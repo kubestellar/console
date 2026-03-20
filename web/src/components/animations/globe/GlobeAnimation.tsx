@@ -49,7 +49,7 @@ const GlobeAnimation = ({
       )}
 
       {/* Three.js Canvas */}
-      <Canvas className="w-full h-full" style={{ background: "transparent" }}>
+      <Canvas className="w-full h-full bg-transparent">
         {/* Camera */}
         <PerspectiveCamera
           makeDefault

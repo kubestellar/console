@@ -185,7 +185,8 @@ function HorseshoeGauge({ value, max = 100, size, strokeWidth, color }: {
           strokeLinecap="round"
           strokeDasharray={`${arcLength} ${circumference}`}
           strokeDashoffset={offset}
-          style={{ transition: 'stroke-dashoffset 0.5s ease', filter: `drop-shadow(0 0 6px ${color}40)` }}
+          className="[transition:stroke-dashoffset_0.5s_ease]"
+          style={{ filter: `drop-shadow(0 0 6px ${color}40)` }}
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">

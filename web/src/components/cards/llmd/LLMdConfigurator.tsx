@@ -105,7 +105,7 @@ function ParameterSlider({ param, onChange }: ParameterSliderProps) {
           }`}
         >
           <motion.div
-            className="absolute top-0.5 w-4 h-4 bg-white rounded-full"
+            className="absolute top-0.5 w-4 h-4 bg-white dark:bg-gray-200 rounded-full"
             animate={{ left: param.value ? '22px' : '2px' }}
           />
         </button>

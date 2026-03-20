@@ -18,8 +18,8 @@ const getNodeColor = (type: TopologyNode['type'], health: TopologyHealthStatus) 
     case 'cluster': return 'bg-purple-500'
     case 'service': return 'bg-blue-500'
     case 'gateway': return 'bg-green-500'
-    case 'external': return 'bg-gray-500'
-    default: return 'bg-gray-500'
+    case 'external': return 'bg-gray-400 dark:bg-gray-500'
+    default: return 'bg-gray-400 dark:bg-gray-500'
   }
 }
 

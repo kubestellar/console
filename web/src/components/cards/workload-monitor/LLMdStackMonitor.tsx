@@ -103,7 +103,7 @@ const STATUS_BADGE: Record<string, string> = {
   healthy: 'bg-green-500/20 text-green-400',
   degraded: 'bg-yellow-500/20 text-yellow-400',
   unhealthy: 'bg-red-500/20 text-red-400',
-  unknown: 'bg-gray-500/20 text-muted-foreground',
+  unknown: 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground',
 }
 
 export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {

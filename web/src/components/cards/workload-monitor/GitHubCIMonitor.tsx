@@ -49,8 +49,8 @@ type SortField = 'name' | 'status' | 'repo' | 'branch'
 const CONCLUSION_BADGE: Record<string, string> = {
   success: 'bg-green-500/20 text-green-400',
   failure: 'bg-red-500/20 text-red-400',
-  cancelled: 'bg-gray-500/20 text-muted-foreground',
-  skipped: 'bg-gray-500/20 text-muted-foreground',
+  cancelled: 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground',
+  skipped: 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground',
   timed_out: 'bg-orange-500/20 text-orange-400',
   action_required: 'bg-yellow-500/20 text-yellow-400',
 }
@@ -333,7 +333,7 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
           'text-xs px-1.5 py-0.5 rounded ml-auto',
           overallHealth === 'healthy' ? 'bg-green-500/20 text-green-400' :
           overallHealth === 'degraded' ? 'bg-yellow-500/20 text-yellow-400' :
-          'bg-gray-500/20 text-muted-foreground',
+          'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground',
         )}>
           {overallHealth}
         </span>
@@ -460,8 +460,8 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
         {items.map(w => {
           const status = effectiveStatus(w)
           const badgeClass = w.status === 'completed'
-            ? (CONCLUSION_BADGE[w.conclusion || ''] || 'bg-gray-500/20 text-muted-foreground')
-            : (STATUS_BADGE[w.status] || 'bg-gray-500/20 text-muted-foreground')
+            ? (CONCLUSION_BADGE[w.conclusion || ''] || 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground')
+            : (STATUS_BADGE[w.status] || 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground')
           const StatusIcon = w.conclusion === 'success' ? CheckCircle :
                              w.conclusion === 'failure' ? XCircle :
                              w.status === 'in_progress' ? Loader2 :

@@ -91,7 +91,7 @@ const getTypeColor = (type: ServiceImportType) => {
     case 'Headless':
       return 'bg-purple-500/20 text-purple-400'
     default:
-      return 'bg-gray-500/20 text-muted-foreground'
+      return 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground'
   }
 }
 

@@ -691,28 +691,28 @@ export function KubeBert() {
         <div className="grid grid-cols-2 gap-1">
           <button
             onClick={() => movePlayer('up-left')}
-            className="p-1.5 rounded bg-white/10 hover:bg-white/20 active:bg-white/30 transition-colors"
+            className="p-1.5 rounded bg-black/10 hover:bg-black/20 active:bg-black/30 dark:bg-white/10 dark:hover:bg-white/20 dark:active:bg-white/30 transition-colors"
             title="Up-Left (↑)"
           >
             <ArrowUp className="w-4 h-4 text-blue-400 -rotate-45" />
           </button>
           <button
             onClick={() => movePlayer('up-right')}
-            className="p-1.5 rounded bg-white/10 hover:bg-white/20 active:bg-white/30 transition-colors"
+            className="p-1.5 rounded bg-black/10 hover:bg-black/20 active:bg-black/30 dark:bg-white/10 dark:hover:bg-white/20 dark:active:bg-white/30 transition-colors"
             title="Up-Right (→)"
           >
             <ArrowUp className="w-4 h-4 text-blue-400 rotate-45" />
           </button>
           <button
             onClick={() => movePlayer('down-left')}
-            className="p-1.5 rounded bg-white/10 hover:bg-white/20 active:bg-white/30 transition-colors"
+            className="p-1.5 rounded bg-black/10 hover:bg-black/20 active:bg-black/30 dark:bg-white/10 dark:hover:bg-white/20 dark:active:bg-white/30 transition-colors"
             title="Down-Left (←)"
           >
             <ArrowDown className="w-4 h-4 text-orange-400 -rotate-45" />
           </button>
           <button
             onClick={() => movePlayer('down-right')}
-            className="p-1.5 rounded bg-white/10 hover:bg-white/20 active:bg-white/30 transition-colors"
+            className="p-1.5 rounded bg-black/10 hover:bg-black/20 active:bg-black/30 dark:bg-white/10 dark:hover:bg-white/20 dark:active:bg-white/30 transition-colors"
             title="Down-Right (↓)"
           >
             <ArrowDown className="w-4 h-4 text-orange-400 rotate-45" />

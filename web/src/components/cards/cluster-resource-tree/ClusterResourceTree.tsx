@@ -897,7 +897,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                     icon={ResourceIcon.cronjob}
                                     iconColor={cj.suspend ? 'text-muted-foreground' : 'text-yellow-400'}
                                     badge={cj.suspend ? t('resourceTree.suspended') : cj.schedule}
-                                    badgeColor={cj.suspend ? 'bg-gray-500/20 text-muted-foreground' : 'bg-yellow-500/20 text-yellow-400'}
+                                    badgeColor={cj.suspend ? 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground' : 'bg-yellow-500/20 text-yellow-400'}
                                     indent={5}
                                     expandedNodes={expandedNodes}
                                     toggleNode={toggleNode}

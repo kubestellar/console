@@ -334,7 +334,7 @@ export function Kubedle(_props: CardComponentProps) {
         {KEYBOARD_ROWS.map((row, rowIdx) => (
           <div key={rowIdx} className="flex gap-1">
             {row.map(key => {
-              let bgColor = 'bg-gray-600 hover:bg-gray-500'
+              let bgColor = 'bg-gray-500 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500'
               if (states[key] === 'correct') {
                 bgColor = 'bg-green-600'
               } else if (states[key] === 'present') {
