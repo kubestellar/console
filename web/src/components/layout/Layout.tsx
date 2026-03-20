@@ -444,7 +444,7 @@ export function Layout({ children }: LayoutProps) {
           className={cn(
             "fixed z-20 bg-background border-b border-orange-500/20 transition-[right] duration-300",
           // Adjust right edge when mission sidebar is open (desktop only)
-          !isMobile && isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen ? "right-[580px]" : "right-0",
+          !isMobile && isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen ? "right-[680px]" : "right-0",
           !isMobile && isMissionSidebarOpen && isMissionSidebarMinimized && !isMissionFullScreen && "right-12"
         )}>
           <div className="flex flex-wrap items-center justify-between gap-2 py-1.5 px-3 md:px-4">
@@ -489,7 +489,7 @@ export function Layout({ children }: LayoutProps) {
           className={cn(
             'relative flex-1 p-4 pb-24 md:p-6 md:pb-28 transition-[margin] duration-300 overflow-y-auto scroll-enhanced min-w-0',
             // Don't apply right margin when fullscreen is active or on mobile
-            !isMobile && isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen && 'mr-[580px]',
+            !isMobile && isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen && 'mr-[680px]',
             !isMobile && isMissionSidebarOpen && isMissionSidebarMinimized && !isMissionFullScreen && 'mr-12'
           )}>
           <NavigationProgress />
