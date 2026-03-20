@@ -1505,6 +1505,10 @@ func (h *FeedbackHandler) createGitHubIssue(request *models.FeatureRequest, user
 // createGitHubIssueInRepo creates a GitHub issue in the specified repository.
 // For documentation issues (target_repo=docs), it uses documentation-appropriate
 // labels instead of the AI fix pipeline labels.
+//
+// If the initial request with labels fails due to insufficient label permissions
+// (HTTP 403 on the "label" resource), the function retries without labels so
+// the issue is still created. Labels can be added later by a maintainer.
 func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest, user *models.User, repoOwner, repoName string) (int, string, error) {
 	// Determine labels based on request type and target repo
 	var labels []string
@@ -1548,19 +1552,37 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest
 *This issue was automatically created from the KubeStellar Console.*
 `, request.RequestType, repoLabel, user.GitHubLogin, request.ID.String(), request.Description)
 
+	// First attempt: create issue with labels
+	number, htmlURL, err := h.postGitHubIssue(repoOwner, repoName, request.Title, issueBody, labels)
+	if err != nil && isLabelPermissionError(err) {
+		// The token lacks permission to create/apply labels on this repo.
+		// Retry without labels — the issue body includes the request type
+		// so maintainers can triage and label it manually.
+		log.Printf("[Feedback] Label permission denied on %s/%s, retrying without labels", repoOwner, repoName)
+		number, htmlURL, err = h.postGitHubIssue(repoOwner, repoName, request.Title, issueBody, nil)
+	}
+
+	return number, htmlURL, err
+}
+
+// postGitHubIssue sends a POST request to the GitHub Issues API.
+// If labels is nil or empty, the "labels" field is omitted from the payload.
+func (h *FeedbackHandler) postGitHubIssue(repoOwner, repoName, title, body string, labels []string) (int, string, error) {
 	payload := map[string]interface{}{
-		"title":  request.Title,
-		"body":   issueBody,
-		"labels": labels,
+		"title": title,
+		"body":  body,
+	}
+	if len(labels) > 0 {
+		payload["labels"] = labels
 	}
 
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		return 0, "", fmt.Errorf("failed to marshal issue payload: %w", err)
 	}
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/issues", repoOwner, repoName)
+	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/issues", repoOwner, repoName)
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return 0, "", err
 	}
@@ -1577,11 +1599,11 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		body, readErr := io.ReadAll(resp.Body)
+		respBody, readErr := io.ReadAll(resp.Body)
 		if readErr != nil {
-			body = []byte("(failed to read response body)")
+			respBody = []byte("(failed to read response body)")
 		}
-		return 0, "", fmt.Errorf("GitHub API returned %d: %s", resp.StatusCode, string(body))
+		return 0, "", fmt.Errorf("GitHub API returned %d: %s", resp.StatusCode, string(respBody))
 	}
 
 	var result struct {
@@ -1593,6 +1615,18 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest
 	}
 
 	return result.Number, result.HTMLURL, nil
+}
+
+// isLabelPermissionError checks whether the error from the GitHub API is a
+// 403 caused by insufficient permissions to create labels. The GitHub API
+// returns: {"message":"You do not have permission to create labels on this
+// repository.","errors":[{"resource":"Repository","field":"label","code":"unauthorized"}]}
+func isLabelPermissionError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "403") && strings.Contains(msg, "label")
 }
 
 // addPRComment adds a comment to a GitHub PR

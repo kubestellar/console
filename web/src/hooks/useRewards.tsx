@@ -204,17 +204,31 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     return rewards.events.slice(0, RECENT_EVENTS_LIMIT)
   }, [rewards])
 
-  // Dedup: subtract console-submitted bug/feature coins that are already in GitHub data
+  // Dedup: subtract console-submitted bug/feature coins that overlap with GitHub data.
+  // Only dedup the *actual* overlap — the minimum of localStorage event count and
+  // GitHub contribution count for each category. This prevents under-counting when
+  // GitHub hasn't indexed an issue yet or classifies it differently due to label timing.
   const consoleSubmittedOffset = useMemo(() => {
     if (!rewards || !githubRewards) return 0
-    const bugEvents = rewards.events.filter(e => e.action === 'bug_report').length
-    const featureEvents = rewards.events.filter(e => e.action === 'feature_suggestion').length
-    return (bugEvents * REWARD_ACTIONS.bug_report.coins) + (featureEvents * REWARD_ACTIONS.feature_suggestion.coins)
+
+    const localBugCount = (rewards.events || []).filter(e => e.action === 'bug_report').length
+    const localFeatureCount = (rewards.events || []).filter(e => e.action === 'feature_suggestion').length
+
+    const githubBugCount = githubRewards.breakdown?.bug_issues ?? 0
+    const githubFeatureCount = githubRewards.breakdown?.feature_issues ?? 0
+
+    // Only dedup entries that appear in BOTH sources (the overlap)
+    const bugOverlap = Math.min(localBugCount, githubBugCount)
+    const featureOverlap = Math.min(localFeatureCount, githubFeatureCount)
+
+    return (bugOverlap * REWARD_ACTIONS.bug_report.coins) + (featureOverlap * REWARD_ACTIONS.feature_suggestion.coins)
   }, [rewards, githubRewards])
 
-  // Merged total: localStorage coins - dedup offset + GitHub coins
+  // Merged total: localStorage coins - dedup offset + GitHub coins.
+  // The dedup offset removes only the overlapping bug/feature coins from
+  // localStorage to avoid double-counting with the GitHub-sourced total.
   const mergedTotalCoins = useMemo(() => {
-    const localCoins = rewards?.totalCoins || 0
+    const localCoins = rewards?.totalCoins ?? 0
     if (!githubRewards) return localCoins
     return Math.max(0, localCoins - consoleSubmittedOffset) + githubPoints
   }, [rewards?.totalCoins, consoleSubmittedOffset, githubPoints, githubRewards])
