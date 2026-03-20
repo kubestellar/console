@@ -2291,7 +2291,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                     <div className="flex items-center gap-2 text-xs text-purple-400 mb-2">
                       <ConsoleAIIcon size="sm" />
                       <span className="font-semibold tracking-wide">{t('drilldown.ai.aiDiagnosis')}</span>
-                      <span className="text-purple-400/50 font-mono">// powered by KubeStellar</span>
+                      <span className="text-purple-400/75 font-mono">// powered by KubeStellar</span>
                     </div>
                     <div className="font-mono text-sm text-foreground leading-relaxed whitespace-pre-wrap">
                       <span className="text-purple-400">{'>'}</span> {aiAnalysis}

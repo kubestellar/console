@@ -914,7 +914,7 @@ function CardPreview({ card }: { card: HoveredCard }) {
               <path
                 d="M0,30 L10,25 L20,28 L30,15 L40,20 L50,10 L60,18 L70,12 L80,8 L90,15 L100,5 L100,40 L0,40 Z"
                 fill="currentColor"
-                className="text-purple-400/20"
+                className="text-purple-400/40"
               />
             </svg>
           </div>

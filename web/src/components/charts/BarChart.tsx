@@ -8,7 +8,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts'
-import { CHART_TOOLTIP_CONTENT_STYLE } from '../../lib/constants'
+import { CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_TEXT_COLOR, CHART_TOOLTIP_LABEL_COLOR } from '../../lib/constants'
 
 interface DataItem {
   name: string
@@ -83,9 +83,9 @@ export function BarChart({
             )}
             <Tooltip
               cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
-              contentStyle={{ ...CHART_TOOLTIP_CONTENT_STYLE, color: '#e0e0e0' }}
-              labelStyle={{ color: '#ccc', fontWeight: 500 }}
-              itemStyle={{ color: '#e0e0e0' }}
+              contentStyle={{ ...CHART_TOOLTIP_CONTENT_STYLE, color: CHART_TOOLTIP_TEXT_COLOR }}
+              labelStyle={{ color: CHART_TOOLTIP_LABEL_COLOR, fontWeight: 500 }}
+              itemStyle={{ color: CHART_TOOLTIP_TEXT_COLOR }}
               formatter={(value) => [`${value}${unit}`, 'Value']}
             />
             <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={80}>
@@ -143,9 +143,9 @@ export function StackedBarChart({
             />
             <Tooltip
               cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
-              contentStyle={{ ...CHART_TOOLTIP_CONTENT_STYLE, color: '#e0e0e0' }}
-              labelStyle={{ color: '#ccc', fontWeight: 500 }}
-              itemStyle={{ color: '#e0e0e0' }}
+              contentStyle={{ ...CHART_TOOLTIP_CONTENT_STYLE, color: CHART_TOOLTIP_TEXT_COLOR }}
+              labelStyle={{ color: CHART_TOOLTIP_LABEL_COLOR, fontWeight: 500 }}
+              itemStyle={{ color: CHART_TOOLTIP_TEXT_COLOR }}
             />
             {categories.map((cat) => (
               <Bar

@@ -9,7 +9,7 @@ import {
   Area,
   AreaChart,
 } from 'recharts'
-import { CHART_TOOLTIP_CONTENT_STYLE, CHART_TICK_COLOR } from '../../lib/constants'
+import { CHART_TOOLTIP_CONTENT_STYLE, CHART_TICK_COLOR, CHART_TOOLTIP_TEXT_COLOR } from '../../lib/constants'
 
 interface DataPoint {
   time: string
@@ -79,7 +79,7 @@ export function TimeSeriesChart({
             <Tooltip
               contentStyle={CHART_TOOLTIP_CONTENT_STYLE}
               labelStyle={{ color: CHART_TICK_COLOR }}
-              itemStyle={{ color: '#fff' }}
+              itemStyle={{ color: CHART_TOOLTIP_TEXT_COLOR }}
               formatter={(value) => [`${value}${unit}`, dataKey]}
             />
             <Area

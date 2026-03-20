@@ -39,6 +39,10 @@ export const CHART_TOOLTIP_CONTENT_STYLE_GRAY: React.CSSProperties = {
 export const CHART_GRID_STROKE = '#333'
 export const CHART_AXIS_STROKE = '#333'
 export const CHART_TICK_COLOR = '#888'
+/** Tooltip item/content text — verified 13:1 contrast on CHART_TOOLTIP_BG (#1a1a2e) */
+export const CHART_TOOLTIP_TEXT_COLOR = '#e0e0e0'
+/** Tooltip label text — verified 11:1 contrast on CHART_TOOLTIP_BG (#1a1a2e) */
+export const CHART_TOOLTIP_LABEL_COLOR = '#ccc'
 
 // ── Kubectl proxy thresholds ────────────────────────────────────────────
 export const MAX_CONCURRENT_KUBECTL_REQUESTS = 4

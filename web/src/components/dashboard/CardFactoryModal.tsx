@@ -462,7 +462,7 @@ const T2_TEMPLATES: T2Template[] = [
   if (editing || !url) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-3 p-4">
-        <Image className="w-8 h-8 text-purple-400/50" />
+        <Image className="w-8 h-8 text-purple-400/70" />
         <p className="text-xs text-muted-foreground text-center">Enter an image URL or API endpoint</p>
         <div className="flex gap-2 w-full max-w-sm">
           <input

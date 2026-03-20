@@ -133,7 +133,7 @@ export function UnifiedStatBlock({
       {/* Demo indicator */}
       {isDemo && (
         <span className="absolute -top-1 -right-1" title="Demo data">
-          <FlaskConical className="w-3.5 h-3.5 text-yellow-400/50" />
+          <FlaskConical className="w-3.5 h-3.5 text-yellow-400/70" />
         </span>
       )}
 

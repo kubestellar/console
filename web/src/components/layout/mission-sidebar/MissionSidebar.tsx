@@ -542,7 +542,7 @@ export function MissionSidebar() {
             <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
             <p className="text-sm font-medium text-green-400">Mission imported</p>
             {toastCountdown > 0 && (
-              <span className="text-2xs text-green-400/40 ml-auto">{toastCountdown}s</span>
+              <span className="text-2xs text-green-400/70 ml-auto">{toastCountdown}s</span>
             )}
           </div>
           <p className="text-xs text-muted-foreground truncate mb-2">{showSavedToast}</p>
