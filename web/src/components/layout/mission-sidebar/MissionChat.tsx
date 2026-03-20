@@ -10,6 +10,8 @@ import {
   BookOpen,
   Save,
   Maximize2,
+  Play,
+  Rocket,
   Sparkles,
   ThumbsUp,
   ThumbsDown,
@@ -18,6 +20,7 @@ import {
   X,
 } from 'lucide-react'
 import { useMissions, type Mission } from '../../../hooks/useMissions'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 import { useResolutions, detectIssueSignature, type Resolution } from '../../../hooks/useResolutions'
 import { cn } from '../../../lib/cn'
 import { MAX_MESSAGE_SIZE_CHARS } from '../../../lib/constants'
@@ -33,7 +36,8 @@ import { MemoizedMessage } from './MemoizedMessage'
 
 export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontSize, onToggleFullScreen }: { mission: Mission; isFullScreen?: boolean; fontSize?: FontSize; onToggleFullScreen?: () => void }) {
   const { t } = useTranslation('common')
-  const { sendMessage, cancelMission, rateMission, setActiveMission, dismissMission, renameMission, selectedAgent } = useMissions()
+  const { sendMessage, cancelMission, rateMission, setActiveMission, dismissMission, renameMission, runSavedMission, selectedAgent } = useMissions()
+  const { isDemoMode } = useDemoMode()
   const { findSimilarResolutions, recordUsage, allResolutions } = useResolutions()
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -665,6 +669,44 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               </div>
             </div>
 
+            <button
+              onClick={() => setActiveMission(null)}
+              className="flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <ChevronLeft className="w-3 h-3" />
+              {t('missionChat.backToMissions')}
+            </button>
+          </div>
+        ) : mission.status === 'saved' ? (
+          <div className="flex flex-col gap-2">
+            {isDemoMode ? (
+              <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/25 p-3 flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Rocket className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+                  <p className="text-xs font-medium text-yellow-300">
+                    Running missions requires a live cluster
+                  </p>
+                </div>
+                <p className="text-xs text-yellow-400/70">
+                  Install KubeStellar Console locally to connect your clusters and run this mission with AI.
+                </p>
+                <button
+                  onClick={() => setShowSetupDialog(true)}
+                  className="mt-1 w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold bg-yellow-500 hover:bg-yellow-400 text-black rounded-lg transition-colors"
+                >
+                  <Rocket className="w-3.5 h-3.5" />
+                  Get KubeStellar Console
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => runSavedMission(mission.id)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                <Play className="w-4 h-4" />
+                Run Mission
+              </button>
+            )}
             <button
               onClick={() => setActiveMission(null)}
               className="flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"

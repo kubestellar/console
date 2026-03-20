@@ -39,6 +39,7 @@ import { ClusterSelectionDialog } from '../../missions/ClusterSelectionDialog'
 import { useTranslation } from 'react-i18next'
 import { SAVED_TOAST_MS, FOCUS_DELAY_MS } from '../../../lib/constants/network'
 import { MISSION_FILE_FETCH_TIMEOUT_MS } from '../../missions/browser/missionCache'
+import { isDemoMode } from '../../../lib/demoMode'
 
 export function MissionSidebar() {
   const { t } = useTranslation(['common'])
@@ -243,8 +244,13 @@ export function MissionSidebar() {
     setViewingMissionRaw(false)
   }, [savedMissionToExport])
 
-  // Run mission — for install/deploy types, show cluster picker first
+  // Run mission — in demo mode (Netlify), block and open the install dialog instead.
+  // For install/deploy types in live mode, show cluster picker first.
   const handleRunMission = useCallback((missionId: string) => {
+    if (isDemoMode()) {
+      window.dispatchEvent(new CustomEvent('open-install'))
+      return
+    }
     const mission = missions.find(m => m.id === missionId)
     const isInstall = mission?.importedFrom?.missionClass === 'install' || mission?.type === 'deploy'
     if (isInstall) {

@@ -103,6 +103,13 @@ export function Layout({ children }: LayoutProps) {
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const [showInClusterAgentDialog, setShowInClusterAgentDialog] = useState(false)
   const [wasBackendDown, setWasBackendDown] = useState(false)
+
+  // Allow any component to open the install dialog via a custom event
+  useEffect(() => {
+    const handler = () => setShowSetupDialog(true)
+    window.addEventListener('open-install', handler)
+    return () => window.removeEventListener('open-install', handler)
+  }, [])
   const [restartState, setRestartState] = useState<'idle' | 'restarting' | 'waiting' | 'copied'>('idle')
   const [restartError, setRestartError] = useState<string | null>(null)
 
