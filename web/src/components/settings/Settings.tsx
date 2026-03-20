@@ -16,6 +16,7 @@ import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { usePredictionSettings } from '../../hooks/usePredictionSettings'
 import { usePersistedSettings, type SyncStatus } from '../../hooks/usePersistedSettings'
 import { BANNER_DISMISS_MS, UI_FEEDBACK_TIMEOUT_MS, TOOLTIP_HIDE_DELAY_MS } from '../../lib/constants/network'
+import { ROUTES } from '../../config/routes'
 import { UpdateSettings } from './UpdateSettings'
 import {
   AISettingsSection,
@@ -116,7 +117,7 @@ export function Settings() {
     if (window.history.length > 1) {
       navigate(-1)
     } else {
-      navigate('/')
+      navigate(ROUTES.HOME)
     }
   }, [navigate])
 

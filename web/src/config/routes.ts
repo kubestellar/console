@@ -123,3 +123,10 @@ export function getSettingsWithHash(hash: string): string {
 export function getMissionRoute(missionId: string): string {
   return ROUTES.MISSION.replace(':missionId', encodeURIComponent(missionId))
 }
+
+/**
+ * Helper function to create the home route with missions browse panel open
+ */
+export function getHomeBrowseMissionsRoute(): string {
+  return `${ROUTES.HOME}?browse=missions`
+}

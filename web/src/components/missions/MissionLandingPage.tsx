@@ -17,6 +17,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { validateMissionExport } from '../../lib/missions/types'
 import type { MissionExport, MissionStep } from '../../lib/missions/types'
+import { getHomeBrowseMissionsRoute } from '../../config/routes'
 
 // ============================================================================
 // Constants
@@ -303,7 +304,7 @@ export function MissionLandingPage() {
   }
 
   const handleBrowseAll = () => {
-    navigate('/?browse=missions', { replace: true })
+    navigate(getHomeBrowseMissionsRoute(), { replace: true })
   }
 
   const typeColor = mission?.type ? (TYPE_COLORS[mission.type] || DEFAULT_TYPE_COLOR) : DEFAULT_TYPE_COLOR
