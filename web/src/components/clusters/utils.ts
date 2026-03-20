@@ -13,6 +13,14 @@ export const isClusterUnreachable = (c: ClusterInfo): boolean => {
   return false
 }
 
+// Helper to check if a cluster is healthy.
+// A cluster is healthy if its healthy flag is true OR it has nodes reporting in.
+// This single definition is used by both the stats overview counts and the filter
+// tabs so that clicking a stat always shows exactly the clusters it counted.
+export const isClusterHealthy = (c: ClusterInfo): boolean => {
+  return c.healthy === true || !!(c.nodeCount && c.nodeCount > 0)
+}
+
 // Helper to check if cluster has token/auth expired error
 export const isClusterTokenExpired = (c: ClusterInfo): boolean => {
   return c.errorType === 'auth'
