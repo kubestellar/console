@@ -88,20 +88,27 @@ jobs:
             const analyticsData = google.analyticsdata({ version: 'v1beta', auth });
 
             // ── Query GA4 for errors in the lookback window ──
-            // GA4 dateHour dimension uses the property's timezone (America/New_York),
-            // not UTC — so we query by date range and aggregate totals directly.
-            // The threshold + dedup + hourly cadence prevent noise.
+            // GA4 Data API finest granularity is dateHour (YYYYMMDDHH in property timezone).
+            // We query the last 2 days to cover any timezone offset, then filter rows
+            // client-side to only include hours within the lookback window.
             const now = new Date();
-            const daysBack = Math.max(1, Math.ceil(lookbackHours / 24));
-            const startDateStr = `${daysBack}daysAgo`;
 
-            core.info(`Querying GA4 property ${propertyId} for ksc_error events (last ${daysBack} day(s), threshold: ${threshold})`);
+            // Build the set of valid dateHour strings (UTC-based; property TZ offset is ≤±14h)
+            const validHours = new Set();
+            for (let h = 0; h < lookbackHours + 14; h++) {
+              const d = new Date(now.getTime() - h * 3600 * 1000);
+              const ymd = `${d.getUTCFullYear()}${String(d.getUTCMonth()+1).padStart(2,'0')}${String(d.getUTCDate()).padStart(2,'0')}`;
+              validHours.add(`${ymd}${String(d.getUTCHours()).padStart(2,'0')}`);
+            }
+
+            core.info(`Querying GA4 property ${propertyId} for ksc_error events (last ${lookbackHours}h, threshold: ${threshold})`);
 
             const { data } = await analyticsData.properties.runReport({
               property: `properties/${propertyId}`,
               requestBody: {
-                dateRanges: [{ startDate: startDateStr, endDate: 'today' }],
+                dateRanges: [{ startDate: '2daysAgo', endDate: 'today' }],
                 dimensions: [
+                  { name: 'dateHour' },
                   { name: 'customEvent:error_category' },
                   { name: 'customEvent:error_page' },
                 ],
@@ -113,7 +120,7 @@ jobs:
                   },
                 },
                 orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
-                limit: 100,
+                limit: 1000,
               },
             });
 
@@ -122,16 +129,60 @@ jobs:
               return;
             }
 
-            // ── Aggregate by category+page ──
+            // ── Aggregate by category+page, filtering to the lookback window ──
             const aggregated = new Map();
 
             for (const row of data.rows) {
-              const category = row.dimensionValues[0].value || 'uncategorized';
-              const page = row.dimensionValues[1].value || '/';
+              const dateHour = row.dimensionValues[0].value || '';
+              if (!validHours.has(dateHour)) continue; // outside lookback window
+
+              const category = row.dimensionValues[1].value || 'uncategorized';
+              const page = row.dimensionValues[2].value || '/';
               const count = parseInt(row.metricValues[0].value);
 
               const key = `${category}::${page === '(not set)' ? '/' : page}`;
               aggregated.set(key, (aggregated.get(key) || 0) + count);
+            }
+
+            // ── Fetch top error details for each spike (for actionable issue body) ──
+            const errorDetails = new Map(); // key -> top error_detail strings
+            try {
+              const { data: detailData } = await analyticsData.properties.runReport({
+                property: `properties/${propertyId}`,
+                requestBody: {
+                  dateRanges: [{ startDate: '2daysAgo', endDate: 'today' }],
+                  dimensions: [
+                    { name: 'dateHour' },
+                    { name: 'customEvent:error_category' },
+                    { name: 'customEvent:error_page' },
+                    { name: 'customEvent:error_detail' },
+                  ],
+                  metrics: [{ name: 'eventCount' }],
+                  dimensionFilter: {
+                    filter: {
+                      fieldName: 'eventName',
+                      stringFilter: { value: 'ksc_error' },
+                    },
+                  },
+                  orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
+                  limit: 200,
+                },
+              });
+              if (detailData.rows) {
+                for (const row of detailData.rows) {
+                  const dateHour = row.dimensionValues[0].value || '';
+                  if (!validHours.has(dateHour)) continue;
+                  const category = row.dimensionValues[1].value || 'uncategorized';
+                  const page = row.dimensionValues[2].value || '/';
+                  const detail = row.dimensionValues[3].value || '(no detail)';
+                  const count = parseInt(row.metricValues[0].value);
+                  const key = `${category}::${page === '(not set)' ? '/' : page}`;
+                  if (!errorDetails.has(key)) errorDetails.set(key, []);
+                  errorDetails.get(key).push({ detail, count });
+                }
+              }
+            } catch (e) {
+              core.warning(`Could not fetch error details: ${e.message}`);
             }
 
             // ── Filter by threshold and sort ──
@@ -229,6 +280,15 @@ jobs:
                 'Add appropriate error handling or guards',
               ];
 
+              // Build top error details section
+              const details = errorDetails.get(key) || [];
+              const topDetails = details
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 5);
+              const detailLines = topDetails.length > 0
+                ? topDetails.map(d => `- \`${d.detail}\` (×${d.count})`)
+                : ['- *(error_detail not captured — check GA4 dashboard)*'];
+
               const body = [
                 `## GA4 Error Spike: ${category}`,
                 '',
@@ -236,6 +296,9 @@ jobs:
                 `**Page:** \`${page}\` | **Category:** \`${category}\``,
                 '',
                 `**Run:** [View workflow run](${runUrl})`,
+                '',
+                '### Top Error Messages',
+                ...detailLines,
                 '',
                 '### Error Category Description',
                 category === 'card_render' ? 'A dashboard card component crashed during rendering. Caught by `DynamicCardErrorBoundary` — the card shows an error state but the page continues working.' :
