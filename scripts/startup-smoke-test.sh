@@ -74,11 +74,14 @@ assert_page_has_content() {
   local marker="${2:-<div id=\"root\"}"
   local label="${3:-page}"
 
-  local body
-  body=$(curl -sf --max-time 10 "$url" 2>/dev/null) || {
-    echo -e "${RED}  ✗ Failed to fetch ${url}${NC}"
+  local body http_code
+  http_code=$(curl -sL -o /tmp/smoke-body -w "%{http_code}" --max-time 10 "$url" 2>/dev/null) || http_code="000"
+  body=$(cat /tmp/smoke-body 2>/dev/null)
+
+  if [ "$http_code" = "000" ]; then
+    echo -e "${RED}  ✗ Failed to connect to ${url}${NC}"
     return 1
-  }
+  fi
 
   if [ -z "$body" ]; then
     echo -e "${RED}  ✗ ${label}: empty response from ${url}${NC}"
@@ -196,7 +199,7 @@ ENVEOF
 
       # Verify clean shutdown
       echo -e "${DIM}  Testing clean shutdown...${NC}"
-      docker stop kc-smoke-test --time 10
+      docker stop kc-smoke-test --timeout 10
       EXIT_CODE=$(docker inspect kc-smoke-test --format='{{.State.ExitCode}}')
       if [ "$EXIT_CODE" = "0" ]; then
         echo -e "${GREEN}  ✓ Clean shutdown (exit code 0)${NC}"
