@@ -15,9 +15,10 @@ on:
       - 'web/**'
       - '.github/workflows/playwright.yml'
 
-# Separate concurrency groups: nightly/manual runs won't be cancelled by push/PR runs
+# Nightly/manual runs get a unique concurrency group (run_id) so they are never
+# cancelled by push/PR runs. Push/PR runs share github.ref so newer ones cancel older.
 concurrency:
-  group: playwright-${{ github.event_name == 'schedule' && 'nightly' || github.event_name == 'workflow_dispatch' && 'manual' || github.ref }}
+  group: playwright-${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.run_id || github.ref }}
   cancel-in-progress: true
 
 env:
