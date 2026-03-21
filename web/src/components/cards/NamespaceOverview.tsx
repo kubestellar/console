@@ -11,7 +11,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { StatusBadge } from '../ui/StatusBadge'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
-import { useDemoMode } from '../../hooks/useDemoMode'
+import { STORAGE_KEY_NS_OVERVIEW_CLUSTER, STORAGE_KEY_NS_OVERVIEW_NAMESPACE } from '../../lib/constants/storage'
 
 interface NamespaceOverviewProps {
   config?: {
@@ -23,8 +23,17 @@ interface NamespaceOverviewProps {
 export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   const { t } = useTranslation('common')
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
-  const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
-  const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
+
+  // Initialize from config prop (card-level override) or persisted localStorage value (#3115)
+  const [selectedCluster, setSelectedCluster] = useState<string>(() => {
+    if (config?.cluster) return config.cluster
+    try { return localStorage.getItem(STORAGE_KEY_NS_OVERVIEW_CLUSTER) || '' } catch { return '' }
+  })
+  const [selectedNamespace, setSelectedNamespace] = useState<string>(() => {
+    if (config?.namespace) return config.namespace
+    try { return localStorage.getItem(STORAGE_KEY_NS_OVERVIEW_NAMESPACE) || '' } catch { return '' }
+  })
+
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
@@ -51,14 +60,22 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
     return result
   }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
-  const { isDemoMode: demoMode } = useDemoMode()
-
-  // Auto-select first cluster and namespace in demo mode
+  // Persist cluster selection so it survives page navigation (#3115)
   useEffect(() => {
-    if (demoMode && !selectedCluster && clusters.length > 0) {
+    try { localStorage.setItem(STORAGE_KEY_NS_OVERVIEW_CLUSTER, selectedCluster) } catch {}
+  }, [selectedCluster])
+
+  // Persist namespace selection so it survives page navigation (#3115)
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_KEY_NS_OVERVIEW_NAMESPACE, selectedNamespace) } catch {}
+  }, [selectedNamespace])
+
+  // Auto-select first available cluster when none is selected (#3113 — works in both demo and live mode)
+  useEffect(() => {
+    if (!selectedCluster && clusters.length > 0) {
       setSelectedCluster(clusters[0].name)
     }
-  }, [demoMode, clusters, selectedCluster])
+  }, [clusters, selectedCluster])
 
   const { issues: allPodIssues, isDemoFallback: podIssuesDemoFallback, isRefreshing: isPodIssuesRefreshing, lastRefresh: podIssuesLastRefresh } = useCachedPodIssues(selectedCluster)
   const { issues: allDeploymentIssues, isDemoFallback: deploymentIssuesDemoFallback, isRefreshing: isDeploymentIssuesRefreshing, lastRefresh: deploymentIssuesLastRefresh } = useCachedDeploymentIssues(selectedCluster)
@@ -66,12 +83,14 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   // Fetch namespaces for the selected cluster
   const { namespaces } = useCachedNamespaces(selectedCluster || undefined)
 
-  // Auto-select first namespace in demo mode once namespaces load
+  // Auto-select first namespace when cluster is selected and no valid namespace is chosen (#3113)
   useEffect(() => {
-    if (demoMode && selectedCluster && !selectedNamespace && namespaces.length > 0) {
-      setSelectedNamespace(namespaces[0])
+    if (selectedCluster && namespaces.length > 0) {
+      if (!selectedNamespace || !namespaces.includes(selectedNamespace)) {
+        setSelectedNamespace(namespaces[0])
+      }
     }
-  }, [demoMode, selectedCluster, selectedNamespace, namespaces])
+  }, [selectedCluster, selectedNamespace, namespaces])
 
   // Filter by namespace
   const podIssues = useMemo(() => {
