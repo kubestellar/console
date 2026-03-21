@@ -149,15 +149,17 @@ case "$MODE" in
   oauth)
     echo -e "${BOLD}Starting startup-oauth.sh (mock credentials)...${NC}"
 
-    # Create mock .env for OAuth
-    cat > .env.smoke-test << 'ENVEOF'
+    # Create mock .env for OAuth (startup-oauth.sh sources .env directly)
+    # Back up existing .env if present
+    [ -f .env ] && cp .env .env.smoke-backup
+    cat > .env << 'ENVEOF'
 GITHUB_CLIENT_ID=smoke-test-client-id
 GITHUB_CLIENT_SECRET=smoke-test-client-secret
 JWT_SECRET=smoke-test-jwt-secret
 ENVEOF
 
     # startup-oauth.sh in prod mode: builds frontend, serves on 8081, watchdog on 8080
-    ENV_FILE=.env.smoke-test bash startup-oauth.sh &
+    bash startup-oauth.sh &
     PIDS_TO_KILL+=($!)
 
     # Wait for watchdog on 8080
@@ -171,7 +173,12 @@ ENVEOF
       assert_port_listening 8081 "backend" || echo -e "${YELLOW}  ⚠ Backend port 8081 not detected${NC}"
     fi
 
-    rm -f .env.smoke-test
+    # Restore original .env if backed up, otherwise remove mock
+    if [ -f .env.smoke-backup ]; then
+      mv .env.smoke-backup .env
+    else
+      rm -f .env
+    fi
     ;;
 
   docker)
