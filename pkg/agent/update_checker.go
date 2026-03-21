@@ -1272,6 +1272,11 @@ type buildResult struct {
 	output string // combined stdout+stderr (last buildOutputTailLines lines)
 }
 
+// writerFunc adapts a plain function to the io.Writer interface.
+type writerFunc func([]byte) (int, error)
+
+func (f writerFunc) Write(p []byte) (int, error) { return f(p) }
+
 // runBuildCmd executes an external command with:
 //   - A hard timeout so builds can never hang indefinitely
 //   - Periodic heartbeat broadcasts so the frontend knows the agent is still alive
@@ -1301,10 +1306,18 @@ func (uc *UpdateChecker) runBuildCmd(
 		cmd.Env = append(os.Environ(), env...)
 	}
 
-	// Capture combined output for error reporting
-	var buf strings.Builder
-	cmd.Stdout = io.MultiWriter(os.Stdout, &buf)
-	cmd.Stderr = io.MultiWriter(os.Stderr, &buf)
+	// Capture combined output for error reporting.
+	// Use a mutex-protected writer: exec.Cmd copies stdout and stderr via
+	// separate goroutines, so concurrent writes to strings.Builder are a race.
+	var mu sync.Mutex
+	var raw strings.Builder
+	syncBuf := writerFunc(func(p []byte) (int, error) {
+		mu.Lock()
+		defer mu.Unlock()
+		return raw.Write(p)
+	})
+	cmd.Stdout = io.MultiWriter(os.Stdout, syncBuf)
+	cmd.Stderr = io.MultiWriter(os.Stderr, syncBuf)
 
 	// Start the command
 	if err := cmd.Start(); err != nil {
@@ -1338,7 +1351,7 @@ func (uc *UpdateChecker) runBuildCmd(
 	close(done)
 
 	// Extract the tail of the output for error messages
-	output := tailLines(buf.String(), buildOutputTailLines)
+	output := tailLines(raw.String(), buildOutputTailLines)
 
 	if ctx.Err() == context.DeadlineExceeded {
 		return buildResult{
