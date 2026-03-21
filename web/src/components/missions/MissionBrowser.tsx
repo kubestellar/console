@@ -40,7 +40,7 @@ import { ImproveMissionDialog } from './ImproveMissionDialog'
 import { useTranslation } from 'react-i18next'
 import {
   TreeNodeItem, DirectoryListing, RecommendationCard, EmptyState, MissionFetchErrorBanner,
-  getMissionSlug, getMissionShareUrl, updateNodeInTree,
+  getMissionSlug, getMissionShareUrl, updateNodeInTree, removeNodeFromTree,
   missionCache, startMissionCacheFetch, resetMissionCache,
   fetchMissionContent, BROWSER_TABS,
   VirtualizedMissionGrid,
@@ -557,15 +557,19 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           const { data: entries } = await api.get<BrowseEntry[]>(
             `/api/missions/browse?path=${encodeURIComponent(node.path)}`
           )
-          children = entries.map((e) => ({
-            id: `${nodeId}/${e.name}`,
-            name: e.name,
-            path: e.path,
-            type: e.type,
-            source: 'community' as const,
-            loaded: e.type === 'file',
-            description: e.description,
-          }))
+          // Backend already filters .gitkeep and index.json, but guard client-side too
+          const HIDDEN_FILES = new Set(['.gitkeep', 'index.json'])
+          children = entries
+            .filter(e => e.type === 'directory' || !HIDDEN_FILES.has(e.name))
+            .map((e) => ({
+              id: `${nodeId}/${e.name}`,
+              name: e.name,
+              path: e.path,
+              type: e.type,
+              source: 'community' as const,
+              loaded: e.type === 'file',
+              description: e.description,
+            }))
         } else if (node.source === 'github') {
           const { data: repos } = await api.get<Array<{ name: string; full_name: string }>>(
             '/api/github/repos?hasMissionsDir=true'
@@ -581,9 +585,18 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           }))
         }
 
-        setTreeNodes((prev) =>
-          updateNodeInTree(prev, nodeId, { children, loaded: true, loading: false })
-        )
+        // For community directories: if no missions remain after filtering,
+        // mark the node as empty and remove it from the parent's children so
+        // empty category folders (containing only .gitkeep) don't clutter the tree.
+        if (node.source === 'community' && children.length === 0) {
+          setTreeNodes((prev) =>
+            removeNodeFromTree(prev, nodeId)
+          )
+        } else {
+          setTreeNodes((prev) =>
+            updateNodeInTree(prev, nodeId, { children, loaded: true, loading: false })
+          )
+        }
       } catch {
         setTreeNodes((prev) =>
           updateNodeInTree(prev, nodeId, { children: [], loaded: true, loading: false })
@@ -610,7 +623,13 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           const { data: entries } = await api.get<BrowseEntry[]>(
             `/api/missions/browse?path=${encodeURIComponent(node.path)}`
           )
-          setDirectoryEntries(entries.filter(e => e.type === 'directory' || e.name.endsWith('.json')))
+          // Hide infrastructure/metadata files that are not missions
+          const HIDDEN_FILES = new Set(['.gitkeep', 'index.json'])
+          setDirectoryEntries(
+            entries.filter(e =>
+              (e.type === 'directory' || e.name.endsWith('.json')) && !HIDDEN_FILES.has(e.name)
+            )
+          )
         } else if (node.source === 'github') {
           const { data: entries } = await api.get<BrowseEntry[]>(
             `/api/github/missions?repo=${encodeURIComponent(node.path)}`

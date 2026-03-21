@@ -42,6 +42,17 @@ export function updateNodeInTree(
   })
 }
 
+/** Remove a node from the tree by ID (used to prune empty community category folders). */
+export function removeNodeFromTree(nodes: TreeNode[], nodeId: string): TreeNode[] {
+  return nodes
+    .filter((node) => node.id !== nodeId)
+    .map((node) =>
+      node.children
+        ? { ...node, children: removeNodeFromTree(node.children, nodeId) }
+        : node
+    )
+}
+
 export function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes < 0) return '0 B'
   if (bytes < 1024) return `${bytes} B`

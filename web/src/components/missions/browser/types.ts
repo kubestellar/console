@@ -8,6 +8,8 @@ export interface TreeNode {
   loaded?: boolean
   loading?: boolean
   description?: string
+  /** True once the directory has been loaded and found to contain no missions */
+  isEmpty?: boolean
 }
 
 export type ViewMode = 'grid' | 'list'

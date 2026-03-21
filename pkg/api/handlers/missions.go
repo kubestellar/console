@@ -312,6 +312,13 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 		return c.Send(body)
 	}
 
+	// Files to hide from the browser UI — infrastructure/metadata files that
+	// are not missions and would confuse users browsing the library.
+	hiddenFiles := map[string]bool{
+		".gitkeep":   true,
+		"index.json": true,
+	}
+
 	var entries []fiber.Map
 	for _, e := range ghEntries {
 		entryType, _ := e["type"].(string)
@@ -319,6 +326,10 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 			entryType = "directory"
 		}
 		name, _ := e["name"].(string)
+		// Skip infrastructure files that are not missions
+		if entryType == "file" && hiddenFiles[name] {
+			continue
+		}
 		path, _ := e["path"].(string)
 		size, _ := e["size"].(float64)
 		entries = append(entries, fiber.Map{

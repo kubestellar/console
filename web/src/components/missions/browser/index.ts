@@ -4,7 +4,7 @@ export { TreeNodeItem } from './TreeNodeItem'
 export { DirectoryListing } from './DirectoryListing'
 export { RecommendationCard } from './RecommendationCard'
 export { EmptyState, MissionFetchErrorBanner } from './EmptyState'
-export { getMissionSlug, getMissionShareUrl, updateNodeInTree, formatBytes, normalizeMission } from './helpers'
+export { getMissionSlug, getMissionShareUrl, updateNodeInTree, removeNodeFromTree, formatBytes, normalizeMission } from './helpers'
 export {
   missionCache, notifyCacheListeners, startMissionCacheFetch, resetMissionCache,
   fetchMissionContent, MISSION_FILE_FETCH_TIMEOUT_MS,
