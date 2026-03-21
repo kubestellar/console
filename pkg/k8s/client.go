@@ -1095,7 +1095,16 @@ func (m *MultiClusterClient) WarmupHealthCache() {
 		}(cl.Name, cl.Context)
 	}
 
-	wg.Wait()
+	// Wait for all probes to finish, but give up when the overall context deadline
+	// fires. This prevents a single hung exec-plugin (e.g. oci credential helper)
+	// from blocking server startup indefinitely.
+	done := make(chan struct{})
+	go func() { wg.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-ctx.Done():
+		log.Printf("[Warmup] timed out waiting for all cluster probes — continuing startup")
+	}
 
 	m.mu.RLock()
 	reachable, unreachable := 0, 0
