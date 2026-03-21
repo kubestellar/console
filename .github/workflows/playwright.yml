@@ -15,6 +15,11 @@ on:
       - 'web/**'
       - '.github/workflows/playwright.yml'
 
+# Separate concurrency groups: nightly/manual runs won't be cancelled by push/PR runs
+concurrency:
+  group: playwright-${{ github.event_name == 'schedule' && 'nightly' || github.event_name == 'workflow_dispatch' && 'manual' || github.ref }}
+  cancel-in-progress: true
+
 env:
   CI: true
 
