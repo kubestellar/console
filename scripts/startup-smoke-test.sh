@@ -60,8 +60,10 @@ wait_for_url() {
       return 1
     fi
 
-    if curl -sf --max-time 5 "$url" > /dev/null 2>&1; then
-      echo -e "${GREEN}  ✓ ${url} is responding (${elapsed}s)${NC}"
+    local code
+    code=$(curl -sL -o /dev/null -w "%{http_code}" --max-time 5 "$url" 2>/dev/null) || code="000"
+    if [ "$code" != "000" ]; then
+      echo -e "${GREEN}  ✓ ${url} is responding (HTTP ${code}, ${elapsed}s)${NC}"
       return 0
     fi
 
