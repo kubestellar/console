@@ -296,6 +296,14 @@ if [ -x "$INSTALL_DIR/kc-agent" ]; then
         # Verify it started
         if kill -0 "$(cat "$AGENT_PID_FILE")" 2>/dev/null; then
             echo "  kc-agent started (PID: $(cat "$AGENT_PID_FILE"), log: $AGENT_LOG_FILE)"
+            # Warn if Claude Code is running — it needs to be restarted to pick up MCP server changes
+            if pgrep -f "claude" > /dev/null 2>&1 && [ -f "$HOME/.claude/claude_desktop_config.json" ]; then
+                echo ""
+                echo "  ⚠️  Claude Code is running in another session."
+                echo "     If MCP servers appear as 'failed' in Claude Code, restart Claude Code"
+                echo "     to pick up the new kubestellar-ops and kubestellar-deploy servers."
+                echo ""
+            fi
         else
             echo "  Warning: kc-agent failed to start. Check $AGENT_LOG_FILE for details."
             rm -f "$AGENT_PID_FILE"
