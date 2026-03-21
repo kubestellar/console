@@ -97,7 +97,7 @@ jobs:
 
       - name: Run smoke test
         run: bash scripts/startup-smoke-test.sh oauth
-        timeout-minutes: 8
+        timeout-minutes: 10
 
   # Test Docker build + entrypoint.sh
   smoke-docker:

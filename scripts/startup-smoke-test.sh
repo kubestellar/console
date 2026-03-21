@@ -164,8 +164,8 @@ ENVEOF
     bash startup-oauth.sh &
     PIDS_TO_KILL+=($!)
 
-    # Wait for watchdog on 8080
-    wait_for_url "http://localhost:8080" 180 || { FAILURES=$((FAILURES+1)); }
+    # Wait for watchdog on 8080 (startup-oauth.sh builds frontend + compiles Go, ~3-4 min in CI)
+    wait_for_url "http://localhost:8080" 420 || { FAILURES=$((FAILURES+1)); }
 
     if [ "$FAILURES" -eq 0 ]; then
       # Check watchdog serves content (might be "Reconnecting..." page or actual app)
