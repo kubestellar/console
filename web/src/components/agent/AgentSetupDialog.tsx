@@ -8,6 +8,7 @@ import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { copyToClipboard } from '../../lib/clipboard'
+import { isNetlifyDeployment } from '../../lib/demoMode'
 
 const DISMISSED_KEY = 'kc-agent-setup-dismissed'
 const SNOOZED_KEY = 'kc-agent-setup-snoozed'
@@ -40,6 +41,9 @@ export function AgentSetupDialog() {
   }, [])
 
   useEffect(() => {
+    // Never auto-show on Netlify — no agent can be installed there
+    if (isNetlifyDeployment) return
+
     // Only show after initial connection check completes
     if (status === 'connecting') return
 

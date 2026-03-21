@@ -11,7 +11,7 @@ import {
   Minus,
   Plus,
   Type,
-  MessageSquarePlus,
+  Sparkles,
   Send,
   Globe,
   Bookmark,
@@ -403,7 +403,7 @@ export function MissionSidebar() {
             )}
             title={t('missionSidebar.startNewMission')}
           >
-            <MessageSquarePlus className="w-4 h-4" />
+            <Sparkles className="w-4 h-4" />
           </button>
           {/* Browse Community Missions */}
           <button
@@ -586,7 +586,7 @@ export function MissionSidebar() {
                 }}
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
               >
-                <MessageSquarePlus className="w-4 h-4" />
+                <Sparkles className="w-4 h-4" />
                 {t('missionSidebar.startCustomMission')}
               </button>
             )}

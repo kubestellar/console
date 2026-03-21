@@ -686,11 +686,8 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
                 >
                   <Play className="w-4 h-4" />
-                  Install KubeStellar Console
+                  Install KubeStellar Console to Run This Mission
                 </button>
-                <p className="text-xs text-center text-muted-foreground px-2">
-                  Run this mission against your own clusters
-                </p>
               </div>
             ) : isDemoMode ? (
               <div className="flex flex-col gap-2">
