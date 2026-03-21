@@ -151,6 +151,13 @@ const STATUS_PROCESSING_DELAY_MS = 3_000
 const MISSION_TIMEOUT_MS = 300_000 // 5 minutes
 /** How often (ms) the frontend checks for timed-out missions */
 const MISSION_TIMEOUT_CHECK_INTERVAL_MS = 15_000 // 15 seconds
+/**
+ * If streaming has started (at least one chunk received) but no new chunk
+ * arrives within this window, the agent is assumed to be stuck waiting on a
+ * tool call (e.g., an APISIX gateway that never responds) and the mission is
+ * failed early with an actionable message (#3079).
+ */
+const MISSION_INACTIVITY_TIMEOUT_MS = 90_000 // 90 seconds of stream silence
 
 // Load missions from localStorage
 function loadMissions(): Mission[] {
@@ -310,32 +317,52 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     saveUnreadMissionIds(unreadMissionIds)
   }, [unreadMissionIds])
 
-  // Periodically check for missions stuck in "running" state beyond the timeout.
-  // This is a client-side safety net: the backend also has a context timeout, but
-  // if the WebSocket drops before the backend error arrives, the mission would
-  // stay in "running" forever without this check (#2375).
+  // Periodically check for missions stuck in "running" state.
+  // Two failure conditions are detected (#2375, #3079):
+  //
+  //   1. Total timeout — mission has been running for >5 min (backend safety net).
+  //      Fires when updatedAt (last ANY update) is stale beyond MISSION_TIMEOUT_MS.
+  //
+  //   2. Stream inactivity — streaming started (first chunk received) but no new
+  //      chunk has arrived in >90 s.  This catches agents stuck mid-tool-call
+  //      (e.g., kubectl waiting on an APISIX gateway that never responds) without
+  //      having to wait the full 5 minutes.
   useEffect(() => {
     const interval = setInterval(() => {
+      const now = Date.now()
+
       setMissions(prev => {
-        const now = Date.now()
-        const hasTimedOut = prev.some(
-          m => m.status === 'running' && (now - new Date(m.updatedAt).getTime()) > MISSION_TIMEOUT_MS
-        )
-        if (!hasTimedOut) return prev
+        const hasIssue = prev.some(m => {
+          if (m.status !== 'running') return false
+          if ((now - new Date(m.updatedAt).getTime()) > MISSION_TIMEOUT_MS) return true
+          const lastStreamTs = lastStreamTimestamp.current.get(m.id)
+          if (lastStreamTs && (now - lastStreamTs) > MISSION_INACTIVITY_TIMEOUT_MS) return true
+          return false
+        })
+        if (!hasIssue) return prev
 
         return prev.map(m => {
           if (m.status !== 'running') return m
-          const elapsed = now - new Date(m.updatedAt).getTime()
-          if (elapsed <= MISSION_TIMEOUT_MS) return m
 
-          const timeoutMinutes = Math.round(MISSION_TIMEOUT_MS / 60_000)
-          // Clean up the pending request for this mission
+          const elapsed = now - new Date(m.updatedAt).getTime()
+          const lastStreamTs = lastStreamTimestamp.current.get(m.id)
+          const isInactive = !!lastStreamTs && (now - lastStreamTs) > MISSION_INACTIVITY_TIMEOUT_MS
+          const isTimedOut = elapsed > MISSION_TIMEOUT_MS
+
+          if (!isTimedOut && !isInactive) return m
+
+          // Clean up pending request and stream tracker for this mission
           for (const [reqId, mId] of pendingRequests.current.entries()) {
-            if (mId === m.id) {
-              pendingRequests.current.delete(reqId)
-            }
+            if (mId === m.id) pendingRequests.current.delete(reqId)
           }
-          emitMissionError(m.type, 'mission_timeout')
+          lastStreamTimestamp.current.delete(m.id)
+
+          emitMissionError(m.type, isInactive ? 'mission_inactivity' : 'mission_timeout')
+
+          const errorContent = isInactive
+            ? `**Agent Not Responding**\n\nThe AI agent started responding but stopped for over ${Math.round(MISSION_INACTIVITY_TIMEOUT_MS / 60_000)} minutes. This usually means the agent is stuck waiting for a tool call to return (e.g., a Kubernetes API call or APISIX gateway request that is not responding).\n\nYou can:\n- **Retry** the mission — the issue may be transient\n- **Check cluster connectivity** — ensure the target cluster API server is reachable\n- **Cancel** and try a simpler or more specific request`
+            : `**Mission Timed Out**\n\nThis mission has been running for over ${Math.round(MISSION_TIMEOUT_MS / 60_000)} minutes without completing. It has been automatically stopped.\n\nYou can:\n- **Retry** the mission with the same or a different prompt\n- **Try a simpler request** that requires less processing\n- **Check your AI provider** configuration in [Settings](/settings)`
+
           return {
             ...m,
             status: 'failed' as MissionStatus,
@@ -346,7 +373,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
               {
                 id: `msg-timeout-${Date.now()}-${m.id}`,
                 role: 'system' as const,
-                content: `**Mission Timed Out**\n\nThis mission has been running for over ${timeoutMinutes} minutes without a response from the AI provider. It has been automatically stopped.\n\nYou can:\n- **Retry** the mission with the same or a different prompt\n- **Try a simpler request** that requires less processing\n- **Check your AI provider** configuration in [Settings](/settings)`,
+                content: errorContent,
                 timestamp: new Date(),
               }
             ]
