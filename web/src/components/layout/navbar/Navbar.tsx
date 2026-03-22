@@ -47,8 +47,8 @@ export function Navbar() {
 
   return (
     <nav data-tour="navbar" className="fixed top-0 left-0 right-0 h-16 glass z-50 px-3 md:px-6 flex items-center justify-between">
-      {/* Left side: Hamburger + Logo */}
-      <div className="flex items-center gap-2 md:gap-3">
+      {/* Left side: Hamburger + Logo — shrink-0 so logo is never compressed */}
+      <div className="flex items-center gap-2 md:gap-3 shrink-0">
         {/* Hamburger menu - mobile only */}
         <button
           onClick={toggleMobileSidebar}
@@ -82,13 +82,14 @@ export function Navbar() {
         </a>
       </div>
 
-      {/* Search - hidden on small mobile */}
-      <div className="hidden sm:block flex-1 max-w-md mx-4">
+      {/* Search - hidden on small mobile; min-w-0 lets it shrink when navbar is tight */}
+      <div className="hidden sm:block flex-1 min-w-0 max-w-md mx-4">
         <Suspense fallback={null}><SearchDropdown /></Suspense>
       </div>
 
-      {/* Right side */}
-      <div className="flex items-center gap-1 md:gap-3">
+      {/* Right side — shrink-0 prevents items (especially UserProfileDropdown)
+           from being squeezed invisible at intermediate widths (see #3191) */}
+      <div className="flex items-center gap-1 md:gap-3 shrink-0">
         {/* Core desktop items: md+ (768px) */}
         <div className="hidden md:flex items-center gap-2">
           {/* Global Filters (includes Clear Filters button) */}
