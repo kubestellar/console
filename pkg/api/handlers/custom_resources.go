@@ -51,9 +51,9 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 
 	if group == "" || version == "" || resource == "" {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "group, version, and resource query parameters are required",
-		})
+		// Return an empty list instead of 400 — callers may query the base URL
+		// before their data context has finished hydrating (e.g. on React mount).
+		return c.JSON(CustomResourceResponse{Items: []CustomResourceItem{}, IsDemoData: false})
 	}
 
 	if h.k8sClient == nil {

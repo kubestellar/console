@@ -140,6 +140,10 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 				clusters[i].Healthy = health.Healthy
 				clusters[i].NodeCount = health.NodeCount
 				clusters[i].PodCount = health.PodCount
+			} else {
+				// No health data collected yet (e.g. immediately after boot).
+				// Signal "initializing" rather than falsely reporting Unhealthy.
+				clusters[i].HealthUnknown = true
 			}
 		}
 

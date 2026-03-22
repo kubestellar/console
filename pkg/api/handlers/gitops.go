@@ -1683,7 +1683,9 @@ func (h *GitOpsHandlers) ListHelmHistory(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 
 	if release == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "release parameter is required"})
+		// Return empty history instead of 400 — callers may query before
+		// their data context has finished hydrating (e.g. on React mount).
+		return c.JSON(fiber.Map{"history": []HelmHistoryEntry{}})
 	}
 
 	// SECURITY: Validate all user-supplied params before passing to helm CLI

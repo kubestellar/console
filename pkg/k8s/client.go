@@ -155,6 +155,7 @@ type ClusterInfo struct {
 	Namespace      string `json:"namespace,omitempty"`
 	AuthMethod     string `json:"authMethod,omitempty"` // exec, token, certificate, auth-provider, unknown
 	Healthy        bool   `json:"healthy"`
+	HealthUnknown  bool   `json:"healthUnknown,omitempty"`  // true if no health data collected yet (initializing)
 	NeverConnected bool   `json:"neverConnected,omitempty"` // true if cluster failed every health probe since startup
 	Source         string `json:"source,omitempty"`
 	NodeCount      int    `json:"nodeCount,omitempty"`
