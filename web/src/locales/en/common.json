@@ -1453,6 +1453,7 @@
     "thanksFeedback": "Thanks for the feedback. Try a different approach or switch to another agent above.",
     "backToMissions": "Back to missions",
     "switchAgentRetry": "Switch agent above and retry",
+    "retryMission": "Retry Mission",
     "retryWithMessage": "Retry with message...",
     "typeMessage": "Type a message...",
     "originalRequest": "Original Request",

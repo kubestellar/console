@@ -799,7 +799,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         // Create helpful error message based on error code
         let errorContent = payload.message || 'Unknown error'
         if (payload.code === 'no_agent' || payload.code === 'agent_unavailable') {
-          errorContent = `${payload.message}\n\n[Configure API Keys →](/settings)\n\nAdd your API key for Claude, OpenAI, or Gemini to use AI missions.`
+          errorContent = `**Mission interrupted — agent not available**\n\nThe AI agent was disconnected or is not reachable. This often happens after a page refresh.\n\n**To fix:**\n1. Make sure your agent (e.g., Claude Code, bob) is running\n2. Select the agent from the top navbar\n3. Click **Retry Mission** below to rerun your request`
         } else if (payload.code === 'authentication_error') {
           errorContent = '**Authentication Error — Agent CLI Needs Attention**\n\nThis is not a console issue. The AI agent\'s API token has expired or is invalid.\n\n**To fix:** Run `/login` in your Claude Code terminal to refresh your OAuth token, or update your API key in [Settings →](/settings).\n\nOnce re-authenticated, retry your message.'
         } else if (payload.code === 'mission_timeout') {
@@ -838,7 +838,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           combinedErrorText.includes('requests per min')
 
         if (isRateLimit) {
-          errorContent = '**AI Provider Rate Limit Exceeded**\n\nThe AI provider returned a quota/rate limit error (HTTP 429). Please wait a minute before retrying, or switch to a different AI provider.\n\n[Configure API Keys →](/settings)'
+          errorContent = '**AI Provider Rate Limit Exceeded**\n\nThe AI provider returned a quota/rate limit error (HTTP 429). Please wait a minute before retrying, or switch to a different AI provider.'
         }
 
         return {

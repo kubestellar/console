@@ -17,6 +17,7 @@ import {
   Pencil,
   Check,
   X,
+  RotateCcw,
 } from 'lucide-react'
 import { useMissions, type Mission } from '../../../hooks/useMissions'
 import { useDemoMode } from '../../../hooks/useDemoMode'
@@ -277,6 +278,14 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
     // Keep focus on input after sending
     setTimeout(() => inputRef.current?.focus(), 0)
   }
+
+  const handleRetryMission = useCallback(() => {
+    // Find the original user prompt (first user message in the conversation)
+    const initialUserMessage = mission.messages.find(m => m.role === 'user')
+    const prompt = initialUserMessage?.content || ''
+    if (!prompt.trim()) return
+    sendMessage(mission.id, prompt)
+  }, [mission.id, mission.messages, sendMessage])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -728,6 +737,15 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               <span className={cn(config.color)}>{config.label}</span>
               <span className="text-muted-foreground">{t('missionChat.switchAgentRetry')}</span>
             </div>
+            {mission.messages.some(m => m.role === 'user') && (
+              <button
+                onClick={handleRetryMission}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                <RotateCcw className="w-4 h-4" />
+                {t('missionChat.retryMission', { defaultValue: 'Retry Mission' })}
+              </button>
+            )}
             <div className="flex gap-2 min-w-0">
               <input
                 ref={inputRef}
