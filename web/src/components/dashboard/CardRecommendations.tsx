@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Clock, ChevronDown, ChevronUp, X, Plus, AlertTriangle, Info, Lightbulb, Timer } from 'lucide-react'
+import { Button } from '../ui/Button'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardRecommendations, CardRecommendation } from '../../hooks/useCardRecommendations'
 import { useSnoozedRecommendations } from '../../hooks/useSnoozedRecommendations'
@@ -227,13 +228,14 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
             <Timer className="w-3 h-3" />
             {countdown}s
           </span>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<ChevronUp className="w-3.5 h-3.5" />}
             onClick={() => { setMinimized(true); safeSetItem(STORAGE_KEY_RECS_COLLAPSED, 'true') }}
-            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
             title="Minimize"
-          >
-            <ChevronUp className="w-3.5 h-3.5" />
-          </button>
+            className="p-1"
+          />
         </div>
       </div>
 
@@ -287,28 +289,30 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
 
                     {/* Action buttons */}
                     <div className="flex flex-wrap gap-1.5">
-                      <button
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        icon={<Plus className="w-3 h-3" />}
+                        loading={isAdding}
                         onClick={() => handleAddCard(rec)}
-                        disabled={isAdding}
-                        className="flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1 bg-primary hover:bg-primary/80 text-white disabled:opacity-50"
+                        className="flex-1"
                       >
-                        <Plus className="w-3 h-3" />
                         {isAdding ? t('dashboard.recommendations.adding') : t('buttons.addCard')}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        icon={<Clock className="w-3 h-3" />}
                         onClick={(e) => handleSnooze(e, rec)}
-                        className="px-2 py-1.5 rounded text-xs font-medium bg-secondary/50 hover:bg-secondary transition-colors"
                         title={t('dashboard.recommendations.snooze')}
-                      >
-                        <Clock className="w-3 h-3" />
-                      </button>
-                      <button
+                      />
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        icon={<X className="w-3 h-3" />}
                         onClick={handleDismiss}
-                        className="px-2 py-1.5 rounded text-xs font-medium bg-secondary/50 hover:bg-secondary transition-colors"
                         title={t('dashboard.recommendations.dismiss')}
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
+                      />
                     </div>
                   </div>
                 </div>

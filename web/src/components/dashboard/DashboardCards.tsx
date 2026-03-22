@@ -107,14 +107,15 @@ export function DashboardCards({
       {/* Header with toggle and actions */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<LayoutGrid className="w-4 h-4" />}
+            iconRight={showCards ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             onClick={() => setShowCards(!showCards)}
-            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
-            <LayoutGrid className="w-4 h-4" />
-            <span>{sectionTitle} ({cards.length})</span>
-            {showCards ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </button>
+            {sectionTitle} ({cards.length})
+          </Button>
           {/* Health indicator */}
           <DashboardHealthIndicator size="sm" />
         </div>

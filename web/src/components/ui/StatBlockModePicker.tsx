@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Settings, Hash, TrendingUp, CircleDot, BarChart3, ArrowUpDown, Layers } from 'lucide-react'
+import { Button } from './Button'
 import type { StatDisplayMode } from './StatsBlockDefinitions'
 import { useModalState } from '../../lib/modals'
 
@@ -111,15 +112,15 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
 
   return (
     <>
-      <button
+      <Button
         ref={triggerRef}
+        variant="ghost"
+        size="sm"
+        icon={<Settings className="w-3 h-3" />}
         onClick={handleToggle}
-        className="absolute top-1.5 right-1.5 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-all z-10"
         title="Change display mode"
-        aria-label="Change display mode"
-      >
-        <Settings className="w-3 h-3" />
-      </button>
+        className="absolute top-1.5 right-1.5 p-1 opacity-0 group-hover:opacity-100 transition-all z-10"
+      />
       {isOpen && createPortal(
         <div
           ref={popoverRef}
