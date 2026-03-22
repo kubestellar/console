@@ -124,12 +124,13 @@ async function fetchAPI<T>(
   return response.json()
 }
 
-// Get list of reachable clusters (prefer local agent data for accurate reachability)
+// Get list of reachable (or not-yet-checked) clusters (prefer local agent data for accurate reachability)
 function getReachableClusters(): string[] {
   // Use local agent's cluster cache - it has up-to-date reachability info
+  // Include reachable === undefined (health check pending) — same logic as getAgentClusters
   if (clusterCacheRef.clusters.length > 0) {
     return clusterCacheRef.clusters
-      .filter(c => c.reachable === true && !c.name.includes('/'))
+      .filter(c => c.reachable !== false && !c.name.includes('/'))
       .map(c => c.name)
   }
   return []
@@ -314,13 +315,16 @@ async function fetchRbacAPI<T>(
 // Agent-based fetchers (used when backend is unavailable but agent is connected)
 // ============================================================================
 
-/** Get reachable cluster names from the shared cluster cache (deduplicated) */
+/** Get reachable (or not-yet-checked) cluster names from the shared cluster cache (deduplicated) */
 function getAgentClusters(): Array<{ name: string; context?: string }> {
   // useCache prevents calling fetchers in demo mode via effectiveEnabled
   // Skip long context-path names (contain '/') — these are duplicates of short-named aliases
   // e.g. "default/api-fmaas-vllm-d-...:6443/..." duplicates "vllm-d"
+  // Include clusters with reachable === undefined (health check pending) to avoid
+  // race condition where cards fetch before health checks complete and cache empty results.
+  // This matches the backend's HealthyClusters() which treats unknown as healthy.
   return clusterCacheRef.clusters
-    .filter(c => c.reachable === true && !c.name.includes('/'))
+    .filter(c => c.reachable !== false && !c.name.includes('/'))
     .map(c => ({ name: c.name, context: c.context }))
 }
 

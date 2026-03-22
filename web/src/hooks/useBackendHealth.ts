@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 export type BackendStatus = 'connected' | 'disconnected' | 'connecting'
 
 const POLL_INTERVAL = 15000 // Check every 15 seconds
-const FAILURE_THRESHOLD = 3 // Require 3 consecutive failures before showing "Connection lost"
+const FAILURE_THRESHOLD = 4 // Require 4 consecutive failures before showing "Connection lost"
+// Short timeout for health checks — a healthy backend responds in <100ms.
+// Using the default 10s timeout causes false failures when the browser's
+// HTTP/1.1 connection pool (6 per origin) is saturated by SSE streams.
+const HEALTH_CHECK_TIMEOUT_MS = 3000
 
 interface BackendState {
   status: BackendStatus
@@ -79,7 +82,7 @@ class BackendHealthManager {
       const response = await fetch('/health', {
         method: 'GET',
         headers: { Accept: 'application/json' },
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+        signal: AbortSignal.timeout(HEALTH_CHECK_TIMEOUT_MS),
       })
 
       if (response.ok) {

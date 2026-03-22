@@ -15,7 +15,9 @@ const DEBOUNCE_MS = 1000
 
 export type SyncStatus = 'idle' | 'saving' | 'saved' | 'error' | 'offline'
 
-/** Fetch helper that routes settings calls to the local kc-agent (saves to ~/.kc/settings.json). */
+/** Fetch helper that routes settings calls to the local kc-agent (saves to ~/.kc/settings.json).
+ * Uses a generous timeout because the agent's HTTP/1.1 connection pool (6 per origin)
+ * can be saturated by concurrent cluster health/data requests during page transitions. */
 async function settingsFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${LOCAL_AGENT_HTTP_URL}${path}`, {
     ...options,
@@ -23,7 +25,7 @@ async function settingsFetch<T>(path: string, options?: RequestInit): Promise<T>
       'Content-Type': 'application/json',
       ...options?.headers,
     },
-    signal: options?.signal ?? AbortSignal.timeout(5000),
+    signal: options?.signal ?? AbortSignal.timeout(15000),
   })
   if (!response.ok) throw new Error(`HTTP ${response.status}`)
   return response.json()
@@ -54,29 +56,37 @@ export function usePersistedSettings() {
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mountedRef = useRef(true)
 
-  // Save current localStorage state to backend (debounced)
+  // Save current localStorage state to backend (debounced, with retry)
   const saveToBackend = useCallback(() => {
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current)
     }
     setSyncStatus('saving')
     debounceTimer.current = setTimeout(async () => {
-      try {
-        const current = collectFromLocalStorage()
-        await settingsFetch('/settings', {
-          method: 'PUT',
-          body: JSON.stringify(current),
-        })
-        if (mountedRef.current) {
-          setSyncStatus('saved')
-          setLastSaved(new Date())
+      const current = collectFromLocalStorage()
+      // Retry once after a delay — transient failures are common during page
+      // transitions when the agent's connection pool is saturated.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          await settingsFetch('/settings', {
+            method: 'PUT',
+            body: JSON.stringify(current),
+          })
+          if (mountedRef.current) {
+            setSyncStatus('saved')
+            setLastSaved(new Date())
+          }
+          return
+        } catch {
+          if (attempt === 0) {
+            await new Promise(r => setTimeout(r, 3000))
+          }
         }
-      } catch {
-        if (mountedRef.current) {
-          setSyncStatus('error')
-        }
-        console.debug('[settings] failed to persist to local agent')
       }
+      if (mountedRef.current) {
+        setSyncStatus('error')
+      }
+      console.debug('[settings] failed to persist to local agent')
     }, DEBOUNCE_MS)
   }, [])
 

@@ -119,8 +119,8 @@ const DASHBOARD_CHUNKS: Record<string, () => Promise<unknown>> = {
   'marketplace': () => import('./components/marketplace/Marketplace'),
 }
 
-// Dashboard always prefetched (it's the home page)
-const ALWAYS_PREFETCH = new Set(['dashboard'])
+// Always prefetched regardless of enabled dashboards
+const ALWAYS_PREFETCH = new Set(['dashboard', 'settings', 'clusters'])
 
 // Prefetch lazy route chunks after initial page load.
 // Batched to avoid overwhelming the Vite dev server with simultaneous
