@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo } from 'react'
+import { useRef, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, Check, Loader2, Sparkles } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
@@ -8,6 +8,7 @@ import type { AgentInfo } from '../../types/agent'
 import { cn } from '../../lib/cn'
 import { useModalState } from '../../lib/modals'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
+import { AgentApprovalDialog, hasApprovedAgents } from './AgentApprovalDialog'
 
 interface AgentSelectorProps {
   compact?: boolean
@@ -26,6 +27,9 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
     typeof window !== 'undefined' ? safeGetItem(PREV_AGENT_KEY) : null
   )
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const [showApproval, setShowApproval] = useState(false)
+  // Stash the agent name the user intended to select when approval was triggered
+  const pendingAgentRef = useRef<string | null>(null)
 
   // Only show agents that are available (installed CLI-based agents).
   // API-key-driven agents are hidden — they can't execute commands to diagnose/repair clusters.
@@ -117,6 +121,12 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   // Always show dropdown (even with 1 agent) so user can access "None" option
 
   const handleSelect = (agentName: string) => {
+    // Gate agent activation behind approval for all non-none selections
+    if (agentName !== 'none' && !hasApprovedAgents()) {
+      pendingAgentRef.current = agentName
+      setShowApproval(true)
+      return
+    }
     selectAgent(agentName)
     closeDropdown()
   }
@@ -186,10 +196,18 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
                 aria-checked={!isNoneSelected}
                 onClick={() => {
                   if (isNoneSelected) {
-                    // Turn AI back on — restore previous agent, or fall back to first available
+                    // Turn AI on — require approval on first use
                     const prev = previousAgentRef.current
-                    const restoreAgent = prev && sortedAgents.find(a => a.name === prev && a.available)
-                    handleSelect(restoreAgent ? restoreAgent.name : (sortedAgents.find(a => a.available)?.name || ''))
+                    const restored = prev ? sortedAgents.find(a => a.name === prev && a.available) : undefined
+                    const targetAgent = restored?.name || sortedAgents.find(a => a.available)?.name || ''
+
+                    if (!hasApprovedAgents()) {
+                      // Show approval dialog before enabling
+                      pendingAgentRef.current = targetAgent
+                      setShowApproval(true)
+                      return
+                    }
+                    handleSelect(targetAgent)
                   } else {
                     // Save current agent before turning AI off
                     previousAgentRef.current = selectedAgent || null
@@ -270,6 +288,23 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
         </div>
       )}
     </div>
+    <AgentApprovalDialog
+      isOpen={showApproval}
+      agents={agents}
+      onApprove={() => {
+        setShowApproval(false)
+        const target = pendingAgentRef.current
+        pendingAgentRef.current = null
+        if (target) {
+          selectAgent(target)
+          closeDropdown()
+        }
+      }}
+      onCancel={() => {
+        setShowApproval(false)
+        pendingAgentRef.current = null
+      }}
+    />
     </>
   )
 }
