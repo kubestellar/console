@@ -3,10 +3,9 @@ import { AlertTriangle, CheckCircle2, AlertCircle } from 'lucide-react'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { RefreshButton } from '../ui/RefreshIndicator'
-import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
-import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardSkeleton, CardAIActions } from '../../lib/cards/CardComponents'
 import type { ClusterEvent } from '../../hooks/useMCP'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
@@ -53,6 +52,7 @@ export function WarningEvents() {
   // Report data state to CardWrapper for failure badge rendering
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
+    isRefreshing,
     isDemoData: isDemoFallback,
     hasAnyData: events.length > 0,
     isFailed,
@@ -105,13 +105,7 @@ export function WarningEvents() {
   })
 
   if (showSkeleton) {
-    return (
-      <div className="space-y-3 p-1">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-      </div>
-    )
+    return <CardSkeleton type="list" rows={3} showHeader showSearch />
   }
 
   if (showEmptyState) {
