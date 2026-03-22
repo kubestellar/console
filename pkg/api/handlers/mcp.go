@@ -657,7 +657,7 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 			log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 		}
-		return c.JSON(fiber.Map{"operator": status, "source": "k8s"})
+		return c.JSON(fiber.Map{"operators": []*k8s.NVIDIAOperatorStatus{status}, "source": "k8s"})
 	}
 
 	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})

@@ -254,6 +254,8 @@ func (h *DashboardHandler) ImportDashboard(c *fiber.Ctx) error {
 			Position:    ce.Position,
 		}
 		if err := h.store.CreateCard(card); err != nil {
+			// Rollback: delete the partially-created dashboard and any cards
+			_ = h.store.DeleteDashboard(dashboard.ID)
 			return fiber.NewError(fiber.StatusInternalServerError, "Failed to create card")
 		}
 	}
