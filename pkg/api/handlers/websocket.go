@@ -295,10 +295,17 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 	// Send authentication success message
 	conn.WriteJSON(Message{Type: "authenticated", Data: map[string]string{"status": "connected"}})
 
-	// Set idle read deadline — reset on every received message.
+	// Set idle read deadline — reset on every received message or pong.
 	// This prevents idle connections from holding OS file descriptors forever
 	// (DoS via infinite idle WebSocket accumulation).
 	conn.SetReadDeadline(time.Now().Add(wsIdleTimeout))
+
+	// Register a pong handler that resets the read deadline whenever the
+	// browser responds to our server-sent pings (automatic in all browsers).
+	conn.SetPongHandler(func(string) error {
+		conn.SetReadDeadline(time.Now().Add(wsIdleTimeout))
+		return nil
+	})
 
 	client := &Client{
 		conn:   conn,
@@ -308,16 +315,29 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 
 	h.register <- client
 
-	// Start writer goroutine
+	// Start writer goroutine — also sends periodic WebSocket-level pings
+	// so the browser responds with pongs and the read deadline keeps resetting.
 	go func() {
+		pingTicker := time.NewTicker(30 * time.Second)
 		defer func() {
+			pingTicker.Stop()
 			conn.Close()
 		}()
 
-		for msg := range client.send {
-			if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
-				log.Printf("WebSocket write error: %v", err)
-				return
+		for {
+			select {
+			case msg, ok := <-client.send:
+				if !ok {
+					return
+				}
+				if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+					log.Printf("WebSocket write error: %v", err)
+					return
+				}
+			case <-pingTicker.C:
+				if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+					return
+				}
 			}
 		}
 	}()
