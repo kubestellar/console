@@ -63,6 +63,24 @@ describe('ChunkErrorBoundary Component', () => {
     expect(screen.getByText('Reload Page')).toBeTruthy()
   })
 
+  it('renders reload UI on safeLazy stale-export error', () => {
+    const ThrowError = () => {
+      throw new Error('Export "Compliance" not found in module — chunk may be stale. Reload the page to get the latest version.')
+    }
+
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    render(
+      <ChunkErrorBoundary>
+        <ThrowError />
+      </ChunkErrorBoundary>
+    )
+
+    expect(screen.getByText('App Updated')).toBeTruthy()
+    expect(screen.getByText('Reload Page')).toBeTruthy()
+  })
+
   it('does not catch non-chunk errors', () => {
     const ThrowError = () => {
       throw new Error('Some other error')

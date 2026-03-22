@@ -31,6 +31,8 @@ export function isChunkLoadMessage(msg: string): boolean {
     // Server returned HTML instead of JS (404 → SPA fallback for missing chunk)
     msg.includes('is not a valid JavaScript MIME type') ||
     // Safari/WebKit uses this message for failed dynamic import()
-    msg.includes('Importing a module script failed')
+    msg.includes('Importing a module script failed') ||
+    // safeLazy() throws this when a named export is missing from a stale chunk
+    msg.includes('chunk may be stale')
   )
 }
