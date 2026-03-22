@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { CheckCircle, WifiOff, Cpu, Loader2, ExternalLink, AlertTriangle, KeyRound } from 'lucide-react'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useClusters, ClusterInfo } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -83,6 +84,7 @@ export function ClusterHealth() {
   const {
     deduplicatedClusters: rawClusters,
     isLoading: isLoadingHook,
+    isRefreshing,
     error,
     lastRefresh,
   } = useClusters()
@@ -142,6 +144,7 @@ export function ClusterHealth() {
   const hasData = rawClusters.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoadingHook || !hasCompletedInitialFetch,
+    isRefreshing,
     hasAnyData: hasData,
     isFailed: !!error && !hasData,
     consecutiveFailures: error ? 1 : 0,
@@ -243,6 +246,12 @@ export function ClusterHealth() {
           <StatusBadge color="purple" title={t('clusterHealth.totalClustersTitle', { count: rawClusters.length })}>
             {rawClusters.length} {t('clusterHealth.clustersLabel')}
           </StatusBadge>
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+            size="sm"
+            showLabel={false}
+          />
         </div>
         <CardControlsRow
           clusterIndicator={
