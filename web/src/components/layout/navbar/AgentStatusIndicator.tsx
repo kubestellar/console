@@ -5,6 +5,7 @@ import { useMissions } from '../../../hooks/useMissions'
 import { useBackendHealth } from '../../../hooks/useBackendHealth'
 import { useDemoMode, isDemoModeForced, getDemoMode } from '../../../hooks/useDemoMode'
 import { SetupInstructionsDialog } from '../../setup/SetupInstructionsDialog'
+import { AgentApprovalDialog, hasApprovedAgents } from '../../agent/AgentApprovalDialog'
 import { cn } from '../../../lib/cn'
 import { useTranslation } from 'react-i18next'
 import { TOAST_DISMISS_MS } from '../../../lib/constants/network'
@@ -12,13 +13,14 @@ import { TOAST_DISMISS_MS } from '../../../lib/constants/network'
 export function AgentStatusIndicator() {
   const { t } = useTranslation(['common'])
   const { status: agentStatus, health: agentHealth, connectionEvents, isConnected, isDegraded, dataErrorCount, lastDataError } = useLocalAgent()
-  const { selectedAgent } = useMissions()
+  const { selectedAgent, agents } = useMissions()
   const { status: backendStatus, isConnected: isBackendConnected, isInClusterMode } = useBackendHealth()
   const { isDemoMode: isDemoModeHook, toggleDemoMode } = useDemoMode()
   // Synchronous fallback prevents flash of WifiOff icon during React transitions
   const isDemoMode = isDemoModeHook || getDemoMode()
   const [showAgentStatus, setShowAgentStatus] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false)
   const agentRef = useRef<HTMLDivElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -171,6 +173,10 @@ export function AgentStatusIndicator() {
                   if (isDemoModeForced && isDemoMode) {
                     setShowSetupDialog(true)
                     setShowAgentStatus(false)
+                  } else if (isDemoMode && !hasApprovedAgents()) {
+                    // Switching from demo → agent: require opt-in first
+                    setShowApprovalDialog(true)
+                    setShowAgentStatus(false)
                   } else {
                     toggleDemoMode()
                   }
@@ -320,6 +326,15 @@ export function AgentStatusIndicator() {
         </div>
       )}
       <SetupInstructionsDialog isOpen={showSetupDialog} onClose={() => setShowSetupDialog(false)} />
+      <AgentApprovalDialog
+        isOpen={showApprovalDialog}
+        agents={agents}
+        onApprove={() => {
+          setShowApprovalDialog(false)
+          toggleDemoMode()
+        }}
+        onCancel={() => setShowApprovalDialog(false)}
+      />
     </div>
   )
 }

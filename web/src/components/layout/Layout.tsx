@@ -12,6 +12,7 @@ import { useLastRoute } from '../../hooks/useLastRoute'
 import { useMissions } from '../../hooks/useMissions'
 import { useDemoMode, isDemoModeForced, hasRealToken } from '../../hooks/useDemoMode'
 import { setDemoMode } from '../../lib/demoMode'
+import { hasApprovedAgents } from '../agent/AgentApprovalDialog'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useClusters } from '../../hooks/mcp/clusters'
 import { emitClusterInventory } from '../../lib/analytics'
@@ -193,7 +194,8 @@ export function Layout({ children }: LayoutProps) {
         demoAutoEnabledRef.current = true
         setDemoMode(true)
       }
-    } else if (agentStatus === 'connected' && isDemoMode && demoAutoEnabledRef.current) {
+    } else if (agentStatus === 'connected' && isDemoMode && demoAutoEnabledRef.current && hasApprovedAgents()) {
+      // Only auto-switch from demo → agent if user has previously approved agents
       demoAutoEnabledRef.current = false
       userToggledOffRef.current = false
       if (demoReEnableTimerRef.current) clearTimeout(demoReEnableTimerRef.current)
