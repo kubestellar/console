@@ -4,7 +4,6 @@ import { useKagentiAgents, useKagentiBuilds, useKagentiTools } from '../../hooks
 import { useCardLoadingState } from './CardDataContext'
 import { Skeleton } from '../ui/Skeleton'
 import { useTranslation } from 'react-i18next'
-import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface KagentiStatusCardProps {
   config?: {
@@ -45,22 +44,24 @@ function MetricTile({ icon: Icon, label, value, sub, accent }: {
 
 export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
   const { t: _t } = useTranslation()
-  const { isDemoMode } = useDemoMode()
   const {
     data: agents,
     isLoading: agentsLoading,
+    isDemoFallback: agentDemo,
     consecutiveFailures: agentFailures,
   } = useKagentiAgents({ cluster: config?.cluster })
 
   const {
     data: builds,
     isLoading: buildsLoading,
+    isDemoFallback: buildDemo,
     consecutiveFailures: buildFailures,
   } = useKagentiBuilds({ cluster: config?.cluster })
 
   const {
     data: tools,
     isLoading: toolsLoading,
+    isDemoFallback: toolDemo,
     consecutiveFailures: toolFailures,
   } = useKagentiTools({ cluster: config?.cluster })
 
@@ -73,7 +74,7 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
     hasAnyData,
     isFailed: maxFailures >= 3,
     consecutiveFailures: maxFailures,
-    isDemoData: isDemoMode,
+    isDemoData: agentDemo || buildDemo || toolDemo,
   })
 
   // Compute stats

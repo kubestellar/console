@@ -5,7 +5,6 @@ import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../..
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { Skeleton } from '../../ui/Skeleton'
 import { useTranslation } from 'react-i18next'
-import { useDemoMode } from '../../../hooks/useDemoMode'
 
 interface KagentiToolRegistryProps {
   config?: { cluster?: string }
@@ -15,10 +14,10 @@ type SortField = 'name' | 'cluster'
 
 export function KagentiToolRegistry({ config }: KagentiToolRegistryProps) {
   const { t: _t } = useTranslation()
-  const { isDemoMode } = useDemoMode()
   const {
     data: tools,
     isLoading,
+    isDemoFallback,
     consecutiveFailures,
   } = useKagentiTools({ cluster: config?.cluster })
 
@@ -27,7 +26,7 @@ export function KagentiToolRegistry({ config }: KagentiToolRegistryProps) {
     hasAnyData: tools.length > 0,
     isFailed: consecutiveFailures >= 3,
     consecutiveFailures,
-    isDemoData: isDemoMode,
+    isDemoData: isDemoFallback,
   })
 
   const {

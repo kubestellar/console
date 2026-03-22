@@ -6,7 +6,6 @@ import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../..
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { Skeleton } from '../../ui/Skeleton'
 import { useTranslation } from 'react-i18next'
-import { useDemoMode } from '../../../hooks/useDemoMode'
 
 interface KagentiAgentDiscoveryProps {
   config?: { cluster?: string }
@@ -16,10 +15,10 @@ type SortField = 'name' | 'cluster'
 
 export function KagentiAgentDiscovery({ config }: KagentiAgentDiscoveryProps) {
   const { t: _t } = useTranslation()
-  const { isDemoMode } = useDemoMode()
   const {
     data: cards,
     isLoading,
+    isDemoFallback,
     consecutiveFailures,
   } = useKagentiCards({ cluster: config?.cluster })
 
@@ -28,7 +27,7 @@ export function KagentiAgentDiscovery({ config }: KagentiAgentDiscoveryProps) {
     hasAnyData: cards.length > 0,
     isFailed: consecutiveFailures >= 3,
     consecutiveFailures,
-    isDemoData: isDemoMode,
+    isDemoData: isDemoFallback,
   })
 
   // Aggregate skill counts

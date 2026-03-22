@@ -3,7 +3,6 @@ import { Bot, Wrench } from 'lucide-react'
 import { useKagentiAgents, useKagentiTools, type KagentiAgent, type KagentiTool } from '../../../hooks/mcp/kagenti'
 import { useCardLoadingState } from '../CardDataContext'
 import { useTranslation } from 'react-i18next'
-import { useDemoMode } from '../../../hooks/useDemoMode'
 
 const FRAMEWORK_COLORS: Record<string, string> = {
   langgraph: '#60a5fa',
@@ -29,15 +28,14 @@ interface TopoEdge {
 
 export function KagentiTopology({ config }: { config?: Record<string, unknown> }) {
   const { t } = useTranslation('cards')
-  const { isDemoMode } = useDemoMode()
   const cluster = config?.cluster as string | undefined
-  const { data: agents, isLoading: agentsLoading } = useKagentiAgents({ cluster })
-  const { data: tools, isLoading: toolsLoading } = useKagentiTools({ cluster })
+  const { data: agents, isLoading: agentsLoading, isDemoFallback: agentsDemo } = useKagentiAgents({ cluster })
+  const { data: tools, isLoading: toolsLoading, isDemoFallback: toolsDemo } = useKagentiTools({ cluster })
 
   useCardLoadingState({
     isLoading: agentsLoading || toolsLoading,
     hasAnyData: agents.length > 0 || tools.length > 0,
-    isDemoData: isDemoMode,
+    isDemoData: agentsDemo || toolsDemo,
   })
 
   const { nodes, edges } = useMemo(() => {
