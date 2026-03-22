@@ -16,6 +16,10 @@ const (
 	wsInactiveCutoff = 60 * time.Second
 	// wsReadDeadline is the read deadline for WebSocket ping/pong frames.
 	wsReadDeadline = 5 * time.Second
+	// wsIdleTimeout is the maximum time a connection may be idle (no message received).
+	// Connections that exceed this without sending a ping are closed to prevent DoS via
+	// exhausted file descriptors.
+	wsIdleTimeout = 90 * time.Second
 )
 
 // Message represents a WebSocket message
@@ -291,8 +295,10 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 	// Send authentication success message
 	conn.WriteJSON(Message{Type: "authenticated", Data: map[string]string{"status": "connected"}})
 
-	// Clear read deadline after successful auth
-	conn.SetReadDeadline(time.Time{})
+	// Set idle read deadline — reset on every received message.
+	// This prevents idle connections from holding OS file descriptors forever
+	// (DoS via infinite idle WebSocket accumulation).
+	conn.SetReadDeadline(time.Now().Add(wsIdleTimeout))
 
 	client := &Client{
 		conn:   conn,
@@ -330,6 +336,10 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 			}
 			break
 		}
+
+		// Reset idle deadline on every received message so active connections
+		// are never dropped while they are communicating.
+		conn.SetReadDeadline(time.Now().Add(wsIdleTimeout))
 
 		// Handle incoming messages (ping/pong, etc.)
 		var msg Message
