@@ -1,4 +1,4 @@
-import { Loader2, AlertTriangle, ChevronRight, Server, Cpu, MemoryStick, Zap } from 'lucide-react'
+import { AlertTriangle, ChevronRight, Server, Cpu, MemoryStick, Zap } from 'lucide-react'
 import { useCachedPods } from '../../hooks/useCachedData'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls } from '../ui/CardControls'
@@ -6,7 +6,7 @@ import { Pagination } from '../ui/Pagination'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCardLoadingState } from './CardDataContext'
-import { CardClusterFilter, CardSearchInput, CardAIActions } from '../../lib/cards/CardComponents'
+import { CardClusterFilter, CardSearchInput, CardSkeleton, CardAIActions } from '../../lib/cards/CardComponents'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
@@ -85,6 +85,7 @@ export function TopPods({ config }: TopPodsProps) {
   // Report data state to CardWrapper for failure badge rendering
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
+    isRefreshing,
     isDemoData: isDemoMode || isDemoFallback,
     hasAnyData: rawPods.length > 0,
     isFailed,
@@ -141,11 +142,7 @@ export function TopPods({ config }: TopPodsProps) {
   })
 
   if (showSkeleton) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
-    )
+    return <CardSkeleton rows={5} type="list" showHeader showSearch />
   }
 
   if (showEmptyState) {
