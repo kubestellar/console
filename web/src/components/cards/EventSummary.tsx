@@ -3,7 +3,7 @@ import { AlertTriangle, CheckCircle2, Activity, Server, ChevronDown, AlertCircle
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { RefreshButton } from '../ui/RefreshIndicator'
-import { Skeleton } from '../ui/Skeleton'
+import { CardSkeleton } from '../../lib/cards/CardComponents'
 import { useChartFilters } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
@@ -25,6 +25,7 @@ export function EventSummary() {
   // Report state to CardWrapper for refresh animation
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
+    isRefreshing,
     isDemoData: isDemoFallback,
     hasAnyData: events.length > 0,
     isFailed: isFailed && events.length === 0,
@@ -78,13 +79,7 @@ export function EventSummary() {
   }, [filteredEvents])
 
   if (showSkeleton) {
-    return (
-      <div className="space-y-3 p-1">
-        <Skeleton className="h-16 w-full" />
-        <Skeleton className="h-4 w-3/4" />
-        <Skeleton className="h-4 w-1/2" />
-      </div>
-    )
+    return <CardSkeleton type="status" rows={3} showHeader={false} />
   }
 
   if (showEmptyState) {
