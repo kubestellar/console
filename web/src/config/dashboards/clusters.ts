@@ -17,7 +17,6 @@ export const clustersDashboardConfig: UnifiedDashboardConfig = {
     { id: 'cluster-metrics-1', cardType: 'cluster_metrics', position: { w: 6, h: 3 } },
     { id: 'cluster-comparison-1', cardType: 'cluster_comparison', position: { w: 6, h: 3 } },
     { id: 'provider-health-1', cardType: 'provider_health', position: { w: 4, h: 3 } },
-    { id: 'cluster-locations-1', cardType: 'cluster_locations', position: { w: 8, h: 4 } },
   ],
   features: {
     dragDrop: true,
