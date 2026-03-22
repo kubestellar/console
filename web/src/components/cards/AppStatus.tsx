@@ -1,11 +1,12 @@
 import { useMemo } from 'react'
-import { Box, CheckCircle, AlertTriangle, Clock, ChevronRight, Loader2 } from 'lucide-react'
+import { Box, CheckCircle, AlertTriangle, Clock, ChevronRight } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCachedDeployments } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useCardLoadingState } from './CardDataContext'
-import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardSkeleton, CardAIActions } from '../../lib/cards/CardComponents'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { useTranslation } from 'react-i18next'
 
@@ -47,11 +48,12 @@ interface AppData {
 export function AppStatus(_props: AppStatusProps) {
   const { t: _t } = useTranslation()
   const { drillToDeployment } = useDrillDownActions()
-  const { deployments, isLoading, isDemoFallback, isFailed, consecutiveFailures } = useCachedDeployments()
+  const { deployments, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, lastRefresh } = useCachedDeployments()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
+    isRefreshing,
     isDemoData: isDemoFallback,
     hasAnyData: deployments.length > 0,
     isFailed,
@@ -176,11 +178,7 @@ export function AppStatus(_props: AppStatusProps) {
   }
 
   if (showSkeleton) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
-    )
+    return <CardSkeleton rows={5} type="list" showSearch />
   }
 
   if (showEmptyState) {
@@ -220,6 +218,8 @@ export function AppStatus(_props: AppStatusProps) {
           onSortDirectionChange: setSortDirection,
         }}
       />
+
+      <RefreshIndicator isRefreshing={isRefreshing} lastUpdated={lastRefresh ? new Date(lastRefresh) : null} size="xs" />
 
       {/* Search */}
       <CardSearchInput
