@@ -4,7 +4,7 @@ import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 export type BackendStatus = 'connected' | 'disconnected' | 'connecting'
 
 const POLL_INTERVAL = 15000 // Check every 15 seconds
-const FAILURE_THRESHOLD = 2 // Require 2 consecutive failures
+const FAILURE_THRESHOLD = 3 // Require 3 consecutive failures before showing "Connection lost"
 
 interface BackendState {
   status: BackendStatus
