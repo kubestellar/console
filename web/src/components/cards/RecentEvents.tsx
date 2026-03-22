@@ -4,11 +4,10 @@ import { useCachedEvents } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { RefreshButton } from '../ui/RefreshIndicator'
-import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
-import { CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { CardControlsRow, CardPaginationFooter, CardSearchInput, CardSkeleton } from '../../lib/cards/CardComponents'
 import type { ClusterEvent } from '../../hooks/useMCP'
 import { useTranslation } from 'react-i18next'
 
@@ -43,6 +42,7 @@ export function RecentEvents() {
   // Report data state to CardWrapper for failure badge rendering
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
+    isRefreshing,
     isDemoData: isDemoMode || isDemoFallback,
     hasAnyData: events.length > 0,
     isFailed,
@@ -90,13 +90,7 @@ export function RecentEvents() {
   })
 
   if (showSkeleton) {
-    return (
-      <div className="space-y-3 p-1">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-      </div>
-    )
+    return <CardSkeleton rows={3} type="list" showHeader={false} />
   }
 
   if (showEmptyState) {
@@ -157,6 +151,9 @@ export function RecentEvents() {
           />
         </div>
       </div>
+
+      {/* Search */}
+      <CardSearchInput value={filters.search} onChange={filters.setSearch} placeholder="Search events..." />
 
       {/* Error Display */}
       {isFailed && (
