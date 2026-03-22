@@ -152,7 +152,11 @@ fi
 # Start kc-agent
 if command -v kc-agent &>/dev/null; then
     echo "Starting kc-agent..."
-    kc-agent &
+    KC_AGENT_ARGS=()
+    if [ -n "$KUBECONFIG" ]; then
+        KC_AGENT_ARGS+=(--kubeconfig "$KUBECONFIG")
+    fi
+    kc-agent "${KC_AGENT_ARGS[@]}" &
     AGENT_PID=$!
     sleep 2
 else

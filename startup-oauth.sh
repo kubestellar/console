@@ -327,8 +327,13 @@ AGENT_LOOP_PID=""
 if [ -n "$KC_AGENT_BIN" ]; then
     echo -e "${GREEN}Starting kc-agent ($KC_AGENT_BIN)...${NC}"
     (
+        # Pass KUBECONFIG from .env / environment as --kubeconfig flag
+        KC_AGENT_ARGS=()
+        if [ -n "$KUBECONFIG" ]; then
+            KC_AGENT_ARGS+=(--kubeconfig "$KUBECONFIG")
+        fi
         while true; do
-            "$KC_AGENT_BIN" &
+            "$KC_AGENT_BIN" "${KC_AGENT_ARGS[@]}" &
             CHILD=$!
             echo "[kc-agent] Started (PID $CHILD)"
             wait $CHILD
