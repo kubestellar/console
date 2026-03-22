@@ -33,6 +33,7 @@ const (
 	clusterProbeTimeout       = 5 * time.Second
 	k8sClientTimeout          = 45 * time.Second
 	clusterCacheTTL           = 60 * time.Second
+	authFailureCacheTTL       = 10 * time.Minute // longer TTL for auth errors to avoid exec-plugin spam (#3158)
 	podIssueAgeThreshold      = 5 * time.Minute
 	podPendingAgeThreshold    = 2 * time.Minute
 	clusterEventDebounce      = 500 * time.Millisecond
@@ -1052,35 +1053,45 @@ func (m *MultiClusterClient) WarmupHealthCache() {
 
 			client, clientErr := m.GetClient(ctxName)
 			if clientErr != nil {
+				errType := classifyError(clientErr.Error())
 				m.mu.Lock()
 				m.healthCache[ctxName] = &ClusterHealth{
 					Cluster:      name,
 					Reachable:    false,
 					Healthy:      false,
-					ErrorType:    classifyError(clientErr.Error()),
+					ErrorType:    errType,
 					ErrorMessage: clientErr.Error(),
 					CheckedAt:    time.Now().Format(time.RFC3339),
 				}
 				m.cacheTime[ctxName] = time.Now()
 				m.mu.Unlock()
-				log.Printf("[Warmup] %s: unreachable (client error)", name)
+				if errType == "auth" {
+					log.Printf("[Warmup] %s: auth failure — run credential refresh (e.g. tsh kube login) to restore access", name)
+				} else {
+					log.Printf("[Warmup] %s: unreachable (client error)", name)
+				}
 				return
 			}
 
 			_, listErr := client.CoreV1().Namespaces().List(probeCtx, metav1.ListOptions{Limit: 1})
 			if listErr != nil {
+				errType := classifyError(listErr.Error())
 				m.mu.Lock()
 				m.healthCache[ctxName] = &ClusterHealth{
 					Cluster:      name,
 					Reachable:    false,
 					Healthy:      false,
-					ErrorType:    classifyError(listErr.Error()),
+					ErrorType:    errType,
 					ErrorMessage: listErr.Error(),
 					CheckedAt:    time.Now().Format(time.RFC3339),
 				}
 				m.cacheTime[ctxName] = time.Now()
 				m.mu.Unlock()
-				log.Printf("[Warmup] %s: unreachable (%v)", name, listErr)
+				if errType == "auth" {
+					log.Printf("[Warmup] %s: auth failure (will cache for %v to avoid exec-plugin spam)", name, authFailureCacheTTL)
+				} else {
+					log.Printf("[Warmup] %s: unreachable (%v)", name, listErr)
+				}
 			} else {
 				m.mu.Lock()
 				m.healthCache[ctxName] = &ClusterHealth{
@@ -1337,11 +1348,17 @@ func classifyError(errMsg string) string {
 
 // GetClusterHealth returns health status for a cluster
 func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName string) (*ClusterHealth, error) {
-	// Check cache — also save previous cached data for fallback on partial failures
+	// Check cache — also save previous cached data for fallback on partial failures.
+	// Auth-failed clusters use a longer TTL to avoid repeatedly triggering exec
+	// credential plugins (e.g. tsh) that flood stderr with relogin errors (#3158).
 	var prevCached *ClusterHealth
 	m.mu.RLock()
 	if health, ok := m.healthCache[contextName]; ok {
-		if time.Since(m.cacheTime[contextName]) < m.cacheTTL {
+		ttl := m.cacheTTL
+		if health.ErrorType == "auth" {
+			ttl = authFailureCacheTTL
+		}
+		if time.Since(m.cacheTime[contextName]) < ttl {
 			m.mu.RUnlock()
 			return health, nil
 		}
