@@ -213,6 +213,10 @@ fi
 # Create data directory
 mkdir -p ./data
 
+# Stage file — watchdog reads this to show startup progress
+STAGE_FILE="/tmp/.kc-startup-stage"
+write_stage() { echo "$1" > "$STAGE_FILE"; }
+
 echo -e "${GREEN}Configuration:${NC}"
 echo "  Mode: OAuth (real GitHub login)"
 echo "  GitHub Client ID: ${GITHUB_CLIENT_ID:0:8}..."
@@ -272,7 +276,7 @@ cleanup() {
     kill $AGENT_LOOP_PID 2>/dev/null || true
     kill $AGENT_PID 2>/dev/null || true
     kill $WATCHDOG_PID 2>/dev/null || true
-    rm -f "$SHUTDOWN_FLAG"
+    rm -f "$SHUTDOWN_FLAG" "$STAGE_FILE"
     exit 0
 }
 trap cleanup SIGINT SIGTERM EXIT
@@ -359,6 +363,7 @@ if [ "$USE_DEV_SERVER" = true ]; then
 
     # Start watchdog first so users see a "waiting" page immediately
     if [ "$WATCHDOG_RUNNING" = false ]; then
+        write_stage "watchdog"
         echo -e "${GREEN}Starting watchdog on port 8080...${NC}"
         GOWORK=off go run ./cmd/console --watchdog --backend-port "$BACKEND_LISTEN_PORT" &
         WATCHDOG_PID=$!
@@ -366,13 +371,16 @@ if [ "$USE_DEV_SERVER" = true ]; then
     fi
 
     if [ ! -d "web/node_modules" ]; then
+        write_stage "npm_install"
         safe_npm_install web
     fi
+    write_stage "backend_compiling"
     echo -e "${GREEN}Starting backend on port $BACKEND_LISTEN_PORT (OAuth mode)...${NC}"
     BACKEND_PORT=$BACKEND_LISTEN_PORT GOWORK=off go run ./cmd/console &
     BACKEND_PID=$!
     sleep 2
 
+    write_stage "vite_starting"
     echo -e "${GREEN}Starting Vite dev server...${NC}"
     (cd web && npm run dev -- --port 5174) &
     FRONTEND_PID=$!
@@ -391,6 +399,7 @@ else
     # Start watchdog first so users see a "waiting" page during the build
     # instead of a connection refused error
     if [ "$WATCHDOG_RUNNING" = false ]; then
+        write_stage "watchdog"
         echo -e "${GREEN}Starting watchdog on port 8080...${NC}"
         GOWORK=off go run ./cmd/console --watchdog --backend-port "$BACKEND_LISTEN_PORT" &
         WATCHDOG_PID=$!
@@ -398,13 +407,16 @@ else
     fi
 
     if [ ! -d "web/node_modules" ]; then
+        write_stage "npm_install"
         safe_npm_install web
     fi
+    write_stage "frontend_build"
     echo -e "${GREEN}Building frontend...${NC}"
     (cd web && npm run build)
     echo -e "${GREEN}Frontend built successfully${NC}"
 
     # Start backend on port 8081 — watchdog on 8080 proxies to it
+    write_stage "backend_compiling"
     echo -e "${GREEN}Starting backend on port $BACKEND_LISTEN_PORT (OAuth mode)...${NC}"
     BACKEND_PORT=$BACKEND_LISTEN_PORT GOWORK=off go run ./cmd/console &
     BACKEND_PID=$!

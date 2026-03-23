@@ -34,6 +34,7 @@ const (
 	watchdogPidFilePerms        = 0600
 	watchdogDefaultBackendPort  = 8081
 	watchdogDefaultListenPort   = 8080
+	watchdogStageFile           = "/tmp/.kc-startup-stage"
 )
 
 // WatchdogConfig holds configuration for the watchdog reverse proxy.
@@ -60,6 +61,7 @@ func runWatchdog(cfg WatchdogConfig) error {
 	// Track backend health with atomic for lock-free reads
 	var backendHealthy int32 // 0 = unhealthy, 1 = healthy
 	var fallbacksServed int64 // count of fallback pages served (for observability)
+	var backendStatus atomic.Value // raw status string from /health ("ok", "starting", "")
 
 	// Create reverse proxy
 	proxy := httputil.NewSingleHostReverseProxy(backendURL)
@@ -117,21 +119,30 @@ func runWatchdog(cfg WatchdogConfig) error {
 	defer cancel()
 
 	// Background health poller
-	go pollBackendHealth(ctx, backendURL.String(), &backendHealthy)
+	go pollBackendHealth(ctx, backendURL.String(), &backendHealthy, &backendStatus)
 
 	// Request handler
 	mux := http.NewServeMux()
 
-	// Watchdog's own health endpoint — always responds 200 (liveness), never proxied
+	// Watchdog's own health endpoint — always responds 200 (liveness), never proxied.
+	// Includes the current startup stage from the stage file written by startup-oauth.sh.
 	mux.HandleFunc("/watchdog/health", func(w http.ResponseWriter, r *http.Request) {
-		status := "down"
+		beStatus := "down"
 		if atomic.LoadInt32(&backendHealthy) == 1 {
-			status = "ok"
+			beStatus = "ok"
+		}
+		stage := readStartupStage()
+		if rawStatus, ok := backendStatus.Load().(string); ok && rawStatus == "starting" {
+			stage = "backend_starting"
+		}
+		if beStatus == "ok" {
+			stage = "ready"
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":           "watchdog",
-			"backend":          status,
+			"backend":          beStatus,
+			"stage":            stage,
 			"fallbacks_served": atomic.LoadInt64(&fallbacksServed),
 		})
 	})
@@ -187,29 +198,34 @@ func runWatchdog(cfg WatchdogConfig) error {
 }
 
 // checkBackendHealth performs a single health check against the backend.
-// Returns true only if the backend responds with {"status": "ok"}.
-func checkBackendHealth(client *http.Client, healthURL string) bool {
+// Returns the status string ("ok", "starting", "shutting_down") or "" if unreachable.
+func checkBackendHealth(client *http.Client, healthURL string) string {
 	resp, err := client.Get(healthURL)
 	if err != nil {
-		return false
+		return ""
 	}
 	defer resp.Body.Close()
 	var body map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		return false
+		return ""
 	}
-	return body["status"] == "ok"
+	if s, ok := body["status"].(string); ok {
+		return s
+	}
+	return ""
 }
 
-// pollBackendHealth polls the backend's /health endpoint and updates the atomic flag.
+// pollBackendHealth polls the backend's /health endpoint and updates the atomic flags.
 // Only status "ok" counts as healthy — "starting" and "shutting_down" are treated as unhealthy.
-func pollBackendHealth(ctx context.Context, backendBase string, healthy *int32) {
+func pollBackendHealth(ctx context.Context, backendBase string, healthy *int32, backendStatus *atomic.Value) {
 	client := &http.Client{Timeout: watchdogHealthTimeout}
 	healthURL := backendBase + "/health"
 
 	for {
 		wasHealthy := atomic.LoadInt32(healthy) == 1
-		isHealthy := checkBackendHealth(client, healthURL)
+		status := checkBackendHealth(client, healthURL)
+		backendStatus.Store(status)
+		isHealthy := status == "ok"
 
 		if isHealthy {
 			if !wasHealthy {
@@ -247,6 +263,20 @@ func serveFallback(w http.ResponseWriter, r *http.Request) {
 		"error":  "backend_unavailable",
 		"status": "watchdog",
 	})
+}
+
+// readStartupStage reads the current startup stage from the stage file.
+// Returns "watchdog" if the file doesn't exist or can't be read.
+func readStartupStage() string {
+	data, err := os.ReadFile(watchdogStageFile)
+	if err != nil {
+		return "watchdog"
+	}
+	stage := strings.TrimSpace(string(data))
+	if stage == "" {
+		return "watchdog"
+	}
+	return stage
 }
 
 // writePidFile writes the current process ID to the given file path.
