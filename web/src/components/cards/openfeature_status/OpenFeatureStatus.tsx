@@ -1,6 +1,7 @@
-import { CheckCircle, AlertTriangle, RefreshCw, Flag, Server, Activity } from 'lucide-react'
+import { CheckCircle, AlertTriangle, Flag, Server, Activity } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../ui/Skeleton'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { useOpenFeatureStatus } from './useOpenFeatureStatus'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { MetricTile } from '../../../lib/cards/CardComponents'
@@ -12,30 +13,13 @@ const SKELETON_HEADER_HEIGHT = 36
 const SKELETON_METRIC_HEIGHT = 80
 const SKELETON_TABLE_HEIGHT = 120
 
-
-function useFormatRelativeTime() {
-  const { t } = useTranslation('cards')
-  return (isoString: string): string => {
-    const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return t('openFeature.syncedJustNow')
-    const minute = 60_000
-    const hour = 60 * minute
-    const day = 24 * hour
-    if (diff < minute) return t('openFeature.syncedJustNow')
-    if (diff < hour) return t('openFeature.syncedMinutesAgo', { count: Math.floor(diff / minute) })
-    if (diff < day) return t('openFeature.syncedHoursAgo', { count: Math.floor(diff / hour) })
-    return t('openFeature.syncedDaysAgo', { count: Math.floor(diff / day) })
-  }
-}
-
 export function OpenFeatureStatus() {
   const { t } = useTranslation('cards')
   // useDemoMode provides explicit demo mode awareness; useOpenFeatureStatus also
   // handles demo data internally via useCache, but we reference isDemoMode here
   // to suppress the "not-installed" state when demo data is being shown.
   const { isDemoMode } = useDemoMode()
-  const formatRelativeTime = useFormatRelativeTime()
-  const { data, error, showSkeleton, showEmptyState, isRefreshing } = useOpenFeatureStatus()
+  const { data, error, showSkeleton, showEmptyState, isRefreshing, lastRefresh } = useOpenFeatureStatus()
 
   if (showSkeleton) {
     return (
@@ -102,10 +86,12 @@ export function OpenFeatureStatus() {
           )}
           {healthLabel}
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          {isRefreshing && <RefreshCw className="w-3 h-3 animate-spin" />}
-          <span>{formatRelativeTime(data.lastCheckTime)}</span>
-        </div>
+        <RefreshIndicator
+          isRefreshing={isRefreshing}
+          lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+          size="sm"
+          showLabel={true}
+        />
       </div>
 
       {/* Metric tiles */}

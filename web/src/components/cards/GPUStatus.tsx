@@ -6,6 +6,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Skeleton } from '../ui/Skeleton'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { useCardLoadingState } from './CardDataContext'
@@ -40,6 +41,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
     isLoading: hookLoading,
     isDemoFallback,
     isRefreshing,
+    lastRefresh,
   } = useCachedGPUNodes(cluster)
   const { drillToCluster } = useDrillDownActions()
 
@@ -177,6 +179,12 @@ export function GPUStatus({ config }: GPUStatusProps) {
           <StatusBadge color="purple">
             {t('gpuStatus.clusterCount', { count: totalItems })}
           </StatusBadge>
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+            size="sm"
+            showLabel={false}
+          />
         </div>
         <CardControlsRow
           clusterIndicator={{

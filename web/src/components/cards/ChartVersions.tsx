@@ -3,6 +3,7 @@ import { Package } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedHelmReleases } from '../../hooks/useCachedData'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { CardSkeleton, CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
@@ -42,6 +43,7 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
     consecutiveFailures,
     isDemoFallback: isDemoData,
     isRefreshing,
+    lastRefresh,
   } = useCachedHelmReleases()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
@@ -139,7 +141,12 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2" />
+        <RefreshIndicator
+          isRefreshing={isRefreshing}
+          lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+          size="sm"
+          showLabel={true}
+        />
         <CardControlsRow
           clusterIndicator={{
             selectedCount: localClusterFilter.length,

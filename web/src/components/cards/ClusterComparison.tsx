@@ -5,6 +5,7 @@ import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -18,7 +19,7 @@ interface ClusterComparisonProps {
 export function ClusterComparison({ config }: ClusterComparisonProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: rawClusters, isLoading: clustersLoading } = useClusters()
-  const { nodes: gpuNodes, isDemoFallback, isRefreshing } = useCachedGPUNodes()
+  const { nodes: gpuNodes, isDemoFallback, isRefreshing, lastRefresh } = useCachedGPUNodes()
   const [selectedClusters, setSelectedClusters] = useState<string[]>(config?.clusters || [])
   const { isDemoMode } = useDemoMode()
 
@@ -136,6 +137,12 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-end mb-4">
+        <RefreshIndicator
+          isRefreshing={isRefreshing}
+          lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+          size="sm"
+          showLabel={true}
+        />
       </div>
 
       {/* Cluster selector */}

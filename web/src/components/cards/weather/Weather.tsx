@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { WeatherAnimation, getWeatherCondition, getConditionColor } from './WeatherAnimation'
 import { WEATHER_API } from '../../../config/externalApis'
 import { useCardLoadingState } from '../CardDataContext'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { useCache } from '../../../lib/cache'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
 import type {
@@ -119,7 +120,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   }, [units, forecastLength])
 
   const weatherCacheKey = `weather:${currentLocation.latitude}:${currentLocation.longitude}:${units}:${forecastLength}`
-  const { data: weatherData, isLoading, isRefreshing, isFailed, isDemoFallback, refetch } = useCache<WeatherData>({
+  const { data: weatherData, isLoading, isRefreshing, isFailed, isDemoFallback, lastRefresh, refetch } = useCache<WeatherData>({
     key: weatherCacheKey,
     category: 'default',
     initialData: INITIAL_WEATHER,
@@ -711,7 +712,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
       </div>
 
       {/* Footer */}
-      <div className="mt-3 pt-2 border-t border-border/30 text-xs text-center text-muted-foreground">
+      <div className="mt-3 pt-2 border-t border-border/30 text-xs text-muted-foreground flex items-center justify-between">
         <a
           href="https://open-meteo.com"
           target="_blank"
@@ -721,6 +722,12 @@ export function Weather({ config }: { config?: WeatherConfig }) {
           Weather data from Open-Meteo
           <ExternalLink className="w-3 h-3" />
         </a>
+        <RefreshIndicator
+          isRefreshing={isRefreshing}
+          lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+          size="xs"
+          showLabel={true}
+        />
       </div>
     </div>
   )

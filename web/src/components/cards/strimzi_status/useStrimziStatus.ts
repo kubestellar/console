@@ -190,6 +190,7 @@ export interface UseStrimziStatusResult {
   data: StrimziStatus
   loading: boolean
   isRefreshing: boolean
+  lastRefresh: number | null
   error: boolean
   consecutiveFailures: number
   showSkeleton: boolean
@@ -197,7 +198,7 @@ export interface UseStrimziStatusResult {
 }
 
 export function useStrimziStatus(): UseStrimziStatusResult {
-  const { data, isLoading, isRefreshing, isFailed, consecutiveFailures, isDemoFallback } =
+  const { data, isLoading, isRefreshing, isFailed, consecutiveFailures, isDemoFallback, lastRefresh } =
     useCache<StrimziStatus>({
       key: CACHE_KEY,
       category: 'default',
@@ -224,6 +225,7 @@ export function useStrimziStatus(): UseStrimziStatusResult {
     data,
     loading: isLoading,
     isRefreshing,
+    lastRefresh,
     error: isFailed && !hasAnyData,
     consecutiveFailures,
     showSkeleton,

@@ -231,12 +231,13 @@ export interface UseOpenFeatureStatusResult {
   data: OpenFeatureStatus
   error: boolean
   isRefreshing: boolean
+  lastRefresh: number | null
   showSkeleton: boolean
   showEmptyState: boolean
 }
 
 export function useOpenFeatureStatus(): UseOpenFeatureStatusResult {
-  const { data, isLoading, isRefreshing, isFailed, consecutiveFailures, isDemoFallback } = useCache<OpenFeatureStatus>({
+  const { data, isLoading, isRefreshing, isFailed, consecutiveFailures, isDemoFallback, lastRefresh } = useCache<OpenFeatureStatus>({
     key: CACHE_KEY,
     fetcher: fetchOpenFeatureStatus,
     demoData: OPENFEATURE_DEMO_DATA,
@@ -262,6 +263,7 @@ export function useOpenFeatureStatus(): UseOpenFeatureStatusResult {
     data,
     error: isFailed && !hasAnyData,
     isRefreshing,
+    lastRefresh,
     showSkeleton,
     showEmptyState,
   }

@@ -8,6 +8,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useTranslation } from 'react-i18next'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 
@@ -71,7 +72,7 @@ function getStatusColor(status: string) {
 
 function PVCStatusInternal() {
   const { t } = useTranslation()
-  const { pvcs, isLoading, isRefreshing, error, consecutiveFailures, isFailed, isDemoFallback } = useCachedPVCs()
+  const { pvcs, isLoading, isRefreshing, error, consecutiveFailures, isFailed, isDemoFallback, lastRefresh } = useCachedPVCs()
   const { drillToPVC } = useDrillDownActions()
   const { isDemoMode: demoMode } = useDemoMode()
 
@@ -179,7 +180,15 @@ function PVCStatusInternal() {
     <div className="h-full flex flex-col">
       {/* Controls */}
       <div className="flex items-center justify-between mb-4">
-        <span className="text-sm font-medium text-muted-foreground">{totalItems} PVCs</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground">{totalItems} PVCs</span>
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+            size="sm"
+            showLabel={false}
+          />
+        </div>
         <CardControlsRow
           clusterIndicator={localClusterFilter.length > 0 ? {
             selectedCount: localClusterFilter.length,

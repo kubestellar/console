@@ -1,27 +1,14 @@
-import { CheckCircle, AlertTriangle, RefreshCw, Database, Activity, Users, Server } from 'lucide-react'
+import { CheckCircle, AlertTriangle, Database, Activity, Users, Server } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../ui/Skeleton'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { useStrimziStatus } from './useStrimziStatus'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 import type { StrimziTopic, StrimziConsumerGroup } from './demoData'
 
 const GROUP_LAG_WARNING_THRESHOLD = 100
 const TOTAL_LAG_WARNING_THRESHOLD = 200
-
-function useFormatRelativeTime() {
-  const { t } = useTranslation('cards')
-  return (isoString: string): string => {
-    const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return t('strimziStatus.syncedJustNow', 'just now')
-    const minute = 60_000
-    const hour = 60 * minute
-    const day = 24 * hour
-    if (diff < minute) return t('strimziStatus.syncedJustNow', 'just now')
-    if (diff < hour) return t('strimziStatus.syncedMinutesAgo', '{{count}}m ago', { count: Math.floor(diff / minute) })
-    if (diff < day) return t('strimziStatus.syncedHoursAgo', '{{count}}h ago', { count: Math.floor(diff / hour) })
-    return t('strimziStatus.syncedDaysAgo', '{{count}}d ago', { count: Math.floor(diff / day) })
-  }
-}
 
 function TopicRow({ topic }: { topic: StrimziTopic }) {
   const { t } = useTranslation('cards')
@@ -84,8 +71,9 @@ function ConsumerGroupRow({ group }: { group: StrimziConsumerGroup }) {
 
 export function StrimziStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = useFormatRelativeTime()
-  const { data, error, showSkeleton, showEmptyState, isRefreshing } = useStrimziStatus()
+  // Subscribe to demo mode so the component re-renders when demo mode toggles
+  const { isDemoMode } = useDemoMode()
+  const { data, error, showSkeleton, showEmptyState, isRefreshing, lastRefresh } = useStrimziStatus()
 
   if (showSkeleton) {
     return (
@@ -112,7 +100,7 @@ export function StrimziStatus() {
     )
   }
 
-  if (data.health === 'not-installed') {
+  if (data.health === 'not-installed' && !isDemoMode) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
         <Database className="w-6 h-6 text-muted-foreground/50" />
@@ -150,10 +138,12 @@ export function StrimziStatus() {
             <span className="opacity-70 text-xs font-normal">&middot; {data.clusterName}</span>
           )}
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          {isRefreshing && <RefreshCw className="w-3 h-3 animate-spin" />}
-          <span>{formatRelativeTime(data.lastCheckTime)}</span>
-        </div>
+        <RefreshIndicator
+          isRefreshing={isRefreshing}
+          lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+          size="sm"
+          showLabel={true}
+        />
       </div>
 
       {/* Key metrics */}
