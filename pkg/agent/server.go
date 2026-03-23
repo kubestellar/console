@@ -28,6 +28,9 @@ const (
 	healthCheckTimeout    = 2 * time.Second
 	registryTimeout       = 10 * time.Second
 	consoleHealthTimeout  = 5 * time.Second
+	wsPingInterval        = 30 * time.Second // how often to send WebSocket pings
+	wsPongTimeout         = 60 * time.Second // how long to wait for a pong before declaring dead
+	wsWriteTimeout        = 10 * time.Second // deadline for a single write (prevents blocking on dead conn)
 	stabilizationDelay    = 3 * time.Second
 	startupDelay          = 500 * time.Millisecond
 	metricsHistoryTick    = 10 * time.Minute
@@ -1878,6 +1881,37 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// closed is set when the read loop exits; goroutines check it before writing
 	var closed atomic.Bool
 
+	// --- Ping/pong keepalive to detect dead connections ---
+	// Set initial read deadline; each pong resets it.
+	conn.SetReadDeadline(time.Now().Add(wsPongTimeout))
+	conn.SetPongHandler(func(string) error {
+		conn.SetReadDeadline(time.Now().Add(wsPongTimeout))
+		return nil
+	})
+
+	// Pinger goroutine: sends pings periodically. Exits when connection closes
+	// or the read loop exits (stopPing closed).
+	stopPing := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(wsPingInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				writeMu.Lock()
+				conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
+				err := conn.WriteMessage(websocket.PingMessage, nil)
+				conn.SetWriteDeadline(time.Time{}) // clear deadline for normal writes
+				writeMu.Unlock()
+				if err != nil {
+					return // connection dead
+				}
+			case <-stopPing:
+				return
+			}
+		}
+	}()
+
 	for {
 		var msg protocol.Message
 		if err := conn.ReadJSON(&msg); err != nil {
@@ -1886,6 +1920,8 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}
 			break
 		}
+		// Reset read deadline after each successful read (active client)
+		conn.SetReadDeadline(time.Now().Add(wsPongTimeout))
 
 		// For chat messages, run in a goroutine so cancel messages can be received
 		if msg.Type == protocol.TypeChat || msg.Type == protocol.TypeClaude {
@@ -1935,6 +1971,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	closed.Store(true)
+	close(stopPing) // signal pinger goroutine to exit
 
 	log.Printf("Client disconnected: %s", conn.RemoteAddr())
 }

@@ -668,6 +668,7 @@ func (w *PredictionWorker) mergePredictions(byProvider map[string][]AIPrediction
 
 // BroadcastToClients sends a message to all connected WebSocket clients.
 // Uses wsMux to prevent concurrent writes which cause gorilla/websocket to panic.
+// Dead connections are removed so they don't leak file descriptors.
 func (s *Server) BroadcastToClients(msgType string, payload interface{}) {
 	message := map[string]interface{}{
 		"type":    msgType,
@@ -684,11 +685,30 @@ func (s *Server) BroadcastToClients(msgType string, payload interface{}) {
 	defer s.wsMux.Unlock()
 
 	s.clientsMux.RLock()
-	defer s.clientsMux.RUnlock()
-
+	clients := make([]*websocket.Conn, 0, len(s.clients))
 	for conn := range s.clients {
+		clients = append(clients, conn)
+	}
+	s.clientsMux.RUnlock()
+
+	var dead []*websocket.Conn
+	for _, conn := range clients {
+		conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
 		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
-			log.Printf("[Server] Error broadcasting to client: %v", err)
+			log.Printf("[Server] Error broadcasting to client %s: %v", conn.RemoteAddr(), err)
+			dead = append(dead, conn)
 		}
+		conn.SetWriteDeadline(time.Time{}) // clear for normal writes
+	}
+
+	// Remove dead clients so they don't accumulate
+	if len(dead) > 0 {
+		s.clientsMux.Lock()
+		for _, conn := range dead {
+			delete(s.clients, conn)
+			conn.Close()
+		}
+		s.clientsMux.Unlock()
+		log.Printf("[Server] Removed %d dead client(s) during broadcast", len(dead))
 	}
 }
