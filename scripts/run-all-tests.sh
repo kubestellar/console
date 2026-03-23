@@ -56,7 +56,6 @@ declare -a FAST_SCRIPTS=(
   "scripts/consistency-test.sh"
   "scripts/helm-lint-test.sh"
   "scripts/license-compliance-test.sh"
-  "scripts/error-boundary-test.sh"
   "scripts/mission-security-test.sh"
   "scripts/card-registry-integrity-test.sh"
   "scripts/unit-test.sh"
@@ -80,10 +79,11 @@ declare -a SECURITY_SCRIPTS=(
   "scripts/security-headers-test.sh"
 )
 
-# Scripts that require a running server or are long-running
+# Scripts that require a running server, Playwright, or are long-running
 declare -a SLOW_SCRIPTS=(
   "scripts/api-contract-test.sh"
   "scripts/api-fuzz-test.sh"
+  "scripts/error-boundary-test.sh"
 )
 
 # Build full list
