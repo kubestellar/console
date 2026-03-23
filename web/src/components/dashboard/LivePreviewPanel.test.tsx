@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import * as LivePreviewPanelModule from './LivePreviewPanel'
+import { LivePreviewPanel } from './LivePreviewPanel'
 
 describe('LivePreviewPanel Component', () => {
   it('exports LivePreviewPanel component', () => {
-    expect(LivePreviewPanelModule.LivePreviewPanel).toBeDefined()
-    expect(typeof LivePreviewPanelModule.LivePreviewPanel).toBe('function')
+    expect(LivePreviewPanel).toBeDefined()
+    expect(typeof LivePreviewPanel).toBe('function')
   })
 })
