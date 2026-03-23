@@ -228,7 +228,9 @@ EOF
 # Summary
 # ============================================================================
 
-if [ "$FAILED" -eq 0 ]; then
+if [ "$PASSED" -eq 0 ] && [ "$FAILED" -eq 0 ]; then
+  echo -e "${RED}${BOLD}No tests were executed${NC}"
+elif [ "$FAILED" -eq 0 ]; then
   echo -e "${GREEN}${BOLD}All ${PASSED} settings migration checks passed${NC}"
 else
   echo -e "${RED}${BOLD}${FAILED}/${TOTAL} settings migration checks failed${NC}"
@@ -239,5 +241,6 @@ echo "Reports:"
 echo "  JSON:     $REPORT_JSON"
 echo "  Summary:  $REPORT_MD"
 
+[ "$PASSED" -eq 0 ] && [ "$FAILED" -eq 0 ] && exit 1
 [ "$FAILED" -gt 0 ] && exit 1
 exit 0
