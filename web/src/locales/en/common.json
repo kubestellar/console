@@ -288,7 +288,7 @@
       "feedbackTokenEnvSource": "Currently sourced from .env.",
       "feedbackTokenNotConfigured": "Not Configured",
       "feedbackTokenNotConfiguredHint": "GitHub features are limited (60 requests/hour, no issue submission)",
-      "feedbackTokenSetupHint": "To enable full GitHub integration, add a GitHub PAT with repo scope here or set FEEDBACK_GITHUB_TOKEN in your .env file."
+      "feedbackTokenSetupHint": "To enable full GitHub integration, add a GitHub PAT with repo scope here or set FEEDBACK_GITHUB_TOKEN (preferred) or GITHUB_TOKEN in your .env file."
     },
     "predictions": {
       "title": "Predictive Failure Detection",

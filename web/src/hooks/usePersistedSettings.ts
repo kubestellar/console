@@ -156,11 +156,16 @@ export function usePersistedSettings() {
         if (!mountedRef.current) return
 
         if (isLocalStorageEmpty() && data) {
-          // Cache was cleared — restore from backend file
-          const hasData = data.theme || data.aiMode || data.feedbackGithubToken ||
-            Object.keys(data.apiKeys || {}).length > 0
+          // Cache was cleared — restore from backend file.
+          // Exclude feedbackGithubToken: the token is stored server-side only;
+          // UI state is driven by /api/github/token/status, not localStorage.
+          const { feedbackGithubToken: _feedbackGithubToken, ...settingsWithoutToken } = data
+          const hasData =
+            settingsWithoutToken.theme ||
+            settingsWithoutToken.aiMode ||
+            Object.keys(settingsWithoutToken.apiKeys || {}).length > 0
           if (hasData) {
-            restoreToLocalStorage(data)
+            restoreToLocalStorage(settingsWithoutToken)
             setRestoredFromFile(true)
           }
         } else {

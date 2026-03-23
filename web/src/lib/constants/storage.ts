@@ -8,7 +8,8 @@
 // ── Auth ────────────────────────────────────────────────────────────────
 export const STORAGE_KEY_TOKEN = 'token'
 export const STORAGE_KEY_AUTH_TOKEN = 'auth_token' // used by notification API
-// Consolidated GitHub token — stored server-side, only source/dismissed flags in localStorage
+// Consolidated GitHub token — stored server-side (encrypted) and mirrored to localStorage
+// for offline/cache access. Source and dismissed flags are also kept in localStorage.
 export const STORAGE_KEY_GITHUB_TOKEN = 'github_token' // legacy, kept for cleanup
 export const STORAGE_KEY_GITHUB_TOKEN_SOURCE = 'github_token_source' // legacy, kept for cleanup
 export const STORAGE_KEY_GITHUB_TOKEN_DISMISSED = 'github_token_dismissed' // legacy, kept for cleanup

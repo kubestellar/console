@@ -76,16 +76,20 @@ type ClaudeCodeProvider struct {
 }
 
 // NewClaudeCodeProvider creates a new Claude Code CLI provider.
-// Detection runs unconditionally — the AgentApprovalDialog provides the
-// user opt-in before any CLI agent is actually invoked (#3159).
+// Startup detection is limited to path resolution (LookPath + stat) — no subprocess
+// is executed until the user opts in via the AgentApprovalDialog (#3159).
+// The `claude --version` check is deferred to the first call to Description() or
+// IsAvailable() after the path is found.
 func NewClaudeCodeProvider() *ClaudeCodeProvider {
 	provider := &ClaudeCodeProvider{}
-	provider.detectCLI()
+	provider.detectCLIPath()
 	return provider
 }
 
-// detectCLI checks if claude CLI is installed and gets its version.
-func (c *ClaudeCodeProvider) detectCLI() {
+// detectCLIPath locates the claude binary using LookPath and common paths.
+// It intentionally does NOT execute any subprocess — no `claude --version` etc.
+// Version detection is deferred to fetchVersionLazy().
+func (c *ClaudeCodeProvider) detectCLIPath() {
 	// Try to find claude in PATH first
 	path, err := exec.LookPath("claude")
 	if err != nil {
@@ -110,12 +114,20 @@ func (c *ClaudeCodeProvider) detectCLI() {
 		log.Printf("Found Claude Code CLI in PATH: %s", path)
 	}
 	c.cliPath = path
+}
 
-	// Get version
+// fetchVersionLazy runs `claude --version` on first demand (i.e. after user opt-in).
+// It is safe to call multiple times; subsequent calls are no-ops once the version
+// has been obtained.
+func (c *ClaudeCodeProvider) fetchVersionLazy() {
+	if c.cliPath == "" || c.version != "" {
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, path, "--version")
+	cmd := exec.CommandContext(ctx, c.cliPath, "--version")
 	cmd.Env = cleanEnvForCLI()
 	output, err := cmd.Output()
 	if err == nil {
@@ -136,13 +148,14 @@ func (c *ClaudeCodeProvider) DisplayName() string {
 	return "Claude Code (Local)"
 }
 
-// Description returns the provider description
+// Description returns the provider description, fetching version lazily on first call.
 func (c *ClaudeCodeProvider) Description() string {
-	if c.version != "" {
-		return fmt.Sprintf("Local CLI with MCP tools - %s", c.version)
-	}
 	if c.cliPath == "" {
 		return "Local Claude Code CLI (not installed)"
+	}
+	c.fetchVersionLazy()
+	if c.version != "" {
+		return fmt.Sprintf("Local CLI with MCP tools - %s", c.version)
 	}
 	return "Local Claude Code CLI with MCP tools and hooks"
 }
@@ -521,7 +534,8 @@ Provide a clear, concise analysis of what this output shows.`, lastToolOutput)
 
 // Refresh re-detects the CLI (useful if user installs it after startup)
 func (c *ClaudeCodeProvider) Refresh() {
-	c.detectCLI()
+	c.version = "" // reset cached version so fetchVersionLazy() re-runs
+	c.detectCLIPath()
 }
 
 // truncateString truncates a string to maxLen characters
