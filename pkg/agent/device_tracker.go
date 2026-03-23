@@ -11,8 +11,9 @@ import (
 )
 
 const (
-	deviceTrackerPoll    = 60 * time.Second
-	deviceTrackerTimeout = 30 * time.Second
+	deviceTrackerPoll           = 60 * time.Second
+	deviceTrackerTimeout        = 30 * time.Second
+	deviceTrackerPerClusterTimeout = 5 * time.Second
 )
 
 // DeviceCounts tracks hardware device counts for a node
@@ -121,8 +122,6 @@ func (t *DeviceTracker) scanDevices() {
 	ctx, cancel := context.WithTimeout(context.Background(), deviceTrackerTimeout)
 	defer cancel()
 
-	// Use ListClusters to get ALL cluster contexts - deduplication happens in frontend
-	// using the clusterNameMap pattern (same as ClusterDetailModal and ResourcesDrillDown)
 	clusters, err := t.k8sClient.ListClusters(ctx)
 	if err != nil {
 		if !t.loggedClusterError {
@@ -132,159 +131,182 @@ func (t *DeviceTracker) scanDevices() {
 		return
 	}
 
-	newAlerts := false
+	// Scan clusters concurrently — each gets its own timeout so unreachable
+	// clusters don't block reachable ones. Snapshots are streamed via a channel
+	// and processed immediately so the UI sees data as soon as each cluster responds.
+	snapshotCh := make(chan DeviceSnapshot, 64)
 
+	var wg sync.WaitGroup
 	for _, cluster := range clusters {
-		nodes, err := t.k8sClient.GetNodes(ctx, cluster.Context)
-		if err != nil {
-			continue
-		}
+		wg.Add(1)
+		go func(cl k8s.ClusterInfo) {
+			defer wg.Done()
+			clusterCtx, clusterCancel := context.WithTimeout(ctx, deviceTrackerPerClusterTimeout)
+			defer clusterCancel()
 
-		for _, node := range nodes {
-			key := cluster.Name + "/" + node.Name
-
-			// Parse device counts from node labels and known fields
-			counts := DeviceCounts{
-				GPUCount: node.GPUCount,
+			nodes, err := t.k8sClient.GetNodes(clusterCtx, cl.Context)
+			if err != nil {
+				return
 			}
 
-			// Parse additional device info from labels
-			for labelKey, labelVal := range node.Labels {
-				switch {
-				// SR-IOV networking
-				case strings.Contains(labelKey, "sriov.capable") || strings.Contains(labelKey, "sriov.configured"):
-					if labelVal == "true" {
-						counts.SRIOVCapable = true
-					}
-				// RDMA/RoCE capability
-				case strings.Contains(labelKey, "rdma.available") || strings.Contains(labelKey, "rdma.capable"):
-					if labelVal == "true" {
-						counts.RDMAAvailable = true
-					}
-				// Mellanox NIC (pci-15b3)
-				case strings.Contains(labelKey, "pci-15b3.present"):
-					if labelVal == "true" {
-						counts.MellanoxPresent = true
-						counts.InfiniBandCount++ // At least one IB HCA
-					}
-				// NVIDIA NIC (pci-10de with sriov)
-				case strings.Contains(labelKey, "pci-10de.sriov"):
-					if labelVal == "true" {
-						counts.NVIDIANICPresent = true
-						counts.NICCount++
-					}
-				// NVMe storage
-				case strings.Contains(labelKey, "storage-nonrotationaldisk") || strings.Contains(labelKey, "nvme"):
-					if labelVal == "true" {
-						counts.NVMECount = 1 // Mark as present
-					}
-				// IBM Spectrum Scale
-				case strings.Contains(labelKey, "scale.spectrum.ibm.com/daemon"):
-					counts.SpectrumScale = true
-				// MOFED driver ready (Mellanox OFED)
-				case strings.Contains(labelKey, "mofed.wait"):
-					counts.MOFEDReady = labelVal == "false" // wait=false means ready
-				// GPU driver ready
-				case strings.Contains(labelKey, "gpu-driver-upgrade-state"):
-					counts.GPUDriverReady = labelVal == "upgrade-done"
+			now := time.Now()
+			for _, node := range nodes {
+				snapshotCh <- DeviceSnapshot{
+					NodeName:  node.Name,
+					Cluster:   cl.Name,
+					Counts:    t.parseDeviceCounts(node),
+					Timestamp: now,
 				}
 			}
+		}(cluster)
+	}
 
-			snapshot := DeviceSnapshot{
-				NodeName:  node.Name,
-				Cluster:   cluster.Name,
-				Counts:    counts,
-				Timestamp: time.Now(),
-			}
+	// Close channel once all scanners finish
+	go func() {
+		wg.Wait()
+		close(snapshotCh)
+	}()
 
-			t.mu.Lock()
-
-			// Update history (keep last 24 hours)
-			t.history[key] = append(t.history[key], snapshot)
-			if len(t.history[key]) > 1440 { // 24 hours at 1-minute intervals
-				t.history[key] = t.history[key][1:]
-			}
-
-			// Update max counts (baseline) - track highest values seen
-			max := t.maxCounts[key]
-			if counts.GPUCount > max.GPUCount {
-				max.GPUCount = counts.GPUCount
-			}
-			if counts.NICCount > max.NICCount {
-				max.NICCount = counts.NICCount
-			}
-			if counts.NVMECount > max.NVMECount {
-				max.NVMECount = counts.NVMECount
-			}
-			if counts.InfiniBandCount > max.InfiniBandCount {
-				max.InfiniBandCount = counts.InfiniBandCount
-			}
-			// Track boolean capabilities (once seen, should stay)
-			if counts.SRIOVCapable {
-				max.SRIOVCapable = true
-			}
-			if counts.RDMAAvailable {
-				max.RDMAAvailable = true
-			}
-			if counts.MellanoxPresent {
-				max.MellanoxPresent = true
-			}
-			if counts.NVIDIANICPresent {
-				max.NVIDIANICPresent = true
-			}
-			if counts.SpectrumScale {
-				max.SpectrumScale = true
-			}
-			if counts.MOFEDReady {
-				max.MOFEDReady = true
-			}
-			if counts.GPUDriverReady {
-				max.GPUDriverReady = true
-			}
-			t.maxCounts[key] = max
-
-			// Check for device count drops
-			if alert := t.checkForDrop(key, node.Name, cluster.Name, "gpu", max.GPUCount, counts.GPUCount); alert != nil {
-				newAlerts = true
-			}
-			if alert := t.checkForDrop(key, node.Name, cluster.Name, "nic", max.NICCount, counts.NICCount); alert != nil {
-				newAlerts = true
-			}
-			if alert := t.checkForDrop(key, node.Name, cluster.Name, "nvme", max.NVMECount, counts.NVMECount); alert != nil {
-				newAlerts = true
-			}
-			if alert := t.checkForDrop(key, node.Name, cluster.Name, "infiniband", max.InfiniBandCount, counts.InfiniBandCount); alert != nil {
-				newAlerts = true
-			}
-
-			// Check for capability/driver state changes (was ready, now not ready)
-			if alert := t.checkForBoolDrop(key, node.Name, cluster.Name, "sriov", max.SRIOVCapable, counts.SRIOVCapable); alert != nil {
-				newAlerts = true
-			}
-			if alert := t.checkForBoolDrop(key, node.Name, cluster.Name, "rdma", max.RDMAAvailable, counts.RDMAAvailable); alert != nil {
-				newAlerts = true
-			}
-			if alert := t.checkForBoolDrop(key, node.Name, cluster.Name, "mellanox", max.MellanoxPresent, counts.MellanoxPresent); alert != nil {
-				newAlerts = true
-			}
-			if alert := t.checkForBoolDrop(key, node.Name, cluster.Name, "mofed-driver", max.MOFEDReady, counts.MOFEDReady); alert != nil {
-				newAlerts = true
-			}
-			if alert := t.checkForBoolDrop(key, node.Name, cluster.Name, "gpu-driver", max.GPUDriverReady, counts.GPUDriverReady); alert != nil {
-				newAlerts = true
-			}
-			if alert := t.checkForBoolDrop(key, node.Name, cluster.Name, "spectrum-scale", max.SpectrumScale, counts.SpectrumScale); alert != nil {
-				newAlerts = true
-			}
-
-			t.mu.Unlock()
+	// Process snapshots as they stream in — broadcast after each cluster's batch
+	newAlerts := false
+	for snapshot := range snapshotCh {
+		if t.processSnapshot(snapshot) {
+			newAlerts = true
 		}
 	}
 
-	// Broadcast if new alerts
 	if newAlerts && t.broadcast != nil {
 		t.broadcast("device_alerts_updated", t.GetAlerts())
 	}
+}
+
+// parseDeviceCounts extracts device counts from node labels and capacity fields.
+func (t *DeviceTracker) parseDeviceCounts(node k8s.NodeInfo) DeviceCounts {
+	counts := DeviceCounts{GPUCount: node.GPUCount}
+
+	for labelKey, labelVal := range node.Labels {
+		switch {
+		case strings.Contains(labelKey, "sriov.capable") || strings.Contains(labelKey, "sriov.configured"):
+			if labelVal == "true" {
+				counts.SRIOVCapable = true
+			}
+		case strings.Contains(labelKey, "rdma.available") || strings.Contains(labelKey, "rdma.capable"):
+			if labelVal == "true" {
+				counts.RDMAAvailable = true
+			}
+		case strings.Contains(labelKey, "pci-15b3.present"):
+			if labelVal == "true" {
+				counts.MellanoxPresent = true
+				counts.InfiniBandCount++
+			}
+		case strings.Contains(labelKey, "pci-10de.sriov"):
+			if labelVal == "true" {
+				counts.NVIDIANICPresent = true
+				counts.NICCount++
+			}
+		case strings.Contains(labelKey, "storage-nonrotationaldisk") || strings.Contains(labelKey, "nvme"):
+			if labelVal == "true" {
+				counts.NVMECount = 1
+			}
+		case strings.Contains(labelKey, "scale.spectrum.ibm.com/daemon"):
+			counts.SpectrumScale = true
+		case strings.Contains(labelKey, "mofed.wait"):
+			counts.MOFEDReady = labelVal == "false"
+		case strings.Contains(labelKey, "gpu-driver-upgrade-state"):
+			counts.GPUDriverReady = labelVal == "upgrade-done"
+		}
+	}
+	return counts
+}
+
+// processSnapshot updates history, baselines, and alerts for a single node snapshot.
+// Returns true if new alerts were generated.
+func (t *DeviceTracker) processSnapshot(snapshot DeviceSnapshot) bool {
+	key := snapshot.Cluster + "/" + snapshot.NodeName
+	counts := snapshot.Counts
+	newAlerts := false
+
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	// Update history (keep last 24 hours)
+	t.history[key] = append(t.history[key], snapshot)
+	if len(t.history[key]) > 1440 {
+		t.history[key] = t.history[key][1:]
+	}
+
+	// Update max counts (baseline)
+	max := t.maxCounts[key]
+	if counts.GPUCount > max.GPUCount {
+		max.GPUCount = counts.GPUCount
+	}
+	if counts.NICCount > max.NICCount {
+		max.NICCount = counts.NICCount
+	}
+	if counts.NVMECount > max.NVMECount {
+		max.NVMECount = counts.NVMECount
+	}
+	if counts.InfiniBandCount > max.InfiniBandCount {
+		max.InfiniBandCount = counts.InfiniBandCount
+	}
+	if counts.SRIOVCapable {
+		max.SRIOVCapable = true
+	}
+	if counts.RDMAAvailable {
+		max.RDMAAvailable = true
+	}
+	if counts.MellanoxPresent {
+		max.MellanoxPresent = true
+	}
+	if counts.NVIDIANICPresent {
+		max.NVIDIANICPresent = true
+	}
+	if counts.SpectrumScale {
+		max.SpectrumScale = true
+	}
+	if counts.MOFEDReady {
+		max.MOFEDReady = true
+	}
+	if counts.GPUDriverReady {
+		max.GPUDriverReady = true
+	}
+	t.maxCounts[key] = max
+
+	// Check for device count drops
+	if t.checkForDrop(key, snapshot.NodeName, snapshot.Cluster, "gpu", max.GPUCount, counts.GPUCount) != nil {
+		newAlerts = true
+	}
+	if t.checkForDrop(key, snapshot.NodeName, snapshot.Cluster, "nic", max.NICCount, counts.NICCount) != nil {
+		newAlerts = true
+	}
+	if t.checkForDrop(key, snapshot.NodeName, snapshot.Cluster, "nvme", max.NVMECount, counts.NVMECount) != nil {
+		newAlerts = true
+	}
+	if t.checkForDrop(key, snapshot.NodeName, snapshot.Cluster, "infiniband", max.InfiniBandCount, counts.InfiniBandCount) != nil {
+		newAlerts = true
+	}
+
+	// Check for capability/driver state changes
+	if t.checkForBoolDrop(key, snapshot.NodeName, snapshot.Cluster, "sriov", max.SRIOVCapable, counts.SRIOVCapable) != nil {
+		newAlerts = true
+	}
+	if t.checkForBoolDrop(key, snapshot.NodeName, snapshot.Cluster, "rdma", max.RDMAAvailable, counts.RDMAAvailable) != nil {
+		newAlerts = true
+	}
+	if t.checkForBoolDrop(key, snapshot.NodeName, snapshot.Cluster, "mellanox", max.MellanoxPresent, counts.MellanoxPresent) != nil {
+		newAlerts = true
+	}
+	if t.checkForBoolDrop(key, snapshot.NodeName, snapshot.Cluster, "mofed-driver", max.MOFEDReady, counts.MOFEDReady) != nil {
+		newAlerts = true
+	}
+	if t.checkForBoolDrop(key, snapshot.NodeName, snapshot.Cluster, "gpu-driver", max.GPUDriverReady, counts.GPUDriverReady) != nil {
+		newAlerts = true
+	}
+	if t.checkForBoolDrop(key, snapshot.NodeName, snapshot.Cluster, "spectrum-scale", max.SpectrumScale, counts.SpectrumScale) != nil {
+		newAlerts = true
+	}
+
+	return newAlerts
 }
 
 // checkForDrop checks if a device count has dropped and creates/updates an alert
