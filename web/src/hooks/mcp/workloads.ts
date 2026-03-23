@@ -251,6 +251,7 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
+  const sseAbortRef = useRef<AbortController | null>(null)
 
   const refetch = useCallback(async (silent = false) => {
     // In demo mode, use demo data
@@ -300,6 +301,11 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
         setIsLoading(true)
       }
     }
+    // Cancel any in-flight SSE request before starting a new one
+    sseAbortRef.current?.abort()
+    const abortController = new AbortController()
+    sseAbortRef.current = abortController
+
     // Use SSE streaming for progressive multi-cluster data
     try {
       const sseParams: Record<string, string> = {}
@@ -310,6 +316,7 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
         url: '/api/mcp/pods/stream',
         params: sseParams,
         itemsKey: 'pods',
+        signal: abortController.signal,
         onClusterData: (_clusterName, items) => {
           // Progressive update — show data as it arrives
           setPods(prev => {
@@ -342,6 +349,8 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
       setConsecutiveFailures(0)
       setLastRefresh(now)
     } catch (err) {
+      // Ignore AbortError — expected when cluster/namespace changes during a fetch
+      if (err instanceof DOMException && err.name === 'AbortError') return
       // Keep stale data on error — only fall back to demo data when demo mode is active
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
@@ -372,6 +381,7 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
     return () => {
       clearInterval(interval)
       unregisterRefetch()
+      sseAbortRef.current?.abort()
     }
   }, [refetch, cacheKey])
 
@@ -426,6 +436,7 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(cached?.timestamp || null)
   const [error, setError] = useState<string | null>(null)
+  const sseAbortRef = useRef<AbortController | null>(null)
 
   const refetch = useCallback(async (silent = false) => {
     // If demo mode is enabled (and not overridden by forceLive), use demo data
@@ -445,6 +456,11 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
         setIsLoading(true)
       }
     }
+    // Cancel any in-flight SSE request before starting a new one
+    sseAbortRef.current?.abort()
+    const abortController = new AbortController()
+    sseAbortRef.current = abortController
+
     // Use SSE streaming for progressive multi-cluster data
     try {
       const sseParams: Record<string, string> = {}
@@ -455,6 +471,7 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
         url: '/api/mcp/pods/stream',
         params: sseParams,
         itemsKey: 'pods',
+        signal: abortController.signal,
         onClusterData: (_clusterName, items) => {
           setPods(prev => [...prev, ...items])
           setIsLoading(false)
@@ -469,6 +486,7 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
       setError(null)
       setLastUpdated(now)
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       if (!silent && !podsCache) {
         setError('Failed to fetch pods')
       }
@@ -494,6 +512,7 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
     return () => {
       clearInterval(interval)
       unregisterRefetch()
+      sseAbortRef.current?.abort()
     }
   }, [refetch, cacheKey])
 
@@ -546,6 +565,7 @@ export function usePodIssues(cluster?: string, namespace?: string) {
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
+  const sseAbortRef = useRef<AbortController | null>(null)
 
   // Track previous values to detect actual changes (not just initial mount)
   const prevClusterRef = useRef<string | undefined>(cluster)
@@ -621,6 +641,11 @@ export function usePodIssues(cluster?: string, namespace?: string) {
       }
     }
 
+    // Cancel any in-flight SSE request before starting a new one
+    sseAbortRef.current?.abort()
+    const abortController = new AbortController()
+    sseAbortRef.current = abortController
+
     // Use SSE streaming for progressive multi-cluster data
     try {
       const sseParams: Record<string, string> = {}
@@ -631,6 +656,7 @@ export function usePodIssues(cluster?: string, namespace?: string) {
         url: '/api/mcp/pod-issues/stream',
         params: sseParams,
         itemsKey: 'issues',
+        signal: abortController.signal,
         onClusterData: (_clusterName, items) => {
           setIssues(prev => [...prev, ...items])
           setIsLoading(false)
@@ -644,7 +670,8 @@ export function usePodIssues(cluster?: string, namespace?: string) {
       setLastUpdated(now)
       setConsecutiveFailures(0)
       setLastRefresh(now)
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent && !podIssuesCache) {
@@ -675,6 +702,7 @@ export function usePodIssues(cluster?: string, namespace?: string) {
     return () => {
       clearInterval(interval)
       unregisterRefetch()
+      sseAbortRef.current?.abort()
     }
   }, [refetch, cacheKey])
 
@@ -737,6 +765,7 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
+  const sseAbortRef = useRef<AbortController | null>(null)
 
   const refetch = useCallback(async (silent = false) => {
     // In demo mode, use demo data
@@ -768,6 +797,11 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
         setIsLoading(true)
       }
     }
+    // Cancel any in-flight SSE request before starting a new one
+    sseAbortRef.current?.abort()
+    const abortController = new AbortController()
+    sseAbortRef.current = abortController
+
     // Use SSE streaming for progressive multi-cluster data
     try {
       const sseParams: Record<string, string> = {}
@@ -778,6 +812,7 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
         url: '/api/mcp/deployment-issues/stream',
         params: sseParams,
         itemsKey: 'issues',
+        signal: abortController.signal,
         onClusterData: (_clusterName, items) => {
           setIssues(prev => [...prev, ...items])
           setIsLoading(false)
@@ -792,6 +827,7 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
       setConsecutiveFailures(0)
       setLastRefresh(now)
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent && !deploymentIssuesCache) {
@@ -821,6 +857,7 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
     return () => {
       clearInterval(interval)
       unregisterRefetch()
+      sseAbortRef.current?.abort()
     }
   }, [refetch, cacheKey])
 
@@ -1106,6 +1143,7 @@ export function useJobs(cluster?: string, namespace?: string) {
   const [jobs, setJobs] = useState<Job[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const sseAbortRef = useRef<AbortController | null>(null)
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
@@ -1133,6 +1171,12 @@ export function useJobs(cluster?: string, namespace?: string) {
         // Fall through to API
       }
     }
+
+    // Cancel any in-flight SSE request before starting a new one
+    sseAbortRef.current?.abort()
+    const abortController = new AbortController()
+    sseAbortRef.current = abortController
+
     // Use SSE streaming for progressive multi-cluster data
     try {
       const sseParams: Record<string, string> = {}
@@ -1142,6 +1186,7 @@ export function useJobs(cluster?: string, namespace?: string) {
         url: '/api/mcp/jobs/stream',
         params: sseParams,
         itemsKey: 'jobs',
+        signal: abortController.signal,
         onClusterData: (_clusterName, items) => {
           setJobs(prev => [...prev, ...items])
           setIsLoading(false)
@@ -1149,7 +1194,8 @@ export function useJobs(cluster?: string, namespace?: string) {
       })
       setJobs(result)
       setError(null)
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       setError('Failed to fetch jobs')
       setJobs([])
     } finally {
@@ -1159,6 +1205,7 @@ export function useJobs(cluster?: string, namespace?: string) {
 
   useEffect(() => {
     refetch()
+    return () => { sseAbortRef.current?.abort() }
   }, [refetch])
 
   return { jobs, isLoading, error, refetch }
