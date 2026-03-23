@@ -877,6 +877,60 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   thanos_status: () => import('./thanos_status'),
   // OpenFeature feature-flag management
   openfeature_status: () => import('./openfeature_status'),
+  // Flatcar Container Linux
+  flatcar_status: () => import('./flatcar_status'),
+  // CoreDNS
+  coredns_status: () => import('./coredns_status'),
+  // Fluentd log collector
+  fluentd_status: () => import('./fluentd_status'),
+  // Lima VM
+  lima_status: () => import('./lima_status'),
+  // Multi-cluster insights — all share one chunk via barrel
+  cross_cluster_event_correlation: () => import('./insights'),
+  cluster_delta_detector: () => import('./insights'),
+  cascade_impact_map: () => import('./insights'),
+  config_drift_heatmap: () => import('./insights'),
+  resource_imbalance_detector: () => import('./insights'),
+  restart_correlation_matrix: () => import('./insights'),
+  deployment_rollout_tracker: () => import('./insights'),
+  // User management & AI missions
+  user_management: () => import('./UserManagement'),
+  console_ai_issues: () => import('./console-missions/ConsoleIssuesCard'),
+  console_ai_kubeconfig_audit: () => import('./console-missions/ConsoleKubeconfigAuditCard'),
+  console_ai_health_check: () => import('./console-missions/ConsoleHealthCheckCard'),
+  // RSS Feed & utilities
+  rss_feed: () => import('./rss'),
+  kubectl: () => import('./Kubectl'),
+  iframe_embed: () => import('./IframeEmbed'),
+  network_utils: () => import('./NetworkUtils'),
+  mobile_browser: () => import('./MobileBrowser'),
+  // Arcade games — all share one chunk via barrel
+  sudoku_game: () => import('./arcade-bundle'),
+  match_game: () => import('./arcade-bundle'),
+  solitaire: () => import('./arcade-bundle'),
+  checkers: () => import('./arcade-bundle'),
+  game_2048: () => import('./arcade-bundle'),
+  kubedle: () => import('./arcade-bundle'),
+  pod_sweeper: () => import('./arcade-bundle'),
+  container_tetris: () => import('./arcade-bundle'),
+  flappy_pod: () => import('./arcade-bundle'),
+  kube_man: () => import('./arcade-bundle'),
+  kube_kong: () => import('./arcade-bundle'),
+  pod_pitfall: () => import('./arcade-bundle'),
+  node_invaders: () => import('./arcade-bundle'),
+  missile_command: () => import('./arcade-bundle'),
+  pod_crosser: () => import('./arcade-bundle'),
+  pod_brothers: () => import('./arcade-bundle'),
+  kube_kart: () => import('./arcade-bundle'),
+  kube_pong: () => import('./arcade-bundle'),
+  kube_snake: () => import('./arcade-bundle'),
+  kube_galaga: () => import('./arcade-bundle'),
+  kube_bert: () => import('./arcade-bundle'),
+  kube_doom: () => import('./arcade-bundle'),
+  kube_craft: () => import('./arcade-bundle'),
+  kube_chess: () => import('./arcade-bundle'),
+  // Dynamic card
+  dynamic_card: () => import('./DynamicCard'),
 }
 
 /**
@@ -1062,6 +1116,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   kagenti_tool_registry: 4,
   kagenti_agent_discovery: 4,
   kagenti_security: 4,
+  kagenti_security_posture: 4,
   kagenti_topology: 8,
 
   // LLM-d stunning visualization cards
@@ -1101,6 +1156,29 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   quota_heatmap: 8,
   // KubeVela application delivery
   kubevela_status: 6,
+  // Flatcar Container Linux
+  flatcar_status: 6,
+  // Fluentd log collector
+  fluentd_status: 6,
+  // Lima VM
+  lima_status: 6,
+  // CloudEvents
+  cloudevents_status: 6,
+  // Karmada
+  karmada_status: 6,
+  // Thanos distributed metrics
+  thanos_status: 6,
+  // OpenFeature feature-flag management
+  openfeature_status: 6,
+
+  // Multi-cluster insights cards
+  cross_cluster_event_correlation: 6,
+  cluster_delta_detector: 6,
+  cascade_impact_map: 6,
+  config_drift_heatmap: 6,
+  resource_imbalance_detector: 6,
+  restart_correlation_matrix: 6,
+  deployment_rollout_tracker: 6,
 
   // Multi-tenancy cards
   ovn_status: 6,
@@ -1187,6 +1265,12 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   sudoku_game: 6,
   // Kube Match card
   match_game: 6,
+  // Solitaire
+  solitaire: 6,
+  // AI Checkers
+  checkers: 6,
+  // Kube 2048
+  game_2048: 5,
   // stock_market_ticker — width registered via unified descriptor system
   // Kubedle
   kubedle: 6,
@@ -1215,6 +1299,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   network_utils: 5,
   mobile_browser: 5,
   kube_chess: 5,
+  kube_bert: 5,
   // kube_craft_3d: 6,  // Temporarily disabled
 
   // Wide cards (7-8 columns) - charts and trends

@@ -101,6 +101,7 @@ export const CARD_TITLES: Record<string, string> = {
   gpu_utilization: 'GPU Utilization',
   gpu_usage_trend: 'GPU Usage Trend',
   gpu_namespace_allocations: 'GPU Namespace Allocations',
+  gpu_node_health: 'GPU Node Health',
   hardware_health: 'Hardware Health',
 
   // Security, RBAC, and compliance
@@ -119,6 +120,12 @@ export const CARD_TITLES: Record<string, string> = {
   external_secrets: 'External Secrets',
   cert_manager: 'Cert Manager',
 
+  // Compliance cross-cluster cards
+  fleet_compliance_heatmap: 'Fleet Compliance Heatmap',
+  compliance_drift: 'Compliance Drift',
+  cross_cluster_policy_comparison: 'Cross-Cluster Policy Comparison',
+  recommended_policies: 'Recommended Policies',
+
   // Alerting cards — active_alerts registered via unified descriptor system
   alert_rules: 'Alert Rules',
 
@@ -131,6 +138,33 @@ export const CARD_TITLES: Record<string, string> = {
   service_imports: 'Service Imports',
   gateway_status: 'Gateway Status',
   service_topology: 'Service Topology',
+
+  // Cluster admin cards
+  predictive_health: 'Predictive Health',
+  node_debug: 'Node Debug',
+  control_plane_health: 'Control Plane Health',
+  node_conditions: 'Node Conditions',
+  admission_webhooks: 'Admission Webhooks',
+  dns_health: 'DNS Health',
+  etcd_status: 'Etcd Status',
+  network_policies: 'Network Policies',
+  rbac_explorer: 'RBAC Explorer',
+  maintenance_windows: 'Maintenance Windows',
+  cluster_changelog: 'Cluster Changelog',
+  quota_heatmap: 'Quota Heatmap',
+
+  // Kagenti AI Agent Platform
+  kagenti_status: 'Kagenti Status',
+  kagenti_agent_fleet: 'Kagenti Agent Fleet',
+  kagenti_build_pipeline: 'Kagenti Build Pipeline',
+  kagenti_tool_registry: 'Kagenti Tool Registry',
+  kagenti_agent_discovery: 'Kagenti Agent Discovery',
+  kagenti_security: 'Kagenti Security',
+  kagenti_security_posture: 'Kagenti Security Posture',
+  kagenti_topology: 'Kagenti Topology',
+
+  // Crossplane
+  crossplane_managed_resources: 'Crossplane Managed Resources',
 
   // Other
   upgrade_status: 'Cluster Upgrade Status',
@@ -201,6 +235,8 @@ export const CARD_TITLES: Record<string, string> = {
   kube_doom: 'Kube Doom',
   kube_craft: 'Kube Craft',
   kube_chess: 'Kube Chess',
+  missile_command: 'Missile Command',
+  kube_bert: 'Kube-BERT',
 
   // Provider health
   provider_health: 'Provider Health',
@@ -210,6 +246,16 @@ export const CARD_TITLES: Record<string, string> = {
   crio_status: 'CRI-O',
   // Strimzi Kafka operator
   strimzi_status: 'Strimzi',
+  // Flatcar Container Linux
+  flatcar_status: 'Flatcar',
+  // Fluentd log collector
+  fluentd_status: 'Fluentd',
+  // Lima VM
+  lima_status: 'Lima',
+  // Thanos distributed metrics
+  thanos_status: 'Thanos',
+  // OpenFeature feature-flag management
+  openfeature_status: 'OpenFeature',
 
   // KubeVela application delivery
   kubevela_status: 'KubeVela',
@@ -317,6 +363,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   gpu_workloads: 'Workloads running on GPU-enabled nodes.',
   gpu_utilization: 'Real-time GPU utilization percentage and temperature.',
   gpu_usage_trend: 'Historical GPU usage trends over time.',
+  gpu_namespace_allocations: 'GPU allocation breakdown by namespace across clusters.',
+  gpu_node_health: 'Proactive GPU node health monitoring with device disappearance detection.',
   hardware_health: 'Detects hardware device disappearances (GPUs, NICs, NVMe, InfiniBand) that often require a power cycle to recover. Common with SuperMicro/HGX systems. Also shows full device inventory per node.',
   security_issues: 'Security vulnerabilities and misconfigurations detected.',
   rbac_overview: 'Overview of RBAC roles, bindings, and permissions.',
@@ -332,6 +380,11 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   vault_secrets: 'HashiCorp Vault secrets management status.',
   external_secrets: 'External Secrets Operator sync status.',
   cert_manager: 'TLS certificate status and renewal from cert-manager.',
+  // Cross-cluster compliance cards
+  fleet_compliance_heatmap: 'Grid view of compliance status across clusters by tool category.',
+  compliance_drift: 'Detects clusters deviating from fleet compliance baseline.',
+  cross_cluster_policy_comparison: 'Side-by-side policy comparison across selected clusters.',
+  recommended_policies: 'AI-powered policy gap analysis with one-click deployment.',
   // active_alerts — registered via unified descriptor system
   alert_rules: 'Configured alert rules and their evaluation status.',
   opencost_overview: 'Cost allocation data from OpenCost.',
@@ -340,6 +393,36 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   service_imports: 'Services imported from other clusters.',
   gateway_status: 'Gateway API resource status and routing.',
   service_topology: 'Visual topology of service-to-service communication.',
+  // Cluster admin cards
+  predictive_health: 'Predictive health analysis using historical trends to forecast issues.',
+  node_debug: 'Interactive node debugging with logs, events, and resource inspection.',
+  control_plane_health: 'Health status of Kubernetes control plane components.',
+  node_conditions: 'Detailed node conditions including disk pressure, memory, and network.',
+  admission_webhooks: 'Status of admission webhooks and their configurations.',
+  dns_health: 'DNS resolution health and CoreDNS pod status.',
+  etcd_status: 'Etcd cluster health, leader status, and database size.',
+  network_policies: 'Network policy coverage and affected pods.',
+  rbac_explorer: 'Interactive RBAC role and binding explorer.',
+  maintenance_windows: 'Scheduled maintenance windows and their status.',
+  cluster_changelog: 'Recent changes to cluster resources and configurations.',
+  quota_heatmap: 'Resource quota utilization heatmap across namespaces.',
+
+  // Kagenti AI Agent Platform
+  kagenti_status: 'Overall Kagenti AI agent platform status.',
+  kagenti_agent_fleet: 'Fleet view of all deployed Kagenti AI agents.',
+  kagenti_build_pipeline: 'Kagenti agent build pipeline status and history.',
+  kagenti_tool_registry: 'Registry of tools available to Kagenti agents.',
+  kagenti_agent_discovery: 'Discover and browse available Kagenti agents.',
+  kagenti_security: 'Security status and access controls for Kagenti agents.',
+  kagenti_security_posture: 'Overall security posture of the Kagenti platform.',
+  kagenti_topology: 'Topology view of Kagenti agent connections and dependencies.',
+
+  // Crossplane
+  crossplane_managed_resources: 'Crossplane managed resources and their sync status.',
+
+  // Cloud Native Buildpacks
+  buildpacks_status: 'Cloud Native Buildpack build status and image history.',
+
   upgrade_status: 'Kubernetes version upgrade status and available upgrades.',
   user_management: 'Manage console users and their roles.',
   github_activity: 'Recent GitHub activity: commits, PRs, and issues.',
@@ -369,6 +452,26 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   ml_notebooks: 'Jupyter notebook server status and resource usage.',
   provider_health: 'Health and status of AI and cloud infrastructure providers.',
   strimzi_status: 'Strimzi Kafka cluster health, topic status, and consumer group lag.',
+  // Flatcar Container Linux
+  flatcar_status: 'Flatcar Container Linux node status, version info, and update readiness.',
+  // Fluentd log collector
+  fluentd_status: 'Fluentd log collector pod health, buffer status, and throughput.',
+  // Lima VM
+  lima_status: 'Lima VM instance status, resource usage, and configuration.',
+  // Thanos distributed metrics
+  thanos_status: 'Thanos distributed metrics store, compactor, and query health.',
+  // OpenFeature feature-flag management
+  openfeature_status: 'OpenFeature feature flag provider status and flag evaluation metrics.',
+
+  // Benchmark cards
+  nightly_e2e_status: 'Nightly end-to-end test results and pass/fail trends.',
+  benchmark_hero: 'Latest benchmark results with key performance metrics.',
+  pareto_frontier: 'Performance vs cost Pareto frontier for hardware configurations.',
+  hardware_leaderboard: 'Hardware configuration rankings by throughput and latency.',
+  latency_breakdown: 'Latency breakdown by stage: prefill, decode, and network.',
+  throughput_comparison: 'Throughput comparison across hardware and model configurations.',
+  performance_timeline: 'Performance metrics over time with regression detection.',
+  resource_utilization: 'Resource utilization efficiency across benchmark runs.',
 
   // Games
   sudoku_game: 'Classic Sudoku puzzle game with multiple difficulty levels.',
@@ -393,6 +496,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   kube_doom: 'First-person debugging adventure.',
   kube_craft: 'Build and manage your cluster world.',
   kube_chess: 'Chess game with Kubernetes-themed pieces.',
+  missile_command: 'Missile Command arcade game defending your cluster.',
+  kube_bert: 'Q*bert style platformer navigating Kubernetes pyramids.',
   // CoreDNS
   coredns_status: 'CoreDNS pod health, restart counts, and cluster status across clusters.',
   // CRI-O container runtime
