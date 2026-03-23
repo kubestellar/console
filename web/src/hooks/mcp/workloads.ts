@@ -252,7 +252,7 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
 
-  const refetch = useCallback(async (silent = false) => {
+  const refetch = useCallback(async (silent = false, signal?: AbortSignal) => {
     // In demo mode, use demo data
     if (isDemoMode()) {
       const demoPods = getDemoPods().filter(p =>
@@ -262,6 +262,7 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
       const sortedDemoPods = sortBy === 'restarts'
         ? demoPods.sort((a, b) => b.restarts - a.restarts)
         : demoPods.sort((a, b) => a.name.localeCompare(b.name))
+      if (signal?.aborted) return
       setPods(sortedDemoPods.slice(0, limit))
       const now = new Date()
       setLastUpdated(now)
@@ -279,6 +280,7 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
 
     // Skip backend fetch when backend is unavailable
     if (isBackendUnavailable()) {
+      if (signal?.aborted) return
       const now = new Date()
       setLastUpdated(now)
       setLastRefresh(now)
@@ -310,7 +312,9 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
         url: '/api/mcp/pods/stream',
         params: sseParams,
         itemsKey: 'pods',
+        signal,
         onClusterData: (_clusterName, items) => {
+          if (signal?.aborted) return
           // Progressive update — show data as it arrives
           setPods(prev => {
             const merged = [...prev, ...items]
@@ -322,6 +326,9 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
           setIsLoading(false)
         },
       })
+
+      // Discard results if the request was aborted (cluster/namespace changed)
+      if (signal?.aborted) return
 
       // Final sort & cache with all pods
       let sortedPods = allPods
@@ -342,6 +349,8 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
       setConsecutiveFailures(0)
       setLastRefresh(now)
     } catch (err) {
+      // Ignore AbortError — expected when cluster/namespace changes during fetch
+      if (err instanceof DOMException && err.name === 'AbortError') return
       // Keep stale data on error — only fall back to demo data when demo mode is active
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
@@ -349,6 +358,7 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
         setError('Failed to fetch pods')
       }
     } finally {
+      if (signal?.aborted) return
       setIsLoading(false)
       if (!silent) {
         setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
@@ -359,17 +369,19 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
   }, [cluster, namespace, sortBy, limit, cacheKey])
 
   useEffect(() => {
+    const controller = new AbortController()
     const hasCachedData = podsCache && podsCache.key === cacheKey
-    refetch(!!hasCachedData) // silent=true if we have cached data
+    refetch(!!hasCachedData, controller.signal) // silent=true if we have cached data
     // Poll for pod updates
-    const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
+    const interval = setInterval(() => refetch(true, controller.signal), getEffectiveInterval(REFRESH_INTERVAL_MS))
 
     // Register for unified mode transition refetch
     const unregisterRefetch = registerRefetch(`pods:${cacheKey}`, () => {
-      refetch(false)
+      refetch(false, controller.signal)
     })
 
     return () => {
+      controller.abort()
       clearInterval(interval)
       unregisterRefetch()
     }
@@ -427,12 +439,13 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
   const [lastUpdated, setLastUpdated] = useState<Date | null>(cached?.timestamp || null)
   const [error, setError] = useState<string | null>(null)
 
-  const refetch = useCallback(async (silent = false) => {
+  const refetch = useCallback(async (silent = false, signal?: AbortSignal) => {
     // If demo mode is enabled (and not overridden by forceLive), use demo data
     if (!forceLive && isDemoMode()) {
       const demoPods = getDemoAllPods().filter(p =>
         (!cluster || p.cluster === cluster) && (!namespace || p.namespace === namespace)
       )
+      if (signal?.aborted) return
       setPods(demoPods)
       setIsLoading(false)
       setError(null)
@@ -455,11 +468,15 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
         url: '/api/mcp/pods/stream',
         params: sseParams,
         itemsKey: 'pods',
+        signal,
         onClusterData: (_clusterName, items) => {
+          if (signal?.aborted) return
           setPods(prev => [...prev, ...items])
           setIsLoading(false)
         },
       })
+
+      if (signal?.aborted) return
 
       const now = new Date()
       podsCache = { data: allPods, timestamp: now, key: cacheKey }
@@ -469,10 +486,12 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
       setError(null)
       setLastUpdated(now)
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       if (!silent && !podsCache) {
         setError('Failed to fetch pods')
       }
     } finally {
+      if (signal?.aborted) return
       if (!silent) {
         setIsLoading(false)
       }
@@ -481,17 +500,19 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
   }, [cluster, namespace, cacheKey, forceLive])
 
   useEffect(() => {
+    const controller = new AbortController()
     const hasCachedData = podsCache && podsCache.key === cacheKey
-    refetch(!!hasCachedData) // silent=true if we have cached data
+    refetch(!!hasCachedData, controller.signal) // silent=true if we have cached data
     // Poll for pod updates
-    const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
+    const interval = setInterval(() => refetch(true, controller.signal), getEffectiveInterval(REFRESH_INTERVAL_MS))
 
     // Register for unified mode transition refetch
     const unregisterRefetch = registerRefetch(`allPods:${cacheKey}`, () => {
-      refetch(false)
+      refetch(false, controller.signal)
     })
 
     return () => {
+      controller.abort()
       clearInterval(interval)
       unregisterRefetch()
     }
@@ -565,12 +586,13 @@ export function usePodIssues(cluster?: string, namespace?: string) {
     }
   }, [cluster, namespace])
 
-  const refetch = useCallback(async (silent = false) => {
+  const refetch = useCallback(async (silent = false, signal?: AbortSignal) => {
     // In demo mode, use demo data
     if (isDemoMode()) {
       const demoIssues = getDemoPodIssues().filter(i =>
         (!cluster || i.cluster === cluster) && (!namespace || i.namespace === namespace)
       )
+      if (signal?.aborted) return
       setIssues(demoIssues)
       const now = new Date()
       setLastUpdated(now)
@@ -602,6 +624,7 @@ export function usePodIssues(cluster?: string, namespace?: string) {
         const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
         const kubectlContext = clusterInfo?.context || cluster
         const podIssuesData = await kubectlProxy.getPodIssues(kubectlContext, namespace)
+        if (signal?.aborted) return
         const now = new Date()
         podIssuesCache = { data: podIssuesData, timestamp: now, key: cacheKey }
         setIssues(podIssuesData)
@@ -631,11 +654,15 @@ export function usePodIssues(cluster?: string, namespace?: string) {
         url: '/api/mcp/pod-issues/stream',
         params: sseParams,
         itemsKey: 'issues',
+        signal,
         onClusterData: (_clusterName, items) => {
+          if (signal?.aborted) return
           setIssues(prev => [...prev, ...items])
           setIsLoading(false)
         },
       })
+
+      if (signal?.aborted) return
 
       const now = new Date()
       podIssuesCache = { data: allIssues, timestamp: now, key: cacheKey }
@@ -644,7 +671,8 @@ export function usePodIssues(cluster?: string, namespace?: string) {
       setLastUpdated(now)
       setConsecutiveFailures(0)
       setLastRefresh(now)
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent && !podIssuesCache) {
@@ -652,6 +680,7 @@ export function usePodIssues(cluster?: string, namespace?: string) {
         setIssues([])
       }
     } finally {
+      if (signal?.aborted) return
       setIsLoading(false)
       if (!silent) {
         setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
@@ -662,17 +691,19 @@ export function usePodIssues(cluster?: string, namespace?: string) {
   }, [cluster, namespace, cacheKey])
 
   useEffect(() => {
+    const controller = new AbortController()
     const hasCachedData = podIssuesCache && podIssuesCache.key === cacheKey
-    refetch(!!hasCachedData) // silent=true if we have cached data
+    refetch(!!hasCachedData, controller.signal) // silent=true if we have cached data
     // Poll every 30 seconds for pod issue updates
-    const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
+    const interval = setInterval(() => refetch(true, controller.signal), getEffectiveInterval(REFRESH_INTERVAL_MS))
 
     // Register for unified mode transition refetch
     const unregisterRefetch = registerRefetch(`podIssues:${cacheKey}`, () => {
-      refetch(false)
+      refetch(false, controller.signal)
     })
 
     return () => {
+      controller.abort()
       clearInterval(interval)
       unregisterRefetch()
     }
@@ -738,12 +769,13 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
 
-  const refetch = useCallback(async (silent = false) => {
+  const refetch = useCallback(async (silent = false, signal?: AbortSignal) => {
     // In demo mode, use demo data
     if (isDemoMode()) {
       const demoIssues = getDemoDeploymentIssues().filter(i =>
         (!cluster || i.cluster === cluster) && (!namespace || i.namespace === namespace)
       )
+      if (signal?.aborted) return
       setIssues(demoIssues)
       const now = new Date()
       setLastUpdated(now)
@@ -778,11 +810,15 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
         url: '/api/mcp/deployment-issues/stream',
         params: sseParams,
         itemsKey: 'issues',
+        signal,
         onClusterData: (_clusterName, items) => {
+          if (signal?.aborted) return
           setIssues(prev => [...prev, ...items])
           setIsLoading(false)
         },
       })
+
+      if (signal?.aborted) return
 
       const now = new Date()
       deploymentIssuesCache = { data: allIssues, timestamp: now, key: cacheKey }
@@ -792,12 +828,14 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
       setConsecutiveFailures(0)
       setLastRefresh(now)
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent && !deploymentIssuesCache) {
         setError('Failed to fetch deployment issues')
       }
     } finally {
+      if (signal?.aborted) return
       setIsLoading(false)
       if (!silent) {
         setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
@@ -808,17 +846,19 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
   }, [cluster, namespace, cacheKey])
 
   useEffect(() => {
+    const controller = new AbortController()
     const hasCachedData = deploymentIssuesCache && deploymentIssuesCache.key === cacheKey
-    refetch(!!hasCachedData) // silent=true if we have cached data
+    refetch(!!hasCachedData, controller.signal) // silent=true if we have cached data
     // Poll every 30 seconds for deployment issues
-    const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
+    const interval = setInterval(() => refetch(true, controller.signal), getEffectiveInterval(REFRESH_INTERVAL_MS))
 
     // Register for unified mode transition refetch
     const unregisterRefetch = registerRefetch(`deploymentIssues:${cacheKey}`, () => {
-      refetch(false)
+      refetch(false, controller.signal)
     })
 
     return () => {
+      controller.abort()
       clearInterval(interval)
       unregisterRefetch()
     }
@@ -902,12 +942,13 @@ export function useDeployments(cluster?: string, namespace?: string) {
     }
   }, [cluster, namespace])
 
-  const refetch = useCallback(async (silent = false) => {
+  const refetch = useCallback(async (silent = false, signal?: AbortSignal) => {
     // In demo mode, use demo data
     if (isDemoMode()) {
       const demoDeployments = getDemoDeployments().filter(d =>
         (!cluster || d.cluster === cluster) && (!namespace || d.namespace === namespace)
       )
+      if (signal?.aborted) return
       setDeployments(demoDeployments)
       const now = new Date()
       setLastUpdated(now)
@@ -941,15 +982,21 @@ export function useDeployments(cluster?: string, namespace?: string) {
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
+        // Chain with the effect's signal so cleanup aborts the fetch too
+        if (signal) {
+          signal.addEventListener('abort', () => controller.abort(), { once: true })
+        }
         const response = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
         })
         clearTimeout(timeoutId)
 
+        if (signal?.aborted) return
         if (response.ok) {
           const data = await response.json()
           const deployData = (data.deployments || []).map((d: Deployment) => ({ ...d, cluster: d.cluster || cluster }))
+          if (signal?.aborted) return
           const now = new Date()
           // Update cache
           deploymentsCache = { data: deployData, timestamp: now, key: cacheKey }
@@ -967,7 +1014,8 @@ export function useDeployments(cluster?: string, namespace?: string) {
           reportAgentDataSuccess()
           return
         }
-      } catch {
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return
         // Agent unavailable — fall through to kubectl proxy
       }
     }
@@ -984,6 +1032,7 @@ export function useDeployments(cluster?: string, namespace?: string) {
         )
         const deployData = await Promise.race([deployPromise, timeoutPromise])
 
+        if (signal?.aborted) return
         if (deployData && deployData.length >= 0) {
           const enriched = deployData.map((d: Deployment) => ({ ...d, cluster: d.cluster || cluster }))
           const now = new Date()
@@ -1014,6 +1063,7 @@ export function useDeployments(cluster?: string, namespace?: string) {
       const url = `/api/mcp/deployments?${params}`
 
       if (isDemoMode()) {
+        if (signal?.aborted) return
         setDeployments([])
         const now = new Date()
         setLastUpdated(now)
@@ -1026,11 +1076,12 @@ export function useDeployments(cluster?: string, namespace?: string) {
       const token = localStorage.getItem(STORAGE_KEY_TOKEN)
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       headers['Authorization'] = `Bearer ${token}`
-      const response = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS) })
+      const response = await fetch(url, { method: 'GET', headers, signal: signal || AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS) })
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
       }
       const data = await response.json() as { deployments: Deployment[] }
+      if (signal?.aborted) return
       const newDeployments = (data.deployments || []).map(d => ({ ...d, cluster: d.cluster || cluster || 'unknown' }))
       setDeployments(newDeployments)
       setError(null)
@@ -1040,6 +1091,7 @@ export function useDeployments(cluster?: string, namespace?: string) {
       setLastRefresh(now)
       deploymentsCache = { data: newDeployments, timestamp: now, key: cacheKey }
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent && !deploymentsCache) {
@@ -1047,6 +1099,7 @@ export function useDeployments(cluster?: string, namespace?: string) {
         setDeployments([])
       }
     } finally {
+      if (signal?.aborted) return
       if (!silent) {
         setIsLoading(false)
         await new Promise(resolve => setTimeout(resolve, MIN_REFRESH_INDICATOR_MS))
@@ -1056,18 +1109,20 @@ export function useDeployments(cluster?: string, namespace?: string) {
   }, [cluster, namespace, cacheKey])
 
   useEffect(() => {
+    const controller = new AbortController()
     // If we have cached data, do a silent refresh
     const hasCachedData = deploymentsCache && deploymentsCache.key === cacheKey
-    refetch(hasCachedData ? true : false)
+    refetch(hasCachedData ? true : false, controller.signal)
     // Poll every 30 seconds for deployment updates
-    const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
+    const interval = setInterval(() => refetch(true, controller.signal), getEffectiveInterval(REFRESH_INTERVAL_MS))
 
     // Register for unified mode transition refetch
     const unregisterRefetch = registerRefetch(`deployments:${cacheKey}`, () => {
-      refetch(false)
+      refetch(false, controller.signal)
     })
 
     return () => {
+      controller.abort()
       clearInterval(interval)
       unregisterRefetch()
     }
@@ -1107,7 +1162,7 @@ export function useJobs(cluster?: string, namespace?: string) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const refetch = useCallback(async () => {
+  const refetch = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true)
     if (cluster && !isAgentUnavailable()) {
       try {
@@ -1116,20 +1171,26 @@ export function useJobs(cluster?: string, namespace?: string) {
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
+        if (signal) {
+          signal.addEventListener('abort', () => controller.abort(), { once: true })
+        }
         const response = await fetch(`${LOCAL_AGENT_URL}/jobs?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
         })
         clearTimeout(timeoutId)
+        if (signal?.aborted) return
         if (response.ok) {
           const data = await response.json()
+          if (signal?.aborted) return
           setJobs(data.jobs || [])
           setError(null)
           setIsLoading(false)
           reportAgentDataSuccess()
           return
         }
-      } catch {
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return
         // Fall through to API
       }
     }
@@ -1142,26 +1203,33 @@ export function useJobs(cluster?: string, namespace?: string) {
         url: '/api/mcp/jobs/stream',
         params: sseParams,
         itemsKey: 'jobs',
+        signal,
         onClusterData: (_clusterName, items) => {
+          if (signal?.aborted) return
           setJobs(prev => [...prev, ...items])
           setIsLoading(false)
         },
       })
+      if (signal?.aborted) return
       setJobs(result)
       setError(null)
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       setError('Failed to fetch jobs')
       setJobs([])
     } finally {
+      if (signal?.aborted) return
       setIsLoading(false)
     }
   }, [cluster, namespace])
 
   useEffect(() => {
-    refetch()
+    const controller = new AbortController()
+    refetch(controller.signal)
+    return () => { controller.abort() }
   }, [refetch])
 
-  return { jobs, isLoading, error, refetch }
+  return { jobs, isLoading, error, refetch: () => refetch() }
 }
 
 // ---------------------------------------------------------------------------
@@ -1173,7 +1241,7 @@ export function useHPAs(cluster?: string, namespace?: string) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const refetch = useCallback(async () => {
+  const refetch = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true)
     if (cluster && !isAgentUnavailable()) {
       try {
@@ -1182,20 +1250,26 @@ export function useHPAs(cluster?: string, namespace?: string) {
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
+        if (signal) {
+          signal.addEventListener('abort', () => controller.abort(), { once: true })
+        }
         const response = await fetch(`${LOCAL_AGENT_URL}/hpas?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
         })
         clearTimeout(timeoutId)
+        if (signal?.aborted) return
         if (response.ok) {
           const data = await response.json()
+          if (signal?.aborted) return
           setHPAs(data.hpas || [])
           setError(null)
           setIsLoading(false)
           reportAgentDataSuccess()
           return
         }
-      } catch {
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return
         // Fall through to API
       }
     }
@@ -1204,21 +1278,26 @@ export function useHPAs(cluster?: string, namespace?: string) {
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
       const { data } = await api.get<{ hpas: HPA[] }>(`/api/mcp/hpas?${params}`)
+      if (signal?.aborted) return
       setHPAs(data.hpas || [])
       setError(null)
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       setError('Failed to fetch HPAs')
       setHPAs([])
     } finally {
+      if (signal?.aborted) return
       setIsLoading(false)
     }
   }, [cluster, namespace])
 
   useEffect(() => {
-    refetch()
+    const controller = new AbortController()
+    refetch(controller.signal)
+    return () => { controller.abort() }
   }, [refetch])
 
-  return { hpas, isLoading, error, refetch }
+  return { hpas, isLoading, error, refetch: () => refetch() }
 }
 
 // ---------------------------------------------------------------------------
@@ -1230,7 +1309,7 @@ export function useReplicaSets(cluster?: string, namespace?: string) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const refetch = useCallback(async () => {
+  const refetch = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true)
     // Try local agent first
     if (cluster && !isAgentUnavailable()) {
@@ -1240,20 +1319,26 @@ export function useReplicaSets(cluster?: string, namespace?: string) {
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
+        if (signal) {
+          signal.addEventListener('abort', () => controller.abort(), { once: true })
+        }
         const response = await fetch(`${LOCAL_AGENT_URL}/replicasets?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
         })
         clearTimeout(timeoutId)
+        if (signal?.aborted) return
         if (response.ok) {
           const data = await response.json()
+          if (signal?.aborted) return
           setReplicaSets(data.replicasets || [])
           setError(null)
           setIsLoading(false)
           reportAgentDataSuccess()
           return
         }
-      } catch {
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return
         // Fall through to API
       }
     }
@@ -1262,18 +1347,25 @@ export function useReplicaSets(cluster?: string, namespace?: string) {
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
       const { data } = await api.get<{ replicasets: ReplicaSet[] }>(`/api/mcp/replicasets?${params}`)
+      if (signal?.aborted) return
       setReplicaSets(data.replicasets || [])
       setError(null)
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       setError('Failed to fetch ReplicaSets')
       setReplicaSets([])
     } finally {
+      if (signal?.aborted) return
       setIsLoading(false)
     }
   }, [cluster, namespace])
 
-  useEffect(() => { refetch() }, [refetch])
-  return { replicasets, isLoading, error, refetch }
+  useEffect(() => {
+    const controller = new AbortController()
+    refetch(controller.signal)
+    return () => { controller.abort() }
+  }, [refetch])
+  return { replicasets, isLoading, error, refetch: () => refetch() }
 }
 
 // ---------------------------------------------------------------------------
@@ -1285,7 +1377,7 @@ export function useStatefulSets(cluster?: string, namespace?: string) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const refetch = useCallback(async () => {
+  const refetch = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true)
     if (cluster && !isAgentUnavailable()) {
       try {
@@ -1294,20 +1386,26 @@ export function useStatefulSets(cluster?: string, namespace?: string) {
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
+        if (signal) {
+          signal.addEventListener('abort', () => controller.abort(), { once: true })
+        }
         const response = await fetch(`${LOCAL_AGENT_URL}/statefulsets?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
         })
         clearTimeout(timeoutId)
+        if (signal?.aborted) return
         if (response.ok) {
           const data = await response.json()
+          if (signal?.aborted) return
           setStatefulSets(data.statefulsets || [])
           setError(null)
           setIsLoading(false)
           reportAgentDataSuccess()
           return
         }
-      } catch {
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return
         // Fall through to API
       }
     }
@@ -1316,18 +1414,25 @@ export function useStatefulSets(cluster?: string, namespace?: string) {
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
       const { data } = await api.get<{ statefulsets: StatefulSet[] }>(`/api/mcp/statefulsets?${params}`)
+      if (signal?.aborted) return
       setStatefulSets(data.statefulsets || [])
       setError(null)
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       setError('Failed to fetch StatefulSets')
       setStatefulSets([])
     } finally {
+      if (signal?.aborted) return
       setIsLoading(false)
     }
   }, [cluster, namespace])
 
-  useEffect(() => { refetch() }, [refetch])
-  return { statefulsets, isLoading, error, refetch }
+  useEffect(() => {
+    const controller = new AbortController()
+    refetch(controller.signal)
+    return () => { controller.abort() }
+  }, [refetch])
+  return { statefulsets, isLoading, error, refetch: () => refetch() }
 }
 
 // ---------------------------------------------------------------------------
@@ -1339,7 +1444,7 @@ export function useDaemonSets(cluster?: string, namespace?: string) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const refetch = useCallback(async () => {
+  const refetch = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true)
     if (cluster && !isAgentUnavailable()) {
       try {
@@ -1348,20 +1453,26 @@ export function useDaemonSets(cluster?: string, namespace?: string) {
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
+        if (signal) {
+          signal.addEventListener('abort', () => controller.abort(), { once: true })
+        }
         const response = await fetch(`${LOCAL_AGENT_URL}/daemonsets?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
         })
         clearTimeout(timeoutId)
+        if (signal?.aborted) return
         if (response.ok) {
           const data = await response.json()
+          if (signal?.aborted) return
           setDaemonSets(data.daemonsets || [])
           setError(null)
           setIsLoading(false)
           reportAgentDataSuccess()
           return
         }
-      } catch {
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return
         // Fall through to API
       }
     }
@@ -1370,18 +1481,25 @@ export function useDaemonSets(cluster?: string, namespace?: string) {
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
       const { data } = await api.get<{ daemonsets: DaemonSet[] }>(`/api/mcp/daemonsets?${params}`)
+      if (signal?.aborted) return
       setDaemonSets(data.daemonsets || [])
       setError(null)
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       setError('Failed to fetch DaemonSets')
       setDaemonSets([])
     } finally {
+      if (signal?.aborted) return
       setIsLoading(false)
     }
   }, [cluster, namespace])
 
-  useEffect(() => { refetch() }, [refetch])
-  return { daemonsets, isLoading, error, refetch }
+  useEffect(() => {
+    const controller = new AbortController()
+    refetch(controller.signal)
+    return () => { controller.abort() }
+  }, [refetch])
+  return { daemonsets, isLoading, error, refetch: () => refetch() }
 }
 
 // ---------------------------------------------------------------------------
@@ -1393,7 +1511,7 @@ export function useCronJobs(cluster?: string, namespace?: string) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const refetch = useCallback(async () => {
+  const refetch = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true)
     if (cluster && !isAgentUnavailable()) {
       try {
@@ -1402,20 +1520,26 @@ export function useCronJobs(cluster?: string, namespace?: string) {
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
+        if (signal) {
+          signal.addEventListener('abort', () => controller.abort(), { once: true })
+        }
         const response = await fetch(`${LOCAL_AGENT_URL}/cronjobs?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
         })
         clearTimeout(timeoutId)
+        if (signal?.aborted) return
         if (response.ok) {
           const data = await response.json()
+          if (signal?.aborted) return
           setCronJobs(data.cronjobs || [])
           setError(null)
           setIsLoading(false)
           reportAgentDataSuccess()
           return
         }
-      } catch {
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return
         // Fall through to API
       }
     }
@@ -1424,18 +1548,25 @@ export function useCronJobs(cluster?: string, namespace?: string) {
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
       const { data } = await api.get<{ cronjobs: CronJob[] }>(`/api/mcp/cronjobs?${params}`)
+      if (signal?.aborted) return
       setCronJobs(data.cronjobs || [])
       setError(null)
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       setError('Failed to fetch CronJobs')
       setCronJobs([])
     } finally {
+      if (signal?.aborted) return
       setIsLoading(false)
     }
   }, [cluster, namespace])
 
-  useEffect(() => { refetch() }, [refetch])
-  return { cronjobs, isLoading, error, refetch }
+  useEffect(() => {
+    const controller = new AbortController()
+    refetch(controller.signal)
+    return () => { controller.abort() }
+  }, [refetch])
+  return { cronjobs, isLoading, error, refetch: () => refetch() }
 }
 
 // ---------------------------------------------------------------------------
@@ -1447,7 +1578,7 @@ export function usePodLogs(cluster: string, namespace: string, pod: string, cont
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const refetch = useCallback(async () => {
+  const refetch = useCallback(async (signal?: AbortSignal) => {
     if (!cluster || !namespace || !pod) return
     setIsLoading(true)
     setError(null)
@@ -1459,20 +1590,25 @@ export function usePodLogs(cluster: string, namespace: string, pod: string, cont
       if (container) params.append('container', container)
       params.append('tail', tail.toString())
       const { data } = await api.get<{ logs: string }>(`/api/mcp/pods/logs?${params}`)
+      if (signal?.aborted) return
       setLogs(data.logs || '')
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       setError(err instanceof Error ? err.message : 'Failed to fetch logs')
       setLogs('')
     } finally {
+      if (signal?.aborted) return
       setIsLoading(false)
     }
   }, [cluster, namespace, pod, container, tail])
 
   useEffect(() => {
-    refetch()
+    const controller = new AbortController()
+    refetch(controller.signal)
+    return () => { controller.abort() }
   }, [refetch])
 
-  return { logs, isLoading, error, refetch }
+  return { logs, isLoading, error, refetch: () => refetch() }
 }
 
 // ============================================================================
