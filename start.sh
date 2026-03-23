@@ -311,6 +311,32 @@ if [ -x "$INSTALL_DIR/kc-agent" ]; then
     fi
 fi
 
+# Check for MCP tool binaries (kubestellar-ops, kubestellar-deploy)
+# These are optional but required for full MCP integration
+MCP_OPS_PATH="${KUBESTELLAR_OPS_PATH:-kubestellar-ops}"
+MCP_DEPLOY_PATH="${KUBESTELLAR_DEPLOY_PATH:-kubestellar-deploy}"
+MCP_MISSING=""
+
+if ! command -v "$MCP_OPS_PATH" &>/dev/null; then
+    MCP_MISSING="kubestellar-ops"
+fi
+if ! command -v "$MCP_DEPLOY_PATH" &>/dev/null; then
+    if [ -n "$MCP_MISSING" ]; then
+        MCP_MISSING="$MCP_MISSING and kubestellar-deploy"
+    else
+        MCP_MISSING="kubestellar-deploy"
+    fi
+fi
+
+if [ -n "$MCP_MISSING" ]; then
+    echo ""
+    echo "  Note: $MCP_MISSING not found on PATH."
+    echo "  MCP tools (Kubernetes ops and deploy) will be unavailable."
+    echo "  To install, follow Step 1 of the Quick Start guide:"
+    echo "    https://kubestellar.io/docs/console/overview/quick-start#step-1-install-kubestellar-mcp-tools"
+    echo ""
+fi
+
 # Generate JWT_SECRET if not set (required in production mode)
 if [ -z "$JWT_SECRET" ]; then
     if command -v openssl &>/dev/null; then

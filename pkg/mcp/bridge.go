@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
+	"os/exec"
 	"sync"
 	"time"
 )
@@ -102,31 +104,41 @@ func NewBridge(config BridgeConfig) *Bridge {
 	}
 }
 
-// Start initializes and starts all MCP clients
+// Start initializes and starts all MCP clients.
+// Binaries that are not found on PATH are skipped with a log message
+// rather than treated as a fatal error.
 func (b *Bridge) Start(ctx context.Context) error {
 	var wg sync.WaitGroup
 	errCh := make(chan error, 2)
 
-	// Start kubestellar-ops if path is configured
+	// Start kubestellar-ops if path is configured and binary exists
 	if b.config.KubestellarOpsPath != "" {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err := b.startOpsClient(ctx); err != nil {
-				errCh <- fmt.Errorf("ops client: %w", err)
-			}
-		}()
+		if _, err := exec.LookPath(b.config.KubestellarOpsPath); err != nil {
+			log.Printf("kubestellar-ops binary not found on PATH (%q) — MCP ops tools will be unavailable. Install via: brew install kubestellar/tap/kubestellar-ops", b.config.KubestellarOpsPath)
+		} else {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				if err := b.startOpsClient(ctx); err != nil {
+					errCh <- fmt.Errorf("ops client: %w", err)
+				}
+			}()
+		}
 	}
 
-	// Start kubestellar-deploy if path is configured
+	// Start kubestellar-deploy if path is configured and binary exists
 	if b.config.KubestellarDeployPath != "" {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err := b.startDeployClient(ctx); err != nil {
-				errCh <- fmt.Errorf("deploy client: %w", err)
-			}
-		}()
+		if _, err := exec.LookPath(b.config.KubestellarDeployPath); err != nil {
+			log.Printf("kubestellar-deploy binary not found on PATH (%q) — MCP deploy tools will be unavailable. Install via: brew install kubestellar/tap/kubestellar-deploy", b.config.KubestellarDeployPath)
+		} else {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				if err := b.startDeployClient(ctx); err != nil {
+					errCh <- fmt.Errorf("deploy client: %w", err)
+				}
+			}()
+		}
 	}
 
 	wg.Wait()
@@ -508,22 +520,42 @@ func (b *Bridge) Status() map[string]interface{} {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	status := map[string]interface{}{
-		"opsClient": map[string]interface{}{
-			"available": b.opsClient != nil && b.opsClient.IsReady(),
-			"toolCount": 0,
-		},
-		"deployClient": map[string]interface{}{
-			"available": b.deployClient != nil && b.deployClient.IsReady(),
-			"toolCount": 0,
-		},
+	opsAvailable := b.opsClient != nil && b.opsClient.IsReady()
+	deployAvailable := b.deployClient != nil && b.deployClient.IsReady()
+
+	opsStatus := map[string]interface{}{
+		"available": opsAvailable,
+		"toolCount": 0,
+	}
+	deployStatus := map[string]interface{}{
+		"available": deployAvailable,
+		"toolCount": 0,
 	}
 
-	if b.opsClient != nil && b.opsClient.IsReady() {
-		status["opsClient"].(map[string]interface{})["toolCount"] = len(b.opsClient.Tools())
+	// Add installation hint when binary is not on PATH
+	if !opsAvailable {
+		if _, err := exec.LookPath(b.config.KubestellarOpsPath); err != nil {
+			opsStatus["reason"] = "binary not found on PATH"
+			opsStatus["install"] = "brew install kubestellar/tap/kubestellar-ops"
+		}
 	}
-	if b.deployClient != nil && b.deployClient.IsReady() {
-		status["deployClient"].(map[string]interface{})["toolCount"] = len(b.deployClient.Tools())
+	if !deployAvailable {
+		if _, err := exec.LookPath(b.config.KubestellarDeployPath); err != nil {
+			deployStatus["reason"] = "binary not found on PATH"
+			deployStatus["install"] = "brew install kubestellar/tap/kubestellar-deploy"
+		}
+	}
+
+	status := map[string]interface{}{
+		"opsClient":    opsStatus,
+		"deployClient": deployStatus,
+	}
+
+	if opsAvailable {
+		opsStatus["toolCount"] = len(b.opsClient.Tools())
+	}
+	if deployAvailable {
+		deployStatus["toolCount"] = len(b.deployClient.Tools())
 	}
 
 	return status
