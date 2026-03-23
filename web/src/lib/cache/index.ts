@@ -594,7 +594,9 @@ class CacheStore<T> {
     const ssEntry = this.persist ? ssRead<T>(key) : null
     const snapshot = ssEntry
       ?? (this.persist ? _idbStorage.getFromSnapshot<T>(key) : null)
-    if (snapshot && !isEquivalentToInitial(snapshot.data, initialData)) {
+    // Accept the snapshot if it contains non-initial data OR has a valid timestamp
+    // (a valid timestamp means it was a real fetch result, even if the data is empty).
+    if (snapshot && (!isEquivalentToInitial(snapshot.data, initialData) || snapshot.timestamp > 0)) {
       this.initialDataLoaded = true
       this.state = {
         data: snapshot.data,
@@ -632,8 +634,8 @@ class CacheStore<T> {
 
     try {
       const entry = await cacheStorage.get<T>(this.key)
-      if (entry && !isEquivalentToInitial(entry.data, this.initialData)) {
-        // Cache found with real data - show immediately, start background refresh.
+      if (entry && (!isEquivalentToInitial(entry.data, this.initialData) || entry.timestamp > 0)) {
+        // Cache found with real data (or valid empty result) - show immediately, start background refresh.
         this.initialDataLoaded = true
         // Mirror to sessionStorage so next reload hydrates synchronously
         ssWrite(this.key, entry.data, entry.timestamp)
