@@ -39,11 +39,12 @@
  * ```
  */
 
-import { createContext, useContext, useLayoutEffect, useMemo } from 'react'
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { isAgentUnavailable } from '../../hooks/useLocalAgent'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { useOptionalStack } from '../../contexts/StackContext'
+import { CARD_LOADING_TIMEOUT_MS } from '../../lib/constants/network'
 
 export interface CardDataState {
   /** Whether 3+ consecutive fetch failures have occurred */
@@ -156,19 +157,49 @@ export function useCardLoadingState(options: CardLoadingStateOptions) {
     isRefreshing: isRefreshingOverride,
   } = options
 
+  // Safety-net timeout: if the caller keeps isLoading=true for longer than
+  // CARD_LOADING_TIMEOUT_MS (30s), force the card out of loading state.
+  // This prevents cards from being permanently stuck in a loading spinner
+  // when child components never report data (e.g., interrupted fetch, hook
+  // cancellation, or network issues that bypass normal error handling).
+  // This complements the CardWrapper-level timeout (which catches stuck
+  // childDataState.isLoading) by also capping at the hook level.
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (isLoading && !hasAnyData) {
+      // Start the safety-net timer when loading with no data
+      setLoadingTimedOut(false)
+      timeoutRef.current = setTimeout(() => setLoadingTimedOut(true), CARD_LOADING_TIMEOUT_MS)
+      return () => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      }
+    }
+    // Loading finished or data arrived — reset
+    setLoadingTimedOut(false)
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
+    }
+  }, [isLoading, hasAnyData])
+
+  // Once the timeout fires, treat the card as no longer loading
+  const effectiveIsLoading = isLoading && !loadingTimedOut
+
   // Data is considered "real" (displayable) if there is any data at all.
   // Demo data should be shown immediately with the Demo badge — not hidden behind a skeleton.
   // When refreshing with cached data, show cached content + refresh animation.
   const hasRealData = hasAnyData
-  const hasData = !isLoading || hasRealData
+  const hasData = !effectiveIsLoading || hasRealData
 
   // Report state to CardWrapper for refresh animation and status badges
   useReportCardDataState({
-    isFailed,
+    isFailed: isFailed || loadingTimedOut,
     consecutiveFailures,
     errorMessage,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isRefreshingOverride ?? (isLoading && hasData),
+    isLoading: effectiveIsLoading && !hasData,
+    isRefreshing: isRefreshingOverride ?? (effectiveIsLoading && hasData),
     hasData,
     isDemoData,
   })
@@ -177,11 +208,11 @@ export function useCardLoadingState(options: CardLoadingStateOptions) {
     /** Whether the card has data to display (true once loading completes or has cached data) */
     hasData,
     /** Whether to show skeleton loading state (only when loading with no cached/real data) */
-    showSkeleton: isLoading && !hasRealData,
+    showSkeleton: effectiveIsLoading && !hasRealData,
     /** Whether to show empty state (loading finished but no data exists) */
-    showEmptyState: !isLoading && !hasAnyData,
+    showEmptyState: !effectiveIsLoading && !hasAnyData,
     /** Whether data is being refreshed (has cache, fetching update) */
-    isRefreshing: isLoading && hasRealData,
+    isRefreshing: effectiveIsLoading && hasRealData,
   }
 }
 
