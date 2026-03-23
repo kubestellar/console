@@ -101,6 +101,7 @@ FAILED_SUITES=0
 SKIPPED_SUITES=0
 RESULTS=""
 declare -a FAILED_NAMES=()
+declare -A SUITE_STATUS=()  # Tracks actual pass/fail/skip per suite name
 
 # Extract a short failure reason from a log file, JSON-escaped for embedding
 extract_failure_reason() {
@@ -129,6 +130,7 @@ for script in "${ALL_SCRIPTS[@]}"; do
   if [ ! -f "$script" ]; then
     echo -e "  ${DIM}⊘  ${SUITE_NAME}${NC} — script not found"
     SKIPPED_SUITES=$((SKIPPED_SUITES + 1))
+    SUITE_STATUS["$SUITE_NAME"]="skip"
     RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"skip\",\"duration\":0},"
     continue
   fi
@@ -146,6 +148,7 @@ for script in "${ALL_SCRIPTS[@]}"; do
   if [ "$SUITE_EXIT" -eq 0 ]; then
     echo -e "    ${GREEN}✓ PASS${NC}  (${SUITE_DURATION}s)"
     PASSED_SUITES=$((PASSED_SUITES + 1))
+    SUITE_STATUS["$SUITE_NAME"]="pass"
     RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"pass\",\"duration\":${SUITE_DURATION}},"
   else
     echo -e "    ${RED}❌ FAIL${NC}  (${SUITE_DURATION}s)"
@@ -155,6 +158,7 @@ for script in "${ALL_SCRIPTS[@]}"; do
     done
     FAILED_SUITES=$((FAILED_SUITES + 1))
     FAILED_NAMES+=("$SUITE_NAME")
+    SUITE_STATUS["$SUITE_NAME"]="fail"
     FAIL_REASON=$(extract_failure_reason "$SUITE_OUTPUT")
     RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"fail\",\"duration\":${SUITE_DURATION},\"failure_reason\":\"${FAIL_REASON}\"},"
   fi
@@ -201,6 +205,7 @@ if [ -z "$FAST_MODE" ]; then
       SUITE_NAME=$(basename "$script" .sh)
       TOTAL=$((TOTAL + 1))
       SKIPPED_SUITES=$((SKIPPED_SUITES + 1))
+      SUITE_STATUS["$SUITE_NAME"]="skip"
       RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"skip\",\"duration\":0},"
     done
   else
@@ -217,6 +222,7 @@ if [ -z "$FAST_MODE" ]; then
         SUITE_NAME=$(basename "$script" .sh)
         TOTAL=$((TOTAL + 1))
         SKIPPED_SUITES=$((SKIPPED_SUITES + 1))
+        SUITE_STATUS["$SUITE_NAME"]="skip"
         RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"skip\",\"duration\":0},"
       done
     else
@@ -245,6 +251,7 @@ if [ -z "$FAST_MODE" ]; then
           SUITE_NAME=$(basename "$script" .sh)
           TOTAL=$((TOTAL + 1))
           SKIPPED_SUITES=$((SKIPPED_SUITES + 1))
+          SUITE_STATUS["$SUITE_NAME"]="skip"
           RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"skip\",\"duration\":0},"
         done
       else
@@ -263,6 +270,7 @@ if [ -z "$FAST_MODE" ]; then
           if [ ! -f "$script" ]; then
             echo -e "  ${DIM}⊘  ${SUITE_NAME}${NC} — script not found"
             SKIPPED_SUITES=$((SKIPPED_SUITES + 1))
+            SUITE_STATUS["$SUITE_NAME"]="skip"
             RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"skip\",\"duration\":0},"
             continue
           fi
@@ -278,6 +286,7 @@ if [ -z "$FAST_MODE" ]; then
           if [ "$SUITE_EXIT" -eq 0 ]; then
             echo -e "    ${GREEN}✓ PASS${NC}  (${SUITE_DURATION}s)"
             PASSED_SUITES=$((PASSED_SUITES + 1))
+            SUITE_STATUS["$SUITE_NAME"]="pass"
             RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"pass\",\"duration\":${SUITE_DURATION}},"
           else
             echo -e "    ${RED}❌ FAIL${NC}  (${SUITE_DURATION}s)"
@@ -286,6 +295,7 @@ if [ -z "$FAST_MODE" ]; then
             done
             FAILED_SUITES=$((FAILED_SUITES + 1))
             FAILED_NAMES+=("$SUITE_NAME")
+            SUITE_STATUS["$SUITE_NAME"]="fail"
             FAIL_REASON=$(extract_failure_reason "$SUITE_OUTPUT")
             RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"fail\",\"duration\":${SUITE_DURATION},\"failure_reason\":\"${FAIL_REASON}\"},"
           fi
@@ -302,6 +312,7 @@ else
     SUITE_NAME=$(basename "$script" .sh)
     TOTAL=$((TOTAL + 1))
     SKIPPED_SUITES=$((SKIPPED_SUITES + 1))
+    SUITE_STATUS["$SUITE_NAME"]="skip"
     RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"skip\",\"duration\":0},"
   done
 fi
@@ -347,19 +358,15 @@ cat > "$REPORT_MD" << EOF
 
 EOF
 
-# Add suite results to markdown
+# Add suite results to markdown using recorded exit-code status (not log parsing)
 for script in "${ALL_SCRIPTS[@]}" "${PLAYWRIGHT_SCRIPTS[@]}"; do
   SUITE_NAME=$(basename "$script" .sh)
-  SUITE_LOG="/tmp/suite-${SUITE_NAME}.log"
-  if [ -f "$SUITE_LOG" ]; then
-    if grep -q "passed\|PASS\|All.*checks passed" "$SUITE_LOG" 2>/dev/null; then
-      echo "| \`${SUITE_NAME}\` | PASS |" >> "$REPORT_MD"
-    else
-      echo "| \`${SUITE_NAME}\` | FAIL |" >> "$REPORT_MD"
-    fi
-  else
-    echo "| \`${SUITE_NAME}\` | SKIP |" >> "$REPORT_MD"
-  fi
+  STATUS="${SUITE_STATUS[$SUITE_NAME]:-skip}"
+  case "$STATUS" in
+    pass) echo "| \`${SUITE_NAME}\` | PASS |" >> "$REPORT_MD" ;;
+    fail) echo "| \`${SUITE_NAME}\` | FAIL |" >> "$REPORT_MD" ;;
+    *)    echo "| \`${SUITE_NAME}\` | SKIP |" >> "$REPORT_MD" ;;
+  esac
 done
 
 # ============================================================================
