@@ -3,6 +3,7 @@ import { Bug } from 'lucide-react'
 import { useNotifications } from '../../hooks/useFeatureRequests'
 import { useTranslation } from 'react-i18next'
 import type { RequestType } from '../../hooks/useFeatureRequests'
+import { useModalState } from '../../lib/modals'
 
 // Lazy-load the modal (~67 KB) — only needed when the user clicks the bug icon
 const FeatureRequestModal = lazy(() =>
@@ -11,30 +12,26 @@ const FeatureRequestModal = lazy(() =>
 
 export function FeatureRequestButton() {
   const { t: _t } = useTranslation()
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const { isOpen: isModalOpen, open: openModal, close: closeModal } = useModalState()
   const [initialRequestType, setInitialRequestType] = useState<RequestType | undefined>()
   const { unreadCount } = useNotifications()
 
   // Auto-open modal when navigated from /issue, /feedback, /feature routes
   useEffect(() => {
-    const handler = () => { setInitialRequestType(undefined); setIsModalOpen(true) }
-    const featureHandler = () => { setInitialRequestType('feature'); setIsModalOpen(true) }
+    const handler = () => { setInitialRequestType(undefined); openModal() }
+    const featureHandler = () => { setInitialRequestType('feature'); openModal() }
     window.addEventListener('open-feedback', handler)
     window.addEventListener('open-feedback-feature', featureHandler)
     return () => {
       window.removeEventListener('open-feedback', handler)
       window.removeEventListener('open-feedback-feature', featureHandler)
     }
-  }, [])
-
-  const handleClick = () => {
-    setIsModalOpen(true)
-  }
+  }, [openModal])
 
   return (
     <>
       <button
-        onClick={handleClick}
+        onClick={openModal}
         data-tour="feedback"
         className={`relative p-2 rounded-lg hover:bg-secondary/50 transition-colors ${
           unreadCount > 0 ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
@@ -53,7 +50,7 @@ export function FeatureRequestButton() {
         <Suspense fallback={null}>
           <FeatureRequestModal
             isOpen={isModalOpen}
-            onClose={() => { setIsModalOpen(false); setInitialRequestType(undefined) }}
+            onClose={() => { closeModal(); setInitialRequestType(undefined) }}
             initialRequestType={initialRequestType}
           />
         </Suspense>

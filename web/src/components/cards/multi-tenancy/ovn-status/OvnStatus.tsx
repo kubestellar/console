@@ -6,11 +6,11 @@
  * installation mission.
  */
 
-import { useState } from 'react'
 import { AlertTriangle, CheckCircle, Network, RefreshCw, Wifi, WifiOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../../ui/Skeleton'
 import { MetricTile } from '../../../../lib/cards/CardComponents'
+import { useModalState } from '../../../../lib/modals'
 import { useMissions } from '../../../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../../console-missions/shared'
 import { useOvnStatus } from './useOvnStatus'
@@ -62,7 +62,7 @@ export function OvnStatus() {
   const { data, error, showSkeleton, showEmptyState, isRefreshing, isDemoData } = useOvnStatus()
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const { isOpen: isDetailModalOpen, open: openDetailModal, close: closeDetailModal } = useModalState()
 
   // ------ Loading ------
   if (showSkeleton) {
@@ -132,8 +132,8 @@ export function OvnStatus() {
         <div
           role="button"
           tabIndex={0}
-          onClick={() => setIsDetailModalOpen(true)}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsDetailModalOpen(true) } }}
+          onClick={openDetailModal}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium cursor-pointer hover:bg-secondary/50 transition-colors ${
             isHealthy
               ? 'bg-green-500/15 text-green-400'
@@ -155,7 +155,7 @@ export function OvnStatus() {
       </div>
 
       {/* Metric tiles */}
-      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" role="button" tabIndex={0} onClick={() => setIsDetailModalOpen(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsDetailModalOpen(true) } }}>
+      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" role="button" tabIndex={0} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
         <MetricTile
           label={t('ovnStatus.ovnPods')}
           value={data.podCount}
@@ -177,7 +177,7 @@ export function OvnStatus() {
       </div>
 
       {/* UDN summary */}
-      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" role="button" tabIndex={0} onClick={() => setIsDetailModalOpen(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsDetailModalOpen(true) } }}>
+      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" role="button" tabIndex={0} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
         <MetricTile
           label={t('ovnStatus.udnCount')}
           value={(data.udns || []).length}
@@ -204,7 +204,7 @@ export function OvnStatus() {
           <p className="text-xs font-medium text-muted-foreground">{t('ovnStatus.udnList')}</p>
           <div className="space-y-1.5 max-h-32 overflow-y-auto scrollbar-thin">
             {(data.udns || []).map((udn) => (
-              <div key={udn.name} className="flex items-center justify-between text-xs gap-2 cursor-pointer hover:bg-secondary/50 transition-colors rounded px-1 -mx-1" role="button" tabIndex={0} onClick={() => setIsDetailModalOpen(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsDetailModalOpen(true) } }}>
+              <div key={udn.name} className="flex items-center justify-between text-xs gap-2 cursor-pointer hover:bg-secondary/50 transition-colors rounded px-1 -mx-1" role="button" tabIndex={0} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
                 <span className="text-muted-foreground truncate flex-1" title={udn.name}>
                   {udn.name}
                 </span>
@@ -239,7 +239,7 @@ export function OvnStatus() {
 
       <OvnDetailModal
         isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
+        onClose={closeDetailModal}
         data={data}
         isDemoData={isDemoData}
       />

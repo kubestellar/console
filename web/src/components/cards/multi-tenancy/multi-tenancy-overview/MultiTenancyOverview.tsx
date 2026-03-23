@@ -6,13 +6,14 @@
  * indicators, overall score, and tenant count. Purely derived from
  * the 4 individual technology hooks (no direct fetch).
  */
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Network, Layers, Box, Monitor, Shield, CheckCircle, XCircle, AlertTriangle, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useMultiTenancyOverview } from './useMultiTenancyOverview'
 import { DEMO_MULTI_TENANCY_OVERVIEW } from './demoData'
 import { useCardLoadingState } from '../../CardDataContext'
 import { MultiTenancyDetailModal } from './MultiTenancyDetailModal'
+import { useModalState } from '../../../../lib/modals'
 
 import type { ComponentStatus, IsolationLevel, IsolationStatus } from './useMultiTenancyOverview'
 
@@ -103,7 +104,7 @@ function IsolationRow({ level, onClick }: { level: IsolationLevel; onClick?: () 
 export function MultiTenancyOverview() {
   const { t } = useTranslation(['cards'])
   const liveData = useMultiTenancyOverview()
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const { isOpen: isDetailModalOpen, open: openDetailModal, close: closeDetailModal } = useModalState()
 
   // Use demo data when all hooks return demo data
   const data = useMemo(
@@ -145,7 +146,7 @@ export function MultiTenancyOverview() {
   return (
     <div className="h-full flex flex-col gap-3">
       {/* Overall score header */}
-      <div className="flex items-center justify-between px-2 py-1.5 bg-secondary/30 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors" role="button" tabIndex={0} onClick={() => setIsDetailModalOpen(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsDetailModalOpen(true) } }}>
+      <div className="flex items-center justify-between px-2 py-1.5 bg-secondary/30 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors" role="button" tabIndex={0} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
         <div className="flex items-center gap-2">
           <Shield className="w-4 h-4 text-cyan-400" />
           <span className="text-xs font-medium text-foreground">
@@ -168,7 +169,7 @@ export function MultiTenancyOverview() {
       {/* 2x2 component status grid */}
       <div className={`grid grid-cols-${COMPONENT_GRID_COLS} gap-2`}>
         {(data.components || []).map((component) => (
-          <ComponentBadge key={component.name} component={component} onClick={() => setIsDetailModalOpen(true)} />
+          <ComponentBadge key={component.name} component={component} onClick={openDetailModal} />
         ))}
       </div>
 
@@ -179,14 +180,14 @@ export function MultiTenancyOverview() {
         </div>
         <div className="space-y-0.5 bg-secondary/20 rounded-lg px-3 py-2">
           {(data.isolationLevels || []).map((level) => (
-            <IsolationRow key={level.type} level={level} onClick={() => setIsDetailModalOpen(true)} />
+            <IsolationRow key={level.type} level={level} onClick={openDetailModal} />
           ))}
         </div>
       </div>
 
       <MultiTenancyDetailModal
         isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
+        onClose={closeDetailModal}
         data={data}
         isDemoData={liveData.isDemoData}
       />

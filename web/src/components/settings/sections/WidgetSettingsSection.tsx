@@ -1,11 +1,11 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Monitor } from 'lucide-react'
 import { WidgetExportModal } from '../../widgets/WidgetExportModal'
+import { useModalState } from '../../../lib/modals'
 
 export function WidgetSettingsSection() {
   const { t } = useTranslation()
-  const [isExportOpen, setIsExportOpen] = useState(false)
+  const { isOpen: isExportOpen, open: openExportModal, close: closeExportModal } = useModalState()
 
   return (
     <div id="widget-settings" className="glass rounded-xl p-6">
@@ -20,7 +20,7 @@ export function WidgetSettingsSection() {
       </div>
 
       <button
-        onClick={() => setIsExportOpen(true)}
+        onClick={openExportModal}
         className="w-full px-4 py-3 rounded-lg bg-secondary hover:bg-secondary/80 border border-border text-sm font-medium text-foreground transition-colors flex items-center justify-center gap-2"
       >
         <Monitor className="w-4 h-4" />
@@ -29,7 +29,7 @@ export function WidgetSettingsSection() {
 
       <WidgetExportModal
         isOpen={isExportOpen}
-        onClose={() => setIsExportOpen(false)}
+        onClose={closeExportModal}
       />
     </div>
   )

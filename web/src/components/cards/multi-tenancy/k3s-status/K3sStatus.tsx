@@ -6,11 +6,11 @@
  * installation mission.
  */
 
-import { useState } from 'react'
 import { AlertTriangle, Box, CheckCircle, RefreshCw, Server, XCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../../ui/Skeleton'
 import { MetricTile } from '../../../../lib/cards/CardComponents'
+import { useModalState } from '../../../../lib/modals'
 import { useMissions } from '../../../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../../console-missions/shared'
 import { useK3sStatus } from './useK3sStatus'
@@ -62,7 +62,7 @@ export function K3sStatus() {
   const { data, error, showSkeleton, showEmptyState, isRefreshing, isDemoData } = useK3sStatus()
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const { isOpen: isDetailModalOpen, open: openDetailModal, close: closeDetailModal } = useModalState()
 
   // ------ Loading ------
   if (showSkeleton) {
@@ -131,8 +131,8 @@ export function K3sStatus() {
         <div
           role="button"
           tabIndex={0}
-          onClick={() => setIsDetailModalOpen(true)}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsDetailModalOpen(true) } }}
+          onClick={openDetailModal}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium cursor-pointer hover:bg-secondary/50 transition-colors ${
             isHealthy
               ? 'bg-green-500/15 text-green-400'
@@ -154,7 +154,7 @@ export function K3sStatus() {
       </div>
 
       {/* Top metrics */}
-      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" role="button" tabIndex={0} onClick={() => setIsDetailModalOpen(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsDetailModalOpen(true) } }}>
+      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" role="button" tabIndex={0} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
         <MetricTile
           label={t('k3sStatus.totalPods')}
           value={data.podCount}
@@ -181,7 +181,7 @@ export function K3sStatus() {
           <p className="text-xs font-medium text-muted-foreground">{t('k3sStatus.serverPodList')}</p>
           <div className="space-y-1.5 max-h-40 overflow-y-auto scrollbar-thin">
             {serverPods.map((pod) => (
-              <div key={pod.name} className="flex items-center justify-between text-xs gap-2 px-2 py-1.5 rounded bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors" role="button" tabIndex={0} onClick={() => setIsDetailModalOpen(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsDetailModalOpen(true) } }}>
+              <div key={pod.name} className="flex items-center justify-between text-xs gap-2 px-2 py-1.5 rounded bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors" role="button" tabIndex={0} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
                 <span className="text-foreground truncate flex-1" title={pod.name}>
                   {pod.name}
                 </span>
@@ -228,7 +228,7 @@ export function K3sStatus() {
 
       <K3sDetailModal
         isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
+        onClose={closeDetailModal}
         data={data}
         isDemoData={isDemoData}
       />
