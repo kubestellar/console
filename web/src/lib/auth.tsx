@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import { api, checkOAuthConfigured } from './api'
+import { checkOAuthConfigured } from './api'
 import { dashboardSync } from './dashboards/dashboardSync'
 import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE, FETCH_DEFAULT_TIMEOUT_MS } from './constants'
 import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession } from './analytics'
@@ -152,6 +152,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const setDemoMode = useCallback(() => {
+    // If user explicitly disabled demo mode, respect their choice.
+    // They want AI mode (agent) or live mode (backend) — not demo fallback.
+    const userExplicitlyDisabledDemo = localStorage.getItem(STORAGE_KEY_DEMO_MODE) === 'false'
+    if (userExplicitlyDisabledDemo) return
+
     const isNetlifyPreview = import.meta.env.VITE_DEMO_MODE === 'true' ||
       window.location.hostname.includes('netlify.app') ||
       window.location.hostname.includes('deploy-preview-')
@@ -226,13 +231,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const response = await api.get<User>('/api/me', {
-        headers: { Authorization: `Bearer ${effectiveToken}` }
+      // Use fetch directly instead of api.get to bypass the backend availability
+      // cache. refreshUser is the auth bootstrapping function — it must always
+      // attempt the request, even if a stale cache says the backend is down.
+      const meResponse = await fetch('/api/me', {
+        headers: { Authorization: `Bearer ${effectiveToken}` },
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
-      setUser(response.data)
-      cacheUser(response.data)
+      if (!meResponse.ok) throw new Error(`/api/me returned ${meResponse.status}`)
+      const userData: User = await meResponse.json()
+      setUser(userData)
+      cacheUser(userData)
       // Set anonymous analytics ID (SHA-256 hash — no PII)
-      setAnalyticsUserId(response.data.id)
+      setAnalyticsUserId(userData.id)
       setAnalyticsUserProperties({ auth_mode: 'github-oauth' })
       // Detect developer running cloned repo with startup-oauth.sh
       emitDeveloperSession()

@@ -157,11 +157,11 @@ export async function checkBackendAvailability(forceCheck = false): Promise<bool
   // Start a new check
   backendCheckPromise = (async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/health`, {
+      const response = await fetch(`${API_BASE}/health`, {
         method: 'GET',
         signal: AbortSignal.timeout(BACKEND_HEALTH_CHECK_TIMEOUT_MS),
       })
-      // Backend is available if it responds at all (even 401 unauthorized)
+      // Backend is available if it responds at all (even non-200)
       // Only 5xx or network errors indicate backend is down
       backendAvailable = response.status < 500
       backendLastCheckTime = Date.now()
@@ -176,13 +176,9 @@ export async function checkBackendAvailability(forceCheck = false): Promise<bool
     } catch {
       backendAvailable = false
       backendLastCheckTime = Date.now()
-      // Cache to localStorage
-      try {
-        localStorage.setItem(BACKEND_STATUS_KEY, JSON.stringify({
-          available: false,
-          timestamp: backendLastCheckTime,
-        }))
-      } catch { /* ignore */ }
+      // Only cache failures in memory — do NOT persist false to localStorage.
+      // Persisting false causes the stuck state where a fresh page load inherits
+      // a stale "backend down" flag and blocks all API calls indefinitely.
       return false
     } finally {
       backendCheckPromise = null
@@ -216,11 +212,10 @@ export async function checkOAuthConfigured(): Promise<{ backendUp: boolean; oaut
 function markBackendFailure(): void {
   backendAvailable = false
   backendLastCheckTime = Date.now()
+  // Don't persist false to localStorage — only keep in memory.
+  // Persisting false causes fresh page loads to inherit stale "backend down" state.
   try {
-    localStorage.setItem(BACKEND_STATUS_KEY, JSON.stringify({
-      available: false,
-      timestamp: backendLastCheckTime,
-    }))
+    localStorage.removeItem(BACKEND_STATUS_KEY)
   } catch { /* ignore */ }
 }
 

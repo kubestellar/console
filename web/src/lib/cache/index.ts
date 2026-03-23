@@ -655,13 +655,15 @@ class CacheStore<T> {
     })
 
     try {
-      // Progressive fetcher: push partial updates to UI as each chunk arrives
+      // Progressive fetcher: push partial updates to UI as each chunk arrives.
+      // Only update `data` here — don't touch isLoading/isRefreshing.
+      // The fetch() completion below sets isLoading: false.
+      // This lets CardWrapper show partial data + refresh spinner while
+      // more clusters are still streaming in via SSE.
       const onProgress = progressiveFetcher ? (partialData: T) => {
         if (this.resetVersion !== fetchVersion) return  // stale — ignore
         this.setState({
           data: partialData,
-          isLoading: false,
-          isRefreshing: true,
         })
       } : undefined
 

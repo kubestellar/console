@@ -136,6 +136,8 @@ export function setDemoMode(value: boolean, userInitiated = false): void {
   if (isNetlifyDeployment && !value) return
   // Don't auto-disable if user explicitly enabled demo mode (only allow manual toggles)
   if (!value && !userInitiated && localStorage.getItem(DEMO_MODE_KEY) === 'true') return
+  // Don't auto-enable if user explicitly disabled demo mode (respect "AI mode" / "live mode")
+  if (value && !userInitiated && localStorage.getItem(DEMO_MODE_KEY) === 'false') return
   if (globalDemoMode === value) return
 
   globalDemoMode = value
