@@ -9,7 +9,9 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/settings"
+	"github.com/kubestellar/console/pkg/store"
 )
 
 const (
@@ -41,12 +43,15 @@ var allowedGitHubPrefixes = []string{
 type GitHubProxyHandler struct {
 	// serverToken is the configured FEEDBACK_GITHUB_TOKEN (or GITHUB_TOKEN alias) from env
 	serverToken string
+	// store is used for admin role checks on token management endpoints
+	store store.Store
 }
 
 // NewGitHubProxyHandler creates a new GitHub API proxy handler.
-func NewGitHubProxyHandler(serverToken string) *GitHubProxyHandler {
+func NewGitHubProxyHandler(serverToken string, s store.Store) *GitHubProxyHandler {
 	return &GitHubProxyHandler{
 		serverToken: serverToken,
+		store:       s,
 	}
 }
 
@@ -180,6 +185,13 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 // to the encrypted server-side settings file. The token is NOT stored in
 // localStorage after this migration.
 func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
+	// Global token management requires console admin role
+	currentUserID := middleware.GetUserID(c)
+	currentUser, err := h.store.GetUser(currentUserID)
+	if err != nil || currentUser == nil || currentUser.Role != "admin" {
+		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	}
+
 	var body struct {
 		Token string `json:"token"`
 	}
@@ -216,6 +228,13 @@ func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
 // DeleteToken handles DELETE /api/github/token — removes the user-provided
 // GitHub PAT from server-side settings.
 func (h *GitHubProxyHandler) DeleteToken(c *fiber.Ctx) error {
+	// Global token management requires console admin role
+	currentUserID := middleware.GetUserID(c)
+	currentUser, err := h.store.GetUser(currentUserID)
+	if err != nil || currentUser == nil || currentUser.Role != "admin" {
+		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	}
+
 	sm := settings.GetSettingsManager()
 	if sm == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
