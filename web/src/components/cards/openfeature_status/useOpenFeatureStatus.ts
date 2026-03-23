@@ -257,6 +257,7 @@ export function useOpenFeatureStatus(): UseOpenFeatureStatusResult {
     hasAnyData,
     isFailed,
     consecutiveFailures,
+    lastRefresh,
   })
 
   return {

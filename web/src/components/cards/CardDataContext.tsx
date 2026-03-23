@@ -61,6 +61,8 @@ export interface CardDataState {
   hasData?: boolean
   /** Whether the card is displaying demo/mock data instead of real data */
   isDemoData?: boolean
+  /** Timestamp of the last successful data refresh (for "Updated Xm ago" display) */
+  lastUpdated?: Date | null
 }
 
 interface CardDataReportContextValue {
@@ -89,13 +91,13 @@ export function useForceLive(): boolean {
  * your cached data hook (e.g. useCachedPodIssues, useCachedDeployments).
  */
 export function useReportCardDataState(state: CardDataState) {
-  const { isFailed, consecutiveFailures, errorMessage, isLoading, isRefreshing, hasData, isDemoData } = state
+  const { isFailed, consecutiveFailures, errorMessage, isLoading, isRefreshing, hasData, isDemoData, lastUpdated } = state
   const ctx = useContext(CardDataReportContext)
   // useLayoutEffect runs synchronously before paint, ensuring cached data
   // is reported before CardWrapper decides to show skeleton
   useLayoutEffect(() => {
-    ctx.report({ isFailed, consecutiveFailures, errorMessage, isLoading, isRefreshing, hasData, isDemoData })
-  }, [ctx, isFailed, consecutiveFailures, errorMessage, isLoading, isRefreshing, hasData, isDemoData])
+    ctx.report({ isFailed, consecutiveFailures, errorMessage, isLoading, isRefreshing, hasData, isDemoData, lastUpdated })
+  }, [ctx, isFailed, consecutiveFailures, errorMessage, isLoading, isRefreshing, hasData, isDemoData, lastUpdated])
 }
 
 /**
@@ -116,6 +118,8 @@ export interface CardLoadingStateOptions {
   isDemoData?: boolean
   /** Whether the card is refreshing cached data in the background (overrides default isLoading && hasData) */
   isRefreshing?: boolean
+  /** Timestamp of the last successful data refresh (epoch ms). Displayed as "Xm ago" in the card header. */
+  lastRefresh?: number | null
 }
 
 /**
@@ -155,7 +159,11 @@ export function useCardLoadingState(options: CardLoadingStateOptions) {
     // Only cards that explicitly set isDemoData: false will opt-out.
     isDemoData,
     isRefreshing: isRefreshingOverride,
+    lastRefresh,
   } = options
+
+  // Convert epoch-ms timestamp to Date for CardWrapper's "Updated Xm ago" display
+  const lastUpdatedDate = typeof lastRefresh === 'number' ? new Date(lastRefresh) : null
 
   // Safety-net timeout: if the caller keeps isLoading=true for longer than
   // CARD_LOADING_TIMEOUT_MS (30s), force the card out of loading state.
@@ -202,6 +210,7 @@ export function useCardLoadingState(options: CardLoadingStateOptions) {
     isRefreshing: isRefreshingOverride ?? (effectiveIsLoading && hasData),
     hasData,
     isDemoData,
+    lastUpdated: lastUpdatedDate,
   })
 
   return {

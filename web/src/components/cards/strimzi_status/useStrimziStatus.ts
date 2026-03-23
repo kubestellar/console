@@ -219,6 +219,7 @@ export function useStrimziStatus(): UseStrimziStatusResult {
     isFailed,
     consecutiveFailures,
     isDemoData: effectiveIsDemoData,
+    lastRefresh,
   })
 
   return {

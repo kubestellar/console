@@ -189,7 +189,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   const currentWeather = weatherData.current
   const forecast = weatherData.forecast
   const hourlyForecast = weatherData.hourly
-  useCardLoadingState({ isLoading, isRefreshing, hasAnyData: !!currentWeather, isDemoData: isDemoFallback })
+  useCardLoadingState({ isLoading, isRefreshing, hasAnyData: !!currentWeather, isDemoData: isDemoFallback, lastRefresh })
 
   // Save locations to localStorage whenever they change
   useEffect(() => {

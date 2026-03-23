@@ -54,6 +54,7 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
     isFailed,
     consecutiveFailures,
     isDemoData,
+    lastRefresh,
   })
 
   // Transform Helm releases to chart info

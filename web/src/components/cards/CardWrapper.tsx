@@ -786,12 +786,15 @@ export function CardWrapper({
                 {!onRefresh && (isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline) && !effectiveIsFailed && (
                   <RefreshCw className="w-3 h-3 text-blue-400 animate-spin" aria-hidden="true" />
                 )}
-                {/* Last updated indicator */}
-                {!isVisuallySpinning && !effectiveIsLoading && !effectiveIsFailed && lastUpdated && (
-                  <span className="text-2xs text-muted-foreground" title={lastUpdated.toLocaleString()}>
-                    {formatTimeAgo(lastUpdated)}
-                  </span>
-                )}
+                {/* Last updated indicator — use prop or child-reported timestamp */}
+                {(() => {
+                  const effectiveLastUpdated = lastUpdated ?? childDataState?.lastUpdated
+                  return !isVisuallySpinning && !effectiveIsLoading && !effectiveIsFailed && effectiveLastUpdated ? (
+                    <span className="text-2xs text-muted-foreground" title={effectiveLastUpdated.toLocaleString()}>
+                      {formatTimeAgo(effectiveLastUpdated)}
+                    </span>
+                  ) : null
+                })()}
               </div>
               <div className="flex items-center gap-1">
                 {/* Collapse/expand button */}

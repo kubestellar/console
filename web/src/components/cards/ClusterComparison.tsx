@@ -29,6 +29,7 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
     isRefreshing,
     hasAnyData: rawClusters.length > 0,
     isDemoData: isDemoMode || isDemoFallback,
+    lastRefresh,
   })
   const {
     selectedClusters: globalSelectedClusters,

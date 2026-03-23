@@ -51,6 +51,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
     isRefreshing,
     hasAnyData: rawNodes.length > 0,
     isDemoData: isDemoMode || isDemoFallback,
+    lastRefresh,
   })
 
   // Card-specific GPU type filter (not handled by useCardData)

@@ -76,7 +76,7 @@ function PVCStatusInternal() {
   const { drillToPVC } = useDrillDownActions()
   const { isDemoMode: demoMode } = useDemoMode()
 
-  // Report card data state
+  // Report card data state (lastRefresh flows to CardWrapper header "Updated Xm ago")
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     isRefreshing,
@@ -84,6 +84,7 @@ function PVCStatusInternal() {
     isFailed,
     consecutiveFailures,
     isDemoData: isDemoFallback || demoMode,
+    lastRefresh,
   })
 
   const {
