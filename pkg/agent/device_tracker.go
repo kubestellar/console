@@ -492,20 +492,39 @@ func (t *DeviceTracker) ClearAlert(alertID string) bool {
 		delete(t.alerts, alertID)
 		// Also reset the max count to current to prevent re-alerting
 		// Extract node key from alert ID (format: "cluster/node/deviceType")
-		parts := alertID[:len(alertID)-len("/gpu")-1] // rough extraction
-		if counts, ok := t.maxCounts[parts]; ok {
+		lastSlash := strings.LastIndex(alertID, "/")
+		if lastSlash < 0 {
+			return true
+		}
+		nodeKey := alertID[:lastSlash]
+		deviceType := alertID[lastSlash+1:]
+		if counts, ok := t.maxCounts[nodeKey]; ok {
 			// Get current counts from latest history
-			if history, ok := t.history[parts]; ok && len(history) > 0 {
+			if history, ok := t.history[nodeKey]; ok && len(history) > 0 {
 				latest := history[len(history)-1].Counts
-				switch {
-				case alertID[len(alertID)-3:] == "gpu":
+				switch deviceType {
+				case "gpu":
 					counts.GPUCount = latest.GPUCount
-				case alertID[len(alertID)-3:] == "nic":
+				case "nic":
 					counts.NICCount = latest.NICCount
-				case alertID[len(alertID)-4:] == "nvme":
+				case "nvme":
 					counts.NVMECount = latest.NVMECount
+				case "infiniband":
+					counts.InfiniBandCount = latest.InfiniBandCount
+				case "sriov":
+					counts.SRIOVCapable = latest.SRIOVCapable
+				case "rdma":
+					counts.RDMAAvailable = latest.RDMAAvailable
+				case "mellanox":
+					counts.MellanoxPresent = latest.MellanoxPresent
+				case "mofed-driver":
+					counts.MOFEDReady = latest.MOFEDReady
+				case "gpu-driver":
+					counts.GPUDriverReady = latest.GPUDriverReady
+				case "spectrum-scale":
+					counts.SpectrumScale = latest.SpectrumScale
 				}
-				t.maxCounts[parts] = counts
+				t.maxCounts[nodeKey] = counts
 			}
 		}
 		return true
