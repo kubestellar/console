@@ -72,7 +72,7 @@
     "remark-gfm": "^4.0.1",
     "sucrase": "^3.35.1",
     "tailwind-merge": "^2.6.0",
-    "three": "^0.169.0"
+    "three": "^0.183.2"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.0",
