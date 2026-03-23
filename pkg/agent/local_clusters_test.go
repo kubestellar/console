@@ -2,6 +2,7 @@ package agent
 
 import (
 	"os/exec"
+	"strings"
 	"testing"
 )
 
@@ -69,5 +70,71 @@ func TestLocalClusterManager(t *testing.T) {
 	err = m.DeleteCluster("k3d", "test-k3d")
 	if err != nil {
 		t.Errorf("Delete k3d cluster failed: %v", err)
+	}
+}
+
+func TestLocalClusterManager_CreateCluster_UnsupportedTool(t *testing.T) {
+	m := NewLocalClusterManager(nil)
+
+	err := m.CreateCluster("foobar", "test-cluster")
+	if err == nil {
+		t.Fatal("Expected error for unsupported tool, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "unsupported tool") {
+		t.Errorf("Expected error to contain 'unsupported tool', got %q", err.Error())
+	}
+}
+
+func TestLocalClusterManager_CreateCluster_DockerNotRunning(t *testing.T) {
+	oldExecCommand := execCommand
+	defer func() { execCommand = oldExecCommand }()
+
+	// Make docker info fail
+	execCommand = func(name string, arg ...string) *exec.Cmd {
+		if name == "docker" && len(arg) > 0 && arg[0] == "info" {
+			return exec.Command("false")
+		}
+		return exec.Command("echo", "ok")
+	}
+
+	m := NewLocalClusterManager(nil)
+
+	err := m.CreateCluster("kind", "test-cluster")
+	if err == nil {
+		t.Fatal("Expected error when Docker is not running, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "Docker is not running") {
+		t.Errorf("Expected error to contain 'Docker is not running', got %q", err.Error())
+	}
+}
+
+func TestLocalClusterManager_CreateCluster_ErrorContainsDetails(t *testing.T) {
+	oldExecCommand := execCommand
+	defer func() { execCommand = oldExecCommand }()
+
+	// Make kind create fail with a specific error
+	execCommand = func(name string, arg ...string) *exec.Cmd {
+		if name == "docker" {
+			return exec.Command("echo", "ok")
+		}
+		if name == "kind" && len(arg) > 0 && arg[0] == "create" {
+			// Simulate a failure by running a command that writes to stderr and exits non-zero
+			return exec.Command("sh", "-c", "echo 'cluster already exists' >&2; exit 1")
+		}
+		return exec.Command("echo", "ok")
+	}
+
+	m := NewLocalClusterManager(nil)
+
+	err := m.CreateCluster("kind", "test-cluster")
+	if err == nil {
+		t.Fatal("Expected error from kind create, got nil")
+	}
+
+	// The error should contain the actual stderr output, not a generic message
+	if !strings.Contains(err.Error(), "cluster already exists") {
+		t.Errorf("Expected error to contain stderr output 'cluster already exists', got %q", err.Error())
 	}
 }

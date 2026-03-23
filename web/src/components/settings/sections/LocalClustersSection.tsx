@@ -5,6 +5,7 @@ import { Button } from '../../ui/Button'
 import { useLocalClusterTools } from '../../../hooks/useLocalClusterTools'
 import { CLUSTER_PROGRESS_AUTO_DISMISS_MS } from '../../../hooks/useClusterProgress'
 import { emitLocalClusterCreated } from '../../../lib/analytics'
+import { friendlyErrorMessage } from '../../../lib/clusterErrors'
 import { useMissions } from '../../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../../cards/console-missions/shared'
 import { useClusters } from '../../../hooks/mcp/clusters'
@@ -63,7 +64,9 @@ function ClusterProgressBanner({
       {isDone && <Check className="w-4 h-4 shrink-0" />}
       {isFailed && <AlertTriangle className="w-4 h-4 shrink-0" />}
 
-      <span className="flex-1">{progress.message}</span>
+      <span className="flex-1">
+        {isFailed ? friendlyErrorMessage(progress.message) : progress.message}
+      </span>
 
       {isActive && (
         <div className="w-24 bg-secondary rounded-full h-1.5 shrink-0">
@@ -699,7 +702,7 @@ After installation, the user can create virtual clusters on this host cluster fr
           {error && (
             <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
               <AlertCircle className="w-4 h-4 inline mr-1" />
-              {error}
+              {friendlyErrorMessage(error)}
             </div>
           )}
         </>

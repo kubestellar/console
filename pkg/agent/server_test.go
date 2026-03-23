@@ -3054,3 +3054,48 @@ func TestServer_HandleLocalClusterTools_WrongMethod(t *testing.T) {
 
 	// Handler should respond without panicking
 }
+
+func TestSanitizeClusterError(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		expected string
+	}{
+		{
+			name:     "nil error returns unknown",
+			err:      nil,
+			expected: "unknown error",
+		},
+		{
+			name:     "short error preserved",
+			err:      fmt.Errorf("kind create failed: cluster already exists"),
+			expected: "kind create failed: cluster already exists",
+		},
+		{
+			name:     "docker not running error preserved",
+			err:      fmt.Errorf("Docker is not running. Start Docker Desktop or Rancher Desktop first. (Cannot connect to the Docker daemon)"),
+			expected: "Docker is not running. Start Docker Desktop or Rancher Desktop first. (Cannot connect to the Docker daemon)",
+		},
+		{
+			name:     "unsupported tool error preserved",
+			err:      fmt.Errorf("unsupported tool: foobar"),
+			expected: "unsupported tool: foobar",
+		},
+		{
+			name: "long error truncated to 512 chars",
+			err:  fmt.Errorf("%s", strings.Repeat("x", 600)),
+			expected: func() string {
+				return strings.Repeat("x", 512) + "..."
+			}(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := sanitizeClusterError(tt.err)
+			if got != tt.expected {
+				t.Errorf("sanitizeClusterError() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}

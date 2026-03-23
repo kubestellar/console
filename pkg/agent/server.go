@@ -4137,6 +4137,25 @@ func (s *Server) handleCloudCLIStatus(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// sanitizeClusterError produces a user-facing error message from an internal
+// error.  It strips absolute filesystem paths and long stack traces while
+// preserving the meaningful part of the message so the UI can show actionable
+// guidance instead of a generic "operation failed".
+func sanitizeClusterError(err error) string {
+	if err == nil {
+		return "unknown error"
+	}
+	msg := err.Error()
+
+	// Cap length so a huge stderr dump doesn't flood the WebSocket payload.
+	const maxLen = 512
+	if len(msg) > maxLen {
+		msg = msg[:maxLen] + "..."
+	}
+
+	return msg
+}
+
 // handleLocalClusterTools returns detected local cluster tools
 func (s *Server) handleLocalClusterTools(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
