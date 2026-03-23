@@ -93,8 +93,8 @@ else
   helm lint "$CHART_DIR" > "$LINT_OUTPUT" 2>&1 || LINT_EXIT=$?
 fi
 
-LINT_WARNINGS=$(grep -c "\[WARNING\]" "$LINT_OUTPUT" 2>/dev/null || echo "0")
-LINT_ERRORS=$(grep -c "\[ERROR\]" "$LINT_OUTPUT" 2>/dev/null || echo "0")
+LINT_WARNINGS=$(grep -c "\[WARNING\]" "$LINT_OUTPUT" 2>/dev/null || true)
+LINT_ERRORS=$(grep -c "\[ERROR\]" "$LINT_OUTPUT" 2>/dev/null || true)
 
 TOTAL=$((TOTAL + 1))
 if [ "$LINT_EXIT" -eq 0 ]; then
@@ -123,7 +123,7 @@ helm template test-release "$CHART_DIR" > "$TEMPLATE_OUTPUT" 2>&1 || TEMPLATE_EX
 
 TOTAL=$((TOTAL + 1))
 if [ "$TEMPLATE_EXIT" -eq 0 ]; then
-  RESOURCE_COUNT=$(grep -c "^kind:" "$TEMPLATE_OUTPUT" 2>/dev/null || echo "0")
+  RESOURCE_COUNT=$(grep -c "^kind:" "$TEMPLATE_OUTPUT" 2>/dev/null || true)
   echo -e "  ${GREEN}✓${NC}  Template renders successfully (${RESOURCE_COUNT} resources)"
   PASSED=$((PASSED + 1))
 else
@@ -305,7 +305,9 @@ EOF
 # Summary
 # ============================================================================
 
-if [ "$FAILED" -eq 0 ]; then
+if [ "$PASSED" -eq 0 ] && [ "$FAILED" -eq 0 ]; then
+  echo -e "${RED}${BOLD}No tests were executed${NC}"
+elif [ "$FAILED" -eq 0 ]; then
   echo -e "${GREEN}${BOLD}All ${PASSED} Helm chart checks passed${NC}"
 else
   echo -e "${RED}${BOLD}${FAILED}/${TOTAL} Helm chart checks failed${NC}"
@@ -316,5 +318,6 @@ echo "Reports:"
 echo "  JSON:     $REPORT_JSON"
 echo "  Summary:  $REPORT_MD"
 
+[ "$PASSED" -eq 0 ] && [ "$FAILED" -eq 0 ] && exit 1
 [ "$FAILED" -gt 0 ] && exit 1
 exit 0

@@ -107,23 +107,23 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
   }
 
   const colors: Record<ToastType, string> = {
-    success: 'bg-green-500/20 border-green-500/50 text-green-300',
-    error: 'bg-red-500/20 border-red-500/50 text-red-300',
-    warning: 'bg-yellow-500/20 border-yellow-500/50 text-yellow-300',
-    info: 'bg-blue-500/20 border-blue-500/50 text-blue-300',
+    success: 'bg-green-900/80 border-green-400/70 text-green-100',
+    error: 'bg-red-900/80 border-red-400/70 text-red-100',
+    warning: 'bg-yellow-900/80 border-yellow-400/70 text-yellow-100',
+    info: 'bg-blue-900/80 border-blue-400/70 text-blue-100',
   }
 
   const iconColors: Record<ToastType, string> = {
-    success: 'text-green-400',
-    error: 'text-red-400',
-    warning: 'text-yellow-400',
-    info: 'text-blue-400',
+    success: 'text-green-300',
+    error: 'text-red-300',
+    warning: 'text-yellow-300',
+    info: 'text-blue-300',
   }
 
   return (
     <div
       className={cn(
-        'flex items-center gap-3 px-4 py-3 rounded-lg border backdrop-blur-sm animate-fade-in-up min-w-[250px] max-w-[400px]',
+        'flex items-center gap-3 px-4 py-3 rounded-lg border backdrop-blur-sm shadow-lg animate-fade-in-up min-w-[250px] max-w-[400px]',
         colors[toast.type]
       )}
     >

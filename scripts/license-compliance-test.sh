@@ -170,7 +170,8 @@ except Exception:
   # Check for blocked licenses in Go deps (if go-licenses was used)
   GO_FLAGGED=0
   if command -v go-licenses &>/dev/null; then
-    GO_FLAGGED=$(grep -ciE "$BLOCKED_LICENSES" "$GO_LICENSE_OUTPUT" 2>/dev/null || echo "0")
+    GO_FLAGGED=$(grep -ciE "$BLOCKED_LICENSES" "$GO_LICENSE_OUTPUT" 2>/dev/null || true)
+    GO_FLAGGED=${GO_FLAGGED:-0}
   fi
 
   if [ "$GO_FLAGGED" -gt 0 ]; then

@@ -115,8 +115,8 @@ WS_TEST_EXIT=0
 go test ./pkg/api/handlers/... -run "TestWebSocket\|TestHub\|TestHandle" -v -timeout 30s > "$WS_TEST_OUTPUT" 2>&1 || WS_TEST_EXIT=$?
 
 # Count pass/fail from Go test output
-GO_PASSED=$(grep -c "^--- PASS:" "$WS_TEST_OUTPUT" 2>/dev/null || echo "0")
-GO_FAILED=$(grep -c "^--- FAIL:" "$WS_TEST_OUTPUT" 2>/dev/null || echo "0")
+GO_PASSED=$(grep -c "^--- PASS:" "$WS_TEST_OUTPUT" 2>/dev/null || true)
+GO_FAILED=$(grep -c "^--- FAIL:" "$WS_TEST_OUTPUT" 2>/dev/null || true)
 
 if [ "$WS_TEST_EXIT" -eq 0 ]; then
   run_test "Go WebSocket handler tests (${GO_PASSED} tests)" "pass" ""
@@ -222,7 +222,9 @@ EOF
 # Summary
 # ============================================================================
 
-if [ "$FAILED" -eq 0 ]; then
+if [ "$PASSED" -eq 0 ] && [ "$FAILED" -eq 0 ]; then
+  echo -e "${RED}${BOLD}No tests were executed${NC}"
+elif [ "$FAILED" -eq 0 ]; then
   echo -e "${GREEN}${BOLD}All ${PASSED} WebSocket tests passed${NC}"
   [ "$SKIPPED" -gt 0 ] && echo -e "${DIM}  (${SKIPPED} skipped — server not running or tool not available)${NC}"
 else
@@ -234,5 +236,6 @@ echo "Reports:"
 echo "  JSON:     $REPORT_JSON"
 echo "  Summary:  $REPORT_MD"
 
+[ "$PASSED" -eq 0 ] && [ "$FAILED" -eq 0 ] && exit 1
 [ "$FAILED" -gt 0 ] && exit 1
 exit 0

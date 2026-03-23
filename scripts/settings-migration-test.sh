@@ -61,8 +61,8 @@ CRYPTO_OUTPUT="$TMPDIR_SM/crypto-tests.txt"
 CRYPTO_EXIT=0
 go test ./pkg/settings/... -run "TestEncryptDecrypt|TestDecrypt|TestEnsureKeyFile|TestKeyFingerprint" -v -timeout 30s > "$CRYPTO_OUTPUT" 2>&1 || CRYPTO_EXIT=$?
 
-CRYPTO_PASSED=$(grep -c "^--- PASS:" "$CRYPTO_OUTPUT" 2>/dev/null || echo "0")
-CRYPTO_FAILED_COUNT=$(grep -c "^--- FAIL:" "$CRYPTO_OUTPUT" 2>/dev/null || echo "0")
+CRYPTO_PASSED=$(grep -c "^--- PASS:" "$CRYPTO_OUTPUT" 2>/dev/null || true)
+CRYPTO_FAILED_COUNT=$(grep -c "^--- FAIL:" "$CRYPTO_OUTPUT" 2>/dev/null || true)
 
 TOTAL=$((TOTAL + 1))
 if [ "$CRYPTO_EXIT" -eq 0 ]; then
@@ -88,8 +88,8 @@ HANDLER_OUTPUT="$TMPDIR_SM/handler-tests.txt"
 HANDLER_EXIT=0
 go test ./pkg/api/handlers/... -run "TestGetSettings|TestSaveSettings|TestExportImport|TestSettingsFileError" -v -timeout 30s > "$HANDLER_OUTPUT" 2>&1 || HANDLER_EXIT=$?
 
-HANDLER_PASSED=$(grep -c "^--- PASS:" "$HANDLER_OUTPUT" 2>/dev/null || echo "0")
-HANDLER_FAILED_COUNT=$(grep -c "^--- FAIL:" "$HANDLER_OUTPUT" 2>/dev/null || echo "0")
+HANDLER_PASSED=$(grep -c "^--- PASS:" "$HANDLER_OUTPUT" 2>/dev/null || true)
+HANDLER_FAILED_COUNT=$(grep -c "^--- FAIL:" "$HANDLER_OUTPUT" 2>/dev/null || true)
 
 TOTAL=$((TOTAL + 1))
 if [ "$HANDLER_EXIT" -eq 0 ]; then
@@ -228,7 +228,9 @@ EOF
 # Summary
 # ============================================================================
 
-if [ "$FAILED" -eq 0 ]; then
+if [ "$PASSED" -eq 0 ] && [ "$FAILED" -eq 0 ]; then
+  echo -e "${RED}${BOLD}No tests were executed${NC}"
+elif [ "$FAILED" -eq 0 ]; then
   echo -e "${GREEN}${BOLD}All ${PASSED} settings migration checks passed${NC}"
 else
   echo -e "${RED}${BOLD}${FAILED}/${TOTAL} settings migration checks failed${NC}"
@@ -239,5 +241,6 @@ echo "Reports:"
 echo "  JSON:     $REPORT_JSON"
 echo "  Summary:  $REPORT_MD"
 
+[ "$PASSED" -eq 0 ] && [ "$FAILED" -eq 0 ] && exit 1
 [ "$FAILED" -gt 0 ] && exit 1
 exit 0

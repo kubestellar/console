@@ -61,8 +61,8 @@ TEST_OUTPUT="$TMPDIR_UL/update-tests.txt"
 TEST_EXIT=0
 go test ./pkg/agent/... -run "TestTriggerNow|TestIsUpdating|TestStatus" -v -timeout 30s > "$TEST_OUTPUT" 2>&1 || TEST_EXIT=$?
 
-GO_PASSED=$(grep -c "^--- PASS:" "$TEST_OUTPUT" 2>/dev/null || echo "0")
-GO_FAILED_COUNT=$(grep -c "^--- FAIL:" "$TEST_OUTPUT" 2>/dev/null || echo "0")
+GO_PASSED=$(grep -c "^--- PASS:" "$TEST_OUTPUT" 2>/dev/null || true)
+GO_FAILED_COUNT=$(grep -c "^--- FAIL:" "$TEST_OUTPUT" 2>/dev/null || true)
 
 TOTAL=$((TOTAL + 1))
 if [ "$TEST_EXIT" -eq 0 ]; then
@@ -364,7 +364,9 @@ EOF
 # Summary
 # ============================================================================
 
-if [ "$FAILED" -eq 0 ]; then
+if [ "$PASSED" -eq 0 ] && [ "$FAILED" -eq 0 ]; then
+  echo -e "${RED}${BOLD}No tests were executed${NC}"
+elif [ "$FAILED" -eq 0 ]; then
   echo -e "${GREEN}${BOLD}All ${PASSED} update lifecycle checks passed${NC}"
 else
   echo -e "${RED}${BOLD}${FAILED}/${TOTAL} update lifecycle checks failed${NC}"
@@ -375,5 +377,6 @@ echo "Reports:"
 echo "  JSON:     $REPORT_JSON"
 echo "  Summary:  $REPORT_MD"
 
+[ "$PASSED" -eq 0 ] && [ "$FAILED" -eq 0 ] && exit 1
 [ "$FAILED" -gt 0 ] && exit 1
 exit 0
