@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useEffect, useRef } from 'react'
 import { useCache } from '../lib/cache'
 import { useClusters } from './mcp/clusters'
 import { detectCloudProvider, getProviderLabel } from '../components/ui/CloudProviderIcon'
@@ -258,20 +258,38 @@ async function fetchProviders(clusterSnapshot: Array<{ name: string; server?: st
 export function useProviderHealth() {
   const { clusters } = useClusters()
 
-  // Stabilize cluster snapshot for cache key — only re-key when cluster count changes
-  const clusterKey = clusters.length
+  // Always use a stable cache key — refetch when the cluster set changes
+  const clustersRef = useRef(clusters)
+  clustersRef.current = clusters
 
   const cacheResult = useCache<ProviderHealthInfo[]>({
-    key: `provider-health:${clusterKey}`,
+    key: 'provider-health',
     category: 'default',
     initialData: [],
     demoData: DEMO_PROVIDERS,
-    fetcher: () => fetchProviders(clusters),
+    demoWhenEmpty: true,
+    fetcher: () => fetchProviders(clustersRef.current),
     refreshInterval: 60_000,
   })
 
+  // Re-fetch when the cluster count changes (cloud provider list depends on clusters)
+  const prevClusterCountRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (prevClusterCountRef.current === null) {
+      prevClusterCountRef.current = clusters.length
+      return
+    }
+    if (clusters.length !== prevClusterCountRef.current) {
+      prevClusterCountRef.current = clusters.length
+      void cacheResult.refetch()
+    }
+  }, [clusters.length]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const aiProviders = useMemo(() => cacheResult.data.filter(p => p.category === 'ai'), [cacheResult.data])
   const cloudProviders = useMemo(() => cacheResult.data.filter(p => p.category === 'cloud'), [cacheResult.data])
+
+  // Don't signal demo fallback while still loading — card should show skeleton, not demo data
+  const effectiveIsDemoFallback = cacheResult.isDemoFallback && !cacheResult.isLoading
 
   return {
     providers: cacheResult.data,
@@ -279,7 +297,7 @@ export function useProviderHealth() {
     cloudProviders,
     isLoading: cacheResult.isLoading,
     isRefreshing: cacheResult.isRefreshing,
-    isDemoFallback: cacheResult.isDemoFallback,
+    isDemoFallback: effectiveIsDemoFallback,
     isFailed: cacheResult.isFailed,
     consecutiveFailures: cacheResult.consecutiveFailures,
     refetch: cacheResult.refetch,
