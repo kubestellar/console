@@ -386,10 +386,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 }
 
+/**
+ * Safe fallback for when useAuth is called outside AuthProvider.
+ *
+ * This can happen transiently during error-boundary recovery, stale chunk
+ * re-evaluation, or KeepAlive route transitions.  Rather than throwing
+ * (which triggers cascading GA4 runtime errors), return a "loading" stub
+ * so the UI shows a spinner until the provider tree re-mounts.
+ */
+const AUTH_FALLBACK: AuthContextType = {
+  user: null,
+  token: null,
+  isAuthenticated: false,
+  isLoading: true,
+  login: () => {},
+  logout: () => {},
+  setToken: () => {},
+  refreshUser: () => Promise.resolve(),
+}
+
 export function useAuth() {
   const context = useContext(AuthContext)
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    if (import.meta.env.DEV) {
+      console.warn('useAuth was called outside AuthProvider — returning safe fallback')
+    }
+    return AUTH_FALLBACK
   }
   return context
 }
