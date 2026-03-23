@@ -30,10 +30,38 @@ var githubProxyAPIBase = getEnvOrDefault("GITHUB_API_BASE_URL", githubProxyAPIBa
 var githubProxyClient = &http.Client{Timeout: githubProxyTimeout}
 
 // allowedGitHubPrefixes restricts which GitHub API paths can be proxied.
-// Only read-only endpoints needed by the frontend are permitted.
+// Only read-only endpoints actually needed by the frontend are permitted.
+// Any path not matching one of these prefixes is rejected with 403 Forbidden.
 var allowedGitHubPrefixes = []string{
-	"/repos/",     // repo info, PRs, issues, releases, contributors, actions, git refs, compare
-	"/rate_limit", // token validation
+	"/repos/",        // repo info, PRs, issues, releases, contributors, actions, git refs, compare
+	"/rate_limit",    // rate-limit check / token validation
+	"/user",          // token validation (GET /user returns the authenticated user)
+	"/notifications", // notification badge (if used by frontend)
+}
+
+// isAllowedGitHubPath checks whether apiPath (which must start with "/")
+// matches one of the allowedGitHubPrefixes.
+//
+// Prefixes that end with "/" (e.g. "/repos/") use simple prefix matching.
+// Prefixes without a trailing "/" (e.g. "/user") match the exact path OR
+// the path followed by "/" (i.e. "/user" and "/user/..."), but NOT
+// longer stems (e.g. "/users/..." is rejected).
+func isAllowedGitHubPath(apiPath string) bool {
+	for _, prefix := range allowedGitHubPrefixes {
+		if strings.HasSuffix(prefix, "/") {
+			// Prefix ends with "/" — standard prefix match (e.g. "/repos/")
+			if strings.HasPrefix(apiPath, prefix) {
+				return true
+			}
+		} else {
+			// Exact-or-subpath match: "/user" matches "/user" and "/user/foo"
+			// but NOT "/users" or "/users/foo"
+			if apiPath == prefix || strings.HasPrefix(apiPath, prefix+"/") {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // GitHubProxyHandler proxies read-only GitHub API requests through the backend,
@@ -100,16 +128,10 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 		})
 	}
 
-	// Security: only allow specific GitHub API prefixes
+	// Security: only allow specific GitHub API prefixes (see allowedGitHubPrefixes)
 	apiPath := "/" + path
-	allowed := false
-	for _, prefix := range allowedGitHubPrefixes {
-		if strings.HasPrefix(apiPath, prefix) {
-			allowed = true
-			break
-		}
-	}
-	if !allowed {
+	if !isAllowedGitHubPath(apiPath) {
+		log.Printf("[GitHubProxy] Blocked disallowed path: %s", apiPath)
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "GitHub API path not allowed",
 		})
