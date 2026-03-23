@@ -2795,6 +2795,9 @@ export function useCachedPVCs(
       }
       return await fetchFromAllClusters<PVC>('pvcs', 'pvcs', { namespace })
     },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      return await fetchViaSSE<PVC>('pvcs', 'pvcs', { namespace }, onProgress)
+    },
   })
 
   return {
@@ -2879,6 +2882,9 @@ export function useCachedJobs(
       }
       return await fetchFromAllClusters<Job>('jobs', 'jobs', { namespace })
     },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      return await fetchViaSSE<Job>('jobs', 'jobs', { namespace }, onProgress)
+    },
   })
 
   return {
@@ -2917,6 +2923,9 @@ export function useCachedHPAs(
         return (data.hpas || []).map(h => ({ ...h, cluster }))
       }
       return await fetchFromAllClusters<HPA>('hpas', 'hpas', { namespace })
+    },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      return await fetchViaSSE<HPA>('hpas', 'hpas', { namespace }, onProgress)
     },
   })
 
@@ -3041,6 +3050,9 @@ export function useCachedServiceAccounts(
       }
       return await fetchFromAllClusters<ServiceAccount>('serviceaccounts', 'serviceaccounts', { namespace })
     },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      return await fetchViaSSE<ServiceAccount>('serviceaccounts', 'serviceaccounts', { namespace }, onProgress)
+    },
   })
 
   return {
@@ -3079,6 +3091,9 @@ export function useCachedReplicaSets(
         return (data.replicasets || []).map(rs => ({ ...rs, cluster }))
       }
       return await fetchFromAllClusters<ReplicaSet>('replicasets', 'replicasets', { namespace })
+    },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      return await fetchViaSSE<ReplicaSet>('replicasets', 'replicasets', { namespace }, onProgress)
     },
   })
 
@@ -3119,6 +3134,9 @@ export function useCachedStatefulSets(
       }
       return await fetchFromAllClusters<StatefulSet>('statefulsets', 'statefulsets', { namespace })
     },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      return await fetchViaSSE<StatefulSet>('statefulsets', 'statefulsets', { namespace }, onProgress)
+    },
   })
 
   return {
@@ -3157,6 +3175,9 @@ export function useCachedDaemonSets(
         return (data.daemonsets || []).map(ds => ({ ...ds, cluster }))
       }
       return await fetchFromAllClusters<DaemonSet>('daemonsets', 'daemonsets', { namespace })
+    },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      return await fetchViaSSE<DaemonSet>('daemonsets', 'daemonsets', { namespace }, onProgress)
     },
   })
 
@@ -3197,6 +3218,9 @@ export function useCachedCronJobs(
       }
       return await fetchFromAllClusters<CronJob>('cronjobs', 'cronjobs', { namespace })
     },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      return await fetchViaSSE<CronJob>('cronjobs', 'cronjobs', { namespace }, onProgress)
+    },
   })
 
   return {
@@ -3236,6 +3260,9 @@ export function useCachedIngresses(
       }
       return await fetchFromAllClusters<Ingress>('ingresses', 'ingresses', { namespace })
     },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      return await fetchViaSSE<Ingress>('ingresses', 'ingresses', { namespace }, onProgress)
+    },
   })
 
   return {
@@ -3274,6 +3301,9 @@ export function useCachedNetworkPolicies(
         return (data.networkpolicies || []).map(np => ({ ...np, cluster }))
       }
       return await fetchFromAllClusters<NetworkPolicy>('networkpolicies', 'networkpolicies', { namespace })
+    },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      return await fetchViaSSE<NetworkPolicy>('networkpolicies', 'networkpolicies', { namespace }, onProgress)
     },
   })
 
