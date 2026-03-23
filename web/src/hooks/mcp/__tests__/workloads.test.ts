@@ -80,6 +80,13 @@ vi.mock('../shared', () => ({
   getEffectiveInterval: (ms: number) => ms,
   LOCAL_AGENT_URL: 'http://localhost:8585',
   clusterCacheRef: mockClusterCacheRef,
+  fetchWithRetry: (url: string, opts: Record<string, unknown> = {}) => {
+    const { timeoutMs, maxRetries, initialBackoffMs, ...rest } = opts
+    void timeoutMs
+    void maxRetries
+    void initialBackoffMs
+    return globalThis.fetch(url, rest)
+  },
 }))
 
 vi.mock('../../../lib/constants/network', () => ({
@@ -236,7 +243,7 @@ describe('usePods', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     // On first cold-cache failure, falls back to demo pods or sets error
     expect(
-      result.current.error === null || result.current.error === 'Failed to fetch pods'
+      result.current.error === null || result.current.error === 'SSE error'
     ).toBe(true)
   })
 
@@ -526,7 +533,7 @@ describe('useJobs', () => {
     const { result } = renderHook(() => useJobs())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.error).toBe('Failed to fetch jobs')
+    expect(result.current.error).toBe('SSE error')
     expect(result.current.jobs).toEqual([])
   })
 
@@ -588,7 +595,7 @@ describe('useHPAs', () => {
     const { result } = renderHook(() => useHPAs())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.error).toBe('Failed to fetch HPAs')
+    expect(result.current.error).toBe('API error')
     expect(result.current.hpas).toEqual([])
   })
 })
@@ -641,7 +648,7 @@ describe('useReplicaSets', () => {
     const { result } = renderHook(() => useReplicaSets())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.error).toBe('Failed to fetch ReplicaSets')
+    expect(result.current.error).toBe('API error')
   })
 })
 
@@ -692,7 +699,7 @@ describe('useStatefulSets', () => {
     const { result } = renderHook(() => useStatefulSets())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.error).toBe('Failed to fetch StatefulSets')
+    expect(result.current.error).toBe('API error')
   })
 })
 
@@ -743,7 +750,7 @@ describe('useDaemonSets', () => {
     const { result } = renderHook(() => useDaemonSets())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.error).toBe('Failed to fetch DaemonSets')
+    expect(result.current.error).toBe('API error')
   })
 })
 
@@ -794,7 +801,7 @@ describe('useCronJobs', () => {
     const { result } = renderHook(() => useCronJobs())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.error).toBe('Failed to fetch CronJobs')
+    expect(result.current.error).toBe('API error')
   })
 })
 

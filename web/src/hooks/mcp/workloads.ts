@@ -6,7 +6,7 @@ import { isDemoMode } from '../../lib/demoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
-import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
+import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef, fetchWithRetry } from './shared'
 import { MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
 import type { PodInfo, PodIssue, Deployment, DeploymentIssue, Job, HPA, ReplicaSet, StatefulSet, DaemonSet, CronJob } from './types'
 
@@ -352,10 +352,12 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
       // Ignore AbortError — expected when cluster/namespace changes during a fetch
       if (err instanceof DOMException && err.name === 'AbortError') return
       // Keep stale data on error — only fall back to demo data when demo mode is active
+      const message = err instanceof Error ? err.message : 'Failed to fetch pods'
+      console.warn('[usePods] Fetch failed:', message)
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent && !podsCache) {
-        setError('Failed to fetch pods')
+        setError(message)
       }
     } finally {
       setIsLoading(false)
@@ -487,8 +489,10 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
       setLastUpdated(now)
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return
+      const message = err instanceof Error ? err.message : 'Failed to fetch pods'
+      console.warn('[useAllPods] Fetch failed:', message)
       if (!silent && !podsCache) {
-        setError('Failed to fetch pods')
+        setError(message)
       }
     } finally {
       if (!silent) {
@@ -636,8 +640,9 @@ export function usePodIssues(cluster?: string, namespace?: string) {
           setIsRefreshing(false)
         }
         return
-      } catch {
+      } catch (proxyErr) {
         // kubectl proxy failed, fall through to SSE
+        console.debug('[usePodIssues] kubectl proxy failed, falling back to SSE:', proxyErr)
       }
     }
 
@@ -672,10 +677,12 @@ export function usePodIssues(cluster?: string, namespace?: string) {
       setLastRefresh(now)
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return
+      const message = err instanceof Error ? err.message : 'Failed to fetch pod issues'
+      console.warn('[usePodIssues] Fetch failed:', message)
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent && !podIssuesCache) {
-        setError('Failed to fetch pod issues')
+        setError(message)
         setIssues([])
       }
     } finally {
@@ -976,13 +983,10 @@ export function useDeployments(cluster?: string, namespace?: string) {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
-        const response = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
-          signal: controller.signal,
+        const response = await fetchWithRetry(`${LOCAL_AGENT_URL}/deployments?${params}`, {
           headers: { 'Accept': 'application/json' },
+          timeoutMs: MCP_HOOK_TIMEOUT_MS,
         })
-        clearTimeout(timeoutId)
 
         if (response.ok) {
           const data = await response.json()
@@ -1004,8 +1008,9 @@ export function useDeployments(cluster?: string, namespace?: string) {
           reportAgentDataSuccess()
           return
         }
-      } catch {
+      } catch (agentErr) {
         // Agent unavailable — fall through to kubectl proxy
+        console.debug('[useDeployments] Agent fetch failed, falling back to kubectl proxy:', agentErr)
       }
     }
 
@@ -1038,8 +1043,9 @@ export function useDeployments(cluster?: string, namespace?: string) {
           }
           return
         }
-      } catch {
+      } catch (proxyErr) {
         // kubectl proxy unavailable — fall through to REST API
+        console.debug('[useDeployments] kubectl proxy failed, falling back to REST API:', proxyErr)
       }
     }
 
@@ -1063,7 +1069,11 @@ export function useDeployments(cluster?: string, namespace?: string) {
       const token = localStorage.getItem(STORAGE_KEY_TOKEN)
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       headers['Authorization'] = `Bearer ${token}`
-      const response = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS) })
+      const response = await fetchWithRetry(url, {
+        method: 'GET',
+        headers,
+        timeoutMs: MCP_HOOK_TIMEOUT_MS,
+      })
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
       }
@@ -1077,10 +1087,12 @@ export function useDeployments(cluster?: string, namespace?: string) {
       setLastRefresh(now)
       deploymentsCache = { data: newDeployments, timestamp: now, key: cacheKey }
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch deployments'
+      console.warn('[useDeployments] All fetch sources failed:', message)
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent && !deploymentsCache) {
-        setError('Failed to fetch deployments')
+        setError(message)
         setDeployments([])
       }
     } finally {
@@ -1143,6 +1155,7 @@ export function useJobs(cluster?: string, namespace?: string) {
   const [jobs, setJobs] = useState<Job[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const sseAbortRef = useRef<AbortController | null>(null)
 
   const refetch = useCallback(async () => {
@@ -1152,23 +1165,22 @@ export function useJobs(cluster?: string, namespace?: string) {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
-        const response = await fetch(`${LOCAL_AGENT_URL}/jobs?${params}`, {
-          signal: controller.signal,
+        const response = await fetchWithRetry(`${LOCAL_AGENT_URL}/jobs?${params}`, {
           headers: { 'Accept': 'application/json' },
+          timeoutMs: MCP_HOOK_TIMEOUT_MS,
         })
-        clearTimeout(timeoutId)
         if (response.ok) {
           const data = await response.json()
           setJobs(data.jobs || [])
           setError(null)
+          setConsecutiveFailures(0)
           setIsLoading(false)
           reportAgentDataSuccess()
           return
         }
-      } catch {
-        // Fall through to API
+      } catch (agentErr) {
+        // Agent failed — fall through to SSE
+        console.debug('[useJobs] Agent fetch failed, falling back to SSE:', agentErr)
       }
     }
 
@@ -1194,9 +1206,13 @@ export function useJobs(cluster?: string, namespace?: string) {
       })
       setJobs(result)
       setError(null)
+      setConsecutiveFailures(0)
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return
-      setError('Failed to fetch jobs')
+      const message = err instanceof Error ? err.message : 'Failed to fetch jobs'
+      console.warn('[useJobs] Fetch failed:', message)
+      setError(message)
+      setConsecutiveFailures(prev => prev + 1)
       setJobs([])
     } finally {
       setIsLoading(false)
@@ -1208,7 +1224,7 @@ export function useJobs(cluster?: string, namespace?: string) {
     return () => { sseAbortRef.current?.abort() }
   }, [refetch])
 
-  return { jobs, isLoading, error, refetch }
+  return { jobs, isLoading, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
 // ---------------------------------------------------------------------------
@@ -1219,6 +1235,7 @@ export function useHPAs(cluster?: string, namespace?: string) {
   const [hpas, setHPAs] = useState<HPA[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
@@ -1227,23 +1244,22 @@ export function useHPAs(cluster?: string, namespace?: string) {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
-        const response = await fetch(`${LOCAL_AGENT_URL}/hpas?${params}`, {
-          signal: controller.signal,
+        const response = await fetchWithRetry(`${LOCAL_AGENT_URL}/hpas?${params}`, {
           headers: { 'Accept': 'application/json' },
+          timeoutMs: MCP_HOOK_TIMEOUT_MS,
         })
-        clearTimeout(timeoutId)
         if (response.ok) {
           const data = await response.json()
           setHPAs(data.hpas || [])
           setError(null)
+          setConsecutiveFailures(0)
           setIsLoading(false)
           reportAgentDataSuccess()
           return
         }
-      } catch {
-        // Fall through to API
+      } catch (agentErr) {
+        // Agent failed — fall through to REST API
+        console.debug('[useHPAs] Agent fetch failed, falling back to REST API:', agentErr)
       }
     }
     try {
@@ -1253,8 +1269,12 @@ export function useHPAs(cluster?: string, namespace?: string) {
       const { data } = await api.get<{ hpas: HPA[] }>(`/api/mcp/hpas?${params}`)
       setHPAs(data.hpas || [])
       setError(null)
-    } catch {
-      setError('Failed to fetch HPAs')
+      setConsecutiveFailures(0)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch HPAs'
+      console.warn('[useHPAs] Fetch failed:', message)
+      setError(message)
+      setConsecutiveFailures(prev => prev + 1)
       setHPAs([])
     } finally {
       setIsLoading(false)
@@ -1265,7 +1285,7 @@ export function useHPAs(cluster?: string, namespace?: string) {
     refetch()
   }, [refetch])
 
-  return { hpas, isLoading, error, refetch }
+  return { hpas, isLoading, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
 // ---------------------------------------------------------------------------
@@ -1276,6 +1296,7 @@ export function useReplicaSets(cluster?: string, namespace?: string) {
   const [replicasets, setReplicaSets] = useState<ReplicaSet[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
@@ -1285,23 +1306,22 @@ export function useReplicaSets(cluster?: string, namespace?: string) {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
-        const response = await fetch(`${LOCAL_AGENT_URL}/replicasets?${params}`, {
-          signal: controller.signal,
+        const response = await fetchWithRetry(`${LOCAL_AGENT_URL}/replicasets?${params}`, {
           headers: { 'Accept': 'application/json' },
+          timeoutMs: MCP_HOOK_TIMEOUT_MS,
         })
-        clearTimeout(timeoutId)
         if (response.ok) {
           const data = await response.json()
           setReplicaSets(data.replicasets || [])
           setError(null)
+          setConsecutiveFailures(0)
           setIsLoading(false)
           reportAgentDataSuccess()
           return
         }
-      } catch {
-        // Fall through to API
+      } catch (agentErr) {
+        // Agent failed — fall through to REST API
+        console.debug('[useReplicaSets] Agent fetch failed, falling back to REST API:', agentErr)
       }
     }
     try {
@@ -1311,8 +1331,12 @@ export function useReplicaSets(cluster?: string, namespace?: string) {
       const { data } = await api.get<{ replicasets: ReplicaSet[] }>(`/api/mcp/replicasets?${params}`)
       setReplicaSets(data.replicasets || [])
       setError(null)
-    } catch {
-      setError('Failed to fetch ReplicaSets')
+      setConsecutiveFailures(0)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch ReplicaSets'
+      console.warn('[useReplicaSets] Fetch failed:', message)
+      setError(message)
+      setConsecutiveFailures(prev => prev + 1)
       setReplicaSets([])
     } finally {
       setIsLoading(false)
@@ -1320,7 +1344,7 @@ export function useReplicaSets(cluster?: string, namespace?: string) {
   }, [cluster, namespace])
 
   useEffect(() => { refetch() }, [refetch])
-  return { replicasets, isLoading, error, refetch }
+  return { replicasets, isLoading, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
 // ---------------------------------------------------------------------------
@@ -1331,6 +1355,7 @@ export function useStatefulSets(cluster?: string, namespace?: string) {
   const [statefulsets, setStatefulSets] = useState<StatefulSet[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
@@ -1339,23 +1364,22 @@ export function useStatefulSets(cluster?: string, namespace?: string) {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
-        const response = await fetch(`${LOCAL_AGENT_URL}/statefulsets?${params}`, {
-          signal: controller.signal,
+        const response = await fetchWithRetry(`${LOCAL_AGENT_URL}/statefulsets?${params}`, {
           headers: { 'Accept': 'application/json' },
+          timeoutMs: MCP_HOOK_TIMEOUT_MS,
         })
-        clearTimeout(timeoutId)
         if (response.ok) {
           const data = await response.json()
           setStatefulSets(data.statefulsets || [])
           setError(null)
+          setConsecutiveFailures(0)
           setIsLoading(false)
           reportAgentDataSuccess()
           return
         }
-      } catch {
-        // Fall through to API
+      } catch (agentErr) {
+        // Agent failed — fall through to REST API
+        console.debug('[useStatefulSets] Agent fetch failed, falling back to REST API:', agentErr)
       }
     }
     try {
@@ -1365,8 +1389,12 @@ export function useStatefulSets(cluster?: string, namespace?: string) {
       const { data } = await api.get<{ statefulsets: StatefulSet[] }>(`/api/mcp/statefulsets?${params}`)
       setStatefulSets(data.statefulsets || [])
       setError(null)
-    } catch {
-      setError('Failed to fetch StatefulSets')
+      setConsecutiveFailures(0)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch StatefulSets'
+      console.warn('[useStatefulSets] Fetch failed:', message)
+      setError(message)
+      setConsecutiveFailures(prev => prev + 1)
       setStatefulSets([])
     } finally {
       setIsLoading(false)
@@ -1374,7 +1402,7 @@ export function useStatefulSets(cluster?: string, namespace?: string) {
   }, [cluster, namespace])
 
   useEffect(() => { refetch() }, [refetch])
-  return { statefulsets, isLoading, error, refetch }
+  return { statefulsets, isLoading, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
 // ---------------------------------------------------------------------------
@@ -1385,6 +1413,7 @@ export function useDaemonSets(cluster?: string, namespace?: string) {
   const [daemonsets, setDaemonSets] = useState<DaemonSet[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
@@ -1393,23 +1422,22 @@ export function useDaemonSets(cluster?: string, namespace?: string) {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
-        const response = await fetch(`${LOCAL_AGENT_URL}/daemonsets?${params}`, {
-          signal: controller.signal,
+        const response = await fetchWithRetry(`${LOCAL_AGENT_URL}/daemonsets?${params}`, {
           headers: { 'Accept': 'application/json' },
+          timeoutMs: MCP_HOOK_TIMEOUT_MS,
         })
-        clearTimeout(timeoutId)
         if (response.ok) {
           const data = await response.json()
           setDaemonSets(data.daemonsets || [])
           setError(null)
+          setConsecutiveFailures(0)
           setIsLoading(false)
           reportAgentDataSuccess()
           return
         }
-      } catch {
-        // Fall through to API
+      } catch (agentErr) {
+        // Agent failed — fall through to REST API
+        console.debug('[useDaemonSets] Agent fetch failed, falling back to REST API:', agentErr)
       }
     }
     try {
@@ -1419,8 +1447,12 @@ export function useDaemonSets(cluster?: string, namespace?: string) {
       const { data } = await api.get<{ daemonsets: DaemonSet[] }>(`/api/mcp/daemonsets?${params}`)
       setDaemonSets(data.daemonsets || [])
       setError(null)
-    } catch {
-      setError('Failed to fetch DaemonSets')
+      setConsecutiveFailures(0)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch DaemonSets'
+      console.warn('[useDaemonSets] Fetch failed:', message)
+      setError(message)
+      setConsecutiveFailures(prev => prev + 1)
       setDaemonSets([])
     } finally {
       setIsLoading(false)
@@ -1428,7 +1460,7 @@ export function useDaemonSets(cluster?: string, namespace?: string) {
   }, [cluster, namespace])
 
   useEffect(() => { refetch() }, [refetch])
-  return { daemonsets, isLoading, error, refetch }
+  return { daemonsets, isLoading, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
 // ---------------------------------------------------------------------------
@@ -1439,6 +1471,7 @@ export function useCronJobs(cluster?: string, namespace?: string) {
   const [cronjobs, setCronJobs] = useState<CronJob[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
@@ -1447,23 +1480,22 @@ export function useCronJobs(cluster?: string, namespace?: string) {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
-        const response = await fetch(`${LOCAL_AGENT_URL}/cronjobs?${params}`, {
-          signal: controller.signal,
+        const response = await fetchWithRetry(`${LOCAL_AGENT_URL}/cronjobs?${params}`, {
           headers: { 'Accept': 'application/json' },
+          timeoutMs: MCP_HOOK_TIMEOUT_MS,
         })
-        clearTimeout(timeoutId)
         if (response.ok) {
           const data = await response.json()
           setCronJobs(data.cronjobs || [])
           setError(null)
+          setConsecutiveFailures(0)
           setIsLoading(false)
           reportAgentDataSuccess()
           return
         }
-      } catch {
-        // Fall through to API
+      } catch (agentErr) {
+        // Agent failed — fall through to REST API
+        console.debug('[useCronJobs] Agent fetch failed, falling back to REST API:', agentErr)
       }
     }
     try {
@@ -1473,8 +1505,12 @@ export function useCronJobs(cluster?: string, namespace?: string) {
       const { data } = await api.get<{ cronjobs: CronJob[] }>(`/api/mcp/cronjobs?${params}`)
       setCronJobs(data.cronjobs || [])
       setError(null)
-    } catch {
-      setError('Failed to fetch CronJobs')
+      setConsecutiveFailures(0)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch CronJobs'
+      console.warn('[useCronJobs] Fetch failed:', message)
+      setError(message)
+      setConsecutiveFailures(prev => prev + 1)
       setCronJobs([])
     } finally {
       setIsLoading(false)
@@ -1482,7 +1518,7 @@ export function useCronJobs(cluster?: string, namespace?: string) {
   }, [cluster, namespace])
 
   useEffect(() => { refetch() }, [refetch])
-  return { cronjobs, isLoading, error, refetch }
+  return { cronjobs, isLoading, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
 // ---------------------------------------------------------------------------
