@@ -215,7 +215,9 @@ export function useCachedBenchmarkReports() {
       const data = await res.json()
       return (data.reports ?? []) as BenchmarkReport[]
     },
-    demoWhenEmpty: true,
+    // Do NOT use demoWhenEmpty — in live (non-demo) mode an empty API response
+    // should render an empty/loading state, not silently inject demo data (#3328).
+    demoWhenEmpty: false,
   })
 
   // Use streamed data if we have any, otherwise fall back to cache/demo
