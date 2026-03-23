@@ -94,7 +94,7 @@ if [ -f "web/e2e/compliance/error-resilience.spec.ts" ]; then
 
     TOTAL=$((TOTAL + 1))
     if [ "$PW_EXIT" -eq 0 ]; then
-      PW_PASSED=$(grep -c "✓\|passed" "$PW_OUTPUT" 2>/dev/null || echo "0")
+      PW_PASSED=$(grep -c "✓\|passed" "$PW_OUTPUT" 2>/dev/null || true)
       echo -e "  ${GREEN}✓${NC}  Error resilience tests passed (${PW_PASSED} checks)"
       PASSED=$((PASSED + 1))
     else

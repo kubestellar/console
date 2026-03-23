@@ -61,8 +61,8 @@ TEST_OUTPUT="$TMPDIR_UL/update-tests.txt"
 TEST_EXIT=0
 go test ./pkg/agent/... -run "TestTriggerNow|TestIsUpdating|TestStatus" -v -timeout 30s > "$TEST_OUTPUT" 2>&1 || TEST_EXIT=$?
 
-GO_PASSED=$(grep -c "^--- PASS:" "$TEST_OUTPUT" 2>/dev/null || echo "0")
-GO_FAILED_COUNT=$(grep -c "^--- FAIL:" "$TEST_OUTPUT" 2>/dev/null || echo "0")
+GO_PASSED=$(grep -c "^--- PASS:" "$TEST_OUTPUT" 2>/dev/null || true)
+GO_FAILED_COUNT=$(grep -c "^--- FAIL:" "$TEST_OUTPUT" 2>/dev/null || true)
 
 TOTAL=$((TOTAL + 1))
 if [ "$TEST_EXIT" -eq 0 ]; then

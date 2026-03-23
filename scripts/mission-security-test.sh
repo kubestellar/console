@@ -59,8 +59,8 @@ VITEST_EXIT=0
 npx vitest run src/lib/missions/__tests__/ --reporter=verbose > "$VITEST_OUTPUT" 2>&1 || VITEST_EXIT=$?
 cd ..
 
-VITEST_PASSED=$(grep -c "✓\|✅\|PASS" "$VITEST_OUTPUT" 2>/dev/null || echo "0")
-VITEST_FAILED_COUNT=$(grep -c "✗\|❌\|FAIL" "$VITEST_OUTPUT" 2>/dev/null || echo "0")
+VITEST_PASSED=$(grep -c "✓\|✅\|PASS" "$VITEST_OUTPUT" 2>/dev/null || true)
+VITEST_FAILED_COUNT=$(grep -c "✗\|❌\|FAIL" "$VITEST_OUTPUT" 2>/dev/null || true)
 
 TOTAL=$((TOTAL + 1))
 if [ "$VITEST_EXIT" -eq 0 ]; then
