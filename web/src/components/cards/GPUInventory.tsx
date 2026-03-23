@@ -41,20 +41,25 @@ export function GPUInventory({ config }: GPUInventoryProps) {
   const {
     nodes: rawNodes,
     isLoading: hookLoading,
+    isRefreshing,
     error,
     isDemoFallback,
+    isFailed,
+    consecutiveFailures,
   } = useCachedGPUNodes(cluster)
   const { drillToGPUNode } = useDrillDownActions()
 
   // Only show skeleton when no cached data exists
-  const isLoading = hookLoading && rawNodes.length === 0
+  const hasData = rawNodes.length > 0
+  const isLoading = hookLoading && !hasData
 
   // Report state to CardWrapper for refresh animation
   useCardLoadingState({
-    isLoading: hookLoading,
-    hasAnyData: rawNodes.length > 0,
-    isFailed: !!error && rawNodes.length === 0,
-    consecutiveFailures: error ? 1 : 0,
+    isLoading: hookLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
+    isFailed,
+    consecutiveFailures,
     isDemoData: isDemoFallback,
   })
 

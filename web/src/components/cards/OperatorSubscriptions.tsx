@@ -55,12 +55,14 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
   const { drillToOperator } = useDrillDownActions()
 
   // Fetch subscriptions - pass undefined to get all clusters
-  const { subscriptions: rawSubscriptions, isLoading: subscriptionsLoading, consecutiveFailures, isFailed, isDemoFallback: isDemoData } = useCachedOperatorSubscriptions(undefined)
+  const { subscriptions: rawSubscriptions, isLoading: subscriptionsLoading, isRefreshing, consecutiveFailures, isFailed, isDemoFallback: isDemoData } = useCachedOperatorSubscriptions(undefined)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = rawSubscriptions.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: clustersLoading || subscriptionsLoading,
-    hasAnyData: rawSubscriptions.length > 0,
+    isLoading: (clustersLoading || subscriptionsLoading) && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
     isDemoData,

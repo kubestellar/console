@@ -75,9 +75,11 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
   const { jobs, status: prowStatus, isLoading, isRefreshing, isFailed, consecutiveFailures, refetch, formatTimeAgo } = useCachedProwJobs()
 
   // Report loading state to CardWrapper
+  const hasData = jobs.length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: jobs.length > 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures: consecutiveFailures ?? 0,
     isDemoData: shouldUseDemoData,

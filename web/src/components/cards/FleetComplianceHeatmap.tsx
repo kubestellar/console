@@ -219,7 +219,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
     }
   }
 
-  useCardLoadingState({ isLoading, hasAnyData: true, isDemoData })
+  useCardLoadingState({ isLoading: isLoading && !isDemoData, isRefreshing, hasAnyData: true, isDemoData })
 
   const rows = useMemo((): HeatmapRow[] => {
     // Collect all cluster names from compliance hooks + useClusters fallback

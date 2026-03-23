@@ -54,9 +54,10 @@ export function DeploymentRolloutTracker() {
     sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
   } = useInsightSort(rolloutInsightsRaw)
 
+  const hasData = rolloutInsightsRaw.length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: rolloutInsightsRaw.length > 0,
+    isLoading: isLoading && !hasData,
+    hasAnyData: hasData,
     isDemoData,
   })
 

@@ -28,7 +28,10 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
   const {
     nodes: rawNodes,
     isLoading: hookLoading,
+    isRefreshing,
     isDemoFallback,
+    isFailed,
+    consecutiveFailures,
   } = useCachedGPUNodes()
   const { deduplicatedClusters: clusters } = useClusters()
   const { isDemoMode } = useDemoMode()
@@ -36,11 +39,14 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   // Report state to CardWrapper for refresh animation
-  // useGPUNodes falls back to demo data when isDemoMode is true and no live data is available
+  const hasData = rawNodes.length > 0
   const { showSkeleton } = useCardLoadingState({
-    isLoading: hookLoading,
-    hasAnyData: rawNodes.length > 0,
+    isLoading: hookLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isDemoData: isDemoMode || isDemoFallback,
+    isFailed,
+    consecutiveFailures,
   })
   const isLoading = showSkeleton
   const { drillToResources } = useDrillDownActions()

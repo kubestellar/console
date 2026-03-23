@@ -73,6 +73,7 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
   const {
     drifts,
     isLoading: isLoadingHook,
+    isRefreshing,
     error,
     isFailed,
     consecutiveFailures,
@@ -81,9 +82,11 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
   const { selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = drifts.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoadingHook,
-    hasAnyData: drifts.length > 0,
+    isLoading: isLoadingHook && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
     isDemoData,

@@ -345,7 +345,7 @@ function RecommendedPoliciesInternal({ config: _config }: CardConfig) {
   }, [grouped])
 
   const hasAnyData = kyvernoInstalled || kubescapeInstalled || trivyInstalled || isDemoData
-  useCardLoadingState({ isLoading, hasAnyData, isDemoData })
+  useCardLoadingState({ isLoading: isLoading && !hasAnyData, hasAnyData, isDemoData })
 
   const handleDeployAll = () => {
     const gaps = recommendations.filter(r => r.coveredClusters.length < r.eligibleClusters.length)

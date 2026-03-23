@@ -114,10 +114,12 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
   const { drillToPod } = useDrillDownActions()
 
   // Report card data state to parent CardWrapper for automatic skeleton/refresh handling
+  const hasData = rawIssues.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
+    isRefreshing: isDemoMode ? false : cachedLoading && hasData,
     isDemoData: isDemoMode || isDemoFallback,
-    hasAnyData: rawIssues.length > 0,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
   })

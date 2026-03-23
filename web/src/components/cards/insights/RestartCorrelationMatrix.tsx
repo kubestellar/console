@@ -27,9 +27,10 @@ export function RestartCorrelationMatrix() {
     sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
   } = useInsightSort(restartInsightsRaw)
 
+  const hasData = restartInsightsRaw.length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: restartInsightsRaw.length > 0,
+    isLoading: isLoading && !hasData,
+    hasAnyData: hasData,
     isDemoData,
   })
 

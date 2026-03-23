@@ -24,6 +24,8 @@ import { STORAGE_KEY_TOKEN } from './lib/constants'
 import { emitPageView, emitDashboardViewed } from './lib/analytics'
 import { fetchEnabledDashboards, getEnabledDashboardIds } from './hooks/useSidebarConfig'
 import { safeLazy } from './lib/safeLazy'
+// Dashboard is the landing page — import eagerly to avoid Suspense delay on reload
+import { Dashboard } from './components/dashboard/Dashboard'
 
 const MissionLandingPage = safeLazy(() => import('./components/missions/MissionLandingPage'), 'MissionLandingPage')
 
@@ -36,8 +38,6 @@ const DrillDownModal = safeLazy(() => import('./components/drilldown/DrillDownMo
 // "chunk may be stale" error that ChunkErrorBoundary auto-recovers from.
 const Login = safeLazy(() => import('./components/auth/Login'), 'Login')
 const AuthCallback = safeLazy(() => import('./components/auth/AuthCallback'), 'AuthCallback')
-// Dashboard is the landing page — import eagerly to avoid Suspense delay on reload
-import { Dashboard } from './components/dashboard/Dashboard'
 const CustomDashboard = safeLazy(() => import('./components/dashboard/CustomDashboard'), 'CustomDashboard')
 const Settings = safeLazy(() => import('./components/settings/Settings'), 'Settings')
 const Clusters = safeLazy(() => import('./components/clusters/Clusters'), 'Clusters')

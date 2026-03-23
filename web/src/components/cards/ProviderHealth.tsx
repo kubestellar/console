@@ -91,10 +91,11 @@ export function ProviderHealth() {
   const navigate = useNavigate()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = aiProviders.length > 0 || cloudProviders.length > 0
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
-    hasAnyData: aiProviders.length > 0 || cloudProviders.length > 0,
+    hasAnyData: hasData,
     isDemoData: isDemoFallback,
     isFailed,
     consecutiveFailures,
@@ -102,7 +103,7 @@ export function ProviderHealth() {
 
   const goToSettings = () => navigate(ROUTES.SETTINGS)
 
-  if (isLoading) {
+  if (isLoading && !hasData) {
     return <SkeletonList items={5} />
   }
 

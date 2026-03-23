@@ -2521,7 +2521,8 @@
     "totalCPU": "Total CPU",
     "totalRAM": "Total RAM",
     "cores": "cores",
-    "totalLabel": "Total {{label}}"
+    "totalLabel": "Total {{label}}",
+    "overcommitted": "{{used}}/{{total}} overcommitted"
   },
   "serviceExports": {
     "loadFailed": "Failed to load service exports",

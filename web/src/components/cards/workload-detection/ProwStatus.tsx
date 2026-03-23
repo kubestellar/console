@@ -17,15 +17,17 @@ export function ProwStatus({ config: _config }: ProwStatusProps) {
   const { status, jobs, isLoading, isRefreshing, lastRefresh, isFailed, consecutiveFailures } = useCachedProwJobs('prow', 'prow')
 
   // Report loading state to CardWrapper
+  const hasData = jobs.length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: jobs.length > 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures: consecutiveFailures ?? 0,
     isDemoData: shouldUseDemoData,
   })
 
-  if (isLoading) {
+  if (isLoading && !hasData) {
     return (
       <div className="space-y-3">
         <Skeleton variant="text" width={120} height={20} />

@@ -33,7 +33,7 @@ function TruncatedIndicator({ total, shown, indent }: { total: number; shown: nu
 
 export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProps) {
   const { t } = useTranslation()
-  const { deduplicatedClusters: clusters, isLoading } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing: clustersRefreshing, isFailed, consecutiveFailures } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToNamespace, drillToPod, drillToCluster, drillToDeployment, drillToService, drillToPVC } = useDrillDownActions()
   // Tree view state - start with clusters expanded
@@ -115,10 +115,14 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
     cronjobsDemoFallback || ingressesDemoFallback || networkpoliciesDemoFallback
 
   // Report state to CardWrapper for refresh animation
+  const hasData = clusters.length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: clusters.length > 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing: clustersRefreshing,
+    hasAnyData: hasData,
     isDemoData,
+    isFailed,
+    consecutiveFailures,
   })
 
   // Cache data for the selected cluster when it changes

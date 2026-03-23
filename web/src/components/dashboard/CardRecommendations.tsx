@@ -184,6 +184,9 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
               <div key={rec.id} className="relative">
                 <button
                   onClick={() => setExpandedRec(isExpanded ? null : rec.id)}
+                  aria-expanded={isExpanded}
+                  aria-haspopup="menu"
+                  aria-controls={isExpanded ? `rec-dropdown-${rec.id}` : undefined}
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-all hover:scale-105 ${CHIP_STYLE.border} ${CHIP_STYLE.bg} ${CHIP_STYLE.text}`}
                 >
                   <Icon className="w-3 h-3" />
@@ -196,6 +199,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
                 {isExpanded && (
                   <div
                     ref={dropdownRef}
+                    id={`rec-dropdown-${rec.id}`}
                     role="menu"
                     className="absolute top-full left-0 mt-1 z-50 w-72 rounded-lg border border-border/50 bg-card shadow-xl"
                     onKeyDown={(e) => {

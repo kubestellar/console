@@ -32,9 +32,10 @@ export function ClusterDeltaDetector() {
     sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
   } = useInsightSort(deltaInsightsRaw)
 
+  const hasData = deltaInsightsRaw.length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: deltaInsightsRaw.length > 0,
+    isLoading: isLoading && !hasData,
+    hasAnyData: hasData,
     isDemoData,
   })
 

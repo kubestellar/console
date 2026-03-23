@@ -37,9 +37,11 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
   } = useCachedProwJobs('prow', 'prow')
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = jobs.length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: jobs.length > 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures: consecutiveFailures ?? 0,
     isDemoData: shouldUseDemoData,
@@ -113,7 +115,7 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
     return colors[type] || 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground'
   }
 
-  if (isLoading) {
+  if (isLoading && !hasData) {
     return (
       <div className="space-y-3">
         <Skeleton variant="text" width={120} height={20} />

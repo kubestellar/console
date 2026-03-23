@@ -38,9 +38,10 @@ export function ConfigDriftHeatmap() {
     sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
   } = useInsightSort(driftInsightsRaw)
 
+  const hasData = driftInsightsRaw.length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: driftInsightsRaw.length > 0,
+    isLoading: isLoading && !hasData,
+    hasAnyData: hasData,
     isDemoData,
   })
 

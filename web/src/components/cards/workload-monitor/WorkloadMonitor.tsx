@@ -38,7 +38,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
   const monitorConfig = config as WorkloadMonitorConfig | undefined
 
   // Cascading selectors (used when config doesn't pre-specify the workload)
-  const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed, consecutiveFailures } = useClusters()
   const { isDemoMode } = useDemoMode()
   const [selectedCluster, setSelectedCluster] = useState(monitorConfig?.cluster || '')
   const [selectedNamespace, setSelectedNamespace] = useState(monitorConfig?.namespace || '')
@@ -48,10 +48,14 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
   const { namespaces, isLoading: nsLoading, isDemoFallback: nsDemoFallback } = useCachedNamespaces(selectedCluster || undefined)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = clusters.length > 0
   useCardLoadingState({
-    isLoading: clustersLoading,
-    hasAnyData: clusters.length > 0,
+    isLoading: clustersLoading && !hasData,
+    isRefreshing: clustersRefreshing,
+    hasAnyData: hasData,
     isDemoData: isDemoMode || nsDemoFallback,
+    isFailed,
+    consecutiveFailures,
   })
 
   const isPreConfigured = !!(monitorConfig?.cluster && monitorConfig?.namespace && monitorConfig?.workload)

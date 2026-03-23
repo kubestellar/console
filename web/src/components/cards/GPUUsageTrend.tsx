@@ -54,20 +54,27 @@ export function GPUUsageTrend() {
   const {
     nodes: gpuNodes,
     isLoading: hookLoading,
+    isRefreshing,
     isDemoFallback,
+    isFailed,
+    consecutiveFailures,
   } = useCachedGPUNodes()
   const { deduplicatedClusters: clusters } = useClusters()
   const { isDemoMode } = useDemoMode()
 
   // Only show skeleton when no cached data exists
-  const isLoading = hookLoading && gpuNodes.length === 0
+  const hasData = gpuNodes.length > 0
+  const isLoading = hookLoading && !hasData
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   // Report state to CardWrapper for refresh animation
   useCardLoadingState({
-    isLoading: hookLoading,
-    hasAnyData: gpuNodes.length > 0,
+    isLoading: hookLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isDemoData: isDemoMode || isDemoFallback,
+    isFailed,
+    consecutiveFailures,
   })
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])

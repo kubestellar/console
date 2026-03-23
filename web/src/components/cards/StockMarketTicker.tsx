@@ -550,7 +550,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   const symbolsKey = useMemo(() => [...activeSymbols].sort().join(','), [activeSymbols])
   const demoStockData = useMemo(() => generateMockStockData(activeSymbols), [activeSymbols])
 
-  const { data: stockData, isLoading: isLoadingData } = useCache<StockData[]>({
+  const { data: stockData, isLoading: isLoadingData, isRefreshing: stockRefreshing } = useCache<StockData[]>({
     key: `stocks:${symbolsKey}:${useLiveData ? 'live' : 'demo'}`,
     category: 'default',
     initialData: [],
@@ -563,7 +563,8 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
     },
   })
 
-  useCardLoadingState({ isLoading: isLoadingData, hasAnyData: stockData.length > 0, isDemoData: false })
+  const hasStockData = stockData.length > 0
+  useCardLoadingState({ isLoading: isLoadingData && !hasStockData, isRefreshing: stockRefreshing, hasAnyData: hasStockData, isDemoData: false })
 
   // Update saved stocks when data changes
   useEffect(() => {

@@ -132,9 +132,10 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   const { releases: allHelmReleases, isLoading: releasesLoading, isDemoFallback: isDemoData } = useCachedHelmReleases()
 
   // Report state to CardWrapper for refresh animation
+  const hasClusterData = allClusters.length > 0
   useCardLoadingState({
-    isLoading: clustersLoading,
-    hasAnyData: allClusters.length > 0,
+    isLoading: clustersLoading && !hasClusterData,
+    hasAnyData: hasClusterData,
     isDemoData,
   })
 

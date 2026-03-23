@@ -45,19 +45,21 @@ const STATUS_DOT: Record<string, string> = {
 
 export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorProps) {
   const { t } = useTranslation()
-  const { deduplicatedClusters: allClusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
-  const { issues: allPodIssues, isLoading: podsLoading, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures, refetch: refetchPods } = useCachedPodIssues()
-  const { issues: allDeployIssues, isLoading: deploysLoading, isDemoFallback: deploysDemoFallback, isFailed: deploysFailed, consecutiveFailures: deploysFailures, refetch: refetchDeploys } = useCachedDeploymentIssues()
+  const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters } = useClusters()
+  const { issues: allPodIssues, isLoading: podsLoading, isRefreshing: podsRefreshing, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures, refetch: refetchPods } = useCachedPodIssues()
+  const { issues: allDeployIssues, isLoading: deploysLoading, isRefreshing: deploysRefreshing, isDemoFallback: deploysDemoFallback, isFailed: deploysFailed, consecutiveFailures: deploysFailures, refetch: refetchDeploys } = useCachedDeploymentIssues()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const [expandedClusters, setExpandedClusters] = useState<Set<string>>(new Set())
   const [isRefreshing, setIsRefreshing] = useState(false)
 
-  const isLoading = clustersLoading || podsLoading || deploysLoading
+  const hasData = allClusters.length > 0
+  const combinedLoading = clustersLoading || podsLoading || deploysLoading
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
-    isLoading,
-    hasAnyData: allClusters.length > 0,
+    isLoading: combinedLoading && !hasData,
+    isRefreshing: clustersRefreshing || podsRefreshing || deploysRefreshing,
+    hasAnyData: hasData,
     isDemoData: podsDemoFallback || deploysDemoFallback,
     isFailed: podsFailed || deploysFailed,
     consecutiveFailures: Math.max(podsFailures, deploysFailures),
@@ -208,7 +210,7 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
     }
   }
 
-  if (isLoading && clusters.length === 0) {
+  if (combinedLoading && !hasData) {
     return (
       <div className="space-y-3">
         <Skeleton variant="text" width={160} height={20} />

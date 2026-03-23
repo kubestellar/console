@@ -78,7 +78,7 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
     setModal({ tool: toolKey, cluster: d.cluster })
   }
 
-  useCardLoadingState({ isLoading, hasAnyData: true, isDemoData })
+  useCardLoadingState({ isLoading: isLoading && !isDemoData, isRefreshing, hasAnyData: true, isDemoData })
 
   const drifts = useMemo((): DriftEntry[] => {
     const result: DriftEntry[] = []

@@ -14,13 +14,15 @@ const CP_LABELS: Record<string, string[]> = {
 
 export function ControlPlaneHealth() {
   const { t } = useTranslation('cards')
-  const { pods, isLoading, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods(undefined, 'kube-system')
+  const { pods, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods(undefined, 'kube-system')
   const { clusters } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
 
+  const hasData = pods.length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: pods.length > 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isDemoData: isDemoFallback,
     isFailed,
     consecutiveFailures,

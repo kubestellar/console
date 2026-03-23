@@ -9,9 +9,10 @@ export function KagentiSecurity({ config }: { config?: Record<string, unknown> }
   const cluster = config?.cluster as string | undefined
   const { data: cards, isLoading, isDemoFallback } = useKagentiCards({ cluster })
 
+  const hasData = cards.length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: cards.length > 0,
+    isLoading: isLoading && !hasData,
+    hasAnyData: hasData,
     isDemoData: isDemoFallback,
   })
 
@@ -29,7 +30,7 @@ export function KagentiSecurity({ config }: { config?: Record<string, unknown> }
     cards.filter((c: KagentiCard) => c.identityBinding === 'none'),
   [cards])
 
-  if (isLoading) {
+  if (isLoading && !hasData) {
     return (
       <div className="h-full flex flex-col min-h-card p-4 animate-pulse space-y-4">
         <div className="h-24 bg-secondary rounded-lg" />

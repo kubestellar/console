@@ -24,9 +24,10 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { data: notebooks, isLoading } = useDemoData(DEMO_NOTEBOOKS)
 
+  const hasData = notebooks.length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: notebooks.length > 0,
+    isLoading: isLoading && !hasData,
+    hasAnyData: hasData,
     isDemoData: true,
   })
 
@@ -65,7 +66,7 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
     }
   }
 
-  if (isLoading) {
+  if (isLoading && !hasData) {
     return (
       <div className="space-y-3">
         <Skeleton variant="text" width={120} height={20} />

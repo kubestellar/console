@@ -18,7 +18,7 @@ interface ClusterFocusProps {
 export function ClusterFocus({ config }: ClusterFocusProps) {
   const { t } = useTranslation(['cards', 'common'])
   const selectedCluster = config?.cluster
-  const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed, consecutiveFailures } = useClusters()
   const { nodes: gpuNodes, isDemoFallback: gpuDemoFallback } = useCachedGPUNodes()
   const { issues: podIssues, isDemoFallback: podsDemoFallback } = useCachedPodIssues(selectedCluster)
   const { issues: deploymentIssues, isDemoFallback: deployDemoFallback } = useCachedDeploymentIssues(selectedCluster)
@@ -27,10 +27,14 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
   const { isDemoMode } = useDemoMode()
 
   // Report state to CardWrapper for refresh animation
+  const hasData = allClusters.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: clustersLoading,
-    hasAnyData: allClusters.length > 0,
+    isLoading: clustersLoading && !hasData,
+    isRefreshing: clustersRefreshing,
+    hasAnyData: hasData,
     isDemoData: isDemoMode || gpuDemoFallback || podsDemoFallback || deployDemoFallback,
+    isFailed,
+    consecutiveFailures,
   })
 
   const {

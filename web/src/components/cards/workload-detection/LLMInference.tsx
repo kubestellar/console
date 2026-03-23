@@ -52,10 +52,11 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
   const { servers, isLoading, isRefreshing, lastRefresh, refetch, isFailed, consecutiveFailures, isDemoFallback, error } = useCachedLLMdServers(llmdClusters)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = servers.length > 0
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
-    hasAnyData: servers.length > 0,
+    hasAnyData: hasData,
     isDemoData: isDemoFallback,
     isFailed,
     consecutiveFailures,
@@ -160,7 +161,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
     return config[componentType] || config['other']
   }
 
-  if (isLoading) {
+  if (isLoading && !hasData) {
     return (
       <div className="space-y-3">
         <Skeleton variant="text" width={120} height={20} />

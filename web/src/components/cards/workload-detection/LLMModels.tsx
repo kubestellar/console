@@ -36,10 +36,11 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
   const { models, isLoading, isRefreshing, lastRefresh, isDemoFallback } = useCachedLLMdModels(llmdClusters)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = models.length > 0
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
-    hasAnyData: models.length > 0,
+    hasAnyData: hasData,
     isDemoData: isDemoFallback,
   })
 
@@ -90,7 +91,7 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
     }
   }
 
-  if (isLoading) {
+  if (isLoading && !hasData) {
     return (
       <div className="space-y-3">
         <Skeleton variant="text" width={120} height={20} />

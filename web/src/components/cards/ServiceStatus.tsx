@@ -49,6 +49,7 @@ export function ServiceStatus() {
   const {
     services,
     isLoading: hookLoading,
+    isRefreshing,
     isDemoFallback,
     isFailed,
     consecutiveFailures,
@@ -58,10 +59,12 @@ export function ServiceStatus() {
   const { drillToService } = useDrillDownActions()
 
   // Report data state to CardWrapper for failure badge rendering
+  const hasData = services.length > 0
   const { showSkeleton } = useCardLoadingState({
-    isLoading: hookLoading,
+    isLoading: hookLoading && !hasData,
+    isRefreshing,
     isDemoData: isDemoFallback,
-    hasAnyData: services.length > 0,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
   })

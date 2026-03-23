@@ -36,9 +36,10 @@ export function CrossClusterEventCorrelation() {
     sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
   } = useInsightSort(correlationInsightsRaw)
 
+  const hasData = correlationInsightsRaw.length > 0 || (warningEvents || []).length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: correlationInsightsRaw.length > 0 || (warningEvents || []).length > 0,
+    isLoading: isLoading && !hasData,
+    hasAnyData: hasData,
     isDemoData,
   })
 

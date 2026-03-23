@@ -135,7 +135,7 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
   // CI data via useCache (persists across navigation)
   const reposKey = useMemo(() => [...repos].sort().join(','), [repos])
 
-  const { data: ciData, isLoading, isFailed, refetch } = useCache<{ workflows: WorkflowRun[], isDemo: boolean }>({
+  const { data: ciData, isLoading, isRefreshing, isFailed, refetch } = useCache<{ workflows: WorkflowRun[], isDemo: boolean }>({
     key: `github-ci:${reposKey}`,
     category: 'default',
     initialData: { workflows: [], isDemo: false },
@@ -188,7 +188,8 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
   const isUsingDemoData = isLoading ? false : ciData.isDemo
   const error = isFailed ? 'Failed to fetch workflows' : null
 
-  useCardLoadingState({ isLoading, hasAnyData: workflows.length > 0, isDemoData: isUsingDemoData })
+  const hasData = workflows.length > 0
+  useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData: isUsingDemoData, isFailed })
 
   // Expose refresh method via ref for CardWrapper
   useImperativeHandle(ref, () => ({

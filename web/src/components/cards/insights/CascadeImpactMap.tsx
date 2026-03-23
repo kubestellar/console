@@ -39,9 +39,10 @@ export function CascadeImpactMap() {
     sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
   } = useInsightSort(cascadeInsightsRaw)
 
+  const hasData = cascadeInsightsRaw.length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: cascadeInsightsRaw.length > 0,
+    isLoading: isLoading && !hasData,
+    hasAnyData: hasData,
     isDemoData,
   })
 

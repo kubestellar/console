@@ -59,19 +59,39 @@ const SS_PREFIX = 'kcc:'
 /** Try to write a cache entry to sessionStorage (best-effort, quota-safe). */
 function ssWrite(key: string, data: unknown, timestamp: number): void {
   try {
-    sessionStorage.setItem(SS_PREFIX + key, JSON.stringify({ d: data, t: timestamp }))
+    // Store cache version alongside data to avoid hydrating incompatible shapes after deploys.
+    sessionStorage.setItem(
+      SS_PREFIX + key,
+      JSON.stringify({ d: data, t: timestamp, v: CACHE_VERSION }),
+    )
   } catch {
     // QuotaExceededError — silently skip, IDB is the durable fallback
   }
 }
 
-/** Synchronous read from sessionStorage. Returns null on miss or parse error. */
+/** Synchronous read from sessionStorage. Returns null on miss, version mismatch, or parse error. */
 function ssRead<T>(key: string): { data: T; timestamp: number } | null {
   try {
-    const raw = sessionStorage.getItem(SS_PREFIX + key)
+    const storageKey = SS_PREFIX + key
+    const raw = sessionStorage.getItem(storageKey)
     if (!raw) return null
-    const parsed = JSON.parse(raw)
-    return parsed && parsed.d !== undefined ? { data: parsed.d as T, timestamp: parsed.t } : null
+
+    const parsed: unknown = JSON.parse(raw)
+    if (
+      !parsed ||
+      typeof parsed !== 'object' ||
+      !('d' in parsed) ||
+      !('t' in parsed) ||
+      !('v' in parsed) ||
+      (parsed as { v: number }).v !== CACHE_VERSION
+    ) {
+      // Clear stale or incompatible snapshot so future reads don't keep failing.
+      sessionStorage.removeItem(storageKey)
+      return null
+    }
+
+    const { d, t } = parsed as { d: T; t: number }
+    return { data: d, timestamp: t }
   } catch {
     return null
   }
@@ -454,7 +474,9 @@ export async function initCacheWorker(): Promise<CacheWorkerRpc> {
     return rpc
   } catch (e) {
     console.error('[Cache] SQLite Worker failed, using IndexedDB fallback:', e)
-    cacheStorage = new IndexedDBStorage()
+    // Reuse the existing _idbStorage instance so that the snapshot hydrated by
+    // preloadAll() remains consistent with the active storage backend.
+    cacheStorage = _idbStorage
     throw e
   }
 }
@@ -471,6 +493,11 @@ export function initPreloadedMeta(meta: Record<string, WorkerCacheMeta>): void {
       lastError: value.lastError,
       lastSuccessfulRefresh: value.lastSuccessfulRefresh,
     })
+  }
+  // Update any stores that were constructed before meta was available
+  // (i.e. before the async worker init completed after first render).
+  for (const store of cacheRegistry.values()) {
+    (store as CacheStore<unknown>).applyPreloadedMeta()
   }
 }
 
@@ -728,6 +755,22 @@ class CacheStore<T> {
     })
   }
 
+  /**
+   * Apply persisted meta (consecutiveFailures, lastSuccessfulRefresh) to stores
+   * that were constructed before initPreloadedMeta() completed.
+   * Only updates stores still in the initial loading state with no snapshot data.
+   */
+  applyPreloadedMeta(): void {
+    if (!this.initialDataLoaded && this.state.isLoading) {
+      const meta = this.loadMeta()
+      this.setState({
+        isFailed: meta.consecutiveFailures >= MAX_FAILURES,
+        consecutiveFailures: meta.consecutiveFailures,
+        lastRefresh: meta.lastSuccessfulRefresh ?? null,
+      })
+    }
+  }
+
   // Fetching
   async fetch(fetcher: () => Promise<T>, merge?: (old: T, new_: T) => T, progressiveFetcher?: (onProgress: (partialData: T) => void) => Promise<T>): Promise<void> {
     if (this.fetchingRef) return
@@ -785,25 +828,15 @@ class CacheStore<T> {
         return
       }
 
-      // Guard: fetcher returned empty data (equivalent to initialData).
-      // This happens when the agent/backend hasn't connected yet.
-      if (isEquivalentToInitial(newData, this.initialData)) {
-        if (hasCachedData) {
-          // Have cache — keep it, just stop refreshing
-          this.fetchingRef = false
-          this.setState({ isLoading: false, isRefreshing: false })
-          return
-        }
-        // Cold load with no cache — keep skeleton visible, track as failure
-        // so auto-refresh retries. Don't save empty data to storage.
+      // Guard: fetcher returned empty data (equivalent to initialData) AND we
+      // already have cached data — keep the cache to avoid wiping good data
+      // with an empty response (e.g. backend not yet connected).
+      // On cold load (no cached data), fall through so the empty result is
+      // accepted as a valid successful fetch; don't keep the skeleton forever.
+      if (isEquivalentToInitial(newData, this.initialData) && hasCachedData) {
+        // Have cache — keep it, just stop refreshing
         this.fetchingRef = false
-        const newFailures = this.state.consecutiveFailures + 1
-        this.saveMeta({ consecutiveFailures: newFailures, lastError: 'Empty result — waiting for data source' })
-        this.setState({
-          isLoading: true,
-          isRefreshing: false,
-          consecutiveFailures: newFailures,
-        })
+        this.setState({ isLoading: false, isRefreshing: false })
         return
       }
 

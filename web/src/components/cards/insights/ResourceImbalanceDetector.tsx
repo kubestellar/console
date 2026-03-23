@@ -32,9 +32,10 @@ export function ResourceImbalanceDetector() {
     sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
   } = useInsightSort(imbalanceInsightsRaw)
 
+  const hasData = imbalanceInsightsRaw.length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: imbalanceInsightsRaw.length > 0,
+    isLoading: isLoading && !hasData,
+    hasAnyData: hasData,
     isDemoData,
   })
 

@@ -208,7 +208,12 @@ export function ResourceUsage() {
               <span className="text-sm text-muted-foreground">{accel.label}</span>
             </div>
             {accel.percent > 100 && (
-              <span className="text-2xs text-red-400 mt-0.5">{accel.data.used}/{accel.data.total} overcommitted</span>
+              <span className="text-2xs text-red-400 mt-0.5">
+                {t('resourceUsage.overcommitted', {
+                  used: accel.data.used,
+                  total: accel.data.total,
+                })}
+              </span>
             )}
           </div>
         ))}

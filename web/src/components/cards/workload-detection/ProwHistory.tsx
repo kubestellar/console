@@ -38,12 +38,14 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
   // Check if we should use demo data
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
 
-  const { jobs, isLoading, isFailed, consecutiveFailures, formatTimeAgo } = useCachedProwJobs('prow', 'prow')
+  const { jobs, isLoading, isRefreshing, isFailed, consecutiveFailures, formatTimeAgo } = useCachedProwJobs('prow', 'prow')
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = jobs.length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: jobs.length > 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures: consecutiveFailures ?? 0,
     isDemoData: shouldUseDemoData,
@@ -75,7 +77,7 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
     defaultLimit: 5,
   })
 
-  if (isLoading) {
+  if (isLoading && !hasData) {
     return (
       <div className="space-y-3">
         <Skeleton variant="text" width={120} height={20} />

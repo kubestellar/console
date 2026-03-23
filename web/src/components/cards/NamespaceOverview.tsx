@@ -22,7 +22,7 @@ interface NamespaceOverviewProps {
 
 export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   const { t } = useTranslation('common')
-  const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersConsecutiveFailures } = useClusters()
 
   // Initialize from config prop (card-level override) or persisted localStorage value (#3115)
   const [selectedCluster, setSelectedCluster] = useState<string>(() => {
@@ -110,10 +110,14 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   const lastRefresh = Math.max(podIssuesLastRefresh || 0, deploymentIssuesLastRefresh || 0)
 
   // Report state to CardWrapper for refresh animation
+  const hasData = allClusters.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: clustersLoading,
+    isLoading: clustersLoading && !hasData,
+    isRefreshing: clustersRefreshing || isRefreshing,
+    hasAnyData: hasData,
     isDemoData: podIssuesDemoFallback || deploymentIssuesDemoFallback,
-    hasAnyData: allClusters.length > 0,
+    isFailed: clustersFailed,
+    consecutiveFailures: clustersConsecutiveFailures,
   })
 
   if (showSkeleton) {

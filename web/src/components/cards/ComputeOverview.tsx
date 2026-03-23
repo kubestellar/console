@@ -14,8 +14,8 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 
 export function ComputeOverview() {
   const { t } = useTranslation(['cards', 'common'])
-  const { deduplicatedClusters: clusters, isLoading } = useClusters()
-  const { nodes: gpuNodes, isLoading: gpuLoading, isDemoFallback } = useCachedGPUNodes()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersConsecutiveFailures } = useClusters()
+  const { nodes: gpuNodes, isLoading: gpuLoading, isRefreshing: gpuRefreshing, isDemoFallback } = useCachedGPUNodes()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToResources } = useDrillDownActions()
   const { isDemoMode } = useDemoMode()
@@ -103,9 +103,13 @@ export function ComputeOverview() {
     filteredClusters.some(c => c.reachable !== false && c.cpuCores !== undefined && c.nodeCount !== undefined && c.nodeCount > 0)
 
   // Report state to CardWrapper for refresh animation
+  const hasData = clusters.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoading || gpuLoading,
-    hasAnyData: clusters.length > 0,
+    isLoading: (isLoading || gpuLoading) && !hasData,
+    isRefreshing: clustersRefreshing || gpuRefreshing,
+    hasAnyData: hasData,
+    isFailed: clustersFailed,
+    consecutiveFailures: clustersConsecutiveFailures,
     isDemoData: isDemoMode || isDemoFallback,
   })
 

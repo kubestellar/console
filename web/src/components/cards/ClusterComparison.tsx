@@ -24,10 +24,11 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
   const { isDemoMode } = useDemoMode()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = rawClusters.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: clustersLoading,
+    isLoading: clustersLoading && !hasData,
     isRefreshing,
-    hasAnyData: rawClusters.length > 0,
+    hasAnyData: hasData,
     isDemoData: isDemoMode || isDemoFallback,
     lastRefresh,
   })

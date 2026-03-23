@@ -32,9 +32,10 @@ export function KagentiTopology({ config }: { config?: Record<string, unknown> }
   const { data: agents, isLoading: agentsLoading, isDemoFallback: agentsDemo } = useKagentiAgents({ cluster })
   const { data: tools, isLoading: toolsLoading, isDemoFallback: toolsDemo } = useKagentiTools({ cluster })
 
+  const hasData = agents.length > 0 || tools.length > 0
   useCardLoadingState({
-    isLoading: agentsLoading || toolsLoading,
-    hasAnyData: agents.length > 0 || tools.length > 0,
+    isLoading: (agentsLoading || toolsLoading) && !hasData,
+    hasAnyData: hasData,
     isDemoData: agentsDemo || toolsDemo,
   })
 

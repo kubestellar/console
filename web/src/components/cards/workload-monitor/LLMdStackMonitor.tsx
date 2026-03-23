@@ -209,9 +209,11 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   const isLoading = serversLoading || monitorLoading
   const isRefreshing = serversRefreshing || monitorRefreshing
 
+  const hasData = servers.length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: servers.length > 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isDemoData: serversDemoFallback,
     isFailed: serversFailed,
     consecutiveFailures: serversFailures,

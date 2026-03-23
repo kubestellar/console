@@ -13,7 +13,7 @@ import { registerAllDescriptorCards } from './cardDescriptors.registry'
 import { CARD_TITLES, CARD_DESCRIPTIONS, DEMO_EXEMPT_CARDS } from './cardMetadata'
 
 // Eagerly import the default main-dashboard cards so they render instantly on
-// page load (no React.lazy chunk delay).  These are the 10 cards in the "main"
+// page load (no React.lazy chunk delay).  These are the 9 cards in the "main"
 // dashboard config — waiting for Vite to compile their chunks causes 10-15s of
 // skeletons even when cached data is available.
 import { ClusterHealth } from './ClusterHealth'

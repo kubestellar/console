@@ -7,7 +7,8 @@ export function AdmissionWebhooks() {
   const { t } = useTranslation('cards')
   const [tab, setTab] = useState<'all' | 'mutating' | 'validating'>('all')
   const { webhooks, isLoading, isDemoData } = useAdmissionWebhooks()
-  useCardLoadingState({ isLoading, hasAnyData: webhooks.length > 0, isDemoData })
+  const hasData = webhooks.length > 0
+  useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData })
   const filtered = tab === 'all' ? webhooks : webhooks.filter(w => w.type === tab)
   const mutatingCount = webhooks.filter(w => w.type === 'mutating').length
   const validatingCount = webhooks.filter(w => w.type === 'validating').length

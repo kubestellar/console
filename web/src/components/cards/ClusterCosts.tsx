@@ -194,16 +194,20 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
     SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
     [t]
   )
-  const { deduplicatedClusters: allClusters, isLoading } = useClusters()
-  const { nodes: gpuNodes, isDemoFallback } = useCachedGPUNodes()
+  const { deduplicatedClusters: allClusters, isLoading, isRefreshing: clustersRefreshing, isFailed, consecutiveFailures } = useClusters()
+  const { nodes: gpuNodes, isRefreshing: gpuRefreshing, isDemoFallback } = useCachedGPUNodes()
   const { drillToCost } = useDrillDownActions()
   const { isDemoMode } = useDemoMode()
 
   // Report state to CardWrapper for refresh animation
+  const hasData = allClusters.length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: allClusters.length > 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing: clustersRefreshing || gpuRefreshing,
+    hasAnyData: hasData,
     isDemoData: isDemoMode || isDemoFallback,
+    isFailed,
+    consecutiveFailures,
   })
 
   // Cloud provider selection

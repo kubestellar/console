@@ -31,9 +31,10 @@ export function MLJobs({ config: _config }: MLJobsProps) {
   const { t } = useTranslation()
   const { data: jobs, isLoading } = useDemoData(DEMO_ML_JOBS)
 
+  const hasData = jobs.length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: jobs.length > 0,
+    isLoading: isLoading && !hasData,
+    hasAnyData: hasData,
     isDemoData: true,
   })
 
@@ -76,7 +77,7 @@ export function MLJobs({ config: _config }: MLJobsProps) {
     }
   }
 
-  if (isLoading) {
+  if (isLoading && !hasData) {
     return (
       <div className="space-y-3">
         <Skeleton variant="text" width={120} height={20} />

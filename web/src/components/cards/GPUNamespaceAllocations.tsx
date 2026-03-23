@@ -61,10 +61,11 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
 
   const isLoading = (gpuLoading && gpuNodes.length === 0) || (podsLoading && allPods.length === 0)
 
+  const hasData = gpuNodes.length > 0 || allPods.length > 0
   useCardLoadingState({
-    isLoading: gpuLoading || podsLoading,
+    isLoading: (gpuLoading || podsLoading) && !hasData,
     isRefreshing: gpuRefreshing,
-    hasAnyData: gpuNodes.length > 0 || allPods.length > 0,
+    hasAnyData: hasData,
     isDemoData,
   })
 

@@ -51,7 +51,7 @@ export function CrossClusterPolicyComparison({ config: _config }: CardConfig) {
     Object.keys(kyvernoStatuses || {}).length > 0 &&
     Object.values(kyvernoStatuses || {}).every(s => !!s.error)
 
-  useCardLoadingState({ isLoading, hasAnyData: true, isDemoData })
+  useCardLoadingState({ isLoading: isLoading && !isDemoData, isRefreshing, hasAnyData: true, isDemoData })
 
   // Filter clusters by global filters + custom filter
   const allClusters = useMemo(() => {

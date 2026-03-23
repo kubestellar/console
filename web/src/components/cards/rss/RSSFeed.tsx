@@ -125,7 +125,8 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
   const [showSourceFilter, setShowSourceFilter] = useState(false)
   const sourceFilterRef = useRef<HTMLDivElement>(null)
 
-  useCardLoadingState({ isLoading, hasAnyData: items.length > 0, isDemoData: isDemoMode })
+  const hasData = items.length > 0
+  useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData: isDemoMode })
 
   const activeFeed = feeds[activeFeedIndex] || feeds[0]
 

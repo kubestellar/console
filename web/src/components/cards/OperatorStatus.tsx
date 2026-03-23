@@ -60,12 +60,14 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
   const { drillToOperator } = useDrillDownActions()
 
   // Fetch operators - pass undefined to get all clusters
-  const { operators: rawOperators, isLoading: operatorsLoading, consecutiveFailures, isFailed, isDemoFallback: isDemoData } = useCachedOperators(undefined)
+  const { operators: rawOperators, isLoading: operatorsLoading, isRefreshing, consecutiveFailures, isFailed, isDemoFallback: isDemoData } = useCachedOperators(undefined)
 
   // Report card data state
+  const hasData = rawOperators.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: clustersLoading || operatorsLoading,
-    hasAnyData: rawOperators.length > 0,
+    isLoading: (clustersLoading || operatorsLoading) && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
     isDemoData,
