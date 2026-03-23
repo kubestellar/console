@@ -1105,7 +1105,7 @@ export function useDeployments(cluster?: string, namespace?: string) {
       deploymentsCache = { data: newDeployments, timestamp: now, key: cacheKey }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch deployments'
-      console.error('[useDeployments] All fetch sources failed:', message)
+      console.error('[useDeployments] All fetch sources failed:', message, err)
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent && !deploymentsCache) {
@@ -1293,7 +1293,7 @@ export function useHPAs(cluster?: string, namespace?: string) {
       setConsecutiveFailures(0)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch HPAs'
-      console.error('[useHPAs] Fetch failed:', message)
+      console.error('[useHPAs] Fetch failed:', message, err)
       setError(message)
       setConsecutiveFailures(prev => prev + 1)
       setHPAs([])
@@ -1355,7 +1355,7 @@ export function useReplicaSets(cluster?: string, namespace?: string) {
       setConsecutiveFailures(0)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch ReplicaSets'
-      console.error('[useReplicaSets] Fetch failed:', message)
+      console.error('[useReplicaSets] Fetch failed:', message, err)
       setError(message)
       setConsecutiveFailures(prev => prev + 1)
       setReplicaSets([])
@@ -1413,7 +1413,7 @@ export function useStatefulSets(cluster?: string, namespace?: string) {
       setConsecutiveFailures(0)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch StatefulSets'
-      console.error('[useStatefulSets] Fetch failed:', message)
+      console.error('[useStatefulSets] Fetch failed:', message, err)
       setError(message)
       setConsecutiveFailures(prev => prev + 1)
       setStatefulSets([])
@@ -1471,7 +1471,7 @@ export function useDaemonSets(cluster?: string, namespace?: string) {
       setConsecutiveFailures(0)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch DaemonSets'
-      console.error('[useDaemonSets] Fetch failed:', message)
+      console.error('[useDaemonSets] Fetch failed:', message, err)
       setError(message)
       setConsecutiveFailures(prev => prev + 1)
       setDaemonSets([])
@@ -1529,7 +1529,7 @@ export function useCronJobs(cluster?: string, namespace?: string) {
       setConsecutiveFailures(0)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch CronJobs'
-      console.error('[useCronJobs] Fetch failed:', message)
+      console.error('[useCronJobs] Fetch failed:', message, err)
       setError(message)
       setConsecutiveFailures(prev => prev + 1)
       setCronJobs([])
