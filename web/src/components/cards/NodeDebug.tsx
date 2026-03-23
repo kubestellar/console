@@ -66,11 +66,12 @@ type TabMode = 'inspect' | 'exec'
 
 export function NodeDebug() {
   const { t } = useTranslation('cards')
-  const { nodes, isLoading, isDemoFallback, isFailed, consecutiveFailures } = useCachedNodes()
+  const { nodes, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures } = useCachedNodes()
   const { execute } = useKubectl()
   const { showToast } = useToast()
   const { showSkeleton } = useCardLoadingState({
     isLoading,
+    isRefreshing,
     hasAnyData: nodes.length > 0,
     isDemoData: isDemoFallback,
     isFailed,

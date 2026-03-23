@@ -493,7 +493,13 @@ class CacheStore<T> {
           isLoading: false,
           isRefreshing: true, // Will fetch latest in background
           lastRefresh: entry.timestamp,
+          // Clear stale failure state — we have cached data to show.
+          // Matches error handler logic: when hasData, isFailed=false.
+          isFailed: false,
+          consecutiveFailures: 0,
         })
+        // Persist the reset so next page load doesn't start with stale failures
+        this.saveMeta({ consecutiveFailures: 0, lastSuccessfulRefresh: entry.timestamp })
       }
     } catch {
       // Ignore errors, will use initial data with isLoading=true
