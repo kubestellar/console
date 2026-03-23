@@ -164,7 +164,7 @@ export function useOvnStatus(): UseOvnStatusResult {
   const hasAnyData = data.detected
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasAnyData,
     isRefreshing,
     hasAnyData,
     isFailed,

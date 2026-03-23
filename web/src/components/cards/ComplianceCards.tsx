@@ -176,7 +176,8 @@ export function TrivyScan({ config: _config }: CardConfig) {
     return agg
   }, [statuses, aggregated, selectedClusters])
 
-  useCardLoadingState({ isLoading, hasAnyData: installed || isDemoData, isDemoData })
+  const hasData = installed || isDemoData
+  useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData })
 
   // Detect degraded state: installed but no reports generated (excludes clusters with errors)
   const isDegraded = useMemo(() => {
@@ -395,7 +396,8 @@ export function KubescapeScan({ config: _config }: CardConfig) {
     }
   }, [statuses, aggregated, selectedClusters])
 
-  useCardLoadingState({ isLoading, hasAnyData: installed || isDemoData, isDemoData })
+  const ksHasData = installed || isDemoData
+  useCardLoadingState({ isLoading: isLoading && !ksHasData, isRefreshing, hasAnyData: ksHasData, isDemoData })
 
   // Detect degraded state: installed but no scan data produced (excludes clusters with errors)
   const isDegraded = useMemo(() => {
@@ -721,7 +723,7 @@ export function PolicyViolations({ config: _config }: CardConfig) {
   )
 
   const hasData = violations.length > 0 || kyvernoDemoData
-  useCardLoadingState({ isLoading: kyvernoLoading, hasAnyData: hasData, isDemoData: kyvernoDemoData })
+  useCardLoadingState({ isLoading: kyvernoLoading && !hasData, isRefreshing: kyvernoRefreshing, hasAnyData: hasData, isDemoData: kyvernoDemoData })
 
   if (violations.length === 0 && !kyvernoDemoData) {
     // Still scanning — show loading state instead of definitive empty state
@@ -965,7 +967,8 @@ export function ComplianceScore({ config: _config }: CardConfig) {
     })
   }
 
-  useCardLoadingState({ isLoading, hasAnyData: !usingFallback || isDemoData, isDemoData })
+  const scoreHasData = !usingFallback || isDemoData
+  useCardLoadingState({ isLoading: isLoading && !scoreHasData, hasAnyData: scoreHasData, isDemoData })
 
   const scoreCtx = getScoreContext(score)
 

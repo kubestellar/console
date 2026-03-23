@@ -45,17 +45,19 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
     SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
     [t]
   )
-  const { isLoading: clustersLoading } = useClusters()
-  const { events: allEvents, isLoading: eventsLoading, isDemoFallback: eventsDemoFallback } = useCachedWarningEvents()
+  const { isLoading: clustersLoading, isRefreshing: clustersRefreshing } = useClusters()
+  const { events: allEvents, isLoading: eventsLoading, isRefreshing: eventsRefreshing, isDemoFallback: eventsDemoFallback } = useCachedWarningEvents()
   const { drillToEvents } = useDrillDownActions()
   const { isDemoMode } = useDemoMode()
 
   const isLoading = clustersLoading || eventsLoading
 
   // Report state to CardWrapper for refresh animation
+  const hasData = allEvents.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
-    hasAnyData: allEvents.length > 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing: clustersRefreshing || eventsRefreshing,
+    hasAnyData: hasData,
     isDemoData: eventsDemoFallback || isDemoMode,
   })
 

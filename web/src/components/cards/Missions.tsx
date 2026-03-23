@@ -141,7 +141,7 @@ const CLUSTER_FILTER_STORAGE_KEY = 'kubestellar-card-filter:deployment-missions-
 export function Missions(_props: MissionsProps) {
   const { t } = useTranslation()
   const { missions: liveMissions, activeMissions: liveActive, completedMissions: liveCompleted } = useDeployMissions()
-  const { deduplicatedClusters, isLoading } = useClusters()
+  const { deduplicatedClusters, isLoading, isRefreshing } = useClusters()
   const { isDemoMode: demoMode } = useDemoMode()
   const missions = demoMode ? DEMO_MISSIONS : liveMissions
   const activeMissions = demoMode ? [] : liveActive
@@ -154,9 +154,11 @@ export function Missions(_props: MissionsProps) {
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
 
   // Report state to CardWrapper for refresh animation
+  const hasData = missions.length > 0 || deduplicatedClusters.length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: missions.length > 0 || deduplicatedClusters.length > 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isDemoData: demoMode,
   })
 

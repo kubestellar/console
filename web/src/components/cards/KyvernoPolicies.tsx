@@ -73,9 +73,11 @@ function KyvernoPoliciesInternal({ config: _config }: KyvernoPoliciesProps) {
     )
   }, [localSearch, allPolicies])
 
+  const hasData = installed || isDemoData
   useCardLoadingState({
-    isLoading,
-    hasAnyData: installed || isDemoData,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isDemoData,
   })
 

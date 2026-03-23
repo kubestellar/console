@@ -72,7 +72,8 @@ export function TrestleScan({ config: _config }: CardConfig) {
     return agg
   }, [statuses, aggregated, selectedClusters])
 
-  useCardLoadingState({ isLoading, hasAnyData: installed || isDemoData, isDemoData })
+  const hasData = installed || isDemoData
+  useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData })
 
   // Detect degraded state: installed but no assessments
   const isDegraded = useMemo(() => {

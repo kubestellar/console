@@ -199,7 +199,7 @@ export function useKubevirtStatus(): UseKubevirtStatusResult {
   const hasAnyData = data.detected
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasAnyData,
     isRefreshing,
     hasAnyData,
     isFailed,

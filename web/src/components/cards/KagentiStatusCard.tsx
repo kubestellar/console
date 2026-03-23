@@ -70,7 +70,7 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
   const maxFailures = Math.max(agentFailures, buildFailures, toolFailures)
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasAnyData,
     hasAnyData,
     isFailed: maxFailures >= 3,
     consecutiveFailures: maxFailures,

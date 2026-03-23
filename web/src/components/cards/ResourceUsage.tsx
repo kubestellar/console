@@ -13,8 +13,8 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 
 export function ResourceUsage() {
   const { t } = useTranslation(['cards', 'common'])
-  const { isLoading: clustersLoading } = useClusters()
-  const { nodes: allGPUNodes, isDemoFallback } = useCachedGPUNodes()
+  const { isLoading: clustersLoading, isRefreshing: clustersRefreshing } = useClusters()
+  const { nodes: allGPUNodes, isDemoFallback, isRefreshing: gpuRefreshing } = useCachedGPUNodes()
   const { drillToResources } = useDrillDownActions()
   const { isDemoMode } = useDemoMode()
 
@@ -73,9 +73,11 @@ export function ResourceUsage() {
   }
 
   // Report state to CardWrapper for refresh animation
+  const hasData = clusters.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: clustersLoading,
-    hasAnyData: clusters.length > 0,
+    isLoading: clustersLoading && !hasData,
+    isRefreshing: clustersRefreshing || gpuRefreshing,
+    hasAnyData: hasData,
     isDemoData: isDemoMode || isDemoFallback,
   })
 

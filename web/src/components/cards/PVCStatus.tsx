@@ -77,10 +77,11 @@ function PVCStatusInternal() {
   const { isDemoMode: demoMode } = useDemoMode()
 
   // Report card data state (lastRefresh flows to CardWrapper header "Updated Xm ago")
+  const hasData = pvcs.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
-    hasAnyData: pvcs.length > 0,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
     isDemoData: isDemoFallback || demoMode,

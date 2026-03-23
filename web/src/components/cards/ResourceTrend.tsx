@@ -44,7 +44,7 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; points: number }[] 
 
 export function ResourceTrend() {
   const { t } = useTranslation()
-  const { deduplicatedClusters: clusters, isLoading } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { isDemoMode } = useDemoMode()
   const [view, setView] = useState<MetricView>('all')
@@ -54,9 +54,11 @@ export function ResourceTrend() {
   const clusterFilterRef = useRef<HTMLDivElement>(null)
 
   // Report state to CardWrapper for refresh animation
+  const hasData = clusters.length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: clusters.length > 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isDemoData: isDemoMode,
   })
 

@@ -77,9 +77,10 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
   const isLoading = (gpuLoading && gpuNodes.length === 0) || (podsLoading && allPods.length === 0)
 
   // Report state to CardWrapper for refresh animation
+  const hasData = gpuNodes.length > 0 || allPods.length > 0
   useCardLoadingState({
-    isLoading: gpuLoading || podsLoading,
-    hasAnyData: gpuNodes.length > 0 || allPods.length > 0,
+    isLoading: (gpuLoading || podsLoading) && !hasData,
+    hasAnyData: hasData,
     isDemoData,
   })
 

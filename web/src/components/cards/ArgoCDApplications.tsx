@@ -61,6 +61,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
   const {
     applications: allApps,
     isLoading,
+    isRefreshing,
     isFailed,
     consecutiveFailures,
     isDemoData,
@@ -73,9 +74,11 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
   const removeSyncingApp = (key: string) => setSyncingApps(prev => { const next = new Set(prev); next.delete(key); return next })
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = allApps.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
-    hasAnyData: allApps.length > 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
     isDemoData,

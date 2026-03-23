@@ -166,7 +166,7 @@ export function useKubeFlexStatus(): UseKubeFlexStatusResult {
   const hasAnyData = data.detected
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasAnyData,
     isRefreshing,
     hasAnyData,
     isFailed,

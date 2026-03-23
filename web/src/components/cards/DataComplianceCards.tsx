@@ -172,11 +172,13 @@ export function ExternalSecrets({ config: _config }: CardConfig) {
 // Cert-Manager TLS Certificates Card
 export function CertManager({ config: _config }: CardConfig) {
   const { t } = useTranslation()
-  const { status, issuers, isLoading, consecutiveFailures, isFailed } = useCertManager()
+  const { status, issuers, isLoading, isRefreshing, consecutiveFailures, isFailed } = useCertManager()
+  const hasData = issuers.length > 0 || status.installed
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
-    isLoading,
-    hasAnyData: issuers.length > 0 || status.installed,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
   })

@@ -115,10 +115,11 @@ export function ISO27001Audit({ config }: ISO27001AuditProps) {
   const consecutiveFailures = useDemoData ? 0 : cachedFailures
 
   // 4. Report card state
+  const hasData = rawFindings.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isDemoData: isDemoMode || isDemoFallback,
-    hasAnyData: rawFindings.length > 0,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
   })

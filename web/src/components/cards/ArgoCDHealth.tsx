@@ -32,15 +32,18 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
     total,
     healthyPercent,
     isLoading,
+    isRefreshing,
     isFailed,
     consecutiveFailures,
     isDemoData,
   } = useArgoCDHealth()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = total > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
-    hasAnyData: total > 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
     isDemoData,

@@ -81,6 +81,7 @@ export function HardwareHealthCard() {
   const {
     data: hwData,
     isLoading,
+    isRefreshing,
     isFailed,
     consecutiveFailures,
     isDemoFallback,
@@ -127,9 +128,11 @@ export function HardwareHealthCard() {
   const clusterFilterRef = useRef<HTMLDivElement>(null)
 
   // Report loading state to CardWrapper (useCache handles demo mode internally)
+  const hasData = alerts.length > 0 || inventory.length > 0 || nodeCount > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: alerts.length > 0 || inventory.length > 0 || nodeCount > 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isDemoData: isDemoFallback,
     isFailed,
     consecutiveFailures,

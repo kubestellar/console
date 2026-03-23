@@ -215,14 +215,16 @@ type StatusFilter = 'all' | 'healthy' | 'unhealthy'
 
 export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const { deduplicatedClusters: allClusters, isLoading } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading, isRefreshing } = useClusters()
   const { drillToCluster } = useDrillDownActions()
   const { isDemoMode } = useDemoMode()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = allClusters.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
-    hasAnyData: allClusters.length > 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isDemoData: isDemoMode,
   })
 

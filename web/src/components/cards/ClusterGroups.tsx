@@ -116,15 +116,17 @@ function relativeTime(iso: string): string {
 export function ClusterGroups(_props: ClusterGroupsProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { groups: liveGroups, createGroup, updateGroup, deleteGroup, evaluateGroup, isPersisted } = useClusterGroups()
-  const { deduplicatedClusters: clusters, isLoading } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing } = useClusters()
   const { isDemoMode: demoMode } = useDemoMode()
   const groups = demoMode ? DEMO_GROUPS : liveGroups
   const [isCreating, setIsCreating] = useState(false)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = clusters.length > 0 || groups.length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: clusters.length > 0 || groups.length > 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isDemoData: demoMode,
   })
   const [editingGroup, setEditingGroup] = useState<string | null>(null)

@@ -476,6 +476,7 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
   // (useClusters may not have populated yet, but demo statuses are provided via useEffect)
   useCardLoadingState({
     isLoading: shouldUseDemoData ? false : (isLoading || (isOPAChecking && !hasOPAData)),
+    isRefreshing,
     hasAnyData: shouldUseDemoData ? true : (clusters.length > 0 && hasOPAData),
     isDemoData: isDemoMode,
   })

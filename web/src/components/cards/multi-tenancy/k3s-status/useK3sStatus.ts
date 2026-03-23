@@ -199,7 +199,7 @@ export function useK3sStatus(): UseK3sStatusResult {
   const hasAnyData = data.detected
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasAnyData,
     isRefreshing,
     hasAnyData,
     isFailed,
