@@ -135,6 +135,13 @@ func streamClusters(
 	c.Set("X-Accel-Buffering", "no")
 
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+		// Create a cancellable context with the overall deadline so that all
+		// spawned goroutines are cancelled when the client disconnects or the
+		// deadline expires.  Previously context.Background() was used, which
+		// caused goroutine leaks on client disconnect (see #3291).
+		streamCtx, streamCancel := context.WithTimeout(context.Background(), sseOverallDeadline)
+		defer streamCancel()
+
 		var mu sync.Mutex
 		totalClusters := len(healthy) + len(offline)
 		completedClusters := 0
@@ -176,7 +183,9 @@ func streamClusters(
 					timeout = sseSlowClusterTimeout
 				}
 
-				ctx, cancel := context.WithTimeout(context.Background(), timeout)
+				// Derive from streamCtx so cancellation propagates when the
+				// client disconnects or the overall deadline fires.
+				ctx, cancel := context.WithTimeout(streamCtx, timeout)
 				defer cancel()
 
 				start := time.Now()
@@ -212,7 +221,8 @@ func streamClusters(
 			}(cl.Name, cacheKey)
 		}
 
-		// Wait for all healthy clusters or overall deadline
+		// Wait for all healthy clusters or until the stream context is
+		// cancelled (client disconnect / overall deadline).
 		done := make(chan struct{})
 		go func() {
 			wg.Wait()
@@ -221,8 +231,10 @@ func streamClusters(
 		select {
 		case <-done:
 			// All healthy clusters finished
-		case <-time.After(sseOverallDeadline):
-			log.Printf("[SSE] overall deadline reached, sending partial results")
+		case <-streamCtx.Done():
+			log.Printf("[SSE] stream context done, sending partial results: %v", streamCtx.Err())
+			// Cancel all in-flight goroutines immediately.
+			streamCancel()
 		}
 
 		mu.Lock()
