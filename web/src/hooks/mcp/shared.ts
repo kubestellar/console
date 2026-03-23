@@ -2,8 +2,8 @@ import { api, isBackendUnavailable } from '../../lib/api'
 import { reportAgentDataError, reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode, isNetlifyDeployment, isDemoToken, subscribeDemoMode } from '../../lib/demoMode'
 import { kubectlProxy } from '../../lib/kubectlProxy'
-import { registerCacheReset } from '../../lib/modeTransition'
-import { resetFailuresForCluster } from '../../lib/cache'
+import { registerCacheReset, triggerAllRefetches } from '../../lib/modeTransition'
+import { resetFailuresForCluster, resetAllCacheFailures } from '../../lib/cache'
 import {
   LOCAL_AGENT_HTTP_URL,
   MCP_HOOK_TIMEOUT_MS,
@@ -323,6 +323,8 @@ export function notifyClusterSubscribersDebounced() {
 
 // Update shared cluster cache
 export function updateClusterCache(updates: Partial<ClusterCache>) {
+  const hadClusters = clusterCache.clusters.length > 0
+
   // Apply cached distributions and merge with stored data to preserve metrics
   if (updates.clusters) {
     updates.clusters = mergeWithStoredClusters(updates.clusters)
@@ -333,6 +335,15 @@ export function updateClusterCache(updates: Partial<ClusterCache>) {
   }
   clusterCache = { ...clusterCache, ...updates }
   notifyClusterSubscribers()
+
+  // When clusters become available for the first time, reset all cache
+  // failures and trigger immediate refetch. This fixes the race condition
+  // where hooks fire before WebSocket delivers cluster data, fail, and
+  // enter exponential backoff — leaving cards empty even after clusters load.
+  if (!hadClusters && clusterCache.clusters.length > 0) {
+    resetAllCacheFailures()
+    triggerAllRefetches()
+  }
 }
 
 // Share metrics between clusters pointing to the same server

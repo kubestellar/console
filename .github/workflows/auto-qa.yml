@@ -1854,13 +1854,15 @@ jobs:
           ISSUES=""
 
           # Find card components without demo data functions
+          # Exclude: games (client-only), modals (no data fetching), pure UI components
+          EXCLUDE_PATTERN="index\|test\|spec\|types\|utils\|KubeKong\|KubeSnake\|KubeBert\|WeatherAnimation\|NotificationVerifyIndicator\|DetailModal\|BreakdownModal"
           CARDS_NO_DEMO=""
-          for f in $(find src/components/cards -name "*.tsx" 2>/dev/null | grep -v "index\|test\|spec\|types\|utils" | head -60); do
+          for f in $(find src/components/cards -name "*.tsx" 2>/dev/null | grep -v "$EXCLUDE_PATTERN" | head -60); do
             # Check if it's a card component (exports a component)
             IS_CARD=$(grep -l "export.*function\|export const" "$f" 2>/dev/null || true)
             if [ -n "$IS_CARD" ]; then
-              # Check for demo data patterns
-              HAS_DEMO=$(grep -l "getDemoData\|DEMO_\|demoData\|useDemoMode\|isDemoMode\|useCardDemoState" "$f" 2>/dev/null || true)
+              # Check for demo data patterns — includes hook-based demo data via useCached*/useCache
+              HAS_DEMO=$(grep -l "getDemoData\|DEMO_\|demoData\|useDemoMode\|isDemoMode\|useCardDemoState\|isDemoFallback\|isDemoData\|useCached" "$f" 2>/dev/null || true)
               if [ -z "$HAS_DEMO" ]; then
                 LINES=$(wc -l < "$f" 2>/dev/null || echo "0")
                 if [ "$LINES" -gt 50 ]; then
@@ -1875,11 +1877,12 @@ jobs:
           fi
 
           # Find components without Skeleton imports (for loading states)
+          # Cards using useCardLoadingState get skeletons via CardWrapper automatically
           NO_SKELETON=""
-          for f in $(find src/components/cards -name "*.tsx" 2>/dev/null | grep -v "index\|test\|spec" | head -60); do
+          for f in $(find src/components/cards -name "*.tsx" 2>/dev/null | grep -v "$EXCLUDE_PATTERN" | head -60); do
             HAS_LOADING=$(grep -l "isLoading\|loading\|Loading" "$f" 2>/dev/null || true)
             if [ -n "$HAS_LOADING" ]; then
-              HAS_SKELETON=$(grep -l "Skeleton\|from.*Skeleton" "$f" 2>/dev/null || true)
+              HAS_SKELETON=$(grep -l "Skeleton\|CardSkeleton\|useCardLoadingState\|from.*Skeleton" "$f" 2>/dev/null || true)
               if [ -z "$HAS_SKELETON" ]; then
                 NO_SKELETON="${NO_SKELETON}  - \`$(basename "$f")\`\n"
               fi
@@ -1899,7 +1902,8 @@ jobs:
             for card in $INVENTORY_CARDS; do
               CARD_FILE=$(find src -name "${card}.tsx" -o -name "${card}Card.tsx" 2>/dev/null | head -1)
               if [ -n "$CARD_FILE" ]; then
-                HAS_DEMO=$(grep -l "getDemoData\|DEMO_\|demoData\|useCardDemoState" "$CARD_FILE" 2>/dev/null || true)
+                # Check for demo data patterns — includes hook-based demo data via useCached*/useCache
+                HAS_DEMO=$(grep -l "getDemoData\|DEMO_\|demoData\|useCardDemoState\|isDemoFallback\|isDemoData\|useCached" "$CARD_FILE" 2>/dev/null || true)
                 if [ -z "$HAS_DEMO" ]; then
                   INVENTORY_NO_DEMO="${INVENTORY_NO_DEMO}  - \`${card}\`\n"
                 fi
@@ -1912,8 +1916,9 @@ jobs:
           fi
 
           # Check for stat blocks without demo values
+          # Stat blocks in cards using useCached* hooks get demo data automatically
           STAT_NO_DEMO=$(grep -rln "StatBlock\|StatCard\|stats\[" src/components --include="*.tsx" 2>/dev/null | while read f; do
-            HAS_DEMO=$(grep -l "demo\|Demo\|mock\|Mock\|sample\|Sample" "$f" 2>/dev/null || true)
+            HAS_DEMO=$(grep -l "demo\|Demo\|mock\|Mock\|sample\|Sample\|isDemoFallback\|useCached" "$f" 2>/dev/null || true)
             if [ -z "$HAS_DEMO" ]; then
               basename "$f"
             fi
@@ -2136,12 +2141,13 @@ jobs:
           fi
 
           # Find cards that don't respect demo mode toggle (check for demo mode subscription)
+          # Cards using useCached* hooks get demo mode handling automatically via useCache's useSyncExternalStore(subscribeDemoMode)
           NO_DEMO_SUBSCRIPTION=""
           for f in $(find src/components/cards -name "*.tsx" 2>/dev/null | grep -v "index\|test" | head -40); do
-            HAS_DEMO=$(grep -l "useDemoMode\|useCardDemoState\|isDemoMode\|subscribeDemoMode" "$f" 2>/dev/null || true)
+            HAS_DEMO=$(grep -l "useDemoMode\|useCardDemoState\|isDemoMode\|subscribeDemoMode\|isDemoFallback\|isDemoData\|useCached" "$f" 2>/dev/null || true)
             if [ -z "$HAS_DEMO" ]; then
-              # Only flag if it has data fetching
-              HAS_FETCH=$(grep -l "fetch\|useQuery\|useCached\|useEffect.*api" "$f" 2>/dev/null || true)
+              # Only flag if it has data fetching (exclude useCached which handles demo internally)
+              HAS_FETCH=$(grep -l "fetch\|useQuery\|useEffect.*api" "$f" 2>/dev/null || true)
               if [ -n "$HAS_FETCH" ]; then
                 NO_DEMO_SUBSCRIPTION="${NO_DEMO_SUBSCRIPTION}  - \`$(basename "$f")\`\n"
               fi
@@ -4048,10 +4054,10 @@ jobs:
                 title: `${prefix} Cards missing demo data support`,
                 body: buildFocusBody('Demo Mode', 'Demo Data Coverage',
                   readOutput('/tmp/focus-inventory-demo.txt'),
-                  ['Add getDemoData() function or DEMO_ constants to cards',
-                   'Use useCardDemoState hook for automatic demo mode handling',
-                   'Import and use Skeleton component for loading states',
-                   'Ensure cards work offline by providing realistic demo data',
+                  ['Cards using useCached* hooks already have demo data via the demoData: parameter in useCache()',
+                   'Cards using isDemoFallback/isDemoData from hooks are already covered',
+                   'For new cards: use useCached* hooks or pass demoData to useCache()',
+                   'Games and pure UI components (modals, animations) do not need demo data',
                    'Test with localStorage.setItem("kc-demo-mode", "true")'], true),
                 labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:demo-data'],
               });

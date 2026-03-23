@@ -147,7 +147,7 @@ async function fetchClusters(): Promise<string[]> {
   // Fall back to backend API
   const data = await fetchAPI<{ clusters: Array<{ name: string; reachable?: boolean }> }>('clusters')
   return (data.clusters || [])
-    .filter(c => c.reachable === true && !c.name.includes('/'))
+    .filter(c => c.reachable !== false && !c.name.includes('/'))
     .map(c => c.name)
 }
 
@@ -1503,7 +1503,7 @@ async function fetchWorkloadsFromAgent(onProgress?: (partial: Workload[]) => voi
   if (isAgentUnavailable()) return null
 
   const clusters = clusterCacheRef.clusters
-    .filter(c => c.reachable === true && !c.name.includes('/'))
+    .filter(c => c.reachable !== false && !c.name.includes('/'))
   if (clusters.length === 0) return null
   const accumulated: Workload[] = []
 

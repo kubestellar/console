@@ -1085,6 +1085,17 @@ export function resetFailuresForCluster(clusterName: string): number {
   return resetCount
 }
 
+/**
+ * Reset failure counters for ALL cache stores and trigger immediate refetch.
+ * Called when clusters become available after initial page load — any hooks
+ * that failed during the race window (clusters not loaded yet) get a fresh retry.
+ */
+export function resetAllCacheFailures(): void {
+  for (const store of cacheRegistry.values()) {
+    (store as CacheStore<unknown>).resetFailures()
+  }
+}
+
 /** Prefetch data into cache */
 export async function prefetchCache<T>(
   key: string,
