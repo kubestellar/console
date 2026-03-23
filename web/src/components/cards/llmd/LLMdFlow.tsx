@@ -595,7 +595,7 @@ export function LLMdFlow() {
   useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0, hasData: true })
 
   // Build dynamic node positions based on actual stack topology
-  const { nodePositions, connections, nodeLabels } = useMemo(() => {
+  const { nodePositions: rawPositions, connections, nodeLabels } = useMemo(() => {
     // Only show demo topology if demo mode is ON
     if (!selectedStack && isDemoMode) {
       return {
@@ -754,6 +754,17 @@ export function LLMdFlow() {
 
     return { nodePositions: positions, connections: conns, nodeLabels: labels }
   }, [selectedStack, isDemoMode])
+
+  // Scale node positions wider when in fullscreen to fill the wider SVG viewBox (240w vs 120w)
+  const nodePositions = useMemo(() => {
+    if (!isExpanded || Object.keys(rawPositions).length === 0) return rawPositions
+    const scaled: Record<string, { x: number; y: number }> = {}
+    for (const [key, pos] of Object.entries(rawPositions)) {
+      // Map from original x range (10-92) to expanded range (10-210)
+      scaled[key] = { x: 10 + (pos.x - 10) * (200 / 82), y: pos.y }
+    }
+    return scaled
+  }, [rawPositions, isExpanded])
 
   // Toggle metric selection
   const toggleMetric = (metric: MetricType) => {
@@ -962,7 +973,7 @@ export function LLMdFlow() {
   const showEmptyState = !selectedStack && !isDemoMode
 
   return (
-    <div className={`relative w-full h-full flex-1 bg-gradient-to-br from-background/50 to-secondary/30 rounded-lg ${isExpanded ? 'min-h-0' : 'min-h-[300px]'}`}>
+    <div className={`relative w-full h-full flex-1 flex flex-col bg-gradient-to-br from-background/50 to-secondary/30 rounded-lg ${isExpanded ? 'min-h-0' : 'min-h-[300px]'}`}>
       {/* Empty state overlay */}
       {showEmptyState && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-background/60 backdrop-blur-sm">
@@ -1059,8 +1070,8 @@ export function LLMdFlow() {
 
       {/* SVG Flow Diagram - overflow visible allows labels to extend beyond viewBox */}
       <svg
-        viewBox="-5 -10 120 140"
-        className="w-full h-[calc(100%-2rem)] mt-8 overflow-visible"
+        viewBox={isExpanded ? '-10 -10 240 120' : '-5 -10 120 140'}
+        className={`w-full overflow-visible ${isExpanded ? 'flex-1 min-h-0 mt-2' : 'h-[calc(100%-2rem)] mt-8'}`}
         preserveAspectRatio="xMidYMid meet"
         style={{ overflow: 'visible' }}
       >

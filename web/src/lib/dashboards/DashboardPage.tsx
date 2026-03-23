@@ -166,12 +166,29 @@ export function DashboardPage({
     }
   }, [searchParams, setSearchParams, setShowAddCard, location.pathname])
 
+  // Inline card insertion
+  const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null)
+  const insertAtIndexRef = useRef<number | null>(null)
+  insertAtIndexRef.current = insertAtIndex
+
   // Card handlers
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
-    addCards(newCards)
+    const idx = insertAtIndexRef.current
+    if (idx !== null) {
+      const cardsToAdd = newCards.map(c => ({
+        id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        card_type: c.type,
+        config: c.config || {},
+        title: c.title,
+      }))
+      setCards(prev => [...prev.slice(0, idx), ...cardsToAdd, ...prev.slice(idx)])
+      setInsertAtIndex(null)
+    } else {
+      addCards(newCards)
+    }
     expandCards()
     setShowAddCard(false)
-  }, [addCards, expandCards, setShowAddCard])
+  }, [addCards, setCards, expandCards, setShowAddCard])
 
   const handleRemoveCard = useCallback((cardId: string) => {
     removeCard(cardId)
@@ -306,7 +323,7 @@ export function DashboardPage({
               >
                 <SortableContext items={cards.map(c => c.id)} strategy={rectSortingStrategy}>
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                    {cards.map(card => (
+                    {cards.map((card, index) => (
                       <SortableDashboardCard
                         key={card.id}
                         card={card}
@@ -317,6 +334,8 @@ export function DashboardPage({
                         isRefreshing={isRefreshing}
                         onRefresh={triggerRefresh}
                         lastUpdated={lastUpdated}
+                        onInsertBefore={() => { setInsertAtIndex(index); setShowAddCard(true) }}
+                        onInsertAfter={() => { setInsertAtIndex(index + 1); setShowAddCard(true) }}
                       />
                     ))}
                   </div>
@@ -350,7 +369,7 @@ export function DashboardPage({
       {/* Add Card Modal */}
       <AddCardModal
         isOpen={showAddCard}
-        onClose={() => { setShowAddCard(false); setAddCardSearch('') }}
+        onClose={() => { setShowAddCard(false); setAddCardSearch(''); setInsertAtIndex(null) }}
         onAddCards={handleAddCards}
         existingCardTypes={cards.map(c => c.card_type)}
         initialSearch={addCardSearch}

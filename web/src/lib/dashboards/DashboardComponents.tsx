@@ -26,6 +26,8 @@ export interface SortableDashboardCardProps {
   isRefreshing?: boolean
   onRefresh?: () => void
   lastUpdated?: Date | null
+  onInsertBefore?: () => void
+  onInsertAfter?: () => void
 }
 
 export const SortableDashboardCard = memo(function SortableDashboardCard({
@@ -37,6 +39,8 @@ export const SortableDashboardCard = memo(function SortableDashboardCard({
   isRefreshing,
   onRefresh,
   lastUpdated,
+  onInsertBefore,
+  onInsertAfter,
 }: SortableDashboardCardProps) {
   const {
     attributes,
@@ -64,7 +68,27 @@ export const SortableDashboardCard = memo(function SortableDashboardCard({
   const CardComponent = CARD_COMPONENTS[card.card_type]
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} className="relative group/card">
+      {onInsertBefore && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onInsertBefore() }}
+          className="absolute top-1/2 -left-2.5 -translate-y-1/2 z-10 opacity-0 group-hover/card:opacity-100 transition-opacity w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shadow-md hover:scale-110"
+          aria-label="Insert card before this one"
+          title="Insert card here"
+        >
+          +
+        </button>
+      )}
+      {onInsertAfter && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onInsertAfter() }}
+          className="absolute top-1/2 -right-2.5 -translate-y-1/2 z-10 opacity-0 group-hover/card:opacity-100 transition-opacity w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shadow-md hover:scale-110"
+          aria-label="Insert card after this one"
+          title="Insert card here"
+        >
+          +
+        </button>
+      )}
       <CardWrapper
         cardId={card.id}
         cardType={card.card_type}

@@ -10,6 +10,7 @@ import { Brain, Lightbulb, AlertTriangle, TrendingUp, Gauge, MessageSquare, Chev
 import { StatusBadge } from '../../../components/ui/StatusBadge'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
+import { useCardExpanded } from '../CardWrapper'
 import { generateAIInsights, type AIInsight } from '../../../lib/llmd/mockData'
 import type { LLMdStack } from '../../../hooks/useStackDiscovery'
 import { useTranslation } from 'react-i18next'
@@ -327,6 +328,7 @@ export function LLMdAIInsights() {
   // Use showDemoBadge (true when global demo mode) rather than shouldUseDemoData (false when stack selected)
   useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0, hasData: true })
 
+  const { isExpanded: isCardExpanded } = useCardExpanded()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [chatInput, setChatInput] = useState('')
   const [chatHistory, setChatHistory] = useState<Array<{ role: 'user' | 'ai'; message: string }>>([])
@@ -452,9 +454,9 @@ export function LLMdAIInsights() {
       </div>
 
       {/* Insights list */}
-      <div className="flex-1 overflow-auto space-y-2 mb-4">
+      <div className={`flex-1 overflow-auto mb-4 ${isCardExpanded ? 'grid grid-cols-2 gap-3 auto-rows-min' : 'space-y-2'}`}>
         {insights.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
+          <div className={`flex flex-col items-center justify-center h-full text-center ${isCardExpanded ? 'col-span-2' : ''}`}>
             <Settings2 size={32} className="text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">
               {reason === 'stack-not-selected'

@@ -106,6 +106,7 @@ export function Dashboard() {
   })
   const [activeId, setActiveId] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null)
   const [_dragOverDashboard, setDragOverDashboard] = useState<string | null>(null)
   const { isOpen: isCreateDashboardOpen, open: openCreateDashboard, close: closeCreateDashboard } = useModalState()
   const { isOpen: isWidgetExportOpen, open: openWidgetExport, close: closeWidgetExport } = useModalState()
@@ -634,9 +635,14 @@ export function Dashboard() {
       recordCardAdded(card.id, card.card_type, card.title, card.config, dashboard?.id, dashboard?.name)
       emitCardAdded(card.card_type, 'add_modal')
     })
-    // Add new cards at the TOP of the dashboard (prepend)
+    // Insert cards at the specified position, or prepend to top
     snapshot(localCards)
-    setLocalCards((prev) => [...newCards, ...prev])
+    if (insertAtIndex !== null) {
+      setLocalCards((prev) => [...prev.slice(0, insertAtIndex), ...newCards, ...prev.slice(insertAtIndex)])
+      setInsertAtIndex(null)
+    } else {
+      setLocalCards((prev) => [...newCards, ...prev])
+    }
 
     // Persist to backend if dashboard exists
     if (dashboard?.id) {
@@ -985,7 +991,7 @@ export function Dashboard() {
             aria-label="Dashboard cards"
             className={`grid grid-cols-1 md:grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)] ${showDragHint ? 'animate-shimmy' : ''}`}
           >
-            {localCards.map((card) => (
+            {localCards.map((card, index) => (
               <SortableCard
                 key={card.id}
                 card={card}
@@ -999,6 +1005,8 @@ export function Dashboard() {
                 onKeyDown={handleGridKeyDown}
                 registerRef={(el) => registerCardRef(card.id, el)}
                 registerExpandTrigger={(expand) => { expandTriggersRef.current.set(card.id, expand) }}
+                onInsertBefore={() => { setInsertAtIndex(index); openAddCardModal() }}
+                onInsertAfter={() => { setInsertAtIndex(index + 1); openAddCardModal() }}
               />
             ))}
 
@@ -1061,7 +1069,7 @@ export function Dashboard() {
       {/* Add Card Modal */}
       <AddCardModal
         isOpen={isAddCardModalOpen}
-        onClose={() => { closeAddCardModal(); setAddCardSearch('') }}
+        onClose={() => { closeAddCardModal(); setAddCardSearch(''); setInsertAtIndex(null) }}
         onAddCards={handleAddCards}
         existingCardTypes={currentCardTypes}
         initialSearch={addCardSearch}

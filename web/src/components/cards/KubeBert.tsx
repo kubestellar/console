@@ -556,6 +556,7 @@ export function KubeBert() {
   // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || (e.target instanceof HTMLElement && e.target.isContentEditable)) return
       if (gameStateRef.current !== 'playing') return
 
       // Q*bert uses diagonal movement mapped to arrow keys:

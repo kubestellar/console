@@ -386,7 +386,7 @@ export function PDDisaggregation() {
       {(isDemoMode || (selectedStack && hasDisaggregation)) && (
         <>
           {/* Metrics summary */}
-          <div className="grid grid-cols-5 gap-2 mb-4">
+          <div className={`grid grid-cols-5 mb-4 ${isExpanded ? 'gap-4' : 'gap-2'}`}>
             <div className="bg-purple-500/10 rounded-lg p-2 text-center">
               <div className="flex items-center justify-center gap-1 text-purple-400 mb-1">
                 <Cpu size={12} />
@@ -441,7 +441,7 @@ export function PDDisaggregation() {
                 <div className="w-3 h-3 rounded-full bg-purple-500" />
                 <span className="text-sm font-medium text-purple-400">{t('llmd.prefillServers')}</span>
               </div>
-              <div className="flex-1 space-y-2 overflow-auto">
+              <div className={`flex-1 overflow-auto ${isExpanded ? 'grid grid-cols-2 gap-3 auto-rows-min' : 'space-y-2'}`}>
                 {prefillServers.map(server => (
                   <ServerCard key={server.id} server={server} />
                 ))}
@@ -484,7 +484,7 @@ export function PDDisaggregation() {
                 <div className="w-3 h-3 rounded-full bg-green-500" />
                 <span className="text-sm font-medium text-green-400">{t('llmd.decodeServers')}</span>
               </div>
-              <div className="flex-1 space-y-2 overflow-auto">
+              <div className={`flex-1 overflow-auto ${isExpanded ? 'grid grid-cols-2 gap-3 auto-rows-min' : 'space-y-2'}`}>
                 {decodeServers.map(server => (
                   <ServerCard key={server.id} server={server} />
                 ))}

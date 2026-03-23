@@ -530,7 +530,7 @@ export function EPPRouting() {
   useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0, hasData: true })
 
   // Build dynamic nodes from stack topology
-  const dynamicNodes = useMemo((): FlowNode[] => {
+  const rawNodes = useMemo((): FlowNode[] => {
     // Only show demo nodes if demo mode is ON
     if (!selectedStack && isDemoMode) {
       return NODES // Default demo nodes
@@ -648,6 +648,15 @@ export function EPPRouting() {
 
     return nodes
   }, [selectedStack, isDemoMode])
+
+  // Scale node positions wider when in fullscreen to fill the wider SVG viewBox
+  const dynamicNodes = useMemo(() => {
+    if (!isExpanded || rawNodes.length === 0) return rawNodes
+    return rawNodes.map(node => ({
+      ...node,
+      x: 10 + (node.x - 12) * (210 / 78),
+    }))
+  }, [rawNodes, isExpanded])
 
   // Toggle metric selection
   const toggleMetric = (metric: MetricType) => {
@@ -957,7 +966,7 @@ export function EPPRouting() {
       {/* Main visualization area */}
       <div className={`flex-1 relative ${isExpanded ? 'min-h-0' : 'min-h-[200px]'}`}>
         <svg
-          viewBox="-5 -10 120 130"
+          viewBox={isExpanded ? '-10 -10 240 110' : '-5 -10 120 130'}
           className="w-full h-full overflow-visible"
           preserveAspectRatio="xMidYMid meet"
           style={{ overflow: 'visible' }}

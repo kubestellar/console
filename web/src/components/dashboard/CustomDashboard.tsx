@@ -75,9 +75,11 @@ interface SortableCardProps {
   isRefreshing?: boolean
   onRefresh?: () => void
   lastUpdated?: Date | null
+  onInsertBefore?: () => void
+  onInsertAfter?: () => void
 }
 
-function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, isRefreshing, onRefresh, lastUpdated }: SortableCardProps) {
+function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, isRefreshing, onRefresh, lastUpdated, onInsertBefore, onInsertAfter }: SortableCardProps) {
   const { t } = useTranslation()
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: card.id })
 
@@ -110,7 +112,27 @@ function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, 
 
   if (!CardComponent) {
     return (
-      <div ref={setNodeRef} style={style} className="relative">
+      <div ref={setNodeRef} style={style} className="relative group/card">
+        {onInsertBefore && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onInsertBefore() }}
+            className="absolute top-1/2 -left-2.5 -translate-y-1/2 z-10 opacity-0 group-hover/card:opacity-100 transition-opacity w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shadow-md hover:scale-110"
+            aria-label="Insert card before this one"
+            title="Insert card here"
+          >
+            +
+          </button>
+        )}
+        {onInsertAfter && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onInsertAfter() }}
+            className="absolute top-1/2 -right-2.5 -translate-y-1/2 z-10 opacity-0 group-hover/card:opacity-100 transition-opacity w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shadow-md hover:scale-110"
+            aria-label="Insert card after this one"
+            title="Insert card here"
+          >
+            +
+          </button>
+        )}
         <CardWrapper
           cardId={card.id}
           cardType={card.card_type}
@@ -132,7 +154,27 @@ function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, 
   }
 
   return (
-    <div ref={setNodeRef} style={style} className="relative">
+    <div ref={setNodeRef} style={style} className="relative group/card">
+      {onInsertBefore && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onInsertBefore() }}
+          className="absolute top-1/2 -left-2.5 -translate-y-1/2 z-10 opacity-0 group-hover/card:opacity-100 transition-opacity w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shadow-md hover:scale-110"
+          aria-label="Insert card before this one"
+          title="Insert card here"
+        >
+          +
+        </button>
+      )}
+      {onInsertAfter && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onInsertAfter() }}
+          className="absolute top-1/2 -right-2.5 -translate-y-1/2 z-10 opacity-0 group-hover/card:opacity-100 transition-opacity w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shadow-md hover:scale-110"
+          aria-label="Insert card after this one"
+          title="Insert card here"
+        >
+          +
+        </button>
+      )}
       {/* Drag handle */}
       <div
         {...attributes}
@@ -237,6 +279,11 @@ export function CustomDashboard() {
   const { isOpen: isTemplatesOpen, open: openTemplates, close: closeTemplates } = useModalState()
   const { isOpen: isDeleteConfirmOpen, open: openDeleteConfirm, close: closeDeleteConfirm } = useModalState()
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
+
+  // Inline card insertion
+  const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null)
+  const insertAtIndexRef = useRef<number | null>(null)
+  insertAtIndexRef.current = insertAtIndex
 
   // Drag state
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -350,7 +397,13 @@ export function CustomDashboard() {
 
     // Add to local state
     snapshot(cardsRef.current)
-    setCards(prev => [...prev, ...cardsToAdd])
+    const idx = insertAtIndexRef.current
+    if (idx !== null) {
+      setCards(prev => [...prev.slice(0, idx), ...cardsToAdd, ...prev.slice(idx)])
+      setInsertAtIndex(null)
+    } else {
+      setCards(prev => [...cardsToAdd, ...prev])
+    }
 
     // Persist to backend
     if (id) {
@@ -590,7 +643,7 @@ export function CustomDashboard() {
         >
           <SortableContext items={cards.map(c => c.id)} strategy={rectSortingStrategy}>
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
-              {cards.map((card) => (
+              {cards.map((card, index) => (
                 <SortableCard
                   key={card.id}
                   card={card}
@@ -601,6 +654,8 @@ export function CustomDashboard() {
                   isRefreshing={isRefreshing}
                   onRefresh={triggerRefresh}
                   lastUpdated={lastUpdated}
+                  onInsertBefore={() => { setInsertAtIndex(index); openAddCard() }}
+                  onInsertAfter={() => { setInsertAtIndex(index + 1); openAddCard() }}
                 />
               ))}
             </div>
@@ -659,7 +714,7 @@ export function CustomDashboard() {
       {/* Add Card Modal */}
       <AddCardModal
         isOpen={isAddCardOpen}
-        onClose={closeAddCard}
+        onClose={() => { closeAddCard(); setInsertAtIndex(null) }}
         onAddCards={handleAddCards}
         existingCardTypes={currentCardTypes}
       />

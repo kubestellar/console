@@ -642,7 +642,7 @@ export function KVCacheMonitor() {
       </div>
 
       {/* Summary stats with glow */}
-      <div className="grid grid-cols-4 gap-2 mb-4">
+      <div className={`grid grid-cols-4 mb-4 ${isExpanded ? 'gap-4' : 'gap-2'}`}>
         <div className="bg-secondary/60 backdrop-blur-sm rounded-lg p-2 text-center border border-border/50">
           <div className="text-lg font-bold text-white flex items-center justify-center gap-1">
             {aggregateMetrics.avgUtil}%
@@ -783,18 +783,25 @@ export function KVCacheMonitor() {
             <motion.div
               key="gauges"
               className={`h-full overflow-auto ${
-                stats.length <= 2 ? 'flex items-center justify-evenly gap-12' :
-                stats.length <= 3 ? 'grid grid-cols-3 gap-6 place-items-center' :
-                stats.length <= 6 ? 'grid grid-cols-3 gap-3 place-items-center' :
-                stats.length <= 9 ? 'grid grid-cols-3 gap-2 place-items-center' :
-                'grid grid-cols-4 gap-2 place-items-center'
+                isExpanded
+                  ? (stats.length <= 2 ? 'flex items-center justify-evenly gap-16' :
+                     stats.length <= 4 ? 'grid grid-cols-4 gap-8 place-items-center' :
+                     stats.length <= 6 ? 'grid grid-cols-3 gap-6 place-items-center' :
+                     'grid grid-cols-4 gap-4 place-items-center')
+                  : (stats.length <= 2 ? 'flex items-center justify-evenly gap-12' :
+                     stats.length <= 3 ? 'grid grid-cols-3 gap-6 place-items-center' :
+                     stats.length <= 6 ? 'grid grid-cols-3 gap-3 place-items-center' :
+                     stats.length <= 9 ? 'grid grid-cols-3 gap-2 place-items-center' :
+                     'grid grid-cols-4 gap-2 place-items-center')
               }`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
             >
-              {stats.slice(0, 12).map((stat) => {
-                const gaugeSize = stats.length <= 2 ? 120 : stats.length <= 3 ? 130 : stats.length <= 6 ? 110 : stats.length <= 9 ? 100 : 85
+              {stats.slice(0, isExpanded ? 20 : 12).map((stat) => {
+                const gaugeSize = isExpanded
+                  ? (stats.length <= 2 ? 200 : stats.length <= 4 ? 180 : stats.length <= 6 ? 160 : 140)
+                  : (stats.length <= 2 ? 120 : stats.length <= 3 ? 130 : stats.length <= 6 ? 110 : stats.length <= 9 ? 100 : 85)
                 return (
                   <div
                     key={stat.podName}
@@ -817,17 +824,24 @@ export function KVCacheMonitor() {
             <motion.div
               key="horseshoe"
               className={`grid h-full place-items-center overflow-auto ${
-                stats.length <= 2 ? 'grid-cols-2 gap-2' :
-                stats.length <= 3 ? 'grid-cols-3 gap-1' :
-                stats.length <= 6 ? 'grid-cols-3 gap-1' :
-                'grid-cols-4 gap-1'
+                isExpanded
+                  ? (stats.length <= 2 ? 'grid-cols-2 gap-6' :
+                     stats.length <= 4 ? 'grid-cols-4 gap-4' :
+                     stats.length <= 6 ? 'grid-cols-3 gap-4' :
+                     'grid-cols-4 gap-3')
+                  : (stats.length <= 2 ? 'grid-cols-2 gap-2' :
+                     stats.length <= 3 ? 'grid-cols-3 gap-1' :
+                     stats.length <= 6 ? 'grid-cols-3 gap-1' :
+                     'grid-cols-4 gap-1')
               }`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
             >
-              {stats.slice(0, 8).map((stat) => {
-                const gaugeSize = stats.length <= 2 ? 180 : stats.length <= 3 ? 160 : stats.length <= 6 ? 140 : 120
+              {stats.slice(0, isExpanded ? 16 : 8).map((stat) => {
+                const gaugeSize = isExpanded
+                  ? (stats.length <= 2 ? 240 : stats.length <= 4 ? 200 : stats.length <= 6 ? 180 : 160)
+                  : (stats.length <= 2 ? 180 : stats.length <= 3 ? 160 : stats.length <= 6 ? 140 : 120)
                 return (
                   <div
                     key={stat.podName}

@@ -63,8 +63,8 @@ const HEIGHT_CLASSES: Record<ModalSize, string> = {
   sm: 'max-h-[min(60vh,calc(100vh-2rem))]',
   md: 'max-h-[min(70vh,calc(100vh-2rem))]',
   lg: 'min-h-[80vh] max-h-[min(90vh,calc(100vh-2rem))]',
-  xl: 'max-h-[min(85vh,calc(100vh-2rem))]',
-  full: 'max-h-[calc(100vh-2rem)]',
+  xl: 'min-h-[85vh] max-h-[min(85vh,calc(100vh-2rem))]',
+  full: 'min-h-[95vh] max-h-[calc(100vh-2rem)]',
 }
 
 // ============================================================================

@@ -19,6 +19,8 @@ interface SortableCardProps {
   onKeyDown?: (e: KeyboardEvent) => void
   registerRef?: (el: HTMLElement | null) => void
   registerExpandTrigger?: (expand: () => void) => void
+  onInsertBefore?: () => void
+  onInsertAfter?: () => void
 }
 
 /** Below this width, clamp small cards to half-width (6 cols) for readability */
@@ -27,7 +29,7 @@ const NARROW_BREAKPOINT = 1024
 /** Minimum card column span at narrow viewports */
 const MIN_NARROW_COLS = 6
 
-export const SortableCard = memo(function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, isRefreshing, onRefresh, lastUpdated, onKeyDown, registerRef, registerExpandTrigger }: SortableCardProps) {
+export const SortableCard = memo(function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, isRefreshing, onRefresh, lastUpdated, onKeyDown, registerRef, registerExpandTrigger, onInsertBefore, onInsertAfter }: SortableCardProps) {
   const {
     attributes,
     listeners,
@@ -65,12 +67,32 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
     <div
       ref={(el) => { setNodeRef(el); registerRef?.(el) }}
       style={style}
-      className="h-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:rounded-xl"
+      className="relative group/card h-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:rounded-xl"
       tabIndex={0}
       role="gridcell"
       aria-label={formatCardTitle(card.card_type)}
       onKeyDown={onKeyDown}
     >
+      {onInsertBefore && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onInsertBefore() }}
+          className="absolute top-1/2 -left-2.5 -translate-y-1/2 z-10 opacity-0 group-hover/card:opacity-100 transition-opacity w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shadow-md hover:scale-110"
+          aria-label="Insert card before this one"
+          title="Insert card here"
+        >
+          +
+        </button>
+      )}
+      {onInsertAfter && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onInsertAfter() }}
+          className="absolute top-1/2 -right-2.5 -translate-y-1/2 z-10 opacity-0 group-hover/card:opacity-100 transition-opacity w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shadow-md hover:scale-110"
+          aria-label="Insert card after this one"
+          title="Insert card here"
+        >
+          +
+        </button>
+      )}
       <CardWrapper
         cardId={card.id}
         cardType={card.card_type}
@@ -119,7 +141,9 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
     prevProps.isDragging === nextProps.isDragging &&
     prevProps.isRefreshing === nextProps.isRefreshing &&
     prevProps.lastUpdated === nextProps.lastUpdated &&
-    prevProps.onKeyDown === nextProps.onKeyDown
+    prevProps.onKeyDown === nextProps.onKeyDown &&
+    prevProps.onInsertBefore === nextProps.onInsertBefore &&
+    prevProps.onInsertAfter === nextProps.onInsertAfter
   )
 })
 

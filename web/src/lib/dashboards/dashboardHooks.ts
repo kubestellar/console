@@ -239,7 +239,7 @@ export function useDashboardCards(
 
     // If small number of cards, add all at once
     if (cardsToAdd.length <= BATCH_SIZE) {
-      setCards(prev => [...prev, ...cardsToAdd])
+      setCards(prev => [...cardsToAdd, ...prev])
       return
     }
 
@@ -249,7 +249,7 @@ export function useDashboardCards(
       const batch = cardsToAdd.slice(currentIndex, currentIndex + BATCH_SIZE)
       if (batch.length === 0) return
 
-      setCards(prev => [...prev, ...batch])
+      setCards(prev => [...batch, ...prev])
       currentIndex += BATCH_SIZE
 
       if (currentIndex < cardsToAdd.length) {
