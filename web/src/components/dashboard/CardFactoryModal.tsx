@@ -490,10 +490,10 @@ const T2_TEMPLATES: T2Template[] = [
           <span className="text-xs text-muted-foreground truncate max-w-[200px]">{url}</span>
         </div>
         <div className="flex gap-1">
-          <button onClick={() => { setLoading(true); setRefreshKey(k => k + 1) }} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-secondary/50" title="Refresh">
+          <button onClick={() => { setLoading(true); setRefreshKey(k => k + 1) }} className="min-h-11 min-w-11 flex items-center justify-center rounded hover:bg-secondary/50" title="Refresh">
             <RefreshCw className={cn('w-3 h-3 text-muted-foreground', loading && 'animate-spin')} />
           </button>
-          <button onClick={() => { setEditing(true); setEditUrl(url) }} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-secondary/50" title="Change URL">
+          <button onClick={() => { setEditing(true); setEditUrl(url) }} className="min-h-11 min-w-11 flex items-center justify-center rounded hover:bg-secondary/50" title="Change URL">
             <Settings className="w-3 h-3 text-muted-foreground" />
           </button>
         </div>
@@ -504,7 +504,7 @@ const T2_TEMPLATES: T2Template[] = [
             <AlertTriangle className="w-5 h-5 text-red-400" />
             <p className="text-xs text-red-400">Failed to load image</p>
             <button onClick={() => { setError(null); setLoading(true); setRefreshKey(k => k + 1) }}
-              className="min-h-[44px] min-w-[44px] flex items-center justify-center text-xs text-purple-400 hover:underline">Retry</button>
+              className="min-h-11 min-w-11 flex items-center justify-center text-xs text-purple-400 hover:underline">Retry</button>
           </div>
         ) : (
           <>
