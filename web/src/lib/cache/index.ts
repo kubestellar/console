@@ -398,13 +398,29 @@ export function isSQLiteWorkerActive(): boolean {
 // ============================================================================
 
 /**
- * Clear all in-memory cache stores. Called by mode transition coordinator
- * when demo mode is toggled (in either direction).
- * This ensures cards get fresh data for the new mode.
+ * Clear all in-memory AND persistent cache stores. Called by mode transition
+ * coordinator when demo mode is toggled (in either direction).
+ *
+ * This ensures no stale real-cluster data leaks into demo mode (and vice versa).
+ * Steps:
+ * 1. Wipe the persistent backend (SQLite / IndexedDB) so no old entries
+ *    can be reloaded on future page loads or storage-load cycles.
+ * 2. Clear the preloaded metadata map (failure counters, etc.).
+ * 3. Reset every in-memory CacheStore to its initial (empty) state WITHOUT
+ *    reloading from storage (the storage was just cleared).
  */
 function clearAllInMemoryCaches(): void {
+  // 1. Clear persistent storage (fire-and-forget)
+  cacheStorage.clear().catch((e) => {
+    console.error('[Cache] Failed to clear persistent storage during mode transition:', e)
+  })
+
+  // 2. Clear metadata
+  preloadedMetaMap.clear()
+
+  // 3. Reset every in-memory store WITHOUT reloading from (now-empty) storage
   for (const store of cacheRegistry.values()) {
-    (store as CacheStore<unknown>).resetToInitialData()
+    (store as CacheStore<unknown>).resetForModeTransition()
   }
 }
 
@@ -580,6 +596,30 @@ class CacheStore<T> {
     if (this.persist) {
       this.storageLoadPromise = this.loadFromStorage()
     }
+  }
+
+  /**
+   * Reset store for a demo/live mode transition WITHOUT reloading from
+   * persistent storage.  Used when persistent storage has already been
+   * cleared by the mode transition coordinator, so there is nothing
+   * useful to reload.
+   *
+   * The next fetch cycle will populate the store with appropriate data
+   * (demo data via useCache or live data from the backend).
+   */
+  resetForModeTransition(): void {
+    this.resetVersion++
+    this.fetchingRef = false
+    this.initialDataLoaded = false
+    this.storageLoadPromise = null
+    this.setState({
+      data: this.initialData,
+      isLoading: true,
+      isRefreshing: false,
+      error: null,
+      isFailed: false,
+      consecutiveFailures: 0,
+    })
   }
 
   // Fetching

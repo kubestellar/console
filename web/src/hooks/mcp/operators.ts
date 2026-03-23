@@ -3,7 +3,7 @@ import { api } from '../../lib/api'
 import { isDemoMode } from '../../lib/demoMode'
 import { fetchSSE } from '../../lib/sseClient'
 import { useDemoMode } from '../useDemoMode'
-import { registerRefetch } from '../../lib/modeTransition'
+import { registerRefetch, registerCacheReset } from '../../lib/modeTransition'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { clusterCacheRef, subscribeClusterCache } from './shared'
 import type { Operator, OperatorSubscription } from './types'
@@ -11,6 +11,18 @@ import type { Operator, OperatorSubscription } from './types'
 // localStorage cache keys
 const OPERATORS_CACHE_KEY = 'kubestellar-operators-cache'
 const SUBSCRIPTIONS_CACHE_KEY = 'kubestellar-subscriptions-cache'
+
+// ── Mode transition: clear localStorage caches when demo mode is toggled ────
+if (typeof window !== 'undefined') {
+  registerCacheReset('operators', () => {
+    try {
+      localStorage.removeItem(OPERATORS_CACHE_KEY)
+      localStorage.removeItem(SUBSCRIPTIONS_CACHE_KEY)
+    } catch {
+      // Ignore storage errors
+    }
+  })
+}
 
 // REST fallback timeout (SSE is preferred but REST needs generous timeout for large clusters)
 const OPERATOR_REST_TIMEOUT = 120000

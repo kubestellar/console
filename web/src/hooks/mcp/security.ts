@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchSSE } from '../../lib/sseClient'
 import { isDemoMode } from '../../lib/demoMode'
 import { useDemoMode } from '../useDemoMode'
-import { registerRefetch } from '../../lib/modeTransition'
+import { registerRefetch, registerCacheReset } from '../../lib/modeTransition'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { MIN_REFRESH_INDICATOR_MS, REFRESH_INTERVAL_MS, getEffectiveInterval } from './shared'
 import { MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
@@ -11,6 +11,17 @@ import type { SecurityIssue, GitOpsDrift } from './types'
 // LocalStorage cache keys
 const GITOPS_DRIFTS_CACHE_KEY = 'kc-gitops-drifts-cache'
 const CACHE_TTL_MS = 30000 // 30 seconds before stale
+
+// ── Mode transition: clear localStorage caches when demo mode is toggled ────
+if (typeof window !== 'undefined') {
+  registerCacheReset('security', () => {
+    try {
+      localStorage.removeItem(GITOPS_DRIFTS_CACHE_KEY)
+    } catch {
+      // Ignore storage errors
+    }
+  })
+}
 
 // Load from localStorage
 function loadGitOpsDriftsFromStorage(): { data: GitOpsDrift[], timestamp: number } {
