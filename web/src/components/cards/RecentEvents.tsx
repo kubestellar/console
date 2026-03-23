@@ -40,11 +40,12 @@ export function RecentEvents() {
   const { filterByCluster } = useGlobalFilters()
 
   // Report data state to CardWrapper for failure badge rendering
+  const hasData = events.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
     isDemoData: isDemoMode || isDemoFallback,
-    hasAnyData: events.length > 0,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
   })

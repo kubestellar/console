@@ -50,11 +50,12 @@ export function WarningEvents() {
   const warningOnly = useMemo(() => events.filter(e => e.type === 'Warning'), [events])
 
   // Report data state to CardWrapper for failure badge rendering
+  const hasData = events.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
     isDemoData: isDemoFallback,
-    hasAnyData: events.length > 0,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
   })

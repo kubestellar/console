@@ -23,12 +23,13 @@ export function EventSummary() {
   const { filterByCluster } = useGlobalFilters()
 
   // Report state to CardWrapper for refresh animation
+  const hasData = events.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
     isDemoData: isDemoFallback,
-    hasAnyData: events.length > 0,
-    isFailed: isFailed && events.length === 0,
+    hasAnyData: hasData,
+    isFailed: isFailed && !hasData,
     consecutiveFailures,
   })
 

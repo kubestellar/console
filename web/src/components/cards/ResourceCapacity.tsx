@@ -53,9 +53,11 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
   const [limit, setLimit] = useState<number | 'unlimited'>(10)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = allClusters.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
-    hasAnyData: allClusters.length > 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
     errorMessage: error ?? undefined,

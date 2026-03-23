@@ -298,7 +298,7 @@ function getDemoVersionForCluster(name: string): string {
 
 export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
   const { t } = useTranslation()
-  const { deduplicatedClusters: allClusters, isLoading: isLoadingHook } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading: isLoadingHook, isRefreshing, isFailed, consecutiveFailures } = useClusters()
   const { drillToCluster } = useDrillDownActions()
   const { startMission } = useMissions()
   const { isConnected: agentConnected } = useLocalAgent()
@@ -316,10 +316,14 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
   const isLoading = isLoadingHook && allClusters.length === 0
 
   // Report state to CardWrapper for refresh animation
+  const hasData = allClusters.length > 0
   useCardLoadingState({
-    isLoading: isLoadingHook,
-    hasAnyData: allClusters.length > 0,
+    isLoading: isLoadingHook && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isDemoData: isDemoMode,
+    isFailed,
+    consecutiveFailures,
   })
 
   // Track previous agent connection state to detect reconnections

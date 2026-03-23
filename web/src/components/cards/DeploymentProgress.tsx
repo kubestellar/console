@@ -87,6 +87,7 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
   const {
     deployments,
     isLoading,
+    isRefreshing,
     isDemoFallback,
     isFailed,
     consecutiveFailures,
@@ -95,10 +96,12 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
   const { drillToDeployment } = useDrillDownActions()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = deployments.length > 0
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
     isDemoData: isDemoFallback,
-    hasAnyData: deployments.length > 0,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
   })

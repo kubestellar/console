@@ -3,13 +3,27 @@ import { useTranslation } from 'react-i18next'
 import { useCachedNodes } from '../../hooks/useCachedData'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useKubectl } from '../../hooks/useKubectl'
+import { useCardLoadingState } from './CardDataContext'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 type ConditionFilter = 'all' | 'healthy' | 'cordoned' | 'pressure'
 
 export function NodeConditions() {
   const { t } = useTranslation('cards')
-  const { nodes, isLoading } = useCachedNodes()
+  const { nodes, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures } = useCachedNodes()
+  const { isDemoMode } = useDemoMode()
   const { execute } = useKubectl()
+
+  const hasData = nodes.length > 0
+  useCardLoadingState({
+    isLoading: isLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
+    isDemoData: isDemoMode || isDemoFallback,
+    isFailed,
+    consecutiveFailures,
+  })
+
   const [filter, setFilter] = useState<ConditionFilter>('all')
   const [actionPending, setActionPending] = useState<string | null>(null)
 

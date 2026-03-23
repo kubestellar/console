@@ -48,6 +48,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
   const {
     issues: rawIssues,
     isLoading: hookLoading,
+    isRefreshing,
     isDemoFallback,
     isFailed,
     consecutiveFailures,
@@ -57,10 +58,12 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
   const { drillToDeployment } = useDrillDownActions()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = rawIssues.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: hookLoading,
+    isLoading: hookLoading && !hasData,
+    isRefreshing,
     isDemoData: isDemoFallback,
-    hasAnyData: rawIssues.length > 0,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
   })

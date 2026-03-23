@@ -44,20 +44,24 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; points: number }[] 
 
 export function PodHealthTrend() {
   const { t } = useTranslation()
-  const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
-  const { issues, isLoading: issuesLoading } = useCachedPodIssues()
+  const { deduplicatedClusters: clusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersFailures } = useClusters()
+  const { issues, isLoading: issuesLoading, isRefreshing: issuesRefreshing, isDemoFallback, isFailed: issuesFailed, consecutiveFailures: issuesFailures } = useCachedPodIssues()
 
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { isDemoMode: isDemoModeActive } = useDemoMode()
 
   // hasData should be true once loading completes (even with empty data)
-  const isLoadingData = clustersLoading || issuesLoading
+  const hasData = clusters.length > 0 || issues.length > 0
+  const isLoadingData = (clustersLoading || issuesLoading) && !hasData
 
   // Report state to CardWrapper for refresh animation
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoadingData,
-    hasAnyData: clusters.length > 0 || issues.length > 0,
-    isDemoData: isDemoModeActive,
+    isRefreshing: clustersRefreshing || issuesRefreshing,
+    hasAnyData: hasData,
+    isDemoData: isDemoModeActive || isDemoFallback,
+    isFailed: clustersFailed || issuesFailed,
+    consecutiveFailures: Math.max(clustersFailures, issuesFailures),
   })
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
