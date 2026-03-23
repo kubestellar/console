@@ -45,11 +45,12 @@ export function PodIssues() {
   } = useCachedPodIssues()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = rawIssues.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: hookLoading,
+    isLoading: hookLoading && !hasData,
     isRefreshing,
     isDemoData: isDemoFallback,
-    hasAnyData: rawIssues.length > 0,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
   })

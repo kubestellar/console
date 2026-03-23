@@ -83,11 +83,12 @@ export function TopPods({ config }: TopPodsProps) {
   } = useCachedPods(clusterConfig, namespaceConfig, { limit: 100, category: 'pods' })
 
   // Report data state to CardWrapper for failure badge rendering
+  const hasData = rawPods.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
     isDemoData: isDemoMode || isDemoFallback,
-    hasAnyData: rawPods.length > 0,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
   })

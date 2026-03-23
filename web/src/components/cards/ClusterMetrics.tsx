@@ -51,7 +51,7 @@ const MAX_AGE_MS = 30 * 60 * 1000 // 30 minutes TTL
 
 export function ClusterMetrics() {
   const { t } = useTranslation(['cards', 'common'])
-  const { isLoading, deduplicatedClusters } = useClusters()
+  const { isLoading, isRefreshing, deduplicatedClusters, isFailed, consecutiveFailures } = useClusters()
   const { isDemoMode } = useDemoMode()
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('cpu')
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
@@ -72,10 +72,14 @@ export function ClusterMetrics() {
   )
 
   // Report state to CardWrapper for refresh animation
+  const hasData = deduplicatedClusters.length > 0
   useCardLoadingState({
-    isLoading,
-    hasAnyData: deduplicatedClusters.length > 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
     isDemoData: isDemoMode,
+    isFailed,
+    consecutiveFailures,
   })
 
   // Use shared chart filters hook for cluster filtering
