@@ -270,11 +270,17 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 	// Send initial terminal size
 	sizeQueue.ch <- remotecommand.TerminalSize{Width: init.Cols, Height: init.Rows}
 
+	// Create a cancellable context so that when the WebSocket client disconnects,
+	// the exec stream is cancelled promptly — preventing goroutine and SPDY leaks.
+	execCtx, execCancel := context.WithCancel(context.Background())
+	defer execCancel()
+
 	// Start a goroutine to read WebSocket messages and route them
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
 		defer close(stdinCh)
+		defer execCancel() // cancel exec stream when client disconnects
 		for {
 			_, rawMsg, err := c.ReadMessage()
 			if err != nil {
@@ -317,7 +323,7 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 		streamOpts.TerminalSizeQueue = sizeQueue
 	}
 
-	execErr := executor.StreamWithContext(context.Background(), streamOpts)
+	execErr := executor.StreamWithContext(execCtx, streamOpts)
 
 	// Send exit message
 	exitCode := 0
