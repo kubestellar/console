@@ -933,35 +933,38 @@ describe('localStorage quota handling', () => {
 
     // Intercept setItem: throw QuotaExceededError on the FIRST kc_missions
     // write (the save triggered by useEffect), then allow the retry.
+    // NOTE: In Vitest 4 / jsdom, localStorage.setItem is a direct own property,
+    // not inherited from Storage.prototype, so we must patch the instance directly.
     let missionWriteCount = 0
-    const realSetItem = Storage.prototype.setItem
-    Storage.prototype.setItem = function (key: string, value: string) {
+    const realSetItem = localStorage.setItem.bind(localStorage)
+    vi.spyOn(localStorage, 'setItem').mockImplementation((key: string, value: string) => {
       if (key === 'kc_missions') {
         missionWriteCount++
         if (missionWriteCount === 1) {
           throw new DOMException('quota exceeded', 'QuotaExceededError')
         }
       }
-      return realSetItem.call(this, key, value)
-    }
+      return realSetItem(key, value)
+    })
 
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     // Mount — loadMissions() then saveMissions() via useEffect
-    const { result } = renderHook(() => useMissions(), { wrapper })
+    renderHook(() => useMissions(), { wrapper })
 
     // The pruning path must have retried
     expect(missionWriteCount).toBeGreaterThanOrEqual(2)
     expect(warnSpy).toHaveBeenCalledWith('[Missions] localStorage quota exceeded, pruning old missions')
 
+    // Verify pruned data was saved (second write succeeded)
+    const stored = JSON.parse(localStorage.getItem('kc_missions')!)
     // All saved (library) missions must still be present
-    expect(result.current.missions.some(m => m.id === 'saved-1')).toBe(true)
-    expect(result.current.missions.some(m => m.id === 'saved-2')).toBe(true)
-
+    expect(stored.some((m: { id: string }) => m.id === 'saved-1')).toBe(true)
+    expect(stored.some((m: { id: string }) => m.id === 'saved-2')).toBe(true)
     // Active missions must still be present
-    expect(result.current.missions.some(m => m.id === 'pending-1')).toBe(true)
+    expect(stored.some((m: { id: string }) => m.id === 'pending-1')).toBe(true)
 
-    Storage.prototype.setItem = realSetItem
+    vi.mocked(localStorage.setItem).mockRestore()
     warnSpy.mockRestore()
   })
 
@@ -970,8 +973,8 @@ describe('localStorage quota handling', () => {
     localStorage.setItem('kc_missions', JSON.stringify([completed1]))
 
     let missionWriteCount = 0
-    const realSetItem = Storage.prototype.setItem
-    Storage.prototype.setItem = function (key: string, value: string) {
+    const realSetItem = localStorage.setItem.bind(localStorage)
+    vi.spyOn(localStorage, 'setItem').mockImplementation((key: string, value: string) => {
       if (key === 'kc_missions') {
         missionWriteCount++
         if (missionWriteCount === 1) {
@@ -982,8 +985,8 @@ describe('localStorage quota handling', () => {
           throw err
         }
       }
-      return realSetItem.call(this, key, value)
-    }
+      return realSetItem(key, value)
+    })
 
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
@@ -993,7 +996,7 @@ describe('localStorage quota handling', () => {
     expect(missionWriteCount).toBeGreaterThanOrEqual(2)
     expect(warnSpy).toHaveBeenCalledWith('[Missions] localStorage quota exceeded, pruning old missions')
 
-    Storage.prototype.setItem = realSetItem
+    vi.mocked(localStorage.setItem).mockRestore()
     warnSpy.mockRestore()
   })
 
@@ -1001,13 +1004,13 @@ describe('localStorage quota handling', () => {
     const completed1 = makeMission({ id: 'c1', status: 'completed' })
     localStorage.setItem('kc_missions', JSON.stringify([completed1]))
 
-    const realSetItem = Storage.prototype.setItem
-    Storage.prototype.setItem = function (key: string, value: string) {
+    const realSetItem = localStorage.setItem.bind(localStorage)
+    vi.spyOn(localStorage, 'setItem').mockImplementation((key: string, value: string) => {
       if (key === 'kc_missions') {
         throw new DOMException('quota exceeded', 'QuotaExceededError')
       }
-      return realSetItem.call(this, key, value)
-    }
+      return realSetItem(key, value)
+    })
 
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -1023,7 +1026,7 @@ describe('localStorage quota handling', () => {
     // Storage should have been cleared as a last resort
     expect(localStorage.getItem('kc_missions')).toBeNull()
 
-    Storage.prototype.setItem = realSetItem
+    vi.mocked(localStorage.setItem).mockRestore()
     errorSpy.mockRestore()
     warnSpy.mockRestore()
   })

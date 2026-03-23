@@ -12,6 +12,7 @@ import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { isNetlifyDeployment } from '../lib/demoMode'
 
 const DEBOUNCE_MS = 1000
+const RETRY_DELAY_MS = 3000
 
 export type SyncStatus = 'idle' | 'saving' | 'saved' | 'error' | 'offline'
 
@@ -79,7 +80,7 @@ export function usePersistedSettings() {
           return
         } catch {
           if (attempt === 0) {
-            await new Promise(r => setTimeout(r, 3000))
+            await new Promise(r => setTimeout(r, RETRY_DELAY_MS))
           }
         }
       }
