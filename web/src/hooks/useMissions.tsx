@@ -276,6 +276,11 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const pendingRequests = useRef<Map<string, string>>(new Map()) // requestId -> missionId
   // Track last stream timestamp per mission to detect tool-use gaps (for creating new chat bubbles)
   const lastStreamTimestamp = useRef<Map<string, number>>(new Map()) // missionId -> timestamp
+  // Ref to always hold the latest missions state — avoids stale closure in sendMessage (#3322)
+  const missionsRef = useRef<Mission[]>(missions)
+  missionsRef.current = missions
+  // Ref to track pending WebSocket reconnection timeout so it can be cleared on unmount (#3318)
+  const wsReconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const STREAM_GAP_THRESHOLD_MS = 8000 // If >8s gap between stream chunks, create new message bubble (tool-use gap)
 
   // Maximum number of WebSocket send retries before giving up
@@ -520,9 +525,11 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           // Don't clear agents - keep them cached for display
           // Users can still see available agents even if temporarily disconnected
 
-          // Auto-reconnect after a short delay (if not in demo mode)
+          // Auto-reconnect after a short delay (if not in demo mode).
+          // Store the timer handle so it can be cleared on unmount (#3318).
           if (!getDemoMode()) {
-            setTimeout(() => {
+            wsReconnectTimer.current = setTimeout(() => {
+              wsReconnectTimer.current = null
               ensureConnection().catch(() => {
                 // Silent fail - will retry on next user interaction
               })
@@ -1221,14 +1228,23 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       const requestId = `claude-${Date.now()}`
       pendingRequests.current.set(requestId, missionId)
 
-      // Get the mission to access its message history
-      const mission = missions.find(m => m.id === missionId)
+      // Read from missionsRef to get the latest state including the message
+      // we just appended via setMissions above (React state updates are async,
+      // so the `missions` closure would be stale here). (#3322)
+      const mission = missionsRef.current.find(m => m.id === missionId)
       const history = mission?.messages
         .filter(msg => msg.role === 'user' || msg.role === 'assistant')
         .map(msg => ({
           role: msg.role,
           content: msg.content,
         })) || []
+
+      // If the ref hasn't yet reflected the setMissions update, ensure the
+      // current user message is still included in the history payload.
+      const lastHistoryContent = history.length > 0 ? history[history.length - 1].content : null
+      if (lastHistoryContent !== content) {
+        history.push({ role: 'user', content })
+      }
 
       wsSend(JSON.stringify({
         id: requestId,
@@ -1262,7 +1278,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         } : m
       ))
     })
-  }, [cancelMission, ensureConnection, missions, selectedAgent])
+  }, [cancelMission, ensureConnection, selectedAgent])
 
   // Dismiss/remove a mission from the list
   const dismissMission = useCallback((missionId: string) => {
@@ -1375,9 +1391,13 @@ Install the console locally with the KubeStellar Console agent to use AI mission
   // Get active mission object
   const activeMission = missions.find(m => m.id === activeMissionId) || null
 
-  // Cleanup on unmount
+  // Cleanup on unmount — close WebSocket and cancel any pending reconnection timer (#3318)
   useEffect(() => {
     return () => {
+      if (wsReconnectTimer.current) {
+        clearTimeout(wsReconnectTimer.current)
+        wsReconnectTimer.current = null
+      }
       wsRef.current?.close()
     }
   }, [])
