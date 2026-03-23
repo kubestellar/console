@@ -52,6 +52,12 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
       )
     }
 
+    // Healthy clusters first, then alphabetical within each group
+    result.sort((a, b) => {
+      if (a.healthy !== b.healthy) return a.healthy ? -1 : 1
+      return a.name.localeCompare(b.name)
+    })
+
     return result
   }, [rawClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
