@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, useContext, ComponentType, Suspense, lazy } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  Maximize2, MoreVertical, Clock, Settings, Trash2, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download, Link2, Bug,
+  Maximize2, MoreVertical, Clock, Settings, Trash2, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download, Link2, Bug, AlertTriangle,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CARD_TITLES, CARD_DESCRIPTIONS, DEMO_EXEMPT_CARDS } from './cardMetadata'
@@ -502,7 +502,7 @@ export function CardWrapper({
 
   // Merge child-reported state with props — child reports take priority when present
   const effectiveIsFailed = isFailed || childDataState?.isFailed || cardLoadingTimedOut
-  const effectiveConsecutiveFailures = consecutiveFailures || childDataState?.consecutiveFailures || 0
+  const effectiveConsecutiveFailures = consecutiveFailures || childDataState?.consecutiveFailures || (cardLoadingTimedOut ? 1 : 0)
   // Show loading when:
   // - Card explicitly reports isLoading: true (AND stuck-loading timeout hasn't fired), OR
   // - Card hasn't reported yet AND quick timeout hasn't passed (brief skeleton for reporting cards)
@@ -1010,11 +1010,37 @@ export function CardWrapper({
                         <CardSkeleton type={effectiveSkeletonType} rows={skeletonRows || 3} showHeader />
                       </div>
                     )}
+                    {/* Loading timeout fallback: if loading exceeded CARD_LOADING_TIMEOUT_MS and
+                    the child has no data, show a clear error state instead of a blank/stuck card.
+                    The child is still mounted (hidden) so it can resume if the data eventually arrives. */}
+                    {cardLoadingTimedOut && !childDataState?.hasData && (
+                      <div className="h-full flex flex-col items-center justify-center p-4 text-center" data-card-loading-timeout="true">
+                        <AlertTriangle className="w-8 h-8 text-amber-400 mb-2" />
+                        <p className="text-sm font-medium text-foreground mb-1">
+                          {t('cardWrapper.loadingTimedOutTitle')}
+                        </p>
+                        <p className="text-xs text-muted-foreground mb-3 max-w-xs">
+                          {t('cardWrapper.loadingTimedOutMessage')}
+                        </p>
+                        {onRefresh && (
+                          <button
+                            onClick={() => {
+                              setCardLoadingTimedOut(false)
+                              onRefresh()
+                            }}
+                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-secondary hover:bg-secondary/80 text-foreground transition-colors"
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            {t('cardWrapper.loadingTimedOutRetry')}
+                          </button>
+                        )}
+                      </div>
+                    )}
                     {/* ALWAYS render children so they can report their data state via useCardLoadingState.
-                    Hide visually when skeleton is showing, but keep mounted so useLayoutEffect runs.
+                    Hide visually when skeleton is showing or loading timed out, but keep mounted so useLayoutEffect runs.
                     This prevents the deadlock where CardWrapper waits for hasData but children never mount.
                     Suspense catches lazy() chunk loading so it doesn't bubble up to Layout and blank the whole page. */}
-                    <div className={shouldShowSkeleton ? 'hidden' : 'contents'}>
+                    <div className={(shouldShowSkeleton || (cardLoadingTimedOut && !childDataState?.hasData)) ? 'hidden' : 'contents'}>
                       <DynamicCardErrorBoundary cardId={cardId || cardType}>
                         <Suspense fallback={<CardSkeleton type={effectiveSkeletonType} rows={skeletonRows || 3} showHeader={false} />}>
                           {children}
