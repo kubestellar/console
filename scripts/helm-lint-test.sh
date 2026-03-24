@@ -93,8 +93,8 @@ else
   helm lint "$CHART_DIR" > "$LINT_OUTPUT" 2>&1 || LINT_EXIT=$?
 fi
 
-LINT_WARNINGS=$(grep -c "\[WARNING\]" "$LINT_OUTPUT" 2>/dev/null || true)
-LINT_ERRORS=$(grep -c "\[ERROR\]" "$LINT_OUTPUT" 2>/dev/null || true)
+LINT_WARNINGS=$(grep -c "\[WARNING\]" "$LINT_OUTPUT" 2>/dev/null) || LINT_WARNINGS=0
+LINT_ERRORS=$(grep -c "\[ERROR\]" "$LINT_OUTPUT" 2>/dev/null) || LINT_ERRORS=0
 
 TOTAL=$((TOTAL + 1))
 if [ "$LINT_EXIT" -eq 0 ]; then
@@ -123,7 +123,7 @@ helm template test-release "$CHART_DIR" > "$TEMPLATE_OUTPUT" 2>&1 || TEMPLATE_EX
 
 TOTAL=$((TOTAL + 1))
 if [ "$TEMPLATE_EXIT" -eq 0 ]; then
-  RESOURCE_COUNT=$(grep -c "^kind:" "$TEMPLATE_OUTPUT" 2>/dev/null || true)
+  RESOURCE_COUNT=$(grep -c "^kind:" "$TEMPLATE_OUTPUT" 2>/dev/null) || RESOURCE_COUNT=0
   echo -e "  ${GREEN}✓${NC}  Template renders successfully (${RESOURCE_COUNT} resources)"
   PASSED=$((PASSED + 1))
 else
