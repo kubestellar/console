@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { FOCUS_DELAY_MS } from '../lib/constants/network'
+import { recordDashboardVisit } from '../lib/dashboardVisits'
 
 const LAST_ROUTE_KEY = 'kubestellar-last-route'
 const SCROLL_POSITIONS_KEY = 'kubestellar-scroll-positions'
@@ -223,6 +224,9 @@ export function useLastRoute() {
     } catch {
       // Ignore localStorage errors
     }
+
+    // Track visit frequency for top-dashboard prefetching
+    recordDashboardVisit(location.pathname)
 
     // On cleanup (path change), save scroll position of the page being left.
     // Use the ref value — KeepAlive sets display:none on old content before

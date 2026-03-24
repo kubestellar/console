@@ -22,6 +22,7 @@ import {
 import { loadDynamicCards, getAllDynamicCards, loadDynamicStats } from './lib/dynamic-cards'
 import { STORAGE_KEY_SQLITE_MIGRATED } from './lib/constants'
 import { initAnalytics } from './lib/analytics'
+import { prefetchTopDashboards } from './lib/dashboardVisits'
 
 // ── Chunk load error recovery ─────────────────────────────────────────────
 // When a new build is deployed, chunk filenames change (content hashes).
@@ -135,4 +136,8 @@ enableMocking()
 
     // Register unified card data hooks (background — ~300 KB chunk)
     import('./lib/unified/registerHooks')
+
+    // Prefetch route chunks for the user's top 5 most-visited dashboards.
+    // Uses requestIdleCallback to avoid competing with initial render.
+    prefetchTopDashboards(window.location.pathname)
   })
