@@ -356,16 +356,19 @@ cat > "$REPORT_MD" << EOF
 
 ## Suites
 
+| Suite | Status |
+|-------|--------|
 EOF
 
-# Add suite results to markdown using recorded exit-code status (not log parsing)
+# Add suite results to markdown using the SUITE_STATUS associative array
+# which records the actual exit-code-based pass/fail/skip for each suite.
 for script in "${ALL_SCRIPTS[@]}" "${PLAYWRIGHT_SCRIPTS[@]}"; do
   SUITE_NAME=$(basename "$script" .sh)
   STATUS="${SUITE_STATUS[$SUITE_NAME]:-skip}"
   case "$STATUS" in
-    pass) echo "| \`${SUITE_NAME}\` | PASS |" >> "$REPORT_MD" ;;
-    fail) echo "| \`${SUITE_NAME}\` | FAIL |" >> "$REPORT_MD" ;;
-    *)    echo "| \`${SUITE_NAME}\` | SKIP |" >> "$REPORT_MD" ;;
+    pass) echo "| \`${SUITE_NAME}\` | :white_check_mark: PASS |" >> "$REPORT_MD" ;;
+    fail) echo "| \`${SUITE_NAME}\` | :x: FAIL |" >> "$REPORT_MD" ;;
+    *)    echo "| \`${SUITE_NAME}\` | :fast_forward: SKIP |" >> "$REPORT_MD" ;;
   esac
 done
 
