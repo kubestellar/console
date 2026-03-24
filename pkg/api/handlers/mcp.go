@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sort"
 	"sync"
 	"time"
 
@@ -1622,6 +1623,9 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 			waitWithDeadline(&wg, maxResponseDeadline)
 
 			// Sort by timestamp (most recent first) and limit total
+			sort.Slice(allEvents, func(i, j int) bool {
+				return allEvents[i].LastSeen > allEvents[j].LastSeen
+			})
 			if len(allEvents) > limit {
 				allEvents = allEvents[:limit]
 			}
@@ -1706,7 +1710,10 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 
 			waitWithDeadline(&wg, maxResponseDeadline)
 
-			// Limit total
+			// Sort by timestamp (most recent first) and limit total
+			sort.Slice(allEvents, func(i, j int) bool {
+				return allEvents[i].LastSeen > allEvents[j].LastSeen
+			})
 			if len(allEvents) > limit {
 				allEvents = allEvents[:limit]
 			}

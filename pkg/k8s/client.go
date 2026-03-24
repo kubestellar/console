@@ -1785,9 +1785,7 @@ func (m *MultiClusterClient) GetEvents(ctx context.Context, contextName, namespa
 		return nil, err
 	}
 
-	events, err := client.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{
-		Limit: int64(limit),
-	})
+	events, err := client.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
