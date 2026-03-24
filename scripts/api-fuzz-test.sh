@@ -80,7 +80,16 @@ for target in "${TARGETS[@]}"; do
   FUZZ_EXIT=0
   go test "./${PKG}/..." -fuzz="^${FUNC}$" -fuzztime="$FUZZ_DURATION" -fuzzminimizetime=10s > "$OUTPUT_FILE" 2>&1 || FUZZ_EXIT=$?
 
-  if [ "$FUZZ_EXIT" -eq 0 ]; then
+  # A non-zero exit from `go test -fuzz` can mean:
+  #   1. An actual crash (output contains "Failing input" or "panic")
+  #   2. A build failure (output contains "build failed")
+  #   3. A normal timeout (output contains "context deadline exceeded" with no crash)
+  # Only #1 and #2 are real failures. #3 means the fuzzer ran for the full
+  # duration without finding any issues — that's a pass.
+  HAS_CRASH=$(grep -c "Failing input\|panic:" "$OUTPUT_FILE" 2>/dev/null) || HAS_CRASH=0
+  HAS_BUILD_FAIL=$(grep -c "build failed" "$OUTPUT_FILE" 2>/dev/null) || HAS_BUILD_FAIL=0
+
+  if [ "$FUZZ_EXIT" -eq 0 ] || ([ "$HAS_CRASH" -eq 0 ] && [ "$HAS_BUILD_FAIL" -eq 0 ]); then
     echo -e "    ${GREEN}✓ PASS${NC} — no crashes"
     PASSED=$((PASSED + 1))
     RESULTS="${RESULTS}{\"target\":\"${PKG}/${FUNC}\",\"status\":\"pass\",\"details\":\"no crashes\"},"

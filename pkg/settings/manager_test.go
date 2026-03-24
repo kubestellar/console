@@ -82,7 +82,7 @@ func TestManager_GetAllSaveAll_RoundTrip(t *testing.T) {
 		"claude": {APIKey: "sk-ant-test-key-123", Model: "claude-opus-4-20250514"},
 		"openai": {APIKey: "sk-openai-test-key-456"},
 	}
-	all.GitHubToken = "ghp_test_token_789"
+	all.FeedbackGitHubToken = "ghp_test_token_789"
 	all.Notifications = NotificationSecrets{
 		SlackWebhookURL: "https://hooks.slack.com/services/T00/B00/xxx",
 		EmailSMTPHost:   "smtp.example.com",
@@ -149,8 +149,8 @@ func TestManager_GetAllSaveAll_RoundTrip(t *testing.T) {
 	if got.APIKeys["openai"].APIKey != "sk-openai-test-key-456" {
 		t.Errorf("openai key = %q, want %q", got.APIKeys["openai"].APIKey, "sk-openai-test-key-456")
 	}
-	if got.GitHubToken != "ghp_test_token_789" {
-		t.Errorf("githubToken = %q, want %q", got.GitHubToken, "ghp_test_token_789")
+	if got.FeedbackGitHubToken != "ghp_test_token_789" {
+		t.Errorf("feedbackGithubToken = %q, want %q", got.FeedbackGitHubToken, "ghp_test_token_789")
 	}
 	if got.Notifications.SlackWebhookURL != "https://hooks.slack.com/services/T00/B00/xxx" {
 		t.Errorf("slackWebhookURL = %q", got.Notifications.SlackWebhookURL)
@@ -217,7 +217,7 @@ func TestManager_ExportImport(t *testing.T) {
 
 	all := DefaultAllSettings()
 	all.Theme = "cyberpunk"
-	all.GitHubToken = "ghp_export_test"
+	all.FeedbackGitHubToken = "ghp_export_test"
 	if err := sm.SaveAll(all); err != nil {
 		t.Fatalf("SaveAll failed: %v", err)
 	}
@@ -247,8 +247,8 @@ func TestManager_ExportImport(t *testing.T) {
 	if got.Theme != "cyberpunk" {
 		t.Errorf("theme = %q, want %q", got.Theme, "cyberpunk")
 	}
-	if got.GitHubToken != "ghp_export_test" {
-		t.Errorf("githubToken = %q, want %q", got.GitHubToken, "ghp_export_test")
+	if got.FeedbackGitHubToken != "ghp_export_test" {
+		t.Errorf("feedbackGithubToken = %q, want %q", got.FeedbackGitHubToken, "ghp_export_test")
 	}
 }
 
@@ -262,7 +262,7 @@ func TestManager_ImportDifferentKey(t *testing.T) {
 
 	all := DefaultAllSettings()
 	all.Theme = "matrix"
-	all.GitHubToken = "ghp_different_key"
+	all.FeedbackGitHubToken = "ghp_different_key"
 	if err := sm.SaveAll(all); err != nil {
 		t.Fatalf("SaveAll failed: %v", err)
 	}
@@ -289,8 +289,8 @@ func TestManager_ImportDifferentKey(t *testing.T) {
 	}
 
 	// Encrypted fields should NOT import (different key)
-	if got.GitHubToken != "" {
-		t.Errorf("githubToken should be empty with different key, got %q", got.GitHubToken)
+	if got.FeedbackGitHubToken != "" {
+		t.Errorf("feedbackGithubToken should be empty with different key, got %q", got.FeedbackGitHubToken)
 	}
 }
 

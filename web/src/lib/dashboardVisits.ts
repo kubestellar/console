@@ -7,6 +7,7 @@
  */
 
 import { DASHBOARD_CHUNKS } from './dashboardChunks'
+import { RETRY_DELAY_MS } from './constants/network'
 
 const VISIT_COUNTS_KEY = 'kubestellar-dashboard-visits'
 const DEFAULT_TOP_N = 5
@@ -86,6 +87,6 @@ export function prefetchTopDashboards(currentPath?: string, n: number = DEFAULT_
   if (typeof requestIdleCallback === 'function') {
     requestIdleCallback(prefetch, { timeout: 3000 })
   } else {
-    setTimeout(prefetch, 1000)
+    setTimeout(prefetch, RETRY_DELAY_MS)
   }
 }

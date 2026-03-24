@@ -8,8 +8,7 @@ import { SetupInstructionsDialog } from '../../setup/SetupInstructionsDialog'
 import { AgentApprovalDialog, hasApprovedAgents } from '../../agent/AgentApprovalDialog'
 import { cn } from '../../../lib/cn'
 import { useTranslation } from 'react-i18next'
-import { TOAST_DISMISS_MS } from '../../../lib/constants/network'
-import { LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
+import { TOAST_DISMISS_MS, LOCAL_AGENT_HTTP_URL, BACKEND_HEALTH_CHECK_TIMEOUT_MS } from '../../../lib/constants/network'
 import type { AgentInfo } from '../../../types/agent'
 
 export function AgentStatusIndicator() {
@@ -30,7 +29,9 @@ export function AgentStatusIndicator() {
   // when the WebSocket is not connected)
   const fetchAgentsFromHealth = useCallback(async () => {
     try {
-      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`)
+      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
+        signal: AbortSignal.timeout(BACKEND_HEALTH_CHECK_TIMEOUT_MS),
+      })
       if (!res.ok) return
       const data = await res.json()
       if (data.availableProviders) {
