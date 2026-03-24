@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 import { useMissions, type Mission } from '../../../hooks/useMissions'
 import { useDemoMode } from '../../../hooks/useDemoMode'
-import { isNetlifyDeployment, setDemoMode } from '../../../lib/demoMode'
+import { isNetlifyDeployment } from '../../../lib/demoMode'
 import { useResolutions, detectIssueSignature, type Resolution } from '../../../hooks/useResolutions'
 import { cn } from '../../../lib/cn'
 import { MAX_MESSAGE_SIZE_CHARS } from '../../../lib/constants'
@@ -518,6 +518,34 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto scroll-enhanced p-4 space-y-4 min-h-0 min-w-0"
       >
+        {/* Inline Run button for saved missions with no conversation yet */}
+        {mission.status === 'saved' && mission.messages.length === 0 && (
+          <div className="flex flex-col items-center gap-3 py-6">
+            <button
+              onClick={() => {
+                if (isNetlifyDeployment) {
+                  window.dispatchEvent(new CustomEvent('open-install'))
+                } else if (isDemoMode) {
+                  window.dispatchEvent(new CustomEvent('open-agent-setup'))
+                } else {
+                  runSavedMission(mission.id)
+                }
+              }}
+              className="flex items-center justify-center gap-2 px-8 py-3 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <Play className="w-4 h-4" />
+              Run Mission
+            </button>
+            <button
+              onClick={() => setActiveMission(null)}
+              className="flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <ChevronLeft className="w-3 h-3" />
+              {t('missionChat.backToMissions')}
+            </button>
+          </div>
+        )}
+
         {mission.messages.map((msg, index) => {
           // Find if this is the last assistant message
           const isLastAssistantMessage = msg.role === 'assistant' &&
@@ -571,7 +599,8 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input / Actions */}
+      {/* Input / Actions — hidden when Run button is inline above */}
+      {!(mission.status === 'saved' && mission.messages.length === 0) && (
       <div className="p-4 border-t border-border flex-shrink-0 bg-card min-w-0">
         {mission.status === 'running' ? (
           <div className="flex flex-col gap-2">
@@ -686,51 +715,6 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               {t('missionChat.backToMissions')}
             </button>
           </div>
-        ) : mission.status === 'saved' ? (
-          <div className="flex flex-col gap-2">
-            {isNetlifyDeployment ? (
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={() => window.dispatchEvent(new CustomEvent('open-install'))}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-                >
-                  <Play className="w-4 h-4" />
-                  Install KubeStellar Console to Run This Mission
-                </button>
-              </div>
-            ) : isDemoMode ? (
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={() => window.dispatchEvent(new CustomEvent('open-agent-setup'))}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-                >
-                  <Play className="w-4 h-4" />
-                  Install Agent &amp; Run Mission
-                </button>
-                <button
-                  onClick={() => setDemoMode(false, true)}
-                  className="text-xs text-center text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Already have the agent? Turn off demo mode
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => runSavedMission(mission.id)}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-              >
-                <Play className="w-4 h-4" />
-                Run Mission
-              </button>
-            )}
-            <button
-              onClick={() => setActiveMission(null)}
-              className="flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-            >
-              <ChevronLeft className="w-3 h-3" />
-              {t('missionChat.backToMissions')}
-            </button>
-          </div>
         ) : mission.status === 'failed' ? (
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between text-xs">
@@ -809,6 +793,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
           </div>
         )}
       </div>
+      )}
       </div>
 
       {/* Right sidebar for full screen mode */}
