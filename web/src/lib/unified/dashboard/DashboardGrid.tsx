@@ -122,7 +122,7 @@ export function DashboardGrid({
           <DashboardHealthIndicator size="sm" />
         </div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
         {cards.map((placement) => (
           <DashboardCardWrapper
             key={placement.id}
