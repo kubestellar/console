@@ -544,6 +544,7 @@ describe('TrestleScan', () => {
       render(<TrestleScan />)
       expect(mockUseCardLoadingState).toHaveBeenCalledWith({
         isLoading: false,
+        isRefreshing: false,
         hasAnyData: true,
         isDemoData: false,
       })
@@ -561,6 +562,7 @@ describe('TrestleScan', () => {
       render(<TrestleScan />)
       expect(mockUseCardLoadingState).toHaveBeenCalledWith({
         isLoading: false,
+        isRefreshing: false,
         hasAnyData: true,  // installed || isDemoData => false || true
         isDemoData: true,
       })
@@ -578,6 +580,7 @@ describe('TrestleScan', () => {
       render(<TrestleScan />)
       expect(mockUseCardLoadingState).toHaveBeenCalledWith({
         isLoading: false,
+        isRefreshing: false,
         hasAnyData: false,
         isDemoData: false,
       })
@@ -596,6 +599,7 @@ describe('TrestleScan', () => {
       render(<TrestleScan />)
       expect(mockUseCardLoadingState).toHaveBeenCalledWith({
         isLoading: true,
+        isRefreshing: false,
         hasAnyData: false,
         isDemoData: false,
       })

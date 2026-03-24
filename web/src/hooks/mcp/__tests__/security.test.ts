@@ -31,6 +31,8 @@ vi.mock('../../../lib/sseClient', () => ({
 
 vi.mock('../../../lib/modeTransition', () => ({
   registerRefetch: (...args: unknown[]) => mockRegisterRefetch(...args),
+  registerCacheReset: vi.fn(() => vi.fn()),
+  unregisterCacheReset: vi.fn(),
 }))
 
 vi.mock('../shared', () => ({
