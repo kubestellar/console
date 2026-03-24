@@ -26,7 +26,7 @@ ARG APP_VERSION=0.0.0
 ARG COMMIT_HASH=unknown
 
 # Copy package files
-COPY web/package*.json ./
+COPY web/package*.json web/.npmrc ./
 RUN npm ci
 
 # Copy source
