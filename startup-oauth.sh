@@ -284,8 +284,13 @@ trap cleanup SIGINT SIGTERM EXIT
 # Resolve kc-agent binary path
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KC_AGENT_BIN=""
-if [ -x "$SCRIPT_DIR/bin/kc-agent" ]; then
-    KC_AGENT_BIN="$SCRIPT_DIR/bin/kc-agent"
+if [ -f "$SCRIPT_DIR/bin/kc-agent" ]; then
+    # Local build binary found — validate it is non-empty and executable
+    if [ -s "$SCRIPT_DIR/bin/kc-agent" ] && [ -x "$SCRIPT_DIR/bin/kc-agent" ]; then
+        KC_AGENT_BIN="$SCRIPT_DIR/bin/kc-agent"
+    else
+        echo -e "${YELLOW}Warning: $SCRIPT_DIR/bin/kc-agent is invalid (empty or not executable). Run 'make build' to rebuild.${NC}"
+    fi
 else
     # Install/upgrade kc-agent via brew
     if command -v brew &>/dev/null; then
@@ -320,8 +325,13 @@ else
     fi
     if [ -n "$BREW_BIN" ] && [ -s "$BREW_BIN" ] && [ -x "$BREW_BIN" ]; then
         KC_AGENT_BIN="$BREW_BIN"
-    elif command -v kc-agent &>/dev/null && [ -s "$(command -v kc-agent)" ]; then
-        KC_AGENT_BIN="$(command -v kc-agent)"
+    elif command -v kc-agent &>/dev/null; then
+        FOUND_BIN="$(command -v kc-agent)"
+        if [ -s "$FOUND_BIN" ]; then
+            KC_AGENT_BIN="$FOUND_BIN"
+        else
+            echo -e "${YELLOW}Warning: kc-agent found at $FOUND_BIN but is empty (0 bytes) — skipping. Run 'make build' or reinstall.${NC}"
+        fi
     fi
 fi
 
