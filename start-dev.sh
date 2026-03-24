@@ -191,14 +191,26 @@ if [ -n "$KC_AGENT_BIN" ]; then
     fi
     "$KC_AGENT_BIN" "${KC_AGENT_ARGS[@]}" &
     AGENT_PID=$!
-    sleep 2
 
-    # Verify kc-agent is still running and listening on port 8585
-    if kill -0 "$AGENT_PID" 2>/dev/null && lsof -i :8585 -t >/dev/null 2>&1; then
-        AGENT_RUNNING=true
-    else
-        echo "Warning: kc-agent started but is not running on port 8585."
-        echo "  The binary may be invalid or crashed on startup."
+    # Wait for kc-agent to become ready (HTTP health check, up to 10s)
+    AGENT_WAIT=0
+    while [ $AGENT_WAIT -lt 10 ]; do
+        if ! kill -0 "$AGENT_PID" 2>/dev/null; then
+            echo "Warning: kc-agent process exited unexpectedly."
+            echo "  The binary may be invalid or crashed on startup."
+            AGENT_PID=""
+            break
+        fi
+        if curl -sf --max-time 1 http://localhost:8585/health >/dev/null 2>&1; then
+            AGENT_RUNNING=true
+            break
+        fi
+        sleep 1
+        AGENT_WAIT=$((AGENT_WAIT + 1))
+    done
+
+    if [ "$AGENT_RUNNING" != true ] && [ -n "$AGENT_PID" ]; then
+        echo "Warning: kc-agent did not become ready within 10s (health endpoint not reachable)."
         AGENT_PID=""
     fi
 else
