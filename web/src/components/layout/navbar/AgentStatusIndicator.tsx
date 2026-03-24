@@ -196,7 +196,7 @@ export function AgentStatusIndicator() {
 
       {/* Agent status dropdown */}
       {showAgentStatus && (
-        <div ref={dropdownRef} className="absolute top-full right-0 mt-2 w-72 bg-card border border-border rounded-lg shadow-xl z-50">
+        <div ref={dropdownRef} className="absolute top-full right-0 mt-2 w-96 bg-card border border-border rounded-lg shadow-xl z-50">
           {/* Demo Mode Toggle */}
           <div className="p-3 border-b border-border">
             <div className="flex items-center justify-between">

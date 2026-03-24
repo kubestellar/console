@@ -4,7 +4,7 @@
  * Renders a responsive grid of cards with optional drag-and-drop support.
  */
 
-import { useMemo, useState, useCallback, useEffect } from 'react'
+import { useMemo, useState, useCallback, useEffect, Suspense } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -27,6 +27,8 @@ import { CSS } from '@dnd-kit/utilities'
 import type { DashboardCardPlacement, DashboardFeatures } from '../types'
 import { UnifiedCard } from '../card'
 import { getCardConfig } from '../../../config/cards'
+import { getCardComponent } from '../../../components/cards/cardRegistry'
+import { CardWrapper } from '../../../components/cards/CardWrapper'
 import { DashboardHealthIndicator } from '../../../components/dashboard/DashboardHealthIndicator'
 import { useDashboardHealth } from '../../../hooks/useDashboardHealth'
 
@@ -216,7 +218,6 @@ function DashboardCardWrapper({
 
   const rawW = Math.min(12, Math.max(3, placement.position.w))
   const effectiveW = isNarrow && rawW < 6 ? 6 : rawW
-  const colSpan = `col-span-${effectiveW}`
 
   // Calculate height (each row unit = 100px) — use inline style because
   // Tailwind JIT can't detect dynamically constructed arbitrary classes.
@@ -226,9 +227,12 @@ function DashboardCardWrapper({
   const cardTypeKey = placement.cardType || (placement as { card_type?: string }).card_type
   const cardConfig = cardTypeKey ? getCardConfig(cardTypeKey) : undefined
 
-  // Style for drag transform + min-height
+  // Style for drag transform + min-height + grid column span
+  // Use inline gridColumn instead of Tailwind col-span-* classes because
+  // dynamic class names (col-span-${n}) aren't detected by Tailwind JIT.
   const style: React.CSSProperties = {
     minHeight: `${minHeightPx}px`,
+    gridColumn: `span ${effectiveW} / span ${effectiveW}`,
     ...(isDraggable
       ? {
           transform: CSS.Transform.toString(transform),
@@ -238,12 +242,15 @@ function DashboardCardWrapper({
       : {}),
   }
 
-  if (!cardConfig) {
+  // Fallback: component-only cards (no config file) render directly via CardWrapper
+  const DirectComponent = !cardConfig && cardTypeKey ? getCardComponent(cardTypeKey) : undefined
+
+  if (!cardConfig && !DirectComponent) {
     return (
       <div
         ref={setNodeRef}
         style={style}
-        className={`${colSpan} glass rounded-lg p-4 flex items-center justify-center text-muted-foreground`}
+        className="glass rounded-lg p-4 flex items-center justify-center text-muted-foreground"
       >
         Unknown card type: {cardTypeKey || 'undefined'}
       </div>
@@ -254,7 +261,7 @@ function DashboardCardWrapper({
     <div
       ref={setNodeRef}
       style={style}
-      className={`${colSpan} ${isOverlay ? 'shadow-2xl' : ''}`}
+      className={isOverlay ? 'shadow-2xl' : ''}
       {...(isDraggable ? attributes : {})}
     >
       <div className="relative h-full group">
@@ -305,12 +312,25 @@ function DashboardCardWrapper({
         )}
 
         {/* The actual card */}
-        <UnifiedCard
-          config={cardConfig}
-          instanceConfig={placement.config as Record<string, unknown> | undefined}
-          title={placement.title}
-          className="h-full glass rounded-lg"
-        />
+        {cardConfig ? (
+          <UnifiedCard
+            config={cardConfig}
+            instanceConfig={placement.config as Record<string, unknown> | undefined}
+            title={placement.title}
+            className="h-full glass rounded-lg"
+          />
+        ) : DirectComponent ? (
+          <CardWrapper
+            cardId={placement.id}
+            cardType={cardTypeKey!}
+            title={placement.title}
+            cardWidth={placement.position.w}
+          >
+            <Suspense fallback={<div className="h-full animate-pulse" />}>
+              <DirectComponent config={placement.config as Record<string, unknown> | undefined} />
+            </Suspense>
+          </CardWrapper>
+        ) : null}
 
         {/* Loading overlay */}
         {isLoading && !isOverlay && (

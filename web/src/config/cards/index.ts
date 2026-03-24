@@ -370,6 +370,14 @@ export const CARD_PROJECT_TAGS: Record<string, string[]> = {
   kagenti_security: ['kubestellar', 'kagenti'],
   kagenti_security_posture: ['kubestellar', 'kagenti'],
   kagenti_topology: ['kubestellar', 'kagenti'],
+  // Kagent CRD cards (component-only, shared with kagent project)
+  kagent_status: ['kubestellar', 'kagent'],
+  kagent_agent_fleet: ['kubestellar', 'kagent'],
+  kagent_tool_registry: ['kubestellar', 'kagent'],
+  kagent_model_providers: ['kubestellar', 'kagent'],
+  kagent_agent_discovery: ['kubestellar', 'kagent'],
+  kagent_security: ['kubestellar', 'kagent'],
+  kagent_topology: ['kubestellar', 'kagent'],
 }
 
 /**

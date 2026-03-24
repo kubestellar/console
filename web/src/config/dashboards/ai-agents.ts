@@ -1,6 +1,6 @@
 /**
  * AI Agents Dashboard Configuration
- * Tabbed view: Kagent | Kagenti
+ * Tabbed view: Kagenti | Kagent
  */
 import type { UnifiedDashboardConfig } from '../../lib/unified/types'
 
@@ -15,23 +15,8 @@ export const aiAgentsDashboardConfig: UnifiedDashboardConfig = {
   // Default cards (used when no tab is active / fallback)
   cards: [],
 
-  // Tabbed layout — Kagent and Kagenti each get their own card set
+  // Tabbed layout — Kagenti first, Kagent second
   tabs: [
-    {
-      id: 'kagent',
-      label: 'Kagent',
-      icon: 'kagent',
-      installUrl: 'https://github.com/kagent-dev/kagent',
-      cards: [
-        { id: 'kagent-status-1', cardType: 'kagent_status', title: 'Kagent Overview', position: { w: 4, h: 5 } },
-        { id: 'kagent-fleet-1', cardType: 'kagent_agent_fleet', title: 'Agent Fleet', position: { w: 8, h: 5 } },
-        { id: 'kagent-tools-1', cardType: 'kagent_tool_registry', title: 'Tool Servers', position: { w: 4, h: 4 } },
-        { id: 'kagent-models-1', cardType: 'kagent_model_providers', title: 'Model Providers', position: { w: 4, h: 4 } },
-        { id: 'kagent-discovery-1', cardType: 'kagent_agent_discovery', title: 'Agent Discovery', position: { w: 4, h: 4 } },
-        { id: 'kagent-security-1', cardType: 'kagent_security', title: 'Security', position: { w: 4, h: 4 } },
-        { id: 'kagent-topology-1', cardType: 'kagent_topology', title: 'Agent Topology', position: { w: 8, h: 4 } },
-      ],
-    },
     {
       id: 'kagenti',
       label: 'Kagenti',
@@ -43,8 +28,23 @@ export const aiAgentsDashboardConfig: UnifiedDashboardConfig = {
         { id: 'kagenti-builds-1', cardType: 'kagenti_build_pipeline', title: 'Build Pipeline', position: { w: 4, h: 4 } },
         { id: 'kagenti-tools-1', cardType: 'kagenti_tool_registry', title: 'MCP Tool Registry', position: { w: 4, h: 4 } },
         { id: 'kagenti-discovery-1', cardType: 'kagenti_agent_discovery', title: 'Agent Discovery', position: { w: 4, h: 4 } },
-        { id: 'kagenti-security-1', cardType: 'kagenti_security', title: 'Security Posture', position: { w: 4, h: 4 } },
-        { id: 'kagenti-topology-1', cardType: 'kagenti_topology', title: 'Agent Topology', position: { w: 8, h: 4 } },
+        { id: 'kagenti-security-1', cardType: 'kagenti_security', title: 'Security Posture', position: { w: 6, h: 4 } },
+        { id: 'kagenti-topology-1', cardType: 'kagenti_topology', title: 'Agent Topology', position: { w: 6, h: 4 } },
+      ],
+    },
+    {
+      id: 'kagent',
+      label: 'Kagent',
+      icon: 'kagent',
+      installUrl: 'https://github.com/kagent-dev/kagent',
+      cards: [
+        { id: 'kagent-status-1', cardType: 'kagent_status', title: 'Kagent Overview', position: { w: 4, h: 5 } },
+        { id: 'kagent-fleet-1', cardType: 'kagent_agent_fleet', title: 'Agent Fleet', position: { w: 8, h: 5 } },
+        { id: 'kagent-tools-1', cardType: 'kagent_tool_registry', title: 'Tool Servers', position: { w: 4, h: 4 } },
+        { id: 'kagent-models-1', cardType: 'kagent_model_providers', title: 'Model Providers', position: { w: 4, h: 4 } },
+        { id: 'kagent-discovery-1', cardType: 'kagent_agent_discovery', title: 'Agent Discovery', position: { w: 4, h: 4 } },
+        { id: 'kagent-security-1', cardType: 'kagent_security', title: 'Security', position: { w: 6, h: 4 } },
+        { id: 'kagent-topology-1', cardType: 'kagent_topology', title: 'Agent Topology', position: { w: 6, h: 4 } },
       ],
     },
   ],

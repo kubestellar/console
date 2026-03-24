@@ -335,8 +335,8 @@ export function UnifiedDashboard({
         isLoading={isLoading}
       />
 
-      {/* Empty state */}
-      {cards.length === 0 && (
+      {/* Empty state — only show when no tabs and no cards */}
+      {cards.length === 0 && !hasTabs && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Activity className="w-12 h-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium text-foreground mb-2">

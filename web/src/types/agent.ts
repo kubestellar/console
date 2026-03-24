@@ -19,6 +19,8 @@ export type AgentProvider =
   | 'raycast'         // Raycast
   | 'open-webui'      // Open WebUI
   | 'bob'             // Bob (discovery-only)
+  | 'kagent'          // Kagent (in-cluster)
+  | 'kagenti'         // Kagenti (in-cluster)
 
 // Capability flags matching backend ProviderCapability
 export const AgentCapabilityChat = 1
