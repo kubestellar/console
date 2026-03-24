@@ -132,7 +132,7 @@ func (s *Server) handleKagentCRDAgents(w http.ResponseWriter, r *http.Request) {
 
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
-		log.Printf("error fetching kagent agents: %v", err)
+		log.Printf("error fetching kagent agents for cluster request")
 		json.NewEncoder(w).Encode(map[string]any{"agents": []any{}, "error": "internal server error"})
 		return
 	}
@@ -222,7 +222,7 @@ func (s *Server) handleKagentCRDTools(w http.ResponseWriter, r *http.Request) {
 
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
-		log.Printf("error fetching kagent tools: %v", err)
+		log.Printf("error fetching kagent tools for cluster request")
 		json.NewEncoder(w).Encode(map[string]any{"tools": []any{}, "error": "internal server error"})
 		return
 	}
@@ -336,7 +336,7 @@ func (s *Server) handleKagentCRDModels(w http.ResponseWriter, r *http.Request) {
 
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
-		log.Printf("error fetching kagent models: %v", err)
+		log.Printf("error fetching kagent models for cluster request")
 		json.NewEncoder(w).Encode(map[string]any{"models": []any{}, "error": "internal server error"})
 		return
 	}
@@ -446,7 +446,7 @@ func (s *Server) handleKagentCRDMemories(w http.ResponseWriter, r *http.Request)
 
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
-		log.Printf("error fetching kagent memories: %v", err)
+		log.Printf("error fetching kagent memories for cluster request")
 		json.NewEncoder(w).Encode(map[string]any{"memories": []any{}, "error": "internal server error"})
 		return
 	}
@@ -509,7 +509,7 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
-		log.Printf("error fetching kagent CRD summary: %v", err)
+		log.Printf("error fetching kagent CRD summary for cluster request")
 		json.NewEncoder(w).Encode(map[string]any{
 			"agentCount": 0, "toolServerCount": 0, "remoteMCPServerCount": 0,
 			"modelConfigCount": 0, "modelProviderConfigCount": 0, "memoryCount": 0,
