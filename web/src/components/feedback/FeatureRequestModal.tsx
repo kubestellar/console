@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle, AlertTriangle, Linkedin, Trophy, Monitor, BookOpen, ImagePlus, Trash2, Copy } from 'lucide-react'
+import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, Pencil, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle, AlertTriangle, Linkedin, Trophy, Monitor, BookOpen, ImagePlus, Trash2, Copy } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { StatusBadge } from '../ui/StatusBadge'
 import { BaseModal } from '../../lib/modals'
@@ -20,6 +20,9 @@ import { emitLinkedInShare } from '../../lib/analytics'
 import { isDemoModeForced } from '../../lib/demoMode'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import remarkBreaks from 'remark-breaks'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { ContributorBanner } from '../rewards/ContributorLadder'
 import { GITHUB_REWARD_LABELS, REWARD_ACTIONS } from '../../types/rewards'
@@ -109,6 +112,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
     }
   }, [isOpen, initialRequestType])
   const [description, setDescription] = useState('')
+  const [descriptionTab, setDescriptionTab] = useState<'write' | 'preview'>('write')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<{ issueUrl?: string } | null>(null)
   const [confirmClose, setConfirmClose] = useState<string | null>(null) // request ID to confirm close
@@ -309,6 +313,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
       // Show thank-you for 5s (extended to give time to copy screenshots) then switch to Updates tab
       setTimeout(() => {
         setDescription('')
+        setDescriptionTab('write')
         setRequestType('bug')
         setTargetRepo('console')
         setSuccess(null)
@@ -336,6 +341,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
         return
       }
       setDescription('')
+      setDescriptionTab('write')
       setRequestType(initialRequestType || 'bug')
       setTargetRepo('console')
       setError(null)
@@ -1313,17 +1319,56 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
 
                 {/* Description — first line becomes title */}
                 <div className="flex flex-col">
-                  <textarea
-                    value={description}
-                    onChange={e => setDescription(e.target.value)}
-                    placeholder={
-                      requestType === 'bug'
-                        ? 'Example bug report: (replace this with a detailed bug report)\n\nWhat happened:\nThe GPU utilization card shows 0% even though pods are running.\n\nWhat I expected:\nGPU metrics should reflect actual usage from nvidia-smi.\n\nSteps to reproduce:\n1. Deploy a GPU workload\n2. Open the dashboard\n3. Check the GPU card'
-                        : 'Example feature request: (replace this with your feature request)\n\nWhat I want:\nAdd a button to export dashboard data as CSV.\n\nWhy it would be useful:\nI need to share cluster metrics with my team in spreadsheets.\n\nAdditional context:\nShould include all visible card data with timestamps.'
-                    }
-                    className="w-full h-[200px] px-3 py-2 bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none font-mono text-sm"
-                    disabled={isSubmitting}
-                  />
+                  {/* Write / Preview tabs */}
+                  <div className="flex items-center gap-3 mb-1.5 border-b border-border">
+                    <button
+                      type="button"
+                      onClick={() => setDescriptionTab('write')}
+                      className={`flex items-center gap-1.5 pb-1.5 text-xs font-medium transition-colors ${
+                        descriptionTab === 'write'
+                          ? 'text-foreground border-b-2 border-purple-500'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Pencil className="w-3 h-3" />
+                      Write
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDescriptionTab('preview')}
+                      className={`flex items-center gap-1.5 pb-1.5 text-xs font-medium transition-colors ${
+                        descriptionTab === 'preview'
+                          ? 'text-foreground border-b-2 border-purple-500'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Eye className="w-3 h-3" />
+                      Preview
+                    </button>
+                  </div>
+                  {descriptionTab === 'write' ? (
+                    <textarea
+                      value={description}
+                      onChange={e => setDescription(e.target.value)}
+                      placeholder={
+                        requestType === 'bug'
+                          ? 'Example bug report: (replace this with a detailed bug report)\n\nWhat happened:\nThe GPU utilization card shows 0% even though pods are running.\n\nWhat I expected:\nGPU metrics should reflect actual usage from nvidia-smi.\n\nSteps to reproduce:\n1. Deploy a GPU workload\n2. Open the dashboard\n3. Check the GPU card'
+                          : 'Example feature request: (replace this with your feature request)\n\nWhat I want:\nAdd a button to export dashboard data as CSV.\n\nWhy it would be useful:\nI need to share cluster metrics with my team in spreadsheets.\n\nAdditional context:\nShould include all visible card data with timestamps.'
+                      }
+                      className="w-full h-[200px] px-3 py-2 bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none font-mono text-sm"
+                      disabled={isSubmitting}
+                    />
+                  ) : (
+                    <div className="w-full h-[200px] overflow-y-auto px-3 py-2 bg-secondary/50 border border-border rounded-lg text-sm prose prose-invert prose-sm max-w-none">
+                      {description.trim() ? (
+                        <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                          {description}
+                        </ReactMarkdown>
+                      ) : (
+                        <p className="text-muted-foreground italic">Nothing to preview</p>
+                      )}
+                    </div>
+                  )}
                   <p className="text-2xs text-muted-foreground mt-1">
                     First line becomes the title. Add details below.
                   </p>
