@@ -291,7 +291,10 @@ if [ -f "$SCRIPT_DIR/bin/kc-agent" ]; then
     else
         echo -e "${YELLOW}Warning: $SCRIPT_DIR/bin/kc-agent is invalid (empty or not executable). Run 'make build' to rebuild.${NC}"
     fi
-else
+fi
+
+# If no valid local binary, attempt install/upgrade via brew (and resolve from PATH)
+if [ -z "$KC_AGENT_BIN" ]; then
     # Install/upgrade kc-agent via brew
     if command -v brew &>/dev/null; then
         if brew list kc-agent &>/dev/null; then
@@ -327,10 +330,10 @@ else
         KC_AGENT_BIN="$BREW_BIN"
     elif command -v kc-agent &>/dev/null; then
         FOUND_BIN="$(command -v kc-agent)"
-        if [ -s "$FOUND_BIN" ]; then
+        if [ -f "$FOUND_BIN" ] && [ -s "$FOUND_BIN" ] && [ -x "$FOUND_BIN" ]; then
             KC_AGENT_BIN="$FOUND_BIN"
         else
-            echo -e "${YELLOW}Warning: kc-agent found at $FOUND_BIN but is empty (0 bytes) — skipping. Run 'make build' or reinstall.${NC}"
+            echo -e "${YELLOW}Warning: kc-agent found at $FOUND_BIN but it is not a valid executable (missing, empty, or not executable) — skipping. Run 'make build' or reinstall.${NC}"
         fi
     fi
 fi
