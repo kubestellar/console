@@ -1593,6 +1593,10 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 
+			if len(clusters) == 0 {
+				return c.JSON(fiber.Map{"events": []k8s.Event{}, "source": "k8s"})
+			}
+
 			perClusterLimit := limit / len(clusters)
 			if perClusterLimit < 10 {
 				perClusterLimit = 10
@@ -1680,6 +1684,10 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 			if err != nil {
 				log.Printf("internal error: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+			}
+
+			if len(clusters) == 0 {
+				return c.JSON(fiber.Map{"events": []k8s.Event{}, "source": "k8s"})
 			}
 
 			perClusterLimit := limit / len(clusters)
