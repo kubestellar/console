@@ -269,7 +269,7 @@ function StatBlock({ block, data, hasData, isLoading, history, onDisplayModeChan
             </div>
             <Sparkline data={history!} color={hexColor} height={28} width={64} fill />
           </div>
-          {data.sublabel && <div className="text-xs text-muted-foreground mt-1">{data.sublabel}</div>}
+          {data.sublabel && <div className="text-xs text-muted-foreground mt-1">{wrapAbbreviations(data.sublabel)}</div>}
         </>
       ) : effectiveMode === 'gauge' && !isNaN(numericValue) ? (
         <>
@@ -282,7 +282,7 @@ function StatBlock({ block, data, hasData, isLoading, history, onDisplayModeChan
               invertColors={PERCENTAGE_STAT_IDS.has(block.id)}
             />
           </div>
-          {data.sublabel && <div className="text-xs text-muted-foreground text-center mt-1">{data.sublabel}</div>}
+          {data.sublabel && <div className="text-xs text-muted-foreground text-center mt-1">{wrapAbbreviations(data.sublabel)}</div>}
         </>
       ) : effectiveMode === 'ring' && !isNaN(numericValue) ? (
         <>
@@ -295,7 +295,7 @@ function StatBlock({ block, data, hasData, isLoading, history, onDisplayModeChan
               color={hexColor}
             />
           </div>
-          {data.sublabel && <div className="text-xs text-muted-foreground text-center mt-1">{data.sublabel}</div>}
+          {data.sublabel && <div className="text-xs text-muted-foreground text-center mt-1">{wrapAbbreviations(data.sublabel)}</div>}
         </>
       ) : effectiveMode === 'mini-bar' && !isNaN(numericValue) ? (
         <>
@@ -311,7 +311,7 @@ function StatBlock({ block, data, hasData, isLoading, history, onDisplayModeChan
               }}
             />
           </div>
-          {data.sublabel && <div className="text-xs text-muted-foreground mt-1">{data.sublabel}</div>}
+          {data.sublabel && <div className="text-xs text-muted-foreground mt-1">{wrapAbbreviations(data.sublabel)}</div>}
         </>
       ) : effectiveMode === 'horseshoe' && !isNaN(numericValue) ? (
         <>
@@ -324,7 +324,7 @@ function StatBlock({ block, data, hasData, isLoading, history, onDisplayModeChan
               color={hexColor}
             />
           </div>
-          {data.sublabel && <div className="text-xs text-muted-foreground text-center mt-1">{data.sublabel}</div>}
+          {data.sublabel && <div className="text-xs text-muted-foreground text-center mt-1">{wrapAbbreviations(data.sublabel)}</div>}
         </>
       ) : effectiveMode === 'trend' && !isNaN(numericValue) ? (
         (() => {
@@ -349,7 +349,7 @@ function StatBlock({ block, data, hasData, isLoading, history, onDisplayModeChan
               {delta === undefined && !isLoading && hasData && (
                 <div className="text-2xs text-muted-foreground/50 mt-0.5">Collecting…</div>
               )}
-              {data.sublabel && <div className="text-xs text-muted-foreground mt-1">{data.sublabel}</div>}
+              {data.sublabel && <div className="text-xs text-muted-foreground mt-1">{wrapAbbreviations(data.sublabel)}</div>}
             </>
           )
         })()
@@ -367,7 +367,7 @@ function StatBlock({ block, data, hasData, isLoading, history, onDisplayModeChan
               }}
             />
           </div>
-          {data.sublabel && <div className="text-xs text-muted-foreground mt-1">{data.sublabel}</div>}
+          {data.sublabel && <div className="text-xs text-muted-foreground mt-1">{wrapAbbreviations(data.sublabel)}</div>}
         </>
       ) : effectiveMode === 'heatmap' && !isNaN(numericValue) ? (
         <>
@@ -377,7 +377,7 @@ function StatBlock({ block, data, hasData, isLoading, history, onDisplayModeChan
           />
           <div className="relative">
             <div className={`text-3xl font-bold ${numericValue > 0 ? 'text-white drop-shadow-sm' : valueColor}`}>{displayValue}</div>
-            {data.sublabel && <div className={`text-xs ${numericValue > 0 ? 'text-white/70' : 'text-muted-foreground'}`}>{data.sublabel}</div>}
+            {data.sublabel && <div className={`text-xs ${numericValue > 0 ? 'text-white/70' : 'text-muted-foreground'}`}>{wrapAbbreviations(data.sublabel)}</div>}
           </div>
         </>
       ) : (
@@ -387,7 +387,7 @@ function StatBlock({ block, data, hasData, isLoading, history, onDisplayModeChan
           {mode === 'sparkline' && !hasEnoughHistory && !isLoading && hasData && (
             <div className="text-2xs text-muted-foreground/50 mt-0.5">Building trend…</div>
           )}
-          {data.sublabel && <div className="text-xs text-muted-foreground">{data.sublabel}</div>}
+          {data.sublabel && <div className="text-xs text-muted-foreground">{wrapAbbreviations(data.sublabel)}</div>}
         </>
       )}
     </div>
@@ -511,7 +511,14 @@ export function StatsOverview({
             </div>
           )}
           {isDemoData && (
-            <StatusBadge color="yellow" size="xs" variant="outline" rounded="full" icon={<FlaskConical className="w-2.5 h-2.5" />}>
+            <StatusBadge
+              color="yellow"
+              size="xs"
+              variant="outline"
+              rounded="full"
+              icon={<FlaskConical className="w-2.5 h-2.5" />}
+              title={t('statsOverview.demoTooltip', 'Showing sample data — connect clusters to see live metrics')}
+            >
               {t('statsOverview.demo')}
             </StatusBadge>
           )}

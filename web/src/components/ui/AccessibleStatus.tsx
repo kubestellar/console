@@ -6,6 +6,7 @@ import {
   getPatternClass,
 } from '../../lib/accessibility'
 import { useAccessibility } from '../../hooks/useAccessibility'
+import { STATUS_TOOLTIPS } from '../shared/TechnicalAcronym'
 
 interface AccessibleStatusBadgeProps {
   status: StatusLevel | string
@@ -59,6 +60,7 @@ export function AccessibleStatusBadge({
       )}
       role="status"
       aria-label={config.ariaLabel}
+      title={STATUS_TOOLTIPS[normalizedStatus] || config.ariaLabel}
     >
       {showIcon && (
         <Icon
@@ -169,6 +171,7 @@ export function AccessibleStatusText({
       className={cn('inline-flex items-center gap-1.5', config.textClass, className)}
       role="status"
       aria-label={config.ariaLabel}
+      title={STATUS_TOOLTIPS[normalizedStatus] || config.ariaLabel}
     >
       {shouldShowIcon && (
         <Icon

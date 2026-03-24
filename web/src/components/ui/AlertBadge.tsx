@@ -478,7 +478,7 @@ export function AlertBadge() {
                         )}
                       />
                     )}
-                    <span className="text-lg">{getSeverityIcon(alert.severity)}</span>
+                    <span className="text-lg" title={`${alert.severity.charAt(0).toUpperCase() + alert.severity.slice(1)} severity`} aria-label={`${alert.severity} severity`}>{getSeverityIcon(alert.severity)}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-foreground truncate">
