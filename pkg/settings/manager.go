@@ -156,15 +156,27 @@ func (sm *SettingsManager) saveLocked() error {
 
 // GetAll returns all settings with sensitive fields decrypted
 func (sm *SettingsManager) GetAll() (*AllSettings, error) {
+	// Check if legacy migration is needed under read lock
+	sm.mu.RLock()
+	needsMigration := sm.settings != nil && sm.settings.Encrypted.GitHubToken != nil
+	sm.mu.RUnlock()
+
+	// Perform migration under exclusive write lock if needed
+	if needsMigration {
+		sm.mu.Lock()
+		sm.migrateLegacyGitHubToken()
+		if err := sm.saveLocked(); err != nil {
+			log.Printf("[settings] failed to persist legacy token migration: %v", err)
+		}
+		sm.mu.Unlock()
+	}
+
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 
 	if sm.settings == nil {
 		return DefaultAllSettings(), nil
 	}
-
-	// Migrate legacy GitHubToken → FeedbackGitHubToken if needed
-	sm.migrateLegacyGitHubToken()
 
 	all := &AllSettings{
 		AIMode:        sm.settings.Settings.AIMode,
@@ -357,7 +369,7 @@ func (sm *SettingsManager) MigrateFromConfigYaml(cp ConfigProvider) error {
 // migrateLegacyGitHubToken moves the old GitHubToken encrypted field to
 // FeedbackGitHubToken if the latter is not yet set. This is a one-time
 // migration for users who had the separate "Personal Access Token" configured.
-// Must be called while sm.mu is held (at least RLock).
+// Must be called while sm.mu is held with an exclusive write Lock.
 func (sm *SettingsManager) migrateLegacyGitHubToken() {
 	if sm.settings == nil || sm.key == nil {
 		return
