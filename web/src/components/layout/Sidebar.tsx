@@ -8,6 +8,7 @@ import { SnoozedCards } from './SnoozedCards'
 import { useSidebarConfig, SidebarItem, PROTECTED_SIDEBAR_IDS, SIDEBAR_COLLAPSED_WIDTH_PX, SIDEBAR_DEFAULT_WIDTH_PX } from '../../hooks/useSidebarConfig'
 import { useMobile } from '../../hooks/useMobile'
 import { useClusters } from '../../hooks/mcp/clusters'
+import { isClusterUnreachable, isClusterHealthy } from '../clusters/utils'
 import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
 import type { SnoozedSwap } from '../../hooks/useSnoozedCards'
 import type { SnoozedRecommendation } from '../../hooks/useSnoozedRecommendations'
@@ -108,12 +109,13 @@ export function Sidebar() {
   const [dragSection, setDragSection] = useState<'primary' | 'secondary' | null>(null)
   const dragCounter = useRef(0)
 
-  // Cluster status counts (using deduplicated clusters to avoid double-counting same server with different contexts)
-  // A cluster is "offline" if reachable===false; "healthy" if reachable and healthy===true;
-  // everything else (unhealthy, still loading, unknown) counts as unhealthy so the three
-  // buckets always add up to the total cluster count.
-  const unreachableClusters = deduplicatedClusters.filter((c) => c.reachable === false).length
-  const healthyClusters = deduplicatedClusters.filter((c) => c.healthy === true && c.reachable !== false).length
+  // Cluster status counts — uses the shared helpers from clusters/utils.ts
+  // so that Sidebar, Dashboard, and My Clusters page all agree on counts.
+  // "Unreachable" = reachable===false or confirmed connection error.
+  // "Healthy" = not unreachable and (healthy flag OR has reporting nodes).
+  // "Unhealthy" = everything else, so the three buckets always sum to total.
+  const unreachableClusters = deduplicatedClusters.filter((c) => isClusterUnreachable(c)).length
+  const healthyClusters = deduplicatedClusters.filter((c) => !isClusterUnreachable(c) && isClusterHealthy(c)).length
   const unhealthyClusters = deduplicatedClusters.length - healthyClusters - unreachableClusters
 
   // Handle Add Card click - work with current dashboard
