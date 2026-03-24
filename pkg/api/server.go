@@ -1094,6 +1094,16 @@ func waitForPortRelease(port int, timeout time.Duration) error {
 // before services are torn down, giving the frontend time to notice.
 func (s *Server) Shutdown() error {
 	atomic.StoreInt32(&s.shuttingDown, 1)
+
+	// If Shutdown is called before Start, the temporary loading server
+	// is still running and holding the port. Shut it down first.
+	if s.loadingSrv != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), serverHealthTimeout)
+		defer cancel()
+		s.loadingSrv.Shutdown(ctx)
+		s.loadingSrv = nil
+	}
+
 	if s.gpuUtilWorker != nil {
 		s.gpuUtilWorker.Stop()
 	}
