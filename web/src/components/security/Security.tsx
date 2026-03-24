@@ -112,7 +112,7 @@ export function Security() {
     return cachedSecurityIssues.map(issue => {
       // Map issue string to type enum
       let type: 'privileged' | 'root' | 'hostNetwork' | 'hostPID' | 'noSecurityContext' = 'noSecurityContext'
-      const issueLower = issue.issue.toLowerCase()
+      const issueLower = (issue.issue || '').toLowerCase()
       if (issueLower.includes('privileged')) type = 'privileged'
       else if (issueLower.includes('root')) type = 'root'
       else if (issueLower.includes('host network')) type = 'hostNetwork'

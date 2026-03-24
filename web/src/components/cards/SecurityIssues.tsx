@@ -80,16 +80,17 @@ interface SecurityIssuesProps {
   config?: Record<string, unknown>
 }
 
-const getIssueIcon = (issue: string, t: (key: string) => string): { icon: typeof Shield; tooltip: string } => {
-  if (issue.includes('Privileged')) return { icon: Shield, tooltip: t('securityIssues.privilegedContainer') }
-  if (issue.includes('root')) return { icon: User, tooltip: t('securityIssues.runningAsRoot') }
-  if (issue.includes('network') || issue.includes('Network')) return { icon: Network, tooltip: t('securityIssues.hostNetworkAccess') }
-  if (issue.includes('PID')) return { icon: Server, tooltip: t('securityIssues.hostPidNamespace') }
+const getIssueIcon = (issue: string | undefined, t: (key: string) => string): { icon: typeof Shield; tooltip: string } => {
+  const s = issue || ''
+  if (s.includes('Privileged')) return { icon: Shield, tooltip: t('securityIssues.privilegedContainer') }
+  if (s.includes('root')) return { icon: User, tooltip: t('securityIssues.runningAsRoot') }
+  if (s.includes('network') || s.includes('Network')) return { icon: Network, tooltip: t('securityIssues.hostNetworkAccess') }
+  if (s.includes('PID')) return { icon: Server, tooltip: t('securityIssues.hostPidNamespace') }
   return { icon: AlertTriangle, tooltip: t('securityIssues.securityIssueDetected') }
 }
 
 const getSeverityColor = (severity: string) => {
-  const level = (severity.toLowerCase() as SeverityLevel) || 'none'
+  const level = ((severity || '').toLowerCase() as SeverityLevel) || 'none'
   const colors = SEVERITY_COLORS[level] || SEVERITY_COLORS.none
   return { bg: colors.bg, border: colors.border, text: colors.text, badge: colors.bg }
 }
