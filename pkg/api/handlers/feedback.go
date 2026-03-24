@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -28,6 +29,12 @@ import (
 // githubAPITimeout is the timeout for HTTP requests to the GitHub API.
 const githubAPITimeout = 10 * time.Second
 
+// prCacheTTL is how long cached PR data is considered fresh.
+const prCacheTTL = 5 * time.Minute
+
+// maxPRPages is the maximum number of pages to fetch per PR state to bound API usage.
+const maxPRPages = 5
+
 // FeedbackHandler handles feature requests and feedback
 type FeedbackHandler struct {
 	store         store.Store
@@ -35,6 +42,11 @@ type FeedbackHandler struct {
 	webhookSecret string
 	repoOwner     string
 	repoName      string
+	httpClient    *http.Client // shared HTTP client for connection reuse
+
+	prCacheMu   sync.RWMutex
+	prCache     []GitHubPR
+	prCacheTime time.Time
 }
 
 // FeedbackConfig holds configuration for the feedback handler
@@ -56,6 +68,7 @@ func NewFeedbackHandler(s store.Store, cfg FeedbackConfig) *FeedbackHandler {
 		webhookSecret: cfg.WebhookSecret,
 		repoOwner:     cfg.RepoOwner,
 		repoName:      cfg.RepoName,
+		httpClient:    &http.Client{Timeout: githubAPITimeout},
 	}
 }
 
@@ -453,7 +466,9 @@ type GitHubPR struct {
 	MergedAt *time.Time `json:"merged_at"`
 }
 
-// fetchLinkedPRs fetches PRs that are linked to the given issues
+// fetchLinkedPRs fetches PRs that are linked to the given issues.
+// Results are cached for prCacheTTL to reduce GitHub API usage.
+// Pagination is used to fetch beyond the first page of results per state.
 func (h *FeedbackHandler) fetchLinkedPRs(issues []GitHubIssue) map[int]GitHubPR {
 	result := make(map[int]GitHubPR)
 	if h.getEffectiveToken() == "" || h.repoOwner == "" || h.repoName == "" {
@@ -466,53 +481,23 @@ func (h *FeedbackHandler) fetchLinkedPRs(issues []GitHubIssue) map[int]GitHubPR 
 		issueNumbers[issue.Number] = true
 	}
 
+	allPRs := h.getCachedOrFetchPRs()
+
 	// Match PRs to issues by looking for "Fixes #N", "Closes #N", or "Fixes owner/repo#N" in PR body
 	fixesPattern := regexp.MustCompile(`(?i)(?:fixes|closes|resolves)\s+(?:[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+)?#(\d+)`)
 
-	// Fetch both open and closed PRs (closed includes merged)
-	for _, state := range []string{"open", "closed"} {
-		url := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls?state=%s&per_page=50&sort=updated&direction=desc",
-			h.repoOwner, h.repoName, state)
-
-		req, err := http.NewRequest("GET", url, nil)
-		if err != nil {
-			continue
-		}
-
-		req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
-		req.Header.Set("Accept", "application/vnd.github.v3+json")
-
-		client := &http.Client{Timeout: githubAPITimeout}
-		resp, err := client.Do(req)
-		if err != nil {
-			continue
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			resp.Body.Close()
-			continue
-		}
-
-		var prs []GitHubPR
-		if err := json.NewDecoder(resp.Body).Decode(&prs); err != nil {
-			resp.Body.Close()
-			continue
-		}
-		resp.Body.Close()
-
-		for _, pr := range prs {
-			matches := fixesPattern.FindAllStringSubmatch(pr.Body, -1)
-			for _, match := range matches {
-				if len(match) > 1 {
-					issueNum, err := strconv.Atoi(match[1])
-					if err == nil && issueNumbers[issueNum] {
-						// Prefer merged PRs > open PRs > closed-without-merge
-						existing, exists := result[issueNum]
-						prIsMerged := pr.MergedAt != nil
-						existingIsMerged := existing.MergedAt != nil
-						if !exists || prIsMerged || (pr.State == "open" && !existingIsMerged) {
-							result[issueNum] = pr
-						}
+	for _, pr := range allPRs {
+		matches := fixesPattern.FindAllStringSubmatch(pr.Body, -1)
+		for _, match := range matches {
+			if len(match) > 1 {
+				issueNum, err := strconv.Atoi(match[1])
+				if err == nil && issueNumbers[issueNum] {
+					// Prefer merged PRs > open PRs > closed-without-merge
+					existing, exists := result[issueNum]
+					prIsMerged := pr.MergedAt != nil
+					existingIsMerged := existing.MergedAt != nil
+					if !exists || prIsMerged || (pr.State == "open" && !existingIsMerged) {
+						result[issueNum] = pr
 					}
 				}
 			}
@@ -520,6 +505,76 @@ func (h *FeedbackHandler) fetchLinkedPRs(issues []GitHubIssue) map[int]GitHubPR 
 	}
 
 	return result
+}
+
+// getCachedOrFetchPRs returns cached PR data if fresh, otherwise fetches
+// from the GitHub API with pagination and caches the result.
+func (h *FeedbackHandler) getCachedOrFetchPRs() []GitHubPR {
+	h.prCacheMu.RLock()
+	if h.prCache != nil && time.Since(h.prCacheTime) < prCacheTTL {
+		cached := h.prCache
+		h.prCacheMu.RUnlock()
+		return cached
+	}
+	h.prCacheMu.RUnlock()
+
+	var allPRs []GitHubPR
+	for _, state := range []string{"open", "closed"} {
+		prs := h.fetchPRPages(state)
+		allPRs = append(allPRs, prs...)
+	}
+
+	h.prCacheMu.Lock()
+	h.prCache = allPRs
+	h.prCacheTime = time.Now()
+	h.prCacheMu.Unlock()
+
+	return allPRs
+}
+
+// fetchPRPages fetches up to maxPRPages pages of PRs for the given state,
+// using the shared HTTP client for connection reuse.
+func (h *FeedbackHandler) fetchPRPages(state string) []GitHubPR {
+	var allPRs []GitHubPR
+
+	for page := 1; page <= maxPRPages; page++ {
+		url := fmt.Sprintf(
+			"https://api.github.com/repos/%s/%s/pulls?state=%s&per_page=50&sort=updated&direction=desc&page=%d",
+			h.repoOwner, h.repoName, state, page)
+
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			break
+		}
+		req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
+		req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+		resp, err := h.httpClient.Do(req)
+		if err != nil {
+			break
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			break
+		}
+
+		var prs []GitHubPR
+		if err := json.NewDecoder(resp.Body).Decode(&prs); err != nil {
+			resp.Body.Close()
+			break
+		}
+		resp.Body.Close()
+
+		allPRs = append(allPRs, prs...)
+
+		// If we got fewer than a full page, there are no more results
+		if len(prs) < 50 {
+			break
+		}
+	}
+
+	return allPRs
 }
 
 // fetchGitHubIssues fetches issues created by the given user from the configured GitHub repo
