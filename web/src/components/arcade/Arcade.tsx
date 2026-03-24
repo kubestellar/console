@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, memo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
-import { Gamepad2, Plus, LayoutGrid, ChevronDown, ChevronRight, GripVertical, Trophy, Zap, AlertTriangle } from 'lucide-react'
+import { Gamepad2, Plus, LayoutGrid, ChevronDown, ChevronRight, Trophy, Zap } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -8,21 +8,15 @@ import {
 } from '@dnd-kit/core'
 import {
   SortableContext,
-  useSortable,
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import { CardWrapper } from '../cards/CardWrapper'
-import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
 import { TemplatesModal } from '../dashboard/TemplatesModal'
 import { ConfigureCardModal } from '../dashboard/ConfigureCardModal'
 import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
-import { formatCardTitle } from '../../lib/formatCardTitle'
-import { useDashboard, DashboardCard } from '../../lib/dashboards'
+import { useDashboard, SortableDashboardCard, DragPreviewCard } from '../../lib/dashboards'
 import { getRememberPosition, setRememberPosition } from '../../hooks/useLastRoute'
-import { useMobile } from '../../hooks/useMobile'
 import { useTranslation } from 'react-i18next'
 
 const ARCADE_CARDS_KEY = 'kubestellar-arcade-cards'
@@ -62,97 +56,6 @@ const DEFAULT_ARCADE_CARDS = [
   // Classic (last)
   { type: 'flappy_pod', title: 'Flappy Pod', position: { w: 6, h: 4 } },
 ]
-
-// Sortable card component with drag handle
-interface SortableArcadeCardProps {
-  card: DashboardCard
-  onConfigure: () => void
-  onRemove: () => void
-  onWidthChange: (newWidth: number) => void
-  isDragging: boolean
-}
-
-const SortableArcadeCard = memo(function SortableArcadeCard({
-  card,
-  onConfigure,
-  onRemove,
-  onWidthChange,
-  isDragging,
-}: SortableArcadeCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id: card.id })
-
-  const { t } = useTranslation('common')
-  const { isMobile } = useMobile()
-  const cardWidth = card.position?.w || 4
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    // Only apply multi-column span on desktop; mobile uses single column
-    gridColumn: isMobile ? 'span 1' : `span ${cardWidth}`,
-    opacity: isDragging ? 0.5 : 1,
-  }
-
-  const CardComponent = CARD_COMPONENTS[card.card_type]
-
-  return (
-    <div ref={setNodeRef} style={style}>
-      <CardWrapper
-        cardId={card.id}
-        cardType={card.card_type}
-        title={formatCardTitle(card.card_type)}
-        cardWidth={cardWidth}
-        onConfigure={onConfigure}
-        onRemove={onRemove}
-        onWidthChange={onWidthChange}
-        isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
-        dragHandle={
-          <button
-            {...attributes}
-            {...listeners}
-            className="p-1 rounded hover:bg-secondary cursor-grab active:cursor-grabbing"
-            title={t('arcade.dragToReorder')}
-          >
-            <GripVertical className="w-4 h-4 text-muted-foreground" />
-          </button>
-        }
-      >
-        {CardComponent ? (
-          <CardComponent config={card.config} />
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground p-4">
-            <AlertTriangle className="w-6 h-6 text-yellow-500" />
-            <p className="text-sm font-medium">Unknown card type: {card.card_type}</p>
-            <p className="text-xs">This card type is not registered. You can remove it.</p>
-          </div>
-        )}
-      </CardWrapper>
-    </div>
-  )
-})
-
-// Drag preview for overlay
-function ArcadeDragPreviewCard({ card }: { card: DashboardCard }) {
-  const cardWidth = card.position?.w || 4
-  return (
-    <div
-      className="glass rounded-lg p-4 shadow-xl"
-      style={{ width: `${(cardWidth / 12) * 100}%`, minWidth: 200, maxWidth: 400 }}
-    >
-      <div className="flex items-center gap-2">
-        <GripVertical className="w-4 h-4 text-muted-foreground" />
-        <span className="text-sm font-medium truncate">
-          {formatCardTitle(card.card_type)}
-        </span>
-      </div>
-    </div>
-  )
-}
 
 export function Arcade() {
   const { t } = useTranslation('common')
@@ -358,7 +261,7 @@ export function Arcade() {
                 <SortableContext items={cards.map(c => c.id)} strategy={rectSortingStrategy}>
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
                     {cards.map(card => (
-                      <SortableArcadeCard
+                      <SortableDashboardCard
                         key={card.id}
                         card={card}
                         onConfigure={() => handleConfigureCard(card.id)}
@@ -371,9 +274,7 @@ export function Arcade() {
                 </SortableContext>
                 <DragOverlay>
                   {activeId ? (
-                    <div className="opacity-80 rotate-3 scale-105">
-                      <ArcadeDragPreviewCard card={cards.find(c => c.id === activeId)!} />
-                    </div>
+                    <DragPreviewCard card={cards.find(c => c.id === activeId)!} />
                   ) : null}
                 </DragOverlay>
               </DndContext>
