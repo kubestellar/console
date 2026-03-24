@@ -293,7 +293,11 @@ export function Layout({ children }: LayoutProps) {
     <div className="h-screen bg-background overflow-hidden flex flex-col">
       {/* Dev mode accent line — 2px green bar at top of viewport (like VS Code debug mode) */}
       {__DEV_MODE__ && (
-        <div className="h-0.5 bg-green-500 flex-shrink-0 z-[60]" title="Development build" />
+        <div className="h-[5px] bg-green-500 flex-shrink-0 z-[60] flex items-center justify-around overflow-visible">
+          {Array.from({ length: 6 }, (_, i) => (
+            <span key={i} className="text-[6px] font-extrabold uppercase tracking-widest text-green-300 leading-none bg-green-950/60 px-1 py-px rounded-sm">dev mode</span>
+          ))}
+        </div>
       )}
 
       {/* Skip to content link for keyboard users and screen readers */}
