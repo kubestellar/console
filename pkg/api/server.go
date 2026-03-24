@@ -211,17 +211,17 @@ func NewServer(cfg Config) (*Server, error) {
 			// Warmup: probe all clusters to populate health cache before serving.
 			// Without this, first load hits ALL clusters (including offline) = 30s+ load.
 			k8sClient.WarmupHealthCache()
-		}
-		k8sClient.SetOnReload(func() {
-			hub.BroadcastAll(handlers.Message{
-				Type: "kubeconfig_changed",
-				Data: map[string]string{"message": "Kubeconfig updated"},
+			k8sClient.SetOnReload(func() {
+				hub.BroadcastAll(handlers.Message{
+					Type: "kubeconfig_changed",
+					Data: map[string]string{"message": "Kubeconfig updated"},
+				})
+				log.Println("Broadcasted kubeconfig change to all clients")
 			})
-			log.Println("Broadcasted kubeconfig change to all clients")
-		})
-		if err := k8sClient.StartWatching(); err != nil {
-			// Watcher fails when kubeconfig doesn't exist — already logged above
-			_ = err
+			if err := k8sClient.StartWatching(); err != nil {
+				// Watcher fails when kubeconfig doesn't exist — already logged above
+				_ = err
+			}
 		}
 	}
 
