@@ -226,6 +226,9 @@ export function KubeBert() {
   const enemyMoveRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const moveLockedRef = useRef(false)
   const gameStateRef = useRef<GameState>('idle')
+  // Refs to break forward-declaration cycles (movePlayer calls these, but they're declared later)
+  const startEnemiesRef = useRef<() => void>(() => {})
+  const startGameLoopRef = useRef<() => void>(() => {})
 
   // Keep gameStateRef in sync
   useEffect(() => { gameStateRef.current = gameState }, [gameState])
@@ -442,8 +445,8 @@ export function KubeBert() {
       setTimeout(() => {
         if (gameStateRef.current === 'levelComplete') {
           setGameState('playing')
-          startEnemies()
-          startGameLoop()
+          startEnemiesRef.current()
+          startGameLoopRef.current()
         }
       }, LEVEL_TRANSITION_DELAY_MS)
     }
@@ -518,6 +521,8 @@ export function KubeBert() {
     }
     gameLoopRef.current = requestAnimationFrame(loop)
   }, [render])
+  // Keep ref in sync so movePlayer's setTimeout can call the latest version
+  startGameLoopRef.current = startGameLoop
 
   // Enemy intervals
   const startEnemies = useCallback(() => {
@@ -528,8 +533,8 @@ export function KubeBert() {
     enemySpawnRef.current = setInterval(spawnEnemy, spawnRate)
     enemyMoveRef.current = setInterval(moveEnemies, moveRate)
   }, [spawnEnemy, moveEnemies])
-
-  // Start game
+  // Keep ref in sync so movePlayer's setTimeout can call the latest version
+  startEnemiesRef.current = startEnemies
   const startGame = useCallback(() => {
     stopIntervals()
     buildTileLabels()
