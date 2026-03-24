@@ -89,6 +89,15 @@ const DIFFERENTIATORS = [
   'Multi-cluster native',
 ]
 
+/** Converts a scenario title to a stable GA4-friendly slug, e.g.
+ *  "AI diagnoses a crashing pod" → "ai_diagnoses_a_crashing_pod" */
+function scenarioSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+}
+
 /* ------------------------------------------------------------------ */
 /*  Main page component                                                */
 /* ------------------------------------------------------------------ */
@@ -193,7 +202,9 @@ export function Welcome() {
             <Link
               key={scenario.title}
               to={scenario.link}
-              onClick={() => emitWelcomeActioned(`scenario_${scenario.link}`, ref)}
+              onClick={() =>
+                emitWelcomeActioned(`scenario_${scenarioSlug(scenario.title)}`, ref)
+              }
               className="group rounded-xl border border-slate-700/50 bg-slate-800/30 p-6 hover:border-purple-500/30 hover:bg-slate-800/50 active:bg-slate-800/70 transition-colors touch-manipulation"
             >
               <div className="mb-4">{scenario.icon}</div>

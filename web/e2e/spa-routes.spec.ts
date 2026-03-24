@@ -58,6 +58,7 @@ const ALL_ROUTES = [
   { path: '/multi-tenancy', name: 'Multi-Tenancy' },
   { path: '/from-lens', name: 'From Lens' },
   { path: '/from-headlamp', name: 'From Headlamp' },
+  { path: '/welcome', name: 'Welcome' },
   { path: '/white-label', name: 'White Label' },
 ]
 

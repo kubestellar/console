@@ -123,6 +123,9 @@ function isAutomatedEnvironment(): boolean {
 
 /** Whether a real user interaction has been detected */
 let userHasInteracted = false
+
+/** Queued ref from emitWelcomeViewed() — fired on first interaction */
+let pendingWelcomeRef: string | null = null
 /** Whether analytics scripts have been loaded (only after interaction) */
 let analyticsScriptsLoaded = false
 
@@ -150,6 +153,12 @@ function onFirstInteraction() {
     const deploymentType = getDeploymentType()
     emitConversionStep(1, 'discovery', { deployment_type: deploymentType })
     emitPageView(window.location.pathname)
+
+    // Flush queued welcome view (ref attribution from /welcome?ref=)
+    if (pendingWelcomeRef !== null) {
+      send('ksc_welcome_viewed', { ref: pendingWelcomeRef })
+      pendingWelcomeRef = null
+    }
   }
 }
 
@@ -1858,9 +1867,15 @@ export function emitAISuggestionViewed(insightCategory: string, hasAIEnrichment:
 
 // ── Welcome / Conference Landing Page ────────────────────────────────
 
-/** Fired once when /welcome is rendered */
+/** Fired once when /welcome is rendered.
+ *  Deferred until first user interaction so the ref attribution is not
+ *  dropped by the send() interaction gate (userHasInteracted guard). */
 export function emitWelcomeViewed(ref: string) {
-  send('ksc_welcome_viewed', { ref })
+  if (userHasInteracted) {
+    send('ksc_welcome_viewed', { ref })
+  } else {
+    pendingWelcomeRef = ref
+  }
 }
 
 /** Fired on CTA button clicks (hero_explore_demo, hero_github, scenario_*, footer_*) */

@@ -304,6 +304,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/login': 'Login',
   '/from-lens': 'Switching from Lens',
   '/from-headlamp': 'Coming from Headlamp',
+  '/welcome': 'Welcome to KubeStellar',
   '/white-label': 'White-Label Your Console',
 }
 
