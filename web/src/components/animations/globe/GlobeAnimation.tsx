@@ -15,6 +15,9 @@ interface GlobeAnimationProps {
   style?: React.CSSProperties
 }
 
+/** Simulated loading delay before revealing the 3-D globe in milliseconds */
+const GLOBE_LOAD_DELAY_MS = 1000
+
 const GlobeAnimation = ({
   width = "100%",
   height = "600px",
@@ -31,7 +34,7 @@ const GlobeAnimation = ({
     // Simulate loading delay to show progressive animation
     const timer = setTimeout(() => {
       setIsLoaded(true)
-    }, 1000)
+    }, GLOBE_LOAD_DELAY_MS)
 
     return () => clearTimeout(timer)
   }, [])

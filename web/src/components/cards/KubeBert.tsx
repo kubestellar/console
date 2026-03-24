@@ -13,6 +13,10 @@ const BONUS_PER_LEVEL = 500
 const ENEMY_SPAWN_INTERVAL_MS = 3000
 const ENEMY_MOVE_INTERVAL_MS = 800
 const PLAYER_MOVE_COOLDOWN_MS = 200
+/** Delay in milliseconds before starting the next level after completing the current one */
+const LEVEL_TRANSITION_DELAY_MS = 1000
+/** Minimum enemy spawn interval in milliseconds — prevents the game from becoming unplayable at high levels */
+const MIN_ENEMY_SPAWN_INTERVAL_MS = 1000
 
 
 // Tile colors by state
@@ -441,7 +445,7 @@ export function KubeBert() {
           startEnemies()
           startGameLoop()
         }
-      }, 1000)
+      }, LEVEL_TRANSITION_DELAY_MS)
     }
   }, [isValidPosition, allTilesVisited, initTiles, highScore, stopIntervals])
 
@@ -518,7 +522,7 @@ export function KubeBert() {
   // Enemy intervals
   const startEnemies = useCallback(() => {
     // Spawn faster at higher levels
-    const spawnRate = Math.max(1000, ENEMY_SPAWN_INTERVAL_MS - (levelRef.current - 1) * 300)
+    const spawnRate = Math.max(MIN_ENEMY_SPAWN_INTERVAL_MS, ENEMY_SPAWN_INTERVAL_MS - (levelRef.current - 1) * 300)
     const moveRate = Math.max(400, ENEMY_MOVE_INTERVAL_MS - (levelRef.current - 1) * 50)
 
     enemySpawnRef.current = setInterval(spawnEnemy, spawnRate)

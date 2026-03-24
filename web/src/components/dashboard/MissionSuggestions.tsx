@@ -18,6 +18,8 @@ const STORAGE_KEY_MISSIONS_COLLAPSED = 'kc-missions-collapsed'
 
 /** Seconds before the panel auto-collapses */
 const AUTO_COLLAPSE_SECONDS = 20
+/** Interval between each countdown tick in milliseconds (1 second) */
+const COUNTDOWN_TICK_MS = 1000
 
 const MISSION_ICONS: Record<MissionType, typeof Zap> = {
   scale: Scale,
@@ -77,7 +79,7 @@ export function MissionSuggestions() {
         }
         return prev - 1
       })
-    }, 1000)
+    }, COUNTDOWN_TICK_MS)
   }, [])
 
   // Manage countdown lifecycle based on minimized state
