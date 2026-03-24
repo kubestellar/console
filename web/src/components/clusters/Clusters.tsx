@@ -1,42 +1,36 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
-import { Check, WifiOff, ChevronRight, CheckCircle, AlertTriangle, ChevronDown, FolderOpen, Plus, Trash2, Server, Activity, LayoutGrid, Scissors } from 'lucide-react'
-import {
-  DndContext,
-  closestCenter,
-  DragOverlay,
-} from '@dnd-kit/core'
-import {
-  SortableContext,
-  rectSortingStrategy,
-} from '@dnd-kit/sortable'
+import { Check, WifiOff, ChevronRight, CheckCircle, AlertTriangle, ChevronDown, FolderOpen, Plus, Trash2, Server, Scissors } from 'lucide-react'
 import { useClusters, useGPUNodes, useNVIDIAOperators, refreshSingleCluster } from '../../hooks/useMCP'
-import { AddCardModal } from '../dashboard/AddCardModal'
-import { TemplatesModal } from '../dashboard/TemplatesModal'
-import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
-import { DashboardTemplate } from '../dashboard/templates'
-import { useDashboard } from '../../lib/dashboards'
 import { ClusterDetailModal } from './ClusterDetailModal'
 import { AddClusterDialog } from './AddClusterDialog'
 import { EmptyClusterState } from './EmptyClusterState'
 import {
   RenameModal,
-  StatsOverview,
   FilterTabs,
   ClusterGrid,
   GPUDetailModal,
-  SortableClusterCard,
-  DragPreviewCard,
-  CardConfigModal,
   type ClusterLayoutMode,
 } from './components'
 import { isClusterUnreachable, isClusterHealthy } from './utils'
-import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useMissions } from '../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../cards/console-missions/shared'
 import { loadMissionPrompt } from '../cards/multi-tenancy/missionLoader'
-import { DashboardHeader } from '../shared/DashboardHeader'
+import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { emitClusterStatsDrillDown } from '../../lib/analytics'
+import { isInClusterMode } from '../../hooks/useBackendHealth'
+import { useDemoMode } from '../../hooks/useDemoMode'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { usePermissions } from '../../hooks/usePermissions'
+import { ClusterCardSkeleton } from '../ui/ClusterCardSkeleton'
+import { useIsModeSwitching } from '../../lib/unified/demo'
+import { useTranslation } from 'react-i18next'
+import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_CLUSTER_LAYOUT, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { useModalState } from '../../lib/modals'
+import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
+import type { StatBlockValue } from '../ui/StatsOverview'
 
 // Storage key for cluster page cards
 const CLUSTERS_CARDS_KEY = 'kubestellar-clusters-cards'
@@ -44,25 +38,10 @@ const CLUSTERS_CARDS_KEY = 'kubestellar-clusters-cards'
 // Default cards loaded from centralized config
 const DEFAULT_CLUSTERS_CARDS = getDefaultCards('clusters')
 
-import { useLocalAgent } from '../../hooks/useLocalAgent'
-import { emitClusterStatsDrillDown } from '../../lib/analytics'
-import { isInClusterMode } from '../../hooks/useBackendHealth'
-import { useDemoMode } from '../../hooks/useDemoMode'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { usePermissions } from '../../hooks/usePermissions'
-import { ClusterCardSkeleton, StatsOverviewSkeleton } from '../ui/ClusterCardSkeleton'
-import { useIsModeSwitching } from '../../lib/unified/demo'
-import { useTranslation } from 'react-i18next'
-import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_CLUSTER_LAYOUT, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
-import { useModalState } from '../../lib/modals'
-
 
 export function Clusters() {
   const { t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch } = useClusters()
-  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
-  const isRefreshing = dataRefreshing || showIndicator
-  const isFetching = isLoading || isRefreshing || showIndicator
   const { nodes: gpuNodes, isLoading: gpuLoading, error: gpuError, refetch: gpuRefetch } = useGPUNodes()
   const { operators: nvidiaOperators } = useNVIDIAOperators()
   const { isConnected, status: agentStatus } = useLocalAgent()
@@ -70,6 +49,7 @@ export function Clusters() {
   const isModeSwitching = useIsModeSwitching()
   const { startMission } = useMissions()
   const { showKeyPrompt: pruneShowKeyPrompt, checkKeyAndRun: pruneCheckKeyAndRun, goToSettings: pruneGoToSettings, dismissPrompt: pruneDismissPrompt } = useApiKeyCheck()
+  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // When demo mode is OFF and agent is not connected, force skeleton display
   // Also show skeleton during mode switching for smooth transitions
@@ -125,90 +105,14 @@ export function Clusters() {
   const [showGroups, setShowGroups] = useState(false) // Collapsed by default so cluster cards are visible first
 
   // Additional UI state
-  const [showStats, setShowStats] = useState(true) // Stats overview visible by default
   const [showClusterGrid, setShowClusterGrid] = useState(true) // Cluster cards visible by default
   const { isOpen: showGPUModal, open: openGPUModal, close: closeGPUModal } = useModalState()
   const [showAddCluster, setShowAddCluster] = useState(false)
-
-  // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
-  const {
-    cards,
-    setCards,
-    addCards,
-    removeCard,
-    configureCard,
-    updateCardWidth,
-    reset,
-    isCustomized,
-    showAddCard,
-    setShowAddCard,
-    showTemplates,
-    setShowTemplates,
-    configuringCard,
-    setConfiguringCard,
-    openConfigureCard,
-    showCards,
-    setShowCards,
-    expandCards,
-    dnd: { sensors, activeId, handleDragStart, handleDragEnd },
-    autoRefresh,
-    setAutoRefresh,
-  } = useDashboard({
-    storageKey: CLUSTERS_CARDS_KEY,
-    defaultCards: DEFAULT_CLUSTERS_CARDS,
-    onRefresh: refetch,
-  })
-
-  // Handle addCard URL param - open modal and clear param.
-  // Guard: KeepAlive keeps hidden dashboards mounted; only process on active route.
-  useEffect(() => {
-    if (location.pathname !== '/clusters') return
-    if (searchParams.get('addCard') === 'true') {
-      setShowAddCard(true)
-      searchParams.delete('addCard')
-      setSearchParams(searchParams, { replace: true })
-    }
-  }, [searchParams, setSearchParams, setShowAddCard, location.pathname])
 
   // Trigger refresh when navigating to this page (location.key changes on each navigation)
   useEffect(() => {
     refetch()
   }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
-    addCards(newCards)
-    expandCards()
-    setShowAddCard(false)
-  }, [addCards, expandCards, setShowAddCard])
-
-  const handleRemoveCard = useCallback((cardId: string) => {
-    removeCard(cardId)
-  }, [removeCard])
-
-  const handleConfigureCard = useCallback((cardId: string) => {
-    openConfigureCard(cardId)
-  }, [openConfigureCard])
-
-  const handleSaveCardConfig = useCallback((cardId: string, config: Record<string, unknown>) => {
-    configureCard(cardId, config)
-    setConfiguringCard(null)
-  }, [configureCard, setConfiguringCard])
-
-  const handleWidthChange = useCallback((cardId: string, newWidth: number) => {
-    updateCardWidth(cardId, newWidth)
-  }, [updateCardWidth])
-
-  const applyTemplate = useCallback((template: DashboardTemplate) => {
-    const newCards = template.cards.map((card, i) => ({
-      id: `card-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
-      card_type: card.card_type,
-      config: card.config || {},
-      title: card.title,
-    }))
-    setCards(newCards)
-    expandCards()
-    setShowTemplates(false)
-  }, [setCards, expandCards, setShowTemplates])
 
   const handleRenameContext = async (oldName: string, newName: string) => {
     if (!isConnected) throw new Error('Local agent not connected')
@@ -245,9 +149,6 @@ export function Clusters() {
     }
 
     // Apply local health filter
-    // Healthy = not unreachable and (healthy flag OR has reporting nodes) — uses shared isClusterHealthy
-    // Unhealthy = not unreachable and not healthy (healthy flag false AND no reporting nodes)
-    // Unreachable = reachable explicitly false, or confirmed connection error (timeout/network/cert/auth)
     if (filter === 'healthy') {
       result = result.filter(c => !isClusterUnreachable(c) && isClusterHealthy(c))
     } else if (filter === 'unhealthy') {
@@ -337,21 +238,14 @@ export function Clusters() {
     })
 
     // Separate unreachable, healthy, unhealthy - simplified logic matching sidebar
-    // Note: Don't filter by "loading" state to avoid hiding clusters during refresh
-    // Unreachable = reachable explicitly false or connection errors or no nodes
     const unreachable = globalFilteredClusters.filter(c => isClusterUnreachable(c)).length
-    // Stale contexts = never connected since console started (kubeconfig entries for deleted clusters)
     const staleContexts = globalFilteredClusters.filter(c => (c as unknown as Record<string, unknown>).neverConnected === true).length
-    // Healthy = not unreachable and (has nodes OR healthy flag) — uses shared isClusterHealthy
     const healthy = globalFilteredClusters.filter(c => !isClusterUnreachable(c) && isClusterHealthy(c)).length
-    // Unhealthy = not unreachable and not healthy
     const unhealthy = globalFilteredClusters.filter(c => !isClusterUnreachable(c) && !isClusterHealthy(c)).length
-    // Loading = initial load only (no data yet), not during refresh
     const loadingCount = globalFilteredClusters.filter(c =>
       c.nodeCount === undefined && c.reachable === undefined
     ).length
 
-    // Check if we have any reachable clusters with resource data
     const hasResourceData = globalFilteredClusters.some(c =>
       !isClusterUnreachable(c) && c.nodeCount !== undefined && c.nodeCount > 0
     )
@@ -377,68 +271,94 @@ export function Clusters() {
   // Determine if we should show skeleton content (loading with no data OR offline without demo OR mode switching)
   const showSkeletonContent = (isLoading && (clusters || []).length === 0) || forceSkeletonForOffline || isModeSwitching
 
-  // Note: We no longer block on errors - always show demo data gracefully
-  // The error variable is kept for potential future use but UI always renders
-
-  return (
-    <div data-testid="clusters-page" className="pt-16">
-      {/* Header */}
-      <DashboardHeader
-        title={t('navigation.clusters')}
-        subtitle={t('cluster.subtitle')}
-        icon={<Server className="w-6 h-6 text-purple-400" />}
-        isFetching={isFetching}
-        onRefresh={triggerRefresh}
-        autoRefresh={autoRefresh}
-        onAutoRefreshChange={setAutoRefresh}
-        autoRefreshId="clusters-auto-refresh"
-        lastUpdated={lastUpdated}
-        rightExtra={
-          <button
-            onClick={() => setShowAddCluster(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            {t('cluster.addCluster')}
-          </button>
+  // Stats value getter for DashboardPage's configurable StatsOverview
+  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+    const hasData = stats.hasResourceData || stats.total > 0
+    switch (blockId) {
+      case 'clusters':
+        return {
+          value: stats.total,
+          sublabel: 'total clusters',
+          onClick: () => { emitClusterStatsDrillDown('cluster_health_status'); setFilter('all'); setShowClusterGrid(true) },
+          isClickable: stats.total > 0,
         }
-      />
+      case 'healthy':
+        return {
+          value: stats.healthy,
+          sublabel: 'healthy',
+          onClick: () => { emitClusterStatsDrillDown('cluster_health_status'); setFilter('healthy'); setShowClusterGrid(true) },
+          isClickable: stats.healthy > 0,
+        }
+      case 'unhealthy':
+        return {
+          value: stats.unhealthy,
+          sublabel: 'unhealthy',
+          onClick: () => { emitClusterStatsDrillDown('cluster_health_status'); setFilter('unhealthy'); setShowClusterGrid(true) },
+          isClickable: stats.unhealthy > 0,
+        }
+      case 'unreachable':
+        return {
+          value: stats.unreachable,
+          sublabel: 'offline',
+          onClick: () => { emitClusterStatsDrillDown('cluster_health_status'); setFilter('unreachable'); setShowClusterGrid(true) },
+          isClickable: stats.unreachable > 0,
+        }
+      case 'nodes':
+        return {
+          value: hasData ? stats.totalNodes : '-',
+          sublabel: 'total nodes',
+          onClick: () => { emitClusterStatsDrillDown('nodes'); window.location.href = '/compute' },
+          isClickable: hasData,
+        }
+      case 'cpus':
+        return {
+          value: hasData ? stats.totalCPUs : '-',
+          sublabel: 'cores allocatable',
+          onClick: () => { emitClusterStatsDrillDown('cpu'); window.location.href = '/compute' },
+          isClickable: hasData,
+        }
+      case 'memory':
+        return {
+          value: hasData ? `${Math.round(stats.totalMemoryGB)} GB` : '-',
+          sublabel: 'allocatable',
+          onClick: () => { emitClusterStatsDrillDown('memory'); window.location.href = '/compute' },
+          isClickable: hasData,
+        }
+      case 'storage':
+        return {
+          value: hasData ? `${Math.round(stats.totalStorageGB)} GB` : '-',
+          sublabel: 'storage',
+          onClick: () => { emitClusterStatsDrillDown('storage'); window.location.href = '/storage' },
+          isClickable: hasData,
+        }
+      case 'gpus':
+        return {
+          value: hasData ? stats.totalGPUs : '-',
+          sublabel: 'total GPUs',
+          onClick: () => { emitClusterStatsDrillDown('gpu'); openGPUModal() },
+          isClickable: hasData && stats.totalGPUs > 0,
+        }
+      case 'pods':
+        return {
+          value: hasData ? stats.totalPods : '-',
+          sublabel: 'running pods',
+          onClick: () => { emitClusterStatsDrillDown('pods'); window.location.href = '/workloads' },
+          isClickable: hasData,
+        }
+      default:
+        return { value: '-', sublabel: '' }
+    }
+  }, [stats, setFilter, openGPUModal])
 
-      {/* Stats Overview - collapsible */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-3">
-          <button
-            onClick={() => setShowStats(!showStats)}
-            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Activity className="w-4 h-4" />
-            <span>Stats Overview</span>
-            {showStats ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </button>
-        </div>
+  const getStatValue = useCallback(
+    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
+    [getDashboardStatValue, getUniversalStatValue]
+  )
 
-        {showStats && (
-          showSkeletonContent ? (
-            <StatsOverviewSkeleton />
-          ) : (
-            <StatsOverview
-              stats={stats}
-              onFilterByStatus={(status) => {
-                emitClusterStatsDrillDown('cluster_health_status')
-                setFilter(status)
-                setShowClusterGrid(true) // Ensure cluster grid is visible
-              }}
-              onCPUClick={() => { emitClusterStatsDrillDown('cpu'); window.location.href = '/compute' }}
-              onMemoryClick={() => { emitClusterStatsDrillDown('memory'); window.location.href = '/compute' }}
-              onStorageClick={() => { emitClusterStatsDrillDown('storage'); window.location.href = '/storage' }}
-              onGPUClick={() => { emitClusterStatsDrillDown('gpu'); openGPUModal() }}
-              onNodesClick={() => { emitClusterStatsDrillDown('nodes'); window.location.href = '/compute' }}
-              onPodsClick={() => { emitClusterStatsDrillDown('pods'); window.location.href = '/workloads' }}
-            />
-          )
-        )}
-      </div>
+  // ── beforeCards: Stale banner + Cluster Info Cards + Cluster Groups ──
 
+  const beforeCardsContent = (
+    <>
       {/* Stale Kubeconfig Contexts Banner */}
       {stats.staleContexts > 0 && (
         <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg border bg-yellow-500/10 border-yellow-500/20 text-yellow-300">
@@ -468,7 +388,6 @@ export function Clusters() {
           </button>
         </div>
       )}
-      <ApiKeyPromptModal isOpen={pruneShowKeyPrompt} onDismiss={pruneDismissPrompt} onGoToSettings={pruneGoToSettings} />
 
       {/* Cluster Info Cards - collapsible */}
       <div className="mb-6">
@@ -666,78 +585,39 @@ export function Clusters() {
           )}
         </div>
       )}
+    </>
+  )
 
-      {/* Cluster Dashboard Cards Section */}
-      <div className="mb-6">
-        {/* Card section header with toggle and buttons */}
-        <div className="flex items-center justify-between mb-3">
-          <button
-            onClick={() => setShowCards(!showCards)}
-            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <LayoutGrid className="w-4 h-4" />
-            <span>Cluster Dashboard Cards ({cards.length})</span>
-            {showCards ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </button>
-        </div>
-
-        {/* Cards grid */}
-        {showCards && (
-          <>
-            {cards.length === 0 ? (
-              <div className="glass p-8 rounded-lg border-2 border-dashed border-border/50 text-center">
-                <div className="flex justify-center mb-4">
-                  <Server className="w-12 h-12 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-medium text-foreground mb-2">Cluster Dashboard</h3>
-                <p className="text-muted-foreground text-sm max-w-md mx-auto mb-4">
-                  Add cards to monitor cluster health, resource usage, and workload status.
-                </p>
-                <button
-                  onClick={() => setShowAddCard(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Cards
-                </button>
-              </div>
-            ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext items={cards.map(c => c.id)} strategy={rectSortingStrategy}>
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-2 auto-rows-[minmax(180px,auto)]">
-                    {cards.map(card => (
-                      <SortableClusterCard
-                        key={card.id}
-                        card={card}
-                        onConfigure={() => handleConfigureCard(card.id)}
-                        onRemove={() => handleRemoveCard(card.id)}
-                        onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
-                        isDragging={activeId === card.id}
-                        isRefreshing={isRefreshing}
-                        onRefresh={triggerRefresh}
-                        lastUpdated={lastUpdated}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-                <DragOverlay>
-                  {activeId ? (
-                    <div className="opacity-80 rotate-3 scale-105">
-                      <DragPreviewCard card={cards.find(c => c.id === activeId)!} />
-                    </div>
-                  ) : null}
-                </DragOverlay>
-              </DndContext>
-            )}
-          </>
-        )}
-      </div>
-
+  return (
+    <DashboardPage
+      title={t('navigation.clusters')}
+      subtitle={t('cluster.subtitle')}
+      icon="Server"
+      storageKey={CLUSTERS_CARDS_KEY}
+      defaultCards={DEFAULT_CLUSTERS_CARDS}
+      statsType="clusters"
+      getStatValue={getStatValue}
+      onRefresh={refetch}
+      isLoading={isLoading}
+      isRefreshing={dataRefreshing}
+      lastUpdated={lastUpdated}
+      hasData={stats.hasResourceData || stats.total > 0}
+      beforeCards={beforeCardsContent}
+      rightExtra={
+        <button
+          onClick={() => setShowAddCluster(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          {t('cluster.addCluster')}
+        </button>
+      }
+      emptyState={{
+        title: 'Cluster Dashboard',
+        description: 'Add cards to monitor cluster health, resource usage, and workload status.',
+      }}
+    >
+      {/* Cluster Detail Modal */}
       {selectedCluster && (
         <ClusterDetailModal
           clusterName={selectedCluster}
@@ -750,6 +630,7 @@ export function Clusters() {
         />
       )}
 
+      {/* Rename Modal */}
       {renamingCluster && (
         <RenameModal
           clusterName={renamingCluster}
@@ -758,39 +639,6 @@ export function Clusters() {
           onRename={handleRenameContext}
         />
       )}
-
-      {/* Floating action buttons */}
-      <FloatingDashboardActions
-        onAddCard={() => setShowAddCard(true)}
-        onOpenTemplates={() => setShowTemplates(true)}
-        onResetToDefaults={reset}
-        isCustomized={isCustomized}
-      />
-
-      {/* Add Card Modal */}
-      <AddCardModal
-        isOpen={showAddCard}
-        onClose={() => setShowAddCard(false)}
-        onAddCards={handleAddCards}
-        existingCardTypes={cards.map(c => c.card_type)}
-      />
-
-      {/* Card Configuration Modal */}
-      {configuringCard && (
-        <CardConfigModal
-          card={configuringCard}
-          clusters={clusters}
-          onSave={(config) => handleSaveCardConfig(configuringCard.id, config)}
-          onClose={() => setConfiguringCard(null)}
-        />
-      )}
-
-      {/* Templates Modal */}
-      <TemplatesModal
-        isOpen={showTemplates}
-        onClose={() => setShowTemplates(false)}
-        onApplyTemplate={applyTemplate}
-      />
 
       {/* GPU Detail Modal */}
       {showGPUModal && (
@@ -803,9 +651,12 @@ export function Clusters() {
           operatorStatus={nvidiaOperators}
         />
       )}
+
+      {/* API Key Prompt for Prune action */}
+      <ApiKeyPromptModal isOpen={pruneShowKeyPrompt} onDismiss={pruneDismissPrompt} onGoToSettings={pruneGoToSettings} />
+
+      {/* Add Cluster Dialog */}
       <AddClusterDialog open={showAddCluster} onClose={() => setShowAddCluster(false)} />
-    </div>
+    </DashboardPage>
   )
 }
-
-

@@ -64,6 +64,8 @@ export interface DashboardPageProps {
   beforeCards?: ReactNode
   /** Extra content to render in header row (e.g., selectors, filters) */
   headerExtra?: ReactNode
+  /** Extra content rendered on the right side of the header (e.g., action buttons) */
+  rightExtra?: ReactNode
   /** Empty state configuration for no cards */
   emptyState?: {
     title: string
@@ -94,6 +96,7 @@ export function DashboardPage({
   children,
   beforeCards,
   headerExtra,
+  rightExtra,
   emptyState,
   isDemoData = false,
 }: DashboardPageProps) {
@@ -257,6 +260,7 @@ export function DashboardPage({
         lastUpdated={lastUpdated}
         error={error}
         afterTitle={<DashboardHealthIndicator />}
+        rightExtra={rightExtra}
       />
 
       {/* Extra header content (e.g., stack selector) */}
