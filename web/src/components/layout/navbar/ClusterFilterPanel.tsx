@@ -1,10 +1,78 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search, Server, Activity, Filter, Check, AlertTriangle, Plus, Folder, X, Trash2, WifiOff } from 'lucide-react'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useGlobalFilters, SEVERITY_LEVELS, SEVERITY_CONFIG, STATUS_LEVELS, STATUS_CONFIG } from '../../../hooks/useGlobalFilters'
 import { Button } from '../../ui/Button'
 import { cn } from '../../../lib/cn'
+
+interface FilterSectionConfig {
+  label: string
+  color: string
+  bgColor: string
+}
+
+function FilterSection<T extends string>({
+  icon,
+  title,
+  levels,
+  configMap,
+  selectedItems,
+  isAllSelected,
+  onToggle,
+  onSelectAll,
+  onDeselectAll,
+}: {
+  icon: ReactNode
+  title: string
+  levels: T[]
+  configMap: Record<T, FilterSectionConfig>
+  selectedItems: T[]
+  isAllSelected: boolean
+  onToggle: (item: T) => void
+  onSelectAll: () => void
+  onDeselectAll: () => void
+}) {
+  return (
+    <div className="p-3 border-b border-border">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          {icon}
+          <span className="text-sm font-medium text-foreground">{title}</span>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onSelectAll} className="text-xs text-purple-400 hover:text-purple-300">
+            All
+          </button>
+          <button onClick={onDeselectAll} className="text-xs text-muted-foreground hover:text-foreground">
+            None
+          </button>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {levels.map((item) => {
+          const config = configMap[item]
+          const isSelected = isAllSelected || selectedItems.includes(item)
+          return (
+            <button
+              key={item}
+              onClick={() => onToggle(item)}
+              className={cn(
+                'flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors',
+                isSelected
+                  ? `${config.bgColor} ${config.color}`
+                  : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {isSelected && <Check className="w-3 h-3" />}
+              {config.label}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 export function ClusterFilterPanel() {
   const { t } = useTranslation()
@@ -143,94 +211,30 @@ export function ClusterFilterPanel() {
             </div>
 
             {/* Severity Filter Section */}
-            <div className="p-3 border-b border-border">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-orange-400" />
-                  <span className="text-sm font-medium text-foreground">{t('common:filters.severity', 'Severity')}</span>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={selectAllSeverities}
-                    className="text-xs text-purple-400 hover:text-purple-300"
-                  >
-                    All
-                  </button>
-                  <button
-                    onClick={deselectAllSeverities}
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    None
-                  </button>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {SEVERITY_LEVELS.map((severity) => {
-                  const config = SEVERITY_CONFIG[severity]
-                  const isSelected = isAllSeveritiesSelected || selectedSeverities.includes(severity)
-                  return (
-                    <button
-                      key={severity}
-                      onClick={() => toggleSeverity(severity)}
-                      className={cn(
-                        'flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors',
-                        isSelected
-                          ? `${config.bgColor} ${config.color}`
-                          : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
-                      )}
-                    >
-                      {isSelected && <Check className="w-3 h-3" />}
-                      {config.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+            <FilterSection
+              icon={<AlertTriangle className="w-4 h-4 text-orange-400" />}
+              title={t('common:filters.severity', 'Severity')}
+              levels={SEVERITY_LEVELS}
+              configMap={SEVERITY_CONFIG}
+              selectedItems={selectedSeverities}
+              isAllSelected={isAllSeveritiesSelected}
+              onToggle={toggleSeverity}
+              onSelectAll={selectAllSeverities}
+              onDeselectAll={deselectAllSeverities}
+            />
 
             {/* Status Filter Section */}
-            <div className="p-3 border-b border-border">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-green-400" />
-                  <span className="text-sm font-medium text-foreground">{t('common:filters.status', 'Status')}</span>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={selectAllStatuses}
-                    className="text-xs text-purple-400 hover:text-purple-300"
-                  >
-                    All
-                  </button>
-                  <button
-                    onClick={deselectAllStatuses}
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    None
-                  </button>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {STATUS_LEVELS.map((status) => {
-                  const config = STATUS_CONFIG[status]
-                  const isSelected = isAllStatusesSelected || selectedStatuses.includes(status)
-                  return (
-                    <button
-                      key={status}
-                      onClick={() => toggleStatus(status)}
-                      className={cn(
-                        'flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors',
-                        isSelected
-                          ? `${config.bgColor} ${config.color}`
-                          : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
-                      )}
-                    >
-                      {isSelected && <Check className="w-3 h-3" />}
-                      {config.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+            <FilterSection
+              icon={<Activity className="w-4 h-4 text-green-400" />}
+              title={t('common:filters.status', 'Status')}
+              levels={STATUS_LEVELS}
+              configMap={STATUS_CONFIG}
+              selectedItems={selectedStatuses}
+              isAllSelected={isAllStatusesSelected}
+              onToggle={toggleStatus}
+              onSelectAll={selectAllStatuses}
+              onDeselectAll={deselectAllStatuses}
+            />
 
             {/* Cluster Groups Section */}
             {clusterGroups.length > 0 && (

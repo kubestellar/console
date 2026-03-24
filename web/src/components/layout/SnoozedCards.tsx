@@ -9,6 +9,17 @@ import { StatusBadge } from '../ui/StatusBadge'
 import { cn } from '../../lib/cn'
 import { POLL_INTERVAL_SLOW_MS } from '../../lib/constants/network'
 
+function useHoverState() {
+  const [isHovered, setIsHovered] = useState(false)
+  return {
+    isHovered,
+    hoverProps: {
+      onMouseEnter: () => setIsHovered(true),
+      onMouseLeave: () => setIsHovered(false),
+    },
+  }
+}
+
 const MISSION_ICONS: Record<MissionType, typeof Zap> = {
   scale: Scale,
   limits: Activity,
@@ -166,7 +177,7 @@ interface SnoozedItemProps {
 
 function SnoozedItem({ swap, onApply, onDismiss }: SnoozedItemProps) {
   const { t } = useTranslation()
-  const [isHovered, setIsHovered] = useState(false)
+  const { isHovered, hoverProps } = useHoverState()
   const timeRemaining = formatTimeRemaining(swap.snoozedUntil)
   const isExpired = timeRemaining === 'Expired'
 
@@ -178,8 +189,7 @@ function SnoozedItem({ swap, onApply, onDismiss }: SnoozedItemProps) {
           ? 'bg-yellow-500/10 border border-yellow-500/30'
           : 'bg-secondary/30 hover:bg-secondary/50'
       )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      {...hoverProps}
     >
       {/* Dismiss button */}
       <button
@@ -243,7 +253,7 @@ interface SnoozedRecommendationItemProps {
 
 function SnoozedRecommendationItem({ rec, onApply, onDismiss }: SnoozedRecommendationItemProps) {
   const { t } = useTranslation()
-  const [isHovered, setIsHovered] = useState(false)
+  const { isHovered, hoverProps } = useHoverState()
   const elapsedTime = formatElapsedTime(rec.snoozedAt)
 
   const priorityColor = {
@@ -265,8 +275,7 @@ function SnoozedRecommendationItem({ rec, onApply, onDismiss }: SnoozedRecommend
         priorityColor,
         'hover:brightness-110'
       )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      {...hoverProps}
     >
       {/* Dismiss button */}
       <button
@@ -324,7 +333,7 @@ interface SnoozedMissionItemProps {
 
 function SnoozedMissionItem({ mission, onApply, onDismiss }: SnoozedMissionItemProps) {
   const { t } = useTranslation()
-  const [isHovered, setIsHovered] = useState(false)
+  const { isHovered, hoverProps } = useHoverState()
   const timeRemaining = formatMissionTimeRemaining(mission.expiresAt - Date.now())
   const isExpired = mission.expiresAt <= Date.now()
 
@@ -351,8 +360,7 @@ function SnoozedMissionItem({ mission, onApply, onDismiss }: SnoozedMissionItemP
         isExpired ? 'border-yellow-500/30 bg-yellow-500/10' : priorityColor,
         'hover:brightness-110'
       )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      {...hoverProps}
     >
       {/* Dismiss button */}
       <button
