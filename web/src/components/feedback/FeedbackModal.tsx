@@ -2,10 +2,10 @@
  * Feedback Modal - allows users to submit bugs or feature requests
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
-import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, Linkedin } from 'lucide-react'
+import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, Linkedin, ImagePlus, Trash2, Copy, Check } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
 import { useToast } from '../ui/Toast'
@@ -38,6 +38,49 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const { awardCoins } = useRewards()
+  const [screenshots, setScreenshots] = useState<{ file: File; preview: string }[]>([])
+  const [isDragOver, setIsDragOver] = useState(false)
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleScreenshotFiles = (files: FileList | null) => {
+    if (!files) return
+    const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'))
+    imageFiles.forEach(file => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setScreenshots(prev => [...prev, { file, preview: e.target?.result as string }])
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(true)
+  }
+  const handleDragLeave = () => setIsDragOver(false)
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    handleScreenshotFiles(e.dataTransfer.files)
+  }
+
+  const removeScreenshot = (index: number) => {
+    setScreenshots(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const copyScreenshotToClipboard = async (preview: string, index: number) => {
+    try {
+      const res = await fetch(preview)
+      const blob = await res.blob()
+      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
+      setCopiedIndex(index)
+      setTimeout(() => setCopiedIndex(null), 2000)
+    } catch {
+      showToast('Could not copy image to clipboard', 'error')
+    }
+  }
 
   // Restore draft from localStorage on mount
   useEffect(() => {
@@ -73,7 +116,10 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
     try {
       // Build GitHub issue URL with pre-filled content
       const issueType = type === 'bug' ? 'Bug Report' : 'Feature Request'
-      const body = `## ${issueType}\n\n${description}\n\n---\n*Submitted via ${branding.appName}*`
+      const screenshotNote = screenshots.length > 0
+        ? `\n\n---\n**Screenshots**: ${screenshots.length} screenshot(s) were attached in the console — please paste them into this issue.`
+        : ''
+      const body = `## ${issueType}\n\n${description}${screenshotNote}\n\n---\n*Submitted via ${branding.appName}*`
 
       const githubUrl = `${branding.issuesUrl}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=${type === 'bug' ? 'bug' : 'enhancement'}`
 
@@ -104,6 +150,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
     setSuccess(false)
     setTitle('')
     setDescription('')
+    setScreenshots([])
     onClose()
   }
 
@@ -189,6 +236,39 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                 Complete your submission on GitHub to create the issue.
               </p>
 
+              {/* Screenshot paste reminder */}
+              {screenshots.length > 0 && (
+                <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <p className="text-xs text-amber-400 font-medium mb-2">
+                    Don't forget your screenshots!
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Paste them into the GitHub issue that just opened. Use the copy buttons below:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {screenshots.map((s, i) => (
+                      <div key={i} className="relative group w-16 h-16 flex-shrink-0">
+                        <img
+                          src={s.preview}
+                          alt={`Screenshot ${i + 1}`}
+                          className="w-16 h-16 object-cover rounded border border-border"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/60 rounded transition-opacity">
+                          <button
+                            type="button"
+                            onClick={() => void copyScreenshotToClipboard(s.preview, i)}
+                            className="p-1.5 rounded-md bg-secondary/80 text-foreground hover:bg-secondary transition-colors"
+                            title="Copy to clipboard"
+                          >
+                            {copiedIndex === i ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* LinkedIn share suggestion */}
               <div className="pt-4 border-t border-border">
                 <p className="text-xs text-muted-foreground mb-3">
@@ -269,10 +349,72 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                     />
                   </div>
 
+                  {/* Screenshot Upload */}
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                      Screenshots <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+                    </label>
+                    <div
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
+                        isDragOver
+                          ? 'border-purple-400 bg-purple-500/10'
+                          : 'border-border hover:border-muted-foreground'
+                      }`}
+                    >
+                      <ImagePlus className="w-5 h-5 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground text-center">Drop screenshots here or click to browse</span>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={e => handleScreenshotFiles(e.target.files)}
+                        className="hidden"
+                      />
+                    </div>
+                    {screenshots.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {screenshots.map((s, i) => (
+                          <div key={i} className="relative group w-20 h-20 flex-shrink-0">
+                            <img
+                              src={s.preview}
+                              alt={`Screenshot ${i + 1}`}
+                              className="w-20 h-20 object-cover rounded-lg border border-border"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 bg-black/60 rounded-lg transition-opacity">
+                              <button
+                                type="button"
+                                onClick={e => { e.stopPropagation(); void copyScreenshotToClipboard(s.preview, i) }}
+                                className="p-1.5 rounded-md bg-secondary/80 text-foreground hover:bg-secondary transition-colors"
+                                title="Copy to clipboard"
+                              >
+                                {copiedIndex === i ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={e => { e.stopPropagation(); removeScreenshot(i) }}
+                                className="p-1.5 rounded-md bg-secondary/80 text-red-400 hover:bg-red-500/20 transition-colors"
+                                title="Remove screenshot"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs">
                     <ExternalLink className="w-4 h-4 text-blue-400 flex-shrink-0" />
                     <span className="text-muted-foreground">
-                      This will open GitHub to create an issue. You can add more details there.
+                      {screenshots.length > 0
+                        ? 'GitHub will open with your report. Use the copy buttons above to paste your screenshots into the issue.'
+                        : 'This will open GitHub to create an issue. You can add more details there.'}
                     </span>
                   </div>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle, AlertTriangle, Linkedin, Trophy, Monitor, BookOpen } from 'lucide-react'
+import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle, AlertTriangle, Linkedin, Trophy, Monitor, BookOpen, ImagePlus, Trash2, Copy } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { StatusBadge } from '../ui/StatusBadge'
 import { BaseModal } from '../../lib/modals'
@@ -119,6 +119,49 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
   const [previewChecking, setPreviewChecking] = useState<number | null>(null) // PR number being checked
   const [previewResults, setPreviewResults] = useState<Record<number, { status: string; preview_url?: string; ready_at?: string; message?: string }>>({})
   const [feedbackTokenMissing, setFeedbackTokenMissing] = useState(false) // true when FEEDBACK_GITHUB_TOKEN is not configured
+  const [screenshots, setScreenshots] = useState<{ file: File; preview: string }[]>([])
+  const [isDragOver, setIsDragOver] = useState(false)
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
+  const screenshotInputRef = useRef<HTMLInputElement>(null)
+
+  const handleScreenshotFiles = (files: FileList | null) => {
+    if (!files) return
+    const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'))
+    imageFiles.forEach(file => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setScreenshots(prev => [...prev, { file, preview: e.target?.result as string }])
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const handleScreenshotDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(true)
+  }
+  const handleScreenshotDragLeave = () => setIsDragOver(false)
+  const handleScreenshotDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    handleScreenshotFiles(e.dataTransfer.files)
+  }
+
+  const removeScreenshot = (index: number) => {
+    setScreenshots(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const copyScreenshotToClipboard = async (preview: string, index: number) => {
+    try {
+      const res = await fetch(preview)
+      const blob = await res.blob()
+      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
+      setCopiedIndex(index)
+      setTimeout(() => setCopiedIndex(null), 2000)
+    } catch {
+      showToast('Could not copy image to clipboard', 'error')
+    }
+  }
 
   // Pre-fill description when opened from a card's bug button (only once on open)
   const prevOpenRef = useRef(false)
@@ -249,10 +292,16 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
       return
     }
 
+    // Append screenshot note to description if screenshots were attached
+    const screenshotNote = screenshots.length > 0
+      ? `\n\n---\n**Screenshots**: ${screenshots.length} screenshot(s) attached — paste images into this issue.`
+      : ''
+    const finalDesc = extractedDesc + screenshotNote
+
     try {
       const result = await createRequest({
         title: extractedTitle,
-        description: extractedDesc,
+        description: finalDesc,
         request_type: requestType,
         target_repo: targetRepo,
       })
@@ -263,10 +312,11 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
         setRequestType('bug')
         setTargetRepo('console')
         setSuccess(null)
+        setScreenshots([])
         setActiveTab('updates')
         refreshRequests()
         refreshNotifications()
-      }, 3000)
+      }, 5000)
     } catch (err) {
       // Show the actual backend error message if available
       const message = err instanceof Error ? err.message : ''
@@ -290,6 +340,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
       setTargetRepo('console')
       setError(null)
       setSuccess(null)
+      setScreenshots([])
       setActiveTab(initialTab || 'submit')
       onClose()
     }
@@ -1126,6 +1177,39 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
                   View Updates
                 </button>
               </div>
+
+              {/* Screenshot paste reminder on success */}
+              {screenshots.length > 0 && (
+                <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-left">
+                  <p className="text-xs text-amber-400 font-medium mb-1">
+                    Attach your screenshots
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Open the GitHub issue above and paste your screenshots. Use the copy buttons:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {screenshots.map((s, i) => (
+                      <div key={i} className="relative group w-16 h-16 flex-shrink-0">
+                        <img
+                          src={s.preview}
+                          alt={`Screenshot ${i + 1}`}
+                          className="w-16 h-16 object-cover rounded border border-border"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/60 rounded transition-opacity">
+                          <button
+                            type="button"
+                            onClick={() => void copyScreenshotToClipboard(s.preview, i)}
+                            className="p-1.5 rounded-md bg-secondary/80 text-foreground hover:bg-secondary transition-colors"
+                            title="Copy to clipboard"
+                          >
+                            {copiedIndex === i ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <form id="feedback-form" onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
@@ -1243,6 +1327,71 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
                   <p className="text-2xs text-muted-foreground mt-1">
                     First line becomes the title. Add details below.
                   </p>
+                </div>
+
+                {/* Screenshot Upload */}
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                    Screenshots <span className="font-normal">(optional)</span>
+                  </label>
+                  <div
+                    onDragOver={handleScreenshotDragOver}
+                    onDragLeave={handleScreenshotDragLeave}
+                    onDrop={handleScreenshotDrop}
+                    onClick={() => screenshotInputRef.current?.click()}
+                    className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
+                      isDragOver
+                        ? 'border-purple-400 bg-purple-500/10'
+                        : 'border-border hover:border-muted-foreground'
+                    }`}
+                  >
+                    <ImagePlus className="w-5 h-5 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground text-center">Drop screenshots here or click to browse</span>
+                    <input
+                      ref={screenshotInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={e => handleScreenshotFiles(e.target.files)}
+                      className="hidden"
+                    />
+                  </div>
+                  {screenshots.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {screenshots.map((s, i) => (
+                        <div key={i} className="relative group w-20 h-20 flex-shrink-0">
+                          <img
+                            src={s.preview}
+                            alt={`Screenshot ${i + 1}`}
+                            className="w-20 h-20 object-cover rounded-lg border border-border"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 bg-black/60 rounded-lg transition-opacity">
+                            <button
+                              type="button"
+                              onClick={e => { e.stopPropagation(); void copyScreenshotToClipboard(s.preview, i) }}
+                              className="p-1.5 rounded-md bg-secondary/80 text-foreground hover:bg-secondary transition-colors"
+                              title="Copy to clipboard"
+                            >
+                              {copiedIndex === i ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={e => { e.stopPropagation(); removeScreenshot(i) }}
+                              className="p-1.5 rounded-md bg-secondary/80 text-red-400 hover:bg-red-500/20 transition-colors"
+                              title="Remove screenshot"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {screenshots.length > 0 && (
+                    <p className="text-2xs text-muted-foreground mt-1">
+                      Screenshots will be noted in the issue. Paste them directly into GitHub after it&apos;s created.
+                    </p>
+                  )}
                 </div>
 
                 {/* Error with actionable guidance */}
