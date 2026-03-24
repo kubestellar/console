@@ -7,7 +7,7 @@ import { useSidebarConfig } from '../../../hooks/useSidebarConfig'
 import { useTheme } from '../../../hooks/useTheme'
 import { useMobile } from '../../../hooks/useMobile'
 import { useBranding } from '../../../hooks/useBranding'
-import { TourTrigger } from '../../onboarding/Tour'
+import { LearnDropdown } from './LearnDropdown'
 import { LogoWithStar } from '../../ui/LogoWithStar'
 import { UserProfileDropdown } from '../UserProfileDropdown'
 import { AlertBadge } from '../../ui/AlertBadge'
@@ -114,7 +114,7 @@ export function Navbar() {
 
         {/* Tour trigger - icon always visible, text shows at xl+ */}
         <div className="flex items-center gap-2">
-          <TourTrigger />
+          <LearnDropdown />
         </div>
 
         {/* Theme toggle - always visible */}
@@ -191,7 +191,7 @@ export function Navbar() {
                     <FeatureRequestButton />
                   </div>
                   <div className="px-3 py-2">
-                    <TourTrigger />
+                    <LearnDropdown />
                   </div>
                 </div>
               </div>
