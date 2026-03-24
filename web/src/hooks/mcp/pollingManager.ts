@@ -10,13 +10,22 @@
 // This module maintains a single setInterval per unique cache key.
 // Components subscribe/unsubscribe; the interval starts on first subscriber
 // and stops when the last one leaves.
+//
+// Subscribers are tracked by a unique numeric ID rather than callback
+// reference identity. This prevents stale callbacks from accumulating
+// when React effects re-run (e.g. due to dependency changes or StrictMode
+// double-mount), since unsubscribe always removes by the stable ID that
+// was captured in the same closure as the subscribe call.
 // ---------------------------------------------------------------------------
+
+/** Auto-incrementing subscriber ID to avoid reference-identity issues */
+let nextSubscriberId = 0
 
 interface PollingEntry {
   /** The active interval handle, or null when no subscribers */
   intervalId: ReturnType<typeof setInterval> | null
-  /** Set of callback references for current subscribers */
-  subscribers: Set<() => void>
+  /** Map from subscriber ID to callback */
+  subscribers: Map<number, () => void>
   /** The polling interval in milliseconds */
   intervalMs: number
 }
@@ -49,13 +58,14 @@ export function subscribePolling(
     // First subscriber for this key — create the entry (interval starts below)
     entry = {
       intervalId: null,
-      subscribers: new Set(),
+      subscribers: new Map(),
       intervalMs,
     }
     pollingRegistry.set(key, entry)
   }
 
-  entry.subscribers.add(callback)
+  const id = nextSubscriberId++
+  entry.subscribers.set(id, callback)
 
   // Start the interval if this is the first subscriber
   if (entry.subscribers.size === 1 && entry.intervalId === null) {
@@ -68,12 +78,13 @@ export function subscribePolling(
     }, intervalMs)
   }
 
-  // Return unsubscribe function
+  // Return unsubscribe function — uses the stable `id` rather than
+  // the callback reference, so cleanup always removes the correct entry
   return () => {
     const current = pollingRegistry.get(key)
     if (!current) return
 
-    current.subscribers.delete(callback)
+    current.subscribers.delete(id)
 
     // If no subscribers remain, stop the interval and clean up
     if (current.subscribers.size === 0) {
