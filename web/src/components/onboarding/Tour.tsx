@@ -318,17 +318,32 @@ export function TourOverlay() {
     <div className="fixed inset-0 z-[100] pointer-events-none">
       {/* Overlay with cutout for target */}
       {targetRect && currentStep.highlight ? (
-        // Use box-shadow trick to create cutout - the highlighted area stays clear
-        <div
-          className="absolute border-4 border-purple-500 rounded-lg animate-pulse pointer-events-none"
-          style={{
-            top: targetRect.top - 8,
-            left: targetRect.left - 8,
-            width: targetRect.width + 16,
-            height: targetRect.height + 16,
-            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.75)',
-          }}
-        />
+        // Use box-shadow trick to create cutout - the highlighted area stays clear.
+        // Split into two elements so that animate-pulse only affects the border,
+        // not the backdrop (box-shadow), which previously caused the background to blink.
+        <>
+          {/* Static dark backdrop — no animation so it never blinks */}
+          <div
+            className="absolute rounded-lg pointer-events-none"
+            style={{
+              top: targetRect.top - 8,
+              left: targetRect.left - 8,
+              width: targetRect.width + 16,
+              height: targetRect.height + 16,
+              boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.75)',
+            }}
+          />
+          {/* Pulsing border highlight — only the border animates, not the backdrop */}
+          <div
+            className="absolute border-4 border-purple-500 rounded-lg animate-pulse pointer-events-none"
+            style={{
+              top: targetRect.top - 8,
+              left: targetRect.left - 8,
+              width: targetRect.width + 16,
+              height: targetRect.height + 16,
+            }}
+          />
+        </>
       ) : (
         // No target found - show full overlay
         <div className="absolute inset-0 bg-black/75" />
