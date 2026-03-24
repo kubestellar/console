@@ -279,6 +279,13 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   // Ref to always hold the latest missions state — avoids stale closure in sendMessage (#3322)
   const missionsRef = useRef<Mission[]>(missions)
   missionsRef.current = missions
+  // Refs to always hold the latest activeMissionId and isSidebarOpen — avoids stale closures in markMissionAsUnread
+  const activeMissionIdRef = useRef(activeMissionId)
+  activeMissionIdRef.current = activeMissionId
+  const isSidebarOpenRef = useRef(isSidebarOpen)
+  isSidebarOpenRef.current = isSidebarOpen
+  // Ref to always hold the latest handleAgentMessage — avoids reconnecting WebSocket when the handler changes
+  const handleAgentMessageRef = useRef<(message: { id: string; type: string; payload?: unknown }) => void>(() => {})
   // Ref to track pending WebSocket reconnection timeout so it can be cleared on unmount (#3318)
   const wsReconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const STREAM_GAP_THRESHOLD_MS = 8000 // If >8s gap between stream chunks, create new message bubble (tool-use gap)
@@ -512,7 +519,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
         wsRef.current.onmessage = (event) => {
           try {
             const message = JSON.parse(event.data)
-            handleAgentMessage(message)
+            handleAgentMessageRef.current(message)
           } catch (e) {
             console.error('[Missions] Failed to parse message:', e)
           }
@@ -580,14 +587,15 @@ Install the console locally with the KubeStellar Console agent to use AI mission
   // Mark a mission as having unread content (not currently being viewed)
   const markMissionAsUnread = useCallback((missionId: string) => {
     // Only mark as unread if it's not the active mission
-    if (missionId !== activeMissionId || !isSidebarOpen) {
+    // Read from refs so this callback is always current without needing to be recreated
+    if (missionId !== activeMissionIdRef.current || !isSidebarOpenRef.current) {
       setUnreadMissionIds(prev => {
         const next = new Set(prev)
         next.add(missionId)
         return next
       })
     }
-  }, [activeMissionId, isSidebarOpen])
+  }, [])
 
   // Handle messages from the agent
   const handleAgentMessage = useCallback((message: { id: string; type: string; payload?: unknown }) => {
@@ -867,7 +875,10 @@ Install the console locally with the KubeStellar Console agent to use AI mission
 
       return m
     }))
-  }, [])
+  }, [markMissionAsUnread])
+
+  // Keep the ref in sync so ensureConnection always calls the latest handler
+  handleAgentMessageRef.current = handleAgentMessage
 
   // Start a new mission
   const startMission = useCallback((params: StartMissionParams): string => {
