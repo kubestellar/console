@@ -14,9 +14,6 @@ import { Clock, AlertTriangle } from 'lucide-react'
 import { useReportCardDataState } from '../CardDataContext'
 import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
 import {
-  generateBenchmarkReports,
-} from '../../../lib/llmd/benchmarkMockData'
-import {
   groupByExperiment,
   getFilterOptions,
   type ScalingPoint,
@@ -65,11 +62,10 @@ function CustomTooltip({ active, payload, label, unit }: {
 
 export function LatencyBreakdown() {
   const { t } = useTranslation()
-  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
-  const effectiveReports = useMemo(
-    () => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []),
-    [isDemoFallback, liveReports]
-  )
+  const { data: reports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
+  // Use hook data directly — it already returns cached live data or demo fallback.
+  // Calling generateBenchmarkReports() here would bypass the warm cache (#3397).
+  const effectiveReports = useMemo(() => reports ?? [], [reports])
   useReportCardDataState({
     isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing,
     hasData: effectiveReports.length > 0,

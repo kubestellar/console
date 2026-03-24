@@ -13,7 +13,6 @@ import { Download, RotateCcw } from 'lucide-react'
 import { useReportCardDataState } from '../CardDataContext'
 import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
 import {
-  generateBenchmarkReports,
   extractParetoPoints,
   computeParetoFrontier,
   HARDWARE_COLORS,
@@ -254,11 +253,10 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
   const chartRef = useRef<ReactECharts>(null)
 
   // ---- Data ----
-  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
-  const effectiveReports = useMemo(
-    () => (isDemoFallback ? generateBenchmarkReports() : (liveReports ?? [])),
-    [isDemoFallback, liveReports],
-  )
+  const { data: reports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
+  // Use hook data directly — it already returns cached live data or demo fallback.
+  // Calling generateBenchmarkReports() here would bypass the warm cache (#3397).
+  const effectiveReports = useMemo(() => reports ?? [], [reports])
   useReportCardDataState({
     isDemoData: isDemoFallback,
     isFailed,

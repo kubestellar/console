@@ -1175,8 +1175,12 @@ export function useCache<T>({
   // the live fetch runs in the background.  This avoids skeleton flicker for
   // "demo until X is installed" cards — they render demo content instantly and
   // swap to real data only if the fetch returns non-empty results.
+  // IMPORTANT: Only apply when current data is empty — if the store already has
+  // real cached data (e.g. from initialData populated via localStorage), showing
+  // demo data would discard that warm cache (#3397).
+  const hasNonEmptyData = Array.isArray(state.data) ? (state.data as unknown[]).length > 0 : !!state.data
   const showOptimisticDemo = effectiveEnabled && demoWhenEmpty && stableDemoData !== undefined
-    && state.isLoading
+    && state.isLoading && !hasNonEmptyData
 
   return {
     data: !effectiveEnabled ? demoDisplayData

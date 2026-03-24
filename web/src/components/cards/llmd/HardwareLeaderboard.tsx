@@ -12,7 +12,6 @@ import { Trophy, ChevronUp, ChevronDown, ArrowUpDown } from 'lucide-react'
 import { useReportCardDataState } from '../CardDataContext'
 import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
 import {
-  generateBenchmarkReports,
   generateLeaderboardRows,
   CONFIG_COLORS,
   type LeaderboardRow,
@@ -55,8 +54,10 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDirection }) {
 
 export function HardwareLeaderboard() {
   const { t } = useTranslation()
-  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
-  const effectiveReports = useMemo(() => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []), [isDemoFallback, liveReports])
+  const { data: reports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
+  // Use hook data directly — it already returns cached live data or demo fallback.
+  // Calling generateBenchmarkReports() here would bypass the warm cache (#3397).
+  const effectiveReports = useMemo(() => reports ?? [], [reports])
   useReportCardDataState({ isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, hasData: effectiveReports.length > 0 })
 
   const [sortKey, setSortKey] = useState<SortKey>('score')
