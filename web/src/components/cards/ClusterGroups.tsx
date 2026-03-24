@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import {
   Server,
@@ -119,7 +119,18 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
   const { groups: liveGroups, createGroup, updateGroup, deleteGroup, evaluateGroup, isPersisted } = useClusterGroups()
   const { deduplicatedClusters: clusters, isLoading, isRefreshing } = useClusters()
   const { isDemoMode: demoMode } = useDemoMode()
-  const groups = demoMode ? DEMO_GROUPS : liveGroups
+
+  // Build the built-in "all-healthy-clusters" group from current cluster state for live mode
+  const builtInGroup = useMemo<ClusterGroup>(() => ({
+    name: 'all-healthy-clusters',
+    kind: 'dynamic',
+    clusters: clusters.filter(c => c.healthy).map(c => c.name),
+    color: 'green',
+    builtIn: true,
+    query: { filters: [{ field: 'healthy', operator: 'eq', value: 'true' }] },
+  }), [clusters])
+
+  const groups = demoMode ? DEMO_GROUPS : [builtInGroup, ...liveGroups]
   const [isCreating, setIsCreating] = useState(false)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior

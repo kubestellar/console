@@ -354,8 +354,8 @@ func (h *WorkloadHandlers) ListClusterGroups(c *fiber.Ctx) error {
 				names = append(names, cl.Name)
 			}
 			builtIn.Clusters = names
+			builtIn.LastEvaluated = time.Now().UTC().Format(time.RFC3339)
 		}
-		builtIn.LastEvaluated = time.Now().UTC().Format(time.RFC3339)
 	}
 	if builtIn.Clusters == nil {
 		builtIn.Clusters = []string{}
@@ -518,11 +518,14 @@ func (h *WorkloadHandlers) SyncClusterGroups(c *fiber.Ctx) error {
 	clusterGroupsMu.Lock()
 	clusterGroups = make(map[string]ClusterGroup)
 	for _, g := range groups {
+		if g.Name == allHealthyClustersGroupName {
+			continue // reserved name cannot be stored
+		}
 		clusterGroups[g.Name] = g
 	}
 	clusterGroupsMu.Unlock()
 
-	return c.JSON(fiber.Map{"synced": len(groups)})
+	return c.JSON(fiber.Map{"synced": len(clusterGroups)})
 }
 
 // EvaluateClusterQuery evaluates a dynamic group query against current cluster state
