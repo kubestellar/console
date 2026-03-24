@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -1201,7 +1202,13 @@ func getEnvOrDefault(key, defaultVal string) string {
 // set.  This helps fork and enterprise deployers notice that the defaults
 // point to the upstream kubestellar repositories so they can override them.
 func warnDefaultEnvVars(vars map[string]string) {
-	for envVar, defaultVal := range vars {
+	keys := make([]string, 0, len(vars))
+	for k := range vars {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, envVar := range keys {
+		defaultVal := vars[envVar]
 		if os.Getenv(envVar) == "" {
 			log.Printf("WARNING: %s is not set, using default %q — "+
 				"set this env var for fork/enterprise deployments to avoid "+
