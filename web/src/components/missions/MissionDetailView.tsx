@@ -37,7 +37,7 @@ type TabId = 'install' | 'uninstall' | 'upgrade' | 'troubleshooting'
 interface TabDef {
   id: TabId
   label: string
-  icon: React.ElementType
+  icon: React.ComponentType<{ className?: string }>
   steps: MissionStep[]
   emptyMessage: string
   color: string

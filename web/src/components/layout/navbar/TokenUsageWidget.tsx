@@ -8,7 +8,7 @@ import { cn } from '../../../lib/cn'
 import { getSettingsWithHash } from '../../../config/routes'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 
-const CATEGORY_CONFIG: Record<TokenCategory, { label: string; icon: React.ElementType; color: string }> = {
+const CATEGORY_CONFIG: Record<TokenCategory, { label: string; icon: React.ComponentType<{ className?: string }>; color: string }> = {
   missions: { label: 'AI Missions', icon: Rocket, color: 'bg-purple-500' },
   diagnose: { label: 'Diagnose', icon: Stethoscope, color: 'bg-blue-500' },
   insights: { label: 'Insights', icon: Lightbulb, color: 'bg-yellow-500' },
