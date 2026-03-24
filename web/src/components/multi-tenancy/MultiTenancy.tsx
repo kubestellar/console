@@ -10,10 +10,11 @@ const MULTI_TENANCY_CARDS_KEY = 'kubestellar-multi-tenancy-cards'
 const DEFAULT_MULTI_TENANCY_CARDS = getDefaultCards('multi-tenancy')
 
 export function MultiTenancy() {
-  const { clusters, isLoading: clustersLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()
+  const { deduplicatedClusters, isLoading: clustersLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
-  const reachableClusters = (clusters || []).filter(c => c.reachable !== false)
+  // Use deduplicated clusters to avoid double-counting in multi-cluster setups
+  const reachableClusters = deduplicatedClusters.filter(c => c.reachable !== false)
 
   const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     // Multi-tenancy stats are resolved via useUniversalStats for now;

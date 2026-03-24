@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { ClusterStatusDot, getClusterState, type ClusterState } from './ClusterStatusBadge'
 import type { ClusterErrorType } from '../../lib/errorClassifier'
 import { cn } from '../../lib/cn'
@@ -36,6 +37,7 @@ export function ClusterSelect({
   placeholder = 'Select cluster...',
   className,
 }: ClusterSelectProps) {
+  const { t } = useTranslation()
   const { isOpen, close, toggle } = useModalState()
   const buttonRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -152,10 +154,10 @@ export function ClusterSelect({
 
               const isUnreachable = cluster.reachable === false
               const stateLabel = clusterState === 'healthy' ? '' :
-                clusterState === 'degraded' ? 'degraded' :
-                clusterState === 'unreachable-auth' ? 'needs auth' :
-                clusterState === 'unreachable-timeout' ? 'offline' :
-                clusterState.startsWith('unreachable') ? 'offline' : ''
+                clusterState === 'degraded' ? t('clusterFilter.degraded') :
+                clusterState === 'unreachable-auth' ? t('clusterFilter.needsAuth') :
+                clusterState === 'unreachable-timeout' ? t('clusterFilter.offline') :
+                clusterState.startsWith('unreachable') ? t('clusterFilter.offline') : ''
 
               return (
                 <Button
