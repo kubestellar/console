@@ -15,7 +15,7 @@ import {
 } from '../../hooks/useFeatureRequests'
 import { useAuth } from '../../lib/auth'
 import { useRewards } from '../../hooks/useRewards'
-import { BACKEND_DEFAULT_URL, STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { BACKEND_DEFAULT_URL, STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
 import { emitLinkedInShare } from '../../lib/analytics'
 import { isDemoModeForced } from '../../lib/demoMode'
 import { useToast } from '../ui/Toast'
@@ -157,11 +157,11 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
 
   const copyScreenshotToClipboard = async (preview: string, index: number) => {
     try {
-      const res = await fetch(preview)
+      const res = await fetch(preview, { signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       const blob = await res.blob()
       await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
       setCopiedIndex(index)
-      setTimeout(() => setCopiedIndex(null), 2000)
+      setTimeout(() => setCopiedIndex(null), COPY_FEEDBACK_TIMEOUT_MS)
     } catch {
       showToast('Could not copy image to clipboard', 'error')
     }

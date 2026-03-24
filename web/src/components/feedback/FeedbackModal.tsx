@@ -11,6 +11,7 @@ import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
 import { useToast } from '../ui/Toast'
 import { emitFeedbackSubmitted, emitLinkedInShare } from '../../lib/analytics'
 import { useBranding } from '../../hooks/useBranding'
+import { FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
 
 type FeedbackType = 'bug' | 'feature'
 
@@ -72,11 +73,11 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
 
   const copyScreenshotToClipboard = async (preview: string, index: number) => {
     try {
-      const res = await fetch(preview)
+      const res = await fetch(preview, { signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       const blob = await res.blob()
       await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
       setCopiedIndex(index)
-      setTimeout(() => setCopiedIndex(null), 2000)
+      setTimeout(() => setCopiedIndex(null), COPY_FEEDBACK_TIMEOUT_MS)
     } catch {
       showToast('Could not copy image to clipboard', 'error')
     }

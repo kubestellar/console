@@ -89,7 +89,7 @@ echo -e "${BOLD}Phase 2: Auth handler tests${NC}"
 
 AUTH_OUTPUT="$TMPDIR_AUTH/auth-handler-tests.txt"
 AUTH_EXIT=0
-go test ./pkg/api/handlers/... -run "TestAuth|TestOAuth|TestLogin|TestCallback" -v -timeout 30s > "$AUTH_OUTPUT" 2>&1 || AUTH_EXIT=$?
+go test ./pkg/api/handlers/... -run "TestDevModeLogin|TestRefreshToken|TestGitHubLogin|TestGenerateJWT|TestGitHubCallback|TestClassifyExchangeError" -v -timeout 30s > "$AUTH_OUTPUT" 2>&1 || AUTH_EXIT=$?
 
 AUTH_PASSED=$(grep -c "^--- PASS:" "$AUTH_OUTPUT" 2>/dev/null) || AUTH_PASSED=0
 
@@ -118,7 +118,7 @@ echo -e "${BOLD}Phase 3: WebSocket auth tests${NC}"
 
 WS_OUTPUT="$TMPDIR_AUTH/ws-auth-tests.txt"
 WS_EXIT=0
-go test ./pkg/api/handlers/... -run "TestWebSocket|TestHub" -v -timeout 30s > "$WS_OUTPUT" 2>&1 || WS_EXIT=$?
+go test ./pkg/agent/... -run "TestServer_HandleWebSocket" -v -timeout 30s > "$WS_OUTPUT" 2>&1 || WS_EXIT=$?
 
 WS_PASSED=$(grep -c "^--- PASS:" "$WS_OUTPUT" 2>/dev/null) || WS_PASSED=0
 

@@ -48,5 +48,9 @@ export const CHART_TOOLTIP_LABEL_COLOR = '#ccc'
 export const MAX_CONCURRENT_KUBECTL_REQUESTS = 4
 export const POD_RESTART_ISSUE_THRESHOLD = 5
 
+// ── Clipboard feedback ───────────────────────────────────────────────
+/** Duration (ms) to show "copied" feedback before resetting the icon */
+export const COPY_FEEDBACK_TIMEOUT_MS = 2000
+
 // ── Pagination ──────────────────────────────────────────────────────────
 export const DEFAULT_PAGE_SIZE = 5
