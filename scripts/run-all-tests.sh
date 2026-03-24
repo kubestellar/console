@@ -87,12 +87,23 @@ declare -a SLOW_SCRIPTS=(
 )
 
 # Build full list
+# In --fast mode, only run FAST_SCRIPTS (quick static checks). Go tests,
+# security scans, and Playwright tests are all skipped to keep the run
+# under a few minutes (#3395).
 declare -a ALL_SCRIPTS=()
 for s in "${FAST_SCRIPTS[@]}"; do ALL_SCRIPTS+=("$s"); done
-for s in "${GO_SCRIPTS[@]}"; do ALL_SCRIPTS+=("$s"); done
-for s in "${SECURITY_SCRIPTS[@]}"; do ALL_SCRIPTS+=("$s"); done
 if [ -z "$FAST_MODE" ]; then
+  for s in "${GO_SCRIPTS[@]}"; do ALL_SCRIPTS+=("$s"); done
+  for s in "${SECURITY_SCRIPTS[@]}"; do ALL_SCRIPTS+=("$s"); done
   for s in "${SLOW_SCRIPTS[@]}"; do ALL_SCRIPTS+=("$s"); done
+fi
+
+# In --fast mode, record Go/Security/Slow scripts as skipped so they appear in reports
+declare -a FAST_SKIPPED_SCRIPTS=()
+if [ -n "$FAST_MODE" ]; then
+  for s in "${GO_SCRIPTS[@]}"; do FAST_SKIPPED_SCRIPTS+=("$s"); done
+  for s in "${SECURITY_SCRIPTS[@]}"; do FAST_SKIPPED_SCRIPTS+=("$s"); done
+  for s in "${SLOW_SCRIPTS[@]}"; do FAST_SKIPPED_SCRIPTS+=("$s"); done
 fi
 
 TOTAL=0
@@ -163,6 +174,18 @@ for script in "${ALL_SCRIPTS[@]}"; do
     RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"fail\",\"duration\":${SUITE_DURATION},\"failure_reason\":\"${FAIL_REASON}\"},"
   fi
 done
+
+# Record Go/Security/Slow scripts as skipped in --fast mode
+if [ -n "$FAST_MODE" ] && [ "${#FAST_SKIPPED_SCRIPTS[@]}" -gt 0 ]; then
+  echo -e "${DIM}Go, security, and slow tests skipped (--fast mode)${NC}"
+  for script in "${FAST_SKIPPED_SCRIPTS[@]}"; do
+    SUITE_NAME=$(basename "$script" .sh)
+    TOTAL=$((TOTAL + 1))
+    SKIPPED_SUITES=$((SKIPPED_SUITES + 1))
+    SUITE_STATUS["$SUITE_NAME"]="skip"
+    RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"skip\",\"duration\":0},"
+  done
+fi
 
 echo ""
 
@@ -362,7 +385,7 @@ EOF
 
 # Add suite results to markdown using the SUITE_STATUS associative array
 # which records the actual exit-code-based pass/fail/skip for each suite.
-for script in "${ALL_SCRIPTS[@]}" "${PLAYWRIGHT_SCRIPTS[@]}"; do
+for script in "${ALL_SCRIPTS[@]}" "${FAST_SKIPPED_SCRIPTS[@]}" "${PLAYWRIGHT_SCRIPTS[@]}"; do
   SUITE_NAME=$(basename "$script" .sh)
   STATUS="${SUITE_STATUS[$SUITE_NAME]:-skip}"
   case "$STATUS" in
