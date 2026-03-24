@@ -42,6 +42,37 @@ describe('Button Component', () => {
     expect(spinner).toBeTruthy()
   })
 
+  it('sets aria-busy when loading', () => {
+    render(<Button loading>Loading</Button>)
+    expect(screen.getByRole('button')).toHaveAttribute('aria-busy', 'true')
+  })
+
+  it('does not set aria-busy when not loading', () => {
+    render(<Button>Not loading</Button>)
+    expect(screen.getByRole('button')).not.toHaveAttribute('aria-busy')
+  })
+
+  it('spinner has aria-hidden when loading', () => {
+    const { container } = render(<Button loading>Loading</Button>)
+    const spinner = container.querySelector('.animate-spin')
+    expect(spinner).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('uses title as aria-label for icon-only buttons', () => {
+    render(<Button icon={<span>★</span>} title="Add item" />)
+    expect(screen.getByRole('button')).toHaveAttribute('aria-label', 'Add item')
+  })
+
+  it('explicit aria-label takes precedence over title', () => {
+    render(<Button icon={<span>★</span>} title="Add item" aria-label="Custom label" />)
+    expect(screen.getByRole('button')).toHaveAttribute('aria-label', 'Custom label')
+  })
+
+  it('does not set aria-label when children provide the accessible name', () => {
+    render(<Button title="Hint">Save</Button>)
+    expect(screen.getByRole('button')).not.toHaveAttribute('aria-label')
+  })
+
   it('renders icon on the left', () => {
     render(<Button icon={<span data-testid="icon">*</span>}>With Icon</Button>)
     expect(screen.getByTestId('icon')).toBeInTheDocument()
