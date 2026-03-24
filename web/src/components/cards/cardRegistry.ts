@@ -202,6 +202,17 @@ const KagentiAgentDiscovery = safeLazy(() => _kagentiBundle, 'KagentiAgentDiscov
 const KagentiSecurity = safeLazy(() => _kagentiBundle, 'KagentiSecurity')
 const KagentiSecurityPosture = safeLazy(() => _kagentiBundle, 'KagentiSecurityPosture')
 const KagentiTopology = safeLazy(() => _kagentiBundle, 'KagentiTopology')
+
+// Kagent CRD Dashboard cards — share one chunk via barrel import
+const KagentStatusCard = safeLazy(() => import('./KagentStatusCard'), 'KagentStatusCard')
+const _kagentBundle = import('./kagent').catch(() => undefined as never)
+const KagentAgentFleet = safeLazy(() => _kagentBundle, 'KagentAgentFleet')
+const KagentToolRegistry = safeLazy(() => _kagentBundle, 'KagentToolRegistry')
+const KagentModelProviders = safeLazy(() => _kagentBundle, 'KagentModelProviders')
+const KagentAgentDiscovery = safeLazy(() => _kagentBundle, 'KagentAgentDiscovery')
+const KagentSecurity = safeLazy(() => _kagentBundle, 'KagentSecurity')
+const KagentTopology = safeLazy(() => _kagentBundle, 'KagentTopology')
+
 const CrossplaneManagedResources = safeLazy(() => import('./crossplane-status/CrossplaneManagedResources'), 'CrossplaneManagedResources')
 // Cloud Native Buildpacks card
 // ISO 27001 Security Audit checklist card
@@ -482,6 +493,16 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   kagenti_security: KagentiSecurity,
   kagenti_security_posture: KagentiSecurityPosture,
   kagenti_topology: KagentiTopology,
+
+  // Kagent CRD Dashboard cards
+  kagent_status: KagentStatusCard,
+  kagent_agent_fleet: KagentAgentFleet,
+  kagent_tool_registry: KagentToolRegistry,
+  kagent_model_providers: KagentModelProviders,
+  kagent_agent_discovery: KagentAgentDiscovery,
+  kagent_security: KagentSecurity,
+  kagent_topology: KagentTopology,
+
   // Crossplane cards
   crossplane_managed_resources: CrossplaneManagedResources,
 
@@ -698,6 +719,14 @@ export const DEMO_DATA_CARDS = new Set([
   'kagenti_security',
   'kagenti_topology',
   'kagenti_security_posture',
+  // Kagent CRD cards - demo until kagent CRDs are installed on clusters
+  'kagent_status',
+  'kagent_agent_fleet',
+  'kagent_tool_registry',
+  'kagent_model_providers',
+  'kagent_agent_discovery',
+  'kagent_security',
+  'kagent_topology',
   // Crossplane cards - demo until Crossplane is installed
   'crossplane_managed_resources',
   // KubeVela - demo until KubeVela is installed
@@ -877,6 +906,14 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   kagenti_security: () => import('./kagenti'),
   kagenti_security_posture: () => import('./kagenti'),
   kagenti_topology: () => import('./kagenti'),
+  // Kagent CRD cards — all share one chunk via barrel
+  kagent_status: () => import('./KagentStatusCard'),
+  kagent_agent_fleet: () => import('./kagent'),
+  kagent_tool_registry: () => import('./kagent'),
+  kagent_model_providers: () => import('./kagent'),
+  kagent_agent_discovery: () => import('./kagent'),
+  kagent_security: () => import('./kagent'),
+  kagent_topology: () => import('./kagent'),
   // Crossplane cards
   crossplane_managed_resources: () => import('./crossplane-status'),
   // Cloud Native Buildpacks
@@ -1003,6 +1040,13 @@ export function prefetchDemoCardChunks(): void {
     () => import('./kagenti/KagentiAgentDiscovery'),
     () => import('./kagenti/KagentiSecurity'),
     () => import('./kagenti/KagentiTopology'),
+    () => import('./KagentStatusCard'),
+    () => import('./kagent/KagentAgentFleet'),
+    () => import('./kagent/KagentToolRegistry'),
+    () => import('./kagent/KagentModelProviders'),
+    () => import('./kagent/KagentAgentDiscovery'),
+    () => import('./kagent/KagentSecurity'),
+    () => import('./kagent/KagentTopology'),
     () => import('./crossplane-status/CrossplaneManagedResources'),
   ]
   startupChunks.forEach(load => load().catch(() => {}))
@@ -1084,6 +1128,14 @@ export const LIVE_DATA_CARDS = new Set([
   'kagenti_agent_discovery',
   'kagenti_security',
   'kagenti_topology',
+  // Kagent CRD cards
+  'kagent_status',
+  'kagent_agent_fleet',
+  'kagent_tool_registry',
+  'kagent_model_providers',
+  'kagent_agent_discovery',
+  'kagent_security',
+  'kagent_topology',
 ])
 
 /**
@@ -1143,6 +1195,15 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   kagenti_security: 4,
   kagenti_security_posture: 4,
   kagenti_topology: 8,
+
+  // Kagent CRD Dashboard cards
+  kagent_status: 4,
+  kagent_agent_fleet: 8,
+  kagent_tool_registry: 4,
+  kagent_model_providers: 4,
+  kagent_agent_discovery: 4,
+  kagent_security: 4,
+  kagent_topology: 8,
 
   // LLM-d stunning visualization cards
   llmd_flow: 8,           // Hero animated flow diagram

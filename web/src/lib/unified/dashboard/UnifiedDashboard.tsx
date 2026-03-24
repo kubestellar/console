@@ -10,11 +10,13 @@
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react'
-import { Activity, RefreshCw, Plus } from 'lucide-react'
+import { Activity, RefreshCw, Plus, ExternalLink } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
+import { AgentIcon } from '../../../components/agent/AgentIcon'
 import type {
   UnifiedDashboardProps,
   DashboardCardPlacement,
+  DashboardTab,
 } from '../types'
 import { UnifiedStatsSection } from '../stats'
 import { DashboardGrid } from './DashboardGrid'
@@ -67,10 +69,30 @@ export function UnifiedDashboard({
     return config.cards
   })
 
+  // Tab state (for dashboards with tabs)
+  const hasTabs = (config.tabs?.length ?? 0) > 0
+
   // Prefetch card chunks for this dashboard so React.lazy() resolves instantly
   useEffect(() => {
-    prefetchCardChunks(cards.map(c => c.cardType))
-  }, [cards])
+    // Prefetch cards for all tabs (not just active) so tab switching is instant
+    const allCards = hasTabs && config.tabs
+      ? config.tabs.flatMap(t => t.cards)
+      : cards
+    prefetchCardChunks(allCards.map(c => c.cardType))
+  }, [cards, hasTabs, config.tabs])
+  const [activeTabId, setActiveTabId] = useState<string>(() => {
+    if (!config.tabs || config.tabs.length === 0) return ''
+    // Default to first non-disabled tab
+    const firstEnabled = config.tabs.find(t => !t.disabled)
+    return firstEnabled?.id ?? config.tabs[0].id
+  })
+
+  // Get cards for the active tab (or all cards if no tabs)
+  const activeCards = useMemo(() => {
+    if (!hasTabs) return cards
+    const activeTab = config.tabs?.find(t => t.id === activeTabId)
+    return activeTab?.cards ?? []
+  }, [hasTabs, cards, config.tabs, activeTabId])
 
   // Loading state
   const [isLoading, setIsLoading] = useState(false)
@@ -269,9 +291,43 @@ export function UnifiedDashboard({
         />
       )}
 
+      {/* Tab bar (when dashboard has tabs) */}
+      {hasTabs && config.tabs && (
+        <div className="flex items-center gap-1 mb-6 border-b border-border">
+          {config.tabs.map((tab: DashboardTab) => (
+            <button
+              key={tab.id}
+              onClick={() => !tab.disabled && setActiveTabId(tab.id)}
+              disabled={tab.disabled}
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                activeTabId === tab.id
+                  ? 'border-purple-500 text-foreground'
+                  : tab.disabled
+                    ? 'border-transparent text-muted-foreground/40 cursor-not-allowed'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+              }`}
+            >
+              {tab.icon && <AgentIcon provider={tab.icon} className="w-4 h-4" />}
+              {tab.label}
+              {tab.disabled && tab.installUrl && (
+                <a
+                  href={tab.installUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={e => e.stopPropagation()}
+                  className="inline-flex items-center gap-0.5 text-xs text-muted-foreground/60 hover:text-muted-foreground ml-1"
+                >
+                  Install <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Cards grid */}
       <DashboardGrid
-        cards={cards}
+        cards={hasTabs ? activeCards : cards}
         features={features}
         onReorder={features.dragDrop !== false ? handleReorder : undefined}
         onRemoveCard={handleRemoveCard}

@@ -640,6 +640,10 @@ export interface UnifiedDashboardConfig {
   /** Available card types for add menu */
   availableCardTypes?: string[]
 
+  // Tab configuration (optional — when present, cards are organized into tabs)
+  /** Dashboard tabs — each tab has its own set of cards */
+  tabs?: DashboardTab[]
+
   // Features
   features?: DashboardFeatures
 
@@ -654,6 +658,21 @@ export interface UnifiedDashboardConfig {
    * ['kubestellar'] = only visible when CONSOLE_PROJECT=kubestellar
    */
   projects?: string[]
+}
+
+export interface DashboardTab {
+  /** Unique tab ID */
+  id: string
+  /** Display label */
+  label: string
+  /** Icon provider key (rendered via AgentIcon or lucide) */
+  icon?: string
+  /** Cards for this tab */
+  cards: DashboardCardPlacement[]
+  /** Whether this tab is disabled (e.g., platform not detected) */
+  disabled?: boolean
+  /** Install URL shown when tab is disabled */
+  installUrl?: string
 }
 
 export interface DashboardCardPlacement {

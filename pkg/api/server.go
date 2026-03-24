@@ -27,6 +27,7 @@ import (
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/kagent"
+	"github.com/kubestellar/console/pkg/kagenti_provider"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/mcp"
 	"github.com/kubestellar/console/pkg/notifications"
@@ -890,6 +891,14 @@ func (s *Server) setupRoutes() {
 	api.Get("/kagent/agents", kagentHandler.ListAgents)
 	api.Post("/kagent/chat", kagentHandler.Chat)
 	api.Post("/kagent/tools/call", kagentHandler.CallTool)
+
+	// Kagenti A2A proxy routes
+	kagentiProviderClient := kagenti_provider.NewKagentiClientFromEnv()
+	kagentiProviderHandler := handlers.NewKagentiProviderProxyHandler(kagentiProviderClient)
+	api.Get("/kagenti-provider/status", kagentiProviderHandler.GetStatus)
+	api.Get("/kagenti-provider/agents", kagentiProviderHandler.ListAgents)
+	api.Post("/kagenti-provider/chat", kagentiProviderHandler.Chat)
+	api.Post("/kagenti-provider/tools/call", kagentiProviderHandler.CallTool)
 
 	// Console persistence routes (CRD-based state management)
 	persistenceHandler := handlers.NewConsolePersistenceHandlers(s.persistenceStore, s.k8sClient, s.hub)

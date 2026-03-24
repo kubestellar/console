@@ -170,6 +170,25 @@ export function AgentIcon({ provider, className = 'w-5 h-5' }: AgentIconProps) {
           <circle cx="18" cy="6" r="4" className="fill-green-500" />
         </svg>
       )
+    case 'kagent':
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          {/* Kagent icon - purple hexagon with K */}
+          <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" className="fill-purple-500" />
+          <text x="12" y="16" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" fontFamily="sans-serif">K</text>
+        </svg>
+      )
+    case 'kagenti':
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          {/* Kagenti icon - green hexagon with connected nodes */}
+          <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" className="fill-green-500" />
+          <circle cx="12" cy="8" r="1.8" fill="white" />
+          <circle cx="8" cy="14" r="1.8" fill="white" />
+          <circle cx="16" cy="14" r="1.8" fill="white" />
+          <path d="M12 8L8 14M12 8L16 14M8 14H16" stroke="white" strokeWidth="0.8" fill="none" />
+        </svg>
+      )
     default:
       // Generic AI/robot icon
       return (

@@ -351,6 +351,13 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/kagenti/tools", s.handleKagentiTools)
 	mux.HandleFunc("/kagenti/summary", s.handleKagentiSummary)
 
+	// Kagent CRD endpoints (kagent.dev API group)
+	mux.HandleFunc("/kagent-crds/agents", s.handleKagentCRDAgents)
+	mux.HandleFunc("/kagent-crds/tools", s.handleKagentCRDTools)
+	mux.HandleFunc("/kagent-crds/models", s.handleKagentCRDModels)
+	mux.HandleFunc("/kagent-crds/memories", s.handleKagentCRDMemories)
+	mux.HandleFunc("/kagent-crds/summary", s.handleKagentCRDSummary)
+
 	// Cloud CLI status (detects installed cloud CLIs for IAM auth guidance)
 	mux.HandleFunc("/cloud-cli-status", s.handleCloudCLIStatus)
 

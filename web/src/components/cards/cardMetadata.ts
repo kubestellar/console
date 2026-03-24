@@ -163,6 +163,15 @@ export const CARD_TITLES: Record<string, string> = {
   kagenti_security_posture: 'Kagenti Security Posture',
   kagenti_topology: 'Kagenti Topology',
 
+  // Kagent CRD Dashboard
+  kagent_status: 'Kagent Status',
+  kagent_agent_fleet: 'Kagent Agent Fleet',
+  kagent_tool_registry: 'Kagent Tool Registry',
+  kagent_model_providers: 'Kagent Model Providers',
+  kagent_agent_discovery: 'Kagent Agent Discovery',
+  kagent_security: 'Kagent Security',
+  kagent_topology: 'Kagent Topology',
+
   // Crossplane
   crossplane_managed_resources: 'Crossplane Managed Resources',
 
@@ -422,6 +431,15 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   kagenti_security: 'Security status and access controls for Kagenti agents.',
   kagenti_security_posture: 'Overall security posture of the Kagenti platform.',
   kagenti_topology: 'Topology view of Kagenti agent connections and dependencies.',
+
+  // Kagent CRD Dashboard
+  kagent_status: 'Overview of kagent agents, tools, and models.',
+  kagent_agent_fleet: 'All kagent agents across clusters.',
+  kagent_tool_registry: 'ToolServer and RemoteMCPServer resources.',
+  kagent_model_providers: 'ModelConfig and ModelProviderConfig resources.',
+  kagent_agent_discovery: 'Agent A2A config, tools, and skills.',
+  kagent_security: 'Agent approval settings and tool permissions.',
+  kagent_topology: 'Agent-Tool-Model dependency graph.',
 
   // Crossplane
   crossplane_managed_resources: 'Crossplane managed resources and their sync status.',
