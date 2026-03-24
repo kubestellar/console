@@ -24,6 +24,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { GripVertical } from 'lucide-react'
 import type { DashboardCardPlacement, DashboardFeatures } from '../types'
 import { UnifiedCard } from '../card'
 import { getCardConfig } from '../../../config/cards'
@@ -257,60 +258,24 @@ function DashboardCardWrapper({
     )
   }
 
+  const dragHandleNode = isDraggable ? (
+    <button
+      {...attributes}
+      {...listeners}
+      className="p-1 rounded hover:bg-secondary cursor-grab active:cursor-grabbing"
+      title="Drag to reorder"
+    >
+      <GripVertical className="w-4 h-4 text-muted-foreground" />
+    </button>
+  ) : undefined
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={isOverlay ? 'shadow-2xl' : ''}
-      {...(isDraggable ? attributes : {})}
     >
-      <div className="relative h-full group">
-        {/* Drag handle */}
-        {isDraggable && (
-          <div
-            {...listeners}
-            className="absolute top-2 left-2 z-10 cursor-grab active:cursor-grabbing p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity bg-secondary/50"
-            title="Drag to reorder"
-          >
-            <svg
-              className="w-4 h-4 text-muted-foreground"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path d="M8 6a2 2 0 11-4 0 2 2 0 014 0zM8 12a2 2 0 11-4 0 2 2 0 014 0zM8 18a2 2 0 11-4 0 2 2 0 014 0zM14 6a2 2 0 11-4 0 2 2 0 014 0zM14 12a2 2 0 11-4 0 2 2 0 014 0zM14 18a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </div>
-        )}
-
-        {/* Card actions */}
-        {(onRemove || onConfigure) && !isOverlay && (
-          <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            {onConfigure && (
-              <button
-                onClick={onConfigure}
-                className="p-1 rounded bg-secondary/50 hover:bg-secondary/80 text-muted-foreground hover:text-white transition-colors"
-                title="Configure card"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
-            )}
-            {onRemove && (
-              <button
-                onClick={onRemove}
-                className="p-1 rounded bg-secondary/50 hover:bg-red-900/50 text-muted-foreground hover:text-red-400 transition-colors"
-                title="Remove card"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
-        )}
-
+      <div className="relative h-full">
         {/* The actual card */}
         {cardConfig ? (
           <UnifiedCard
@@ -325,6 +290,9 @@ function DashboardCardWrapper({
             cardType={cardTypeKey!}
             title={placement.title}
             cardWidth={placement.position.w}
+            dragHandle={dragHandleNode}
+            onRemove={onRemove}
+            onConfigure={onConfigure}
           >
             <Suspense fallback={<div className="h-full animate-pulse" />}>
               <DirectComponent config={placement.config as Record<string, unknown> | undefined} />

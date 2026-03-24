@@ -53,6 +53,13 @@ function RuntimeBadge({ runtime }: { runtime: string }) {
 
 type SortField = 'name' | 'status' | 'agentType' | 'cluster'
 
+const SORT_OPTIONS: { value: SortField; label: string }[] = [
+  { value: 'name', label: 'Name' },
+  { value: 'status', label: 'Status' },
+  { value: 'agentType', label: 'Agent Type' },
+  { value: 'cluster', label: 'Cluster' },
+]
+
 export function KagentAgentFleet({ config }: KagentAgentFleetProps) {
   const { t: _t } = useTranslation()
   const {
@@ -74,12 +81,14 @@ export function KagentAgentFleet({ config }: KagentAgentFleetProps) {
   const {
     items: paginatedItems,
     filters,
+    sorting,
     currentPage,
     totalPages,
     totalItems,
     goToPage,
     needsPagination,
     itemsPerPage,
+    setItemsPerPage,
     containerRef,
     containerStyle,
   } = useCardData(agents, {
@@ -124,6 +133,29 @@ export function KagentAgentFleet({ config }: KagentAgentFleetProps) {
   return (
     <div className="space-y-2 p-1">
       <CardControlsRow
+        clusterIndicator={{
+          selectedCount: filters.localClusterFilter.length,
+          totalCount: filters.availableClusters.length,
+        }}
+        clusterFilter={{
+          availableClusters: filters.availableClusters,
+          selectedClusters: filters.localClusterFilter,
+          onToggle: filters.toggleClusterFilter,
+          onClear: filters.clearClusterFilter,
+          isOpen: filters.showClusterFilter,
+          setIsOpen: filters.setShowClusterFilter,
+          containerRef: filters.clusterFilterRef,
+          minClusters: 1,
+        }}
+        cardControls={{
+          limit: itemsPerPage,
+          onLimitChange: setItemsPerPage,
+          sortBy: sorting.sortBy,
+          sortOptions: SORT_OPTIONS,
+          onSortChange: (v) => sorting.setSortBy(v as SortField),
+          sortDirection: sorting.sortDirection,
+          onSortDirectionChange: sorting.setSortDirection,
+        }}
         extra={
           <CardSearchInput value={filters.search} onChange={filters.setSearch} placeholder="Search agents..." />
         }

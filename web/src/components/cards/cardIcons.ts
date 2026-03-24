@@ -210,6 +210,25 @@ export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: stri
   kube_chess: { icon: Crown, color: 'text-yellow-400' },
   kube_craft_3d: { icon: Puzzle, color: 'text-green-400' },
 
+  // Kagenti (kagenti-operator) cards
+  kagenti_status: { icon: Activity, color: 'text-purple-400' },
+  kagenti_agent_fleet: { icon: Users, color: 'text-purple-400' },
+  kagenti_build_pipeline: { icon: Workflow, color: 'text-blue-400' },
+  kagenti_tool_registry: { icon: Wrench, color: 'text-cyan-400' },
+  kagenti_agent_discovery: { icon: Target, color: 'text-green-400' },
+  kagenti_security: { icon: Shield, color: 'text-yellow-400' },
+  kagenti_security_posture: { icon: Shield, color: 'text-orange-400' },
+  kagenti_topology: { icon: Network, color: 'text-blue-400' },
+
+  // Kagent (kagent CRD) cards
+  kagent_status: { icon: Activity, color: 'text-purple-400' },
+  kagent_agent_fleet: { icon: Users, color: 'text-purple-400' },
+  kagent_tool_registry: { icon: Wrench, color: 'text-cyan-400' },
+  kagent_model_providers: { icon: Cpu, color: 'text-blue-400' },
+  kagent_agent_discovery: { icon: Target, color: 'text-green-400' },
+  kagent_security: { icon: Shield, color: 'text-yellow-400' },
+  kagent_topology: { icon: Network, color: 'text-blue-400' },
+
   // Multi-tenancy
   ovn_status: { icon: Network, color: 'text-blue-400' },
   kubeflex_status: { icon: Layers, color: 'text-purple-400' },

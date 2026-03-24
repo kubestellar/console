@@ -718,6 +718,16 @@ export function CardWrapper({
       <ForceLiveContext.Provider value={!!forceLive}>
       <CardDataReportContext.Provider value={reportCtx}>
         <>
+          {/* Outer wrapper for demo corner brackets (outside card border) */}
+          <div className={cn('relative', isCollapsed ? 'h-auto' : 'h-full')}>
+            {showDemoIndicator && (
+              <>
+                <span className="absolute -top-[1px] -left-[1px] w-8 h-8 border-t-[3px] border-l-[3px] border-yellow-500/40 rounded-tl-[15px] pointer-events-none z-10" />
+                <span className="absolute -top-[1px] -right-[1px] w-8 h-8 border-t-[3px] border-r-[3px] border-yellow-500/40 rounded-tr-[15px] pointer-events-none z-10" />
+                <span className="absolute -bottom-[1px] -left-[1px] w-8 h-8 border-b-[3px] border-l-[3px] border-yellow-500/40 rounded-bl-[15px] pointer-events-none z-10" />
+                <span className="absolute -bottom-[1px] -right-[1px] w-8 h-8 border-b-[3px] border-r-[3px] border-yellow-500/40 rounded-br-[15px] pointer-events-none z-10" />
+              </>
+            )}
           {/* Main card */}
           <div
             ref={lazyRef}
@@ -733,7 +743,6 @@ export function CardWrapper({
               'glass rounded-xl overflow-hidden card-hover',
               'flex flex-col transition-all duration-200',
               isCollapsed ? 'h-auto' : 'h-full',
-              showDemoIndicator && '!border-2 !border-yellow-500/50',
               // Only pulse during initial skeleton display, not background refreshes (prevents flicker)
               shouldShowSkeleton && !forceSkeletonForOffline && 'animate-card-refresh-pulse',
               getFlashClass()
@@ -1109,6 +1118,7 @@ export function CardWrapper({
               </div>
             )}
           </div>
+          </div>{/* Close outer wrapper for demo corner brackets */}
 
           {/* Expanded modal */}
           <BaseModal
