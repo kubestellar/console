@@ -27,6 +27,8 @@ import { CSS } from '@dnd-kit/utilities'
 import type { DashboardCardPlacement, DashboardFeatures } from '../types'
 import { UnifiedCard } from '../card'
 import { getCardConfig } from '../../../config/cards'
+import { DashboardHealthIndicator } from '../../../components/dashboard/DashboardHealthIndicator'
+import { useDashboardHealth } from '../../../hooks/useDashboardHealth'
 
 /** Viewport width breakpoint below which small cards are clamped to wider minimum */
 const NARROW_VIEWPORT_BREAKPOINT_PX = 1024
@@ -61,6 +63,7 @@ export function DashboardGrid({
   className = '',
 }: DashboardGridProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
+  const health = useDashboardHealth()
 
   // Configure drag sensors
   const sensors = useSensors(
@@ -109,19 +112,27 @@ export function DashboardGrid({
 
   // Render grid content
   const gridContent = (
-    <div className={`grid grid-cols-1 md:grid-cols-12 gap-4 ${className}`}>
-      {cards.map((placement) => (
-        <DashboardCardWrapper
-          key={placement.id}
-          placement={placement}
-          isDraggable={enableDragDrop}
-          isLoading={isLoading}
-          onRemove={onRemoveCard ? () => onRemoveCard(placement.id) : undefined}
-          onConfigure={
-            onConfigureCard ? () => onConfigureCard(placement.id) : undefined
-          }
-        />
-      ))}
+    <div className={className}>
+      {/* Health indicator banner - shown only when there are issues */}
+      {health.status !== 'healthy' && (
+        <div className="mb-3">
+          <DashboardHealthIndicator size="sm" />
+        </div>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+        {cards.map((placement) => (
+          <DashboardCardWrapper
+            key={placement.id}
+            placement={placement}
+            isDraggable={enableDragDrop}
+            isLoading={isLoading}
+            onRemove={onRemoveCard ? () => onRemoveCard(placement.id) : undefined}
+            onConfigure={
+              onConfigureCard ? () => onConfigureCard(placement.id) : undefined
+            }
+          />
+        ))}
+      </div>
     </div>
   )
 

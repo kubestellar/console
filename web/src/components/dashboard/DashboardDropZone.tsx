@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { LayoutDashboard, Plus, Check } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Dashboard } from '../../hooks/useDashboards'
+import { DashboardHealthIndicator } from './DashboardHealthIndicator'
 
 interface DashboardDropZoneProps {
   dashboards: Dashboard[]
@@ -29,6 +30,7 @@ export function DashboardDropZone({
         <div className="flex items-center gap-2 mb-3 text-sm font-medium text-foreground">
           <LayoutDashboard className="w-4 h-4 text-purple-400" />
           {t('dashboard.dropZone.moveToDashboard')}
+          <DashboardHealthIndicator size="sm" className="ml-auto" />
         </div>
 
         {otherDashboards.length === 0 ? (

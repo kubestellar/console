@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { LayoutDashboard, FileText, Layout, ChevronRight, Check, ChevronDown } from 'lucide-react'
+import { LayoutDashboard, FileText, Layout, ChevronRight, Check, ChevronDown, AlertTriangle } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { Button } from '../ui/Button'
 import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from './templates'
 import { FOCUS_DELAY_MS } from '../../lib/constants/network'
+import { useDashboardHealth } from '../../hooks/useDashboardHealth'
 
 interface CreateDashboardModalProps {
   isOpen: boolean
@@ -26,6 +27,7 @@ export function CreateDashboardModal({
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const { t } = useTranslation()
+  const health = useDashboardHealth()
 
   // Reset state when modal opens
   useEffect(() => {
@@ -76,6 +78,22 @@ export function CreateDashboardModal({
       />
 
       <BaseModal.Content>
+        {/* Health alert - shown only when system has issues */}
+        {health.status !== 'healthy' && (
+          <div
+            className={`flex items-center gap-2 mb-4 p-3 rounded-lg border text-xs ${
+              health.status === 'critical'
+                ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400'
+            }`}
+            role="alert"
+            aria-label={`System health: ${health.message}`}
+          >
+            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>{health.message}</span>
+          </div>
+        )}
+
         {/* Dashboard name input */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-foreground mb-2">
