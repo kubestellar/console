@@ -314,7 +314,10 @@ type ClusterGroup struct {
 	Icon          string             `json:"icon,omitempty"`
 	Query         *ClusterGroupQuery `json:"query,omitempty"`         // only for dynamic groups
 	LastEvaluated string             `json:"lastEvaluated,omitempty"` // RFC3339 timestamp
+	BuiltIn       bool               `json:"builtIn,omitempty"`       // true for system-provided groups
 }
+
+const allHealthyClustersGroupName = "all-healthy-clusters"
 
 // In-memory cluster group store (persisted via frontend localStorage; backend is source of truth for labels)
 var (
@@ -326,11 +329,38 @@ var (
 // GET /api/cluster-groups
 func (h *WorkloadHandlers) ListClusterGroups(c *fiber.Ctx) error {
 	clusterGroupsMu.RLock()
-	groups := make([]ClusterGroup, 0, len(clusterGroups))
+	groups := make([]ClusterGroup, 0, len(clusterGroups)+1)
 	for _, g := range clusterGroups {
 		groups = append(groups, g)
 	}
 	clusterGroupsMu.RUnlock()
+
+	// Prepend the built-in "all healthy clusters" group
+	builtIn := ClusterGroup{
+		Name:    allHealthyClustersGroupName,
+		Kind:    "dynamic",
+		Color:   "green",
+		BuiltIn: true,
+		Query: &ClusterGroupQuery{
+			Filters: []ClusterFilter{{Field: "healthy", Operator: "eq", Value: "true"}},
+		},
+	}
+	if h.k8sClient != nil {
+		ctx, cancel := context.WithTimeout(c.Context(), workloadListTimeout)
+		defer cancel()
+		if healthyClusters, _, err := h.k8sClient.HealthyClusters(ctx); err == nil {
+			names := make([]string, 0, len(healthyClusters))
+			for _, cl := range healthyClusters {
+				names = append(names, cl.Name)
+			}
+			builtIn.Clusters = names
+		}
+		builtIn.LastEvaluated = time.Now().UTC().Format(time.RFC3339)
+	}
+	if builtIn.Clusters == nil {
+		builtIn.Clusters = []string{}
+	}
+	groups = append([]ClusterGroup{builtIn}, groups...)
 
 	return c.JSON(fiber.Map{"groups": groups})
 }
@@ -352,6 +382,9 @@ func (h *WorkloadHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 	}
 	if group.Name == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "name is required"})
+	}
+	if group.Name == allHealthyClustersGroupName {
+		return c.Status(400).JSON(fiber.Map{"error": "cannot create a group with the reserved name"})
 	}
 	// Dynamic groups may start with no clusters (evaluated on demand)
 	if group.Kind != "dynamic" && len(group.Clusters) == 0 {
@@ -388,6 +421,9 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 	}
 
 	name := c.Params("name")
+	if name == allHealthyClustersGroupName {
+		return c.Status(400).JSON(fiber.Map{"error": "cannot modify a built-in group"})
+	}
 
 	var group ClusterGroup
 	if err := c.BodyParser(&group); err != nil {
@@ -442,6 +478,9 @@ func (h *WorkloadHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
 	}
 
 	name := c.Params("name")
+	if name == allHealthyClustersGroupName {
+		return c.Status(400).JSON(fiber.Map{"error": "cannot delete a built-in group"})
+	}
 
 	clusterGroupsMu.Lock()
 	group, existed := clusterGroups[name]

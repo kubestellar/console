@@ -40,6 +40,7 @@ interface ClusterGroupsProps {
 }
 
 const DEMO_GROUPS: ClusterGroup[] = [
+  { name: 'all-healthy-clusters', kind: 'dynamic', clusters: ['eks-prod-us-east-1', 'openshift-prod', 'do-nyc1-prod', 'gke-staging', 'aks-dev-westeu', 'k3s-edge', 'kind-local', 'minikube'], color: 'green', builtIn: true, query: { filters: [{ field: 'healthy', operator: 'eq', value: 'true' }] } },
   { name: 'production', kind: 'static', clusters: ['eks-prod-us-east-1', 'openshift-prod', 'do-nyc1-prod'], color: 'green' },
   { name: 'staging', kind: 'static', clusters: ['gke-staging', 'aks-dev-westeu'], color: 'blue' },
   { name: 'edge', kind: 'dynamic', clusters: ['k3s-edge', 'kind-local', 'minikube'], color: 'purple', query: { filters: [{ field: 'nodeCount', operator: 'lte', value: '3' }] } },
@@ -209,7 +210,7 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
       ) : (
         <div className="space-y-2">
           {groups.map((group) => (
-            editingGroup === group.name ? (
+            editingGroup === group.name && !group.builtIn ? (
               <EditGroupForm
                 key={group.name}
                 group={group}
@@ -355,6 +356,7 @@ function DroppableGroup({ group, isExpanded, isRefreshing, clusterHealthMap, onT
         )}
 
         {/* Actions */}
+        {!group.builtIn && (
         <div className="flex items-center gap-1">
           <button
             onClick={onEdit}
@@ -371,6 +373,7 @@ function DroppableGroup({ group, isExpanded, isRefreshing, clusterHealthMap, onT
             <Trash2 className="w-3 h-3" />
           </button>
         </div>
+        )}
       </div>
 
       {/* Expanded: cluster list + query info for dynamic groups */}

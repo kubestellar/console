@@ -29,6 +29,7 @@ export interface ClusterGroup {
   icon?: string
   query?: ClusterGroupQuery
   lastEvaluated?: string
+  builtIn?: boolean
 }
 
 export interface AIQueryResult {
