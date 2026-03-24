@@ -284,13 +284,15 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 				}
 			case "copilot/working", "feasibility-study", "ai-processing", "ai-awaiting-fix":
 				status = "feasibility_study"
+			case "ai-pr-active":
+				status = "fix_in_progress"
 			case "fix-ready", "copilot/fix-ready", "ai-pr-ready", "ai-pr-draft":
 				status = "fix_ready"
 			case "fix-complete", "ai-processing-complete":
 				status = "fix_complete"
 			case "unable-to-fix", "needs-human-review", "ai-needs-human":
 				status = "unable_to_fix"
-			case "bug":
+			case "bug", "kind/bug":
 				requestType = "bug"
 			case "enhancement", "feature":
 				requestType = "feature"
@@ -1496,7 +1498,7 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest
 		// Documentation issues get doc-specific labels (no AI pipeline)
 		labels = []string{"console-docs"}
 		if request.RequestType == models.RequestTypeBug {
-			labels = append(labels, "bug")
+			labels = append(labels, "kind/bug")
 		} else {
 			labels = append(labels, "enhancement")
 		}
@@ -1504,7 +1506,7 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest
 		// Console issues get the AI fix pipeline labels
 		labels = []string{"ai-fix-requested", "needs-triage"}
 		if request.RequestType == models.RequestTypeBug {
-			labels = append(labels, "bug")
+			labels = append(labels, "kind/bug")
 		} else {
 			labels = append(labels, "enhancement")
 		}
