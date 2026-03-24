@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -36,6 +37,8 @@ const (
 	serverShutdownTimeout  = 30 * time.Second
 	serverHealthTimeout    = 2 * time.Second
 	serverStartupDelay     = 50 * time.Millisecond
+	portReleaseTimeout     = 3 * time.Second
+	portReleasePollInterval = 50 * time.Millisecond
 	defaultDevFrontendURL  = "http://localhost:5174"
 	defaultProdFrontendURL = "http://localhost:8080"
 )
@@ -1046,24 +1049,44 @@ func (s *Server) backendURL() string {
 
 // Start shuts down the temporary loading server and starts the real Fiber app.
 func (s *Server) Start() error {
-	// Shut down the temporary loading page server to free the port
-	if s.loadingSrv != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), serverHealthTimeout)
-		defer cancel()
-		s.loadingSrv.Shutdown(ctx)
-		s.loadingSrv = nil
-		// Brief pause to ensure the port is fully released
-		time.Sleep(serverStartupDelay)
-	}
-
 	// When BackendPort is set (watchdog mode), listen on that port instead
 	listenPort := s.config.Port
 	if s.config.BackendPort > 0 {
 		listenPort = s.config.BackendPort
 	}
 	addr := fmt.Sprintf(":%d", listenPort)
+
+	// Shut down the temporary loading page server to free the port
+	if s.loadingSrv != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), serverHealthTimeout)
+		defer cancel()
+		s.loadingSrv.Shutdown(ctx)
+		s.loadingSrv = nil
+
+		// Wait for the OS to fully release the port instead of a fixed sleep.
+		// The previous 50ms sleep was insufficient on some systems.
+		if err := waitForPortRelease(listenPort, portReleaseTimeout); err != nil {
+			log.Printf("Warning: port %d may not be fully released: %v", listenPort, err)
+		}
+	}
+
 	log.Printf("Starting server on %s (dev=%v)", addr, s.config.DevMode)
 	return s.app.Listen(addr)
+}
+
+// waitForPortRelease polls until the given port is free or the timeout expires.
+func waitForPortRelease(port int, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	addr := fmt.Sprintf("127.0.0.1:%d", port)
+	for time.Now().Before(deadline) {
+		ln, err := net.Listen("tcp", addr)
+		if err == nil {
+			ln.Close()
+			return nil
+		}
+		time.Sleep(portReleasePollInterval)
+	}
+	return fmt.Errorf("port %d not released within %v", port, timeout)
 }
 
 // Shutdown gracefully shuts down the server.
