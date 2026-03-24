@@ -70,6 +70,12 @@ function deduplicateAlerts(alerts: Alert[], rules: AlertRule[]): Alert[] {
 const ALERT_RULES_KEY = 'kc_alert_rules'
 const ALERTS_KEY = 'kc_alerts'
 
+/** Maximum number of alerts to retain in memory and storage at any time. */
+const MAX_ALERTS = 500
+
+/** Maximum number of resolved alerts to keep after a quota-exceeded prune. */
+const MAX_RESOLVED_ALERTS_AFTER_PRUNE = 50
+
 /** Minimum time (ms) between repeat notifications for the same alert */
 const NOTIFICATION_COOLDOWN_MS = 300_000 // 5 minutes
 
@@ -126,6 +132,48 @@ function saveToStorage<T>(key: string, value: T): void {
     localStorage.setItem(key, JSON.stringify(value))
   } catch (e) {
     console.error(`Failed to save ${key} to localStorage:`, e)
+  }
+}
+
+// Save alerts to localStorage with a hard cap and quota-exceeded handling.
+// Keeps all firing alerts and trims resolved alerts by recency when the cap is hit.
+function saveAlerts(alerts: Alert[]): void {
+  // Enforce a global cap before every write: keep all firing alerts and trim resolved by recency.
+  let toSave = alerts
+  if (toSave.length > MAX_ALERTS) {
+    const firing = toSave.filter(a => a.status === 'firing')
+    const resolved = toSave
+      .filter(a => a.status === 'resolved')
+      .sort((a, b) => new Date(b.resolvedAt ?? b.firedAt).getTime() - new Date(a.resolvedAt ?? a.firedAt).getTime())
+      .slice(0, Math.max(0, MAX_ALERTS - firing.length))
+    toSave = [...firing, ...resolved]
+  }
+
+  try {
+    localStorage.setItem(ALERTS_KEY, JSON.stringify(toSave))
+  } catch (e) {
+    // QuotaExceededError: DOMException with name 'QuotaExceededError', or legacy
+    // browsers that use numeric code 22 instead of the named exception.
+    // Pattern matches useMissions/useMetricsHistory for consistency across the codebase.
+    const isQuotaError = e instanceof DOMException && (e.name === 'QuotaExceededError' || e.code === 22)
+    if (isQuotaError) {
+      console.warn('[Alerts] localStorage quota exceeded, pruning resolved alerts')
+      // Keep all firing alerts + a small number of recent resolved ones
+      const firing = toSave.filter(a => a.status === 'firing')
+      const resolved = toSave
+        .filter(a => a.status === 'resolved')
+        .sort((a, b) => new Date(b.resolvedAt ?? b.firedAt).getTime() - new Date(a.resolvedAt ?? a.firedAt).getTime())
+        .slice(0, MAX_RESOLVED_ALERTS_AFTER_PRUNE)
+      const pruned = [...firing, ...resolved]
+      try {
+        localStorage.setItem(ALERTS_KEY, JSON.stringify(pruned))
+      } catch (retryError) {
+        console.error('[Alerts] localStorage still full after pruning, clearing alerts', retryError)
+        localStorage.removeItem(ALERTS_KEY)
+      }
+    } else {
+      console.error(`Failed to save ${ALERTS_KEY} to localStorage:`, e)
+    }
   }
 }
 
@@ -321,7 +369,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
 
   // Save alerts whenever they change
   useEffect(() => {
-    saveToStorage(ALERTS_KEY, alerts)
+    saveAlerts(alerts)
   }, [alerts])
 
   // Clear demo-generated alerts when demo mode is turned off
@@ -505,7 +553,16 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        return [alert, ...prev]
+        // Cap the in-memory array: evict oldest resolved alerts first so firing alerts are never dropped.
+        // This mirrors the saveAlerts cap and prevents unbounded memory growth in high-frequency scenarios.
+        const newAlerts = [alert, ...prev]
+        if (newAlerts.length <= MAX_ALERTS) return newAlerts
+        const firingAlerts = newAlerts.filter(a => a.status === 'firing')
+        const resolvedAlerts = newAlerts
+          .filter(a => a.status === 'resolved')
+          .sort((a, b) => new Date(b.resolvedAt ?? b.firedAt).getTime() - new Date(a.resolvedAt ?? a.firedAt).getTime())
+          .slice(0, Math.max(0, MAX_ALERTS - firingAlerts.length))
+        return [...firingAlerts, ...resolvedAlerts]
       })
     },
     [isDemoMode]
