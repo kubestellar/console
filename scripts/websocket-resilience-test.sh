@@ -118,8 +118,10 @@ go test ./pkg/api/handlers/... -run "TestWebSocket\|TestHub\|TestHandle" -v -tim
 GO_PASSED=$(grep -c "^--- PASS:" "$WS_TEST_OUTPUT" 2>/dev/null || true)
 GO_FAILED=$(grep -c "^--- FAIL:" "$WS_TEST_OUTPUT" 2>/dev/null || true)
 
-if [ "$WS_TEST_EXIT" -eq 0 ]; then
+if [ "$WS_TEST_EXIT" -eq 0 ] && [ "$GO_PASSED" -gt 0 ]; then
   run_test "Go WebSocket handler tests (${GO_PASSED} tests)" "pass" ""
+elif [ "$WS_TEST_EXIT" -eq 0 ] && [ "$GO_PASSED" -eq 0 ]; then
+  run_test "Go WebSocket handler tests" "fail" "exit 0 but zero tests matched"
 elif [ "$GO_PASSED" -eq 0 ] && [ "$GO_FAILED" -eq 0 ]; then
   run_test "Go WebSocket handler tests" "skip" "no matching tests found"
 else

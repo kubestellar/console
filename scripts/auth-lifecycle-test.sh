@@ -65,9 +65,12 @@ JWT_PASSED=$(grep -c "^--- PASS:" "$JWT_OUTPUT" 2>/dev/null || true)
 JWT_FAILED_COUNT=$(grep -c "^--- FAIL:" "$JWT_OUTPUT" 2>/dev/null || true)
 
 TOTAL=$((TOTAL + 1))
-if [ "$JWT_EXIT" -eq 0 ]; then
+if [ "$JWT_EXIT" -eq 0 ] && [ "$JWT_PASSED" -gt 0 ]; then
   echo -e "  ${GREEN}✓${NC}  JWT middleware tests passed (${JWT_PASSED} tests)"
   PASSED=$((PASSED + 1))
+elif [ "$JWT_EXIT" -eq 0 ] && [ "$JWT_PASSED" -eq 0 ]; then
+  echo -e "  ${YELLOW}⚠️ ${NC} JWT middleware — zero tests matched (exit 0 but 0 tests ran)"
+  FAILED=$((FAILED + 1))
 else
   echo -e "  ${RED}❌${NC} JWT middleware tests failed (${JWT_FAILED_COUNT} failures)"
   grep "^--- FAIL:" "$JWT_OUTPUT" 2>/dev/null | while IFS= read -r line; do
@@ -91,12 +94,12 @@ go test ./pkg/api/handlers/... -run "TestAuth|TestOAuth|TestLogin|TestCallback" 
 AUTH_PASSED=$(grep -c "^--- PASS:" "$AUTH_OUTPUT" 2>/dev/null || true)
 
 TOTAL=$((TOTAL + 1))
-if [ "$AUTH_EXIT" -eq 0 ]; then
+if [ "$AUTH_EXIT" -eq 0 ] && [ "$AUTH_PASSED" -gt 0 ]; then
   echo -e "  ${GREEN}✓${NC}  Auth handler tests passed (${AUTH_PASSED} tests)"
   PASSED=$((PASSED + 1))
-elif [ "$AUTH_PASSED" -eq 0 ]; then
-  echo -e "  ${DIM}⊘  No auth handler tests matched — skipping${NC}"
-  # Don't count as failure if no tests matched
+elif [ "$AUTH_EXIT" -eq 0 ] && [ "$AUTH_PASSED" -eq 0 ]; then
+  echo -e "  ${YELLOW}⚠️ ${NC} Auth handler tests — zero tests matched"
+  FAILED=$((FAILED + 1))
 else
   echo -e "  ${RED}❌${NC} Auth handler tests failed"
   grep "FAIL" "$AUTH_OUTPUT" 2>/dev/null | head -5 | while IFS= read -r line; do
@@ -120,13 +123,12 @@ go test ./pkg/api/handlers/... -run "TestWebSocket|TestHub" -v -timeout 30s > "$
 WS_PASSED=$(grep -c "^--- PASS:" "$WS_OUTPUT" 2>/dev/null || true)
 
 TOTAL=$((TOTAL + 1))
-if [ "$WS_EXIT" -eq 0 ]; then
-  if [ "$WS_PASSED" -gt 0 ]; then
-    echo -e "  ${GREEN}✓${NC}  WebSocket auth tests passed (${WS_PASSED} tests)"
-  else
-    echo -e "  ${DIM}⊘  No WebSocket auth tests matched${NC}"
-  fi
+if [ "$WS_EXIT" -eq 0 ] && [ "$WS_PASSED" -gt 0 ]; then
+  echo -e "  ${GREEN}✓${NC}  WebSocket auth tests passed (${WS_PASSED} tests)"
   PASSED=$((PASSED + 1))
+elif [ "$WS_EXIT" -eq 0 ] && [ "$WS_PASSED" -eq 0 ]; then
+  echo -e "  ${YELLOW}⚠️ ${NC} WebSocket auth tests — zero tests matched"
+  FAILED=$((FAILED + 1))
 else
   echo -e "  ${RED}❌${NC} WebSocket auth tests failed"
   grep "FAIL" "$WS_OUTPUT" 2>/dev/null | head -5 | while IFS= read -r line; do
