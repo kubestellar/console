@@ -7,7 +7,7 @@ import { useCardRecommendations, CardRecommendation } from '../../hooks/useCardR
 import { useSnoozedRecommendations } from '../../hooks/useSnoozedRecommendations'
 import { AI_THINKING_DELAY_MS } from '../../lib/constants/network'
 import { emitCardRecommendationsShown, emitCardRecommendationActioned } from '../../lib/analytics'
-import { safeSetItem } from '../../lib/utils/localStorage'
+import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 
 /** localStorage key to persist that the user has seen (and auto-collapsed) the panel */
 const STORAGE_KEY_RECS_COLLAPSED = 'kc-recommendations-collapsed'
@@ -36,7 +36,9 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
   const { snoozeRecommendation, dismissRecommendation, isSnoozed, isDismissed, snoozedRecommendations } = useSnoozedRecommendations()
   const [expandedRec, setExpandedRec] = useState<string | null>(null)
   const [addingCard, setAddingCard] = useState<string | null>(null)
-  const [minimized, setMinimized] = useState(true)
+  const [minimized, setMinimized] = useState(() =>
+    safeGetItem(STORAGE_KEY_RECS_COLLAPSED) === 'true'
+  )
   const [countdown, setCountdown] = useState(AUTO_COLLAPSE_SECONDS)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
