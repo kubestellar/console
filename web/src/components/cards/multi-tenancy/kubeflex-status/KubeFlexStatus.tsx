@@ -61,6 +61,13 @@ export function KubeFlexStatus() {
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
   const { isOpen: isDetailModalOpen, open: openDetailModal, close: closeDetailModal } = useModalState()
 
+  const handleDetailKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      openDetailModal()
+    }
+  }
+
   // ------ Loading ------
   if (showSkeleton) {
     return (
@@ -127,7 +134,11 @@ export function KubeFlexStatus() {
       {/* Health badge + last check */}
       <div className="flex items-center justify-between">
         <div
+          role="button"
+          tabIndex={0}
           onClick={openDetailModal}
+          onKeyDown={handleDetailKeyDown}
+          aria-label={isHealthy ? t('kubeFlexStatus.healthy') : t('kubeFlexStatus.degraded')}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium cursor-pointer hover:bg-secondary/50 transition-colors ${
             isHealthy
               ? 'bg-green-500/15 text-green-400'
@@ -149,7 +160,14 @@ export function KubeFlexStatus() {
       </div>
 
       {/* Metric tiles */}
-      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" onClick={openDetailModal}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={openDetailModal}
+        onKeyDown={handleDetailKeyDown}
+        aria-label={t('kubeFlexStatus.viewDetails')}
+        className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg"
+      >
         <MetricTile
           label={t('kubeFlexStatus.controller')}
           value={data.controllerHealthy ? t('kubeFlexStatus.controllerUp') : t('kubeFlexStatus.controllerDown')}
@@ -176,7 +194,14 @@ export function KubeFlexStatus() {
           <p className="text-xs font-medium text-muted-foreground">{t('kubeFlexStatus.controlPlaneList')}</p>
           <div className="space-y-1.5 max-h-40 overflow-y-auto scrollbar-thin">
             {(data.controlPlanes || []).map((cp) => (
-              <div key={cp.name} className="flex items-center justify-between text-xs gap-2 px-2 py-1.5 rounded bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors" onClick={openDetailModal}>
+              <div key={cp.name}
+                role="button"
+                tabIndex={0}
+                onClick={openDetailModal}
+                onKeyDown={handleDetailKeyDown}
+                aria-label={`${cp.name}: ${cp.healthy ? t('kubeFlexStatus.cpHealthy') : t('kubeFlexStatus.cpUnhealthy')}`}
+                className="flex items-center justify-between text-xs gap-2 px-2 py-1.5 rounded bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors"
+              >
                 <span className="text-foreground truncate flex-1" title={cp.name}>
                   {cp.name}
                 </span>

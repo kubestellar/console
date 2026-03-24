@@ -2885,7 +2885,8 @@
     "syncedJustNow": "just now",
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
-    "syncedDaysAgo": "{{count}}d ago"
+    "syncedDaysAgo": "{{count}}d ago",
+    "viewDetails": "View KubeFlex details"
   },
   "k3sStatus": {
     "fetchError": "Failed to fetch K3s status",
