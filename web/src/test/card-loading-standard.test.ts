@@ -335,14 +335,6 @@ describe('Card Loading State Gold Standard', () => {
       // the count dropped, that's great — update the expected count!
       const EXPECTED_KNOWN_VIOLATION_COUNT = 77
       expect(totalKnown).toBeLessThanOrEqual(EXPECTED_KNOWN_VIOLATION_COUNT)
-
-      // If someone fixed violations, remind them to update the count
-      if (totalKnown < EXPECTED_KNOWN_VIOLATION_COUNT) {
-        console.log(
-          `\n🎉 Known violations decreased from ${EXPECTED_KNOWN_VIOLATION_COUNT} to ${totalKnown}!\n` +
-          `   Update EXPECTED_KNOWN_VIOLATION_COUNT in this test to ${totalKnown}.`
-        )
-      }
     })
   })
 })
