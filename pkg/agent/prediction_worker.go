@@ -667,7 +667,9 @@ func (w *PredictionWorker) mergePredictions(byProvider map[string][]AIPrediction
 }
 
 // BroadcastToClients sends a message to all connected WebSocket clients.
-// Uses wsMux to prevent concurrent writes which cause gorilla/websocket to panic.
+// Uses per-client write mutexes to prevent gorilla/websocket panics from
+// concurrent writes without holding a global lock during I/O. A slow or
+// dead client no longer blocks broadcasts to other clients.
 // Dead connections are removed so they don't leak file descriptors.
 func (s *Server) BroadcastToClients(msgType string, payload interface{}) {
 	message := map[string]interface{}{
@@ -681,24 +683,30 @@ func (s *Server) BroadcastToClients(msgType string, payload interface{}) {
 		return
 	}
 
-	s.wsMux.Lock()
-	defer s.wsMux.Unlock()
-
+	// Snapshot current clients under read lock — no I/O while holding this.
 	s.clientsMux.RLock()
-	clients := make([]*websocket.Conn, 0, len(s.clients))
-	for conn := range s.clients {
-		clients = append(clients, conn)
+	type clientEntry struct {
+		conn *websocket.Conn
+		wsc  *wsClient
+	}
+	clients := make([]clientEntry, 0, len(s.clients))
+	for conn, wsc := range s.clients {
+		clients = append(clients, clientEntry{conn: conn, wsc: wsc})
 	}
 	s.clientsMux.RUnlock()
 
+	// Write to each client using its per-connection mutex + deadline.
+	// A slow client only blocks its own write, not other clients.
 	var dead []*websocket.Conn
-	for _, conn := range clients {
-		conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
-		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
-			log.Printf("[Server] Error broadcasting to client %s: %v", conn.RemoteAddr(), err)
-			dead = append(dead, conn)
+	for _, c := range clients {
+		c.wsc.writeMu.Lock()
+		c.conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
+		if err := c.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+			log.Printf("[Server] Error broadcasting to client %s: %v", c.conn.RemoteAddr(), err)
+			dead = append(dead, c.conn)
 		}
-		conn.SetWriteDeadline(time.Time{}) // clear for normal writes
+		c.conn.SetWriteDeadline(time.Time{}) // clear for normal writes
+		c.wsc.writeMu.Unlock()
 	}
 
 	// Remove dead clients so they don't accumulate

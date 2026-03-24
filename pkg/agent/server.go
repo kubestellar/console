@@ -71,6 +71,13 @@ var defaultAllowedOrigins = []string{
 	"http://*.ibm.com",
 }
 
+// wsClient wraps a WebSocket connection with a per-connection write mutex
+// to prevent gorilla/websocket panics from concurrent writes without
+// requiring a global lock across all clients.
+type wsClient struct {
+	writeMu sync.Mutex
+}
+
 // Server is the local agent WebSocket server
 type Server struct {
 	config         Config
@@ -78,9 +85,8 @@ type Server struct {
 	kubectl        *KubectlProxy
 	k8sClient      *k8s.MultiClusterClient // For rich cluster data queries
 	registry       *Registry
-	clients        map[*websocket.Conn]bool
-	clientsMux     sync.RWMutex
-	wsMux          sync.Mutex // protects concurrent WebSocket writes
+	clients    map[*websocket.Conn]*wsClient
+	clientsMux sync.RWMutex
 	allowedOrigins []string
 	agentToken     string // Optional shared secret for authentication
 
@@ -178,7 +184,7 @@ func NewServer(cfg Config) (*Server, error) {
 		kubectl:        kubectl,
 		k8sClient:      k8sClient,
 		registry:       GetRegistry(),
-		clients:        make(map[*websocket.Conn]bool),
+		clients:        make(map[*websocket.Conn]*wsClient),
 		allowedOrigins: allowedOrigins,
 		agentToken:     agentToken,
 		sessionStart:   now,
@@ -1865,7 +1871,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	s.clientsMux.Lock()
-	s.clients[conn] = true
+	s.clients[conn] = &wsClient{}
 	s.clientsMux.Unlock()
 
 	defer func() {
