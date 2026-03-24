@@ -205,15 +205,18 @@ jobs:
                 per_page: 5,
               });
 
+              const isCopilotLogin = (login) =>
+                login === 'Copilot' || login === 'copilot-swe-agent[bot]' || login === 'copilot-swe-agent';
+
               const failedToStart = comments.some(c =>
-                c.user.login === 'Copilot' &&
+                isCopilotLogin(c.user.login) &&
                 c.body.includes('encountered an error and was unable to start')
               );
 
               if (!failedToStart) {
                 // Check for stalled assignment (assigned but no comment after 30min)
-                const copilotAssigned = (issue.assignees || []).some(a => a.login === 'Copilot');
-                const copilotCommented = comments.some(c => c.user.login === 'Copilot');
+                const copilotAssigned = (issue.assignees || []).some(a => isCopilotLogin(a.login));
+                const copilotCommented = comments.some(c => isCopilotLogin(c.user.login));
                 const issueAge = Date.now() - new Date(issue.created_at).getTime();
                 if (!(copilotAssigned && !copilotCommented && issueAge > 30 * 60 * 1000)) continue;
                 core.info(`#${issue.number}: stalled ${Math.round(issueAge / 60000)}m with no Copilot response`);

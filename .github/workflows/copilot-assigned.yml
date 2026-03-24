@@ -15,7 +15,8 @@ jobs:
   handle-copilot-assignment:
     if: |
       github.event.assignee.login == 'Copilot' ||
-      github.event.assignee.login == 'copilot-swe-agent'
+      github.event.assignee.login == 'copilot-swe-agent' ||
+      github.event.assignee.login == 'copilot-swe-agent[bot]'
     runs-on: ubuntu-latest
 
     steps:
