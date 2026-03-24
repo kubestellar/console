@@ -1198,7 +1198,7 @@ func LoadConfigFromEnv() Config {
 	warnDefaultEnvVars(map[string]string{
 		"FEEDBACK_REPO_OWNER":  "kubestellar",
 		"FEEDBACK_REPO_NAME":   "console",
-		"REWARDS_GITHUB_ORGS":  "repo:kubestellar/console repo:kubestellar/console-marketplace repo:kubestellar/console-kb",
+		"REWARDS_GITHUB_ORGS":  "repo:kubestellar/console repo:kubestellar/console-marketplace repo:kubestellar/console-kb repo:kubestellar/docs",
 	})
 
 	return Config{
@@ -1224,7 +1224,7 @@ func LoadConfigFromEnv() Config {
 		FeedbackRepoOwner:   getEnvOrDefault("FEEDBACK_REPO_OWNER", "kubestellar"),
 		FeedbackRepoName:    getEnvOrDefault("FEEDBACK_REPO_NAME", "console"),
 		// GitHub activity rewards
-		RewardsGitHubOrgs: getEnvOrDefault("REWARDS_GITHUB_ORGS", "org:kubestellar"),
+		RewardsGitHubOrgs: getEnvOrDefault("REWARDS_GITHUB_ORGS", "repo:kubestellar/console repo:kubestellar/console-marketplace repo:kubestellar/console-kb repo:kubestellar/docs"),
 		// Skip onboarding questionnaire for new users
 		SkipOnboarding: os.Getenv("SKIP_ONBOARDING") == "true",
 		// Benchmark data from Google Drive
