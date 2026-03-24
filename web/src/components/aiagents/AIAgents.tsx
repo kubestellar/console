@@ -26,13 +26,13 @@ function getTabDefaultCards(tabId: string) {
 
 export function AIAgents() {
   const { t } = useTranslation('common')
-  const { summary, isLoading, refetch, error } = useKagentiSummary()
+  const { summary, isLoading, isDemoData: hookIsDemoData, refetch, error } = useKagentiSummary()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const tabs = aiAgentsDashboardConfig.tabs || []
   const [activeTab, setActiveTab] = useState(tabs[0]?.id || 'kagenti')
 
   const hasData = !!summary && summary.agentCount > 0
-  const isDemoData = !hasData && !isLoading
+  const isDemoData = hookIsDemoData || (!hasData && !isLoading)
 
   const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     if (!summary) return { value: '-' }

@@ -246,12 +246,13 @@ export function useKagentiTools(options?: { cluster?: string; namespace?: string
 
 /** Aggregated summary computed from all kagenti sub-hooks */
 export function useKagentiSummary() {
-  const { data: agents, isLoading: agentsLoading, error: agentsError, refetch: refetchAgents } = useKagentiAgents()
-  const { data: builds, isLoading: buildsLoading, refetch: refetchBuilds } = useKagentiBuilds()
-  const { data: cards, isLoading: cardsLoading, refetch: refetchCards } = useKagentiCards()
-  const { data: tools, isLoading: toolsLoading, refetch: refetchTools } = useKagentiTools()
+  const { data: agents, isLoading: agentsLoading, error: agentsError, refetch: refetchAgents, isDemoFallback: agentsDemo } = useKagentiAgents()
+  const { data: builds, isLoading: buildsLoading, refetch: refetchBuilds, isDemoFallback: buildsDemo } = useKagentiBuilds()
+  const { data: cards, isLoading: cardsLoading, refetch: refetchCards, isDemoFallback: cardsDemo } = useKagentiCards()
+  const { data: tools, isLoading: toolsLoading, refetch: refetchTools, isDemoFallback: toolsDemo } = useKagentiTools()
 
   const isLoading = agentsLoading || buildsLoading || cardsLoading || toolsLoading
+  const isDemoData = agentsDemo || buildsDemo || cardsDemo || toolsDemo
   const error = agentsError
 
   const summary = useMemo((): KagentiSummary | null => {
@@ -290,5 +291,5 @@ export function useKagentiSummary() {
     await Promise.all([refetchAgents(), refetchBuilds(), refetchCards(), refetchTools()])
   }, [refetchAgents, refetchBuilds, refetchCards, refetchTools])
 
-  return { summary, isLoading, error, refetch }
+  return { summary, isLoading, isDemoData, error, refetch }
 }
