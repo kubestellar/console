@@ -1,0 +1,247 @@
+import { useEffect } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import {
+  ArrowRight,
+  Sparkles,
+  Shield,
+  Cpu,
+  DollarSign,
+  GitBranch,
+  Layers,
+  Zap,
+  ExternalLink,
+  Play,
+} from 'lucide-react'
+import { emitWelcomeViewed, emitWelcomeActioned } from '../lib/analytics'
+
+/* ------------------------------------------------------------------ */
+/*  Hero stats — social proof for conference audiences                 */
+/* ------------------------------------------------------------------ */
+
+const HERO_STATS = [
+  { value: '250+', label: 'CNCF tools' },
+  { value: '32', label: 'Dashboards' },
+  { value: '241', label: 'Cards' },
+  { value: '0', label: 'Paywalls' },
+]
+
+/* ------------------------------------------------------------------ */
+/*  "See it in action" scenarios — the 30-second aha moments           */
+/* ------------------------------------------------------------------ */
+
+interface Scenario {
+  icon: React.ReactNode
+  title: string
+  description: string
+  /** Dashboard path to deep-link into */
+  link: string
+}
+
+const SCENARIOS: Scenario[] = [
+  {
+    icon: <Sparkles className="w-6 h-6 text-purple-400" />,
+    title: 'AI diagnoses a crashing pod',
+    description: 'Watch the AI mission scan your cluster, find the root cause, and propose a fix — all in natural language.',
+    link: '/',
+  },
+  {
+    icon: <Layers className="w-6 h-6 text-purple-400" />,
+    title: 'Multi-cluster at a glance',
+    description: 'See cluster health, node status, and pod issues across every cluster in a single view.',
+    link: '/clusters',
+  },
+  {
+    icon: <Cpu className="w-6 h-6 text-purple-400" />,
+    title: 'GPU workload monitoring',
+    description: 'Track GPU reservations, utilization, and AI/ML workload performance with built-in dashboards.',
+    link: '/ai-ml',
+  },
+  {
+    icon: <Shield className="w-6 h-6 text-purple-400" />,
+    title: 'Security & compliance scoring',
+    description: 'OPA, Kyverno, Kubescape, and Trivy — all built in. See your compliance posture in seconds.',
+    link: '/compliance',
+  },
+  {
+    icon: <DollarSign className="w-6 h-6 text-purple-400" />,
+    title: 'Cost visibility per namespace',
+    description: 'OpenCost integration shows exactly where your spend is going. No separate billing tool.',
+    link: '/cost',
+  },
+  {
+    icon: <GitBranch className="w-6 h-6 text-purple-400" />,
+    title: 'GitOps sync status',
+    description: 'ArgoCD and Flux drift detection baked in. See what\'s out of sync at a glance.',
+    link: '/gitops',
+  },
+]
+
+/* ------------------------------------------------------------------ */
+/*  What makes this different — quick differentiators                  */
+/* ------------------------------------------------------------------ */
+
+const DIFFERENTIATORS = [
+  'No account required',
+  'No license keys',
+  'Apache 2.0',
+  'Works offline',
+  'AI-powered missions',
+  'Multi-cluster native',
+]
+
+/* ------------------------------------------------------------------ */
+/*  Main page component                                                */
+/* ------------------------------------------------------------------ */
+
+export function Welcome() {
+  const [searchParams] = useSearchParams()
+  const ref = searchParams.get('ref') || 'direct'
+
+  useEffect(() => {
+    emitWelcomeViewed(ref)
+  }, [ref])
+
+  return (
+    <div className="min-h-screen bg-[#0f172a] text-white">
+      {/* ---- Hero ---- */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-transparent to-blue-900/20 pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative max-w-5xl mx-auto px-6 pt-20 pb-12 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-8 rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-300 text-sm">
+            <Zap className="w-4 h-4" />
+            Open Source &middot; AI-Powered &middot; Multi-Cluster
+          </div>
+
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight mb-6">
+            Your Kubernetes clusters.{' '}
+            <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+              One&nbsp;console.
+            </span>
+          </h1>
+
+          <p className="text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto mb-4 leading-relaxed">
+            KubeStellar Console is the open-source Kubernetes dashboard with{' '}
+            <span className="text-white font-medium">AI troubleshooting, GPU visibility, cost analytics, and security compliance</span>{' '}
+            built in — not bolted on.
+          </p>
+
+          <p className="text-sm text-slate-400 max-w-xl mx-auto mb-10">
+            No sign-up. No install. Explore the full demo right now.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+            <Link
+              to="/"
+              onClick={() => emitWelcomeActioned('hero_explore_demo', ref)}
+              className="inline-flex items-center gap-2 px-8 py-4 sm:py-3.5 rounded-lg bg-purple-500 hover:bg-purple-600 active:bg-purple-700 text-white font-semibold text-lg transition-colors w-full sm:w-auto justify-center"
+            >
+              <Play className="w-5 h-5" />
+              Explore the Demo
+            </Link>
+            <a
+              href="https://github.com/kubestellar/console"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => emitWelcomeActioned('hero_github', ref)}
+              className="inline-flex items-center gap-2 px-8 py-4 sm:py-3.5 rounded-lg border border-slate-600 hover:border-slate-500 hover:bg-slate-800/50 active:bg-slate-800 text-slate-300 font-medium text-lg transition-colors w-full sm:w-auto justify-center"
+            >
+              GitHub
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          </div>
+
+          {/* Stats strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-2xl mx-auto">
+            {HERO_STATS.map((stat) => (
+              <div key={stat.label} className="text-center">
+                <div className="text-3xl font-bold text-purple-400">{stat.value}</div>
+                <div className="text-xs text-slate-400 mt-1 uppercase tracking-wider">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ---- Differentiator pills ---- */}
+      <section className="max-w-5xl mx-auto px-6 py-8">
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          {DIFFERENTIATORS.map((d) => (
+            <span
+              key={d}
+              className="px-4 py-1.5 rounded-full border border-slate-700/50 bg-slate-800/30 text-sm text-slate-300"
+            >
+              {d}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      {/* ---- Scenarios — "See it in action" ---- */}
+      <section className="max-w-5xl mx-auto px-6 py-16">
+        <h2 className="text-3xl font-bold text-center mb-4">
+          See it in{' '}
+          <span className="text-purple-400">action</span>
+        </h2>
+        <p className="text-slate-400 text-center mb-12 max-w-2xl mx-auto">
+          Click any scenario to jump straight into the demo dashboard.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {SCENARIOS.map((scenario) => (
+            <Link
+              key={scenario.title}
+              to={scenario.link}
+              onClick={() => emitWelcomeActioned(`scenario_${scenario.link}`, ref)}
+              className="group rounded-xl border border-slate-700/50 bg-slate-800/30 p-6 hover:border-purple-500/30 hover:bg-slate-800/50 active:bg-slate-800/70 transition-colors touch-manipulation"
+            >
+              <div className="mb-4">{scenario.icon}</div>
+              <h3 className="text-lg font-semibold mb-2 group-hover:text-purple-300 transition-colors">
+                {scenario.title}
+              </h3>
+              <p className="text-sm text-slate-400 leading-relaxed mb-3">{scenario.description}</p>
+              <span className="inline-flex items-center gap-1.5 text-sm text-purple-400 group-hover:text-purple-300 transition-colors">
+                Try it
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* ---- Footer CTA ---- */}
+      <section className="border-t border-slate-700/50 bg-gradient-to-b from-slate-900/50 to-[#0f172a]">
+        <div className="max-w-5xl mx-auto px-6 py-20 text-center">
+          <h2 className="text-4xl font-bold mb-4">Ready to try it?</h2>
+          <p className="text-slate-400 mb-10 text-lg">
+            The full demo runs in your browser. No cluster required.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              to="/"
+              onClick={() => emitWelcomeActioned('footer_explore_demo', ref)}
+              className="inline-flex items-center gap-2 px-8 py-3 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-semibold text-lg transition-colors"
+            >
+              Explore the Demo
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+            <a
+              href="https://github.com/kubestellar/console"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => emitWelcomeActioned('footer_github', ref)}
+              className="inline-flex items-center gap-2 px-8 py-3 rounded-lg border border-slate-600 hover:border-slate-500 hover:bg-slate-800/50 text-slate-300 font-medium text-lg transition-colors"
+            >
+              View on GitHub
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          </div>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+export default Welcome

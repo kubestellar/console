@@ -81,6 +81,7 @@ export const ROUTES = {
   FEATURES: '/features',
 
   // Marketing / competitive landing pages
+  WELCOME: '/welcome',
   FROM_LENS: '/from-lens',
   FROM_HEADLAMP: '/from-headlamp',
   WHITE_LABEL: '/white-label',
