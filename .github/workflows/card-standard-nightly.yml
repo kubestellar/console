@@ -8,6 +8,8 @@ on:
     paths:
       - 'web/src/components/cards/**'
       - 'web/src/test/card-loading-standard.test.ts'
+      - 'web/package.json'
+      - 'web/package-lock.json'
   workflow_dispatch:
 
 jobs:

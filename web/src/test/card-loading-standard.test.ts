@@ -24,10 +24,14 @@
 import { describe, it, expect } from 'vitest'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 // ── Configuration ──────────────────────────────────────────────────────────
 
-const CARDS_DIR = path.resolve(__dirname, '../components/cards')
+const CARDS_DIR = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../components/cards',
+)
 
 /**
  * Cards exempt from ALL checks (with reasons).
@@ -171,7 +175,9 @@ function findCardFiles(dir: string): string[] {
 
 /** Get relative path from CARDS_DIR for readable test names */
 function relPath(filePath: string): string {
-  return path.relative(CARDS_DIR, filePath)
+  const rel = path.relative(CARDS_DIR, filePath)
+  // Normalize to POSIX-style separators so this matches KNOWN_VIOLATIONS keys
+  return rel.replace(/\\/g, '/')
 }
 
 /** Check if a file is exempt from all checks */
@@ -180,9 +186,9 @@ function isExempt(filePath: string): boolean {
   return !!EXEMPT_CARDS[basename]
 }
 
-/** Check if file uses useCardLoadingState or useReportCardDataState */
+/** Check if file uses useCardLoadingState */
 function usesLoadingStateHook(src: string): boolean {
-  return src.includes('useCardLoadingState') || src.includes('useReportCardDataState')
+  return src.includes('useCardLoadingState')
 }
 
 /** Check if file uses a useCached* hook */
