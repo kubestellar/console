@@ -30,6 +30,10 @@ export function useStablePageHeight(pageSize: number | string, totalItems: numbe
   // Uses a post-render effect to read scrollHeight and update minHeight
   // when a taller page is observed. The guard prevents calling setState
   // when the height hasn't actually changed (avoiding re-render loops).
+  //
+  // IMPORTANT: We temporarily remove minHeight before measuring to avoid a
+  // feedback loop where setting minHeight increases scrollHeight, which
+  // triggers another setState, ad infinitum ("Maximum update depth exceeded").
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
     const el = containerRef.current
@@ -37,12 +41,18 @@ export function useStablePageHeight(pageSize: number | string, totalItems: numbe
     const effectivePageSize = typeof pageSize === 'number' ? pageSize : Infinity
     if (totalItems <= effectivePageSize) return // no pagination active
 
+    // Temporarily clear minHeight so we measure the natural content height,
+    // not the inflated height from a previous minHeight setting.
+    const prevMinHeight = el.style.minHeight
+    el.style.minHeight = ''
     const height = el.scrollHeight
+    el.style.minHeight = prevMinHeight
+
     if (height > maxHeightRef.current) {
       maxHeightRef.current = height
       // Only call setState if the value actually changed — prevents
       // infinite useLayoutEffect → setState → re-render → useLayoutEffect
-      // loops that cause "Maximum call stack size exceeded" (28 GA4 errors).
+      // loops that cause "Maximum update depth exceeded".
       if (height !== stableMinHeight) {
         setStableMinHeight(height)
       }
