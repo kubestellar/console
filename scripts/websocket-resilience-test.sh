@@ -112,7 +112,7 @@ echo -e "${BOLD}Go WebSocket handler tests:${NC}"
 
 WS_TEST_OUTPUT="$TMPDIR_WS/go-ws-tests.txt"
 WS_TEST_EXIT=0
-go test ./pkg/api/handlers/... -run "TestWebSocket\|TestHub\|TestHandle" -v -timeout 30s > "$WS_TEST_OUTPUT" 2>&1 || WS_TEST_EXIT=$?
+go test ./pkg/agent/... -run "TestServer_HandleWebSocket" -v -timeout 30s > "$WS_TEST_OUTPUT" 2>&1 || WS_TEST_EXIT=$?
 
 # Count pass/fail from Go test output
 GO_PASSED=$(grep -c "^--- PASS:" "$WS_TEST_OUTPUT" 2>/dev/null) || GO_PASSED=0
