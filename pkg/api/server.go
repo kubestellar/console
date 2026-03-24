@@ -1037,7 +1037,11 @@ func (s *Server) backendURL() string {
 	if !s.config.DevMode && s.config.FrontendURL != "" {
 		return s.config.FrontendURL
 	}
-	return fmt.Sprintf("http://localhost:%d", s.config.Port)
+	port := s.config.Port
+	if s.config.BackendPort > 0 {
+		port = s.config.BackendPort
+	}
+	return fmt.Sprintf("http://localhost:%d", port)
 }
 
 // Start shuts down the temporary loading server and starts the real Fiber app.
