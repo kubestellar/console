@@ -83,11 +83,14 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 	var mu sync.Mutex
 	allItems := make([]CustomResourceItem, 0)
 
+	clusterCtx, clusterCancel := context.WithCancel(c.Context())
+	defer clusterCancel()
+
 	for _, cl := range clusters {
 		wg.Add(1)
 		go func(clusterName string) {
 			defer wg.Done()
-			ctx, cancel := context.WithTimeout(context.Background(), mcpDefaultTimeout)
+			ctx, cancel := context.WithTimeout(clusterCtx, mcpDefaultTimeout)
 			defer cancel()
 
 			items, err := h.listCR(ctx, clusterName, namespace, gvr)
@@ -103,7 +106,7 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 		}(cl.Name)
 	}
 
-	waitWithDeadline(&wg, maxResponseDeadline)
+	waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 	return c.JSON(CustomResourceResponse{Items: allItems, IsDemoData: false})
 }
 

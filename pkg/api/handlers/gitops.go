@@ -280,13 +280,16 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 		allKustomizations := make([]Kustomization, 0)
 		clusterTimeout := gitopsClusterTimeout
 
+		clusterCtx, clusterCancel := context.WithCancel(c.Context())
+		defer clusterCancel()
+
 		for _, cl := range clusters {
 			wg.Add(1)
 			go func(clusterName string) {
 				defer wg.Done()
 				subprocessSem <- struct{}{}        // acquire
 				defer func() { <-subprocessSem }() // release
-				ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+				ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 				defer cancel()
 
 				kustomizations := h.getKustomizationsForCluster(ctx, clusterName)
@@ -298,7 +301,7 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 			}(cl.Name)
 		}
 
-		waitWithDeadline(&wg, maxResponseDeadline)
+		waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 		return c.JSON(fiber.Map{"kustomizations": allKustomizations})
 	}
 

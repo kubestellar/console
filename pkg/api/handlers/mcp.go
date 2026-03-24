@@ -35,11 +35,12 @@ const mcpDefaultTimeout = 15 * time.Second
 const mcpExtendedTimeout = 30 * time.Second
 
 // waitWithDeadline waits for all goroutines in wg to finish, but returns
-// early if the deadline is reached. Goroutines that haven't finished
-// continue running in the background (their results are simply not
-// included in the current response). Returns true if the deadline was
-// hit (partial results), false if all goroutines completed in time.
-func waitWithDeadline(wg *sync.WaitGroup, deadline time.Duration) bool {
+// early if the deadline is reached. When the deadline fires, cancel is
+// called to signal the in-flight goroutines to stop, so they exit promptly
+// rather than running indefinitely in the background. Returns true if the
+// deadline was hit (partial results), false if all goroutines completed in
+// time.
+func waitWithDeadline(wg *sync.WaitGroup, cancel context.CancelFunc, deadline time.Duration) bool {
 	done := make(chan struct{})
 	go func() {
 		wg.Wait()
@@ -51,6 +52,7 @@ func waitWithDeadline(wg *sync.WaitGroup, deadline time.Duration) bool {
 	case <-done:
 		return false
 	case <-timer.C:
+		cancel()
 		return true
 	}
 }
@@ -259,11 +261,14 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 			allPods := make([]k8s.PodInfo, 0)
 			clusterTimeout := mcpExtendedTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					pods, err := h.k8sClient.GetPods(ctx, clusterName, namespace)
@@ -275,7 +280,7 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"pods": allPods, "source": "k8s"})
 		}
 
@@ -333,11 +338,14 @@ func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 			allIssues := make([]k8s.PodIssue, 0)
 			clusterTimeout := mcpExtendedTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					issues, err := h.k8sClient.FindPodIssues(ctx, clusterName, namespace)
@@ -349,7 +357,7 @@ func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"issues": allIssues, "source": "k8s"})
 		}
 
@@ -393,11 +401,14 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 			allNodes := make([]k8s.GPUNode, 0)
 			clusterTimeout := mcpExtendedTimeout // Increased for large GPU clusters
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					nodes, err := h.k8sClient.GetGPUNodes(ctx, clusterName)
@@ -409,7 +420,7 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"nodes": allNodes, "source": "k8s"})
 		}
 
@@ -451,11 +462,14 @@ func (h *MCPHandlers) GetGPUNodeHealth(c *fiber.Ctx) error {
 			allNodes := make([]k8s.GPUNodeHealthStatus, 0)
 			clusterTimeout := mcpExtendedTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					nodes, err := h.k8sClient.GetGPUNodeHealth(ctx, clusterName)
@@ -467,7 +481,7 @@ func (h *MCPHandlers) GetGPUNodeHealth(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"nodes": allNodes, "source": "k8s"})
 		}
 
@@ -630,11 +644,14 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 			allStatus := make([]*k8s.NVIDIAOperatorStatus, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					status, err := h.k8sClient.GetNVIDIAOperatorStatus(ctx, clusterName)
@@ -646,7 +663,7 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"operators": allStatus, "source": "k8s"})
 		}
 
@@ -687,11 +704,14 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 			allNodes := make([]k8s.NodeInfo, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					nodes, err := h.k8sClient.GetNodes(ctx, clusterName)
@@ -703,7 +723,7 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"nodes": allNodes, "source": "k8s"})
 		}
 
@@ -749,11 +769,14 @@ func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
 			allIssues := make([]k8s.DeploymentIssue, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					issues, err := h.k8sClient.FindDeploymentIssues(ctx, clusterName, namespace)
@@ -765,7 +788,7 @@ func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"issues": allIssues, "source": "k8s"})
 		}
 
@@ -809,11 +832,14 @@ func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
 			allDeployments := make([]k8s.Deployment, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					deployments, err := h.k8sClient.GetDeployments(ctx, clusterName, namespace)
@@ -825,7 +851,7 @@ func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"deployments": allDeployments, "source": "k8s"})
 		}
 
@@ -868,11 +894,14 @@ func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
 			allServices := make([]k8s.Service, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					services, err := h.k8sClient.GetServices(ctx, clusterName, namespace)
@@ -884,7 +913,7 @@ func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"services": allServices, "source": "k8s"})
 		}
 
@@ -928,11 +957,14 @@ func (h *MCPHandlers) GetJobs(c *fiber.Ctx) error {
 			allJobs := make([]k8s.Job, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					jobs, err := h.k8sClient.GetJobs(ctx, clusterName, namespace)
@@ -944,7 +976,7 @@ func (h *MCPHandlers) GetJobs(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"jobs": allJobs, "source": "k8s"})
 		}
 
@@ -988,11 +1020,14 @@ func (h *MCPHandlers) GetHPAs(c *fiber.Ctx) error {
 			allHPAs := make([]k8s.HPA, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					hpas, err := h.k8sClient.GetHPAs(ctx, clusterName, namespace)
@@ -1004,7 +1039,7 @@ func (h *MCPHandlers) GetHPAs(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"hpas": allHPAs, "source": "k8s"})
 		}
 
@@ -1048,11 +1083,14 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 			allConfigMaps := make([]k8s.ConfigMap, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					configmaps, err := h.k8sClient.GetConfigMaps(ctx, clusterName, namespace)
@@ -1064,7 +1102,7 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"configmaps": allConfigMaps, "source": "k8s"})
 		}
 
@@ -1108,11 +1146,14 @@ func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
 			allSecrets := make([]k8s.Secret, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					secrets, err := h.k8sClient.GetSecrets(ctx, clusterName, namespace)
@@ -1124,7 +1165,7 @@ func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"secrets": allSecrets, "source": "k8s"})
 		}
 
@@ -1168,11 +1209,14 @@ func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
 			allServiceAccounts := make([]k8s.ServiceAccount, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					serviceAccounts, err := h.k8sClient.GetServiceAccounts(ctx, clusterName, namespace)
@@ -1184,7 +1228,7 @@ func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"serviceAccounts": allServiceAccounts, "source": "k8s"})
 		}
 
@@ -1228,11 +1272,14 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 			allPVCs := make([]k8s.PVC, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					pvcs, err := h.k8sClient.GetPVCs(ctx, clusterName, namespace)
@@ -1244,7 +1291,7 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"pvcs": allPVCs, "source": "k8s"})
 		}
 
@@ -1287,11 +1334,14 @@ func (h *MCPHandlers) GetPVs(c *fiber.Ctx) error {
 			allPVs := make([]k8s.PV, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					pvs, err := h.k8sClient.GetPVs(ctx, clusterName)
@@ -1303,7 +1353,7 @@ func (h *MCPHandlers) GetPVs(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"pvs": allPVs, "source": "k8s"})
 		}
 
@@ -1347,11 +1397,14 @@ func (h *MCPHandlers) GetResourceQuotas(c *fiber.Ctx) error {
 			allQuotas := make([]k8s.ResourceQuota, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					quotas, err := h.k8sClient.GetResourceQuotas(ctx, clusterName, namespace)
@@ -1363,7 +1416,7 @@ func (h *MCPHandlers) GetResourceQuotas(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"resourceQuotas": allQuotas, "source": "k8s"})
 		}
 
@@ -1407,11 +1460,14 @@ func (h *MCPHandlers) GetLimitRanges(c *fiber.Ctx) error {
 			allRanges := make([]k8s.LimitRange, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					ranges, err := h.k8sClient.GetLimitRanges(ctx, clusterName, namespace)
@@ -1423,7 +1479,7 @@ func (h *MCPHandlers) GetLimitRanges(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"limitRanges": allRanges, "source": "k8s"})
 		}
 
@@ -1604,11 +1660,14 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 			allEvents := make([]k8s.Event, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					events, err := h.k8sClient.GetEvents(ctx, clusterName, namespace, perClusterLimit)
@@ -1620,7 +1679,7 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 
 			// Sort by timestamp (most recent first) and limit total
 			sort.Slice(allEvents, func(i, j int) bool {
@@ -1692,11 +1751,14 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 			allEvents := make([]k8s.Event, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					events, err := h.k8sClient.GetWarningEvents(ctx, clusterName, namespace, perClusterLimit)
@@ -1708,7 +1770,7 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 
 			// Sort by timestamp (most recent first) and limit total
 			sort.Slice(allEvents, func(i, j int) bool {
@@ -1762,11 +1824,14 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 			allIssues := make([]k8s.SecurityIssue, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					issues, err := h.k8sClient.CheckSecurityIssues(ctx, clusterName, namespace)
@@ -1778,7 +1843,7 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"issues": allIssues, "source": "k8s"})
 		}
 
@@ -1994,11 +2059,14 @@ func (h *MCPHandlers) GetFlatcarNodes(c *fiber.Ctx) error {
 			var mu sync.Mutex
 			allNodes := make([]k8s.FlatcarNodeInfo, 0)
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), mcpDefaultTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, mcpDefaultTimeout)
 					defer cancel()
 
 					nodes, err := h.k8sClient.GetFlatcarNodes(ctx, clusterName)
@@ -2010,7 +2078,7 @@ func (h *MCPHandlers) GetFlatcarNodes(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"nodes": allNodes, "source": "k8s"})
 		}
 
@@ -2052,11 +2120,14 @@ func (h *MCPHandlers) GetReplicaSets(c *fiber.Ctx) error {
 			allItems := make([]k8s.ReplicaSet, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					items, err := h.k8sClient.GetReplicaSets(ctx, clusterName, namespace)
@@ -2068,7 +2139,7 @@ func (h *MCPHandlers) GetReplicaSets(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"replicasets": allItems, "source": "k8s"})
 		}
 
@@ -2112,11 +2183,14 @@ func (h *MCPHandlers) GetStatefulSets(c *fiber.Ctx) error {
 			allItems := make([]k8s.StatefulSet, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					items, err := h.k8sClient.GetStatefulSets(ctx, clusterName, namespace)
@@ -2128,7 +2202,7 @@ func (h *MCPHandlers) GetStatefulSets(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"statefulsets": allItems, "source": "k8s"})
 		}
 
@@ -2172,11 +2246,14 @@ func (h *MCPHandlers) GetDaemonSets(c *fiber.Ctx) error {
 			allItems := make([]k8s.DaemonSet, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					items, err := h.k8sClient.GetDaemonSets(ctx, clusterName, namespace)
@@ -2188,7 +2265,7 @@ func (h *MCPHandlers) GetDaemonSets(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"daemonsets": allItems, "source": "k8s"})
 		}
 
@@ -2232,11 +2309,14 @@ func (h *MCPHandlers) GetCronJobs(c *fiber.Ctx) error {
 			allItems := make([]k8s.CronJob, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					items, err := h.k8sClient.GetCronJobs(ctx, clusterName, namespace)
@@ -2248,7 +2328,7 @@ func (h *MCPHandlers) GetCronJobs(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"cronjobs": allItems, "source": "k8s"})
 		}
 
@@ -2292,11 +2372,14 @@ func (h *MCPHandlers) GetIngresses(c *fiber.Ctx) error {
 			allItems := make([]k8s.Ingress, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					items, err := h.k8sClient.GetIngresses(ctx, clusterName, namespace)
@@ -2308,7 +2391,7 @@ func (h *MCPHandlers) GetIngresses(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"ingresses": allItems, "source": "k8s"})
 		}
 
@@ -2352,11 +2435,14 @@ func (h *MCPHandlers) GetNetworkPolicies(c *fiber.Ctx) error {
 			allItems := make([]k8s.NetworkPolicy, 0)
 			clusterTimeout := mcpDefaultTimeout
 
+			clusterCtx, clusterCancel := context.WithCancel(c.Context())
+			defer clusterCancel()
+
 			for _, cl := range clusters {
 				wg.Add(1)
 				go func(clusterName string) {
 					defer wg.Done()
-					ctx, cancel := context.WithTimeout(context.Background(), clusterTimeout)
+					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
 					items, err := h.k8sClient.GetNetworkPolicies(ctx, clusterName, namespace)
@@ -2368,7 +2454,7 @@ func (h *MCPHandlers) GetNetworkPolicies(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			waitWithDeadline(&wg, maxResponseDeadline)
+			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 			return c.JSON(fiber.Map{"networkpolicies": allItems, "source": "k8s"})
 		}
 
@@ -2461,12 +2547,15 @@ func (h *MCPHandlers) GetPodNetworkStats(c *fiber.Ctx) error {
 	var mu sync.Mutex
 	allStats := make([]PodNetworkStats, 0)
 
+	clusterCtx, clusterCancel := context.WithCancel(c.Context())
+	defer clusterCancel()
+
 	for _, cl := range clusters {
 		wg.Add(1)
 		go func(clusterName string) {
 			defer wg.Done()
 
-			ctx, cancel := context.WithTimeout(context.Background(), podNetworkStatsTimeout)
+			ctx, cancel := context.WithTimeout(clusterCtx, podNetworkStatsTimeout)
 			defer cancel()
 
 			client, clientErr := h.k8sClient.GetClient(clusterName)
@@ -2524,7 +2613,7 @@ func (h *MCPHandlers) GetPodNetworkStats(c *fiber.Ctx) error {
 		}(cl.Name)
 	}
 
-	waitWithDeadline(&wg, maxResponseDeadline)
+	waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 	return c.JSON(fiber.Map{"stats": allStats, "source": "k8s"})
 }
 

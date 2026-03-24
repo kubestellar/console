@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -20,12 +21,15 @@ func TestWaitWithDeadline_CompletesBeforeDeadline(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
+	_, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	go func() {
 		defer wg.Done()
 		time.Sleep(5 * time.Millisecond)
 	}()
 
-	timedOut := waitWithDeadline(&wg, 200*time.Millisecond)
+	timedOut := waitWithDeadline(&wg, cancel, 200*time.Millisecond)
 	assert.False(t, timedOut)
 }
 
@@ -33,10 +37,38 @@ func TestWaitWithDeadline_DeadlineHit(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	timedOut := waitWithDeadline(&wg, 10*time.Millisecond)
+	_, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	timedOut := waitWithDeadline(&wg, cancel, 10*time.Millisecond)
 	assert.True(t, timedOut)
 
 	wg.Done()
+}
+
+func TestWaitWithDeadline_CancelledOnDeadline(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	cancelled := make(chan struct{})
+	go func() {
+		defer wg.Done()
+		<-ctx.Done()
+		close(cancelled)
+	}()
+
+	timedOut := waitWithDeadline(&wg, cancel, 20*time.Millisecond)
+	assert.True(t, timedOut)
+
+	select {
+	case <-cancelled:
+		// goroutine was cancelled as expected
+	case <-time.After(200 * time.Millisecond):
+		t.Error("goroutine was not cancelled after deadline")
+	}
 }
 
 func TestMCPGetPods_DemoModeReturnsDemoData(t *testing.T) {
