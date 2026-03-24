@@ -1,6 +1,6 @@
-import { useRef, useEffect, useMemo, useState } from 'react'
+import { useRef, useEffect, useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, Check, Loader2, Sparkles } from 'lucide-react'
+import { ChevronDown, Check, Loader2, Sparkles, Play } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
 import { useDemoMode, getDemoMode } from '../../hooks/useDemoMode'
 import { useKagentBackend } from '../../hooks/useKagentBackend'
@@ -18,7 +18,7 @@ interface AgentSelectorProps {
 
 export function AgentSelector({ compact = false, className = '' }: AgentSelectorProps) {
   const { t } = useTranslation()
-  const { agents, selectedAgent, agentsLoading, selectAgent, connectToAgent } = useMissions()
+  const { agents, selectedAgent, agentsLoading, selectAgent, connectToAgent, startMission } = useMissions()
   const { isDemoMode: isDemoModeHook } = useDemoMode()
   const { kagentAvailable, kagentiAvailable, selectedKagentAgent, selectedKagentiAgent } = useKagentBackend()
   // Synchronous fallback prevents flash during React transitions
@@ -45,6 +45,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
         provider: 'kagent',
         available: kagentAvailable,
         installUrl: kagentAvailable ? undefined : 'https://github.com/kagent-dev/kagent',
+        installMissionId: kagentAvailable ? undefined : 'install-kagent',
       },
       {
         name: 'kagenti',
@@ -53,10 +54,24 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
         provider: 'kagenti',
         available: kagentiAvailable,
         installUrl: kagentiAvailable ? undefined : 'https://github.com/kagenti/kagenti',
+        installMissionId: kagentiAvailable ? undefined : 'install-kagenti',
       },
     ]
     return [...local, ...inCluster]
   }, [agents, kagentAvailable, kagentiAvailable, selectedKagentAgent, selectedKagentiAgent])
+
+  // Check if any CLI agent is available (can run install missions)
+  const hasCliAgent = useMemo(() => agents.some(a => a.available), [agents])
+
+  const handleInstallMission = useCallback((missionId: string, displayName: string) => {
+    startMission({
+      title: `Install ${displayName}`,
+      description: `Install ${displayName} in the cluster using AI mission`,
+      type: 'deploy',
+      initialPrompt: `/mission/${missionId}`,
+    })
+    closeDropdown()
+  }, [startMission, closeDropdown])
 
   // Sort: selected agent first, then available agents, then unavailable
   const sortedAgents = useMemo(() => {
@@ -282,12 +297,28 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
                         <Check className="w-4 h-4 text-primary flex-shrink-0" />
                       )}
                     </div>
-                    <p className={cn('text-xs truncate', agent.available ? 'text-muted-foreground' : 'text-muted-foreground/60')}>
+                    <p className={cn('text-xs', agent.available ? 'text-muted-foreground' : 'text-muted-foreground/60')}>
                       {agent.description}
-                      {agent.installUrl && (
-                        <> — <a href={agent.installUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-primary hover:underline">Install</a></>
-                      )}
                     </p>
+                    {agent.installUrl && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <a href={agent.installUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-xs text-primary hover:underline">
+                          Manual install
+                        </a>
+                        {hasCliAgent && agent.installMissionId && (
+                          <>
+                            <span className="text-xs text-muted-foreground/40">|</span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleInstallMission(agent.installMissionId!, agent.displayName) }}
+                              className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                            >
+                              <Play className="w-3 h-3" />
+                              Install with AI Mission
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

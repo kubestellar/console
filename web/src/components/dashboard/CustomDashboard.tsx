@@ -557,7 +557,7 @@ export function CustomDashboard() {
         <div className="animate-pulse space-y-6">
           <div className="h-8 w-64 bg-secondary/50 rounded" />
           <div className="h-4 w-96 bg-secondary/30 rounded" />
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
             {[...Array(3)].map((_, i) => (
               <div key={i} className="col-span-4 h-48 bg-secondary/30 rounded-lg" />
             ))}
@@ -648,7 +648,7 @@ export function CustomDashboard() {
           onDragEnd={handleDragEnd}
         >
           <SortableContext items={cards.map(c => c.id)} strategy={rectSortingStrategy}>
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-2 auto-rows-[minmax(180px,auto)]">
               {cards.map((card, index) => (
                 <SortableCard
                   key={card.id}

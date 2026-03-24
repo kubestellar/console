@@ -1360,7 +1360,7 @@ export function GPUReservations() {
             onDragEnd={handleDashDragEnd}
           >
             <SortableContext items={dashCardIds} strategy={rectSortingStrategy}>
-              <div className="grid grid-cols-12 gap-4">
+              <div className="grid grid-cols-12 gap-2">
                 {dashboardCards.map((card, index) => (
                   <SortableGpuCard
                     key={dashCardIds[index]}

@@ -172,21 +172,29 @@ export function AgentIcon({ provider, className = 'w-5 h-5' }: AgentIconProps) {
       )
     case 'kagent':
       return (
-        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-          {/* Kagent icon - purple hexagon with K */}
-          <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" className="fill-purple-500" />
-          <text x="12" y="16" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" fontFamily="sans-serif">K</text>
+        <svg className={className} viewBox="0 0 123 93" fill="none">
+          {/* Kagent official icon - geometric K mark (#942DE7) */}
+          <path d="M91.609 46.098H76.333V61.472H91.609V46.098Z" fill="#942DE7"/>
+          <path d="M61.081 46.098H45.805V61.472H61.081V46.098Z" fill="#942DE7"/>
+          <path d="M106.861 15.374L91.585 0H76.333H61.057H45.805H30.528V15.374H15.276V30.724H0V46.098V61.448L15.276 76.822L30.528 92.172H45.805H61.057H76.333H91.585H106.861V76.822H91.585H76.333H61.057H45.805H30.528V61.448V46.098V30.724H45.805H61.057H76.333H91.585H106.861V46.098V61.448V76.822H122.113V61.448V46.098V30.724L106.861 15.374Z" fill="#942DE7"/>
         </svg>
       )
     case 'kagenti':
       return (
-        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-          {/* Kagenti icon - green hexagon with connected nodes */}
-          <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" className="fill-green-500" />
-          <circle cx="12" cy="8" r="1.8" fill="white" />
-          <circle cx="8" cy="14" r="1.8" fill="white" />
-          <circle cx="16" cy="14" r="1.8" fill="white" />
-          <path d="M12 8L8 14M12 8L16 14M8 14H16" stroke="white" strokeWidth="0.8" fill="none" />
+        <svg className={className} viewBox="0 0 24 24" fill="none">
+          {/* Kagenti icon - container ship on water (from official logo) */}
+          <rect x="4" y="8" width="16" height="6" rx="1" fill="#0EA5E9" />
+          {/* Containers on deck */}
+          <rect x="5" y="5" width="4" height="3" rx="0.5" fill="#7C3AED" />
+          <rect x="10" y="5" width="4" height="3" rx="0.5" fill="#2DD4BF" />
+          <rect x="15" y="5" width="4" height="3" rx="0.5" fill="#F59E0B" />
+          <rect x="7" y="2.5" width="4" height="2.5" rx="0.5" fill="#EC4899" />
+          <rect x="12" y="2.5" width="4" height="2.5" rx="0.5" fill="#10B981" />
+          {/* Hull bottom */}
+          <path d="M3 14l2 3h14l2-3H3z" fill="#0284C7" />
+          {/* Water waves */}
+          <path d="M1 19c2-1 4-1 6 0s4 1 6 0 4-1 6 0 4 1 5 0" stroke="#38BDF8" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+          <path d="M1 21.5c2-1 4-1 6 0s4 1 6 0 4-1 6 0 4 1 5 0" stroke="#38BDF8" strokeWidth="1" strokeLinecap="round" fill="none" opacity="0.5" />
         </svg>
       )
     default:

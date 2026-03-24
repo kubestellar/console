@@ -995,7 +995,7 @@ export function Dashboard() {
             data-tour="dashboard"
             role="grid"
             aria-label="Dashboard cards"
-            className={`grid grid-cols-1 md:grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)] ${showDragHint ? 'animate-shimmy' : ''}`}
+            className={`grid grid-cols-1 md:grid-cols-12 gap-2 auto-rows-[minmax(180px,auto)] ${showDragHint ? 'animate-shimmy' : ''}`}
           >
             {localCards.map((card, index) => (
               <SortableCard
