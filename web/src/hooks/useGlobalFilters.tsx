@@ -94,7 +94,7 @@ interface GlobalFiltersContextType {
   filterBySeverity: <T extends { severity?: string }>(items: T[]) => T[]
   filterByStatus: <T extends { status?: string }>(items: T[]) => T[]
   filterByCustomText: <T extends Record<string, unknown>>(items: T[], searchFields?: string[]) => T[]
-  filterItems: <T extends { cluster?: string; severity?: string }>(items: T[]) => T[]
+  filterItems: <T extends { cluster?: string; severity?: string; status?: string } & Record<string, unknown>>(items: T[]) => T[]
 }
 
 const GlobalFiltersContext = createContext<GlobalFiltersContextType | null>(null)
@@ -419,12 +419,14 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     )
   }, [customFilter])
 
-  const filterItems = useCallback(<T extends { cluster?: string; severity?: string }>(items: T[]): T[] => {
+  const filterItems = useCallback(<T extends { cluster?: string; severity?: string; status?: string } & Record<string, unknown>>(items: T[]): T[] => {
     let filtered = items
     filtered = filterByCluster(filtered)
     filtered = filterBySeverity(filtered)
+    filtered = filterByStatus(filtered)
+    filtered = filterByCustomText(filtered)
     return filtered
-  }, [filterByCluster, filterBySeverity])
+  }, [filterByCluster, filterBySeverity, filterByStatus, filterByCustomText])
 
   const contextValue = useMemo(() => ({
     // Cluster filtering
