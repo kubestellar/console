@@ -33,6 +33,7 @@ export interface AgentInfo {
   provider: AgentProvider
   available: boolean
   capabilities?: number // bitmask of capabilities
+  installUrl?: string // shown when agent is not available
 }
 
 export interface AgentState {

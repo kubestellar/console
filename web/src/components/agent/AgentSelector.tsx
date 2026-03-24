@@ -34,30 +34,29 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   const pendingAgentRef = useRef<string | null>(null)
 
   // Merge local agents with in-cluster backends (kagent, kagenti)
-  // In demo mode, always show kagent/kagenti so users can see the full experience
+  // Always show kagent/kagenti — when not installed, they appear with an install link
   const visibleAgents = useMemo(() => {
     const local = agents.filter(a => a.available)
-    const inCluster: AgentInfo[] = []
-    if (kagentAvailable || isDemoMode) {
-      inCluster.push({
+    const inCluster: AgentInfo[] = [
+      {
         name: 'kagent',
         displayName: selectedKagentAgent ? `Kagent (${selectedKagentAgent.name})` : 'Kagent',
-        description: isDemoMode && !kagentAvailable ? 'In-cluster AI agent via kagent (demo)' : 'In-cluster AI agent via kagent',
+        description: kagentAvailable ? 'In-cluster AI agent via kagent' : 'Install kagent for in-cluster AI agents',
         provider: 'kagent',
         available: kagentAvailable,
-      })
-    }
-    if (kagentiAvailable || isDemoMode) {
-      inCluster.push({
+        installUrl: kagentAvailable ? undefined : 'https://github.com/kagent-dev/kagent',
+      },
+      {
         name: 'kagenti',
         displayName: selectedKagentiAgent ? `Kagenti (${selectedKagentiAgent.name})` : 'Kagenti',
-        description: isDemoMode && !kagentiAvailable ? 'In-cluster AI agent via kagenti (demo)' : 'In-cluster AI agent via kagenti',
+        description: kagentiAvailable ? 'In-cluster AI agent via kagenti' : 'Install kagenti for in-cluster AI agents',
         provider: 'kagenti',
         available: kagentiAvailable,
-      })
-    }
+        installUrl: kagentiAvailable ? undefined : 'https://github.com/kagenti/kagenti',
+      },
+    ]
     return [...local, ...inCluster]
-  }, [agents, kagentAvailable, kagentiAvailable, selectedKagentAgent, selectedKagentiAgent, isDemoMode])
+  }, [agents, kagentAvailable, kagentiAvailable, selectedKagentAgent, selectedKagentiAgent])
 
   // Sort: selected agent first, then available agents, then unavailable
   const sortedAgents = useMemo(() => {
@@ -283,7 +282,12 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
                         <Check className="w-4 h-4 text-primary flex-shrink-0" />
                       )}
                     </div>
-                    <p className={cn('text-xs truncate', agent.available ? 'text-muted-foreground' : 'text-muted-foreground/60')}>{agent.description}</p>
+                    <p className={cn('text-xs truncate', agent.available ? 'text-muted-foreground' : 'text-muted-foreground/60')}>
+                      {agent.description}
+                      {agent.installUrl && (
+                        <> — <a href={agent.installUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-primary hover:underline">Install</a></>
+                      )}
+                    </p>
                   </div>
                 </div>
               ))}
