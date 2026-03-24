@@ -216,6 +216,10 @@ func (h *AuthHandler) GitHubLogin(c *fiber.Ctx) error {
 	storeOAuthState(state)
 
 	url := h.oauthConfig.AuthCodeURL(state)
+	// Prevent Safari from caching the 307 redirect (which contains a unique CSRF state).
+	// Without this, Safari reuses a stale redirect URL whose state was already consumed,
+	// causing CSRF validation to fail on the callback.
+	c.Set("Cache-Control", "no-store")
 	return c.Redirect(url, fiber.StatusTemporaryRedirect)
 }
 
@@ -301,6 +305,7 @@ func (h *AuthHandler) devModeLogin(c *fiber.Ctx) error {
 	h.setJWTCookie(c, jwtToken)
 
 	// Redirect to frontend with token
+	c.Set("Cache-Control", "no-store")
 	redirectURL := fmt.Sprintf("%s/auth/callback?token=%s&onboarded=%t", h.frontendURL, jwtToken, user.Onboarded)
 	return c.Redirect(redirectURL, fiber.StatusTemporaryRedirect)
 }
@@ -312,6 +317,7 @@ func (h *AuthHandler) oauthErrorRedirect(c *fiber.Ctx, errorCode, detail string)
 	if detail != "" {
 		q.Set("error_detail", detail)
 	}
+	c.Set("Cache-Control", "no-store")
 	return c.Redirect(h.frontendURL+"/login?"+q.Encode(), fiber.StatusTemporaryRedirect)
 }
 
@@ -431,6 +437,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	h.setJWTCookie(c, jwtToken)
 
 	// Redirect to frontend with token
+	c.Set("Cache-Control", "no-store")
 	redirectURL := fmt.Sprintf("%s/auth/callback?token=%s&onboarded=%t", h.frontendURL, jwtToken, user.Onboarded)
 	return c.Redirect(redirectURL, fiber.StatusTemporaryRedirect)
 }
