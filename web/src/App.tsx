@@ -74,6 +74,7 @@ const Insights = safeLazy(() => import('./components/insights/Insights'), 'Insig
 const MultiTenancy = safeLazy(() => import('./components/multi-tenancy/MultiTenancy'), 'MultiTenancy')
 const Marketplace = safeLazy(() => import('./components/marketplace/Marketplace'), 'Marketplace')
 const MiniDashboard = safeLazy(() => import('./components/widget/MiniDashboard'), 'MiniDashboard')
+const Welcome = safeLazy(() => import('./pages/Welcome'), 'Welcome')
 const FromLens = safeLazy(() => import('./pages/FromLens'), 'FromLens')
 const FromHeadlamp = safeLazy(() => import('./pages/FromHeadlamp'), 'FromHeadlamp')
 const WhiteLabel = safeLazy(() => import('./pages/WhiteLabel'), 'WhiteLabel')
@@ -463,6 +464,7 @@ function FullDashboardApp() {
       <Suspense fallback={<LoadingFallback />}>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/welcome" element={<Welcome />} />
         <Route path="/from-lens" element={<FromLens />} />
         <Route path="/from-headlamp" element={<FromHeadlamp />} />
         <Route path="/white-label" element={<WhiteLabel />} />

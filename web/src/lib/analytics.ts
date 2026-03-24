@@ -1856,6 +1856,18 @@ export function emitAISuggestionViewed(insightCategory: string, hasAIEnrichment:
   send('ksc_ai_suggestion_viewed', { insight_category: insightCategory, has_ai_enrichment: hasAIEnrichment })
 }
 
+// ── Welcome / Conference Landing Page ────────────────────────────────
+
+/** Fired once when /welcome is rendered */
+export function emitWelcomeViewed(ref: string) {
+  send('ksc_welcome_viewed', { ref })
+}
+
+/** Fired on CTA button clicks (hero_explore_demo, hero_github, scenario_*, footer_*) */
+export function emitWelcomeActioned(action: string, ref: string) {
+  send('ksc_welcome_actioned', { action, ref })
+}
+
 // ── From Lens Landing Page ──────────────────────────────────────────
 
 /** Fired when a user views the /from-lens landing page */
