@@ -11,7 +11,7 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { Skeleton } from '../ui/Skeleton'
 import { StatusBadge } from '../ui/StatusBadge'
 import { emitMissionSuggestionsShown, emitMissionSuggestionActioned } from '../../lib/analytics'
-import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
+import { safeSetItem } from '../../lib/utils/localStorage'
 
 /** localStorage key to persist that the user has seen (and auto-collapsed) the panel */
 const STORAGE_KEY_MISSIONS_COLLAPSED = 'kc-missions-collapsed'
@@ -47,9 +47,7 @@ export function MissionSuggestions() {
   const { startMission } = useMissions()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [processingId, setProcessingId] = useState<string | null>(null)
-  const [minimized, setMinimized] = useState(() =>
-    safeGetItem(STORAGE_KEY_MISSIONS_COLLAPSED) === 'true'
-  )
+  const [minimized, setMinimized] = useState(true)
   const [countdown, setCountdown] = useState(AUTO_COLLAPSE_SECONDS)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -245,15 +243,92 @@ export function MissionSuggestions() {
           </button>
           {suggestions.slice(0, 6).map((suggestion) => {
             const Icon = MISSION_ICONS[suggestion.type]
+            const isExpanded = expandedId === suggestion.id
+            const snoozeRemaining = getSnoozeRemaining(suggestion.id)
             return (
-              <button
-                key={suggestion.id}
-                onClick={() => { setMinimized(false); setExpandedId(suggestion.id) }}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-all hover:scale-105 ${CHIP_STYLE.border} ${CHIP_STYLE.bg} ${CHIP_STYLE.text}`}
-              >
-                <Icon className="w-3 h-3" />
-                <span className="max-w-[150px] truncate">{suggestion.title}</span>
-              </button>
+              <div key={suggestion.id} className="relative">
+                <button
+                  onClick={() => setExpandedId(isExpanded ? null : suggestion.id)}
+                  aria-expanded={isExpanded}
+                  aria-haspopup="menu"
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-all hover:scale-105 ${CHIP_STYLE.border} ${CHIP_STYLE.bg} ${CHIP_STYLE.text}`}
+                >
+                  <Icon className="w-3 h-3" />
+                  <span className="max-w-[150px] truncate">{suggestion.title}</span>
+                  <ChevronDown className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Inline dropdown — appears below the chip without expanding the panel */}
+                {isExpanded && (
+                  <div
+                    ref={dropdownRef}
+                    role="menu"
+                    className="absolute top-full left-0 mt-1 z-50 w-72 rounded-lg border border-border/50 bg-card shadow-xl"
+                    onKeyDown={(e) => {
+                      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+                      e.preventDefault()
+                      const items = e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')
+                      const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+                      if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
+                      else items[Math.max(idx - 1, 0)]?.focus()
+                    }}
+                  >
+                    <div className="p-3">
+                      <p className="text-xs text-muted-foreground mb-2">{suggestion.description}</p>
+                      {suggestion.context.details && suggestion.context.details.length > 0 && (
+                        <div className="text-xs text-muted-foreground mb-3 max-h-20 overflow-y-auto">
+                          <ul className="ml-3 list-disc space-y-0.5">
+                            {suggestion.context.details.slice(0, 3).map((detail, idx) => (
+                              <li key={idx} className="truncate">{detail}</li>
+                            ))}
+                            {suggestion.context.details.length > 3 && (
+                              <li className="text-muted-foreground/70">
+                                {t('dashboard.missions.moreDetails', { count: suggestion.context.details.length - 3 })}
+                              </li>
+                            )}
+                          </ul>
+                        </div>
+                      )}
+                      {snoozeRemaining && snoozeRemaining > 0 && (
+                        <div className="text-xs text-muted-foreground mb-2">
+                          {t('dashboard.missions.snoozedFor', { time: formatTimeRemaining(snoozeRemaining) })}
+                        </div>
+                      )}
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          onClick={(e) => handleAction(e, suggestion)}
+                          className="flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1 bg-primary hover:bg-primary/80 text-white"
+                        >
+                          <Stethoscope className="w-3 h-3" />
+                          {suggestion.action.label}
+                        </button>
+                        <button
+                          onClick={(e) => handleRepair(e, suggestion)}
+                          className="px-2 py-1.5 rounded text-xs font-medium bg-secondary/50 hover:bg-secondary text-foreground transition-colors flex items-center gap-1"
+                          title={t('dashboard.missions.repairTitle')}
+                        >
+                          <Wrench className="w-3 h-3" />
+                          {t('dashboard.missions.repair')}
+                        </button>
+                        <button
+                          onClick={(e) => handleSnooze(e, suggestion)}
+                          className="px-2 py-1.5 rounded text-xs font-medium bg-secondary hover:bg-secondary/80 transition-colors"
+                          title={t('dashboard.missions.snoozeTitle')}
+                        >
+                          <Clock className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={(e) => handleDismiss(e, suggestion)}
+                          className="px-2 py-1.5 rounded text-xs font-medium bg-secondary hover:bg-secondary/80 transition-colors"
+                          title={t('dashboard.missions.dismiss')}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             )
           })}
           {stats.critical > 0 && (
