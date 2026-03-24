@@ -34,29 +34,30 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   const pendingAgentRef = useRef<string | null>(null)
 
   // Merge local agents with in-cluster backends (kagent, kagenti)
+  // In demo mode, always show kagent/kagenti so users can see the full experience
   const visibleAgents = useMemo(() => {
     const local = agents.filter(a => a.available)
     const inCluster: AgentInfo[] = []
-    if (kagentAvailable) {
+    if (kagentAvailable || isDemoMode) {
       inCluster.push({
         name: 'kagent',
         displayName: selectedKagentAgent ? `Kagent (${selectedKagentAgent.name})` : 'Kagent',
-        description: 'In-cluster AI agent via kagent',
+        description: isDemoMode && !kagentAvailable ? 'In-cluster AI agent via kagent (demo)' : 'In-cluster AI agent via kagent',
         provider: 'kagent',
-        available: true,
+        available: kagentAvailable,
       })
     }
-    if (kagentiAvailable) {
+    if (kagentiAvailable || isDemoMode) {
       inCluster.push({
         name: 'kagenti',
         displayName: selectedKagentiAgent ? `Kagenti (${selectedKagentiAgent.name})` : 'Kagenti',
-        description: 'In-cluster AI agent via kagenti',
+        description: isDemoMode && !kagentiAvailable ? 'In-cluster AI agent via kagenti (demo)' : 'In-cluster AI agent via kagenti',
         provider: 'kagenti',
-        available: true,
+        available: kagentiAvailable,
       })
     }
     return [...local, ...inCluster]
-  }, [agents, kagentAvailable, kagentiAvailable, selectedKagentAgent, selectedKagentiAgent])
+  }, [agents, kagentAvailable, kagentiAvailable, selectedKagentAgent, selectedKagentiAgent, isDemoMode])
 
   // Sort: selected agent first, then available agents, then unavailable
   const sortedAgents = useMemo(() => {
