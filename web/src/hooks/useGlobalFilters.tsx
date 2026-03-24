@@ -426,63 +426,103 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     return filtered
   }, [filterByCluster, filterBySeverity])
 
+  const contextValue = useMemo(() => ({
+    // Cluster filtering
+    selectedClusters: effectiveSelectedClusters,
+    setSelectedClusters,
+    toggleCluster,
+    selectAllClusters,
+    deselectAllClusters,
+    isAllClustersSelected,
+    isClustersFiltered,
+    availableClusters,
+    clusterInfoMap,
+
+    // Cluster groups
+    clusterGroups,
+    addClusterGroup,
+    updateClusterGroup,
+    deleteClusterGroup,
+    selectClusterGroup,
+
+    // Severity filtering
+    selectedSeverities: effectiveSelectedSeverities,
+    setSelectedSeverities,
+    toggleSeverity,
+    selectAllSeverities,
+    deselectAllSeverities,
+    isAllSeveritiesSelected,
+    isSeveritiesFiltered,
+
+    // Status filtering
+    selectedStatuses: effectiveSelectedStatuses,
+    setSelectedStatuses,
+    toggleStatus,
+    selectAllStatuses,
+    deselectAllStatuses,
+    isAllStatusesSelected,
+    isStatusesFiltered,
+
+    // Custom text filter
+    customFilter,
+    setCustomFilter,
+    clearCustomFilter,
+    hasCustomFilter,
+
+    // Combined filter helpers
+    isFiltered,
+    clearAllFilters,
+
+    // Filter functions
+    filterByCluster,
+    filterBySeverity,
+    filterByStatus,
+    filterByCustomText,
+    filterItems,
+  }), [
+    effectiveSelectedClusters,
+    setSelectedClusters,
+    toggleCluster,
+    selectAllClusters,
+    deselectAllClusters,
+    isAllClustersSelected,
+    isClustersFiltered,
+    availableClusters,
+    clusterInfoMap,
+    clusterGroups,
+    addClusterGroup,
+    updateClusterGroup,
+    deleteClusterGroup,
+    selectClusterGroup,
+    effectiveSelectedSeverities,
+    setSelectedSeverities,
+    toggleSeverity,
+    selectAllSeverities,
+    deselectAllSeverities,
+    isAllSeveritiesSelected,
+    isSeveritiesFiltered,
+    effectiveSelectedStatuses,
+    setSelectedStatuses,
+    toggleStatus,
+    selectAllStatuses,
+    deselectAllStatuses,
+    isAllStatusesSelected,
+    isStatusesFiltered,
+    customFilter,
+    setCustomFilter,
+    clearCustomFilter,
+    hasCustomFilter,
+    isFiltered,
+    clearAllFilters,
+    filterByCluster,
+    filterBySeverity,
+    filterByStatus,
+    filterByCustomText,
+    filterItems,
+  ])
+
   return (
-    <GlobalFiltersContext.Provider
-      value={{
-        // Cluster filtering
-        selectedClusters: effectiveSelectedClusters,
-        setSelectedClusters,
-        toggleCluster,
-        selectAllClusters,
-        deselectAllClusters,
-        isAllClustersSelected,
-        isClustersFiltered,
-        availableClusters,
-        clusterInfoMap,
-
-        // Cluster groups
-        clusterGroups,
-        addClusterGroup,
-        updateClusterGroup,
-        deleteClusterGroup,
-        selectClusterGroup,
-
-        // Severity filtering
-        selectedSeverities: effectiveSelectedSeverities,
-        setSelectedSeverities,
-        toggleSeverity,
-        selectAllSeverities,
-        deselectAllSeverities,
-        isAllSeveritiesSelected,
-        isSeveritiesFiltered,
-
-        // Status filtering
-        selectedStatuses: effectiveSelectedStatuses,
-        setSelectedStatuses,
-        toggleStatus,
-        selectAllStatuses,
-        deselectAllStatuses,
-        isAllStatusesSelected,
-        isStatusesFiltered,
-
-        // Custom text filter
-        customFilter,
-        setCustomFilter,
-        clearCustomFilter,
-        hasCustomFilter,
-
-        // Combined filter helpers
-        isFiltered,
-        clearAllFilters,
-
-        // Filter functions
-        filterByCluster,
-        filterBySeverity,
-        filterByStatus,
-        filterByCustomText,
-        filterItems,
-      }}
-    >
+    <GlobalFiltersContext.Provider value={contextValue}>
       {children}
     </GlobalFiltersContext.Provider>
   )
