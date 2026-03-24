@@ -306,7 +306,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
         target_repo: targetRepo,
       })
       setSuccess({ issueUrl: result.github_issue_url })
-      // Show thank-you briefly, then switch to Updates tab
+      // Show thank-you for 5s (extended to give time to copy screenshots) then switch to Updates tab
       setTimeout(() => {
         setDescription('')
         setRequestType('bug')
