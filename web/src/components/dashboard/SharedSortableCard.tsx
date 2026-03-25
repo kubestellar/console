@@ -21,6 +21,8 @@ interface SortableCardProps {
   registerExpandTrigger?: (expand: () => void) => void
   onInsertBefore?: () => void
   onInsertAfter?: () => void
+  /** When true, a workload item (not a card) is being dragged — disable sortable to prevent card from hijacking the drag */
+  isWorkloadDragActive?: boolean
 }
 
 /** Below this width, clamp small cards to half-width (6 cols) for readability */
@@ -29,11 +31,12 @@ const NARROW_BREAKPOINT = 1024
 /** Minimum card column span at narrow viewports */
 const MIN_NARROW_COLS = 6
 
-export const SortableCard = memo(function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, isRefreshing, onRefresh, lastUpdated, onKeyDown, registerRef, registerExpandTrigger, onInsertBefore, onInsertAfter }: SortableCardProps) {
+export const SortableCard = memo(function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, isRefreshing, onRefresh, lastUpdated, onKeyDown, registerRef, registerExpandTrigger, onInsertBefore, onInsertAfter, isWorkloadDragActive: _isWorkloadDragActive }: SortableCardProps) {
   const {
     attributes,
     listeners,
     setNodeRef,
+    setActivatorNodeRef,
     transform,
     transition,
   } = useSortable({ id: card.id })
@@ -51,13 +54,13 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  const effectiveW = isNarrow && (card.position?.w ?? 4) < MIN_NARROW_COLS ? MIN_NARROW_COLS : (card.position?.w ?? 4)
+  const effectiveW = isNarrow && card.position.w < MIN_NARROW_COLS ? MIN_NARROW_COLS : card.position.w
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     gridColumn: `span ${effectiveW}`,
-    gridRow: `span ${card.position?.h ?? 2}`,
+    gridRow: `span ${card.position.h}`,
     opacity: isDragging ? 0.5 : 1,
   }
 
@@ -100,7 +103,7 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
         title={card.title}
         isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
         isLive={LIVE_DATA_CARDS.has(card.card_type)}
-        cardWidth={card.position?.w ?? 4}
+        cardWidth={card.position.w}
         isRefreshing={isRefreshing}
         onRefresh={onRefresh}
         lastUpdated={lastUpdated}
@@ -110,6 +113,7 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
         registerExpandTrigger={registerExpandTrigger}
         dragHandle={
           <button
+            ref={setActivatorNodeRef}
             {...attributes}
             {...listeners}
             className="p-1 rounded hover:bg-secondary cursor-grab active:cursor-grabbing"
@@ -133,8 +137,8 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
   return (
     prevProps.card.id === nextProps.card.id &&
     prevProps.card.card_type === nextProps.card.card_type &&
-    prevProps.card.position?.w === nextProps.card.position?.w &&
-    prevProps.card.position?.h === nextProps.card.position?.h &&
+    prevProps.card.position.w === nextProps.card.position.w &&
+    prevProps.card.position.h === nextProps.card.position.h &&
     prevProps.card.title === nextProps.card.title &&
     prevProps.card.last_summary === nextProps.card.last_summary &&
     JSON.stringify(prevProps.card.config) === JSON.stringify(nextProps.card.config) &&
@@ -143,7 +147,8 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
     prevProps.lastUpdated === nextProps.lastUpdated &&
     prevProps.onKeyDown === nextProps.onKeyDown &&
     prevProps.onInsertBefore === nextProps.onInsertBefore &&
-    prevProps.onInsertAfter === nextProps.onInsertAfter
+    prevProps.onInsertAfter === nextProps.onInsertAfter &&
+    prevProps.isWorkloadDragActive === nextProps.isWorkloadDragActive
   )
 })
 
@@ -154,7 +159,7 @@ export function DragPreviewCard({ card }: { card: Card }) {
     <div
       className="rounded-lg glass border border-purple-500/50 p-4 shadow-xl"
       style={{
-        width: `${(card.position?.w ?? 4) * 100}px`,
+        width: `${card.position.w * 100}px`,
         minWidth: '200px',
         maxWidth: '400px',
       }}

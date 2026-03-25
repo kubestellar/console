@@ -29,6 +29,8 @@ export interface UseDashboardDnDResult {
   sensors: ReturnType<typeof useSensors>
   /** Currently dragging item ID */
   activeId: string | null
+  /** Data attached to the currently dragged item (from useDraggable) */
+  activeDragData: Record<string, unknown> | null
   /** Handle drag start event */
   handleDragStart: (event: DragStartEvent) => void
   /** Handle drag end event */
@@ -40,11 +42,12 @@ export function useDashboardDnD<T extends { id: string }>(
   setItems: React.Dispatch<React.SetStateAction<T[]>>
 ): UseDashboardDnDResult {
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [activeDragData, setActiveDragData] = useState<Record<string, unknown> | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -54,11 +57,13 @@ export function useDashboardDnD<T extends { id: string }>(
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(event.active.id as string)
+    setActiveDragData(event.active.data.current as Record<string, unknown> | null)
   }, [])
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event
     setActiveId(null)
+    setActiveDragData(null)
 
     if (over && active.id !== over.id) {
       setItems((items) => {
@@ -72,6 +77,7 @@ export function useDashboardDnD<T extends { id: string }>(
   return {
     sensors,
     activeId,
+    activeDragData,
     handleDragStart,
     handleDragEnd,
   }

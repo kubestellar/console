@@ -3,6 +3,8 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   DndContext,
   closestCenter,
+  pointerWithin,
+  rectIntersection,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -11,6 +13,7 @@ import {
   DragOverlay,
   DragStartEvent,
   DragOverEvent,
+  type CollisionDetection,
 } from '@dnd-kit/core'
 import {
   arrayMove,
@@ -105,6 +108,7 @@ export function Dashboard() {
     return DEFAULT_DASHBOARD_CARDS
   })
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [activeDragData, setActiveDragData] = useState<Record<string, unknown> | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null)
   const [_dragOverDashboard, setDragOverDashboard] = useState<string | null>(null)
@@ -264,7 +268,7 @@ export function Dashboard() {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Need to drag 8px before starting
+        distance: 3,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -272,8 +276,54 @@ export function Dashboard() {
     })
   )
 
+  // Custom collision detection: when dragging a workload, prioritize cluster-group
+  // and cluster-drop droppable zones (detected via pointerWithin) over the larger
+  // sortable card containers that would otherwise always win with closestCenter.
+  const collisionDetection: CollisionDetection = useCallback((args) => {
+    const isWorkloadDrag = args.active.data.current?.type === 'workload'
+    if (isWorkloadDrag) {
+      // For workload drags, prioritize cluster-group drop targets.
+      // Use ALL strategies to find cluster-group targets — pointerWithin alone
+      // can miss if the droppable is small or partially obscured.
+      const allCollisions = [
+        ...pointerWithin(args),
+        ...rectIntersection(args),
+      ]
+      // Deduplicate by id
+      const seen = new Set<string>()
+      const unique = allCollisions.filter(c => {
+        const id = String(c.id)
+        if (seen.has(id)) return false
+        seen.add(id)
+        return true
+      })
+      // Find cluster-group or cluster-drop targets first
+      const targetCollision = unique.find(
+        (c) => String(c.id).startsWith('cluster-group-') || String(c.id).startsWith('cluster-drop-')
+      )
+      if (targetCollision) return [targetCollision]
+      // Fall back to the card-level cluster-groups drop zone
+      const cardTarget = unique.find(
+        (c) => String(c.id) === 'cluster-groups-card'
+      )
+      if (cardTarget) return [cardTarget]
+      // Fall back to dashboard-drop zones
+      const dashboardCollision = unique.find(
+        (c) => String(c.id).startsWith('dashboard-drop-')
+      )
+      if (dashboardCollision) return [dashboardCollision]
+      // Return empty — don't let sortable card droppables capture workload drags
+      return []
+    }
+    // Normal card reorder uses closestCenter
+    return closestCenter(args)
+  }, [])
+
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string)
+    const id = event.active.id as string
+    const data = event.active.data.current as Record<string, unknown> | null
+    setActiveId(id)
+    setActiveDragData(data)
     setIsDragging(true)
   }
 
@@ -290,6 +340,7 @@ export function Dashboard() {
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
     setActiveId(null)
+    setActiveDragData(null)
     setIsDragging(false)
     setDragOverDashboard(null)
 
@@ -358,6 +409,7 @@ export function Dashboard() {
 
   const handleDragCancel = () => {
     setActiveId(null)
+    setActiveDragData(null)
     setIsDragging(false)
     setDragOverDashboard(null)
   }
@@ -443,7 +495,7 @@ export function Dashboard() {
           id: `template-${Date.now()}-${index}`,
           card_type: tc.card_type,
           config: tc.config || {},
-          position: { x: 0, y: 0, w: tc.position.w, h: tc.position.h },
+          position: { x: 0, y: 0, w: tc.position?.w || 4, h: tc.position?.h || 2 },
           title: tc.title,
         }))
 
@@ -808,7 +860,7 @@ export function Dashboard() {
       id: `template-${Date.now()}-${index}`,
       card_type: tc.card_type,
       config: tc.config || {},
-      position: { x: 0, y: 0, w: tc.position.w, h: tc.position.h },
+      position: { x: 0, y: 0, w: tc.position?.w || 4, h: tc.position?.h || 2 },
       title: tc.title,
     }))
     // Record each card addition in history
@@ -983,7 +1035,7 @@ export function Dashboard() {
       {/* Card grid with drag and drop */}
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={collisionDetection}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
@@ -1013,6 +1065,7 @@ export function Dashboard() {
                 registerExpandTrigger={(expand) => { expandTriggersRef.current.set(card.id, expand) }}
                 onInsertBefore={() => { setInsertAtIndex(index); openAddCardModal() }}
                 onInsertAfter={() => { setInsertAtIndex(index + 1); openAddCardModal() }}
+                isWorkloadDragActive={activeDragData?.type === 'workload'}
               />
             ))}
 
@@ -1028,10 +1081,19 @@ export function Dashboard() {
         </SortableContext>
 
         {/* Drag overlay for visual feedback */}
-        <DragOverlay>
-          {activeId ? (
+        <DragOverlay dropAnimation={null} zIndex={9999}>
+          {activeId && localCards.find(c => c.id === activeId) ? (
             <div className="opacity-80 rotate-3 scale-105">
               <DragPreviewCard card={localCards.find(c => c.id === activeId)!} />
+            </div>
+          ) : activeId && activeDragData?.type === 'workload' ? (
+            <div className="bg-blue-100 dark:bg-blue-900/60 shadow-xl rounded-lg px-4 py-2 border-2 border-blue-400 max-w-xs pointer-events-none">
+              <div className="text-sm font-medium text-blue-900 dark:text-blue-100 truncate">
+                {(activeDragData.workload as { name?: string })?.name || 'Workload'}
+              </div>
+              <div className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
+                Drop on a cluster group to deploy
+              </div>
             </div>
           ) : null}
         </DragOverlay>

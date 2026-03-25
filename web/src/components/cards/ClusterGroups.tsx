@@ -10,9 +10,7 @@ import {
   Layers,
   ChevronDown,
   ChevronRight,
-  Loader2,
   Rocket,
-  RefreshCw,
   Zap,
   Sparkles,
   Search,
@@ -116,7 +114,7 @@ function relativeTime(iso: string): string {
 
 export function ClusterGroups(_props: ClusterGroupsProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const { groups: liveGroups, createGroup, updateGroup, deleteGroup, evaluateGroup, isPersisted } = useClusterGroups()
+  const { groups: liveGroups, createGroup, updateGroup, deleteGroup, isPersisted } = useClusterGroups()
   const { deduplicatedClusters: clusters, isLoading, isRefreshing } = useClusters()
   const { isDemoMode: demoMode } = useDemoMode()
 
@@ -143,7 +141,6 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
   })
   const [editingGroup, setEditingGroup] = useState<string | null>(null)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
-  const [refreshing, setRefreshing] = useState<Set<string>>(new Set())
 
   const toggleExpanded = useCallback((name: string) => {
     setExpandedGroups(prev => {
@@ -153,21 +150,6 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
       return next
     })
   }, [])
-
-  const handleRefreshGroup = useCallback(async (name: string) => {
-    setRefreshing(prev => new Set(prev).add(name))
-    try {
-      await evaluateGroup(name)
-    } catch {
-      // evaluateGroup has internal error handling; this catches any unexpected throws
-    } finally {
-      setRefreshing(prev => {
-        const next = new Set(prev)
-        next.delete(name)
-        return next
-      })
-    }
-  }, [evaluateGroup])
 
   const availableClusterNames = clusters.map(c => c.name)
 
@@ -243,12 +225,10 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
                 key={group.name}
                 group={group}
                 isExpanded={expandedGroups.has(group.name)}
-                isRefreshing={refreshing.has(group.name)}
                 clusterHealthMap={new Map(clusters.map(c => [c.name, c.healthy]))}
                 onToggle={() => toggleExpanded(group.name)}
                 onEdit={() => setEditingGroup(group.name)}
                 onDelete={() => deleteGroup(group.name)}
-                onRefresh={() => handleRefreshGroup(group.name)}
               />
             )
           ))}
@@ -272,15 +252,13 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
 interface DroppableGroupProps {
   group: ClusterGroup
   isExpanded: boolean
-  isRefreshing: boolean
   clusterHealthMap: Map<string, boolean | undefined>
   onToggle: () => void
   onEdit: () => void
   onDelete: () => void
-  onRefresh: () => void
 }
 
-function DroppableGroup({ group, isExpanded, isRefreshing, clusterHealthMap, onToggle, onEdit, onDelete, onRefresh }: DroppableGroupProps) {
+function DroppableGroup({ group, isExpanded, clusterHealthMap, onToggle, onEdit, onDelete }: DroppableGroupProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { isOver, setNodeRef } = useDroppable({
     id: `cluster-group-${group.name}`,
@@ -353,18 +331,6 @@ function DroppableGroup({ group, isExpanded, isRefreshing, clusterHealthMap, onT
         <span className="text-2xs text-muted-foreground">
           {healthyCount}/{group.clusters.length} {t('common:common.healthy').toLowerCase()}
         </span>
-
-        {/* Dynamic: refresh button */}
-        {isDynamic && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onRefresh() }}
-            disabled={isRefreshing}
-            className="p-1 rounded hover:bg-white/10 text-purple-400 hover:text-purple-300 transition-colors"
-            title={group.lastEvaluated ? t('cards:clusterGroups.lastEvaluated', { time: relativeTime(group.lastEvaluated) }) : t('cards:clusterGroups.evaluateQuery')}
-          >
-            <RefreshCw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} />
-          </button>
-        )}
 
         {/* Drop indicator */}
         {isOver && (
@@ -707,7 +673,7 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
                   : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
               )}
             >
-              {isPreviewing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
+              {isPreviewing ? <span className="refresh-dots inline-flex items-center gap-0.5 text-purple-400"><span className="w-1 h-1 rounded-full bg-current" /><span className="w-1 h-1 rounded-full bg-current" /><span className="w-1 h-1 rounded-full bg-current" /></span> : <Search className="w-3 h-3" />}
               {t('cards:clusterGroups.previewMatches')}
             </button>
             {previewClusters !== null && (
@@ -771,7 +737,7 @@ function StaticClusterPicker({
       <div className="max-h-32 overflow-y-auto space-y-1">
         {availableClusters.length === 0 ? (
           <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
-            <Loader2 className="w-3 h-3 animate-spin" />
+            <span className="refresh-dots inline-flex items-center gap-0.5 text-muted-foreground"><span className="w-1 h-1 rounded-full bg-current" /><span className="w-1 h-1 rounded-full bg-current" /><span className="w-1 h-1 rounded-full bg-current" /></span>
             {t('cards:clusterGroups.loadingClusters')}
           </div>
         ) : (
@@ -999,7 +965,7 @@ function AIAssistant({
             : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
         )}
       >
-        {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+        {loading ? <span className="refresh-dots inline-flex items-center gap-0.5 text-purple-400"><span className="w-1 h-1 rounded-full bg-current" /><span className="w-1 h-1 rounded-full bg-current" /><span className="w-1 h-1 rounded-full bg-current" /></span> : <Sparkles className="w-3 h-3" />}
         {loading ? t('common:common.generating') : t('cards:clusterGroups.generateQuery')}
       </button>
       {error && (
@@ -1164,7 +1130,7 @@ function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onC
                 : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
             )}
           >
-            {isPreviewing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
+            {isPreviewing ? <span className="refresh-dots inline-flex items-center gap-0.5 text-purple-400"><span className="w-1 h-1 rounded-full bg-current" /><span className="w-1 h-1 rounded-full bg-current" /><span className="w-1 h-1 rounded-full bg-current" /></span> : <Search className="w-3 h-3" />}
             {t('cards:clusterGroups.previewMatches')}
           </button>
           {previewClusters !== null && (

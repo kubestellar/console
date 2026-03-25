@@ -306,6 +306,11 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/hpas", s.handleHPAsHTTP)
 	mux.HandleFunc("/pvcs", s.handlePVCsHTTP)
 	mux.HandleFunc("/cluster-health", s.handleClusterHealthHTTP)
+	mux.HandleFunc("/roles", s.handleRolesHTTP)
+	mux.HandleFunc("/rolebindings", s.handleRoleBindingsHTTP)
+	mux.HandleFunc("/resourcequotas", s.handleResourceQuotasHTTP)
+	mux.HandleFunc("/limitranges", s.handleLimitRangesHTTP)
+	mux.HandleFunc("/resolve-deps", s.handleResolveDepsHTTP)
 
 	// Rename context endpoint
 	mux.HandleFunc("/rename-context", s.handleRenameContextHTTP)
@@ -1225,6 +1230,189 @@ func (s *Server) handlePVCsHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	json.NewEncoder(w).Encode(map[string]interface{}{"pvcs": pvcs, "source": "agent"})
+}
+
+// handleRolesHTTP returns Roles for a cluster/namespace
+func (s *Server) handleRolesHTTP(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if s.k8sClient == nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{"roles": []interface{}{}, "error": "k8s client not initialized"})
+		return
+	}
+	cluster := r.URL.Query().Get("cluster")
+	namespace := r.URL.Query().Get("namespace")
+	if cluster == "" {
+		json.NewEncoder(w).Encode(map[string]interface{}{"roles": []interface{}{}, "error": "cluster parameter required"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
+	defer cancel()
+	roles, err := s.k8sClient.ListRoles(ctx, cluster, namespace)
+	if err != nil {
+		log.Printf("error fetching roles: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"roles": []interface{}{}, "error": "internal server error"})
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{"roles": roles, "source": "agent"})
+}
+
+// handleRoleBindingsHTTP returns RoleBindings for a cluster/namespace
+func (s *Server) handleRoleBindingsHTTP(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if s.k8sClient == nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{"rolebindings": []interface{}{}, "error": "k8s client not initialized"})
+		return
+	}
+	cluster := r.URL.Query().Get("cluster")
+	namespace := r.URL.Query().Get("namespace")
+	if cluster == "" {
+		json.NewEncoder(w).Encode(map[string]interface{}{"rolebindings": []interface{}{}, "error": "cluster parameter required"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
+	defer cancel()
+	bindings, err := s.k8sClient.ListRoleBindings(ctx, cluster, namespace)
+	if err != nil {
+		log.Printf("error fetching rolebindings: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"rolebindings": []interface{}{}, "error": "internal server error"})
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{"rolebindings": bindings, "source": "agent"})
+}
+
+// handleResourceQuotasHTTP returns ResourceQuotas for a cluster/namespace
+func (s *Server) handleResourceQuotasHTTP(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if s.k8sClient == nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{"resourcequotas": []interface{}{}, "error": "k8s client not initialized"})
+		return
+	}
+	cluster := r.URL.Query().Get("cluster")
+	namespace := r.URL.Query().Get("namespace")
+	if cluster == "" {
+		json.NewEncoder(w).Encode(map[string]interface{}{"resourcequotas": []interface{}{}, "error": "cluster parameter required"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
+	defer cancel()
+	quotas, err := s.k8sClient.GetResourceQuotas(ctx, cluster, namespace)
+	if err != nil {
+		log.Printf("error fetching resourcequotas: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"resourcequotas": []interface{}{}, "error": "internal server error"})
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{"resourcequotas": quotas, "source": "agent"})
+}
+
+// handleLimitRangesHTTP returns LimitRanges for a cluster/namespace
+func (s *Server) handleLimitRangesHTTP(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if s.k8sClient == nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{"limitranges": []interface{}{}, "error": "k8s client not initialized"})
+		return
+	}
+	cluster := r.URL.Query().Get("cluster")
+	namespace := r.URL.Query().Get("namespace")
+	if cluster == "" {
+		json.NewEncoder(w).Encode(map[string]interface{}{"limitranges": []interface{}{}, "error": "cluster parameter required"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
+	defer cancel()
+	ranges, err := s.k8sClient.GetLimitRanges(ctx, cluster, namespace)
+	if err != nil {
+		log.Printf("error fetching limitranges: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{"limitranges": []interface{}{}, "error": "internal server error"})
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{"limitranges": ranges, "source": "agent"})
+}
+
+// handleResolveDepsHTTP resolves workload dependencies dynamically by walking
+// the pod spec, RBAC, services, ingresses, PDBs, HPAs, etc.
+func (s *Server) handleResolveDepsHTTP(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if s.k8sClient == nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"dependencies": []interface{}{},
+			"error":        "k8s client not initialized",
+		})
+		return
+	}
+	cluster := r.URL.Query().Get("cluster")
+	namespace := r.URL.Query().Get("namespace")
+	name := r.URL.Query().Get("name")
+	if cluster == "" || namespace == "" || name == "" {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"dependencies": []interface{}{},
+			"error":        "cluster, namespace, and name parameters required",
+		})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	kind, bundle, err := s.k8sClient.ResolveWorkloadDependencies(ctx, cluster, namespace, name)
+	if err != nil {
+		log.Printf("error resolving dependencies for %s/%s in %s: %v", namespace, name, cluster, err)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"workload":     name,
+			"kind":         "Deployment",
+			"namespace":    namespace,
+			"cluster":      cluster,
+			"dependencies": []interface{}{},
+			"warnings":     []string{err.Error()},
+			"source":       "agent",
+		})
+		return
+	}
+
+	deps := make([]map[string]interface{}, 0, len(bundle.Dependencies))
+	for _, d := range bundle.Dependencies {
+		deps = append(deps, map[string]interface{}{
+			"kind":      string(d.Kind),
+			"name":      d.Name,
+			"namespace": d.Namespace,
+			"optional":  d.Optional,
+			"order":     d.Order,
+		})
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"workload":     name,
+		"kind":         kind,
+		"namespace":    namespace,
+		"cluster":      cluster,
+		"dependencies": deps,
+		"warnings":     bundle.Warnings,
+		"source":       "agent",
+	})
 }
 
 // handlePodsHTTP returns pods for a cluster/namespace

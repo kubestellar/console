@@ -5,7 +5,11 @@ import { getIcon } from '../icons'
 import {
   DndContext,
   closestCenter,
+  pointerWithin,
+  rectIntersection,
   DragOverlay,
+  type DragEndEvent,
+  type CollisionDetection,
 } from '@dnd-kit/core'
 import {
   SortableContext,
@@ -73,6 +77,8 @@ export interface DashboardPageProps {
   }
   /** Whether this dashboard shows demo/mock data */
   isDemoData?: boolean
+  /** Custom drag-end handler (called after card reorder, e.g. for workload drops) */
+  onDragEnd?: (event: DragEndEvent) => void
 }
 
 // ============================================================================
@@ -99,6 +105,7 @@ export function DashboardPage({
   rightExtra,
   emptyState,
   isDemoData = false,
+  onDragEnd: externalDragEnd,
 }: DashboardPageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
@@ -134,7 +141,7 @@ export function DashboardPage({
     showCards,
     setShowCards,
     expandCards,
-    dnd: { sensors, activeId, handleDragStart, handleDragEnd },
+    dnd: { sensors, activeId, activeDragData, handleDragStart, handleDragEnd: baseDragEnd },
     autoRefresh,
     setAutoRefresh,
     undo,
@@ -146,6 +153,40 @@ export function DashboardPage({
     defaultCards,
     onRefresh,
   })
+
+  // Workload-aware collision detection: when dragging a workload, prefer
+  // cluster-group droppables over the larger sortable card containers.
+  const collisionDetection: CollisionDetection = useCallback((args) => {
+    const isWorkloadDrag = args.active.data.current?.type === 'workload'
+    if (isWorkloadDrag) {
+      const allCollisions = [...pointerWithin(args), ...rectIntersection(args)]
+      const seen = new Set<string>()
+      const unique = allCollisions.filter(c => {
+        const id = String(c.id)
+        if (seen.has(id)) return false
+        seen.add(id)
+        return true
+      })
+      // Prefer specific cluster-group targets
+      const target = unique.find(
+        (c) => String(c.id).startsWith('cluster-group-') || String(c.id).startsWith('cluster-drop-')
+      )
+      if (target) return [target]
+      // Fall back to the card-level drop zone
+      const cardTarget = unique.find(
+        (c) => String(c.id) === 'cluster-groups-card'
+      )
+      if (cardTarget) return [cardTarget]
+      return []
+    }
+    return closestCenter(args)
+  }, [])
+
+  // Combined drag-end: card reorder + external handler (e.g. workload deploy)
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    baseDragEnd(event)
+    externalDragEnd?.(event)
+  }, [baseDragEnd, externalDragEnd])
 
   // Prefetch React.lazy() chunks for cards on this dashboard
   useEffect(() => {
@@ -321,7 +362,7 @@ export function DashboardPage({
             ) : (
               <DndContext
                 sensors={sensors}
-                collisionDetection={closestCenter}
+                collisionDetection={collisionDetection}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
               >
@@ -344,9 +385,18 @@ export function DashboardPage({
                     ))}
                   </div>
                 </SortableContext>
-                <DragOverlay>
-                  {activeId ? (
+                <DragOverlay dropAnimation={null} zIndex={9999}>
+                  {activeId && cards.find(c => c.id === activeId) ? (
                     <DragPreviewCard card={cards.find(c => c.id === activeId)!} />
+                  ) : activeId && activeDragData?.type === 'workload' ? (
+                    <div className="bg-blue-100 dark:bg-blue-900/60 shadow-xl rounded-lg px-4 py-2 border-2 border-blue-400 max-w-xs pointer-events-none">
+                      <div className="text-sm font-medium text-blue-900 dark:text-blue-100 truncate">
+                        {(activeDragData.workload as { name?: string })?.name || 'Workload'}
+                      </div>
+                      <div className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
+                        Drop on a cluster group to deploy
+                      </div>
+                    </div>
                   ) : null}
                 </DragOverlay>
               </DndContext>

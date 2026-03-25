@@ -1,4 +1,7 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
+import type { DragEndEvent } from '@dnd-kit/core'
+import { useClusterGroups } from '../../hooks/useClusterGroups'
+import { useClusters } from '../../hooks/useMCP'
 import { useDeployments, useHelmReleases } from '../../hooks/useMCP'
 import { useCachedDeployments } from '../../hooks/useCachedData'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
@@ -179,6 +182,56 @@ export function Deploy() {
     }
   }, [pendingDeploy, publishCardEvent, deployWorkload, shouldPersist, createManagedWorkload, createWorkloadDeployment, showToast])
 
+  // Cluster groups for the picker fallback
+  const { groups: clusterGroups } = useClusterGroups()
+  const { deduplicatedClusters: allClusters } = useClusters()
+  const builtInGroup = useMemo(() => ({
+    name: 'all-healthy-clusters',
+    clusters: allClusters.filter(c => c.healthy).map(c => c.name),
+  }), [allClusters])
+  const allGroups = useMemo(() => [
+    builtInGroup,
+    ...clusterGroups.map(g => ({ name: g.name, clusters: g.clusters })),
+  ], [builtInGroup, clusterGroups])
+
+  // Workload dropped on card but not a specific group → show group picker
+  const [groupPickerWorkload, setGroupPickerWorkload] = useState<{
+    name: string; namespace: string; sourceCluster: string; currentClusters: string[]
+  } | null>(null)
+
+  // Handle workload dropped on a cluster group → open deploy dialog
+  const handleWorkloadDrop = useCallback((event: DragEndEvent) => {
+    const { active, over } = event
+    const activeData = active.data.current as Record<string, unknown> | undefined
+    if (activeData?.type !== 'workload') return
+
+    const workload = activeData.workload as {
+      name: string
+      namespace: string
+      sourceCluster: string
+      currentClusters: string[]
+    }
+
+    const overData = over?.data.current as Record<string, unknown> | undefined
+
+    // Dropped on a specific cluster group
+    if (overData?.type === 'cluster-group') {
+      const clusters = (overData.clusters as string[]) || []
+      const groupName = overData.groupName as string
+      setPendingDeploy({
+        workloadName: workload.name,
+        namespace: workload.namespace,
+        sourceCluster: workload.sourceCluster,
+        targetClusters: clusters,
+        groupName,
+      })
+      return
+    }
+
+    // Dropped anywhere else (or nowhere) → show group picker
+    setGroupPickerWorkload(workload)
+  }, [])
+
   return (
     <DashboardPage
       title={t('common:deploy.title')}
@@ -193,6 +246,7 @@ export function Deploy() {
       isRefreshing={deploymentsRefreshing}
       lastUpdated={lastUpdated}
       hasData={cachedDeployments.length > 0}
+      onDragEnd={handleWorkloadDrop}
       emptyState={{
         title: t('common:deploy.dashboardTitle'),
         description: t('common:deploy.emptyDescription'),
@@ -209,6 +263,49 @@ export function Deploy() {
         targetClusters={pendingDeploy?.targetClusters ?? []}
         groupName={pendingDeploy?.groupName}
       />
+
+      {/* Group Picker — shown when workload is dropped on the card but not a specific group */}
+      {groupPickerWorkload && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setGroupPickerWorkload(null)}>
+          <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-sm mx-4 p-5" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-medium text-foreground mb-1">
+              Choose a cluster group
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Deploy <span className="font-medium text-foreground">{groupPickerWorkload.name}</span> to:
+            </p>
+            <div className="space-y-2">
+              {allGroups.map(g => (
+                <button
+                  key={g.name}
+                  onClick={() => {
+                    setPendingDeploy({
+                      workloadName: groupPickerWorkload.name,
+                      namespace: groupPickerWorkload.namespace,
+                      sourceCluster: groupPickerWorkload.sourceCluster,
+                      targetClusters: g.clusters,
+                      groupName: g.name,
+                    })
+                    setGroupPickerWorkload(null)
+                  }}
+                  className="w-full text-left px-4 py-3 rounded-lg bg-secondary/50 hover:bg-secondary border border-border/50 hover:border-blue-400/50 transition-colors"
+                >
+                  <div className="font-medium text-sm text-foreground">{g.name}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {g.clusters.length} cluster{g.clusters.length !== 1 ? 's' : ''}: {g.clusters.slice(0, 3).join(', ')}{g.clusters.length > 3 ? ` +${g.clusters.length - 3} more` : ''}
+                  </div>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setGroupPickerWorkload(null)}
+              className="mt-4 w-full px-4 py-2 text-sm rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </DashboardPage>
   )
 }

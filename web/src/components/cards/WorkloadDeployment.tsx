@@ -1,6 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useDraggable } from '@dnd-kit/core'
-import { CSS } from '@dnd-kit/utilities'
 import {
   Box,
   CheckCircle2,
@@ -12,7 +11,7 @@ import {
   Database,
   Gauge,
   Plus,
-  ArrowUpRight,
+  Minus,
   GripVertical,
 } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -209,11 +208,12 @@ interface DraggableWorkloadItemProps {
 }
 
 function DraggableWorkloadItem({ workload, isSelected, onSelect }: DraggableWorkloadItemProps) {
+  const [desiredReplicas, setDesiredReplicas] = useState(workload.replicas)
   const { t } = useTranslation()
   // Source cluster is the first cluster in the list (where we'll copy from)
   const sourceCluster = workload.targetClusters[0] || 'unknown'
 
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `workload-${sourceCluster}-${workload.namespace}-${workload.name}`,
     data: {
       type: 'workload',
@@ -227,12 +227,10 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect }: DraggableWork
     },
   })
 
-  const style = transform
-    ? {
-        transform: CSS.Translate.toString(transform),
-        zIndex: isDragging ? 1000 : undefined,
-      }
-    : undefined
+  // When dragging, fade the original — the DragOverlay renders the floating preview as a portal
+  const style: React.CSSProperties = isDragging
+    ? { opacity: 0.3, pointerEvents: 'none' }
+    : {}
 
   return (
     <div
@@ -240,11 +238,10 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect }: DraggableWork
       style={style}
       {...attributes}
       {...listeners}
+      data-dnd-workload="true"
       className={cn(
         'p-3 transition-colors cursor-grab active:cursor-grabbing',
-        isDragging
-          ? 'bg-blue-100 dark:bg-blue-900/40 shadow-lg rounded-lg opacity-90'
-          : 'hover:bg-gray-50 dark:hover:bg-secondary/50',
+        !isDragging && 'hover:bg-gray-50 dark:hover:bg-secondary/50',
         isSelected && !isDragging && 'bg-blue-50 dark:bg-blue-900/20'
       )}
     >
@@ -252,9 +249,9 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect }: DraggableWork
         <div className="flex items-start gap-2 min-w-0">
           <GripVertical className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
           <TypeIcon type={workload.type} />
-          <div 
-            className="min-w-0" 
-            onClick={onSelect}
+          <div
+            className="min-w-0 cursor-pointer"
+            onClick={(e) => { e.stopPropagation(); onSelect() }}
             role="button"
             tabIndex={0}
             aria-label={`Select workload ${workload.name}`}
@@ -328,18 +325,40 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect }: DraggableWork
               ))}
             </div>
           </div>
-          <div className="flex gap-2 mt-2">
-            <button className="flex items-center gap-2 text-xs px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors min-h-11 min-w-11">
-              <ArrowUpRight className="h-3 w-3" />
-              Scale
-            </button>
-            <button className="flex items-center gap-2 text-xs px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition-colors min-h-11 min-w-11">
-              <Plus className="h-3 w-3" />
-              Deploy to Cluster
-            </button>
+          <div className="flex items-center gap-3 mt-2" onPointerDown={(e) => e.stopPropagation()}>
+            {/* Scale +/- */}
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground mr-1">Replicas</span>
+              <button
+                onClick={() => setDesiredReplicas((r) => Math.max(0, r - 1))}
+                className="w-7 h-7 flex items-center justify-center rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors"
+                aria-label="Decrease replicas"
+              >
+                <Minus className="h-3 w-3" />
+              </button>
+              <input
+                type="number"
+                min={0}
+                value={desiredReplicas}
+                onChange={(e) => setDesiredReplicas(Math.max(0, parseInt(e.target.value) || 0))}
+                className="w-12 h-7 text-center text-xs rounded border border-border bg-secondary/30 focus:outline-none focus:ring-1 focus:ring-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <button
+                onClick={() => setDesiredReplicas((r) => r + 1)}
+                className="w-7 h-7 flex items-center justify-center rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors"
+                aria-label="Increase replicas"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+              {desiredReplicas !== workload.replicas && (
+                <span className="text-2xs text-yellow-500 ml-1">
+                  {workload.replicas} → {desiredReplicas}
+                </span>
+              )}
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground italic">
-            Tip: Drag workload to deploy to additional clusters
+          <p className="text-xs text-muted-foreground italic mt-1">
+            Drag workload to a cluster group to deploy
           </p>
         </div>
       )}

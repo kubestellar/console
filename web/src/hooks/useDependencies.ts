@@ -3,7 +3,7 @@ import { isAgentUnavailable } from './useLocalAgent'
 import { clusterCacheRef } from './mcp/shared'
 import { isDemoMode } from '../lib/demoMode'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS, MCP_HOOK_TIMEOUT_MS } from '../lib/constants/network'
+import { MCP_HOOK_TIMEOUT_MS } from '../lib/constants/network'
 
 export interface ResolvedDependency {
   kind: string
@@ -44,8 +44,10 @@ async function agentFetch(path: string, timeout = MCP_HOOK_TIMEOUT_MS): Promise<
 }
 
 /**
- * Resolve dependencies via the local agent by scanning namespace resources.
- * This is a fallback when the backend REST API is unavailable.
+ * Resolve dependencies via the local agent's /resolve-deps endpoint.
+ * This dynamically traces the workload's pod spec to find actual referenced
+ * resources (ConfigMaps, Secrets, SAs, RBAC, PVCs, Services, Ingresses,
+ * NetworkPolicies, PDBs, HPAs, CRDs, Webhooks).
  */
 async function resolveViaAgent(
   cluster: string,
@@ -60,63 +62,21 @@ async function resolveViaAgent(
   )
   const context = clusterEntry?.context || cluster
 
-  const params = `cluster=${encodeURIComponent(context)}&namespace=${encodeURIComponent(namespace)}`
+  const params = `cluster=${encodeURIComponent(context)}&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`
+  // Dependency resolution can be slow — give it 30s
+  const result = await agentFetch(`/resolve-deps?${params}`, 30_000)
 
-  // Fetch namespace resources in parallel — includes all agent-supported kinds
-  const [
-    configmaps, secrets, serviceaccounts, services, pvcs, hpas,
-    ingresses, networkpolicies,
-  ] = await Promise.allSettled([
-    agentFetch(`/configmaps?${params}`),
-    agentFetch(`/secrets?${params}`),
-    agentFetch(`/serviceaccounts?${params}`),
-    agentFetch(`/services?${params}`),
-    agentFetch(`/pvcs?${params}`),
-    agentFetch(`/hpas?${params}`),
-    agentFetch(`/ingresses?${params}`),
-    agentFetch(`/networkpolicies?${params}`),
-  ])
-
-  const deps: ResolvedDependency[] = []
-  let order = 0
-
-  // Extract resources from agent responses
-  const extract = (result: PromiseSettledResult<Record<string, unknown>>, key: string, kind: string) => {
-    if (result.status !== 'fulfilled') return
-    const items = result.value[key] as Array<{ name: string; namespace?: string }> | null
-    if (!items) return
-    for (const item of (items || [])) {
-      // Skip system resources
-      if (item.name.startsWith('kube-') && kind !== 'Service') continue
-      if (kind === 'ServiceAccount' && item.name === 'default') continue
-      deps.push({
-        kind,
-        name: item.name,
-        namespace: item.namespace || namespace,
-        optional: false,
-        order: order++,
-      })
-    }
+  if (result.error) {
+    throw new Error(result.error as string)
   }
 
-  extract(configmaps, 'configmaps', 'ConfigMap')
-  extract(secrets, 'secrets', 'Secret')
-  extract(serviceaccounts, 'serviceaccounts', 'ServiceAccount')
-  extract(services, 'services', 'Service')
-  extract(pvcs, 'pvcs', 'PersistentVolumeClaim')
-  extract(hpas, 'hpas', 'HorizontalPodAutoscaler')
-  extract(ingresses, 'ingresses', 'Ingress')
-  extract(networkpolicies, 'networkpolicies', 'NetworkPolicy')
-
   return {
-    workload: name,
-    kind: 'Deployment',
-    namespace,
-    cluster,
-    dependencies: deps,
-    warnings: deps.length > 0
-      ? ['Showing all namespace resources (exact dependency tracing requires backend)']
-      : [],
+    workload: result.workload as string || name,
+    kind: result.kind as string || 'Deployment',
+    namespace: result.namespace as string || namespace,
+    cluster: result.cluster as string || cluster,
+    dependencies: (result.dependencies as ResolvedDependency[]) || [],
+    warnings: (result.warnings as string[]) || [],
   }
 }
 
@@ -128,6 +88,7 @@ export function useResolveDependencies() {
   const [data, setData] = useState<DependencyResolution | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
+  const [progressMessage, setProgressMessage] = useState<string>('')
 
   const resolve = useCallback(async (
     cluster: string,
@@ -136,6 +97,7 @@ export function useResolveDependencies() {
   ): Promise<DependencyResolution | null> => {
     setIsLoading(true)
     setError(null)
+    setProgressMessage('Connecting to cluster…')
 
     // Demo mode returns synthetic dependency data
     if (isDemoMode()) {
@@ -170,9 +132,10 @@ export function useResolveDependencies() {
     try {
       // Try backend REST API first (works when JWT auth is available)
       try {
+        setProgressMessage('Scanning pod spec for references…')
         const res = await fetch(
           `/api/workloads/resolve-deps/${encodeURIComponent(cluster)}/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}`,
-          { headers: authHeaders(), signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) },
+          { headers: authHeaders(), signal: AbortSignal.timeout(3000) },
         )
         if (!res.ok) {
           throw new Error(`REST ${res.status}`)
@@ -180,19 +143,20 @@ export function useResolveDependencies() {
         const result: DependencyResolution = await res.json()
         setData(result)
         return result
-      } catch {
-        // REST API failed, try agent fallback
+      } catch (restErr) {
+        console.warn('[useDependencies] REST API failed, trying agent:', restErr)
       }
 
-      // Fall back to agent-based namespace resource scan
+      // Fall back to agent's dynamic resolve-deps endpoint
       try {
+        setProgressMessage('Tracing ConfigMaps, Secrets, RBAC, Services, PVCs…')
         const agentResult = await resolveViaAgent(cluster, namespace, name)
         if (agentResult) {
           setData(agentResult)
           return agentResult
         }
-      } catch {
-        // Agent also failed
+      } catch (agentErr) {
+        console.warn('[useDependencies] Agent resolve-deps failed:', agentErr)
       }
 
       setError(new Error('No data source available for dependency resolution'))
@@ -206,7 +170,8 @@ export function useResolveDependencies() {
     setData(null)
     setError(null)
     setIsLoading(false)
+    setProgressMessage('')
   }, [])
 
-  return { data, isLoading, error, resolve, reset }
+  return { data, isLoading, error, progressMessage, resolve, reset }
 }

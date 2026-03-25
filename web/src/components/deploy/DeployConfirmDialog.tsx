@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
   Rocket,
-  Loader2,
   AlertTriangle,
   ChevronDown,
   ChevronRight,
@@ -39,9 +38,10 @@ interface DeployConfirmDialogProps {
 const DEP_CATEGORIES: { label: string; kinds: string[]; icon: typeof Shield }[] = [
   { label: 'RBAC & Identity', kinds: ['ServiceAccount', 'Role', 'RoleBinding', 'ClusterRole', 'ClusterRoleBinding'], icon: Shield },
   { label: 'Configuration', kinds: ['ConfigMap', 'Secret'], icon: FileText },
-  { label: 'Networking', kinds: ['Service', 'Ingress', 'NetworkPolicy'], icon: Network },
-  { label: 'Scaling & Availability', kinds: ['HorizontalPodAutoscaler', 'PodDisruptionBudget'], icon: Gauge },
-  { label: 'Storage', kinds: ['PersistentVolumeClaim'], icon: HardDrive },
+  { label: 'Networking', kinds: ['Service', 'Ingress', 'NetworkPolicy', 'EndpointSlice'], icon: Network },
+  { label: 'Scaling & Availability', kinds: ['HorizontalPodAutoscaler', 'PodDisruptionBudget', 'PriorityClass'], icon: Gauge },
+  { label: 'Storage', kinds: ['PersistentVolumeClaim', 'StorageClass'], icon: HardDrive },
+  { label: 'Namespace Setup', kinds: ['ResourceQuota', 'LimitRange'], icon: Server },
   { label: 'Custom Resources', kinds: ['CustomResourceDefinition'], icon: Blocks },
   { label: 'Admission Control', kinds: ['ValidatingWebhookConfiguration', 'MutatingWebhookConfiguration'], icon: ShieldAlert },
 ]
@@ -97,7 +97,7 @@ export function DeployConfirmDialog({
   groupName,
 }: DeployConfirmDialogProps) {
   const { t } = useTranslation()
-  const { data, isLoading, error, resolve, reset } = useResolveDependencies()
+  const { data, isLoading, error, progressMessage, resolve, reset } = useResolveDependencies()
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
   // Resolve dependencies when dialog opens
@@ -175,9 +175,14 @@ export function DeployConfirmDialog({
 
           {/* Loading state */}
           {isLoading && (
-            <div className="flex items-center justify-center py-6 gap-2">
-              <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
-              <span className="text-sm text-muted-foreground">{t('deploy.resolvingDependencies')}</span>
+            <div className="flex flex-col items-center justify-center py-6 gap-2">
+              <div className="flex items-center gap-2">
+                <span className="refresh-dots inline-flex items-center gap-0.5 text-blue-400"><span className="w-1 h-1 rounded-full bg-current" /><span className="w-1 h-1 rounded-full bg-current" /><span className="w-1 h-1 rounded-full bg-current" /></span>
+                <span className="text-sm text-muted-foreground">{t('deploy.resolvingDependencies')}</span>
+              </div>
+              {progressMessage && (
+                <span className="text-xs text-muted-foreground/70 font-mono">{progressMessage}</span>
+              )}
             </div>
           )}
 
@@ -232,7 +237,7 @@ export function DeployConfirmDialog({
                               className="flex items-center gap-2 py-0.5 text-xs"
                             >
                               <DepIcon className="w-3 h-3 text-muted-foreground shrink-0" />
-                              <span className="text-muted-foreground w-24 truncate shrink-0">{dep.kind}</span>
+                              <span className="text-muted-foreground shrink-0">{dep.kind}</span>
                               <span className="text-foreground truncate flex-1">{dep.name}</span>
                               {dep.optional && (
                                 <span className="text-2xs text-yellow-500 shrink-0">{t('deploy.optional')}</span>
@@ -273,9 +278,12 @@ export function DeployConfirmDialog({
           </button>
           <button
             onClick={onConfirm}
+            disabled={isLoading}
             className={cn(
               'px-4 py-2 text-sm rounded-lg transition-colors flex items-center gap-2',
-              'bg-blue-500/20 hover:bg-blue-500/30 text-blue-400',
+              isLoading
+                ? 'bg-blue-500/10 text-blue-400/40 cursor-not-allowed'
+                : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-400',
             )}
           >
             <Rocket className="w-4 h-4" />
