@@ -153,8 +153,6 @@ The Auto-QA workflow uses this file to verify component consistency.
 | StrimziStatus | web/src/components/cards/strimzi_status/index.ts | `strimzi_status` |
 | KubeVelaStatus | web/src/components/cards/kubevela_status/index.ts | `kubevela_status` |
 | KarmadaStatus | web/src/components/cards/karmada_status/index.ts | `karmada_status` |
-| ContourStatus | web/src/components/cards/contour-status/index.ts | `contour_status` |
-| WasmCloudStatus | web/src/components/cards/wasmcloud_status/index.ts | `wasmcloud_status` |
 | ThanosStatus | web/src/components/cards/thanos_status/index.tsx | `thanos_status` |
 | OpenFeatureStatus | web/src/components/cards/openfeature_status/index.ts | `openfeature_status` |
 | CrossplaneManagedResources | web/src/components/cards/crossplane-status/CrossplaneManagedResources.tsx | `crossplane_managed_resources` |
