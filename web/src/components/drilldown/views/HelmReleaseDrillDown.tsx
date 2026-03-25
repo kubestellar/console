@@ -162,7 +162,13 @@ export function HelmReleaseDrillDown({ data }: Props) {
   // Helper to run helm commands via the agent
   const runHelm = (args: string[]): Promise<string> => {
     return new Promise((resolve) => {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      let ws: WebSocket
+      try {
+        ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      } catch {
+        resolve('')
+        return
+      }
       const requestId = `helm-${Date.now()}-${Math.random().toString(36).slice(2)}`
       let output = ''
 

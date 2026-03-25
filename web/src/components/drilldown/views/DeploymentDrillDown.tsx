@@ -119,7 +119,13 @@ export function DeploymentDrillDown({ data }: Props) {
   // Helper to run kubectl commands
   const runKubectl = (args: string[]): Promise<string> => {
     return new Promise((resolve) => {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      let ws: WebSocket
+      try {
+        ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      } catch {
+        resolve('')
+        return
+      }
       const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
       let output = ''
 
