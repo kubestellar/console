@@ -357,16 +357,14 @@ export function Clusters() {
         }
       case 'memory':
         return {
-          value: hasData ? stats.totalMemoryGB : '-',
-          format: (v: number) => formatMemoryStat(v),
+          value: hasData ? formatMemoryStat(stats.totalMemoryGB) : '-',
           sublabel: 'allocatable',
           onClick: () => { emitClusterStatsDrillDown('memory'); window.location.href = '/compute' },
           isClickable: hasData,
         }
       case 'storage':
         return {
-          value: hasData ? stats.totalStorageGB : '-',
-          format: (v: number) => formatMemoryStat(v),
+          value: hasData ? formatMemoryStat(stats.totalStorageGB) : '-',
           sublabel: 'storage',
           onClick: () => { emitClusterStatsDrillDown('storage'); window.location.href = '/storage' },
           isClickable: hasData,

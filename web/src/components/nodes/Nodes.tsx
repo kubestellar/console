@@ -68,7 +68,7 @@ export function Nodes() {
       case 'cpus':
         return { value: totalCPU, sublabel: t('common:nodes.cpuCores'), onClick: () => drillToAllNodes(), isClickable: totalCPU > 0 }
       case 'memory':
-        return { value: totalMemoryGB, format: (v: number) => formatMemoryStat(v), sublabel: t('common:common.memory'), onClick: () => drillToAllNodes(), isClickable: totalMemoryGB > 0 }
+        return { value: formatMemoryStat(totalMemoryGB), sublabel: t('common:common.memory'), onClick: () => drillToAllNodes(), isClickable: totalMemoryGB > 0 }
       case 'gpus':
         return { value: totalGPUs, sublabel: t('common:common.gpus'), onClick: () => drillToAllGPU(), isClickable: totalGPUs > 0 }
       case 'tpus':
