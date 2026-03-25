@@ -29,4 +29,5 @@ export const DEMO_MULTI_TENANCY_OVERVIEW: MultiTenancyOverviewData = {
   totalLevels: DEMO_TOTAL_LEVELS,
   isLoading: false,
   isDemoData: true,
+  isFailed: false,
 }

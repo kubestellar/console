@@ -50,7 +50,7 @@ export function Sidebar() {
   const { deduplicatedClusters } = useClusters()
   const dashboardContext = useDashboardContextOptional()
   const { isFullScreen: isMissionFullScreen } = useMissions()
-  const { viewerCount, hasError: viewersError } = useActiveUsers()
+  const { viewerCount, hasError: viewersError, isLoading: viewersLoading } = useActiveUsers()
   const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
@@ -531,7 +531,7 @@ export function Sidebar() {
             >
               <User className={cn('w-3 h-3', viewersError && 'text-red-400')} />
               <span className="text-2xs tabular-nums">
-                {viewersError ? '!' : viewerCount}
+                {viewersError ? '!' : viewersLoading ? '…' : viewerCount}
               </span>
             </div>
           </div>

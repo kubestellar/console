@@ -39,6 +39,7 @@ export interface MultiTenancyOverviewData {
   totalLevels: number
   isLoading: boolean
   isDemoData: boolean
+  isFailed: boolean
 }
 
 export function useMultiTenancyOverview(): MultiTenancyOverviewData {
@@ -57,6 +58,8 @@ export function useMultiTenancyOverview(): MultiTenancyOverviewData {
   const isLoading = ovnResult.loading || kubeflexResult.loading || k3sResult.loading || kubevirtResult.loading
   // Demo when ALL hooks are returning demo fallback data (useCache in demo mode)
   const isDemoData = ovnResult.isDemoData && kubeflexResult.isDemoData && k3sResult.isDemoData && kubevirtResult.isDemoData
+  // Failed when ANY underlying hook has failed without recoverable data
+  const isFailed = ovnResult.error || kubeflexResult.error || k3sResult.error || kubevirtResult.error
 
   const components: ComponentStatus[] = useMemo(() => [
     { name: 'OVN-K8s', detected: ovn.detected, health: ovn.health, icon: 'network' },
@@ -102,5 +105,6 @@ export function useMultiTenancyOverview(): MultiTenancyOverviewData {
     totalLevels: TOTAL_ISOLATION_LEVELS,
     isLoading,
     isDemoData,
+    isFailed,
   }
 }

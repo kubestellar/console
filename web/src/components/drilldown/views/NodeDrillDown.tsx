@@ -32,7 +32,7 @@ export function NodeDrillDown({ data }: Props) {
   const issue = data.issue as string | undefined
 
   // Fetch node data from cache to fill in missing fields (#3028)
-  const { nodes, isLoading: isLoadingNodes } = useCachedNodes(cluster || undefined)
+  const { nodes, isLoading: isLoadingNodes, isFailed: isNodesFailed } = useCachedNodes(cluster || undefined)
 
   // Look up this specific node from the cached data
   const cachedNode = useMemo(() => {
@@ -62,6 +62,8 @@ export function NodeDrillDown({ data }: Props) {
 
   /** Whether we are still loading node data and have no usable status yet */
   const isResolvingNode = !status && isLoadingNodes
+  /** Whether node data failed to load and we have no status */
+  const isNodeDataError = !status && !isLoadingNodes && isNodesFailed
 
   const copyCommand = (cmd: string, label: string) => {
     copyToClipboard(cmd)
@@ -133,6 +135,14 @@ Start by checking node events and conditions.`,
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
             <Loader2 className="w-4 h-4 animate-spin" />
             <span>Loading node details...</span>
+          </div>
+        )}
+
+        {/* Error indicator when node data failed to load */}
+        {isNodeDataError && (
+          <div className="flex items-center gap-2 text-sm text-yellow-400 mb-4">
+            <AlertTriangle className="w-4 h-4" />
+            <span>Unable to load node details from cluster</span>
           </div>
         )}
 

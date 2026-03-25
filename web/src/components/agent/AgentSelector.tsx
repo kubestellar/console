@@ -39,6 +39,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   // Install guide modal state
   const [installGuide, setInstallGuide] = useState<{ mission: MissionExport; raw: string } | null>(null)
   const [installGuideLoading, setInstallGuideLoading] = useState(false)
+  const [installGuideError, setInstallGuideError] = useState(false)
   const [installGuideShowRaw, setInstallGuideShowRaw] = useState(false)
   // Cluster selection for AI install
   const [pendingInstall, setPendingInstall] = useState<{ missionId: string; displayName: string; mission: MissionExport } | null>(null)
@@ -80,6 +81,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   const openInstallGuide = useCallback(async (missionId: string) => {
     closeDropdown()
     setInstallGuideLoading(true)
+    setInstallGuideError(false)
     const paths = INSTALL_MISSION_PATHS[missionId] || [`solutions/cncf-install/${missionId}.json`, `solutions/platform-install/${missionId}.json`]
     for (const path of paths) {
       try {
@@ -105,6 +107,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
         return
       } catch { continue }
     }
+    setInstallGuideError(true)
     setInstallGuideLoading(false)
   }, [closeDropdown])
 
@@ -438,17 +441,17 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
       }}
     />
     {/* Install guide modal */}
-    {(installGuide || installGuideLoading) && createPortal(
+    {(installGuide || installGuideLoading || installGuideError) && createPortal(
       <div
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-2xl"
-        onClick={(e) => { if (e.target === e.currentTarget) { setInstallGuide(null); setInstallGuideLoading(false) } }}
-        onKeyDown={(e) => { if (e.key === 'Escape') { setInstallGuide(null); setInstallGuideLoading(false) } }}
+        onClick={(e) => { if (e.target === e.currentTarget) { setInstallGuide(null); setInstallGuideLoading(false); setInstallGuideError(false) } }}
+        onKeyDown={(e) => { if (e.key === 'Escape') { setInstallGuide(null); setInstallGuideLoading(false); setInstallGuideError(false) } }}
         tabIndex={-1}
         ref={(el) => el?.focus()}
       >
         <div className="relative bg-card border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col w-[900px] max-h-[85vh]">
           <button
-            onClick={() => { setInstallGuide(null); setInstallGuideLoading(false) }}
+            onClick={() => { setInstallGuide(null); setInstallGuideLoading(false); setInstallGuideError(false) }}
             className="absolute top-3 right-3 z-10 p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-4 h-4" />
@@ -457,6 +460,11 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
             {installGuideLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : installGuideError ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
+                <p className="text-sm text-red-400">{t('agent.installGuideLoadError', 'Failed to load install guide')}</p>
+                <p className="text-xs text-muted-foreground">{t('agent.installGuideLoadErrorHint', 'Check your connection or try again later')}</p>
               </div>
             ) : installGuide ? (
               <MissionDetailView

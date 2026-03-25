@@ -117,6 +117,7 @@ export function MultiTenancyOverview() {
     isLoading: data.isLoading && !hasData,
     hasAnyData: hasData,
     isDemoData: data.isDemoData,
+    isFailed: data.isFailed,
   })
 
   if (showSkeleton) {
