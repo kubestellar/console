@@ -498,7 +498,13 @@ export function Layout({ children }: LayoutProps) {
       )}
 
       <div className="flex flex-1 overflow-hidden transition-[padding-top] duration-300" style={{ paddingTop: NAVBAR_HEIGHT + totalBannerHeight }}>
-        <Sidebar />
+        {/* Wrap Sidebar in PageErrorBoundary so stale-chunk errors
+            (e.g. "Can't find variable: handleSidebarMouseEnter" from cached
+            old bundles) are caught at page level instead of propagating to
+            AppErrorBoundary and crashing the entire application. */}
+        <PageErrorBoundary>
+          <Sidebar />
+        </PageErrorBoundary>
         <main
           id="main-content"
           style={{ marginLeft: sidebarWidthPx }}

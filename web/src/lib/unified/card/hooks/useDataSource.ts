@@ -8,7 +8,7 @@
  * - context: Read from React context
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useSyncExternalStore } from 'react'
 import type { CardDataSource } from '../../types'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../constants'
 
@@ -22,6 +22,39 @@ const dataHookRegistry: Record<
     refetch?: () => void
   }
 > = {}
+
+/**
+ * Registry version counter -- incremented every time a hook is registered.
+ * Components can subscribe via useDataHookRegistryVersion() to remount
+ * when the registry changes, keeping React hook counts stable.
+ */
+let registryVersion = 0
+const registryListeners = new Set<() => void>()
+
+/**
+ * Subscribe to registry version changes (used by useDataHookRegistryVersion)
+ */
+export function subscribeRegistryChange(listener: () => void): () => void {
+  registryListeners.add(listener)
+  return () => { registryListeners.delete(listener) }
+}
+
+/**
+ * Get current registry version snapshot (used by useDataHookRegistryVersion)
+ */
+export function getRegistryVersion(): number {
+  return registryVersion
+}
+
+/**
+ * React hook that returns the current registry version.
+ * When hooks are registered (e.g. after dynamic import), this triggers
+ * a re-render so parent components can remount children with a fresh
+ * hook count -- avoiding "Rendered more hooks than previous render" crashes.
+ */
+export function useDataHookRegistryVersion(): number {
+  return useSyncExternalStore(subscribeRegistryChange, getRegistryVersion)
+}
 
 /**
  * Register a data hook for use in card configs
@@ -39,6 +72,8 @@ export function registerDataHook(
   }
 ) {
   dataHookRegistry[name] = hook
+  registryVersion++
+  registryListeners.forEach(l => l())
 }
 
 /**
@@ -146,38 +181,38 @@ function useHookDataSourceInternal(
   hookName: string | null,
   params?: Record<string, unknown>
 ): UseDataSourceResult {
-  // Memoize error result
-  const errorResult = useMemo<UseDataSourceResult>(
-    () => {
-      if (!hookName) return EMPTY_RESULT
-      return {
-        data: undefined,
-        isLoading: false,
-        error: new Error(
-          `Data hook not registered: ${hookName}. Register it with registerDataHook().`
-        ),
-        refetch: () => {},
-      }
-    },
-    [hookName]
-  )
-
-  // Get the hook from registry
+  // Check if the named hook exists in the registry.
+  // NOTE: We intentionally do NOT call the registered hook here when it
+  // is absent. Registered hooks are React hooks (they use useState,
+  // useEffect, etc.). Calling them conditionally -- only after the
+  // dynamic-import populates the registry -- violates React's rules of
+  // hooks and causes "Rendered more hooks than during the previous render"
+  // crashes.
+  //
+  // Instead, we return a loading result when the hook is missing, and
+  // rely on the parent component using useDataHookRegistryVersion() as a
+  // key to remount this entire subtree once the registry is populated.
+  // After remount, the hook exists from the very first render, keeping
+  // hook counts stable across all renders of this component instance.
   const registeredHook = hookName ? dataHookRegistry[hookName] : null
 
-  // Call the hook if it exists, otherwise use a stable empty result
-  // Note: We can't conditionally call hooks, but we CAN conditionally
-  // pass null to a function that returns stable results
-  const hookResult = registeredHook ? registeredHook(params) : null
-
-  // Return appropriate result
   if (!hookName) {
     return EMPTY_RESULT
   }
 
-  if (!hookResult) {
-    return errorResult
+  if (!registeredHook) {
+    // Hook not yet registered (dynamic import in progress) -- show loading
+    return {
+      data: undefined,
+      isLoading: true,
+      error: null,
+      refetch: () => {},
+    }
   }
+
+  // Hook is registered -- call it. This is safe because after a key-based
+  // remount, the hook exists on every render of this component instance.
+  const hookResult = registeredHook(params)
 
   return {
     data: hookResult.data,

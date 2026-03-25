@@ -16,6 +16,7 @@
 
 import { useMemo } from 'react'
 import { UnifiedCard } from './UnifiedCard'
+import { useDataHookRegistryVersion } from './hooks/useDataSource'
 import { getCardConfig } from '../../../config/cards'
 import type { CardComponentProps } from '../../../components/cards/cardRegistry'
 
@@ -336,10 +337,17 @@ export function UnifiedCardAdapter({
     return true
   }, [cardType, forceLegacy])
 
+  // Track data-hook registry version so that when hooks are registered
+  // (after dynamic import in main.tsx), we remount UnifiedCard with a new
+  // key. This keeps React hook counts stable within each component lifecycle
+  // and prevents "Rendered more hooks than previous render" crashes.
+  const registryVersion = useDataHookRegistryVersion()
+
   // Render via UnifiedCard
   if (useUnified && config) {
     return (
       <UnifiedCard
+        key={`unified-${cardType}-rv${registryVersion}`}
         config={config}
         instanceConfig={instanceConfig}
         className="h-full"
