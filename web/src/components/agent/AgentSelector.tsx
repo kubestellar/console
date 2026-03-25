@@ -462,7 +462,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
               </div>
             ) : installGuideError ? (
-              <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
+              <div role="alert" className="flex flex-col items-center justify-center py-12 gap-3 text-center">
                 <p className="text-sm text-red-400">{t('agent.installGuideLoadError', 'Failed to load install guide')}</p>
                 <p className="text-xs text-muted-foreground">{t('agent.installGuideLoadErrorHint', 'Check your connection or try again later')}</p>
               </div>
