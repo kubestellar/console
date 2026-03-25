@@ -25,9 +25,14 @@ export function useApiKeyCheck() {
   // Deprecated: for backwards compatibility
   const hasApiKey = hasAvailableAgent
 
-  const checkKeyAndRun = useCallback((onSuccess: () => void) => {
+  const checkKeyAndRun = useCallback((onSuccess: () => void | Promise<void>) => {
     if (hasAvailableAgent()) {
-      onSuccess()
+      // Wrap in Promise.resolve so async callbacks (returning Promise) have their
+      // rejections caught — without this, an unhandled rejection is created when
+      // the caller passes an async function and the promise is discarded.
+      Promise.resolve(onSuccess()).catch((err) => {
+        console.error('[checkKeyAndRun] Mission callback failed:', err)
+      })
     } else {
       setShowKeyPrompt(true)
     }

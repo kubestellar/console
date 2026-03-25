@@ -785,7 +785,11 @@ class CacheStore<T> {
     // This ensures we don't show skeleton when cached data is available
     if (this.storageLoadPromise) {
       const currentPromise = this.storageLoadPromise
-      await currentPromise
+      try {
+        await currentPromise
+      } catch {
+        // Storage load failed — proceed with current in-memory state
+      }
       // Only clear if it hasn't been replaced by a concurrent resetToInitialData()
       if (this.storageLoadPromise === currentPromise) {
         this.storageLoadPromise = null
@@ -1122,7 +1126,7 @@ export function useCache<T>({
     if (!isModeTransition && !initialFetchDoneRef.current) {
       // Initial mount or page navigation remount — fetch immediately
       initialFetchDoneRef.current = true
-      refetch()
+      refetch().catch(() => { /* errors handled inside CacheStore.fetch */ })
     }
     // else: mode transition — triggerAllRefetches() will call refetch after skeleton timer
     // else: backoff re-fire — let the interval handle the next retry
@@ -1134,7 +1138,7 @@ export function useCache<T>({
     // The interval restarts when consecutiveFailures changes (backoff kicks in).
     // Suppressed when the dashboard "Auto" checkbox is unchecked (global pause).
     if (autoRefresh && !autoRefreshGloballyPaused) {
-      const intervalId = setInterval(refetch, effectiveInterval)
+      const intervalId = setInterval(() => { refetch().catch(() => { /* errors handled inside CacheStore.fetch */ }) }, effectiveInterval)
       return () => { clearInterval(intervalId); unregisterRefetch() }
     }
     return () => unregisterRefetch()
