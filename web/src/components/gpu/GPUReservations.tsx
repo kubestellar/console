@@ -985,10 +985,9 @@ export function GPUReservations() {
                           <button
                             key={`add-${day}`}
                             onClick={() => { setPrefillDate(dateStr); setEditingReservation(null); setShowReservationForm(true) }}
-                            className="absolute w-5 h-5 flex items-center justify-center rounded bg-purple-500/20 text-purple-400 opacity-0 group-hover/bars:opacity-60 hover:!opacity-100 hover:bg-purple-500/40 transition-all z-10"
+                            className="absolute w-5 h-5 flex items-center justify-center rounded bg-purple-500/20 text-purple-400 opacity-0 group-hover/bars:opacity-60 hover:!opacity-100 hover:bg-purple-500/40 transition-all z-10 bottom-1"
                             style={{
                               left: `calc(${((col + 1) / 7) * 100}% - 24px)`,
-                              bottom: '4px',
                             }}
                             aria-label={`Add reservation on ${dateStr}`}
                           >

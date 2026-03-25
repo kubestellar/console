@@ -1579,8 +1579,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                         items={filteredRecommendations}
                         viewMode="grid"
                         maxColumns={3}
-                        className="flex-1"
-                        style={{ height: 'calc(90vh - 360px)' }}
+                        className="flex-1 h-[calc(90vh-360px)]"
                         renderItem={(match) => (
                           <RecommendationCard
                             match={match}
@@ -1597,8 +1596,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                     items={filteredRecommendations}
                     viewMode="grid"
                     maxColumns={3}
-                    className="flex-1"
-                    style={{ height: 'calc(90vh - 360px)' }}
+                    className="flex-1 h-[calc(90vh-360px)]"
                     renderItem={(match) => (
                       <RecommendationCard
                         match={match}
@@ -1737,8 +1735,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                       items={filteredInstallers}
                       viewMode={viewMode}
                       maxColumns={4}
-                      className="flex-1"
-                      style={{ height: 'calc(90vh - 280px)' }}
+                      className="flex-1 h-[calc(90vh-280px)]"
                       renderItem={(mission) => (
                         <InstallerCard
                           mission={mission}
@@ -1814,8 +1811,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                       items={filteredSolutions}
                       viewMode={viewMode}
                       maxColumns={3}
-                      className="flex-1"
-                      style={{ height: 'calc(90vh - 280px)' }}
+                      className="flex-1 h-[calc(90vh-280px)]"
                       renderItem={(mission) => (
                         <SolutionCard
                           mission={mission}

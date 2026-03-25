@@ -21,6 +21,7 @@ import {
   CHART_AXIS_STROKE,
   CHART_TOOLTIP_CONTENT_STYLE,
   CHART_TICK_COLOR,
+  CHART_LEGEND_WRAPPER_STYLE,
 } from '../../lib/constants'
 import { useDemoMode } from '../../hooks/useDemoMode'
 
@@ -355,7 +356,7 @@ export function ResourceTrend() {
                 labelStyle={{ color: CHART_TICK_COLOR }}
               />
               <Legend
-                wrapperStyle={{ fontSize: '10px' }}
+                wrapperStyle={CHART_LEGEND_WRAPPER_STYLE}
                 iconType="line"
               />
               {lines.map((line, idx) => (

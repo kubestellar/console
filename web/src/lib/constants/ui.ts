@@ -20,6 +20,10 @@ export const CHART_TOOLTIP_BORDER_RADIUS = '8px'
 export const CHART_TOOLTIP_FONT_SIZE = '12px'
 /** Compact font size for insight-card tooltips */
 export const CHART_TOOLTIP_FONT_SIZE_COMPACT = '11px'
+/** Compact font size for recharts Legend wrapperStyle (10px ≈ text-[10px]) */
+export const CHART_LEGEND_WRAPPER_STYLE: React.CSSProperties = { fontSize: '10px' }
+/** Standard font size for recharts Legend wrapperStyle (12px ≈ text-xs) */
+export const CHART_LEGEND_WRAPPER_STYLE_SM: React.CSSProperties = { fontSize: '12px' }
 /** Shared Recharts Tooltip contentStyle — eliminates repeated inline objects */
 export const CHART_TOOLTIP_CONTENT_STYLE: React.CSSProperties = {
   backgroundColor: CHART_TOOLTIP_BG,

@@ -481,13 +481,12 @@ export function NetworkUtils() {
                         {results.slice(-10).map((r, i) => (
                           <div
                             key={i}
-                            className={`flex-1 rounded-t ${
+                            className={`flex-1 rounded-t min-h-1 ${
                               r.status === 'success' ? 'bg-green-500' :
                               r.status === 'timeout' ? 'bg-yellow-500' : 'bg-red-500'
                             }`}
                             style={{
                               height: r.latency ? `${Math.min(100, (r.latency / 500) * 100)}%` : '10%',
-                              minHeight: '4px',
                             }}
                             title={`${r.latency || 'N/A'}ms`}
                           />

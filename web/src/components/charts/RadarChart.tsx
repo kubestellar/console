@@ -8,7 +8,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts'
-import { CHART_TOOLTIP_CONTENT_STYLE } from '../../lib/constants'
+import { CHART_TOOLTIP_CONTENT_STYLE, CHART_LEGEND_WRAPPER_STYLE_SM } from '../../lib/constants'
 
 interface DataPoint {
   name: string
@@ -119,7 +119,7 @@ export function MultiRadarChart({
           />
           {showLegend && (
             <Legend
-              wrapperStyle={{ fontSize: '12px' }}
+              wrapperStyle={CHART_LEGEND_WRAPPER_STYLE_SM}
             />
           )}
           {series.map((s) => (

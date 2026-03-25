@@ -24,6 +24,7 @@ import {
   CHART_AXIS_STROKE,
   CHART_TOOLTIP_CONTENT_STYLE,
   CHART_TICK_COLOR,
+  CHART_LEGEND_WRAPPER_STYLE,
 } from '../../lib/constants'
 
 interface GPUDataPoint {
@@ -372,7 +373,7 @@ export function GPUUsageTrend() {
                   }}
                 />
                 <Legend
-                  wrapperStyle={{ fontSize: '10px' }}
+                  wrapperStyle={CHART_LEGEND_WRAPPER_STYLE}
                   iconType="rect"
                   formatter={(value) => value === 'allocated' ? 'In Use' : 'Free'}
                 />
