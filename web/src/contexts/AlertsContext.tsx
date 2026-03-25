@@ -471,24 +471,31 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
 
   // Resolve an alert
   const resolveAlert = useCallback((alertId: string) => {
+    const resolvedAt = new Date().toISOString()
+    let resolvedAlert: Alert | undefined
     setAlerts(prev => {
       const updated = prev.map(alert =>
         alert.id === alertId
-          ? { ...alert, status: 'resolved' as const, resolvedAt: new Date().toISOString() }
+          ? { ...alert, status: 'resolved' as const, resolvedAt }
           : alert
       )
-      // Send resolution notifications to channels (enables PD/OG auto-close)
-      const resolvedAlert = updated.find(a => a.id === alertId)
+      resolvedAlert = updated.find(a => a.id === alertId)
+      return updated
+    })
+    // Send resolution notifications outside the state updater to avoid duplicate
+    // side effects if React replays the updater (Strict Mode / concurrent rendering).
+    // We use queueMicrotask so the notification runs after the state update commits
+    // but still within the same task, keeping it predictable and non-blocking.
+    queueMicrotask(() => {
       if (resolvedAlert) {
-        const rule = rules.find(r => r.id === resolvedAlert.ruleId)
+        const rule = rules.find(r => r.id === resolvedAlert!.ruleId)
         if (rule) {
           const enabledChannels = rule.channels.filter(ch => ch.enabled)
           if (enabledChannels.length > 0) {
-            sendNotifications(resolvedAlert, enabledChannels).catch(() => {})
+            sendNotifications(resolvedAlert!, enabledChannels).catch(() => {})
           }
         }
       }
-      return updated
     })
   }, [rules])
 
@@ -508,6 +515,12 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       resource?: string,
       resourceKind?: string
     ) => {
+      // Generate the id and timestamp outside the state updater so they remain
+      // stable if React replays the updater function (Strict Mode / concurrent rendering).
+      const alertId = generateId()
+      const firedAt = new Date().toISOString()
+      let newAlert: Alert | undefined
+
       setAlerts(prev => {
         // For per-resource alert types (pod_crash), each distinct resource (pod name) gets its
         // own alert. For cluster-aggregate types (gpu_usage, gpu_health_cronjob, node_not_ready,
@@ -530,9 +543,11 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
             existingAlert.resourceKind === resourceKind &&
             shallowEqualRecords(existingAlert.details, details)
           ) {
+            newAlert = undefined
             return prev
           }
           // Update the existing alert with the latest details (keeps original firedAt)
+          newAlert = undefined
           return prev.map(a =>
             a.id === existingAlert.id
               ? { ...a, message, details, resource, namespace, resourceKind }
@@ -541,7 +556,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
         }
 
         const alert: Alert = {
-          id: generateId(),
+          id: alertId,
           ruleId: rule.id,
           ruleName: rule.name,
           severity: rule.severity,
@@ -552,20 +567,11 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           namespace,
           resource,
           resourceKind,
-          firedAt: new Date().toISOString(),
+          firedAt,
           isDemo: isDemoMode, // Mark alert as demo if created during demo mode
         }
 
-        // Send notification to configured channels (async, non-blocking, silent failures)
-        if (rule.channels && rule.channels.length > 0) {
-          const enabledChannels = rule.channels.filter(ch => ch.enabled)
-          if (enabledChannels.length > 0) {
-            // Send notifications asynchronously without blocking alert creation
-            sendNotifications(alert, enabledChannels).catch(() => {
-              // Silent failure - notifications are best-effort
-            })
-          }
-        }
+        newAlert = alert
 
         // Cap the in-memory array: evict oldest resolved alerts first so firing alerts are never dropped.
         // This mirrors the saveAlerts cap and prevents unbounded memory growth in high-frequency scenarios.
@@ -577,6 +583,20 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           .sort((a, b) => new Date(b.resolvedAt ?? b.firedAt).getTime() - new Date(a.resolvedAt ?? a.firedAt).getTime())
           .slice(0, Math.max(0, MAX_ALERTS - firingAlerts.length))
         return [...firingAlerts, ...resolvedAlerts]
+      })
+
+      // Send notifications outside the state updater to avoid duplicate side effects
+      // if React replays the updater (Strict Mode / concurrent rendering).
+      // We use queueMicrotask so the notification runs after the state update commits.
+      queueMicrotask(() => {
+        if (newAlert && rule.channels && rule.channels.length > 0) {
+          const enabledChannels = rule.channels.filter(ch => ch.enabled)
+          if (enabledChannels.length > 0) {
+            sendNotifications(newAlert, enabledChannels).catch(() => {
+              // Silent failure - notifications are best-effort
+            })
+          }
+        }
       })
     },
     [isDemoMode]
