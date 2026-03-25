@@ -311,6 +311,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/resourcequotas", s.handleResourceQuotasHTTP)
 	mux.HandleFunc("/limitranges", s.handleLimitRangesHTTP)
 	mux.HandleFunc("/resolve-deps", s.handleResolveDepsHTTP)
+	mux.HandleFunc("/scale", s.handleScaleHTTP)
 
 	// Rename context endpoint
 	mux.HandleFunc("/rename-context", s.handleRenameContextHTTP)
@@ -1412,6 +1413,86 @@ func (s *Server) handleResolveDepsHTTP(w http.ResponseWriter, r *http.Request) {
 		"dependencies": deps,
 		"warnings":     bundle.Warnings,
 		"source":       "agent",
+	})
+}
+
+// handleScaleHTTP scales a workload (Deployment or StatefulSet) to the given
+// replica count via the Kubernetes API. It accepts POST with JSON body or
+// GET with query parameters for convenience.
+func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if s.k8sClient == nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "k8s client not initialized",
+		})
+		return
+	}
+
+	var cluster, namespace, name string
+	var replicas int32
+
+	if r.Method == "POST" {
+		var req struct {
+			Cluster   string `json:"cluster"`
+			Namespace string `json:"namespace"`
+			Name      string `json:"name"`
+			Replicas  int32  `json:"replicas"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success": false,
+				"error":   "invalid request body",
+			})
+			return
+		}
+		cluster = req.Cluster
+		namespace = req.Namespace
+		name = req.Name
+		replicas = req.Replicas
+	} else {
+		cluster = r.URL.Query().Get("cluster")
+		namespace = r.URL.Query().Get("namespace")
+		name = r.URL.Query().Get("name")
+		if r.URL.Query().Get("replicas") != "" {
+			n, _ := strconv.Atoi(r.URL.Query().Get("replicas"))
+			replicas = int32(n)
+		}
+	}
+
+	if cluster == "" || namespace == "" || name == "" {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "cluster, namespace, and name are required",
+		})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	defer cancel()
+
+	result, err := s.k8sClient.ScaleWorkload(ctx, namespace, name, []string{cluster}, replicas)
+	if err != nil {
+		log.Printf("error scaling %s/%s in %s: %v", namespace, name, cluster, err)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   err.Error(),
+			"source":  "agent",
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":        result.Success,
+		"message":        result.Message,
+		"deployedTo":     result.DeployedTo,
+		"failedClusters": result.FailedClusters,
+		"source":         "agent",
 	})
 }
 

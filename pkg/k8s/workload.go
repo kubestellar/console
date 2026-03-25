@@ -809,12 +809,116 @@ func normalizeImageRef(image string) string {
 	return "docker.io/" + image
 }
 
-// ScaleWorkload scales a workload across clusters
+// ScaleWorkload scales a workload across the specified clusters using the
+// scale subresource. It tries Deployments and StatefulSets (DaemonSets do not
+// support replicas). If targetClusters is empty, all known clusters are tried.
 func (m *MultiClusterClient) ScaleWorkload(ctx context.Context, namespace, name string, targetClusters []string, replicas int32) (*v1alpha1.DeployResponse, error) {
-	// Placeholder for scaling implementation
+	if len(targetClusters) == 0 {
+		m.mu.RLock()
+		for name := range m.dynamicClients {
+			targetClusters = append(targetClusters, name)
+		}
+		m.mu.RUnlock()
+	}
+	if len(targetClusters) == 0 {
+		return &v1alpha1.DeployResponse{
+			Success: false,
+			Message: "no target clusters specified or available",
+		}, nil
+	}
+
+	scalableGVRs := []struct {
+		gvr  schema.GroupVersionResource
+		kind string
+	}{
+		{gvrDeployments, "Deployment"},
+		{gvrStatefulSets, "StatefulSet"},
+	}
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	deployed := make([]string, 0, len(targetClusters))
+	failed := make([]string, 0)
+	var lastErr error
+
+	for _, cluster := range targetClusters {
+		wg.Add(1)
+		go func(clusterName string) {
+			defer wg.Done()
+
+			client, err := m.GetDynamicClient(clusterName)
+			if err != nil {
+				mu.Lock()
+				failed = append(failed, clusterName)
+				lastErr = fmt.Errorf("cluster %s: %w", clusterName, err)
+				mu.Unlock()
+				return
+			}
+
+			// Try each scalable resource type until we find the workload
+			var scaled bool
+			for _, g := range scalableGVRs {
+				// Get current object to verify it exists
+				obj, getErr := client.Resource(g.gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+				if getErr != nil {
+					if apierrors.IsNotFound(getErr) {
+						continue // Try next GVR
+					}
+					mu.Lock()
+					failed = append(failed, clusterName)
+					lastErr = fmt.Errorf("cluster %s: get %s: %w", clusterName, g.kind, getErr)
+					mu.Unlock()
+					return
+				}
+
+				// Update the replica count via the spec
+				spec, ok := obj.Object["spec"].(map[string]interface{})
+				if !ok {
+					mu.Lock()
+					failed = append(failed, clusterName)
+					lastErr = fmt.Errorf("cluster %s: invalid spec in %s %s/%s", clusterName, g.kind, namespace, name)
+					mu.Unlock()
+					return
+				}
+				spec["replicas"] = int64(replicas)
+
+				_, updateErr := client.Resource(g.gvr).Namespace(namespace).Update(ctx, obj, metav1.UpdateOptions{})
+				if updateErr != nil {
+					mu.Lock()
+					failed = append(failed, clusterName)
+					lastErr = fmt.Errorf("cluster %s: scale %s: %w", clusterName, g.kind, updateErr)
+					mu.Unlock()
+					return
+				}
+
+				scaled = true
+				break
+			}
+
+			mu.Lock()
+			if scaled {
+				deployed = append(deployed, clusterName)
+			} else {
+				failed = append(failed, clusterName)
+				lastErr = fmt.Errorf("cluster %s: workload %s/%s not found as Deployment or StatefulSet", clusterName, namespace, name)
+			}
+			mu.Unlock()
+		}(cluster)
+	}
+
+	wg.Wait()
+
+	success := len(deployed) > 0
+	msg := fmt.Sprintf("Scaled %s/%s to %d replicas on %d/%d clusters", namespace, name, replicas, len(deployed), len(targetClusters))
+	if lastErr != nil && !success {
+		msg = lastErr.Error()
+	}
+
 	return &v1alpha1.DeployResponse{
-		Success: true,
-		Message: "Workload scaling initiated",
+		Success:        success,
+		Message:        msg,
+		DeployedTo:     deployed,
+		FailedClusters: failed,
 	}, nil
 }
 

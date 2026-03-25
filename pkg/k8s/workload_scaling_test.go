@@ -25,6 +25,9 @@ func TestScaleWorkload(t *testing.T) {
 				"name":      "dep1",
 				"namespace": "default",
 			},
+			"spec": map[string]interface{}{
+				"replicas": int64(1),
+			},
 		},
 	}
 

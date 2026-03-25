@@ -13,18 +13,23 @@ import {
   Plus,
   Minus,
   GripVertical,
+  Loader2,
+  Check,
 } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { cn } from '../../lib/cn'
-import { Workload as ApiWorkload } from '../../hooks/useWorkloads'
+import { Workload as ApiWorkload, useScaleWorkload } from '../../hooks/useWorkloads'
 import { useCachedWorkloads } from '../../hooks/useCachedData'
 import { useClusters } from '../../hooks/useMCP'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
+import { isAgentUnavailable } from '../../hooks/useLocalAgent'
+import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
+import { clusterCacheRef } from '../../hooks/mcp/shared'
 
 // Workload types
 type WorkloadType = 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Job' | 'CronJob'
@@ -200,16 +205,94 @@ const statusColors: Record<WorkloadStatus, string> = {
   Unknown: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-muted-foreground',
 }
 
+/** Scale a workload via the agent's /scale endpoint (fallback when backend is unavailable). */
+async function scaleViaAgent(
+  cluster: string,
+  namespace: string,
+  name: string,
+  replicas: number,
+): Promise<{ success: boolean; message?: string }> {
+  if (isAgentUnavailable()) throw new Error('Agent unavailable')
+
+  const clusterEntry = clusterCacheRef.clusters.find(
+    c => c.name === cluster && c.reachable !== false,
+  )
+  const context = clusterEntry?.context || cluster
+
+  const ctrl = new AbortController()
+  const tid = setTimeout(() => ctrl.abort(), 15_000)
+  try {
+    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/scale`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      signal: ctrl.signal,
+      body: JSON.stringify({ cluster: context, namespace, name, replicas }),
+    })
+    if (!res.ok) throw new Error(`Agent ${res.status}`)
+    return await res.json()
+  } finally {
+    clearTimeout(tid)
+  }
+}
+
 // Draggable workload item component
 interface DraggableWorkloadItemProps {
   workload: Workload
   isSelected: boolean
   onSelect: () => void
+  onScaled?: () => void
 }
 
-function DraggableWorkloadItem({ workload, isSelected, onSelect }: DraggableWorkloadItemProps) {
+function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: DraggableWorkloadItemProps) {
   const [desiredReplicas, setDesiredReplicas] = useState(workload.replicas)
+  const [isScaling, setIsScaling] = useState(false)
+  const [scaleError, setScaleError] = useState<string | null>(null)
+  const [scaleSuccess, setScaleSuccess] = useState(false)
+  const { mutate: scaleWorkload } = useScaleWorkload()
   const { t } = useTranslation()
+
+  // Sync desired replicas when workload data updates (e.g. after refresh)
+  useEffect(() => {
+    if (!isScaling) setDesiredReplicas(workload.replicas)
+  }, [workload.replicas, isScaling])
+
+  const handleApplyScale = useCallback(async () => {
+    if (desiredReplicas === workload.replicas || isScaling) return
+    setIsScaling(true)
+    setScaleError(null)
+    setScaleSuccess(false)
+
+    const cluster = workload.targetClusters[0] || 'unknown'
+
+    try {
+      // Try backend REST API first
+      await scaleWorkload({
+        workloadName: workload.name,
+        namespace: workload.namespace,
+        targetClusters: workload.targetClusters,
+        replicas: desiredReplicas,
+      })
+      setScaleSuccess(true)
+      onScaled?.()
+      setTimeout(() => setScaleSuccess(false), 2000)
+    } catch {
+      // Backend failed — try agent fallback
+      try {
+        const result = await scaleViaAgent(cluster, workload.namespace, workload.name, desiredReplicas)
+        if (result.success) {
+          setScaleSuccess(true)
+          onScaled?.()
+          setTimeout(() => setScaleSuccess(false), 2000)
+        } else {
+          setScaleError(result.message || 'Scale failed')
+        }
+      } catch (agentErr) {
+        setScaleError(agentErr instanceof Error ? agentErr.message : 'Scale failed')
+      }
+    } finally {
+      setIsScaling(false)
+    }
+  }, [desiredReplicas, workload, isScaling, scaleWorkload, onScaled])
   // Source cluster is the first cluster in the list (where we'll copy from)
   const sourceCluster = workload.targetClusters[0] || 'unknown'
 
@@ -325,38 +408,69 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect }: DraggableWork
               ))}
             </div>
           </div>
-          <div className="flex items-center gap-3 mt-2" onPointerDown={(e) => e.stopPropagation()}>
-            {/* Scale +/- */}
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground mr-1">Replicas</span>
-              <button
-                onClick={() => setDesiredReplicas((r) => Math.max(0, r - 1))}
-                className="w-7 h-7 flex items-center justify-center rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors"
-                aria-label="Decrease replicas"
-              >
-                <Minus className="h-3 w-3" />
-              </button>
-              <input
-                type="number"
-                min={0}
-                value={desiredReplicas}
-                onChange={(e) => setDesiredReplicas(Math.max(0, parseInt(e.target.value) || 0))}
-                className="w-12 h-7 text-center text-xs rounded border border-border bg-secondary/30 focus:outline-none focus:ring-1 focus:ring-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
-              <button
-                onClick={() => setDesiredReplicas((r) => r + 1)}
-                className="w-7 h-7 flex items-center justify-center rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors"
-                aria-label="Increase replicas"
-              >
-                <Plus className="h-3 w-3" />
-              </button>
-              {desiredReplicas !== workload.replicas && (
-                <span className="text-2xs text-yellow-500 ml-1">
-                  {workload.replicas} → {desiredReplicas}
-                </span>
+          {/* Scale controls */}
+          {(workload.type === 'Deployment' || workload.type === 'StatefulSet') && (
+            <div className="mt-2" onPointerDown={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-muted-foreground mr-1">Replicas</span>
+                <button
+                  onClick={() => setDesiredReplicas((r) => Math.max(0, r - 1))}
+                  disabled={isScaling || desiredReplicas <= 0}
+                  className={cn(
+                    'w-7 h-7 flex items-center justify-center rounded transition-colors',
+                    isScaling || desiredReplicas <= 0
+                      ? 'bg-secondary/30 text-muted-foreground cursor-not-allowed'
+                      : 'bg-secondary hover:bg-secondary/80 text-foreground',
+                  )}
+                  aria-label="Decrease replicas"
+                >
+                  <Minus className="h-3 w-3" />
+                </button>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={desiredReplicas}
+                  onChange={(e) => setDesiredReplicas(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
+                  disabled={isScaling}
+                  className="w-12 h-7 text-center text-xs rounded border border-border bg-secondary/30 focus:outline-none focus:ring-1 focus:ring-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
+                />
+                <button
+                  onClick={() => setDesiredReplicas((r) => Math.min(100, r + 1))}
+                  disabled={isScaling || desiredReplicas >= 100}
+                  className={cn(
+                    'w-7 h-7 flex items-center justify-center rounded transition-colors',
+                    isScaling || desiredReplicas >= 100
+                      ? 'bg-secondary/30 text-muted-foreground cursor-not-allowed'
+                      : 'bg-secondary hover:bg-secondary/80 text-foreground',
+                  )}
+                  aria-label="Increase replicas"
+                >
+                  <Plus className="h-3 w-3" />
+                </button>
+                {desiredReplicas !== workload.replicas && !isScaling && (
+                  <button
+                    onClick={handleApplyScale}
+                    className="ml-1 px-2 h-7 text-xs rounded bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 transition-colors flex items-center gap-1"
+                  >
+                    Apply
+                    <span className="text-2xs text-blue-400/70">
+                      {workload.replicas} → {desiredReplicas}
+                    </span>
+                  </button>
+                )}
+                {isScaling && (
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-400 ml-1" />
+                )}
+                {scaleSuccess && (
+                  <Check className="h-4 w-4 text-green-400 ml-1" />
+                )}
+              </div>
+              {scaleError && (
+                <p className="text-2xs text-red-400 mt-1">{scaleError}</p>
               )}
             </div>
-          </div>
+          )}
           <p className="text-xs text-muted-foreground italic mt-1">
             Drag workload to a cluster group to deploy
           </p>
@@ -401,7 +515,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
   const isDemo = demoMode
 
   // Fetch real workloads from cache (handles demo mode internally via useCache)
-  const { data: realWorkloads, isLoading: workloadsLoading, isFailed, consecutiveFailures, isDemoFallback } = useCachedWorkloads()
+  const { data: realWorkloads, isLoading: workloadsLoading, isFailed, consecutiveFailures, isDemoFallback, refetch: refetchWorkloads } = useCachedWorkloads()
 
   // Report state to CardWrapper for refresh animation
   const { showSkeleton } = useCardLoadingState({
@@ -733,6 +847,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
                 onSelect={() =>
                   setSelectedWorkload(selectedWorkload?.name === workload.name ? null : workload)
                 }
+                onScaled={() => setTimeout(refetchWorkloads, 1500)}
               />
             ))}
           </div>
