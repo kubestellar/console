@@ -1,17 +1,26 @@
 /**
  * Feedback Modal - allows users to submit bugs or feature requests
+ *
+ * Uses the backend API (POST /api/feedback/requests) to create GitHub issues
+ * directly via the server-side GitHub token. This means users do not need to
+ * be logged into GitHub — the issue is created automatically.
+ *
+ * Screenshots are auto-copied to the clipboard and the created issue URL is
+ * provided so the user can paste them in one click.
  */
 
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
-import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, Linkedin, ImagePlus, Trash2, Copy, Check } from 'lucide-react'
+import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, Linkedin, ImagePlus, Trash2, Copy, Check, AlertTriangle, Loader2 } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
 import { useToast } from '../ui/Toast'
 import { emitFeedbackSubmitted, emitLinkedInShare } from '../../lib/analytics'
 import { useBranding } from '../../hooks/useBranding'
 import { FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
+import { useFeatureRequests } from '../../hooks/useFeatureRequests'
+import { useAuth } from '../../lib/auth'
 
 type FeedbackType = 'bug' | 'feature'
 
@@ -33,11 +42,14 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   const { showToast } = useToast()
   const { t } = useTranslation(['common'])
   const branding = useBranding()
+  const { user } = useAuth()
+  const { createRequest } = useFeatureRequests(user?.github_login || '')
   const [type, setType] = useState<FeedbackType>(initialType)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [success, setSuccess] = useState(false)
+  const [success, setSuccess] = useState<{ issueUrl?: string } | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const { awardCoins } = useRewards()
   const [screenshots, setScreenshots] = useState<{ file: File; preview: string }[]>([])
   const [isDragOver, setIsDragOver] = useState(false)
@@ -65,6 +77,27 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
     e.preventDefault()
     setIsDragOver(false)
     handleScreenshotFiles(e.dataTransfer.files)
+  }
+
+  // Handle paste events to capture screenshots pasted into the textarea
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+    const imageItems = Array.from(items).filter(item => item.type.startsWith('image/'))
+    if (imageItems.length === 0) return
+    // Prevent pasting image data as text in the textarea
+    e.preventDefault()
+    imageItems.forEach(item => {
+      const file = item.getAsFile()
+      if (file) {
+        const reader = new FileReader()
+        reader.onload = (ev) => {
+          setScreenshots(prev => [...prev, { file, preview: ev.target?.result as string }])
+        }
+        reader.readAsDataURL(file)
+      }
+    })
+    showToast(`Screenshot${imageItems.length > 1 ? 's' : ''} added`, 'success')
   }
 
   const removeScreenshot = (index: number) => {
@@ -113,30 +146,48 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
     if (!title.trim() || !description.trim()) return
 
     setIsSubmitting(true)
+    setSubmitError(null)
 
     try {
-      // Build GitHub issue URL with pre-filled content
-      const issueType = type === 'bug' ? 'Bug Report' : 'Feature Request'
+      // Build description with screenshot note if applicable
       const screenshotNote = screenshots.length > 0
         ? `\n\n---\n**Screenshots**: ${screenshots.length} screenshot(s) were attached in the console — please paste them into this issue.`
         : ''
-      const body = `## ${issueType}\n\n${description}${screenshotNote}\n\n---\n*Submitted via ${branding.appName}*`
+      const fullDescription = `${description.trim()}${screenshotNote}`
 
-      const githubUrl = `${branding.issuesUrl}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=${type === 'bug' ? 'bug' : 'enhancement'}`
+      // Submit via backend API — creates GitHub issue directly using the
+      // server-side token. No GitHub login required from the user.
+      const result = await createRequest({
+        title: title.trim(),
+        description: fullDescription,
+        request_type: type,
+        target_repo: 'console',
+      })
 
-      // Open GitHub in new tab
-      window.open(githubUrl, '_blank', 'noopener,noreferrer')
       emitFeedbackSubmitted(type)
 
       // Award coins based on type
       const action = type === 'bug' ? 'bug_report' : 'feature_suggestion'
       awardCoins(action as 'bug_report' | 'feature_suggestion', { title, type })
 
+      // Auto-copy first screenshot to clipboard so user can paste it into the issue
+      if (screenshots.length > 0) {
+        try {
+          const res = await fetch(screenshots[0].preview, { signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+          const blob = await res.blob()
+          await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
+        } catch {
+          // Best-effort — clipboard may not be available
+        }
+      }
+
       // Clear draft on successful submit
       localStorage.removeItem(DRAFT_KEY)
-      setSuccess(true)
+      setSuccess({ issueUrl: result.github_issue_url })
     } catch (err) {
       console.error('Failed to submit feedback:', err)
+      const message = err instanceof Error ? err.message : 'Failed to submit feedback'
+      setSubmitError(message)
       showToast('Failed to submit feedback', 'error')
     } finally {
       setIsSubmitting(false)
@@ -144,11 +195,12 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   }
 
   const handleClose = () => {
-    if ((title.trim() !== '' || description.trim() !== '') && !window.confirm(t('common:common.discardUnsavedChanges', 'Discard unsaved changes?'))) {
+    if (!success && (title.trim() !== '' || description.trim() !== '') && !window.confirm(t('common:common.discardUnsavedChanges', 'Discard unsaved changes?'))) {
       return
     }
     localStorage.removeItem(DRAFT_KEY)
-    setSuccess(false)
+    setSuccess(null)
+    setSubmitError(null)
     setTitle('')
     setDescription('')
     setScreenshots([])
@@ -228,25 +280,37 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
               </div>
               <h3 className="text-lg font-medium text-foreground mb-2">Thank you!</h3>
               <p className="text-sm text-muted-foreground mb-2">
-                Your {type === 'bug' ? 'bug report' : 'feature suggestion'} has been submitted.
+                Your {type === 'bug' ? 'bug report' : 'feature suggestion'} has been created as a GitHub issue.
               </p>
               <p className="text-sm text-yellow-400 mb-4">
                 +{coins} coins earned!
               </p>
-              <p className="text-xs text-muted-foreground mb-4">
-                Complete your submission on GitHub to create the issue.
-              </p>
 
-              {/* Screenshot paste reminder */}
+              {/* Link to the created GitHub issue */}
+              {success.issueUrl && (
+                <a
+                  href={success.issueUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground text-sm font-medium transition-colors mb-4"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  View issue on GitHub
+                </a>
+              )}
+
+              {/* Screenshot paste helper — auto-copied first screenshot */}
               {screenshots.length > 0 && (
                 <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
                   <p className="text-xs text-amber-400 font-medium mb-2">
-                    Don't forget your screenshots!
+                    {screenshots.length === 1
+                      ? 'Screenshot copied to clipboard!'
+                      : `First screenshot copied to clipboard! ${screenshots.length - 1} more below.`}
                   </p>
                   <p className="text-xs text-muted-foreground mb-2">
-                    Paste them into the GitHub issue that just opened. Use the copy buttons below:
+                    Open the issue above and paste (Ctrl+V / Cmd+V) to attach {screenshots.length === 1 ? 'it' : 'them'}.
                   </p>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 justify-center">
                     {screenshots.map((s, i) => (
                       <div key={i} className="relative group w-16 h-16 flex-shrink-0">
                         <img
@@ -340,9 +404,10 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                     <textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
+                      onPaste={handlePaste}
                       placeholder={type === 'bug'
-                        ? 'Steps to reproduce, expected behavior, actual behavior...'
-                        : 'Describe the feature, use case, and how it would help...'
+                        ? 'Steps to reproduce, expected behavior, actual behavior... (paste screenshots here!)'
+                        : 'Describe the feature, use case, and how it would help... (paste screenshots here!)'
                       }
                       rows={4}
                       className="w-full px-3 py-2.5 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none"
@@ -410,12 +475,20 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                     )}
                   </div>
 
+                  {/* Error message */}
+                  {submitError && (
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs">
+                      <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                      <span className="text-red-400">{submitError}</span>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs">
                     <ExternalLink className="w-4 h-4 text-blue-400 flex-shrink-0" />
                     <span className="text-muted-foreground">
                       {screenshots.length > 0
-                        ? 'GitHub will open with your report. Use the copy buttons above to paste your screenshots into the issue.'
-                        : 'This will open GitHub to create an issue. You can add more details there.'}
+                        ? 'A GitHub issue will be created automatically. Your first screenshot will be copied to clipboard so you can paste it into the issue.'
+                        : 'A GitHub issue will be created automatically. No GitHub login required.'}
                     </span>
                   </div>
 
@@ -424,8 +497,12 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                     disabled={isSubmitting || !title.trim() || !description.trim()}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-purple-500 hover:bg-purple-600 disabled:bg-purple-500/50 disabled:cursor-not-allowed text-white font-medium transition-colors"
                   >
-                    <Send className="w-4 h-4" />
-                    Submit & Earn {coins} Coins
+                    {isSubmitting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                    {isSubmitting ? 'Creating issue...' : `Submit & Earn ${coins} Coins`}
                   </button>
                 </div>
               </form>
