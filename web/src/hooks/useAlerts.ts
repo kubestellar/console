@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useContext } from 'react'
-import { useAlertsContext, AlertsContext } from '../contexts/AlertsContext'
+import { AlertsContext } from '../contexts/AlertsContext'
 import type {
   Alert,
   AlertRule,
@@ -43,16 +43,30 @@ function saveToStorage<T>(key: string, value: T): void {
 // Default empty stats returned when AlertsProvider is absent
 const _defaultAlertStats: AlertStats = { total: 0, firing: 0, resolved: 0, critical: 0, warning: 0, info: 0, acknowledged: 0 }
 
+// Fully-populated safe AlertRule returned by the no-provider createRule fallback
+const _emptyAlertRule: AlertRule = {
+  id: '',
+  name: '',
+  description: '',
+  enabled: false,
+  condition: { type: 'custom' },
+  severity: 'info',
+  channels: [],
+  aiDiagnose: false,
+  createdAt: '',
+  updatedAt: '',
+}
+
 // Hook for managing alert rules - uses shared context
 export function useAlertRules() {
   const context = useContext(AlertsContext)
   if (!context) {
     return {
       rules: [] as AlertRule[],
-      createRule: (() => ({ id: '', createdAt: '', updatedAt: '' } as unknown as AlertRule)),
-      updateRule: () => {},
-      deleteRule: () => {},
-      toggleRule: () => {},
+      createRule: (() => ({ ..._emptyAlertRule })) as unknown as (rule: Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt'>) => AlertRule,
+      updateRule: (_id: string, _updates: Partial<AlertRule>) => {},
+      deleteRule: (_id: string) => {},
+      toggleRule: (_id: string) => {},
     }
   }
   const { rules, createRule, updateRule, deleteRule, toggleRule } = context

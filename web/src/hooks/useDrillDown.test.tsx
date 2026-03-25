@@ -836,3 +836,25 @@ describe('useDrillDownActions', () => {
     })
   })
 })
+
+// ── useDrillDownActions without provider ──────────────────────────────────────
+
+describe('useDrillDownActions without DrillDownProvider', () => {
+  it('does not throw when used outside DrillDownProvider', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(() => renderHook(() => useDrillDownActions())).not.toThrow()
+    consoleSpy.mockRestore()
+  })
+
+  it('returns callable drillTo* no-op functions when provider is absent', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { result } = renderHook(() => useDrillDownActions())
+    // Calling any drillTo* should not throw
+    expect(() => {
+      act(() => { result.current.drillToCluster('ctx/prod') })
+      act(() => { result.current.drillToPod('ctx/prod', 'default', 'my-pod') })
+      act(() => { result.current.drillToAllClusters() })
+    }).not.toThrow()
+    consoleSpy.mockRestore()
+  })
+})
