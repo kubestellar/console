@@ -209,8 +209,12 @@ export function KubeBert() {
   const [level, setLevel] = useState(1)
   const [, setLives] = useState(INITIAL_LIVES)
   const [highScore, setHighScore] = useState(() => {
-    const saved = localStorage.getItem('kubeBertHighScore')
-    return saved ? parseInt(saved, 10) : 0
+    try {
+      const saved = localStorage.getItem('kubeBertHighScore')
+      return saved ? parseInt(saved, 10) : 0
+    } catch {
+      return 0
+    }
   })
 
   // Game refs (mutable state that shouldn't trigger re-renders)
@@ -336,7 +340,11 @@ export function KubeBert() {
           emitGameEnded('kube_bert', 'loss', scoreRef.current)
           if (scoreRef.current > highScore) {
             setHighScore(scoreRef.current)
-            localStorage.setItem('kubeBertHighScore', String(scoreRef.current))
+            try {
+              localStorage.setItem('kubeBertHighScore', String(scoreRef.current))
+            } catch {
+              // Ignore storage errors (e.g. private browsing, quota exceeded)
+            }
           }
           stopIntervals()
           return
@@ -388,7 +396,11 @@ export function KubeBert() {
         emitGameEnded('kube_bert', 'loss', scoreRef.current)
         if (scoreRef.current > highScore) {
           setHighScore(scoreRef.current)
-          localStorage.setItem('kubeBertHighScore', String(scoreRef.current))
+          try {
+            localStorage.setItem('kubeBertHighScore', String(scoreRef.current))
+          } catch {
+            // Ignore storage errors (e.g. private browsing, quota exceeded)
+          }
         }
         stopIntervals()
         return
@@ -419,7 +431,11 @@ export function KubeBert() {
           emitGameEnded('kube_bert', 'loss', scoreRef.current)
           if (scoreRef.current > highScore) {
             setHighScore(scoreRef.current)
-            localStorage.setItem('kubeBertHighScore', String(scoreRef.current))
+            try {
+              localStorage.setItem('kubeBertHighScore', String(scoreRef.current))
+            } catch {
+              // Ignore storage errors (e.g. private browsing, quota exceeded)
+            }
           }
           stopIntervals()
           return

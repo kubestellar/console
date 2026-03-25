@@ -234,30 +234,34 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
 
   // Load saved state and best times
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as GameState
-        // Reconstruct Sets for notes
-        parsed.board = parsed.board.map((row) =>
-          row.map((cell) => ({
-            ...cell,
-            notes: new Set(Array.isArray(cell.notes) ? cell.notes : []),
-          }))
-        )
-        setGameState(parsed)
-      } catch (e) {
-        console.error('Failed to load saved game:', e)
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved) as GameState
+          // Reconstruct Sets for notes
+          parsed.board = parsed.board.map((row) =>
+            row.map((cell) => ({
+              ...cell,
+              notes: new Set(Array.isArray(cell.notes) ? cell.notes : []),
+            }))
+          )
+          setGameState(parsed)
+        } catch (e) {
+          console.error('Failed to load saved game:', e)
+        }
       }
-    }
 
-    const savedBestTimes = localStorage.getItem(BEST_TIMES_KEY)
-    if (savedBestTimes) {
-      try {
-        setBestTimes(JSON.parse(savedBestTimes) as BestTimes)
-      } catch (e) {
-        console.error('Failed to load best times:', e)
+      const savedBestTimes = localStorage.getItem(BEST_TIMES_KEY)
+      if (savedBestTimes) {
+        try {
+          setBestTimes(JSON.parse(savedBestTimes) as BestTimes)
+        } catch (e) {
+          console.error('Failed to load best times:', e)
+        }
       }
+    } catch {
+      // Ignore storage errors (e.g. private browsing)
     }
   }, [])
 
@@ -285,7 +289,11 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
         }))
       ),
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave))
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave))
+    } catch {
+      // Ignore storage errors (e.g. private browsing, quota exceeded)
+    }
   }, [gameState])
 
   // Start new game
@@ -398,7 +406,11 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
       if (!currentBest || gameState.timer < currentBest) {
         const newBestTimes = { ...bestTimes, [gameState.difficulty]: gameState.timer }
         setBestTimes(newBestTimes)
-        localStorage.setItem(BEST_TIMES_KEY, JSON.stringify(newBestTimes))
+        try {
+          localStorage.setItem(BEST_TIMES_KEY, JSON.stringify(newBestTimes))
+        } catch {
+          // Ignore storage errors (e.g. private browsing, quota exceeded)
+        }
       }
     }
   }, [gameState, selectedCell, pencilMode, addToHistory, bestTimes])

@@ -85,13 +85,13 @@ export function Weather({ config }: { config?: WeatherConfig }) {
 
   // Current location state - restore from localStorage
   const [currentLocation, setCurrentLocation] = useState<SavedLocation>(() => {
-    const saved = localStorage.getItem('weather-current-location')
-    if (saved) {
-      try {
+    try {
+      const saved = localStorage.getItem('weather-current-location')
+      if (saved) {
         return JSON.parse(saved)
-      } catch {
-        // Fall through to default
       }
+    } catch {
+      // Fall through to default (private browsing or storage error)
     }
     return {
       id: 'default',
@@ -109,8 +109,12 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
 
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>(() => {
-    const saved = localStorage.getItem('weather-saved-locations-v2')
-    return saved ? JSON.parse(saved) : []
+    try {
+      const saved = localStorage.getItem('weather-saved-locations-v2')
+      return saved ? JSON.parse(saved) : []
+    } catch {
+      return []
+    }
   })
 
   // Weather data via useCache (persists across navigation)
@@ -193,12 +197,20 @@ export function Weather({ config }: { config?: WeatherConfig }) {
 
   // Save locations to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('weather-saved-locations-v2', JSON.stringify(savedLocations))
+    try {
+      localStorage.setItem('weather-saved-locations-v2', JSON.stringify(savedLocations))
+    } catch {
+      // Ignore storage errors (e.g. private browsing, quota exceeded)
+    }
   }, [savedLocations])
 
   // Save current location to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('weather-current-location', JSON.stringify(currentLocation))
+    try {
+      localStorage.setItem('weather-current-location', JSON.stringify(currentLocation))
+    } catch {
+      // Ignore storage errors (e.g. private browsing, quota exceeded)
+    }
   }, [currentLocation])
 
   // City search with Open-Meteo Geocoding API

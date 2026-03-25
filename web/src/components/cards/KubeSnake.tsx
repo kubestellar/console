@@ -40,8 +40,12 @@ export function KubeSnake() {
   const [gameState, setGameState] = useState<'idle' | 'playing' | 'paused' | 'gameover'>('idle')
   const [score, setScore] = useState(0)
   const [highScore, setHighScore] = useState(() => {
-    const saved = localStorage.getItem('kubeSnakeHighScore')
-    return saved ? parseInt(saved, 10) : 0
+    try {
+      const saved = localStorage.getItem('kubeSnakeHighScore')
+      return saved ? parseInt(saved, 10) : 0
+    } catch {
+      return 0
+    }
   })
   const [speed, setSpeed] = useState(INITIAL_SPEED)
 
@@ -108,7 +112,11 @@ export function KubeSnake() {
       emitGameEnded('snake', 'loss', score)
       if (score > highScore) {
         setHighScore(score)
-        localStorage.setItem('kubeSnakeHighScore', score.toString())
+        try {
+          localStorage.setItem('kubeSnakeHighScore', score.toString())
+        } catch {
+          // Ignore storage errors (e.g. private browsing, quota exceeded)
+        }
       }
       return
     }
@@ -119,7 +127,11 @@ export function KubeSnake() {
       emitGameEnded('snake', 'loss', score)
       if (score > highScore) {
         setHighScore(score)
-        localStorage.setItem('kubeSnakeHighScore', score.toString())
+        try {
+          localStorage.setItem('kubeSnakeHighScore', score.toString())
+        } catch {
+          // Ignore storage errors (e.g. private browsing, quota exceeded)
+        }
       }
       return
     }
