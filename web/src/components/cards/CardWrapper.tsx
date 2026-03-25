@@ -772,10 +772,10 @@ export function CardWrapper({
           >
             {/* Header */}
             <div data-tour="card-header" className="flex items-center justify-between px-4 py-3 border-b border-border/50">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 {dragHandle}
-                {ResolvedIcon && <ResolvedIcon className={cn('w-4 h-4', resolvedIconColor)} />}
-                <h3 className="text-sm font-medium text-foreground">{title}</h3>
+                {ResolvedIcon && <ResolvedIcon className={cn('w-4 h-4 flex-shrink-0', resolvedIconColor)} />}
+                <h3 className="text-sm font-medium text-foreground truncate">{title}</h3>
                 <InfoTooltip text={description || t('messages.descriptionComingSoon', { title })} />
                 {/* Demo data indicator - shows if card uses demo data (respects child opt-out) */}
                 {showDemoIndicator && (
@@ -783,7 +783,7 @@ export function CardWrapper({
                     data-testid="demo-badge"
                     role="status"
                     aria-live="polite"
-                    className="text-2xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400"
+                    className="text-2xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 flex-shrink-0"
                     title={effectiveIsDemoData ? t('cardWrapper.demoBadgeTitle') : t('cardWrapper.demoModeTitle')}
                   >
                     {t('cardWrapper.demo')}
@@ -794,7 +794,7 @@ export function CardWrapper({
                   <span
                     role="status"
                     aria-live="polite"
-                    className="text-2xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400"
+                    className="text-2xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 flex-shrink-0"
                     title={t('cardWrapper.liveBadgeTitle')}
                   >
                     {t('cardWrapper.live')}
@@ -805,7 +805,7 @@ export function CardWrapper({
                   <span
                     role="alert"
                     aria-live="assertive"
-                    className="text-2xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 flex items-center gap-1"
+                    className="text-2xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 flex items-center gap-1 flex-shrink-0"
                     title={t('cardWrapper.refreshFailedCount', { count: effectiveConsecutiveFailures })}
                   >
                     {t('cardWrapper.refreshFailed')}
@@ -825,7 +825,7 @@ export function CardWrapper({
                   ) : null
                 })()}
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 flex-shrink-0">
                 {/* Collapse/expand button */}
                 <button
                   onClick={() => setCollapsed(!isCollapsed)}
