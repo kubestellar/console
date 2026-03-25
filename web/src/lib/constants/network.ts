@@ -23,9 +23,11 @@ const _isNetlify = typeof window !== 'undefined' && (
 
 /**
  * WebSocket URL for the local kc-agent.
- * Empty on Netlify — all WebSocket consumers have try/catch so empty URL throws immediately.
+ * On Netlify, uses a syntactically-valid but unroutable URL so that `new WebSocket(url)`
+ * never throws (Safari throws TypeError for empty/invalid URLs). The connection simply
+ * fails via `onerror`, which all consumers already handle.
  */
-export const LOCAL_AGENT_WS_URL = _isNetlify ? '' : 'ws://127.0.0.1:8585/ws'
+export const LOCAL_AGENT_WS_URL = _isNetlify ? 'ws://localhost:1/disabled' : 'ws://127.0.0.1:8585/ws'
 
 /**
  * HTTP URL for the local kc-agent.
