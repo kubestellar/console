@@ -409,23 +409,23 @@ export function MiniDashboard() {
         ) : !isInstalled ? (
           <div className="text-center text-xs text-muted-foreground space-y-1">
             {isSafariBrowser ? (
-              <p>Safari: <strong>File → Add to Dock</strong> to install</p>
+              <p>{t('miniDashboard.safariInstall')}</p>
             ) : (
               <>
-                <p className="text-yellow-500/80">⚠️ Install from THIS page for the mini widget</p>
-                <p>Click <strong className="text-foreground">Open in app</strong> in your address bar</p>
+                <p className="text-yellow-500/80">⚠️ {t('miniDashboard.installFromThisPage')}</p>
+                <p>{t('miniDashboard.installInstruction')}</p>
               </>
             )}
           </div>
         ) : (
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Nodes Widget</span>
+            <span>{t('miniDashboard.nodesWidget')}</span>
             <button
               onClick={openFullDashboard}
               className="flex items-center gap-1 hover:text-muted-foreground transition-colors"
             >
               <Maximize2 className="w-3 h-3" />
-              Open Full Dashboard
+              {t('miniDashboard.openFullDashboard')}
             </button>
           </div>
         )}

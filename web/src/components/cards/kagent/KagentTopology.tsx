@@ -28,7 +28,7 @@ interface TopoEdge {
 }
 
 export function KagentTopology({ config }: { config?: Record<string, unknown> }) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation('cards')
   const cluster = config?.cluster as string | undefined
   const { data: agents, isLoading: agentsLoading, isDemoFallback: agentsDemo } = useKagentCRDAgents({ cluster })
   const { data: tools, isLoading: toolsLoading, isDemoFallback: toolsDemo } = useKagentCRDTools({ cluster })
@@ -149,19 +149,19 @@ export function KagentTopology({ config }: { config?: Record<string, unknown> })
       <div className="flex items-center gap-4 px-3 pt-2 pb-1 text-xs text-muted-foreground">
         <div className="flex items-center gap-1">
           <div className="w-2.5 h-2.5 rounded-full border-2 border-blue-400" />
-          <span>Agent</span>
+          <span>{t('kagentTopology.legendAgent')}</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-2.5 h-2.5 rounded bg-cyan-500/50" />
-          <span>ToolServer</span>
+          <span>{t('kagentTopology.legendToolServer')}</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-2.5 h-2.5 rounded bg-emerald-500/50" />
-          <span>Model</span>
+          <span>{t('kagentTopology.legendModel')}</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-6 h-0 border-t border-dashed border-muted-foreground/50" />
-          <span>Link</span>
+          <span>{t('kagentTopology.legendLink')}</span>
         </div>
       </div>
 

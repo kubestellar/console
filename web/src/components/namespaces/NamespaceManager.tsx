@@ -605,7 +605,7 @@ export function NamespaceManager() {
           {filteredNamespaces.length === 0 && !loading && loadingClusters.size === 0 && (
             <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
               <Folder className="w-12 h-12 mb-3 opacity-50" />
-              <p>No namespaces found</p>
+              <p>{t('namespaces.noNamespaces')}</p>
             </div>
           )}
         </div>
@@ -1144,8 +1144,8 @@ function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNamespaceM
                         onChange={(e) => updateAccessRole(index, e.target.value as 'cluster-admin' | 'admin' | 'edit' | 'view')}
                         className="px-2 py-1 text-xs rounded bg-secondary border border-border text-white"
                       >
-                        <option value="cluster-admin">Full Admin</option>
-                        <option value="admin">Admin</option>
+                        <option value="cluster-admin">{t('namespaces.roleFullAdmin')}</option>
+                        <option value="admin">{t('namespaces.roleAdminShort')}</option>
                         <option value="edit">{t('common.edit')}</option>
                         <option value="view">{t('common.view')}</option>
                       </select>
@@ -1312,9 +1312,9 @@ function GrantAccessModal({ namespace, existingAccess, onClose, onGranted }: Gra
               }}
               className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             >
-              <option value="User">User</option>
-              <option value="Group">Group</option>
-              <option value="ServiceAccount">Service Account</option>
+              <option value="User">{t('namespaces.subjectUser')}</option>
+              <option value="Group">{t('namespaces.subjectGroup')}</option>
+              <option value="ServiceAccount">{t('namespaces.subjectServiceAccount')}</option>
             </select>
           </div>
 
@@ -1384,13 +1384,13 @@ function GrantAccessModal({ namespace, existingAccess, onClose, onGranted }: Gra
               onChange={(e) => setRole(e.target.value)}
               className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             >
-              <option value="cluster-admin">Namespace Admin - Full Access (all resources, RBAC, secrets)</option>
-              <option value="admin">Admin (all resources except RBAC)</option>
-              <option value="edit">Edit (create/update/delete, no secrets/RBAC)</option>
-              <option value="view">View (read-only)</option>
+              <option value="cluster-admin">{t('namespaces.roleClusterAdmin')}</option>
+              <option value="admin">{t('namespaces.roleAdmin')}</option>
+              <option value="edit">{t('namespaces.roleEdit')}</option>
+              <option value="view">{t('namespaces.roleView')}</option>
             </select>
             <p className="text-xs text-muted-foreground mt-1">
-              These roles are scoped to this namespace only - not cluster-wide.
+              {t('namespaces.rolesNamespaceScoped')}
             </p>
           </div>
         </div>

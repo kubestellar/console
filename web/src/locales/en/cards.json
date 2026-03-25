@@ -1059,7 +1059,8 @@
     "nvme": "NVMe",
     "infiniband": "InfiniBand",
     "monitoring": "Monitoring",
-    "deviceDisappearances": "Device Disappearances"
+    "deviceDisappearances": "Device Disappearances",
+    "noDevicesDetected": "No devices detected"
   },
   "networkOverview": {
     "policies": "Policies",
@@ -2973,5 +2974,27 @@
     "noSearchResults": "No matches found.",
     "clusterPolicies": "ClusterPolicies",
     "overridePolicies": "OverridePolicies"
+  },
+  "kagentTopology": {
+    "legendAgent": "Agent",
+    "legendToolServer": "ToolServer",
+    "legendModel": "Model",
+    "legendLink": "Link"
+  },
+  "complianceDrift": {
+    "scanning": "Scanning clusters for compliance drift...",
+    "failedToLoad": "Failed to load compliance data",
+    "allWithinBaseline": "All clusters within baseline",
+    "noDeviations": "No significant compliance deviations detected across the fleet",
+    "driftDescription": "Flags clusters deviating from fleet average. Drift indicates inconsistent security posture that needs investigation.",
+    "scanningInProgress": "Scanning...",
+    "retry": "Retry"
+  },
+  "maintenanceWindows": {
+    "maintenance": "Maintenance",
+    "patching": "Patching"
+  },
+  "kagentAgentPicker": {
+    "noAgentsAvailable": "No kagent agents available"
   }
 }

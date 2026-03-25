@@ -504,7 +504,7 @@ const T2_TEMPLATES: T2Template[] = [
             <AlertTriangle className="w-5 h-5 text-red-400" />
             <p className="text-xs text-red-400">Failed to load image</p>
             <button onClick={() => { setError(null); setLoading(true); setRefreshKey(k => k + 1) }}
-              className="min-h-11 min-w-11 flex items-center justify-center text-xs text-purple-400 hover:underline">Retry</button>
+              className="min-h-11 min-w-11 flex items-center justify-center text-xs text-purple-400 hover:underline">{t('common.retry')}</button>
           </div>
         ) : (
           <>

@@ -21,6 +21,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { KyvernoDetailModal } from './kyverno/KyvernoDetailModal'
 import { TrivyDetailModal } from './trivy/TrivyDetailModal'
 import { KubescapeDetailModal } from './kubescape/KubescapeDetailModal'
+import { useTranslation } from 'react-i18next'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -50,6 +51,7 @@ function stats(values: number[]): { mean: number; stdDev: number } {
 }
 
 export function ComplianceDrift({ config: _config }: CardConfig) {
+  const { t } = useTranslation('cards')
   const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, lastRefresh: kyvernoLastRefresh, isDemoData: kyvernoDemoData, refetch: kyvernoRefetch, clustersChecked: kyvernoChecked, totalClusters: kyvernoTotal } = useKyverno()
   const { statuses: trivyStatuses, isLoading: trivyLoading, isRefreshing: trivyRefreshing, isDemoData: trivyDemoData, refetch: trivyRefetch, clustersChecked: trivyChecked, totalClusters: trivyTotal } = useTrivy()
   const { statuses: kubescapeStatuses, isLoading: kubescapeLoading, isRefreshing: kubescapeRefreshing, isDemoData: kubescapeDemoData, refetch: kubescapeRefetch, clustersChecked: kubescapeChecked, totalClusters: kubescapeTotal } = useKubescape()
@@ -174,7 +176,7 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
         ) : (
           <Loader2 className="w-6 h-6 animate-spin opacity-50" />
         )}
-        <p>Scanning clusters for compliance drift...</p>
+        <p>{t('complianceDrift.scanning')}</p>
       </div>
     )
   }
@@ -184,14 +186,14 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm gap-2 p-4">
         <AlertTriangle className="w-6 h-6 text-destructive opacity-70" />
-        <p className="text-destructive">Failed to load compliance data</p>
+        <p className="text-destructive">{t('complianceDrift.failedToLoad')}</p>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => { kyvernoRefetch(); trivyRefetch(); kubescapeRefetch() }}
           className="text-xs text-blue-400 hover:text-blue-300"
         >
-          Retry
+          {t('complianceDrift.retry')}
         </Button>
       </div>
     )
@@ -202,9 +204,9 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-2 text-center p-4">
         <CheckCircle2 className="w-8 h-8 text-green-400" />
-        <p className="text-sm font-medium text-green-400">All clusters within baseline</p>
+        <p className="text-sm font-medium text-green-400">{t('complianceDrift.allWithinBaseline')}</p>
         <p className="text-xs text-muted-foreground">
-          No significant compliance deviations detected across the fleet
+          {t('complianceDrift.noDeviations')}
         </p>
       </div>
     )
@@ -215,7 +217,7 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
       {/* Context description */}
       <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5 mb-1">
         <Info className="w-3 h-3 flex-shrink-0 mt-0.5 text-muted-foreground/60" />
-        <span>Flags clusters deviating from fleet average. Drift indicates inconsistent security posture that needs investigation.</span>
+        <span>{t('complianceDrift.driftDescription')}</span>
       </div>
 
       {/* Refresh indicator + inline progress */}
@@ -223,7 +225,7 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
         {(isLoading || isRefreshing) && totalChecking > 0 && (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <ProgressRing progress={minChecked / totalChecking} size={14} strokeWidth={1.5} />
-            <span>Scanning...</span>
+            <span>{t('complianceDrift.scanningInProgress')}</span>
           </div>
         )}
         <div className="ml-auto">

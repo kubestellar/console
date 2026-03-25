@@ -118,7 +118,7 @@ export function FilterTabs({
 
         {/* Sort selector */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Sort:</span>
+          <span className="text-xs text-muted-foreground">{t('actions.sort')}:</span>
           <select
             value={sortBy}
             onChange={(e) => onSortByChange(e.target.value as SortByType)}

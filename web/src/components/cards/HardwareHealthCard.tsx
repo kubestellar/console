@@ -76,7 +76,7 @@ function getDeviceLabel(deviceType: string): string {
 type ViewMode = 'alerts' | 'inventory'
 
 export function HardwareHealthCard() {
-  const { t: _t } = useTranslation(['cards', 'common'])
+  const { t } = useTranslation(['cards', 'common'])
   // Use cached hook — persists to IndexedDB, survives navigation, handles demo mode
   const {
     data: hwData,
@@ -820,7 +820,7 @@ export function HardwareHealthCard() {
                           <StatusBadge color="green" size="xs">GPU Driver</StatusBadge>
                         )}
                         {getTotalDevices(node.devices) === 0 && (
-                          <span className="text-2xs text-muted-foreground italic">No devices detected</span>
+                          <span className="text-2xs text-muted-foreground italic">{t('hardwareHealth.noDevicesDetected')}</span>
                         )}
                       </div>
                     </div>

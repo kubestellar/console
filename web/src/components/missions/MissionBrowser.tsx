@@ -113,7 +113,7 @@ function saveWatchedPaths(paths: string[]) {
 // ============================================================================
 
 export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: MissionBrowserProps) {
-  useTranslation(['common', 'cards'])
+  const { t } = useTranslation(['common', 'cards'])
   const { user, isAuthenticated } = useAuth()
   const { clusterContext } = useClusterContext()
   const clusterContextRef = useRef(clusterContext)
@@ -1498,7 +1498,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                         Add it to your <code className="px-1 py-0.5 bg-white/10 rounded text-xs font-mono">.env</code> file:
                         <pre className="mt-1 px-3 py-2 bg-black/40 rounded text-xs font-mono text-purple-300 select-all">GITHUB_TOKEN=ghp_your_token_here</pre>
                       </li>
-                      <li>Restart the console</li>
+                      <li>{t('common.restartConsole')}</li>
                     </ol>
                   </div>
                 </div>

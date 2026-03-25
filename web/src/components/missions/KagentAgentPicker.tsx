@@ -1,5 +1,6 @@
 import { Bot, ChevronDown } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { KagentAgent } from '../../lib/kagentBackend'
 
 interface KagentAgentPickerProps {
@@ -9,6 +10,7 @@ interface KagentAgentPickerProps {
 }
 
 export function KagentAgentPicker({ agents, selectedAgent, onSelect }: KagentAgentPickerProps) {
+  const { t } = useTranslation('cards')
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -25,7 +27,7 @@ export function KagentAgentPicker({ agents, selectedAgent, onSelect }: KagentAge
     return (
       <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground">
         <Bot className="w-3.5 h-3.5" />
-        <span>No kagent agents available</span>
+        <span>{t('kagentAgentPicker.noAgentsAvailable')}</span>
       </div>
     )
   }

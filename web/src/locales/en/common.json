@@ -2509,7 +2509,10 @@
     "networking": "Networking",
     "scaling": "Scaling",
     "crds": "CRDs",
-    "admission": "Admission"
+    "admission": "Admission",
+    "maintenance": "Maintenance",
+    "patching": "Patching",
+    "restartConsole": "Restart the console"
   },
   "namespaces": {
     "createNamespace": "Create Namespace",
@@ -2522,7 +2525,17 @@
     "namespaceStatus": "Namespace Status",
     "activeNamespaces": "Active Namespaces",
     "terminatingNamespaces": "Terminating Namespaces",
-    "noNamespaces": "No namespaces found"
+    "noNamespaces": "No namespaces found",
+    "roleFullAdmin": "Full Admin",
+    "roleClusterAdmin": "Namespace Admin - Full Access (all resources, RBAC, secrets)",
+    "roleAdmin": "Admin (all resources except RBAC)",
+    "roleEdit": "Edit (create/update/delete, no secrets/RBAC)",
+    "roleView": "View (read-only)",
+    "roleAdminShort": "Admin",
+    "subjectUser": "User",
+    "subjectGroup": "Group",
+    "subjectServiceAccount": "Service Account",
+    "rolesNamespaceScoped": "These roles are scoped to this namespace only - not cluster-wide."
   },
   "cluster": {
     "subtitle": "Manage your Kubernetes clusters",
@@ -2983,5 +2996,13 @@
       "description": "Install the KubeStellar widget for instant cluster status from your desktop.",
       "action": "Install widget"
     }
+  },
+  "miniDashboard": {
+    "safariInstall": "Safari: File → Add to Dock to install",
+    "installFromThisPage": "Install from THIS page for the mini widget",
+    "openInApp": "Open in app",
+    "nodesWidget": "Nodes Widget",
+    "openFullDashboard": "Open Full Dashboard",
+    "installInstruction": "Click Open in app in your address bar"
   }
 }

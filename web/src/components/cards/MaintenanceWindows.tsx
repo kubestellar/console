@@ -133,13 +133,13 @@ export function MaintenanceWindows() {
               onChange={e => setFormData(f => ({ ...f, type: e.target.value as MaintenanceWindow['type'] }))}
               className="px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary"
             >
-              <option value="maintenance">Maintenance</option>
+              <option value="maintenance">{t('common.maintenance')}</option>
               <option value="upgrade">{t('common.upgrade')}</option>
-              <option value="patching">Patching</option>
+              <option value="patching">{t('common.patching')}</option>
               <option value="custom">{t('common.custom')}</option>
             </select>
             <button onClick={handleAdd} className="px-3 py-1 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
-              Add
+              {t('common.add')}
             </button>
           </div>
         </div>
