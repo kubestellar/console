@@ -4237,18 +4237,19 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 			}()
 			if err := s.localClusters.CreateCluster(req.Tool, req.Name); err != nil {
 				log.Printf("[LocalClusters] Failed to create cluster %s with %s: %v", req.Name, req.Tool, err)
+				errMsg := sanitizeClusterError(err)
 				s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
 					"tool":     req.Tool,
 					"name":     req.Name,
 					"status":   "failed",
-					"message":  "operation failed",
+					"message":  errMsg,
 					"progress": 0,
 				})
 				// Keep backwards-compat event
 				s.BroadcastToClients("local_cluster_error", map[string]string{
 					"tool":  req.Tool,
 					"name":  req.Name,
-					"error": "internal server error",
+					"error": errMsg,
 				})
 			} else {
 				log.Printf("[LocalClusters] Created cluster %s with %s", req.Name, req.Tool)
@@ -4293,18 +4294,19 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 			}()
 			if err := s.localClusters.DeleteCluster(tool, name); err != nil {
 				log.Printf("[LocalClusters] Failed to delete cluster %s: %v", name, err)
+				errMsg := sanitizeClusterError(err)
 				s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
 					"tool":     tool,
 					"name":     name,
 					"status":   "failed",
-					"message":  "operation failed",
+					"message":  errMsg,
 					"progress": 0,
 				})
 				// Keep backwards-compat event
 				s.BroadcastToClients("local_cluster_error", map[string]string{
 					"tool":  tool,
 					"name":  name,
-					"error": "internal server error",
+					"error": errMsg,
 				})
 			} else {
 				log.Printf("[LocalClusters] Deleted cluster %s", name)
@@ -4409,7 +4411,7 @@ func (s *Server) handleVClusterCreate(w http.ResponseWriter, r *http.Request) {
 				"tool":     "vcluster",
 				"name":     req.Name,
 				"status":   "failed",
-				"message":  "operation failed",
+				"message":  sanitizeClusterError(err),
 				"progress": progressFailed,
 			})
 		} else {
@@ -4574,7 +4576,7 @@ func (s *Server) handleVClusterDelete(w http.ResponseWriter, r *http.Request) {
 				"tool":     "vcluster",
 				"name":     req.Name,
 				"status":   "failed",
-				"message":  "operation failed",
+				"message":  sanitizeClusterError(err),
 				"progress": progressFailed,
 			})
 		} else {

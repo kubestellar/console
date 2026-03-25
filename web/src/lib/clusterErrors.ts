@@ -10,9 +10,9 @@ export function friendlyErrorMessage(raw: string): string {
     return 'Docker is not running. Please start Docker Desktop or Rancher Desktop and try again.'
   }
 
-  // Cluster name validation - RFC-1123 subdomain
-  if (/invalid.*name|must consist of lower case alphanumeric/i.test(raw)) {
-    return 'Invalid cluster name. Use only lowercase letters, numbers, and hyphens (e.g. "my-cluster-1").'
+  // Cluster name validation - RFC-1123 subdomain / kind regex
+  if (/invalid.*name|must consist of lower case alphanumeric|not a valid cluster name|cluster names must match/i.test(raw)) {
+    return 'Invalid cluster name. Use only lowercase letters, numbers, dots, or hyphens (e.g. "my-cluster-1").'
   }
 
   // Cluster already exists

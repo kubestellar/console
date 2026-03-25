@@ -28,6 +28,12 @@ describe('friendlyErrorMessage', () => {
     expect(friendlyErrorMessage(raw)).toContain('lowercase letters')
   })
 
+  it('maps kind-specific cluster name validation errors', () => {
+    const raw = "kind create failed: ERROR: failed to create cluster: 'Demo' is not a valid cluster name, cluster names must match ^[a-z0-9.-]+$"
+    expect(friendlyErrorMessage(raw)).toContain('lowercase letters')
+    expect(friendlyErrorMessage(raw)).toContain('hyphens')
+  })
+
   it('maps executable-not-found errors', () => {
     const raw = 'exec: "kind": executable file not found in $PATH'
     expect(friendlyErrorMessage(raw)).toContain('not found on the system PATH')
