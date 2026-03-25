@@ -1091,7 +1091,7 @@ export function CardWrapper({
                             } else if (installInfo) {
                               // No agent: try to load KB guide and show manual steps
                               try {
-                                const resp = await fetch(`/console-kb/${installInfo.kbPaths[0]}`)
+                                const resp = await fetch(`/console-kb/${installInfo.kbPaths[0]}`, { signal: AbortSignal.timeout(10_000) })
                                 if (resp.ok) {
                                   const data = await resp.json()
                                   setShowInstallGuide({ mission: data })

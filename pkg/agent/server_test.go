@@ -458,20 +458,10 @@ func TestServer_SettingsHandlers(t *testing.T) {
 		t.Fatalf("Failed to decode keys status: %v", err)
 	}
 
-	foundOpenAI := false
-	for _, k := range resp.Keys {
-		if k.Provider == "openai" {
-			foundOpenAI = true
-			if !k.Configured {
-				t.Error("OpenAI should be configured")
-			}
-			if k.Valid == nil || !*k.Valid {
-				t.Error("OpenAI key should be valid (skipped validation)")
-			}
-		}
-	}
-	if !foundOpenAI {
-		t.Error("OpenAI provider not found in status response")
+	// API-key providers are intentionally hidden (only CLI-based agents shown),
+	// so the keys endpoint returns an empty list even when keys are configured.
+	if len(resp.Keys) != 0 {
+		t.Errorf("Expected empty keys list (API-key providers hidden), got %d entries", len(resp.Keys))
 	}
 }
 
