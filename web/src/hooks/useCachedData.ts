@@ -122,7 +122,12 @@ async function fetchAPI<T>(
     throw new Error(`API error: ${response.status}`)
   }
 
-  return response.json()
+  const text = await response.text()
+  try {
+    return JSON.parse(text) as T
+  } catch {
+    throw new Error(`API returned non-JSON response from /api/mcp/${endpoint}`)
+  }
 }
 
 // Get list of reachable (or not-yet-checked) clusters (prefer local agent data for accurate reachability)
@@ -278,7 +283,12 @@ async function fetchGitOpsAPI<T>(
   })
 
   if (!response.ok) throw new Error(`API error: ${response.status}`)
-  return response.json()
+  const gitopsText = await response.text()
+  try {
+    return JSON.parse(gitopsText) as T
+  } catch {
+    throw new Error(`API returned non-JSON response from /api/gitops/${endpoint}`)
+  }
 }
 
 /** RBAC timeout — roles/bindings can be slow on large clusters */
@@ -309,7 +319,12 @@ async function fetchRbacAPI<T>(
   })
 
   if (!response.ok) throw new Error(`API error: ${response.status}`)
-  return response.json()
+  const rbacText = await response.text()
+  try {
+    return JSON.parse(rbacText) as T
+  } catch {
+    throw new Error(`API returned non-JSON response from /api/rbac/${endpoint}`)
+  }
 }
 
 // ============================================================================

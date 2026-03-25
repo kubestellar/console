@@ -135,7 +135,7 @@ export function Clusters() {
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })
     if (!response.ok) {
-      const data = await response.json()
+      const data = await response.json().catch(() => ({})) as { message?: string }
       throw new Error(data.message || 'Failed to rename context')
     }
     refetch()

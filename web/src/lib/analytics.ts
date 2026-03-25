@@ -1102,6 +1102,20 @@ export function startGlobalErrorTracking() {
       // unhandled rejections when they occur inside async functions; the errors are
       // typically transient (stale cache data, invalid cluster server URLs).
       if (msg.includes('did not match the expected pattern')) return
+      // Skip JSON parse / SyntaxError errors from response.json() calls.
+      // These occur when the backend temporarily returns HTML (e.g. 502/503 gateway
+      // errors, nginx error pages) instead of JSON. The calling code catches them
+      // internally; they surface here only because browsers report the rejected
+      // Promise before the catch handler runs in some edge cases.
+      //   Firefox:  "JSON.parse: unexpected character at line 1 column 1 …"
+      //   Chrome:   "… is not valid JSON"
+      //   Safari:   "JSON Parse error: Unexpected token <"
+      if (
+        msg.includes('JSON.parse') ||
+        msg.includes('is not valid JSON') ||
+        msg.includes('JSON Parse error') ||
+        msg.includes('Unexpected token')
+      ) return
       emitError('unhandled_rejection', msg)
     } finally {
       isEmitting = false
