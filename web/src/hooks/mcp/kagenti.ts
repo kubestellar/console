@@ -1,4 +1,5 @@
 import { useMemo, useCallback } from 'react'
+import { mapSettledWithConcurrency } from '../../lib/utils/concurrency'
 import { isAgentUnavailable, reportAgentDataSuccess } from '../useLocalAgent'
 import { clusterCacheRef, LOCAL_AGENT_URL } from './shared'
 import { useCache } from '../../lib/cache'
@@ -154,13 +155,14 @@ async function agentFetchAllClusters<T>(
     ? clusters.filter(c => c.name === specificCluster)
     : clusters
 
-  const results = await Promise.allSettled(
-    targets.map(async ({ name, context }) => {
+  const results = await mapSettledWithConcurrency(
+    targets,
+    async ({ name, context }) => {
       const data = await agentFetch<Record<string, unknown>>(path, context || name, namespace)
       if (!data) throw new Error('No data')
       const items = (data[key] || []) as T[]
       return items.map(item => ({ ...item, cluster: name }))
-    }),
+    },
   )
 
   const items: T[] = []

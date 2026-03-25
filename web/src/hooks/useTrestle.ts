@@ -4,7 +4,7 @@
  * Uses parallel cluster checks with progressive streaming:
  * - Phase 1: CRD existence check per cluster (5s timeout)
  * - Phase 2: Fetch assessment data from installed clusters (15s timeout)
- * - All clusters checked in parallel via Promise.allSettled
+ * - Clusters checked with bounded concurrency (default 8 parallel)
  * - Results stream to the card as each cluster completes
  * - localStorage cache with auto-refresh
  * - Demo fallback when no clusters are connected
@@ -17,6 +17,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useClusters } from './useMCP'
 import { kubectlProxy } from '../lib/kubectlProxy'
+import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { useDemoMode } from './useDemoMode'
 import { registerRefetch, registerCacheReset, unregisterCacheReset } from '../lib/modeTransition'
 import { STORAGE_KEY_TRESTLE_CACHE, STORAGE_KEY_TRESTLE_CACHE_TIME } from '../lib/constants/storage'
@@ -374,23 +375,22 @@ export function useTrestle() {
       return
     }
 
-    // Real mode: check all clusters in parallel, stream results progressively
+    // Real mode: check all clusters with bounded concurrency, stream results progressively
     const allStatuses: Record<string, TrestleClusterStatus> = {}
 
-    const promises = (clusterNames || []).map(cluster =>
-      fetchSingleCluster(cluster).then(status => {
-        allStatuses[cluster] = status
-        if (mountedRef.current) {
-          // Stream each result immediately — card re-renders progressively
-          setStatuses(prev => ({ ...prev, [cluster]: status }))
-          setClustersChecked(prev => prev + 1)
-          // Clear initial loading after first result arrives
-          setIsLoading(false)
-        }
-      })
-    )
+    const tasks = (clusterNames || []).map(cluster => async () => {
+      const status = await fetchSingleCluster(cluster)
+      allStatuses[cluster] = status
+      if (mountedRef.current) {
+        // Stream each result immediately — card re-renders progressively
+        setStatuses(prev => ({ ...prev, [cluster]: status }))
+        setClustersChecked(prev => prev + 1)
+        // Clear initial loading after first result arrives
+        setIsLoading(false)
+      }
+    })
 
-    await Promise.allSettled(promises)
+    await settledWithConcurrency(tasks)
 
     if (mountedRef.current) {
       // If no cluster has Trestle installed, fall back to demo data so the

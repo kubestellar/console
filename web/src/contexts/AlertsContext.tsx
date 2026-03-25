@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense, type ReactNode } from 'react'
+import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { useMissions } from '../hooks/useMissions'
 import { useDemoMode } from '../hooks/useDemoMode'
 import type {
@@ -277,8 +278,8 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
       const results: Record<string, GPUHealthCheckResult[]> = {}
 
-      await Promise.allSettled(
-        currentClusters.map(async (cluster) => {
+      await settledWithConcurrency(
+        currentClusters.map((cluster) => async () => {
           try {
             const resp = await fetch(
               `${API_BASE}/api/mcp/gpu-nodes/health/cronjob/results?cluster=${encodeURIComponent(cluster.name)}`,

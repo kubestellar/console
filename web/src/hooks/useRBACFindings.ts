@@ -13,6 +13,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useClusters } from './useMCP'
 import { kubectlProxy } from '../lib/kubectlProxy'
+import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { useDemoMode } from './useDemoMode'
 import { registerRefetch, registerCacheReset, unregisterCacheReset } from '../lib/modeTransition'
 import { STORAGE_KEY_RBAC_CACHE, STORAGE_KEY_RBAC_CACHE_TIME } from '../lib/constants/storage'
@@ -307,23 +308,22 @@ export function useRBACFindings() {
 
       const allFindings: RBACFinding[] = []
 
-      // Check all clusters in parallel, stream results progressively
-      const promises = clusters.map(cluster =>
-        fetchSingleCluster(cluster).then(clusterFindings => {
-          allFindings.push(...clusterFindings)
-          // Stream each cluster's results immediately
-          setFindings(prev => {
-            const otherFindings = prev.filter(f => f.cluster !== cluster)
-            return [...otherFindings, ...clusterFindings]
-          })
-          if (!initialLoadDone.current && clusterFindings.length > 0) {
-            initialLoadDone.current = true
-            setIsLoading(false)
-          }
+      // Check all clusters with bounded concurrency, stream results progressively
+      const tasks = clusters.map(cluster => async () => {
+        const clusterFindings = await fetchSingleCluster(cluster)
+        allFindings.push(...clusterFindings)
+        // Stream each cluster's results immediately
+        setFindings(prev => {
+          const otherFindings = prev.filter(f => f.cluster !== cluster)
+          return [...otherFindings, ...clusterFindings]
         })
-      )
+        if (!initialLoadDone.current && clusterFindings.length > 0) {
+          initialLoadDone.current = true
+          setIsLoading(false)
+        }
+      })
 
-      await Promise.allSettled(promises)
+      await settledWithConcurrency(tasks)
 
       saveToCache(allFindings)
       initialLoadDone.current = true

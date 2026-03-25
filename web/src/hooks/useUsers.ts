@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../lib/api'
+import { mapSettledWithConcurrency } from '../lib/utils/concurrency'
 import { getDemoMode } from './useDemoMode'
 import type {
   ConsoleUser,
@@ -342,9 +343,10 @@ export function useAllOpenShiftUsers(clusters: Array<{ name: string }>) {
     const allUsers: OpenShiftUser[] = []
     const failed: string[] = []
 
-    // Fetch from all clusters in parallel
-    const results = await Promise.allSettled(
-      clusters.map(async (cluster) => {
+    // Fetch from all clusters with bounded concurrency
+    const results = await mapSettledWithConcurrency(
+      clusters,
+      async (cluster) => {
         try {
           const { data } = await api.get<OpenShiftUser[]>(`/api/openshift/users?cluster=${cluster.name}`)
           return { cluster: cluster.name, users: data || [] }
@@ -352,7 +354,7 @@ export function useAllOpenShiftUsers(clusters: Array<{ name: string }>) {
           // Mark cluster as failed but don't break the whole fetch
           return { cluster: cluster.name, users: [] as OpenShiftUser[], failed: true }
         }
-      })
+      },
     )
 
     results.forEach((result) => {
@@ -538,9 +540,10 @@ export function useAllK8sServiceAccounts(clusters: Array<{ name: string }>) {
     const allSAs: K8sServiceAccount[] = []
     const failed: string[] = []
 
-    // Fetch from all clusters in parallel
-    const results = await Promise.allSettled(
-      clusters.map(async (cluster) => {
+    // Fetch from all clusters with bounded concurrency
+    const results = await mapSettledWithConcurrency(
+      clusters,
+      async (cluster) => {
         try {
           const { data } = await api.get<K8sServiceAccount[]>(`/api/rbac/service-accounts?cluster=${cluster.name}`, { timeout: 60000 })
           return { cluster: cluster.name, sas: data || [] }
@@ -548,7 +551,7 @@ export function useAllK8sServiceAccounts(clusters: Array<{ name: string }>) {
           // Mark cluster as failed but don't break the whole fetch
           return { cluster: cluster.name, sas: [] as K8sServiceAccount[], failed: true }
         }
-      })
+      },
     )
 
     results.forEach((result) => {

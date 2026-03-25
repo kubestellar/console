@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { mapSettledWithConcurrency } from '../lib/utils/concurrency'
 import { isAgentUnavailable } from './useLocalAgent'
 import { clusterCacheRef } from './mcp/shared'
 import { isDemoMode } from '../lib/demoMode'
@@ -92,8 +93,9 @@ async function fetchWorkloadsViaAgent(opts?: {
     ? clusters.filter(c => c.name === opts.cluster)
     : clusters
 
-  const results = await Promise.allSettled(
-    targets.map(async ({ name, context }) => {
+  const results = await mapSettledWithConcurrency(
+    targets,
+    async ({ name, context }) => {
       const params = new URLSearchParams()
       params.append('cluster', context || name)
       if (opts?.namespace) params.append('namespace', opts.namespace)
@@ -127,7 +129,7 @@ async function fetchWorkloadsViaAgent(opts?: {
           createdAt: new Date().toISOString(),
         }
       })
-    })
+    },
   )
 
   const items: Workload[] = []

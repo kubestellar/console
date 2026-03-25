@@ -24,6 +24,7 @@ import { clusterCacheRef } from './mcp/shared'
 import { isAgentUnavailable } from './useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS, KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/constants/network'
+import { settledWithConcurrency } from '../lib/utils/concurrency'
 import type {
   PodInfo,
   PodIssue,
@@ -167,8 +168,8 @@ async function fetchFromAllClusters<T>(
   const accumulated: T[] = []
   let failedCount = 0
 
-  // Fetch from each cluster in parallel, progressively reporting results
-  const promises = clusters.map(async (cluster) => {
+  // Fetch from each cluster with bounded concurrency, progressively reporting results
+  const tasks = clusters.map((cluster) => async () => {
     try {
       const data = await fetchAPI<Record<string, T[]>>(endpoint, { ...params, cluster })
       const items = data[resultKey] || []
@@ -182,7 +183,7 @@ async function fetchFromAllClusters<T>(
     }
   })
 
-  await Promise.allSettled(promises)
+  await settledWithConcurrency(tasks)
 
   // If every cluster fetch failed, throw so callers can try agent fallback
   if (accumulated.length === 0 && clusters.length > 0 && failedCount === clusters.length) {
@@ -335,7 +336,7 @@ async function fetchPodIssuesViaAgent(namespace?: string, onProgress?: (partial:
   if (clusters.length === 0) return []
   const accumulated: PodIssue[] = []
 
-  const promises = clusters.map(async ({ name, context }) => {
+  const tasks = clusters.map(({ name, context }) => async () => {
     const ctx = context || name
     const issues = await kubectlProxy.getPodIssues(ctx, namespace)
     // Always use the short name — kubectlProxy returns context path as cluster
@@ -345,7 +346,7 @@ async function fetchPodIssuesViaAgent(namespace?: string, onProgress?: (partial:
     return tagged
   })
 
-  await Promise.allSettled(promises)
+  await settledWithConcurrency(tasks)
   return accumulated
 }
 
@@ -356,7 +357,7 @@ async function fetchDeploymentsViaAgent(namespace?: string, onProgress?: (partia
   if (clusters.length === 0) return []
   const accumulated: Deployment[] = []
 
-  const promises = clusters.map(async ({ name, context }) => {
+  const tasks = clusters.map(({ name, context }) => async () => {
     const params = new URLSearchParams()
     params.append('cluster', context || name)
     if (namespace) params.append('namespace', namespace)
@@ -381,7 +382,7 @@ async function fetchDeploymentsViaAgent(namespace?: string, onProgress?: (partia
     return tagged
   })
 
-  await Promise.allSettled(promises)
+  await settledWithConcurrency(tasks)
   return accumulated
 }
 
@@ -557,11 +558,11 @@ export function useCachedEvents(
           const events = await kubectlProxy.getEvents(ctx, namespace, limit)
           return events.map(e => ({ ...e, cluster }))
         }
-        // Fetch from all clusters via agent
+        // Fetch from all clusters via agent with bounded concurrency
         const clusters = getAgentClusters()
         const allEvents: ClusterEvent[] = []
-        const results = await Promise.allSettled(
-          clusters.map(async (ci) => {
+        const results = await settledWithConcurrency(
+          clusters.map((ci) => async () => {
             const ctx = ci.context || ci.name
             const events = await kubectlProxy.getEvents(ctx, namespace, limit)
             return events.map(e => ({ ...e, cluster: ci.name }))
@@ -1345,7 +1346,7 @@ async function fetchLLMdServers(
   // useCache prevents calling fetchers in demo mode via effectiveEnabled
   const accumulated: LLMdServer[] = []
 
-  const promises = clusters.map(async (cluster) => {
+  const tasks = clusters.map((cluster) => async () => {
     try {
       const clusterServers = await fetchLLMdServersForCluster(cluster)
       accumulated.push(...clusterServers)
@@ -1361,7 +1362,7 @@ async function fetchLLMdServers(
     }
   })
 
-  await Promise.allSettled(promises)
+  await settledWithConcurrency(tasks)
   return accumulated
 }
 
@@ -1420,7 +1421,7 @@ async function fetchLLMdModels(
   // useCache prevents calling fetchers in demo mode via effectiveEnabled
   const accumulated: LLMdModel[] = []
 
-  const promises = clusters.map(async (cluster) => {
+  const tasks = clusters.map((cluster) => async () => {
     try {
       const response = await kubectlProxy.exec(['get', 'inferencepools', '-A', '-o', 'json'], { context: cluster, timeout: KUBECTL_EXTENDED_TIMEOUT_MS })
       if (response.exitCode !== 0) return []
@@ -1450,7 +1451,7 @@ async function fetchLLMdModels(
     }
   })
 
-  await Promise.allSettled(promises)
+  await settledWithConcurrency(tasks)
   return accumulated
 }
 
@@ -1507,7 +1508,7 @@ async function fetchWorkloadsFromAgent(onProgress?: (partial: Workload[]) => voi
   if (clusters.length === 0) return null
   const accumulated: Workload[] = []
 
-  const promises = clusters.map(async ({ name, context }) => {
+  const tasks = clusters.map(({ name, context }) => async () => {
     const params = new URLSearchParams()
     params.append('cluster', context || name)
 
@@ -1545,7 +1546,7 @@ async function fetchWorkloadsFromAgent(onProgress?: (partial: Workload[]) => voi
     return tagged
   })
 
-  await Promise.allSettled(promises)
+  await settledWithConcurrency(tasks)
   return accumulated.length > 0 ? accumulated : null
 }
 
@@ -1640,9 +1641,9 @@ async function fetchSecurityIssuesViaKubectl(cluster?: string, namespace?: strin
   const severityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 }
   const accumulated: SecurityIssue[] = []
 
-  const promises = clusters
+  const tasks = clusters
     .filter(c => !cluster || c.name === cluster)
-    .map(async ({ name, context }) => {
+    .map(({ name, context }) => async () => {
       const ctx = context || name
       // Get all pods and check for security issues
       const nsFlag = namespace ? ['-n', namespace] : ['-A']
@@ -1715,7 +1716,7 @@ async function fetchSecurityIssuesViaKubectl(cluster?: string, namespace?: strin
       return issues
     })
 
-  await Promise.allSettled(promises)
+  await settledWithConcurrency(tasks)
   // Final sort
   return accumulated.sort((a, b) => (severityOrder[a.severity] || 5) - (severityOrder[b.severity] || 5))
 }
@@ -3892,9 +3893,9 @@ async function fetchISO27001AuditViaKubectl(
 
   const accumulated: ISO27001Finding[] = []
 
-  const promises = clusters
+  const tasks = clusters
     .filter(c => !cluster || c.name === cluster)
-    .map(async ({ name, context }) => {
+    .map(({ name, context }) => async () => {
       try {
         const clusterFindings = await runISO27001ChecksForCluster(name, context || name)
         accumulated.push(...clusterFindings)
@@ -3906,7 +3907,7 @@ async function fetchISO27001AuditViaKubectl(
       }
     })
 
-  await Promise.allSettled(promises)
+  await settledWithConcurrency(tasks)
   return accumulated
 }
 

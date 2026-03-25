@@ -4,7 +4,7 @@
  * Uses parallel cluster checks with progressive streaming:
  * - Phase 1: CRD/API existence check per cluster (3s timeout)
  * - Phase 2: Fetch ConfigurationScanSummaries from installed clusters (15s timeout)
- * - All clusters checked in parallel via Promise.allSettled
+ * - Clusters checked with bounded concurrency (default 8 parallel)
  * - Results stream to the card as each cluster completes
  * - localStorage cache with auto-refresh
  * - Demo fallback when no clusters are connected
@@ -13,6 +13,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useClusters } from './useMCP'
 import { kubectlProxy } from '../lib/kubectlProxy'
+import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { useDemoMode } from './useDemoMode'
 import { registerRefetch, registerCacheReset, unregisterCacheReset } from '../lib/modeTransition'
 import { STORAGE_KEY_KUBESCAPE_CACHE, STORAGE_KEY_KUBESCAPE_CACHE_TIME } from '../lib/constants/storage'
@@ -355,24 +356,23 @@ export function useKubescape() {
     }
     setClustersChecked(0)
 
-    // Check all clusters in parallel, stream results progressively
+    // Check all clusters with bounded concurrency, stream results progressively
     const allStatuses: Record<string, KubescapeClusterStatus> = {}
 
-    const promises = (clusters || []).map(cluster =>
-      fetchSingleCluster(cluster).then(status => {
-        allStatuses[cluster] = status
-        // Stream each result immediately — card re-renders progressively
-        setStatuses(prev => ({ ...prev, [cluster]: status }))
-        setClustersChecked(prev => prev + 1)
-        // Clear loading state once first cluster with data arrives
-        if (!initialLoadDone.current && status.installed) {
-          initialLoadDone.current = true
-          setIsLoading(false)
-        }
-      })
-    )
+    const tasks = (clusters || []).map(cluster => async () => {
+      const status = await fetchSingleCluster(cluster)
+      allStatuses[cluster] = status
+      // Stream each result immediately — card re-renders progressively
+      setStatuses(prev => ({ ...prev, [cluster]: status }))
+      setClustersChecked(prev => prev + 1)
+      // Clear loading state once first cluster with data arrives
+      if (!initialLoadDone.current && status.installed) {
+        initialLoadDone.current = true
+        setIsLoading(false)
+      }
+    })
 
-    await Promise.allSettled(promises)
+    await settledWithConcurrency(tasks)
 
     // Final: save complete cache and clear refresh state
     saveToCache(allStatuses)
