@@ -156,12 +156,17 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
 
   const handleRefreshGroup = useCallback(async (name: string) => {
     setRefreshing(prev => new Set(prev).add(name))
-    await evaluateGroup(name)
-    setRefreshing(prev => {
-      const next = new Set(prev)
-      next.delete(name)
-      return next
-    })
+    try {
+      await evaluateGroup(name)
+    } catch {
+      // evaluateGroup has internal error handling; this catches any unexpected throws
+    } finally {
+      setRefreshing(prev => {
+        const next = new Set(prev)
+        next.delete(name)
+        return next
+      })
+    }
   }, [evaluateGroup])
 
   const availableClusterNames = clusters.map(c => c.name)
@@ -484,32 +489,47 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
 
   const handlePreview = async () => {
     setIsPreviewing(true)
-    const result = await previewQuery(buildQuery())
-    setPreviewClusters(result.clusters)
-    setIsPreviewing(false)
+    try {
+      const result = await previewQuery(buildQuery())
+      setPreviewClusters(result.clusters)
+    } catch {
+      setPreviewClusters([])
+    } finally {
+      setIsPreviewing(false)
+    }
   }
 
   const handleAIGenerate = async () => {
     if (!aiPrompt.trim()) return
     setAiLoading(true)
     setAiError(null)
-    const result = await generateAIQuery(aiPrompt.trim())
-    if (result.error) {
-      setAiError(result.error)
-    } else if (result.query) {
-      setLabelSelector(result.query.labelSelector ?? '')
-      setFilters(result.query.filters ?? [])
-      if (result.suggestedName && !name) {
-        setName(result.suggestedName)
+    try {
+      const result = await generateAIQuery(aiPrompt.trim())
+      if (result.error) {
+        setAiError(result.error)
+      } else if (result.query) {
+        setLabelSelector(result.query.labelSelector ?? '')
+        setFilters(result.query.filters ?? [])
+        if (result.suggestedName && !name) {
+          setName(result.suggestedName)
+        }
+        setDynamicTab('builder')
+        // Auto-preview
+        setIsPreviewing(true)
+        try {
+          const preview = await previewQuery(result.query)
+          setPreviewClusters(preview.clusters)
+        } catch {
+          setPreviewClusters([])
+        } finally {
+          setIsPreviewing(false)
+        }
       }
-      setDynamicTab('builder')
-      // Auto-preview
-      setIsPreviewing(true)
-      const preview = await previewQuery(result.query)
-      setPreviewClusters(preview.clusters)
-      setIsPreviewing(false)
+    } catch {
+      setAiError('Failed to generate query')
+    } finally {
+      setAiLoading(false)
     }
-    setAiLoading(false)
   }
 
   const addFilter = () => {
