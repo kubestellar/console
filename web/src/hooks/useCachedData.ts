@@ -999,7 +999,12 @@ async function fetchProwJobs(prowCluster: string, namespace: string): Promise<Pr
     throw new Error(response.error || 'Failed to get ProwJobs')
   }
 
-  const data = JSON.parse(response.output)
+  let data: { items?: ProwJobResource[] }
+  try {
+    data = JSON.parse(response.output)
+  } catch {
+    throw new Error('Failed to parse ProwJobs response: invalid JSON')
+  }
   return (data.items || [])
     .reverse()
     .slice(0, MAX_PROW_JOBS)
@@ -1206,7 +1211,11 @@ async function fetchLLMdServersForCluster(cluster: string): Promise<LLMdServer[]
 
   // Process HPA results
   if (hpaResult.status === 'fulfilled' && hpaResult.value.exitCode === 0) {
-    for (const hpa of (JSON.parse(hpaResult.value.output).items || []) as HPAResource[]) {
+    let hpaItems: HPAResource[] = []
+    try {
+      hpaItems = JSON.parse(hpaResult.value.output).items || []
+    } catch { /* invalid JSON — skip HPA data */ }
+    for (const hpa of hpaItems) {
       if (hpa.spec.scaleTargetRef.kind === 'Deployment') {
         autoscalerMap.set(`${hpa.metadata.namespace}/${hpa.spec.scaleTargetRef.name}`, 'hpa')
         autoscalerItems.push({
@@ -1228,7 +1237,11 @@ async function fetchLLMdServersForCluster(cluster: string): Promise<LLMdServer[]
 
   // Process VA results
   if (vaResult.status === 'fulfilled' && vaResult.value.exitCode === 0) {
-    for (const va of (JSON.parse(vaResult.value.output).items || []) as VariantAutoscalingResource[]) {
+    let vaItems: VariantAutoscalingResource[] = []
+    try {
+      vaItems = JSON.parse(vaResult.value.output).items || []
+    } catch { /* invalid JSON — skip VA data */ }
+    for (const va of vaItems) {
       if (va.spec.targetRef?.name) {
         const key = `${va.metadata.namespace}/${va.spec.targetRef.name}`
         autoscalerMap.set(key, autoscalerMap.has(key) ? 'both' : 'va')
@@ -1251,7 +1264,10 @@ async function fetchLLMdServersForCluster(cluster: string): Promise<LLMdServer[]
 
   // Process VPA results
   if (vpaResult.status === 'fulfilled' && vpaResult.value.exitCode === 0) {
-    const vpaData = JSON.parse(vpaResult.value.output)
+    let vpaData: { items?: Array<{ metadata: { name: string; namespace: string }; spec?: { targetRef?: { name?: string } } }> } = {}
+    try {
+      vpaData = JSON.parse(vpaResult.value.output)
+    } catch { /* invalid JSON — skip VPA data */ }
     for (const vpa of (vpaData.items || []) as Array<{ metadata: { name: string; namespace: string }; spec?: { targetRef?: { name?: string } } }>) {
       const targetName = vpa.spec?.targetRef?.name || 'unknown'
       autoscalerItems.push({

@@ -425,10 +425,10 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
   }
 
   useEffect(() => {
-    fetchGitHubData()
+    fetchGitHubData().catch(() => { /* errors handled inside fetchGitHubData */ })
     // Auto-refresh every 60 seconds (bypasses cache for fresh data) — skip in demo mode
     if (!isDemoMode) {
-      const interval = setInterval(() => fetchGitHubData(true), 60_000)
+      const interval = setInterval(() => fetchGitHubData(true).catch(() => { /* errors handled inside fetchGitHubData */ }), 60_000)
       return () => clearInterval(interval)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

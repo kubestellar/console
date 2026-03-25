@@ -1218,12 +1218,13 @@ async function checkHealthProgressively(clusterList: ClusterInfo[]) {
 
       // Don't await here - let multiple run in parallel
       processClusterHealth(cluster)
+        .catch(() => { /* health check errors are non-fatal — cluster stays in existing state */ })
         .finally(() => {
           inProgress.delete(key)
           completed++
           // Start next one immediately when one finishes
           if (queue.length > 0) {
-            processNext()
+            processNext().catch(() => { /* ignore — errors already handled per-cluster */ })
           }
         })
     }
@@ -1232,7 +1233,7 @@ async function checkHealthProgressively(clusterList: ClusterInfo[]) {
   // Start initial batch up to concurrency limit
   const initialBatch = Math.min(HEALTH_CHECK_CONCURRENCY, clusterList.length)
   for (let i = 0; i < initialBatch; i++) {
-    processNext()
+    processNext().catch(() => { /* ignore — errors already handled per-cluster */ })
   }
 
   // Wait for all to complete (non-blocking check)
