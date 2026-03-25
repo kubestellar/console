@@ -2,6 +2,7 @@ import { CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink, AlertCircle }
 import { Skeleton } from '../ui/Skeleton'
 import { useArgoCDHealth } from '../../hooks/useArgoCD'
 import { useCardLoadingState } from './CardDataContext'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 
 interface ArgoCDHealthProps {
@@ -27,6 +28,7 @@ const healthConfig: Record<string, HealthConfigEntry> = {
 
 export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
   const { t } = useTranslation('cards')
+  const { isDemoMode } = useDemoMode()
   const {
     stats,
     total,
@@ -46,7 +48,7 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
     hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
-    isDemoData,
+    isDemoData: isDemoMode || isDemoData,
   })
 
   if (showSkeleton) {
