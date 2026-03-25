@@ -5,7 +5,7 @@
  * populates the right panel with details. Overlays toggle resource views.
  */
 
-import { useId, useMemo, useState, useCallback, useEffect, useRef } from 'react'
+import { useId, useMemo, useState, useCallback, useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Rocket,
@@ -15,16 +15,26 @@ import {
   Layout,
   HardDrive,
   Info,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  PanelRightClose,
+  PanelRightOpen,
+  Pause,
+  Play,
+  Download,
+  Tags,
   Loader2,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'
+
 import { BlueprintDefs } from './svg/BlueprintDefs'
 import { ClusterZone } from './svg/ClusterZone'
 import type { ClusterHoverInfo } from './svg/ClusterZone'
 import { ProjectNode } from './svg/ProjectNode'
 import type { ProjectHoverInfo } from './svg/ProjectNode'
-import { DependencyPath } from './svg/DependencyPath'
+import { DependencyPath, DependencyLabel, computeEdgeMidpoint } from './svg/DependencyPath'
 import { PhaseTimeline } from './svg/PhaseTimeline'
 import type {
   MissionControlState,
@@ -41,6 +51,24 @@ import type { MissionExport } from '../../lib/missions/types'
 import { MissionDetailView } from '../missions/MissionDetailView'
 import { PayloadProject as PP } from './types'
 
+/** Shorten cluster names like "default/api-fmaas-platform-eval-fmaas-res..." to a readable form */
+function shortenClusterName(name: string): string {
+  // Strip context prefix (e.g. "default/")
+  const parts = name.split('/')
+  const base = parts[parts.length - 1]
+  // If still long, take first meaningful segment
+  if (base.length > 24) {
+    // Try splitting by common separators and taking key parts
+    const segments = base.split(/[-_.]/)
+    if (segments.length > 2) {
+      // Take first 2-3 segments that are informative
+      return segments.slice(0, 3).join('-')
+    }
+    return base.slice(0, 22) + '…'
+  }
+  return base
+}
+
 /** Resolve kbPath for a project — tries explicit kbPath, then convention-based lookup */
 function resolveKbPath(proj: PP): string | undefined {
   if (proj.kbPath) return proj.kbPath
@@ -55,6 +83,7 @@ interface FlightPlanBlueprintProps {
   onDeployModeChange: (mode: 'phased' | 'yolo') => void
   onLaunch: () => void
   onMoveProject?: (projectName: string, fromCluster: string, toCluster: string) => void
+  installedProjects?: Set<string>
 }
 
 // ---------------------------------------------------------------------------
@@ -115,7 +144,8 @@ function computeLayout(state: MissionControlState): BlueprintLayout {
     projects.forEach((pName, j) => {
       const pCol = j % pCols
       const pRow = Math.floor(j / pCols)
-      projectPositions.set(pName, {
+      // Composite key: "clusterName/projectName" — allows same project on multiple clusters
+      projectPositions.set(`${name}/${pName}`, {
         projectName: pName,
         cx: rect.x + innerPadX + projSpaceX * (pCol + 0.5),
         cy: rect.y + innerPadTop + projSpaceY * (pRow + 0.5),
@@ -124,12 +154,49 @@ function computeLayout(state: MissionControlState): BlueprintLayout {
     })
   })
 
-  // Labels for known integration patterns
+  // Labels for known integration patterns — keep focused on direct, primary integrations
   const INTEGRATION_LABELS: Record<string, Record<string, string>> = {
-    'cert-manager': { 'external-secrets': 'TLS certs', 'external-secrets-operator': 'TLS certs', keycloak: 'HTTPS certs', istio: 'mTLS' },
-    prometheus: { falco: 'metrics', cilium: 'Hubble metrics', 'trivy-operator': 'scan metrics', trivy: 'scan metrics', grype: 'scan metrics', kyverno: 'policy metrics', keycloak: 'JMX metrics' },
+    'cert-manager': { istio: 'mTLS', linkerd: 'mTLS certs', 'external-secrets': 'TLS certs' },
+    prometheus: { grafana: 'dashboards', thanos: 'long-term storage', alertmanager: 'alerts', falco: 'metrics', 'trivy-operator': 'scan metrics', trivy: 'scan metrics' },
     falco: { kyverno: 'defense layers', 'open-policy-agent': 'runtime + policy' },
-    cilium: { kyverno: 'L3-L7 + admission', 'open-policy-agent': 'network + admission' },
+    cilium: { 'open-policy-agent': 'network + admission', istio: 'eBPF dataplane' },
+    istio: { jaeger: 'distributed traces', envoy: 'sidecar proxy' },
+    grafana: { jaeger: 'trace UI', thanos: 'query', loki: 'log query' },
+    fluentd: { 'fluent-bit': 'log forwarding' },
+    'fluent-bit': { loki: 'log shipping' },
+    harbor: { trivy: 'image scanning' },
+    flux: { helm: 'chart releases' },
+    argocd: { helm: 'chart sync' },
+    'argo-cd': { helm: 'chart sync' },
+    velero: { longhorn: 'volume backup', rook: 'snapshot backup' },
+    keda: { nats: 'event scaler', strimzi: 'Kafka scaler' },
+    dapr: { nats: 'pub/sub', strimzi: 'Kafka binding' },
+    knative: { istio: 'ingress', contour: 'ingress alt' },
+    spiffe: { spire: 'identity runtime' },
+    etcd: { coredns: 'service discovery' },
+    keycloak: { 'open-policy-agent': 'auth policy', 'cert-manager': 'HTTPS certs' },
+    metallb: { contour: 'ingress LB' },
+    'external-secrets': { 'external-secrets-operator': 'operator' },
+    crossplane: { helm: 'provider-helm' },
+  }
+
+  // Reverse lookup: projectName → positions (supports multi-cluster)
+  const projectPosByName = new Map<string, ProjectPosition[]>()
+  for (const pos of projectPositions.values()) {
+    const list = projectPosByName.get(pos.projectName) || []
+    list.push(pos)
+    projectPosByName.set(pos.projectName, list)
+  }
+
+  // Find best position pair for two projects (prefer same-cluster)
+  function findEdgePair(a: string, b: string): { from: ProjectPosition; to: ProjectPosition; cross: boolean } | null {
+    const posA = projectPosByName.get(a)
+    const posB = projectPosByName.get(b)
+    if (!posA?.length || !posB?.length) return null
+    for (const fa of posA) for (const fb of posB) {
+      if (fa.clusterName === fb.clusterName) return { from: fa, to: fb, cross: false }
+    }
+    return { from: posA[0], to: posB[0], cross: true }
   }
 
   const dependencyEdges: DependencyEdge[] = []
@@ -138,9 +205,8 @@ function computeLayout(state: MissionControlState): BlueprintLayout {
   // Explicit dependencies
   for (const project of state.projects) {
     for (const dep of project.dependencies) {
-      if (projectPositions.has(dep) && projectPositions.has(project.name)) {
-        const fromPos = projectPositions.get(project.name)!
-        const toPos = projectPositions.get(dep)!
+      const pair = findEdgePair(project.name, dep)
+      if (pair) {
         const key = `${project.name}->${dep}`
         if (!edgeSet.has(key)) {
           edgeSet.add(key)
@@ -148,8 +214,8 @@ function computeLayout(state: MissionControlState): BlueprintLayout {
           dependencyEdges.push({
             from: project.name,
             to: dep,
-            crossCluster: fromPos.clusterName !== toPos.clusterName,
-            label: label ?? 'depends on',
+            crossCluster: pair.cross,
+            label: label,
           })
         }
       }
@@ -158,21 +224,22 @@ function computeLayout(state: MissionControlState): BlueprintLayout {
 
   // Implicit integration edges (not explicit deps, but known integrations)
   for (const [src, targets] of Object.entries(INTEGRATION_LABELS)) {
-    if (!projectPositions.has(src)) continue
+    if (!projectPosByName.has(src)) continue
     for (const [target, label] of Object.entries(targets)) {
-      if (!projectPositions.has(target)) continue
+      if (!projectPosByName.has(target)) continue
       const key1 = `${src}->${target}`
       const key2 = `${target}->${src}`
       if (!edgeSet.has(key1) && !edgeSet.has(key2)) {
         edgeSet.add(key1)
-        const fromPos = projectPositions.get(src)!
-        const toPos = projectPositions.get(target)!
-        dependencyEdges.push({
-          from: src,
-          to: target,
-          crossCluster: fromPos.clusterName !== toPos.clusterName,
-          label,
-        })
+        const pair = findEdgePair(src, target)
+        if (pair) {
+          dependencyEdges.push({
+            from: src,
+            to: target,
+            crossCluster: pair.cross,
+            label,
+          })
+        }
       }
     }
   }
@@ -239,6 +306,162 @@ function GaugeRow({ label, value, max, unit }: {
 }
 
 // ---------------------------------------------------------------------------
+// Full report export (opens print dialog → Save as PDF)
+// ---------------------------------------------------------------------------
+
+function exportFullReport(
+  state: MissionControlState,
+  healthyState: MissionControlState,
+  installedProjects: Set<string>,
+  _layout: BlueprintLayout | null,
+  svgContainerRef: React.RefObject<HTMLDivElement | null>,
+) {
+  const effectivePhases = state.phases.length > 0 ? state.phases : generateDefaultPhases(state.projects)
+  const rollbackPhases = [...effectivePhases].reverse()
+  const toRemove = state.projects.filter(p => !installedProjects.has(p.name))
+  const toKeep = state.projects.filter(p => installedProjects.has(p.name))
+
+  // Serialize SVG
+  let svgMarkup = ''
+  const svgEl = svgContainerRef.current?.querySelector('svg')
+  if (svgEl) {
+    const clone = svgEl.cloneNode(true) as SVGElement
+    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+    bg.setAttribute('width', '100%')
+    bg.setAttribute('height', '100%')
+    bg.setAttribute('fill', '#0f172a')
+    clone.insertBefore(bg, clone.firstChild)
+    svgMarkup = new XMLSerializer().serializeToString(clone)
+  }
+
+  // Cluster summary
+  const clusterRows = healthyState.assignments
+    .filter(a => a.projectNames.length > 0)
+    .map(a => `<tr>
+      <td>${shortenClusterName(a.clusterName)}</td>
+      <td>${a.projectNames.length}</td>
+      <td>${a.projectNames.map(n =>
+        `<span class="${installedProjects.has(n) ? 'installed' : 'deploy'}">${n}</span>`
+      ).join(' ')}</td>
+    </tr>`).join('')
+
+  // Phase breakdown
+  const phaseRows = effectivePhases.map((phase) => {
+    const projs = phase.projectNames.map(n => {
+      const isInst = installedProjects.has(n)
+      return `<span class="${isInst ? 'installed' : 'deploy'}">${n}${isInst ? ' ✓' : ''}</span>`
+    }).join(' ')
+    const est = phase.estimatedSeconds ? `${Math.ceil(phase.estimatedSeconds / 60)} min` : ''
+    return `<tr><td>${phase.phase}. ${phase.name}</td><td>${est}</td><td>${projs}</td></tr>`
+  }).join('')
+
+  // Rollback steps
+  const rollbackRows = rollbackPhases.map((phase, i) => {
+    const removable = phase.projectNames.filter(n => !installedProjects.has(n))
+    if (removable.length === 0) return ''
+    return `<tr><td>Step ${i + 1}</td><td>Remove ${phase.name}</td><td>${removable.map(n => `<code>helm uninstall ${n}</code>`).join('<br/>')}</td></tr>`
+  }).filter(Boolean).join('')
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Flight Plan: ${state.title || 'Mission Control'}</title>
+<style>
+  body { font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 0 auto; padding: 32px; color: #1e293b; line-height: 1.5; }
+  h1 { font-size: 24px; border-bottom: 2px solid #6366f1; padding-bottom: 8px; }
+  h2 { font-size: 18px; margin-top: 28px; color: #4338ca; }
+  h3 { font-size: 14px; margin-top: 20px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 16px; font-size: 13px; }
+  th, td { border: 1px solid #e2e8f0; padding: 6px 10px; text-align: left; }
+  th { background: #f1f5f9; font-weight: 600; font-size: 11px; text-transform: uppercase; }
+  .installed { display: inline-block; background: #d1fae5; color: #065f46; padding: 1px 6px; border-radius: 4px; font-size: 11px; margin: 1px; }
+  .deploy { display: inline-block; background: #fef3c7; color: #92400e; padding: 1px 6px; border-radius: 4px; font-size: 11px; margin: 1px; }
+  .protected { display: inline-block; background: #d1fae5; color: #065f46; padding: 1px 6px; border-radius: 4px; font-size: 11px; margin: 1px; }
+  .remove { display: inline-block; background: #fef3c7; color: #92400e; padding: 1px 6px; border-radius: 4px; font-size: 11px; margin: 1px; }
+  code { background: #f1f5f9; padding: 2px 6px; border-radius: 3px; font-size: 12px; }
+  .meta { color: #64748b; font-size: 13px; }
+  .svg-container { margin: 16px 0; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+  .svg-container svg { width: 100%; height: auto; }
+  .section { page-break-inside: avoid; }
+  .description { background: #f8fafc; border-left: 3px solid #6366f1; padding: 12px 16px; margin: 12px 0; font-size: 13px; }
+  @media print { body { padding: 16px; } .no-print { display: none; } }
+</style></head><body>
+
+<h1>Flight Plan: ${state.title || 'Untitled Mission'}</h1>
+<p class="meta">Generated ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} · ${state.projects.length} projects · ${healthyState.assignments.filter(a => a.projectNames.length > 0).length} clusters</p>
+
+<div class="section">
+<h2>1. Define Mission</h2>
+<div class="description">${state.description || 'No description provided'}</div>
+<table>
+  <thead><tr><th>Project</th><th>Category</th><th>Priority</th><th>Status</th><th>Why</th></tr></thead>
+  <tbody>${state.projects.map(p => `<tr>
+    <td><strong>${p.displayName}</strong></td>
+    <td>${p.category}</td>
+    <td>${p.priority}</td>
+    <td><span class="${installedProjects.has(p.name) ? 'installed' : 'deploy'}">${installedProjects.has(p.name) ? 'Installed' : 'Needs Deploy'}</span></td>
+    <td style="font-size:11px">${p.reason || ''}</td>
+  </tr>`).join('')}</tbody>
+</table>
+</div>
+
+<div class="section">
+<h2>2. Chart Course — Cluster Assignments</h2>
+<table>
+  <thead><tr><th>Cluster</th><th>Projects</th><th>Assignments</th></tr></thead>
+  <tbody>${clusterRows}</tbody>
+</table>
+</div>
+
+<div class="section">
+<h2>3. Flight Plan Blueprint</h2>
+${svgMarkup ? `<div class="svg-container">${svgMarkup}</div>` : '<p class="meta">SVG blueprint not available</p>'}
+</div>
+
+<div class="section">
+<h2>4. PHASED Rollout Plan</h2>
+<table>
+  <thead><tr><th>Phase</th><th>Estimate</th><th>Projects</th></tr></thead>
+  <tbody>${phaseRows}</tbody>
+</table>
+</div>
+
+<div class="section">
+<h2>5. YOLO Mode</h2>
+<p>Launch all ${state.projects.length} projects simultaneously — no dependency gating.</p>
+<p>${state.projects.map(p =>
+  `<span class="${installedProjects.has(p.name) ? 'installed' : 'deploy'}">${p.displayName}${installedProjects.has(p.name) ? ' ✓' : ''}</span>`
+).join(' ')}</p>
+</div>
+
+<div class="section">
+<h2>6. Rollback Plan</h2>
+${toKeep.length > 0 ? `
+<h3>Protected (will not be removed)</h3>
+<p>${toKeep.map(p => `<span class="protected">${p.displayName} ✓</span>`).join(' ')}</p>
+` : ''}
+${toRemove.length > 0 ? `
+<h3>Removal Order (reverse phases)</h3>
+<table>
+  <thead><tr><th>Step</th><th>Action</th><th>Commands</th></tr></thead>
+  <tbody>${rollbackRows}</tbody>
+</table>
+` : '<p>All projects are already installed — nothing to roll back.</p>'}
+</div>
+
+<p class="meta" style="margin-top:32px; border-top:1px solid #e2e8f0; padding-top:12px;">
+  KubeStellar Console · Mission Control Report · Use browser Print (Cmd+P / Ctrl+P) to save as PDF
+</p>
+
+<script>window.onload = () => window.print()</script>
+</body></html>`
+
+  const w = window.open('', '_blank')
+  if (w) {
+    w.document.write(html)
+    w.document.close()
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Status colors
 // ---------------------------------------------------------------------------
 
@@ -266,17 +489,221 @@ export function FlightPlanBlueprint({
   onDeployModeChange,
   onLaunch,
   onMoveProject,
+  installedProjects = new Set(),
 }: FlightPlanBlueprintProps) {
   const svgId = useId().replace(/:/g, '')
   const { clusters } = useClusters()
-  const layout = useMemo(() => computeLayout(state), [state])
+
+  // Filter out unhealthy clusters and redistribute orphaned projects to healthy ones
+  const healthyState = useMemo(() => {
+    let assignments = state.assignments
+    const healthyNames = clusters?.length
+      ? new Set(clusters.filter(c => c.healthy !== false).map(c => c.name))
+      : null
+
+    // Filter unhealthy clusters
+    if (healthyNames) {
+      const hasUnhealthy = assignments.some(a => a.projectNames.length > 0 && !healthyNames.has(a.clusterName))
+      if (hasUnhealthy) {
+        const orphanedProjects: string[] = []
+        const healthyAssignments = assignments.filter(a => {
+          if (healthyNames.has(a.clusterName)) return true
+          orphanedProjects.push(...a.projectNames)
+          return false
+        }).map(a => ({ ...a, projectNames: [...a.projectNames] }))
+        if (orphanedProjects.length > 0 && healthyAssignments.length > 0) {
+          orphanedProjects.forEach((p, i) => {
+            const target = healthyAssignments[i % healthyAssignments.length]
+            if (!target.projectNames.includes(p)) {
+              target.projectNames.push(p)
+            }
+          })
+        }
+        assignments = healthyAssignments
+      }
+    }
+
+    // Deduplicate: each project can only appear on one cluster in the blueprint.
+    // Keep the first assignment (from AI auto-assign or user selection).
+    const seen = new Set<string>()
+    const dedupedAssignments = assignments.map(a => {
+      const unique = a.projectNames.filter(p => {
+        if (seen.has(p)) return false
+        seen.add(p)
+        return true
+      })
+      return unique.length === a.projectNames.length ? a : { ...a, projectNames: unique }
+    })
+
+    return { ...state, assignments: dedupedAssignments }
+  }, [state, clusters])
+
+  const layout = useMemo(() => computeLayout(healthyState), [healthyState])
   const [infoPanel, setInfoPanel] = useState<InfoPanelData | null>(null)
-  const [stickyPanel, setStickyPanel] = useState<InfoPanelData | null>(null)
+  const [stickyPanel, setStickyPanel] = useState<InfoPanelData | null>(
+    () => ({ kind: 'deployMode' as const, mode: state.deployMode, phases: state.phases })
+  )
   const [dragProject, setDragProject] = useState<{ name: string; fromCluster: string } | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [previewMission, setPreviewMission] = useState<MissionExport | null>(null)
   const [previewRaw, setPreviewRaw] = useState(false)
   const [previewLoading, setPreviewLoading] = useState(false)
+
+  // Resizable info panel
+  const INFO_PANEL_MIN = 280
+  const INFO_PANEL_MAX = 600
+  const INFO_PANEL_DEFAULT = 416 // 26rem
+  const INFO_PANEL_LS_KEY = 'mission-control-info-panel-width'
+
+  const [infoPanelWidth, setInfoPanelWidth] = useState<number>(() => {
+    try {
+      const stored = localStorage.getItem(INFO_PANEL_LS_KEY)
+      if (stored) {
+        const parsed = Number(stored)
+        if (parsed >= INFO_PANEL_MIN && parsed <= INFO_PANEL_MAX) return parsed
+      }
+    } catch { /* ignore */ }
+    return INFO_PANEL_DEFAULT
+  })
+  const [infoPanelCollapsed, setInfoPanelCollapsed] = useState(false)
+
+  // Zoom controls
+  const [zoom, setZoom] = useState(1)
+  const ZOOM_MIN = 0.3
+  const ZOOM_MAX = 3
+  const ZOOM_STEP = 0.2
+
+  // Animation toggle
+  const [animationsEnabled, setAnimationsEnabled] = useState(true)
+  // Line labels toggle
+  const [labelsVisible, setLabelsVisible] = useState(true)
+
+  // Hovered edge (from label hover) or hovered project — highlights connected lines and projects
+  const [hoveredEdge, setHoveredEdge] = useState<{ from: string; to: string } | null>(null)
+  const [hoveredProject, setHoveredProject] = useState<string | null>(null)
+
+  // Compute which edges and projects should glow
+  const glowEdges = useMemo(() => {
+    const edges = new Set<string>()
+    if (hoveredEdge) {
+      edges.add(`${hoveredEdge.from}-${hoveredEdge.to}`)
+    }
+    if (hoveredProject && layout) {
+      for (const edge of layout.dependencyEdges) {
+        if (edge.from === hoveredProject || edge.to === hoveredProject) {
+          edges.add(`${edge.from}-${edge.to}`)
+        }
+      }
+    }
+    return edges
+  }, [hoveredEdge, hoveredProject, layout])
+
+  const glowProjects = useMemo(() => {
+    const projects = new Set<string>()
+    if (hoveredEdge) {
+      projects.add(hoveredEdge.from)
+      projects.add(hoveredEdge.to)
+    }
+    if (hoveredProject && layout) {
+      // Only glow if the project has connections — isolated projects shouldn't dim everything
+      const hasEdges = layout.dependencyEdges.some(e => e.from === hoveredProject || e.to === hoveredProject)
+      if (hasEdges) {
+        projects.add(hoveredProject)
+        for (const edge of layout.dependencyEdges) {
+          if (edge.from === hoveredProject) projects.add(edge.to)
+          if (edge.to === hoveredProject) projects.add(edge.from)
+        }
+      }
+    }
+    return projects
+  }, [hoveredEdge, hoveredProject, layout])
+
+  // Detect installed projects via helm releases
+
+
+  // Pan/drag when zoomed in
+  const svgContainerRef = useRef<HTMLDivElement>(null)
+  const isPanningRef = useRef(false)
+  const panStartRef = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 })
+
+  const handlePanStart = useCallback((e: ReactMouseEvent) => {
+    if (zoom <= 1) return
+    const container = svgContainerRef.current
+    if (!container) return
+    isPanningRef.current = true
+    panStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      scrollLeft: container.scrollLeft,
+      scrollTop: container.scrollTop,
+    }
+    document.body.style.cursor = 'grabbing'
+    document.body.style.userSelect = 'none'
+  }, [zoom])
+
+  useEffect(() => {
+    const handlePanMove = (e: MouseEvent) => {
+      if (!isPanningRef.current) return
+      const container = svgContainerRef.current
+      if (!container) return
+      const dx = e.clientX - panStartRef.current.x
+      const dy = e.clientY - panStartRef.current.y
+      container.scrollLeft = panStartRef.current.scrollLeft - dx
+      container.scrollTop = panStartRef.current.scrollTop - dy
+    }
+    const handlePanEnd = () => {
+      if (!isPanningRef.current) return
+      isPanningRef.current = false
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    window.addEventListener('mousemove', handlePanMove)
+    window.addEventListener('mouseup', handlePanEnd)
+    return () => {
+      window.removeEventListener('mousemove', handlePanMove)
+      window.removeEventListener('mouseup', handlePanEnd)
+    }
+  }, [])
+
+  const isResizingRef = useRef(false)
+  const startXRef = useRef(0)
+  const startWidthRef = useRef(INFO_PANEL_DEFAULT)
+
+  const handleResizeStart = useCallback((e: ReactMouseEvent) => {
+    e.preventDefault()
+    isResizingRef.current = true
+    startXRef.current = e.clientX
+    startWidthRef.current = infoPanelWidth
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+  }, [infoPanelWidth])
+
+  useEffect(() => {
+    const handleMouseMove = (e: globalThis.MouseEvent) => {
+      if (!isResizingRef.current) return
+      // Panel is on the right, so dragging left (negative deltaX) should increase width
+      const deltaX = e.clientX - startXRef.current
+      const newWidth = Math.min(INFO_PANEL_MAX, Math.max(INFO_PANEL_MIN, startWidthRef.current - deltaX))
+      setInfoPanelWidth(newWidth)
+    }
+    const handleMouseUp = () => {
+      if (!isResizingRef.current) return
+      isResizingRef.current = false
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      // Persist to localStorage
+      setInfoPanelWidth((w) => {
+        try { localStorage.setItem(INFO_PANEL_LS_KEY, String(w)) } catch { /* ignore */ }
+        return w
+      })
+    }
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [])
 
   const projectMap = useMemo(() => {
     return new Map(state.projects.map((p) => [p.name, p]))
@@ -339,7 +766,7 @@ export function FlightPlanBlueprint({
           </h2>
           <p className="text-xs text-muted-foreground">
             {state.projects.length} projects across{' '}
-            {state.assignments.filter((a) => a.projectNames.length > 0).length} clusters
+            {healthyState.assignments.filter((a) => a.projectNames.length > 0).length} clusters
           </p>
         </div>
 
@@ -365,37 +792,35 @@ export function FlightPlanBlueprint({
           </div>
 
           {/* Deploy mode toggle */}
-          <div className="flex items-center rounded-lg border border-border overflow-hidden">
+          <div className="flex items-center rounded-lg overflow-hidden">
             <button
-              onClick={() => onDeployModeChange('phased')}
-              onMouseEnter={() => {
+              onClick={() => {
+                onDeployModeChange('phased')
                 const data: InfoPanelData = { kind: 'deployMode', mode: 'phased', phases: state.phases }
-                setInfoPanel(data)
                 setStickyPanel(data)
               }}
-              onMouseLeave={() => setInfoPanel(null)}
               className={cn(
-                'px-3 py-1.5 text-xs transition-colors',
+                'px-3 py-1.5 text-xs font-medium transition-all duration-150 border',
+                'rounded-l-lg',
                 state.deployMode === 'phased'
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-violet-500/20 text-violet-300 border-violet-500/40 shadow-inner'
+                  : 'bg-secondary/30 text-muted-foreground border-border hover:text-foreground hover:bg-secondary/50'
               )}
             >
-              Phased
+              PHASED
             </button>
             <button
-              onClick={() => onDeployModeChange('yolo')}
-              onMouseEnter={() => {
+              onClick={() => {
+                onDeployModeChange('yolo')
                 const data: InfoPanelData = { kind: 'deployMode', mode: 'yolo', phases: state.phases }
-                setInfoPanel(data)
                 setStickyPanel(data)
               }}
-              onMouseLeave={() => setInfoPanel(null)}
               className={cn(
-                'px-3 py-1.5 text-xs transition-colors',
+                'px-3 py-1.5 text-xs font-medium transition-all duration-150 border -ml-px',
+                'rounded-r-lg',
                 state.deployMode === 'yolo'
-                  ? 'bg-amber-500/10 text-amber-400'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-inner'
+                  : 'bg-secondary/30 text-muted-foreground border-border hover:text-foreground hover:bg-secondary/50'
               )}
             >
               YOLO
@@ -419,15 +844,74 @@ export function FlightPlanBlueprint({
       <div className="flex-1 flex overflow-hidden">
         {/* SVG Blueprint */}
         <div className="flex-1 p-4 overflow-hidden relative">
+          {/* Zoom & sidebar controls */}
+          <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
+            <button
+              onClick={() => setZoom(z => Math.min(z + ZOOM_STEP, ZOOM_MAX))}
+              className="p-1 rounded bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+              title="Zoom in"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setZoom(z => Math.max(z - ZOOM_STEP, ZOOM_MIN))}
+              className="p-1 rounded bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+              title="Zoom out"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setZoom(1)}
+              className="p-1 rounded bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+              title="Reset zoom"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setInfoPanelCollapsed(c => !c)}
+              className="p-1 rounded bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors ml-1"
+              title={infoPanelCollapsed ? 'Show info panel' : 'Hide info panel'}
+            >
+              {infoPanelCollapsed ? <PanelRightOpen className="w-4 h-4" /> : <PanelRightClose className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => setAnimationsEnabled(a => !a)}
+              className="p-1 rounded bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+              title={animationsEnabled ? 'Pause animations' : 'Resume animations'}
+            >
+              {animationsEnabled ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => setLabelsVisible(v => !v)}
+              className={cn("p-1 rounded bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors", !labelsVisible && "opacity-50")}
+              title={labelsVisible ? 'Hide line labels' : 'Show line labels'}
+            >
+              <Tags className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => exportFullReport(state, healthyState, installedProjects, layout, svgContainerRef)}
+              className="p-1 rounded bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+              title="Export full report (Print to PDF)"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div
+            ref={svgContainerRef}
+            className="w-full h-full overflow-auto"
+            style={{ cursor: zoom > 1 ? 'grab' : 'default' }}
+            onMouseDown={handlePanStart}
+          >
           <motion.div
-            className="w-full h-full flex items-center justify-center"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
+            style={{ width: `${zoom * 100}%`, height: `${zoom * 100}%`, minWidth: `${zoom * 100}%`, minHeight: `${zoom * 100}%` }}
           >
             <svg
               viewBox={`0 0 ${layout.viewBox.width} ${layout.viewBox.height}`}
-              className="w-full h-full max-h-full"
+              className="w-full h-full"
             >
               <BlueprintDefs id={svgId} />
 
@@ -445,7 +929,7 @@ export function FlightPlanBlueprint({
                   <ClusterZone
                     key={name}
                     id={svgId}
-                    name={name}
+                    name={shortenClusterName(name)}
                     provider={cluster?.distribution ?? detectCloudProvider(name, cluster?.server, cluster?.namespaces, cluster?.user)}
                     rect={rect}
                     nodeCount={cluster?.nodeCount}
@@ -464,11 +948,25 @@ export function FlightPlanBlueprint({
                 )
               })}
 
-              {/* Dependency paths */}
+              {/* Dependency paths — find positions by project name from composite-keyed map */}
               {layout.dependencyEdges.map((edge, i) => {
-                const from = layout.projectPositions.get(edge.from)
-                const to = layout.projectPositions.get(edge.to)
-                // Skip edges where either endpoint is outside the viewbox (stray lines)
+                let from: ProjectPosition | undefined
+                let to: ProjectPosition | undefined
+                const fromAll: ProjectPosition[] = []
+                const toAll: ProjectPosition[] = []
+                for (const pos of layout.projectPositions.values()) {
+                  if (pos.projectName === edge.from) fromAll.push(pos)
+                  if (pos.projectName === edge.to) toAll.push(pos)
+                }
+                // Prefer same-cluster pair
+                for (const fp of fromAll) {
+                  for (const tp of toAll) {
+                    if (fp.clusterName === tp.clusterName) { from = fp; to = tp; break }
+                  }
+                  if (from) break
+                }
+                if (!from && fromAll.length) from = fromAll[0]
+                if (!to && toAll.length) to = toAll[0]
                 if (!from || !to) return null
                 if (from.cx <= 0 || from.cy <= 0 || to.cx <= 0 || to.cy <= 0) return null
                 return (
@@ -486,16 +984,16 @@ export function FlightPlanBlueprint({
                 )
               })}
 
-              {/* Project nodes */}
-              {Array.from(layout.projectPositions.entries()).map(([name, pos], i) => {
-                const project = projectMap.get(name)
+              {/* Project nodes — composite keys allow same project on multiple clusters */}
+              {Array.from(layout.projectPositions.entries()).map(([compositeKey, pos], i) => {
+                const project = projectMap.get(pos.projectName)
                 if (!project) return null
                 const launchProject = state.launchProgress
                   .flatMap((p) => p.projects)
-                  .find((p) => p.name === name)
+                  .find((p) => p.name === pos.projectName)
                 return (
                   <ProjectNode
-                    key={name}
+                    key={compositeKey}
                     id={svgId}
                     name={project.name}
                     displayName={project.displayName}
@@ -505,18 +1003,64 @@ export function FlightPlanBlueprint({
                     index={i}
                     status={launchProject?.status}
                     isRequired={project.priority === 'required'}
+                    installed={installedProjects.has(project.name)}
                     reason={project.reason}
                     dependencies={project.dependencies}
                     kbPath={project.kbPath}
                     maturity={project.maturity}
                     priority={project.priority}
                     overlay={state.overlay}
-                    onHover={handleProjectHover}
+                    glow={glowProjects.has(project.name)}
+                    dimmed={glowProjects.size > 0 && !glowProjects.has(project.name)}
+                    onHover={(info) => {
+                      handleProjectHover(info)
+                      setHoveredProject(info ? project.name : null)
+                    }}
                     onDragStart={(n) => setDragProject({ name: n, fromCluster: pos.clusterName })}
                     onDragEnd={() => { setDragProject(null); setDropTarget(null) }}
                   />
                 )
               })}
+
+              {/* Dependency labels — top layer so they're never hidden behind lines */}
+              {labelsVisible && (() => {
+                const MIN_LABEL_GAP = 14
+                const labelSlots: { midX: number; midY: number; offsetY: number }[] = []
+                return layout.dependencyEdges.map((edge) => {
+                  if (!edge.label) return null
+                  const from = layout.projectPositions.get(edge.from)
+                  const to = layout.projectPositions.get(edge.to)
+                  if (!from || !to) return null
+                  if (from.cx <= 0 || from.cy <= 0 || to.cx <= 0 || to.cy <= 0) return null
+
+                  const { midX, midY } = computeEdgeMidpoint(from.cx, from.cy, to.cx, to.cy)
+                  let offsetY = 0
+                  for (const slot of labelSlots) {
+                    const dxL = Math.abs(midX - slot.midX)
+                    const dyL = Math.abs(midY + offsetY - (slot.midY + slot.offsetY))
+                    if (dxL < 60 && dyL < MIN_LABEL_GAP) {
+                      offsetY = (slot.midY + slot.offsetY) - midY + MIN_LABEL_GAP
+                    }
+                  }
+                  labelSlots.push({ midX, midY, offsetY })
+                  return (
+                    <DependencyLabel
+                      key={`label-${edge.from}-${edge.to}`}
+                      midX={midX}
+                      midY={midY + offsetY}
+                      label={edge.label}
+                      crossCluster={edge.crossCluster}
+                      fromName={edge.from}
+                      toName={edge.to}
+                      anchorX={midX}
+                      anchorY={midY}
+                      onHover={setHoveredEdge}
+                      highlight={glowEdges.has(`${edge.from}-${edge.to}`)}
+                      dimmed={glowEdges.size > 0 && !glowEdges.has(`${edge.from}-${edge.to}`)}
+                    />
+                  )
+                })
+              })()}
 
               {/* Phase timeline */}
               <PhaseTimeline
@@ -540,8 +1084,11 @@ export function FlightPlanBlueprint({
               >
                 FLIGHT PLAN{state.title ? `: ${state.title.toUpperCase()}` : ''}
               </text>
+
+
             </svg>
           </motion.div>
+          </div>
 
           {/* Drag-and-drop overlay — invisible drop zones per cluster */}
           {dragProject && (
@@ -580,10 +1127,23 @@ export function FlightPlanBlueprint({
               </svg>
             </div>
           )}
+
+
         </div>
 
         {/* Right info panel */}
-        <div className="w-[26rem] border-l border-border bg-card flex flex-col overflow-y-auto shrink-0">
+        <div
+          className={cn(
+            'relative border-l border-border bg-card flex flex-col overflow-y-auto shrink-0 transition-[width] duration-200',
+            infoPanelCollapsed && 'w-0 border-l-0 overflow-hidden'
+          )}
+          style={infoPanelCollapsed ? { width: 0 } : { width: infoPanelWidth }}
+        >
+          {/* Resize drag handle */}
+          <div
+            className="absolute top-0 left-0 w-[3px] h-full cursor-col-resize z-10 hover:bg-primary/40 active:bg-primary/60 transition-colors"
+            onMouseDown={handleResizeStart}
+          />
           <AnimatePresence mode="wait">
             {visiblePanel ? (
               <motion.div
@@ -595,7 +1155,7 @@ export function FlightPlanBlueprint({
                 className="p-4 space-y-4"
               >
                 {visiblePanel.kind === 'project' ? (
-                  <ProjectInfoPanel info={visiblePanel.info} />
+                  <ProjectInfoPanel info={visiblePanel.info} edges={layout?.dependencyEdges} />
                 ) : visiblePanel.kind === 'cluster' ? (
                   <ClusterInfoPanel info={visiblePanel.info} />
                 ) : (
@@ -604,6 +1164,7 @@ export function FlightPlanBlueprint({
                     phases={state.phases}
                     projects={state.projects}
                     onShowProject={(proj) => handleShowMissionPreview(proj)}
+                    installedProjects={installedProjects}
                   />
                 )}
               </motion.div>
@@ -668,7 +1229,9 @@ export function FlightPlanBlueprint({
 // Project info panel
 // ---------------------------------------------------------------------------
 
-function ProjectInfoPanel({ info }: { info: ProjectHoverInfo }) {
+function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edges?: DependencyEdge[] }) {
+  // Find connections for this project
+  const connections = edges?.filter(e => e.from === info.name || e.to === info.name) ?? []
   const [mission, setMission] = useState<MissionExport | null>(null)
   const [loadingSteps, setLoadingSteps] = useState(false)
   const fetchedRef = useRef<string>('')
@@ -739,6 +1302,34 @@ function ProjectInfoPanel({ info }: { info: ProjectHoverInfo }) {
         </div>
       )}
 
+      {/* Connections (from dependency edges) */}
+      {connections.length > 0 && (
+        <div>
+          <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Connections</h4>
+          <div className="space-y-1">
+            {connections.map((edge, i) => {
+              const other = edge.from === info.name ? edge.to : edge.from
+              const direction = edge.from === info.name ? '→' : '←'
+              return (
+                <div key={i} className="flex items-center gap-1.5 text-xs">
+                  <span className={cn(
+                    'w-1.5 h-1.5 rounded-full',
+                    edge.crossCluster ? 'bg-amber-500' : 'bg-indigo-500'
+                  )} />
+                  <span className="text-foreground/80">{direction} {other}</span>
+                  {edge.label && (
+                    <span className="text-muted-foreground">({edge.label})</span>
+                  )}
+                  {edge.crossCluster && (
+                    <span className="text-[9px] text-amber-400/70">cross-cluster</span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Install steps from KB mission */}
       {info.kbPath && (
         <div>
@@ -778,6 +1369,7 @@ function ProjectInfoPanel({ info }: { info: ProjectHoverInfo }) {
           {info.isRequired && <span className="text-muted-foreground font-normal ml-1">(required)</span>}
         </div>
       </div>
+
     </>
   )
 }
@@ -969,11 +1561,12 @@ function generateDefaultPhases(projects: PayloadProject[]): DeployPhase[] {
   return result
 }
 
-function DeployModeInfoPanel({ mode, phases, projects, onShowProject }: {
+function DeployModeInfoPanel({ mode, phases, projects, onShowProject, installedProjects = new Set() }: {
   mode: 'phased' | 'yolo'
   phases: DeployPhase[]
   projects: PayloadProject[]
   onShowProject?: (project: PayloadProject) => void
+  installedProjects?: Set<string>
 }) {
   const depNotes = useMemo(() => getDependencyNotes(projects), [projects])
   // Use AI-provided phases, or auto-generate from dependencies
@@ -1072,6 +1665,16 @@ function DeployModeInfoPanel({ mode, phases, projects, onShowProject }: {
                               </button>
                             )}
                           </div>
+                          {installedProjects.has(proj.name) && (
+                            <span className="text-[9px] ml-1 px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-400">
+                              installed
+                            </span>
+                          )}
+                          {!installedProjects.has(proj.name) && (
+                            <span className="text-[9px] ml-1 px-1 py-0.5 rounded bg-slate-500/10 text-slate-400">
+                              deploy
+                            </span>
+                          )}
                           <span className={cn(
                             'text-[9px] ml-1.5 px-1 py-0.5 rounded',
                             proj.priority === 'required' ? 'bg-red-500/10 text-red-400' :
@@ -1107,8 +1710,14 @@ function DeployModeInfoPanel({ mode, phases, projects, onShowProject }: {
           <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 p-3">
             <div className="flex flex-wrap gap-1.5">
               {projects.map((proj) => (
-                <span key={proj.name} className="text-[10px] px-2 py-1 rounded-md bg-violet-500/10 text-violet-300 border border-violet-500/20">
+                <span key={proj.name} className={cn(
+                  'text-[10px] px-2 py-1 rounded-md border',
+                  installedProjects.has(proj.name)
+                    ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+                    : 'bg-violet-500/10 text-violet-300 border-violet-500/20'
+                )}>
                   {proj.displayName}
+                  {installedProjects.has(proj.name) && <span className="ml-1 opacity-60">✓</span>}
                 </span>
               ))}
             </div>
@@ -1160,6 +1769,84 @@ function DeployModeInfoPanel({ mode, phases, projects, onShowProject }: {
           )}
         </div>
       </div>
+
+      {/* Rollback Plan */}
+      {projects.length > 0 && (() => {
+        const toRemove = projects.filter(p => !installedProjects.has(p.name))
+        const toKeep = projects.filter(p => installedProjects.has(p.name))
+        const effectivePhases2 = phases.length > 0 ? phases : generateDefaultPhases(projects)
+        const rollbackPhases = [...effectivePhases2].reverse()
+        return (
+          <div className="pt-2 border-t border-border">
+            <h4 className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider mb-1.5">
+              Rollback Plan
+            </h4>
+            <p className="text-[10px] text-muted-foreground mb-2">
+              Reverse deployment in safe order. Already-installed items are preserved.
+            </p>
+
+            {toKeep.length > 0 && (
+              <div className="mb-2">
+                <p className="text-[9px] font-semibold text-emerald-400 uppercase tracking-wider mb-1">
+                  Protected (will not be removed)
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {toKeep.map(p => (
+                    <span key={p.name} className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      {p.displayName}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {toRemove.length > 0 && (
+              <div>
+                <p className="text-[9px] font-semibold text-amber-400 uppercase tracking-wider mb-1">
+                  {mode === 'phased' ? 'Removal Order (reverse phases)' : 'Will Be Removed'}
+                </p>
+                {mode === 'phased' ? (
+                  <div className="space-y-1.5">
+                    {rollbackPhases.map((phase, i) => {
+                      const removable = phase.projectNames.filter(n => !installedProjects.has(n))
+                      if (removable.length === 0) return null
+                      return (
+                        <div key={phase.phase} className="rounded border border-amber-500/20 bg-amber-500/5 p-2">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="text-[9px] font-bold text-amber-400">Step {i + 1}</span>
+                            <span className="text-[10px] text-muted-foreground">Remove {phase.name}</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {removable.map(n => (
+                              <span key={n} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                                helm uninstall {n}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-1">
+                    {toRemove.map(p => (
+                      <span key={p.name} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                        helm uninstall {p.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {toRemove.length === 0 && (
+              <p className="text-[10px] text-emerald-400 italic">
+                All projects are already installed — nothing to roll back.
+              </p>
+            )}
+          </div>
+        )
+      })()}
     </>
   )
 }

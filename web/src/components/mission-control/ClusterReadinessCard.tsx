@@ -3,8 +3,10 @@
  * health status, and assigned projects.
  */
 
+import { Server, Cpu, Box } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { CloudProviderIcon } from '../ui/CloudProviderIcon'
+import { clusterDisplayName } from '../../hooks/mcp/shared'
 import type { ClusterInfo } from '../../hooks/mcp/types'
 import type { ClusterAssignment } from './types'
 
@@ -14,6 +16,8 @@ interface ClusterReadinessCardProps {
   onToggleProject: (projectName: string, assigned: boolean) => void
   availableProjects: string[]
   isRecommended?: boolean
+  /** Map of projectName → Set<clusterName> for installed projects */
+  installedOnCluster?: Map<string, Set<string>>
 }
 
 function CapacityBar({ label, used, total, unit }: {
@@ -50,6 +54,7 @@ export function ClusterReadinessCard({
   onToggleProject,
   availableProjects,
   isRecommended,
+  installedOnCluster = new Map(),
 }: ClusterReadinessCardProps) {
   const provider = (cluster.distribution || 'kubernetes') as Parameters<typeof CloudProviderIcon>[0]['provider']
   const assignedProjects = assignment?.projectNames ?? []
@@ -69,7 +74,7 @@ export function ClusterReadinessCard({
         <CloudProviderIcon provider={provider} size={28} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h4 className="text-sm font-medium truncate">{cluster.name}</h4>
+            <h4 className="text-sm font-medium truncate" title={cluster.name}>{clusterDisplayName(cluster.name)}</h4>
             <span
               className={cn(
                 'w-2 h-2 rounded-full flex-shrink-0',
@@ -78,10 +83,23 @@ export function ClusterReadinessCard({
               title={cluster.healthy ? 'Healthy' : 'Unhealthy'}
             />
           </div>
-          <p className="text-xs text-muted-foreground">
-            {cluster.nodeCount ?? 0} node{(cluster.nodeCount ?? 0) !== 1 ? 's' : ''}
-            {cluster.distribution && ` · ${cluster.distribution}`}
-          </p>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1" title={`${cluster.nodeCount ?? 0} nodes`}>
+              <Server className="w-3 h-3" />
+              <span>{cluster.nodeCount ?? 0}</span>
+            </div>
+            <div className="flex items-center gap-1" title={`${cluster.cpuCores ?? 0} CPU cores`}>
+              <Cpu className="w-3 h-3" />
+              <span>{cluster.cpuCores ?? 0}</span>
+            </div>
+            <div className="flex items-center gap-1" title={`${cluster.podCount ?? 0} pods`}>
+              <Box className="w-3 h-3" />
+              <span>{cluster.podCount ?? 0}</span>
+            </div>
+            {cluster.distribution && (
+              <span className="text-2xs opacity-60">{cluster.distribution}</span>
+            )}
+          </div>
         </div>
         {readiness && (
           <div
@@ -148,20 +166,32 @@ export function ClusterReadinessCard({
         <div className="space-y-1 max-h-40 overflow-y-auto overscroll-contain [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full">
           {availableProjects.map((name) => {
             const checked = assignedProjects.includes(name)
+            const isInstalled = installedOnCluster.get(name)?.has(cluster.name) ?? false
             return (
               <label
                 key={name}
-                className="flex items-center gap-2 text-xs cursor-pointer hover:bg-secondary/50 px-1.5 py-0.5 rounded"
+                className={cn(
+                  'flex items-center gap-2 text-xs px-1.5 py-0.5 rounded',
+                  isInstalled ? 'cursor-default' : 'cursor-pointer hover:bg-secondary/50'
+                )}
+                title={isInstalled ? `${name} is already installed on this cluster` : undefined}
               >
                 <input
                   type="checkbox"
-                  checked={checked}
-                  onChange={() => onToggleProject(name, !checked)}
+                  checked={checked || isInstalled}
+                  onChange={() => !isInstalled && onToggleProject(name, !checked)}
+                  disabled={isInstalled}
                   className="rounded border-border"
                 />
-                <span className={checked ? 'text-foreground' : 'text-muted-foreground'}>
+                <span className={cn(
+                  checked || isInstalled ? 'text-foreground' : 'text-muted-foreground',
+                  isInstalled && 'font-medium'
+                )}>
                   {name}
                 </span>
+                {isInstalled && (
+                  <span className="text-[9px] text-emerald-400 font-medium ml-auto">installed</span>
+                )}
               </label>
             )
           })}

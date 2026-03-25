@@ -37,6 +37,7 @@ interface SolutionDefinitionPanelProps {
   onReplaceProject?: (oldName: string, newProject: PayloadProject) => void
   aiStreaming: boolean
   planningMission: Mission | null | undefined
+  installedProjects?: Set<string>
 }
 
 export function SolutionDefinitionPanel({
@@ -50,12 +51,12 @@ export function SolutionDefinitionPanel({
   onReplaceProject,
   aiStreaming,
   planningMission,
+  installedProjects,
 }: SolutionDefinitionPanelProps) {
   const [placeholderIdx, setPlaceholderIdx] = useState(0)
   const [showManualAdd, setShowManualAdd] = useState(false)
   const [manualName, setManualName] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const [hoveredProject, setHoveredProject] = useState<PayloadProject | null>(null)
   const [stickyProject, setStickyProject] = useState<PayloadProject | null>(null)
 
   useEffect(() => {
@@ -88,9 +89,8 @@ export function SolutionDefinitionPanel({
     setShowManualAdd(false)
   }
 
-  const handleCardHover = useCallback((project: PayloadProject | null) => {
-    setHoveredProject(project)
-    if (project) setStickyProject(project)
+  const handleCardClick = useCallback((project: PayloadProject) => {
+    setStickyProject(project)
   }, [])
 
   const latestAIMessage = planningMission?.messages
@@ -314,7 +314,8 @@ export function SolutionDefinitionPanel({
             projects={state.projects}
             onRemoveProject={onRemoveProject}
             onUpdatePriority={onUpdatePriority}
-            onHoverProject={handleCardHover}
+            onClickProject={handleCardClick}
+            installedProjects={installedProjects}
           />
         </div>
       </div>
@@ -322,9 +323,9 @@ export function SolutionDefinitionPanel({
       {/* Right: Info panel */}
       <div className="w-[26rem] border-l border-border bg-card flex flex-col overflow-y-auto shrink-0">
         <AnimatePresence mode="wait">
-          {(hoveredProject ?? stickyProject) ? (
+          {stickyProject ? (
             <motion.div
-              key={`p-${(hoveredProject ?? stickyProject)!.name}`}
+              key={`p-${stickyProject!.name}`}
               initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 10 }}
@@ -334,11 +335,15 @@ export function SolutionDefinitionPanel({
               <ProjectDetailPanel
                 project={
                   // Always use the latest version from state (stale hover refs don't have swap updates)
-                  state.projects.find((p) => p.name === (hoveredProject ?? stickyProject)!.name)
-                  ?? (hoveredProject ?? stickyProject)!
+                  state.projects.find((p) => p.name === stickyProject!.name)
+                  ?? stickyProject!
                 }
                 allProjects={state.projects}
-                onReplace={onReplaceProject}
+                onReplace={onReplaceProject ? (oldName, newProject) => {
+                  onReplaceProject(oldName, newProject)
+                  // Update sticky to the swapped-in project so the panel refreshes
+                  setStickyProject(newProject)
+                } : undefined}
               />
             </motion.div>
           ) : (
@@ -349,7 +354,7 @@ export function SolutionDefinitionPanel({
               className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-6"
             >
               <Info className="w-8 h-8 mb-3 opacity-30" />
-              <p className="text-sm text-center">Hover a project card for details</p>
+              <p className="text-sm text-center">Click a project card for details</p>
               <p className="text-xs text-center mt-1 opacity-60">
                 See AI reasoning, install steps, dependencies, and alternatives
               </p>

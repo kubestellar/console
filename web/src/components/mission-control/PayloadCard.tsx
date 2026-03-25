@@ -54,9 +54,11 @@ interface PayloadCardProps {
   onRemove: () => void
   onUpdatePriority: (priority: PayloadProject['priority']) => void
   onHover?: (project: PayloadProject | null) => void
+  onClick?: () => void
+  installed?: boolean
 }
 
-export function PayloadCard({ project, onRemove, onUpdatePriority, onHover }: PayloadCardProps) {
+export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onClick, installed }: PayloadCardProps) {
   const [imgFailed, setImgFailed] = useState(false)
   const [showPriorityMenu, setShowPriorityMenu] = useState(false)
   const [showDeps, setShowDeps] = useState(false)
@@ -76,7 +78,11 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover }: Pa
       onMouseLeave={() => onHover?.(null)}
     >
       <div
-        className="rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+        className={cn(
+          'rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow',
+          onClick && 'cursor-pointer'
+        )}
+        onClick={onClick}
         style={{
           borderTopColor: gradient[0],
           borderTopWidth: 2,
@@ -135,6 +141,19 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover }: Pa
           >
             {project.category}
           </span>
+
+          {/* Installed / Needs deploy */}
+          {installed != null && (
+            installed ? (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-400 border border-green-500/30 font-medium">
+                Installed
+              </span>
+            ) : (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-500/15 text-slate-400 border border-dashed border-slate-500/30 font-medium">
+                Needs deploy
+              </span>
+            )
+          )}
 
           {/* Swapped indicator */}
           {project.originalName && (

@@ -55,12 +55,18 @@ export interface ProjectNodeProps {
   index: number
   status?: NodeStatus
   isRequired?: boolean
+  /** Whether this project is already installed on the cluster */
+  installed?: boolean
   reason?: string
   dependencies?: string[]
   kbPath?: string
   maturity?: string
   priority?: string
   overlay?: string
+  /** Whether this node is highlighted (connected edge/project hovered) */
+  glow?: boolean
+  /** Whether something else is glowing and this node should fade */
+  dimmed?: boolean
   onHover?: (info: ProjectHoverInfo | null) => void
   onDragStart?: (name: string) => void
   onDragEnd?: () => void
@@ -107,12 +113,15 @@ export function ProjectNode({
   index,
   status = 'pending',
   isRequired = false,
+  installed = false,
   reason,
   dependencies = [],
   kbPath,
   maturity,
   priority,
   overlay = 'architecture',
+  glow = false,
+  dimmed = false,
   onHover,
   onDragStart,
   onDragEnd,
@@ -132,14 +141,14 @@ export function ProjectNode({
     overlay === 'architecture' ||
     OVERLAY_CATEGORIES[overlay]?.has(category) ||
     false
-  const dimOpacity = overlay === 'architecture' ? 1 : isRelevant ? 1 : 0.25
+  const overlayDim = overlay === 'architecture' ? 1 : isRelevant ? 1 : 0.25
 
   const iconSize = radius * 1.2
 
   return (
     <motion.g
       initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: dimOpacity }}
+      animate={{ scale: 1, opacity: dimmed ? 0.15 : overlayDim }}
       transition={{
         type: 'spring',
         stiffness: 400,
@@ -154,16 +163,17 @@ export function ProjectNode({
       })}
       onMouseLeave={() => onHover?.(null)}
     >
-      {/* Outer glow ring */}
+      {/* Outer ring — solid green=installed, dashed slate=needs deploy, white when glowing */}
       <circle
         cx={cx}
         cy={cy}
         r={radius + 3}
         fill="none"
-        stroke={statusColor}
-        strokeWidth={isRequired ? 1.5 : 0.8}
-        strokeOpacity={0.4}
-        filter={statusGlowId ? `url(#${statusGlowId})` : undefined}
+        stroke={glow ? '#ffffff' : installed ? '#22c55e' : '#64748b'}
+        strokeWidth={glow ? 2 : installed ? 1.5 : 0.6}
+        strokeOpacity={glow ? 0.9 : installed ? 0.6 : 0.3}
+        strokeDasharray={installed ? 'none' : '3 2'}
+        filter={glow ? `url(#${id}-glow)` : statusGlowId ? `url(#${statusGlowId})` : undefined}
       />
 
       {/* Running pulse */}
@@ -174,27 +184,16 @@ export function ProjectNode({
         </circle>
       )}
 
-      {/* Node circle background */}
+      {/* Node circle background — green border for installed, subtle slate for uninstalled */}
       <circle
         cx={cx}
         cy={cy}
         r={radius}
         fill={`url(#${id}-node-bg)`}
-        stroke={primaryColor}
-        strokeWidth={1.2}
-        strokeOpacity={0.7}
+        stroke={glow ? '#ffffff' : '#475569'}
+        strokeWidth={1}
+        strokeOpacity={0.4}
         cursor="pointer"
-      />
-
-      {/* Category color accent (inner ring) */}
-      <circle
-        cx={cx}
-        cy={cy}
-        r={radius - 2}
-        fill="none"
-        stroke={primaryColor}
-        strokeWidth={0.5}
-        strokeOpacity={0.3}
       />
 
       {/* Project icon via foreignObject — GitHub avatar or fallback letter */}
@@ -249,26 +248,11 @@ export function ProjectNode({
         </div>
       </foreignObject>
 
-      {/* Label — auto-shorten long names */}
-      <text
-        x={cx}
-        y={cy + radius + 8}
-        textAnchor="middle"
-        fill="white"
-        fontSize={displayName.length > 18 ? 4.5 : 5.5}
-        fontFamily="system-ui, sans-serif"
-        opacity={0.85}
-      >
-        {displayName.length > 22 ? displayName.slice(0, 20) + '...' : displayName}
-      </text>
 
-      {/* Status indicator dot */}
-      <circle
-        cx={cx + radius - 2}
-        cy={cy - radius + 2}
-        r={2.5}
-        fill={statusColor}
-      />
+
+
+
+
 
       {/* Completed checkmark */}
       {status === 'completed' && (
@@ -283,6 +267,44 @@ export function ProjectNode({
           transition={{ duration: 0.3 }}
         />
       )}
+
+      {/* Name label — only shown when this node is glowing, placed above to avoid edge labels */}
+      {glow && (() => {
+        const shortName = name.length <= 16 ? name : name.replace(/-/g, ' ')
+        const labelW = shortName.length * 3.6 + 8
+        const labelY = cy - radius - 10
+        return (
+          <motion.g
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
+          >
+            <rect
+              x={cx - labelW / 2}
+              y={labelY - 5.5}
+              width={labelW}
+              height={10}
+              rx={3}
+              fill="#0f172a"
+              fillOpacity={0.9}
+              stroke="#ffffff"
+              strokeWidth={0.4}
+              strokeOpacity={0.5}
+            />
+            <text
+              x={cx}
+              y={labelY + 1.5}
+              textAnchor="middle"
+              fill="#e2e8f0"
+              fontSize={5}
+              fontFamily="system-ui, sans-serif"
+              fontWeight="600"
+            >
+              {shortName}
+            </text>
+          </motion.g>
+        )
+      })()}
     </motion.g>
   )
 }

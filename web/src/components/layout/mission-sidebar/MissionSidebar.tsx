@@ -867,9 +867,22 @@ export function MissionSidebar() {
                   key={mission.id}
                   mission={mission}
                   isActive={false}
-                  onClick={() => setActiveMission(mission.id)}
+                  onClick={() => {
+                    if (mission.title === 'Mission Control Planning') {
+                      setShowMissionControl(true)
+                    } else {
+                      setActiveMission(mission.id)
+                    }
+                  }}
                   onDismiss={() => dismissMission(mission.id)}
-                  onExpand={() => { setActiveMission(mission.id); setFullScreen(true) }}
+                  onExpand={() => {
+                    if (mission.title === 'Mission Control Planning') {
+                      setShowMissionControl(true)
+                    } else {
+                      setActiveMission(mission.id)
+                      setFullScreen(true)
+                    }
+                  }}
                   isCollapsed={collapsedMissions.has(mission.id)}
                   onToggleCollapse={() => toggleMissionCollapse(mission.id)}
                 />

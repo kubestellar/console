@@ -18,6 +18,8 @@ import type { Mission } from '../../hooks/useMissions'
 
 // Import cluster data hook
 import { useClusters } from '../../hooks/mcp/clusters'
+import { useHelmReleases } from '../../hooks/mcp/helm'
+import { clusterDisplayName } from '../../hooks/mcp/shared'
 
 type ViewMode = 'cards' | 'matrix'
 
@@ -27,6 +29,8 @@ interface ClusterAssignmentPanelProps {
   onSetAssignment: (clusterName: string, projectName: string, assigned: boolean) => void
   aiStreaming: boolean
   planningMission?: Mission | null
+  /** Map of projectName → Set<clusterName> for projects already installed */
+  installedOnCluster?: Map<string, Set<string>>
 }
 
 export function ClusterAssignmentPanel({
@@ -35,8 +39,10 @@ export function ClusterAssignmentPanel({
   onSetAssignment,
   aiStreaming,
   planningMission,
+  installedOnCluster = new Map(),
 }: ClusterAssignmentPanelProps) {
   const { clusters, isLoading: clustersLoading } = useClusters()
+  const { releases: helmReleases } = useHelmReleases()
   const [viewMode, setViewMode] = useState<ViewMode>('cards')
   const [autoAssignDone, setAutoAssignDone] = useState(false)
   const [excludedClusters, setExcludedClusters] = useState<Set<string>>(new Set())
@@ -56,6 +62,31 @@ export function ClusterAssignmentPanel({
   )
 
   const projectNames = state.projects.map((p) => p.name)
+
+  // Generate per-cluster inspection notes from helm release data
+  const clusterInspectionNotes = useMemo(() => {
+    const notes = new Map<string, string[]>()
+    if (!helmReleases?.length) return notes
+    for (const cluster of healthyClusters) {
+      const clusterReleases = helmReleases.filter(r => r.cluster === cluster.name)
+      if (clusterReleases.length === 0) continue
+      const clusterNotes: string[] = []
+      for (const project of state.projects) {
+        const pName = project.name.toLowerCase()
+        const match = clusterReleases.find(r =>
+          r.name.toLowerCase().includes(pName) ||
+          (r.chart && r.chart.toLowerCase().includes(pName)) ||
+          (r.namespace && r.namespace.toLowerCase().includes(pName))
+        )
+        if (match) {
+          const ns = match.namespace ? ` in '${match.namespace}' namespace` : ''
+          clusterNotes.push(`${project.displayName} already running${ns} (${match.name}) — skip install`)
+        }
+      }
+      if (clusterNotes.length > 0) notes.set(cluster.name, clusterNotes)
+    }
+    return notes
+  }, [helmReleases, healthyClusters, state.projects])
 
   const handleAutoAssign = useCallback(() => {
     if (healthyClusters.length === 0) return
@@ -79,18 +110,18 @@ export function ClusterAssignmentPanel({
     setAutoAssignDone(true)
   }, [healthyClusters, state.projects, onAskAI])
 
-  // Auto-assign on first mount if we have clusters and no assignments yet
+  // Show cluster picker on first mount so user can select clusters before auto-assign
   useEffect(() => {
     if (
       !autoAssignDone &&
       !aiStreaming &&
-      healthyClusters.length > 0 &&
+      allHealthyClusters.length > 0 &&
       state.assignments.length === 0 &&
       state.projects.length > 0
     ) {
-      handleAutoAssign()
+      setShowClusterPicker(true)
     }
-  }, [healthyClusters.length, autoAssignDone])
+  }, [allHealthyClusters.length])
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
@@ -147,7 +178,7 @@ export function ClusterAssignmentPanel({
                     >
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                        <span className="text-xs font-medium">{c.name}</span>
+                        <span className="text-xs font-medium" title={c.name}>{clusterDisplayName(c.name)}</span>
                         <span className="text-[10px] text-muted-foreground">{c.distribution || 'k8s'}</span>
                       </div>
                       <button
@@ -173,7 +204,7 @@ export function ClusterAssignmentPanel({
                         >
                           <div className="flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-slate-500" />
-                            <span className="text-xs font-medium text-muted-foreground">{c.name}</span>
+                            <span className="text-xs font-medium text-muted-foreground" title={c.name}>{clusterDisplayName(c.name)}</span>
                             <span className="text-[10px] text-muted-foreground">{c.distribution || 'k8s'}</span>
                           </div>
                           <button
@@ -245,11 +276,18 @@ export function ClusterAssignmentPanel({
         <>
           {viewMode === 'cards' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {healthyClusters.map((cluster) => (
+              {healthyClusters.map((cluster) => {
+                const aiAssignment = state.assignments.find((a) => a.clusterName === cluster.name)
+                const helmNotes = clusterInspectionNotes.get(cluster.name) ?? []
+                // Merge: use AI warnings if present, otherwise use helm-generated notes
+                const mergedAssignment = aiAssignment && helmNotes.length > 0 && (aiAssignment.warnings?.length ?? 0) === 0
+                  ? { ...aiAssignment, warnings: helmNotes }
+                  : aiAssignment
+                return (
                 <ClusterReadinessCard
                   key={cluster.name}
                   cluster={cluster}
-                  assignment={state.assignments.find((a) => a.clusterName === cluster.name)}
+                  assignment={mergedAssignment}
                   onToggleProject={(name, assigned) =>
                     onSetAssignment(cluster.name, name, assigned)
                   }
@@ -257,8 +295,10 @@ export function ClusterAssignmentPanel({
                   isRecommended={state.assignments.some(
                     (a) => a.clusterName === cluster.name && a.projectNames.length > 0
                   )}
+                  installedOnCluster={installedOnCluster}
                 />
-              ))}
+                )
+              })}
             </div>
           ) : (
             <AssignmentMatrix

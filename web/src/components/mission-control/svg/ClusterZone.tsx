@@ -64,16 +64,22 @@ function pct(used: number | undefined, total: number | undefined): number | unde
   return Math.round((used / total) * 100)
 }
 
+/** Format large GB values as TB for readability */
+function formatStorage(gb: number): string {
+  if (gb >= 1024) return `${(gb / 1024).toFixed(gb >= 10240 ? 0 : 1)} TB`
+  return `${Math.round(gb)} GB`
+}
+
 /** Mini stat block for SVG overlays */
-function StatBlock({ x, y, label, value, max, unit, color }: {
-  x: number; y: number; label: string; value?: number; max?: number; unit: string; color: string
+function StatBlock({ x, y, label, value, max, unit, color, displayOverride }: {
+  x: number; y: number; label: string; value?: number; max?: number; unit: string; color: string; displayOverride?: string
 }) {
   const pctVal = pct(value, max)
-  const display = value != null && max != null
+  const display = displayOverride ?? (value != null && max != null
     ? `${Math.round(value)}/${Math.round(max)}${unit}`
     : max != null
       ? `${Math.round(max)}${unit}`
-      : '—'
+      : '—')
   const barColor = pctVal != null
     ? pctVal >= 80 ? '#ef4444' : pctVal >= 50 ? '#f59e0b' : color
     : color
@@ -83,11 +89,11 @@ function StatBlock({ x, y, label, value, max, unit, color }: {
       {/* Background */}
       <rect x={x} y={y} width={56} height={14} rx={2} fill="#0f172a" stroke={color} strokeWidth={0.4} strokeOpacity={0.3} />
       {/* Label */}
-      <text x={x + 3} y={y + 5} fill={color} fontSize={3.5} fontWeight="700" fontFamily="system-ui, sans-serif" opacity={0.8}>
+      <text x={x + 3} y={y + 5} fill={color} fontSize={5.5} fontWeight="700" fontFamily="system-ui, sans-serif" opacity={0.8}>
         {label}
       </text>
       {/* Value */}
-      <text x={x + 53} y={y + 5} textAnchor="end" fill="white" fontSize={3.5} fontFamily="system-ui, sans-serif" opacity={0.9}>
+      <text x={x + 53} y={y + 5} textAnchor="end" fill="white" fontSize={5.5} fontFamily="system-ui, sans-serif" opacity={0.9}>
         {display}
       </text>
       {/* Gauge bar */}
@@ -205,7 +211,7 @@ export function ClusterZone({
         y={y + 17}
         textAnchor="start"
         fill="white"
-        fontSize={9}
+        fontSize={11}
         fontWeight="600"
         fontFamily="system-ui, sans-serif"
         opacity={0.9}
@@ -220,8 +226,8 @@ export function ClusterZone({
       {showCompute && (
         <g>
           {/* Stat block row at top-right */}
-          <StatBlock x={x + width - 120} y={y + 6} label="CPU" value={cpuUsage} max={cpuCores} unit=" cores" color="#22c55e" />
-          <StatBlock x={x + width - 60} y={y + 6} label="MEM" value={memUsage} max={memGB != null ? Math.round(memGB) : undefined} unit=" GB" color="#3b82f6" />
+          <StatBlock x={x + width - 120} y={y + 6} label="CPU" value={cpuUsage} max={cpuCores} unit="" color="#22c55e" displayOverride={pct(cpuUsage, cpuCores) != null ? `${pct(cpuUsage, cpuCores)}%` : cpuCores != null ? `${cpuCores} cores` : '—'} />
+          <StatBlock x={x + width - 60} y={y + 6} label="MEM" value={memUsage} max={memGB} unit="" color="#3b82f6" displayOverride={pct(memUsage, memGB) != null ? `${pct(memUsage, memGB)}%` : memGB != null ? formatStorage(memGB) : '—'} />
           {/* GPU / TPU row */}
           {(gpuCount != null || tpuCount != null) && (
             <>
@@ -235,7 +241,7 @@ export function ClusterZone({
       {/* Storage overlay: PVC, Storage capacity */}
       {showStorage && (
         <g>
-          <StatBlock x={x + width - 120} y={y + 6} label="STORAGE" value={undefined} max={storageGB != null ? Math.round(storageGB) : undefined} unit=" GB" color="#84cc16" />
+          <StatBlock x={x + width - 120} y={y + 6} label="DISK" value={undefined} max={storageGB != null ? Math.round(storageGB) : undefined} unit="" color="#84cc16" displayOverride={storageGB != null ? formatStorage(storageGB) : '—'} />
           <StatBlock x={x + width - 60} y={y + 6} label="PVC" value={pvcBoundCount} max={pvcCount} unit="" color="#06b6d4" />
         </g>
       )}
@@ -245,7 +251,7 @@ export function ClusterZone({
         <g>
           <StatBlock x={x + width - 120} y={y + 6} label="PODS" value={undefined} max={podCount} unit="" color="#0ea5e9" />
           <StatBlock x={x + width - 60} y={y + 6} label="NODES" value={undefined} max={nodeCount} unit="" color="#0ea5e9" />
-          <text x={x + width / 2} y={y + height - 20} textAnchor="middle" fill="#0ea5e9" fontSize={4.5} fontFamily="system-ui, sans-serif" opacity={0.7}>
+          <text x={x + width / 2} y={y + height - 20} textAnchor="middle" fill="#0ea5e9" fontSize={6.5} fontFamily="system-ui, sans-serif" opacity={0.7}>
             Network policies · Service mesh ready
           </text>
         </g>
@@ -256,26 +262,43 @@ export function ClusterZone({
         <g>
           <StatBlock x={x + width - 120} y={y + 6} label="NODES" value={undefined} max={nodeCount} unit="" color="#ef4444" />
           <StatBlock x={x + width - 60} y={y + 6} label="PODS" value={undefined} max={podCount} unit="" color="#ef4444" />
-          <text x={x + width / 2} y={y + height - 20} textAnchor="middle" fill="#ef4444" fontSize={4.5} fontFamily="system-ui, sans-serif" opacity={0.7}>
+          <text x={x + width / 2} y={y + height - 20} textAnchor="middle" fill="#ef4444" fontSize={6.5} fontFamily="system-ui, sans-serif" opacity={0.7}>
             RBAC · Pod Security Standards · Secrets encrypted
           </text>
         </g>
       )}
 
-      {/* Resource summary at bottom */}
-      <text
-        x={x + width / 2}
-        y={y + height - 8}
-        textAnchor="middle"
-        fill="white"
-        fontSize={6.5}
-        fontFamily="system-ui, sans-serif"
-        opacity={0.5}
-      >
-        {nodeCount != null && `${nodeCount} nodes`}
-        {cpuCores != null && ` · ${cpuCores} cores`}
-        {memGB != null && ` · ${memGB.toFixed(0)} GB`}
-      </text>
+      {/* Resource summary at bottom — mini icon + number pairs */}
+      <g opacity={0.55}>
+        {nodeCount != null && (
+          <g>
+            <title>{nodeCount} nodes</title>
+            <text x={x + width / 2 - 48} y={y + height - 7} fill={color} fontSize={9} fontFamily="system-ui, sans-serif">⊞</text>
+            <text x={x + width / 2 - 40} y={y + height - 7} fill="white" fontSize={8} fontFamily="system-ui, sans-serif">{nodeCount}</text>
+          </g>
+        )}
+        {cpuCores != null && (
+          <g>
+            <title>{cpuCores} CPU cores</title>
+            <text x={x + width / 2 - 18} y={y + height - 7} fill={color} fontSize={9} fontFamily="system-ui, sans-serif">⚙</text>
+            <text x={x + width / 2 - 10} y={y + height - 7} fill="white" fontSize={8} fontFamily="system-ui, sans-serif">{cpuCores}</text>
+          </g>
+        )}
+        {podCount != null && (
+          <g>
+            <title>{podCount} pods</title>
+            <text x={x + width / 2 + 12} y={y + height - 7} fill={color} fontSize={9} fontFamily="system-ui, sans-serif">▣</text>
+            <text x={x + width / 2 + 20} y={y + height - 7} fill="white" fontSize={8} fontFamily="system-ui, sans-serif">{podCount}</text>
+          </g>
+        )}
+        {memGB != null && (
+          <g>
+            <title>{memGB.toFixed(0)} GB memory</title>
+            <text x={x + width / 2 + 38} y={y + height - 7} fill={color} fontSize={9} fontFamily="system-ui, sans-serif">◧</text>
+            <text x={x + width / 2 + 46} y={y + height - 7} fill="white" fontSize={8} fontFamily="system-ui, sans-serif">{memGB.toFixed(0)}</text>
+          </g>
+        )}
+      </g>
     </motion.g>
   )
 }

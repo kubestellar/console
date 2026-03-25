@@ -13,6 +13,8 @@ interface PayloadGridProps {
   onRemoveProject: (name: string) => void
   onUpdatePriority: (name: string, priority: PayloadProject['priority']) => void
   onHoverProject?: (project: PayloadProject | null) => void
+  onClickProject?: (project: PayloadProject) => void
+  installedProjects?: Set<string>
 }
 
 export function PayloadGrid({
@@ -20,6 +22,8 @@ export function PayloadGrid({
   onRemoveProject,
   onUpdatePriority,
   onHoverProject,
+  onClickProject,
+  installedProjects,
 }: PayloadGridProps) {
   const [filter, setFilter] = useState('')
 
@@ -69,6 +73,8 @@ export function PayloadGrid({
               onRemove={() => onRemoveProject(project.name)}
               onUpdatePriority={(p) => onUpdatePriority(project.name, p)}
               onHover={onHoverProject}
+              onClick={onClickProject ? () => onClickProject(project) : undefined}
+              installed={installedProjects?.has(project.name)}
             />
           ))}
         </AnimatePresence>

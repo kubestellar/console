@@ -223,6 +223,7 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                     onReplaceProject={mc.replaceProject}
                     aiStreaming={state.aiStreaming}
                     planningMission={mc.planningMission}
+                    installedProjects={mc.installedProjects}
                   />
                 </PhaseWrapper>
               )}
@@ -234,6 +235,7 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                     onSetAssignment={mc.setAssignment}
                     aiStreaming={state.aiStreaming}
                     planningMission={mc.planningMission}
+                    installedOnCluster={mc.installedOnCluster}
                   />
                 </PhaseWrapper>
               )}
@@ -245,6 +247,7 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                     onDeployModeChange={mc.setDeployMode}
                     onLaunch={() => mc.setPhase('launching')}
                     onMoveProject={mc.moveProjectToCluster}
+                    installedProjects={mc.installedProjects}
                   />
                 </PhaseWrapper>
               )}
@@ -282,6 +285,27 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                   </span>
                 )}
               </div>
+              {/* Legend (only on blueprint phase) */}
+              {state.phase === 'blueprint' && (
+                <div className="flex items-center gap-4 text-2xs text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-4 h-0 border-t border-amber-500 inline-block" />
+                    Cross-cluster
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-4 h-0 border-t border-dashed border-indigo-500 inline-block" />
+                    Intra-cluster
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full border-2 border-green-500 inline-block" />
+                    Installed
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full border border-dashed border-slate-500 inline-block" />
+                    Needs deploy
+                  </span>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 {canGoBack && (
                   <Button

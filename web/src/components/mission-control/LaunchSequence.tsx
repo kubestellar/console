@@ -11,11 +11,11 @@ import {
   Rocket,
   Check,
   X,
-  Loader2,
   AlertTriangle,
   SkipForward,
   RotateCcw,
   PartyPopper,
+  Loader2,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'

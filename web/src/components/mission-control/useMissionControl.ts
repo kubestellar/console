@@ -5,8 +5,10 @@
  * console-kb project index lookup, and localStorage persistence.
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useMissions } from '../../hooks/useMissions'
+import { useHelmReleases } from '../../hooks/mcp/helm'
+import { useClusters } from '../../hooks/mcp/clusters'
 import type {
   MissionControlState,
   PayloadProject,
@@ -66,17 +68,28 @@ function makeInitialState(persisted?: Partial<MissionControlState> | null): Miss
 // JSON extraction from AI messages
 // ---------------------------------------------------------------------------
 
-/** Extract the first ```json ... ``` block from a string */
-export function extractJSON<T>(text: string): T | null {
-  // Try fenced JSON blocks first
-  const fenced = text.match(/```json\s*\n?([\s\S]*?)```/)
-  if (fenced) {
+/**
+ * Extract a JSON block from AI text. When `requiredKey` is given, tries all
+ * fenced ```json blocks and returns the first one containing that key.
+ * Falls back to the first parseable block otherwise.
+ */
+export function extractJSON<T>(text: string, requiredKey?: string): T | null {
+  const fencedRe = /```json\s*\n?([\s\S]*?)```/g
+  const candidates: T[] = []
+  let m: RegExpExecArray | null
+  while ((m = fencedRe.exec(text)) !== null) {
     try {
-      return JSON.parse(fenced[1]) as T
+      const parsed = JSON.parse(m[1]) as T
+      if (requiredKey && typeof parsed === 'object' && parsed !== null && requiredKey in parsed) {
+        return parsed
+      }
+      candidates.push(parsed)
     } catch {
-      // fall through
+      // skip unparseable blocks
     }
   }
+  if (candidates.length > 0) return candidates[0]
+
   // Try raw JSON (starts with { or [)
   const rawMatch = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/)
   if (rawMatch) {
@@ -98,7 +111,9 @@ export function useMissionControl() {
     makeInitialState(loadPersistedState())
   )
   const { startMission, sendMessage, missions } = useMissions()
-  const prevMessageCountRef = useRef(0)
+  const { releases: helmReleases } = useHelmReleases()
+  const { clusters } = useClusters()
+  const lastParsedContentRef = useRef('')
 
   // Persist on change (debounced via effect)
   useEffect(() => {
@@ -112,32 +127,54 @@ export function useMissionControl() {
   // Watch the planning mission for new assistant messages
   const planningMission = missions.find((m) => m.id === state.planningMissionId)
 
+  // Track content length of the latest assistant message so we can re-parse
+  // when streaming appends to it (messages.length stays the same during streaming)
+  const latestAssistantContent = useMemo(() => {
+    if (!planningMission) return ''
+    const msgs = planningMission.messages.filter((m) => m.role === 'assistant')
+    return msgs[msgs.length - 1]?.content ?? ''
+  }, [planningMission?.messages])
+
   useEffect(() => {
     if (!planningMission) return
     const assistantMsgs = planningMission.messages.filter((m) => m.role === 'assistant')
-    if (assistantMsgs.length <= prevMessageCountRef.current) return
-    prevMessageCountRef.current = assistantMsgs.length
-
     const latest = assistantMsgs[assistantMsgs.length - 1]
     if (!latest) return
 
+    // Skip if we already parsed this exact content
+    if (latest.content === lastParsedContentRef.current) return
+
     // Try to parse structured data from the latest AI message
     if (state.phase === 'define') {
-      const parsed = extractJSON<{ projects?: PayloadProject[] }>(latest.content)
+      const parsed = extractJSON<{ projects?: PayloadProject[] }>(latest.content, 'projects')
       if (parsed?.projects && parsed.projects.length > 0) {
+        // Ensure dependencies defaults to []
+        const normalized = parsed.projects.map((p) => ({
+          ...p,
+          dependencies: p.dependencies ?? [],
+        }))
+        console.log('[MissionControl] Parsed', normalized.length, 'projects from AI response')
+        lastParsedContentRef.current = latest.content
         setState((prev) => ({
           ...prev,
-          projects: mergeProjects(prev.projects, parsed.projects!),
+          projects: mergeProjects(prev.projects, normalized),
           aiStreaming: false,
         }))
+      } else {
+        // Debug: log what we found
+        const jsonBlocks = latest.content.match(/```json[\s\S]*?```/g)
+        if (jsonBlocks && latest.content.includes('"projects"')) {
+          console.log('[MissionControl] Found JSON blocks but no projects key match:', jsonBlocks.length, 'blocks')
+        }
       }
     } else if (state.phase === 'assign') {
       const parsed = extractJSON<{
         assignments?: ClusterAssignment[]
         phases?: DeployPhase[]
         warnings?: string[]
-      }>(latest.content)
+      }>(latest.content, 'assignments')
       if (parsed?.assignments) {
+        lastParsedContentRef.current = latest.content
         setState((prev) => ({
           ...prev,
           assignments: parsed.assignments!,
@@ -146,7 +183,7 @@ export function useMissionControl() {
         }))
       }
     }
-  }, [planningMission?.messages.length, state.phase, state.planningMissionId])
+  }, [latestAssistantContent, state.phase, state.planningMissionId, planningMission?.status])
 
   // Update streaming state from mission status
   useEffect(() => {
@@ -211,11 +248,18 @@ export function useMissionControl() {
           ? `\n\nAlready selected projects:\n${JSON.stringify(existingProjects.map((p) => p.name))}`
           : ''
 
+      // Include helm release info so AI knows what's already installed
+      const helmContext = helmReleases?.length
+        ? `\n\nIMPORTANT — Cluster inspection results (helm releases already installed across clusters):\n${JSON.stringify(helmReleases.map(r => ({ name: r.name, chart: r.chart, namespace: r.namespace, status: r.status, cluster: r.cluster })), null, 2)}\n\nFor each suggested project, check if it is already installed on the clusters. Include a "Cluster Inspection Summary" table in your analysis showing which components are Running vs Not installed on each cluster.`
+        : ''
+
       const prompt = `You are helping plan a Kubernetes solution deployment.
 User's goal: "${description}"
-${existingContext}
+${existingContext}${helmContext}
 
 First, provide a brief executive analysis of the user's requirements and your recommended architecture approach. Explain what layers of the stack need to be covered (security, networking, observability, etc.) and why.
+
+IMPORTANT: Always include a "Cluster Inspection Summary" table showing which components are already running vs not installed on each cluster. Use the helm release data above to determine installation status.
 
 Then suggest which CNCF/Kubernetes projects to deploy to achieve this goal.
 
@@ -264,7 +308,7 @@ Include real CNCF projects only. Consider dependencies between projects.`
         setState((prev) => ({ ...prev, aiStreaming: true }))
       }
     },
-    [state.planningMissionId, startMission, sendMessage]
+    [state.planningMissionId, startMission, sendMessage, helmReleases]
   )
 
   const addProject = useCallback((project: PayloadProject) => {
@@ -462,12 +506,70 @@ Order phases by dependency — prerequisites first. Each phase completes before 
 
   const reset = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY)
-    prevMessageCountRef.current = 0
+    lastParsedContentRef.current = ''
     setState(makeInitialState())
   }, [])
 
+  // Detect installed projects via helm releases + cluster namespaces
+  const { installedProjects, installedOnCluster } = useMemo(() => {
+    const installed = new Set<string>()
+    const perCluster = new Map<string, Set<string>>() // projectName → Set<clusterName>
+    if (!state.projects.length) return { installedProjects: installed, installedOnCluster: perCluster }
+
+    // Namespace aliases — projects commonly deployed in shared namespaces
+    const NS_ALIASES: Record<string, string[]> = {
+      monitoring: ['prometheus', 'grafana', 'alertmanager', 'thanos'],
+      observability: ['prometheus', 'grafana', 'alertmanager', 'jaeger', 'tempo'],
+      logging: ['fluent-bit', 'fluentd', 'loki', 'fluentbit'],
+      security: ['falco', 'kyverno', 'opa', 'trivy'],
+      ingress: ['nginx', 'traefik', 'haproxy', 'ingress-nginx'],
+      'gatekeeper-system': ['opa', 'open-policy-agent', 'opa-gatekeeper'],
+    }
+
+    // Build per-cluster name sets from helm releases
+    const clusterNames = new Map<string, Set<string>>()
+    helmReleases?.forEach(r => {
+      const cName = r.cluster || '_unknown'
+      if (!clusterNames.has(cName)) clusterNames.set(cName, new Set())
+      const names = clusterNames.get(cName)!
+      names.add(r.name.toLowerCase())
+      if (r.chart) names.add(r.chart.toLowerCase().replace(/-\d+.*$/, ''))
+      if (r.namespace) names.add(r.namespace.toLowerCase())
+    })
+
+    // Add cluster namespaces + expand aliases
+    clusters?.forEach(c => {
+      if (!clusterNames.has(c.name)) clusterNames.set(c.name, new Set())
+      const names = clusterNames.get(c.name)!
+      c.namespaces?.forEach(ns => {
+        const lower = ns.toLowerCase()
+        names.add(lower)
+        const aliased = NS_ALIASES[lower]
+        if (aliased) aliased.forEach(a => names.add(a))
+      })
+    })
+
+    // Match projects against each cluster's known names
+    for (const project of state.projects) {
+      const pName = project.name.toLowerCase()
+      for (const [clusterName, names] of clusterNames) {
+        const found = Array.from(names).some(n =>
+          n === pName || n.includes(pName) || pName.includes(n)
+        )
+        if (found) {
+          installed.add(project.name)
+          if (!perCluster.has(project.name)) perCluster.set(project.name, new Set())
+          perCluster.get(project.name)!.add(clusterName)
+        }
+      }
+    }
+    return { installedProjects: installed, installedOnCluster: perCluster }
+  }, [helmReleases, clusters, state.projects])
+
   return {
     state,
+    installedProjects,
+    installedOnCluster,
     // Phase 1
     setDescription,
     setTitle,

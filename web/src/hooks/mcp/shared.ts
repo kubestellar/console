@@ -1656,3 +1656,15 @@ export async function fetchWithRetry(
   // Should not reach here, but just in case
   throw lastError
 }
+
+/** Shorten a cluster name for display — strips context prefix, truncates long names */
+export function clusterDisplayName(name: string): string {
+  const parts = name.split('/')
+  const base = parts[parts.length - 1]
+  if (base.length > 24) {
+    const segments = base.split(/[-_.]/)
+    if (segments.length > 2) return segments.slice(0, 3).join('-')
+    return base.slice(0, 22) + '…'
+  }
+  return base
+}
