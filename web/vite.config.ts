@@ -101,6 +101,11 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('/framer-motion/')) {
             return 'motion-vendor'
           }
+          // Terminal emulator — only needed when a pod exec drilldown is opened.
+          // Isolate so xterm never loads on normal page views.
+          if (id.includes('/@xterm/')) {
+            return 'xterm-vendor'
+          }
           // Core UI interaction (icons + drag-and-drop)
           if (id.includes('/lucide-react/') || id.includes('/@dnd-kit/')) {
             return 'ui-vendor'

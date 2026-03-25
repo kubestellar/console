@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   DndContext,
@@ -31,8 +31,7 @@ import { useToast } from '../ui/Toast'
 import { CARD_COMPONENTS, prefetchCardChunks } from '../cards/cardRegistry'
 import { ROUTES } from '../../config/routes'
 import { getDefaultCardsForDashboard } from '../../config/dashboards'
-import { AddCardModal } from './AddCardModal'
-import { ConfigureCardModal } from './ConfigureCardModal'
+import { safeLazy } from '../../lib/safeLazy'
 import { CardRecommendations } from './CardRecommendations'
 import { safeGetItem, safeSetItem, safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
 import { MissionSuggestions } from './MissionSuggestions'
@@ -69,6 +68,11 @@ import { DashboardHealthIndicator } from './DashboardHealthIndicator'
 import { useCardGridNavigation } from '../../hooks/useCardGridNavigation'
 import { useModalState } from '../../lib/modals'
 import { setAutoRefreshPaused } from '../../lib/cache'
+
+// Lazy-load modal components — only shown on explicit user action,
+// so deferring their chunk until first use reduces the initial dashboard bundle.
+const AddCardModal = safeLazy(() => import('./AddCardModal'), 'AddCardModal')
+const ConfigureCardModal = safeLazy(() => import('./ConfigureCardModal'), 'ConfigureCardModal')
 
 // Module-level cache for dashboard data (survives navigation)
 interface CachedDashboard {
@@ -1073,25 +1077,29 @@ export function Dashboard() {
       />
 
       {/* Add Card Modal */}
-      <AddCardModal
-        isOpen={isAddCardModalOpen}
-        onClose={() => { closeAddCardModal(); setAddCardSearch(''); setInsertAtIndex(null) }}
-        onAddCards={handleAddCards}
-        existingCardTypes={currentCardTypes}
-        initialSearch={addCardSearch}
-      />
+      <Suspense fallback={null}>
+        <AddCardModal
+          isOpen={isAddCardModalOpen}
+          onClose={() => { closeAddCardModal(); setAddCardSearch(''); setInsertAtIndex(null) }}
+          onAddCards={handleAddCards}
+          existingCardTypes={currentCardTypes}
+          initialSearch={addCardSearch}
+        />
+      </Suspense>
 
       {/* Configure Card Modal */}
-      <ConfigureCardModal
-        isOpen={isConfigureCardOpen}
-        card={selectedCard}
-        onClose={() => {
-          closeConfigureCard()
-          setSelectedCard(null)
-        }}
-        onSave={handleCardConfigured}
-        onCreateCard={handleCreateCardFromAI}
-      />
+      <Suspense fallback={null}>
+        <ConfigureCardModal
+          isOpen={isConfigureCardOpen}
+          card={selectedCard}
+          onClose={() => {
+            closeConfigureCard()
+            setSelectedCard(null)
+          }}
+          onSave={handleCardConfigured}
+          onCreateCard={handleCreateCardFromAI}
+        />
+      </Suspense>
 
       {/* Templates Modal */}
       <TemplatesModal
