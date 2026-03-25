@@ -13,10 +13,10 @@ export interface TreeNode {
 }
 
 export type ViewMode = 'grid' | 'list'
-export type BrowserTab = 'recommended' | 'installers' | 'solutions'
+export type BrowserTab = 'recommended' | 'installers' | 'fixes'
 
 export const BROWSER_TABS: { id: BrowserTab; label: string; icon: string }[] = [
   { id: 'recommended', label: 'Recommended', icon: '🔍' },
   { id: 'installers', label: 'Installers', icon: '📦' },
-  { id: 'solutions', label: 'Solutions', icon: '🛠️' },
+  { id: 'fixes', label: 'Fixes', icon: '🔧' },
 ]

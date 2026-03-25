@@ -21,6 +21,7 @@ import {
   Eye,
   ShieldOff,
   BookOpen,
+  Rocket,
 } from 'lucide-react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { useMissions } from '../../../hooks/useMissions'
@@ -30,6 +31,7 @@ import { cn } from '../../../lib/cn'
 import { AgentSelector } from '../../agent/AgentSelector'
 import { AgentIcon } from '../../agent/AgentIcon'
 import { MissionBrowser } from '../../missions/MissionBrowser'
+import { MissionControlDialog } from '../../mission-control/MissionControlDialog'
 import { MissionDetailView } from '../../missions/MissionDetailView'
 import type { MissionExport } from '../../../lib/missions/types'
 import type { Mission } from '../../../hooks/useMissions'
@@ -53,6 +55,7 @@ export function MissionSidebar() {
   const [fontSize, setFontSize] = useState<FontSize>('base')
   const [showNewMission, setShowNewMission] = useState(false)
   const [showBrowser, setShowBrowser] = useState(false)
+  const [showMissionControl, setShowMissionControl] = useState(false)
   const [newMissionPrompt, setNewMissionPrompt] = useState('')
   const [showSavedToast, setShowSavedToast] = useState<string | null>(null)
   /** Countdown seconds remaining for the saved-mission toast */
@@ -439,6 +442,14 @@ export function MissionSidebar() {
           >
             <Globe className="w-4 h-4" />
           </button>
+          {/* Mission Control */}
+          <button
+            onClick={() => setShowMissionControl(true)}
+            className="p-1.5 rounded transition-colors hover:bg-secondary text-muted-foreground hover:text-foreground"
+            title="Mission Control — Multi-Cluster Solutions Orchestrator"
+          >
+            <Rocket className="w-4 h-4" />
+          </button>
           <AgentSelector compact={!isFullScreen} />
           {/* Font size controls */}
           <div className="flex items-center gap-1 border border-border rounded-lg px-1">
@@ -622,6 +633,13 @@ export function MissionSidebar() {
             >
               <Globe className="w-4 h-4" />
               Browse Community Missions
+            </button>
+            <button
+              onClick={() => setShowMissionControl(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-lg hover:from-violet-500 hover:to-indigo-500 transition-colors shadow-lg shadow-violet-500/25"
+            >
+              <Rocket className="w-4 h-4" />
+              Mission Control
             </button>
           </div>
         </div>
@@ -917,6 +935,12 @@ export function MissionSidebar() {
         onClose={() => setShowBrowser(false)}
         onImport={handleImportMission}
         initialMission={deepLinkMission || undefined}
+      />
+
+      {/* Mission Control Dialog */}
+      <MissionControlDialog
+        open={showMissionControl}
+        onClose={() => setShowMissionControl(false)}
       />
 
       {/* Cluster Selection Dialog for install missions */}

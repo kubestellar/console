@@ -1,0 +1,281 @@
+/**
+ * ClusterZone — Rounded rect SVG group representing a cluster in the Flight Plan.
+ * Uses CloudProviderIcon via foreignObject, animated dashed glow border.
+ * Tooltip rendered by parent FlightPlanBlueprint as an HTML overlay.
+ */
+
+import { motion } from 'framer-motion'
+import { CloudProviderIcon } from '../../ui/CloudProviderIcon'
+import type { LayoutRect, OverlayMode } from '../types'
+
+const PROVIDER_COLORS: Record<string, string> = {
+  eks: '#FF9900',
+  gke: '#4285F4',
+  aks: '#0078D4',
+  openshift: '#EE0000',
+  coreweave: '#4F7BEF',
+  k3s: '#FFC61C',
+  kind: '#326CE5',
+  minikube: '#326CE5',
+  kubernetes: '#326CE5',
+}
+
+export interface ClusterZoneProps {
+  id: string
+  name: string
+  provider: string
+  rect: LayoutRect
+  nodeCount?: number
+  cpuCores?: number
+  cpuUsage?: number
+  memGB?: number
+  memUsage?: number
+  storageGB?: number
+  gpuCount?: number
+  tpuCount?: number
+  pvcCount?: number
+  pvcBoundCount?: number
+  podCount?: number
+  index: number
+  overlay?: OverlayMode
+  onHover?: (info: ClusterHoverInfo | null) => void
+}
+
+export interface ClusterHoverInfo {
+  name: string
+  provider: string
+  nodeCount?: number
+  cpuCores?: number
+  cpuUsage?: number
+  memGB?: number
+  memUsage?: number
+  storageGB?: number
+  gpuCount?: number
+  tpuCount?: number
+  pvcCount?: number
+  pvcBoundCount?: number
+  podCount?: number
+  /** SVG rect for positioning */
+  rect: LayoutRect
+}
+
+function pct(used: number | undefined, total: number | undefined): number | undefined {
+  if (used == null || total == null || total === 0) return undefined
+  return Math.round((used / total) * 100)
+}
+
+/** Mini stat block for SVG overlays */
+function StatBlock({ x, y, label, value, max, unit, color }: {
+  x: number; y: number; label: string; value?: number; max?: number; unit: string; color: string
+}) {
+  const pctVal = pct(value, max)
+  const display = value != null && max != null
+    ? `${Math.round(value)}/${Math.round(max)}${unit}`
+    : max != null
+      ? `${Math.round(max)}${unit}`
+      : '—'
+  const barColor = pctVal != null
+    ? pctVal >= 80 ? '#ef4444' : pctVal >= 50 ? '#f59e0b' : color
+    : color
+
+  return (
+    <g>
+      {/* Background */}
+      <rect x={x} y={y} width={56} height={14} rx={2} fill="#0f172a" stroke={color} strokeWidth={0.4} strokeOpacity={0.3} />
+      {/* Label */}
+      <text x={x + 3} y={y + 5} fill={color} fontSize={3.5} fontWeight="700" fontFamily="system-ui, sans-serif" opacity={0.8}>
+        {label}
+      </text>
+      {/* Value */}
+      <text x={x + 53} y={y + 5} textAnchor="end" fill="white" fontSize={3.5} fontFamily="system-ui, sans-serif" opacity={0.9}>
+        {display}
+      </text>
+      {/* Gauge bar */}
+      <rect x={x + 2} y={y + 8.5} width={52} height={2.5} rx={1} fill="#1e293b" />
+      {pctVal != null ? (
+        <rect x={x + 2} y={y + 8.5} width={52 * pctVal / 100} height={2.5} rx={1} fill={barColor} />
+      ) : max != null ? (
+        <rect x={x + 2} y={y + 8.5} width={52} height={2.5} rx={1} fill={color} opacity={0.3} />
+      ) : null}
+    </g>
+  )
+}
+
+export function ClusterZone({
+  id,
+  name,
+  provider,
+  rect,
+  nodeCount,
+  cpuCores,
+  cpuUsage,
+  memGB,
+  memUsage,
+  storageGB,
+  gpuCount,
+  tpuCount,
+  pvcCount,
+  pvcBoundCount,
+  podCount,
+  index,
+  overlay = 'architecture',
+  onHover,
+}: ClusterZoneProps) {
+  const color = PROVIDER_COLORS[provider] ?? PROVIDER_COLORS.kubernetes
+  const { x, y, width, height } = rect
+
+  const showCompute = overlay === 'architecture' || overlay === 'compute'
+  const showStorage = overlay === 'architecture' || overlay === 'storage'
+  const showNetwork = overlay === 'network'
+  const showSecurity = overlay === 'security'
+
+  return (
+    <motion.g
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5, delay: index * 0.15 }}
+      onMouseEnter={() => onHover?.({
+        name, provider, nodeCount, cpuCores, cpuUsage,
+        memGB, memUsage, storageGB, gpuCount, tpuCount,
+        pvcCount, pvcBoundCount, podCount, rect,
+      })}
+      onMouseLeave={() => onHover?.(null)}
+    >
+      {/* Zone background — fully opaque */}
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        rx={8}
+        ry={8}
+        fill="#0a0f1a"
+      />
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        rx={8}
+        ry={8}
+        fill="#0f172a"
+        stroke={color}
+        strokeWidth={1}
+        strokeDasharray="6 3"
+        strokeOpacity={0.5}
+        filter={`url(#${id}-zone-glow)`}
+      />
+
+      {/* Animated dash border */}
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        rx={8}
+        ry={8}
+        fill="none"
+        stroke={color}
+        strokeWidth={0.5}
+        strokeDasharray="4 4"
+        strokeOpacity={0.3}
+      >
+        <animate
+          attributeName="stroke-dashoffset"
+          from="0"
+          to="-16"
+          dur="3s"
+          repeatCount="indefinite"
+        />
+      </rect>
+
+      {/* Provider icon via foreignObject */}
+      <foreignObject x={x + 6} y={y + 4} width={20} height={20}>
+        <div style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title={provider.toUpperCase()}>
+          <CloudProviderIcon
+            provider={provider as Parameters<typeof CloudProviderIcon>[0]['provider']}
+            size={16}
+          />
+        </div>
+      </foreignObject>
+
+      {/* Cluster name (positioned after icon) */}
+      <text
+        x={x + 30}
+        y={y + 17}
+        textAnchor="start"
+        fill="white"
+        fontSize={9}
+        fontWeight="600"
+        fontFamily="system-ui, sans-serif"
+        opacity={0.9}
+        cursor="pointer"
+      >
+        {name}
+      </text>
+
+      {/* ── Overlay-dependent resource display ─────────────── */}
+
+      {/* Compute overlay: CPU, Memory, GPU, TPU stat blocks */}
+      {showCompute && (
+        <g>
+          {/* Stat block row at top-right */}
+          <StatBlock x={x + width - 120} y={y + 6} label="CPU" value={cpuUsage} max={cpuCores} unit=" cores" color="#22c55e" />
+          <StatBlock x={x + width - 60} y={y + 6} label="MEM" value={memUsage} max={memGB != null ? Math.round(memGB) : undefined} unit=" GB" color="#3b82f6" />
+          {/* GPU / TPU row */}
+          {(gpuCount != null || tpuCount != null) && (
+            <>
+              <StatBlock x={x + width - 120} y={y + 22} label="GPU" value={undefined} max={gpuCount} unit="" color="#a855f7" />
+              <StatBlock x={x + width - 60} y={y + 22} label="TPU" value={undefined} max={tpuCount} unit="" color="#f59e0b" />
+            </>
+          )}
+        </g>
+      )}
+
+      {/* Storage overlay: PVC, Storage capacity */}
+      {showStorage && (
+        <g>
+          <StatBlock x={x + width - 120} y={y + 6} label="STORAGE" value={undefined} max={storageGB != null ? Math.round(storageGB) : undefined} unit=" GB" color="#84cc16" />
+          <StatBlock x={x + width - 60} y={y + 6} label="PVC" value={pvcBoundCount} max={pvcCount} unit="" color="#06b6d4" />
+        </g>
+      )}
+
+      {/* Network overlay: pod count, node info */}
+      {showNetwork && (
+        <g>
+          <StatBlock x={x + width - 120} y={y + 6} label="PODS" value={undefined} max={podCount} unit="" color="#0ea5e9" />
+          <StatBlock x={x + width - 60} y={y + 6} label="NODES" value={undefined} max={nodeCount} unit="" color="#0ea5e9" />
+          <text x={x + width / 2} y={y + height - 20} textAnchor="middle" fill="#0ea5e9" fontSize={4.5} fontFamily="system-ui, sans-serif" opacity={0.7}>
+            Network policies · Service mesh ready
+          </text>
+        </g>
+      )}
+
+      {/* Security overlay: RBAC, PSS */}
+      {showSecurity && (
+        <g>
+          <StatBlock x={x + width - 120} y={y + 6} label="NODES" value={undefined} max={nodeCount} unit="" color="#ef4444" />
+          <StatBlock x={x + width - 60} y={y + 6} label="PODS" value={undefined} max={podCount} unit="" color="#ef4444" />
+          <text x={x + width / 2} y={y + height - 20} textAnchor="middle" fill="#ef4444" fontSize={4.5} fontFamily="system-ui, sans-serif" opacity={0.7}>
+            RBAC · Pod Security Standards · Secrets encrypted
+          </text>
+        </g>
+      )}
+
+      {/* Resource summary at bottom */}
+      <text
+        x={x + width / 2}
+        y={y + height - 8}
+        textAnchor="middle"
+        fill="white"
+        fontSize={6.5}
+        fontFamily="system-ui, sans-serif"
+        opacity={0.5}
+      >
+        {nodeCount != null && `${nodeCount} nodes`}
+        {cpuCores != null && ` · ${cpuCores} cores`}
+        {memGB != null && ` · ${memGB.toFixed(0)} GB`}
+      </text>
+    </motion.g>
+  )
+}

@@ -183,10 +183,10 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
 
   // Installer & Solution missions — backed by module-level cache
   const [installerMissions, setInstallerMissions] = useState<MissionExport[]>(missionCache.installers)
-  const [solutionMissions, setSolutionMissions] = useState<MissionExport[]>(missionCache.solutions)
+  const [solutionMissions, setSolutionMissions] = useState<MissionExport[]>(missionCache.fixes)
   const [, forceUpdate] = useState(0)
   const loadingInstallers = !missionCache.installersDone
-  const loadingSolutions = !missionCache.solutionsDone
+  const loadingSolutions = !missionCache.fixesDone
   const [missionFetchError, setMissionFetchError] = useState<string | null>(missionCache.fetchError)
   const [installerCategoryFilter, setInstallerCategoryFilter] = useState<string>('All')
   const [installerMaturityFilter, setInstallerMaturityFilter] = useState<string>('All')
@@ -275,9 +275,9 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     // Derive recommendations from the existing mission cache (no separate scan)
     setTokenError(null)
     function updateRecommendations() {
-      const allMissions = [...missionCache.solutions]
+      const allMissions = [...missionCache.fixes]
       if (allMissions.length === 0) {
-        if (!missionCache.solutionsDone) {
+        if (!missionCache.fixesDone) {
           setLoadingRecommendations(true)
           setSearchProgress({ step: 'Scanning', detail: 'Loading solutions...', found: 0, scanned: 0 })
         }
@@ -290,7 +290,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
         setRecommendations(cached)
         setHasCluster(!!clusterContextRef.current)
         setLoadingRecommendations(false)
-        const done = missionCache.solutionsDone
+        const done = missionCache.fixesDone
         setSearchProgress({
           step: done ? 'Done' : 'Scanning',
           detail: `${allMissions.length} solutions`,
@@ -307,7 +307,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       setCachedRecommendations(matched, cluster)
       setRecommendations(matched)
       setLoadingRecommendations(false)
-      const done = missionCache.solutionsDone
+      const done = missionCache.fixesDone
       setSearchProgress({
         step: done ? 'Done' : 'Scanning',
         detail: `${allMissions.length} solutions`,
@@ -331,12 +331,12 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
 
     // Sync local state from cache immediately (covers re-open with cached data)
     setInstallerMissions([...missionCache.installers])
-    setSolutionMissions([...missionCache.solutions])
+    setSolutionMissions([...missionCache.fixes])
 
     // Listen for incremental updates from the background fetch
     const listener = () => {
       setInstallerMissions([...missionCache.installers])
-      setSolutionMissions([...missionCache.solutions])
+      setSolutionMissions([...missionCache.fixes])
       setMissionFetchError(missionCache.fetchError)
       forceUpdate(n => n + 1)
     }
@@ -469,7 +469,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
 
     const solutionMatch = findBest(solutionMissions, false)
     if (solutionMatch) {
-      setActiveTab('solutions')
+      setActiveTab('fixes')
       selectCardMission(solutionMatch)
       deepLinkSlugRef.current = null // consumed
       return
@@ -586,21 +586,33 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           }))
         }
 
-        // For community directories: if no missions remain after filtering,
+        // For community sub-directories (not root): if no missions remain after filtering,
         // mark the node as empty and remove it from the parent's children so
         // empty category folders (containing only .gitkeep) don't clutter the tree.
-        if (node.source === 'community' && children.length === 0) {
+        if (node.source === 'community' && children.length === 0 && nodeId !== 'community') {
           setTreeNodes((prev) =>
             removeNodeFromTree(prev, nodeId)
           )
         } else {
           setTreeNodes((prev) =>
-            updateNodeInTree(prev, nodeId, { children, loaded: true, loading: false })
+            updateNodeInTree(prev, nodeId, {
+              children,
+              loaded: true,
+              loading: false,
+              isEmpty: children.length === 0,
+            })
           )
         }
       } catch {
+        // Network/rate-limit error — show as loaded but empty with a descriptive marker
         setTreeNodes((prev) =>
-          updateNodeInTree(prev, nodeId, { children: [], loaded: true, loading: false })
+          updateNodeInTree(prev, nodeId, {
+            children: [],
+            loaded: true,
+            loading: false,
+            isEmpty: true,
+            description: 'Failed to load — check network or GitHub rate limits',
+          })
         )
       }
     }
@@ -1012,7 +1024,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={activeTab === 'installers' ? 'Search installers… (AND logic: "argo events" = argo AND events)' : activeTab === 'solutions' ? 'Search solutions…' : 'Search missions by name, tag, or description…'}
+            placeholder={activeTab === 'installers' ? 'Search installers… (AND logic: "argo events" = argo AND events)' : activeTab === 'fixes' ? 'Search fixes…' : 'Search missions by name, tag, or description…'}
             className="w-full pl-10 pr-4 py-2 bg-secondary border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/40"
             autoFocus
           />
@@ -1273,7 +1285,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             {tab.id === 'installers' && (
               <span className="text-2xs bg-secondary px-1.5 py-0.5 rounded-full min-w-[28px] text-center tabular-nums">{installerMissions.length || '–'}</span>
             )}
-            {tab.id === 'solutions' && (
+            {tab.id === 'fixes' && (
               <span className="text-2xs bg-secondary px-1.5 py-0.5 rounded-full min-w-[28px] text-center tabular-nums">{solutionMissions.length || '–'}</span>
             )}
           </button>
@@ -1281,9 +1293,9 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
         <button
           onClick={() => resetMissionCache()}
           className="ml-auto inline-flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors"
-          title={activeTab === 'installers' ? 'Refresh installers' : activeTab === 'solutions' ? 'Refresh solutions' : 'Refresh all mission data'}
+          title={activeTab === 'installers' ? 'Refresh installers' : activeTab === 'fixes' ? 'Refresh fixes' : 'Refresh all mission data'}
         >
-          <RefreshCw className={cn('w-3.5 h-3.5', (activeTab === 'installers' ? !missionCache.installersDone : activeTab === 'solutions' ? !missionCache.solutionsDone : (!missionCache.installersDone || !missionCache.solutionsDone)) && 'animate-spin')} />
+          <RefreshCw className={cn('w-3.5 h-3.5', (activeTab === 'installers' ? !missionCache.installersDone : activeTab === 'fixes' ? !missionCache.fixesDone : (!missionCache.installersDone || !missionCache.fixesDone)) && 'animate-spin')} />
         </button>
       </div>
 
@@ -1752,7 +1764,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             {/* ============================================================ */}
             {/* SOLUTIONS TAB */}
             {/* ============================================================ */}
-            {!selectedMission && activeTab === 'solutions' && (
+            {!selectedMission && activeTab === 'fixes' && (
               <div className="space-y-4">
                 {/* Solution filters */}
                 <div className="flex flex-wrap items-center gap-2">

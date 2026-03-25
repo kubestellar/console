@@ -15,11 +15,11 @@ const MISSION_CACHE_STORAGE_KEY = 'kc-mission-cache'
 
 export interface MissionCache {
   installers: MissionExport[]
-  solutions: MissionExport[]
+  fixes: MissionExport[]
   installersFetching: boolean
-  solutionsFetching: boolean
+  fixesFetching: boolean
   installersDone: boolean
-  solutionsDone: boolean
+  fixesDone: boolean
   listeners: Set<() => void>
   abortController: AbortController | null
   fetchedAt: number
@@ -28,11 +28,11 @@ export interface MissionCache {
 
 export const missionCache: MissionCache = {
   installers: [],
-  solutions: [],
+  fixes: [],
   installersFetching: false,
-  solutionsFetching: false,
+  fixesFetching: false,
   installersDone: false,
-  solutionsDone: false,
+  fixesDone: false,
   listeners: new Set(),
   abortController: null,
   fetchedAt: 0,
@@ -44,12 +44,12 @@ function restoreCacheFromStorage() {
   try {
     const raw = localStorage.getItem(MISSION_CACHE_STORAGE_KEY)
     if (!raw) return false
-    const stored = JSON.parse(raw) as { installers: MissionExport[]; solutions: MissionExport[]; fetchedAt: number }
+    const stored = JSON.parse(raw) as { installers: MissionExport[]; fixes: MissionExport[]; fetchedAt: number }
     if (Date.now() - stored.fetchedAt > MISSION_CACHE_TTL_MS) return false
     missionCache.installers = stored.installers || []
-    missionCache.solutions = stored.solutions || []
+    missionCache.fixes = stored.fixes || []
     missionCache.installersDone = true
-    missionCache.solutionsDone = true
+    missionCache.fixesDone = true
     missionCache.fetchedAt = stored.fetchedAt
     return true
   } catch {
@@ -62,7 +62,7 @@ function persistCacheToStorage() {
   try {
     localStorage.setItem(MISSION_CACHE_STORAGE_KEY, JSON.stringify({
       installers: missionCache.installers,
-      solutions: missionCache.solutions,
+      fixes: missionCache.fixes,
       fetchedAt: missionCache.fetchedAt,
     }))
   } catch {
@@ -191,7 +191,7 @@ const INDEX_FETCH_TIMEOUT_MS = 30_000
 
 /**
  * Load all missions from the pre-built index in a single API call.
- * Splits results into installers and solutions, populating both caches at once.
+ * Splits results into installers and fixes, populating both caches at once.
  * Persists to localStorage for instant restore on next page load.
  */
 async function fetchAllFromIndex() {
@@ -210,7 +210,7 @@ async function fetchAllFromIndex() {
       if (entry.missionClass === 'install') {
         missionCache.installers.push(mission)
       } else {
-        missionCache.solutions.push(mission)
+        missionCache.fixes.push(mission)
       }
     }
     missionCache.fetchedAt = Date.now()
@@ -222,8 +222,8 @@ async function fetchAllFromIndex() {
   } finally {
     missionCache.installersDone = true
     missionCache.installersFetching = false
-    missionCache.solutionsDone = true
-    missionCache.solutionsFetching = false
+    missionCache.fixesDone = true
+    missionCache.fixesFetching = false
     notifyCacheListeners()
   }
 }
@@ -234,7 +234,7 @@ async function fetchAllFromIndex() {
  */
 export function startMissionCacheFetch() {
   // Already loaded from localStorage or a previous fetch — skip
-  if (missionCache.installersDone && missionCache.solutionsDone) {
+  if (missionCache.installersDone && missionCache.fixesDone) {
     // Check if cache is stale (older than TTL)
     if (missionCache.fetchedAt > 0 && Date.now() - missionCache.fetchedAt < MISSION_CACHE_TTL_MS) {
       notifyCacheListeners()
@@ -242,12 +242,12 @@ export function startMissionCacheFetch() {
     }
     // Cache is stale — clear and refetch
     missionCache.installers = []
-    missionCache.solutions = []
+    missionCache.fixes = []
     missionCache.installersDone = false
-    missionCache.solutionsDone = false
+    missionCache.fixesDone = false
   }
   missionCache.installersFetching = true
-  missionCache.solutionsFetching = true
+  missionCache.fixesFetching = true
   notifyCacheListeners()
   fetchAllFromIndex()
 }
@@ -255,11 +255,11 @@ export function startMissionCacheFetch() {
 /** Force refresh: clear cache and refetch from index */
 export function resetMissionCache() {
   missionCache.installers = []
-  missionCache.solutions = []
+  missionCache.fixes = []
   missionCache.installersDone = false
-  missionCache.solutionsDone = false
+  missionCache.fixesDone = false
   missionCache.installersFetching = false
-  missionCache.solutionsFetching = false
+  missionCache.fixesFetching = false
   missionCache.fetchedAt = 0
   missionCache.fetchError = null
   // Also invalidate recommendation cache when mission data is refreshed
@@ -276,7 +276,7 @@ export function resetMissionCache() {
 interface RecommendationCacheEntry {
   /** Cached recommendation results */
   recommendations: MissionMatch[]
-  /** Number of solutions when recommendations were computed (invalidation key) */
+  /** Number of fixes when recommendations were computed (invalidation key) */
   solutionCount: number
   /** Timestamp of last computation */
   computedAt: number
@@ -312,8 +312,8 @@ let recommendationCacheEntry: RecommendationCacheEntry | null = null
  */
 export function getCachedRecommendations(clusterCtx: ClusterContext | null): MissionMatch[] | null {
   if (!recommendationCacheEntry) return null
-  // Invalidate if solutions changed (new data arrived)
-  if (recommendationCacheEntry.solutionCount !== missionCache.solutions.length) return null
+  // Invalidate if fixes changed (new data arrived)
+  if (recommendationCacheEntry.solutionCount !== missionCache.fixes.length) return null
   // Invalidate if TTL expired
   if (Date.now() - recommendationCacheEntry.computedAt > RECOMMENDATION_CACHE_TTL_MS) return null
   // Invalidate if cluster context changed (different cluster, new operators, etc.)
@@ -327,7 +327,7 @@ export function getCachedRecommendations(clusterCtx: ClusterContext | null): Mis
 export function setCachedRecommendations(recommendations: MissionMatch[], clusterCtx: ClusterContext | null) {
   recommendationCacheEntry = {
     recommendations,
-    solutionCount: missionCache.solutions.length,
+    solutionCount: missionCache.fixes.length,
     computedAt: Date.now(),
     clusterFingerprint: computeClusterFingerprint(clusterCtx),
   }
