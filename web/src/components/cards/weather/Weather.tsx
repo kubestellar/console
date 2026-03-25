@@ -11,6 +11,7 @@ import { useCardLoadingState } from '../CardDataContext'
 import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { useCache } from '../../../lib/cache'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
+import { useToast } from '../../ui/Toast'
 import type {
   GeocodingResult,
   ForecastDay,
@@ -77,6 +78,7 @@ const INITIAL_WEATHER: WeatherData = { current: null, forecast: [], hourly: [] }
 
 export function Weather({ config }: { config?: WeatherConfig }) {
   const { t } = useTranslation('common')
+  const { showToast } = useToast()
   const [units, setUnits] = useState<'F' | 'C'>(config?.units || 'F')
   const [forecastLength, setForecastLength] = useState<2 | 7 | 14>(config?.forecastLength || 7)
   const [showSettings, setShowSettings] = useState(false)
@@ -238,14 +240,13 @@ export function Weather({ config }: { config?: WeatherConfig }) {
       }
     } catch (error) {
       console.error('City search error:', error)
+      showToast(t('errors.citySearchFailed', 'City search failed. Please try again.'), 'error')
       setCitySearchResults([])
       setShowCityDropdown(false)
     } finally {
       setIsSearching(false)
     }
-  }, [])
-
-  // Debounced city search
+  }, [showToast, t])
   useEffect(() => {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current)

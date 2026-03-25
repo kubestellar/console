@@ -4,6 +4,7 @@ import { Terminal, Globe, Rocket, X, ExternalLink, Copy, Check } from 'lucide-re
 import { cn } from '../../lib/cn'
 import { copyToClipboard } from '../../lib/clipboard'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
+import { useToast } from '../ui/Toast'
 
 const DISMISSED_KEY = 'kc-welcome-dismissed'
 
@@ -15,6 +16,7 @@ const COPY_FEEDBACK_MS = 2000
 
 export function WelcomeCard() {
   const { t } = useTranslation()
+  const { showToast } = useToast()
   const [dismissed, setDismissed] = useState(() => safeGetItem(DISMISSED_KEY) === 'true')
   const [copied, setCopied] = useState(false)
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -33,7 +35,7 @@ export function WelcomeCard() {
       if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
       copyTimerRef.current = setTimeout(() => setCopied(false), COPY_FEEDBACK_MS)
     } catch {
-      // Clipboard API not available
+      showToast(t('common.errors.clipboardFailed', 'Failed to copy to clipboard'), 'error')
     }
   }
 

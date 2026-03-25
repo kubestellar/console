@@ -9,6 +9,7 @@ import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
+import { useToast } from '../ui/Toast'
 
 // Kubernetes/Cloud themed icons for matching
 const CARD_ICONS = [
@@ -49,6 +50,7 @@ const DIFFICULTY_CONFIG = {
 
 export function MatchGame(_props: CardComponentProps) {
   const { t } = useTranslation()
+  const { showToast } = useToast()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const { isExpanded } = useCardExpanded()
   const [difficulty, setDifficulty] = useState<Difficulty>('easy')
@@ -75,9 +77,10 @@ export function MatchGame(_props: CardComponentProps) {
         setHighScores(JSON.parse(stored))
       } catch (e) {
         console.error('Failed to load high scores:', e)
+        showToast(t('matchGame.errors.highScoresFailed', 'Could not load high scores.'), 'warning')
       }
     }
-  }, [])
+  }, [showToast, t])
 
   // Initialize game
   const initGame = useCallback(() => {

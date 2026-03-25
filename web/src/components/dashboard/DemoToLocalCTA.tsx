@@ -17,6 +17,7 @@ import {
 } from '../../lib/constants/storage'
 import { emitDemoToLocalShown, emitDemoToLocalActioned, emitInstallCommandCopied } from '../../lib/analytics'
 import { copyToClipboard } from '../../lib/clipboard'
+import { useToast } from '../ui/Toast'
 
 const NETLIFY_INSTALL_COMMAND = 'curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash'
 
@@ -24,6 +25,7 @@ const NETLIFY_INSTALL_COMMAND = 'curl -sSL https://raw.githubusercontent.com/kub
 const COPY_FEEDBACK_MS = 2000
 
 export function DemoToLocalCTA() {
+  const { showToast } = useToast()
   const [dismissed, setDismissed] = useState(
     () => safeGetItem(STORAGE_KEY_DEMO_CTA_DISMISSED) === 'true'
   )
@@ -68,6 +70,7 @@ export function DemoToLocalCTA() {
       copyTimerRef.current = setTimeout(() => setCopied(false), COPY_FEEDBACK_MS)
     } catch {
       // Clipboard API not available — select the text instead
+      showToast('Failed to copy to clipboard', 'error')
       const el = document.querySelector('[data-install-command]') as HTMLElement
       if (el) {
         const range = document.createRange()
