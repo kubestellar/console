@@ -127,6 +127,18 @@ let userHasInteracted = false
 let analyticsScriptsLoaded = false
 
 /**
+ * Pending chunk-reload recovery event captured at startup (before user
+ * interaction). send() gates on userHasInteracted, so we defer the emit
+ * until onFirstInteraction() to ensure the event reaches GA4.
+ *
+ * Recovery events are intentionally scoped to interactive sessions: if the
+ * user never interacts after a chunk-reload recovery the session wasn't
+ * meaningful and we'd rather not inflate the tracked recovery count with
+ * bot/automated load traffic.
+ */
+let pendingRecoveryEvent: { latencyMs: number; page: string } | null = null
+
+/**
  * Called on first user interaction (click, scroll, keypress, touch).
  * Loads analytics scripts and flushes the initial page_view / conversion events.
  */
@@ -137,6 +149,18 @@ function onFirstInteraction() {
   // Remove interaction listeners — they're no longer needed
   for (const evt of INTERACTION_GATE_EVENTS) {
     document.removeEventListener(evt, onFirstInteraction)
+  }
+
+  // Emit deferred chunk-reload recovery event captured at startup.
+  // Must happen after userHasInteracted = true so send() doesn't drop it.
+  if (pendingRecoveryEvent) {
+    const { latencyMs, page } = pendingRecoveryEvent
+    pendingRecoveryEvent = null
+    send('ksc_chunk_reload_recovery', {
+      recovery_result: 'success',
+      recovery_latency_ms: latencyMs,
+      recovery_page: page,
+    })
   }
 
   if (!analyticsScriptsLoaded) {
@@ -977,7 +1001,11 @@ export function emitError(category: string, detail: string, cardId?: string) {
  * Check if this page load is a recovery from a chunk-load auto-reload.
  * If CHUNK_RELOAD_TS_KEY exists in sessionStorage, the previous page load
  * hit a stale chunk error and triggered window.location.reload().
- * Emit a recovery event with the outcome and clear the marker.
+ *
+ * Called at startup (before user interaction), so we cannot call send()
+ * directly — it gates on userHasInteracted and would drop the event.
+ * Instead, store the data in pendingRecoveryEvent and flush it in
+ * onFirstInteraction() once send() is unblocked.
  */
 function checkChunkReloadRecovery() {
   try {
@@ -990,12 +1018,12 @@ function checkChunkReloadRecovery() {
     // Clear the marker so we don't re-emit on subsequent navigations
     sessionStorage.removeItem(CHUNK_RELOAD_TS_KEY)
 
-    // Emit recovery event — the app loaded successfully after auto-reload
-    send('ksc_chunk_reload_recovery', {
-      recovery_result: 'success',
-      recovery_latency_ms: recoveryMs,
-      recovery_page: window.location.pathname,
-    })
+    // Defer until first user interaction so send() isn't blocked by
+    // the userHasInteracted gate (onFirstInteraction flushes this).
+    pendingRecoveryEvent = {
+      latencyMs: recoveryMs,
+      page: window.location.pathname,
+    }
   } catch {
     // sessionStorage may be unavailable in some contexts
   }

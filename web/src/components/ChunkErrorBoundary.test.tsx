@@ -63,6 +63,28 @@ describe('ChunkErrorBoundary Component', () => {
     expect(screen.getByText('Reload Page')).toBeTruthy()
   })
 
+  // Safari reports module import failures with its own message pattern.
+  // GA4 shows these as "TypeError: Importing a module script failed." (×12)
+  // and "Importing a module script failed." (×1) — 13 of the 14 reported errors.
+  it.each([
+    ['Error', new Error('Importing a module script failed.')],
+    ['TypeError (Safari prefix)', new TypeError('Importing a module script failed.')],
+  ])('renders reload UI on Safari module script error: %s', (_label, error) => {
+    const ThrowError = () => { throw error }
+
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    render(
+      <ChunkErrorBoundary>
+        <ThrowError />
+      </ChunkErrorBoundary>
+    )
+
+    expect(screen.getByText('App Updated')).toBeTruthy()
+    expect(screen.getByText('Reload Page')).toBeTruthy()
+  })
+
   it('renders reload UI on safeLazy stale-export error', () => {
     const ThrowError = () => {
       throw new Error('Export "Compliance" not found in module — chunk may be stale. Reload the page to get the latest version.')

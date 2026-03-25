@@ -89,8 +89,8 @@
   force = false
 
 # Headers for security and caching.
-# Cache-Control: no-cache is set here for all routes so that SPA paths like
-# /clusters (served as index.html via the /* rewrite) are always revalidated
+# Cache-Control: no-cache, no-store is set here for all routes so that SPA paths like
+# /clusters (served as index.html via the /* rewrite) are always refetched fresh
 # after a deploy. Netlify matches headers against the request path, not the
 # served file, so the /*.html rule below does NOT cover /clusters etc.
 # The /assets/* rule (below) overrides this with immutable for hashed bundles.
@@ -104,7 +104,8 @@
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
     X-XSS-Protection = "1; mode=block"
     Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://analytics.kubestellar.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.google-analytics.com https://*.googleapis.com https://api.github.com https://api.dicebear.com https://fonts.gstatic.com https://analytics.kubestellar.io wss:; frame-ancestors 'none'"
-    Cache-Control = "no-cache"
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
 
 # Versioned JS/CSS assets have content-hashed filenames — safe to cache forever.
 # Netlify uses the most specific matching path, so /assets/* takes precedence over /*.
@@ -117,12 +118,14 @@
 [[headers]]
   for = "/*.html"
   [headers.values]
-    Cache-Control = "no-cache"
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
 
 [[headers]]
   for = "/index.html"
   [headers.values]
-    Cache-Control = "no-cache"
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
 
 # Context-specific settings
 [context.production]
