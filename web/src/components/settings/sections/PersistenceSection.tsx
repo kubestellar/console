@@ -35,22 +35,35 @@ export function PersistenceSection() {
   }, [config])
 
   const handleSave = async () => {
-    const success = await updateConfig(localConfig)
-    if (success) {
-      setTestResult(null)
+    try {
+      const success = await updateConfig(localConfig)
+      if (success) {
+        setTestResult(null)
+      }
+    } catch {
+      // updateConfig handles errors internally; ignore unexpected throws
     }
   }
 
   const handleTest = async (cluster: string) => {
     setTesting(true)
     setTestResult(null)
-    const result = await testConnection(cluster)
-    setTestResult({ cluster, success: result.success })
-    setTesting(false)
+    try {
+      const result = await testConnection(cluster)
+      setTestResult({ cluster, success: result.success })
+    } catch {
+      setTestResult({ cluster, success: false })
+    } finally {
+      setTesting(false)
+    }
   }
 
   const handleSync = async () => {
-    await syncNow()
+    try {
+      await syncNow()
+    } catch {
+      // syncNow handles errors internally; ignore unexpected throws
+    }
   }
 
   const getHealthIcon = (health: ClusterHealth) => {

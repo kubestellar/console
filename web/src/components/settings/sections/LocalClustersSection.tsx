@@ -142,36 +142,50 @@ export function LocalClustersSection() {
 
   const handleCreate = async () => {
     if (!selectedTool || !clusterName.trim()) return
+    try {
+      const result = await createCluster(selectedTool, clusterName.trim())
+      emitLocalClusterCreated(selectedTool)
 
-    const result = await createCluster(selectedTool, clusterName.trim())
-    emitLocalClusterCreated(selectedTool)
-
-    if (result.status === 'creating') {
-      setClusterName('')
-      // Real-time progress is now handled by ClusterProgressBanner via WebSocket
+      if (result.status === 'creating') {
+        setClusterName('')
+        // Real-time progress is now handled by ClusterProgressBanner via WebSocket
+      }
+    } catch {
+      // createCluster handles errors internally; ignore unexpected throws
     }
   }
 
   const handleDelete = async (tool: string, name: string) => {
     if (!confirm(t('settings.localClusters.deleteConfirm', { name }))) return
-    await deleteCluster(tool, name)
+    try {
+      await deleteCluster(tool, name)
+    } catch {
+      // deleteCluster handles errors internally; ignore unexpected throws
+    }
   }
 
   const handleCreateVCluster = async () => {
     if (!vclusterName.trim()) return
+    try {
+      const result = await createVCluster(vclusterName.trim(), vclusterNamespace.trim() || VCLUSTER_DEFAULT_NAMESPACE)
+      emitLocalClusterCreated('vcluster')
 
-    const result = await createVCluster(vclusterName.trim(), vclusterNamespace.trim() || VCLUSTER_DEFAULT_NAMESPACE)
-    emitLocalClusterCreated('vcluster')
-
-    if (result.status === 'creating') {
-      setVclusterName('')
-      setVclusterNamespace(VCLUSTER_DEFAULT_NAMESPACE)
+      if (result.status === 'creating') {
+        setVclusterName('')
+        setVclusterNamespace(VCLUSTER_DEFAULT_NAMESPACE)
+      }
+    } catch {
+      // createVCluster handles errors internally; ignore unexpected throws
     }
   }
 
   const handleDeleteVCluster = async (name: string, namespace: string) => {
     if (!confirm(t('settings.localClusters.vclusterDeleteConfirm', { name, namespace }))) return
-    await deleteVCluster(name, namespace)
+    try {
+      await deleteVCluster(name, namespace)
+    } catch {
+      // deleteVCluster handles errors internally; ignore unexpected throws
+    }
   }
 
   // Client mission: install vCluster CLI locally

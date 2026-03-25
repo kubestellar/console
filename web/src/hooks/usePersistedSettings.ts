@@ -64,30 +64,37 @@ export function usePersistedSettings() {
     }
     setSyncStatus('saving')
     debounceTimer.current = setTimeout(async () => {
-      const current = collectFromLocalStorage()
-      // Retry once after a delay — transient failures are common during page
-      // transitions when the agent's connection pool is saturated.
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          await settingsFetch('/settings', {
-            method: 'PUT',
-            body: JSON.stringify(current),
-          })
-          if (mountedRef.current) {
-            setSyncStatus('saved')
-            setLastSaved(new Date())
-          }
-          return
-        } catch {
-          if (attempt === 0) {
-            await new Promise(r => setTimeout(r, RETRY_DELAY_MS))
+      try {
+        const current = collectFromLocalStorage()
+        // Retry once after a delay — transient failures are common during page
+        // transitions when the agent's connection pool is saturated.
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            await settingsFetch('/settings', {
+              method: 'PUT',
+              body: JSON.stringify(current),
+            })
+            if (mountedRef.current) {
+              setSyncStatus('saved')
+              setLastSaved(new Date())
+            }
+            return
+          } catch {
+            if (attempt === 0) {
+              await new Promise(r => setTimeout(r, RETRY_DELAY_MS))
+            }
           }
         }
+        if (mountedRef.current) {
+          setSyncStatus('error')
+        }
+        console.debug('[settings] failed to persist to local agent')
+      } catch {
+        // Unexpected error — set error state so UI shows sync failed
+        if (mountedRef.current) {
+          setSyncStatus('error')
+        }
       }
-      if (mountedRef.current) {
-        setSyncStatus('error')
-      }
-      console.debug('[settings] failed to persist to local agent')
     }, DEBOUNCE_MS)
   }, [])
 

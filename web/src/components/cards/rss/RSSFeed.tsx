@@ -378,7 +378,12 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
             const items = await fetchSingleFeed(url)
             // Find source feed info
             const sourceFeed = feeds.find(f => f.url === url) || PRESET_FEEDS.find(p => p.url === url)
-            const sourceName = sourceFeed?.name || new URL(url).hostname
+            let sourceName: string
+            try {
+              sourceName = sourceFeed?.name || new URL(url).hostname
+            } catch {
+              sourceName = sourceFeed?.name || url
+            }
             const sourceIcon = sourceFeed?.icon || '📰'
             // Attach source info to each item
             return items.map(item => ({

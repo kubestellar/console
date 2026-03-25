@@ -139,7 +139,7 @@ export function MobileBrowser() {
 
     setTabs(prev => prev.map(tab =>
       tab.id === activeTabId
-        ? { ...tab, url: fullUrl, title: new URL(fullUrl).hostname }
+        ? { ...tab, url: fullUrl, title: (() => { try { return new URL(fullUrl).hostname } catch { return fullUrl } })() }
         : tab
     ))
     setUrlInput(fullUrl)
@@ -167,7 +167,7 @@ export function MobileBrowser() {
       const url = history[newIndex]
       setTabs(prev => prev.map(tab =>
         tab.id === activeTabId
-          ? { ...tab, url, title: new URL(url).hostname }
+          ? { ...tab, url, title: (() => { try { return new URL(url).hostname } catch { return url } })() }
           : tab
       ))
       setUrlInput(url)
@@ -181,7 +181,7 @@ export function MobileBrowser() {
       const url = history[newIndex]
       setTabs(prev => prev.map(tab =>
         tab.id === activeTabId
-          ? { ...tab, url, title: new URL(url).hostname }
+          ? { ...tab, url, title: (() => { try { return new URL(url).hostname } catch { return url } })() }
           : tab
       ))
       setUrlInput(url)
