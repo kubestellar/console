@@ -17,6 +17,12 @@ export function safeLazy<T extends Record<string, unknown>>(
 ): ReturnType<typeof lazy> {
   return lazy(() =>
     importFn().then((m) => {
+      if (!m) {
+        throw new Error(
+          'Module failed to load — chunk may be stale. ' +
+          'Reload the page to get the latest version.',
+        )
+      }
       const component = m[exportName]
       if (!component) {
         throw new Error(

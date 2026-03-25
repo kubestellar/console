@@ -209,8 +209,8 @@ export function UnifiedDashboard({
       return (
         card.id !== defaultCard?.id ||
         card.cardType !== defaultCard?.cardType ||
-        card.position.w !== defaultCard?.position.w ||
-        card.position.h !== defaultCard?.position.h
+        card.position?.w !== defaultCard?.position?.w ||
+        card.position?.h !== defaultCard?.position?.h
       )
     })
   }, [cards, config.cards])

@@ -5,10 +5,31 @@ import React, { useState, useEffect, useMemo, useCallback, useRef, useReducer } 
 // Tree-shaking is not applicable here as the entire icon library must be available
 // for user-defined dynamic card code at runtime.
 import * as LucideIcons from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { cn } from '../cn'
 import { useCardData, commonComparators } from '../cards/cardHooks'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { Pagination } from '../../components/ui/Pagination'
+
+/**
+ * A simple spinner component available to dynamic card code as `<Spinner />`.
+ * Wraps the Loader2 lucide icon with sensible defaults.
+ */
+function Spinner({ className }: { className?: string }) {
+  return React.createElement(Loader2, { className: cn('w-5 h-5 animate-spin text-muted-foreground', className) })
+}
+
+/**
+ * A centering wrapper for a spinner, available as `<SpinWrapper />`.
+ * Renders children (or a default Spinner) centered in the card.
+ */
+function SpinWrapper({ children, className }: { children?: React.ReactNode; className?: string }) {
+  return React.createElement(
+    'div',
+    { className: cn('h-full flex items-center justify-center', className) },
+    children ?? React.createElement(Spinner, null),
+  )
+}
 
 /** Minimum allowed interval for setInterval in dynamic cards (ms) */
 const MIN_INTERVAL_MS = 1_000
@@ -119,6 +140,12 @@ export function getDynamicScope(): Record<string, unknown> {
     // UI components
     Skeleton,
     Pagination,
+
+    // Convenience spinner components — commonly used in AI-generated card code.
+    // Loader2 is already spread from LucideIcons above; these aliases ensure that
+    // code referencing the generic names `Spinner` and `SpinWrapper` also works.
+    Spinner,
+    SpinWrapper,
 
     // Safe timer APIs — function-only callbacks, NaN-safe delays,
     // setInterval clamped to MIN_INTERVAL_MS, max MAX_ACTIVE_TIMERS per card.

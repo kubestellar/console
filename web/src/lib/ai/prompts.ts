@@ -72,7 +72,9 @@ Available in scope (DO NOT import these — they are globally available):
 - commonComparators (sorting utilities)
 - Skeleton (loading placeholder component)
 - Pagination (pagination component: <Pagination currentPage totalPages totalItems itemsPerPage onPageChange />)
-- Common lucide-react icons (e.g. Server, Database, CheckCircle2, AlertTriangle, Activity, Cpu, etc.)
+- Spinner (convenience spinner: <Spinner className="..." /> — wraps Loader2)
+- SpinWrapper (centers a spinner: <SpinWrapper> or <SpinWrapper><Spinner /></SpinWrapper>)
+- All lucide-react icons including Loader2 (e.g. Server, Database, CheckCircle2, AlertTriangle, Activity, Cpu, Loader2, etc.)
 
 RULES:
 - Export a default function component: export default function MyCard({ config }) { ... }
@@ -126,7 +128,7 @@ export const CODE_INLINE_ASSIST_PROMPT = `You are an assistant that generates TS
 
 The user will describe what they want. Generate a default-exported React component.
 
-Available in scope (DO NOT import): React, useState, useEffect, useMemo, useCallback, useRef, cn, useCardData, Skeleton, Pagination, common lucide-react icons.
+Available in scope (DO NOT import): React, useState, useEffect, useMemo, useCallback, useRef, cn, useCardData, Skeleton, Pagination, Spinner, SpinWrapper, Loader2, common lucide-react icons.
 
 Return a JSON object:
 {
