@@ -85,6 +85,27 @@ describe('ChunkErrorBoundary Component', () => {
     expect(screen.getByText('Reload Page')).toBeTruthy()
   })
 
+  it('renders reload UI on safeLazy null-module error (bundle pre-load .catch(() => undefined))', () => {
+    // Simulates the case where an eagerly-loaded bundle uses
+    // .catch(() => undefined as never) and the chunk fails to load.
+    // safeLazy now throws "chunk may be stale" instead of a generic TypeError.
+    const ThrowError = () => {
+      throw new Error('Module failed to load — chunk may be stale. Reload the page to get the latest version.')
+    }
+
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    render(
+      <ChunkErrorBoundary>
+        <ThrowError />
+      </ChunkErrorBoundary>
+    )
+
+    expect(screen.getByText('App Updated')).toBeTruthy()
+    expect(screen.getByText('Reload Page')).toBeTruthy()
+  })
+
   it('renders reload UI on safeLazy stale-export error', () => {
     const ThrowError = () => {
       throw new Error('Export "Compliance" not found in module — chunk may be stale. Reload the page to get the latest version.')

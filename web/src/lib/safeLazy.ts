@@ -17,6 +17,11 @@ export function safeLazy<T extends Record<string, unknown>>(
 ): ReturnType<typeof lazy> {
   return lazy(() =>
     importFn().then((m) => {
+      // When an eagerly-loaded bundle uses .catch(() => undefined) to suppress
+      // unhandled rejections, a stale-chunk failure resolves the promise to
+      // undefined instead of rejecting it. Without this guard, accessing
+      // m[exportName] throws a generic TypeError that isChunkLoadMessage()
+      // does not recognise, so ChunkErrorBoundary never triggers auto-reload.
       if (!m) {
         throw new Error(
           'Module failed to load — chunk may be stale. ' +
