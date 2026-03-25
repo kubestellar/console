@@ -131,11 +131,11 @@ enableMocking()
         dynamicCards.forEach(card => {
           registerDynamicCardType(card.id, card.defaultWidth ?? 6)
         })
-      })
+      }).catch(() => { /* ignore — dynamic card registration is non-critical */ })
     }
 
     // Register unified card data hooks (background — ~300 KB chunk)
-    import('./lib/unified/registerHooks')
+    import('./lib/unified/registerHooks').catch(() => { /* ignore — hook registration is non-critical */ })
 
     // Prefetch route chunks for the user's top 5 most-visited dashboards.
     // Uses requestIdleCallback to avoid competing with initial render.
