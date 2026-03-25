@@ -274,12 +274,23 @@ function getViewKey(view: DrillDownView): string {
   }
 }
 
+// Stable no-op functions used when DrillDownProvider is absent
+const _noopOpen = () => {}
+const _noopPush = () => {}
+const _noopGoTo = () => {}
+const _noopState: DrillDownState = { isOpen: false, stack: [], currentView: null }
+
 // Helper hook to create drill-down actions
 export function useDrillDownActions() {
-  const { state, open, push, goTo } = useDrillDown()
+  const context = useContext(DrillDownContext)
+  const state = context?.state ?? _noopState
+  const open = context?.open ?? _noopOpen
+  const push = context?.push ?? _noopPush
+  const goTo = context?.goTo ?? _noopGoTo
 
   // Helper to navigate - checks if view already exists in stack
   const openOrPush = useCallback((view: DrillDownView) => {
+    if (!context) return
     if (!state.isOpen) {
       open(view)
       return
@@ -295,7 +306,7 @@ export function useDrillDownActions() {
     } else {
       push(view)
     }
-  }, [state.isOpen, state.stack, open, push, goTo])
+  }, [context, state.isOpen, state.stack, open, push, goTo])
 
   const drillToCluster = useCallback((cluster: string, clusterData?: Record<string, unknown>) => {
     openOrPush({

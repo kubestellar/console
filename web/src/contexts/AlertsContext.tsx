@@ -200,7 +200,7 @@ interface AlertsContextValue {
   toggleRule: (id: string) => void
 }
 
-const AlertsContext = createContext<AlertsContextValue | null>(null)
+export const AlertsContext = createContext<AlertsContextValue | null>(null)
 
 export function AlertsProvider({ children }: { children: ReactNode }) {
   // Alert Rules State

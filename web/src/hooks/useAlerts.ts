@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useAlertsContext } from '../contexts/AlertsContext'
+import { useState, useEffect, useCallback, useContext } from 'react'
+import { useAlertsContext, AlertsContext } from '../contexts/AlertsContext'
 import type {
   Alert,
   AlertRule,
@@ -40,9 +40,22 @@ function saveToStorage<T>(key: string, value: T): void {
   }
 }
 
+// Default empty stats returned when AlertsProvider is absent
+const _defaultAlertStats: AlertStats = { total: 0, firing: 0, resolved: 0, critical: 0, warning: 0, info: 0, acknowledged: 0 }
+
 // Hook for managing alert rules - uses shared context
 export function useAlertRules() {
-  const { rules, createRule, updateRule, deleteRule, toggleRule } = useAlertsContext()
+  const context = useContext(AlertsContext)
+  if (!context) {
+    return {
+      rules: [] as AlertRule[],
+      createRule: (() => ({ id: '', createdAt: '', updatedAt: '' } as unknown as AlertRule)),
+      updateRule: () => {},
+      deleteRule: () => {},
+      toggleRule: () => {},
+    }
+  }
+  const { rules, createRule, updateRule, deleteRule, toggleRule } = context
 
   return {
     rules,
@@ -88,6 +101,23 @@ export function useSlackWebhooks() {
 
 // Hook for managing alerts - uses shared context
 export function useAlerts() {
+  const context = useContext(AlertsContext)
+  if (!context) {
+    return {
+      alerts: [] as Alert[],
+      activeAlerts: [] as Alert[],
+      acknowledgedAlerts: [] as Alert[],
+      stats: _defaultAlertStats,
+      acknowledgeAlert: () => {},
+      acknowledgeAlerts: () => {},
+      resolveAlert: () => {},
+      deleteAlert: () => {},
+      runAIDiagnosis: (() => null) as (alertId: string) => string | null,
+      evaluateConditions: () => {},
+      isLoadingData: false,
+      dataError: null as string | null,
+    }
+  }
   const {
     alerts,
     activeAlerts,
@@ -101,7 +131,7 @@ export function useAlerts() {
     evaluateConditions,
     isLoadingData,
     dataError,
-  } = useAlertsContext()
+  } = context
 
   return {
     alerts,
