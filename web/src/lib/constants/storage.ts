@@ -43,6 +43,7 @@ export const STORAGE_KEY_ANONYMOUS_USER_ID = 'kc-anonymous-user-id'
 export const STORAGE_KEY_CLUSTER_LAYOUT = 'kubestellar-cluster-layout-mode'
 export const STORAGE_KEY_NAV_HISTORY = 'kubestellar-nav-history'
 export const STORAGE_KEY_CLUSTER_PROVIDER_OVERRIDES = 'kubestellar-cluster-provider-overrides'
+export const STORAGE_KEY_CLUSTER_ORDER = 'kubestellar-cluster-order'
 export const STORAGE_KEY_MISSIONS_ACTIVE = 'kubestellar-missions-active'
 export const STORAGE_KEY_MISSIONS_HISTORY = 'kubestellar-missions-history'
 

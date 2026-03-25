@@ -13,6 +13,7 @@ import { useModalState } from '../../lib/modals'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 import { AgentApprovalDialog, hasApprovedAgents } from './AgentApprovalDialog'
 import { MissionDetailView } from '../missions/MissionDetailView'
+import { ClusterSelectionDialog } from '../missions/ClusterSelectionDialog'
 
 interface AgentSelectorProps {
   compact?: boolean
@@ -21,7 +22,7 @@ interface AgentSelectorProps {
 
 export function AgentSelector({ compact = false, className = '' }: AgentSelectorProps) {
   const { t } = useTranslation()
-  const { agents, selectedAgent, agentsLoading, selectAgent, connectToAgent, startMission } = useMissions()
+  const { agents, selectedAgent, agentsLoading, selectAgent, connectToAgent, startMission, openSidebar } = useMissions()
   const { isDemoMode: isDemoModeHook } = useDemoMode()
   const { kagentAvailable, kagentiAvailable, selectedKagentAgent, selectedKagentiAgent } = useKagentBackend()
   // Synchronous fallback prevents flash during React transitions
@@ -39,6 +40,8 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   const [installGuide, setInstallGuide] = useState<{ mission: MissionExport; raw: string } | null>(null)
   const [installGuideLoading, setInstallGuideLoading] = useState(false)
   const [installGuideShowRaw, setInstallGuideShowRaw] = useState(false)
+  // Cluster selection for AI install
+  const [pendingInstall, setPendingInstall] = useState<{ missionId: string; displayName: string; mission: MissionExport } | null>(null)
 
   // Merge local agents with in-cluster backends (kagent, kagenti)
   // Always show kagent/kagenti — when not installed, they appear with an install link
@@ -46,20 +49,20 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
     const local = agents.filter(a => a.available)
     const inCluster: AgentInfo[] = [
       {
-        name: 'kagent',
-        displayName: selectedKagentAgent ? `Kagent (${selectedKagentAgent.name})` : 'Kagent',
-        description: kagentAvailable ? 'In-cluster AI agent via kagent' : 'Install kagent for in-cluster AI agents',
-        provider: 'kagent',
-        available: kagentAvailable,
-        installMissionId: kagentAvailable ? undefined : 'install-kagent',
-      },
-      {
         name: 'kagenti',
         displayName: selectedKagentiAgent ? `Kagenti (${selectedKagentiAgent.name})` : 'Kagenti',
         description: kagentiAvailable ? 'In-cluster AI agent via kagenti' : 'Install kagenti for in-cluster AI agents',
         provider: 'kagenti',
         available: kagentiAvailable,
         installMissionId: kagentiAvailable ? undefined : 'install-kagenti',
+      },
+      {
+        name: 'kagent',
+        displayName: selectedKagentAgent ? `Kagent (${selectedKagentAgent.name})` : 'Kagent',
+        description: kagentAvailable ? 'In-cluster AI agent via kagent' : 'Install kagent for in-cluster AI agents',
+        provider: 'kagent',
+        available: kagentAvailable,
+        installMissionId: kagentAvailable ? undefined : 'install-kagent',
       },
     ]
     return [...local, ...inCluster]
@@ -105,15 +108,37 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
     setInstallGuideLoading(false)
   }, [closeDropdown])
 
-  const handleInstallMission = useCallback((missionId: string, displayName: string) => {
-    startMission({
-      title: `Install ${displayName}`,
-      description: `Install ${displayName} in the cluster using AI mission`,
-      type: 'deploy',
-      initialPrompt: `/mission/${missionId}`,
-    })
+  const handleInstallMission = useCallback(async (missionId: string, displayName: string) => {
     closeDropdown()
-  }, [startMission, closeDropdown])
+    // Fetch the actual mission content
+    const paths = INSTALL_MISSION_PATHS[missionId] || [`solutions/cncf-install/${missionId}.json`, `solutions/platform-install/${missionId}.json`]
+    let missionData: MissionExport | null = null
+    for (const path of paths) {
+      try {
+        const res = await fetch(`/api/missions/file?path=${encodeURIComponent(path)}`, { signal: AbortSignal.timeout(5000) })
+        if (!res.ok) continue
+        const raw = await res.text()
+        const parsed = JSON.parse(raw)
+        const nested = parsed.mission || {}
+        missionData = {
+          version: parsed.version || '1.0',
+          title: nested.title || parsed.title || displayName,
+          description: nested.description || parsed.description || `Install ${displayName}`,
+          type: 'deploy',
+          tags: nested.tags || parsed.tags || [],
+          steps: nested.steps || parsed.steps || [],
+        }
+        break
+      } catch { continue }
+    }
+    if (!missionData) {
+      // Fallback: start with simple prompt
+      startMission({ title: `Install ${displayName}`, description: `Install ${displayName} in the cluster`, type: 'deploy', initialPrompt: `Install ${displayName} in the cluster` })
+      return
+    }
+    // Show cluster selection dialog before running
+    setPendingInstall({ missionId, displayName, mission: missionData })
+  }, [closeDropdown, startMission])
 
   // Sort: selected agent first, then available agents, then unavailable
   const sortedAgents = useMemo(() => {
@@ -124,7 +149,9 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
       // Available before unavailable
       if (a.available && !b.available) return -1
       if (!a.available && b.available) return 1
-      // Alphabetical within same group
+      // Kagenti before kagent, then alphabetical
+      if (a.provider === 'kagenti' && b.provider === 'kagent') return -1
+      if (a.provider === 'kagent' && b.provider === 'kagenti') return 1
       return a.displayName.localeCompare(b.displayName)
     })
   }, [visibleAgents, selectedAgent])
@@ -451,6 +478,27 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
         </div>
       </div>,
       document.body
+    )}
+    {/* Cluster selection for AI install */}
+    {pendingInstall && (
+      <ClusterSelectionDialog
+        open
+        missionTitle={`Install ${pendingInstall.displayName}`}
+        onSelect={(clusters) => {
+          const m = pendingInstall.mission
+          const stepsText = (m.steps ?? []).map((s, i) => `${i + 1}. ${s.title}${s.description ? ': ' + s.description : ''}`).join('\n') || m.description
+          startMission({
+            title: `Install ${pendingInstall.displayName}`,
+            description: m.description,
+            type: 'deploy',
+            cluster: clusters.length > 0 ? clusters.join(',') : undefined,
+            initialPrompt: stepsText,
+          })
+          openSidebar()
+          setPendingInstall(null)
+        }}
+        onCancel={() => setPendingInstall(null)}
+      />
     )}
     </>
   )

@@ -10,6 +10,7 @@ name: Auto-QA Agent
 #   3=Operator Usefulness, 4=SRE/Multi-Cluster,
 #   5=Feature Recommendations, 6=Resilience, 7=Consistency
 # Layer 7 (weekly): Self-improvement analysis based on recent PR patterns
+# Layer 8 (always): Adoption psychology — curiosity, discovery, stickiness
 #
 # Issues auto-assign Copilot and feed into the automation pipeline.
 #
@@ -30,7 +31,7 @@ on:
         default: false
         type: boolean
       focus_override:
-        description: 'Override focus (performance|security|a11y|operator|sre|features|resilience|consistency|none)'
+        description: 'Override focus (performance|security|a11y|operator|sre|features|resilience|consistency|adoption|none)'
         required: false
         default: ''
         type: string
@@ -3239,6 +3240,138 @@ jobs:
             echo "Event parity looks good"
           fi
 
+      # ── Layer 8: Adoption & Engagement Psychology ───────────────────
+      # Scans the codebase for opportunities to apply psychological
+      # techniques (variable rewards, curiosity gaps, progress loops,
+      # social proof, etc.) that improve discovery, stickiness, and
+      # long-term adoption — inspired by patterns that make social
+      # platforms engaging.
+
+      - name: "Adoption: Engagement psychology opportunities"
+        id: focus_adoption_psychology
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Scanning for adoption & engagement psychology opportunities..."
+          ISSUES=""
+
+          # ── 1. Variable Reward / Surprise & Delight ──
+          # Look for pages that always show the same static content with
+          # no dynamic highlights, tips, or rotating recommendations.
+          STATIC_PAGES=""
+          for page_dir in src/components/dashboard src/components/clusters src/components/deploy src/components/compliance src/components/ai-ml src/components/arcade; do
+            if [ -d "$page_dir" ]; then
+              PAGE_NAME=$(basename "$page_dir")
+              # Check if page has any dynamic tip/highlight/recommendation/surprise element
+              HAS_DYNAMIC=$(grep -rlE "tip(s)?[Oo]f[Tt]he[Dd]ay|didYouKnow|randomTip|spotlight|featured|shuffle|random|rotate.*suggestion|surprise" "$page_dir" 2>/dev/null | head -1 || true)
+              if [ -z "$HAS_DYNAMIC" ]; then
+                STATIC_PAGES="${STATIC_PAGES}  - \`${PAGE_NAME}\`: no variable-reward elements (tips, spotlights, rotating highlights)\n"
+              fi
+            fi
+          done
+          if [ -n "$STATIC_PAGES" ]; then
+            ISSUES="${ISSUES}### Missing Variable Rewards (Surprise & Delight)\nThese pages show the same content every visit — adding rotating tips, \"did you know\" facts, or spotlight features would create curiosity and repeat engagement:\n${STATIC_PAGES}\n**Psychology:** Variable ratio reinforcement (slot machine effect) keeps users coming back because they never know what they'll discover next.\n\n"
+          fi
+
+          # ── 2. Progress & Completion Loops ──
+          # Check if there are progress indicators, streaks, or completion
+          # tracking beyond basic onboarding.
+          HAS_STREAK=$(grep -rl "streak\|consecutive.*day\|login.*count\|daily.*reward\|visit.*count" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | head -1 || true)
+          HAS_PROGRESS_BEYOND_TOUR=$(grep -rlE "progress[Bb]ar|completionPercent|mastery|level[Uu]p|achievement|badge[s]?[Ee]arned|xp\b|experience.*point" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | grep -v "tour\|welcome\|getting-started\|onboard" | head -1 || true)
+          HAS_COMPLETION=$(grep -rl "checklist\|setup.*complete\|profile.*complete\|configuration.*score" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | grep -v node_modules | head -1 || true)
+
+          PROGRESS_GAPS=""
+          if [ -z "$HAS_STREAK" ]; then
+            PROGRESS_GAPS="${PROGRESS_GAPS}  - **No streak/consistency tracking**: Users have no reason to return daily. A \"3-day streak\" badge or activity heatmap creates commitment loops.\n"
+          fi
+          if [ -z "$HAS_PROGRESS_BEYOND_TOUR" ]; then
+            PROGRESS_GAPS="${PROGRESS_GAPS}  - **No mastery/progression system**: Beyond onboarding, users have no sense of progression. A skills tree, exploration percentage, or feature mastery meter would drive deeper engagement.\n"
+          fi
+          if [ -z "$HAS_COMPLETION" ]; then
+            PROGRESS_GAPS="${PROGRESS_GAPS}  - **No setup completeness score**: Users don't know how much of the platform they've configured. A \"Your console is 60% set up\" prompt creates the Zeigarnik effect — the urge to complete unfinished tasks.\n"
+          fi
+          if [ -n "$PROGRESS_GAPS" ]; then
+            ISSUES="${ISSUES}### Missing Progress & Completion Loops\n${PROGRESS_GAPS}\n**Psychology:** The endowed progress effect and Zeigarnik effect drive users to complete sequences they've started. Instagram's activity status and GitHub's contribution graph use this.\n\n"
+          fi
+
+          # ── 3. Social Proof & Community Signals ──
+          # Check for community/social proof elements.
+          HAS_SOCIAL=$(grep -rlE "other.*users|popular|trending|most.*used|community|adopted.*by|used.*by.*teams|star[s]?.*count|fork[s]?.*count" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | grep -v node_modules | head -1 || true)
+          HAS_ACTIVITY_FEED=$(grep -rlE "activity.*feed|recent.*activity|live.*feed|event.*stream|what.*others" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | head -1 || true)
+
+          SOCIAL_GAPS=""
+          if [ -z "$HAS_SOCIAL" ]; then
+            SOCIAL_GAPS="${SOCIAL_GAPS}  - **No social proof signals**: Show \"Used by N teams\" or \"Most popular card this week\" to validate user choices and drive feature discovery.\n"
+          fi
+          if [ -z "$HAS_ACTIVITY_FEED" ]; then
+            SOCIAL_GAPS="${SOCIAL_GAPS}  - **No activity feed**: A lightweight \"Recent activity\" or \"What's happening\" panel creates FOMO and shows the platform is alive.\n"
+          fi
+          if [ -n "$SOCIAL_GAPS" ]; then
+            ISSUES="${ISSUES}### Missing Social Proof & Community Signals\n${SOCIAL_GAPS}\n**Psychology:** Social proof (Cialdini) — people follow what others do. Reddit's upvotes, GitHub's stars, and LinkedIn's \"N people viewed your profile\" all leverage this.\n\n"
+          fi
+
+          # ── 4. Curiosity Gaps & Discovery Triggers ──
+          # Check for elements that tease undiscovered features.
+          HAS_TEASER=$(grep -rlE "unlock|discover|hidden|sneak.*peek|coming.*soon|preview|try.*new|new.*feature|beta.*badge|explore.*more|see.*what" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | grep -v node_modules | head -3 || true)
+          HAS_EASTER_EGG=$(grep -rlE "easter.*egg|secret|konami|hidden.*feature|surprise.*mode" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | head -1 || true)
+
+          CURIOSITY_GAPS=""
+          if [ -z "$HAS_TEASER" ]; then
+            CURIOSITY_GAPS="${CURIOSITY_GAPS}  - **No feature teasers**: Partially revealed features (\"Unlock AI insights by connecting a cluster\") create information gaps that users feel compelled to close.\n"
+          fi
+          if [ -z "$HAS_EASTER_EGG" ]; then
+            CURIOSITY_GAPS="${CURIOSITY_GAPS}  - **No easter eggs or discovery moments**: Hidden features that users stumble upon create word-of-mouth sharing and delight. Even small ones (Konami code, hidden theme) build cult following.\n"
+          fi
+          if [ -n "$CURIOSITY_GAPS" ]; then
+            ISSUES="${ISSUES}### Missing Curiosity Gaps & Discovery Triggers\n${CURIOSITY_GAPS}\n**Psychology:** The information gap theory (Loewenstein) — curiosity is the gap between what we know and what we want to know. Facebook's notification badges and Reddit's \"N new comments\" exploit this.\n\n"
+          fi
+
+          # ── 5. Personalization & Investment ──
+          # Check if users can invest effort that makes the product
+          # more valuable to them over time (IKEA effect).
+          HAS_CUSTOMIZATION=$(grep -rlE "custom.*layout|user.*preference|personali[sz]|my.*dashboard|favorite|bookmark|pin|saved.*view" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | grep -v node_modules | head -1 || true)
+          HAS_STORED_VALUE=$(grep -rlE "history|recent.*search|saved.*filter|custom.*card|user.*config|workspace" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | grep -v node_modules | head -1 || true)
+
+          INVEST_GAPS=""
+          if [ -z "$HAS_CUSTOMIZATION" ]; then
+            INVEST_GAPS="${INVEST_GAPS}  - **No deep customization**: Users who invest effort customizing a tool feel ownership (IKEA effect) and are less likely to churn.\n"
+          fi
+          if [ -z "$HAS_STORED_VALUE" ]; then
+            INVEST_GAPS="${INVEST_GAPS}  - **No stored value accumulation**: Search history, saved filters, and custom views create switching costs. The more a user invests, the harder it is to leave.\n"
+          fi
+          if [ -n "$INVEST_GAPS" ]; then
+            ISSUES="${ISSUES}### Missing Investment & Stored Value\n${INVEST_GAPS}\n**Psychology:** The IKEA effect and sunk cost — users value things they've built. Pinterest boards, Spotify playlists, and Reddit karma all create investment that prevents churn.\n\n"
+          fi
+
+          # ── 6. Trigger & Notification Hooks ──
+          # Check for re-engagement triggers.
+          HAS_REENGAGEMENT=$(grep -rlE "notification|remind|alert.*config|digest|email.*pref|push.*notif|webhook.*user|come.*back" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | grep -v node_modules | head -1 || true)
+          HAS_IDLE_PROMPT=$(grep -rlE "idle|inactive|welcome.*back|time.*since|last.*visit|miss.*you|catch.*up" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | head -1 || true)
+
+          TRIGGER_GAPS=""
+          if [ -z "$HAS_REENGAGEMENT" ]; then
+            TRIGGER_GAPS="${TRIGGER_GAPS}  - **No re-engagement triggers**: No notification preferences, digest settings, or alert configurations to bring users back.\n"
+          fi
+          if [ -z "$HAS_IDLE_PROMPT" ]; then
+            TRIGGER_GAPS="${TRIGGER_GAPS}  - **No welcome-back experience**: Users who return after absence see no acknowledgment or catch-up summary. A \"While you were away...\" panel drives re-engagement.\n"
+          fi
+          if [ -n "$TRIGGER_GAPS" ]; then
+            ISSUES="${ISSUES}### Missing Re-engagement Triggers\n${TRIGGER_GAPS}\n**Psychology:** Fogg's behavior model — behavior requires trigger + motivation + ability. External triggers (notifications, digests) bring users back; internal triggers form through habit loops.\n\n"
+          fi
+
+          # ── Emit results ──
+          if [ -n "$ISSUES" ]; then
+            # Count total suggestions
+            SUGGESTION_COUNT=$(echo -e "$ISSUES" | grep -c "^###" || echo "0")
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "count=$SUGGESTION_COUNT" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-adoption-psychology.txt
+            echo "Found $SUGGESTION_COUNT adoption psychology opportunities"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No adoption psychology gaps detected — engagement patterns look solid"
+          fi
+
       # ── Ensure Labels Exist ────────────────────────────────────────
 
       - name: Ensure labels exist
@@ -3283,6 +3416,7 @@ jobs:
             "auto-qa:bundle-size:3B82F6:Bundle chunk size issues"
             "auto-qa:large-files:6B7280:Oversized source files"
             "auto-qa:import-cost:F59E0B:Import patterns that hurt tree-shaking"
+            "auto-qa:adoption:FF1493:Adoption & engagement psychology improvement"
           )
           for entry in "${LABELS[@]}"; do
             IFS=: read -r NAME COLOR DESC <<< "$entry"
@@ -3373,6 +3507,9 @@ jobs:
           FOCUS_ARIA_GAPS: ${{ steps.focus_aria_gaps.outputs.found }}
           FOCUS_MODAL_SAFETY: ${{ steps.focus_modal_safety.outputs.found }}
           FOCUS_EVENT_PARITY: ${{ steps.focus_event_parity.outputs.found }}
+          # Adoption psychology
+          FOCUS_ADOPTION: ${{ steps.focus_adoption_psychology.outputs.found }}
+          FOCUS_ADOPTION_COUNT: ${{ steps.focus_adoption_psychology.outputs.count }}
           # A11y focus
           FOCUS_COLOR_CONTRAST: ${{ steps.focus_color_contrast.outputs.found }}
           # Performance focus (additional)
@@ -4323,6 +4460,33 @@ jobs:
                    'Consider using actual <button> elements instead of divs',
                    'Ensure all interactive elements are keyboard accessible'], true),
                 labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:event-parity'],
+              });
+            }
+
+            // Adoption & Engagement Psychology (every run)
+            if (process.env.FOCUS_ADOPTION === 'true') {
+              const count = process.env.FOCUS_ADOPTION_COUNT || '?';
+              checks.push({
+                title: `${prefix} ${count} adoption & engagement psychology opportunities found`,
+                body: [
+                  `## Auto-QA [Adoption]: Engagement Psychology Audit`,
+                  '',
+                  `**Detected:** ${now} | **Focus:** Adoption Psychology | **Commit:** \`${sha}\` | **Run:** [View](${runUrl})`,
+                  '',
+                  readOutput('/tmp/focus-adoption-psychology.txt'),
+                  '',
+                  '### Implementation Guidance',
+                  '- Pick **one** suggestion and implement it as a small, self-contained UX improvement',
+                  '- Measure impact via GA4 events (add `ksc_` tracking for the new engagement feature)',
+                  '- Prefer lightweight implementations — a "did you know" tooltip is better than a full gamification system',
+                  '- Reference: Nir Eyal\'s Hook Model (Trigger → Action → Variable Reward → Investment)',
+                  ...(prGuidance ? ['', `> **PR Guidance:** ${prGuidance}`] : []),
+                  '',
+                  '---',
+                  `*This issue was automatically created by the [Auto-QA workflow](${runUrl}) during **Adoption Psychology** analysis.*`,
+                  '*Labels `help wanted` enable contributors to pick this up.*',
+                ].join('\n'),
+                labels: ['enhancement', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:adoption'],
               });
             }
 

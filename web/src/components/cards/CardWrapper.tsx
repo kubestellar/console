@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, useContext, ComponentType, Suspense, lazy } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  Maximize2, MoreVertical, Clock, Settings, Trash2, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download, Link2, Bug, AlertTriangle,
+  Maximize2, MoreVertical, Clock, Settings, Trash2, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download, Link2, Bug, AlertTriangle, Sparkles, X,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CARD_TITLES, CARD_DESCRIPTIONS, DEMO_EXEMPT_CARDS } from './cardMetadata'
@@ -21,6 +21,11 @@ import { ChatMessage } from './CardChat'
 import { CardSkeleton, type CardSkeletonProps } from '../../lib/cards/CardComponents'
 import { isCardExportable } from '../../lib/widgets/widgetRegistry'
 import { emitCardExpanded, emitCardRefreshed } from '../../lib/analytics'
+import { useMissions } from '../../hooks/useMissions'
+import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { CARD_INSTALL_MAP } from '../../lib/cards/cardInstallMap'
+import { loadMissionPrompt } from '../cards/multi-tenancy/missionLoader'
+import { ClusterSelectionDialog } from '../missions/ClusterSelectionDialog'
 // Lazy-load the widget export modal (~42 KB + code generator ~30 KB) — only when user exports
 const WidgetExportModal = lazy(() =>
   import('../widgets/WidgetExportModal').then(m => ({ default: m.WidgetExportModal }))
@@ -331,8 +336,14 @@ export function CardWrapper({
   children,
 }: CardWrapperProps) {
   const { t } = useTranslation(['cards', 'common'])
+  const { startMission, openSidebar } = useMissions()
+  const { status: agentStatus } = useLocalAgent()
+  const isAgentConnected = agentStatus === 'connected'
   const [isExpanded, setIsExpanded] = useState(false)
   const [showBugReport, setShowBugReport] = useState(false)
+  const [showInstallClusterSelect, setShowInstallClusterSelect] = useState(false)
+  const [showInstallGuide, setShowInstallGuide] = useState<{ mission: { mission?: { title?: string; description?: string; steps?: { title?: string; description?: string }[] } } } | null>(null)
+  const installInfo = CARD_INSTALL_MAP[cardType]
 
   // Register expand trigger for keyboard navigation
   useEffect(() => {
@@ -1068,6 +1079,42 @@ export function CardWrapper({
                         </Suspense>
                       </DynamicCardErrorBoundary>
                     </div>
+                    {/* Demo CTA — install prompt for live data */}
+                    {showDemoIndicator && !shouldShowSkeleton && !DEMO_EXEMPT_CARDS.has(cardType) && (
+                      <div className="mt-auto pt-2 border-t border-yellow-500/10">
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation()
+                            if (isAgentConnected && installInfo) {
+                              // Agent available: show cluster selector, then start AI mission
+                              setShowInstallClusterSelect(true)
+                            } else if (installInfo) {
+                              // No agent: try to load KB guide and show manual steps
+                              try {
+                                const resp = await fetch(`/console-kb/${installInfo.kbPaths[0]}`)
+                                if (resp.ok) {
+                                  const data = await resp.json()
+                                  setShowInstallGuide({ mission: data })
+                                }
+                              } catch { /* ignore fetch error */ }
+                            } else {
+                              // Generic fallback: start AI mission
+                              startMission({
+                                title: `Set up ${title} for live data`,
+                                description: `Install and configure the components needed for live data`,
+                                type: 'deploy',
+                                initialPrompt: `The user is viewing the "${title}" dashboard card which is currently showing demo data. Help them install and configure whatever is needed to get live data for this card.`,
+                              })
+                              openSidebar()
+                            }
+                          }}
+                          className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-yellow-400/80 hover:text-yellow-300 hover:bg-yellow-500/10 rounded transition-colors"
+                        >
+                          <Sparkles className="w-3 h-3" />
+                          <span>Install {installInfo?.project ?? 'components'} for live data</span>
+                        </button>
+                      </div>
+                    )}
                   </>
                 ) : (
                   // Show skeleton during lazy mount (before IntersectionObserver fires)
@@ -1167,6 +1214,60 @@ export function CardWrapper({
                 cardType={cardType}
               />
             </Suspense>
+          )}
+
+          {/* Install CTA: cluster selection dialog (agent available) */}
+          {showInstallClusterSelect && installInfo && (
+            <ClusterSelectionDialog
+              open={showInstallClusterSelect}
+              onCancel={() => setShowInstallClusterSelect(false)}
+              onSelect={async (clusters) => {
+                setShowInstallClusterSelect(false)
+                const prompt = await loadMissionPrompt(
+                  installInfo.missionKey,
+                  `Install and configure ${installInfo.project} for live data on the "${title}" dashboard card.`,
+                  installInfo.kbPaths,
+                )
+                const clusterContext = clusters.length > 0
+                  ? `\n\n**Target cluster(s):** ${clusters.join(', ')}\n\nPlease install on ${clusters.length === 1 ? `cluster "${clusters[0]}"` : `the following clusters: ${clusters.join(', ')}`}.`
+                  : ''
+                startMission({
+                  title: `Install ${installInfo.project}`,
+                  description: `Install and configure ${installInfo.project}`,
+                  type: 'deploy',
+                  cluster: clusters.length > 0 ? clusters.join(',') : undefined,
+                  initialPrompt: prompt + clusterContext,
+                })
+                openSidebar()
+              }}
+              missionTitle={`Install ${installInfo.project}`}
+            />
+          )}
+
+          {/* Install CTA: manual guide modal (no agent) */}
+          {showInstallGuide && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowInstallGuide(null)}>
+              <div className="bg-card border border-border rounded-xl shadow-2xl max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">{showInstallGuide.mission.mission?.title ?? `Install ${installInfo?.project ?? 'Component'}`}</h3>
+                  <button onClick={() => setShowInstallGuide(null)} className="p-1 hover:bg-secondary rounded"><X className="w-4 h-4" /></button>
+                </div>
+                {showInstallGuide.mission.mission?.description && (
+                  <p className="text-sm text-muted-foreground mb-4">{showInstallGuide.mission.mission.description}</p>
+                )}
+                <ol className="space-y-4">
+                  {(showInstallGuide.mission.mission?.steps ?? []).map((step: { title?: string; description?: string }, i: number) => (
+                    <li key={i} className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-xs flex items-center justify-center font-medium">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        {step.title && <p className="text-sm font-medium mb-1">{step.title}</p>}
+                        {step.description && <div className="text-sm text-muted-foreground whitespace-pre-wrap">{step.description}</div>}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </div>
           )}
 
           {/* Per-card bug/feature report modal */}

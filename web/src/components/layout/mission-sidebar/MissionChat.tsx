@@ -22,12 +22,10 @@ import {
 import { useMissions, type Mission } from '../../../hooks/useMissions'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { isNetlifyDeployment } from '../../../lib/demoMode'
-import { useResolutions, detectIssueSignature, type Resolution } from '../../../hooks/useResolutions'
+import { useResolutions, detectIssueSignature } from '../../../hooks/useResolutions'
 import { cn } from '../../../lib/cn'
 import { MAX_MESSAGE_SIZE_CHARS } from '../../../lib/constants'
 import { AgentBadge, AgentIcon } from '../../agent/AgentIcon'
-import { ResolutionKnowledgePanel } from '../../missions/ResolutionKnowledgePanel'
-import { ResolutionHistoryPanel } from '../../missions/ResolutionHistoryPanel'
 import { SaveResolutionDialog } from '../../missions/SaveResolutionDialog'
 import { SetupInstructionsDialog } from '../../setup/SetupInstructionsDialog'
 import { STATUS_CONFIG, TYPE_ICONS } from './types'
@@ -39,7 +37,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   const { t } = useTranslation('common')
   const { sendMessage, cancelMission, rateMission, setActiveMission, dismissMission, renameMission, runSavedMission, selectedAgent } = useMissions()
   const { isDemoMode } = useDemoMode()
-  const { findSimilarResolutions, recordUsage, allResolutions } = useResolutions()
+  const { findSimilarResolutions, recordUsage } = useResolutions()
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -52,8 +50,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   const savedInputRef = useRef('')
   // Resolution memory state
   const [showSaveDialog, setShowSaveDialog] = useState(false)
-  const [appliedResolutionId, setAppliedResolutionId] = useState<string | null>(null)
-  const [resolutionPanelView, setResolutionPanelView] = useState<'related' | 'history'>('related')
+  const [appliedResolutionId] = useState<string | null>(null)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   // Message validation error (e.g. too long)
   const [inputError, setInputError] = useState<string | null>(null)
@@ -78,14 +75,6 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
 
     return findSimilarResolutions(signature as { type: string }, { minSimilarity: 0.4, limit: 5 })
   }, [mission.title, mission.description, mission.messages, findSimilarResolutions])
-
-  // Handle applying a resolution
-  const handleApplyResolution = useCallback((resolution: Resolution) => {
-    setAppliedResolutionId(resolution.id)
-    // Inject the resolution into the chat as a user message
-    const applyMessage = `Please apply this saved resolution:\n\n**${resolution.title}**\n\n${resolution.resolution.summary}\n\nSteps:\n${resolution.resolution.steps.map((s, i) => `${i + 1}. ${s}`).join('\n')}${resolution.resolution.yaml ? `\n\nYAML:\n\`\`\`yaml\n${resolution.resolution.yaml}\n\`\`\`` : ''}`
-    sendMessage(mission.id, applyMessage)
-  }, [mission.id, sendMessage])
 
   // Save transcript as markdown file
   const saveTranscript = useCallback(() => {
@@ -324,70 +313,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
 
   return (
     <>
-    <div className={cn("flex flex-1 min-h-0 min-w-0", isFullScreen && "gap-4")}>
-      {/* Left panel for resolutions (fullscreen only) */}
-      {isFullScreen && (
-        <div className="flex flex-col">
-          {/* Panel toggle */}
-          <div className="flex mb-2 bg-secondary/50 rounded-lg p-0.5">
-            <button
-              onClick={() => setResolutionPanelView('related')}
-              className={cn(
-                "flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center justify-center gap-1.5",
-                resolutionPanelView === 'related'
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Related
-              {relatedResolutions.length > 0 && (
-                <span className={cn(
-                  "px-1.5 py-0.5 text-2xs rounded-full",
-                  resolutionPanelView === 'related'
-                    ? "bg-green-500/20 text-green-400"
-                    : "bg-muted text-muted-foreground"
-                )}>
-                  {relatedResolutions.length}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setResolutionPanelView('history')}
-              className={cn(
-                "flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center justify-center gap-1.5",
-                resolutionPanelView === 'history'
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              All Saved
-              {allResolutions.length > 0 && (
-                <span className={cn(
-                  "px-1.5 py-0.5 text-2xs rounded-full",
-                  resolutionPanelView === 'history'
-                    ? "bg-primary/20 text-primary"
-                    : "bg-muted text-muted-foreground"
-                )}>
-                  {allResolutions.length}
-                </span>
-              )}
-            </button>
-          </div>
-          {/* Panel content */}
-          {resolutionPanelView === 'related' ? (
-            <ResolutionKnowledgePanel
-              relatedResolutions={relatedResolutions}
-              onApplyResolution={handleApplyResolution}
-              onSaveNewResolution={() => setShowSaveDialog(true)}
-            />
-          ) : (
-            <ResolutionHistoryPanel
-              onApplyResolution={handleApplyResolution}
-            />
-          )}
-        </div>
-      )}
-
+    <div className={cn("flex flex-1 min-h-0 min-w-0")}>
       {/* Main chat area */}
       <div className="flex flex-col flex-1 min-h-0 min-w-0">
       {/* Header */}

@@ -12,7 +12,7 @@ import type { MissionExport } from '../../../lib/missions/types'
 /** Timeout for fetching a mission file from console-kb (ms) */
 const MISSION_FETCH_TIMEOUT_MS = 10_000
 
-/** Console-kb paths for missions */
+/** Console-kb paths for missions (legacy keys used by multi-tenancy cards) */
 export const MISSION_PATHS: Record<string, string> = {
   ovn: 'solutions/cncf-install/install-ovn-kubernetes.json',
   kubeflex: 'solutions/platform-install/platform-kubeflex.json',
@@ -27,13 +27,18 @@ export const MISSION_PATHS: Record<string, string> = {
  * expected by startMission(). Returns the mission steps as a formatted
  * prompt that the AI agent can follow.
  *
+ * Accepts either a componentKey (looked up in MISSION_PATHS) or a
+ * kbPaths array (tried in order) for direct path resolution.
+ *
  * Falls back to the raw text prompt if the fetch fails.
  */
 export async function loadMissionPrompt(
   componentKey: string,
   fallbackPrompt: string,
+  kbPaths?: string[],
 ): Promise<string> {
-  const path = MISSION_PATHS[componentKey]
+  // Try kbPaths first, then legacy MISSION_PATHS lookup
+  const path = kbPaths?.[0] ?? MISSION_PATHS[componentKey]
   if (!path) return fallbackPrompt
 
   try {

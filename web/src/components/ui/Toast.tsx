@@ -32,12 +32,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const toastCounter = useRef(0)
   const showToast = useCallback((message: string, type: ToastType = 'success') => {
     const id = `toast-${Date.now()}-${++toastCounter.current}`
-    setToasts((prev) => [...prev, { id, message, type }])
+    setToasts((prev) => {
+      // Deduplicate: skip if an identical message+type is already visible
+      if (prev.some(t => t.message === message && t.type === type)) return prev
+      return [...prev, { id, message, type }]
+    })
 
-    // Auto-remove after 3 seconds
+    // Auto-remove after 3 seconds (timeout is harmless if toast was deduplicated)
     const timeoutId = window.setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id))
-      // Only delete if still in map (component may have unmounted)
       if (timeoutsRef.current.has(id)) {
         timeoutsRef.current.delete(id)
       }

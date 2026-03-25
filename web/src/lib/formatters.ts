@@ -66,6 +66,23 @@ export function formatBytes(bytes: number, decimals = 1): string {
 }
 
 /**
+ * Format a value already in GB to a smart string, auto-converting to TB when large.
+ * Returns { display, tooltip } so callers can show the short form and hover for detail.
+ */
+export function formatGBSmart(gb: number, decimals = 1): { display: string; tooltip: string } {
+  if (!Number.isFinite(gb) || gb <= 0) return { display: '0 GB', tooltip: '0 GB' }
+  if (gb >= 1024) {
+    const tb = gb / 1024
+    return {
+      display: `${tb.toFixed(decimals)} TB`,
+      tooltip: `${Math.round(gb).toLocaleString()} GB`,
+    }
+  }
+  const rounded = gb >= 10 ? Math.round(gb) : Number(gb.toFixed(decimals))
+  return { display: `${rounded} GB`, tooltip: `${gb.toFixed(2)} GB` }
+}
+
+/**
  * Format Kubernetes resource quantity (e.g., "16077540Ki") to human-readable string
  */
 export function formatK8sMemory(value: string): string {

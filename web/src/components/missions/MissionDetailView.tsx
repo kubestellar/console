@@ -413,7 +413,7 @@ export function MissionDetailView({
                 {method}
               </span>
             ))}
-            {mission.tags
+            {(mission.tags || [])
               .filter((t) => !['installation', 'configuration', 'cncf'].includes(t))
               .slice(0, 4)
               .map((tag) => (

@@ -99,7 +99,7 @@ export function RecommendationCard({
               {mission.metadata.maturity}
             </span>
           )}
-          {mission.tags.slice(0, 2).map((tag) => (
+          {(mission.tags || []).slice(0, 2).map((tag) => (
             <span key={tag} className="px-1.5 py-0.5 text-2xs rounded bg-secondary text-muted-foreground">
               {tag}
             </span>

@@ -403,6 +403,10 @@ export function useSidebarConfig() {
     setConfig((prev) => ({ ...prev, collapsed: !prev.collapsed }))
   }, [])
 
+  const setCollapsed = useCallback((collapsed: boolean) => {
+    setConfig((prev) => ({ ...prev, collapsed }))
+  }, [])
+
   const openMobileSidebar = useCallback(() => {
     setConfig((prev) => ({ ...prev, isMobileOpen: true }))
   }, [])
@@ -484,6 +488,7 @@ export function useSidebarConfig() {
     toggleClusterStatus,
     setWidth,
     toggleCollapsed,
+    setCollapsed,
     openMobileSidebar,
     closeMobileSidebar,
     toggleMobileSidebar,

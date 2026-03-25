@@ -81,7 +81,9 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
     toggle()
   }
 
-  const handleSelect = (mode: StatDisplayMode) => {
+  const handleSelect = (e: React.MouseEvent, mode: StatDisplayMode) => {
+    e.stopPropagation()
+    e.preventDefault()
     onModeChange(mode)
     close()
   }
@@ -139,7 +141,7 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
               <button
                 key={mode}
                 role="menuitem"
-                onClick={() => isAvailable && handleSelect(mode)}
+                onClick={(e) => isAvailable && handleSelect(e, mode)}
                 disabled={!isAvailable}
                 className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded text-xs transition-colors ${
                   isActive

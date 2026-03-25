@@ -369,8 +369,8 @@
 
 /* Scrollbar - uses theme variables */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -386,21 +386,20 @@
   background: var(--scrollbar-thumb-hover);
 }
 
-/* Enhanced scrollbar for panels, sidebars, and dropdowns where
-   the default thin scrollbar is too hard to see/grab */
+/* Enhanced scrollbar for panels, sidebars, and dropdowns —
+   slim and subtle, only visible on hover/scroll */
 .scroll-enhanced::-webkit-scrollbar {
-  width: 12px;
+  width: 6px;
 }
 .scroll-enhanced::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.5);
-  border-radius: 6px;
+  background: transparent;
 }
 .scroll-enhanced::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.5);
-  border-radius: 6px;
+  background: rgba(100, 116, 139, 0.3);
+  border-radius: 3px;
 }
 .scroll-enhanced::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.75);
+  background: rgba(100, 116, 139, 0.55);
 }
 
 

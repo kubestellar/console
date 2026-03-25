@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { Plus, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff, GripVertical, X, User } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff, GripVertical, X, User, Pin, PinOff } from 'lucide-react'
 import { iconRegistry } from '../../lib/icons'
 import { cn } from '../../lib/cn'
 import { SnoozedCards } from './SnoozedCards'
@@ -14,6 +14,7 @@ import type { SnoozedSwap } from '../../hooks/useSnoozedCards'
 import type { SnoozedRecommendation } from '../../hooks/useSnoozedRecommendations'
 import type { SnoozedMission } from '../../hooks/useSnoozedMissions'
 import { useActiveUsers } from '../../hooks/useActiveUsers'
+import { useMissions } from '../../hooks/useMissions'
 import { ROUTES } from '../../config/routes'
 import { DASHBOARD_CONFIGS } from '../../config/dashboards/index'
 import { emitSidebarNavigated, emitDashboardRenamed } from '../../lib/analytics'
@@ -44,10 +45,11 @@ const HREF_TO_DASHBOARD_ID: Record<string, string> = {
 }
 
 export function Sidebar() {
-  const { config, toggleCollapsed, reorderItems, updateItem, removeItem, closeMobileSidebar, setWidth } = useSidebarConfig()
+  const { config, toggleCollapsed, setCollapsed, reorderItems, updateItem, removeItem, closeMobileSidebar, setWidth } = useSidebarConfig()
   const { isMobile } = useMobile()
   const { deduplicatedClusters } = useClusters()
   const dashboardContext = useDashboardContextOptional()
+  const { isFullScreen: isMissionFullScreen } = useMissions()
   const { viewerCount, hasError: viewersError } = useActiveUsers()
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -59,6 +61,51 @@ export function Sidebar() {
       closeMobileSidebar()
     }
   }, [location.pathname, isMobile, closeMobileSidebar])
+
+  // Auto-hide: collapse sidebar when mouse leaves, expand on hover
+  const SIDEBAR_AUTO_HIDE_MS = 2000
+  const [isPinned, setIsPinned] = useState(() => {
+    try { return localStorage.getItem('sidebar-left-pinned') !== 'false' } catch { return true }
+  })
+  const autoHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const clearAutoHideTimer = useCallback(() => {
+    if (autoHideTimerRef.current) {
+      clearTimeout(autoHideTimerRef.current)
+      autoHideTimerRef.current = null
+    }
+  }, [])
+
+  const handleSidebarMouseEnter = useCallback(() => {
+    clearAutoHideTimer()
+    if (!isPinned && config.collapsed && !isMobile) {
+      setCollapsed(false)
+    }
+  }, [clearAutoHideTimer, isPinned, config.collapsed, isMobile, setCollapsed])
+
+  const handleSidebarMouseLeave = useCallback(() => {
+    if (!isPinned && !isMobile) {
+      clearAutoHideTimer()
+      autoHideTimerRef.current = setTimeout(() => {
+        setCollapsed(true)
+      }, SIDEBAR_AUTO_HIDE_MS)
+    }
+  }, [isPinned, isMobile, clearAutoHideTimer, setCollapsed])
+
+  const toggleSidebarPin = useCallback(() => {
+    setIsPinned(prev => {
+      const next = !prev
+      try { localStorage.setItem('sidebar-left-pinned', String(next)) } catch { /* ignore */ }
+      if (next) clearAutoHideTimer()
+      else if (!config.collapsed) {
+        // Start auto-hide when unpinning
+        autoHideTimerRef.current = setTimeout(() => setCollapsed(true), SIDEBAR_AUTO_HIDE_MS)
+      }
+      return next
+    })
+  }, [clearAutoHideTimer, config.collapsed, setCollapsed])
+
+  useEffect(() => () => clearAutoHideTimer(), [clearAutoHideTimer])
 
   // On mobile, always show expanded view; on desktop, respect collapsed state
   const isCollapsed = !isMobile && config.collapsed
@@ -371,6 +418,8 @@ export function Sidebar() {
       <aside
         data-testid="sidebar"
         data-tour="sidebar"
+        onMouseEnter={handleSidebarMouseEnter}
+        onMouseLeave={handleSidebarMouseLeave}
         className={cn(
           'fixed left-0 top-16 bottom-0 glass border-r border-border/50 overflow-y-auto scroll-enhanced z-40',
           !isResizing && 'transition-all duration-300',
@@ -382,15 +431,6 @@ export function Sidebar() {
           isMobile && config.isMobileOpen && 'translate-x-0'
         )}
         style={{ width: isMobile ? SIDEBAR_DEFAULT_WIDTH_PX : sidebarWidth }}>
-        {/* Collapse toggle - hidden on mobile */}
-        <button
-          data-testid="sidebar-collapse-toggle"
-          onClick={toggleCollapsed}
-          aria-expanded={!config.collapsed}
-          className="sticky top-2 float-right -mr-4 mb-4 p-1 rounded-full bg-secondary border border-border text-muted-foreground hover:text-foreground z-10 hidden md:block shadow-md"
-        >
-          {config.collapsed ? <ChevronRight className="w-4 h-4" aria-hidden="true" /> : <ChevronLeft className="w-4 h-4" aria-hidden="true" />}
-        </button>
 
         {/* Primary navigation */}
         <nav data-testid="sidebar-primary-nav" className="space-y-1">
@@ -484,7 +524,7 @@ export function Sidebar() {
 
         {/* Viewer count */}
         {!isCollapsed && (
-          <div className="mt-4 flex items-center justify-end">
+          <div className="mt-auto pt-4 flex items-center justify-center">
             <div
               className="flex items-center gap-1 px-2 text-muted-foreground/60"
               title={t('sidebar.activeViewers', { count: viewerCount })}
@@ -498,15 +538,57 @@ export function Sidebar() {
         )}
       </aside>
 
-      {/* Resize handle - drag to adjust sidebar width */}
+      {/* Collapse + Pin controls — top-right of sidebar, above resize handle */}
+      {!isMobile && !isMissionFullScreen && (
+        <div
+          className="fixed top-[4.5rem] z-[51] flex flex-col gap-1.5 items-center"
+          style={{ left: sidebarWidth - 18 }}
+        >
+          <button
+            data-testid="sidebar-collapse-toggle"
+            onClick={() => {
+              if (config.collapsed) {
+                // Expanding: also pin so it stays open
+                setCollapsed(false)
+                if (!isPinned) {
+                  setIsPinned(true)
+                  try { localStorage.setItem('sidebar-left-pinned', 'true') } catch { /* ignore */ }
+                  clearAutoHideTimer()
+                }
+              } else {
+                toggleCollapsed()
+              }
+            }}
+            aria-expanded={!config.collapsed}
+            className="p-1.5 rounded-full bg-background border border-border text-muted-foreground hover:text-foreground hover:bg-secondary shadow-md transition-colors"
+            title={config.collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {config.collapsed ? <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" /> : <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />}
+          </button>
+          <button
+            onClick={toggleSidebarPin}
+            className={cn(
+              "p-1.5 rounded-full border border-border shadow-md transition-colors",
+              isPinned
+                ? "bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 border-purple-500/30"
+                : "bg-background text-muted-foreground/50 hover:text-muted-foreground hover:bg-secondary"
+            )}
+            title={isPinned ? 'Unpin sidebar (auto-collapse on mouse leave)' : 'Pin sidebar open'}
+          >
+            {isPinned ? <Pin className="w-3.5 h-3.5" /> : <PinOff className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+      )}
+
+      {/* Resize handle - drag to adjust sidebar width, starts below pin/collapse buttons */}
       {!isCollapsed && !isMobile && (
         <div
           onMouseDown={handleResizeStart}
           className={cn(
-            "fixed top-16 bottom-0 cursor-col-resize z-50 hover:bg-purple-500/30 transition-colors",
+            "fixed bottom-0 cursor-col-resize z-50 hover:bg-purple-500/30 transition-colors",
             isResizing && "bg-purple-500/50"
           )}
-          style={{ left: sidebarWidth - 3, width: 6 }}
+          style={{ top: 160, left: sidebarWidth - 3, width: 6 }}
         />
       )}
 

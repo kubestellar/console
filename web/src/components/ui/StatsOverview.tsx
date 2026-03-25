@@ -154,6 +154,8 @@ export interface StatBlockValue {
   thresholds?: { warning: number; critical: number }
   /** Hint to the display mode picker about what modes are appropriate */
   modeHints?: StatDisplayMode[]
+  /** Optional formatter for display — when value is numeric but should display as a string (e.g., "30.5 TB") */
+  format?: (value: number) => string
 }
 
 /** Inline horseshoe gauge — a 270° arc with value text centered */
@@ -223,10 +225,13 @@ function StatBlock({ block, data, hasData, isLoading, history, onDisplayModeChan
   const mode: StatDisplayMode = block.displayMode || 'numeric'
   const availableModes = getAvailableModes(block.id, data)
 
-  const displayValue = hasData ? data.value : '-'
-  const numericValue = typeof data.value === 'number'
-    ? data.value
-    : parseFloat(String(data.value))
+  const rawValue = data.value
+  const displayValue = hasData
+    ? (data.format && typeof rawValue === 'number' ? data.format(rawValue) : rawValue)
+    : '-'
+  const numericValue = typeof rawValue === 'number'
+    ? rawValue
+    : parseFloat(String(rawValue))
   const maxValue = data.max ?? 100
 
   // Sparkline: fall back to numeric if not enough data yet

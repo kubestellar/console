@@ -1,5 +1,23 @@
-import { memo, useState, useEffect, useRef } from 'react'
-import { Pencil, Globe, User, ShieldAlert, ChevronRight, Star, WifiOff, RefreshCw, ExternalLink, AlertCircle, Cpu, Box, Server, KeyRound, Copy, Check } from 'lucide-react'
+import { memo, useState, useEffect, useRef, useCallback } from 'react'
+import { Pencil, Globe, User, ShieldAlert, ChevronRight, Star, WifiOff, RefreshCw, ExternalLink, AlertCircle, Cpu, Box, Server, KeyRound, Copy, Check, GripVertical } from 'lucide-react'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  rectSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { FlashingValue } from '../../ui/FlashingValue'
 import { ClusterInfo } from '../../../hooks/useMCP'
 import { StatusIndicator } from '../../charts/StatusIndicator'
@@ -120,6 +138,7 @@ interface ClusterGridProps {
   onSelectCluster: (clusterName: string) => void
   onRenameCluster: (clusterName: string) => void
   onRefreshCluster?: (clusterName: string) => void
+  onReorder?: (clusterNames: string[]) => void
   layoutMode?: ClusterLayoutMode
 }
 
@@ -133,6 +152,7 @@ interface ClusterCardProps {
   onSelectCluster: () => void
   onRenameCluster: () => void
   onRefreshCluster?: () => void
+  dragHandle?: React.ReactNode
   layoutMode: ClusterLayoutMode
 }
 
@@ -146,6 +166,7 @@ const FullClusterCard = memo(function FullClusterCard({
   onSelectCluster,
   onRenameCluster,
   onRefreshCluster,
+  dragHandle,
 }: Omit<ClusterCardProps, 'layoutMode'>) {
   const { t } = useTranslation()
   const loading = isClusterLoading(cluster)
@@ -165,7 +186,7 @@ const FullClusterCard = memo(function FullClusterCard({
   return (
     <div
       onClick={onSelectCluster}
-      className="relative p-[1px] rounded-lg cursor-pointer transition-all hover:scale-[1.02] overflow-hidden"
+      className="relative p-[1px] rounded-lg cursor-pointer transition-all hover:scale-[1.02] overflow-hidden h-full"
       style={{
         /* Card view: prominent gradient — provider at 50%, theme at 38% */
         background: `linear-gradient(135deg, color-mix(in srgb, ${providerColor} 50%, transparent) 0%, color-mix(in srgb, ${themeColor} 38%, transparent) 100%)`,
@@ -185,6 +206,7 @@ const FullClusterCard = memo(function FullClusterCard({
         </div>
         <div className="flex items-start justify-between mb-4 relative z-10">
           <div className="flex items-center gap-3">
+            {dragHandle}
             {/* Status indicator with refresh button below */}
             <div className="flex flex-col items-center gap-2 flex-shrink-0">
               {initialLoading ? (
@@ -370,6 +392,7 @@ const ListClusterCard = memo(function ListClusterCard({
   isClusterAdmin,
   onSelectCluster,
   onRefreshCluster,
+  dragHandle,
 }: Omit<ClusterCardProps, 'layoutMode' | 'isConnected' | 'onRenameCluster'>) {
   const { t } = useTranslation()
   const loading = isClusterLoading(cluster)
@@ -406,6 +429,7 @@ const ListClusterCard = memo(function ListClusterCard({
           <CloudProviderIcon provider={provider} size={64} />
         </div>
         <div className="flex items-center gap-4">
+          {dragHandle}
           {/* Status indicator */}
           <div className="flex-shrink-0">
             {initialLoading ? (
@@ -546,6 +570,7 @@ const CompactClusterCard = memo(function CompactClusterCard({
   cluster,
   gpuInfo,
   onSelectCluster,
+  dragHandle,
 }: Omit<ClusterCardProps, 'layoutMode' | 'isConnected' | 'permissionsLoading' | 'isClusterAdmin' | 'onRenameCluster' | 'onRefreshCluster'>) {
   const { t } = useTranslation()
   const unreachable = isClusterUnreachable(cluster)
@@ -569,6 +594,7 @@ const CompactClusterCard = memo(function CompactClusterCard({
       <div className="relative glass p-3 rounded-lg h-full overflow-hidden">
         {/* Header */}
         <div className="flex items-center gap-2 mb-2">
+          {dragHandle}
           {isTokenExpired(cluster) ? (
             <span title="Token Expired"><KeyRound className="w-3 h-3 text-red-400" /></span>
           ) : unreachable ? (
@@ -632,6 +658,43 @@ const CompactClusterCard = memo(function CompactClusterCard({
   )
 })
 
+// Sortable wrapper for individual cluster items
+function SortableClusterItem({ id, children, onReorder }: { id: string; children: (dragHandle: React.ReactNode) => React.ReactNode; onReorder?: (names: string[]) => void }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    position: 'relative' as const,
+    zIndex: isDragging ? 10 : undefined,
+  }
+
+  const dragHandle = onReorder ? (
+    <button
+      {...attributes}
+      {...listeners}
+      className="p-0.5 rounded hover:bg-secondary/80 cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"
+      title="Drag to reorder"
+    >
+      <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50" />
+    </button>
+  ) : null
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      {children(dragHandle)}
+    </div>
+  )
+}
+
 export const ClusterGrid = memo(function ClusterGrid({
   clusters,
   gpuByCluster,
@@ -641,9 +704,25 @@ export const ClusterGrid = memo(function ClusterGrid({
   onSelectCluster,
   onRenameCluster,
   onRefreshCluster,
+  onReorder,
   layoutMode = 'grid',
 }: ClusterGridProps) {
   const { t } = useTranslation()
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id || !onReorder) return
+    const oldIndex = clusters.findIndex(c => c.name === active.id)
+    const newIndex = clusters.findIndex(c => c.name === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+    const reordered = arrayMove(clusters, oldIndex, newIndex)
+    onReorder(reordered.map(c => c.name))
+  }, [clusters, onReorder])
 
   if (clusters.length === 0) {
     return (
@@ -661,53 +740,66 @@ export const ClusterGrid = memo(function ClusterGrid({
     wide: 'grid grid-cols-1 lg:grid-cols-2 gap-4',
   }
 
+  const sortingStrategy = layoutMode === 'list' ? verticalListSortingStrategy : rectSortingStrategy
+  const clusterIds = clusters.map(c => c.name)
+
   return (
-    <div className={`${gridClasses[layoutMode]} mb-6`}>
-      {clusters.map((cluster) => {
-        const clusterKey = cluster.name.split('/')[0]
-        const gpuInfo = gpuByCluster[clusterKey] || gpuByCluster[cluster.name]
-        const clusterIsAdmin = isClusterAdmin(cluster.name)
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={clusterIds} strategy={sortingStrategy}>
+        <div className={`${gridClasses[layoutMode]} mb-6`}>
+          {clusters.map((cluster) => {
+            const clusterKey = cluster.name.split('/')[0]
+            const gpuInfo = gpuByCluster[clusterKey] || gpuByCluster[cluster.name]
+            const clusterIsAdmin = isClusterAdmin(cluster.name)
 
-        if (layoutMode === 'list') {
-          return (
-            <ListClusterCard
-              key={cluster.name}
-              cluster={cluster}
-              gpuInfo={gpuInfo}
-              permissionsLoading={permissionsLoading}
-              isClusterAdmin={clusterIsAdmin}
-              onSelectCluster={() => onSelectCluster(cluster.name)}
-              onRefreshCluster={onRefreshCluster ? () => onRefreshCluster(cluster.name) : undefined}
-            />
-          )
-        }
+            return (
+              <SortableClusterItem key={cluster.name} id={cluster.name} onReorder={onReorder}>
+                {(dragHandle) => {
+                  if (layoutMode === 'list') {
+                    return (
+                      <ListClusterCard
+                        cluster={cluster}
+                        gpuInfo={gpuInfo}
+                        permissionsLoading={permissionsLoading}
+                        isClusterAdmin={clusterIsAdmin}
+                        onSelectCluster={() => onSelectCluster(cluster.name)}
+                        onRefreshCluster={onRefreshCluster ? () => onRefreshCluster(cluster.name) : undefined}
+                        dragHandle={dragHandle}
+                      />
+                    )
+                  }
 
-        if (layoutMode === 'compact') {
-          return (
-            <CompactClusterCard
-              key={cluster.name}
-              cluster={cluster}
-              gpuInfo={gpuInfo}
-              onSelectCluster={() => onSelectCluster(cluster.name)}
-            />
-          )
-        }
+                  if (layoutMode === 'compact') {
+                    return (
+                      <CompactClusterCard
+                        cluster={cluster}
+                        gpuInfo={gpuInfo}
+                        onSelectCluster={() => onSelectCluster(cluster.name)}
+                        dragHandle={dragHandle}
+                      />
+                    )
+                  }
 
-        // grid and wide use the full card
-        return (
-          <FullClusterCard
-            key={cluster.name}
-            cluster={cluster}
-            gpuInfo={gpuInfo}
-            isConnected={isConnected}
-            permissionsLoading={permissionsLoading}
-            isClusterAdmin={clusterIsAdmin}
-            onSelectCluster={() => onSelectCluster(cluster.name)}
-            onRenameCluster={() => onRenameCluster(cluster.name)}
-            onRefreshCluster={onRefreshCluster ? () => onRefreshCluster(cluster.name) : undefined}
-          />
-        )
-      })}
-    </div>
+                  // grid and wide use the full card
+                  return (
+                    <FullClusterCard
+                      cluster={cluster}
+                      gpuInfo={gpuInfo}
+                      isConnected={isConnected}
+                      permissionsLoading={permissionsLoading}
+                      isClusterAdmin={clusterIsAdmin}
+                      onSelectCluster={() => onSelectCluster(cluster.name)}
+                      onRenameCluster={() => onRenameCluster(cluster.name)}
+                      onRefreshCluster={onRefreshCluster ? () => onRefreshCluster(cluster.name) : undefined}
+                      dragHandle={dragHandle}
+                    />
+                  )
+                }}
+              </SortableClusterItem>
+            )
+          })}
+        </div>
+      </SortableContext>
+    </DndContext>
   )
 })

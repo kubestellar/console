@@ -884,8 +884,18 @@ Install the console locally with the KubeStellar Console agent to use AI mission
   const startMission = useCallback((params: StartMissionParams): string => {
     const missionId = `mission-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
-    // Auto-match and inject resolution context for relevant mission types
+    // Inject cluster targeting into the prompt sent to the agent
     let enhancedPrompt = params.initialPrompt
+    if (params.cluster) {
+      const clusterList = params.cluster.split(',').map(c => c.trim()).filter(Boolean)
+      if (clusterList.length === 1) {
+        enhancedPrompt = `Target cluster: ${clusterList[0]}\nIMPORTANT: All kubectl commands MUST use --context=${clusterList[0]}\n\n${enhancedPrompt}`
+      } else {
+        enhancedPrompt = `Target clusters: ${clusterList.join(', ')}\nIMPORTANT: Perform the following on each cluster using their respective kubectl contexts.\n\n${enhancedPrompt}`
+      }
+    }
+
+    // Auto-match and inject resolution context for relevant mission types
     let matchedResolutions: MatchedResolution[] = []
 
     // Match resolutions for troubleshooting-related missions (not deploy/upgrade)
@@ -1099,10 +1109,17 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       ? `${mission.description}\n\nSteps:\n${mission.importedFrom.steps.map((s, i) => `${i + 1}. ${s.title}: ${s.description}`).join('\n')}`
       : mission.description
 
-    // Inject cluster targeting context if a cluster was selected
-    const initialPrompt = cluster
-      ? `Target cluster: ${cluster}\n\nIMPORTANT: All kubectl commands MUST use --context=${cluster}\n\n${basePrompt}`
-      : basePrompt
+    // Inject cluster targeting context if cluster(s) were selected
+    let initialPrompt = basePrompt
+    if (cluster) {
+      const clusterList = cluster.split(',').map(c => c.trim()).filter(Boolean)
+      if (clusterList.length === 1) {
+        initialPrompt = `Target cluster: ${clusterList[0]}\n\nIMPORTANT: All kubectl commands MUST use --context=${clusterList[0]}\n\n${basePrompt}`
+      } else {
+        const contextFlags = clusterList.map(c => `--context=${c}`).join(', ')
+        initialPrompt = `Target clusters: ${clusterList.join(', ')}\n\nIMPORTANT: Perform the following on each cluster. Use these kubectl contexts: ${contextFlags}\n\n${basePrompt}`
+      }
+    }
 
     setMissions(prev => prev.map(m =>
       m.id === missionId ? {

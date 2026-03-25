@@ -300,12 +300,12 @@ export function ResourceTrend() {
           </div>
           <span className="text-sm font-bold text-foreground">{hasReachableClusters ? currentTotals.cpuCores : '-'}</span>
         </div>
-        <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20" title={hasReachableClusters ? `${currentTotals.memoryGB.toFixed(0)} GB memory total` : 'No reachable clusters'}>
+        <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20" title={hasReachableClusters ? `${currentTotals.memoryGB.toFixed(2)} GB memory total` : 'No reachable clusters'}>
           <div className="flex items-center gap-1 mb-1">
             <MemoryStick className="w-3 h-3 text-green-400" />
             <span className="text-xs text-green-400">Mem</span>
           </div>
-          <span className="text-sm font-bold text-foreground">{hasReachableClusters ? `${currentTotals.memoryGB.toFixed(0)}G` : '-'}</span>
+          <span className="text-sm font-bold text-foreground">{hasReachableClusters ? (currentTotals.memoryGB >= 1024 ? `${(currentTotals.memoryGB / 1024).toFixed(1)}T` : `${currentTotals.memoryGB.toFixed(0)}G`) : '-'}</span>
         </div>
         <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20" title={hasReachableClusters ? `${currentTotals.pods} pods running` : 'No reachable clusters'}>
           <div className="flex items-center gap-1 mb-1">

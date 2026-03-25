@@ -135,7 +135,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
 
   // Build resource items list
   const resourceItems = useMemo(() => {
-    const formatBytes = (v: number) => v >= 1024 ? `${(v / 1024).toFixed(1)} TB` : `${Math.round(v)} GB`
+    const formatGB = (v: number) => v >= 1024 ? `${(v / 1024).toFixed(1)} TB` : `${Math.round(v)} GB`
 
     const items: ResourceItem[] = []
 
@@ -163,7 +163,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
         capacity: totals.memoryGB,
         unit: 'GB',
         color: 'purple',
-        format: formatBytes,
+        format: formatGB,
       })
     }
 

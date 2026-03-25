@@ -1,10 +1,10 @@
-import { WifiOff, SortAsc, SortDesc, LayoutGrid, List, Grid3X3, Columns } from 'lucide-react'
+import { WifiOff, SortAsc, SortDesc, LayoutGrid, List, Grid3X3, Columns, Plus } from 'lucide-react'
 import { ClusterStats } from './StatsOverview'
 import { ClusterLayoutMode } from './ClusterGrid'
 import { useTranslation } from 'react-i18next'
 
 export type FilterType = 'all' | 'healthy' | 'unhealthy' | 'unreachable'
-export type SortByType = 'name' | 'nodes' | 'pods' | 'health'
+export type SortByType = 'name' | 'nodes' | 'pods' | 'health' | 'provider' | 'custom'
 
 interface FilterTabsProps {
   stats: ClusterStats
@@ -16,6 +16,7 @@ interface FilterTabsProps {
   onSortAscChange: (asc: boolean) => void
   layoutMode?: ClusterLayoutMode
   onLayoutModeChange?: (mode: ClusterLayoutMode) => void
+  onAddCluster?: () => void
 }
 
 const LAYOUT_OPTIONS: { mode: ClusterLayoutMode; icon: typeof LayoutGrid; label: string }[] = [
@@ -35,6 +36,7 @@ export function FilterTabs({
   onSortAscChange,
   layoutMode = 'grid',
   onLayoutModeChange,
+  onAddCluster,
 }: FilterTabsProps) {
   const { t } = useTranslation()
   return (
@@ -82,8 +84,18 @@ export function FilterTabs({
         Offline ({stats.unreachable})
       </button>
 
-      {/* Sort and Layout selectors */}
+      {/* Add Cluster, Layout, and Sort */}
       <div className="ml-auto flex items-center gap-3">
+        {/* Add Cluster */}
+        {onAddCluster && (
+          <button
+            onClick={onAddCluster}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Cluster
+          </button>
+        )}
         {/* Layout mode selector */}
         {onLayoutModeChange && (
           <div className="flex items-center gap-1 border-r border-border pr-3">
@@ -112,10 +124,12 @@ export function FilterTabs({
             onChange={(e) => onSortByChange(e.target.value as SortByType)}
             className="px-2 py-1.5 rounded-lg text-sm bg-card/50 border border-border text-foreground"
           >
+            <option value="custom">Custom</option>
             <option value="name">{t('common.name')}</option>
             <option value="nodes">{t('common.nodes')}</option>
             <option value="pods">{t('common.pods')}</option>
             <option value="health">Health</option>
+            <option value="provider">Provider</option>
           </select>
           <button
             onClick={() => onSortAscChange(!sortAsc)}
@@ -125,6 +139,7 @@ export function FilterTabs({
             {sortAsc ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />}
           </button>
         </div>
+
       </div>
     </div>
   )

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
   X,
   ChevronRight,
@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   Eye,
   ShieldOff,
+  BookOpen,
 } from 'lucide-react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { useMissions } from '../../../hooks/useMissions'
@@ -36,6 +37,9 @@ import type { FontSize } from './types'
 import { MissionListItem } from './MissionListItem'
 import { MissionChat } from './MissionChat'
 import { ClusterSelectionDialog } from '../../missions/ClusterSelectionDialog'
+import { ResolutionKnowledgePanel } from '../../missions/ResolutionKnowledgePanel'
+import { ResolutionHistoryPanel } from '../../missions/ResolutionHistoryPanel'
+import { useResolutions, detectIssueSignature } from '../../../hooks/useResolutions'
 import { useTranslation } from 'react-i18next'
 import { SAVED_TOAST_MS, FOCUS_DELAY_MS } from '../../../lib/constants/network'
 import { MISSION_FILE_FETCH_TIMEOUT_MS } from '../../missions/browser/missionCache'
@@ -43,7 +47,7 @@ import { isDemoMode } from '../../../lib/demoMode'
 
 export function MissionSidebar() {
   const { t } = useTranslation(['common'])
-  const { missions, activeMission, isSidebarOpen, isSidebarMinimized, isFullScreen, setActiveMission, closeSidebar, dismissMission, minimizeSidebar, expandSidebar, setFullScreen, selectedAgent, startMission, saveMission, runSavedMission, openSidebar } = useMissions()
+  const { missions, activeMission, isSidebarOpen, isSidebarMinimized, isFullScreen, setActiveMission, closeSidebar, dismissMission, minimizeSidebar, expandSidebar, setFullScreen, selectedAgent, startMission, saveMission, runSavedMission, openSidebar, sendMessage } = useMissions()
   const { isMobile } = useMobile()
   const [collapsedMissions, setCollapsedMissions] = useState<Set<string>>(new Set())
   const [fontSize, setFontSize] = useState<FontSize>('base')
@@ -58,6 +62,26 @@ export function MissionSidebar() {
   const newMissionInputRef = useRef<HTMLTextAreaElement>(null)
   // Cluster selection for install missions
   const [pendingRunMissionId, setPendingRunMissionId] = useState<string | null>(null)
+  // Resolution panel state (fullscreen left sidebar)
+  const [resolutionPanelView, setResolutionPanelView] = useState<'related' | 'history'>('related')
+  const { findSimilarResolutions, allResolutions } = useResolutions()
+  const relatedResolutions = useMemo(() => {
+    if (!activeMission) return []
+    const content = [
+      activeMission.title,
+      activeMission.description,
+      ...activeMission.messages.slice(0, 3).map(m => m.content),
+    ].join('\n')
+    const signature = detectIssueSignature(content)
+    if (!signature.type || signature.type === 'Unknown') return []
+    return findSimilarResolutions(signature as { type: string }, { minSimilarity: 0.4, limit: 5 })
+  }, [activeMission?.title, activeMission?.description, activeMission?.messages, findSimilarResolutions])
+
+  const handleApplyResolution = useCallback((resolution: { title: string; resolution: { summary: string; steps: string[]; yaml?: string } }) => {
+    if (!activeMission) return
+    const applyMessage = `Please apply this saved resolution:\n\n**${resolution.title}**\n\n${resolution.resolution.summary}\n\nSteps:\n${resolution.resolution.steps.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}${resolution.resolution.yaml ? `\n\nYAML:\n\`\`\`yaml\n${resolution.resolution.yaml}\n\`\`\`` : ''}`
+    sendMessage(activeMission.id, applyMessage)
+  }, [activeMission, sendMessage])
 
   // Deep-link: open MissionBrowser via ?mission= (specific) or ?browse=missions (explorer)
   // Direct import: ?import= fetches and imports mission directly (no browser popup)
@@ -268,6 +292,7 @@ export function MissionSidebar() {
       if (e.key === 'Escape') {
         if (isFullScreen) {
           setFullScreen(false)
+          closeSidebar()
         } else if (isSidebarOpen) {
           closeSidebar()
         }
@@ -313,7 +338,8 @@ export function MissionSidebar() {
   // Minimized sidebar view (thin strip) - desktop only
   if (isSidebarMinimized && !isMobile) {
     return (
-      <div className={cn(
+      <div
+        className={cn(
         "fixed top-16 right-0 bottom-0 w-12 bg-card/95 backdrop-blur-sm border-l border-border shadow-xl z-40 flex flex-col items-center py-4",
         "transition-transform duration-300 ease-in-out",
         !isSidebarOpen && "translate-x-full pointer-events-none"
@@ -572,7 +598,7 @@ export function MissionSidebar() {
 
       {missions.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-          <AgentIcon provider={getAgentProvider(selectedAgent)} className="w-12 h-12 opacity-50 mb-4" />
+          <Sparkles className="w-10 h-10 text-purple-400/40 mb-4" />
           <p className="text-muted-foreground">{t('missionSidebar.noActiveMissions')}</p>
           <p className="text-xs text-muted-foreground/70 mt-1">
             {t('missionSidebar.startMissionPrompt')}
@@ -595,7 +621,7 @@ export function MissionSidebar() {
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors"
             >
               <Globe className="w-4 h-4" />
-              Browse Missions
+              Browse Community Missions
             </button>
           </div>
         </div>
@@ -604,59 +630,133 @@ export function MissionSidebar() {
           "flex-1 flex min-h-0 min-w-0 overflow-hidden",
           isFullScreen && "w-full"
         )}>
-          {/* Fullscreen: show saved missions panel on left */}
-          {isFullScreen && savedMissions.length > 0 && (
+          {/* Fullscreen: left sidebar with saved missions + related knowledge */}
+          {isFullScreen && (
             <div className="w-64 border-r border-border bg-secondary/20 flex flex-col overflow-hidden flex-shrink-0">
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
-                <Bookmark className="w-4 h-4 text-purple-400" />
-                <span className="text-xs font-semibold text-foreground">Saved Missions</span>
-                <StatusBadge color="purple" size="xs" rounded="full" className="ml-auto">{savedMissions.length}</StatusBadge>
-              </div>
-              <div className="flex-1 overflow-y-auto scroll-enhanced p-1.5 space-y-1">
-                {savedMissions.map(m => (
-                  <div
-                    key={m.id}
-                    className="group p-2 rounded-lg hover:bg-purple-500/10 transition-colors cursor-pointer border border-transparent hover:border-purple-500/20"
-                    onClick={() => handleViewSavedMission(m)}
-                  >
-                    <div className="flex items-start gap-2">
-                      <Bookmark className="w-3.5 h-3.5 text-purple-400 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-foreground truncate">{m.title}</p>
-                        {m.importedFrom?.cncfProject && (
-                          <p className="text-2xs text-muted-foreground truncate">{m.importedFrom.cncfProject}</p>
-                        )}
-                        {m.importedFrom?.tags && m.importedFrom.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-0.5 mt-1">
-                            {m.importedFrom.tags.slice(0, 3).map(tag => (
-                              <span key={tag} className="text-[9px] px-1 py-0 bg-secondary rounded text-muted-foreground">{tag}</span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+              <div className="flex-1 overflow-y-auto scroll-enhanced">
+                {/* Saved Missions section */}
+                {savedMissions.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+                      <Bookmark className="w-4 h-4 text-purple-400" />
+                      <span className="text-xs font-semibold text-foreground">Saved Missions</span>
+                      <StatusBadge color="purple" size="xs" rounded="full" className="ml-auto">{savedMissions.length}</StatusBadge>
                     </div>
-                    <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleViewSavedMission(m) }}
-                        className="flex items-center gap-1 px-2 py-0.5 text-2xs text-muted-foreground hover:text-foreground rounded hover:bg-secondary transition-colors"
-                      >
-                        <Eye className="w-2.5 h-2.5" /> View
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleRunMission(m.id) }}
-                        className="flex items-center gap-1 px-2 py-0.5 text-2xs font-medium bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                      >
-                        <Play className="w-2.5 h-2.5" /> Run
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); dismissMission(m.id) }}
-                        className="flex items-center gap-1 px-2 py-0.5 text-2xs text-muted-foreground hover:text-red-400 rounded hover:bg-red-500/10 transition-colors"
-                      >
-                        <Trash2 className="w-2.5 h-2.5" /> Remove
-                      </button>
+                    <div className="p-1.5 space-y-1">
+                      {savedMissions.map(m => (
+                        <div
+                          key={m.id}
+                          className="group p-2 rounded-lg hover:bg-purple-500/10 transition-colors cursor-pointer border border-transparent hover:border-purple-500/20"
+                          onClick={() => handleViewSavedMission(m)}
+                        >
+                          <div className="flex items-start gap-2">
+                            <Bookmark className="w-3.5 h-3.5 text-purple-400 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium text-foreground truncate">{m.title}</p>
+                              {m.importedFrom?.cncfProject && (
+                                <p className="text-2xs text-muted-foreground truncate">{m.importedFrom.cncfProject}</p>
+                              )}
+                              {m.importedFrom?.tags && m.importedFrom.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-0.5 mt-1">
+                                  {m.importedFrom.tags.slice(0, 3).map(tag => (
+                                    <span key={tag} className="text-[9px] px-1 py-0 bg-secondary rounded text-muted-foreground">{tag}</span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleViewSavedMission(m) }}
+                              className="flex items-center gap-1 px-2 py-0.5 text-2xs text-muted-foreground hover:text-foreground rounded hover:bg-secondary transition-colors"
+                            >
+                              <Eye className="w-2.5 h-2.5" /> View
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleRunMission(m.id) }}
+                              className="flex items-center gap-1 px-2 py-0.5 text-2xs font-medium bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                            >
+                              <Play className="w-2.5 h-2.5" /> Run
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); dismissMission(m.id) }}
+                              className="flex items-center gap-1 px-2 py-0.5 text-2xs text-muted-foreground hover:text-red-400 rounded hover:bg-red-500/10 transition-colors"
+                            >
+                              <Trash2 className="w-2.5 h-2.5" /> Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
+                )}
+
+                {/* Related Knowledge section */}
+                <div className={cn(savedMissions.length > 0 && "border-t border-border")}>
+                  <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+                    <BookOpen className="w-4 h-4 text-purple-400" />
+                    <span className="text-xs font-semibold text-foreground">Knowledge</span>
+                  </div>
+                  {/* Toggle tabs */}
+                  <div className="flex mx-1.5 mt-1.5 bg-secondary/50 rounded-lg p-0.5">
+                    <button
+                      onClick={() => setResolutionPanelView('related')}
+                      className={cn(
+                        "flex-1 px-2 py-1 text-2xs font-medium rounded-md transition-colors flex items-center justify-center gap-1",
+                        resolutionPanelView === 'related'
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      Related
+                      {relatedResolutions.length > 0 && (
+                        <span className={cn(
+                          "px-1 py-0 text-[9px] rounded-full",
+                          resolutionPanelView === 'related'
+                            ? "bg-green-500/20 text-green-400"
+                            : "bg-muted text-muted-foreground"
+                        )}>
+                          {relatedResolutions.length}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setResolutionPanelView('history')}
+                      className={cn(
+                        "flex-1 px-2 py-1 text-2xs font-medium rounded-md transition-colors flex items-center justify-center gap-1",
+                        resolutionPanelView === 'history'
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      All Saved
+                      {allResolutions.length > 0 && (
+                        <span className={cn(
+                          "px-1 py-0 text-[9px] rounded-full",
+                          resolutionPanelView === 'history'
+                            ? "bg-primary/20 text-primary"
+                            : "bg-muted text-muted-foreground"
+                        )}>
+                          {allResolutions.length}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                  {/* Panel content */}
+                  <div className="p-1.5">
+                    {resolutionPanelView === 'related' ? (
+                      <ResolutionKnowledgePanel
+                        relatedResolutions={relatedResolutions}
+                        onApplyResolution={handleApplyResolution}
+                        onSaveNewResolution={() => {}}
+                      />
+                    ) : (
+                      <ResolutionHistoryPanel
+                        onApplyResolution={handleApplyResolution}
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -824,8 +924,8 @@ export function MissionSidebar() {
         <ClusterSelectionDialog
           open
           missionTitle={pendingMission?.title ?? 'Mission'}
-          onSelect={(cluster) => {
-            runSavedMission(pendingRunMissionId, cluster || undefined)
+          onSelect={(clusters) => {
+            runSavedMission(pendingRunMissionId, clusters.length > 0 ? clusters.join(',') : undefined)
             setPendingRunMissionId(null)
           }}
           onCancel={() => setPendingRunMissionId(null)}

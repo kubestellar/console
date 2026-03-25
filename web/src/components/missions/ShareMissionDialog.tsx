@@ -78,7 +78,7 @@ function missionToMarkdown(mission: MissionExport): string {
     `# ${mission.title}`,
     '',
     `**Type:** ${mission.type}`,
-    `**Tags:** ${mission.tags.join(', ')}`,
+    `**Tags:** ${(mission.tags || []).join(', ')}`,
     '',
     '## Problem',
     mission.description,

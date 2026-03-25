@@ -13,6 +13,7 @@ import {
   type ClusterLayoutMode,
 } from './components'
 import { isClusterUnreachable, isClusterHealthy } from './utils'
+import { detectCloudProvider, getProviderLabel } from '../ui/CloudProviderIcon'
 import { useMissions } from '../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../cards/console-missions/shared'
 import { loadMissionPrompt } from '../cards/multi-tenancy/missionLoader'
@@ -27,10 +28,11 @@ import { usePermissions } from '../../hooks/usePermissions'
 import { ClusterCardSkeleton } from '../ui/ClusterCardSkeleton'
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { useTranslation } from 'react-i18next'
-import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_CLUSTER_LAYOUT, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_CLUSTER_LAYOUT, STORAGE_KEY_CLUSTER_ORDER, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { useModalState } from '../../lib/modals'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import type { StatBlockValue } from '../ui/StatsOverview'
+import { formatMemoryStat } from '../../lib/formatStats'
 
 // Storage key for cluster page cards
 const CLUSTERS_CARDS_KEY = 'kubestellar-clusters-cards'
@@ -92,8 +94,18 @@ export function Clusters() {
     }
     setSearchParams(searchParams, { replace: true })
   }, [searchParams, setSearchParams])
-  const [sortBy, setSortBy] = useState<'name' | 'nodes' | 'pods' | 'health'>('name')
+  const [sortBy, setSortBy] = useState<'name' | 'nodes' | 'pods' | 'health' | 'provider' | 'custom'>(() => {
+    // Default to custom if user has a saved order
+    const savedOrder = localStorage.getItem(STORAGE_KEY_CLUSTER_ORDER)
+    return savedOrder ? 'custom' : 'name'
+  })
   const [sortAsc, setSortAsc] = useState(true)
+  const [customOrder, setCustomOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CLUSTER_ORDER)
+      return saved ? JSON.parse(saved) : []
+    } catch { return [] }
+  })
   const [layoutMode, setLayoutMode] = useState<ClusterLayoutMode>(() => {
     const stored = localStorage.getItem(STORAGE_KEY_CLUSTER_LAYOUT)
     return (stored as ClusterLayoutMode) || 'grid'
@@ -129,6 +141,12 @@ export function Clusters() {
     refetch()
   }
 
+  const handleReorder = useCallback((newOrder: string[]) => {
+    setCustomOrder(newOrder)
+    setSortBy('custom')
+    localStorage.setItem(STORAGE_KEY_CLUSTER_ORDER, JSON.stringify(newOrder))
+  }, [])
+
   const filteredClusters = useMemo(() => {
     let result = clusters || []
 
@@ -158,30 +176,50 @@ export function Clusters() {
     }
 
     // Sort
-    result = [...result].sort((a, b) => {
-      let cmp = 0
-      switch (sortBy) {
-        case 'name':
-          cmp = a.name.localeCompare(b.name)
-          break
-        case 'nodes':
-          cmp = (a.nodeCount || 0) - (b.nodeCount || 0)
-          break
-        case 'pods':
-          cmp = (a.podCount || 0) - (b.podCount || 0)
-          break
-        case 'health': {
-          const aHealth = isClusterUnreachable(a) ? 0 : isClusterHealthy(a) ? 2 : 1
-          const bHealth = isClusterUnreachable(b) ? 0 : isClusterHealthy(b) ? 2 : 1
-          cmp = aHealth - bHealth
-          break
+    if (sortBy === 'custom' && customOrder.length > 0) {
+      // Use custom order: items in customOrder come first in that order,
+      // items not in customOrder are appended alphabetically
+      const orderMap = new Map(customOrder.map((name, i) => [name, i]))
+      result = [...result].sort((a, b) => {
+        const aIdx = orderMap.get(a.name)
+        const bIdx = orderMap.get(b.name)
+        if (aIdx !== undefined && bIdx !== undefined) return aIdx - bIdx
+        if (aIdx !== undefined) return -1
+        if (bIdx !== undefined) return 1
+        return a.name.localeCompare(b.name)
+      })
+    } else {
+      result = [...result].sort((a, b) => {
+        let cmp = 0
+        switch (sortBy) {
+          case 'name':
+            cmp = a.name.localeCompare(b.name)
+            break
+          case 'nodes':
+            cmp = (a.nodeCount || 0) - (b.nodeCount || 0)
+            break
+          case 'pods':
+            cmp = (a.podCount || 0) - (b.podCount || 0)
+            break
+          case 'health': {
+            const aHealth = isClusterUnreachable(a) ? 0 : isClusterHealthy(a) ? 2 : 1
+            const bHealth = isClusterUnreachable(b) ? 0 : isClusterHealthy(b) ? 2 : 1
+            cmp = aHealth - bHealth
+            break
+          }
+          case 'provider': {
+            const aProvider = getProviderLabel((a.distribution as ReturnType<typeof detectCloudProvider>) || detectCloudProvider(a.name, a.server, a.namespaces, a.user))
+            const bProvider = getProviderLabel((b.distribution as ReturnType<typeof detectCloudProvider>) || detectCloudProvider(b.name, b.server, b.namespaces, b.user))
+            cmp = aProvider.localeCompare(bProvider)
+            break
+          }
         }
-      }
-      return sortAsc ? cmp : -cmp
-    })
+        return sortAsc ? cmp : -cmp
+      })
+    }
 
     return result
-  }, [clusters, filter, globalSelectedClusters, isAllClustersSelected, customFilter, sortBy, sortAsc])
+  }, [clusters, filter, globalSelectedClusters, isAllClustersSelected, customFilter, sortBy, sortAsc, customOrder])
 
   // Get GPU count per cluster
   const gpuByCluster = useMemo(() => {
@@ -191,8 +229,8 @@ export function Clusters() {
       if (!map[clusterKey]) {
         map[clusterKey] = { total: 0, allocated: 0 }
       }
-      map[clusterKey].total += node.gpuCount
-      map[clusterKey].allocated += node.gpuAllocated
+      map[clusterKey].total += node.gpuCount || 0
+      map[clusterKey].allocated += node.gpuAllocated || 0
     })
     return map
   }, [gpuNodes])
@@ -319,14 +357,16 @@ export function Clusters() {
         }
       case 'memory':
         return {
-          value: hasData ? `${Math.round(stats.totalMemoryGB)} GB` : '-',
+          value: hasData ? stats.totalMemoryGB : '-',
+          format: (v: number) => formatMemoryStat(v),
           sublabel: 'allocatable',
           onClick: () => { emitClusterStatsDrillDown('memory'); window.location.href = '/compute' },
           isClickable: hasData,
         }
       case 'storage':
         return {
-          value: hasData ? `${Math.round(stats.totalStorageGB)} GB` : '-',
+          value: hasData ? stats.totalStorageGB : '-',
+          format: (v: number) => formatMemoryStat(v),
           sublabel: 'storage',
           onClick: () => { emitClusterStatsDrillDown('storage'); window.location.href = '/storage' },
           isClickable: hasData,
@@ -430,6 +470,7 @@ export function Clusters() {
                   setLayoutMode(mode)
                   localStorage.setItem(STORAGE_KEY_CLUSTER_LAYOUT, mode)
                 }}
+                onAddCluster={() => setShowAddCluster(true)}
               />
               {filteredClusters.length === 0 && !isLoading && !showSkeletonContent ? (
                 <EmptyClusterState onAddCluster={() => setShowAddCluster(true)} />
@@ -444,6 +485,7 @@ export function Clusters() {
                   onSelectCluster={setSelectedCluster}
                   onRenameCluster={setRenamingCluster}
                   onRefreshCluster={refreshSingleCluster}
+                  onReorder={handleReorder}
                 />
               )}
             </>
@@ -603,15 +645,6 @@ export function Clusters() {
       lastUpdated={lastUpdated}
       hasData={stats.hasResourceData || stats.total > 0}
       beforeCards={beforeCardsContent}
-      rightExtra={
-        <button
-          onClick={() => setShowAddCluster(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          {t('cluster.addCluster')}
-        </button>
-      }
       emptyState={{
         title: 'Cluster Dashboard',
         description: 'Add cards to monitor cluster health, resource usage, and workload status.',

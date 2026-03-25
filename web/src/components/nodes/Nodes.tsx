@@ -5,6 +5,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
+import { formatMemoryStat } from '../../lib/formatStats'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { useTranslation } from 'react-i18next'
@@ -67,7 +68,7 @@ export function Nodes() {
       case 'cpus':
         return { value: totalCPU, sublabel: t('common:nodes.cpuCores'), onClick: () => drillToAllNodes(), isClickable: totalCPU > 0 }
       case 'memory':
-        return { value: `${totalMemoryGB.toFixed(0)} GB`, sublabel: t('common:common.memory'), onClick: () => drillToAllNodes(), isClickable: totalMemoryGB > 0 }
+        return { value: totalMemoryGB, format: (v: number) => formatMemoryStat(v), sublabel: t('common:common.memory'), onClick: () => drillToAllNodes(), isClickable: totalMemoryGB > 0 }
       case 'gpus':
         return { value: totalGPUs, sublabel: t('common:common.gpus'), onClick: () => drillToAllGPU(), isClickable: totalGPUs > 0 }
       case 'tpus':
