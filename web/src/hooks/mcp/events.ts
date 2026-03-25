@@ -173,7 +173,9 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       setConsecutiveFailures(0)
       setLastRefresh(now)
     } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') return
+      // Use name check instead of instanceof to handle both Error and DOMException
+      // across all browser versions (DOMException may not extend Error in older Safari).
+      if ((err as { name?: string })?.name === 'AbortError') return
       if (!isMountedRef.current) return
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())

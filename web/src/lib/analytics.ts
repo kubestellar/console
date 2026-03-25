@@ -1083,6 +1083,25 @@ export function startGlobalErrorTracking() {
       if (msg.includes('writeText') || msg.includes('clipboard') || msg.includes('copy')) return
       // Stale chunks can surface as unhandled rejections from dynamic import()
       if (tryChunkReloadRecovery(msg)) return
+      // Skip AbortError / TimeoutError — expected when fetches are cancelled on unmount
+      // or when AbortSignal.timeout() fires. Different browsers surface different messages:
+      //   Safari:  "Fetch is aborted."  |  Chrome: "The user aborted a request."
+      //   Safari timeout: "The operation timed out."  |  Chrome timeout: "signal timed out"
+      const errorName: string = (event.reason as { name?: string })?.name ?? ''
+      if (errorName === 'AbortError' || errorName === 'TimeoutError') return
+      if (
+        msg.includes('Fetch is aborted') ||
+        msg.includes('The user aborted a request') ||
+        msg.includes('signal is aborted') ||
+        msg.includes('The operation timed out') ||
+        msg.includes('signal timed out') ||
+        msg.includes('Load failed')
+      ) return
+      // Skip WebKit URL-parse errors — "The string did not match the expected pattern."
+      // is thrown by new URL() in Safari when the input is invalid. These surface as
+      // unhandled rejections when they occur inside async functions; the errors are
+      // typically transient (stale cache data, invalid cluster server URLs).
+      if (msg.includes('did not match the expected pattern')) return
       emitError('unhandled_rejection', msg)
     } finally {
       isEmitting = false

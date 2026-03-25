@@ -69,6 +69,10 @@ export function NodeConditions() {
     setActionPending(nodeName)
     try {
       await execute(cluster, ['cordon', nodeName])
+    } catch {
+      // Ignore kubectl errors (connection failures, timeouts) — they are
+      // expected when the local agent is unavailable and must not surface
+      // as unhandled promise rejections from the onClick handler.
     } finally {
       setActionPending(null)
     }
@@ -78,6 +82,8 @@ export function NodeConditions() {
     setActionPending(nodeName)
     try {
       await execute(cluster, ['uncordon', nodeName])
+    } catch {
+      // Same rationale as handleCordon above.
     } finally {
       setActionPending(null)
     }
