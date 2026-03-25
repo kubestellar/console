@@ -190,10 +190,32 @@ export function TourProvider({ children }: { children: ReactNode }) {
   )
 }
 
+/**
+ * Safe fallback for when useTour is called outside TourProvider.
+ * This can happen transiently during error-boundary recovery or when a
+ * stale chunk re-evaluates outside the provider tree.
+ */
+const TOUR_FALLBACK: TourContextValue = {
+  isActive: false,
+  currentStep: null,
+  currentStepIndex: 0,
+  totalSteps: 0,
+  hasCompletedTour: true,
+  startTour: () => {},
+  nextStep: () => {},
+  prevStep: () => {},
+  skipTour: () => {},
+  resetTour: () => {},
+  goToStep: () => {},
+}
+
 export function useTour() {
   const context = useContext(TourContext)
   if (!context) {
-    throw new Error('useTour must be used within a TourProvider')
+    if (import.meta.env.DEV) {
+      console.warn('useTour was called outside TourProvider — returning safe fallback')
+    }
+    return TOUR_FALLBACK
   }
   return context
 }

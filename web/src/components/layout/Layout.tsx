@@ -28,6 +28,7 @@ import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { InClusterAgentDialog } from '../setup/InClusterAgentDialog'
 import { AgentSetupDialog } from '../agent/AgentSetupDialog'
 import { KeepAliveOutlet } from './KeepAliveOutlet'
+import { PageErrorBoundary } from '../PageErrorBoundary'
 import { UpdateProgressBanner } from '../updates/UpdateProgressBanner'
 import { useUpdateProgress } from '../../hooks/useUpdateProgress'
 import { VersionCheckProvider } from '../../hooks/useVersionCheck'
@@ -509,9 +510,11 @@ export function Layout({ children }: LayoutProps) {
           )}>
           <NavigationProgress />
           {children ? (
-            <Suspense fallback={<ContentLoadingSkeleton />}>
-              {children}
-            </Suspense>
+            <PageErrorBoundary>
+              <Suspense fallback={<ContentLoadingSkeleton />}>
+                {children}
+              </Suspense>
+            </PageErrorBoundary>
           ) : (
             <KeepAliveOutlet />
           )}

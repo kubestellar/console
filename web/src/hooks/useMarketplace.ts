@@ -277,7 +277,7 @@ export function useMarketplace() {
     const matchesSearch = !searchQuery ||
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesTag = !selectedTag || item.tags.includes(selectedTag)
+    const matchesTag = !selectedTag || (item.tags || []).includes(selectedTag)
     const matchesType = !selectedType || item.type === selectedType
     const matchesStatus = !showHelpWanted || item.status === 'help-wanted'
     return matchesSearch && matchesTag && matchesType && matchesStatus

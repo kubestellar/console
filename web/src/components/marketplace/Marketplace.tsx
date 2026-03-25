@@ -243,7 +243,7 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
               </span>
             ))
           ) : (
-            item.tags.slice(0, 3).map(tag => (
+            (item.tags || []).slice(0, 3).map(tag => (
               <span key={tag} className="text-2xs px-1.5 py-0.5 bg-primary/80 text-primary-foreground rounded">
                 {tag}
               </span>

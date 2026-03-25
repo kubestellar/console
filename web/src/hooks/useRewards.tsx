@@ -254,10 +254,32 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
   )
 }
 
+/**
+ * Safe fallback for when useRewards is called outside RewardsProvider.
+ * This can happen transiently during error-boundary recovery or when a
+ * stale chunk re-evaluates after AppErrorBoundary catches a render error.
+ */
+const REWARDS_FALLBACK: RewardsContextType = {
+  rewards: null,
+  totalCoins: 0,
+  earnedAchievements: [],
+  isLoading: false,
+  awardCoins: () => false,
+  hasEarnedAction: () => false,
+  getActionCount: () => 0,
+  recentEvents: [],
+  githubRewards: null,
+  githubPoints: 0,
+  refreshGitHubRewards: async () => {},
+}
+
 export function useRewards() {
   const context = useContext(RewardsContext)
   if (!context) {
-    throw new Error('useRewards must be used within a RewardsProvider')
+    if (import.meta.env.DEV) {
+      console.warn('useRewards was called outside RewardsProvider — returning safe fallback')
+    }
+    return REWARDS_FALLBACK
   }
   return context
 }
