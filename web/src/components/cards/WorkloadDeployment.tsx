@@ -28,7 +28,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 import { isAgentUnavailable } from '../../hooks/useLocalAgent'
-import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
+import { LOCAL_AGENT_HTTP_URL, MCP_HOOK_TIMEOUT_MS } from '../../lib/constants'
 import { clusterCacheRef } from '../../hooks/mcp/shared'
 
 // Workload types
@@ -220,7 +220,7 @@ async function scaleViaAgent(
   const context = clusterEntry?.context || cluster
 
   const ctrl = new AbortController()
-  const tid = setTimeout(() => ctrl.abort(), 15_000)
+  const tid = setTimeout(() => ctrl.abort(), MCP_HOOK_TIMEOUT_MS)
   try {
     const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/scale`, {
       method: 'POST',
@@ -229,7 +229,22 @@ async function scaleViaAgent(
       body: JSON.stringify({ cluster: context, namespace, name, replicas }),
     })
     if (!res.ok) throw new Error(`Agent ${res.status}`)
-    return await res.json()
+
+    const data: { success?: boolean; message?: string; error?: string } = await res.json()
+
+    if (data && typeof data === 'object') {
+      if (data.error) {
+        // Agent often returns { error: string } with HTTP 200 on failure
+        return { success: false, message: data.error }
+      }
+
+      if (typeof data.success === 'boolean') {
+        return { success: data.success, message: data.message }
+      }
+    }
+
+    // Fallback if the agent response shape is unexpected
+    return { success: false, message: 'Unexpected agent response from scale endpoint' }
   } finally {
     clearTimeout(tid)
   }
@@ -262,8 +277,6 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
     setScaleError(null)
     setScaleSuccess(false)
 
-    const cluster = workload.targetClusters[0] || 'unknown'
-
     try {
       // Try backend REST API first
       await scaleWorkload({
@@ -276,18 +289,38 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
       onScaled?.()
       setTimeout(() => setScaleSuccess(false), 2000)
     } catch {
-      // Backend failed — try agent fallback
+      // Backend failed — try agent fallback for all target clusters
       try {
-        const result = await scaleViaAgent(cluster, workload.namespace, workload.name, desiredReplicas)
-        if (result.success) {
+        const clusters = workload.targetClusters.length > 0 ? workload.targetClusters : ['unknown']
+        const results = await Promise.all(
+          clusters.map(c => scaleViaAgent(c, workload.namespace, workload.name, desiredReplicas)),
+        )
+        const failures = results.filter(r => !r.success)
+        if (failures.length === 0) {
           setScaleSuccess(true)
           onScaled?.()
           setTimeout(() => setScaleSuccess(false), 2000)
         } else {
-          setScaleError(result.message || 'Scale failed')
+          setScaleError(failures.map(r => r.message || 'Scale failed').join('; '))
         }
       } catch (agentErr) {
-        setScaleError(agentErr instanceof Error ? agentErr.message : 'Scale failed')
+        if (
+          agentErr &&
+          typeof agentErr === 'object' &&
+          'name' in agentErr &&
+          (agentErr as { name?: unknown }).name === 'AbortError'
+        ) {
+          setScaleError('Scaling request was aborted')
+        } else if (
+          agentErr &&
+          typeof agentErr === 'object' &&
+          'message' in agentErr &&
+          typeof (agentErr as { message?: unknown }).message === 'string'
+        ) {
+          setScaleError((agentErr as { message: string }).message)
+        } else {
+          setScaleError('Scale failed')
+        }
       }
     } finally {
       setIsScaling(false)

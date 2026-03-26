@@ -809,14 +809,15 @@ func normalizeImageRef(image string) string {
 	return "docker.io/" + image
 }
 
-// ScaleWorkload scales a workload across the specified clusters using the
-// scale subresource. It tries Deployments and StatefulSets (DaemonSets do not
-// support replicas). If targetClusters is empty, all known clusters are tried.
+// ScaleWorkload scales supported workload types across the specified clusters by
+// fetching the workload and updating spec.replicas on the main resource object.
+// It tries Deployments and StatefulSets (DaemonSets do not support replicas).
+// If targetClusters is empty, all known clusters are tried.
 func (m *MultiClusterClient) ScaleWorkload(ctx context.Context, namespace, name string, targetClusters []string, replicas int32) (*v1alpha1.DeployResponse, error) {
 	if len(targetClusters) == 0 {
 		m.mu.RLock()
-		for name := range m.dynamicClients {
-			targetClusters = append(targetClusters, name)
+		for clusterName := range m.dynamicClients {
+			targetClusters = append(targetClusters, clusterName)
 		}
 		m.mu.RUnlock()
 	}
