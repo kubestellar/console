@@ -174,7 +174,7 @@ export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact
     }
   }, [])
   const category = mission.category ?? 'Orchestration'
-  const gradient = CNCF_CATEGORY_GRADIENTS[category] ?? ['#6366f1', '#8b5cf6']
+  const gradient = CNCF_CATEGORY_GRADIENTS[category] ?? ['var(--cncf-default-start)', 'var(--cncf-default-end)']
   const iconPath = CNCF_CATEGORY_ICONS[category] ?? CNCF_CATEGORY_ICONS['Orchestration']
   const maturityTag = mission.tags?.find(t => ['graduated', 'incubating', 'sandbox'].includes(t))
   const maturity = maturityTag ? MATURITY_CONFIG[maturityTag] : null

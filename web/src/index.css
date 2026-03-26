@@ -94,6 +94,32 @@
     --chart-color-7: #8b5cf6;
     --chart-color-8: #14b8a6;
 
+    /* CNCF category gradient colors */
+    --cncf-observability-start: #3b82f6;
+    --cncf-observability-end: #06b6d4;
+    --cncf-orchestration-start: #10b981;
+    --cncf-orchestration-end: #14b8a6;
+    --cncf-runtime-start: #f59e0b;
+    --cncf-runtime-end: #f97316;
+    --cncf-provisioning-start: #ec4899;
+    --cncf-provisioning-end: #f43f5e;
+    --cncf-security-start: #ef4444;
+    --cncf-security-end: #dc2626;
+    --cncf-service-mesh-start: #06b6d4;
+    --cncf-service-mesh-end: #0ea5e9;
+    --cncf-app-definition-start: #8b5cf6;
+    --cncf-app-definition-end: #6366f1;
+    --cncf-serverless-start: #a855f7;
+    --cncf-serverless-end: #7c3aed;
+    --cncf-storage-start: #84cc16;
+    --cncf-storage-end: #22c55e;
+    --cncf-streaming-start: #f97316;
+    --cncf-streaming-end: #eab308;
+    --cncf-networking-start: #0ea5e9;
+    --cncf-networking-end: #3b82f6;
+    --cncf-default-start: #6366f1;
+    --cncf-default-end: #8b5cf6;
+
     /* Font - can be overridden by theme */
     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;

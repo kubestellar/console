@@ -1,17 +1,17 @@
 /** Shared CNCF styling constants used across Marketplace and Mission Browser */
 
 export const CNCF_CATEGORY_GRADIENTS: Record<string, [string, string]> = {
-  'Observability': ['#3b82f6', '#06b6d4'],
-  'Orchestration': ['#10b981', '#14b8a6'],
-  'Runtime': ['#f59e0b', '#f97316'],
-  'Provisioning': ['#ec4899', '#f43f5e'],
-  'Security': ['#ef4444', '#dc2626'],
-  'Service Mesh': ['#06b6d4', '#0ea5e9'],
-  'App Definition': ['#8b5cf6', '#6366f1'],
-  'Serverless': ['#a855f7', '#7c3aed'],
-  'Storage': ['#84cc16', '#22c55e'],
-  'Streaming': ['#f97316', '#eab308'],
-  'Networking': ['#0ea5e9', '#3b82f6'],
+  'Observability': ['var(--cncf-observability-start)', 'var(--cncf-observability-end)'],
+  'Orchestration': ['var(--cncf-orchestration-start)', 'var(--cncf-orchestration-end)'],
+  'Runtime': ['var(--cncf-runtime-start)', 'var(--cncf-runtime-end)'],
+  'Provisioning': ['var(--cncf-provisioning-start)', 'var(--cncf-provisioning-end)'],
+  'Security': ['var(--cncf-security-start)', 'var(--cncf-security-end)'],
+  'Service Mesh': ['var(--cncf-service-mesh-start)', 'var(--cncf-service-mesh-end)'],
+  'App Definition': ['var(--cncf-app-definition-start)', 'var(--cncf-app-definition-end)'],
+  'Serverless': ['var(--cncf-serverless-start)', 'var(--cncf-serverless-end)'],
+  'Storage': ['var(--cncf-storage-start)', 'var(--cncf-storage-end)'],
+  'Streaming': ['var(--cncf-streaming-start)', 'var(--cncf-streaming-end)'],
+  'Networking': ['var(--cncf-networking-start)', 'var(--cncf-networking-end)'],
 }
 
 export const CNCF_CATEGORY_ICONS: Record<string, string> = {

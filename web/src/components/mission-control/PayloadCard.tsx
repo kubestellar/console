@@ -40,7 +40,7 @@ function getAvatarUrl(project: PayloadProject): string {
 }
 
 function getCategoryGradient(category: string): [string, string] {
-  return (CNCF_CATEGORY_GRADIENTS as Record<string, [string, string]>)[category] ?? ['#6366f1', '#8b5cf6']
+  return (CNCF_CATEGORY_GRADIENTS as Record<string, [string, string]>)[category] ?? ['var(--cncf-default-start)', 'var(--cncf-default-end)']
 }
 
 const PRIORITY_STYLES = {
