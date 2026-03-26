@@ -746,28 +746,37 @@ data:
         className="flex-1 font-mono text-xs bg-black/30 rounded-lg p-3 overflow-y-auto mb-3 min-h-0"
       >
         {output.length === 0 ? (
-          <div className="text-muted-foreground/50">
+          <div className="text-muted-foreground/50 whitespace-pre">
             <p>kubectl terminal ready. Type commands or use AI assistant.</p>
             <p className="mt-2">Examples:</p>
-            <p className="ml-4">• get pods</p>
-            <p className="ml-4">• get deployments</p>
-            <p className="ml-4">• describe pod &lt;name&gt;</p>
-            <p className="ml-4">• logs &lt;pod-name&gt;</p>
+            <p className="ml-4">  get pods</p>
+            <p className="ml-4">  get deployments</p>
+            <p className="ml-4">  describe pod &lt;name&gt;</p>
+            <p className="ml-4">  logs &lt;pod-name&gt;</p>
           </div>
         ) : (
-          output.map((line, idx) => (
-            <div
-              key={idx}
-              className={cn(
-                line.startsWith('$') ? 'text-green-400 font-semibold' :
-                line.startsWith('Error:') ? 'text-red-400' :
-                line.startsWith('AI:') ? 'text-purple-400' :
-                'text-foreground'
-              )}
-            >
-              {line}
-            </div>
-          ))
+          output.map((line, idx) => {
+            const isCommand = line.startsWith('$')
+            const isError = line.startsWith('Error:')
+            const isAI = line.startsWith('AI:')
+            const isEmpty = line === ''
+            // Show a subtle separator for empty lines between command blocks
+            if (isEmpty) {
+              return <div key={idx} className="h-2 border-b border-border/10 mb-2" />
+            }
+            return (
+              <pre
+                key={idx}
+                className={cn(
+                  'whitespace-pre-wrap break-words m-0 py-0 leading-snug',
+                  isCommand && 'text-green-400 font-semibold bg-green-500/5 -mx-1 px-1 rounded mt-1 py-0.5 border-l-2 border-green-500/40',
+                  isError && 'text-red-400 bg-red-500/5 -mx-1 px-1 rounded',
+                  isAI && 'text-purple-400',
+                  !isCommand && !isError && !isAI && 'text-foreground/90'
+                )}
+              >{line}</pre>
+            )
+          })
         )}
       </div>
 
