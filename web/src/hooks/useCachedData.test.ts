@@ -96,6 +96,17 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** Create a mock Response with both .json() and .text() (fetchAPI uses response.text()) */
+function mockResponse(body: unknown, { ok = true, status = 200 }: { ok?: boolean; status?: number } = {}) {
+  const text = JSON.stringify(body)
+  return {
+    ok,
+    status,
+    json: async () => body,
+    text: async () => text,
+  }
+}
+
 /** Default cache result shape returned by the mocked useCache */
 function defaultCacheResult<T>(data: T, overrides: Record<string, unknown> = {}) {
   return {
@@ -168,10 +179,7 @@ describe('fetchAPI internals (via useCachedPods)', () => {
   })
 
   it('constructs correct URL with query params', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ pods: [] }),
-    })
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({ pods: [] }))
 
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedPods('test-cluster', 'default'),
@@ -188,10 +196,7 @@ describe('fetchAPI internals (via useCachedPods)', () => {
   })
 
   it('sets Authorization: Bearer <token> header', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ pods: [] }),
-    })
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({ pods: [] }))
 
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedPods('test-cluster'),
@@ -227,10 +232,7 @@ describe('fetchAPI internals (via useCachedPods)', () => {
   })
 
   it('uses AbortSignal.timeout on fetch requests', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ pods: [] }),
-    })
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({ pods: [] }))
 
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedPods('test-cluster'),
@@ -327,10 +329,7 @@ describe('useCachedPods', () => {
       { name: 'pod-b', restarts: 10 },
       { name: 'pod-c', restarts: 5 },
     ]
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ pods: unsortedPods }),
-    })
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({ pods: unsortedPods }))
 
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedPods('test', undefined, { limit: 2 }),
@@ -394,10 +393,7 @@ describe('useCachedEvents', () => {
   })
 
   it('fetcher passes limit param to API', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ events: [] }),
-    })
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({ events: [] }))
 
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedEvents('test', undefined, { limit: 10 }),
@@ -412,10 +408,7 @@ describe('useCachedEvents', () => {
     const mockEvents = [
       { type: 'Warning', reason: 'BackOff', message: 'test' },
     ]
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ events: mockEvents }),
-    })
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({ events: mockEvents }))
 
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedEvents('prod-east'),
@@ -467,15 +460,12 @@ describe('useCachedDeploymentIssues', () => {
     mockIsAgentUnavailable.mockReturnValue(false)
 
     // Mock agent fetch returning deployments with unhealthy replicas
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        deployments: [
-          { name: 'web-app', namespace: 'prod', replicas: 3, readyReplicas: 1, status: 'running' },
-          { name: 'api-gw', namespace: 'prod', replicas: 2, readyReplicas: 2, status: 'running' },
-        ],
-      }),
-    })
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({
+      deployments: [
+        { name: 'web-app', namespace: 'prod', replicas: 3, readyReplicas: 1, status: 'running' },
+        { name: 'api-gw', namespace: 'prod', replicas: 2, readyReplicas: 2, status: 'running' },
+      ],
+    }))
 
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedDeploymentIssues('prod'),
@@ -495,10 +485,7 @@ describe('useCachedDeploymentIssues', () => {
     const mockIssues = [
       { name: 'failing-deploy', namespace: 'prod', replicas: 2, readyReplicas: 0, reason: 'DeploymentFailed' },
     ]
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ issues: mockIssues }),
-    })
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({ issues: mockIssues }))
 
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedDeploymentIssues('prod'),
@@ -575,10 +562,7 @@ describe('useCachedServices', () => {
   })
 
   it('fetcher calls correct API endpoint for single cluster', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ services: [{ name: 'svc-1' }] }),
-    })
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({ services: [{ name: 'svc-1' }] }))
 
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedServices('my-cluster', 'default'),
@@ -861,10 +845,7 @@ describe('useCachedPodIssues', () => {
     mockClusterCacheRef.clusters = []
     mockIsBackendUnavailable.mockReturnValue(false)
 
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ issues: [{ name: 'broken-pod', restarts: 3 }] }),
-    })
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({ issues: [{ name: 'broken-pod', restarts: 3 }] }))
 
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedPodIssues('prod'),
@@ -912,10 +893,7 @@ describe('useCachedWarningEvents', () => {
   })
 
   it('fetcher uses events/warnings endpoint for single cluster', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ events: [{ type: 'Warning', reason: 'BackOff' }] }),
-    })
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({ events: [{ type: 'Warning', reason: 'BackOff' }] }))
 
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedWarningEvents('prod-east'),
@@ -997,14 +975,8 @@ describe('Multi-cluster fetching', () => {
 
     // Mock fetch for cluster listing and pod fetches
     globalThis.fetch = vi.fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ pods: [{ name: 'pod-a1' }] }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ pods: [{ name: 'pod-b1' }] }),
-      })
+      .mockResolvedValueOnce(mockResponse({ pods: [{ name: 'pod-a1' }] }))
+      .mockResolvedValueOnce(mockResponse({ pods: [{ name: 'pod-b1' }] }))
 
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedPods(undefined, undefined, { limit: 100 }),
@@ -1022,10 +994,7 @@ describe('Multi-cluster fetching', () => {
     ]
 
     // Only cluster-a should be fetched
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ pods: [{ name: 'pod-a1' }] }),
-    })
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({ pods: [{ name: 'pod-a1' }] }))
 
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedPods(undefined, undefined, { limit: 100 }),
@@ -1040,10 +1009,7 @@ describe('Multi-cluster fetching', () => {
     mockClusterCacheRef.clusters = []
 
     // fetchClusters falls back to backend API which also returns empty
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ clusters: [] }),
-    })
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({ clusters: [] }))
 
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedPods(undefined, undefined, { limit: 100 }),
@@ -1078,10 +1044,7 @@ describe('Backend/Agent unavailability', () => {
     mockIsBackendUnavailable.mockReturnValue(false)
 
     // Should fall through to REST API
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ issues: [{ name: 'deploy-issue' }] }),
-    })
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({ issues: [{ name: 'deploy-issue' }] }))
 
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedDeploymentIssues('prod'),

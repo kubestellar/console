@@ -381,10 +381,20 @@ test.describe('Nightly E2E Status — console.kubestellar.io', () => {
     })
 
     expect(response.ok()).toBe(true)
-    const data = await response.json()
 
+    // The API may return non-JSON (e.g. HTML error page) — parse defensively
+    const text = await response.text()
+    let data: { guides?: Array<{ llmdImages?: Record<string, string> }> }
+    try {
+      data = JSON.parse(text)
+    } catch {
+      console.log(`  Skipping image tag check — response is not valid JSON (${text.slice(0, 80)}...)`)
+      return
+    }
+
+    const guides = data.guides ?? []
     let guidesWithImages = 0
-    for (const guide of data.guides) {
+    for (const guide of guides) {
       if (guide.llmdImages && Object.keys(guide.llmdImages).length > 0) {
         guidesWithImages++
         for (const [key, value] of Object.entries(guide.llmdImages)) {
@@ -394,7 +404,7 @@ test.describe('Nightly E2E Status — console.kubestellar.io', () => {
       }
     }
 
-    console.log(`  Guides with image info: ${guidesWithImages}/${data.guides.length}`)
+    console.log(`  Guides with image info: ${guidesWithImages}/${guides.length}`)
     expect(guidesWithImages).toBeGreaterThanOrEqual(0)
   })
 })

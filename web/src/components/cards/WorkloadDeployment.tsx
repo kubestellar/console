@@ -57,6 +57,10 @@ export interface Workload {
   createdAt: string
 }
 
+// Timeout constants (avoids magic numbers in setTimeout/setInterval)
+const SCALE_SUCCESS_RESET_MS = 2000
+const REFETCH_AFTER_SCALE_MS = 1500
+
 // Demo workload data
 const DEMO_WORKLOADS: Workload[] = [
   {
@@ -287,7 +291,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
       })
       setScaleSuccess(true)
       onScaled?.()
-      setTimeout(() => setScaleSuccess(false), 2000)
+      setTimeout(() => setScaleSuccess(false), SCALE_SUCCESS_RESET_MS)
     } catch {
       // Backend failed — try agent fallback for all target clusters
       try {
@@ -302,7 +306,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
         if (failures.length === 0) {
           setScaleSuccess(true)
           onScaled?.()
-          setTimeout(() => setScaleSuccess(false), 2000)
+          setTimeout(() => setScaleSuccess(false), SCALE_SUCCESS_RESET_MS)
         } else {
           setScaleError(failures.map(r => `${r.cluster}: ${r.message || 'Scale failed'}`).join('; '))
         }
@@ -883,7 +887,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
                 onSelect={() =>
                   setSelectedWorkload(selectedWorkload?.name === workload.name ? null : workload)
                 }
-                onScaled={() => setTimeout(refetchWorkloads, 1500)}
+                onScaled={() => setTimeout(refetchWorkloads, REFETCH_AFTER_SCALE_MS)}
               />
             ))}
           </div>

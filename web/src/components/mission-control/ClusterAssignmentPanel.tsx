@@ -359,7 +359,7 @@ export function ClusterAssignmentPanel({
                       Phase {phase.phase}: {phase.name}
                     </div>
                     <div className="text-[10px] text-muted-foreground mt-0.5">
-                      {phase.projectNames.join(', ')}
+                      {(phase.projectNames || []).join(', ')}
                     </div>
                   </div>
                 ))}
