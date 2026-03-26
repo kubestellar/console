@@ -103,16 +103,36 @@ export function GitOps() {
     setLastUpdated(new Date())
   }, [refetch])
 
-  // Detect drift for all apps on mount (skip in demo mode - no backend)
+  // Detect drift for all apps on mount (skip in demo mode - no backend).
+  // Guard: verify backend is reachable first to avoid slow sequential failures
+  // that block the UI and add latency (#3609).
   useEffect(() => {
     if (getDemoMode()) return
 
+    let cancelled = false
+
     async function detectAllDrift() {
+      // Quick health check — skip drift detection entirely if backend is down
+      try {
+        const health = await fetch('/api/health', { signal: AbortSignal.timeout(3000) })
+        if (!health.ok) {
+          setIsDetecting(false)
+          return
+        }
+      } catch {
+        setIsDetecting(false)
+        return
+      }
+
+      if (cancelled) return
+
       setIsDetecting(true)
       const results = new Map<string, DriftResult>()
       const configs = getGitOpsAppConfigs()
 
-      for (const appConfig of configs) {
+      // Run drift checks in parallel with individual timeouts instead of
+      // sequential requests, reducing total latency significantly.
+      const promises = configs.map(async (appConfig) => {
         try {
           const response = await api.post<{
             drifted: boolean
@@ -124,23 +144,25 @@ export function GitOps() {
             namespace: appConfig.namespace,
             cluster: appConfig.cluster || undefined,
           })
-
-          results.set(appConfig.name, {
-            drifted: response.data.drifted,
-            resources: response.data.resources || [],
-          })
+          return { name: appConfig.name, result: { drifted: response.data.drifted, resources: response.data.resources || [] } as DriftResult }
         } catch {
-          results.set(appConfig.name, { drifted: false, resources: [], error: 'Failed to detect drift' })
-          showToast(`Failed to detect drift for ${appConfig.name}`, 'error')
+          return { name: appConfig.name, result: { drifted: false, resources: [], error: 'Failed to detect drift' } as DriftResult }
         }
+      })
+
+      const settled = await Promise.all(promises)
+      if (cancelled) return
+
+      for (const { name, result } of settled) {
+        results.set(name, result)
       }
 
-      // React 18+ automatically batches state updates in async functions
       setDriftResults(results)
       setIsDetecting(false)
     }
 
     detectAllDrift()
+    return () => { cancelled = true }
   }, [])
 
   // Handle sync action - open the sync dialog

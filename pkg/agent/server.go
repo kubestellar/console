@@ -3161,14 +3161,45 @@ func (s *Server) isToolCapableAgent(agentName string) bool {
 	return provider.Capabilities().HasCapability(CapabilityToolExec)
 }
 
-// findToolCapableAgent finds an available agent with tool execution capabilities
+// findToolCapableAgent finds the best available agent with tool execution capabilities.
+// Agents that can execute commands directly (claude-code, codex, gemini-cli) are
+// preferred over agents that only suggest commands (copilot-cli). This prevents
+// missions from returning kubectl suggestions instead of executing them (#3609).
 func (s *Server) findToolCapableAgent() string {
-	// Check all registered providers for tool execution capability
-	for _, info := range s.registry.List() {
+	// Priority order: agents that execute commands directly first,
+	// then agents that may only suggest commands.
+	preferredOrder := []string{"claude-code", "codex", "gemini-cli", "antigravity", "bob"}
+	suggestOnlyAgents := []string{"copilot-cli", "gh-copilot"}
+
+	allProviders := s.registry.List()
+
+	// First pass: try preferred agents in priority order
+	for _, name := range preferredOrder {
+		for _, info := range allProviders {
+			if info.Name == name && info.Available && ProviderCapability(info.Capabilities).HasCapability(CapabilityToolExec) {
+				return info.Name
+			}
+		}
+	}
+
+	// Second pass: any tool-capable agent that is NOT in the suggest-only list
+	suggestOnly := make(map[string]bool, len(suggestOnlyAgents))
+	for _, name := range suggestOnlyAgents {
+		suggestOnly[name] = true
+	}
+	for _, info := range allProviders {
+		if ProviderCapability(info.Capabilities).HasCapability(CapabilityToolExec) && info.Available && !suggestOnly[info.Name] {
+			return info.Name
+		}
+	}
+
+	// Last resort: even suggest-only agents are better than nothing
+	for _, info := range allProviders {
 		if ProviderCapability(info.Capabilities).HasCapability(CapabilityToolExec) && info.Available {
 			return info.Name
 		}
 	}
+
 	return ""
 }
 

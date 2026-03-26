@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useRef, useEffect, ReactNode } from 'react'
 import type { AgentInfo, AgentsListPayload, AgentSelectedPayload, ChatStreamPayload } from '../types/agent'
+import { AgentCapabilityToolExec } from '../types/agent'
 import { getDemoMode } from './useDemoMode'
 import { addCategoryTokens, setActiveTokenCategory } from './useTokenUsage'
 import { detectIssueSignature, findSimilarResolutionsStandalone, generateResolutionPromptContext } from './useResolutions'
@@ -610,8 +611,18 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       const persisted = localStorage.getItem(SELECTED_AGENT_KEY)
       const hasAvailableAgent = payload.agents.some(a => a.available)
       const persistedAvailable = persisted && persisted !== 'none' && payload.agents.some(a => a.name === persisted && a.available)
-      const firstAvailable = hasAvailableAgent ? (payload.agents.find(a => a.available)?.name || null) : null
-      const resolved = persistedAvailable ? persisted : (payload.selected || payload.defaultAgent || firstAvailable)
+
+      // When auto-selecting, prefer agents that execute commands directly over
+      // agents that only suggest commands (e.g. copilot-cli). This prevents
+      // missions from returning kubectl commands as text instead of running them (#3609).
+      const SUGGEST_ONLY_AGENTS = new Set(['copilot-cli', 'gh-copilot'])
+      const bestAvailable = hasAvailableAgent
+        ? (payload.agents.find(a => a.available && ((a.capabilities ?? 0) & AgentCapabilityToolExec) !== 0 && !SUGGEST_ONLY_AGENTS.has(a.name))?.name
+          || payload.agents.find(a => a.available && !SUGGEST_ONLY_AGENTS.has(a.name))?.name
+          || payload.agents.find(a => a.available)?.name
+          || null)
+        : null
+      const resolved = persistedAvailable ? persisted : (payload.selected || payload.defaultAgent || bestAvailable)
       setSelectedAgent(resolved)
       // If we restored a persisted agent that differs from the server's selection, tell the server
       if (persistedAvailable && persisted !== payload.selected && wsRef.current?.readyState === WebSocket.OPEN) {

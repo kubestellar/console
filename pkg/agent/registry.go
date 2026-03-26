@@ -177,6 +177,35 @@ func (r *Registry) List() []ProviderInfo {
 	return result
 }
 
+// suggestOnlyAgents are agents that return command suggestions as text rather
+// than executing them. They should not be the default when better options exist.
+var suggestOnlyAgents = map[string]bool{
+	"copilot-cli": true,
+	"gh-copilot":  true,
+}
+
+// promoteExecutingDefault checks if the current default agent only suggests
+// commands (e.g. copilot-cli) and, if so, promotes the first available agent
+// that can actually execute commands to be the default (#3609).
+func (r *Registry) promoteExecutingDefault() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if !suggestOnlyAgents[r.defaultAgent] {
+		return // current default is fine
+	}
+
+	// Look for a better agent that actually executes commands
+	for name, provider := range r.providers {
+		if provider.IsAvailable() && !suggestOnlyAgents[name] &&
+			provider.Capabilities().HasCapability(CapabilityToolExec) {
+			r.defaultAgent = name
+			return
+		}
+	}
+	// No better option found — keep copilot-cli as fallback
+}
+
 // ListAvailable returns only providers that are configured and ready
 func (r *Registry) ListAvailable() []ProviderInfo {
 	if r == nil {
@@ -226,16 +255,21 @@ type ProviderInfo struct {
 func InitializeProviders() error {
 	registry := GetRegistry()
 
-	// Register tool-capable agents FIRST so they become the default
-	// Tool-capable agents can execute kubectl, helm, and other commands
+	// Register tool-capable agents FIRST so they become the default.
+	// Tool-capable agents can execute kubectl, helm, and other commands.
+	// Order matters: the first available agent becomes the default.
 	registry.Register(NewClaudeCodeProvider())
 	registry.Register(NewBobProvider())
 
 	// Register CLI-based tool-capable agents
 	registry.Register(NewCodexProvider())
-	registry.Register(NewCopilotCLIProvider())
 	registry.Register(NewGeminiCLIProvider())
 	registry.Register(NewAntigravityProvider())
+
+	// Register copilot-cli LAST among tool-capable agents.
+	// copilot-cli suggests commands as text rather than executing them,
+	// so it should only be the default when no other agent is available (#3609).
+	registry.Register(NewCopilotCLIProvider())
 	// GHCopilot is deprecated — the gh-copilot extension runs but executes no commands
 
 	// NOTE: API-only agents (Claude API, OpenAI, Gemini) and IDE-based agents
@@ -251,6 +285,10 @@ func InitializeProviders() error {
 			fmt.Printf("Warning: Could not set default agent %s: %v\n", defaultAgent, err)
 		}
 	}
+
+	// If the default ended up as copilot-cli but a better agent is available,
+	// prefer the agent that can actually execute commands (#3609).
+	registry.promoteExecutingDefault()
 
 	// Ensure at least one provider is available
 	if !registry.HasAvailableProviders() {
