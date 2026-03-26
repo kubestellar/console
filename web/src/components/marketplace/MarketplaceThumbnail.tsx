@@ -9,17 +9,17 @@ interface ThumbnailConfig {
 
 const ITEM_THUMBNAILS: Record<string, ThumbnailConfig> = {
   'sre-overview': {
-    gradient: ['var(--cncf-serverless-end)', 'var(--chart-color-2)'],
+    gradient: ['var(--cncf-serverless-end)', 'var(--cncf-observability-start)'],
     icon: 'M22 12h-4l-3 9L9 3l-3 9H2', // Activity
     label: 'SRE',
   },
   'security-audit': {
-    gradient: ['var(--color-error)', 'var(--cncf-runtime-end)'],
+    gradient: ['var(--cncf-security-start)', 'var(--cncf-runtime-end)'],
     icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', // Shield
     label: 'SEC',
   },
   'gitops-pipeline': {
-    gradient: ['var(--color-success)', 'var(--color-info)'],
+    gradient: ['var(--cncf-orchestration-start)', 'var(--cncf-observability-end)'],
     icon: 'M6 3v12M18 9a3 3 0 100 6 3 3 0 000-6zM6 21a3 3 0 100-6 3 3 0 000 6zM18 15l-6 6', // GitBranch
     label: 'OPS',
   },
@@ -32,7 +32,7 @@ const TYPE_FALLBACKS: Record<string, ThumbnailConfig> = {
     label: '',
   },
   'card-preset': {
-    gradient: ['var(--color-info)', 'var(--chart-color-2)'],
+    gradient: ['var(--cncf-service-mesh-start)', 'var(--cncf-observability-start)'],
     icon: 'M21 8V5a2 2 0 00-2-2H5a2 2 0 00-2 2v3m18 0v11a2 2 0 01-2 2H5a2 2 0 01-2-2V8m18 0H3', // Card
     label: '',
   },
