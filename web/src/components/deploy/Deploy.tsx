@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { useClusterGroups } from '../../hooks/useClusterGroups'
 import { useClusters } from '../../hooks/useMCP'
-import { useDeployments, useHelmReleases } from '../../hooks/useMCP'
+import { useDeployments } from '../../hooks/useMCP'
 import { useCachedDeployments } from '../../hooks/useCachedData'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
@@ -24,7 +24,6 @@ export function Deploy() {
   const { t } = useTranslation(['cards', 'common'])
   const { isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, lastUpdated, refetch } = useDeployments()
   const { deployments: cachedDeployments } = useCachedDeployments()
-  const { releases: helmReleases } = useHelmReleases()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   const publishCardEvent = useCardPublish()
@@ -52,14 +51,12 @@ export function Deploy() {
         return { value: progressingCount, sublabel: t('common:deploy.deploying') }
       case 'failed':
         return { value: failedCount, sublabel: t('common:common.failed') }
-      case 'helm':
-        return { value: helmReleases.length, sublabel: t('common:deploy.releases') }
       case 'argocd':
         return { value: 0, sublabel: t('common:deploy.applications'), isDemo: true }
       default:
         return { value: '-' }
     }
-  }, [cachedDeployments.length, runningCount, progressingCount, failedCount, helmReleases.length, t])
+  }, [cachedDeployments.length, runningCount, progressingCount, failedCount, t])
 
   const getStatValue = useCallback(
     (blockId: string) => createMergedStatValueGetter(getDeployStatValue, getUniversalStatValue)(blockId),
