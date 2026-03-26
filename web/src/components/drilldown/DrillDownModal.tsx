@@ -29,12 +29,12 @@ const ComplianceDrillDown = safeLazy(() => import('./views/ComplianceDrillDown')
 
 const EventsDrillDown = safeLazy(() => import('./views/EventsDrillDown'), 'EventsDrillDown')
 
-// Keep smaller components as direct imports for immediate loading
-import { NamespaceDrillDown } from './views/NamespaceDrillDown'
-import { LogsDrillDown } from './views/LogsDrillDown'
-import { NodeDrillDown } from './views/NodeDrillDown'
-import { GPUNodeDrillDown } from './views/GPUNodeDrillDown'
+const NamespaceDrillDown = safeLazy(() => import('./views/NamespaceDrillDown'), 'NamespaceDrillDown')
+const NodeDrillDown = safeLazy(() => import('./views/NodeDrillDown'), 'NodeDrillDown')
 const GPUNamespaceDrillDown = safeLazy(() => import('./views/GPUNamespaceDrillDown'), 'GPUNamespaceDrillDown')
+// Keep smaller components as direct imports for immediate loading
+import { LogsDrillDown } from './views/LogsDrillDown'
+import { GPUNodeDrillDown } from './views/GPUNodeDrillDown'
 import { YAMLDrillDown } from './views/YAMLDrillDown'
 
 // Loading fallback for lazy-loaded drilldown views
