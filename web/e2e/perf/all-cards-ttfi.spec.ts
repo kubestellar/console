@@ -76,6 +76,7 @@ const MOCK_DATA: Record<string, Record<string, unknown[]>> = {
   'deployment-issues': { issues: [] },
   services: { services: [{ name: 'nginx-svc', namespace: 'default', cluster: MOCK_CLUSTER }] },
   'security-issues': { issues: [{ name: 'nginx-1', namespace: 'default', cluster: MOCK_CLUSTER }] },
+  'gpu-nodes': { nodes: [{ name: 'gpu-node-1', cluster: MOCK_CLUSTER, gpuType: 'NVIDIA A100', gpuCount: 4, gpuAllocated: 2, labels: {} }] },
 }
 
 function buildSSEResponse(endpoint: string): string {

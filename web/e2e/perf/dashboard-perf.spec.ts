@@ -48,6 +48,7 @@ const DASHBOARDS = [
   { id: 'ai-agents', name: 'AI Agents', route: '/ai-agents' },
   { id: 'data-compliance', name: 'Data Compliance', route: '/data-compliance' },
   { id: 'arcade', name: 'Arcade', route: '/arcade' },
+  { id: 'cluster-admin', name: 'Cluster Admin', route: '/cluster-admin' },
 ]
 
 // Max cards to measure per dashboard (prevent very long tests)
