@@ -109,15 +109,18 @@ export function Settings() {
   const [activeSection, setActiveSection] = useState<string>('ai-mode-settings')
   const [showRestoredToast, setShowRestoredToast] = useState(false)
 
-  /** Close settings and return to previous page (or home as fallback) */
+  /** Close settings and return to previous page (or home as fallback).
+   *  Uses location.key to detect whether the user arrived via in-app
+   *  navigation (key !== 'default') or by directly loading the URL
+   *  (key === 'default'). navigate(-1) on a direct load would exit the
+   *  app, so we fall back to HOME in that case. */
   const handleClose = useCallback(() => {
-    // window.history.length > 1 covers both browser and react-router history
-    if (window.history.length > 1) {
+    if (location.key !== 'default') {
       navigate(-1)
     } else {
       navigate(ROUTES.HOME)
     }
-  }, [navigate])
+  }, [navigate, location.key])
 
   // Suppresses IntersectionObserver updates during programmatic scrolls
   // so the sidebar highlight stays on the clicked item instead of flickering
