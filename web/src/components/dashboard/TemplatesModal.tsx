@@ -164,14 +164,14 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
                   <div className="text-xs text-muted-foreground mb-2">{t('dashboard.templates.layoutPreview')}</div>
                   <div className="grid grid-cols-12 gap-1 min-h-[120px]">
                     {hoveredTemplate.cards.map((card, idx) => {
-                      const colSpan = Math.min(card.position.w, 12)
+                      const colSpan = Math.min(card.position?.w || 4, 12)
                       return (
                         <div
                           key={idx}
                           className={`rounded ${CARD_COLORS[card.card_type] || 'bg-gray-500/40 dark:bg-gray-900/40'} flex items-center justify-center p-1`}
                           style={{
                             gridColumn: `span ${colSpan}`,
-                            minHeight: `${card.position.h * 24}px`
+                            minHeight: `${(card.position?.h || 2) * 24}px`
                           }}
                         >
                           <span className="text-[9px] text-foreground/80 text-center leading-tight">

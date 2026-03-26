@@ -119,7 +119,7 @@ export function getDefaultCards(dashboardId: string): Array<{ type: string; titl
   return config.cards.map(card => ({
     type: card.cardType,
     title: card.title,
-    position: { w: card.position.w, h: card.position.h },
+    position: { w: card.position?.w || 4, h: card.position?.h || 2 },
   }))
 }
 
@@ -136,10 +136,10 @@ export function getDefaultCardsForDashboard(dashboardId: string): Array<{ id: st
     card_type: card.cardType,
     config: {},
     position: {
-      x: card.position.x ?? (index % 3) * 4,
-      y: card.position.y ?? Math.floor(index / 3) * 3,
-      w: card.position.w,
-      h: card.position.h,
+      x: card.position?.x ?? (index % 3) * 4,
+      y: card.position?.y ?? Math.floor(index / 3) * 3,
+      w: card.position?.w || 4,
+      h: card.position?.h || 2,
     },
   }))
 }

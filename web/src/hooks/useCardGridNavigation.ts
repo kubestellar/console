@@ -24,7 +24,7 @@ function computeGridLayout(cards: CardLike[], gridColumns: number): GridPosition
   let col = 0
 
   for (let i = 0; i < cards.length; i++) {
-    const w = Math.min(cards[i].position.w, gridColumns)
+    const w = Math.min(cards[i].position?.w || 4, gridColumns)
     if (col + w > gridColumns) {
       row++
       col = 0

@@ -217,12 +217,12 @@ function DashboardCardWrapper({
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  const rawW = Math.min(12, Math.max(3, placement.position.w))
+  const rawW = Math.min(12, Math.max(3, placement.position?.w || 4))
   const effectiveW = isNarrow && rawW < 6 ? 6 : rawW
 
   // Calculate height (each row unit = 100px) — use inline style because
   // Tailwind JIT can't detect dynamically constructed arbitrary classes.
-  const minHeightPx = placement.position.h * 100
+  const minHeightPx = (placement.position?.h || 2) * 100
 
   // Get card config - support both cardType (new) and card_type (legacy localStorage)
   const cardTypeKey = placement.cardType || (placement as { card_type?: string }).card_type
@@ -289,7 +289,7 @@ function DashboardCardWrapper({
             cardId={placement.id}
             cardType={cardTypeKey!}
             title={placement.title}
-            cardWidth={placement.position.w}
+            cardWidth={placement.position?.w || 4}
             dragHandle={dragHandleNode}
             onRemove={onRemove}
             onConfigure={onConfigure}

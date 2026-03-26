@@ -20,7 +20,7 @@ function getTabDefaultCards(tabId: string) {
   return tab.cards.map(card => ({
     type: card.cardType,
     title: card.title,
-    position: { w: card.position.w, h: card.position.h },
+    position: { w: card.position?.w || 4, h: card.position?.h || 2 },
   }))
 }
 

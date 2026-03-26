@@ -757,7 +757,7 @@ export function Dashboard() {
     setLocalCards((prev) =>
       prev.map((c) =>
         c.id === cardId
-          ? { ...c, position: { ...c.position, w: newWidth } }
+          ? { ...c, position: { ...(c.position || { w: 4, h: 2 }), w: newWidth } }
           : c
       )
     )
@@ -768,7 +768,7 @@ export function Dashboard() {
         const card = localCards.find((c) => c.id === cardId)
         if (card) {
           await api.put(`/api/cards/${cardId}`, {
-            position: { ...card.position, w: newWidth }
+            position: { ...(card.position || { w: 4, h: 2 }), w: newWidth }
           })
         }
       } catch (error) {

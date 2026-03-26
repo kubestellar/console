@@ -54,13 +54,15 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  const effectiveW = isNarrow && card.position.w < MIN_NARROW_COLS ? MIN_NARROW_COLS : card.position.w
+  const posW = card.position?.w || 4
+  const posH = card.position?.h || 2
+  const effectiveW = isNarrow && posW < MIN_NARROW_COLS ? MIN_NARROW_COLS : posW
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     gridColumn: `span ${effectiveW}`,
-    gridRow: `span ${card.position.h}`,
+    gridRow: `span ${posH}`,
     opacity: isDragging ? 0.5 : 1,
   }
 
@@ -103,7 +105,7 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
         title={card.title}
         isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
         isLive={LIVE_DATA_CARDS.has(card.card_type)}
-        cardWidth={card.position.w}
+        cardWidth={card.position?.w || 4}
         isRefreshing={isRefreshing}
         onRefresh={onRefresh}
         lastUpdated={lastUpdated}
@@ -137,8 +139,8 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
   return (
     prevProps.card.id === nextProps.card.id &&
     prevProps.card.card_type === nextProps.card.card_type &&
-    prevProps.card.position.w === nextProps.card.position.w &&
-    prevProps.card.position.h === nextProps.card.position.h &&
+    (prevProps.card.position?.w || 4) === (nextProps.card.position?.w || 4) &&
+    (prevProps.card.position?.h || 2) === (nextProps.card.position?.h || 2) &&
     prevProps.card.title === nextProps.card.title &&
     prevProps.card.last_summary === nextProps.card.last_summary &&
     JSON.stringify(prevProps.card.config) === JSON.stringify(nextProps.card.config) &&
@@ -159,7 +161,7 @@ export function DragPreviewCard({ card }: { card: Card }) {
     <div
       className="rounded-lg glass border border-purple-500/50 p-4 shadow-xl"
       style={{
-        width: `${card.position.w * 100}px`,
+        width: `${(card.position?.w || 4) * 100}px`,
         minWidth: '200px',
         maxWidth: '400px',
       }}

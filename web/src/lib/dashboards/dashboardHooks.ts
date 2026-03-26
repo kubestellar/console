@@ -147,7 +147,12 @@ export function useDashboardCards(
     try {
       const stored = localStorage.getItem(storageKey)
       if (stored) {
-        return JSON.parse(stored)
+        const parsed = JSON.parse(stored) as DashboardCard[]
+        // Ensure every card has a position object (guards against old/corrupt data)
+        return parsed.map(c => ({
+          ...c,
+          position: c.position || { w: 4, h: 2 },
+        }))
       }
     } catch {
       // Fall through to return defaults

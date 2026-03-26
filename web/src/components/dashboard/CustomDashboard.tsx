@@ -468,7 +468,7 @@ export function CustomDashboard() {
       card_type: tc.card_type,
       title: tc.title,
       config: tc.config || {},
-      position: { x: 0, y: 0, w: tc.position.w, h: tc.position.h }
+      position: { x: 0, y: 0, w: tc.position?.w || 4, h: tc.position?.h || 2 }
     }))
 
     snapshot(cardsRef.current)

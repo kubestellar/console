@@ -63,12 +63,12 @@ export function ensureCardInDashboard(
     }
 
     // Shift existing cards down by the height of the new card
-    const shiftY = card.position.h
+    const shiftY = card.position?.h || 2
     const migrated = [
       card,
       ...cards.map(c => ({
         ...c,
-        position: { ...c.position, y: c.position.y + shiftY },
+        position: { ...(c.position || { w: 4, h: 2, x: 0, y: 0 }), y: (c.position?.y || 0) + shiftY },
       })),
     ]
 
