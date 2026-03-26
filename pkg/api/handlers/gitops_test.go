@@ -45,10 +45,13 @@ func TestGitOps_ListHelmHistory_Validation_MissingRelease(t *testing.T) {
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	// When release is empty the handler returns 200 with an empty history
+	// so callers querying before their data context hydrates get a valid response.
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	body, _ := io.ReadAll(resp.Body)
-	assert.Contains(t, string(body), "release parameter is required")
+	var body map[string][]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Empty(t, body["history"])
 }
 
 func TestGitOps_ListHelmHistory_Validation_InvalidClusterName(t *testing.T) {

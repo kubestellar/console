@@ -230,6 +230,23 @@ func TestScaleWorkload(t *testing.T) {
 	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Post("/api/workloads/scale", handler.ScaleWorkload)
 
+	scheme := newK8sScheme()
+
+	// Inject a dynamic client with a Deployment so ScaleWorkload can find and patch it.
+	deploy := &appsv1.Deployment{
+		TypeMeta:   metav1.TypeMeta{Kind: "Deployment", APIVersion: "apps/v1"},
+		ObjectMeta: metav1.ObjectMeta{Name: "scale-app", Namespace: "default"},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: func(i int32) *int32 { return &i }(1),
+			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "scale"}},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "scale"}},
+				Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "c", Image: "nginx"}}},
+			},
+		},
+	}
+	injectDynamicClusterWithObjects(env, "scale-cluster", scheme, []runtime.Object{deploy})
+
 	// Payload
 	payload := map[string]interface{}{
 		"workloadName":   "scale-app",
@@ -306,8 +323,11 @@ func TestClusterGroupsCRUD(t *testing.T) {
 	var listResp map[string][]map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &listResp)
-	assert.Equal(t, 1, len(listResp["groups"]))
-	assert.Equal(t, "group1", listResp["groups"][0]["name"])
+	// ListClusterGroups prepends the built-in "all-healthy-clusters" group,
+	// so we expect 2 groups total: the built-in one plus "group1".
+	assert.Equal(t, 2, len(listResp["groups"]))
+	assert.Equal(t, "all-healthy-clusters", listResp["groups"][0]["name"])
+	assert.Equal(t, "group1", listResp["groups"][1]["name"])
 
 	updatePayload := map[string]interface{}{
 		"name":     "group1",
@@ -340,10 +360,12 @@ func TestClusterGroupsCRUD(t *testing.T) {
 	resp, err = env.App.Test(req)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
-	var listRespEmpty map[string][]interface{}
-	bodyEmpty, _ := io.ReadAll(resp.Body)
-	json.Unmarshal(bodyEmpty, &listRespEmpty)
-	assert.Empty(t, listRespEmpty["groups"])
+	var listRespAfterDelete map[string][]map[string]interface{}
+	bodyAfterDelete, _ := io.ReadAll(resp.Body)
+	json.Unmarshal(bodyAfterDelete, &listRespAfterDelete)
+	// After deleting "group1", only the built-in group should remain.
+	assert.Equal(t, 1, len(listRespAfterDelete["groups"]))
+	assert.Equal(t, "all-healthy-clusters", listRespAfterDelete["groups"][0]["name"])
 }
 
 func TestEvaluateClusterQuery(t *testing.T) {
