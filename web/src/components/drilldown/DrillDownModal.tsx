@@ -1,7 +1,7 @@
-import { useEffect, Suspense } from 'react'
+import { Component, useEffect, Suspense, type ReactNode, type ErrorInfo } from 'react'
 import { safeLazy } from '../../lib/safeLazy'
 import { useTranslation } from 'react-i18next'
-import { Box, Server, Layers, Rocket, FileText, Zap, Cpu, Lock, User, Bell, Ship, GitBranch, Settings, Shield, Package, DollarSign } from 'lucide-react'
+import { Box, Server, Layers, Rocket, FileText, Zap, Cpu, Lock, User, Bell, Ship, GitBranch, Settings, Shield, Package, DollarSign, AlertTriangle, RefreshCw } from 'lucide-react'
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { useMobile } from '../../hooks/useMobile'
 // Lazy load large components (>300 lines) for better performance
@@ -44,6 +44,66 @@ function DrillDownLoading() {
       <div className="animate-spin rounded-full h-8 w-8 border-2 border-transparent border-t-primary" />
     </div>
   )
+}
+
+/**
+ * Error boundary for drilldown view content. Catches render errors within
+ * individual drilldown views and displays a recovery UI inside the modal
+ * instead of crashing the entire application with a blank screen.
+ */
+class DrillDownErrorBoundary extends Component<
+  { children: ReactNode; onClose: () => void },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: ReactNode; onClose: () => void }) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('[DrillDownErrorBoundary] Render error in drilldown view:', error, errorInfo)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-64 text-center p-6">
+          <AlertTriangle className="w-10 h-10 text-yellow-400 mb-3" />
+          <h3 className="text-base font-semibold text-foreground mb-1">
+            Failed to load view
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4 max-w-md">
+            An error occurred while rendering this drilldown view.
+          </p>
+          {this.state.error && (
+            <p className="text-xs text-muted-foreground/70 font-mono mb-4 break-all max-w-md">
+              {this.state.error.message}
+            </p>
+          )}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => this.setState({ hasError: false, error: null })}
+              className="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Retry
+            </button>
+            <button
+              onClick={this.props.onClose}
+              className="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
 }
 
 // Helper to get status badge color for pods
@@ -312,9 +372,11 @@ export function DrillDownModal() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
-          <Suspense fallback={<DrillDownLoading />}>
-            {renderView()}
-          </Suspense>
+          <DrillDownErrorBoundary onClose={close}>
+            <Suspense fallback={<DrillDownLoading />}>
+              {renderView()}
+            </Suspense>
+          </DrillDownErrorBoundary>
         </div>
 
         {/* Footer with keyboard hints - hidden on mobile */}

@@ -465,8 +465,8 @@ function FullDashboardApp() {
       <AlertsProvider>
       <DashboardProvider>
       <DrillDownProvider>
-      <Suspense fallback={null}><DrillDownModal /></Suspense>
       <AppErrorBoundary>
+      <Suspense fallback={null}><DrillDownModal /></Suspense>
       <ChunkErrorBoundary>
       <Suspense fallback={<LoadingFallback />}>
       <Routes>

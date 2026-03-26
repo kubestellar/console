@@ -79,9 +79,9 @@ function buildLabelSelector(
 
 export function DeploymentDrillDown({ data }: Props) {
   const { t } = useTranslation()
-  const cluster = data.cluster as string
-  const namespace = data.namespace as string
-  const deploymentName = data.deployment as string
+  const cluster = (data.cluster as string) || ''
+  const namespace = (data.namespace as string) || ''
+  const deploymentName = (data.deployment as string) || ''
   const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster, drillToPod, drillToReplicaSet } = useDrillDownActions()
 
