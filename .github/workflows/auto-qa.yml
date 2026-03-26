@@ -1578,8 +1578,8 @@ jobs:
                 total|score|healthy|warning|critical|*_util|firing|pending|resolved|bound|installed|*_cost) continue ;;
               esac
 
-              # Search for this card type string in source
-              FOUND=$(grep -rl "'${ct}'\|\"${ct}\"" src/ 2>/dev/null | head -1 || true)
+              # Search for this card type string in source (quoted strings or object keys)
+              FOUND=$(grep -rlE "'${ct}'|\"${ct}\"|${ct}\s*:" src/ 2>/dev/null | head -1 || true)
               if [ -z "$FOUND" ]; then
                 UNREGISTERED="${UNREGISTERED}  - \`${ct}\` — in INVENTORY.md but not found in source code\n"
               fi
