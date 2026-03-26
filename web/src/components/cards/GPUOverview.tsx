@@ -142,6 +142,23 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
   }
 
   const totalGPUs = nodes.reduce((sum, n) => sum + n.gpuCount, 0)
+
+  // Empty state when clusters are reachable but have no GPU resources
+  if (!isLoading && totalGPUs === 0) {
+    return (
+      <div className="h-full flex flex-col content-loaded">
+        <div className="flex items-center justify-end mb-3">
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center text-center">
+          <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3">
+            <Activity className="w-6 h-6 text-muted-foreground" />
+          </div>
+          <p className="text-foreground font-medium">{t('gpuStatus.noGPUData')}</p>
+          <p className="text-sm text-muted-foreground">{t('gpuStatus.gpuMetricsNotAvailable')}</p>
+        </div>
+      </div>
+    )
+  }
   const allocatedGPUs = nodes.reduce((sum, n) => sum + n.gpuAllocated, 0)
   const gpuUtilization = totalGPUs > 0 ? (allocatedGPUs / totalGPUs) * 100 : 0
 
