@@ -3,17 +3,19 @@ import {
   ChevronDown,
   Maximize2,
   Trash2,
+  StopCircle,
 } from 'lucide-react'
 import type { Mission } from '../../../hooks/useMissions'
 import { cn } from '../../../lib/cn'
 import { STATUS_CONFIG, TYPE_ICONS } from './types'
 
-export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpand, isCollapsed, onToggleCollapse }: {
+export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpand, onTerminate, isCollapsed, onToggleCollapse }: {
   mission: Mission
   isActive: boolean
   onClick: () => void
   onDismiss: () => void
   onExpand: () => void
+  onTerminate?: () => void
   isCollapsed: boolean
   onToggleCollapse: () => void
 }) {
@@ -53,6 +55,16 @@ export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpan
           <TypeIcon className="w-3 h-3 text-muted-foreground flex-shrink-0" />
           <span className="text-sm font-medium text-foreground truncate">{mission.title}</span>
         </button>
+        {mission.status === 'running' && onTerminate && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onTerminate() }}
+            className="p-0.5 hover:bg-red-500/20 rounded transition-colors flex-shrink-0"
+            title="Terminate Session"
+            data-testid="terminate-session-list-btn"
+          >
+            <StopCircle className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
+          </button>
+        )}
         <button
           onClick={(e) => { e.stopPropagation(); onExpand() }}
           className="p-0.5 hover:bg-secondary/50 rounded transition-colors flex-shrink-0"

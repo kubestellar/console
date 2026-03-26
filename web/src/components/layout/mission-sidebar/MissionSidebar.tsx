@@ -49,7 +49,7 @@ import { isDemoMode } from '../../../lib/demoMode'
 
 export function MissionSidebar() {
   const { t } = useTranslation(['common'])
-  const { missions, activeMission, isSidebarOpen, isSidebarMinimized, isFullScreen, setActiveMission, closeSidebar, dismissMission, minimizeSidebar, expandSidebar, setFullScreen, selectedAgent, startMission, saveMission, runSavedMission, openSidebar, sendMessage } = useMissions()
+  const { missions, activeMission, isSidebarOpen, isSidebarMinimized, isFullScreen, setActiveMission, closeSidebar, dismissMission, cancelMission, minimizeSidebar, expandSidebar, setFullScreen, selectedAgent, startMission, saveMission, runSavedMission, openSidebar, sendMessage } = useMissions()
   const { isMobile } = useMobile()
   const [collapsedMissions, setCollapsedMissions] = useState<Set<string>>(new Set())
   const [fontSize, setFontSize] = useState<FontSize>('base')
@@ -875,6 +875,7 @@ export function MissionSidebar() {
                     }
                   }}
                   onDismiss={() => dismissMission(mission.id)}
+                  onTerminate={() => cancelMission(mission.id)}
                   onExpand={() => {
                     if (mission.title === 'Mission Control Planning') {
                       setShowMissionControl(true)

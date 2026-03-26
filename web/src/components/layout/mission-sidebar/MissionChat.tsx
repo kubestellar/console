@@ -18,6 +18,7 @@ import {
   Check,
   X,
   RotateCcw,
+  StopCircle,
 } from 'lucide-react'
 import { useMissions, type Mission } from '../../../hooks/useMissions'
 import { useDemoMode } from '../../../hooks/useDemoMode'
@@ -389,6 +390,17 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               <Maximize2 className="w-4 h-4 text-muted-foreground" />
             </button>
           )}
+          {mission.status === 'running' && (
+            <button
+              onClick={() => cancelMission(mission.id)}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 rounded-lg transition-colors"
+              title={t('missionChat.terminateSession', { defaultValue: 'Terminate Session' })}
+              data-testid="terminate-session-btn"
+            >
+              <StopCircle className="w-3.5 h-3.5" />
+              {t('missionChat.terminateSession', { defaultValue: 'Terminate Session' })}
+            </button>
+          )}
           <div className={cn('flex items-center gap-1', config.color)}>
             <StatusIcon className={cn('w-4 h-4', mission.status === 'running' && 'animate-spin')} />
             <span className="text-xs">{config.label}</span>
@@ -552,9 +564,11 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
             <div className="flex items-center justify-end">
               <button
                 onClick={() => cancelMission(mission.id)}
-                className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-500/10 transition-colors"
+                className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-500/10 transition-colors"
+                data-testid="terminate-session-inline-btn"
               >
-                {t('missionChat.cancel')}
+                <StopCircle className="w-3 h-3" />
+                {t('missionChat.terminateSession', { defaultValue: 'Terminate Session' })}
               </button>
             </div>
           </div>
