@@ -3,6 +3,7 @@ import { AlertTriangle } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
+import { useDataCompliance } from '../../hooks/useDataCompliance'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { useTranslation } from 'react-i18next'
@@ -17,87 +18,64 @@ const DEFAULT_DATA_COMPLIANCE_CARDS = [
   { type: 'namespace_rbac', title: 'Access Controls', position: { w: 6, h: 4 } },
 ]
 
-// Fixed demo data for data compliance posture
-const DEMO_POSTURE = {
-  // Encryption
-  encryptedSecrets: 156,
-  unencryptedSecrets: 8,
-  encryptionScore: 94,
-  // Data residency
-  regionsCompliant: 4,
-  regionsTotal: 5,
-  // Access control
-  rbacPolicies: 48,
-  excessivePermissions: 6,
-  // PII detection
-  piiDetected: 12,
-  piiProtected: 9,
-  // Audit
-  auditEnabled: 85,
-  retentionDays: 90,
-  // Framework scores
-  gdprScore: 86,
-  hipaaScore: 82,
-  pciScore: 88,
-  soc2Score: 84,
-}
-
 export function DataCompliance() {
   const { t: _t } = useTranslation()
-  const { isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
+  const { isLoading: clustersLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
   useGlobalFilters() // Keep hook for potential future use
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
+  const { posture, scores, isLoading: complianceLoading, isDemoData, isRefreshing: complianceRefreshing } = useDataCompliance()
 
-  // Use fixed demo posture data
-  const posture = DEMO_POSTURE
+  const isLoading = clustersLoading || complianceLoading
+  const isRefreshing = dataRefreshing || complianceRefreshing
 
-  // Stats value getter - returns fixed demo data with isDemo flag
+  // Stats value getter — derives values from real cluster data
   const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+    const demo = isDemoData
     switch (blockId) {
       // Encryption
       case 'encryption_score':
-        return { value: `${posture.encryptionScore}%`, sublabel: 'encryption coverage', isClickable: false, isDemo: true }
+        return { value: `${scores.encryptionScore}%`, sublabel: 'encryption coverage', isClickable: false, isDemo: demo }
       case 'encrypted_secrets':
-        return { value: posture.encryptedSecrets, sublabel: 'encrypted secrets', isClickable: false, isDemo: true }
+        return { value: posture.totalSecrets - posture.opaqueSecrets, sublabel: 'typed secrets', isClickable: false, isDemo: demo }
       case 'unencrypted_secrets':
-        return { value: posture.unencryptedSecrets, sublabel: 'unencrypted', isClickable: false, isDemo: true }
+        return { value: posture.opaqueSecrets, sublabel: 'opaque secrets', isClickable: false, isDemo: demo }
 
-      // Data residency
+      // Cluster coverage
       case 'regions_compliant':
-        return { value: `${posture.regionsCompliant}/${posture.regionsTotal}`, sublabel: 'regions compliant', isClickable: false, isDemo: true }
+        return { value: `${posture.reachableClusters}/${posture.totalClusters}`, sublabel: 'clusters reachable', isClickable: false, isDemo: demo }
 
       // Access control
       case 'rbac_policies':
-        return { value: posture.rbacPolicies, sublabel: 'RBAC policies', isClickable: false, isDemo: true }
+        return { value: posture.rbacPolicies, sublabel: 'RBAC policies', isClickable: false, isDemo: demo }
       case 'excessive_permissions':
-        return { value: posture.excessivePermissions, sublabel: 'excessive permissions', isClickable: false, isDemo: true }
+        return { value: posture.clusterAdminBindings, sublabel: 'cluster-admin bindings', isClickable: false, isDemo: demo }
 
-      // PII
+      // Certificates
       case 'pii_detected':
-        return { value: posture.piiDetected, sublabel: 'PII instances', isClickable: false, isDemo: true }
+        return { value: posture.totalCertificates, sublabel: 'certificates', isClickable: false, isDemo: demo }
       case 'pii_protected':
-        return { value: posture.piiProtected, sublabel: 'protected', isClickable: false, isDemo: true }
+        return { value: posture.validCertificates, sublabel: 'valid certs', isClickable: false, isDemo: demo }
 
-      // Audit
+      // Audit / namespaces
       case 'audit_enabled':
-        return { value: `${posture.auditEnabled}%`, sublabel: 'audit enabled', isClickable: false, isDemo: true }
+        return { value: posture.totalNamespaces, sublabel: 'namespaces', isClickable: false, isDemo: demo }
       case 'retention_days':
-        return { value: posture.retentionDays, sublabel: 'day retention', isClickable: false, isDemo: true }
+        return { value: posture.roleBindings, sublabel: 'role bindings', isClickable: false, isDemo: demo }
 
-      // Framework scores
+      // Framework scores (derived from real data)
       case 'gdpr_score':
-        return { value: `${posture.gdprScore}%`, sublabel: 'GDPR', isClickable: false, isDemo: true }
+        return { value: `${scores.overallScore}%`, sublabel: 'overall', isClickable: false, isDemo: demo }
       case 'hipaa_score':
-        return { value: `${posture.hipaaScore}%`, sublabel: 'HIPAA', isClickable: false, isDemo: true }
+        return { value: `${scores.rbacScore}%`, sublabel: 'RBAC', isClickable: false, isDemo: demo }
       case 'pci_score':
-        return { value: `${posture.pciScore}%`, sublabel: 'PCI-DSS', isClickable: false, isDemo: true }
+        return { value: `${scores.encryptionScore}%`, sublabel: 'secrets', isClickable: false, isDemo: demo }
       case 'soc2_score':
-        return { value: `${posture.soc2Score}%`, sublabel: 'SOC 2', isClickable: false, isDemo: true }
+        return { value: `${scores.certScore}%`, sublabel: 'certificates', isClickable: false, isDemo: demo }
 
       default:
         return { value: '-' }
     }
-  }, [posture])
+  }, [posture, scores, isDemoData])
 
   const getStatValue = useCallback(
     (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
@@ -115,10 +93,10 @@ export function DataCompliance() {
       getStatValue={getStatValue}
       onRefresh={refetch}
       isLoading={isLoading}
-      isRefreshing={dataRefreshing}
+      isRefreshing={isRefreshing}
       lastUpdated={lastUpdated}
       hasData={true}
-      isDemoData={true}
+      isDemoData={isDemoData}
       emptyState={{
         title: 'Data Compliance Dashboard',
         description: 'Add cards to monitor data encryption, access controls, and compliance frameworks.',

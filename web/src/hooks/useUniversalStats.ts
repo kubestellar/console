@@ -376,7 +376,9 @@ export function useUniversalStats() {
         return { value: '91%', sublabel: 'PCI-DSS', isClickable: false, isDemo: true }
 
       // ══════════════════════════════════════════
-      // Data Compliance stats (demo data)
+      // Data Compliance stats (fallback demo data —
+      // real values are provided by useDataCompliance
+      // hook in the DataCompliance page component)
       // ══════════════════════════════════════════
       case 'encryption_score':
         return { value: '92%', sublabel: 'encrypted', isClickable: false, isDemo: true }
