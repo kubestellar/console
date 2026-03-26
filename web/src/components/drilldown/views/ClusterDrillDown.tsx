@@ -6,10 +6,12 @@ import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { Gauge } from '../../charts/Gauge'
 import { useTranslation } from 'react-i18next'
+import { cn } from '../../../lib/cn'
 import { LOADING_TIMEOUT_MS } from '../../../lib/constants/network'
 
 // Resource tree lens/view options
 type TreeLens = 'all' | 'issues' | 'nodes' | 'workloads' | 'storage' | 'network'
+type ClusterTab = 'events' | 'resources'
 
 interface Props {
   data: Record<string, unknown>
@@ -24,7 +26,7 @@ export function ClusterDrillDown({ data }: Props) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['cluster', 'nodes', 'namespaces']))
   const [searchFilter, setSearchFilter] = useState('')
   const [activeLens, setActiveLens] = useState<TreeLens>('all')
-  const [showResourceTree, setShowResourceTree] = useState(false)
+  const [activeTab, setActiveTab] = useState<ClusterTab>('events')
 
   // Safeguard timeout to prevent infinite loading - show content after 5 seconds max
   const [loadingTimedOut, setLoadingTimedOut] = useState(false)
@@ -287,63 +289,6 @@ export function ClusterDrillDown({ data }: Props) {
         </div>
       )}
 
-      {/* Recent Events Section */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold text-foreground">{t('drilldown.fields.recentEvents')}</h3>
-          <button
-            onClick={() => drillToEvents(clusterName)}
-            className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
-          >
-            View All →
-          </button>
-        </div>
-        {eventsLoading ? (
-          <div className="space-y-2 animate-pulse">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="p-3 rounded-lg bg-card/30 border border-border">
-                <div className="h-4 w-32 bg-secondary rounded mb-2" />
-                <div className="h-3 w-full bg-secondary/50 rounded" />
-              </div>
-            ))}
-          </div>
-        ) : clusterEvents.length === 0 ? (
-          <div className="p-4 rounded-lg bg-card/30 border border-border text-center text-muted-foreground text-sm">
-            No recent events
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {clusterEvents.slice(0, 5).map((event, i) => (
-              <div
-                key={i}
-                className={`p-3 rounded-lg border-l-4 cursor-pointer hover:bg-card/50 transition-colors ${
-                  event.type === 'Warning'
-                    ? 'bg-yellow-500/10 border-l-yellow-500'
-                    : 'bg-card/30 border-l-green-500'
-                }`}
-                onClick={() => drillToEvents(clusterName)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <StatusIndicator status={event.type === 'Warning' ? 'warning' : 'healthy'} size="sm" />
-                    <span className="font-medium text-foreground text-sm">{event.reason}</span>
-                  </div>
-                  {event.count > 1 && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-card text-muted-foreground">
-                      x{event.count}
-                    </span>
-                  )}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1 truncate">
-                  {event.namespace}/{event.object}
-                </div>
-                <p className="text-xs text-foreground mt-1 line-clamp-1">{event.message}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Issues Section */}
       {(podIssues.length > 0 || clusterDeploymentIssues.length > 0) && (
         <div>
@@ -475,25 +420,100 @@ export function ClusterDrillDown({ data }: Props) {
         </div>
       )}
 
-      {/* Resource Tree Section */}
-      <div className="border-t border-border pt-6">
-        <div className="flex items-center justify-between mb-4">
-          <button
-            onClick={() => setShowResourceTree(!showResourceTree)}
-            className="flex items-center gap-2 text-lg font-semibold text-foreground hover:text-primary transition-colors"
-          >
-            {showResourceTree ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-            <Layers className="w-5 h-5 text-purple-400" />
-            Resource Tree
-            {issueCounts.total > 0 && (
-              <StatusBadge color="red" size="xs" rounded="full" className="ml-2">
-                {issueCounts.total} issues
-              </StatusBadge>
-            )}
-          </button>
+      {/* Tabs for Events and Resources */}
+      <div className="border-t border-border pt-4">
+        <div className="border-b border-border mb-4">
+          <div className="flex gap-0">
+            {([
+              { id: 'events' as ClusterTab, label: t('drilldown.fields.recentEvents'), count: clusterEvents.length },
+              { id: 'resources' as ClusterTab, label: 'Resource Tree', count: issueCounts.total > 0 ? issueCounts.total : undefined },
+            ]).map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors',
+                  activeTab === tab.id
+                    ? 'text-primary border-primary'
+                    : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border'
+                )}
+              >
+                {tab.label}
+                {tab.count !== undefined && tab.count > 0 && (
+                  <span className={cn(
+                    'text-xs px-1.5 py-0.5 rounded-full',
+                    activeTab === tab.id
+                      ? 'bg-primary/20 text-primary'
+                      : tab.id === 'resources' ? 'bg-red-500/20 text-red-400' : 'bg-secondary text-muted-foreground'
+                  )}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {showResourceTree && (
+        {/* Events Tab */}
+        {activeTab === 'events' && (
+          <div>
+            <div className="flex justify-end mb-3">
+              <button
+                onClick={() => drillToEvents(clusterName)}
+                className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
+              >
+                View All →
+              </button>
+            </div>
+            {eventsLoading ? (
+              <div className="space-y-2 animate-pulse">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="p-3 rounded-lg bg-card/30 border border-border">
+                    <div className="h-4 w-32 bg-secondary rounded mb-2" />
+                    <div className="h-3 w-full bg-secondary/50 rounded" />
+                  </div>
+                ))}
+              </div>
+            ) : clusterEvents.length === 0 ? (
+              <div className="p-4 rounded-lg bg-card/30 border border-border text-center text-muted-foreground text-sm">
+                No recent events
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {clusterEvents.slice(0, 10).map((event, i) => (
+                  <div
+                    key={i}
+                    className={`p-3 rounded-lg border-l-4 cursor-pointer hover:bg-card/50 transition-colors ${
+                      event.type === 'Warning'
+                        ? 'bg-yellow-500/10 border-l-yellow-500'
+                        : 'bg-card/30 border-l-green-500'
+                    }`}
+                    onClick={() => drillToEvents(clusterName)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <StatusIndicator status={event.type === 'Warning' ? 'warning' : 'healthy'} size="sm" />
+                        <span className="font-medium text-foreground text-sm">{event.reason}</span>
+                      </div>
+                      {event.count > 1 && (
+                        <span className="text-xs px-2 py-0.5 rounded bg-card text-muted-foreground">
+                          x{event.count}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1 truncate">
+                      {event.namespace}/{event.object}
+                    </div>
+                    <p className="text-xs text-foreground mt-1 line-clamp-1">{event.message}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Resources Tab */}
+        {activeTab === 'resources' && (
           <div className="space-y-4">
             {/* Search and Filters */}
             <div className="flex flex-col md:flex-row gap-3">
