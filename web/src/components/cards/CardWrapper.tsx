@@ -218,7 +218,7 @@ function InfoTooltip({ text }: { text: string }) {
     if (!triggerRef.current || !isVisible) return
 
     const rect = triggerRef.current.getBoundingClientRect()
-    const tooltipWidth = 280 // max-w-[280px]
+    const tooltipWidth = 320 // max-w-xs (320px)
     const tooltipHeight = tooltipRef.current?.offsetHeight || 80 // estimate
 
     // Position below the icon by default
@@ -258,7 +258,7 @@ function InfoTooltip({ text }: { text: string }) {
     }
   }, [isVisible, updatePosition])
 
-  // Close tooltip when clicking outside
+  // Close tooltip when clicking outside or pressing Escape
   useEffect(() => {
     if (!isVisible) return
 
@@ -269,8 +269,18 @@ function InfoTooltip({ text }: { text: string }) {
       }
     }
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsVisible(false)
+      }
+    }
+
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
   }, [isVisible])
 
   return (
@@ -281,6 +291,7 @@ function InfoTooltip({ text }: { text: string }) {
         onMouseEnter={() => setIsVisible(true)}
         onMouseLeave={() => setIsVisible(false)}
         className="p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+        aria-label={t('cardWrapper.cardInfo')}
         title={t('cardWrapper.cardInfo')}
       >
         <Info className="w-3.5 h-3.5" />
@@ -288,7 +299,8 @@ function InfoTooltip({ text }: { text: string }) {
       {isVisible && position && createPortal(
         <div
           ref={tooltipRef}
-          className="fixed z-[100] max-w-[280px] px-3 py-2 text-xs rounded-lg bg-background border border-border text-foreground shadow-xl animate-fade-in"
+          role="tooltip"
+          className="fixed z-[100] max-w-xs px-3 py-2.5 text-xs leading-relaxed rounded-lg bg-background border border-border text-foreground shadow-xl animate-fade-in"
           style={{ top: position.top, left: position.left }}
           onMouseEnter={() => setIsVisible(true)}
           onMouseLeave={() => setIsVisible(false)}
