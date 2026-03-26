@@ -31,6 +31,7 @@ export type DrillDownViewType =
   | 'drift'
   // Phase 2: Policy and compliance views
   | 'policy'
+  | 'compliance'
   | 'crd'
   // Phase 2: Alerting and monitoring views
   | 'alert'
@@ -225,6 +226,8 @@ function getViewKey(view: DrillDownView): string {
     // Phase 2: Policy and compliance views
     case 'policy':
       return `policy:${data.cluster}:${data.namespace || ''}:${data.policy}`
+    case 'compliance':
+      return `compliance:${data.filterStatus || 'all'}`
     case 'crd':
       return `crd:${data.cluster}:${data.crd}`
     // Phase 2: Alerting and monitoring views
@@ -535,6 +538,18 @@ export function useDrillDownActions() {
     })
   }, [openOrPush])
 
+  const drillToCompliance = useCallback((filterStatus?: string, complianceData?: Record<string, unknown>) => {
+    const title = filterStatus
+      ? `${filterStatus.charAt(0).toUpperCase() + filterStatus.slice(1)} Controls`
+      : 'OSCAL Compliance Controls'
+    openOrPush({
+      type: 'compliance',
+      title,
+      subtitle: 'Compliance Trestle Assessment',
+      data: { filterStatus, ...complianceData },
+    })
+  }, [openOrPush])
+
   const drillToCRD = useCallback((cluster: string, crd: string, crdData?: Record<string, unknown>) => {
     openOrPush({
       type: 'crd',
@@ -760,6 +775,7 @@ export function useDrillDownActions() {
     drillToBuildpack,
     drillToDrift,
     drillToPolicy,
+    drillToCompliance,
     drillToCRD,
     drillToAlert,
     drillToAlertRule,

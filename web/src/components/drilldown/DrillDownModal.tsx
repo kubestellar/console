@@ -25,6 +25,7 @@ const ConfigMapDrillDown = safeLazy(() => import('./views/ConfigMapDrillDown'), 
 const BuildpackDrillDown = safeLazy(() => import('./views/BuildpackDrillDown'), 'BuildpackDrillDown')
 const RBACDrillDown = safeLazy(() => import('./views/RBACDrillDown'), 'RBACDrillDown')
 const CostDrillDown = safeLazy(() => import('./views/CostDrillDown'), 'CostDrillDown')
+const ComplianceDrillDown = safeLazy(() => import('./views/ComplianceDrillDown'), 'ComplianceDrillDown')
 
 const EventsDrillDown = safeLazy(() => import('./views/EventsDrillDown'), 'EventsDrillDown')
 
@@ -77,6 +78,7 @@ const getViewIcon = (type: string) => {
     case 'argoapp': return <GitBranch className="w-4 h-4 text-orange-400" />
     case 'operator': return <Settings className="w-4 h-4 text-purple-400" />
     case 'policy': return <Shield className="w-4 h-4 text-blue-400" />
+    case 'compliance': return <Shield className="w-4 h-4 text-teal-400" />
     case 'kustomization': return <Layers className="w-4 h-4 text-blue-400" />
     case 'buildpack': return <Package className="w-4 h-4 text-blue-400" />
     case 'crd': return <Package className="w-4 h-4 text-purple-400" />
@@ -198,6 +200,8 @@ export function DrillDownModal() {
         return <OperatorDrillDown data={data} />
       case 'policy':
         return <PolicyDrillDown data={data} />
+      case 'compliance':
+        return <ComplianceDrillDown data={data} />
       case 'kustomization':
         return <KustomizationDrillDown data={data} />
       case 'buildpack':

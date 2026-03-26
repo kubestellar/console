@@ -47,6 +47,8 @@ export interface OscalControlResult {
   title: string
   status: 'pass' | 'fail' | 'other' | 'not-applicable'
   description?: string
+  severity?: 'critical' | 'high' | 'medium' | 'low'
+  profile?: string
 }
 
 export interface OscalProfile {
@@ -125,6 +127,64 @@ function clearCache(): void {
 
 // ── Demo data ────────────────────────────────────────────────────────────
 
+/** Demo NIST 800-53 control families for realistic demo data */
+const DEMO_CONTROL_FAMILIES = [
+  { id: 'AC', name: 'Access Control', controls: ['AC-1','AC-2','AC-3','AC-4','AC-5','AC-6','AC-7','AC-8','AC-11','AC-12','AC-14','AC-17','AC-18','AC-19','AC-20','AC-21','AC-22'] },
+  { id: 'AU', name: 'Audit and Accountability', controls: ['AU-1','AU-2','AU-3','AU-4','AU-5','AU-6','AU-7','AU-8','AU-9','AU-11','AU-12'] },
+  { id: 'AT', name: 'Awareness and Training', controls: ['AT-1','AT-2','AT-3','AT-4'] },
+  { id: 'CM', name: 'Configuration Management', controls: ['CM-1','CM-2','CM-3','CM-4','CM-5','CM-6','CM-7','CM-8','CM-9','CM-10','CM-11'] },
+  { id: 'CP', name: 'Contingency Planning', controls: ['CP-1','CP-2','CP-3','CP-4','CP-6','CP-7','CP-8','CP-9','CP-10'] },
+  { id: 'IA', name: 'Identification and Authentication', controls: ['IA-1','IA-2','IA-3','IA-4','IA-5','IA-6','IA-7','IA-8'] },
+  { id: 'IR', name: 'Incident Response', controls: ['IR-1','IR-2','IR-3','IR-4','IR-5','IR-6','IR-7','IR-8'] },
+  { id: 'MA', name: 'Maintenance', controls: ['MA-1','MA-2','MA-3','MA-4','MA-5','MA-6'] },
+  { id: 'MP', name: 'Media Protection', controls: ['MP-1','MP-2','MP-3','MP-4','MP-5','MP-6','MP-7'] },
+  { id: 'PE', name: 'Physical and Environmental Protection', controls: ['PE-1','PE-2','PE-3','PE-4','PE-6','PE-8','PE-9','PE-10','PE-11','PE-12','PE-13','PE-14','PE-15','PE-16'] },
+  { id: 'PL', name: 'Planning', controls: ['PL-1','PL-2','PL-4','PL-8'] },
+  { id: 'PS', name: 'Personnel Security', controls: ['PS-1','PS-2','PS-3','PS-4','PS-5','PS-6','PS-7','PS-8'] },
+  { id: 'RA', name: 'Risk Assessment', controls: ['RA-1','RA-2','RA-3','RA-5'] },
+  { id: 'SA', name: 'System and Services Acquisition', controls: ['SA-1','SA-2','SA-3','SA-4','SA-5','SA-8','SA-9','SA-10','SA-11'] },
+  { id: 'SC', name: 'System and Communications Protection', controls: ['SC-1','SC-2','SC-4','SC-5','SC-7','SC-8','SC-10','SC-12','SC-13','SC-15','SC-17','SC-18','SC-19','SC-20','SC-21','SC-22','SC-23','SC-28','SC-39'] },
+  { id: 'SI', name: 'System and Information Integrity', controls: ['SI-1','SI-2','SI-3','SI-4','SI-5','SI-7','SI-8','SI-10','SI-11','SI-12','SI-16'] },
+  { id: 'SR', name: 'Supply Chain Risk Management', controls: ['SR-1','SR-2','SR-3','SR-5','SR-6','SR-8','SR-10','SR-11','SR-12'] },
+]
+
+const DEMO_SEVERITIES: Array<'critical' | 'high' | 'medium' | 'low'> = ['critical', 'high', 'medium', 'low']
+
+/** Deterministic pseudo-random from seed */
+function demoRand(seed: number): number {
+  const x = Math.sin(seed * 9301 + 49297) * 233280
+  return x - Math.floor(x)
+}
+
+function generateDemoControlResults(cluster: string, total: number, passed: number, failed: number, _other: number): OscalControlResult[] {
+  const results: OscalControlResult[] = []
+  const clusterSeed = cluster.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+  let idx = 0
+  const profiles = ['NIST 800-53 rev5', 'FedRAMP Moderate']
+
+  for (const family of DEMO_CONTROL_FAMILIES) {
+    for (const controlId of family.controls) {
+      if (idx >= total) break
+      const rand = demoRand(clusterSeed + idx)
+      let status: 'pass' | 'fail' | 'other'
+      if (idx < passed) status = 'pass'
+      else if (idx < passed + failed) status = 'fail'
+      else status = 'other'
+
+      results.push({
+        controlId,
+        title: `${family.name}: ${controlId}`,
+        description: `Ensure ${family.name.toLowerCase()} control ${controlId} requirements are satisfied`,
+        status,
+        severity: DEMO_SEVERITIES[Math.floor(rand * 4)],
+        profile: profiles[idx % 2 === 0 ? 0 : 1],
+      })
+      idx++
+    }
+  }
+  return results
+}
+
 function getDemoStatus(cluster: string): TrestleClusterStatus {
   const seed = cluster.length
   const score = DEMO_OVERALL_SCORE + (seed % 15) - 7
@@ -158,7 +218,7 @@ function getDemoStatus(cluster: string): TrestleClusterStatus {
     passedControls: passed,
     failedControls: failed,
     otherControls: other,
-    controlResults: [],
+    controlResults: generateDemoControlResults(cluster, total, passed, failed, other),
     lastAssessment: new Date(Date.now() - (seed % 60) * 60_000).toISOString(),
   }
 }
@@ -265,18 +325,21 @@ async function fetchSingleCluster(cluster: string): Promise<TrestleClusterStatus
                 const controlStatus = String(r.status || r.state || 'other').toLowerCase()
                 const controlId = String(r.controlId || r.control || r.id || '')
                 const title = String(r.title || r.description || controlId)
+                const description = String(r.description || r.title || '')
+                const severity = (String(r.severity || r.priority || 'medium').toLowerCase()) as 'critical' | 'high' | 'medium' | 'low'
 
                 if (controlStatus === 'pass' || controlStatus === 'satisfied') {
                   passed++
-                  controlResults.push({ controlId, title, status: 'pass' })
+                  controlResults.push({ controlId, title, status: 'pass', description, severity, profile: profileName })
                 } else if (controlStatus === 'fail' || controlStatus === 'not-satisfied') {
                   failed++
-                  controlResults.push({ controlId, title, status: 'fail' })
+                  controlResults.push({ controlId, title, status: 'fail', description, severity, profile: profileName })
                 } else {
                   other++
                   controlResults.push({
                     controlId, title,
                     status: controlStatus === 'not-applicable' ? 'not-applicable' : 'other',
+                    description, severity, profile: profileName,
                   })
                 }
               }

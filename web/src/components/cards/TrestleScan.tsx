@@ -16,6 +16,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useTrestle, type OscalProfile } from '../../hooks/useTrestle'
 import { useMissions } from '../../hooks/useMissions'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 
 interface CardConfig {
@@ -50,6 +51,7 @@ export function TrestleScan({ config: _config }: CardConfig) {
   const { statuses, aggregated, isLoading, isRefreshing, installed, isDemoData, lastRefresh, clustersChecked, totalClusters } = useTrestle()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
+  const { drillToCompliance } = useDrillDownActions()
   const [expandedProfile, setExpandedProfile] = useState<string | null>(null)
 
   /** Whether all clusters have been checked */
@@ -243,33 +245,51 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
       {/* Overall Score */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex flex-col items-center">
+          <button
+            onClick={() => drillToCompliance('', {})}
+            className="flex flex-col items-center hover:opacity-80 transition-opacity cursor-pointer"
+            title="View all compliance controls"
+          >
             <span className={`text-3xl font-bold ${scoreColor}`}>{filtered.overallScore}%</span>
             <span className={`text-xs ${scoreColor}`}>{scoreLabel}</span>
-          </div>
+          </button>
           <div className="text-xs text-muted-foreground">
-            <div className="flex items-center gap-1">
+            <button
+              onClick={() => drillToCompliance('pass', {})}
+              className="flex items-center gap-1 hover:text-green-400 transition-colors cursor-pointer"
+              title="View passing controls"
+            >
               <CheckCircle className="w-3 h-3 text-green-400" />
               <span>{filtered.passedControls} passed</span>
-            </div>
-            <div className="flex items-center gap-1">
+            </button>
+            <button
+              onClick={() => drillToCompliance('fail', {})}
+              className="flex items-center gap-1 hover:text-red-400 transition-colors cursor-pointer"
+              title="View failing controls"
+            >
               <XCircle className="w-3 h-3 text-red-400" />
               <span>{filtered.failedControls} failed</span>
-            </div>
+            </button>
             {filtered.otherControls > 0 && (
-              <div className="flex items-center gap-1">
+              <button
+                onClick={() => drillToCompliance('other', {})}
+                className="flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer"
+                title="View other controls"
+              >
                 <Info className="w-3 h-3 text-muted-foreground" />
                 <span>{filtered.otherControls} other</span>
-              </div>
+              </button>
             )}
           </div>
         </div>
-        <StatusBadge
-          color={filtered.overallScore >= SCORE_GOOD_THRESHOLD ? 'green' : filtered.overallScore >= SCORE_WARNING_THRESHOLD ? 'yellow' : 'red'}
-          size="xs"
-        >
-          {filtered.totalControls} controls
-        </StatusBadge>
+        <button onClick={() => drillToCompliance('', {})} className="cursor-pointer" title="View all compliance controls">
+          <StatusBadge
+            color={filtered.overallScore >= SCORE_GOOD_THRESHOLD ? 'green' : filtered.overallScore >= SCORE_WARNING_THRESHOLD ? 'yellow' : 'red'}
+            size="xs"
+          >
+            {filtered.totalControls} controls
+          </StatusBadge>
+        </button>
       </div>
 
       {/* Compliance Context Banner */}
