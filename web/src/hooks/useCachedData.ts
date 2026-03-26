@@ -3595,8 +3595,18 @@ export function useCachedBuildpackImages(
     initialData: [] as BuildpackImage[],
     demoData: getDemoBuildpackImages(),
     fetcher: async () => {
-      const data = await fetchGitOpsAPI<{ images: BuildpackImage[] }>('buildpack-images', cluster ? { cluster } : undefined)
-      return data.images || []
+      try {
+        const data = await fetchGitOpsAPI<{ images: BuildpackImage[] }>('buildpack-images', cluster ? { cluster } : undefined)
+        return data.images || []
+      } catch (err) {
+        // When no buildpacks CRDs exist on any cluster, the API returns 404.
+        // Treat this as an empty result rather than an error so the card
+        // settles into its empty state instead of retrying indefinitely.
+        if (err instanceof Error && err.message.includes('404')) {
+          return []
+        }
+        throw err
+      }
     },
   })
 

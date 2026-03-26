@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CheckCircle, AlertTriangle, XCircle, Clock, ChevronRight, Server } from 'lucide-react'
+import { CheckCircle, AlertTriangle, XCircle, Clock, ChevronRight, Server, Package } from 'lucide-react'
 import { useClusters, BuildpackImage } from '../../../hooks/useMCP'
 import { useCachedBuildpackImages } from '../../../hooks/useCachedData'
 import { Skeleton } from '../../ui/Skeleton'
@@ -186,14 +186,16 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
 
   if (showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
         {error ? (
           <>
+            <AlertTriangle className="w-6 h-6 text-red-400" />
             <p className="text-sm text-red-400">{error}</p>
             <p className="text-xs mt-1">{t('buildpacksStatus.loadFailed')}</p>
           </>
         ) : (
           <>
+            <Package className="w-8 h-8 text-muted-foreground/50" />
             <p className="text-sm">{t('buildpacksStatus.noImages')}</p>
             <p className="text-xs mt-1">
               {t('buildpacksStatus.createHint')}
