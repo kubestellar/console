@@ -1323,7 +1323,7 @@ function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edges?: Dep
               'text-[10px] px-1.5 py-0.5 rounded-full font-medium',
               info.priority === 'required' ? 'bg-red-500/10 text-red-400' :
               info.priority === 'recommended' ? 'bg-blue-500/10 text-blue-400' :
-              'bg-gray-500/10 text-gray-400'
+              'bg-gray-500/10 text-gray-400 dark:text-gray-500'
             )}>
               {info.priority}
             </span>
@@ -1719,7 +1719,7 @@ function DeployModeInfoPanel({ mode, phases, projects, onShowProject, installedP
                             'text-[9px] ml-1.5 px-1 py-0.5 rounded',
                             proj.priority === 'required' ? 'bg-red-500/10 text-red-400' :
                             proj.priority === 'recommended' ? 'bg-blue-500/10 text-blue-400' :
-                            'bg-gray-500/10 text-gray-400'
+                            'bg-gray-500/10 text-gray-400 dark:text-gray-500'
                           )}>
                             {proj.priority}
                           </span>

@@ -8,6 +8,29 @@ import { motion } from 'framer-motion'
 import { CloudProviderIcon } from '../../ui/CloudProviderIcon'
 import type { LayoutRect, OverlayMode } from '../types'
 
+/**
+ * SVG fill colors — mapped from Tailwind palette equivalents.
+ * SVG `fill` attributes require raw color strings; Tailwind classes cannot be used.
+ * Each constant documents its Tailwind equivalent for design-token traceability.
+ */
+const SVG_COLORS = {
+  /** red-500 */    danger:  '#ef4444',
+  /** amber-500 */  warning: '#f59e0b',
+  /** green-500 */  cpu:     '#22c55e',
+  /** blue-500 */   mem:     '#3b82f6',
+  /** purple-500 */ gpu:     '#a855f7',
+  /** amber-500 */  tpu:     '#f59e0b',
+  /** lime-500 */   disk:    '#84cc16',
+  /** cyan-500 */   pvc:     '#06b6d4',
+  /** sky-500 */    network: '#0ea5e9',
+  /** slate-400 */  muted:   '#94a3b8',
+  /** slate-950 */  zoneBg:  '#0a0f1a',
+  /** slate-900 */  zoneFg:  '#0f172a',
+  /** slate-800 */  barBg:   '#1e293b',
+} as const
+
+/** Brand colors for cloud providers — used as SVG fill values.
+ *  These are intentional brand colors that cannot use Tailwind classes in SVG context. */
 const PROVIDER_COLORS: Record<string, string> = {
   eks: '#FF9900',
   gke: '#4285F4',
@@ -81,13 +104,13 @@ function StatBlock({ x, y, label, value, max, unit, color, displayOverride, noAl
       ? `${Math.round(max)}${unit}`
       : '—')
   const barColor = pctVal != null && !noAlert
-    ? pctVal >= 80 ? '#ef4444' : pctVal >= 50 ? '#f59e0b' : color
+    ? pctVal >= 80 ? SVG_COLORS.danger : pctVal >= 50 ? SVG_COLORS.warning : color
     : color
 
   return (
     <g>
       {/* Background */}
-      <rect x={x} y={y} width={56} height={14} rx={2} fill="#0f172a" stroke={color} strokeWidth={0.4} strokeOpacity={0.3} />
+      <rect x={x} y={y} width={56} height={14} rx={2} fill={SVG_COLORS.zoneFg} stroke={color} strokeWidth={0.4} strokeOpacity={0.3} />
       {/* Label */}
       <text x={x + 3} y={y + 5} fill={color} fontSize={5.5} fontWeight="700" fontFamily="system-ui, sans-serif" opacity={0.8}>
         {label}
@@ -97,7 +120,7 @@ function StatBlock({ x, y, label, value, max, unit, color, displayOverride, noAl
         {display}
       </text>
       {/* Gauge bar */}
-      <rect x={x + 2} y={y + 8.5} width={52} height={2.5} rx={1} fill="#1e293b" />
+      <rect x={x + 2} y={y + 8.5} width={52} height={2.5} rx={1} fill={SVG_COLORS.barBg} />
       {pctVal != null ? (
         <rect x={x + 2} y={y + 8.5} width={52 * pctVal / 100} height={2.5} rx={1} fill={barColor} />
       ) : max != null ? (
@@ -155,7 +178,7 @@ export function ClusterZone({
         height={height}
         rx={8}
         ry={8}
-        fill="#0a0f1a"
+        fill={SVG_COLORS.zoneBg}
       />
       <rect
         x={x}
@@ -164,7 +187,7 @@ export function ClusterZone({
         height={height}
         rx={8}
         ry={8}
-        fill="#0f172a"
+        fill={SVG_COLORS.zoneFg}
         stroke={color}
         strokeWidth={1}
         strokeDasharray="6 3"
@@ -226,13 +249,13 @@ export function ClusterZone({
       {showCompute && (
         <g>
           {/* Stat block row at top-right */}
-          <StatBlock x={x + width - 120} y={y + 6} label="CPU" value={cpuUsage} max={cpuCores} unit="" color="#22c55e" displayOverride={pct(cpuUsage, cpuCores) != null ? `${pct(cpuUsage, cpuCores)}%` : cpuCores != null ? `${cpuCores} cores` : '—'} />
-          <StatBlock x={x + width - 60} y={y + 6} label="MEM" value={memUsage} max={memGB} unit="" color="#3b82f6" displayOverride={pct(memUsage, memGB) != null ? `${pct(memUsage, memGB)}%` : memGB != null ? formatStorage(memGB) : '—'} />
+          <StatBlock x={x + width - 120} y={y + 6} label="CPU" value={cpuUsage} max={cpuCores} unit="" color={SVG_COLORS.cpu} displayOverride={pct(cpuUsage, cpuCores) != null ? `${pct(cpuUsage, cpuCores)}%` : cpuCores != null ? `${cpuCores} cores` : '—'} />
+          <StatBlock x={x + width - 60} y={y + 6} label="MEM" value={memUsage} max={memGB} unit="" color={SVG_COLORS.mem} displayOverride={pct(memUsage, memGB) != null ? `${pct(memUsage, memGB)}%` : memGB != null ? formatStorage(memGB) : '—'} />
           {/* GPU / TPU row */}
           {(gpuCount != null || tpuCount != null) && (
             <>
-              <StatBlock x={x + width - 120} y={y + 22} label="GPU" value={undefined} max={gpuCount} unit="" color="#a855f7" />
-              <StatBlock x={x + width - 60} y={y + 22} label="TPU" value={undefined} max={tpuCount} unit="" color="#f59e0b" />
+              <StatBlock x={x + width - 120} y={y + 22} label="GPU" value={undefined} max={gpuCount} unit="" color={SVG_COLORS.gpu} />
+              <StatBlock x={x + width - 60} y={y + 22} label="TPU" value={undefined} max={tpuCount} unit="" color={SVG_COLORS.tpu} />
             </>
           )}
         </g>
@@ -241,17 +264,17 @@ export function ClusterZone({
       {/* Storage overlay: PVC, Storage capacity */}
       {showStorage && (
         <g>
-          <StatBlock x={x + width - 120} y={y + 6} label="DISK" value={undefined} max={storageGB != null ? Math.round(storageGB) : undefined} unit="" color="#84cc16" displayOverride={storageGB != null ? formatStorage(storageGB) : '—'} />
-          <StatBlock x={x + width - 60} y={y + 6} label="PVC" value={pvcBoundCount} max={pvcCount} unit="" color="#06b6d4" noAlert />
+          <StatBlock x={x + width - 120} y={y + 6} label="DISK" value={undefined} max={storageGB != null ? Math.round(storageGB) : undefined} unit="" color={SVG_COLORS.disk} displayOverride={storageGB != null ? formatStorage(storageGB) : '—'} />
+          <StatBlock x={x + width - 60} y={y + 6} label="PVC" value={pvcBoundCount} max={pvcCount} unit="" color={SVG_COLORS.pvc} noAlert />
         </g>
       )}
 
       {/* Network overlay: pod count, node info */}
       {showNetwork && (
         <g>
-          <StatBlock x={x + width - 120} y={y + 6} label="PODS" value={undefined} max={podCount} unit="" color="#0ea5e9" noAlert />
-          <StatBlock x={x + width - 60} y={y + 6} label="NODES" value={undefined} max={nodeCount} unit="" color="#0ea5e9" noAlert />
-          <text x={x + width / 2} y={y + height - 20} textAnchor="middle" fill="#0ea5e9" fontSize={6.5} fontFamily="system-ui, sans-serif" opacity={0.7}>
+          <StatBlock x={x + width - 120} y={y + 6} label="PODS" value={undefined} max={podCount} unit="" color={SVG_COLORS.network} noAlert />
+          <StatBlock x={x + width - 60} y={y + 6} label="NODES" value={undefined} max={nodeCount} unit="" color={SVG_COLORS.network} noAlert />
+          <text x={x + width / 2} y={y + height - 20} textAnchor="middle" fill={SVG_COLORS.network} fontSize={6.5} fontFamily="system-ui, sans-serif" opacity={0.7}>
             Network policies · Service mesh ready
           </text>
         </g>
@@ -260,9 +283,9 @@ export function ClusterZone({
       {/* Security overlay: RBAC, PSS */}
       {showSecurity && (
         <g>
-          <StatBlock x={x + width - 120} y={y + 6} label="NODES" value={undefined} max={nodeCount} unit="" color="#94a3b8" noAlert />
-          <StatBlock x={x + width - 60} y={y + 6} label="PODS" value={undefined} max={podCount} unit="" color="#94a3b8" noAlert />
-          <text x={x + width / 2} y={y + height - 20} textAnchor="middle" fill="#94a3b8" fontSize={6.5} fontFamily="system-ui, sans-serif" opacity={0.7}>
+          <StatBlock x={x + width - 120} y={y + 6} label="NODES" value={undefined} max={nodeCount} unit="" color={SVG_COLORS.muted} noAlert />
+          <StatBlock x={x + width - 60} y={y + 6} label="PODS" value={undefined} max={podCount} unit="" color={SVG_COLORS.muted} noAlert />
+          <text x={x + width / 2} y={y + height - 20} textAnchor="middle" fill={SVG_COLORS.muted} fontSize={6.5} fontFamily="system-ui, sans-serif" opacity={0.7}>
             RBAC · Pod Security Standards · Secrets encrypted
           </text>
         </g>

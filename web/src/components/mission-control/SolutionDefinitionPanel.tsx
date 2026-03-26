@@ -700,7 +700,7 @@ function ProjectDetailPanel({
             'text-[10px] px-1.5 py-0.5 rounded-full font-medium',
             project.priority === 'required' ? 'bg-red-500/10 text-red-400' :
             project.priority === 'recommended' ? 'bg-blue-500/10 text-blue-400' :
-            'bg-gray-500/10 text-gray-400'
+            'bg-gray-500/10 text-gray-400 dark:text-gray-500'
           )}>
             {project.priority}
           </span>

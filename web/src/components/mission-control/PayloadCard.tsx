@@ -46,7 +46,7 @@ function getCategoryGradient(category: string): [string, string] {
 const PRIORITY_STYLES = {
   required: 'bg-red-500/15 text-red-400 border-red-500/30',
   recommended: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  optional: 'bg-gray-500/15 text-gray-400 border-gray-500/30',
+  optional: 'bg-gray-500/15 text-gray-400 dark:text-gray-500 border-gray-500/30',
 } as const
 
 interface PayloadCardProps {
@@ -91,7 +91,7 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
         {/* Header with gradient accent */}
         <div className="flex items-start gap-3 p-3">
           {/* Avatar */}
-          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-white/90 shadow-sm flex items-center justify-center overflow-hidden">
+          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-white/90 dark:bg-white/10 shadow-sm flex items-center justify-center overflow-hidden">
             {!imgFailed ? (
               <img
                 src={getAvatarUrl(project)}

@@ -82,7 +82,7 @@ export function BarChart({
               </>
             )}
             <Tooltip
-              cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
+              cursor={{ fill: 'hsl(var(--foreground) / 0.05)' }}
               contentStyle={{ ...CHART_TOOLTIP_CONTENT_STYLE, color: CHART_TOOLTIP_TEXT_COLOR }}
               labelStyle={{ color: CHART_TOOLTIP_LABEL_COLOR, fontWeight: 500 }}
               itemStyle={{ color: CHART_TOOLTIP_TEXT_COLOR }}
@@ -142,7 +142,7 @@ export function StackedBarChart({
               width={40}
             />
             <Tooltip
-              cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
+              cursor={{ fill: 'hsl(var(--foreground) / 0.05)' }}
               contentStyle={{ ...CHART_TOOLTIP_CONTENT_STYLE, color: CHART_TOOLTIP_TEXT_COLOR }}
               labelStyle={{ color: CHART_TOOLTIP_LABEL_COLOR, fontWeight: 500 }}
               itemStyle={{ color: CHART_TOOLTIP_TEXT_COLOR }}

@@ -50,7 +50,7 @@ function StatusBadge({ status }: { status: string }) {
     healthy: { icon: CheckCircle, bg: 'bg-green-500/15', text: 'text-green-400', label: 'Healthy' },
     degraded: { icon: AlertTriangle, bg: 'bg-yellow-500/15', text: 'text-yellow-400', label: 'Degraded' },
     unhealthy: { icon: XCircle, bg: 'bg-red-500/15', text: 'text-red-400', label: 'Unhealthy' },
-  }[status] || { icon: AlertTriangle, bg: 'bg-gray-500/15', text: 'text-muted-foreground', label: status }
+  }[status] || { icon: AlertTriangle, bg: 'bg-gray-500/15 dark:bg-gray-400/15', text: 'text-muted-foreground', label: status }
 
   const Icon = config.icon
   return (
@@ -229,7 +229,7 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
 
       {/* Install dialog */}
       {showInstallDialog && (
-        <div className="border-t border-border px-3 py-2 bg-white/[0.01] space-y-2">
+        <div className="border-t border-border px-3 py-2 bg-foreground/[0.01] space-y-2">
           <div className="text-2xs text-white/50 uppercase tracking-wider">Install GPU Health CronJob</div>
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -341,7 +341,7 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
 
       {/* CronJob Results (expandable) */}
       {showResults && status?.lastResults && status.lastResults.length > 0 && (
-        <div className="border-t border-border px-3 py-2 bg-white/[0.01] space-y-1.5">
+        <div className="border-t border-border px-3 py-2 bg-foreground/[0.01] space-y-1.5">
           <div className="text-2xs text-white/50 uppercase tracking-wider">Latest CronJob Results</div>
           {status.lastResults.map(result => (
             <div key={result.nodeName} className="rounded border border-border bg-secondary p-2">
@@ -507,7 +507,7 @@ export function ProactiveGPUNodeHealthMonitor() {
         {availableClusters.length === 0 && (
           <button
             onClick={() => setShowCronJobPanel(prev => !prev)}
-            className="mt-3 flex items-center gap-1.5 px-3 py-1.5 text-xs rounded border border-white/10 bg-secondary text-white/50 hover:text-white/70 hover:bg-white/[0.05] transition-colors"
+            className="mt-3 flex items-center gap-1.5 px-3 py-1.5 text-xs rounded border border-border bg-secondary text-muted-foreground hover:text-foreground/70 hover:bg-secondary/80 transition-colors"
           >
             <Settings2 className="w-3.5 h-3.5" />
             CronJob Setup
@@ -660,7 +660,7 @@ export function ProactiveGPUNodeHealthMonitor() {
 
               {/* Expanded detail */}
               {isExpanded && (
-                <div className="border-t border-border px-4 py-2 bg-white/[0.01]">
+                <div className="border-t border-border px-4 py-2 bg-foreground/[0.01]">
                   {/* GPU type */}
                   <div className="text-xs text-white/50 mb-2">{node.gpuType}</div>
 
@@ -690,7 +690,7 @@ export function ProactiveGPUNodeHealthMonitor() {
                       e.stopPropagation()
                       drillToNode(node.cluster, node.nodeName, { issue: (node.issues || [])[0] })
                     }}
-                    className="mt-2 px-3 py-1 text-xs bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 rounded text-white/60 hover:text-white/80 transition-colors"
+                    className="mt-2 px-3 py-1 text-xs bg-secondary hover:bg-secondary/80 border border-border rounded text-muted-foreground hover:text-foreground/80 transition-colors"
                   >
                     View Node Details
                   </button>

@@ -661,7 +661,7 @@ function KubeChessInternal() {
             {piece && (
               <span
                 className={`text-${isExpanded ? '4xl' : '2xl'} select-none ${
-                  piece.color === 'white' ? 'text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]' : 'text-gray-900'
+                  piece.color === 'white' ? 'text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]' : 'text-gray-900 dark:text-gray-950'
                 }`}
                 style={{ fontSize: cellSize * 0.7 }}
               >
@@ -686,7 +686,7 @@ function KubeChessInternal() {
         {/* Status */}
         <div className="flex items-center justify-between w-full max-w-xs">
           <div className="flex items-center gap-2">
-            <div className={`w-3 h-3 rounded-full ${gameState.turn === 'white' ? 'bg-white border border-gray-300' : 'bg-gray-800'}`} />
+            <div className={`w-3 h-3 rounded-full ${gameState.turn === 'white' ? 'bg-white border border-gray-300 dark:border-gray-600' : 'bg-gray-800 dark:bg-gray-900'}`} />
             <span className="text-sm font-medium">
               {isThinking ? 'AI thinking...' : (
                 gameResult !== 'ongoing' ? (

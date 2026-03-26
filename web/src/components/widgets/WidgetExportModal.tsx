@@ -489,7 +489,10 @@ const PREV_SM = '8px'           // 2 × 4px: standard margins and gaps
 const PREV_ITEM_PAD = '4px 8px' // py-1 px-2: item-row padding (vertical=XS, horizontal=SM)
 const PREV_DOTS_GAP = '2px'     // sub-grid gap for tightly-packed status-dot rows
 
-// --- Shared preview styles matching Übersicht widget appearance ---
+/** Shared preview styles matching macOS Übersicht widget appearance.
+ *  These use hardcoded dark colors intentionally — they render a fixed preview
+ *  of how the exported widget will look on a macOS desktop, regardless of
+ *  the console's current theme. */
 const ps = {
   card: {
     backgroundColor: 'rgba(17, 24, 39, 0.9)',

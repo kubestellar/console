@@ -50,9 +50,10 @@ export function SimpleGlobe({ className = '' }: SimpleGlobeProps) {
           <svg className="absolute inset-0 w-full h-full opacity-30">
             <defs>
               <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="rgb(59, 130, 246)" stopOpacity="0" />
-                <stop offset="50%" stopColor="rgb(59, 130, 246)" stopOpacity="1" />
-                <stop offset="100%" stopColor="rgb(59, 130, 246)" stopOpacity="0" />
+                {/* blue-500 equivalent */}
+                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0" />
+                <stop offset="50%" stopColor="#3b82f6" stopOpacity="1" />
+                <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
               </linearGradient>
             </defs>
             {clusters.slice(0, 6).map((cluster, i) => {

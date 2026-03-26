@@ -305,7 +305,7 @@ export function PodExecTerminal({
           {status === 'reconnecting' && (
             <button
               onClick={handleReconnect}
-              className="flex items-center gap-1.5 px-3 py-1 text-xs rounded bg-[#d29922] hover:bg-[#e3b341] text-black transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1 text-xs rounded bg-yellow-600 hover:bg-yellow-500 text-black dark:text-black transition-colors"
             >
               <RotateCcw className="w-3 h-3" />
               Reconnect Now

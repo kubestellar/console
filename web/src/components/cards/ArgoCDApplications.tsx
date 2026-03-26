@@ -35,7 +35,7 @@ const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTran
 const syncStatusConfig = {
   Synced: { icon: CheckCircle, color: 'text-green-400', bg: 'bg-green-500/20' },
   OutOfSync: { icon: RefreshCw, color: 'text-yellow-400', bg: 'bg-yellow-500/20' },
-  Unknown: { icon: AlertTriangle, color: 'text-muted-foreground', bg: 'bg-gray-500/20' },
+  Unknown: { icon: AlertTriangle, color: 'text-muted-foreground', bg: 'bg-gray-500/20 dark:bg-gray-400/20' },
 }
 
 const healthStatusConfig = {
