@@ -548,6 +548,187 @@ func TestKubectlProxy_ImportKubeconfig_Backup(t *testing.T) {
 	}
 }
 
+func TestKubectlProxy_ImportKubeconfig_ClusterCollision(t *testing.T) {
+	tmpDir := t.TempDir()
+	kubeconfigPath := filepath.Join(tmpDir, "config")
+
+	// Write an initial kubeconfig with cluster "shared-cluster" pointing to server A
+	initial := sampleKubeconfig("ctx-a", "shared-cluster", "shared-user", "https://server-a.example.com")
+	if err := os.WriteFile(kubeconfigPath, []byte(initial), 0600); err != nil {
+		t.Fatalf("Failed to write initial kubeconfig: %v", err)
+	}
+
+	proxy, err := NewKubectlProxy(kubeconfigPath)
+	if err != nil {
+		t.Fatalf("NewKubectlProxy failed: %v", err)
+	}
+
+	// Import a DIFFERENT context that reuses the name "shared-cluster" but with a different server URL.
+	// The user data is identical (same "fake-token"), so only the cluster should be renamed.
+	importYAML := sampleKubeconfig("ctx-b", "shared-cluster", "shared-user", "https://server-b.example.com")
+	added, skipped, err := proxy.ImportKubeconfig(importYAML)
+	if err != nil {
+		t.Fatalf("ImportKubeconfig failed: %v", err)
+	}
+	if len(added) != 1 || added[0] != "ctx-b" {
+		t.Errorf("Expected added=[ctx-b], got %v", added)
+	}
+	if len(skipped) != 0 {
+		t.Errorf("Expected no skipped, got %v", skipped)
+	}
+
+	ctxB, ok := proxy.config.Contexts["ctx-b"]
+	if !ok {
+		t.Fatal("ctx-b not found in config")
+	}
+
+	// Cluster should be renamed because server URLs differ
+	if ctxB.Cluster == "shared-cluster" {
+		t.Error("ctx-b should NOT reference the original 'shared-cluster' (collision should have been resolved)")
+	}
+	if ctxB.Cluster != "shared-cluster-imported" {
+		t.Errorf("ctx-b cluster = %q, want 'shared-cluster-imported'", ctxB.Cluster)
+	}
+
+	// User should NOT be renamed because token data is identical
+	if ctxB.AuthInfo != "shared-user" {
+		t.Errorf("ctx-b authInfo = %q, want 'shared-user' (same data, no rename needed)", ctxB.AuthInfo)
+	}
+
+	// Verify the renamed cluster has the correct server URL
+	renamedCluster, ok := proxy.config.Clusters["shared-cluster-imported"]
+	if !ok {
+		t.Fatal("shared-cluster-imported not found in config")
+	}
+	if renamedCluster.Server != "https://server-b.example.com" {
+		t.Errorf("renamed cluster server = %q, want https://server-b.example.com", renamedCluster.Server)
+	}
+
+	// Verify original cluster is unchanged
+	origCluster, ok := proxy.config.Clusters["shared-cluster"]
+	if !ok {
+		t.Fatal("original shared-cluster not found in config")
+	}
+	if origCluster.Server != "https://server-a.example.com" {
+		t.Errorf("original cluster server = %q, want https://server-a.example.com", origCluster.Server)
+	}
+}
+
+func TestKubectlProxy_ImportKubeconfig_UserCollision(t *testing.T) {
+	tmpDir := t.TempDir()
+	kubeconfigPath := filepath.Join(tmpDir, "config")
+
+	// Use a custom kubeconfig with a specific token for the initial user
+	initial := fmt.Sprintf(`apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://server.example.com
+  name: cluster-a
+contexts:
+- context:
+    cluster: cluster-a
+    user: shared-user
+  name: ctx-a
+users:
+- name: shared-user
+  user:
+    token: token-aaa
+current-context: ctx-a
+`)
+	if err := os.WriteFile(kubeconfigPath, []byte(initial), 0600); err != nil {
+		t.Fatalf("Failed to write initial kubeconfig: %v", err)
+	}
+
+	proxy, err := NewKubectlProxy(kubeconfigPath)
+	if err != nil {
+		t.Fatalf("NewKubectlProxy failed: %v", err)
+	}
+
+	// Import a context with same user name but different token
+	importYAML := fmt.Sprintf(`apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://other-server.example.com
+  name: cluster-b
+contexts:
+- context:
+    cluster: cluster-b
+    user: shared-user
+  name: ctx-b
+users:
+- name: shared-user
+  user:
+    token: token-bbb
+current-context: ctx-b
+`)
+	added, _, err := proxy.ImportKubeconfig(importYAML)
+	if err != nil {
+		t.Fatalf("ImportKubeconfig failed: %v", err)
+	}
+	if len(added) != 1 || added[0] != "ctx-b" {
+		t.Errorf("Expected added=[ctx-b], got %v", added)
+	}
+
+	ctxB := proxy.config.Contexts["ctx-b"]
+	if ctxB.AuthInfo == "shared-user" {
+		t.Error("ctx-b should NOT reference the original 'shared-user' (different token)")
+	}
+	if ctxB.AuthInfo != "shared-user-imported" {
+		t.Errorf("ctx-b authInfo = %q, want 'shared-user-imported'", ctxB.AuthInfo)
+	}
+
+	// Verify renamed user has correct token
+	renamedUser := proxy.config.AuthInfos[ctxB.AuthInfo]
+	if renamedUser == nil {
+		t.Fatalf("renamed user %q not found", ctxB.AuthInfo)
+	}
+	if renamedUser.Token != "token-bbb" {
+		t.Errorf("renamed user token = %q, want token-bbb", renamedUser.Token)
+	}
+
+	// Original user unchanged
+	origUser := proxy.config.AuthInfos["shared-user"]
+	if origUser.Token != "token-aaa" {
+		t.Errorf("original user token = %q, want token-aaa", origUser.Token)
+	}
+}
+
+func TestKubectlProxy_ImportKubeconfig_SameDataNoRename(t *testing.T) {
+	tmpDir := t.TempDir()
+	kubeconfigPath := filepath.Join(tmpDir, "config")
+
+	initial := sampleKubeconfig("ctx-a", "shared-cluster", "shared-user", "https://same-server.example.com")
+	if err := os.WriteFile(kubeconfigPath, []byte(initial), 0600); err != nil {
+		t.Fatalf("Failed to write initial kubeconfig: %v", err)
+	}
+
+	proxy, err := NewKubectlProxy(kubeconfigPath)
+	if err != nil {
+		t.Fatalf("NewKubectlProxy failed: %v", err)
+	}
+
+	// Import a different context name that references the same cluster/user data (same server, same token).
+	importYAML := sampleKubeconfig("ctx-b", "shared-cluster", "shared-user", "https://same-server.example.com")
+	added, _, err := proxy.ImportKubeconfig(importYAML)
+	if err != nil {
+		t.Fatalf("ImportKubeconfig failed: %v", err)
+	}
+	if len(added) != 1 || added[0] != "ctx-b" {
+		t.Errorf("Expected added=[ctx-b], got %v", added)
+	}
+
+	// Since data is identical, the context should keep the original name (no rename).
+	ctxB := proxy.config.Contexts["ctx-b"]
+	if ctxB.Cluster != "shared-cluster" {
+		t.Errorf("ctx-b cluster = %q, want shared-cluster (same data, no rename needed)", ctxB.Cluster)
+	}
+	if ctxB.AuthInfo != "shared-user" {
+		t.Errorf("ctx-b authInfo = %q, want shared-user (same data, no rename needed)", ctxB.AuthInfo)
+	}
+}
+
 func TestKubectlProxy_AddCluster_Token(t *testing.T) {
 	tmpDir := t.TempDir()
 	kubeconfigPath := filepath.Join(tmpDir, "config")

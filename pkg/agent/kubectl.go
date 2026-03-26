@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 
@@ -367,18 +368,46 @@ func (k *KubectlProxy) ImportKubeconfig(yamlContent string) (added []string, ski
 			skipped = append(skipped, name)
 			continue
 		}
-		// Add context
-		k.config.Contexts[name] = ctx
+
+		// Resolve cluster name collisions: if the name already exists with
+		// different data, pick a unique name so we don't silently drop the
+		// incoming cluster definition.
+		clusterName := ctx.Cluster
+		if incomingCluster, ok := incoming.Clusters[clusterName]; ok {
+			if existing, exists := k.config.Clusters[clusterName]; exists {
+				if !clustersEquivalent(existing, incomingCluster) {
+					clusterName = uniqueName(clusterName, k.config.Clusters)
+				}
+				// else: same data, reuse existing entry
+			}
+		}
+
+		// Resolve user/auth-info name collisions the same way.
+		userName := ctx.AuthInfo
+		if incomingUser, ok := incoming.AuthInfos[userName]; ok {
+			if existing, exists := k.config.AuthInfos[userName]; exists {
+				if !authInfosEquivalent(existing, incomingUser) {
+					userName = uniqueName(userName, k.config.AuthInfos)
+				}
+			}
+		}
+
+		// Build the context with possibly-renamed references.
+		mergedCtx := ctx.DeepCopy()
+		mergedCtx.Cluster = clusterName
+		mergedCtx.AuthInfo = userName
+		k.config.Contexts[name] = mergedCtx
+
 		// Add referenced cluster if present
 		if cluster, ok := incoming.Clusters[ctx.Cluster]; ok {
-			if _, exists := k.config.Clusters[ctx.Cluster]; !exists {
-				k.config.Clusters[ctx.Cluster] = cluster
+			if _, exists := k.config.Clusters[clusterName]; !exists {
+				k.config.Clusters[clusterName] = cluster
 			}
 		}
 		// Add referenced user if present
 		if user, ok := incoming.AuthInfos[ctx.AuthInfo]; ok {
-			if _, exists := k.config.AuthInfos[ctx.AuthInfo]; !exists {
-				k.config.AuthInfos[ctx.AuthInfo] = user
+			if _, exists := k.config.AuthInfos[userName]; !exists {
+				k.config.AuthInfos[userName] = user
 			}
 		}
 		added = append(added, name)
@@ -393,6 +422,47 @@ func (k *KubectlProxy) ImportKubeconfig(yamlContent string) (added []string, ski
 	k.Reload()
 
 	return added, skipped, nil
+}
+
+// clustersEquivalent returns true if two Cluster structs carry the same
+// semantic configuration.  The LocationOfOrigin field is ignored because it
+// reflects which file a value was loaded from, not the cluster definition.
+func clustersEquivalent(a, b *api.Cluster) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	ac := a.DeepCopy()
+	bc := b.DeepCopy()
+	ac.LocationOfOrigin = ""
+	bc.LocationOfOrigin = ""
+	return reflect.DeepEqual(ac, bc)
+}
+
+// authInfosEquivalent is the AuthInfo analogue of clustersEquivalent.
+func authInfosEquivalent(a, b *api.AuthInfo) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	ac := a.DeepCopy()
+	bc := b.DeepCopy()
+	ac.LocationOfOrigin = ""
+	bc.LocationOfOrigin = ""
+	return reflect.DeepEqual(ac, bc)
+}
+
+// uniqueName returns a name that does not collide with any key in m.
+// It tries "<base>-imported", then "<base>-imported-2", "-imported-3", etc.
+func uniqueName[V any](base string, m map[string]V) string {
+	candidate := base + "-imported"
+	if _, exists := m[candidate]; !exists {
+		return candidate
+	}
+	for i := 2; ; i++ {
+		candidate = fmt.Sprintf("%s-imported-%d", base, i)
+		if _, exists := m[candidate]; !exists {
+			return candidate
+		}
+	}
 }
 
 // AddClusterRequest describes the form fields for adding a cluster.
