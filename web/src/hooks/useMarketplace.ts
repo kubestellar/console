@@ -3,6 +3,7 @@ import { api } from '../lib/api'
 import { addCustomTheme, removeCustomTheme } from '../lib/themes'
 import { emitMarketplaceInstall, emitMarketplaceRemove, emitMarketplaceInstallFailed } from '../lib/analytics'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
+import { isCardTypeRegistered } from '../components/cards/cardRegistry'
 
 const REGISTRY_URL = 'https://raw.githubusercontent.com/kubestellar/console-marketplace/main/registry.json'
 const CACHE_KEY = 'kc-marketplace-registry'
@@ -60,9 +61,52 @@ interface CachedRegistry {
   fetchedAt: number
 }
 
+/**
+ * Maps marketplace item IDs to their implemented card type in the card registry.
+ * When the external marketplace registry still marks a card as "help-wanted" but
+ * the card has since been implemented in this repo, we auto-correct the status
+ * so the marketplace shows it as available instead of "not yet implemented."
+ *
+ * This avoids waiting for the external console-marketplace repo to catch up.
+ */
+const MARKETPLACE_TO_CARD_TYPE: Record<string, string> = {
+  'cncf-karmada': 'karmada_status',
+  'cncf-keda': 'keda_status',
+  'cncf-etcd': 'etcd_status',
+  'cncf-fluentd': 'fluentd_status',
+  'cncf-crio': 'crio_status',
+  'cncf-cloudevents': 'cloudevents_status',
+  'cncf-crossplane': 'crossplane_managed_resources',
+  'cncf-buildpacks': 'buildpacks_status',
+  'cncf-kubevirt': 'kubevirt_status',
+  'cncf-kubevela': 'kubevela_status',
+  'cncf-lima': 'lima_status',
+  'cncf-openfeature': 'openfeature_status',
+  'cncf-strimzi': 'strimzi_status',
+  'cncf-thanos': 'thanos_status',
+}
+
+/**
+ * Reconcile marketplace items against the local card registry.
+ * Items marked "help-wanted" whose cards are already implemented get
+ * promoted to "available" with the help-wanted tag removed.
+ */
+function reconcileImplementedCards(items: MarketplaceItem[]): MarketplaceItem[] {
+  return items.map(item => {
+    if (item.status !== 'help-wanted') return item
+    const cardType = MARKETPLACE_TO_CARD_TYPE[item.id]
+    if (!cardType || !isCardTypeRegistered(cardType)) return item
+    return {
+      ...item,
+      status: 'available' as MarketplaceItemStatus,
+      tags: item.tags.filter(t => t !== 'help-wanted'),
+    }
+  })
+}
+
 /** Merge items + presets from the registry into a single array */
 function mergeRegistryItems(registry: MarketplaceRegistry): MarketplaceItem[] {
-  return [...(registry.items || []), ...(registry.presets || [])]
+  return reconcileImplementedCards([...(registry.items || []), ...(registry.presets || [])])
 }
 
 interface InstalledEntry {
