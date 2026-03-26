@@ -25,6 +25,7 @@ import { useDemoMode } from '../../../hooks/useDemoMode'
 import { isNetlifyDeployment } from '../../../lib/demoMode'
 import { useResolutions, detectIssueSignature } from '../../../hooks/useResolutions'
 import { cn } from '../../../lib/cn'
+import { ConfirmDialog } from '../../../lib/modals'
 import { MAX_MESSAGE_SIZE_CHARS } from '../../../lib/constants'
 import { AgentBadge, AgentIcon } from '../../agent/AgentIcon'
 import { SaveResolutionDialog } from '../../missions/SaveResolutionDialog'
@@ -55,6 +56,8 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   // Message validation error (e.g. too long)
   const [inputError, setInputError] = useState<string | null>(null)
+  // Delete confirmation
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   // Title editing state
   const [isEditingTitle, setIsEditingTitle] = useState(false)
@@ -372,10 +375,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
             <Download className="w-4 h-4 text-muted-foreground" />
           </button>
           <button
-            onClick={() => {
-              dismissMission(mission.id)
-              setActiveMission(null)
-            }}
+            onClick={() => setShowDeleteConfirm(true)}
             className="p-1 hover:bg-red-500/20 rounded transition-colors"
             title="Delete mission"
           >
@@ -851,6 +851,21 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
     <SetupInstructionsDialog
       isOpen={showSetupDialog}
       onClose={() => setShowSetupDialog(false)}
+    />
+
+    {/* Delete confirmation dialog */}
+    <ConfirmDialog
+      isOpen={showDeleteConfirm}
+      onClose={() => setShowDeleteConfirm(false)}
+      onConfirm={() => {
+        setShowDeleteConfirm(false)
+        dismissMission(mission.id)
+        setActiveMission(null)
+      }}
+      title="Delete Mission"
+      message="Are you sure you want to delete this mission? This action cannot be undone."
+      confirmLabel="Delete"
+      variant="danger"
     />
     </>
   )
