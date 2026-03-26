@@ -112,6 +112,9 @@ type CreateFeatureRequestInput struct {
 	Description string      `json:"description" validate:"required,min=20,max=5000"`
 	RequestType RequestType `json:"request_type" validate:"required,oneof=bug feature"`
 	TargetRepo  TargetRepo  `json:"target_repo,omitempty"`
+	// Screenshots contains base64-encoded data URIs (e.g. "data:image/png;base64,...")
+	// that will be uploaded to GitHub and embedded in the issue body.
+	Screenshots []string `json:"screenshots,omitempty"`
 }
 
 // SubmitFeedbackInput is the input for submitting PR feedback

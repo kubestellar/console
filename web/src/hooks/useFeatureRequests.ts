@@ -77,6 +77,8 @@ export interface CreateFeatureRequestInput {
   description: string
   request_type: RequestType
   target_repo?: TargetRepo
+  /** Base64 data-URI screenshots to upload and embed in the GitHub issue */
+  screenshots?: string[]
 }
 
 export interface SubmitFeedbackInput {

@@ -5,8 +5,8 @@
  * directly via the server-side GitHub token. This means users do not need to
  * be logged into GitHub — the issue is created automatically.
  *
- * Screenshots are auto-copied to the clipboard and the created issue URL is
- * provided so the user can paste them in one click.
+ * Screenshots are uploaded to GitHub via the backend and embedded directly
+ * in the created issue as markdown images.
  */
 
 import { useState, useEffect, useRef } from 'react'
@@ -149,19 +149,19 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
     setSubmitError(null)
 
     try {
-      // Build description with screenshot note if applicable
-      const screenshotNote = screenshots.length > 0
-        ? `\n\n---\n**Screenshots**: ${screenshots.length} screenshot(s) were attached in the console — please paste them into this issue.`
-        : ''
-      const fullDescription = `${description.trim()}${screenshotNote}`
+      // Collect base64 data URIs for any attached screenshots so the
+      // backend can upload them to GitHub and embed them in the issue.
+      const screenshotDataURIs = screenshots.map(s => s.preview)
 
       // Submit via backend API — creates GitHub issue directly using the
       // server-side token. No GitHub login required from the user.
+      // Screenshots are uploaded server-side and embedded as images.
       const result = await createRequest({
         title: title.trim(),
-        description: fullDescription,
+        description: description.trim(),
         request_type: type,
         target_repo: 'console',
+        ...(screenshotDataURIs.length > 0 && { screenshots: screenshotDataURIs }),
       })
 
       emitFeedbackSubmitted(type)
@@ -169,17 +169,6 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
       // Award coins based on type
       const action = type === 'bug' ? 'bug_report' : 'feature_suggestion'
       awardCoins(action as 'bug_report' | 'feature_suggestion', { title, type })
-
-      // Auto-copy first screenshot to clipboard so user can paste it into the issue
-      if (screenshots.length > 0) {
-        try {
-          const res = await fetch(screenshots[0].preview, { signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
-          const blob = await res.blob()
-          await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
-        } catch {
-          // Best-effort — clipboard may not be available
-        }
-      }
 
       // Clear draft on successful submit
       localStorage.removeItem(DRAFT_KEY)
@@ -299,38 +288,14 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                 </a>
               )}
 
-              {/* Screenshot paste helper — auto-copied first screenshot */}
+              {/* Screenshot confirmation */}
               {screenshots.length > 0 && (
-                <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                  <p className="text-xs text-amber-400 font-medium mb-2">
+                <div className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <p className="text-xs text-green-400 font-medium">
                     {screenshots.length === 1
-                      ? 'Screenshot copied to clipboard!'
-                      : `First screenshot copied to clipboard! ${screenshots.length - 1} more below.`}
+                      ? 'Screenshot uploaded and attached to the issue.'
+                      : `${screenshots.length} screenshots uploaded and attached to the issue.`}
                   </p>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    Open the issue above and paste (Ctrl+V / Cmd+V) to attach {screenshots.length === 1 ? 'it' : 'them'}.
-                  </p>
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {screenshots.map((s, i) => (
-                      <div key={i} className="relative group w-16 h-16 flex-shrink-0">
-                        <img
-                          src={s.preview}
-                          alt={`Screenshot ${i + 1}`}
-                          className="w-16 h-16 object-cover rounded border border-border"
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/60 rounded transition-opacity">
-                          <button
-                            type="button"
-                            onClick={() => void copyScreenshotToClipboard(s.preview, i)}
-                            className="p-1.5 rounded-md bg-secondary/80 text-foreground hover:bg-secondary transition-colors"
-                            title="Copy to clipboard"
-                          >
-                            {copiedIndex === i ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </div>
               )}
 
@@ -487,7 +452,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                     <ExternalLink className="w-4 h-4 text-blue-400 flex-shrink-0" />
                     <span className="text-muted-foreground">
                       {screenshots.length > 0
-                        ? 'A GitHub issue will be created automatically. Your first screenshot will be copied to clipboard so you can paste it into the issue.'
+                        ? 'A GitHub issue will be created automatically with your screenshots attached.'
                         : 'A GitHub issue will be created automatically. No GitHub login required.'}
                     </span>
                   </div>

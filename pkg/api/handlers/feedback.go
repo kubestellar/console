@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -147,7 +148,7 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	}
 
 	// Create GitHub issue (route to the correct repo)
-	issueNumber, _, err := h.createGitHubIssueInRepo(request, user, h.repoOwner, targetRepoName)
+	issueNumber, _, err := h.createGitHubIssueInRepo(request, user, h.repoOwner, targetRepoName, input.Screenshots)
 	if err != nil {
 		log.Printf("Failed to create GitHub issue: %v", err)
 		// Clean up the orphaned database record
@@ -1479,7 +1480,7 @@ func (h *FeedbackHandler) handleDeploymentStatus(payload map[string]interface{})
 
 // createGitHubIssue creates an issue on GitHub
 func (h *FeedbackHandler) createGitHubIssue(request *models.FeatureRequest, user *models.User) (int, string, error) {
-	return h.createGitHubIssueInRepo(request, user, h.repoOwner, h.repoName)
+	return h.createGitHubIssueInRepo(request, user, h.repoOwner, h.repoName, nil)
 }
 
 // createGitHubIssueInRepo creates a GitHub issue in the specified repository.
@@ -1489,7 +1490,7 @@ func (h *FeedbackHandler) createGitHubIssue(request *models.FeatureRequest, user
 // If the initial request with labels fails due to insufficient label permissions
 // (HTTP 403 on the "label" resource), the function retries without labels so
 // the issue is still created. Labels can be added later by a maintainer.
-func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest, user *models.User, repoOwner, repoName string) (int, string, error) {
+func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest, user *models.User, repoOwner, repoName string, screenshots []string) (int, string, error) {
 	// Determine labels based on request type and target repo
 	var labels []string
 	isDocs := request.TargetRepo == models.TargetRepoDocs
@@ -1517,6 +1518,23 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest
 		repoLabel = "Console Documentation"
 	}
 
+	// Upload screenshots to GitHub and build markdown image references
+	screenshotMarkdown := ""
+	if len(screenshots) > 0 {
+		var imageLines []string
+		for i, dataURI := range screenshots {
+			url, err := h.uploadScreenshotToGitHub(repoOwner, repoName, request.ID.String(), i, dataURI)
+			if err != nil {
+				log.Printf("[Feedback] Failed to upload screenshot %d: %v", i+1, err)
+				continue
+			}
+			imageLines = append(imageLines, fmt.Sprintf("![Screenshot %d](%s)", i+1, url))
+		}
+		if len(imageLines) > 0 {
+			screenshotMarkdown = "\n\n## Screenshots\n\n" + strings.Join(imageLines, "\n\n")
+		}
+	}
+
 	issueBody := fmt.Sprintf(`## User Request
 
 **Type:** %s
@@ -1526,11 +1544,11 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest
 
 ## Description
 
-%s
+%s%s
 
 ---
 *This issue was automatically created from the KubeStellar Console.*
-`, request.RequestType, repoLabel, user.GitHubLogin, request.ID.String(), request.Description)
+`, request.RequestType, repoLabel, user.GitHubLogin, request.ID.String(), request.Description, screenshotMarkdown)
 
 	// First attempt: create issue with labels
 	number, htmlURL, err := h.postGitHubIssue(repoOwner, repoName, request.Title, issueBody, labels)
@@ -1595,6 +1613,82 @@ func (h *FeedbackHandler) postGitHubIssue(repoOwner, repoName, title, body strin
 	}
 
 	return result.Number, result.HTMLURL, nil
+}
+
+// uploadScreenshotToGitHub uploads a base64 data-URI screenshot to the
+// repository via the GitHub Contents API and returns the raw download URL
+// that can be embedded in issue markdown.
+//
+// Files are stored under .github/screenshots/{requestID}/ to keep them
+// organized and to avoid polluting the main source tree.
+func (h *FeedbackHandler) uploadScreenshotToGitHub(repoOwner, repoName, requestID string, index int, dataURI string) (string, error) {
+	// Parse data URI: "data:image/png;base64,iVBOR..."
+	parts := strings.SplitN(dataURI, ",", 2)
+	if len(parts) != 2 {
+		return "", fmt.Errorf("invalid data URI format")
+	}
+
+	// Extract MIME type to determine file extension
+	ext := "png" // default
+	header := parts[0]
+	if strings.Contains(header, "image/jpeg") || strings.Contains(header, "image/jpg") {
+		ext = "jpg"
+	} else if strings.Contains(header, "image/gif") {
+		ext = "gif"
+	} else if strings.Contains(header, "image/webp") {
+		ext = "webp"
+	}
+
+	// The base64 content (GitHub Contents API expects raw base64, no wrapping)
+	b64Content := parts[1]
+
+	// Validate that the base64 content is actually valid
+	if _, err := base64.StdEncoding.DecodeString(b64Content); err != nil {
+		return "", fmt.Errorf("invalid base64 content: %w", err)
+	}
+
+	filePath := fmt.Sprintf(".github/screenshots/%s/screenshot-%d.%s", requestID, index+1, ext)
+
+	payload := map[string]string{
+		"message": fmt.Sprintf("Add screenshot %d for issue %s", index+1, requestID),
+		"content": b64Content,
+	}
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal upload payload: %w", err)
+	}
+
+	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/contents/%s", repoOwner, repoName, filePath)
+
+	req, err := http.NewRequest("PUT", apiURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		respBody, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("GitHub Contents API returned %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var result struct {
+		Content struct {
+			DownloadURL string `json:"download_url"`
+		} `json:"content"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("failed to decode upload response: %w", err)
+	}
+
+	return result.Content.DownloadURL, nil
 }
 
 // isLabelPermissionError checks whether the error from the GitHub API is a
