@@ -178,10 +178,9 @@ export function useMissionControl() {
         setState((prev) => {
           const aiAssignments = parsed.assignments!
           const aiClusterNames = new Set(aiAssignments.map(a => a.clusterName))
-          // Preserve clusters from prev state that AI didn't mention
+          // Keep clusters the AI didn't mention as-is (user may have manually edited them)
           const preserved = prev.assignments
             .filter(a => !aiClusterNames.has(a.clusterName))
-            .map(a => ({ ...a, projectNames: [] as string[], warnings: [] as string[] }))
           return {
             ...prev,
             assignments: [...aiAssignments, ...preserved],

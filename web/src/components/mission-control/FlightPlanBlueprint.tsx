@@ -498,33 +498,34 @@ export function FlightPlanBlueprint({
   const svgId = useId().replace(/:/g, '')
   const { clusters } = useClusters()
 
-  // Filter out unhealthy clusters and redistribute orphaned projects to healthy ones
+  // Filter out explicitly unhealthy clusters and redistribute orphaned projects to healthy ones
   const healthyState = useMemo(() => {
     let assignments = state.assignments
-    const healthyNames = clusters?.length
-      ? new Set(clusters.filter(c => c.healthy !== false).map(c => c.name))
-      : null
+    // Only build the unhealthy set from clusters that are explicitly marked unhealthy/unreachable.
+    // Clusters not present in the clusters list (e.g. not yet loaded) are left alone so that
+    // user-assigned projects are never silently dropped.
+    const unhealthyNames = clusters?.length
+      ? new Set(clusters.filter(c => c.healthy === false || c.reachable === false).map(c => c.name))
+      : new Set<string>()
 
-    // Filter unhealthy clusters
-    if (healthyNames) {
-      const hasUnhealthy = assignments.some(a => a.projectNames.length > 0 && !healthyNames.has(a.clusterName))
-      if (hasUnhealthy) {
-        const orphanedProjects: string[] = []
-        const healthyAssignments = assignments.filter(a => {
-          if (healthyNames.has(a.clusterName)) return true
-          orphanedProjects.push(...a.projectNames)
-          return false
-        }).map(a => ({ ...a, projectNames: [...a.projectNames] }))
-        if (orphanedProjects.length > 0 && healthyAssignments.length > 0) {
-          orphanedProjects.forEach((p, i) => {
-            const target = healthyAssignments[i % healthyAssignments.length]
-            if (!target.projectNames.includes(p)) {
-              target.projectNames.push(p)
-            }
-          })
-        }
-        assignments = healthyAssignments
+    // Only filter out explicitly unhealthy clusters
+    const hasUnhealthy = assignments.some(a => a.projectNames.length > 0 && unhealthyNames.has(a.clusterName))
+    if (hasUnhealthy) {
+      const orphanedProjects: string[] = []
+      const healthyAssignments = assignments.filter(a => {
+        if (!unhealthyNames.has(a.clusterName)) return true
+        orphanedProjects.push(...a.projectNames)
+        return false
+      }).map(a => ({ ...a, projectNames: [...a.projectNames] }))
+      if (orphanedProjects.length > 0 && healthyAssignments.length > 0) {
+        orphanedProjects.forEach((p, i) => {
+          const target = healthyAssignments[i % healthyAssignments.length]
+          if (!target.projectNames.includes(p)) {
+            target.projectNames.push(p)
+          }
+        })
       }
+      assignments = healthyAssignments
     }
 
     // Allow projects on multiple clusters — composite keys handle positioning
