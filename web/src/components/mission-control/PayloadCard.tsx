@@ -45,9 +45,9 @@ function getCategoryGradient(category: string): [string, string] {
 }
 
 const PRIORITY_STYLES = {
-  required: 'bg-red-500/15 text-red-400 border-red-500/30',
-  recommended: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  optional: 'bg-gray-500/15 text-gray-400 dark:text-gray-500 border-gray-500/30',
+  required: 'bg-red-500/15 dark:bg-red-500/20 text-red-400 dark:text-red-300 border-red-500/30 dark:border-red-400/30',
+  recommended: 'bg-blue-500/15 dark:bg-blue-500/20 text-blue-400 dark:text-blue-300 border-blue-500/30 dark:border-blue-400/30',
+  optional: 'bg-gray-500/15 dark:bg-gray-400/15 text-gray-400 dark:text-gray-300 border-gray-500/30 dark:border-gray-400/30',
 } as const
 
 interface PayloadCardProps {
@@ -147,11 +147,11 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
           {/* Installed / Needs deploy */}
           {installed != null && (
             installed ? (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-400 border border-green-500/30 font-medium">
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/15 dark:bg-green-500/20 text-green-400 dark:text-green-300 border border-green-500/30 dark:border-green-400/30 font-medium">
                 Installed
               </span>
             ) : (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-500/15 text-slate-400 border border-dashed border-slate-500/30 font-medium">
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-500/15 dark:bg-slate-400/15 text-slate-400 dark:text-slate-300 border border-dashed border-slate-500/30 dark:border-slate-400/30 font-medium">
                 Needs deploy
               </span>
             )
@@ -159,7 +159,7 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
 
           {/* Swapped indicator */}
           {project.originalName && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 font-medium flex items-center gap-0.5">
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/15 dark:bg-amber-500/20 text-amber-400 dark:text-amber-300 border border-amber-500/30 dark:border-amber-400/30 font-medium flex items-center gap-0.5">
               <ArrowLeftRight className="w-2.5 h-2.5" />
               Swapped
             </span>
