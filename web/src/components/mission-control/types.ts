@@ -148,6 +148,10 @@ export interface DependencyEdge {
   crossCluster: boolean
   /** Short label describing the integration (e.g., "TLS certs", "metrics") */
   label?: string
+  /** Pre-resolved source position for multi-cluster edge routing */
+  fromPos?: ProjectPosition
+  /** Pre-resolved target position for multi-cluster edge routing */
+  toPos?: ProjectPosition
 }
 
 export interface BlueprintLayout {

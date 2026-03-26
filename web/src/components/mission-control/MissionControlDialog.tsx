@@ -16,6 +16,8 @@ import {
   ChevronRight,
   ChevronLeft,
   RotateCcw,
+  FlaskConical,
+  Monitor,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'
@@ -232,6 +234,7 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                   <ClusterAssignmentPanel
                     state={state}
                     onAskAI={mc.askAIForAssignments}
+                    onAutoAssign={mc.autoAssignProjects}
                     onSetAssignment={mc.setAssignment}
                     aiStreaming={state.aiStreaming}
                     planningMission={mc.planningMission}
@@ -245,7 +248,6 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                     state={state}
                     onOverlayChange={mc.setOverlay}
                     onDeployModeChange={mc.setDeployMode}
-                    onLaunch={() => mc.setPhase('launching')}
                     onMoveProject={mc.moveProjectToCluster}
                     installedProjects={mc.installedProjects}
                   />
@@ -269,7 +271,7 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
           {/* ── Footer nav ─────────────────────────────────────────── */}
           {!isLaunching && !isComplete && (
             <footer className="flex items-center justify-between px-6 py-3 border-t border-border bg-card">
-              <div className="text-sm text-muted-foreground">
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 {state.projects.length > 0 && (
                   <span>
                     {state.projects.length} project
@@ -277,35 +279,36 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                   </span>
                 )}
                 {state.assignments.length > 0 && (
-                  <span className="ml-4">
+                  <span>
                     → {state.assignments.filter((a) => a.projectNames.length > 0).length} cluster
                     {state.assignments.filter((a) => a.projectNames.length > 0).length !== 1
                       ? 's'
                       : ''}
                   </span>
                 )}
+                {/* Legend (only on blueprint phase) */}
+                {state.phase === 'blueprint' && (
+                  <>
+                    <span className="w-px h-4 bg-border" />
+                    <span className="flex items-center gap-1.5 text-2xs">
+                      <span className="w-4 h-0 border-t border-amber-500 inline-block" />
+                      Cross-cluster
+                    </span>
+                    <span className="flex items-center gap-1.5 text-2xs">
+                      <span className="w-4 h-0 border-t border-dashed border-indigo-500 inline-block" />
+                      Intra-cluster
+                    </span>
+                    <span className="flex items-center gap-1.5 text-2xs">
+                      <span className="w-3 h-3 rounded-full border-2 border-green-500 inline-block" />
+                      Installed
+                    </span>
+                    <span className="flex items-center gap-1.5 text-2xs">
+                      <span className="w-3 h-3 rounded-full border border-dashed border-slate-500 inline-block" />
+                      Needs deploy
+                    </span>
+                  </>
+                )}
               </div>
-              {/* Legend (only on blueprint phase) */}
-              {state.phase === 'blueprint' && (
-                <div className="flex items-center gap-4 text-2xs text-muted-foreground">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-4 h-0 border-t border-amber-500 inline-block" />
-                    Cross-cluster
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-4 h-0 border-t border-dashed border-indigo-500 inline-block" />
-                    Intra-cluster
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded-full border-2 border-green-500 inline-block" />
-                    Installed
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded-full border border-dashed border-slate-500 inline-block" />
-                    Needs deploy
-                  </span>
-                </div>
-              )}
               <div className="flex items-center gap-2">
                 {canGoBack && (
                   <Button
@@ -317,7 +320,37 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                     Back
                   </Button>
                 )}
-                {state.phase !== 'blueprint' && (
+                {state.phase === 'blueprint' ? (
+                  <>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => { /* TODO: create local clusters for simulation */ }}
+                      icon={<Monitor className="w-3.5 h-3.5" />}
+                      title="Create local clusters to simulate the deployment"
+                    >
+                      Deploy Local
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => mc.setPhase('launching')}
+                      className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white border-0 shadow-lg shadow-violet-500/25"
+                      icon={<Rocket className="w-4 h-4" />}
+                    >
+                      Deploy to Clusters
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => { /* TODO: dry run against live clusters */ }}
+                      icon={<FlaskConical className="w-3.5 h-3.5" />}
+                      title="Run against live clusters without deploying — report only"
+                    >
+                      Dry Run
+                    </Button>
+                  </>
+                ) : (
                   <Button
                     variant="primary"
                     size="sm"

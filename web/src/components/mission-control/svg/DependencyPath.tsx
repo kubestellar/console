@@ -23,6 +23,8 @@ interface DependencyPathProps {
   highlight?: boolean
   /** Whether something else is glowing and this path should fade */
   dimmed?: boolean
+  /** Whether overlay filtering is active (reduces opacity) */
+  overlayDim?: boolean
 }
 
 /** Compute the bezier midpoint for a dependency edge — used for label placement */
@@ -49,9 +51,10 @@ export function DependencyPath({
   toY,
   crossCluster,
   index,
-  animate: _showParticle = true,
+  animate: showParticle = true,
   highlight = false,
   dimmed = false,
+  overlayDim = false,
 }: DependencyPathProps) {
   // Calculate bezier control points for a nice curve
   const dx = toX - fromX
@@ -73,12 +76,13 @@ export function DependencyPath({
   const pathD = `M ${fromX} ${fromY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${toX} ${toY}`
   const pathId = `${id}-dep-path-${index}`
   const gradientRef = crossCluster ? `url(#${id}-cross-dep)` : `url(#${id}-intra-dep)`
+  const particleColor = crossCluster ? '#f97316' : '#818cf8'
 
   return (
     <motion.g
       initial={{ opacity: 0 }}
-      animate={{ opacity: dimmed ? 0.1 : 1 }}
-      transition={{ duration: 0.5, delay: 0.8 + index * 0.1 }}
+      animate={{ opacity: dimmed ? 0.1 : overlayDim ? 0.35 : 1 }}
+      transition={{ opacity: { duration: 0.1 }, delay: 0.8 + index * 0.1 }}
     >
       {/* Path definition for animateMotion */}
       <path id={pathId} d={pathD} fill="none" stroke="none" />
@@ -97,19 +101,31 @@ export function DependencyPath({
         transition={{ duration: 0.8, delay: 0.8 + index * 0.1, ease: 'easeOut' }}
       />
 
-
+      {/* Flowing particle */}
+      {showParticle && (
+        <circle r={1.2} fill={particleColor} opacity={0.8}>
+          <animateMotion
+            dur={`${3 + index * 0.5}s`}
+            repeatCount="indefinite"
+            begin={`${0.8 + index * 0.1}s`}
+          >
+            <mpath href={`#${pathId}`} />
+          </animateMotion>
+        </circle>
+      )}
     </motion.g>
   )
 }
 
 /** Label pill rendered in a separate top layer so it's never hidden behind lines */
-export function DependencyLabel({ midX, midY, label, crossCluster, fromName, toName, anchorX, anchorY, onHover, highlight, dimmed }: {
+export function DependencyLabel({ midX, midY, label, crossCluster, fromName, toName, anchorX, anchorY, onHover, highlight, dimmed, overlayDim }: {
   midX: number; midY: number; label: string; crossCluster: boolean
   fromName?: string; toName?: string
   anchorX?: number; anchorY?: number
   onHover?: (edge: { from: string; to: string } | null) => void
   highlight?: boolean
   dimmed?: boolean
+  overlayDim?: boolean
 }) {
   const tooltip = [
     label,
@@ -123,8 +139,8 @@ export function DependencyLabel({ midX, midY, label, crossCluster, fromName, toN
 
   return (
     <g
-      style={{ cursor: 'pointer' }}
-      opacity={dimmed ? 0.15 : 1}
+      style={{ cursor: 'pointer', transition: 'opacity 0.1s' }}
+      opacity={dimmed ? 0.15 : overlayDim ? 0.35 : 1}
       onMouseEnter={() => fromName && toName && onHover?.({ from: fromName, to: toName })}
       onMouseLeave={() => onHover?.(null)}
     >
@@ -141,22 +157,22 @@ export function DependencyLabel({ midX, midY, label, crossCluster, fromName, toN
         />
       )}
       <rect
-        x={midX - label.length * 2.2}
-        y={midY - 6}
-        width={label.length * 4.4}
-        height={11}
-        rx={4}
+        x={midX - label.length * 1.8}
+        y={midY - 4.5}
+        width={label.length * 3.6}
+        height={9}
+        rx={3}
         fill={highlight ? '#1e293b' : '#0f172a'}
         stroke={highlight ? '#ffffff' : lineColor}
-        strokeWidth={highlight ? 0.8 : 0.4}
+        strokeWidth={highlight ? 0.6 : 0.3}
         strokeOpacity={highlight ? 0.9 : 0.5}
       />
       <text
         x={midX}
-        y={midY + 1.5}
+        y={midY + 1}
         textAnchor="middle"
         fill={crossCluster ? '#fdba74' : '#a5b4fc'}
-        fontSize={5.5}
+        fontSize={4.5}
         fontFamily="system-ui, sans-serif"
         fontWeight="500"
       >

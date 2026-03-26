@@ -71,8 +71,8 @@ function formatStorage(gb: number): string {
 }
 
 /** Mini stat block for SVG overlays */
-function StatBlock({ x, y, label, value, max, unit, color, displayOverride }: {
-  x: number; y: number; label: string; value?: number; max?: number; unit: string; color: string; displayOverride?: string
+function StatBlock({ x, y, label, value, max, unit, color, displayOverride, noAlert }: {
+  x: number; y: number; label: string; value?: number; max?: number; unit: string; color: string; displayOverride?: string; noAlert?: boolean
 }) {
   const pctVal = pct(value, max)
   const display = displayOverride ?? (value != null && max != null
@@ -80,7 +80,7 @@ function StatBlock({ x, y, label, value, max, unit, color, displayOverride }: {
     : max != null
       ? `${Math.round(max)}${unit}`
       : '—')
-  const barColor = pctVal != null
+  const barColor = pctVal != null && !noAlert
     ? pctVal >= 80 ? '#ef4444' : pctVal >= 50 ? '#f59e0b' : color
     : color
 
@@ -197,7 +197,7 @@ export function ClusterZone({
 
       {/* Provider icon via foreignObject */}
       <foreignObject x={x + 6} y={y + 4} width={20} height={20}>
-        <div style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title={provider.toUpperCase()}>
+        <div style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <CloudProviderIcon
             provider={provider as Parameters<typeof CloudProviderIcon>[0]['provider']}
             size={16}
@@ -242,15 +242,15 @@ export function ClusterZone({
       {showStorage && (
         <g>
           <StatBlock x={x + width - 120} y={y + 6} label="DISK" value={undefined} max={storageGB != null ? Math.round(storageGB) : undefined} unit="" color="#84cc16" displayOverride={storageGB != null ? formatStorage(storageGB) : '—'} />
-          <StatBlock x={x + width - 60} y={y + 6} label="PVC" value={pvcBoundCount} max={pvcCount} unit="" color="#06b6d4" />
+          <StatBlock x={x + width - 60} y={y + 6} label="PVC" value={pvcBoundCount} max={pvcCount} unit="" color="#06b6d4" noAlert />
         </g>
       )}
 
       {/* Network overlay: pod count, node info */}
       {showNetwork && (
         <g>
-          <StatBlock x={x + width - 120} y={y + 6} label="PODS" value={undefined} max={podCount} unit="" color="#0ea5e9" />
-          <StatBlock x={x + width - 60} y={y + 6} label="NODES" value={undefined} max={nodeCount} unit="" color="#0ea5e9" />
+          <StatBlock x={x + width - 120} y={y + 6} label="PODS" value={undefined} max={podCount} unit="" color="#0ea5e9" noAlert />
+          <StatBlock x={x + width - 60} y={y + 6} label="NODES" value={undefined} max={nodeCount} unit="" color="#0ea5e9" noAlert />
           <text x={x + width / 2} y={y + height - 20} textAnchor="middle" fill="#0ea5e9" fontSize={6.5} fontFamily="system-ui, sans-serif" opacity={0.7}>
             Network policies · Service mesh ready
           </text>
@@ -260,9 +260,9 @@ export function ClusterZone({
       {/* Security overlay: RBAC, PSS */}
       {showSecurity && (
         <g>
-          <StatBlock x={x + width - 120} y={y + 6} label="NODES" value={undefined} max={nodeCount} unit="" color="#ef4444" />
-          <StatBlock x={x + width - 60} y={y + 6} label="PODS" value={undefined} max={podCount} unit="" color="#ef4444" />
-          <text x={x + width / 2} y={y + height - 20} textAnchor="middle" fill="#ef4444" fontSize={6.5} fontFamily="system-ui, sans-serif" opacity={0.7}>
+          <StatBlock x={x + width - 120} y={y + 6} label="NODES" value={undefined} max={nodeCount} unit="" color="#94a3b8" noAlert />
+          <StatBlock x={x + width - 60} y={y + 6} label="PODS" value={undefined} max={podCount} unit="" color="#94a3b8" noAlert />
+          <text x={x + width / 2} y={y + height - 20} textAnchor="middle" fill="#94a3b8" fontSize={6.5} fontFamily="system-ui, sans-serif" opacity={0.7}>
             RBAC · Pod Security Standards · Secrets encrypted
           </text>
         </g>

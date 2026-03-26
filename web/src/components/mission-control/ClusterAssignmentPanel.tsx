@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { Loader2, Wand2, LayoutGrid, Table, Plus, X } from 'lucide-react'
+import { Loader2, Wand2, Shuffle, LayoutGrid, Table, Plus, X } from 'lucide-react'
 import { motion } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -26,6 +26,7 @@ type ViewMode = 'cards' | 'matrix'
 interface ClusterAssignmentPanelProps {
   state: MissionControlState
   onAskAI: (projects: PayloadProject[], clustersJson: string) => void
+  onAutoAssign: (clusters: Array<{ name: string; context?: string; distribution?: string; cpuCores?: number; memoryGB?: number; storageGB?: number; cpuUsageCores?: number; cpuRequestsCores?: number; memoryUsageGB?: number; memoryRequestsGB?: number }>) => void
   onSetAssignment: (clusterName: string, projectName: string, assigned: boolean) => void
   aiStreaming: boolean
   planningMission?: Mission | null
@@ -36,6 +37,7 @@ interface ClusterAssignmentPanelProps {
 export function ClusterAssignmentPanel({
   state,
   onAskAI,
+  onAutoAssign,
   onSetAssignment,
   aiStreaming,
   planningMission,
@@ -68,7 +70,11 @@ export function ClusterAssignmentPanel({
     const notes = new Map<string, string[]>()
     if (!helmReleases?.length) return notes
     for (const cluster of healthyClusters) {
-      const clusterReleases = helmReleases.filter(r => r.cluster === cluster.name)
+      const clusterReleases = helmReleases.filter(r =>
+        r.cluster === cluster.name ||
+        r.cluster === cluster.context ||
+        (r.cluster && (r.cluster.includes(cluster.name) || cluster.name.includes(r.cluster)))
+      )
       if (clusterReleases.length === 0) continue
       const clusterNotes: string[] = []
       for (const project of state.projects) {
@@ -90,6 +96,12 @@ export function ClusterAssignmentPanel({
 
   const handleAutoAssign = useCallback(() => {
     if (healthyClusters.length === 0) return
+    onAutoAssign(healthyClusters)
+    setAutoAssignDone(true)
+  }, [healthyClusters, onAutoAssign])
+
+  const handleAISuggest = useCallback(() => {
+    if (healthyClusters.length === 0) return
     const clustersJson = JSON.stringify(
       healthyClusters.map((c) => ({
         name: c.name,
@@ -107,7 +119,6 @@ export function ClusterAssignmentPanel({
       2
     )
     onAskAI(state.projects, clustersJson)
-    setAutoAssignDone(true)
   }, [healthyClusters, state.projects, onAskAI])
 
   // Show cluster picker on first mount so user can select clusters before auto-assign
@@ -235,6 +246,16 @@ export function ClusterAssignmentPanel({
             size="sm"
             onClick={handleAutoAssign}
             disabled={aiStreaming || healthyClusters.length === 0}
+            icon={<Shuffle className="w-3.5 h-3.5" />}
+            title="Balance projects across clusters by compute, category, and install status"
+          >
+            Auto-Assign
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleAISuggest}
+            disabled={aiStreaming || healthyClusters.length === 0}
             icon={
               aiStreaming ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -242,8 +263,9 @@ export function ClusterAssignmentPanel({
                 <Wand2 className="w-3.5 h-3.5" />
               )
             }
+            title="AI analyzes clusters and suggests assignments with detailed notes"
           >
-            {aiStreaming ? 'Assigning...' : 'Auto-Assign'}
+            {aiStreaming ? 'Analyzing...' : 'Suggest & Refine'}
           </Button>
         </div>
       </div>
@@ -279,9 +301,23 @@ export function ClusterAssignmentPanel({
               {healthyClusters.map((cluster) => {
                 const aiAssignment = state.assignments.find((a) => a.clusterName === cluster.name)
                 const helmNotes = clusterInspectionNotes.get(cluster.name) ?? []
-                // Merge: use AI warnings if present, otherwise use helm-generated notes
-                const mergedAssignment = aiAssignment && helmNotes.length > 0 && (aiAssignment.warnings?.length ?? 0) === 0
-                  ? { ...aiAssignment, warnings: helmNotes }
+                // Merge helm-generated notes with AI warnings (dedupe by checking if AI already mentions the project)
+                const mergedAssignment = aiAssignment && helmNotes.length > 0
+                  ? {
+                      ...aiAssignment,
+                      warnings: [
+                        ...helmNotes.filter(note => {
+                          // Don't add helm note if AI already has a warning about the same project
+                          const aiWarnings = aiAssignment.warnings ?? []
+                          return !aiWarnings.some(w => {
+                            // Compare by checking if both mention the same project name
+                            const noteProject = note.split(' already')[0].toLowerCase()
+                            return w.toLowerCase().includes(noteProject)
+                          })
+                        }),
+                        ...(aiAssignment.warnings ?? []),
+                      ],
+                    }
                   : aiAssignment
                 return (
                 <ClusterReadinessCard

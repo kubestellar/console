@@ -78,6 +78,7 @@ export interface ProjectHoverInfo {
   category: string
   status: NodeStatus
   isRequired: boolean
+  installed: boolean
   reason?: string
   dependencies: string[]
   kbPath?: string
@@ -93,7 +94,7 @@ const OVERLAY_CATEGORIES: Record<string, Set<string>> = {
   compute: new Set(['Orchestration', 'Serverless', 'Runtime']),
   storage: new Set(['Storage', 'Streaming']),
   network: new Set(['Networking', 'Service Mesh']),
-  security: new Set(['Security', 'Identity & Encryption', 'Policy Enforcement', 'Runtime Security', 'Vulnerability Scanning']),
+  security: new Set(['Security', 'Identity & Encryption', 'Policy Enforcement', 'Runtime Security', 'Vulnerability Scanning', 'Secrets Management']),
 }
 
 function getAvatarUrl(name: string): string {
@@ -131,11 +132,6 @@ export function ProjectNode({
   const primaryColor = gradientColors?.[0] ?? '#6366f1'
   const statusColor = STATUS_COLORS[status]
 
-  const statusGlowId =
-    status === 'completed' ? `${id}-glow-green` :
-    status === 'failed' ? `${id}-glow-red` :
-    status === 'running' ? `${id}-glow-amber` :
-    undefined
 
   const isRelevant =
     overlay === 'architecture' ||
@@ -148,32 +144,39 @@ export function ProjectNode({
   return (
     <motion.g
       initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: dimmed ? 0.15 : overlayDim }}
+      animate={{ scale: 1, opacity: dimmed ? 0.15 : glow ? 1 : overlayDim }}
       transition={{
-        type: 'spring',
-        stiffness: 400,
-        damping: 25,
-        delay: 0.3 + index * 0.08,
+        scale: { type: 'spring', stiffness: 400, damping: 25, delay: 0.3 + index * 0.08 },
+        opacity: { duration: 0.1 },
       }}
-      style={{ transformOrigin: `${cx}px ${cy}px` }}
+      style={{ transformOrigin: `${cx}px ${cy}px`, pointerEvents: 'all' as const }}
       onMouseEnter={() => onHover?.({
-        name, displayName, category, status, isRequired,
+        name, displayName, category, status, isRequired, installed,
         reason, dependencies, kbPath, maturity, priority,
         cx, cy, radius,
       })}
       onMouseLeave={() => onHover?.(null)}
     >
-      {/* Outer ring — solid green=installed, dashed slate=needs deploy, white when glowing */}
+      {/* Invisible hit target — ensures mouse events fire even when dimmed */}
+      <circle
+        cx={cx}
+        cy={cy}
+        r={radius + 4}
+        fill="transparent"
+        stroke="none"
+        style={{ cursor: 'pointer' }}
+      />
+
+      {/* Outer ring — solid green=installed, dashed slate=needs deploy, brighter when glowing */}
       <circle
         cx={cx}
         cy={cy}
         r={radius + 3}
         fill="none"
-        stroke={glow ? '#ffffff' : installed ? '#22c55e' : '#64748b'}
-        strokeWidth={glow ? 2 : installed ? 1.5 : 0.6}
-        strokeOpacity={glow ? 0.9 : installed ? 0.6 : 0.3}
+        stroke={glow ? (installed ? '#4ade80' : '#e2e8f0') : installed ? '#22c55e' : '#64748b'}
+        strokeWidth={glow ? (installed ? 2 : 1.2) : installed ? 1.5 : 0.6}
+        strokeOpacity={glow ? 1 : installed ? 0.6 : 0.3}
         strokeDasharray={installed ? 'none' : '3 2'}
-        filter={glow ? `url(#${id}-glow)` : statusGlowId ? `url(#${statusGlowId})` : undefined}
       />
 
       {/* Running pulse */}
@@ -190,9 +193,9 @@ export function ProjectNode({
         cy={cy}
         r={radius}
         fill={`url(#${id}-node-bg)`}
-        stroke={glow ? '#ffffff' : '#475569'}
-        strokeWidth={1}
-        strokeOpacity={0.4}
+        stroke={glow ? (installed ? '#4ade80' : '#ffffff') : '#475569'}
+        strokeWidth={glow ? 1.2 : 1}
+        strokeOpacity={glow ? 0.7 : 0.4}
         cursor="pointer"
       />
 
@@ -271,32 +274,32 @@ export function ProjectNode({
       {/* Name label — only shown when this node is glowing, placed above to avoid edge labels */}
       {glow && (() => {
         const shortName = name.length <= 16 ? name : name.replace(/-/g, ' ')
-        const labelW = shortName.length * 3.6 + 8
-        const labelY = cy - radius - 10
+        const labelW = shortName.length * 3 + 6
+        const labelY = cy - radius - 8
         return (
           <motion.g
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.08 }}
           >
             <rect
               x={cx - labelW / 2}
-              y={labelY - 5.5}
+              y={labelY - 4.5}
               width={labelW}
-              height={10}
-              rx={3}
+              height={8.5}
+              rx={2.5}
               fill="#0f172a"
               fillOpacity={0.9}
-              stroke="#ffffff"
-              strokeWidth={0.4}
+              stroke={installed ? '#22c55e' : '#ffffff'}
+              strokeWidth={0.3}
               strokeOpacity={0.5}
             />
             <text
               x={cx}
-              y={labelY + 1.5}
+              y={labelY + 1}
               textAnchor="middle"
               fill="#e2e8f0"
-              fontSize={5}
+              fontSize={4.2}
               fontFamily="system-ui, sans-serif"
               fontWeight="600"
             >

@@ -175,12 +175,20 @@ export function useMissionControl() {
       }>(latest.content, 'assignments')
       if (parsed?.assignments) {
         lastParsedContentRef.current = latest.content
-        setState((prev) => ({
-          ...prev,
-          assignments: parsed.assignments!,
-          phases: parsed.phases ?? prev.phases,
-          aiStreaming: false,
-        }))
+        setState((prev) => {
+          const aiAssignments = parsed.assignments!
+          const aiClusterNames = new Set(aiAssignments.map(a => a.clusterName))
+          // Preserve clusters from prev state that AI didn't mention
+          const preserved = prev.assignments
+            .filter(a => !aiClusterNames.has(a.clusterName))
+            .map(a => ({ ...a, projectNames: [] as string[], warnings: [] as string[] }))
+          return {
+            ...prev,
+            assignments: [...aiAssignments, ...preserved],
+            phases: parsed.phases ?? prev.phases,
+            aiStreaming: false,
+          }
+        })
       }
     }
   }, [latestAssistantContent, state.phase, state.planningMissionId, planningMission?.status])
@@ -215,13 +223,23 @@ export function useMissionControl() {
         projectNames: a.projectNames.filter((n) => projectNames.has(n)),
       }))
 
-      // Remove empty assignments (clusters with no projects left)
-      const nonEmpty = reconciled.filter((a) => a.projectNames.length > 0)
+      // Add newly-added projects to the first cluster that has assignments
+      // (so the user can see and re-assign them on Chart Course)
+      const allAssignedNames = new Set(reconciled.flatMap((a) => a.projectNames))
+      const newProjects = [...projectNames].filter((n) => !allAssignedNames.has(n))
+      if (newProjects.length > 0 && reconciled.length > 0) {
+        reconciled[0] = {
+          ...reconciled[0],
+          projectNames: [...reconciled[0].projectNames, ...newProjects],
+        }
+      }
+
+      // Keep all cluster assignments (even empty) so clusters persist in Flight Plan
 
       // Clear phases — they'll be regenerated when user reaches Phase 2 or asks AI
       return {
         ...prev,
-        assignments: nonEmpty,
+        assignments: reconciled,
         phases: [],
       }
     })
@@ -378,7 +396,15 @@ ${clustersJson}
 For each cluster, determine:
 1. Can it handle the assigned projects? (CPU/mem/storage headroom)
 2. Are prerequisites met? (helm installed, RBAC, network policies)
-3. Any warnings?
+3. What is already installed that may conflict or integrate?
+4. Any warnings or notes?
+
+IMPORTANT: Every cluster MUST have detailed warnings/notes analyzing its readiness. Include notes about:
+- Existing deployments that overlap or conflict with assigned projects
+- Available resources and headroom assessment
+- Prerequisites that are met or missing (helm, RBAC, network policies, storage classes)
+- Integration opportunities with existing tools
+- Any risks or considerations for deployment
 
 Optimally distribute the projects across clusters. Put related projects together when possible.
 Return a JSON block:
@@ -391,7 +417,7 @@ Return a JSON block:
       "clusterContext": "cluster-1-context",
       "provider": "eks",
       "projectNames": ["falco", "opa"],
-      "warnings": ["Limited CPU headroom"],
+      "warnings": ["cert-manager already running (3 pods) — skip install", "Limited CPU headroom (35% remaining)", "Helm CLI installed — chart-based deployments ready"],
       "readiness": {
         "cpuHeadroomPercent": 35,
         "memHeadroomPercent": 60,
@@ -566,6 +592,135 @@ Order phases by dependency — prerequisites first. Each phase completes before 
     return { installedProjects: installed, installedOnCluster: perCluster }
   }, [helmReleases, clusters, state.projects])
 
+  // ---------------------------------------------------------------------------
+  // Auto-assign: deterministic local algorithm (no AI)
+  // ---------------------------------------------------------------------------
+
+  const autoAssignProjects = useCallback(
+    (availableClusters: Array<{ name: string; context?: string; distribution?: string; cpuCores?: number; memoryGB?: number; storageGB?: number; cpuUsageCores?: number; cpuRequestsCores?: number; memoryUsageGB?: number; memoryRequestsGB?: number }>) => {
+      if (availableClusters.length === 0 || state.projects.length === 0) return
+
+      // Category groups — projects in the same group have affinity
+      const CATEGORY_GROUPS: Record<string, string> = {
+        Security: 'security',
+        'Runtime Security': 'security',
+        'Secrets Management': 'security',
+        'Policy Engine': 'security',
+        Observability: 'observability',
+        Monitoring: 'observability',
+        Logging: 'observability',
+        Tracing: 'observability',
+        Networking: 'networking',
+        'Service Mesh': 'networking',
+        Ingress: 'networking',
+        Storage: 'storage',
+        'Backup & Recovery': 'storage',
+      }
+
+      // Score each cluster for resource headroom (0-100)
+      const clusterScores = new Map<string, number>()
+      for (const c of availableClusters) {
+        const cpuTotal = c.cpuCores ?? 0
+        const cpuUsed = c.cpuUsageCores ?? c.cpuRequestsCores ?? 0
+        const memTotal = c.memoryGB ?? 0
+        const memUsed = c.memoryUsageGB ?? c.memoryRequestsGB ?? 0
+        const cpuFree = cpuTotal > 0 ? ((cpuTotal - cpuUsed) / cpuTotal) * 100 : 50
+        const memFree = memTotal > 0 ? ((memTotal - memUsed) / memTotal) * 100 : 50
+        clusterScores.set(c.name, (cpuFree + memFree) / 2)
+      }
+
+      // Track how many projects each cluster gets (for load balancing)
+      const clusterLoad = new Map<string, number>()
+      availableClusters.forEach(c => clusterLoad.set(c.name, 0))
+
+      // Track category → preferred cluster (affinity)
+      const categoryCluster = new Map<string, string>()
+
+      // Build assignments map
+      const newAssignments = new Map<string, string[]>()
+      availableClusters.forEach(c => newAssignments.set(c.name, []))
+
+      // Sort projects: required first, then recommended, then optional
+      const priorityOrder = { required: 0, recommended: 1, optional: 2 }
+      const sortedProjects = [...state.projects].sort(
+        (a, b) => (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1)
+      )
+
+      for (const project of sortedProjects) {
+        const pName = project.name
+        const group = CATEGORY_GROUPS[project.category] ?? project.category.toLowerCase()
+
+        // If already installed on a cluster, assign there and skip
+        const installedClusters = installedOnCluster.get(pName)
+        if (installedClusters && installedClusters.size > 0) {
+          // Don't add to newAssignments — it's already installed
+          continue
+        }
+
+        // Score each cluster for this project
+        let bestCluster = availableClusters[0].name
+        let bestScore = -Infinity
+
+        for (const c of availableClusters) {
+          let score = clusterScores.get(c.name) ?? 50
+
+          // Category affinity: strong preference to co-locate same-group projects
+          if (categoryCluster.has(group) && categoryCluster.get(group) === c.name) {
+            score += 30
+          }
+
+          // Dependency affinity: prefer cluster where dependencies are assigned
+          for (const dep of project.dependencies ?? []) {
+            const depAssigned = newAssignments.get(c.name)
+            if (depAssigned?.includes(dep)) {
+              score += 25
+            }
+          }
+
+          // Load balancing penalty: slightly penalize clusters with more projects
+          const load = clusterLoad.get(c.name) ?? 0
+          score -= load * 8
+
+          if (score > bestScore) {
+            bestScore = score
+            bestCluster = c.name
+          }
+        }
+
+        // Assign
+        newAssignments.get(bestCluster)!.push(pName)
+        clusterLoad.set(bestCluster, (clusterLoad.get(bestCluster) ?? 0) + 1)
+
+        // Record category affinity
+        if (!categoryCluster.has(group)) {
+          categoryCluster.set(group, bestCluster)
+        }
+      }
+
+      // Build assignment objects
+      setState(prev => {
+        const assignments: ClusterAssignment[] = availableClusters.map(c => {
+          const existing = prev.assignments.find(a => a.clusterName === c.name)
+          return {
+            clusterName: c.name,
+            clusterContext: c.context ?? c.name,
+            provider: c.distribution ?? 'kubernetes',
+            projectNames: newAssignments.get(c.name) ?? [],
+            warnings: existing?.warnings ?? [],
+            readiness: existing?.readiness ?? {
+              cpuHeadroomPercent: Math.round(clusterScores.get(c.name) ?? 50),
+              memHeadroomPercent: Math.round(clusterScores.get(c.name) ?? 50),
+              storageHeadroomPercent: 50,
+              overallScore: Math.round(clusterScores.get(c.name) ?? 50),
+            },
+          }
+        })
+        return { ...prev, assignments }
+      })
+    },
+    [state.projects, installedOnCluster]
+  )
+
   return {
     state,
     installedProjects,
@@ -580,6 +735,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
     replaceProject,
     // Phase 2
     askAIForAssignments,
+    autoAssignProjects,
     setAssignment,
     moveProjectToCluster,
     // Navigation

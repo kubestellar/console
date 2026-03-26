@@ -5,7 +5,7 @@
 
 import { Server, Cpu, Box } from 'lucide-react'
 import { cn } from '../../lib/cn'
-import { CloudProviderIcon } from '../ui/CloudProviderIcon'
+import { CloudProviderIcon, getProviderLabel } from '../ui/CloudProviderIcon'
 import { clusterDisplayName } from '../../hooks/mcp/shared'
 import type { ClusterInfo } from '../../hooks/mcp/types'
 import type { ClusterAssignment } from './types'
@@ -56,7 +56,24 @@ export function ClusterReadinessCard({
   isRecommended,
   installedOnCluster = new Map(),
 }: ClusterReadinessCardProps) {
-  const provider = (cluster.distribution || 'kubernetes') as Parameters<typeof CloudProviderIcon>[0]['provider']
+  // Detect provider: prefer explicit distribution, fall back to name/context/namespace heuristic
+  const detectProvider = (): string => {
+    if (cluster.distribution) return cluster.distribution
+    const name = cluster.name.toLowerCase()
+    const ctx = (cluster.context || '').toLowerCase()
+    const allText = `${name} ${ctx} ${(cluster.namespaces || []).join(' ').toLowerCase()}`
+    if (allText.includes('coreweave') || name.includes('cks') || allText.includes('cw-')) return 'coreweave'
+    if (allText.includes('eks') || allText.includes('aws')) return 'eks'
+    if (allText.includes('gke') || allText.includes('gcp')) return 'gke'
+    if (allText.includes('aks') || allText.includes('azure')) return 'aks'
+    if (allText.includes('openshift')) return 'openshift'
+    if (name.includes('kind') || ctx.includes('kind-')) return 'kind'
+    if (allText.includes('k3s')) return 'k3s'
+    if (allText.includes('minikube')) return 'minikube'
+    if (allText.includes('rancher')) return 'rancher'
+    return 'kubernetes'
+  }
+  const provider = detectProvider() as Parameters<typeof CloudProviderIcon>[0]['provider']
   const assignedProjects = assignment?.projectNames ?? []
   const warnings = assignment?.warnings ?? []
   const readiness = assignment?.readiness
@@ -71,7 +88,9 @@ export function ClusterReadinessCard({
     >
       {/* Header */}
       <div className="flex items-center gap-3 mb-3">
-        <CloudProviderIcon provider={provider} size={28} />
+        <span title={getProviderLabel(provider)}>
+          <CloudProviderIcon provider={provider} size={28} />
+        </span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h4 className="text-sm font-medium truncate" title={cluster.name}>{clusterDisplayName(cluster.name)}</h4>
@@ -163,8 +182,13 @@ export function ClusterReadinessCard({
         <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">
           Assigned Projects
         </p>
-        <div className="space-y-1 max-h-40 overflow-y-auto overscroll-contain [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full">
-          {availableProjects.map((name) => {
+        <div className="space-y-1 max-h-64 overflow-y-auto overscroll-contain [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb]:rounded-full">
+          {[...availableProjects].sort((a, b) => {
+            const aInstalled = installedOnCluster.get(a)?.has(cluster.name) ?? false
+            const bInstalled = installedOnCluster.get(b)?.has(cluster.name) ?? false
+            if (aInstalled !== bInstalled) return aInstalled ? 1 : -1
+            return 0
+          }).map((name) => {
             const checked = assignedProjects.includes(name)
             const isInstalled = installedOnCluster.get(name)?.has(cluster.name) ?? false
             return (

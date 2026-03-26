@@ -14,11 +14,9 @@ export function BlueprintDefs({ id }: BlueprintDefsProps) {
     <defs>
       {/* ── Glow filter (for nodes & connections) ─────────────── */}
       <filter id={`${id}-glow`} x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur stdDeviation="1.5" result="blur" />
-        <feFlood floodColor="#8b5cf6" floodOpacity="0.4" result="color" />
-        <feComposite in="color" in2="blur" operator="in" result="glow" />
+        <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur" />
         <feMerge>
-          <feMergeNode in="glow" />
+          <feMergeNode in="blur" />
           <feMergeNode in="SourceGraphic" />
         </feMerge>
       </filter>

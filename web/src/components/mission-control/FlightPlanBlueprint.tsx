@@ -8,7 +8,6 @@
 import { useId, useMemo, useState, useCallback, useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Rocket,
   Zap,
   Network,
   Shield,
@@ -27,7 +26,6 @@ import {
   Loader2,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
-import { Button } from '../ui/Button'
 
 import { BlueprintDefs } from './svg/BlueprintDefs'
 import { ClusterZone } from './svg/ClusterZone'
@@ -81,7 +79,6 @@ interface FlightPlanBlueprintProps {
   state: MissionControlState
   onOverlayChange: (overlay: OverlayMode) => void
   onDeployModeChange: (mode: 'phased' | 'yolo') => void
-  onLaunch: () => void
   onMoveProject?: (projectName: string, fromCluster: string, toCluster: string) => void
   installedProjects?: Set<string>
 }
@@ -94,9 +91,8 @@ function computeLayout(state: MissionControlState): BlueprintLayout {
   // Determine how many projects the densest cluster has — scale viewbox accordingly
   const clusterProjects = new Map<string, string[]>()
   for (const assignment of state.assignments) {
-    if (assignment.projectNames.length > 0) {
-      clusterProjects.set(assignment.clusterName, assignment.projectNames)
-    }
+    // Include all assigned clusters, even empty ones (drop targets in blueprint)
+    clusterProjects.set(assignment.clusterName, assignment.projectNames)
   }
 
   const clusterNames = Array.from(clusterProjects.keys())
@@ -131,8 +127,8 @@ function computeLayout(state: MissionControlState): BlueprintLayout {
     clusterRects.set(name, rect)
 
     const projects = clusterProjects.get(name) ?? []
-    const pCols = projects.length <= 2 ? projects.length : Math.min(3, projects.length)
-    const pRows = Math.ceil(projects.length / pCols)
+    const pCols = projects.length <= 2 ? Math.max(1, projects.length) : Math.min(3, projects.length)
+    const pRows = projects.length > 0 ? Math.ceil(projects.length / pCols) : 0
     const innerPadX = 20
     const innerPadTop = 32
     const innerPadBot = 22
@@ -189,14 +185,19 @@ function computeLayout(state: MissionControlState): BlueprintLayout {
   }
 
   // Find best position pair for two projects (prefer same-cluster)
-  function findEdgePair(a: string, b: string): { from: ProjectPosition; to: ProjectPosition; cross: boolean } | null {
+  // Find all same-cluster pairs for two projects, plus one cross-cluster fallback
+  function findEdgePairs(a: string, b: string): { from: ProjectPosition; to: ProjectPosition; cross: boolean }[] {
     const posA = projectPosByName.get(a)
     const posB = projectPosByName.get(b)
-    if (!posA?.length || !posB?.length) return null
-    for (const fa of posA) for (const fb of posB) {
-      if (fa.clusterName === fb.clusterName) return { from: fa, to: fb, cross: false }
+    if (!posA?.length || !posB?.length) return []
+    const pairs: { from: ProjectPosition; to: ProjectPosition; cross: boolean }[] = []
+    for (const fa of posA) {
+      for (const fb of posB) {
+        if (fa.clusterName === fb.clusterName) pairs.push({ from: fa, to: fb, cross: false })
+      }
     }
-    return { from: posA[0], to: posB[0], cross: true }
+    if (pairs.length === 0) pairs.push({ from: posA[0], to: posB[0], cross: true })
+    return pairs
   }
 
   const dependencyEdges: DependencyEdge[] = []
@@ -205,9 +206,9 @@ function computeLayout(state: MissionControlState): BlueprintLayout {
   // Explicit dependencies
   for (const project of state.projects) {
     for (const dep of project.dependencies) {
-      const pair = findEdgePair(project.name, dep)
-      if (pair) {
-        const key = `${project.name}->${dep}`
+      const pairs = findEdgePairs(project.name, dep)
+      for (const pair of pairs) {
+        const key = `${pair.from.clusterName}:${project.name}->${dep}`
         if (!edgeSet.has(key)) {
           edgeSet.add(key)
           const label = INTEGRATION_LABELS[dep]?.[project.name] ?? INTEGRATION_LABELS[project.name]?.[dep]
@@ -215,7 +216,9 @@ function computeLayout(state: MissionControlState): BlueprintLayout {
             from: project.name,
             to: dep,
             crossCluster: pair.cross,
-            label: label,
+            label,
+            fromPos: pair.from,
+            toPos: pair.to,
           })
         }
       }
@@ -227,17 +230,19 @@ function computeLayout(state: MissionControlState): BlueprintLayout {
     if (!projectPosByName.has(src)) continue
     for (const [target, label] of Object.entries(targets)) {
       if (!projectPosByName.has(target)) continue
-      const key1 = `${src}->${target}`
-      const key2 = `${target}->${src}`
-      if (!edgeSet.has(key1) && !edgeSet.has(key2)) {
-        edgeSet.add(key1)
-        const pair = findEdgePair(src, target)
-        if (pair) {
+      const pairs = findEdgePairs(src, target)
+      for (const pair of pairs) {
+        const key1 = `${pair.from.clusterName}:${src}->${target}`
+        const key2 = `${pair.from.clusterName}:${target}->${src}`
+        if (!edgeSet.has(key1) && !edgeSet.has(key2)) {
+          edgeSet.add(key1)
           dependencyEdges.push({
             from: src,
             to: target,
             crossCluster: pair.cross,
             label,
+            fromPos: pair.from,
+            toPos: pair.to,
           })
         }
       }
@@ -487,7 +492,6 @@ export function FlightPlanBlueprint({
   state,
   onOverlayChange,
   onDeployModeChange,
-  onLaunch,
   onMoveProject,
   installedProjects = new Set(),
 }: FlightPlanBlueprintProps) {
@@ -523,19 +527,8 @@ export function FlightPlanBlueprint({
       }
     }
 
-    // Deduplicate: each project can only appear on one cluster in the blueprint.
-    // Keep the first assignment (from AI auto-assign or user selection).
-    const seen = new Set<string>()
-    const dedupedAssignments = assignments.map(a => {
-      const unique = a.projectNames.filter(p => {
-        if (seen.has(p)) return false
-        seen.add(p)
-        return true
-      })
-      return unique.length === a.projectNames.length ? a : { ...a, projectNames: unique }
-    })
-
-    return { ...state, assignments: dedupedAssignments }
+    // Allow projects on multiple clusters — composite keys handle positioning
+    return { ...state, assignments }
   }, [state, clusters])
 
   const layout = useMemo(() => computeLayout(healthyState), [healthyState])
@@ -578,45 +571,73 @@ export function FlightPlanBlueprint({
   // Line labels toggle
   const [labelsVisible, setLabelsVisible] = useState(true)
 
-  // Hovered edge (from label hover) or hovered project — highlights connected lines and projects
+  // Hovered edge (from label hover) or hovered project (composite key: "cluster/project")
   const [hoveredEdge, setHoveredEdge] = useState<{ from: string; to: string } | null>(null)
-  const [hoveredProject, setHoveredProject] = useState<string | null>(null)
+  const [hoveredProjectKey, setHoveredProjectKey] = useState<string | null>(null)
+  const hoveredProjectName = hoveredProjectKey?.split('/')[1] ?? null
+  const hoveredCluster = hoveredProjectKey?.split('/')[0] ?? null
 
-  // Compute which edges and projects should glow
+  // Compute which edges should glow — cluster-scoped
   const glowEdges = useMemo(() => {
     const edges = new Set<string>()
-    if (hoveredEdge) {
-      edges.add(`${hoveredEdge.from}-${hoveredEdge.to}`)
-    }
-    if (hoveredProject && layout) {
+    if (hoveredEdge && layout) {
       for (const edge of layout.dependencyEdges) {
-        if (edge.from === hoveredProject || edge.to === hoveredProject) {
-          edges.add(`${edge.from}-${edge.to}`)
+        if (edge.from === hoveredEdge.from && edge.to === hoveredEdge.to) {
+          const cluster = edge.fromPos?.clusterName ?? ''
+          edges.add(`${cluster}:${edge.from}-${edge.to}`)
         }
+      }
+    }
+    if (hoveredProjectName && hoveredCluster && layout) {
+      for (const edge of layout.dependencyEdges) {
+        const edgeCluster = edge.fromPos?.clusterName ?? ''
+        const isConnected = edge.from === hoveredProjectName || edge.to === hoveredProjectName
+        if (!isConnected) continue
+        // Same-cluster edges: only glow if on the hovered cluster
+        // Cross-cluster edges: always glow if the hovered project is an endpoint
+        if (!edge.crossCluster && edgeCluster !== hoveredCluster) continue
+        edges.add(`${edgeCluster}:${edge.from}-${edge.to}`)
       }
     }
     return edges
-  }, [hoveredEdge, hoveredProject, layout])
+  }, [hoveredEdge, hoveredProjectKey, hoveredProjectName, hoveredCluster, layout])
 
-  const glowProjects = useMemo(() => {
-    const projects = new Set<string>()
-    if (hoveredEdge) {
-      projects.add(hoveredEdge.from)
-      projects.add(hoveredEdge.to)
-    }
-    if (hoveredProject && layout) {
-      // Only glow if the project has connections — isolated projects shouldn't dim everything
-      const hasEdges = layout.dependencyEdges.some(e => e.from === hoveredProject || e.to === hoveredProject)
-      if (hasEdges) {
-        projects.add(hoveredProject)
-        for (const edge of layout.dependencyEdges) {
-          if (edge.from === hoveredProject) projects.add(edge.to)
-          if (edge.to === hoveredProject) projects.add(edge.from)
-        }
+  // Compute which project nodes should glow — composite keys for cluster scoping
+  const glowProjectKeys = useMemo(() => {
+    const keys = new Set<string>()
+    if (hoveredEdge && layout) {
+      for (const key of layout.projectPositions.keys()) {
+        const pName = key.split('/')[1]
+        if (pName === hoveredEdge.from || pName === hoveredEdge.to) keys.add(key)
       }
     }
-    return projects
-  }, [hoveredEdge, hoveredProject, layout])
+    if (hoveredProjectKey && hoveredProjectName && layout) {
+      // Always glow the hovered project itself
+      keys.add(hoveredProjectKey)
+      // Find connected project names — separate same-cluster vs cross-cluster
+      const sameClusterConnected = new Set<string>()
+      const crossClusterConnected = new Set<string>()
+      for (const edge of layout.dependencyEdges) {
+        const edgeCluster = edge.fromPos?.clusterName ?? ''
+        if (edge.from === hoveredProjectName) {
+          if (edge.crossCluster) crossClusterConnected.add(edge.to)
+          else if (edgeCluster === hoveredCluster) sameClusterConnected.add(edge.to)
+        }
+        if (edge.to === hoveredProjectName) {
+          if (edge.crossCluster) crossClusterConnected.add(edge.from)
+          else if (edgeCluster === hoveredCluster) sameClusterConnected.add(edge.from)
+        }
+      }
+      for (const key of layout.projectPositions.keys()) {
+        const [cluster, pName] = key.split('/')
+        // Same-cluster connections: glow on same cluster
+        if (cluster === hoveredCluster && sameClusterConnected.has(pName)) keys.add(key)
+        // Cross-cluster connections: glow on any cluster
+        if (crossClusterConnected.has(pName)) keys.add(key)
+      }
+    }
+    return keys
+  }, [hoveredEdge, hoveredProjectKey, hoveredProjectName, hoveredCluster, layout])
 
   // Detect installed projects via helm releases
 
@@ -807,7 +828,7 @@ export function FlightPlanBlueprint({
                   : 'bg-secondary/30 text-muted-foreground border-border hover:text-foreground hover:bg-secondary/50'
               )}
             >
-              PHASED
+              phased
             </button>
             <button
               onClick={() => {
@@ -823,20 +844,12 @@ export function FlightPlanBlueprint({
                   : 'bg-secondary/30 text-muted-foreground border-border hover:text-foreground hover:bg-secondary/50'
               )}
             >
-              YOLO
+              yolo
             </button>
           </div>
 
-          {/* Launch button */}
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={onLaunch}
-            className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white border-0 shadow-lg shadow-violet-500/25"
-            icon={<Rocket className="w-4 h-4" />}
-          >
-            Launch Mission
-          </Button>
+          {/* Spacer — action buttons moved to footer */}
+          <div />
         </div>
       </div>
 
@@ -948,30 +961,16 @@ export function FlightPlanBlueprint({
                 )
               })}
 
-              {/* Dependency paths — find positions by project name from composite-keyed map */}
+              {/* Dependency paths — use pre-resolved positions from layout */}
               {layout.dependencyEdges.map((edge, i) => {
-                let from: ProjectPosition | undefined
-                let to: ProjectPosition | undefined
-                const fromAll: ProjectPosition[] = []
-                const toAll: ProjectPosition[] = []
-                for (const pos of layout.projectPositions.values()) {
-                  if (pos.projectName === edge.from) fromAll.push(pos)
-                  if (pos.projectName === edge.to) toAll.push(pos)
-                }
-                // Prefer same-cluster pair
-                for (const fp of fromAll) {
-                  for (const tp of toAll) {
-                    if (fp.clusterName === tp.clusterName) { from = fp; to = tp; break }
-                  }
-                  if (from) break
-                }
-                if (!from && fromAll.length) from = fromAll[0]
-                if (!to && toAll.length) to = toAll[0]
+                const from = edge.fromPos
+                const to = edge.toPos
                 if (!from || !to) return null
                 if (from.cx <= 0 || from.cy <= 0 || to.cx <= 0 || to.cy <= 0) return null
+                const clusterEdgeKey = `${from.clusterName}:${edge.from}-${edge.to}`
                 return (
                   <DependencyPath
-                    key={`${edge.from}-${edge.to}`}
+                    key={clusterEdgeKey}
                     id={svgId}
                     fromX={from.cx}
                     fromY={from.cy}
@@ -980,6 +979,10 @@ export function FlightPlanBlueprint({
                     crossCluster={edge.crossCluster}
                     index={i}
                     label={edge.label}
+                    animate={animationsEnabled}
+                    highlight={glowEdges.has(clusterEdgeKey)}
+                    dimmed={(glowEdges.size > 0 || glowProjectKeys.size > 0) && !glowEdges.has(clusterEdgeKey)}
+                    overlayDim={state.overlay !== 'architecture'}
                   />
                 )
               })}
@@ -1010,11 +1013,11 @@ export function FlightPlanBlueprint({
                     maturity={project.maturity}
                     priority={project.priority}
                     overlay={state.overlay}
-                    glow={glowProjects.has(project.name)}
-                    dimmed={glowProjects.size > 0 && !glowProjects.has(project.name)}
+                    glow={glowProjectKeys.has(compositeKey)}
+                    dimmed={glowProjectKeys.size > 0 && !glowProjectKeys.has(compositeKey)}
                     onHover={(info) => {
                       handleProjectHover(info)
-                      setHoveredProject(info ? project.name : null)
+                      setHoveredProjectKey(info ? compositeKey : null)
                     }}
                     onDragStart={(n) => setDragProject({ name: n, fromCluster: pos.clusterName })}
                     onDragEnd={() => { setDragProject(null); setDropTarget(null) }}
@@ -1025,38 +1028,51 @@ export function FlightPlanBlueprint({
               {/* Dependency labels — top layer so they're never hidden behind lines */}
               {labelsVisible && (() => {
                 const MIN_LABEL_GAP = 14
-                const labelSlots: { midX: number; midY: number; offsetY: number }[] = []
+                const NODE_RADIUS = 18
+                const labelSlots: { x: number; y: number }[] = []
+                const nodeCenters = Array.from(layout.projectPositions.values())
                 return layout.dependencyEdges.map((edge) => {
                   if (!edge.label) return null
-                  const from = layout.projectPositions.get(edge.from)
-                  const to = layout.projectPositions.get(edge.to)
+                  const from = edge.fromPos
+                  const to = edge.toPos
                   if (!from || !to) return null
                   if (from.cx <= 0 || from.cy <= 0 || to.cx <= 0 || to.cy <= 0) return null
 
-                  const { midX, midY } = computeEdgeMidpoint(from.cx, from.cy, to.cx, to.cy)
-                  let offsetY = 0
-                  for (const slot of labelSlots) {
-                    const dxL = Math.abs(midX - slot.midX)
-                    const dyL = Math.abs(midY + offsetY - (slot.midY + slot.offsetY))
-                    if (dxL < 60 && dyL < MIN_LABEL_GAP) {
-                      offsetY = (slot.midY + slot.offsetY) - midY + MIN_LABEL_GAP
+                  const { midX, midY: rawMidY } = computeEdgeMidpoint(from.cx, from.cy, to.cx, to.cy)
+                  let labelY = rawMidY - 12
+                  // Push away from project nodes
+                  for (const node of nodeCenters) {
+                    const dx = Math.abs(midX - node.cx)
+                    const dy = Math.abs(labelY - node.cy)
+                    if (dx < 40 && dy < NODE_RADIUS + 8) {
+                      labelY = node.cy - NODE_RADIUS - 12
                     }
                   }
-                  labelSlots.push({ midX, midY, offsetY })
+                  // Avoid overlapping other labels
+                  for (const slot of labelSlots) {
+                    const dxL = Math.abs(midX - slot.x)
+                    const dyL = Math.abs(labelY - slot.y)
+                    if (dxL < 60 && dyL < MIN_LABEL_GAP) {
+                      labelY = slot.y - MIN_LABEL_GAP
+                    }
+                  }
+                  labelSlots.push({ x: midX, y: labelY })
+                  const clusterEdgeKey = `${from.clusterName}:${edge.from}-${edge.to}`
                   return (
                     <DependencyLabel
-                      key={`label-${edge.from}-${edge.to}`}
+                      key={`label-${clusterEdgeKey}`}
                       midX={midX}
-                      midY={midY + offsetY}
+                      midY={labelY}
                       label={edge.label}
                       crossCluster={edge.crossCluster}
                       fromName={edge.from}
                       toName={edge.to}
                       anchorX={midX}
-                      anchorY={midY}
+                      anchorY={rawMidY}
                       onHover={setHoveredEdge}
-                      highlight={glowEdges.has(`${edge.from}-${edge.to}`)}
-                      dimmed={glowEdges.size > 0 && !glowEdges.has(`${edge.from}-${edge.to}`)}
+                      highlight={glowEdges.has(clusterEdgeKey)}
+                      dimmed={(glowEdges.size > 0 || glowProjectKeys.size > 0) && !glowEdges.has(clusterEdgeKey)}
+                      overlayDim={state.overlay !== 'architecture'}
                     />
                   )
                 })
@@ -1152,7 +1168,7 @@ export function FlightPlanBlueprint({
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 10 }}
                 transition={{ duration: 0.12 }}
-                className="p-4 space-y-4"
+                className="p-4 space-y-4 flex-1 flex flex-col min-h-0"
               >
                 {visiblePanel.kind === 'project' ? (
                   <ProjectInfoPanel info={visiblePanel.info} edges={layout?.dependencyEdges} />
@@ -1236,31 +1252,60 @@ function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edges?: Dep
   const [loadingSteps, setLoadingSteps] = useState(false)
   const fetchedRef = useRef<string>('')
 
-  // Fetch mission steps when kbPath is available
+  // Fetch mission steps — try multiple KB path variants for fuzzy matching
+  const slug = info.name.toLowerCase().replace(/\s+/g, '-')
   useEffect(() => {
-    if (!info.kbPath || fetchedRef.current === info.kbPath) return
-    fetchedRef.current = info.kbPath
+    if (fetchedRef.current === slug) return
+    fetchedRef.current = slug
     setLoadingSteps(true)
-    const indexMission: MissionExport = {
-      version: 'kc-mission-v1',
-      title: info.displayName,
-      description: info.reason ?? '',
-      type: 'custom',
-      tags: [],
-      steps: [],
-      metadata: { source: info.kbPath },
+    setMission(null)
+
+    const candidates: string[] = []
+    if (info.kbPath) candidates.push(info.kbPath)
+    candidates.push(`solutions/cncf-install/install-${slug}.json`)
+    // Try with abbreviation suffix: open-policy-agent → open-policy-agent-opa
+    const parts = slug.split('-')
+    if (parts.length >= 2) {
+      const abbrev = parts.map(p => p[0]).join('')
+      candidates.push(`solutions/cncf-install/install-${slug}-${abbrev}.json`)
     }
-    fetchMissionContent(indexMission)
-      .then(({ mission: m }) => setMission(m))
-      .catch(() => {/* ignore */})
-      .finally(() => setLoadingSteps(false))
-  }, [info.kbPath, info.displayName, info.reason])
+    // Try without trailing "-operator"
+    if (slug.endsWith('-operator')) {
+      candidates.push(`solutions/cncf-install/install-${slug.replace(/-operator$/, '')}.json`)
+    }
+
+    const tryNext = (idx: number) => {
+      if (idx >= candidates.length) { setLoadingSteps(false); return }
+      const indexMission: MissionExport = {
+        version: 'kc-mission-v1',
+        title: info.displayName,
+        description: info.reason ?? '',
+        type: 'custom',
+        tags: [],
+        steps: [],
+        metadata: { source: candidates[idx] },
+      }
+      fetchMissionContent(indexMission)
+        .then(({ mission: m }) => {
+          if (m.steps && m.steps.length > 0) { setMission(m); setLoadingSteps(false) }
+          else tryNext(idx + 1)
+        })
+        .catch(() => tryNext(idx + 1))
+    }
+    tryNext(0)
+  }, [slug, info.kbPath, info.displayName, info.reason])
 
   return (
-    <>
+    <div className="space-y-5">
+      {/* Header */}
       <div>
-        <h3 className="text-base font-bold text-foreground">{info.displayName}</h3>
-        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold text-foreground pr-2">{info.displayName}</h3>
+          <div className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap', info.installed ? 'text-green-400 bg-green-500/10' : (STATUS_COLORS[info.status] ?? 'text-slate-400'))}>
+            {info.installed ? 'INSTALLED' : (STATUS_LABELS[info.status] ?? info.status.toUpperCase())}
+          </div>
+        </div>
+        <div className="flex items-center gap-1 mt-1.5 flex-wrap">
           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
             {info.category}
           </span>
@@ -1282,95 +1327,86 @@ function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edges?: Dep
         </div>
       </div>
 
-      {info.reason && (
-        <div>
-          <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Why</h4>
-          <p className="text-sm text-foreground/80 leading-relaxed">{info.reason}</p>
-        </div>
-      )}
+      {/* Why */}
+      <div>
+        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Why</h4>
+        <p className="text-xs text-foreground/80 leading-relaxed">{info.reason || '—'}</p>
+      </div>
 
-      {info.dependencies.length > 0 && (
-        <div>
-          <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Dependencies</h4>
+      {/* Dependencies */}
+      <div>
+        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Dependencies</h4>
+        {info.dependencies.length > 0 ? (
           <div className="flex flex-wrap gap-1">
             {info.dependencies.map((dep) => (
-              <span key={dep} className="text-xs px-2 py-0.5 rounded-md bg-violet-500/10 text-violet-400 border border-violet-500/20">
+              <span key={dep} className="text-[10px] px-1.5 py-0.5 rounded-md bg-violet-500/10 text-violet-400 border border-violet-500/20">
                 {dep}
               </span>
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="text-[10px] text-muted-foreground">None</p>
+        )}
+      </div>
 
-      {/* Connections (from dependency edges) */}
-      {connections.length > 0 && (
-        <div>
-          <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Connections</h4>
+      {/* Connections */}
+      <div>
+        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Connections</h4>
+        {connections.length > 0 ? (
           <div className="space-y-1">
             {connections.map((edge, i) => {
               const other = edge.from === info.name ? edge.to : edge.from
               const direction = edge.from === info.name ? '→' : '←'
               return (
-                <div key={i} className="flex items-center gap-1.5 text-xs">
+                <div key={i} className="flex items-center gap-1.5 text-[11px]">
                   <span className={cn(
-                    'w-1.5 h-1.5 rounded-full',
+                    'w-1.5 h-1.5 rounded-full shrink-0',
                     edge.crossCluster ? 'bg-amber-500' : 'bg-indigo-500'
                   )} />
                   <span className="text-foreground/80">{direction} {other}</span>
                   {edge.label && (
                     <span className="text-muted-foreground">({edge.label})</span>
                   )}
-                  {edge.crossCluster && (
-                    <span className="text-[9px] text-amber-400/70">cross-cluster</span>
-                  )}
                 </div>
               )
             })}
           </div>
-        </div>
-      )}
-
-      {/* Install steps from KB mission */}
-      {info.kbPath && (
-        <div>
-          <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Install Steps</h4>
-          {loadingSteps ? (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              Loading mission...
-            </div>
-          ) : mission?.steps && mission.steps.length > 0 ? (
-            <div className="space-y-2">
-              {mission.steps.map((step, i) => (
-                <div key={i} className="flex gap-2">
-                  <span className="text-[10px] font-bold text-primary mt-0.5 shrink-0">{i + 1}.</span>
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-foreground">{step.title || step.description?.slice(0, 60)}</p>
-                    {step.command && (
-                      <pre className="text-[10px] text-emerald-400 font-mono mt-0.5 bg-slate-800 rounded px-1.5 py-0.5 overflow-x-auto whitespace-pre-wrap break-all">
-                        {step.command}
-                      </pre>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-emerald-400 font-mono">
-              {info.kbPath.split('/').pop()?.replace('.json', '')}
-            </p>
-          )}
-        </div>
-      )}
-
-      <div className="pt-2 border-t border-border">
-        <div className={cn('text-sm font-semibold', STATUS_COLORS[info.status] ?? 'text-slate-400')}>
-          {STATUS_LABELS[info.status] ?? info.status.toUpperCase()}
-          {info.isRequired && <span className="text-muted-foreground font-normal ml-1">(required)</span>}
-        </div>
+        ) : (
+          <p className="text-[10px] text-muted-foreground">None</p>
+        )}
       </div>
 
-    </>
+      {/* Install steps */}
+      <div>
+        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Install Steps</h4>
+        {loadingSteps ? (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            Loading...
+          </div>
+        ) : mission?.steps && mission.steps.length > 0 ? (
+          <div className="space-y-1.5">
+            {mission.steps.map((step, i) => (
+              <div key={i} className="flex gap-1.5">
+                <span className="text-[10px] font-bold text-primary mt-0.5 shrink-0">{i + 1}.</span>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium text-foreground">{step.title || step.description?.slice(0, 60)}</p>
+                  {step.command && (
+                    <pre className="text-[10px] text-emerald-400 font-mono mt-0.5 bg-slate-800 rounded px-1.5 py-0.5 overflow-x-auto whitespace-pre-wrap break-all">
+                      {step.command}
+                    </pre>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[10px] text-muted-foreground italic">
+            No install steps found in knowledge base
+          </p>
+        )}
+      </div>
+    </div>
   )
 }
 
