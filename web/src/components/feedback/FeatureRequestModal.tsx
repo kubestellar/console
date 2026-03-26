@@ -1361,7 +1361,31 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
                   ) : (
                     <div className="w-full h-[200px] overflow-y-auto px-3 py-2 bg-secondary/50 border border-border rounded-lg text-sm prose prose-invert prose-sm max-w-none">
                       {description.trim() ? (
-                        <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm, remarkBreaks]}
+                          components={{
+                            code({ className, children, ...props }) {
+                              const match = /language-(\w+)/.exec(className || '')
+                              const isInline = !match && !className
+                              return isInline ? (
+                                <code className="bg-black/20 px-1 rounded text-purple-300" {...props}>{children}</code>
+                              ) : (
+                                <pre className="bg-black/30 rounded-lg p-3 overflow-x-auto my-2">
+                                  <code className={className} {...props}>{children}</code>
+                                </pre>
+                              )
+                            },
+                            table: ({ children }) => (
+                              <div className="overflow-x-auto w-full my-3 rounded border border-border">
+                                <table className="min-w-full border-collapse text-sm">{children}</table>
+                              </div>
+                            ),
+                            thead: ({ children }) => <thead className="bg-secondary/50">{children}</thead>,
+                            th: ({ children }) => <th className="px-3 py-2 text-left text-xs font-semibold border-b border-border">{children}</th>,
+                            td: ({ children }) => <td className="px-3 py-2 text-xs border-b border-border/50">{children}</td>,
+                            blockquote: ({ children }) => <blockquote className="border-l-4 border-purple-500/50 pl-3 my-3 text-muted-foreground italic">{children}</blockquote>,
+                          }}
+                        >
                           {description}
                         </ReactMarkdown>
                       ) : (
