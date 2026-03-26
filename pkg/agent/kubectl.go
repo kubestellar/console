@@ -213,26 +213,32 @@ func (k *KubectlProxy) validateArgs(args []string) bool {
 
 	// Special case: scale command - only allow for specific resource types
 	if command == "scale" {
-		if len(args) < 2 {
-			return false // Need at least "scale <resource>"
+		// Extract positional (non-flag) arguments after "scale"
+		// Flags start with "-" and are skipped; we need the first positional arg
+		// to be a valid scalable resource type.
+		var firstPositional string
+		for _, a := range args[1:] {
+			if strings.HasPrefix(a, "-") {
+				continue
+			}
+			firstPositional = strings.ToLower(a)
+			break
 		}
-		// Scale can have format: scale deployment/name or scale --replicas=N deployment name
-		resourceArg := strings.ToLower(args[1])
+		if firstPositional == "" {
+			return false // No resource type found
+		}
 		// Handle "scale deployment/myapp" format
-		if strings.Contains(resourceArg, "/") {
-			parts := strings.SplitN(resourceArg, "/", 2)
-			resourceType := parts[0]
-			if !allowedScaleResources[resourceType] {
+		if strings.Contains(firstPositional, "/") {
+			parts := strings.SplitN(firstPositional, "/", 2)
+			if !allowedScaleResources[parts[0]] {
 				return false
 			}
-		} else if !strings.HasPrefix(resourceArg, "--") {
+		} else {
 			// Handle "scale deployment myapp" format
-			if !allowedScaleResources[resourceArg] {
+			if !allowedScaleResources[firstPositional] {
 				return false
 			}
 		}
-		// If it starts with --, we'll check the next non-flag argument
-		// For simplicity, we'll allow it as long as a valid resource type appears somewhere
 	}
 
 	// Block any args that might execute arbitrary commands

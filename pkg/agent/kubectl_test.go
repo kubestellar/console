@@ -160,6 +160,12 @@ func TestKubectlProxy_ValidateArgs(t *testing.T) {
 		{[]string{"describe", "pod", "foo"}, true},
 		{[]string{"scale", "deployment", "foo", "--replicas=3"}, true},
 		{[]string{"scale", "sts/foo", "--replicas=3"}, true},
+		{[]string{"scale", "--replicas=3", "deployment", "foo"}, true},
+		{[]string{"scale", "--replicas=3", "deploy/foo"}, true},
+		{[]string{"scale", "--replicas=3", "secrets", "mysecret"}, false},  // Issue #3649: flags-first bypass
+		{[]string{"scale", "--replicas=3", "configmap", "mycm"}, false},    // Issue #3649: flags-first bypass
+		{[]string{"scale", "secret", "mysecret", "--replicas=3"}, false},   // Non-scalable resource
+		{[]string{"scale", "--replicas=3"}, false},                          // No resource type
 		{[]string{"delete", "pod", "foo"}, true},
 
 		// Blocked cases
