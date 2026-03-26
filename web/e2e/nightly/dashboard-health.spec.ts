@@ -221,7 +221,7 @@ test.describe('Nightly Dashboard Health', () => {
       // Check cards rendered (only for dashboards that should have cards)
       if (route.expectCards && metrics.cardCount === 0) {
         issues.push('No cards detected')
-        if (result.status !== 'fail') result.status = 'warn'
+        result.status = 'fail'
       }
 
       result.details = issues.length > 0 ? issues.join('; ') : 'OK'
@@ -236,6 +236,9 @@ test.describe('Nightly Dashboard Health', () => {
       // Assertions
       expect(pageErrors, `Unhandled exceptions on ${route.path}: ${pageErrors.join('; ')}`).toHaveLength(0)
       expect(metrics.hasContent, `${route.path} appears blank (text length < ${MIN_PAGE_TEXT_LENGTH})`).toBe(true)
+      if (route.expectCards) {
+        expect(metrics.cardCount, `${route.path} rendered zero cards — expected at least one`).toBeGreaterThan(0)
+      }
     })
   }
 
