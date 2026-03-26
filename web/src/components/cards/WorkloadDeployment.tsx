@@ -293,7 +293,10 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
       try {
         const clusters = workload.targetClusters.length > 0 ? workload.targetClusters : ['unknown']
         const results = await Promise.all(
-          clusters.map(c => scaleViaAgent(c, workload.namespace, workload.name, desiredReplicas)),
+          clusters.map(async c => {
+            const r = await scaleViaAgent(c, workload.namespace, workload.name, desiredReplicas)
+            return { cluster: c, ...r }
+          }),
         )
         const failures = results.filter(r => !r.success)
         if (failures.length === 0) {
@@ -301,7 +304,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
           onScaled?.()
           setTimeout(() => setScaleSuccess(false), 2000)
         } else {
-          setScaleError(failures.map(r => r.message || 'Scale failed').join('; '))
+          setScaleError(failures.map(r => `${r.cluster}: ${r.message || 'Scale failed'}`).join('; '))
         }
       } catch (agentErr) {
         if (
