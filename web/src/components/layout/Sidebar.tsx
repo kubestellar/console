@@ -379,24 +379,28 @@ export function Sidebar() {
               )
             })()}
             {!isCollapsed && (
-              <span className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm rounded px-0.5">
+              <span className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm rounded px-1">
                 {!PROTECTED_SIDEBAR_IDS.includes(item.id) && (
                   <span
                     role="button"
                     tabIndex={0}
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeItem(item.id) }}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); removeItem(item.id) } }}
-                    className="p-0.5 rounded hover:bg-red-500/20 hover:text-red-400 text-muted-foreground/50 transition-colors"
+                    className="p-1 rounded hover:bg-red-500/20 hover:text-red-400 text-muted-foreground/50 transition-colors"
                     title={t('sidebar.removeFromSidebar')}
                   >
                     <X className="w-3.5 h-3.5" aria-hidden="true" />
                   </span>
                 )}
-                <GripVertical
-                  className="w-4 h-4 text-muted-foreground/50 cursor-grab active:cursor-grabbing"
-                  aria-hidden="true"
+                <span
+                  className="p-1 rounded hover:bg-secondary text-muted-foreground/50 hover:text-muted-foreground cursor-grab active:cursor-grabbing transition-colors"
                   onMouseDown={(e) => e.stopPropagation()}
-                />
+                >
+                  <GripVertical
+                    className="w-4 h-4"
+                    aria-hidden="true"
+                  />
+                </span>
               </span>
             )}
           </NavLink>
@@ -542,7 +546,7 @@ export function Sidebar() {
       {!isMobile && !isMissionFullScreen && (
         <div
           className="fixed top-[4.5rem] z-[45] flex flex-col gap-1.5 items-center"
-          style={{ left: sidebarWidth - 18 }}
+          style={{ left: sidebarWidth - 14 }}
         >
           <button
             data-testid="sidebar-collapse-toggle"
