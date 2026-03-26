@@ -541,7 +541,7 @@ export function Sidebar() {
       {/* Collapse + Pin controls — top-right of sidebar, above resize handle */}
       {!isMobile && !isMissionFullScreen && (
         <div
-          className="fixed top-[4.5rem] z-[51] flex flex-col gap-1.5 items-center"
+          className="fixed top-[4.5rem] z-[45] flex flex-col gap-1.5 items-center"
           style={{ left: sidebarWidth - 18 }}
         >
           <button
@@ -585,7 +585,7 @@ export function Sidebar() {
         <div
           onMouseDown={handleResizeStart}
           className={cn(
-            "fixed bottom-0 cursor-col-resize z-50 hover:bg-purple-500/30 transition-colors",
+            "fixed bottom-0 cursor-col-resize z-[45] hover:bg-purple-500/30 transition-colors",
             isResizing && "bg-purple-500/50"
           )}
           style={{ top: 160, left: sidebarWidth - 3, width: 6 }}
