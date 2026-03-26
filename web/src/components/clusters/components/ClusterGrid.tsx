@@ -1,5 +1,5 @@
 import { memo, useState, useEffect, useRef, useCallback } from 'react'
-import { Pencil, Globe, User, ShieldAlert, ChevronRight, Star, WifiOff, RefreshCw, ExternalLink, AlertCircle, Cpu, Box, Server, KeyRound, Copy, Check, GripVertical } from 'lucide-react'
+import { Pencil, Globe, User, ShieldAlert, ChevronRight, Star, WifiOff, RefreshCw, ExternalLink, AlertCircle, Cpu, Box, Server, KeyRound, Copy, Check, GripVertical, Play, Square, RotateCcw } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -26,6 +26,7 @@ import { CloudProviderIcon, detectCloudProvider, getProviderLabel, getProviderCo
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { copyToClipboard } from '../../../lib/clipboard'
+import { useLocalClusterTools } from '../../../hooks/useLocalClusterTools'
 
 // Guarantees spinner runs for at least 1 full rotation (1s) even if data returns faster.
 // Uses refs for condition checks to avoid stale closure issues when refreshing
@@ -121,6 +122,95 @@ function CopyCmd({ text }: { text: string }) {
     </button>
   )
 }
+
+// Local cluster platforms that support lifecycle controls
+const LOCAL_PLATFORMS = new Set(['kind', 'minikube', 'k3s'])
+
+// Map cloud provider to the tool name used by the backend
+function providerToTool(provider: string): string | null {
+  switch (provider) {
+    case 'kind': return 'kind'
+    case 'minikube': return 'minikube'
+    case 'k3s': return 'k3d' // k3s clusters detected from name may be k3d-managed
+    default: return null
+  }
+}
+
+// Inline play/stop/restart controls for local clusters
+const LocalClusterControls = memo(function LocalClusterControls({
+  clusterName,
+  provider,
+  unreachable,
+}: {
+  clusterName: string
+  provider: string
+  unreachable: boolean
+}) {
+  const { clusterLifecycle, clusters } = useLocalClusterTools()
+  const [actionInProgress, setActionInProgress] = useState<string | null>(null)
+  const tool = providerToTool(provider)
+
+  if (!tool) return null
+
+  // Try to find the cluster in local clusters list for accurate tool/name mapping
+  const localCluster = clusters.find(c =>
+    clusterName.includes(c.name) || c.name.includes(clusterName.replace(/^kind-/, ''))
+  )
+  const effectiveTool = localCluster?.tool || tool
+  const effectiveName = localCluster?.name || clusterName.replace(/^kind-/, '')
+  const isStopped = localCluster?.status === 'stopped' || unreachable
+
+  const handleAction = async (action: 'start' | 'stop' | 'restart', e: React.MouseEvent) => {
+    e.stopPropagation()
+    setActionInProgress(action)
+    await clusterLifecycle(effectiveTool, effectiveName, action)
+    setActionInProgress(null)
+  }
+
+  return (
+    <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+      {isStopped ? (
+        <button
+          onClick={(e) => handleAction('start', e)}
+          disabled={!!actionInProgress}
+          className={`p-1 rounded transition-colors ${
+            actionInProgress === 'start'
+              ? 'text-green-400 bg-green-500/20'
+              : 'text-muted-foreground hover:text-green-400 hover:bg-green-500/20'
+          }`}
+          title="Start cluster"
+        >
+          <Play className={`w-3.5 h-3.5 ${actionInProgress === 'start' ? 'animate-pulse' : ''}`} />
+        </button>
+      ) : (
+        <button
+          onClick={(e) => handleAction('stop', e)}
+          disabled={!!actionInProgress}
+          className={`p-1 rounded transition-colors ${
+            actionInProgress === 'stop'
+              ? 'text-red-400 bg-red-500/20'
+              : 'text-muted-foreground hover:text-red-400 hover:bg-red-500/20'
+          }`}
+          title="Stop cluster"
+        >
+          <Square className={`w-3 h-3 ${actionInProgress === 'stop' ? 'animate-pulse' : ''}`} />
+        </button>
+      )}
+      <button
+        onClick={(e) => handleAction('restart', e)}
+        disabled={!!actionInProgress}
+        className={`p-1 rounded transition-colors ${
+          actionInProgress === 'restart'
+            ? 'text-blue-400 bg-blue-500/20'
+            : 'text-muted-foreground hover:text-blue-400 hover:bg-blue-500/20'
+        }`}
+        title="Restart cluster"
+      >
+        <RotateCcw className={`w-3.5 h-3.5 ${actionInProgress === 'restart' ? 'animate-spin' : ''}`} />
+      </button>
+    </div>
+  )
+})
 
 interface GPUInfo {
   total: number
@@ -376,7 +466,16 @@ const FullClusterCard = memo(function FullClusterCard({
           )}
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">Source: {cluster.source || 'kubeconfig'}</span>
-            <span title={t('common.viewDetails')}><ChevronRight className="w-4 h-4 text-primary" /></span>
+            <div className="flex items-center gap-2">
+              {LOCAL_PLATFORMS.has(provider) && (
+                <LocalClusterControls
+                  clusterName={cluster.name}
+                  provider={provider}
+                  unreachable={unreachable}
+                />
+              )}
+              <span title={t('common.viewDetails')}><ChevronRight className="w-4 h-4 text-primary" /></span>
+            </div>
           </div>
         </div>
       </div>
@@ -538,6 +637,13 @@ const ListClusterCard = memo(function ListClusterCard({
 
           {/* Actions */}
           <div className="flex items-center gap-1 flex-shrink-0">
+            {LOCAL_PLATFORMS.has(provider) && (
+              <LocalClusterControls
+                clusterName={cluster.name}
+                provider={provider}
+                unreachable={unreachable}
+              />
+            )}
             {onRefreshCluster && (
               <button
                 onClick={(e) => { e.stopPropagation(); onRefreshCluster() }}

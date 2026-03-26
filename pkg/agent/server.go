@@ -370,6 +370,7 @@ func (s *Server) Start() error {
 	// Local cluster management endpoints
 	mux.HandleFunc("/local-cluster-tools", s.handleLocalClusterTools)
 	mux.HandleFunc("/local-clusters", s.handleLocalClusters)
+	mux.HandleFunc("/local-cluster-lifecycle", s.handleLocalClusterLifecycle)
 
 	// vCluster management endpoints
 	mux.HandleFunc("/vcluster/list", s.handleVClusterList)
@@ -4605,6 +4606,94 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+// handleLocalClusterLifecycle handles start/stop/restart for local clusters
+func (s *Server) handleLocalClusterLifecycle(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Tool   string `json:"tool"`
+		Name   string `json:"name"`
+		Action string `json:"action"` // "start", "stop", "restart"
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	if req.Tool == "" || req.Name == "" || req.Action == "" {
+		http.Error(w, "tool, name, and action are required", http.StatusBadRequest)
+		return
+	}
+	if req.Action != "start" && req.Action != "stop" && req.Action != "restart" {
+		http.Error(w, "action must be start, stop, or restart", http.StatusBadRequest)
+		return
+	}
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[LocalClusters] recovered from panic during %s of cluster %s: %v", req.Action, req.Name, r)
+			}
+		}()
+
+		var err error
+		switch req.Action {
+		case "start":
+			err = s.localClusters.StartCluster(req.Tool, req.Name)
+		case "stop":
+			err = s.localClusters.StopCluster(req.Tool, req.Name)
+		case "restart":
+			err = s.localClusters.StopCluster(req.Tool, req.Name)
+			if err == nil {
+				err = s.localClusters.StartCluster(req.Tool, req.Name)
+			}
+		}
+
+		if err != nil {
+			log.Printf("[LocalClusters] Failed to %s cluster %s: %v", req.Action, req.Name, err)
+			errMsg := sanitizeClusterError(err)
+			s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
+				"tool":     req.Tool,
+				"name":     req.Name,
+				"status":   "failed",
+				"message":  errMsg,
+				"progress": 0,
+			})
+		} else {
+			log.Printf("[LocalClusters] %s cluster %s completed", req.Action, req.Name)
+			s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
+				"tool":     req.Tool,
+				"name":     req.Name,
+				"status":   "done",
+				"message":  fmt.Sprintf("Cluster '%s' %sed successfully", req.Name, req.Action),
+				"progress": 100,
+			})
+		}
+	}()
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":  req.Action + "ing",
+		"tool":    req.Tool,
+		"name":    req.Name,
+		"message": fmt.Sprintf("Cluster %s started. You will be notified when it completes.", req.Action),
+	})
 }
 
 // handleVClusterList returns all vCluster instances

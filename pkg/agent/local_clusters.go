@@ -364,6 +364,130 @@ func (m *LocalClusterManager) createMinikubeCluster(name string) error {
 	return nil
 }
 
+// StartCluster starts a stopped local cluster with phased progress broadcasting
+func (m *LocalClusterManager) StartCluster(tool, name string) error {
+	m.broadcastProgress(tool, name, "validating", fmt.Sprintf("Preparing to start cluster '%s'...", name), progressValidating)
+
+	m.broadcastProgress(tool, name, "starting", fmt.Sprintf("Starting %s cluster '%s'...", tool, name), progressCreating)
+
+	switch tool {
+	case "kind":
+		return m.startKindCluster(name)
+	case "k3d":
+		return m.startK3dCluster(name)
+	case "minikube":
+		return m.startMinikubeCluster(name)
+	default:
+		return fmt.Errorf("unsupported tool: %s", tool)
+	}
+}
+
+func (m *LocalClusterManager) startKindCluster(name string) error {
+	// kind clusters run as Docker containers — start all containers with the cluster label
+	cmd := execCommand("docker", "start", name+"-control-plane")
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to start kind cluster containers: %s", stderr.String())
+	}
+	// Also start any worker nodes
+	for i := 1; i <= 10; i++ {
+		workerName := fmt.Sprintf("%s-worker%s", name, func() string {
+			if i == 1 {
+				return ""
+			}
+			return fmt.Sprintf("%d", i)
+		}())
+		cmd := execCommand("docker", "start", workerName)
+		if err := cmd.Run(); err != nil {
+			break // No more workers
+		}
+	}
+	return nil
+}
+
+func (m *LocalClusterManager) startK3dCluster(name string) error {
+	cmd := execCommand("k3d", "cluster", "start", name)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("k3d start failed: %s", stderr.String())
+	}
+	return nil
+}
+
+func (m *LocalClusterManager) startMinikubeCluster(name string) error {
+	cmd := execCommand("minikube", "start", "--profile", name)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("minikube start failed: %s", stderr.String())
+	}
+	return nil
+}
+
+// StopCluster stops a running local cluster with phased progress broadcasting
+func (m *LocalClusterManager) StopCluster(tool, name string) error {
+	m.broadcastProgress(tool, name, "validating", fmt.Sprintf("Preparing to stop cluster '%s'...", name), progressValidating)
+
+	m.broadcastProgress(tool, name, "stopping", fmt.Sprintf("Stopping %s cluster '%s'...", tool, name), progressCreating)
+
+	switch tool {
+	case "kind":
+		return m.stopKindCluster(name)
+	case "k3d":
+		return m.stopK3dCluster(name)
+	case "minikube":
+		return m.stopMinikubeCluster(name)
+	default:
+		return fmt.Errorf("unsupported tool: %s", tool)
+	}
+}
+
+func (m *LocalClusterManager) stopKindCluster(name string) error {
+	// kind clusters run as Docker containers — stop all containers with the cluster label
+	cmd := execCommand("docker", "stop", name+"-control-plane")
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to stop kind cluster containers: %s", stderr.String())
+	}
+	// Also stop any worker nodes
+	for i := 1; i <= 10; i++ {
+		workerName := fmt.Sprintf("%s-worker%s", name, func() string {
+			if i == 1 {
+				return ""
+			}
+			return fmt.Sprintf("%d", i)
+		}())
+		cmd := execCommand("docker", "stop", workerName)
+		if err := cmd.Run(); err != nil {
+			break // No more workers
+		}
+	}
+	return nil
+}
+
+func (m *LocalClusterManager) stopK3dCluster(name string) error {
+	cmd := execCommand("k3d", "cluster", "stop", name)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("k3d stop failed: %s", stderr.String())
+	}
+	return nil
+}
+
+func (m *LocalClusterManager) stopMinikubeCluster(name string) error {
+	cmd := execCommand("minikube", "stop", "--profile", name)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("minikube stop failed: %s", stderr.String())
+	}
+	return nil
+}
+
 // DeleteCluster deletes a local cluster with phased progress broadcasting
 func (m *LocalClusterManager) DeleteCluster(tool, name string) error {
 	// Phase 1: Validating

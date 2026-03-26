@@ -197,6 +197,45 @@ export function useLocalClusterTools() {
     }
   }, [isConnected, isDemoMode])
 
+  // Lifecycle action (start/stop/restart) on a local cluster
+  const clusterLifecycle = useCallback(async (tool: string, name: string, action: 'start' | 'stop' | 'restart'): Promise<boolean> => {
+    // In demo mode (without agent connected), simulate the action
+    if (isDemoMode && !isConnected) {
+      setError(null)
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS))
+      return true
+    }
+
+    if (!isConnected) {
+      return false
+    }
+
+    setError(null)
+
+    try {
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/local-cluster-lifecycle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool, name, action }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+      })
+
+      if (response.ok) {
+        // Refresh clusters list after action starts
+        setTimeout(() => fetchClusters(), UI_FEEDBACK_TIMEOUT_MS)
+        return true
+      } else {
+        const text = await response.text()
+        setError(text)
+        return false
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : `Failed to ${action} cluster`
+      setError(message)
+      return false
+    }
+  }, [isConnected, isDemoMode, fetchClusters])
+
   // Delete a cluster
   const deleteCluster = useCallback(async (tool: string, name: string): Promise<boolean> => {
     // In demo mode (without agent connected), simulate cluster deletion
@@ -536,6 +575,7 @@ export function useLocalClusterTools() {
     dismissProgress,
     createCluster,
     deleteCluster,
+    clusterLifecycle,
     refresh,
     // vCluster state and actions
     vclusterInstances,
