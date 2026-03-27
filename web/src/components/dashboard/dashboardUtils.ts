@@ -22,6 +22,7 @@ export function isLocalOnlyCard(cardId: string): boolean {
          cardId.startsWith('restored-') ||
          cardId.startsWith('ai-') ||
          cardId.startsWith('rec-') ||
+         cardId.startsWith('default-') ||
          cardId.startsWith('demo-')
 }
 
@@ -101,9 +102,9 @@ export function getDefaultCardSize(cardType: string): { w: number; h: number } {
     deployment_progress: { w: 4, h: 3 },
     upgrade_status: { w: 4, h: 3 },
     compute_overview: { w: 4, h: 3 },
-    klaude_issues: { w: 4, h: 4 },
-    klaude_kubeconfig_audit: { w: 4, h: 3 },
-    klaude_health_check: { w: 4, h: 3 },
+    console_ai_issues: { w: 4, h: 4 },
+    console_ai_kubeconfig_audit: { w: 4, h: 3 },
+    console_ai_health_check: { w: 4, h: 3 },
   }
   return cardSizes[cardType] || { w: 4, h: 3 }
 }
