@@ -6,13 +6,13 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import { useDashboardScrollTracking } from '../useDashboardScrollTracking'
 
 // Mock the analytics module
 vi.mock('../../lib/analytics', () => ({
   emitDashboardScrolled: vi.fn(),
 }))
 
+import { useDashboardScrollTracking } from '../useDashboardScrollTracking'
 import { emitDashboardScrolled } from '../../lib/analytics'
 
 const mockedEmit = vi.mocked(emitDashboardScrolled)
@@ -33,7 +33,9 @@ describe('useDashboardScrollTracking', () => {
 
   afterEach(() => {
     vi.useRealTimers()
-    document.body.removeChild(mainEl)
+    if (mainEl && mainEl.isConnected) {
+      mainEl.remove()
+    }
   })
 
   function simulateScroll(scrollTop: number) {
