@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { AlertCircle } from 'lucide-react'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
@@ -15,7 +16,7 @@ type TimeRange = '1h' | '6h' | '24h' | '7d'
 
 export function ClusterChangelog() {
   const { t } = useTranslation('cards')
-  const { events, isLoading, isDemoFallback, isFailed, consecutiveFailures } = useCachedEvents(undefined, undefined, { limit: 200 })
+  const { events, isLoading, isDemoFallback, isFailed, consecutiveFailures, refetch } = useCachedEvents(undefined, undefined, { limit: 200 })
   const [timeRange, setTimeRange] = useState<TimeRange>('24h')
   const { showSkeleton } = useCardLoadingState({
     isLoading,
@@ -90,6 +91,23 @@ export function ClusterChangelog() {
           </button>
         ))}
       </div>
+
+      {/* Error Display */}
+      {isFailed && (
+        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-xs font-medium text-red-400">{t('clusterChangelog.errorLoading')}</p>
+            <p className="text-2xs text-muted-foreground mt-0.5">{t('clusterChangelog.fetchFailed', { count: consecutiveFailures })}</p>
+          </div>
+          <button
+            onClick={() => refetch()}
+            className="text-xs text-red-400 hover:text-red-300 underline underline-offset-2 flex-shrink-0"
+          >
+            {t('clusterChangelog.retry')}
+          </button>
+        </div>
+      )}
 
       <div className="space-y-1 max-h-[350px] overflow-y-auto">
         {changeEvents.length === 0 ? (

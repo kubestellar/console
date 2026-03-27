@@ -1961,7 +1961,10 @@
     "hoursAgo_one": "{{count}}h ago",
     "hoursAgo_other": "{{count}}h ago",
     "daysAgo_one": "{{count}}d ago",
-    "daysAgo_other": "{{count}}d ago"
+    "daysAgo_other": "{{count}}d ago",
+    "errorLoading": "Error loading changelog",
+    "fetchFailed": "Failed to fetch event data ({{count}} attempts)",
+    "retry": "Retry"
   },
   "etcdStatus": {
     "managedByProvider": "etcd Managed by Provider",
