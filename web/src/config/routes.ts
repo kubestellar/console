@@ -84,6 +84,9 @@ export const ROUTES = {
   WELCOME: '/welcome',
   FROM_LENS: '/from-lens',
   FROM_HEADLAMP: '/from-headlamp',
+  FROM_HOLMESGPT: '/from-holmesgpt',
+  FEATURE_INSPEKTORGADGET: '/feature-inspektorgadget',
+  FEATURE_KAGENT: '/feature-kagent',
   WHITE_LABEL: '/white-label',
 
   // Multi-Tenancy

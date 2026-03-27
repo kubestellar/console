@@ -9,6 +9,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { ROUTES } from '../../config/routes'
 import { useTranslation } from 'react-i18next'
 
 const COMPUTE_CARDS_KEY = 'kubestellar-compute-cards'
@@ -164,7 +165,7 @@ export function Compute() {
 
   const handleCompare = useCallback(() => {
     if (selectedForComparison.length >= 2) {
-      navigate(`/compute/compare?clusters=${selectedForComparison.join(',')}`)
+      navigate(`${ROUTES.COMPUTE_COMPARE}?clusters=${selectedForComparison.join(',')}`)
     }
   }, [selectedForComparison, navigate])
 

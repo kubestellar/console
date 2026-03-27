@@ -433,10 +433,10 @@ function App() {
           stack (no DashboardProvider, AlertsProvider, MissionProvider,
           CardEventProvider, etc.). This cuts initial JS from ~1.8MB to
           ~200KB and eliminates cold-start API calls. */}
-      <Route path="/missions/:missionId" element={
+      <Route path={ROUTES.MISSION} element={
         <LightweightShell><MissionLandingPage /></LightweightShell>
       } />
-      <Route path="/missions" element={
+      <Route path={ROUTES.MISSIONS} element={
         <LightweightShell><MissionBrowseLink /></LightweightShell>
       } />
 
@@ -470,79 +470,79 @@ function FullDashboardApp() {
       <ChunkErrorBoundary>
       <Suspense fallback={<LoadingFallback />}>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/welcome" element={<Welcome />} />
-        <Route path="/from-lens" element={<FromLens />} />
-        <Route path="/from-headlamp" element={<FromHeadlamp />} />
-        <Route path="/from-holmesgpt" element={<FromHolmesGPT />} />
-        <Route path="/feature-inspektorgadget" element={<FeatureInspektorGadget />} />
-        <Route path="/feature-kagent" element={<FeatureKagent />} />
-        <Route path="/white-label" element={<WhiteLabel />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path={ROUTES.LOGIN} element={<Login />} />
+        <Route path={ROUTES.WELCOME} element={<Welcome />} />
+        <Route path={ROUTES.FROM_LENS} element={<FromLens />} />
+        <Route path={ROUTES.FROM_HEADLAMP} element={<FromHeadlamp />} />
+        <Route path={ROUTES.FROM_HOLMESGPT} element={<FromHolmesGPT />} />
+        <Route path={ROUTES.FEATURE_INSPEKTORGADGET} element={<FeatureInspektorGadget />} />
+        <Route path={ROUTES.FEATURE_KAGENT} element={<FeatureKagent />} />
+        <Route path={ROUTES.WHITE_LABEL} element={<WhiteLabel />} />
+        <Route path={ROUTES.AUTH_CALLBACK} element={<AuthCallback />} />
         {/* PWA Mini Dashboard - lightweight widget mode (no auth required for local monitoring) */}
-        <Route path="/widget" element={<MiniDashboard />} />
+        <Route path={ROUTES.WIDGET} element={<MiniDashboard />} />
 
         {/* Layout route — all dashboard routes share a single Layout instance.
             KeepAliveOutlet preserves component state across navigations so that
             warm-nav is near-instant (no unmount/remount). */}
         <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Dashboard />} />
-          <Route path="/custom-dashboard/:id" element={<CustomDashboard />} />
+          <Route path={ROUTES.CUSTOM_DASHBOARD} element={<CustomDashboard />} />
           {/* Test routes — rendered with Layout but not cached by KeepAlive */}
-          <Route path="/__perf/all-cards" element={<AllCardsPerfTest />} />
-          <Route path="/__compliance/all-cards" element={<CompliancePerfTest />} />
-          <Route path="/clusters" element={<Clusters />} />
-          <Route path="/workloads" element={<Workloads />} />
-          <Route path="/nodes" element={<Nodes />} />
-          <Route path="/deployments" element={<Deployments />} />
-          <Route path="/pods" element={<Pods />} />
-          <Route path="/services" element={<Services />} />
-          <Route path="/operators" element={<Operators />} />
-          <Route path="/helm" element={<HelmReleases />} />
-          <Route path="/logs" element={<Logs />} />
-          <Route path="/compute" element={<Compute />} />
-          <Route path="/compute/compare" element={<ClusterComparisonPage />} />
-          <Route path="/storage" element={<Storage />} />
-          <Route path="/network" element={<Network />} />
-          <Route path="/events" element={<Events />} />
-          <Route path="/security" element={<Security />} />
-          <Route path="/gitops" element={<GitOps />} />
-          <Route path="/alerts" element={<Alerts />} />
-          <Route path="/cost" element={<Cost />} />
-          <Route path="/security-posture" element={<Compliance />} />
+          <Route path={ROUTES.PERF_ALL_CARDS} element={<AllCardsPerfTest />} />
+          <Route path={ROUTES.PERF_COMPLIANCE} element={<CompliancePerfTest />} />
+          <Route path={ROUTES.CLUSTERS} element={<Clusters />} />
+          <Route path={ROUTES.WORKLOADS} element={<Workloads />} />
+          <Route path={ROUTES.NODES} element={<Nodes />} />
+          <Route path={ROUTES.DEPLOYMENTS} element={<Deployments />} />
+          <Route path={ROUTES.PODS} element={<Pods />} />
+          <Route path={ROUTES.SERVICES} element={<Services />} />
+          <Route path={ROUTES.OPERATORS} element={<Operators />} />
+          <Route path={ROUTES.HELM} element={<HelmReleases />} />
+          <Route path={ROUTES.LOGS} element={<Logs />} />
+          <Route path={ROUTES.COMPUTE} element={<Compute />} />
+          <Route path={ROUTES.COMPUTE_COMPARE} element={<ClusterComparisonPage />} />
+          <Route path={ROUTES.STORAGE} element={<Storage />} />
+          <Route path={ROUTES.NETWORK} element={<Network />} />
+          <Route path={ROUTES.EVENTS} element={<Events />} />
+          <Route path={ROUTES.SECURITY} element={<Security />} />
+          <Route path={ROUTES.GITOPS} element={<GitOps />} />
+          <Route path={ROUTES.ALERTS} element={<Alerts />} />
+          <Route path={ROUTES.COST} element={<Cost />} />
+          <Route path={ROUTES.SECURITY_POSTURE} element={<Compliance />} />
           {/* Legacy route for backwards compatibility */}
-          <Route path="/compliance" element={<Compliance />} />
-          <Route path="/data-compliance" element={<DataCompliance />} />
-          <Route path="/gpu-reservations" element={<GPUReservations />} />
-          <Route path="/history" element={<CardHistoryWithRestore />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/users" element={<UserManagementPage />} />
-          <Route path="/namespaces" element={<NamespaceManager />} />
-          <Route path="/arcade" element={<Arcade />} />
-          <Route path="/deploy" element={<Deploy />} />
-          <Route path="/ai-ml" element={<AIML />} />
-          <Route path="/ai-agents" element={<AIAgents />} />
-          <Route path="/llm-d-benchmarks" element={<LLMdBenchmarks />} />
-          <Route path="/cluster-admin" element={<ClusterAdmin />} />
-          <Route path="/ci-cd" element={<CICD />} />
-          <Route path="/insights" element={<Insights />} />
-          <Route path="/multi-tenancy" element={<MultiTenancy />} />
-          <Route path="/marketplace" element={<Marketplace />} />
+          <Route path={ROUTES.COMPLIANCE} element={<Compliance />} />
+          <Route path={ROUTES.DATA_COMPLIANCE} element={<DataCompliance />} />
+          <Route path={ROUTES.GPU_RESERVATIONS} element={<GPUReservations />} />
+          <Route path={ROUTES.HISTORY} element={<CardHistoryWithRestore />} />
+          <Route path={ROUTES.SETTINGS} element={<Settings />} />
+          <Route path={ROUTES.USERS} element={<UserManagementPage />} />
+          <Route path={ROUTES.NAMESPACES} element={<NamespaceManager />} />
+          <Route path={ROUTES.ARCADE} element={<Arcade />} />
+          <Route path={ROUTES.DEPLOY} element={<Deploy />} />
+          <Route path={ROUTES.AI_ML} element={<AIML />} />
+          <Route path={ROUTES.AI_AGENTS} element={<AIAgents />} />
+          <Route path={ROUTES.LLM_D_BENCHMARKS} element={<LLMdBenchmarks />} />
+          <Route path={ROUTES.CLUSTER_ADMIN} element={<ClusterAdmin />} />
+          <Route path={ROUTES.CI_CD} element={<CICD />} />
+          <Route path={ROUTES.INSIGHTS} element={<Insights />} />
+          <Route path={ROUTES.MULTI_TENANCY} element={<MultiTenancy />} />
+          <Route path={ROUTES.MARKETPLACE} element={<Marketplace />} />
           {/* Dev test routes for unified framework validation */}
-          <Route path="/test/unified-card" element={<UnifiedCardTest />} />
-          <Route path="/test/unified-stats" element={<UnifiedStatsTest />} />
-          <Route path="/test/unified-dashboard" element={<UnifiedDashboardTest />} />
+          <Route path={ROUTES.TEST_UNIFIED_CARD} element={<UnifiedCardTest />} />
+          <Route path={ROUTES.TEST_UNIFIED_STATS} element={<UnifiedStatsTest />} />
+          <Route path={ROUTES.TEST_UNIFIED_DASHBOARD} element={<UnifiedDashboardTest />} />
           {/* Mission deep-link: /missions/install-prometheus → opens MissionBrowser.
               Must be inside ProtectedRoute so auth is verified before redirect,
               and the ?mission= param survives the OAuth round-trip. */}
           {/* Mission routes moved outside ProtectedRoute for the landing page */}
           {/* /issue, /issues, /feedback open the feedback modal on the dashboard */}
-          <Route path="/issue" element={<IssueRedirect />} />
-          <Route path="/issues" element={<IssueRedirect />} />
-          <Route path="/feedback" element={<IssueRedirect />} />
+          <Route path={ROUTES.ISSUE} element={<IssueRedirect />} />
+          <Route path={ROUTES.ISSUES} element={<IssueRedirect />} />
+          <Route path={ROUTES.FEEDBACK} element={<IssueRedirect />} />
           {/* /feature, /features open the feedback modal on the feature tab */}
-          <Route path="/feature" element={<FeatureRedirect />} />
-          <Route path="/features" element={<FeatureRedirect />} />
+          <Route path={ROUTES.FEATURE} element={<FeatureRedirect />} />
+          <Route path={ROUTES.FEATURES} element={<FeatureRedirect />} />
         </Route>
 
         <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
