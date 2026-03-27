@@ -354,20 +354,20 @@ export function ComplianceDrillDown({ data }: Props) {
           <div className="rounded-lg border border-border overflow-hidden">
             {/* Table header */}
             <div className="grid grid-cols-[1fr_2fr_100px_100px_120px_120px] gap-px bg-border text-xs font-medium text-muted-foreground">
-              <button onClick={() => toggleSort('controlId')} className="flex items-center gap-1 px-3 py-2 bg-card/80 hover:bg-card transition-colors">
+              <button onClick={() => toggleSort('controlId')} className="flex items-center gap-1 px-3 py-2 min-h-11 bg-card/80 hover:bg-card transition-colors">
                 Control <SortIndicator field="controlId" />
               </button>
-              <div className="px-3 py-2 bg-card/80">Description</div>
-              <button onClick={() => toggleSort('status')} className="flex items-center gap-1 px-3 py-2 bg-card/80 hover:bg-card transition-colors">
+              <div className="px-3 py-2 min-h-11 bg-card/80">Description</div>
+              <button onClick={() => toggleSort('status')} className="flex items-center gap-1 px-3 py-2 min-h-11 bg-card/80 hover:bg-card transition-colors">
                 Status <SortIndicator field="status" />
               </button>
-              <button onClick={() => toggleSort('severity')} className="flex items-center gap-1 px-3 py-2 bg-card/80 hover:bg-card transition-colors">
+              <button onClick={() => toggleSort('severity')} className="flex items-center gap-1 px-3 py-2 min-h-11 bg-card/80 hover:bg-card transition-colors">
                 Severity <SortIndicator field="severity" />
               </button>
-              <button onClick={() => toggleSort('cluster')} className="flex items-center gap-1 px-3 py-2 bg-card/80 hover:bg-card transition-colors">
+              <button onClick={() => toggleSort('cluster')} className="flex items-center gap-1 px-3 py-2 min-h-11 bg-card/80 hover:bg-card transition-colors">
                 Cluster <SortIndicator field="cluster" />
               </button>
-              <button onClick={() => toggleSort('profile')} className="flex items-center gap-1 px-3 py-2 bg-card/80 hover:bg-card transition-colors">
+              <button onClick={() => toggleSort('profile')} className="flex items-center gap-1 px-3 py-2 min-h-11 bg-card/80 hover:bg-card transition-colors">
                 Profile <SortIndicator field="profile" />
               </button>
             </div>

@@ -173,7 +173,7 @@ const LocalClusterControls = memo(function LocalClusterControls({
         <button
           onClick={(e) => handleAction('start', e)}
           disabled={!!actionInProgress}
-          className={`p-1 rounded transition-colors ${
+          className={`p-2 min-h-11 min-w-11 flex items-center justify-center rounded transition-colors ${
             actionInProgress === 'start'
               ? 'text-green-400 bg-green-500/20'
               : 'text-muted-foreground hover:text-green-400 hover:bg-green-500/20'
@@ -186,7 +186,7 @@ const LocalClusterControls = memo(function LocalClusterControls({
         <button
           onClick={(e) => handleAction('stop', e)}
           disabled={!!actionInProgress}
-          className={`p-1 rounded transition-colors ${
+          className={`p-2 min-h-11 min-w-11 flex items-center justify-center rounded transition-colors ${
             actionInProgress === 'stop'
               ? 'text-red-400 bg-red-500/20'
               : 'text-muted-foreground hover:text-red-400 hover:bg-red-500/20'
@@ -199,7 +199,7 @@ const LocalClusterControls = memo(function LocalClusterControls({
       <button
         onClick={(e) => handleAction('restart', e)}
         disabled={!!actionInProgress}
-        className={`p-1 rounded transition-colors ${
+        className={`p-2 min-h-11 min-w-11 flex items-center justify-center rounded transition-colors ${
           actionInProgress === 'restart'
             ? 'text-blue-400 bg-blue-500/20'
             : 'text-muted-foreground hover:text-blue-400 hover:bg-blue-500/20'
