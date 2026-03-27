@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -400,9 +401,19 @@ func (h *WorkloadHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 		ctx, cancel := context.WithTimeout(c.Context(), workloadWriteTimeout)
 		defer cancel()
 
+		var labelErrors []string
 		for _, cluster := range group.Clusters {
-			_ = h.k8sClient.LabelClusterNodes(ctx, cluster, map[string]string{
+			if err := h.k8sClient.LabelClusterNodes(ctx, cluster, map[string]string{
 				"kubestellar.io/group": group.Name,
+			}); err != nil {
+				log.Printf("failed to label cluster %s: %v", cluster, err)
+				labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: %v", cluster, err))
+			}
+		}
+		if len(labelErrors) > 0 {
+			return c.Status(207).JSON(fiber.Map{
+				"group":    group,
+				"warnings": labelErrors,
 			})
 		}
 	}
@@ -450,17 +461,30 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 		for _, c := range group.Clusters {
 			newSet[c] = true
 		}
+		var labelErrors []string
 		for _, cluster := range oldGroup.Clusters {
 			if !newSet[cluster] {
-				_ = h.k8sClient.RemoveClusterNodeLabels(ctx, cluster, []string{"kubestellar.io/group"})
+				if err := h.k8sClient.RemoveClusterNodeLabels(ctx, cluster, []string{"kubestellar.io/group"}); err != nil {
+					log.Printf("failed to remove label from cluster %s: %v", cluster, err)
+					labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: %v", cluster, err))
+				}
 			}
 		}
 		for _, cluster := range group.Clusters {
 			if !oldSet[cluster] {
-				_ = h.k8sClient.LabelClusterNodes(ctx, cluster, map[string]string{
+				if err := h.k8sClient.LabelClusterNodes(ctx, cluster, map[string]string{
 					"kubestellar.io/group": group.Name,
-				})
+				}); err != nil {
+					log.Printf("failed to label cluster %s: %v", cluster, err)
+					labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: %v", cluster, err))
+				}
 			}
+		}
+		if len(labelErrors) > 0 {
+			return c.JSON(fiber.Map{
+				"group":    group,
+				"warnings": labelErrors,
+			})
 		}
 	}
 
@@ -492,8 +516,19 @@ func (h *WorkloadHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
 		ctx, cancel := context.WithTimeout(c.Context(), workloadWriteTimeout)
 		defer cancel()
 
+		var labelErrors []string
 		for _, cluster := range group.Clusters {
-			_ = h.k8sClient.RemoveClusterNodeLabels(ctx, cluster, []string{"kubestellar.io/group"})
+			if err := h.k8sClient.RemoveClusterNodeLabels(ctx, cluster, []string{"kubestellar.io/group"}); err != nil {
+				log.Printf("failed to remove label from cluster %s: %v", cluster, err)
+				labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: %v", cluster, err))
+			}
+		}
+		if len(labelErrors) > 0 {
+			return c.JSON(fiber.Map{
+				"message":  "Cluster group deleted with warnings",
+				"name":     name,
+				"warnings": labelErrors,
+			})
 		}
 	}
 
@@ -747,6 +782,9 @@ func compareInt(actual int64, op, value string) bool {
 	}
 }
 
+// floatEpsilon is the tolerance for float equality comparisons (#3722).
+const floatEpsilon = 1e-9
+
 func compareFloat(actual float64, op, value string) bool {
 	expected, err := strconv.ParseFloat(value, 64)
 	if err != nil {
@@ -754,17 +792,17 @@ func compareFloat(actual float64, op, value string) bool {
 	}
 	switch op {
 	case "eq":
-		return actual == expected
+		return math.Abs(actual-expected) < floatEpsilon
 	case "neq":
-		return actual != expected
+		return math.Abs(actual-expected) >= floatEpsilon
 	case "gt":
 		return actual > expected
 	case "gte":
-		return actual >= expected
+		return actual >= expected || math.Abs(actual-expected) < floatEpsilon
 	case "lt":
-		return actual < expected
+		return actual < expected && math.Abs(actual-expected) >= floatEpsilon
 	case "lte":
-		return actual <= expected
+		return actual <= expected || math.Abs(actual-expected) < floatEpsilon
 	default:
 		return false
 	}
@@ -847,6 +885,10 @@ If the user's request doesn't need label selectors, omit the labelSelector field
 	if err != nil {
 		log.Printf("ai query generation failed: %v", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+	}
+	if resp == nil {
+		log.Printf("ai query generation returned nil response")
+		return c.Status(500).JSON(fiber.Map{"error": "empty response from AI provider"})
 	}
 
 	// Try to parse the AI response as structured JSON
@@ -1049,36 +1091,48 @@ func (h *WorkloadHandlers) GetDeployLogs(c *fiber.Ctx) error {
 	}
 
 	// Collect k8s events for the deployment and its pods
-	eventLines := make([]string, 0)
+	// Use a limit to bound memory usage (#3721)
+	const maxEventsPerQuery = 50
+	var allEvents []corev1.Event
 
 	// Events for the deployment itself
 	deployEvents, _ := client.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{
 		FieldSelector: fmt.Sprintf("involvedObject.name=%s", name),
+		Limit:         maxEventsPerQuery,
 	})
 	if deployEvents != nil {
-		for _, ev := range deployEvents.Items {
-			eventLines = append(eventLines, formatEvent(ev))
-		}
+		allEvents = append(allEvents, deployEvents.Items...)
 	}
 
 	// Events for each pod
 	for _, pod := range pods.Items {
 		podEvents, _ := client.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{
 			FieldSelector: fmt.Sprintf("involvedObject.name=%s", pod.Name),
+			Limit:         maxEventsPerQuery,
 		})
 		if podEvents != nil {
-			for _, ev := range podEvents.Items {
-				eventLines = append(eventLines, formatEvent(ev))
-			}
+			allEvents = append(allEvents, podEvents.Items...)
 		}
 	}
 
-	// Sort events by timestamp (newest last) and take tail
-	sort.Slice(eventLines, func(i, j int) bool {
-		return eventLines[i] < eventLines[j]
+	// Sort events by actual timestamp (newest last) (#3718)
+	sort.Slice(allEvents, func(i, j int) bool {
+		ti := allEvents[i].LastTimestamp.Time
+		if ti.IsZero() {
+			ti = allEvents[i].CreationTimestamp.Time
+		}
+		tj := allEvents[j].LastTimestamp.Time
+		if tj.IsZero() {
+			tj = allEvents[j].CreationTimestamp.Time
+		}
+		return ti.Before(tj)
 	})
-	if len(eventLines) > tailLines {
-		eventLines = eventLines[len(eventLines)-tailLines:]
+	if len(allEvents) > tailLines {
+		allEvents = allEvents[len(allEvents)-tailLines:]
+	}
+	eventLines := make([]string, 0, len(allEvents))
+	for _, ev := range allEvents {
+		eventLines = append(eventLines, formatEvent(ev))
 	}
 
 	// Return Kubernetes events only — pod stdout is misleading for deploy events
