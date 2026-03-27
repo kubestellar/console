@@ -1557,7 +1557,8 @@
     "openMenu": "Open menu",
     "goHome": "Go to home dashboard",
     "themeToggle": "Theme: {{theme}} (click to toggle)",
-    "moreOptions": "More options"
+    "moreOptions": "More options",
+    "viewDocs": "View documentation"
   },
   "missionSidebar": {
     "expandSidebar": "Expand sidebar",

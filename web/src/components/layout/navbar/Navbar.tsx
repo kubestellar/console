@@ -1,7 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Sun, Moon, Monitor, Menu, X, MoreVertical } from 'lucide-react'
+import { Sun, Moon, Monitor, Menu, X, MoreVertical, ExternalLink } from 'lucide-react'
 import { useAuth } from '../../../lib/auth'
 import { useSidebarConfig } from '../../../hooks/useSidebarConfig'
 import { useTheme } from '../../../hooks/useTheme'
@@ -71,14 +71,24 @@ export function Navbar() {
         >
           <LogoWithStar className="w-8 h-8 md:w-9 md:h-9" />
         </button>
+        <button
+          type="button"
+          onClick={() => navigate(ROUTES.HOME)}
+          className="hidden lg:flex flex-col leading-tight hover:opacity-80 transition-opacity text-left"
+          aria-label={t('navbar.goHome')}
+        >
+          <span className="text-base md:text-lg font-semibold text-foreground">{branding.appName}</span>
+          <span className="text-[10px] text-muted-foreground tracking-wide">{branding.tagline}</span>
+        </button>
         <a
           href={branding.docsUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="hidden lg:flex flex-col leading-tight hover:opacity-80 transition-opacity"
+          className="hidden lg:flex items-center p-1.5 hover:bg-secondary rounded-md transition-colors"
+          aria-label={t('navbar.viewDocs')}
+          title={t('navbar.viewDocs')}
         >
-          <span className="text-base md:text-lg font-semibold text-foreground">{branding.appName}</span>
-          <span className="text-[10px] text-muted-foreground tracking-wide">{branding.tagline}</span>
+          <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
         </a>
       </div>
 
