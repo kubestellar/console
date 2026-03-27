@@ -12,12 +12,46 @@ const HANDSHAKE_POLL_MS = 1_000
 /** Maximum retry attempts before giving up */
 const MAX_RETRIES = 3
 
+interface ProviderCheckResult {
+  ready: boolean
+  error?: string
+  /** Prerequisites the user needs (from backend handshake) */
+  prerequisites?: string[]
+  /** Provider version (from backend handshake) */
+  version?: string
+}
+
 /**
- * Check if a provider is ready to accept connections by querying
- * the agent health endpoint and verifying the provider appears
- * in availableProviders.
+ * Check if a provider is ready to accept connections.
+ *
+ * First tries the /provider/check endpoint which runs a full handshake
+ * (e.g., `antigravity --version`) and returns structured prerequisites.
+ * Falls back to the /health endpoint for providers without handshake support.
  */
-async function checkProviderReady(providerName: string): Promise<{ ready: boolean; error?: string }> {
+async function checkProviderReady(providerName: string): Promise<ProviderCheckResult> {
+  // Try the dedicated provider check endpoint first (supports handshake)
+  try {
+    const checkUrl = `${LOCAL_AGENT_HTTP_URL}/provider/check?name=${encodeURIComponent(providerName)}`
+    const checkResponse = await fetch(checkUrl, {
+      signal: AbortSignal.timeout(15_000),
+    })
+    if (checkResponse.ok) {
+      const data = await checkResponse.json()
+      if (data.ready) {
+        return { ready: true, version: data.version }
+      }
+      // Return the structured error from the handshake
+      return {
+        ready: false,
+        error: data.message || `Provider "${providerName}" is not ready`,
+        prerequisites: data.prerequisites,
+      }
+    }
+  } catch {
+    // /provider/check not available -- fall through to health check
+  }
+
+  // Fallback: check the health endpoint for simple provider presence
   try {
     const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
       signal: AbortSignal.timeout(3_000),
@@ -91,6 +125,7 @@ export function useProviderConnection() {
       error: null,
       retryCount: 0,
       prerequisite: prerequisite?.description ?? null,
+      prerequisites: [],
     })
 
     // Phase 2: handshake -- poll for provider readiness
@@ -117,23 +152,36 @@ export function useProviderConnection() {
         return
       }
 
-      const { ready, error } = await checkProviderReady(providerName)
+      const result = await checkProviderReady(providerName)
       if (abortRef.current) return
 
-      if (ready) {
+      if (result.ready) {
         setConnectionState(prev => ({
           ...prev,
           phase: 'connected',
           error: null,
+          prerequisites: [],
         }))
         onSuccess()
         return
       }
 
-      // Not ready yet, continue polling
+      // Not ready yet -- if the backend returned prerequisites, show them
+      // and stop polling (the user needs to take action first).
+      if (result.prerequisites && result.prerequisites.length > 0) {
+        setConnectionState(prev => ({
+          ...prev,
+          phase: 'failed',
+          error: result.error ?? null,
+          prerequisites: result.prerequisites ?? [],
+        }))
+        return
+      }
+
+      // No prerequisites -- continue polling
       setConnectionState(prev => ({
         ...prev,
-        error: error ?? null,
+        error: result.error ?? null,
       }))
       pollTimerRef.current = setTimeout(poll, HANDSHAKE_POLL_MS)
     }

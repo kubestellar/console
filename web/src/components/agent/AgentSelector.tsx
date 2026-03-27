@@ -21,6 +21,7 @@ import { CLUSTER_PROVIDER_KEYS, buildVisibleAgents, sectionAgents } from './agen
 /** Map agent names to their backend provider key for prerequisite lookup */
 const AGENT_TO_PROVIDER_KEY: Record<string, string> = {
   vscode: 'vscode',
+  antigravity: 'antigravity',
 }
 
 interface AgentSelectorProps {
@@ -510,7 +511,19 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
                   {connectionState.error && (
                     <p className="text-xs text-muted-foreground ml-6">{connectionState.error}</p>
                   )}
-                  {connectionState.provider && PROVIDER_PREREQUISITES[AGENT_TO_PROVIDER_KEY[connectionState.provider] ?? ''] && (
+                  {/* Backend handshake prerequisites (from /provider/check) */}
+                  {connectionState.prerequisites.length > 0 && (
+                    <ul className="ml-6 space-y-1">
+                      {connectionState.prerequisites.map((prereq, i) => (
+                        <li key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                          <span className="text-muted-foreground/60 mt-0.5">-</span>
+                          <span>{prereq}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {/* Static prerequisite from PROVIDER_PREREQUISITES config */}
+                  {connectionState.prerequisites.length === 0 && connectionState.provider && PROVIDER_PREREQUISITES[AGENT_TO_PROVIDER_KEY[connectionState.provider] ?? ''] && (
                     <div className="ml-6 space-y-1">
                       <p className="text-xs text-muted-foreground">
                         {t('agent.providerPrerequisite')}:

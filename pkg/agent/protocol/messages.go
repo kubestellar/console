@@ -199,3 +199,16 @@ type ProgressPayload struct {
 	Input  map[string]any `json:"input,omitempty"`  // Tool input (truncated)
 	Output string         `json:"output,omitempty"` // Tool output (truncated)
 }
+
+// ProviderCheckResponse is returned by the /provider/check endpoint.
+// It tells the frontend whether a provider is ready and what is missing.
+type ProviderCheckResponse struct {
+	Provider      string   `json:"provider"`
+	Ready         bool     `json:"ready"`
+	State         string   `json:"state"`                   // "starting", "handshake", "connected", "failed"
+	Message       string   `json:"message"`
+	Prerequisites []string `json:"prerequisites,omitempty"` // What the user needs to install/configure
+	Version       string   `json:"version,omitempty"`
+	CliPath       string   `json:"cliPath,omitempty"`
+	HasHandshake  bool     `json:"hasHandshake"`            // Whether the provider supports explicit readiness checks
+}

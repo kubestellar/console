@@ -335,6 +335,9 @@ func (s *Server) Start() error {
 	// Provider health check (proxies status page checks server-side to avoid CORS)
 	mux.HandleFunc("/providers/health", s.handleProvidersHealth)
 
+	// Provider readiness check - runs handshake for a specific provider
+	mux.HandleFunc("/provider/check", s.handleProviderCheck)
+
 	// Prediction endpoints
 	mux.HandleFunc("/predictions/ai", s.handlePredictionsAI)
 	mux.HandleFunc("/predictions/analyze", s.handlePredictionsAnalyze)
@@ -516,6 +519,84 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(payload)
+}
+
+// handleProviderCheck runs a readiness handshake for a specific provider.
+// GET /provider/check?name=antigravity
+func (s *Server) handleProviderCheck(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	providerName := r.URL.Query().Get("name")
+	if providerName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{
+			Code:    "missing_name",
+			Message: "Query parameter 'name' is required",
+		})
+		return
+	}
+
+	provider, err := s.registry.Get(providerName)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(protocol.ProviderCheckResponse{
+			Provider: providerName,
+			Ready:    false,
+			State:    "failed",
+			Message:  fmt.Sprintf("Provider '%s' is not registered", providerName),
+		})
+		return
+	}
+
+	// Check if the provider supports explicit handshake
+	hp, hasHandshake := provider.(HandshakeProvider)
+	if !hasHandshake {
+		// Providers without Handshake just report availability
+		resp := protocol.ProviderCheckResponse{
+			Provider:     providerName,
+			Ready:        provider.IsAvailable(),
+			HasHandshake: false,
+		}
+		if provider.IsAvailable() {
+			resp.State = "connected"
+			resp.Message = fmt.Sprintf("%s is available", provider.DisplayName())
+		} else {
+			resp.State = "failed"
+			resp.Message = fmt.Sprintf("%s is not available", provider.DisplayName())
+		}
+		json.NewEncoder(w).Encode(resp)
+		return
+	}
+
+	// Run the handshake with a timeout
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+
+	result := hp.Handshake(ctx)
+	log.Printf("[ProviderCheck] %s: state=%s ready=%v msg=%s", providerName, result.State, result.Ready, result.Message)
+
+	json.NewEncoder(w).Encode(protocol.ProviderCheckResponse{
+		Provider:      providerName,
+		Ready:         result.Ready,
+		State:         result.State,
+		Message:       result.Message,
+		Prerequisites: result.Prerequisites,
+		Version:       result.Version,
+		CliPath:       result.CliPath,
+		HasHandshake:  true,
+	})
 }
 
 // isAllowedOrigin checks if the origin is in the allowed list.

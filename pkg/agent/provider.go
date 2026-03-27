@@ -110,6 +110,33 @@ func (c ProviderCapability) HasCapability(cap ProviderCapability) bool {
 	return c&cap != 0
 }
 
+// HandshakeProvider is an optional interface for providers that support
+// explicit readiness checks beyond simple binary detection.  Providers
+// implementing this interface can report prerequisites, detailed error
+// messages, and whether they are truly ready to accept requests.
+type HandshakeProvider interface {
+	AIProvider
+	// Handshake performs a quick connectivity/readiness check and returns
+	// a structured result the frontend can render to the user.
+	Handshake(ctx context.Context) *HandshakeResult
+}
+
+// HandshakeResult contains the outcome of a provider readiness check.
+type HandshakeResult struct {
+	// Ready is true when the provider responded successfully.
+	Ready bool `json:"ready"`
+	// State is one of: "starting", "handshake", "connected", "failed".
+	State string `json:"state"`
+	// Message is a human-readable status or error description.
+	Message string `json:"message"`
+	// Prerequisites lists things the user needs (desktop app, helper, etc).
+	Prerequisites []string `json:"prerequisites,omitempty"`
+	// Version is the detected provider version (empty if unknown).
+	Version string `json:"version,omitempty"`
+	// CliPath is the resolved path to the provider binary (empty if not found).
+	CliPath string `json:"cliPath,omitempty"`
+}
+
 // MixedModeConfig configures dual-agent missions (thinking + execution)
 type MixedModeConfig struct {
 	// ThinkingAgent is the API agent for analysis (user-selected primary)
