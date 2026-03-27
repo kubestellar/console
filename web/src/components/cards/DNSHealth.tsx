@@ -6,10 +6,11 @@ import { useCardLoadingState } from './CardDataContext'
 export function DNSHealth() {
   const { t } = useTranslation('cards')
   const { pods, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods(undefined, 'kube-system')
+  const hasData = pods.length > 0
   const { showSkeleton } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
-    hasAnyData: pods.length > 0,
+    hasAnyData: hasData,
     isDemoData: isDemoFallback,
     isFailed,
     consecutiveFailures,
