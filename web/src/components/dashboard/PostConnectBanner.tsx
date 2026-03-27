@@ -120,7 +120,7 @@ export function PostConnectBanner({
         </div>
         <button
           onClick={handleDismiss}
-          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 min-h-11 min-w-11 flex items-center justify-center"
+          className="p-1.5 rounded-md hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors duration-150 flex-shrink-0 flex items-center justify-center"
           aria-label="Dismiss"
         >
           <X className="w-3.5 h-3.5" />

@@ -59,7 +59,7 @@ export function UpdateProgressBanner({ progress, onDismiss }: UpdateProgressBann
           setVisible(false)
           onDismiss()
         }}
-        className="p-1 hover:bg-secondary/50 rounded shrink-0"
+        className="p-1 hover:bg-secondary/50 rounded shrink-0 transition-colors duration-150"
       >
         <X className="w-3 h-3" />
       </button>
