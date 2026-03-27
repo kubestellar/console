@@ -609,7 +609,7 @@ export function MissionSidebar() {
 
       {missions.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-          <Sparkles className="w-10 h-10 text-purple-400/40 mb-4" />
+          <Sparkles className="w-10 h-10 text-purple-400/60 mb-4" />
           <p className="text-muted-foreground">{t('missionSidebar.noActiveMissions')}</p>
           <p className="text-xs text-muted-foreground/70 mt-1">
             {t('missionSidebar.startMissionPrompt')}

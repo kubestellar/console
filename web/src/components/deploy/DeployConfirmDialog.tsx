@@ -282,7 +282,7 @@ export function DeployConfirmDialog({
             className={cn(
               'px-4 py-2 text-sm rounded-lg transition-colors flex items-center gap-2',
               isLoading
-                ? 'bg-blue-500/10 text-blue-400/40 cursor-not-allowed'
+                ? 'bg-blue-500/10 text-blue-400/60 cursor-not-allowed'
                 : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-400',
             )}
           >
