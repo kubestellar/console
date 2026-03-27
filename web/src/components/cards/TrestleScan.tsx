@@ -313,25 +313,45 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
           const isExpanded = expandedProfile === profile.name
 
           return (
-            <button
+            <div
               key={profile.name}
-              onClick={() => setExpandedProfile(isExpanded ? null : profile.name)}
               className="w-full text-left p-2.5 rounded-lg border border-border/50 hover:border-border transition-colors bg-secondary/20"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-3.5 h-3.5 text-teal-400" />
-                  <span className="text-xs font-medium text-foreground">{profile.name}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs font-bold ${
-                    profileScore >= SCORE_GOOD_THRESHOLD ? 'text-green-400' :
-                    profileScore >= SCORE_WARNING_THRESHOLD ? 'text-yellow-400' : 'text-red-400'
-                  }`}>
-                    {profileScore}%
-                  </span>
-                  <ChevronRight className={`w-3 h-3 text-muted-foreground transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                </div>
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  onClick={() => setExpandedProfile(isExpanded ? null : profile.name)}
+                  className="flex-1 text-left"
+                  title={`Toggle ${profile.name} details`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-3.5 h-3.5 text-teal-400" />
+                      <span className="text-xs font-medium text-foreground">{profile.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-bold ${
+                        profileScore >= SCORE_GOOD_THRESHOLD ? 'text-green-400' :
+                        profileScore >= SCORE_WARNING_THRESHOLD ? 'text-yellow-400' : 'text-red-400'
+                      }`}>
+                        {profileScore}%
+                      </span>
+                      <ChevronRight className={`w-3 h-3 text-muted-foreground transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => drillToCompliance('', { profile: profile.name })}
+                  className="cursor-pointer"
+                  title={`View ${profile.name} controls`}
+                >
+                  <StatusBadge
+                    color={profileScore >= SCORE_GOOD_THRESHOLD ? 'green' : profileScore >= SCORE_WARNING_THRESHOLD ? 'yellow' : 'red'}
+                    size="xs"
+                  >
+                    {profile.totalControls} controls
+                  </StatusBadge>
+                </button>
               </div>
 
               {/* Progress bar */}
@@ -348,21 +368,33 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
               {/* Expanded details */}
               {isExpanded && (
                 <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
-                  <div className="flex items-center gap-1 text-green-400">
+                  <button
+                    onClick={() => drillToCompliance('pass', { profile: profile.name })}
+                    className="flex items-center gap-1 text-green-400 hover:opacity-80 transition-opacity cursor-pointer"
+                    title={`View passing controls for ${profile.name}`}
+                  >
                     <CheckCircle className="w-3 h-3" />
                     <span>{profile.controlsPassed} pass</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-red-400">
+                  </button>
+                  <button
+                    onClick={() => drillToCompliance('fail', { profile: profile.name })}
+                    className="flex items-center gap-1 text-red-400 hover:opacity-80 transition-opacity cursor-pointer"
+                    title={`View failing controls for ${profile.name}`}
+                  >
                     <XCircle className="w-3 h-3" />
                     <span>{profile.controlsFailed} fail</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-muted-foreground">
+                  </button>
+                  <button
+                    onClick={() => drillToCompliance('other', { profile: profile.name })}
+                    className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    title={`View other controls for ${profile.name}`}
+                  >
                     <Info className="w-3 h-3" />
                     <span>{profile.controlsOther} other</span>
-                  </div>
+                  </button>
                 </div>
               )}
-            </button>
+            </div>
           )
         })}
       </div>

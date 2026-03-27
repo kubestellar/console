@@ -115,7 +115,7 @@ export function VaultSecrets({ config: _config }: CardConfig) {
   }, [clusters, isDemoMode])
 
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !vaultStatus.installed,
     hasAnyData: true,
     isDemoData: isDemoMode,
   })
@@ -289,7 +289,7 @@ export function ExternalSecrets({ config: _config }: CardConfig) {
   }, [clusters, isDemoMode])
 
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !esoStatus.installed,
     hasAnyData: true,
     isDemoData: isDemoMode,
   })

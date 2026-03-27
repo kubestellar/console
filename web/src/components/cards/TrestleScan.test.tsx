@@ -16,6 +16,7 @@ import type { TrestleClusterStatus, OscalProfile } from '../../hooks/useTrestle'
 
 const mockStartMission = vi.fn()
 const mockUseCardLoadingState = vi.fn()
+const mockDrillToCompliance = vi.fn()
 
 vi.mock('../../hooks/useTrestle', () => ({
   useTrestle: vi.fn(),
@@ -23,6 +24,10 @@ vi.mock('../../hooks/useTrestle', () => ({
 
 vi.mock('../../hooks/useMissions', () => ({
   useMissions: () => ({ startMission: mockStartMission }),
+}))
+
+vi.mock('../../hooks/useDrillDown', () => ({
+  useDrillDownActions: () => ({ drillToCompliance: mockDrillToCompliance }),
 }))
 
 vi.mock('../../hooks/useGlobalFilters', () => ({
@@ -323,7 +328,29 @@ describe('TrestleScan', () => {
       setTrestleReturn()
 
       render(<TrestleScan />)
-      expect(screen.getByText('100 controls')).toBeInTheDocument()
+      const controlsBadges = screen.getAllByText('100 controls')
+      expect(controlsBadges.length).toBeGreaterThanOrEqual(1)
+    })
+
+    it('clicking total controls opens compliance drilldown', async () => {
+      const user = userEvent.setup()
+      setTrestleReturn()
+
+      render(<TrestleScan />)
+      const allControlsButtons = screen.getAllByTitle('View all compliance controls')
+      await user.click(allControlsButtons[0])
+
+      expect(mockDrillToCompliance).toHaveBeenCalledWith('', {})
+    })
+
+    it('each profile has controls button that opens compliance drilldown with profile context', async () => {
+      const user = userEvent.setup()
+      setTrestleReturn()
+
+      render(<TrestleScan />)
+      await user.click(screen.getByTitle('View NIST 800-53 rev5 controls'))
+
+      expect(mockDrillToCompliance).toHaveBeenCalledWith('', { profile: 'NIST 800-53 rev5' })
     })
   })
 
@@ -386,6 +413,23 @@ describe('TrestleScan', () => {
       await user.click(screen.getByText('Profile B'))
       expect(screen.getByText('80 pass')).toBeInTheDocument()
       expect(screen.queryByText('50 pass')).not.toBeInTheDocument()
+    })
+
+    it('expanded pass/fail/other chips open compliance dialog with profile + status', async () => {
+      const user = userEvent.setup()
+      setTrestleReturn()
+
+      render(<TrestleScan />)
+      await user.click(screen.getByText('NIST 800-53 rev5'))
+
+      await user.click(screen.getByTitle('View passing controls for NIST 800-53 rev5'))
+      expect(mockDrillToCompliance).toHaveBeenCalledWith('pass', { profile: 'NIST 800-53 rev5' })
+
+      await user.click(screen.getByTitle('View failing controls for NIST 800-53 rev5'))
+      expect(mockDrillToCompliance).toHaveBeenCalledWith('fail', { profile: 'NIST 800-53 rev5' })
+
+      await user.click(screen.getByTitle('View other controls for NIST 800-53 rev5'))
+      expect(mockDrillToCompliance).toHaveBeenCalledWith('other', { profile: 'NIST 800-53 rev5' })
     })
   })
 
