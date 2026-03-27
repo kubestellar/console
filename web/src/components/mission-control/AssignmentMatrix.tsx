@@ -5,6 +5,7 @@
 
 import { cn } from '../../lib/cn'
 import { Check } from 'lucide-react'
+import { Button } from '../ui/Button'
 import type { ClusterInfo } from '../../hooks/mcp/types'
 import type { PayloadProject, ClusterAssignment } from './types'
 
@@ -104,17 +105,19 @@ export function AssignmentMatrix({
                     className="p-2 border-b border-border/50 text-center"
                   >
                     <div className="flex items-center justify-center gap-1.5">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => onToggle(cluster.name, project.name, !assigned)}
                         className={cn(
-                          'w-7 h-7 rounded-lg border transition-all flex items-center justify-center',
+                          '!w-7 !h-7 !p-0 rounded-lg border',
                           assigned
                             ? 'bg-primary/20 border-primary/50 text-primary hover:bg-primary/30'
                             : 'border-border hover:border-primary/30 hover:bg-primary/5 text-transparent hover:text-primary/30'
                         )}
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                      </button>
+                        title={assigned ? 'Unassign project' : 'Assign project'}
+                        icon={<Check className="w-3.5 h-3.5" />}
+                      />
                       {dot && (
                         <span
                           className={cn('w-2 h-2 rounded-full flex-shrink-0', dot.color)}

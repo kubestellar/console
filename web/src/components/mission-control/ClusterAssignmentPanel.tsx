@@ -148,20 +148,22 @@ export function ClusterAssignmentPanel({
         <div className="flex items-center gap-2">
           {/* View toggle */}
           <div className="flex items-center rounded-lg border border-border overflow-hidden">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setViewMode('cards')}
-              className={`p-1.5 ${viewMode === 'cards' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`!p-1.5 !rounded-none ${viewMode === 'cards' ? 'bg-primary/10 text-primary' : ''}`}
               title="Card view"
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </button>
-            <button
+              icon={<LayoutGrid className="w-4 h-4" />}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setViewMode('matrix')}
-              className={`p-1.5 ${viewMode === 'matrix' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`!p-1.5 !rounded-none ${viewMode === 'matrix' ? 'bg-primary/10 text-primary' : ''}`}
               title="Matrix view"
-            >
-              <Table className="w-4 h-4" />
-            </button>
+              icon={<Table className="w-4 h-4" />}
+            />
           </div>
 
           {/* Add/remove clusters */}
@@ -192,13 +194,14 @@ export function ClusterAssignmentPanel({
                         <span className="text-xs font-medium" title={c.name}>{clusterDisplayName(c.name)}</span>
                         <span className="text-[10px] text-muted-foreground">{c.distribution || 'k8s'}</span>
                       </div>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setExcludedClusters((prev) => new Set([...prev, c.name]))}
-                        className="text-muted-foreground hover:text-destructive p-0.5 rounded"
+                        className="!p-0.5 text-muted-foreground hover:text-destructive"
                         title="Remove from mission"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
+                        icon={<X className="w-3 h-3" />}
+                      />
                     </div>
                   ))}
 
@@ -218,16 +221,18 @@ export function ClusterAssignmentPanel({
                             <span className="text-xs font-medium text-muted-foreground" title={c.name}>{clusterDisplayName(c.name)}</span>
                             <span className="text-[10px] text-muted-foreground">{c.distribution || 'k8s'}</span>
                           </div>
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => setExcludedClusters((prev) => {
                               const next = new Set(prev)
                               next.delete(c.name)
                               return next
                             })}
-                            className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20"
+                            className="!text-[10px] !px-2 !py-0.5 bg-primary/10 text-primary hover:bg-primary/20"
                           >
                             Add
-                          </button>
+                          </Button>
                         </div>
                       ))}
                     </>

@@ -7,6 +7,7 @@ import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { X, Star, ChevronDown, ArrowLeftRight } from 'lucide-react'
+import { Button } from '../ui/Button'
 import { cn } from '../../lib/cn'
 import { MATURITY_CONFIG, CNCF_CATEGORY_GRADIENTS } from '../../lib/cncf-constants'
 import type { PayloadProject } from './types'
@@ -116,13 +117,14 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
             <div className="flex items-center gap-2">
               <h4 className="text-sm font-medium truncate">{project.displayName}</h4>
               {/* Remove button */}
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={onRemove}
-                className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-all"
+                className="opacity-0 group-hover:opacity-100 !p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
                 title="Remove"
-              >
-                <X className="w-3 h-3" />
-              </button>
+                icon={<X className="w-3 h-3" />}
+              />
             </div>
             <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
               {project.reason}
@@ -179,40 +181,44 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
 
           {/* Priority dropdown */}
           <div className="relative ml-auto">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={(e) => {
                 e.stopPropagation()
                 setShowPriorityMenu(!showPriorityMenu)
               }}
               className={cn(
-                'text-[10px] px-1.5 py-0.5 rounded-full border font-medium flex items-center gap-0.5 cursor-pointer',
+                '!text-[10px] !px-1.5 !py-0.5 rounded-full border !gap-0.5 cursor-pointer',
                 PRIORITY_STYLES[project.priority]
               )}
+              icon={project.priority === 'required' ? <Star className="w-2.5 h-2.5" /> : undefined}
+              iconRight={<ChevronDown className={cn('w-2.5 h-2.5 transition-transform', showPriorityMenu && 'rotate-180')} />}
             >
-              {project.priority === 'required' && <Star className="w-2.5 h-2.5" />}
               {project.priority}
-              <ChevronDown className={cn('w-2.5 h-2.5 transition-transform', showPriorityMenu && 'rotate-180')} />
-            </button>
+            </Button>
             {showPriorityMenu && (
               <>
                 {/* Backdrop to close on outside click */}
                 <div className="fixed inset-0 z-20" onClick={() => setShowPriorityMenu(false)} />
                 <div className="absolute right-0 bottom-full mb-1 bg-slate-900 border border-border rounded-lg shadow-lg py-1 z-30 min-w-[100px]">
                   {(['required', 'recommended', 'optional'] as const).map((p) => (
-                    <button
+                    <Button
                       key={p}
+                      variant="ghost"
+                      size="sm"
                       onClick={(e) => {
                         e.stopPropagation()
                         onUpdatePriority(p)
                         setShowPriorityMenu(false)
                       }}
                       className={cn(
-                        'w-full text-left text-xs px-3 py-1.5 hover:bg-secondary transition-colors capitalize',
+                        'w-full !justify-start !text-xs !px-3 !py-1.5 !rounded-none capitalize',
                         project.priority === p && 'font-medium text-primary'
                       )}
                     >
                       {p}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </>
