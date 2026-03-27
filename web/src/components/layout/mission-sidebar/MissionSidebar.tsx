@@ -47,12 +47,65 @@ import { SAVED_TOAST_MS, FOCUS_DELAY_MS } from '../../../lib/constants/network'
 import { MISSION_FILE_FETCH_TIMEOUT_MS } from '../../missions/browser/missionCache'
 import { isDemoMode } from '../../../lib/demoMode'
 
+const SIDEBAR_MIN_WIDTH = 380
+const SIDEBAR_MAX_WIDTH = 1200
+const SIDEBAR_DEFAULT_WIDTH = 680
+const SIDEBAR_WIDTH_KEY = 'ksc-mission-sidebar-width'
+
+function loadSavedWidth(): number {
+  try {
+    const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY)
+    if (saved) {
+      const w = Number(saved)
+      if (w >= SIDEBAR_MIN_WIDTH && w <= SIDEBAR_MAX_WIDTH) return w
+    }
+  } catch { /* ignore */ }
+  return SIDEBAR_DEFAULT_WIDTH
+}
+
 export function MissionSidebar() {
   const { t } = useTranslation(['common'])
   const { missions, activeMission, isSidebarOpen, isSidebarMinimized, isFullScreen, setActiveMission, closeSidebar, dismissMission, cancelMission, minimizeSidebar, expandSidebar, setFullScreen, selectedAgent, startMission, saveMission, runSavedMission, openSidebar, sendMessage } = useMissions()
   const { isMobile } = useMobile()
   const [collapsedMissions, setCollapsedMissions] = useState<Set<string>>(new Set())
   const [fontSize, setFontSize] = useState<FontSize>('base')
+
+  // Resizable sidebar width (desktop non-fullscreen only)
+  const [sidebarWidth, setSidebarWidth] = useState(loadSavedWidth)
+  const [isResizing, setIsResizing] = useState(false)
+
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResizing(true)
+    const startX = e.clientX
+    const startWidth = sidebarWidth
+
+    const onMouseMove = (ev: MouseEvent) => {
+      // Sidebar is on the right, so dragging left increases width
+      const delta = startX - ev.clientX
+      const maxW = Math.min(SIDEBAR_MAX_WIDTH, window.innerWidth * 0.85)
+      const newWidth = Math.max(SIDEBAR_MIN_WIDTH, Math.min(maxW, startWidth + delta))
+      setSidebarWidth(newWidth)
+    }
+
+    const onMouseUp = () => {
+      setIsResizing(false)
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      // Persist final width
+      setSidebarWidth((w) => {
+        try { localStorage.setItem(SIDEBAR_WIDTH_KEY, String(w)) } catch { /* ignore */ }
+        return w
+      })
+    }
+
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  }, [sidebarWidth])
   const [showNewMission, setShowNewMission] = useState(false)
   const [showBrowser, setShowBrowser] = useState(false)
   const [showMissionControl, setShowMissionControl] = useState(false)
@@ -387,17 +440,29 @@ export function MissionSidebar() {
         data-tour="ai-missions"
         className={cn(
           "fixed bg-card border-border z-40 flex flex-col overflow-hidden shadow-2xl",
-          "transition-[width,top,border,transform] duration-300 ease-in-out",
+          !isResizing && "transition-[width,top,border,transform] duration-300 ease-in-out",
           // Mobile: bottom sheet
           isMobile && "inset-x-0 bottom-0 rounded-t-2xl border-t max-h-[80vh]",
           isMobile && !isSidebarOpen && "translate-y-full pointer-events-none",
           isMobile && isSidebarOpen && "translate-y-0",
           // Desktop: right sidebar
           !isMobile && isFullScreen && "inset-0 top-16 border-l-0 rounded-none",
-          !isMobile && !isFullScreen && "top-16 right-0 bottom-0 w-[680px] border-l shadow-xl",
+          !isMobile && !isFullScreen && "top-16 right-0 bottom-0 border-l shadow-xl",
           !isMobile && !isSidebarOpen && "translate-x-full pointer-events-none"
         )}
+        style={!isMobile && !isFullScreen ? { width: sidebarWidth } : undefined}
       >
+      {/* Desktop resize handle (left edge) */}
+      {!isMobile && !isFullScreen && isSidebarOpen && (
+        <div
+          onMouseDown={handleResizeStart}
+          className="absolute top-0 left-0 bottom-0 w-1.5 cursor-col-resize z-50 group"
+          title="Drag to resize"
+        >
+          <div className="absolute inset-y-0 left-0 w-0.5 bg-border group-hover:bg-primary/50 transition-colors" />
+        </div>
+      )}
+
       {/* Mobile drag handle */}
       {isMobile && (
         <div className="flex justify-center py-2 md:hidden">
