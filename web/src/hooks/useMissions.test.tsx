@@ -35,6 +35,16 @@ vi.mock('../lib/analytics', () => ({
   emitMissionRated: vi.fn(),
 }))
 
+vi.mock('../lib/missions/preflightCheck', () => ({
+  runPreflightCheck: vi.fn().mockResolvedValue({ ok: true }),
+  classifyKubectlError: vi.fn().mockReturnValue({ code: 'UNKNOWN_EXECUTION_FAILURE', message: 'mock' }),
+  getRemediationActions: vi.fn().mockReturnValue([]),
+}))
+
+vi.mock('../lib/kubectlProxy', () => ({
+  kubectlProxy: { exec: vi.fn() },
+}))
+
 // ── Mock WebSocket ─────────────────────────────────────────────────────────────
 
 class MockWebSocket {
@@ -100,6 +110,8 @@ async function startMissionWithConnection(
   act(() => {
     missionId = result.current.startMission(defaultParams)
   })
+  // Flush microtask queue so the preflight .then() chain resolves (#3742)
+  await act(async () => { await Promise.resolve() })
   await act(async () => {
     MockWebSocket.lastInstance?.simulateOpen()
   })

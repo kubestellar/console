@@ -28,6 +28,7 @@ import { cn } from '../../../lib/cn'
 import { ConfirmDialog } from '../../../lib/modals'
 import { MAX_MESSAGE_SIZE_CHARS } from '../../../lib/constants'
 import { AgentBadge, AgentIcon } from '../../agent/AgentIcon'
+import { PreflightFailure } from '../../missions/PreflightFailure'
 import { SaveResolutionDialog } from '../../missions/SaveResolutionDialog'
 import { SetupInstructionsDialog } from '../../setup/SetupInstructionsDialog'
 import { STATUS_CONFIG, TYPE_ICONS } from './types'
@@ -37,7 +38,7 @@ import { MemoizedMessage } from './MemoizedMessage'
 
 export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontSize, onToggleFullScreen }: { mission: Mission; isFullScreen?: boolean; fontSize?: FontSize; onToggleFullScreen?: () => void }) {
   const { t } = useTranslation('common')
-  const { sendMessage, cancelMission, rateMission, setActiveMission, dismissMission, renameMission, runSavedMission, selectedAgent } = useMissions()
+  const { sendMessage, retryPreflight, cancelMission, rateMission, setActiveMission, dismissMission, renameMission, runSavedMission, selectedAgent } = useMissions()
   const { isDemoMode } = useDemoMode()
   const { findSimilarResolutions, recordUsage } = useResolutions()
   const [input, setInput] = useState('')
@@ -502,6 +503,17 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
           )
         })}
 
+        {/* Preflight failure panel when mission is blocked (#3742) */}
+        {mission.status === 'blocked' && mission.preflightError && (
+          <div className="px-1">
+            <PreflightFailure
+              error={mission.preflightError}
+              context={mission.cluster}
+              onRetry={() => retryPreflight(mission.id)}
+            />
+          </div>
+        )}
+
         {/* Typing indicator when agent is working - uses currently selected agent */}
         {mission.status === 'running' && (
           <div className="flex gap-3">
@@ -653,6 +665,27 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
             >
               <ChevronLeft className="w-3 h-3" />
               {t('missionChat.backToMissions')}
+            </button>
+          </div>
+        ) : mission.status === 'blocked' ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-amber-400">{config.label}</span>
+              <span className="text-muted-foreground">Fix the issue above, then retry</span>
+            </div>
+            <button
+              onClick={() => retryPreflight(mission.id)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold bg-amber-600/20 text-amber-300 border border-amber-500/30 rounded-lg hover:bg-amber-600/30 transition-colors"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Retry Preflight Check
+            </button>
+            <button
+              onClick={() => dismissMission(mission.id)}
+              className="flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-3 h-3" />
+              Dismiss Mission
             </button>
           </div>
         ) : mission.status === 'failed' ? (

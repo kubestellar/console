@@ -11,6 +11,7 @@ import {
   Sparkles,
   Hammer,
   Bookmark,
+  ShieldAlert,
 } from 'lucide-react'
 import type { Mission, MissionStatus, MissionMessage } from '../../../hooks/useMissions'
 
@@ -32,6 +33,7 @@ export const STATUS_CONFIG: Record<MissionStatus, { icon: typeof Loader2; color:
   waiting_input: { icon: MessageSquare, color: 'text-purple-400', label: 'Waiting for input' },
   completed: { icon: CheckCircle, color: 'text-green-400', label: 'Completed' },
   failed: { icon: AlertCircle, color: 'text-red-400', label: 'Failed' },
+  blocked: { icon: ShieldAlert, color: 'text-amber-400', label: 'Blocked — permissions' },
   saved: { icon: Bookmark, color: 'text-yellow-400', label: 'Saved' },
 }
 

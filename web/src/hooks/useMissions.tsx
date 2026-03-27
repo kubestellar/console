@@ -7,8 +7,10 @@ import { detectIssueSignature, findSimilarResolutionsStandalone, generateResolut
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
 import { scanForMaliciousContent } from '../lib/missions/scanner/malicious'
+import { runPreflightCheck, type PreflightError } from '../lib/missions/preflightCheck'
+import { kubectlProxy } from '../lib/kubectlProxy'
 
-export type MissionStatus = 'pending' | 'running' | 'waiting_input' | 'completed' | 'failed' | 'saved'
+export type MissionStatus = 'pending' | 'running' | 'waiting_input' | 'completed' | 'failed' | 'saved' | 'blocked'
 
 export interface MissionMessage {
   id: string
@@ -53,6 +55,8 @@ export interface Mission {
   agent?: string
   /** Resolutions that were auto-matched for this mission */
   matchedResolutions?: MatchedResolution[]
+  /** Structured preflight error when mission is blocked */
+  preflightError?: PreflightError
   /** Original imported mission data (for saved/library missions) */
   importedFrom?: {
     title: string
@@ -90,6 +94,7 @@ interface MissionContextValue {
   saveMission: (params: SaveMissionParams) => string
   runSavedMission: (missionId: string, cluster?: string) => void
   sendMessage: (missionId: string, content: string) => void
+  retryPreflight: (missionId: string) => void
   cancelMission: (missionId: string) => void
   dismissMission: (missionId: string) => void
   renameMission: (missionId: string, newTitle: string) => void
@@ -211,9 +216,9 @@ function saveMissions(missions: Mission[]) {
       && (e.name === 'QuotaExceededError' || e.code === 22)
     if (isQuotaError) {
       console.warn('[Missions] localStorage quota exceeded, pruning old missions')
-      // Keep active missions (pending/running/waiting_input) unconditionally
+      // Keep active missions (pending/running/waiting_input/blocked) unconditionally
       const active = missions.filter(m =>
-        m.status === 'running' || m.status === 'pending' || m.status === 'waiting_input'
+        m.status === 'running' || m.status === 'pending' || m.status === 'waiting_input' || m.status === 'blocked'
       )
       // Keep saved/library missions unconditionally — they are small (no chat history)
       const saved = missions.filter(m => m.status === 'saved')
@@ -983,6 +988,61 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     setIsSidebarMinimized(false)
     emitMissionStarted(params.type, selectedAgent || defaultAgent || 'unknown')
 
+    // Run preflight permission check for missions that target a cluster.
+    // This catches missing credentials, expired tokens, RBAC denials, etc.
+    // before the agent starts executing mutating steps (#3742).
+    const missionNeedsCluster = !!params.cluster || ['deploy', 'repair', 'upgrade'].includes(params.type)
+    const preflightPromise = missionNeedsCluster
+      ? runPreflightCheck(
+          (args, opts) => kubectlProxy.exec(args, opts),
+          params.cluster?.split(',')[0]?.trim(),
+        )
+      : Promise.resolve({ ok: true } as { ok: true })
+
+    preflightPromise.then(preflight => {
+      if (!preflight.ok && 'error' in preflight && preflight.error) {
+        // Preflight failed — block the mission with a structured error
+        setMissions(prev => prev.map(m =>
+          m.id === missionId ? {
+            ...m,
+            status: 'blocked' as MissionStatus,
+            currentStep: 'Preflight check failed',
+            preflightError: preflight.error,
+            messages: [
+              ...m.messages,
+              {
+                id: `msg-${Date.now()}-preflight`,
+                role: 'system' as const,
+                content: `**Preflight Check Failed**\n\nThe mission cannot proceed because cluster access verification failed. See the details below for how to fix this.\n\nError: ${preflight.error?.message || 'Unknown error'}`,
+                timestamp: new Date(),
+              }
+            ]
+          } : m
+        ))
+        emitMissionError(params.type, preflight.error?.code || 'preflight_unknown')
+        return
+      }
+
+      // Preflight passed — proceed to send to agent
+      executeMission(missionId, enhancedPrompt, params)
+    }).catch(() => {
+      // Preflight itself threw unexpectedly — still allow mission to proceed
+      // (don't block on preflight infrastructure failures)
+      executeMission(missionId, enhancedPrompt, params)
+    })
+
+    return missionId
+  }, [ensureConnection])
+
+  /**
+   * Internal: send mission to agent after preflight passes.
+   * Extracted from startMission to allow reuse from retryPreflight.
+   */
+  const executeMission = useCallback((
+    missionId: string,
+    enhancedPrompt: string,
+    params: { context?: Record<string, unknown>; type?: string },
+  ) => {
     // Send to agent
     ensureConnection().then(() => {
       const requestId = `claude-${Date.now()}`
@@ -1050,9 +1110,90 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         } : m
       ))
     })
-
-    return missionId
   }, [ensureConnection])
+
+  /**
+   * Retry preflight check for a blocked mission.
+   * If preflight passes, transitions the mission to running and sends to agent.
+   */
+  const retryPreflight = useCallback((missionId: string) => {
+    const mission = missionsRef.current.find(m => m.id === missionId)
+    if (!mission || mission.status !== 'blocked') return
+
+    // Transition to pending while we re-check
+    setMissions(prev => prev.map(m =>
+      m.id === missionId ? {
+        ...m,
+        status: 'pending' as MissionStatus,
+        currentStep: 'Re-running preflight check...',
+        preflightError: undefined,
+      } : m
+    ))
+
+    const clusterContext = mission.cluster?.split(',')[0]?.trim()
+
+    runPreflightCheck(
+      (args, opts) => kubectlProxy.exec(args, opts),
+      clusterContext,
+    ).then(preflight => {
+      if (!preflight.ok && 'error' in preflight && preflight.error) {
+        // Still failing — re-block
+        setMissions(prev => prev.map(m =>
+          m.id === missionId ? {
+            ...m,
+            status: 'blocked' as MissionStatus,
+            currentStep: 'Preflight check failed',
+            preflightError: preflight.error,
+            messages: [
+              ...m.messages,
+              {
+                id: `msg-${Date.now()}-preflight-retry`,
+                role: 'system' as const,
+                content: `**Preflight Check Still Failing**\n\nError: ${preflight.error?.message || 'Unknown error'}`,
+                timestamp: new Date(),
+              }
+            ]
+          } : m
+        ))
+        return
+      }
+
+      // Preflight passed — build prompt and execute
+      const lastUserMsg = mission.messages.find(m => m.role === 'user')
+      let prompt = lastUserMsg?.content || mission.description
+      if (mission.cluster) {
+        const clusterList = mission.cluster.split(',').map(c => c.trim()).filter(Boolean)
+        if (clusterList.length === 1) {
+          prompt = `Target cluster: ${clusterList[0]}\nIMPORTANT: All kubectl commands MUST use --context=${clusterList[0]}\n\n${prompt}`
+        } else {
+          prompt = `Target clusters: ${clusterList.join(', ')}\nIMPORTANT: Perform the following on each cluster using their respective kubectl contexts.\n\n${prompt}`
+        }
+      }
+
+      setMissions(prev => prev.map(m =>
+        m.id === missionId ? {
+          ...m,
+          preflightError: undefined,
+          messages: [
+            ...m.messages,
+            {
+              id: `msg-${Date.now()}-preflight-ok`,
+              role: 'system' as const,
+              content: '**Preflight check passed** — proceeding with mission execution.',
+              timestamp: new Date(),
+            }
+          ]
+        } : m
+      ))
+
+      executeMission(missionId, prompt, { context: mission.context, type: mission.type })
+    }).catch(() => {
+      // Preflight threw unexpectedly — allow mission to proceed
+      const lastUserMsg = mission.messages.find(m => m.role === 'user')
+      const prompt = lastUserMsg?.content || mission.description
+      executeMission(missionId, prompt, { context: mission.context, type: mission.type })
+    })
+  }, [executeMission])
 
   // Save a mission to library without running it
   const saveMission = useCallback((params: SaveMissionParams): string => {
@@ -1459,6 +1600,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       saveMission,
       runSavedMission,
       sendMessage,
+      retryPreflight,
       cancelMission,
       dismissMission,
       renameMission,
@@ -1505,6 +1647,7 @@ const MISSIONS_FALLBACK: MissionContextValue = {
   saveMission: () => '',
   runSavedMission: () => {},
   sendMessage: () => {},
+  retryPreflight: () => {},
   cancelMission: () => {},
   dismissMission: () => {},
   renameMission: () => {},
