@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, memo } from 'react'
 import { useModalState } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import {
@@ -159,7 +159,7 @@ export interface StatBlockValue {
 }
 
 /** Inline horseshoe gauge — a 270° arc with value text centered */
-function HorseshoeGauge({ value, max = 100, size, strokeWidth, color }: {
+const HorseshoeGauge = memo(function HorseshoeGauge({ value, max = 100, size, strokeWidth, color }: {
   value: number; max?: number; size: number; strokeWidth: number; color: string
 }) {
   const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0
@@ -196,7 +196,7 @@ function HorseshoeGauge({ value, max = 100, size, strokeWidth, color }: {
       </div>
     </div>
   )
-}
+})
 
 /** Get heatmap opacity for a value */
 function getHeatmapOpacity(value: number): number {
@@ -215,7 +215,7 @@ interface StatBlockProps {
   onDisplayModeChange?: (mode: StatDisplayMode) => void
 }
 
-function StatBlock({ block, data, hasData, isLoading, history, onDisplayModeChange }: StatBlockProps) {
+const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, history, onDisplayModeChange }: StatBlockProps) {
   const IconComponent = ICONS[block.icon] || Server
   const colorClass = COLOR_CLASSES[block.color] || 'text-foreground'
   const valueColor = VALUE_COLORS[block.id] || 'text-foreground'
@@ -397,7 +397,7 @@ function StatBlock({ block, data, hasData, isLoading, history, onDisplayModeChan
       )}
     </div>
   )
-}
+})
 
 interface StatsOverviewProps {
   /** Dashboard type for loading config */

@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import {
   Folder, FolderOpen, FileJson, ChevronRight, ChevronDown,
   Loader2, Globe, Github, HardDrive, Trash2, Plus,
@@ -5,7 +6,7 @@ import {
 import { cn } from '../../../lib/cn'
 import type { TreeNode } from './types'
 
-export function TreeNodeItem({
+export const TreeNodeItem = memo(function TreeNodeItem({
   node,
   depth,
   expandedNodes,
@@ -44,6 +45,10 @@ export function TreeNodeItem({
 
   const showHeaderActions = showRemoveButton || (depth === 0 && !!onAdd)
 
+  // Memoize inline style objects to avoid creating new references on each render
+  const paddingStyle = useMemo(() => ({ paddingLeft: `${depth * 16 + 8}px` }), [depth])
+  const emptyPaddingStyle = useMemo(() => ({ paddingLeft: `${(depth + 1) * 16 + 8}px` }), [depth])
+
   return (
     <div>
       <div className={showHeaderActions ? 'flex items-center' : undefined}>
@@ -59,7 +64,7 @@ export function TreeNodeItem({
               : 'text-foreground hover:bg-secondary/50',
             showHeaderActions && 'flex-1 min-w-0'
           )}
-          style={{ paddingLeft: `${depth * 16 + 8}px` }}
+          style={paddingStyle}
         >
           {isDir ? (
             <>
@@ -126,7 +131,7 @@ export function TreeNodeItem({
           {node.children.length === 0 && node.loaded && (
             <div
               className="text-xs text-muted-foreground italic py-1"
-              style={{ paddingLeft: `${(depth + 1) * 16 + 8}px` }}
+              style={emptyPaddingStyle}
             >
               Empty
             </div>
@@ -135,4 +140,4 @@ export function TreeNodeItem({
       )}
     </div>
   )
-}
+})
