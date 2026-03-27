@@ -70,145 +70,169 @@ function setCachedVersion(clusterName: string, version: string) {
   persistCache()
 }
 
-// Shared WebSocket for version fetching
-let versionWs: WebSocket | null = null
-const versionPendingRequests: Map<string, (version: string | null) => void> = new Map()
-let wsConnecting = false
-
-function ensureVersionWs(): Promise<WebSocket> {
-  // If WebSocket is already open, return it
-  if (versionWs?.readyState === WebSocket.OPEN) {
-    return Promise.resolve(versionWs)
-  }
-
-  // If already connecting, wait a bit and check again
-  if (wsConnecting) {
-    return new Promise((resolve, reject) => {
-      const checkInterval = setInterval(() => {
-        if (versionWs?.readyState === WebSocket.OPEN) {
-          clearInterval(checkInterval)
-          resolve(versionWs)
-        }
-      }, 100)
-      // Timeout after 5 seconds
-      setTimeout(() => {
-        clearInterval(checkInterval)
-        reject(new Error('WebSocket connection timeout'))
-      }, 5000)
-    })
-  }
-
-  wsConnecting = true
-
-  return new Promise((resolve, reject) => {
-    try {
-      versionWs = new WebSocket(LOCAL_AGENT_WS_URL)
-    } catch (err) {
-      wsConnecting = false
-      reject(new Error('Failed to create WebSocket'))
-      return
-    }
-
-    const connectionTimeout = setTimeout(() => {
-      wsConnecting = false
-      if (versionWs?.readyState !== WebSocket.OPEN) {
-        versionWs?.close()
-        reject(new Error('WebSocket connection timeout'))
-      }
-    }, 10000)
-
-    versionWs.onopen = () => {
-      clearTimeout(connectionTimeout)
-      wsConnecting = false
-      resolve(versionWs!)
-    }
-
-    versionWs.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data)
-        const resolver = versionPendingRequests.get(msg.id)
-        if (resolver) {
-          versionPendingRequests.delete(msg.id)
-          if (msg.payload?.output) {
-            try {
-              const versionInfo = JSON.parse(msg.payload.output)
-              resolver(versionInfo.serverVersion?.gitVersion || null)
-            } catch {
-              resolver(null)
-            }
-          } else {
-            resolver(null)
-          }
-        }
-      } catch {
-        // Ignore parse errors
-      }
-    }
-
-    versionWs.onerror = () => {
-      clearTimeout(connectionTimeout)
-      wsConnecting = false
-      reject(new Error('WebSocket error'))
-    }
-
-    versionWs.onclose = () => {
-      clearTimeout(connectionTimeout)
-      wsConnecting = false
-      versionWs = null
-      // Reject all pending requests
-      versionPendingRequests.forEach((resolver) => resolver(null))
-      versionPendingRequests.clear()
-    }
-  })
+// Managed WebSocket handle — created per component mount, torn down on unmount
+interface VersionWsHandle {
+  ensureWs: () => Promise<WebSocket>
+  fetchClusterVersion: (clusterName: string, forceRefresh?: boolean) => Promise<string | null>
+  destroy: () => void
 }
 
-// Fetch version from local agent for a cluster (with caching)
-async function fetchClusterVersion(clusterName: string, forceRefresh = false): Promise<string | null> {
-  // Check cache first (unless forcing refresh)
-  if (!forceRefresh) {
-    const cached = getCachedVersion(clusterName)
-    if (cached) {
-      return cached
-    }
+function createVersionWsHandle(): VersionWsHandle {
+  let ws: WebSocket | null = null
+  let connecting = false
+  let destroyed = false
+  const pendingRequests = new Map<string, (version: string | null) => void>()
+
+  function rejectAllPending() {
+    pendingRequests.forEach((resolver) => resolver(null))
+    pendingRequests.clear()
   }
 
-  try {
-    const ws = await ensureVersionWs()
-    const requestId = `version-${clusterName}-${Date.now()}`
+  function closeWs() {
+    if (ws) {
+      // Remove handlers before closing to avoid triggering reconnection logic
+      ws.onopen = null
+      ws.onmessage = null
+      ws.onerror = null
+      ws.onclose = null
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+        ws.close()
+      }
+      ws = null
+    }
+    connecting = false
+    rejectAllPending()
+  }
 
-    return new Promise((resolve) => {
-      const timeout = setTimeout(() => {
-        versionPendingRequests.delete(requestId)
-        // Return cached version on timeout instead of null
-        resolve(getCachedVersion(clusterName))
-      }, 10000)
+  function ensureWs(): Promise<WebSocket> {
+    if (destroyed) return Promise.reject(new Error('Handle destroyed'))
 
-      versionPendingRequests.set(requestId, (version) => {
-        clearTimeout(timeout)
-        if (version) {
-          setCachedVersion(clusterName, version)
-        }
-        resolve(version || getCachedVersion(clusterName))
+    if (ws?.readyState === WebSocket.OPEN) {
+      return Promise.resolve(ws)
+    }
+
+    if (connecting) {
+      return new Promise((resolve, reject) => {
+        const checkInterval = setInterval(() => {
+          if (destroyed) { clearInterval(checkInterval); reject(new Error('Handle destroyed')); return }
+          if (ws?.readyState === WebSocket.OPEN) { clearInterval(checkInterval); resolve(ws) }
+        }, 100)
+        setTimeout(() => { clearInterval(checkInterval); reject(new Error('WebSocket connection timeout')) }, 5000)
       })
+    }
 
-      // Check WebSocket state before sending - it may have closed between await and send
-      if (ws.readyState !== WebSocket.OPEN) {
-        versionPendingRequests.delete(requestId)
-        clearTimeout(timeout)
-        resolve(getCachedVersion(clusterName))
+    connecting = true
+
+    return new Promise((resolve, reject) => {
+      try {
+        ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      } catch {
+        connecting = false
+        reject(new Error('Failed to create WebSocket'))
         return
       }
 
-      ws.send(JSON.stringify({
-        id: requestId,
-        type: 'kubectl',
-        payload: { context: clusterName, args: ['version', '-o', 'json'] }
-      }))
+      const connectionTimeout = setTimeout(() => {
+        connecting = false
+        if (ws?.readyState !== WebSocket.OPEN) {
+          closeWs()
+          reject(new Error('WebSocket connection timeout'))
+        }
+      }, 10000)
+
+      ws.onopen = () => {
+        clearTimeout(connectionTimeout)
+        connecting = false
+        if (destroyed) { closeWs(); reject(new Error('Handle destroyed')); return }
+        resolve(ws!)
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data)
+          const resolver = pendingRequests.get(msg.id)
+          if (resolver) {
+            pendingRequests.delete(msg.id)
+            if (msg.payload?.output) {
+              try {
+                const versionInfo = JSON.parse(msg.payload.output)
+                resolver(versionInfo.serverVersion?.gitVersion || null)
+              } catch {
+                resolver(null)
+              }
+            } else {
+              resolver(null)
+            }
+          }
+        } catch {
+          // Ignore parse errors
+        }
+      }
+
+      ws.onerror = () => {
+        clearTimeout(connectionTimeout)
+        connecting = false
+        rejectAllPending()
+        reject(new Error('WebSocket error'))
+      }
+
+      ws.onclose = () => {
+        clearTimeout(connectionTimeout)
+        connecting = false
+        ws = null
+        rejectAllPending()
+      }
     })
-  } catch {
-    // Return cached version on error
-    return getCachedVersion(clusterName)
   }
+
+  async function fetchClusterVersion(clusterName: string, forceRefresh = false): Promise<string | null> {
+    if (destroyed) return getCachedVersion(clusterName)
+
+    if (!forceRefresh) {
+      const cached = getCachedVersion(clusterName)
+      if (cached) return cached
+    }
+
+    try {
+      const socket = await ensureWs()
+      const requestId = `version-${clusterName}-${Date.now()}`
+
+      return new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          pendingRequests.delete(requestId)
+          resolve(getCachedVersion(clusterName))
+        }, 10000)
+
+        pendingRequests.set(requestId, (version) => {
+          clearTimeout(timeout)
+          if (version) setCachedVersion(clusterName, version)
+          resolve(version || getCachedVersion(clusterName))
+        })
+
+        if (socket.readyState !== WebSocket.OPEN) {
+          pendingRequests.delete(requestId)
+          clearTimeout(timeout)
+          resolve(getCachedVersion(clusterName))
+          return
+        }
+
+        socket.send(JSON.stringify({
+          id: requestId,
+          type: 'kubectl',
+          payload: { context: clusterName, args: ['version', '-o', 'json'] },
+        }))
+      })
+    } catch {
+      return getCachedVersion(clusterName)
+    }
+  }
+
+  function destroy() {
+    destroyed = true
+    closeWs()
+  }
+
+  return { ensureWs, fetchClusterVersion, destroy }
 }
 
 // Check if a newer stable version is available
@@ -306,6 +330,21 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
   const [clusterVersions, setClusterVersions] = useState<Record<string, string>>({})
   const [fetchCompleted, setFetchCompleted] = useState(false)
 
+  // Managed WebSocket handle — created once per mount, destroyed on unmount
+  const wsHandleRef = useRef<VersionWsHandle | null>(null)
+  if (!wsHandleRef.current) {
+    wsHandleRef.current = createVersionWsHandle()
+  }
+
+  // Destroy WebSocket and pending requests on unmount
+  useEffect(() => {
+    const handle = wsHandleRef.current
+    return () => {
+      handle?.destroy()
+      wsHandleRef.current = null
+    }
+  }, [])
+
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
@@ -383,8 +422,10 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
       }
 
       // Fetch all clusters in parallel for faster loading
+      const handle = wsHandleRef.current
+      if (!handle) return
       const fetchPromises = clustersToFetch.map(async (cluster) => {
-        const version = await fetchClusterVersion(cluster.name)
+        const version = await handle.fetchClusterVersion(cluster.name)
         return { name: cluster.name, version }
       })
 
