@@ -48,13 +48,13 @@ import { MISSION_FILE_FETCH_TIMEOUT_MS } from '../../missions/browser/missionCac
 import { isDemoMode } from '../../../lib/demoMode'
 
 const SIDEBAR_MIN_WIDTH = 380
-const SIDEBAR_MAX_WIDTH = 1200
-const SIDEBAR_DEFAULT_WIDTH = 680
+const SIDEBAR_MAX_WIDTH = 800
+const SIDEBAR_DEFAULT_WIDTH = 480
 const SIDEBAR_WIDTH_KEY = 'ksc-mission-sidebar-width'
 
 function loadSavedWidth(): number {
   const maxW = typeof window !== 'undefined'
-    ? Math.min(SIDEBAR_MAX_WIDTH, window.innerWidth * 0.85)
+    ? Math.min(SIDEBAR_MAX_WIDTH, window.innerWidth * 0.6)
     : SIDEBAR_MAX_WIDTH
   try {
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY)
@@ -78,10 +78,24 @@ export function MissionSidebar() {
   const [isResizing, setIsResizing] = useState(false)
   const latestWidthRef = useRef(sidebarWidth)
 
+  // Publish sidebar width as a CSS custom property so Layout.tsx can
+  // adjust main-content margins without needing context plumbing.
+  useEffect(() => {
+    const root = document.documentElement
+    if (!isMobile && isSidebarOpen && !isSidebarMinimized && !isFullScreen) {
+      root.style.setProperty('--mission-sidebar-width', `${sidebarWidth}px`)
+    } else if (!isMobile && isSidebarOpen && isSidebarMinimized && !isFullScreen) {
+      root.style.setProperty('--mission-sidebar-width', '48px')
+    } else {
+      root.style.setProperty('--mission-sidebar-width', '0px')
+    }
+    return () => { root.style.removeProperty('--mission-sidebar-width') }
+  }, [isMobile, isSidebarOpen, isSidebarMinimized, isFullScreen, sidebarWidth])
+
   // Re-clamp sidebar width when viewport is resized
   useEffect(() => {
     const onResize = () => {
-      const maxW = Math.min(SIDEBAR_MAX_WIDTH, window.innerWidth * 0.85)
+      const maxW = Math.min(SIDEBAR_MAX_WIDTH, window.innerWidth * 0.6)
       setSidebarWidth((w) => {
         const clamped = Math.min(w, maxW)
         latestWidthRef.current = clamped
@@ -95,13 +109,14 @@ export function MissionSidebar() {
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     setIsResizing(true)
+    document.documentElement.dataset.missionResizing = '1'
     const startX = e.clientX
     const startWidth = sidebarWidth
 
     const onMouseMove = (ev: MouseEvent) => {
       // Sidebar is on the right, so dragging left increases width
       const delta = startX - ev.clientX
-      const maxW = Math.min(SIDEBAR_MAX_WIDTH, window.innerWidth * 0.85)
+      const maxW = Math.min(SIDEBAR_MAX_WIDTH, window.innerWidth * 0.6)
       const newWidth = Math.max(SIDEBAR_MIN_WIDTH, Math.min(maxW, startWidth + delta))
       latestWidthRef.current = newWidth
       setSidebarWidth(newWidth)
@@ -109,6 +124,7 @@ export function MissionSidebar() {
 
     const onMouseUp = () => {
       setIsResizing(false)
+      delete document.documentElement.dataset.missionResizing
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseup', onMouseUp)
       document.body.style.cursor = ''

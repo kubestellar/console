@@ -9,7 +9,6 @@ import { useSidebarConfig, SIDEBAR_COLLAPSED_WIDTH_PX, SIDEBAR_DEFAULT_WIDTH_PX 
 import { useMobile } from '../../hooks/useMobile'
 import { useNavigationHistory } from '../../hooks/useNavigationHistory'
 import { useLastRoute } from '../../hooks/useLastRoute'
-import { useMissions } from '../../hooks/useMissions'
 import { useDemoMode, isDemoModeForced, hasRealToken } from '../../hooks/useDemoMode'
 import { setDemoMode } from '../../lib/demoMode'
 import { hasApprovedAgents } from '../agent/AgentApprovalDialog'
@@ -95,7 +94,8 @@ export function Layout({ children }: LayoutProps) {
   const { config } = useSidebarConfig()
   const { isMobile } = useMobile()
   const sidebarWidthPx = isMobile ? 0 : (config.collapsed ? SIDEBAR_COLLAPSED_WIDTH_PX : (config.width ?? SIDEBAR_DEFAULT_WIDTH_PX))
-  const { isSidebarOpen: isMissionSidebarOpen, isSidebarMinimized: isMissionSidebarMinimized, isFullScreen: isMissionFullScreen } = useMissions()
+  // Mission sidebar width is communicated via CSS custom property --mission-sidebar-width
+  // set by MissionSidebar.tsx — no need to read sidebar state from the hook here.
   const { isDemoMode, toggleDemoMode } = useDemoMode()
   const { status: agentStatus } = useLocalAgent()
   const { deduplicatedClusters } = useClusters()
@@ -456,13 +456,9 @@ export function Layout({ children }: LayoutProps) {
       {/* Offline Mode Banner - positioned in main content area only */}
       {showOfflineBanner && (
         <div
-          style={{ top: offlineBannerTop, left: sidebarWidthPx }}
-          className={cn(
-            "fixed z-20 bg-background border-b border-orange-500/20 transition-[right] duration-300",
-          // Adjust right edge when mission sidebar is open (desktop only)
-          !isMobile && isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen ? "right-[680px]" : "right-0",
-          !isMobile && isMissionSidebarOpen && isMissionSidebarMinimized && !isMissionFullScreen && "right-12"
-        )}>
+          style={{ top: offlineBannerTop, left: sidebarWidthPx, right: 'var(--mission-sidebar-width, 0px)' }}
+          className="fixed z-20 bg-background border-b border-orange-500/20 transition-[right] duration-300"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2 py-1.5 px-3 md:px-4">
             <div className="flex items-center gap-2 min-w-0">
               <WifiOff className="w-4 h-4 text-orange-400 shrink-0" />
@@ -507,13 +503,9 @@ export function Layout({ children }: LayoutProps) {
         </PageErrorBoundary>
         <main
           id="main-content"
-          style={{ marginLeft: sidebarWidthPx }}
-          className={cn(
-            'relative flex-1 p-4 pb-24 md:p-6 md:pb-28 transition-[margin] duration-300 overflow-y-auto scroll-enhanced min-w-0',
-            // Don't apply right margin when fullscreen is active or on mobile
-            !isMobile && isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen && 'mr-[680px]',
-            !isMobile && isMissionSidebarOpen && isMissionSidebarMinimized && !isMissionFullScreen && 'mr-12'
-          )}>
+          style={{ marginLeft: sidebarWidthPx, marginRight: 'var(--mission-sidebar-width, 0px)' }}
+          className="relative flex-1 p-4 pb-24 md:p-6 md:pb-28 transition-[margin] duration-300 overflow-y-auto scroll-enhanced min-w-0"
+        >
           <NavigationProgress />
           {children ? (
             <PageErrorBoundary>
