@@ -1,14 +1,38 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { AlertCircle, Shield } from 'lucide-react'
 import { useCardLoadingState } from './CardDataContext'
 import { useAdmissionWebhooks } from '../../hooks/useAdmissionWebhooks'
+import { CardSkeleton } from '../../lib/cards/CardComponents'
 
 export function AdmissionWebhooks() {
   const { t } = useTranslation('cards')
   const [tab, setTab] = useState<'all' | 'mutating' | 'validating'>('all')
-  const { webhooks, isLoading, isDemoData } = useAdmissionWebhooks()
+  const { webhooks, isLoading, isDemoData, isFailed, consecutiveFailures, lastRefresh } = useAdmissionWebhooks()
   const hasData = webhooks.length > 0
-  useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData })
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
+    isLoading: isLoading && !hasData,
+    hasAnyData: hasData,
+    isDemoData,
+    isFailed,
+    consecutiveFailures,
+    lastRefresh,
+  })
+
+  if (showSkeleton) {
+    return <CardSkeleton type="list" rows={4} />
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <Shield className="w-8 h-8 mb-2 opacity-50" />
+        <p className="text-sm">{t('admissionWebhooks.noWebhooks', 'No admission webhooks found')}</p>
+        <p className="text-xs mt-1">{t('admissionWebhooks.noWebhooksHint', 'Webhooks will appear here when configured')}</p>
+      </div>
+    )
+  }
+
   const filtered = tab === 'all' ? webhooks : webhooks.filter(w => w.type === tab)
   const mutatingCount = webhooks.filter(w => w.type === 'mutating').length
   const validatingCount = webhooks.filter(w => w.type === 'validating').length
@@ -28,6 +52,16 @@ export function AdmissionWebhooks() {
           </button>
         ))}
       </div>
+
+      {isFailed && (
+        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-xs font-medium text-red-400">{t('admissionWebhooks.errorTitle', 'Error loading webhooks')}</p>
+            <p className="text-2xs text-muted-foreground mt-0.5">{t('admissionWebhooks.errorDescription', 'Failed to fetch webhook data ({{count}} attempts)', { count: consecutiveFailures })}</p>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-1 max-h-[300px] overflow-y-auto">
         {filtered.map((wh, i) => (
