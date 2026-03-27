@@ -20,6 +20,26 @@ export function CreateDashboardModal({
   onCreate,
   existingNames = [],
 }: CreateDashboardModalProps) {
+  // Only mount inner content (and its hooks) when the modal is open.
+  // This avoids health-check API polling when the modal is closed.
+  if (!isOpen) return null
+
+  return (
+    <CreateDashboardModalInner
+      isOpen={isOpen}
+      onClose={onClose}
+      onCreate={onCreate}
+      existingNames={existingNames}
+    />
+  )
+}
+
+function CreateDashboardModalInner({
+  isOpen,
+  onClose,
+  onCreate,
+  existingNames = [],
+}: CreateDashboardModalProps) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState<DashboardTemplate | null>(null)
