@@ -130,6 +130,9 @@ export function useResolveDependencies() {
     // grid row and causing the browser to scroll to the top of the page.
 
     try {
+      let restError: unknown
+      let agentError: unknown
+
       // Try backend REST API first (works when JWT auth is available)
       try {
         setProgressMessage('Scanning pod spec for references…')
@@ -144,6 +147,7 @@ export function useResolveDependencies() {
         setData(result)
         return result
       } catch (restErr) {
+        restError = restErr
         console.warn('[useDependencies] REST API failed, trying agent:', restErr)
       }
 
@@ -156,10 +160,18 @@ export function useResolveDependencies() {
           return agentResult
         }
       } catch (agentErr) {
+        agentError = agentErr
         console.warn('[useDependencies] Agent resolve-deps failed:', agentErr)
       }
 
-      setError(new Error('No data source available for dependency resolution'))
+      // Both sources failed — build a descriptive error for UI consumers
+      const details: string[] = []
+      if (restError) details.push(`REST API: ${restError instanceof Error ? restError.message : String(restError)}`)
+      if (agentError) details.push(`Agent: ${agentError instanceof Error ? agentError.message : String(agentError)}`)
+      const message = details.length > 0
+        ? `Dependency resolution failed (${details.join('; ')})`
+        : 'No data source available for dependency resolution'
+      setError(new Error(message))
       return null
     } finally {
       setIsLoading(false)
