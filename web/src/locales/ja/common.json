@@ -1541,7 +1541,8 @@
     "mission": "mission",
     "missions": "missions",
     "missionCount_one": "{{count}} mission",
-    "missionCount_other": "{{count}} missions"
+    "missionCount_other": "{{count}} missions",
+    "resizeHandleTooltip": "Drag to resize"
   },
   "feedback": {
     "share": "Share",

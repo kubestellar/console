@@ -53,14 +53,17 @@ const SIDEBAR_DEFAULT_WIDTH = 680
 const SIDEBAR_WIDTH_KEY = 'ksc-mission-sidebar-width'
 
 function loadSavedWidth(): number {
+  const maxW = typeof window !== 'undefined'
+    ? Math.min(SIDEBAR_MAX_WIDTH, window.innerWidth * 0.85)
+    : SIDEBAR_MAX_WIDTH
   try {
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY)
     if (saved) {
       const w = Number(saved)
-      if (w >= SIDEBAR_MIN_WIDTH && w <= SIDEBAR_MAX_WIDTH) return w
+      if (w >= SIDEBAR_MIN_WIDTH && w <= SIDEBAR_MAX_WIDTH) return Math.min(w, maxW)
     }
   } catch { /* ignore */ }
-  return SIDEBAR_DEFAULT_WIDTH
+  return Math.min(SIDEBAR_DEFAULT_WIDTH, maxW)
 }
 
 export function MissionSidebar() {
@@ -73,6 +76,21 @@ export function MissionSidebar() {
   // Resizable sidebar width (desktop non-fullscreen only)
   const [sidebarWidth, setSidebarWidth] = useState(loadSavedWidth)
   const [isResizing, setIsResizing] = useState(false)
+  const latestWidthRef = useRef(sidebarWidth)
+
+  // Re-clamp sidebar width when viewport is resized
+  useEffect(() => {
+    const onResize = () => {
+      const maxW = Math.min(SIDEBAR_MAX_WIDTH, window.innerWidth * 0.85)
+      setSidebarWidth((w) => {
+        const clamped = Math.min(w, maxW)
+        latestWidthRef.current = clamped
+        return clamped
+      })
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
@@ -85,6 +103,7 @@ export function MissionSidebar() {
       const delta = startX - ev.clientX
       const maxW = Math.min(SIDEBAR_MAX_WIDTH, window.innerWidth * 0.85)
       const newWidth = Math.max(SIDEBAR_MIN_WIDTH, Math.min(maxW, startWidth + delta))
+      latestWidthRef.current = newWidth
       setSidebarWidth(newWidth)
     }
 
@@ -94,11 +113,8 @@ export function MissionSidebar() {
       document.removeEventListener('mouseup', onMouseUp)
       document.body.style.cursor = ''
       document.body.style.userSelect = ''
-      // Persist final width
-      setSidebarWidth((w) => {
-        try { localStorage.setItem(SIDEBAR_WIDTH_KEY, String(w)) } catch { /* ignore */ }
-        return w
-      })
+      // Persist final width using ref to avoid state-updater side effects
+      try { localStorage.setItem(SIDEBAR_WIDTH_KEY, String(latestWidthRef.current)) } catch { /* ignore */ }
     }
 
     document.body.style.cursor = 'col-resize'
@@ -456,8 +472,11 @@ export function MissionSidebar() {
       {!isMobile && !isFullScreen && isSidebarOpen && (
         <div
           onMouseDown={handleResizeStart}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label={t('missionSidebar.resizeHandleTooltip')}
+          title={t('missionSidebar.resizeHandleTooltip')}
           className="absolute top-0 left-0 bottom-0 w-1.5 cursor-col-resize z-50 group"
-          title="Drag to resize"
         >
           <div className="absolute inset-y-0 left-0 w-0.5 bg-border group-hover:bg-primary/50 transition-colors" />
         </div>
