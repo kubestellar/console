@@ -1950,6 +1950,8 @@
   "etcdStatus": {
     "managedByProvider": "etcd Managed by Provider",
     "managedDescription": "etcd is managed by your cloud provider or not visible in kube-system",
+    "notDetected": "etcd Not Detected",
+    "notDetectedDescription": "No etcd pods found by name, labels, or container name. etcd may use custom naming or run outside the cluster.",
     "membersSummary": "{{members}} etcd members across {{clusters}} clusters",
     "membersCount": "{{ready}}/{{total}} members",
     "restarts": "{{count}} restarts",

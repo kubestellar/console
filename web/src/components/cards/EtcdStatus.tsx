@@ -1,11 +1,45 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { PodInfo } from '../../hooks/mcp/types'
 import { useCachedPods } from '../../hooks/useCachedData'
 import { useCardLoadingState } from './CardDataContext'
 
+/**
+ * Detects whether a pod is an etcd member using multiple signals:
+ * - Pod name contains 'etcd' (but not 'operator' or 'backup')
+ * - Labels: component=etcd, tier=control-plane with app=etcd
+ * - Container names: any container named 'etcd' or 'etcd-container'
+ */
+function isEtcdPod(pod: PodInfo): boolean {
+  const name = pod.name?.toLowerCase() || ''
+  const labels = pod.labels || {}
+
+  // Exclude operator/backup pods regardless of detection method
+  if (name.includes('operator') || name.includes('backup')) return false
+
+  // Signal 1: Pod name contains 'etcd'
+  if (name.includes('etcd')) return true
+
+  // Signal 2: Labels indicate etcd (component=etcd or app.kubernetes.io/name=etcd)
+  if (labels['component'] === 'etcd') return true
+  if (labels['app.kubernetes.io/name'] === 'etcd') return true
+  if (labels['app'] === 'etcd' && labels['tier'] === 'control-plane') return true
+
+  // Signal 3: Container named 'etcd' inside the pod
+  if (pod.containers?.some(c => c.name === 'etcd' || c.name === 'etcd-container')) return true
+
+  return false
+}
+
+/** Check if a cluster appears to be managed (no kube-system pods visible at all) */
+function isManagedCluster(allPods: PodInfo[], cluster: string): boolean {
+  return !allPods.some(p => (p.cluster || 'unknown') === cluster && p.namespace === 'kube-system')
+}
+
 export function EtcdStatus() {
   const { t } = useTranslation('cards')
-  const { pods, isLoading, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods(undefined, 'kube-system')
+  // Fetch from all namespaces so we catch etcd pods outside kube-system
+  const { pods, isLoading, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods()
   const { showSkeleton } = useCardLoadingState({
     isLoading,
     hasAnyData: pods.length > 0,
@@ -15,7 +49,7 @@ export function EtcdStatus() {
   })
 
   const etcdPods = useMemo(() => {
-    return pods.filter(p => p.name?.includes('etcd') && !p.name?.includes('operator'))
+    return pods.filter(isEtcdPod)
   }, [pods])
 
   const byCluster = useMemo(() => {
@@ -28,6 +62,13 @@ export function EtcdStatus() {
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b))
   }, [etcdPods])
 
+  // Determine distinct clusters that have pods but no etcd detected
+  const clustersWithoutEtcd = useMemo(() => {
+    const allClusters = new Set(pods.map(p => p.cluster || 'unknown'))
+    const etcdClusters = new Set(etcdPods.map(p => p.cluster || 'unknown'))
+    return Array.from(allClusters).filter(c => !etcdClusters.has(c))
+  }, [pods, etcdPods])
+
   if (showSkeleton) {
     return (
       <div className="space-y-2 p-1">
@@ -39,11 +80,18 @@ export function EtcdStatus() {
   }
 
   if (byCluster.length === 0) {
+    // Distinguish: are we seeing pods at all? If yes, etcd is truly not detected.
+    // If no pods at all, we likely have no data.
+    const hasAnyPods = pods.length > 0
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm p-4">
-        <div className="text-2xl mb-2">🗄️</div>
-        <div className="font-medium">{t('etcdStatus.managedByProvider')}</div>
-        <div className="text-xs text-center mt-1">{t('etcdStatus.managedDescription')}</div>
+        <div className="text-2xl mb-2">{hasAnyPods ? '🔍' : '🗄️'}</div>
+        <div className="font-medium">
+          {hasAnyPods ? t('etcdStatus.notDetected') : t('etcdStatus.managedByProvider')}
+        </div>
+        <div className="text-xs text-center mt-1">
+          {hasAnyPods ? t('etcdStatus.notDetectedDescription') : t('etcdStatus.managedDescription')}
+        </div>
       </div>
     )
   }
@@ -89,6 +137,15 @@ export function EtcdStatus() {
           </div>
         )
       })}
+      {clustersWithoutEtcd.length > 0 && (
+        <div className="mt-1 px-2 py-1.5 rounded-lg bg-muted/20 text-xs text-muted-foreground">
+          <span className="font-medium">{clustersWithoutEtcd.join(', ')}</span>
+          {' — '}
+          {clustersWithoutEtcd.some(c => isManagedCluster(pods, c))
+            ? t('etcdStatus.managedByProvider')
+            : t('etcdStatus.notDetected')}
+        </div>
+      )}
     </div>
   )
 }
