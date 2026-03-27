@@ -1,7 +1,7 @@
 # KubeStellar Console — developer workflow targets
 #
 # Usage:
-#   make dev       Start frontend, backend, and kc-agent (no OAuth required)
+#   make dev       Start OAuth dev mode (Vite HMR + live reload)
 #   make update    Pull latest, build everything, restart
 #   make build     Build frontend + Go binaries
 #   make restart   Restart all processes via startup-oauth.sh
@@ -52,9 +52,9 @@ analytics-ping:
 ## update: Pull, build, restart, and send anonymous analytics ping
 update: pull build restart analytics-ping
 
-## dev: Start frontend, backend, and kc-agent for local development (no OAuth required)
+## dev: Start OAuth dev mode (Vite HMR + backend + kc-agent)
 dev:
-	bash start-dev.sh
+	bash startup-oauth.sh --dev
 
 ## lint: Run frontend linter
 lint:
