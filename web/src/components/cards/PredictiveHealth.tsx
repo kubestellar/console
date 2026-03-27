@@ -14,6 +14,40 @@ interface Prediction {
   timeToExhaustion?: string
 }
 
+/**
+ * Estimate time to exhaustion based on current usage percentage.
+ * Uses a tiered heuristic when historical trend data is unavailable:
+ *   >95% → "< 12h", >90% → "< 24h", >80% → "1-3 days",
+ *   >70% → "3-7 days", ≤70% → "> 7 days"
+ */
+function estimateTimeToExhaustion(usagePct: number): string {
+  if (usagePct > 95) return '< 12h'
+  if (usagePct > 90) return '< 24h'
+  if (usagePct > 80) return '1-3 days'
+  if (usagePct > 70) return '3-7 days'
+  return '> 7 days'
+}
+
+/**
+ * Derive a severity level from the estimated time to exhaustion.
+ */
+function severityFromUsage(usagePct: number): 'critical' | 'warning' | 'info' {
+  if (usagePct > 90) return 'critical'
+  if (usagePct > 70) return 'warning'
+  return 'info'
+}
+
+/**
+ * Derive confidence from how extreme the usage level is —
+ * values near 0% or 100% are more predictable.
+ */
+function confidenceFromUsage(usagePct: number): number {
+  if (usagePct > 90) return 0.92
+  if (usagePct > 80) return 0.85
+  if (usagePct > 70) return 0.75
+  return 0.65
+}
+
 export function PredictiveHealth() {
   const { t } = useTranslation('cards')
   const { nodes, isLoading: nodesLoading, isDemoFallback: nodesDemoFallback, isFailed: nodesFailed, consecutiveFailures: nodesFailures } = useCachedNodes()
@@ -46,16 +80,17 @@ export function PredictiveHealth() {
       const clusterPods = pods.filter(p => p.cluster === cluster)
       const podDensity = cNodes.length > 0 ? clusterPods.length / cNodes.length : 0
 
-      // High pod density warning
+      // High pod density warning — treat density as a % of a ~110 pods/node ceiling
       if (podDensity > 80) {
+        const densityPct = Math.min((podDensity / 110) * 100, 100)
         results.push({
           id: `pod-density-${cluster}`,
           cluster,
           resource: 'Pods',
-          severity: podDensity > 100 ? 'critical' : 'warning',
+          severity: severityFromUsage(densityPct),
           message: `Pod density is ${Math.round(podDensity)} pods/node — consider adding nodes`,
-          confidence: 0.85,
-          timeToExhaustion: podDensity > 100 ? '< 24h' : '3-7 days',
+          confidence: confidenceFromUsage(densityPct),
+          timeToExhaustion: estimateTimeToExhaustion(densityPct),
         })
       }
 
@@ -65,14 +100,16 @@ export function PredictiveHealth() {
         return conditions.some(c => c.type !== 'Ready' && c.status === 'True')
       })
       if (pressuredNodes.length > 0) {
+        // Proportion of nodes under pressure drives the projection
+        const pressurePct = (pressuredNodes.length / cNodes.length) * 100
         results.push({
           id: `pressure-${cluster}`,
           cluster,
           resource: 'Nodes',
-          severity: pressuredNodes.length > 1 ? 'critical' : 'warning',
+          severity: severityFromUsage(Math.max(pressurePct, 85)),
           message: `${pressuredNodes.length} node(s) under pressure — risk of pod eviction`,
-          confidence: 0.92,
-          timeToExhaustion: '< 1h',
+          confidence: confidenceFromUsage(Math.max(pressurePct, 85)),
+          timeToExhaustion: estimateTimeToExhaustion(Math.max(pressurePct, 85)),
         })
       }
 
