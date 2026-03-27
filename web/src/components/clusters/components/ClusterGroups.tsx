@@ -30,26 +30,26 @@ export function ClusterGroups({
   onDeleteGroup,
 }: ClusterGroupsProps) {
   const { t: _t } = useTranslation()
-  const [showGroupForm, setShowGroupForm] = useState(false)
-  const [newGroupName, setNewGroupName] = useState('')
-  const [newGroupClusters, setNewGroupClusters] = useState<string[]>([])
+  const [formState, setFormState] = useState({
+    showForm: false,
+    name: '',
+    clusters: [] as string[],
+  })
+
+  const resetForm = () => setFormState({ showForm: false, name: '', clusters: [] })
 
   const handleCreateGroup = () => {
-    if (newGroupName.trim() && newGroupClusters.length > 0) {
-      onAddGroup({ name: newGroupName.trim(), clusters: newGroupClusters })
-      setShowGroupForm(false)
-      setNewGroupName('')
-      setNewGroupClusters([])
+    if (formState.name.trim() && formState.clusters.length > 0) {
+      onAddGroup({ name: formState.name.trim(), clusters: formState.clusters })
+      resetForm()
     }
   }
 
   const handleCancel = () => {
-    setShowGroupForm(false)
-    setNewGroupName('')
-    setNewGroupClusters([])
+    resetForm()
   }
 
-  if (clusterGroups.length === 0 && !showGroupForm) {
+  if (clusterGroups.length === 0 && !formState.showForm) {
     return null
   }
 
@@ -65,7 +65,7 @@ export function ClusterGroups({
           {showGroups ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
         <button
-          onClick={() => setShowGroupForm(!showGroupForm)}
+          onClick={() => setFormState(prev => ({ ...prev, showForm: !prev.showForm }))}
           className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
         >
           <Plus className="w-3.5 h-3.5" />
@@ -76,29 +76,29 @@ export function ClusterGroups({
       {showGroups && (
         <div className="space-y-2">
           {/* New Group Form */}
-          {showGroupForm && (
+          {formState.showForm && (
             <div className="glass p-4 rounded-lg space-y-3">
               <input
                 type="text"
                 placeholder="Group name..."
-                value={newGroupName}
-                onChange={(e) => setNewGroupName(e.target.value)}
+                value={formState.name}
+                onChange={(e) => setFormState(prev => ({ ...prev, name: e.target.value }))}
                 className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 autoFocus
               />
               <div className="text-xs text-muted-foreground mb-1">Select clusters for this group:</div>
               <div className="flex flex-wrap gap-2">
                 {clusters.map((cluster) => {
-                  const isInGroup = newGroupClusters.includes(cluster.name)
+                  const isInGroup = formState.clusters.includes(cluster.name)
                   const unreachable = isClusterUnreachable(cluster)
                   return (
                     <button
                       key={cluster.name}
                       onClick={() => {
                         if (isInGroup) {
-                          setNewGroupClusters(prev => prev.filter(c => c !== cluster.name))
+                          setFormState(prev => ({ ...prev, clusters: prev.clusters.filter(c => c !== cluster.name) }))
                         } else {
-                          setNewGroupClusters(prev => [...prev, cluster.name])
+                          setFormState(prev => ({ ...prev, clusters: [...prev.clusters, cluster.name] }))
                         }
                       }}
                       className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors ${
@@ -128,7 +128,7 @@ export function ClusterGroups({
                 </button>
                 <button
                   onClick={handleCreateGroup}
-                  disabled={!newGroupName.trim() || newGroupClusters.length === 0}
+                  disabled={!formState.name.trim() || formState.clusters.length === 0}
                   className="flex items-center gap-1 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Check className="w-3.5 h-3.5" />

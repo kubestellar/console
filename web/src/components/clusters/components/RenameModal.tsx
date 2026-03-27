@@ -14,33 +14,31 @@ interface RenameModalProps {
 export function RenameModal({ isOpen = true, clusterName, currentDisplayName, onClose, onRename }: RenameModalProps) {
   const { t: _t } = useTranslation()
   const [newName, setNewName] = useState(currentDisplayName)
-  const [isRenaming, setIsRenaming] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [status, setStatus] = useState<{ renaming: boolean; error: string | null }>({ renaming: false, error: null })
 
   const handleRename = async () => {
     if (!newName.trim()) {
-      setError('Name cannot be empty')
+      setStatus(prev => ({ ...prev, error: 'Name cannot be empty' }))
       return
     }
     if (newName.includes(' ')) {
-      setError('Name cannot contain spaces')
+      setStatus(prev => ({ ...prev, error: 'Name cannot contain spaces' }))
       return
     }
     if (newName.trim() === currentDisplayName) {
-      setError('Name is unchanged')
+      setStatus(prev => ({ ...prev, error: 'Name is unchanged' }))
       return
     }
 
-    setIsRenaming(true)
-    setError(null)
+    setStatus({ renaming: true, error: null })
 
     try {
       await onRename(clusterName, newName.trim())
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to rename context')
+      setStatus({ renaming: false, error: err instanceof Error ? err.message : 'Failed to rename context' })
     } finally {
-      setIsRenaming(false)
+      setStatus(prev => ({ ...prev, renaming: false }))
     }
   }
 
@@ -72,7 +70,7 @@ export function RenameModal({ isOpen = true, clusterName, currentDisplayName, on
           />
         </div>
 
-        {error && <p className="text-sm text-red-400 mb-4">{error}</p>}
+        {status.error && <p className="text-sm text-red-400 mb-4">{status.error}</p>}
 
         <p className="text-xs text-muted-foreground">This updates your kubeconfig via the local agent.</p>
       </BaseModal.Content>
@@ -85,10 +83,10 @@ export function RenameModal({ isOpen = true, clusterName, currentDisplayName, on
           </button>
           <button
             onClick={handleRename}
-            disabled={isRenaming || !newName.trim()}
+            disabled={status.renaming || !newName.trim()}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-50"
           >
-            {isRenaming ? <><Loader2 className="w-4 h-4 animate-spin" />Renaming...</> : <><Check className="w-4 h-4" />Rename</>}
+            {status.renaming ? <><Loader2 className="w-4 h-4 animate-spin" />Renaming...</> : <><Check className="w-4 h-4" />Rename</>}
           </button>
         </div>
       </BaseModal.Footer>
