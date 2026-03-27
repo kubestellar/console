@@ -50,7 +50,7 @@ const LEVEL_DATA = [
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0],
   [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0],
-  [0, 6, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 4, 4],
+  [0, 0, 0, 6, 0, 6, 0, 0, 0, 0, 0, 0, 0, 4, 4],
   [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
   [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
 ]
@@ -107,6 +107,7 @@ export function PodBrothers() {
   const levelRef = useRef<number[][]>([])
   /** Frames remaining of spawn invincibility (prevents instant death on overlapping enemies) */
   const invincibilityRef = useRef<number>(0)
+  const livesRef = useRef<number>(3)
 
   // Initialize level
   const initLevel = useCallback(() => {
@@ -250,15 +251,17 @@ export function PodBrothers() {
 
     // Fall off screen
     if (player.y > CANVAS_HEIGHT) {
-      setLives(l => {
-        if (l <= 1) {
-          setGameState('lost')
-          setScore(s => { emitGameEnded('pod_brothers', 'loss', s); return s })
-          return 0
-        }
+      const currentLives = livesRef.current
+      if (currentLives <= 1) {
+        livesRef.current = 0
+        setLives(0)
+        setGameState('lost')
+        setScore(s => { emitGameEnded('pod_brothers', 'loss', s); return s })
+      } else {
+        livesRef.current = currentLives - 1
+        setLives(currentLives - 1)
         initLevel()
-        return l - 1
-      })
+      }
       return
     }
 
@@ -293,15 +296,17 @@ export function PodBrothers() {
           setScore(s => s + 200)
         } else if (invincibilityRef.current <= 0) {
           // Only take damage when not invincible
-          setLives(l => {
-            if (l <= 1) {
-              setGameState('lost')
-              setScore(s => { emitGameEnded('pod_brothers', 'loss', s); return s })
-              return 0
-            }
+          const currentLives = livesRef.current
+          if (currentLives <= 1) {
+            livesRef.current = 0
+            setLives(0)
+            setGameState('lost')
+            setScore(s => { emitGameEnded('pod_brothers', 'loss', s); return s })
+          } else {
+            livesRef.current = currentLives - 1
+            setLives(currentLives - 1)
             initLevel()
-            return l - 1
-          })
+          }
           return
         }
       }
@@ -500,8 +505,11 @@ export function PodBrothers() {
   }, [gameState, initLevel, render])
 
   const startGame = () => {
+    // Cancel any in-flight animation frame to prevent stale updates
+    cancelAnimationFrame(animationRef.current)
     initLevel()
     setScore(0)
+    livesRef.current = 3
     setLives(3)
     setGameState('playing')
     emitGameStarted('pod_brothers')
