@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"os/exec"
@@ -1461,8 +1462,15 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 		namespace = r.URL.Query().Get("namespace")
 		name = r.URL.Query().Get("name")
 		if r.URL.Query().Get("replicas") != "" {
-			n, _ := strconv.Atoi(r.URL.Query().Get("replicas"))
-			replicas = int32(n)
+			n, err := strconv.Atoi(r.URL.Query().Get("replicas"))
+			if err != nil || n < math.MinInt32 || n > math.MaxInt32 {
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"success": false,
+					"error":   "invalid replicas value",
+				})
+				return
+			}
+			replicas = int32(n) // #nosec G109 -- bounds checked above
 		}
 	}
 
