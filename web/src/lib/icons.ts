@@ -1,8 +1,8 @@
 /**
  * Centralized icon registry using named imports from lucide-react.
  *
- * This file replaces `import * as Icons from 'lucide-react'` namespace imports
- * throughout the codebase, enabling bundler tree-shaking to eliminate unused icons.
+ * All Lucide icons used in the app are imported here by name, enabling bundler
+ * tree-shaking to eliminate unused icons from the production bundle.
  *
  * When adding a new icon to the app, add it here first.
  */
