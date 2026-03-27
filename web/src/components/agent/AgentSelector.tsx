@@ -1,12 +1,14 @@
 import { useRef, useEffect, useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
-import { ChevronDown, Check, Loader2, Sparkles, Play, BookOpen, X } from 'lucide-react'
+import { ChevronDown, Check, Loader2, Sparkles, Play, BookOpen, X, RefreshCw, AlertTriangle, ExternalLink } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
 import { useDemoMode, getDemoMode } from '../../hooks/useDemoMode'
 import { useKagentBackend } from '../../hooks/useKagentBackend'
+import { useProviderConnection } from '../../hooks/useProviderConnection'
 import { AgentIcon } from './AgentIcon'
 import type { AgentInfo, AgentProvider } from '../../types/agent'
+import { PROVIDER_PREREQUISITES } from '../../types/agent'
 import type { MissionExport } from '../../lib/missions/types'
 import { cn } from '../../lib/cn'
 import { useModalState } from '../../lib/modals'
@@ -15,6 +17,11 @@ import { AgentApprovalDialog, hasApprovedAgents } from './AgentApprovalDialog'
 import { MissionDetailView } from '../missions/MissionDetailView'
 import { ClusterSelectionDialog } from '../missions/ClusterSelectionDialog'
 import { CLUSTER_PROVIDER_KEYS, buildVisibleAgents, sectionAgents } from './agentSelectorUtils'
+
+/** Map agent names to their backend provider key for prerequisite lookup */
+const AGENT_TO_PROVIDER_KEY: Record<string, string> = {
+  vscode: 'vscode',
+}
 
 interface AgentSelectorProps {
   compact?: boolean
@@ -35,6 +42,8 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   )
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [showApproval, setShowApproval] = useState(false)
+  // Provider connection lifecycle tracking
+  const { connectionState, startConnection, retry, reset: resetConnection, dismiss: dismissConnection } = useProviderConnection()
   // Stash the agent name the user intended to select when approval was triggered
   const pendingAgentRef = useRef<string | null>(null)
   // Install guide modal state
@@ -210,6 +219,13 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
     }
   }, [isDemoMode, closeDropdown])
 
+  // Reset connection lifecycle state when dropdown closes
+  useEffect(() => {
+    if (!isOpen && connectionState.phase !== 'idle') {
+      resetConnection()
+    }
+  }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Loading state — only show spinner if we already had agents (reconnecting).
   // When no agents have loaded yet (e.g. cluster mode with no kc-agent), render nothing
   // to avoid a perpetual spinner from the reconnect loop.
@@ -240,6 +256,20 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
       setShowApproval(true)
       return
     }
+
+    // For providers with prerequisites (e.g. VS Code), run a readiness check
+    // with clear lifecycle feedback instead of silently timing out
+    const providerKey = AGENT_TO_PROVIDER_KEY[agentName]
+    if (providerKey && PROVIDER_PREREQUISITES[providerKey]) {
+      // Persist the selection immediately so it is not lost on timeout
+      selectAgent(agentName)
+      startConnection(agentName, () => {
+        // Connection confirmed - dropdown can close
+        closeDropdown()
+      })
+      return
+    }
+
     selectAgent(agentName)
     closeDropdown()
   }
@@ -435,6 +465,84 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
                   </div>
                   {clusterAgents.map(renderAgentRow)}
                 </>
+              )}
+            </div>
+          )}
+          {/* Provider connection lifecycle feedback */}
+          {connectionState.phase !== 'idle' && (
+            <div className="px-3 py-3 border-t border-border bg-secondary/20">
+              {(connectionState.phase === 'starting' || connectionState.phase === 'handshake') && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-yellow-400 flex-shrink-0" />
+                    <span className="text-sm font-medium text-foreground">
+                      {connectionState.phase === 'starting'
+                        ? t('agent.providerStarting', { provider: connectionState.provider })
+                        : t('agent.providerHandshake', { provider: connectionState.provider })}
+                    </span>
+                  </div>
+                  {connectionState.prerequisite && (
+                    <p className="text-xs text-muted-foreground ml-6">
+                      {connectionState.prerequisite}
+                    </p>
+                  )}
+                  {connectionState.error && (
+                    <p className="text-xs text-yellow-400 ml-6">{connectionState.error}</p>
+                  )}
+                </div>
+              )}
+              {connectionState.phase === 'connected' && (
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
+                  <span className="text-sm font-medium text-green-400">
+                    {t('agent.providerConnected', { provider: connectionState.provider })}
+                  </span>
+                </div>
+              )}
+              {connectionState.phase === 'failed' && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                    <span className="text-sm font-medium text-red-400">
+                      {t('agent.providerFailed', { provider: connectionState.provider })}
+                    </span>
+                  </div>
+                  {connectionState.error && (
+                    <p className="text-xs text-muted-foreground ml-6">{connectionState.error}</p>
+                  )}
+                  {connectionState.provider && PROVIDER_PREREQUISITES[AGENT_TO_PROVIDER_KEY[connectionState.provider] ?? ''] && (
+                    <div className="ml-6 space-y-1">
+                      <p className="text-xs text-muted-foreground">
+                        {t('agent.providerPrerequisite')}:
+                      </p>
+                      <a
+                        href={PROVIDER_PREREQUISITES[AGENT_TO_PROVIDER_KEY[connectionState.provider] ?? '']?.installUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        {PROVIDER_PREREQUISITES[AGENT_TO_PROVIDER_KEY[connectionState.provider] ?? '']?.label}
+                      </a>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 ml-6">
+                    <button
+                      onClick={() => retry(() => closeDropdown())}
+                      className="flex items-center gap-1 text-xs text-primary hover:text-primary/80"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      {t('agent.providerRetry')}
+                    </button>
+                    <span className="text-xs text-muted-foreground/40">|</span>
+                    <button
+                      onClick={dismissConnection}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      {t('actions.dismiss')}
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           )}

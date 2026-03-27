@@ -44,6 +44,7 @@ export function AgentStatusIndicator() {
           'antigravity': 'google-ag',
           'bob': 'bob',
           'gh-copilot': 'github',
+          'vscode': 'microsoft',
         }
         setDiscoveredAgents(data.availableProviders.map((p: { name: string; displayName: string; capabilities: number }) => ({
           name: p.name,

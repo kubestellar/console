@@ -33,7 +33,8 @@
     "signOut": "Sign Out",
     "getYourOwn": "Get Your Own Console",
     "viewDetails": "View Details",
-    "copied": "Copied!"
+    "copied": "Copied!",
+    "dismiss": "Dismiss"
   },
   "buttons": {
     "addCard": "Add Card",
@@ -1549,6 +1550,12 @@
     "keysSavedTo": "Keys saved to",
     "securityNote": "API keys are stored securely on your local machine and never sent to our servers.",
     "selectAgent": "Select AI agent",
+    "providerStarting": "Starting {{provider}}...",
+    "providerHandshake": "Waiting for {{provider}} handshake...",
+    "providerConnected": "{{provider}} connected",
+    "providerFailed": "{{provider}} connection failed",
+    "providerPrerequisite": "Prerequisite",
+    "providerRetry": "Retry",
     "installViaHomebrewMacOS": "# Install via Homebrew (macOS / WSL)",
     "installLinuxBuildFromSource": "# Linux / WSL: build from source (requires Go 1.24+)"
   },
