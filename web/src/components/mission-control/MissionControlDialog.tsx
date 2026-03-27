@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'
+import { useToast } from '../ui/Toast'
 import { useMissionControl } from './useMissionControl'
 import { SolutionDefinitionPanel } from './SolutionDefinitionPanel'
 import { ClusterAssignmentPanel } from './ClusterAssignmentPanel'
@@ -61,6 +62,7 @@ const PHASE_STEPS: {
 
 export function MissionControlDialog({ open, onClose }: MissionControlDialogProps) {
   const mc = useMissionControl()
+  const { showToast } = useToast()
   const { state } = mc
 
   // Escape to close
@@ -325,7 +327,7 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => { /* TODO: create local clusters for simulation */ }}
+                      onClick={() => showToast('Local cluster simulation is not yet available', 'info')}
                       icon={<Monitor className="w-3.5 h-3.5" />}
                       title="Create local clusters to simulate the deployment"
                     >
@@ -343,7 +345,7 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => { /* TODO: dry run against live clusters */ }}
+                      onClick={() => showToast('Dry run mode is not yet available', 'info')}
                       icon={<FlaskConical className="w-3.5 h-3.5" />}
                       title="Run against live clusters without deploying — report only"
                     >
