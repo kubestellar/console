@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 export interface DashboardCard {
   id: string
@@ -50,6 +50,10 @@ export function useDashboardReset<T extends DashboardCard>({
     localStorage.getItem(storageKey) !== null
   )
 
+  // Keep a ref to the latest cards so callbacks never read stale state
+  const cardsRef = useRef(cards)
+  cardsRef.current = cards
+
   // Reset to only default cards (replace mode)
   const resetToDefaults = useCallback(() => {
     setCards(defaultCards)
@@ -59,7 +63,8 @@ export function useDashboardReset<T extends DashboardCard>({
 
   // Add missing default cards while keeping existing cards
   const addMissingDefaults = useCallback(() => {
-    const existingTypes = new Set(cards.map(c => c.card_type))
+    const currentCards = cardsRef.current
+    const existingTypes = new Set(currentCards.map(c => c.card_type))
     const missingCards = defaultCards.filter(d => !existingTypes.has(d.card_type))
 
     if (missingCards.length > 0) {
@@ -68,11 +73,11 @@ export function useDashboardReset<T extends DashboardCard>({
         ...card,
         id: `${card.card_type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       }))
-      setCards([...cards, ...cardsToAdd] as T[])
+      setCards([...currentCards, ...cardsToAdd] as T[])
     }
 
     return missingCards.length
-  }, [cards, defaultCards, setCards])
+  }, [defaultCards, setCards])
 
   // Reset with mode selection
   const reset = useCallback((mode: ResetMode) => {
