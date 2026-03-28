@@ -1478,9 +1478,9 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                 </div>
               </div>
 
-              {/* Right side - Preview Panel (always rendered) */}
-              <div className="w-64 border-l border-border pl-4 flex-shrink-0">
-                {hoveredCard ? (
+              {/* Right side - Preview Panel (only shown when hovering a card) */}
+              {hoveredCard && (
+                <div className="w-64 border-l border-border pl-4 flex-shrink-0">
                   <div>
                     <div className="text-2xs text-muted-foreground uppercase tracking-wide mb-2">{t('dashboard.addCard.preview')}</div>
 
@@ -1506,13 +1506,8 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                       </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground py-8">
-                    <LayoutGrid className="w-8 h-8 mb-2 opacity-30" />
-                    <p className="text-xs text-center">{t('dashboard.addCard.hoverToPreview')}</p>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
 
