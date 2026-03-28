@@ -359,26 +359,36 @@ export function useGPUNodes(cluster?: string) {
 
       if (!existing) {
         // First time seeing this node - ensure gpuAllocated doesn't exceed gpuCount
+        // Guard against undefined/NaN values from incomplete API data
+        const count = node.gpuCount || 0
+        const allocated = node.gpuAllocated || 0
         seenNodes.set(nodeKey, {
           ...node,
-          gpuAllocated: Math.min(node.gpuAllocated, node.gpuCount)
+          gpuCount: count,
+          gpuAllocated: Math.min(allocated, count)
         })
       } else if (isShortName && !existingIsShortName) {
         // New entry has short cluster name, existing has long - prefer short
+        const count = node.gpuCount || 0
+        const allocated = node.gpuAllocated || 0
         seenNodes.set(nodeKey, {
           ...node,
-          gpuAllocated: Math.min(node.gpuAllocated, node.gpuCount)
+          gpuCount: count,
+          gpuAllocated: Math.min(allocated, count)
         })
       } else if (!isShortName && existingIsShortName) {
         // Existing has short name, keep it - don't replace
       } else {
         // Both have same type of name - keep the one with more reasonable data
         const existingValid = existing.gpuAllocated <= existing.gpuCount
-        const newValid = node.gpuAllocated <= node.gpuCount
+        const newCount = node.gpuCount || 0
+        const newAllocated = node.gpuAllocated || 0
+        const newValid = newAllocated <= newCount
         if (newValid && !existingValid) {
           seenNodes.set(nodeKey, {
             ...node,
-            gpuAllocated: Math.min(node.gpuAllocated, node.gpuCount)
+            gpuCount: newCount,
+            gpuAllocated: Math.min(newAllocated, newCount)
           })
         }
       }

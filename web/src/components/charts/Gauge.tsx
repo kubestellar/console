@@ -21,7 +21,10 @@ export function Gauge({
   thresholds = { warning: 70, critical: 90 },
   invertColors = false,
 }: GaugeProps) {
-  const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0
+  // Guard against NaN/undefined values that can occur with incomplete API data
+  const safeValue = Number.isFinite(value) ? value : 0
+  const safeMax = Number.isFinite(max) && max > 0 ? max : 100
+  const percentage = Math.min((safeValue / safeMax) * 100, 100)
   const rotation = (percentage / 100) * 180 - 90 // -90 to 90 degrees
 
   const getColor = () => {
@@ -82,7 +85,7 @@ export function Gauge({
         {/* Value display */}
         <div className="absolute inset-0 flex items-end justify-center pb-1">
           <span className={`font-bold ${s.fontSize} ${color.text}`}>
-            {Math.round(value)}
+            {Math.round(safeValue)}
             <span className="text-sm text-muted-foreground">{unit}</span>
           </span>
         </div>

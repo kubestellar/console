@@ -89,8 +89,8 @@ export function ClusterDrillDown({ data }: Props) {
       if (!map[type]) {
         map[type] = { total: 0, allocated: 0, nodes: 0 }
       }
-      map[type].total += node.gpuCount
-      map[type].allocated += node.gpuAllocated
+      map[type].total += node.gpuCount || 0
+      map[type].allocated += node.gpuAllocated || 0
       map[type].nodes += 1
     })
     return map
@@ -226,8 +226,8 @@ export function ClusterDrillDown({ data }: Props) {
     )
   }
 
-  const totalGPUs = clusterGPUNodes.reduce((sum, n) => sum + n.gpuCount, 0)
-  const allocatedGPUs = clusterGPUNodes.reduce((sum, n) => sum + n.gpuAllocated, 0)
+  const totalGPUs = clusterGPUNodes.reduce((sum, n) => sum + (n.gpuCount || 0), 0)
+  const allocatedGPUs = clusterGPUNodes.reduce((sum, n) => sum + (n.gpuAllocated || 0), 0)
 
   return (
     <div className="space-y-6">
