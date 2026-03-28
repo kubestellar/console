@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCachedPods } from '../../hooks/useCachedData'
 import { useClusters } from '../../hooks/useMCP'
+import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 
 const CP_LABELS: Record<string, string[]> = {
@@ -19,7 +20,7 @@ export function ControlPlaneHealth() {
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
 
   const hasData = pods.length > 0
-  useCardLoadingState({
+  const { showSkeleton } = useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
@@ -58,11 +59,11 @@ export function ControlPlaneHealth() {
 
   const managedCluster = componentStatus.every(c => c.total === 0) && clusters.length > 0
 
-  if (isLoading && pods.length === 0) {
+  if (showSkeleton) {
     return (
       <div className="space-y-2 p-1">
         {[1, 2, 3, 4, 5].map(i => (
-          <div key={i} className="h-8 rounded bg-muted/50 animate-pulse" />
+          <Skeleton key={i} variant="rounded" height={32} />
         ))}
       </div>
     )
