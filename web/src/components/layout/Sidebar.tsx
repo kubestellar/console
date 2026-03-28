@@ -564,7 +564,7 @@ export function Sidebar() {
               }
             }}
             aria-expanded={!config.collapsed}
-            className="p-1.5 rounded-full bg-background border border-border text-muted-foreground hover:text-foreground hover:bg-secondary shadow-md transition-colors"
+            className="p-1.5 rounded-full bg-background border border-border text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 shadow-md transition-colors"
             title={config.collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {config.collapsed ? <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" /> : <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />}
@@ -574,8 +574,8 @@ export function Sidebar() {
             className={cn(
               "p-1.5 rounded-full border border-border shadow-md transition-colors",
               isPinned
-                ? "bg-purple-900 text-purple-300 hover:bg-purple-800 border-purple-600"
-                : "bg-gray-800 text-muted-foreground hover:text-foreground hover:bg-gray-700 border-gray-600"
+                ? "bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 border-purple-500/30"
+                : "bg-background text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
             )}
             title={isPinned ? 'Unpin sidebar (auto-collapse on mouse leave)' : 'Pin sidebar open'}
           >

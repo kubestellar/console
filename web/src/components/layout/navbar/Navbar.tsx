@@ -52,7 +52,7 @@ export function Navbar() {
         {/* Hamburger menu - mobile only */}
         <button
           onClick={toggleMobileSidebar}
-          className="p-2 md:hidden hover:bg-secondary rounded-lg transition-colors"
+          className="p-2 md:hidden rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/10"
           aria-label={config.isMobileOpen ? t('navbar.closeMenu') : t('navbar.openMenu')}
         >
           {config.isMobileOpen ? (

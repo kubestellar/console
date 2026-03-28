@@ -434,7 +434,7 @@ export function MissionSidebar() {
       )}>
         <button
           onClick={expandSidebar}
-          className="p-2 hover:bg-secondary rounded transition-colors mb-4"
+          className="p-2 rounded transition-colors hover:bg-black/5 dark:hover:bg-white/10 mb-4"
           title={t('missionSidebar.expandSidebar')}
         >
           <PanelRightOpen className="w-5 h-5 text-muted-foreground" />
@@ -528,7 +528,7 @@ export function MissionSidebar() {
               "p-1.5 rounded transition-colors",
               showNewMission
                 ? "bg-primary text-primary-foreground"
-                : "hover:bg-secondary text-muted-foreground hover:text-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
             )}
             title={t('missionSidebar.startNewMission')}
           >
@@ -537,7 +537,7 @@ export function MissionSidebar() {
           {/* Browse Community Missions */}
           <button
             onClick={() => setShowBrowser(true)}
-            className="p-1.5 rounded transition-colors hover:bg-secondary text-muted-foreground hover:text-foreground"
+            className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
             title="Browse community missions"
           >
             <Globe className="w-4 h-4" />
@@ -545,7 +545,7 @@ export function MissionSidebar() {
           {/* Mission Control */}
           <button
             onClick={() => setShowMissionControl(true)}
-            className="p-1.5 rounded transition-colors hover:bg-secondary text-muted-foreground hover:text-foreground"
+            className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
             title="Mission Control — Multi-Cluster Solutions Orchestrator"
           >
             <Rocket className="w-4 h-4" />
@@ -556,7 +556,7 @@ export function MissionSidebar() {
             <button
               onClick={() => setFontSize(prev => prev === 'base' ? 'sm' : prev === 'lg' ? 'base' : 'sm')}
               disabled={fontSize === 'sm'}
-              className="p-1 hover:bg-secondary rounded transition-colors disabled:opacity-30"
+              className="p-1 rounded transition-colors disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/10"
               title={t('missionSidebar.decreaseFontSize')}
             >
               <Minus className="w-3 h-3 text-muted-foreground" />
@@ -565,7 +565,7 @@ export function MissionSidebar() {
             <button
               onClick={() => setFontSize(prev => prev === 'sm' ? 'base' : prev === 'base' ? 'lg' : 'lg')}
               disabled={fontSize === 'lg'}
-              className="p-1 hover:bg-secondary rounded transition-colors disabled:opacity-30"
+              className="p-1 rounded transition-colors disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/10"
               title={t('missionSidebar.increaseFontSize')}
             >
               <Plus className="w-3 h-3 text-muted-foreground" />
@@ -575,7 +575,7 @@ export function MissionSidebar() {
           {!isMobile && (isFullScreen ? (
             <button
               onClick={() => setFullScreen(false)}
-              className="p-1 hover:bg-secondary rounded transition-colors"
+              className="p-1 rounded transition-colors hover:bg-black/5 dark:hover:bg-white/10"
               title={t('missionSidebar.exitFullScreen')}
             >
               <Minimize2 className="w-5 h-5 text-muted-foreground" />
@@ -584,14 +584,14 @@ export function MissionSidebar() {
             <>
               <button
                 onClick={() => setFullScreen(true)}
-                className="p-1 hover:bg-secondary rounded transition-colors"
+                className="p-1 rounded transition-colors hover:bg-black/5 dark:hover:bg-white/10"
                 title={t('missionSidebar.fullScreen')}
               >
                 <Maximize2 className="w-5 h-5 text-muted-foreground" />
               </button>
               <button
                 onClick={minimizeSidebar}
-                className="p-1 hover:bg-secondary rounded transition-colors"
+                className="p-1 rounded transition-colors hover:bg-black/5 dark:hover:bg-white/10"
                 title={t('missionSidebar.minimizeSidebar')}
               >
                 <PanelRightClose className="w-5 h-5 text-muted-foreground" />
@@ -600,7 +600,7 @@ export function MissionSidebar() {
           ))}
           <button
             onClick={closeSidebar}
-            className="p-1 hover:bg-secondary rounded transition-colors"
+            className="p-1 rounded transition-colors hover:bg-black/5 dark:hover:bg-white/10"
             title={t('missionSidebar.closeSidebar')}
           >
             <X className="w-5 h-5 text-muted-foreground" />
