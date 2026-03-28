@@ -7,6 +7,7 @@ import { Github, Send, Coins, CheckCircle2, X, ExternalLink } from 'lucide-react
 import { StatusBadge } from '../ui/StatusBadge'
 import { useRewards } from '../../hooks/useRewards'
 import { useTranslation } from 'react-i18next'
+import { safeSetItem } from '../../lib/utils/localStorage'
 
 interface GitHubInviteProps {
   isOpen: boolean
@@ -37,7 +38,7 @@ function saveInvite(username: string): void {
     timestamp: new Date().toISOString(),
     status: 'pending',
   })
-  localStorage.setItem(INVITES_STORAGE_KEY, JSON.stringify(invites))
+  safeSetItem(INVITES_STORAGE_KEY, JSON.stringify(invites))
 }
 
 export function GitHubInviteModal({ isOpen, onClose }: GitHubInviteProps) {

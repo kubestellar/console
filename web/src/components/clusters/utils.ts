@@ -1,4 +1,5 @@
 import { ClusterInfo } from '../../hooks/useMCP'
+import { safeSetItem } from '../../lib/utils/localStorage'
 
 // Helper to determine if cluster is unreachable vs just unhealthy
 // IMPORTANT: Only mark as unreachable with CORROBORATED evidence
@@ -84,5 +85,5 @@ export function loadClusterCards(): ClusterCard[] {
 }
 
 export function saveClusterCards(cards: ClusterCard[]): void {
-  localStorage.setItem(CLUSTERS_CARDS_KEY, JSON.stringify(cards))
+  safeSetItem(CLUSTERS_CARDS_KEY, JSON.stringify(cards))
 }

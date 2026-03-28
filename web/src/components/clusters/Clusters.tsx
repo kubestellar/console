@@ -29,6 +29,7 @@ import { ClusterCardSkeleton } from '../ui/ClusterCardSkeleton'
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_CLUSTER_LAYOUT, STORAGE_KEY_CLUSTER_ORDER, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 import { useModalState } from '../../lib/modals'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import type { StatBlockValue } from '../ui/StatsOverview'
@@ -96,7 +97,7 @@ export function Clusters() {
   }, [searchParams, setSearchParams])
   const [sortBy, setSortBy] = useState<'name' | 'nodes' | 'pods' | 'health' | 'provider' | 'custom'>(() => {
     // Default to custom if user has a saved order
-    const savedOrder = localStorage.getItem(STORAGE_KEY_CLUSTER_ORDER)
+    const savedOrder = safeGetItem(STORAGE_KEY_CLUSTER_ORDER)
     return savedOrder ? 'custom' : 'name'
   })
   const [sortAsc, setSortAsc] = useState(true)
@@ -107,7 +108,7 @@ export function Clusters() {
     } catch { return [] }
   })
   const [layoutMode, setLayoutMode] = useState<ClusterLayoutMode>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY_CLUSTER_LAYOUT)
+    const stored = safeGetItem(STORAGE_KEY_CLUSTER_LAYOUT)
     return (stored as ClusterLayoutMode) || 'grid'
   })
   const [renamingCluster, setRenamingCluster] = useState<string | null>(null)
@@ -144,7 +145,7 @@ export function Clusters() {
   const handleReorder = useCallback((newOrder: string[]) => {
     setCustomOrder(newOrder)
     setSortBy('custom')
-    localStorage.setItem(STORAGE_KEY_CLUSTER_ORDER, JSON.stringify(newOrder))
+    safeSetItem(STORAGE_KEY_CLUSTER_ORDER, JSON.stringify(newOrder))
   }, [])
 
   const filteredClusters = useMemo(() => {
@@ -466,7 +467,7 @@ export function Clusters() {
                 layoutMode={layoutMode}
                 onLayoutModeChange={(mode) => {
                   setLayoutMode(mode)
-                  localStorage.setItem(STORAGE_KEY_CLUSTER_LAYOUT, mode)
+                  safeSetItem(STORAGE_KEY_CLUSTER_LAYOUT, mode)
                 }}
                 onAddCluster={() => setShowAddCluster(true)}
               />
