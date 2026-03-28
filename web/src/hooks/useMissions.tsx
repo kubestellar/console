@@ -911,6 +911,16 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       }
     }
 
+    // Remind the agent that it runs in a non-interactive terminal (no stdin).
+    // This prevents commands that prompt for user input from hanging (#3767).
+    const isInstallMission = params.type === 'deploy' || /install/i.test(params.title)
+    if (isInstallMission) {
+      enhancedPrompt += '\n\nIMPORTANT: You are running in a non-interactive terminal with NO stdin support. ' +
+        'Never run commands that require interactive input (login prompts, confirmation dialogs, browser OAuth flows). ' +
+        'Always use non-interactive flags (--yes, -y, --non-interactive, --no-input, --batch) or pipe "yes" where needed. ' +
+        'If a step requires interactive authentication, stop and tell the user to complete it manually in their own terminal first.'
+    }
+
     // Auto-match and inject resolution context for relevant mission types
     let matchedResolutions: MatchedResolution[] = []
 
@@ -952,6 +962,17 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         timestamp: new Date(),
       }
     ]
+
+    // Warn the user that interactive terminal input is not supported (#3767)
+    if (isInstallMission) {
+      initialMessages.push({
+        id: `msg-${Date.now()}-nointeractive`,
+        role: 'system',
+        content: '**Non-interactive mode:** This terminal does not support interactive input. ' +
+          'If a tool requires browser-based login or manual confirmation, the agent will ask you to run that step in your own terminal first.',
+        timestamp: new Date(),
+      })
+    }
 
     // Add system message if resolutions were auto-matched
     if (matchedResolutions.length > 0) {

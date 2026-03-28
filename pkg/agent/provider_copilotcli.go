@@ -190,9 +190,16 @@ func (c *CopilotCLIProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 
 	// If stdout was empty but stderr has content, the CLI may have failed
 	if content == "" && waitErr != nil {
-		errMsg := stderrContent.String()
+		errMsg := strings.TrimSpace(stderrContent.String())
 		if errMsg != "" {
-			return nil, fmt.Errorf("copilot CLI failed: %s", strings.TrimSpace(errMsg))
+			// Detect authentication/login prompts that require interactive input
+			lower := strings.ToLower(errMsg)
+			if strings.Contains(lower, "login") || strings.Contains(lower, "auth") ||
+				strings.Contains(lower, "sign in") || strings.Contains(lower, "token") ||
+				strings.Contains(lower, "authenticate") {
+				return nil, fmt.Errorf("copilot CLI requires authentication. Please run 'gh auth login' in your own terminal first, then retry this mission. Error: %s", errMsg)
+			}
+			return nil, fmt.Errorf("copilot CLI failed: %s", errMsg)
 		}
 		return nil, fmt.Errorf("copilot CLI returned empty response (exit: %v)", waitErr)
 	}

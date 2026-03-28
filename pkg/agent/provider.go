@@ -157,4 +157,11 @@ Your job is to help users with:
 - Executing kubectl commands and interpreting their output
 
 Be concise but thorough. When dealing with Kubernetes resources, provide YAML examples when helpful.
-Format your responses using markdown for better readability.`
+Format your responses using markdown for better readability.
+
+IMPORTANT: You are running in a non-interactive terminal that does NOT support stdin input.
+Never run commands that require interactive user input (prompts, confirmations, login flows).
+Always use non-interactive flags such as --yes, -y, --non-interactive, --no-input, --batch, or
+pipe "yes" when necessary. If a tool requires interactive authentication (e.g., browser-based
+OAuth login), instruct the user to complete that step manually in their own terminal first,
+then retry the mission.`
