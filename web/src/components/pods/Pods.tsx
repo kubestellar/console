@@ -51,7 +51,9 @@ export function Pods() {
   const handlePodIssueKeyDown = useCallback((e: React.KeyboardEvent, cluster: string | undefined, namespace: string, name: string) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault() // Prevent default for both Enter and Space to match button behavior
-      drillToPod(cluster || '', namespace, name)
+      if (cluster) {
+        drillToPod(cluster, namespace, name)
+      }
     }
   }, [drillToPod])
 
@@ -167,11 +169,11 @@ export function Pods() {
           {filteredPodIssues.map((issue, i) => (
             <div
               key={i}
-              onClick={() => drillToPod(issue.cluster || '', issue.namespace, issue.name)}
+              onClick={() => issue.cluster && drillToPod(issue.cluster, issue.namespace, issue.name)}
               onKeyDown={(e) => handlePodIssueKeyDown(e, issue.cluster, issue.namespace, issue.name)}
               role="button"
               tabIndex={0}
-              aria-label={`View pod issue: ${issue.name} in ${issue.namespace}`}
+              aria-label={`View pod issue: ${issue.name} in ${issue.namespace}${issue.cluster ? ` on ${issue.cluster.split('/').pop()}` : ''}`}
               className={`glass p-4 rounded-lg cursor-pointer transition-all hover:scale-[1.01] border-l-4 ${
                 issue.reason === 'CrashLoopBackOff' || issue.reason === 'OOMKilled' ? 'border-l-red-500' :
                 issue.reason === 'Pending' || issue.reason === 'ContainerCreating' ? 'border-l-yellow-500' :
