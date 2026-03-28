@@ -13,6 +13,8 @@ import { useCardLoadingState } from './CardDataContext'
 import { LOCAL_AGENT_WS_URL } from '../../lib/constants'
 import { useTranslation } from 'react-i18next'
 
+const WS_CONNECTION_TIMEOUT_MS = 5000
+
 interface UpgradeStatusProps {
   config?: Record<string, unknown>
 }
@@ -117,7 +119,7 @@ function createVersionWsHandle(): VersionWsHandle {
           if (destroyed) { clearInterval(checkInterval); reject(new Error('Handle destroyed')); return }
           if (ws?.readyState === WebSocket.OPEN) { clearInterval(checkInterval); resolve(ws) }
         }, 100)
-        setTimeout(() => { clearInterval(checkInterval); reject(new Error('WebSocket connection timeout')) }, 5000)
+        setTimeout(() => { clearInterval(checkInterval); reject(new Error('WebSocket connection timeout')) }, WS_CONNECTION_TIMEOUT_MS)
       })
     }
 

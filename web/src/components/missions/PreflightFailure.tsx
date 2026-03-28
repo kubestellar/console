@@ -6,6 +6,8 @@
  */
 
 import { useState, useCallback } from 'react'
+
+const COPY_FEEDBACK_MS = 2000
 import {
   ShieldAlert,
   KeyRound,
@@ -86,7 +88,7 @@ function ActionButton({
         // Fallback: select text in a temporary textarea
       })
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setTimeout(() => setCopied(false), COPY_FEEDBACK_MS)
     }
   }, [action.codeSnippet])
 

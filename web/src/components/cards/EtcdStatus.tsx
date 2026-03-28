@@ -139,7 +139,7 @@ export function EtcdStatus() {
       })}
       {clustersWithoutEtcd.length > 0 && (
         <div className="mt-1 px-2 py-1.5 rounded-lg bg-muted/20 text-xs text-muted-foreground">
-          <span className="font-medium">{clustersWithoutEtcd.join(', ')}</span>
+          <span className="font-medium">{(clustersWithoutEtcd ?? []).join(', ')}</span>
           {' — '}
           {clustersWithoutEtcd.some(c => isManagedCluster(pods, c))
             ? t('etcdStatus.managedByProvider')
