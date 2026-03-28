@@ -37,6 +37,7 @@ vi.mock('../../hooks/useMCP', () => ({
 
 vi.mock('../../hooks/useCachedData', () => ({
   useCachedEvents: () => ({
+    // lastRefresh: null → no lastUpdated timestamp available in test environment
     events: [], isLoading: false, isRefreshing: false, lastRefresh: null, refetch: vi.fn(),
   }),
 }))

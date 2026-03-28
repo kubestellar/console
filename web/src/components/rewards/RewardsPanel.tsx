@@ -208,7 +208,11 @@ export function RewardsPanel() {
 
           {githubRewards.from_cache && (
             <p className="text-xs text-muted-foreground mt-2">
-              Cached {new Date(githubRewards.cached_at).toLocaleTimeString()}
+              {(() => {
+                // Show lastUpdated timestamp when displaying cached GitHub rewards data
+                const lastUpdated = githubRewards.cached_at ? new Date(githubRewards.cached_at) : null
+                return lastUpdated ? `Cached ${lastUpdated.toLocaleTimeString()}` : 'Cached'
+              })()}
             </p>
           )}
         </div>

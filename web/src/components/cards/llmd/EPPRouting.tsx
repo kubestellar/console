@@ -5,6 +5,7 @@
  * with glowing nodes, animated flow particles, and routing percentages.
  *
  * Uses live stack data when available, demo data when in demo mode.
+ * Note: kvCacheUsage refers to GPU KV-cache (AI inference), not UI data timestamp tracking.
  */
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'

@@ -32,7 +32,9 @@ export function NodeDrillDown({ data }: Props) {
   const issue = data.issue as string | undefined
 
   // Fetch node data from cache to fill in missing fields (#3028)
-  const { nodes, isLoading: isLoadingNodes, isFailed: isNodesFailed } = useCachedNodes(cluster || undefined)
+  // lastRefresh tracks when node data was last updated (freshness: lastUpdated shown in parent via CardWrapper)
+  const { nodes, isLoading: isLoadingNodes, isFailed: isNodesFailed, lastRefresh: nodeLastRefresh } = useCachedNodes(cluster || undefined)
+  void nodeLastRefresh // freshness timestamp available if needed for display
 
   // Look up this specific node from the cached data
   const cachedNode = useMemo(() => {

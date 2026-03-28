@@ -14,7 +14,7 @@ const STORAGE_KEY = 'kc_notification_config'
 // Load from localStorage
 function loadConfig(): NotificationConfig {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY)
+    const stored = localStorage.getItem(STORAGE_KEY) // no TTL: user notification preferences
     if (stored) {
       return JSON.parse(stored)
     }

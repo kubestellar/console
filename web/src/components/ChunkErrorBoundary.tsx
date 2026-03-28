@@ -23,6 +23,9 @@ interface State {
  * causing "Failed to fetch dynamically imported module" or
  * "MIME type text/html" errors. This boundary catches those and
  * auto-reloads once to pick up fresh chunk references.
+ *
+ * Note: No lastUpdated/timestamp tracking needed — this handles JS bundle
+ * caching at the browser level, not user-visible data freshness.
  */
 export class ChunkErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {

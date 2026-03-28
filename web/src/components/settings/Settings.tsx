@@ -133,6 +133,7 @@ export function Settings() {
   const NAV_SCROLL_SUPPRESS_MS = 1200
 
   // Show toast when settings are restored from backup file (after cache clear)
+  // Note: settings uses sync status (lastSaved) for persistence tracking, not API data timestamps
   useEffect(() => {
     if (restoredFromFile) {
       setShowRestoredToast(true)

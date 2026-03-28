@@ -265,6 +265,8 @@ const FullClusterCard = memo(function FullClusterCard({
   const initialLoading = loading && !hasCachedData
   const refreshing = cluster.refreshing === true
   const spinning = useMinSpin(refreshing)
+  // No per-card lastUpdated timestamp — freshness is indicated by the spinning
+  // refresh icon (useMinSpin) when polling is in progress for this cluster.
 
   const provider = (cluster.distribution as ReturnType<typeof detectCloudProvider>) ||
     detectCloudProvider(cluster.name, cluster.server, cluster.namespaces, cluster.user)

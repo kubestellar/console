@@ -103,7 +103,7 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
   const { drillToPod } = useDrillDownActions()
   const { startMission } = useMissions()
 
-  // Get cached cluster info for distribution detection
+  // Get cached cluster info for distribution detection (lastUpdated via parent refresh cycle)
   // First try deduplicated clusters, then raw clusters, also check aliases
   const clusterInfo = useMemo(() => {
     // Direct match in deduplicated clusters

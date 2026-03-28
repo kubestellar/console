@@ -393,6 +393,7 @@ export function ProactiveGPUNodeHealthMonitor() {
     isDemoFallback,
     isFailed,
     consecutiveFailures,
+    lastRefresh,
   } = useCachedGPUNodeHealth()
 
   const { drillToNode } = useDrillDownActions()
@@ -409,13 +410,14 @@ export function ProactiveGPUNodeHealthMonitor() {
 
   const clusterFilterRef = useRef<HTMLDivElement>(null!)
 
-  // Report loading state to CardWrapper
+  // Report loading state to CardWrapper (lastRefresh enables "Updated Xm ago" freshness display)
   useCardLoadingState({
     isLoading,
     hasAnyData: nodes.length > 0,
     isFailed,
     consecutiveFailures,
     isDemoData: isDemoFallback,
+    lastRefresh,
   })
 
   // Close dropdown on outside click

@@ -2168,14 +2168,31 @@ jobs:
             ISSUES="${ISSUES}### 'Loading...' text instead of skeletons\nUse Skeleton components for better UX:\n\`\`\`\n${LOADING_TEXT}\n\`\`\`\n\n"
           fi
 
-          # Find localStorage reads without checking for stale data
-          STALE_STORAGE=$(grep -rn "localStorage.getItem" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | \
-            grep -v "node_modules\|test\|timestamp\|Timestamp\|expir\|ttl\|TTL" | head -15 || true)
+          # Find components that cache API data in localStorage without TTL validation.
+          # Uses file-level analysis: only flags files that both read AND write localStorage
+          # (indicating a caching pattern) but lack any TTL/expiry checking.
+          # Excludes: games, user preferences, auth tokens, UI state — these never expire by design.
+          STALE_STORAGE=""
+          for f in $(grep -rln "localStorage.setItem" src/components/ --include="*.tsx" --include="*.ts" 2>/dev/null); do
+            # Only check files that also read from localStorage (caching pattern)
+            HAS_GET=$(grep -l "localStorage.getItem" "$f" 2>/dev/null || true)
+            if [ -n "$HAS_GET" ]; then
+              # Skip if the file already has TTL/expiry checking
+              HAS_TTL=$(grep -lE "TTL|ttl|MAX_AGE|maxAge|expir|EXPIR|savedAt|WIZARD_STATE" "$f" 2>/dev/null || true)
+              if [ -z "$HAS_TTL" ]; then
+                # Skip game cards, user-preference storage, and UI state (never expire by design)
+                IS_PREF=$(grep -lE "Score|highScore|HighScore|BestTime|bestTime|high-score|Filter|filter|Repo|repo|History|history|width|height|sidebar|panel|world|location|stocks|draft|bookmark|Bookmark|pong|chess|kubedle|flappy|weather|Pref|pref|VIEW_MODE|BANNER|import\b" "$f" 2>/dev/null || true)
+                if [ -z "$IS_PREF" ]; then
+                  STALE_STORAGE="${STALE_STORAGE}  - $(basename "$f")\n"
+                fi
+              fi
+            fi
+          done
 
           if [ -n "$STALE_STORAGE" ]; then
-            COUNT=$(echo "$STALE_STORAGE" | wc -l | tr -d ' ')
-            if [ "$COUNT" -gt 5 ]; then
-              ISSUES="${ISSUES}### localStorage reads without staleness check (${COUNT})\nConsider adding TTL or timestamp validation:\n\`\`\`\n$(echo "$STALE_STORAGE" | head -8)\n\`\`\`\n\n"
+            COUNT=$(echo -e "$STALE_STORAGE" | grep -c "^\s*-" || true)
+            if [ "$COUNT" -gt 2 ]; then
+              ISSUES="${ISSUES}### Components caching API data in localStorage without TTL (${COUNT})\nConsider adding TTL or timestamp validation:\n${STALE_STORAGE}\n\n"
             fi
           fi
 

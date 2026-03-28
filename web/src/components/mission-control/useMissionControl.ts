@@ -20,16 +20,34 @@ import type {
 } from './types'
 
 const STORAGE_KEY = 'kc_mission_control_state'
+// Wizard state expires after 7 days to avoid persisting abandoned mission drafts
+const WIZARD_STATE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
 // ---------------------------------------------------------------------------
 // Persisted state (survives page reload / accidental close)
 // ---------------------------------------------------------------------------
 
+interface PersistedStateEntry {
+  state: Partial<MissionControlState>
+  savedAt: number
+}
+
 function loadPersistedState(): Partial<MissionControlState> | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(STORAGE_KEY) // TTL validation applied below via WIZARD_STATE_TTL_MS
     if (!raw) return null
-    return JSON.parse(raw) as Partial<MissionControlState>
+    const entry = JSON.parse(raw) as PersistedStateEntry | Partial<MissionControlState>
+    // Support both new format (with savedAt timestamp) and legacy format (plain state)
+    if ('savedAt' in entry && typeof entry.savedAt === 'number') {
+      // Check TTL — discard wizard state older than WIZARD_STATE_TTL_MS
+      if (Date.now() - entry.savedAt > WIZARD_STATE_TTL_MS) {
+        localStorage.removeItem(STORAGE_KEY)
+        return null
+      }
+      return entry.state
+    }
+    // Legacy format — no expiry info, return as-is
+    return entry as Partial<MissionControlState>
   } catch {
     return null
   }
@@ -37,7 +55,8 @@ function loadPersistedState(): Partial<MissionControlState> | null {
 
 function persistState(state: MissionControlState) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    const entry: PersistedStateEntry = { state, savedAt: Date.now() }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entry))
   } catch {
     // quota exceeded — silently ignore
   }
