@@ -62,6 +62,34 @@ const CATEGORY_KEYS: Record<string, 'nodeDebug.categorySystem' | 'nodeDebug.cate
   storage: 'nodeDebug.categoryStorage',
 }
 
+const OUTPUT_MAX_LINES = 500
+const OUTPUT_MAX_BYTES = 50_000
+
+/** Truncate command output to prevent browser freezes on large results. Keeps the last N lines / 50 KB. */
+function truncateOutput(raw: string): { text: string; truncated: boolean } {
+  let text = raw
+  let truncated = false
+
+  // Byte-size check first — if over limit, take a trailing slice then trim to a line boundary
+  if (text.length > OUTPUT_MAX_BYTES) {
+    text = text.slice(-OUTPUT_MAX_BYTES)
+    const firstNewline = text.indexOf('\n')
+    if (firstNewline !== -1) {
+      text = text.slice(firstNewline + 1)
+    }
+    truncated = true
+  }
+
+  // Line-count check
+  const lines = text.split('\n')
+  if (lines.length > OUTPUT_MAX_LINES) {
+    text = lines.slice(-OUTPUT_MAX_LINES).join('\n')
+    truncated = true
+  }
+
+  return { text, truncated }
+}
+
 type TabMode = 'inspect' | 'exec'
 
 export function NodeDebug() {
@@ -80,6 +108,7 @@ export function NodeDebug() {
   const [selectedCluster, setSelectedCluster] = useState<string>('')
   const [selectedNode, setSelectedNode] = useState<string>('')
   const [output, setOutput] = useState<string>('')
+  const [wasTruncated, setWasTruncated] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
   const [mode, setMode] = useState<TabMode>('exec')
   const [execImage, setExecImage] = useState(EXEC_IMAGES[0].value)
@@ -93,13 +122,17 @@ export function NodeDebug() {
     const args = cmdFn(selectedNode)
     const cmdStr = `kubectl ${args.join(' ')}`
     setOutput(`$ ${cmdStr}\n\nRunning...`)
+    setWasTruncated(false)
     setIsRunning(true)
     try {
       const result = await execute(selectedCluster || 'default', args)
-      setOutput(`$ ${cmdStr}\n\n${result || 'Command completed'}`)
+      const { text, truncated } = truncateOutput(result || 'Command completed')
+      setOutput(`$ ${cmdStr}\n\n${text}`)
+      setWasTruncated(truncated)
       showToast(t('nodeDebug.commandCompleted'), 'success')
     } catch (err) {
       setOutput(`$ ${cmdStr}\n\nError: ${err instanceof Error ? err.message : String(err)}`)
+      setWasTruncated(false)
     } finally {
       setIsRunning(false)
     }
@@ -115,13 +148,17 @@ export function NodeDebug() {
     ]
     const cmdStr = `kubectl debug node/${selectedNode} --image=${execImage.split('/').pop()} -- sh -c "${shellCmd}"`
     setOutput(`$ ${cmdStr}\n\nCreating debug pod on ${selectedNode}...`)
+    setWasTruncated(false)
     setIsRunning(true)
     try {
       const result = await execute(selectedCluster || 'default', args)
-      setOutput(`$ ${cmdStr}\n\n${result || 'Command completed (no output)'}`)
+      const { text, truncated } = truncateOutput(result || 'Command completed (no output)')
+      setOutput(`$ ${cmdStr}\n\n${text}`)
+      setWasTruncated(truncated)
       showToast(t('nodeDebug.commandCompleted'), 'success')
     } catch (err) {
       setOutput(`$ ${cmdStr}\n\nError: ${err instanceof Error ? err.message : String(err)}`)
+      setWasTruncated(false)
     } finally {
       setIsRunning(false)
     }
@@ -259,6 +296,11 @@ export function NodeDebug() {
 
       {/* Output terminal */}
       <div className="flex-1 min-h-[120px] max-h-[300px] overflow-auto rounded-lg bg-black/50 border border-border/30 p-2 font-mono text-xs text-green-400 whitespace-pre-wrap">
+        {wasTruncated && (
+          <div className="mb-2 px-2 py-1 rounded bg-yellow-500/15 text-yellow-400 text-2xs border border-yellow-500/20">
+            {t('nodeDebug.outputTruncated', { maxLines: OUTPUT_MAX_LINES, defaultValue: `Output truncated to last ${OUTPUT_MAX_LINES} lines / ${Math.round(OUTPUT_MAX_BYTES / 1000)} KB` })}
+          </div>
+        )}
         {output || (
           <span className="text-muted-foreground">
             {selectedNode
