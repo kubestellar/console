@@ -22,7 +22,7 @@ function useFormatRelativeTime() {
 export function CrioStatus() {
   const { t } = useTranslation('cards')
   const formatRelativeTime = useFormatRelativeTime()
-  const { data, error, showSkeleton, showEmptyState, isRefreshing } = useCrioStatus()
+  const { data, error, showSkeleton, showEmptyState, isRefreshing, isDemoData } = useCrioStatus()
 
   if (showSkeleton) {
     return (
@@ -100,10 +100,12 @@ export function CrioStatus() {
           {isHealthy ? t('crio.healthy') : t('crio.degraded')}
         </div>
 
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span>{formatRelativeTime(data.lastCheckTime)}</span>
-        </div>
+        {!isDemoData && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>{formatRelativeTime(data.lastCheckTime)}</span>
+          </div>
+        )}
       </div>
 
       {/* Top metric tiles - Container Runtime */}

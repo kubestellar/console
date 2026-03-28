@@ -254,6 +254,8 @@ export interface UseCrioStatusResult {
   consecutiveFailures: number
   showSkeleton: boolean
   showEmptyState: boolean
+  /** True when displaying demo/fallback data (no real cluster connected) */
+  isDemoData: boolean
 }
 
 export function useCrioStatus(): UseCrioStatusResult {
@@ -287,5 +289,6 @@ export function useCrioStatus(): UseCrioStatusResult {
     consecutiveFailures,
     showSkeleton,
     showEmptyState,
+    isDemoData: effectiveIsDemoData,
   }
 }

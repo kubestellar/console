@@ -190,6 +190,8 @@ export interface UseLimaStatusResult {
   consecutiveFailures: number
   showSkeleton: boolean
   showEmptyState: boolean
+  /** True when displaying demo/fallback data (no real cluster connected) */
+  isDemoData: boolean
 }
 
 export function useLimaStatus(): UseLimaStatusResult {
@@ -203,6 +205,8 @@ export function useLimaStatus(): UseLimaStatusResult {
       fetcher: fetchLimaStatus,
     })
 
+  const effectiveIsDemoData = isDemoFallback && !isLoading
+
   // hasAnyData is true only when Lima nodes exist.
   // 'not-detected' is NOT counted as "has data" so the empty state shows properly.
   const hasAnyData = data.totalNodes > 0
@@ -212,7 +216,7 @@ export function useLimaStatus(): UseLimaStatusResult {
     hasAnyData,
     isFailed,
     consecutiveFailures,
-    isDemoData: isDemoFallback,
+    isDemoData: effectiveIsDemoData,
   })
 
   return {
@@ -222,5 +226,6 @@ export function useLimaStatus(): UseLimaStatusResult {
     consecutiveFailures,
     showSkeleton,
     showEmptyState,
+    isDemoData: effectiveIsDemoData,
   }
 }

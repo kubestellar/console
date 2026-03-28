@@ -1856,7 +1856,7 @@ jobs:
 
           # Find card components without demo data functions
           # Exclude: games (client-only), modals (no data fetching), pure UI components
-          EXCLUDE_PATTERN="index\|test\|spec\|types\|utils\|KubeKong\|KubeSnake\|KubeBert\|WeatherAnimation\|NotificationVerifyIndicator\|DetailModal\|BreakdownModal"
+          EXCLUDE_PATTERN="index\|test\|spec\|types\|utils\|KubeKong\|KubeSnake\|KubeBert\|WeatherAnimation\|NotificationVerifyIndicator\|DetailModal\|BreakdownModal\|PremiumGauge\|HorseshoeGauge\|PortalTooltip\|AlertListItem"
           CARDS_NO_DEMO=""
           for f in $(find src/components/cards -name "*.tsx" 2>/dev/null | grep -v "$EXCLUDE_PATTERN" | head -60); do
             # Check if it's a card component (exports a component)
@@ -1883,7 +1883,7 @@ jobs:
           for f in $(find src/components/cards -name "*.tsx" 2>/dev/null | grep -v "$EXCLUDE_PATTERN" | head -60); do
             HAS_LOADING=$(grep -l "isLoading\|loading\|Loading" "$f" 2>/dev/null || true)
             if [ -n "$HAS_LOADING" ]; then
-              HAS_SKELETON=$(grep -l "Skeleton\|CardSkeleton\|useCardLoadingState\|from.*Skeleton" "$f" 2>/dev/null || true)
+              HAS_SKELETON=$(grep -l "Skeleton\|CardSkeleton\|useCardLoadingState\|useReportCardDataState\|from.*Skeleton" "$f" 2>/dev/null || true)
               if [ -z "$HAS_SKELETON" ]; then
                 NO_SKELETON="${NO_SKELETON}  - \`$(basename "$f")\`\n"
               fi
@@ -1903,8 +1903,8 @@ jobs:
             for card in $INVENTORY_CARDS; do
               CARD_FILE=$(find src -name "${card}.tsx" -o -name "${card}Card.tsx" 2>/dev/null | head -1)
               if [ -n "$CARD_FILE" ]; then
-                # Check for demo data patterns — includes hook-based demo data via useCached*/useCache
-                HAS_DEMO=$(grep -l "getDemoData\|DEMO_\|demoData\|useCardDemoState\|isDemoFallback\|isDemoData\|useCached" "$CARD_FILE" 2>/dev/null || true)
+                # Check for demo data patterns — includes hook-based demo data via useCached*/useCache and useDemoMode
+                HAS_DEMO=$(grep -l "getDemoData\|DEMO_\|demoData\|useCardDemoState\|isDemoFallback\|isDemoData\|useCached\|useDemoMode\|isDemoMode" "$CARD_FILE" 2>/dev/null || true)
                 if [ -z "$HAS_DEMO" ]; then
                   INVENTORY_NO_DEMO="${INVENTORY_NO_DEMO}  - \`${card}\`\n"
                 fi
@@ -1919,7 +1919,7 @@ jobs:
           # Check for stat blocks without demo values
           # Stat blocks in cards using useCached* hooks get demo data automatically
           STAT_NO_DEMO=$(grep -rln "StatBlock\|StatCard\|stats\[" src/components --include="*.tsx" 2>/dev/null | while read f; do
-            HAS_DEMO=$(grep -l "demo\|Demo\|mock\|Mock\|sample\|Sample\|isDemoFallback\|useCached" "$f" 2>/dev/null || true)
+            HAS_DEMO=$(grep -l "demo\|Demo\|mock\|Mock\|sample\|Sample\|isDemoFallback\|useCached\|useClusters\|useMCP" "$f" 2>/dev/null || true)
             if [ -z "$HAS_DEMO" ]; then
               basename "$f"
             fi

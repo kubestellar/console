@@ -7,6 +7,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { Pagination } from '../ui/Pagination'
 import { useCardData } from '../../lib/cards/cardHooks'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
+import { useCardDemoState, useReportCardDataState } from './CardDataContext'
 import { cn } from '../../lib/cn'
 import type { DynamicCardDefinition, DynamicCardDefinition_T1 } from '../../lib/dynamic-cards/types'
 import type { CardComponentProps, CardComponent } from './cardRegistry'
@@ -25,6 +26,10 @@ export function DynamicCard({ config }: CardComponentProps) {
   const { t: _t } = useTranslation()
   const dynamicCardId = (config?.dynamicCardId as string) || ''
   const definition = getDynamicCard(dynamicCardId)
+
+  // Report demo state: dynamic cards depend on the agent for live API data
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
+  useReportCardDataState({ isDemoData: shouldUseDemoData, isFailed: false, consecutiveFailures: 0 })
 
   if (!definition) {
     return (
