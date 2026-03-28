@@ -42,6 +42,9 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
     typeof window !== 'undefined' ? safeGetItem(PREV_AGENT_KEY) : null
   )
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null)
   const [showApproval, setShowApproval] = useState(false)
   // Provider connection lifecycle tracking
   const { connectionState, startConnection, retry, reset: resetConnection, dismiss: dismissConnection } = useProviderConnection()
@@ -189,16 +192,31 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
     }
   }, [isOpen, agents.length, agentsLoading, isDemoMode, connectToAgent])
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside (check both trigger and portal panel)
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(target) &&
+        (!panelRef.current || !panelRef.current.contains(target))
+      ) {
         closeDropdown()
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [closeDropdown])
+
+  // Compute dropdown position when opened (portal needs absolute screen coords)
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setDropdownPos({
+        top: rect.bottom + 4, // 4px gap (mt-1 equivalent)
+        right: window.innerWidth - rect.right,
+      })
+    }
+  }, [isOpen])
 
   // Close on escape
   useEffect(() => {
@@ -354,6 +372,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
     <>
     <div ref={dropdownRef} className={cn('relative flex items-center gap-1', className, isGreyedOut && 'opacity-40 pointer-events-none')}>
       <button
+        ref={buttonRef}
         onClick={() => !isDemoMode && toggleDropdown()}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
@@ -381,11 +400,13 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
         )} />
       </button>
 
-      {isOpen && (
+      {isOpen && dropdownPos && createPortal(
         <div
+          ref={panelRef}
           role="listbox"
           aria-label={t('agent.selectAgent')}
-          className="absolute z-50 top-full mt-1 right-0 w-96 max-h-[calc(100vh-8rem)] rounded-lg bg-card border border-border shadow-lg overflow-hidden flex flex-col"
+          className="fixed z-[9999] w-96 max-h-[calc(100vh-8rem)] rounded-lg bg-card border border-border shadow-lg overflow-hidden flex flex-col"
+          style={{ top: dropdownPos.top, right: dropdownPos.right }}
           onKeyDown={(e) => {
             if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
             e.preventDefault()
@@ -579,7 +600,8 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
               )}
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
     <AgentApprovalDialog
