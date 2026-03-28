@@ -13,6 +13,8 @@ interface PingResult {
   latency: number | null
   status: 'success' | 'timeout' | 'error'
   timestamp: Date
+  statusCode?: number
+  error?: string
 }
 
 interface SavedHost {
@@ -126,41 +128,58 @@ export function NetworkUtils() {
     }
   }, [])
 
-  // Ping a single host using fetch timing
+  // Ping a single host via the backend proxy.
+  // The backend performs a real HTTP HEAD request and returns the actual
+  // status code and server-side measured latency, avoiding the browser's
+  // no-cors limitation where opaque responses hide failures.
   const pingHost = useCallback(async (host: string): Promise<PingResult> => {
-    const startTime = performance.now()
-
     try {
-      // Ensure URL has protocol
-      let url = host
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        url = 'https://' + url
+      // Ensure URL has protocol for the backend
+      let targetUrl = host
+      if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+        targetUrl = 'https://' + targetUrl
       }
 
       abortControllerRef.current = new AbortController()
       const timeoutId = setTimeout(() => abortControllerRef.current?.abort(), PING_TIMEOUT)
 
-      await fetch(url, {
-        method: 'HEAD',
-        mode: 'no-cors', // Allow cross-origin requests
-        cache: 'no-store',
-        signal: abortControllerRef.current.signal,
-      })
+      const response = await fetch(
+        `/api/ping?url=${encodeURIComponent(targetUrl)}`,
+        {
+          method: 'GET',
+          signal: abortControllerRef.current.signal,
+        }
+      )
 
       clearTimeout(timeoutId)
-      const endTime = performance.now()
-      const latency = Math.round(endTime - startTime)
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({ error: 'unknown error' })) as Record<string, string>
+        return {
+          host,
+          latency: null,
+          status: 'error',
+          timestamp: new Date(),
+          error: errorBody.error,
+        }
+      }
+
+      const data = await response.json() as {
+        status: 'success' | 'timeout' | 'error'
+        latencyMs: number
+        statusCode?: number
+        error?: string
+      }
 
       return {
         host,
-        latency,
-        status: 'success',
+        latency: data.status === 'success' ? data.latencyMs : null,
+        status: data.status,
         timestamp: new Date(),
+        statusCode: data.statusCode,
+        error: data.error || undefined,
       }
     } catch (error) {
-      const endTime = performance.now()
-      const latency = Math.round(endTime - startTime)
-
       if (error instanceof Error && error.name === 'AbortError') {
         return {
           host,
@@ -170,22 +189,12 @@ export function NetworkUtils() {
         }
       }
 
-      // Even with errors, we might have gotten a response (CORS blocks reading)
-      // If latency is reasonable, consider it a success
-      if (latency < PING_TIMEOUT - 100) {
-        return {
-          host,
-          latency,
-          status: 'success',
-          timestamp: new Date(),
-        }
-      }
-
       return {
         host,
         latency: null,
         status: 'error',
         timestamp: new Date(),
+        error: error instanceof Error ? error.message : 'unknown error',
       }
     }
   }, [])

@@ -557,6 +557,10 @@ func (s *Server) setupRoutes() {
 	s.app.Get("/api/ksc", handlers.UmamiScriptProxy)
 	s.app.Post("/api/send", handlers.UmamiCollectProxy)
 
+	// Network ping proxy (public — lightweight server-side HTTP HEAD for latency measurement)
+	// Avoids browser no-cors limitations that produce unreliable results
+	s.app.Get("/api/ping", handlers.PingHandler)
+
 	// MCP handlers (used in protected routes below)
 	mcpHandlers := handlers.NewMCPHandlers(s.bridge, s.k8sClient)
 	// SECURITY FIX: All MCP routes are now protected regardless of dev mode
