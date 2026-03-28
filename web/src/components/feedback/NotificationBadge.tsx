@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
+import { useModalState } from '../../lib/modals'
 import { Bell, X, Check, Clock, Bug, Sparkles, GitPullRequest, Eye } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useNotifications, type Notification, type NotificationType } from '../../hooks/useFeatureRequests'
@@ -49,7 +50,7 @@ export function NotificationBadge() {
     markAllAsRead,
     isLoading,
   } = useNotifications()
-  const [isOpen, setIsOpen] = useState(false)
+  const { isOpen, close, toggle } = useModalState()
 
   useEffect(() => {
     if (!isOpen) return
@@ -57,13 +58,13 @@ export function NotificationBadge() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault()
-        setIsOpen(false)
+        close()
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen])
+  }, [isOpen, close])
 
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.read) {
@@ -90,7 +91,7 @@ export function NotificationBadge() {
     <div className="relative">
       {/* Badge Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggle}
         className={`relative p-2 rounded-lg hover:bg-secondary/50 transition-colors ${
           unreadCount > 0 ? 'text-foreground' : 'text-muted-foreground'
         }`}
@@ -110,7 +111,7 @@ export function NotificationBadge() {
           {/* Backdrop */}
           <div
             className="fixed inset-0 z-40"
-            onClick={() => setIsOpen(false)}
+            onClick={close}
           />
 
           {/* Panel */}
@@ -147,7 +148,7 @@ export function NotificationBadge() {
                   </button>
                 )}
                 <button
-                  onClick={() => setIsOpen(false)}
+                  onClick={close}
                   className="p-1 rounded hover:bg-secondary/50 text-muted-foreground"
                 >
                   <X className="w-4 h-4" />
@@ -208,7 +209,7 @@ export function NotificationBadge() {
               <div className="p-2 border-t border-border text-center">
                 <button
                   onClick={() => {
-                    setIsOpen(false)
+                    close()
                     // Could navigate to full notifications page
                   }}
                   className="text-xs text-purple-400 hover:text-purple-300 transition-colors"

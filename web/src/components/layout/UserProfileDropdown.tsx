@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, lazy, Suspense } from 'react'
+import { useModalState } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import { User, Mail, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Linkedin, Globe, Check, Download, Code2, ExternalLink, Rocket, KeyRound, CheckCircle2, XCircle, GitBranch } from 'lucide-react'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
@@ -28,12 +29,12 @@ interface UserProfileDropdownProps {
 }
 
 export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfileDropdownProps) {
-  const [isOpen, setIsOpen] = useState(false)
+  const { isOpen, close: closeDropdown, toggle: toggleDropdown } = useModalState()
   const [showLanguageSubmenu, setShowLanguageSubmenu] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const [showDevSetupDialog, setShowDevSetupDialog] = useState(false)
   const [showRewards, setShowRewards] = useState(false)
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
+  const { isOpen: showFeedbackModal, open: openFeedbackModal, close: closeFeedbackModal } = useModalState()
   const [showDevPanel, setShowDevPanel] = useState(false)
   const [oauthStatus, setOauthStatus] = useState<{ checked: boolean; configured: boolean; backendUp: boolean }>({
     checked: false,
@@ -58,7 +59,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
     window.open(linkedInUrl, '_blank', 'noopener,noreferrer,width=600,height=600')
     emitLinkedInShare('profile_dropdown')
     awardCoins('linkedin_share')
-    setIsOpen(false)
+    closeDropdown()
   }
 
   // Check OAuth status on mount, retrying until backend is fully up.
@@ -96,19 +97,19 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
+        closeDropdown()
       }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, [closeDropdown])
 
   // Close dropdown on escape
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        setIsOpen(false)
+        closeDropdown()
       }
     }
 
@@ -116,7 +117,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
       document.addEventListener('keydown', handleKeyDown)
       return () => document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isOpen])
+  }, [isOpen, closeDropdown])
 
   if (!user) return null
 
@@ -124,7 +125,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
     <div className="relative" ref={dropdownRef}>
       {/* Trigger button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggleDropdown}
         className="flex items-center gap-3 pl-3 border-l border-border hover:bg-secondary rounded-lg p-2 transition-colors"
       >
         {user.avatar_url ? (
@@ -191,7 +192,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
             </div>
             <button
               onClick={() => {
-                setIsOpen(false)
+                closeDropdown()
                 setShowRewards(true)
               }}
               className="w-full flex items-center gap-3 px-2 py-1.5 text-sm hover:bg-secondary rounded-lg transition-colors"
@@ -298,7 +299,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                   <div className="flex flex-col gap-1 pt-1">
                     <button
                       onClick={() => {
-                        setIsOpen(false)
+                        closeDropdown()
                         if (installMethod === 'dev') {
                           setShowDevSetupDialog(true)
                         } else {
@@ -350,8 +351,8 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
           <div className="p-2">
             <button
               onClick={() => {
-                setIsOpen(false)
-                setShowFeedbackModal(true)
+                closeDropdown()
+                openFeedbackModal()
               }}
               className="w-full flex items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors"
             >
@@ -369,7 +370,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
             </button>
             <button
               onClick={() => {
-                setIsOpen(false)
+                closeDropdown()
                 onPreferences?.()
               }}
               className="w-full flex items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors"
@@ -379,7 +380,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
             </button>
             <button
               onClick={() => {
-                setIsOpen(false)
+                closeDropdown()
                 if (isDemoModeForced) {
                   setShowSetupDialog(true)
                 } else {
@@ -436,7 +437,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
         <Suspense fallback={null}>
           <FeatureRequestModal
             isOpen={showFeedbackModal}
-            onClose={() => setShowFeedbackModal(false)}
+            onClose={closeFeedbackModal}
             initialTab="submit"
           />
         </Suspense>

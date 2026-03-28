@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
+import { useRef, useEffect } from 'react'
+import { useModalState } from '../../../lib/modals'
 import { useLocation } from 'react-router-dom'
 import { BookOpen, Play, ExternalLink, GraduationCap, Video } from 'lucide-react'
 import { useTour } from '../../../hooks/useTour'
@@ -19,40 +20,40 @@ const RESOURCES = [
 ]
 
 export function LearnDropdown() {
-  const [isOpen, setIsOpen] = useState(false)
+  const { isOpen, close, toggle } = useModalState()
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { startTour, hasCompletedTour } = useTour()
   const location = useLocation()
 
   // Close on route change
   useEffect(() => {
-    setIsOpen(false)
-  }, [location.pathname])
+    close()
+  }, [location.pathname, close])
 
   // Close on click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
+        close()
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, [close])
 
   // Close on escape
   useEffect(() => {
     function handleEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') setIsOpen(false)
+      if (event.key === 'Escape') close()
     }
     if (isOpen) {
       document.addEventListener('keydown', handleEscape)
       return () => document.removeEventListener('keydown', handleEscape)
     }
-  }, [isOpen])
+  }, [isOpen, close])
 
   const handleStartTour = () => {
-    setIsOpen(false)
+    close()
     startTour()
   }
 
@@ -60,7 +61,7 @@ export function LearnDropdown() {
     <div className="relative" ref={dropdownRef}>
       {/* Trigger */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggle}
         className={cn(
           'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
           hasCompletedTour
