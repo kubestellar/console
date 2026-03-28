@@ -4571,13 +4571,14 @@ jobs:
             };
 
             let created = 0;
+            let createdTotal = 0;
             const rejections = [];
 
             let capReached = false;
             for (const check of checks) {
               if (created >= maxIssues && !check.bonus) {
                 if (!capReached) {
-                  core.warning(`Rate limit reached (${maxIssues} issues). Remaining non-bonus findings skipped.`);
+                  core.warning(`Max issues cap reached (${maxIssues} issues). Remaining non-bonus findings skipped.`);
                   capReached = true;
                 }
                 continue;
@@ -4605,6 +4606,7 @@ jobs:
               });
 
               core.info(`Created issue #${issue.number}: ${check.title}`);
+              createdTotal++;
 
               // Auto-assign Copilot coding agent so no human triage is needed
               const repo = `${context.repo.owner}/${context.repo.repo}`;
@@ -4699,4 +4701,4 @@ jobs:
               }
             }
 
-            core.info(`Auto-QA complete (focus: ${focusArea}): ${created} issue(s) created, ${checks.length} finding(s) total.`);
+            core.info(`Auto-QA complete (focus: ${focusArea}): ${createdTotal} issue(s) created (${created} counted against cap), ${checks.length} finding(s) total.`);
