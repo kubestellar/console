@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCachedNodes } from '../../hooks/useCachedData'
 import { useKubectl } from '../../hooks/useKubectl'
@@ -117,15 +117,30 @@ export function NodeDebug() {
   const clusters = Array.from(new Set(nodes.map(n => n.cluster).filter(Boolean))).sort()
   const clusterNodes = nodes.filter(n => !selectedCluster || n.cluster === selectedCluster)
 
+  // Resolve the effective cluster: explicit selection first, then the selected node's cluster.
+  // Never fall back to 'default' — that could silently target the wrong cluster.
+  const effectiveCluster = useMemo(() => {
+    if (selectedCluster) return selectedCluster
+    if (selectedNode) {
+      const nodeInfo = nodes.find(n => n.name === selectedNode)
+      return nodeInfo?.cluster || ''
+    }
+    return ''
+  }, [selectedCluster, selectedNode, nodes])
+
   const handleRun = useCallback(async (cmdFn: (node: string) => string[]) => {
     if (!selectedNode) return
+    if (!effectiveCluster) {
+      showToast(t('nodeDebug.clusterRequired'), 'error')
+      return
+    }
     const args = cmdFn(selectedNode)
     const cmdStr = `kubectl ${args.join(' ')}`
     setOutput(`$ ${cmdStr}\n\nRunning...`)
     setWasTruncated(false)
     setIsRunning(true)
     try {
-      const result = await execute(selectedCluster || 'default', args)
+      const result = await execute(effectiveCluster, args)
       const { text, truncated } = truncateOutput(result || 'Command completed')
       setOutput(`$ ${cmdStr}\n\n${text}`)
       setWasTruncated(truncated)
@@ -136,10 +151,14 @@ export function NodeDebug() {
     } finally {
       setIsRunning(false)
     }
-  }, [selectedNode, selectedCluster, execute, showToast, t])
+  }, [selectedNode, effectiveCluster, execute, showToast, t])
 
   const handleExec = useCallback(async (shellCmd: string) => {
     if (!selectedNode || !shellCmd.trim()) return
+    if (!effectiveCluster) {
+      showToast(t('nodeDebug.clusterRequired'), 'error')
+      return
+    }
     // kubectl debug node/<name> creates a privileged pod on the node
     const args = [
       `debug`, `node/${selectedNode}`,
@@ -151,7 +170,7 @@ export function NodeDebug() {
     setWasTruncated(false)
     setIsRunning(true)
     try {
-      const result = await execute(selectedCluster || 'default', args)
+      const result = await execute(effectiveCluster, args)
       const { text, truncated } = truncateOutput(result || 'Command completed (no output)')
       setOutput(`$ ${cmdStr}\n\n${text}`)
       setWasTruncated(truncated)
@@ -162,7 +181,7 @@ export function NodeDebug() {
     } finally {
       setIsRunning(false)
     }
-  }, [selectedNode, selectedCluster, execImage, execute, showToast, t])
+  }, [selectedNode, effectiveCluster, execImage, execute, showToast, t])
 
   if (showSkeleton) {
     return (
@@ -199,6 +218,13 @@ export function NodeDebug() {
           ))}
         </select>
       </div>
+
+      {/* Cluster resolution warning */}
+      {selectedNode && !effectiveCluster && (
+        <div className="px-2 py-1.5 text-xs rounded bg-yellow-500/10 border border-yellow-500/30 text-yellow-400">
+          {t('nodeDebug.clusterRequired')}
+        </div>
+      )}
 
       {/* Mode tabs */}
       <div className="flex gap-1">

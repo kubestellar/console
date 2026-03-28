@@ -1916,7 +1916,8 @@
     "categoryKubernetes": "Kubernetes",
     "categoryNetwork": "Network",
     "categoryStorage": "Storage",
-    "commandCompleted": "Command completed"
+    "commandCompleted": "Command completed",
+    "clusterRequired": "Select a cluster before running commands — defaulting could target the wrong cluster"
   },
   "predictiveHealth": {
     "criticalCount": "{{count}} critical",
