@@ -8,6 +8,7 @@ import { SlackNotificationSettings } from './SlackNotificationSettings'
 import { EmailNotificationSettings } from './EmailNotificationSettings'
 import { PagerDutyNotificationSettings } from './PagerDutyNotificationSettings'
 import { OpsGenieNotificationSettings } from './OpsGenieNotificationSettings'
+import { useToast } from '../../ui/Toast'
 
 const STORAGE_KEY = 'kc_notification_config'
 
@@ -18,19 +19,20 @@ function loadConfig(): NotificationConfig {
     if (stored) {
       return JSON.parse(stored)
     }
-  } catch (e) {
-    console.error('Failed to load notification config:', e)
+  } catch {
+    // Silently fall back to empty object {} (e.g. corrupted storage)
   }
   return {}
 }
 
-// Save to localStorage
-function saveConfig(config: NotificationConfig): void {
+// Save to localStorage - returns true on success, false on failure
+function saveConfig(config: NotificationConfig): boolean {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config))
     window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
-  } catch (e) {
-    console.error('Failed to save notification config:', e)
+    return true
+  } catch {
+    return false
   }
 }
 
@@ -43,6 +45,7 @@ export interface TestResultState {
 
 export function NotificationSettingsSection() {
   const { t } = useTranslation()
+  const { showToast } = useToast()
   const [config, setConfig] = useState<NotificationConfig>(loadConfig())
   const [testResult, setTestResult] = useState<TestResultState | null>(null)
   const { testNotification, isLoading } = useNotificationAPI()
@@ -50,7 +53,9 @@ export function NotificationSettingsSection() {
   const updateConfig = (updates: Partial<NotificationConfig>) => {
     const newConfig = { ...config, ...updates }
     setConfig(newConfig)
-    saveConfig(newConfig)
+    if (!saveConfig(newConfig)) {
+      showToast(t('settings.notifications.saveFailed', 'Failed to save settings'), 'error')
+    }
   }
 
   return (

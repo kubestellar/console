@@ -224,8 +224,8 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
               }
             }
           }
-        } catch (e) {
-          console.error('Failed to parse WebSocket message:', e)
+        } catch {
+          // Ignore malformed WebSocket messages
         }
         ws.close()
         setDescribeLoading(false)
@@ -263,8 +263,8 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
           if (msg.id === requestId && msg.payload?.output) {
             setLogsOutput(msg.payload.output)
           }
-        } catch (e) {
-          console.error('Failed to parse WebSocket message:', e)
+        } catch {
+          // Ignore malformed WebSocket messages
         }
         ws.close()
         setLogsLoading(false)
@@ -302,8 +302,8 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
           if (msg.id === requestId && msg.payload?.output) {
             setEventsOutput(msg.payload.output)
           }
-        } catch (e) {
-          console.error('Failed to parse WebSocket message:', e)
+        } catch {
+          // Ignore malformed WebSocket messages
         }
         ws.close()
         setEventsLoading(false)
@@ -349,8 +349,8 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
               if (msg.id === requestId && msg.payload?.output) {
                 output = msg.payload.output
               }
-            } catch (e) {
-              console.error('Failed to parse WebSocket message:', e)
+            } catch {
+              // Ignore malformed WebSocket messages
             }
             clearTimeout(timeout)
             ws.close()
@@ -494,8 +494,8 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
               setAiAnalysis('Analysis complete - no specific issues identified.')
             }
           }
-        } catch (e) {
-          console.error('Failed to parse WebSocket message:', e)
+        } catch {
+          // Ignore malformed WebSocket messages
         }
         ws.close()
         setAiAnalysisLoading(false)
@@ -535,8 +535,8 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
           if (msg.id === requestId && msg.payload?.output) {
             setPodStatusOutput(msg.payload.output)
           }
-        } catch (e) {
-          console.error('Failed to parse WebSocket message:', e)
+        } catch {
+          // Ignore malformed WebSocket messages
         }
         ws.close()
         setPodStatusLoading(false)
@@ -574,8 +574,8 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
           if (msg.id === requestId && msg.payload?.output) {
             setYamlOutput(msg.payload.output)
           }
-        } catch (e) {
-          console.error('Failed to parse WebSocket message:', e)
+        } catch {
+          // Ignore malformed WebSocket messages
         }
         ws.close()
         setYamlLoading(false)
@@ -737,8 +737,8 @@ Please proceed step by step and ask for confirmation before making any changes.`
               closeDrillDown()
             }
           }
-        } catch (e) {
-          console.error('Failed to parse WebSocket message:', e)
+        } catch {
+          // Ignore malformed WebSocket messages
         }
         ws.close()
         setDeletingPod(false)
@@ -797,8 +797,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                   resolve({ success: false, error: msg.payload?.error || 'Unknown error' })
                 }
               }
-            } catch (e) {
-              console.error('Failed to parse WebSocket message:', e)
+            } catch {
               clearTimeout(timeout)
               ws.close()
               resolve({ success: false, error: 'Failed to parse response' })
@@ -935,8 +934,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                   resolve({ success: false, error: msg.payload?.error || 'Unknown error' })
                 }
               }
-            } catch (e) {
-              console.error('Failed to parse WebSocket message:', e)
+            } catch {
               clearTimeout(timeout)
               ws.close()
               resolve({ success: false, error: 'Failed to parse response' })
@@ -1067,8 +1065,8 @@ Please proceed step by step and ask for confirmation before making any changes.`
               if (msg.id === requestId && msg.payload?.output) {
                 output = msg.payload.output
               }
-            } catch (e) {
-              console.error('Failed to parse WebSocket message:', e)
+            } catch {
+              // Ignore malformed WebSocket messages
             }
             clearTimeout(timeout)
             ws.close()

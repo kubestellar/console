@@ -1,4 +1,5 @@
 import { AlertTriangle, ChevronRight, Server, Cpu, MemoryStick, Zap } from 'lucide-react'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useCachedPods } from '../../hooks/useCachedData'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls } from '../ui/CardControls'
@@ -63,7 +64,7 @@ const getEffectiveMemory = (pod: { memoryUsageBytes?: number; memoryRequestBytes
   return pod.metricsAvailable && pod.memoryUsageBytes ? pod.memoryUsageBytes : (pod.memoryRequestBytes || 0)
 }
 
-export function TopPods({ config }: TopPodsProps) {
+function TopPodsInternal({ config }: TopPodsProps) {
   const { t } = useTranslation()
   const clusterConfig = config?.cluster
   const namespaceConfig = config?.namespace
@@ -428,5 +429,13 @@ export function TopPods({ config }: TopPodsProps) {
         </div>
       )}
     </div>
+  )
+}
+
+export function TopPods(props: TopPodsProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="TopPods">
+      <TopPodsInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }

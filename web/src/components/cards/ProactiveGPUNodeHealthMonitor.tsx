@@ -3,6 +3,7 @@ import { CheckCircle, AlertTriangle, XCircle, ChevronRight, ChevronDown, Server,
 import { cn } from '../../lib/cn'
 import { useCardLoadingState } from './CardDataContext'
 import { CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCachedGPUNodeHealth, useGPUHealthCronJob } from '../../hooks/useCachedData'
@@ -386,7 +387,7 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
   )
 }
 
-export function ProactiveGPUNodeHealthMonitor() {
+function ProactiveGPUNodeHealthMonitorInternal() {
   const {
     nodes,
     isLoading,
@@ -711,6 +712,14 @@ export function ProactiveGPUNodeHealthMonitor() {
         needsPagination={totalPages > 1}
       />
     </div>
+  )
+}
+
+export function ProactiveGPUNodeHealthMonitor() {
+  return (
+    <DynamicCardErrorBoundary cardId="ProactiveGPUNodeHealthMonitor">
+      <ProactiveGPUNodeHealthMonitorInternal />
+    </DynamicCardErrorBoundary>
   )
 }
 

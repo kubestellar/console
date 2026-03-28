@@ -49,7 +49,7 @@ export function YAMLDrillDown({ data }: Props) {
       })
       const { data: response } = await api.get<{ yaml: string }>(`/api/mcp/resource-yaml?${params}`)
       setYAML(response.yaml || getDemoYAML(resourceType, resourceName, namespace))
-    } catch (err) {
+    } catch {
       // Use demo YAML if API fails
       setYAML(getDemoYAML(resourceType, resourceName, namespace))
       setError('Using example YAML - live fetch requires MCP')
@@ -65,8 +65,7 @@ export function YAMLDrillDown({ data }: Props) {
       clearTimeout(copiedTimerRef.current)
       copiedTimerRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
       emitDataExported('yaml_copy', resourceType)
-    } catch (err) {
-      console.error('Failed to copy:', err)
+    } catch {
       showToast('Failed to copy to clipboard', 'error')
     }
   }

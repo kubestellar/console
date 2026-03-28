@@ -3,6 +3,7 @@ import {
   Play, Pause, Lightbulb, Pencil, Undo2, Redo2,
   Save, Trophy, Settings, Sparkles, X
 } from 'lucide-react'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
@@ -210,7 +211,7 @@ function isComplete(board: Cell[][], solution: number[][]): boolean {
   return true
 }
 
-export function SudokuGame({ config: _config }: SudokuGameProps) {
+function SudokuGameInternal({ config: _config }: SudokuGameProps) {
   const { t } = useTranslation()
   const { showToast } = useToast()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
@@ -700,5 +701,13 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
         </div>
       )}
     </div>
+  )
+}
+
+export function SudokuGame(props: SudokuGameProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="SudokuGame">
+      <SudokuGameInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }

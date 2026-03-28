@@ -8,6 +8,7 @@ import { StatusBadge } from '../ui/StatusBadge'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useCardData } from '../../lib/cards/cardHooks'
 import { CardClusterFilter, CardSearchInput, CardAIActions } from '../../lib/cards/CardComponents'
 import { SEVERITY_COLORS, SeverityLevel } from '../../lib/accessibility'
@@ -95,7 +96,7 @@ const getSeverityColor = (severity: string) => {
   return { bg: colors.bg, border: colors.border, text: colors.text, badge: colors.bg }
 }
 
-export function SecurityIssues({ config }: SecurityIssuesProps) {
+function SecurityIssuesInternal({ config }: SecurityIssuesProps) {
   const { t } = useTranslation(['cards', 'common'])
   const clusterConfig = config?.cluster as string | undefined
   const namespaceConfig = config?.namespace as string | undefined
@@ -365,5 +366,13 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
 
       <LimitedAccessWarning hasError={!!error} className="mt-2" />
     </div>
+  )
+}
+
+export function SecurityIssues(props: SecurityIssuesProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="SecurityIssues">
+      <SecurityIssuesInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }

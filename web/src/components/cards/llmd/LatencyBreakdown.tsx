@@ -13,6 +13,7 @@ import {
 import { Clock, AlertTriangle } from 'lucide-react'
 import { useReportCardDataState } from '../CardDataContext'
 import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
+import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import {
   groupByExperiment,
   getFilterOptions,
@@ -60,7 +61,7 @@ function CustomTooltip({ active, payload, label, unit }: {
   )
 }
 
-export function LatencyBreakdown() {
+function LatencyBreakdownInternal() {
   const { t } = useTranslation()
   const { data: reports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
   // Use hook data directly — it already returns cached live data or demo fallback.
@@ -259,6 +260,14 @@ export function LatencyBreakdown() {
         ))}
       </div>
     </div>
+  )
+}
+
+export function LatencyBreakdown() {
+  return (
+    <DynamicCardErrorBoundary cardId="LatencyBreakdown">
+      <LatencyBreakdownInternal />
+    </DynamicCardErrorBoundary>
   )
 }
 

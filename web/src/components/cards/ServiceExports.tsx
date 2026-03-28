@@ -9,6 +9,7 @@ import type { ServiceExport, ServiceExportStatus } from '../../types/mcs'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useServiceExports } from '../../hooks/useServiceExports'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 
 const getStatusIcon = (status: ServiceExportStatus) => {
   switch (status) {
@@ -56,7 +57,7 @@ interface ServiceExportsProps {
   config?: Record<string, unknown>
 }
 
-export function ServiceExports({ config: _config }: ServiceExportsProps) {
+function ServiceExportsInternal({ config: _config }: ServiceExportsProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { exports: allExports, isLoading, isDemoData } = useServiceExports()
   const SORT_OPTIONS = useMemo(() =>
@@ -310,5 +311,13 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
         </a>
       </div>
     </div>
+  )
+}
+
+export function ServiceExports(props: ServiceExportsProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="ServiceExports">
+      <ServiceExportsInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }

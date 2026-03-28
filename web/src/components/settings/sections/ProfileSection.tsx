@@ -56,7 +56,6 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLo
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to save profile'
       setError(message)
-      console.error('Failed to save profile:', error)
       setIsRefreshing(false)
     } finally {
       setIsSaving(false)

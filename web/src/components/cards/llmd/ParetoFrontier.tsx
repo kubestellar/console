@@ -21,6 +21,7 @@ import {
   type ParetoPoint,
 } from '../../../lib/llmd/benchmarkMockData'
 import { useTranslation } from 'react-i18next'
+import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 
 // Minimal parameter type for ECharts label/tooltip formatter callbacks
 interface EChartsFormatterParam {
@@ -248,7 +249,7 @@ interface ParetoFrontierProps {
   config?: { chartType?: string }
 }
 
-export function ParetoFrontier({ config }: ParetoFrontierProps) {
+function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
   const { t } = useTranslation(['cards', 'common'])
   const chartRef = useRef<ReactECharts>(null)
 
@@ -686,6 +687,14 @@ function Toggle({ label, active, onChange }: { label: string; active: boolean; o
         />
       </span>
     </button>
+  )
+}
+
+export function ParetoFrontier(props: ParetoFrontierProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="ParetoFrontier">
+      <ParetoFrontierInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }
 

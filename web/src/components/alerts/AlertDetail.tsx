@@ -100,8 +100,7 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
       setSlackSent(true)
       const timeoutId = window.setTimeout(() => setSlackSent(false), TOAST_DISMISS_MS)
       timeoutsRef.current.push(timeoutId)
-    } catch (error) {
-      console.error('Failed to send Slack notification:', error)
+    } catch {
       showToast('Failed to send Slack notification', 'error')
     } finally {
       setIsSendingSlack(false)

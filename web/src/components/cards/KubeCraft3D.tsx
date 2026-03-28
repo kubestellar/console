@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import {
   Scene,
   Color,
@@ -158,7 +159,7 @@ function generateTerrain(): Block[][][] {
   return world
 }
 
-export function KubeCraft3D() {
+function KubeCraft3DInternal() {
   const { t: _t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const { isExpanded } = useCardExpanded()
@@ -588,5 +589,13 @@ export function KubeCraft3D() {
         </p>
       </div>
     </div>
+  )
+}
+
+export function KubeCraft3D() {
+  return (
+    <DynamicCardErrorBoundary cardId="KubeCraft3D">
+      <KubeCraft3DInternal />
+    </DynamicCardErrorBoundary>
   )
 }

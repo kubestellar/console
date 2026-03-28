@@ -13,6 +13,7 @@ import { Acronym } from './shared/PortalTooltip'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { usePrometheusMetrics } from '../../../hooks/usePrometheusMetrics'
+import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import { useCardExpanded } from '../CardWrapper'
 import { useTranslation } from 'react-i18next'
 import { POLL_INTERVAL_FAST_MS } from '../../../lib/constants/network'
@@ -500,7 +501,7 @@ function HorseshoeNode({ node, uniqueId, isSelected, onClick }: HorseshoeNodePro
   )
 }
 
-export function EPPRouting() {
+function EPPRoutingInternal() {
   const { t } = useTranslation(['cards', 'common'])
   const stackContext = useOptionalStack()
   const [hoveredLink, setHoveredLink] = useState<string | null>(null)
@@ -1234,6 +1235,14 @@ export function EPPRouting() {
         </div>
       </div>
     </div>
+  )
+}
+
+export function EPPRouting() {
+  return (
+    <DynamicCardErrorBoundary cardId="EPPRouting">
+      <EPPRoutingInternal />
+    </DynamicCardErrorBoundary>
   )
 }
 

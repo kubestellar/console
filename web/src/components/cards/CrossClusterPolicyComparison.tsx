@@ -18,6 +18,7 @@ import { useKyverno } from '../../hooks/useKyverno'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useClusters } from '../../hooks/useMCP'
 import { KyvernoDetailModal } from './kyverno/KyvernoDetailModal'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -38,7 +39,7 @@ interface PolicyRow {
   discrepancies: number
 }
 
-export function CrossClusterPolicyComparison({ config: _config }: CardConfig) {
+function CrossClusterPolicyComparisonInternal({ config: _config }: CardConfig) {
   const { t } = useTranslation('cards')
   const { statuses: kyvernoStatuses, isLoading, isRefreshing, lastRefresh, isDemoData, refetch, clustersChecked, totalClusters } = useKyverno()
   const { deduplicatedClusters: rawClusters } = useClusters()
@@ -307,6 +308,14 @@ export function CrossClusterPolicyComparison({ config: _config }: CardConfig) {
         />
       )}
     </div>
+  )
+}
+
+export function CrossClusterPolicyComparison(props: CardConfig) {
+  return (
+    <DynamicCardErrorBoundary cardId="CrossClusterPolicyComparison">
+      <CrossClusterPolicyComparisonInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }
 

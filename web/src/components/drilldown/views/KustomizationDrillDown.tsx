@@ -151,8 +151,8 @@ export function KustomizationDrillDown({ data }: Props) {
           if (msg.id === requestId && msg.payload?.output) {
             output = msg.payload.output
           }
-        } catch (e) {
-          console.error('Failed to parse WebSocket message:', e)
+        } catch {
+          // Ignore malformed WebSocket messages
         }
         clearTimeout(timeout)
         ws.close()
