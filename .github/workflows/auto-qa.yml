@@ -4487,6 +4487,7 @@ jobs:
                   '*Labels `help wanted` enable contributors to pick this up.*',
                 ].join('\n'),
                 labels: ['enhancement', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:adoption'],
+                bonus: true,  // bypass maxIssues cap — adoption issues are always created
               });
             }
 
@@ -4572,10 +4573,14 @@ jobs:
             let created = 0;
             const rejections = [];
 
+            let capReached = false;
             for (const check of checks) {
-              if (created >= maxIssues) {
-                core.warning(`Rate limit reached (${maxIssues} issues). Remaining findings skipped.`);
-                break;
+              if (created >= maxIssues && !check.bonus) {
+                if (!capReached) {
+                  core.warning(`Rate limit reached (${maxIssues} issues). Remaining non-bonus findings skipped.`);
+                  capReached = true;
+                }
+                continue;
               }
 
               // Check for duplicates using pattern matching (handles varying counts in titles)
@@ -4624,15 +4629,19 @@ jobs:
                 core.warning(`Could not assign Copilot to #${issue.number}: ${e.message}${hint}`);
                 rejections.push({ issueNumber: issue.number, status: e.status || 'unknown', message: e.message });
               }
-              created++;
+              if (!check.bonus) {
+                created++;
 
-              // Throttle Copilot assignments to avoid rate limiting.
-              // Copilot's coding agent has concurrency limits — rapid-fire
-              // assignments cause silent failures or queuing issues.
-              const delaySeconds = parseInt(process.env.COPILOT_ASSIGNMENT_DELAY_S || '120');
-              if (created < maxIssues && delaySeconds > 0) {
-                core.info(`Waiting ${delaySeconds}s before next Copilot assignment to avoid rate limits...`);
-                await new Promise(resolve => setTimeout(resolve, delaySeconds * 1000));
+                // Throttle Copilot assignments to avoid rate limiting.
+                // Copilot's coding agent has concurrency limits — rapid-fire
+                // assignments cause silent failures or queuing issues.
+                const delaySeconds = parseInt(process.env.COPILOT_ASSIGNMENT_DELAY_S || '120');
+                if (created < maxIssues && delaySeconds > 0) {
+                  core.info(`Waiting ${delaySeconds}s before next Copilot assignment to avoid rate limits...`);
+                  await new Promise(resolve => setTimeout(resolve, delaySeconds * 1000));
+                }
+              } else {
+                core.info(`Bonus issue — does not count against maxIssues cap`);
               }
 
               // Auto-triage is handled by including triage/accepted in the issue labels at creation
