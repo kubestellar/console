@@ -31,7 +31,7 @@ const NARROW_BREAKPOINT = 1024
 /** Minimum card column span at narrow viewports */
 const MIN_NARROW_COLS = 6
 
-export const SortableCard = memo(function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, isRefreshing, onRefresh, lastUpdated, onKeyDown, registerRef, registerExpandTrigger, onInsertBefore, onInsertAfter, isWorkloadDragActive: _isWorkloadDragActive }: SortableCardProps) {
+export const SortableCard = memo(function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, isRefreshing, onRefresh, lastUpdated, onKeyDown, registerRef, registerExpandTrigger, onInsertBefore: _onInsertBefore, onInsertAfter, isWorkloadDragActive: _isWorkloadDragActive }: SortableCardProps) {
   const {
     attributes,
     listeners,
@@ -78,22 +78,12 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
       aria-label={formatCardTitle(card.card_type)}
       onKeyDown={onKeyDown}
     >
-      {onInsertBefore && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onInsertBefore() }}
-          className="absolute top-1/2 -left-2.5 -translate-y-1/2 z-10 opacity-0 group-hover/card:opacity-100 transition-opacity w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shadow-md hover:scale-110"
-          aria-label="Insert card before this one"
-          title="Insert card here"
-        >
-          +
-        </button>
-      )}
       {onInsertAfter && (
         <button
           onClick={(e) => { e.stopPropagation(); onInsertAfter() }}
-          className="absolute top-1/2 -right-2.5 -translate-y-1/2 z-10 opacity-0 group-hover/card:opacity-100 transition-opacity w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shadow-md hover:scale-110"
-          aria-label="Insert card after this one"
-          title="Insert card here"
+          className="absolute -top-2 -right-2 z-20 opacity-0 group-hover/card:opacity-100 transition-all w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shadow-lg hover:scale-110 ring-2 ring-background"
+          aria-label="Add card"
+          title="Add card here"
         >
           +
         </button>
@@ -148,7 +138,6 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
     prevProps.isRefreshing === nextProps.isRefreshing &&
     prevProps.lastUpdated === nextProps.lastUpdated &&
     prevProps.onKeyDown === nextProps.onKeyDown &&
-    prevProps.onInsertBefore === nextProps.onInsertBefore &&
     prevProps.onInsertAfter === nextProps.onInsertAfter &&
     prevProps.isWorkloadDragActive === nextProps.isWorkloadDragActive
   )
