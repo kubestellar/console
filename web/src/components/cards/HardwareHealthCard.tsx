@@ -95,6 +95,10 @@ export function HardwareHealthCard() {
   const lastUpdate = hwData.lastUpdate ? new Date(hwData.lastUpdate) : null
 
   const [viewMode, setViewMode] = useState<ViewMode>('inventory')
+  // Track whether the user has explicitly chosen a view tab.
+  // When true, auto-switch logic is suppressed so data refreshes
+  // don't override the user's choice.
+  const userSelectedView = useRef(false)
   const [showSnoozed, setShowSnoozed] = useState(false)
   const [snoozeMenuOpen, setSnoozeMenuOpen] = useState<string | null>(null)
   const [snoozeAllMenuOpen, setSnoozeAllMenuOpen] = useState(false)
@@ -254,9 +258,10 @@ export function HardwareHealthCard() {
     return deduplicatedAlerts.filter(alert => !isSnoozed(alert.id)).length
   }, [deduplicatedAlerts, isSnoozed])
 
-  // Auto-switch to alerts tab when active alerts exist
+  // Auto-switch to alerts tab on initial load when active alerts exist.
+  // Once the user has explicitly clicked a view tab, stop overriding.
   useEffect(() => {
-    if (activeAlertCount > 0) {
+    if (activeAlertCount > 0 && !userSelectedView.current) {
       setViewMode('alerts')
     }
   }, [activeAlertCount])
@@ -452,7 +457,7 @@ export function HardwareHealthCard() {
           </div>
         </div>
         <button
-          onClick={() => setViewMode('inventory')}
+          onClick={() => { userSelectedView.current = true; setViewMode('inventory') }}
           className="p-2 rounded-lg border bg-muted/20 border-muted/30 hover:bg-muted/40 transition-colors cursor-pointer text-left"
         >
           <div className="text-xl font-bold text-foreground">{deduplicatedNodeCount}</div>
@@ -466,7 +471,7 @@ export function HardwareHealthCard() {
       <div className="flex gap-2 mb-3">
         <div className="flex flex-1 bg-muted/30 rounded-lg p-0.5">
           <button
-            onClick={() => setViewMode('inventory')}
+            onClick={() => { userSelectedView.current = true; setViewMode('inventory') }}
             className={cn(
               'flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors',
               viewMode === 'inventory'
@@ -483,7 +488,7 @@ export function HardwareHealthCard() {
             )}
           </button>
           <button
-            onClick={() => setViewMode('alerts')}
+            onClick={() => { userSelectedView.current = true; setViewMode('alerts') }}
             className={cn(
               'flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors',
               viewMode === 'alerts'
