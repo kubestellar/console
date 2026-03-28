@@ -8,12 +8,13 @@
  * Follows the ClusterOPAModal pattern using BaseModal compound components.
  */
 
-import { useState, useMemo } from 'react'
-import { Shield, FileCheck, BarChart3, Search, ExternalLink, Sparkles } from 'lucide-react'
+import { useState, useMemo, useCallback } from 'react'
+import { Shield, FileCheck, BarChart3, Search, ExternalLink, Sparkles, AlertTriangle, ChevronRight } from 'lucide-react'
 import { BaseModal } from '../../../lib/modals'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { RefreshButton } from '../../ui/RefreshIndicator'
 import { useMissions } from '../../../hooks/useMissions'
+import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import type { KyvernoClusterStatus, KyvernoPolicy, KyvernoPolicyReport } from '../../../hooks/useKyverno'
 
 type KyvernoTab = 'policies' | 'reports'
@@ -41,6 +42,20 @@ export function KyvernoDetailModal({
   const [activeTab, setActiveTab] = useState<KyvernoTab>('policies')
   const [search, setSearch] = useState('')
   const { startMission } = useMissions()
+  const { drillToPolicy } = useDrillDownActions()
+
+  const handlePolicyClick = useCallback((policy: KyvernoPolicy) => {
+    onClose()
+    drillToPolicy(policy.cluster, policy.namespace, policy.name, {
+      policyType: 'kyverno',
+      kind: policy.kind,
+      status: policy.status,
+      category: policy.category,
+      description: policy.description,
+      violationCount: policy.violations,
+      background: policy.background,
+    })
+  }, [onClose, drillToPolicy])
 
   const tabs = [
     { id: 'policies' as const, label: 'Policies', icon: FileCheck, badge: status.totalPolicies },
@@ -177,7 +192,7 @@ Please proceed step by step.`,
             ) : (
               <div className="space-y-2">
                 {filteredPolicies.map((policy, i) => (
-                  <PolicyRow key={`${policy.name}-${i}`} policy={policy} getStatusColor={getStatusColor} getCategoryColor={getCategoryColor} />
+                  <PolicyRow key={`${policy.name}-${i}`} policy={policy} getStatusColor={getStatusColor} getCategoryColor={getCategoryColor} onClick={handlePolicyClick} />
                 ))}
               </div>
             )}
@@ -243,13 +258,22 @@ function PolicyRow({
   policy,
   getStatusColor,
   getCategoryColor,
+  onClick,
 }: {
   policy: KyvernoPolicy
   getStatusColor: (s: string) => 'green' | 'yellow' | 'blue'
   getCategoryColor: (c: string) => string
+  onClick: (policy: KyvernoPolicy) => void
 }) {
   return (
-    <div className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
+    <div
+      className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
+      onClick={() => onClick(policy)}
+      role="button"
+      aria-label={`View policy insights: ${policy.name}`}
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(policy) } }}
+    >
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-sm font-medium text-foreground truncate">{policy.name}</span>
@@ -258,7 +282,14 @@ function PolicyRow({
           </StatusBadge>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          {policy.violations > 0 && (
+            <span className="flex items-center gap-1 text-xs text-yellow-400">
+              <AlertTriangle className="w-3 h-3" />
+              {policy.violations}
+            </span>
+          )}
           <span className="text-xs text-muted-foreground">{policy.kind}</span>
+          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-purple-400 transition-colors" />
         </div>
       </div>
       {policy.description && (

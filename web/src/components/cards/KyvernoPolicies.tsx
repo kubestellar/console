@@ -19,6 +19,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { StatusBadge } from '../ui/StatusBadge'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { KyvernoDetailModal } from './kyverno/KyvernoDetailModal'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 import type { KyvernoPolicy } from '../../hooks/useKyverno'
 
 interface KyvernoPoliciesProps {
@@ -30,6 +31,7 @@ function KyvernoPoliciesInternal({ config: _config }: KyvernoPoliciesProps) {
   const { statuses, isLoading, isRefreshing, lastRefresh, installed, hasErrors, isDemoData, refetch, clustersChecked, totalClusters } = useKyverno()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
+  const { drillToPolicy } = useDrillDownActions()
   const [localSearch, setLocalSearch] = useState('')
   const [modalCluster, setModalCluster] = useState<string | null>(null)
 
@@ -141,6 +143,18 @@ Please proceed step by step.`,
       case 'audit': return 'bg-yellow-500/20 text-yellow-400'
       default: return 'bg-blue-500/20 text-blue-400'
     }
+  }
+
+  const handlePolicyClick = (policy: KyvernoPolicy) => {
+    drillToPolicy(policy.cluster, policy.namespace, policy.name, {
+      policyType: 'kyverno',
+      kind: policy.kind,
+      status: policy.status,
+      category: policy.category,
+      description: policy.description,
+      violationCount: policy.violations,
+      background: policy.background,
+    })
   }
 
   const getCategoryColor = (category: string) => {
@@ -279,11 +293,11 @@ Please proceed step by step.`,
           <div
             key={`${policy.cluster}-${policy.name}-${i}`}
             className="p-2.5 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
-            onClick={() => setModalCluster(policy.cluster)}
+            onClick={() => handlePolicyClick(policy)}
             role="button"
             aria-label={`View Kyverno policy: ${policy.name} on ${policy.cluster}`}
             tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setModalCluster(policy.cluster) } }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlePolicyClick(policy) } }}
           >
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
