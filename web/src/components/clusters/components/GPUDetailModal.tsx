@@ -488,8 +488,8 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
           {gpuNodes.length === 0 && !isLoading && (
             <div className="text-center py-8 text-muted-foreground">
               <Zap className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>No GPU nodes detected across your clusters</p>
-              <p className="text-sm mt-1">GPU nodes with nvidia.com/gpu resources will appear here</p>
+              <p>{t('gpu.noGpuNodesDetected')}</p>
+              <p className="text-sm mt-1">{t('gpu.gpuNodesHint')}</p>
             </div>
           )}
 
@@ -497,7 +497,7 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
           {isLoading && gpuNodes.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <RefreshCw className="w-8 h-8 mx-auto mb-3 animate-spin" />
-              <p>Loading GPU data...</p>
+              <p>{t('gpu.loadingData')}</p>
             </div>
           )}
         </div>

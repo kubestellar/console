@@ -443,7 +443,8 @@
       "vclusterInstallWithAgent": "Install with AI Agent",
       "vclusterCreateNew": "Create Virtual Cluster",
       "vclusterDefaultNamespace": "vcluster",
-      "vclusterDeleteConfirm": "Delete virtual cluster \"{{name}}\" in namespace \"{{namespace}}\"? This cannot be undone."
+      "vclusterDeleteConfirm": "Delete virtual cluster \"{{name}}\" in namespace \"{{namespace}}\"? This cannot be undone.",
+      "selectHostCluster": "Select a host cluster..."
     },
     "backup": {
       "title": "Backup & Sync",
@@ -662,7 +663,10 @@
     "select": "Select Language"
   },
   "gpu": {
-    "noPendingRequests": "No pending requests"
+    "noPendingRequests": "No pending requests",
+    "noGpuNodesDetected": "No GPU nodes detected across your clusters",
+    "loadingData": "Loading GPU data...",
+    "gpuNodesHint": "GPU nodes with nvidia.com/gpu resources will appear here"
   },
   "gitops": {
     "allClusters": "All Clusters",
@@ -1976,6 +1980,39 @@
       "defaultDeploymentName": "<deployment-name>",
       "syncSuccessMessage": "Sync triggered for application \"{{appName}}\" in namespace \"{{namespace}}\". Argo CD will reconcile the desired state from Git.",
       "syncFailedMessage": "Failed to trigger sync: {{error}}"
+    },
+    "kustomization": {
+      "noResources": "No resources found",
+      "noConditions": "No conditions available",
+      "clickAnalyze": "Click \"Analyze Kustomization\" to get AI-powered analysis",
+      "analyzeHint": "AI will analyze the kustomization and suggest improvements"
+    },
+    "policy": {
+      "specNotAvailable": "Policy specification not available",
+      "clickAnalyze": "Click \"Analyze Policy\" to get AI-powered analysis",
+      "analyzeHint": "AI will analyze the policy and suggest improvements"
+    },
+    "nodeDetail": {
+      "loadingDetails": "Loading node details...",
+      "unableToLoad": "Unable to load node details from cluster",
+      "tipInvestigate": "Use \"Investigate\" to understand why the node was cordoned before uncordoning.",
+      "cordonedHint": "Nodes may be cordoned for maintenance, upgrades, or due to detected issues."
+    },
+    "alertDetail": {
+      "alertRule": "Alert Rule",
+      "ruleNotAvailable": "Alert rule source not available",
+      "clickDiagnose": "Click \"Diagnose Alert\" to get AI-powered analysis",
+      "connectAgentRule": "Connect the agent to fetch PrometheusRule definitions",
+      "analyzeHint": "AI will analyze the alert and suggest remediation steps"
+    },
+    "buildpack": {
+      "noBuilds": "No builds found",
+      "availableAIActions": "Available AI Actions",
+      "buildHealthAnalysis": "Build health and status analysis",
+      "builderConfigReview": "Builder configuration review",
+      "buildFailureDiagnosis": "Build failure diagnosis",
+      "connectAgentBuilds": "Connect the agent to fetch build history",
+      "analyzeHint": "AI will analyze the buildpack and suggest improvements"
     }
   },
   "pagination": {
@@ -2521,7 +2558,9 @@
     "admission": "Admission",
     "maintenance": "Maintenance",
     "patching": "Patching",
-    "restartConsole": "Restart the console"
+    "restartConsole": "Restart the console",
+    "health": "Health",
+    "loadingMore": "Loading more..."
   },
   "namespaces": {
     "createNamespace": "Create Namespace",
@@ -3013,5 +3052,8 @@
     "nodesWidget": "Nodes Widget",
     "openFullDashboard": "Open Full Dashboard",
     "installInstruction": "Click Open in app in your address bar"
+  },
+  "history": {
+    "configurationUpdated": "Configuration updated"
   }
 }

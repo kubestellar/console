@@ -22,7 +22,7 @@ export function CardConfigModal({
   onSave,
   onClose,
 }: CardConfigModalProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const [config, setConfig] = useState<Record<string, unknown>>(card.config || {})
 
   // Use standardized modal keyboard navigation (Escape to close, body scroll lock)
@@ -58,7 +58,7 @@ export function CardConfigModal({
               onChange={(e) => setConfig(prev => ({ ...prev, cluster: e.target.value || undefined }))}
               className="w-full px-3 py-2 bg-secondary/50 border border-border rounded-lg text-foreground"
             >
-              <option value="">All Clusters</option>
+              <option value="">{t('filters.allClusters')}</option>
               {clusters.map(c => (
                 <option key={c.name} value={c.name}>{c.name}</option>
               ))}

@@ -522,7 +522,7 @@ After installation, the user can create virtual clusters on this host cluster fr
                       onChange={(e) => { setVclusterHostCluster(e.target.value); if (e.target.value) checkVClusterOnCluster(e.target.value) }}
                       className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                     >
-                      <option value="" disabled>Select a host cluster...</option>
+                      <option value="" disabled>{t('settings.localClusters.selectHostCluster')}</option>
                       {(healthyClusters || []).map(c => {
                         const vcStatus = (vclusterClusterStatus || []).find(s => s.context === (c.context || c.name))
                         const hasVC = vcStatus?.hasCRD

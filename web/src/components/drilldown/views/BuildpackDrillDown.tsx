@@ -16,6 +16,7 @@ import {
 } from '../../modals'
 import { useToast } from '../../ui/Toast'
 import { copyToClipboard } from '../../../lib/clipboard'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   data: Record<string, unknown>
@@ -95,6 +96,7 @@ const mapConditionToBuildpackStatus = (
 }
 
 export function BuildpackDrillDown({ data }: Props) {
+  const { t } = useTranslation()
   const cluster = data.cluster as string
   const namespace = data.namespace as string
   const name = data.name as string
@@ -656,8 +658,8 @@ Check:
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <History className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No builds found</p>
-                <p className="text-xs mt-1">Connect the agent to fetch build history</p>
+                <p>{t('drilldown.buildpack.noBuilds')}</p>
+                <p className="text-xs mt-1">{t('drilldown.buildpack.connectAgentBuilds')}</p>
               </div>
             )}
           </div>
@@ -719,19 +721,19 @@ Check:
             ) : (
               <div className="space-y-4">
                 <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                  <h5 className="text-sm font-medium text-purple-400 mb-2">Available AI Actions</h5>
+                  <h5 className="text-sm font-medium text-purple-400 mb-2">{t('drilldown.buildpack.availableAIActions')}</h5>
                   <ul className="space-y-2 text-sm text-muted-foreground">
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-green-400 mt-0.5" />
-                      <span>Build health and status analysis</span>
+                      <span>{t('drilldown.buildpack.buildHealthAnalysis')}</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-green-400 mt-0.5" />
-                      <span>Builder configuration review</span>
+                      <span>{t('drilldown.buildpack.builderConfigReview')}</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-green-400 mt-0.5" />
-                      <span>Build failure diagnosis</span>
+                      <span>{t('drilldown.buildpack.buildFailureDiagnosis')}</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-green-400 mt-0.5" />
@@ -742,7 +744,7 @@ Check:
                 <div className="text-center py-8 text-muted-foreground">
                   <Stethoscope className="w-12 h-12 mx-auto mb-3 opacity-50" />
                   <p>Click "Analyze Buildpack" to get AI-powered insights</p>
-                  <p className="text-xs mt-1">AI will analyze the buildpack and suggest improvements</p>
+                  <p className="text-xs mt-1">{t('drilldown.buildpack.analyzeHint')}</p>
                 </div>
               </div>
             )}

@@ -399,7 +399,7 @@ Please:
                     className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20 transition-colors text-sm"
                   >
                     <Bell className="w-3 h-3" />
-                    <span>Alert Rule</span>
+                    <span>{t('drilldown.alertDetail.alertRule')}</span>
                   </button>
                 )}
               </div>
@@ -486,8 +486,8 @@ Please:
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <Code className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>Alert rule source not available</p>
-                <p className="text-xs mt-1">Connect the agent to fetch PrometheusRule definitions</p>
+                <p>{t('drilldown.alertDetail.ruleNotAvailable')}</p>
+                <p className="text-xs mt-1">{t('drilldown.alertDetail.connectAgentRule')}</p>
               </div>
             )}
           </div>
@@ -527,8 +527,8 @@ Please:
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <Stethoscope className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>Click "Diagnose Alert" to get AI-powered analysis</p>
-                <p className="text-xs mt-1">AI will analyze the alert and suggest remediation steps</p>
+                <p>{t('drilldown.alertDetail.clickDiagnose')}</p>
+                <p className="text-xs mt-1">{t('drilldown.alertDetail.analyzeHint')}</p>
               </div>
             )}
           </div>

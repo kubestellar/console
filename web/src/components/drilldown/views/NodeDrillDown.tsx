@@ -134,7 +134,7 @@ Start by checking node events and conditions.`,
         {isResolvingNode && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span>Loading node details...</span>
+            <span>{t('drilldown.nodeDetail.loadingDetails')}</span>
           </div>
         )}
 
@@ -142,7 +142,7 @@ Start by checking node events and conditions.`,
         {isNodeDataError && (
           <div className="flex items-center gap-2 text-sm text-yellow-400 mb-4">
             <AlertTriangle className="w-4 h-4" />
-            <span>Unable to load node details from cluster</span>
+            <span>{t('drilldown.nodeDetail.unableToLoad')}</span>
           </div>
         )}
 
@@ -349,8 +349,8 @@ Provide the specific kubectl commands for cluster context "${clusterShort}".`,
             {/* Info cards */}
             <div className="text-sm space-y-2 mt-3">
               <div className="p-2 rounded bg-muted/30 text-xs text-muted-foreground">
-                <strong>Tip:</strong> Use &quot;Investigate&quot; to understand why the node was cordoned before uncordoning.
-                Nodes may be cordoned for maintenance, upgrades, or due to detected issues.
+                <strong>Tip:</strong> {t('drilldown.nodeDetail.tipInvestigate')}
+                {t('drilldown.nodeDetail.cordonedHint')}
               </div>
             </div>
           </div>

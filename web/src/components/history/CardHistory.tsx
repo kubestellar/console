@@ -78,7 +78,7 @@ interface CardHistoryProps {
 }
 
 export function CardHistory({ onRestoreCard }: CardHistoryProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const { history: rawHistory, clearHistory, removeEntry } = useCardHistory()
   const history = rawHistory || []
   const [filter, setFilter] = useState<CardHistoryEntry['action'] | 'all'>('all')
@@ -179,7 +179,7 @@ export function CardHistory({ onRestoreCard }: CardHistoryProps) {
                     <>Added to {entry.dashboardName || 'dashboard'}</>
                   )}
                   {entry.action === 'configured' && (
-                    <>Configuration updated</>
+                    <>{t('history.configurationUpdated')}</>
                   )}
                 </p>
 

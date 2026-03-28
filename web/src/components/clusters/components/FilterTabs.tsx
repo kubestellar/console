@@ -124,12 +124,12 @@ export function FilterTabs({
             onChange={(e) => onSortByChange(e.target.value as SortByType)}
             className="px-2 py-1.5 rounded-lg text-sm bg-card/50 border border-border text-foreground"
           >
-            <option value="custom">Custom</option>
+            <option value="custom">{t('common.custom')}</option>
             <option value="name">{t('common.name')}</option>
             <option value="nodes">{t('common.nodes')}</option>
             <option value="pods">{t('common.pods')}</option>
-            <option value="health">Health</option>
-            <option value="provider">Provider</option>
+            <option value="health">{t('common.health')}</option>
+            <option value="provider">{t('common.provider')}</option>
           </select>
           <button
             onClick={() => onSortAscChange(!sortAsc)}

@@ -283,7 +283,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
         {isPartiallyLoading && (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Loader2 className="w-3 h-3 animate-spin" />
-            <span>Loading more...</span>
+            <span>{t('common.loadingMore')}</span>
           </div>
         )}
         {!isPartiallyLoading && <div />}

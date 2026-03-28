@@ -486,7 +486,7 @@ Please:
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No resources found</p>
+                <p>{t('drilldown.kustomization.noResources')}</p>
               </div>
             )}
           </div>
@@ -535,7 +535,7 @@ Please:
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No conditions available</p>
+                <p>{t('drilldown.kustomization.noConditions')}</p>
               </div>
             )}
           </div>
@@ -575,8 +575,8 @@ Please:
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <Stethoscope className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>Click "Analyze Kustomization" to get AI-powered analysis</p>
-                <p className="text-xs mt-1">AI will analyze the kustomization and suggest improvements</p>
+                <p>{t('drilldown.kustomization.clickAnalyze')}</p>
+                <p className="text-xs mt-1">{t('drilldown.kustomization.analyzeHint')}</p>
               </div>
             )}
           </div>
