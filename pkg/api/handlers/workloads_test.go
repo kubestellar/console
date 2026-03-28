@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -289,6 +290,13 @@ func TestDeleteWorkload(t *testing.T) {
 func TestClusterGroupsCRUD(t *testing.T) {
 	env := setupTestEnv(t)
 	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
+
+	// Inject fake dynamic clients for clusters used in the test so that
+	// LabelClusterNodes / RemoveClusterNodeLabels can resolve them without
+	// a real kubeconfig (fixes CI where ~/.kube/config doesn't exist).
+	nodeGVR := schema.GroupVersionResource{Version: "v1", Resource: "nodes"}
+	injectDynamicCluster(env, "c1", map[schema.GroupVersionResource]string{nodeGVR: "NodeList"})
+	injectDynamicCluster(env, "c2", map[schema.GroupVersionResource]string{nodeGVR: "NodeList"})
 
 	env.App.Get("/api/cluster-groups", handler.ListClusterGroups)
 	env.App.Post("/api/cluster-groups", handler.CreateClusterGroup)
