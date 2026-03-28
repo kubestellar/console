@@ -2009,7 +2009,10 @@
     "showUncovered": "Show uncovered",
     "podsCount": "{{count}} pods",
     "podsCount_one": "{{count}} pod",
-    "podsCount_other": "{{count}} pods"
+    "podsCount_other": "{{count}} pods",
+    "policiesAndPods": "{{policies}} policies, {{pods}} pods",
+    "estimated": "Estimated (policy API unavailable)",
+    "estimatedTooltip": "NetworkPolicy resources could not be fetched. Coverage is estimated based on namespace type (system vs user). Connect the agent or check API access for accurate data."
   },
   "quotaHeatmap": {
     "noNamespaceData": "No namespace data",

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCachedPods } from '../../hooks/useCachedData'
+import { useNetworkPolicies } from '../../hooks/mcp/networking'
 import { useCardLoadingState } from './CardDataContext'
 
 interface NamespaceCoverage {
@@ -13,39 +14,77 @@ interface NamespaceCoverage {
 
 export function NetworkPolicyCoverage() {
   const { t } = useTranslation('cards')
-  const { pods, isLoading, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods()
+  const { pods, isLoading: podsLoading, isDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPods()
+  const { networkpolicies, isLoading: policiesLoading, isFailed: policiesFailed } = useNetworkPolicies()
   const [showUncovered, setShowUncovered] = useState(false)
+
+  const isLoading = podsLoading || policiesLoading
+  const isFailed = podsFailed && policiesFailed
+  // Policies fetch failed but pods succeeded — fall back to heuristic with warning
+  const isEstimated = policiesFailed && !podsLoading && pods.length > 0
+
   const { showSkeleton } = useCardLoadingState({
     isLoading,
     hasAnyData: pods.length > 0,
     isDemoData: isDemoFallback,
     isFailed,
-    consecutiveFailures,
+    consecutiveFailures: podsFailures,
     errorMessage: isFailed ? 'Failed to load network policy data' : undefined,
   })
 
-  // Build namespace coverage from pod data
-  // In a real implementation, this would also fetch NetworkPolicy resources
+  // Build a set of namespace keys that have real NetworkPolicy resources
+  const policyNamespaceKeys = useMemo(() => {
+    const keys = new Set<string>()
+    for (const policy of networkpolicies) {
+      const cluster = policy.cluster || 'unknown'
+      const ns = policy.namespace || 'default'
+      keys.add(`${cluster}/${ns}`)
+    }
+    return keys
+  }, [networkpolicies])
+
+  // Count policies per namespace key
+  const policyCountByNs = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const policy of networkpolicies) {
+      const key = `${policy.cluster || 'unknown'}/${policy.namespace || 'default'}`
+      counts.set(key, (counts.get(key) || 0) + 1)
+    }
+    return counts
+  }, [networkpolicies])
+
+  // Build namespace coverage from pod data + real policy data
   const coverage = useMemo((): NamespaceCoverage[] => {
     const nsMap = new Map<string, NamespaceCoverage>()
     for (const pod of pods) {
-      const key = `${pod.cluster || 'unknown'}/${pod.namespace || 'default'}`
+      const ns = pod.namespace || 'default'
+      const cluster = pod.cluster || 'unknown'
+      const key = `${cluster}/${ns}`
       if (!nsMap.has(key)) {
-        // Heuristic: system namespaces typically have policies
-        const ns = pod.namespace || 'default'
-        const isSystem = ns.startsWith('kube-') || ns.startsWith('openshift-') || ns === 'istio-system'
+        let hasPolicies: boolean
+        let policyCount: number
+        if (isEstimated) {
+          // Fallback heuristic when policy API is unavailable
+          const isSystem = ns.startsWith('kube-') || ns.startsWith('openshift-') || ns === 'istio-system'
+          hasPolicies = isSystem
+          policyCount = isSystem ? 1 : 0
+        } else {
+          // Use real NetworkPolicy data
+          hasPolicies = policyNamespaceKeys.has(key)
+          policyCount = policyCountByNs.get(key) || 0
+        }
         nsMap.set(key, {
           namespace: ns,
-          cluster: pod.cluster || 'unknown',
+          cluster,
           podCount: 0,
-          hasPolicies: isSystem,
-          policyCount: isSystem ? 1 : 0,
+          hasPolicies,
+          policyCount,
         })
       }
       nsMap.get(key)!.podCount++
     }
     return Array.from(nsMap.values()).sort((a, b) => b.podCount - a.podCount)
-  }, [pods])
+  }, [pods, isEstimated, policyNamespaceKeys, policyCountByNs])
 
   const coveredCount = coverage.filter(c => c.hasPolicies).length
   const totalCount = coverage.length
@@ -66,6 +105,19 @@ export function NetworkPolicyCoverage() {
 
   return (
     <div className="space-y-2 p-1">
+      {/* Estimated coverage warning */}
+      {isEstimated && (
+        <div
+          className="flex items-center gap-1.5 text-xs text-yellow-500 bg-yellow-500/10 rounded px-2 py-1"
+          title={t('networkPolicyCoverage.estimatedTooltip')}
+        >
+          <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+          </svg>
+          <span>{t('networkPolicyCoverage.estimated')}</span>
+        </div>
+      )}
+
       {/* Coverage donut */}
       <div className="flex items-center gap-4">
         <div className="relative w-16 h-16">
@@ -112,7 +164,10 @@ export function NetworkPolicyCoverage() {
               </div>
             </div>
             <div className="text-xs text-muted-foreground shrink-0">
-              {t('networkPolicyCoverage.podsCount', { count: ns.podCount })}
+              {ns.policyCount > 0
+                ? t('networkPolicyCoverage.policiesAndPods', { policies: ns.policyCount, pods: ns.podCount })
+                : t('networkPolicyCoverage.podsCount', { count: ns.podCount })
+              }
             </div>
           </div>
         ))}
