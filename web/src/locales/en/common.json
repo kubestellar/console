@@ -2012,6 +2012,8 @@
       "builderConfigReview": "Builder configuration review",
       "buildFailureDiagnosis": "Build failure diagnosis",
       "connectAgentBuilds": "Connect the agent to fetch build history",
+      "optimizationRecommendations": "Optimization recommendations",
+      "clickAnalyze": "Click \"Analyze Buildpack\" to get AI-powered insights",
       "analyzeHint": "AI will analyze the buildpack and suggest improvements"
     }
   },
