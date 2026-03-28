@@ -20,7 +20,7 @@ import {
 import type { MessageProps } from './types'
 
 // Memoized message component to prevent re-renders on scroll
-export const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent, isFullScreen, fontSize, isLastAssistantMessage, missionStatus }: MessageProps) {
+export const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent, isFullScreen, fontSize, isLastAssistantMessage, missionStatus, userAvatarUrl }: MessageProps) {
   // Memoize the parsed content to avoid re-parsing on every render
   const parsedContent = useMemo(() => {
     if (msg.role !== 'assistant') return null
@@ -118,7 +118,11 @@ export const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent
         msg.role === 'user' ? 'bg-primary/20' : msg.role === 'assistant' ? 'bg-purple-500/20' : 'bg-yellow-500/20'
       )}>
         {msg.role === 'user' ? (
-          <User className="w-4 h-4 text-primary" />
+          userAvatarUrl ? (
+            <img src={userAvatarUrl} alt="User avatar" className="w-8 h-8 rounded-full" />
+          ) : (
+            <User className="w-4 h-4 text-primary" />
+          )
         ) : msg.role === 'assistant' ? (
           <AgentIcon provider={agentProvider} className="w-4 h-4" />
         ) : (

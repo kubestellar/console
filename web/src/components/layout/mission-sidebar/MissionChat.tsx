@@ -21,6 +21,7 @@ import {
   StopCircle,
 } from 'lucide-react'
 import { useMissions, type Mission } from '../../../hooks/useMissions'
+import { useAuth } from '../../../lib/auth'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { isNetlifyDeployment } from '../../../lib/demoMode'
 import { useResolutions, detectIssueSignature } from '../../../hooks/useResolutions'
@@ -39,6 +40,7 @@ import { MemoizedMessage } from './MemoizedMessage'
 export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontSize, onToggleFullScreen }: { mission: Mission; isFullScreen?: boolean; fontSize?: FontSize; onToggleFullScreen?: () => void }) {
   const { t } = useTranslation('common')
   const { sendMessage, retryPreflight, cancelMission, rateMission, setActiveMission, dismissMission, renameMission, runSavedMission, selectedAgent } = useMissions()
+  const { user } = useAuth()
   const { isDemoMode } = useDemoMode()
   const { findSimilarResolutions, recordUsage } = useResolutions()
   const [input, setInput] = useState('')
@@ -499,6 +501,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               fontSize={fontSize}
               isLastAssistantMessage={isLastAssistantMessage}
               missionStatus={mission.status}
+              userAvatarUrl={user?.avatar_url}
             />
           )
         })}

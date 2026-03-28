@@ -101,4 +101,5 @@ export interface MessageProps {
   fontSize: FontSize
   isLastAssistantMessage?: boolean
   missionStatus?: string
+  userAvatarUrl?: string
 }
