@@ -19,6 +19,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useTranslation } from 'react-i18next'
+import { safeGetItem, safeSetItem } from '../../../lib/utils/localStorage'
 
 export interface StatBlockConfig {
   id: string
@@ -250,7 +251,7 @@ export function useStatsConfig(storageKey: string = 'cluster-stats-config') {
   const { t: _t } = useTranslation()
   const [blocks, setBlocks] = useState<StatBlockConfig[]>(() => {
     try {
-      const saved = localStorage.getItem(storageKey)
+      const saved = safeGetItem(storageKey)
       if (saved) {
         const parsed = JSON.parse(saved) as StatBlockConfig[]
         // Merge with defaults to handle new blocks added in updates
@@ -272,7 +273,7 @@ export function useStatsConfig(storageKey: string = 'cluster-stats-config') {
   const saveBlocks = (newBlocks: StatBlockConfig[]) => {
     setBlocks(newBlocks)
     try {
-      localStorage.setItem(storageKey, JSON.stringify(newBlocks))
+      safeSetItem(storageKey, JSON.stringify(newBlocks))
     } catch {
       // Ignore storage errors
     }

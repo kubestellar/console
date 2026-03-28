@@ -103,7 +103,7 @@ export function Clusters() {
   const [sortAsc, setSortAsc] = useState(true)
   const [customOrder, setCustomOrder] = useState<string[]>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY_CLUSTER_ORDER)
+      const saved = safeGetItem(STORAGE_KEY_CLUSTER_ORDER)
       return saved ? JSON.parse(saved) : []
     } catch { return [] }
   })
