@@ -506,105 +506,111 @@ export function MissionSidebar() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between p-3 md:p-4 border-b border-border">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between p-3 md:p-4 border-b border-border min-w-0">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <AgentIcon provider={getAgentProvider(selectedAgent)} className="w-5 h-5" />
-          <h2 className="font-semibold text-foreground text-sm md:text-base">{t('missionSidebar.aiMissions')}</h2>
+          <h2 className="font-semibold text-foreground text-sm md:text-base whitespace-nowrap">{t('missionSidebar.aiMissions')}</h2>
           {needsAttention > 0 && (
             <StatusBadge color="purple" rounded="full">{needsAttention}</StatusBadge>
           )}
         </div>
-        {/* Agent Selector */}
-        <div className="flex items-center gap-2">
-          {/* New Mission Button */}
-          <button
-            onClick={() => {
-              setShowNewMission(!showNewMission)
-              if (!showNewMission) {
-                setTimeout(() => newMissionInputRef.current?.focus(), FOCUS_DELAY_MS)
-              }
-            }}
-            className={cn(
-              "p-1.5 rounded transition-colors",
-              showNewMission
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
-            )}
-            title={t('missionSidebar.startNewMission')}
-          >
-            <Sparkles className="w-4 h-4" />
-          </button>
-          {/* Browse Community Missions */}
-          <button
-            onClick={() => setShowBrowser(true)}
-            className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
-            title="Browse community missions"
-          >
-            <Globe className="w-4 h-4" />
-          </button>
-          {/* Mission Control */}
-          <button
-            onClick={() => setShowMissionControl(true)}
-            className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
-            title="Mission Control — Multi-Cluster Solutions Orchestrator"
-          >
-            <Rocket className="w-4 h-4" />
-          </button>
-          <AgentSelector compact={!isFullScreen} />
-          {/* Font size controls */}
-          <div className="flex items-center gap-1 border border-border rounded-lg px-1">
+        {/* Toolbar and window controls — split so close/minimize never overflow */}
+        <div className="flex items-center gap-1 min-w-0">
+          {/* Optional toolbar buttons — clipped when sidebar is narrow */}
+          <div className="flex items-center gap-1 overflow-hidden min-w-0 flex-shrink">
+            {/* New Mission Button */}
             <button
-              onClick={() => setFontSize(prev => prev === 'base' ? 'sm' : prev === 'lg' ? 'base' : 'sm')}
-              disabled={fontSize === 'sm'}
-              className="p-1 rounded transition-colors disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/10"
-              title={t('missionSidebar.decreaseFontSize')}
+              onClick={() => {
+                setShowNewMission(!showNewMission)
+                if (!showNewMission) {
+                  setTimeout(() => newMissionInputRef.current?.focus(), FOCUS_DELAY_MS)
+                }
+              }}
+              className={cn(
+                "p-1.5 rounded transition-colors flex-shrink-0",
+                showNewMission
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
+              )}
+              title={t('missionSidebar.startNewMission')}
             >
-              <Minus className="w-3 h-3 text-muted-foreground" />
+              <Sparkles className="w-4 h-4" />
             </button>
-            <Type className="w-3 h-3 text-muted-foreground" />
+            {/* Browse Community Missions */}
             <button
-              onClick={() => setFontSize(prev => prev === 'sm' ? 'base' : prev === 'base' ? 'lg' : 'lg')}
-              disabled={fontSize === 'lg'}
-              className="p-1 rounded transition-colors disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/10"
-              title={t('missionSidebar.increaseFontSize')}
+              onClick={() => setShowBrowser(true)}
+              className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 flex-shrink-0"
+              title="Browse community missions"
             >
-              <Plus className="w-3 h-3 text-muted-foreground" />
+              <Globe className="w-4 h-4" />
+            </button>
+            {/* Mission Control */}
+            <button
+              onClick={() => setShowMissionControl(true)}
+              className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 flex-shrink-0"
+              title="Mission Control — Multi-Cluster Solutions Orchestrator"
+            >
+              <Rocket className="w-4 h-4" />
+            </button>
+            <AgentSelector compact={!isFullScreen} />
+            {/* Font size controls */}
+            <div className="flex items-center gap-1 border border-border rounded-lg px-1 flex-shrink-0">
+              <button
+                onClick={() => setFontSize(prev => prev === 'base' ? 'sm' : prev === 'lg' ? 'base' : 'sm')}
+                disabled={fontSize === 'sm'}
+                className="p-1 rounded transition-colors disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/10"
+                title={t('missionSidebar.decreaseFontSize')}
+              >
+                <Minus className="w-3 h-3 text-muted-foreground" />
+              </button>
+              <Type className="w-3 h-3 text-muted-foreground" />
+              <button
+                onClick={() => setFontSize(prev => prev === 'sm' ? 'base' : prev === 'base' ? 'lg' : 'lg')}
+                disabled={fontSize === 'lg'}
+                className="p-1 rounded transition-colors disabled:opacity-30 hover:bg-black/5 dark:hover:bg-white/10"
+                title={t('missionSidebar.increaseFontSize')}
+              >
+                <Plus className="w-3 h-3 text-muted-foreground" />
+              </button>
+            </div>
+          </div>
+          {/* Window control buttons — always visible, never clipped */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {/* Fullscreen and minimize - desktop only */}
+            {!isMobile && (isFullScreen ? (
+              <button
+                onClick={() => setFullScreen(false)}
+                className="p-1 rounded transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+                title={t('missionSidebar.exitFullScreen')}
+              >
+                <Minimize2 className="w-5 h-5 text-muted-foreground" />
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => setFullScreen(true)}
+                  className="p-1 rounded transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+                  title={t('missionSidebar.fullScreen')}
+                >
+                  <Maximize2 className="w-5 h-5 text-muted-foreground" />
+                </button>
+                <button
+                  onClick={minimizeSidebar}
+                  className="p-1 rounded transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+                  title={t('missionSidebar.minimizeSidebar')}
+                >
+                  <PanelRightClose className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </>
+            ))}
+            <button
+              onClick={closeSidebar}
+              className="p-1 rounded transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+              title={t('missionSidebar.closeSidebar')}
+            >
+              <X className="w-5 h-5 text-muted-foreground" />
             </button>
           </div>
-          {/* Fullscreen and minimize - desktop only */}
-          {!isMobile && (isFullScreen ? (
-            <button
-              onClick={() => setFullScreen(false)}
-              className="p-1 rounded transition-colors hover:bg-black/5 dark:hover:bg-white/10"
-              title={t('missionSidebar.exitFullScreen')}
-            >
-              <Minimize2 className="w-5 h-5 text-muted-foreground" />
-            </button>
-          ) : (
-            <>
-              <button
-                onClick={() => setFullScreen(true)}
-                className="p-1 rounded transition-colors hover:bg-black/5 dark:hover:bg-white/10"
-                title={t('missionSidebar.fullScreen')}
-              >
-                <Maximize2 className="w-5 h-5 text-muted-foreground" />
-              </button>
-              <button
-                onClick={minimizeSidebar}
-                className="p-1 rounded transition-colors hover:bg-black/5 dark:hover:bg-white/10"
-                title={t('missionSidebar.minimizeSidebar')}
-              >
-                <PanelRightClose className="w-5 h-5 text-muted-foreground" />
-              </button>
-            </>
-          ))}
-          <button
-            onClick={closeSidebar}
-            className="p-1 rounded transition-colors hover:bg-black/5 dark:hover:bg-white/10"
-            title={t('missionSidebar.closeSidebar')}
-          >
-            <X className="w-5 h-5 text-muted-foreground" />
-          </button>
         </div>
       </div>
 
