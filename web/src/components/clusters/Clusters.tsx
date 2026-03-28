@@ -34,6 +34,7 @@ import { useModalState } from '../../lib/modals'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import type { StatBlockValue } from '../ui/StatsOverview'
 import { formatMemoryStat } from '../../lib/formatStats'
+import { RotatingTip } from '../ui/RotatingTip'
 
 // Storage key for cluster page cards
 const CLUSTERS_CARDS_KEY = 'kubestellar-clusters-cards'
@@ -644,6 +645,7 @@ export function Clusters() {
       lastUpdated={lastUpdated}
       hasData={stats.hasResourceData || stats.total > 0}
       beforeCards={beforeCardsContent}
+      rightExtra={<RotatingTip page="clusters" />}
       emptyState={{
         title: 'Cluster Dashboard',
         description: 'Add cards to monitor cluster health, resource usage, and workload status.',

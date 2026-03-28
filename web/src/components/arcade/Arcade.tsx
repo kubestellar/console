@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { getRememberPosition, setRememberPosition } from '../../hooks/useLastRoute'
+import { RotatingTip } from '../ui/RotatingTip'
 
 const ARCADE_CARDS_KEY = 'kubestellar-arcade-cards'
 const DEFAULT_ARCADE_CARDS = getDefaultCards('arcade')
@@ -36,6 +37,7 @@ export function Arcade() {
       statsType="clusters"
       isLoading={false}
       isRefreshing={false}
+      rightExtra={<RotatingTip page="arcade" />}
       headerExtra={
         <label
           htmlFor="arcade-pin"

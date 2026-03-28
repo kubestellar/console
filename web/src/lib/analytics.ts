@@ -2000,3 +2000,12 @@ export function emitWhiteLabelTabSwitch(tab: string) {
 export function emitWhiteLabelCommandCopy(tab: string, step: number, command: string) {
   send('ksc_white_label_command_copy', { tab, step, command })
 }
+
+/* ------------------------------------------------------------------ */
+/*  Rotating tips (variable-reward engagement)                         */
+/* ------------------------------------------------------------------ */
+
+/** Fired when a rotating "Did you know?" tip is displayed on a page */
+export function emitTipShown(page: string, tip: string) {
+  send('ksc_tip_shown', { page, tip })
+}

@@ -13,6 +13,7 @@ import { getDefaultCards } from '../../config/dashboards'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { emitComplianceDrillDown } from '../../lib/analytics'
+import { RotatingTip } from '../ui/RotatingTip'
 
 const COMPLIANCE_CARDS_KEY = 'compliance-dashboard-cards'
 
@@ -245,6 +246,7 @@ export function Compliance() {
       lastUpdated={lastUpdated}
       hasData={hasData}
       isDemoData={allDemo}
+      rightExtra={<RotatingTip page="compliance" />}
       emptyState={{
         title: 'Compliance Dashboard',
         description: 'Add cards to monitor security compliance, policy enforcement, and vulnerability scanning.',
