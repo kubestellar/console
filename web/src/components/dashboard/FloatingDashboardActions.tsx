@@ -9,6 +9,7 @@ import { useFeatureHints } from '../../hooks/useFeatureHints'
 import { ResetMode } from '../../hooks/useDashboardReset'
 import { ResetDialog } from './ResetDialog'
 import { SidebarCustomizer } from '../layout/SidebarCustomizer'
+import { DashboardHealthIndicator } from './DashboardHealthIndicator'
 
 interface FloatingDashboardActionsProps {
   onAddCard: () => void
@@ -136,6 +137,10 @@ export function FloatingDashboardActions({
               else items[Math.max(idx - 1, 0)]?.focus()
             }}
           >
+            {/* Health status indicator */}
+            <div className="px-1 pb-1 border-b border-border/50 mb-0.5">
+              <DashboardHealthIndicator size="sm" />
+            </div>
             {onExport && (
               <button
                 role="menuitem"

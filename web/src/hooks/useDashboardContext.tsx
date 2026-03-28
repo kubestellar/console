@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import { useDashboardHealth, type DashboardHealthInfo } from './useDashboardHealth'
 
 // Card to be restored from history
 export interface PendingRestoreCard {
@@ -27,6 +28,9 @@ interface DashboardContextType {
   pendingRestoreCard: PendingRestoreCard | null
   setPendingRestoreCard: (card: PendingRestoreCard | null) => void
   clearPendingRestoreCard: () => void
+
+  // Aggregated health status
+  health: DashboardHealthInfo
 }
 
 const DashboardContext = createContext<DashboardContextType | null>(null)
@@ -36,6 +40,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [pendingOpenAddCardModal, setPendingOpenAddCardModalState] = useState(false)
   const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false)
   const [pendingRestoreCard, setPendingRestoreCardState] = useState<PendingRestoreCard | null>(null)
+
+  const health = useDashboardHealth()
 
   const openAddCardModal = useCallback(() => {
     setIsAddCardModalOpen(true)
@@ -79,6 +85,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         pendingRestoreCard,
         setPendingRestoreCard,
         clearPendingRestoreCard,
+        health,
       }}
     >
       {children}
