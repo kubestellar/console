@@ -806,8 +806,10 @@ func (s *Server) handleEventsHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Note: Events endpoint doesn't require auth for local agent
-	// This allows the frontend to fetch events without backend auth
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
 	if s.k8sClient == nil {
 		json.NewEncoder(w).Encode(map[string]interface{}{"events": []interface{}{}, "error": "k8s client not initialized"})
@@ -2744,9 +2746,12 @@ func (s *Server) handleCancelChat(conn *websocket.Conn, msg protocol.Message, wr
 // handleCancelChatHTTP is the HTTP fallback for cancelling in-progress chat sessions.
 // Used when the WebSocket connection is unavailable (e.g., disconnected during long agent runs).
 func (s *Server) handleCancelChatHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 
 	if r.Method == "OPTIONS" {
@@ -2755,6 +2760,11 @@ func (s *Server) handleCancelChatHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
