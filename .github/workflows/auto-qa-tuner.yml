@@ -252,10 +252,12 @@ jobs:
   # Job B: Weekly Analysis — broader patterns, create report issue
   # ============================================================
   weekly-analysis:
+    needs: daily-feedback
     if: >
-      github.event.schedule == '0 4 * * 0' ||
-      (github.event_name == 'workflow_dispatch' &&
-       (inputs.job_override == 'weekly' || inputs.job_override == 'all'))
+      !failure() && !cancelled() &&
+      (github.event.schedule == '0 4 * * 0' ||
+       (github.event_name == 'workflow_dispatch' &&
+        (inputs.job_override == 'weekly' || inputs.job_override == 'all')))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -497,10 +499,12 @@ jobs:
   # Job C: CNCF Intelligence — scan landscape repos for patterns
   # ============================================================
   cncf-intelligence:
+    needs: weekly-analysis
     if: >
-      github.event.schedule == '0 5 * * 3' ||
-      (github.event_name == 'workflow_dispatch' &&
-       (inputs.job_override == 'cncf' || inputs.job_override == 'all'))
+      !failure() && !cancelled() &&
+      (github.event.schedule == '0 5 * * 3' ||
+       (github.event_name == 'workflow_dispatch' &&
+        (inputs.job_override == 'cncf' || inputs.job_override == 'all')))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
