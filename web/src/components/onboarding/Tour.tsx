@@ -379,8 +379,9 @@ export function TourOverlay() {
           <button
             onClick={skipTour}
             className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
+            aria-label="Skip tour"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
 
@@ -412,8 +413,9 @@ export function TourOverlay() {
               <button
                 onClick={prevStep}
                 className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Previous step"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-4 h-4" aria-hidden="true" />
               </button>
             )}
             <button

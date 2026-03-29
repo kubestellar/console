@@ -220,15 +220,17 @@ export function Onboarding() {
                       onClick={() => handleRankMove(index, 'up')}
                       disabled={index === 0}
                       className="p-1.5 rounded hover:bg-purple-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      aria-label={`Move ${option} up`}
                     >
-                      <ArrowUp className="w-4 h-4 text-muted-foreground" />
+                      <ArrowUp className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
                     </button>
                     <button
                       onClick={() => handleRankMove(index, 'down')}
                       disabled={index === getRankedOrder().length - 1}
                       className="p-1.5 rounded hover:bg-purple-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      aria-label={`Move ${option} down`}
                     >
-                      <ArrowDown className="w-4 h-4 text-muted-foreground" />
+                      <ArrowDown className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
                     </button>
                   </div>
                 </div>
