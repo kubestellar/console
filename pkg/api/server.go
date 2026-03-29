@@ -188,6 +188,9 @@ func NewServer(cfg Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to initialize store: %w", err)
 	}
 
+	// Wire up persistent token revocation so revoked JWTs survive restarts.
+	middleware.InitTokenRevocation(db)
+
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
 		ErrorHandler:   customErrorHandler,

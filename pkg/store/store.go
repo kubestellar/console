@@ -98,6 +98,11 @@ type Store interface {
 	DeleteOldUtilizationSnapshots(before time.Time) (int64, error)
 	ListActiveGPUReservations() ([]models.GPUReservation, error)
 
+	// Token Revocation
+	RevokeToken(jti string, expiresAt time.Time) error
+	IsTokenRevoked(jti string) (bool, error)
+	CleanupExpiredTokens() (int64, error)
+
 	// Lifecycle
 	Close() error
 }

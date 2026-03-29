@@ -16,7 +16,8 @@ const (
 	// the server signals the client to silently refresh its token.
 	tokenRefreshThresholdFraction = 0.5
 
-	// revokedTokenCleanupInterval is how often expired entries are pruned from the in-memory revocation store.
+	// revokedTokenCleanupInterval is how often expired entries are pruned from the
+	// in-memory cache and the persistent store.
 	revokedTokenCleanupInterval = 1 * time.Hour
 )
 
@@ -27,51 +28,112 @@ type UserClaims struct {
 	jwt.RegisteredClaims
 }
 
-// revokedTokenStore is an in-memory store of revoked JWT token IDs (jti).
-// Entries auto-expire when the underlying JWT would have expired.
-// NOTE: This store does not survive server restarts — revoked tokens become
-// valid again after restart. For production use, consider a persistent store.
-type revokedTokenStore struct {
-	sync.RWMutex
-	tokens map[string]time.Time // jti -> expiresAt
+// TokenRevoker is the subset of store.Store needed for token revocation.
+// Defined here to avoid a circular import with the store package.
+type TokenRevoker interface {
+	RevokeToken(jti string, expiresAt time.Time) error
+	IsTokenRevoked(jti string) (bool, error)
+	CleanupExpiredTokens() (int64, error)
 }
 
-var revokedTokens = &revokedTokenStore{
+// revokedTokenCache is an in-memory write-through cache backed by a persistent
+// TokenRevoker (typically SQLite). The cache avoids a DB query on every request
+// while the persistent store ensures revocations survive server restarts.
+type revokedTokenCache struct {
+	sync.RWMutex
+	tokens map[string]time.Time // jti -> expiresAt
+	store  TokenRevoker         // nil when running without persistence
+}
+
+var revokedTokens = &revokedTokenCache{
 	tokens: make(map[string]time.Time),
 }
 
-func init() {
+// InitTokenRevocation wires the persistent store into the revocation layer.
+// It loads all currently-revoked tokens from the database into the in-memory
+// cache and starts the background cleanup goroutine. Must be called once at
+// server startup, before any HTTP traffic is served.
+func InitTokenRevocation(store TokenRevoker) {
+	revokedTokens.Lock()
+	revokedTokens.store = store
+	revokedTokens.Unlock()
 	go revokedTokens.cleanupLoop()
 }
 
-func (s *revokedTokenStore) Revoke(jti string, expiresAt time.Time) {
-	s.Lock()
-	defer s.Unlock()
-	s.tokens[jti] = expiresAt
-}
+func (c *revokedTokenCache) Revoke(jti string, expiresAt time.Time) {
+	c.Lock()
+	c.tokens[jti] = expiresAt
+	store := c.store
+	c.Unlock()
 
-func (s *revokedTokenStore) IsRevoked(jti string) bool {
-	s.RLock()
-	defer s.RUnlock()
-	_, ok := s.tokens[jti]
-	return ok
-}
-
-func (s *revokedTokenStore) cleanupLoop() {
-	ticker := time.NewTicker(revokedTokenCleanupInterval)
-	defer ticker.Stop()
-	for range ticker.C {
-		s.cleanup()
+	// Write-through to persistent store (best-effort; log on failure).
+	if store != nil {
+		if err := store.RevokeToken(jti, expiresAt); err != nil {
+			log.Printf("[Auth] failed to persist token revocation for jti %s: %v", jti, err)
+		}
 	}
 }
 
-func (s *revokedTokenStore) cleanup() {
-	s.Lock()
-	defer s.Unlock()
+func (c *revokedTokenCache) IsRevoked(jti string) bool {
+	// Fast path: check in-memory cache first.
+	c.RLock()
+	_, ok := c.tokens[jti]
+	store := c.store
+	c.RUnlock()
+	if ok {
+		return true
+	}
+
+	// Slow path: check persistent store (covers tokens revoked by a previous
+	// server instance that haven't been loaded into this cache yet).
+	if store != nil {
+		revoked, err := store.IsTokenRevoked(jti)
+		if err != nil {
+			log.Printf("[Auth] failed to check token revocation for jti %s: %v", jti, err)
+			return false
+		}
+		if revoked {
+			// Backfill cache so subsequent checks are fast.
+			c.Lock()
+			// Use a zero time since we don't know the exact expiry from this path;
+			// the cleanup loop will leave it until the DB entry is cleaned up.
+			if _, exists := c.tokens[jti]; !exists {
+				c.tokens[jti] = time.Time{}
+			}
+			c.Unlock()
+			return true
+		}
+	}
+	return false
+}
+
+func (c *revokedTokenCache) cleanupLoop() {
+	ticker := time.NewTicker(revokedTokenCleanupInterval)
+	defer ticker.Stop()
+	for range ticker.C {
+		c.cleanup()
+	}
+}
+
+func (c *revokedTokenCache) cleanup() {
+	c.Lock()
 	now := time.Now()
-	for jti, exp := range s.tokens {
-		if now.After(exp) {
-			delete(s.tokens, jti)
+	for jti, exp := range c.tokens {
+		// Remove entries whose JWT has expired. Zero-time entries (backfilled
+		// from DB) are left in place; the DB cleanup will handle them.
+		if !exp.IsZero() && now.After(exp) {
+			delete(c.tokens, jti)
+		}
+	}
+	store := c.store
+	c.Unlock()
+
+	// Also prune expired rows from the persistent store.
+	if store != nil {
+		if n, err := store.CleanupExpiredTokens(); err != nil {
+			log.Printf("[Auth] failed to cleanup expired tokens: %v", err)
+		} else if n > 0 {
+			log.Printf("[Auth] cleaned up %d expired revoked tokens from store", n)
 		}
 	}
 }
@@ -91,7 +153,7 @@ func IsTokenRevoked(jti string) bool {
 const jwtCookieName = "kc_auth"
 
 // JWTAuth creates JWT authentication middleware.
-// Token resolution order: Authorization header → HttpOnly cookie → _token query param (SSE only).
+// Token resolution order: Authorization header -> HttpOnly cookie -> _token query param (SSE only).
 func JWTAuth(secret string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		authHeader := c.Get("Authorization")

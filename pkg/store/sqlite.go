@@ -225,6 +225,13 @@ func (s *SQLiteStore) migrate() error {
 		FOREIGN KEY (reservation_id) REFERENCES gpu_reservations(id) ON DELETE CASCADE
 	);
 	CREATE INDEX IF NOT EXISTS idx_utilization_reservation ON gpu_utilization_snapshots(reservation_id, timestamp);
+
+	-- Revoked JWT tokens (persisted across server restarts)
+	CREATE TABLE IF NOT EXISTS revoked_tokens (
+		jti TEXT PRIMARY KEY,
+		expires_at DATETIME NOT NULL
+	);
+	CREATE INDEX IF NOT EXISTS idx_revoked_tokens_expires ON revoked_tokens(expires_at);
 	`
 	_, err := s.db.Exec(schema)
 	if err != nil {
@@ -1523,4 +1530,39 @@ func boolToInt(b bool) int {
 		return 1
 	}
 	return 0
+}
+
+// Token Revocation methods
+
+// RevokeToken persists a revoked token JTI with its expiration time.
+func (s *SQLiteStore) RevokeToken(jti string, expiresAt time.Time) error {
+	_, err := s.db.Exec(
+		`INSERT OR REPLACE INTO revoked_tokens (jti, expires_at) VALUES (?, ?)`,
+		jti, expiresAt,
+	)
+	return err
+}
+
+// IsTokenRevoked checks whether a token JTI has been revoked.
+func (s *SQLiteStore) IsTokenRevoked(jti string) (bool, error) {
+	var count int
+	err := s.db.QueryRow(
+		`SELECT COUNT(*) FROM revoked_tokens WHERE jti = ?`, jti,
+	).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+// CleanupExpiredTokens removes revoked tokens whose JWT has expired,
+// since they can no longer be used regardless of revocation status.
+func (s *SQLiteStore) CleanupExpiredTokens() (int64, error) {
+	result, err := s.db.Exec(
+		`DELETE FROM revoked_tokens WHERE expires_at < ?`, time.Now(),
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
