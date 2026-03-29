@@ -18,64 +18,9 @@ permissions:
   pull-requests: write
 
 jobs:
-  # Queue issues for Copilot assignment (processed by copilot-queue.yml)
-  queue-for-copilot:
-    runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'issues' &&
-       contains(github.event.issue.labels.*.name, 'ai-fix-requested') &&
-       contains(github.event.issue.labels.*.name, 'triage/accepted')) ||
-      github.event_name == 'workflow_dispatch'
-    steps:
-      - name: Add to Copilot queue
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.CONSOLE_AUTO || secrets.GITHUB_TOKEN }}
-          script: |
-            const issueNumber = context.eventName === 'workflow_dispatch'
-              ? parseInt('${{ inputs.issue_number }}', 10)
-              : context.payload.issue?.number;
-
-            if (!issueNumber) {
-              core.info('No issue number found, skipping');
-              return;
-            }
-
-            const { data: issue } = await github.rest.issues.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber,
-            });
-
-            const labels = issue.labels.map(l => l.name);
-
-            // Skip if already queued or being processed
-            if (labels.includes('ai-queued') || labels.includes('ai-processing') || labels.includes('ai-pr-ready')) {
-              core.info(`#${issueNumber}: already queued or in progress, skipping`);
-              return;
-            }
-
-            // Check required label
-            if (!labels.includes('ai-fix-requested') && context.eventName !== 'workflow_dispatch') {
-              core.info(`#${issueNumber}: missing ai-fix-requested label, skipping`);
-              return;
-            }
-
-            // Add to queue
-            await github.rest.issues.addLabels({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber,
-              labels: ['ai-queued'],
-            });
-
-            core.info(`#${issueNumber}: added to Copilot queue`);
-
-  # Keep the PR linking job from the reusable workflow
-  update-issue-on-pr:
-    if: github.event_name == 'pull_request_target'
+  ai-fix:
     uses: kubestellar/infra/.github/workflows/reusable-ai-fix.yml@main
     with:
-      issue_number: ''
+      issue_number: ${{ github.event.inputs.issue_number || '' }}
     secrets:
-      token: ${{ secrets.CONSOLE_AUTO || secrets.GITHUB_TOKEN }}
+      token: ${{ secrets.GITHUB_TOKEN }}
