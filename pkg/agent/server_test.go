@@ -106,7 +106,7 @@ func TestServer_IsAllowedOrigin(t *testing.T) {
 	}{
 		{"http://localhost", true},
 		{"https://sub.ibm.com", true},
-		{"https://deep.sub.ibm.com", true}, // Wildcard matches multiple levels? Assuming implementation uses robust matching
+		{"https://deep.sub.ibm.com", false}, // Wildcard only matches single-level subdomain
 		{"http://ibm.com", false},          // Wrong scheme
 		{"https://google.com", false},
 		{"", false}, // Empty origin usually treated as allowed in checkOrigin logic, but isAllowedOrigin likely returns false map lookup
@@ -729,12 +729,16 @@ func TestMatchOrigin(t *testing.T) {
 		want    bool
 	}{
 		{"http://localhost:5174", "http://localhost", true},
+		{"http://localhost", "http://localhost", true},
+		{"http://localhost.attacker.com", "http://localhost", false}, // prefix bypass
 		{"https://app.ibm.com", "https://*.ibm.com", true},
-		{"https://deep.sub.ibm.com", "https://*.ibm.com", true},
-		{"http://ibm.com", "https://*.ibm.com", false},  // wrong scheme
-		{"https://ibm.com", "https://*.ibm.com", false}, // no subdomain, doesn't have .ibm.com suffix
+		{"https://deep.sub.ibm.com", "https://*.ibm.com", false}, // multi-level subdomain rejected
+		{"http://ibm.com", "https://*.ibm.com", false},           // wrong scheme
+		{"https://ibm.com", "https://*.ibm.com", false},          // no subdomain, doesn't have .ibm.com suffix
 		{"https://google.com", "https://*.ibm.com", false},
 		{"http://exact.com", "http://exact.com", true},
+		{"http://exact.com:8080", "http://exact.com", true},      // port variation allowed
+		{"http://exact.com.evil.com", "http://exact.com", false}, // suffix bypass rejected
 	}
 
 	for _, tt := range tests {

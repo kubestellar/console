@@ -614,17 +614,32 @@ func (s *Server) isAllowedOrigin(origin string) bool {
 }
 
 // matchOrigin checks if an origin matches an allowed pattern.
-// Supports prefix matching (e.g. "http://localhost" matches "http://localhost:5174")
-// and wildcard suffix matching (e.g. "https://*.ibm.com" matches "https://kc.apps.example.ibm.com").
+// For non-wildcard origins, requires an exact match or a match with an additional port
+// (e.g. "http://localhost" matches "http://localhost" and "http://localhost:5174" but NOT "http://localhost.attacker.com").
+// For wildcard patterns like "https://*.ibm.com", matches only a single subdomain level
+// (e.g. "https://kc.ibm.com" matches but "https://evil.kc.ibm.com" does not).
 func matchOrigin(origin, allowed string) bool {
-	// Wildcard matching: "https://*.ibm.com" matches any subdomain
+	// Wildcard matching: "https://*.ibm.com" matches a single-level subdomain
 	if idx := strings.Index(allowed, "*."); idx != -1 {
 		scheme := allowed[:idx]   // e.g. "https://"
 		suffix := allowed[idx+1:] // e.g. ".ibm.com"
-		return strings.HasPrefix(origin, scheme) && strings.HasSuffix(origin, suffix)
+		if !strings.HasPrefix(origin, scheme) || !strings.HasSuffix(origin, suffix) {
+			return false
+		}
+		// Extract the subdomain part between the scheme and the suffix
+		middle := origin[len(scheme) : len(origin)-len(suffix)]
+		// Must be non-empty and contain no dots (single-level subdomain only)
+		return len(middle) > 0 && !strings.Contains(middle, ".")
 	}
-	// Prefix matching (original behavior)
-	return strings.HasPrefix(origin, allowed)
+	// Exact match
+	if origin == allowed {
+		return true
+	}
+	// Allow the origin to have a port appended (e.g. allowed "http://localhost" matches "http://localhost:5174")
+	if strings.HasPrefix(origin, allowed) && len(origin) > len(allowed) && origin[len(allowed)] == ':' {
+		return true
+	}
+	return false
 }
 
 // handleClustersHTTP returns the list of kubeconfig contexts
