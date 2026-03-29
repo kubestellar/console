@@ -150,4 +150,8 @@ func (m *MockStore) GetBulkUtilizationSnapshots(reservationIDs []string) (map[st
 func (m *MockStore) DeleteOldUtilizationSnapshots(before time.Time) (int64, error) { return 0, nil }
 func (m *MockStore) ListActiveGPUReservations() ([]models.GPUReservation, error)   { return nil, nil }
 
+func (m *MockStore) RevokeToken(jti string, expiresAt time.Time) error { return nil }
+func (m *MockStore) IsTokenRevoked(jti string) (bool, error)           { return false, nil }
+func (m *MockStore) CleanupExpiredTokens() (int64, error)              { return 0, nil }
+
 func (m *MockStore) Close() error { return nil }
