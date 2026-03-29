@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	authv1 "k8s.io/api/authorization/v1"
@@ -451,28 +452,68 @@ func (m *MultiClusterClient) GetAllClusterPermissions(ctx context.Context) ([]mo
 	return result, nil
 }
 
-// CountServiceAccountsAllClusters returns total SA count across all clusters
+// isSystemNamespace returns true for Kubernetes system namespaces whose
+// ServiceAccounts should be excluded from user-facing counts.
+func isSystemNamespace(ns string) bool {
+	return ns == "kube-system" || ns == "kube-public" || ns == "kube-node-lease"
+}
+
+// countServiceAccountsInCluster lists ServiceAccounts directly (without
+// fetching RoleBindings/ClusterRoleBindings) and returns the number of
+// non-system ones.  This is much cheaper than ListServiceAccounts which
+// also builds a roles map that is unnecessary for counting.
+func (m *MultiClusterClient) countServiceAccountsInCluster(ctx context.Context, contextName string) (int, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return 0, err
+	}
+
+	sas, err := client.CoreV1().ServiceAccounts("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return 0, err
+	}
+
+	count := 0
+	for _, sa := range sas.Items {
+		if !isSystemNamespace(sa.Namespace) {
+			count++
+		}
+	}
+	return count, nil
+}
+
+// CountServiceAccountsAllClusters returns total SA count across all clusters.
+// It fans out requests in parallel (one goroutine per cluster) and only lists
+// ServiceAccounts — it no longer fetches RoleBindings/ClusterRoleBindings,
+// which were previously pulled in by ListServiceAccounts but never used here.
 func (m *MultiClusterClient) CountServiceAccountsAllClusters(ctx context.Context) (int, []string, error) {
 	clusters, err := m.ListClusters(ctx)
 	if err != nil {
 		return 0, nil, err
 	}
 
-	total := 0
-	var clusterNames []string
+	var (
+		mu           sync.Mutex
+		wg           sync.WaitGroup
+		total        int
+		clusterNames []string
+	)
+
+	wg.Add(len(clusters))
 	for _, cluster := range clusters {
-		sas, err := m.ListServiceAccounts(ctx, cluster.Name, "")
-		if err != nil {
-			continue
-		}
-		// Don't count system service accounts
-		for _, sa := range sas {
-			if sa.Namespace != "kube-system" && sa.Namespace != "kube-public" && sa.Namespace != "kube-node-lease" {
-				total++
+		go func(name string) {
+			defer wg.Done()
+			count, err := m.countServiceAccountsInCluster(ctx, name)
+			if err != nil {
+				return // skip unreachable clusters, same as before
 			}
-		}
-		clusterNames = append(clusterNames, cluster.Name)
+			mu.Lock()
+			total += count
+			clusterNames = append(clusterNames, name)
+			mu.Unlock()
+		}(cluster.Name)
 	}
+	wg.Wait()
 
 	return total, clusterNames, nil
 }
