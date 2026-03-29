@@ -43,6 +43,160 @@ const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: typeof Serv
   node: { label: 'Nodes', icon: HardDrive },
 }
 
+/**
+ * SearchResultsPanel is rendered only when the search bar is open AND has a
+ * non-empty query. This means useSearchIndex (and its 7 expensive API hooks)
+ * are never mounted until the user actually types a search query, avoiding
+ * unnecessary API calls on every page load. See issue #3871.
+ */
+function SearchResultsPanel({
+  searchQuery,
+  selectedIndex,
+  onSelect,
+  onAskAI,
+  resultsRef,
+  onResultsChange,
+}: {
+  searchQuery: string
+  selectedIndex: number
+  onSelect: (item: SearchItem, index: number) => void
+  onAskAI: () => void
+  resultsRef: React.RefObject<HTMLDivElement>
+  /** Called when results change so the parent can handle Enter key selection and analytics */
+  onResultsChange: (flatResults: SearchItem[], totalCount: number) => void
+}) {
+  const { results, totalCount } = useSearchIndex(searchQuery)
+
+  // Flatten results into a single list for keyboard navigation
+  const flatResults = useMemo(() => {
+    const flat: SearchItem[] = []
+    for (const cat of CATEGORY_ORDER) {
+      const items = results.get(cat)
+      if (items) flat.push(...items)
+    }
+    return flat
+  }, [results])
+
+  // Sync flat results and total count to parent for keyboard handling + analytics
+  useEffect(() => {
+    onResultsChange(flatResults, totalCount)
+  }, [flatResults, totalCount, onResultsChange])
+
+  const askAIIndex = flatResults.length
+
+  // Track flat index across categories
+  let flatIndex = 0
+
+  return (
+    <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-lg shadow-xl overflow-hidden z-[60]">
+      {flatResults.length > 0 ? (
+        <div ref={resultsRef} className="py-1 max-h-96 overflow-y-auto">
+          {CATEGORY_ORDER.map(cat => {
+            const items = results.get(cat)
+            if (!items || items.length === 0) return null
+            const config = CATEGORY_CONFIG[cat]
+            const CategoryIcon = config.icon
+
+            return (
+              <div key={cat}>
+                {/* Category header */}
+                <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
+                  <CategoryIcon className="w-3.5 h-3.5 text-muted-foreground/60" />
+                  <span className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider">
+                    {config.label}
+                  </span>
+                </div>
+                {/* Category items */}
+                {items.map(item => {
+                  const currentIndex = flatIndex++
+                  const isSelected = currentIndex === selectedIndex
+                  return (
+                    <button
+                      key={item.id}
+                      data-selected={isSelected}
+                      onClick={() => onSelect(item, currentIndex)}
+                      className={`w-full flex items-center gap-3 px-4 py-1.5 text-left transition-colors ${
+                        isSelected
+                          ? 'bg-purple-900 text-foreground'
+                          : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{item.name}</p>
+                        {item.description && (
+                          <p className="text-xs text-muted-foreground truncate">{item.description}</p>
+                        )}
+                      </div>
+                      <span className="text-2xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground/70 shrink-0">
+                        {config.label.toLowerCase()}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )
+          })}
+          {/* Total count footer */}
+          {totalCount > flatResults.length && (
+            <div className="px-4 py-2 text-xs text-muted-foreground/50 text-center border-t border-border/50">
+              Showing {flatResults.length} of {totalCount} results
+            </div>
+          )}
+
+          {/* Ask AI action */}
+          <div className="border-t border-border/50">
+            <button
+              data-selected={selectedIndex === askAIIndex}
+              onClick={onAskAI}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                selectedIndex === askAIIndex
+                  ? 'bg-purple-900 text-foreground'
+                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+              }`}
+            >
+              <Bot className="w-4 h-4 text-muted-foreground shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">Ask AI about this</p>
+                <p className="text-xs text-muted-foreground truncate">&quot;{searchQuery}&quot;</p>
+              </div>
+              <kbd className="text-2xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground/70 shrink-0">
+                &crarr;
+              </kbd>
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="py-4">
+          {/* No results - show Ask AI prominently */}
+          <div className="px-4 py-2 text-center mb-2">
+            <p className="text-muted-foreground text-sm">No results for &quot;{searchQuery}&quot;</p>
+          </div>
+          <div className="border-t border-border/50">
+            <button
+              data-selected={selectedIndex === askAIIndex}
+              onClick={onAskAI}
+              className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                selectedIndex === askAIIndex
+                  ? 'bg-purple-900 text-foreground'
+                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+              }`}
+            >
+              <Bot className="w-5 h-5 text-muted-foreground shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">Ask AI instead</p>
+                <p className="text-xs text-muted-foreground truncate">Start a mission: &quot;{searchQuery}&quot;</p>
+              </div>
+              <kbd className="text-2xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground/70 shrink-0">
+                &crarr;
+              </kbd>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function SearchDropdown() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -54,11 +208,32 @@ export function SearchDropdown() {
   const searchRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const resultsRef = useRef<HTMLDivElement>(null)
+  // Flat results from the SearchResultsPanel child, used for keyboard Enter handling.
+  // Total count is tracked for analytics (onBlur emits query stats).
+  const flatResultsRef = useRef<SearchItem[]>([])
+  const totalCountRef = useRef(0)
   const cmdKHint = useFeatureHints('cmd-k')
   const isMac = typeof navigator !== 'undefined' && /Mac/.test(navigator.platform || '')
   const searchShortcut = isMac ? '⌘K' : 'Ctrl+K'
 
-  const { results, totalCount } = useSearchIndex(searchQuery)
+  // Whether the results panel is active (mounted).
+  // The panel -- and its expensive useSearchIndex hook -- only mount when
+  // the search bar is open AND the user has typed a non-empty query.
+  const isResultsPanelActive = isSearchOpen && !!searchQuery.trim()
+
+  // Clear stale results when the panel unmounts
+  useEffect(() => {
+    if (!isResultsPanelActive) {
+      flatResultsRef.current = []
+      totalCountRef.current = 0
+    }
+  }, [isResultsPanelActive])
+
+  // Callback for SearchResultsPanel to sync flat results to parent
+  const handleResultsChange = useCallback((flatResults: SearchItem[], totalCount: number) => {
+    flatResultsRef.current = flatResults
+    totalCountRef.current = totalCount
+  }, [])
 
   // Create a custom mission from the search query
   const handleAskAI = useCallback(() => {
@@ -76,21 +251,6 @@ export function SearchDropdown() {
     setSearchQuery('')
     setIsSearchOpen(false)
   }, [searchQuery, startMission])
-
-  // Flatten results into a single list for keyboard navigation
-  // +1 for the "Ask AI" action at the end
-  const flatResults = useMemo(() => {
-    const flat: SearchItem[] = []
-    for (const cat of CATEGORY_ORDER) {
-      const items = results.get(cat)
-      if (items) flat.push(...items)
-    }
-    return flat
-  }, [results])
-
-  // Total selectable items: results + 1 for "Ask AI" action
-  const totalSelectableItems = flatResults.length + 1
-  const askAIIndex = flatResults.length // "Ask AI" is always the last item
 
   // Check if a page route is a discoverable dashboard not currently in the sidebar
   const sidebarHrefs = useMemo(() => {
@@ -168,6 +328,11 @@ export function SearchDropdown() {
 
       if (!isSearchOpen) return
 
+      // Total selectable items: flat results + 1 for "Ask AI"
+      const flatResults = flatResultsRef.current
+      const totalSelectableItems = flatResults.length + 1
+      const askAIIndex = flatResults.length
+
       if (event.key === 'ArrowDown') {
         event.preventDefault()
         setSelectedIndex(prev => Math.min(prev + 1, totalSelectableItems - 1))
@@ -176,7 +341,7 @@ export function SearchDropdown() {
         setSelectedIndex(prev => Math.max(prev - 1, 0))
       } else if (event.key === 'Enter') {
         event.preventDefault()
-        if (selectedIndex === askAIIndex) {
+        if (selectedIndex === askAIIndex || !isResultsPanelActive) {
           handleAskAI()
         } else if (flatResults[selectedIndex]) {
           handleSelect(flatResults[selectedIndex], selectedIndex)
@@ -189,7 +354,7 @@ export function SearchDropdown() {
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isSearchOpen, flatResults, selectedIndex, handleSelect, totalSelectableItems, askAIIndex, handleAskAI])
+  }, [isSearchOpen, isResultsPanelActive, selectedIndex, handleSelect, handleAskAI])
 
   // Reset selected index when results change
   useEffect(() => {
@@ -204,9 +369,6 @@ export function SearchDropdown() {
       selected.scrollIntoView({ block: 'nearest' })
     }
   }, [selectedIndex])
-
-  // Track flat index across categories
-  let flatIndex = 0
 
   return (
     <div data-tour="search" className="flex-1 max-w-md mx-8" ref={searchRef}>
@@ -224,7 +386,7 @@ export function SearchDropdown() {
             setIsSearchOpen(true)
           }}
           onFocus={() => { setIsSearchOpen(true); cmdKHint.action(); emitGlobalSearchOpened('click') }}
-          onBlur={() => { if (searchQuery.trim()) emitGlobalSearchQueried(searchQuery.trim().length, totalCount) }}
+          onBlur={() => { if (searchQuery.trim()) emitGlobalSearchQueried(searchQuery.trim().length, totalCountRef.current) }}
           placeholder="Search or ask AI anything..."
           className="w-full pl-10 pr-16 py-2 bg-secondary rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
         />
@@ -241,114 +403,18 @@ export function SearchDropdown() {
           />
         )}
 
-        {/* Search results dropdown */}
-        {isSearchOpen && searchQuery.trim() && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-lg shadow-xl overflow-hidden z-[60]">
-            {flatResults.length > 0 ? (
-              <div ref={resultsRef} className="py-1 max-h-96 overflow-y-auto">
-                {CATEGORY_ORDER.map(cat => {
-                  const items = results.get(cat)
-                  if (!items || items.length === 0) return null
-                  const config = CATEGORY_CONFIG[cat]
-                  const CategoryIcon = config.icon
-
-                  return (
-                    <div key={cat}>
-                      {/* Category header */}
-                      <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
-                        <CategoryIcon className="w-3.5 h-3.5 text-muted-foreground/60" />
-                        <span className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider">
-                          {config.label}
-                        </span>
-                      </div>
-                      {/* Category items */}
-                      {items.map(item => {
-                        const currentIndex = flatIndex++
-                        const isSelected = currentIndex === selectedIndex
-                        return (
-                          <button
-                            key={item.id}
-                            data-selected={isSelected}
-                            onClick={() => handleSelect(item, currentIndex)}
-                            className={`w-full flex items-center gap-3 px-4 py-1.5 text-left transition-colors ${
-                              isSelected
-                                ? 'bg-purple-900 text-foreground'
-                                : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-                            }`}
-                          >
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">{item.name}</p>
-                              {item.description && (
-                                <p className="text-xs text-muted-foreground truncate">{item.description}</p>
-                              )}
-                            </div>
-                            <span className="text-2xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground/70 shrink-0">
-                              {config.label.toLowerCase()}
-                            </span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )
-                })}
-                {/* Total count footer */}
-                {totalCount > flatResults.length && (
-                  <div className="px-4 py-2 text-xs text-muted-foreground/50 text-center border-t border-border/50">
-                    Showing {flatResults.length} of {totalCount} results
-                  </div>
-                )}
-
-                {/* Ask AI action */}
-                <div className="border-t border-border/50">
-                  <button
-                    data-selected={selectedIndex === askAIIndex}
-                    onClick={handleAskAI}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                      selectedIndex === askAIIndex
-                        ? 'bg-purple-900 text-foreground'
-                        : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-                    }`}
-                  >
-                    <Bot className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">Ask AI about this</p>
-                      <p className="text-xs text-muted-foreground truncate">&quot;{searchQuery}&quot;</p>
-                    </div>
-                    <kbd className="text-2xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground/70 shrink-0">
-                      ↵
-                    </kbd>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="py-4">
-                {/* No results - show Ask AI prominently */}
-                <div className="px-4 py-2 text-center mb-2">
-                  <p className="text-muted-foreground text-sm">No results for &quot;{searchQuery}&quot;</p>
-                </div>
-                <div className="border-t border-border/50">
-                  <button
-                    data-selected={selectedIndex === askAIIndex}
-                    onClick={handleAskAI}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                      selectedIndex === askAIIndex
-                        ? 'bg-purple-900 text-foreground'
-                        : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-                    }`}
-                  >
-                    <Bot className="w-5 h-5 text-muted-foreground shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">Ask AI instead</p>
-                      <p className="text-xs text-muted-foreground truncate">Start a mission: &quot;{searchQuery}&quot;</p>
-                    </div>
-                    <kbd className="text-2xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground/70 shrink-0">
-                      ↵
-                    </kbd>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+        {/* Search results panel -- only mounts when query is non-empty.
+            This ensures useSearchIndex (and its 7 API hooks) never run
+            until the user actually types a search query. */}
+        {isResultsPanelActive && (
+          <SearchResultsPanel
+            searchQuery={searchQuery}
+            selectedIndex={selectedIndex}
+            onSelect={handleSelect}
+            onAskAI={handleAskAI}
+            resultsRef={resultsRef}
+            onResultsChange={handleResultsChange}
+          />
         )}
       </div>
     </div>
