@@ -246,6 +246,16 @@ interface ClusterCardProps {
   layoutMode: ClusterLayoutMode
 }
 
+// Keyboard handler for clickable card divs: activates on Enter or Space
+function handleCardKeyDown(callback: () => void) {
+  return (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      callback()
+    }
+  }
+}
+
 // Full/default card (used for 'grid' and 'wide' modes)
 const FullClusterCard = memo(function FullClusterCard({
   cluster,
@@ -278,6 +288,10 @@ const FullClusterCard = memo(function FullClusterCard({
   return (
     <div
       onClick={onSelectCluster}
+      onKeyDown={handleCardKeyDown(onSelectCluster)}
+      role="button"
+      tabIndex={0}
+      aria-label={`Select cluster ${cluster.context || cluster.name}`}
       className="relative p-[1px] rounded-lg cursor-pointer transition-all hover:scale-[1.02] overflow-hidden h-full"
       style={{
         /* Card view: prominent gradient — provider at 50%, theme at 38% */
@@ -511,6 +525,10 @@ const ListClusterCard = memo(function ListClusterCard({
   return (
     <div
       onClick={onSelectCluster}
+      onKeyDown={handleCardKeyDown(onSelectCluster)}
+      role="button"
+      tabIndex={0}
+      aria-label={`Select cluster ${cluster.context || cluster.name}`}
       className="relative p-[1px] rounded-lg cursor-pointer transition-all hover:scale-[1.01] overflow-hidden"
       style={{
         /* List view: subtle gradient — provider at 38%, theme at 25% */
@@ -693,6 +711,10 @@ const CompactClusterCard = memo(function CompactClusterCard({
   return (
     <div
       onClick={onSelectCluster}
+      onKeyDown={handleCardKeyDown(onSelectCluster)}
+      role="button"
+      tabIndex={0}
+      aria-label={`Select cluster ${cluster.context || cluster.name}`}
       className="relative p-[1px] rounded-lg cursor-pointer transition-all hover:scale-[1.02] overflow-hidden"
       style={{
         /* Grid view: subtle gradient — provider at 38%, theme at 25% */

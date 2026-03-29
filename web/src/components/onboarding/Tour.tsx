@@ -378,6 +378,7 @@ export function TourOverlay() {
           </div>
           <button
             onClick={skipTour}
+            aria-label="Skip tour"
             className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
             aria-label="Skip tour"
           >
@@ -412,6 +413,7 @@ export function TourOverlay() {
             {currentStepIndex > 0 && (
               <button
                 onClick={prevStep}
+                aria-label="Previous step"
                 className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
                 aria-label="Previous step"
               >

@@ -199,6 +199,7 @@ export function CardHistory({ onRestoreCard }: CardHistoryProps) {
                 {entry.action === 'removed' && onRestoreCard && (
                   <button
                     onClick={() => onRestoreCard(entry)}
+                    aria-label={`Restore ${entry.cardTitle || 'card'}`}
                     className="p-2 rounded-lg hover:bg-green-500/20 text-muted-foreground hover:text-green-400 transition-colors"
                     title="Restore card"
                     aria-label={`Restore ${entry.cardTitle || 'card'}`}
@@ -208,6 +209,7 @@ export function CardHistory({ onRestoreCard }: CardHistoryProps) {
                 )}
                 <button
                   onClick={() => removeEntry(entry.id)}
+                  aria-label={`Remove ${entry.cardTitle || 'card'} from history`}
                   className="p-2 rounded-lg hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
                   title="Remove from history"
                   aria-label={`Remove ${entry.cardTitle || 'card'} from history`}
