@@ -172,19 +172,12 @@ export function useMissionControl() {
           ...p,
           dependencies: p.dependencies ?? [],
         }))
-        console.log('[MissionControl] Parsed', normalized.length, 'projects from AI response')
         lastParsedContentRef.current = latest.content
         setState((prev) => ({
           ...prev,
           projects: mergeProjects(prev.projects, normalized),
           aiStreaming: false,
         }))
-      } else {
-        // Debug: log what we found
-        const jsonBlocks = latest.content.match(/```json[\s\S]*?```/g)
-        if (jsonBlocks && latest.content.includes('"projects"')) {
-          console.log('[MissionControl] Found JSON blocks but no projects key match:', jsonBlocks.length, 'blocks')
-        }
       }
     } else if (state.phase === 'assign') {
       const parsed = extractJSON<{
