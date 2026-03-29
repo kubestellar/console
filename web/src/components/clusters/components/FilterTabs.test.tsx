@@ -62,7 +62,7 @@ describe('FilterTabs', () => {
 
   it('calls onSortByChange when sort dropdown changes', () => {
     const { props } = renderFilterTabs({ sortBy: 'custom' })
-    const select = screen.getByDisplayValue('Custom')
+    const select = screen.getByDisplayValue('common.custom')
 
     fireEvent.change(select, { target: { value: 'health' } })
     expect(props.onSortByChange).toHaveBeenCalledWith('health')
