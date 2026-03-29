@@ -102,15 +102,15 @@ jobs:
           categorize_title() {
             local title="$1"
             title_lower=$(echo "$title" | tr '[:upper:]' '[:lower:]')
-            if echo "$title_lower" | grep -qE 'aria|a11y|accessibility|keyboard nav|screen reader'; then echo "a11y"
+            if echo "$title_lower" | grep -qE 'aria|a11y|accessibility|keyboard nav|screen reader|dom nest|html|semantic'; then echo "a11y"
             elif echo "$title_lower" | grep -qE 'security|hardcoded|credential|token|vuln|cve'; then echo "security"
             elif echo "$title_lower" | grep -qE 'performance|lazy|unused dep|bundle|optim'; then echo "performance"
-            elif echo "$title_lower" | grep -qE 'dom nest|html|semantic'; then echo "dom-errors"
-            elif echo "$title_lower" | grep -qE 'loading|spinner|skeleton|refresh'; then echo "ui-design"
+            elif echo "$title_lower" | grep -qE 'operator|workflow|helm|deploy|cluster|kubeconfig'; then echo "operator"
+            elif echo "$title_lower" | grep -qE 'test|coverage|monitor|alert|observ|sre'; then echo "sre"
+            elif echo "$title_lower" | grep -qE 'feat|enhance|ui-design|loading|spinner|skeleton|refresh|design'; then echo "features"
             elif echo "$title_lower" | grep -qE 'error|catch|resilience|toast|feedback'; then echo "resilience"
             elif echo "$title_lower" | grep -qE 'inventory|consistency|demo'; then echo "consistency"
-            elif echo "$title_lower" | grep -qE 'test|coverage'; then echo "testing"
-            else echo "other"
+            else echo "operator"
             fi
           }
 
