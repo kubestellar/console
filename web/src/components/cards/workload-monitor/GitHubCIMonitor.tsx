@@ -154,7 +154,10 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
             return { workflows: DEMO_WORKFLOWS, isDemo: true }
           }
           if (!response.ok) continue // Skip this repo on other errors
-          const data = await response.json()
+          // Use .catch() directly to prevent Firefox from firing unhandledrejection
+          // before the outer try/catch processes the rejection (Firefox-specific timing issue).
+          const data = await response.json().catch(() => null) as { workflow_runs?: Record<string, unknown>[] } | null
+          if (!data) continue
           const runs = (data.workflow_runs || []).map((run: Record<string, unknown>) => ({
             id: String(run.id),
             name: run.name as string,

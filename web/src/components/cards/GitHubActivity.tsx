@@ -318,7 +318,10 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
       // Fetch repository info
       const repoResponse = await fetch(`/api/github/repos/${targetRepo}`, { headers, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
       if (!repoResponse.ok) throw new Error(`Failed to fetch repo: ${repoResponse.statusText}`)
-      const repoData = await repoResponse.json()
+      // Use .catch() directly on .json() to prevent Firefox from firing unhandledrejection
+      // before the outer try/catch processes the rejection (Firefox-specific microtask timing).
+      const repoData = await repoResponse.json().catch(() => null)
+      if (!repoData) throw new Error('Failed to parse GitHub repo response: invalid JSON')
       setRepoInfo(repoData)
 
       // Fetch open PRs and closed/merged PRs separately to ensure we get merged PRs
@@ -331,8 +334,9 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
       if (!openPRsResponse.ok) throw new Error(`Failed to fetch open PRs: ${openPRsResponse.statusText}`)
       if (!closedPRsResponse.ok) throw new Error(`Failed to fetch closed PRs: ${closedPRsResponse.statusText}`)
 
-      const openPRsData = await openPRsResponse.json()
-      const closedPRsData = await closedPRsResponse.json()
+      const openPRsData = await openPRsResponse.json().catch(() => null)
+      const closedPRsData = await closedPRsResponse.json().catch(() => null)
+      if (!openPRsData || !closedPRsData) throw new Error('Failed to parse GitHub PR response: invalid JSON')
 
       // Combine and sort by updated_at (most recent first)
       const allPRs = [...openPRsData, ...closedPRsData]
@@ -356,14 +360,14 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
           const match = linkHeader.match(/page=(\d+)>; rel="last"/)
           calculatedOpenIssueCount = match ? parseInt(match[1], 10) : 1
         } else {
-          const openIssues = await openIssuesResponse.json()
-          calculatedOpenIssueCount = openIssues.filter((i: GitHubIssue & { pull_request?: unknown }) => !i.pull_request).length
+          const openIssues = await openIssuesResponse.json().catch(() => null)
+          calculatedOpenIssueCount = (openIssues || []).filter((i: GitHubIssue & { pull_request?: unknown }) => !i.pull_request).length
         }
         setOpenIssueCount(calculatedOpenIssueCount)
       }
 
       if (!recentIssuesResponse.ok) throw new Error(`Failed to fetch issues: ${recentIssuesResponse.statusText}`)
-      const issuesData: GitHubIssue[] = await recentIssuesResponse.json()
+      const issuesData: GitHubIssue[] = await recentIssuesResponse.json().catch(() => null) ?? []
       // Filter out pull requests (they come with issues endpoint but have pull_request field)
       const filteredIssues = issuesData.filter((issue: GitHubIssue & { pull_request?: unknown }) => !issue.pull_request)
       setIssues(filteredIssues)
@@ -371,13 +375,15 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
       // Fetch Releases
       const releasesResponse = await fetch(`/api/github/repos/${targetRepo}/releases?per_page=10`, { headers, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
       if (!releasesResponse.ok) throw new Error(`Failed to fetch releases: ${releasesResponse.statusText}`)
-      const releasesData = await releasesResponse.json()
+      const releasesData = await releasesResponse.json().catch(() => null)
+      if (!releasesData) throw new Error('Failed to parse GitHub releases response: invalid JSON')
       setReleases(releasesData)
 
       // Fetch Contributors
       const contributorsResponse = await fetch(`/api/github/repos/${targetRepo}/contributors?per_page=20`, { headers, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
       if (!contributorsResponse.ok) throw new Error(`Failed to fetch contributors: ${contributorsResponse.statusText}`)
-      const contributorsData = await contributorsResponse.json()
+      const contributorsData = await contributorsResponse.json().catch(() => null)
+      if (!contributorsData) throw new Error('Failed to parse GitHub contributors response: invalid JSON')
       setContributors(contributorsData)
 
       // Cache the fetched data using the calculated counts
