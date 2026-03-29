@@ -2,6 +2,11 @@
  * Dashboard Configuration Registry
  *
  * Central registry for all unified dashboard configurations.
+ * This is the SINGLE SOURCE OF TRUTH for default card lists.
+ * Each dashboard's default cards are defined in its own config file
+ * (e.g., ./main.ts, ./clusters.ts) and exposed via getDefaultCards()
+ * and getDefaultCardsForDashboard(). Do not duplicate these lists
+ * elsewhere in the codebase.
  */
 
 import type { UnifiedDashboardConfig, DashboardConfigRegistry } from '../../lib/unified/types'
