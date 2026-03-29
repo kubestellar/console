@@ -5,7 +5,7 @@
  * replacing the generic error message with targeted guidance.
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 
 const COPY_FEEDBACK_MS = 2000
 import {
@@ -81,6 +81,14 @@ function ActionButton({
   onRetry?: () => void
 }) {
   const [copied, setCopied] = useState(false)
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Cleanup copy feedback timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
+    }
+  }, [])
 
   const handleCopy = useCallback(() => {
     if (action.codeSnippet) {
@@ -88,7 +96,11 @@ function ActionButton({
         // Fallback: select text in a temporary textarea
       })
       setCopied(true)
-      setTimeout(() => setCopied(false), COPY_FEEDBACK_MS)
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
+      copyTimeoutRef.current = setTimeout(() => {
+        setCopied(false)
+        copyTimeoutRef.current = null
+      }, COPY_FEEDBACK_MS)
     }
   }, [action.codeSnippet])
 

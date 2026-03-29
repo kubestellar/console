@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { RotateCcw, HelpCircle, BarChart3, X } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
@@ -130,6 +130,7 @@ export function Kubedle(_props: CardComponentProps) {
   const { isExpanded } = useCardExpanded()
 
   const gameContainerRef = useRef<HTMLDivElement>(null)
+  const shakeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [targetWord, setTargetWord] = useState(getTodaysWord)
   const [guesses, setGuesses] = useState<string[]>([])
   const [currentGuess, setCurrentGuess] = useState('')
@@ -171,9 +172,11 @@ export function Kubedle(_props: CardComponentProps) {
       if (currentGuess.length !== 5) {
         setShake(true)
         setMessage('Not enough letters')
-        setTimeout(() => {
+        if (shakeTimeoutRef.current) clearTimeout(shakeTimeoutRef.current)
+        shakeTimeoutRef.current = setTimeout(() => {
           setShake(false)
           setMessage('')
+          shakeTimeoutRef.current = null
         }, 500)
         return
       }
@@ -230,6 +233,13 @@ export function Kubedle(_props: CardComponentProps) {
     handleKey(e.key)
   }, [handleKey, showStats, showHelp])
   useGameKeys(gameContainerRef, { onKeyDown: handleKubedleKeyDown })
+
+  // Cleanup shake timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (shakeTimeoutRef.current) clearTimeout(shakeTimeoutRef.current)
+    }
+  }, [])
 
   // New game
   const newGame = useCallback((practice: boolean = false) => {
