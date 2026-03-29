@@ -117,7 +117,7 @@ export function MultiTenancyOverview() {
     isLoading: data.isLoading && !hasData,
     hasAnyData: hasData,
     isDemoData: data.isDemoData,
-    isFailed: data.isFailed,
+    isFailed: !!data.isFailed,
   })
 
   if (showSkeleton) {
@@ -133,8 +133,18 @@ export function MultiTenancyOverview() {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">{t('cards:multiTenancy.noData', 'No multi-tenancy data')}</p>
-        <p className="text-xs mt-1">{t('cards:multiTenancy.connectClusters', 'Connect to clusters to detect components')}</p>
+        {data.isFailed ? (
+          <>
+            <AlertTriangle className="w-8 h-8 text-red-400 mb-2" />
+            <p className="text-sm font-medium text-foreground">{t('cards:multiTenancy.errorLoading', 'Failed to load data')}</p>
+            <p className="text-xs mt-1">{t('cards:multiTenancy.connectClusters', 'Connect to clusters to detect components')}</p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm">{t('cards:multiTenancy.noData', 'No multi-tenancy data')}</p>
+            <p className="text-xs mt-1">{t('cards:multiTenancy.connectClusters', 'Connect to clusters to detect components')}</p>
+          </>
+        )}
         <button
           onClick={() => window.location.reload()}
           className="mt-2 text-xs text-primary hover:underline"

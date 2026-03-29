@@ -196,6 +196,15 @@ export function ISO27001Audit({ config }: ISO27001AuditProps) {
 
   // 9. Empty state
   if (showEmptyState || (!isLoading && rawFindings.length === 0)) {
+    if (isFailed) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center text-center p-4">
+          <AlertTriangle className="w-8 h-8 text-red-400 mb-2" />
+          <p className="text-sm font-medium text-foreground">Failed to load audit data</p>
+          <p className="text-xs text-muted-foreground mt-1">Check agent connectivity and cluster access</p>
+        </div>
+      )
+    }
     return (
       <div className="h-full flex flex-col items-center justify-center text-center p-4">
         <Shield className="w-8 h-8 text-blue-400 mb-2" />

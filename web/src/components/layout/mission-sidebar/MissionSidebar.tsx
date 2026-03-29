@@ -150,6 +150,7 @@ export function MissionSidebar() {
   const newMissionInputRef = useRef<HTMLTextAreaElement>(null)
   // Cluster selection for install missions
   const [pendingRunMissionId, setPendingRunMissionId] = useState<string | null>(null)
+  const [isDirectImporting, setIsDirectImporting] = useState(false)
   // Resolution panel state (fullscreen left sidebar)
   const [resolutionPanelView, setResolutionPanelView] = useState<'related' | 'history'>('related')
   const { findSimilarResolutions, allResolutions } = useResolutions()
@@ -222,6 +223,7 @@ export function MissionSidebar() {
     ]
 
     const tryImport = async () => {
+      setIsDirectImporting(true)
       // Race all lookups — resolve as soon as the first succeeds, cancel rest.
       // This avoids waiting for 12 slow 404s when the mission is in cncf-install.
       const controller = new AbortController()
@@ -283,7 +285,7 @@ export function MissionSidebar() {
       setShowBrowser(true)
     }
 
-    tryImport()
+    tryImport().finally(() => setIsDirectImporting(false))
   }, [directImportSlug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Split missions into saved (library) and active
@@ -710,6 +712,14 @@ export function MissionSidebar() {
           >
             {t('common.dismiss', 'Dismiss')}
           </button>
+        </div>
+      )}
+
+      {/* Direct import loading indicator */}
+      {isDirectImporting && (
+        <div className="mx-3 mt-2 p-2.5 bg-secondary/30 border border-border rounded-lg flex items-center gap-2">
+          <Loader2 className="w-4 h-4 animate-spin text-primary flex-shrink-0" />
+          <p className="text-xs text-muted-foreground">{t('missionSidebar.importingMission', 'Importing mission...')}</p>
         </div>
       )}
 
