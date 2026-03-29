@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, createContext, useContext } from 'react'
 import { Theme, themes, getAllThemes, getThemeById, getDefaultTheme } from '../lib/themes'
 import { emitThemeChanged } from '../lib/analytics'
+import { GOOGLE_FONTS_API_URL } from '../config/externalApis'
 
 // Legacy type for backwards compatibility
 export type ThemeMode = 'dark' | 'light' | 'system'
@@ -26,7 +27,7 @@ function loadThemeFont(fontFamily: string) {
   loadedFonts.add(fontName)
   const link = document.createElement('link')
   link.rel = 'stylesheet'
-  link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/ /g, '+')}:wght@400;500;600;700&display=swap`
+  link.href = `${GOOGLE_FONTS_API_URL}?family=${fontName.replace(/ /g, '+')}:wght@400;500;600;700&display=swap`
   document.head.appendChild(link)
 }
 

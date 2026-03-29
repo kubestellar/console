@@ -81,3 +81,13 @@ export const KC_AGENT = {
   url: LOCAL_AGENT_HTTP_URL,
   installCommand: 'brew install kubestellar/tap/kc-agent && kc-agent',
 } as const
+
+/**
+ * Google Fonts API
+ *
+ * SECURITY: Safe - Public font CDN endpoint (no credentials required)
+ * Can be overridden via VITE_GOOGLE_FONTS_API_URL environment variable
+ * for environments that cannot reach Google Fonts (e.g., air-gapped clusters).
+ */
+export const GOOGLE_FONTS_API_URL =
+  import.meta.env.VITE_GOOGLE_FONTS_API_URL || 'https://fonts.googleapis.com/css2'
