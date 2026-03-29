@@ -139,8 +139,12 @@ const SELECTED_AGENT_KEY = 'kc_selected_agent'
 
 /** Delay before auto-reconnecting interrupted missions after WS opens */
 const MISSION_RECONNECT_DELAY_MS = 500
-/** Delay before auto-reconnecting WebSocket after close */
-const WS_AUTO_RECONNECT_DELAY_MS = 3_000
+/** Initial delay (ms) before auto-reconnecting WebSocket after close */
+const WS_RECONNECT_INITIAL_DELAY_MS = 1_000
+/** Maximum delay (ms) between reconnection attempts (backoff cap) */
+const WS_RECONNECT_MAX_DELAY_MS = 30_000
+/** Maximum number of consecutive reconnection attempts before giving up */
+const WS_RECONNECT_MAX_RETRIES = 10
 /** Delay before showing "Waiting for response..." status */
 const STATUS_WAITING_DELAY_MS = 500
 /** Delay before showing "Processing with AI..." status */
@@ -294,6 +298,8 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const handleAgentMessageRef = useRef<(message: { id: string; type: string; payload?: unknown }) => void>(() => {})
   // Ref to track pending WebSocket reconnection timeout so it can be cleared on unmount (#3318)
   const wsReconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Tracks consecutive reconnection attempts for exponential backoff (#3870)
+  const wsReconnectAttempts = useRef(0)
   const STREAM_GAP_THRESHOLD_MS = 8000 // If >8s gap between stream chunks, create new message bubble (tool-use gap)
 
   // Maximum number of WebSocket send retries before giving up
@@ -443,6 +449,8 @@ export function MissionProvider({ children }: { children: ReactNode }) {
 
         wsRef.current.onopen = () => {
           clearTimeout(timeout)
+          // Reset reconnection backoff on successful connection (#3870)
+          wsReconnectAttempts.current = 0
           // Fetch available agents on connect
           fetchAgents()
 
@@ -538,15 +546,30 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           // Don't clear agents - keep them cached for display
           // Users can still see available agents even if temporarily disconnected
 
-          // Auto-reconnect after a short delay (if not in demo mode).
+          // Auto-reconnect with exponential backoff (if not in demo mode).
           // Store the timer handle so it can be cleared on unmount (#3318).
-          if (!getDemoMode()) {
+          // Gives up after WS_RECONNECT_MAX_RETRIES to avoid infinite loops (#3870).
+          if (!getDemoMode() && wsReconnectAttempts.current < WS_RECONNECT_MAX_RETRIES) {
+            const attempt = wsReconnectAttempts.current
+            const delay = Math.min(
+              WS_RECONNECT_INITIAL_DELAY_MS * Math.pow(2, attempt),
+              WS_RECONNECT_MAX_DELAY_MS,
+            )
+            wsReconnectAttempts.current = attempt + 1
+            console.warn(
+              `[Missions] WebSocket closed. Reconnecting in ${delay}ms (attempt ${attempt + 1}/${WS_RECONNECT_MAX_RETRIES})`,
+            )
             wsReconnectTimer.current = setTimeout(() => {
               wsReconnectTimer.current = null
-              ensureConnection().catch(() => {
-                // Silent fail - will retry on next user interaction
+              ensureConnection().catch((err: unknown) => {
+                console.warn('[Missions] WebSocket reconnection failed:', err)
               })
-            }, WS_AUTO_RECONNECT_DELAY_MS)
+            }, delay)
+          } else if (!getDemoMode()) {
+            console.warn(
+              `[Missions] WebSocket reconnection abandoned after ${WS_RECONNECT_MAX_RETRIES} attempts. ` +
+              'Will retry on next user interaction.',
+            )
           }
 
           // Fail any pending missions that were waiting for a response
