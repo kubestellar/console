@@ -3051,7 +3051,7 @@ func (s *Server) handleMixedModeChat(ctx context.Context, conn *websocket.Conn, 
 	// Phase 1: Send thinking phase indicator
 	safeWrite(protocol.Message{
 		ID:   msg.ID,
-		Type: "mixed_mode_thinking",
+		Type: protocol.TypeMixedModeThinking,
 		Payload: map[string]interface{}{
 			"agent":   thinkingProvider.DisplayName(),
 			"phase":   "thinking",
@@ -3092,7 +3092,7 @@ User request: %s`, req.Prompt)
 	// Stream the thinking response
 	safeWrite(protocol.Message{
 		ID:   msg.ID,
-		Type: "stream_chunk",
+		Type: protocol.TypeStreamChunk,
 		Payload: map[string]interface{}{
 			"content": fmt.Sprintf("**🧠 %s Analysis:**\n%s\n\n", thinkingProvider.DisplayName(), thinkingResp.Content),
 			"agent":   thinkingAgent,
@@ -3115,7 +3115,7 @@ User request: %s`, req.Prompt)
 		// No commands to execute - just return thinking response
 		safeWrite(protocol.Message{
 			ID:   msg.ID,
-			Type: "stream_end",
+			Type: protocol.TypeStreamEnd,
 			Payload: map[string]interface{}{
 				"agent": thinkingAgent,
 				"phase": "complete",
@@ -3127,7 +3127,7 @@ User request: %s`, req.Prompt)
 	// Phase 2: Execute commands via CLI agent
 	safeWrite(protocol.Message{
 		ID:   msg.ID,
-		Type: "mixed_mode_executing",
+		Type: protocol.TypeMixedModeExecuting,
 		Payload: map[string]interface{}{
 			"agent":    execProvider.DisplayName(),
 			"phase":    "executing",
@@ -3157,7 +3157,7 @@ User request: %s`, req.Prompt)
 		execContent = fmt.Sprintf("Execution Error: %v", err)
 		safeWrite(protocol.Message{
 			ID:   msg.ID,
-			Type: "stream_chunk",
+			Type: protocol.TypeStreamChunk,
 			Payload: map[string]interface{}{
 				"content": fmt.Sprintf("\n**🔧 %s Execution Error:** %v\n", execProvider.DisplayName(), err),
 				"agent":   executionAgent,
@@ -3170,7 +3170,7 @@ User request: %s`, req.Prompt)
 		}
 		safeWrite(protocol.Message{
 			ID:   msg.ID,
-			Type: "stream_chunk",
+			Type: protocol.TypeStreamChunk,
 			Payload: map[string]interface{}{
 				"content": fmt.Sprintf("**🔧 %s Output:**\n```\n%s\n```\n\n", execProvider.DisplayName(), execContent),
 				"agent":   executionAgent,
@@ -3182,7 +3182,7 @@ User request: %s`, req.Prompt)
 	// Phase 3: Feed results back to thinking agent for analysis
 	safeWrite(protocol.Message{
 		ID:   msg.ID,
-		Type: "mixed_mode_thinking",
+		Type: protocol.TypeMixedModeThinking,
 		Payload: map[string]interface{}{
 			"agent":   thinkingProvider.DisplayName(),
 			"phase":   "analyzing",
@@ -3213,7 +3213,7 @@ Command output:
 	} else if analysisResp != nil {
 		safeWrite(protocol.Message{
 			ID:   msg.ID,
-			Type: "stream_chunk",
+			Type: protocol.TypeStreamChunk,
 			Payload: map[string]interface{}{
 				"content": fmt.Sprintf("**🧠 %s Summary:**\n%s", thinkingProvider.DisplayName(), analysisResp.Content),
 				"agent":   thinkingAgent,
@@ -3225,7 +3225,7 @@ Command output:
 	// End stream
 	safeWrite(protocol.Message{
 		ID:   msg.ID,
-		Type: "stream_end",
+		Type: protocol.TypeStreamEnd,
 		Payload: map[string]interface{}{
 			"agent": thinkingAgent,
 			"phase": "complete",

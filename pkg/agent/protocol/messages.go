@@ -19,9 +19,15 @@ const (
 	TypeResult        MessageType = "result"
 	TypeError         MessageType = "error"
 	TypeStream        MessageType = "stream"
+	TypeStreamChunk   MessageType = "stream_chunk"   // Streaming response chunk
+	TypeStreamEnd     MessageType = "stream_end"     // End of streaming response
 	TypeProgress      MessageType = "progress"       // Tool activity/progress events
 	TypeAgentSelected MessageType = "agent_selected" // Agent selection confirmed
 	TypeAgentsList    MessageType = "agents_list"    // List of available agents
+
+	// Mixed-mode chat types
+	TypeMixedModeThinking  MessageType = "mixed_mode_thinking"  // Thinking agent phase indicator
+	TypeMixedModeExecuting MessageType = "mixed_mode_executing" // Execution agent phase indicator
 )
 
 // Message is the base message structure for WebSocket communication
