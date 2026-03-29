@@ -379,18 +379,18 @@ function exportFullReport(
   h2 { font-size: 18px; margin-top: 28px; color: #4338ca; }
   h3 { font-size: 14px; margin-top: 20px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
   table { width: 100%; border-collapse: collapse; margin: 8px 0 16px; font-size: 13px; }
-  th, td { border: 1px solid #e2e8f0; padding: 6px 10px; text-align: left; }
+  th, td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; }
   th { background: #f1f5f9; font-weight: 600; font-size: 11px; text-transform: uppercase; }
-  .installed { display: inline-block; background: #d1fae5; color: #065f46; padding: 1px 6px; border-radius: 4px; font-size: 11px; margin: 1px; }
-  .deploy { display: inline-block; background: #fef3c7; color: #92400e; padding: 1px 6px; border-radius: 4px; font-size: 11px; margin: 1px; }
-  .protected { display: inline-block; background: #d1fae5; color: #065f46; padding: 1px 6px; border-radius: 4px; font-size: 11px; margin: 1px; }
-  .remove { display: inline-block; background: #fef3c7; color: #92400e; padding: 1px 6px; border-radius: 4px; font-size: 11px; margin: 1px; }
-  code { background: #f1f5f9; padding: 2px 6px; border-radius: 3px; font-size: 12px; }
+  .installed { display: inline-block; background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin: 2px; }
+  .deploy { display: inline-block; background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin: 2px; }
+  .protected { display: inline-block; background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin: 2px; }
+  .remove { display: inline-block; background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin: 2px; }
+  code { background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
   .meta { color: #64748b; font-size: 13px; }
   .svg-container { margin: 16px 0; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
   .svg-container svg { width: 100%; height: auto; }
   .section { page-break-inside: avoid; }
-  .description { background: #f8fafc; border-left: 3px solid #6366f1; padding: 12px 16px; margin: 12px 0; font-size: 13px; }
+  .description { background: #f8fafc; border-left: 4px solid #6366f1; padding: 12px 16px; margin: 12px 0; font-size: 13px; }
   @media print { body { padding: 16px; } .no-print { display: none; } }
 </style></head><body>
 

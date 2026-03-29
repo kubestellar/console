@@ -441,7 +441,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
         backgroundColor: 'rgba(15,23,42,0.97)',
         borderColor: '#334155',
         borderWidth: 1,
-        padding: [10, 14],
+        padding: [12, 16],
         textStyle: { color: '#e2e8f0', fontSize: 11 },
         extraCssText: 'box-shadow:0 4px 12px rgba(0,0,0,0.3);',
         formatter: (params: EChartsFormatterParam) => {

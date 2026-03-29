@@ -84,7 +84,7 @@ function showExpiryWarningBanner(onRefresh: () => void): void {
   const btn = document.createElement('button')
   btn.textContent = 'Refresh Now'
   btn.style.cssText = `
-    margin-left: 8px; padding: 4px 12px; border-radius: 6px;
+    margin-left: 8px; padding: 4px 12px; border-radius: 8px;
     background: rgba(234,179,8,0.3); border: 1px solid rgba(234,179,8,0.5);
     color: #fbbf24; cursor: pointer; font-size: 13px; font-family: inherit;
   `
