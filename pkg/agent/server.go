@@ -1555,6 +1555,15 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if replicas < 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "replicas must be a non-negative integer",
+		})
+		return
+	}
+
 	if cluster == "" || namespace == "" || name == "" {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"success": false,
