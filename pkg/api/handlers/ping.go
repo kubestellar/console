@@ -18,7 +18,7 @@ import (
 var pingClient = &http.Client{
 	Timeout: 5 * time.Second,
 	Transport: &http.Transport{
-		TLSClientConfig:   &tls.Config{InsecureSkipVerify: false},
+		TLSClientConfig:   &tls.Config{MinVersion: tls.VersionTLS12},
 		DisableKeepAlives: true,
 		DialContext: (&net.Dialer{
 			Timeout: 5 * time.Second,
