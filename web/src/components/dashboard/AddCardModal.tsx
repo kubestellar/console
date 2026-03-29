@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Sparkles, Plus, Loader2, LayoutGrid, Search, Wand2, Activity } from 'lucide-react'
+import { Sparkles, Plus, Loader2, LayoutGrid, Search, Wand2, Activity, Eye } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { useModalState } from '../../lib/modals'
 import { CardFactoryModal } from './CardFactoryModal'
@@ -1448,42 +1448,14 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
 
                 </div>
 
-                {/* Add Card button - below the list */}
-                <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    {selectedBrowseCards.size > 0
-                      ? t('dashboard.addCard.cardsSelected', { count: selectedBrowseCards.size })
-                      : t('dashboard.addCard.cardsAvailable', { count: Object.values(filteredCatalog).flat().filter(c => !existingCardTypes.includes(c.type)).length })}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {selectedBrowseCards.size > 0 && (
-                      <button
-                        onClick={() => setSelectedBrowseCards(new Set())}
-                        className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        {t('dashboard.addCard.clear')}
-                      </button>
-                    )}
-                    <button
-                      onClick={handleAddBrowseCards}
-                      disabled={selectedBrowseCards.size === 0}
-                      className="px-4 py-2 bg-gradient-ks text-primary-foreground rounded-lg font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Plus className="w-4 h-4" />
-                      {selectedBrowseCards.size > 0
-                        ? t('dashboard.addCard.addCount', { count: selectedBrowseCards.size })
-                        : t('dashboard.addCard.addCards')}
-                    </button>
-                  </div>
-                </div>
               </div>
 
-              {/* Right side - Preview Panel (only shown when hovering a card) */}
-              {hoveredCard && (
-                <div className="w-64 border-l border-border pl-4 flex-shrink-0">
-                  <div>
-                    <div className="text-2xs text-muted-foreground uppercase tracking-wide mb-2">{t('dashboard.addCard.preview')}</div>
+              {/* Right side - Preview Panel (always visible) */}
+              <div className="w-64 border-l border-border pl-4 flex-shrink-0">
+                <div className="text-2xs text-muted-foreground uppercase tracking-wide mb-2">{t('dashboard.addCard.preview')}</div>
 
+                {hoveredCard ? (
+                  <div>
                     {/* Card preview - looks like actual card */}
                     <CardPreview card={hoveredCard} />
 
@@ -1506,8 +1478,15 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-32 rounded-lg border border-dashed border-border/50 bg-secondary/20">
+                    <Eye className="w-6 h-6 text-muted-foreground/40 mb-2" />
+                    <p className="text-xs text-muted-foreground/60 text-center px-4">
+                      {t('dashboard.addCard.hoverToPreview', 'Hover over a card to see a preview')}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -1619,6 +1598,37 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
           )}
         </BaseModal.Content>
 
+
+        {/* Footer - Browse tab (always visible so Add button is never hidden) */}
+        {activeTab === 'browse' && (
+          <BaseModal.Footer showKeyboardHints={false} className="justify-between">
+            <span className="text-sm text-muted-foreground">
+              {selectedBrowseCards.size > 0
+                ? t('dashboard.addCard.cardsSelected', { count: selectedBrowseCards.size })
+                : t('dashboard.addCard.cardsAvailable', { count: Object.values(filteredCatalog).flat().filter(c => !existingCardTypes.includes(c.type)).length })}
+            </span>
+            <div className="flex items-center gap-2">
+              {selectedBrowseCards.size > 0 && (
+                <button
+                  onClick={() => setSelectedBrowseCards(new Set())}
+                  className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {t('dashboard.addCard.clear')}
+                </button>
+              )}
+              <button
+                onClick={handleAddBrowseCards}
+                disabled={selectedBrowseCards.size === 0}
+                className="px-4 py-2 bg-gradient-ks text-primary-foreground rounded-lg font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Plus className="w-4 h-4" />
+                {selectedBrowseCards.size > 0
+                  ? t('dashboard.addCard.addCount', { count: selectedBrowseCards.size })
+                  : t('dashboard.addCard.addCards')}
+              </button>
+            </div>
+          </BaseModal.Footer>
+        )}
 
         {/* Footer - AI tab */}
         {activeTab === 'ai' && suggestions.length > 0 && (
