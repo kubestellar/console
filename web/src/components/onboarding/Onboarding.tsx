@@ -219,7 +219,6 @@ export function Onboarding() {
                     <button
                       onClick={() => handleRankMove(index, 'up')}
                       disabled={index === 0}
-                      aria-label={`Move ${option} up`}
                       className="p-1.5 rounded hover:bg-purple-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                       aria-label={`Move ${option} up`}
                     >
@@ -228,7 +227,6 @@ export function Onboarding() {
                     <button
                       onClick={() => handleRankMove(index, 'down')}
                       disabled={index === getRankedOrder().length - 1}
-                      aria-label={`Move ${option} down`}
                       className="p-1.5 rounded hover:bg-purple-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                       aria-label={`Move ${option} down`}
                     >
