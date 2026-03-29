@@ -39,7 +39,7 @@ export const SortableDashboardCard = memo(function SortableDashboardCard({
   isRefreshing,
   onRefresh,
   lastUpdated,
-  onInsertBefore,
+  onInsertBefore: _onInsertBefore,
   onInsertAfter,
 }: SortableDashboardCardProps) {
   const {
@@ -69,22 +69,12 @@ export const SortableDashboardCard = memo(function SortableDashboardCard({
 
   return (
     <div ref={setNodeRef} style={style} className="relative group/card">
-      {onInsertBefore && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onInsertBefore() }}
-          className="absolute top-1/2 -left-2.5 -translate-y-1/2 z-10 opacity-0 group-hover/card:opacity-100 transition-opacity w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shadow-md hover:scale-110"
-          aria-label="Insert card before this one"
-          title="Insert card here"
-        >
-          +
-        </button>
-      )}
       {onInsertAfter && (
         <button
           onClick={(e) => { e.stopPropagation(); onInsertAfter() }}
-          className="absolute top-1/2 -right-2.5 -translate-y-1/2 z-10 opacity-0 group-hover/card:opacity-100 transition-opacity w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shadow-md hover:scale-110"
-          aria-label="Insert card after this one"
-          title="Insert card here"
+          className="absolute -top-2 -right-2 z-20 opacity-0 group-hover/card:opacity-100 transition-all w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shadow-lg hover:scale-110 ring-2 ring-background"
+          aria-label="Add card"
+          title="Add card here"
         >
           +
         </button>
