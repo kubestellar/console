@@ -289,7 +289,8 @@
       "feedbackTokenEnvSource": "Currently sourced from .env.",
       "feedbackTokenNotConfigured": "Not Configured",
       "feedbackTokenNotConfiguredHint": "GitHub features are limited (60 requests/hour, no issue submission)",
-      "feedbackTokenSetupHint": "To enable full GitHub integration, add a GitHub PAT with repo scope here or set FEEDBACK_GITHUB_TOKEN in your .env file."
+      "feedbackTokenSetupHint": "To enable full GitHub integration, add a GitHub PAT with repo scope here or set FEEDBACK_GITHUB_TOKEN in your .env file.",
+      "clearConfirm": "Are you sure you want to remove the GitHub token? GitHub features will be limited until a new token is configured."
     },
     "predictions": {
       "title": "Predictive Failure Detection",
@@ -1848,6 +1849,10 @@
       "willBeRecreated": "(will be recreated)",
       "nodeNotAccepting": "This node is not accepting new workloads",
       "nodeNotHealthy": "Node is not healthy"
+    },
+    "confirmDelete": {
+      "managedPod": "Delete pod \"{{name}}\"? It will be recreated by its controller.",
+      "unmanagedPod": "Delete pod \"{{name}}\"? This pod is not managed by a controller and will NOT be recreated."
     },
     "actions": {
       "scaleDeployment": "Scale Deployment",

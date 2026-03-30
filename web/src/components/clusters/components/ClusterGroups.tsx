@@ -3,6 +3,7 @@ import { FolderOpen, ChevronDown, ChevronRight, Plus, Trash2, Check, WifiOff, Ch
 import { ClusterInfo } from '../../../hooks/useMCP'
 import { isClusterUnreachable } from '../utils'
 import { useTranslation } from 'react-i18next'
+import { ConfirmDialog } from '../../../lib/modals'
 
 export interface ClusterGroup {
   id: string
@@ -35,6 +36,7 @@ export function ClusterGroups({
     name: '',
     clusters: [] as string[],
   })
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
   const resetForm = () => setFormState({ showForm: false, name: '', clusters: [] })
 
@@ -162,7 +164,7 @@ export function ClusterGroups({
               <button
                 onClick={(e) => {
                   e.stopPropagation()
-                  onDeleteGroup(group.id)
+                  setDeleteConfirmId(group.id)
                 }}
                 className="p-1.5 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
                 title="Delete group"
@@ -173,6 +175,21 @@ export function ClusterGroups({
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={deleteConfirmId !== null}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={() => {
+          if (deleteConfirmId) {
+            onDeleteGroup(deleteConfirmId)
+            setDeleteConfirmId(null)
+          }
+        }}
+        title="Delete Cluster Group"
+        message="Are you sure you want to delete this cluster group? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+      />
     </div>
   )
 }

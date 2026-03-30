@@ -20,6 +20,7 @@ import {
 } from './pod-drilldown'
 import type { TabType, RelatedResource, CachedData } from './pod-drilldown'
 import { copyToClipboard } from '../../../lib/clipboard'
+import { ConfirmDialog } from '../../../lib/modals'
 
 /** Keys that must never be used as object property names (prototype pollution prevention). */
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
@@ -106,6 +107,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   const [canDeletePod, setCanDeletePod] = useState<boolean | null>(null)
   const [deletingPod, setDeletingPod] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [showDeletePodConfirm, setShowDeletePodConfirm] = useState(false)
   const { checkPermission } = useCanI()
   const { close: closeDrillDown } = useDrillDown()
 
@@ -703,13 +705,6 @@ Please proceed step by step and ask for confirmation before making any changes.`
   // Delete pod handler
   const handleDeletePod = async () => {
     if (!agentConnected || !canDeletePod) return
-
-    // Confirm deletion
-    const confirmMessage = isManagedPod
-      ? `Delete pod "${podName}"? It will be recreated by its controller.`
-      : `Delete pod "${podName}"? This pod is not managed by a controller and will NOT be recreated.`
-
-    if (!window.confirm(confirmMessage)) return
 
     setDeletingPod(true)
     setDeleteError(null)
@@ -2348,7 +2343,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
               </div>
             )}
             <button
-              onClick={handleDeletePod}
+              onClick={() => setShowDeletePodConfirm(true)}
               disabled={!agentConnected || canDeletePod === false || deletingPod}
               title={
                 !agentConnected
@@ -2391,6 +2386,23 @@ Please proceed step by step and ask for confirmation before making any changes.`
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={showDeletePodConfirm}
+        onClose={() => setShowDeletePodConfirm(false)}
+        onConfirm={() => {
+          setShowDeletePodConfirm(false)
+          handleDeletePod()
+        }}
+        title={t('drilldown.actions.deletePod')}
+        message={
+          isManagedPod
+            ? t('drilldown.confirmDelete.managedPod', { name: podName })
+            : t('drilldown.confirmDelete.unmanagedPod', { name: podName })
+        }
+        confirmLabel={t('drilldown.actions.deletePod')}
+        variant="danger"
+      />
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { Save, RefreshCw, Check, X, Github, ExternalLink, Loader2, Server } from
 import { STORAGE_KEY_TOKEN, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_DISMISSED, FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
 import { emitGitHubTokenConfigured, emitGitHubTokenRemoved, emitConversionStep } from '../../../lib/analytics'
 import { UI_FEEDBACK_TIMEOUT_MS, SCROLL_COMPLETE_MS } from '../../../lib/constants/network'
+import { ConfirmDialog } from '../../../lib/modals'
 
 interface GitHubTokenSectionProps {
   forceVersionCheck: () => void
@@ -38,6 +39,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
   const [tokenError, setTokenError] = useState<string | null>(null)
   const [rateLimit, setRateLimit] = useState<{ limit: number; remaining: number; reset: Date } | null>(null)
   const [isInitializing, setIsInitializing] = useState(true)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
 
   // Load GitHub token status on mount
   useEffect(() => {
@@ -324,7 +326,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
                 </button>
                 {hasToken && (
                   <button
-                    onClick={handleClearToken}
+                    onClick={() => setShowClearConfirm(true)}
                     className="px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10"
                   >
                     {t('settings.github.clear')}
@@ -393,6 +395,19 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
           </div>
         </>
       )}
+
+      <ConfirmDialog
+        isOpen={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={() => {
+          setShowClearConfirm(false)
+          handleClearToken()
+        }}
+        title={t('settings.github.clear')}
+        message={t('settings.github.clearConfirm')}
+        confirmLabel={t('actions.delete')}
+        variant="danger"
+      />
     </div>
   )
 }

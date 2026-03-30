@@ -10,6 +10,7 @@ import { useMissions } from '../../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../../cards/console-missions/shared'
 import { useClusters } from '../../../hooks/mcp/clusters'
 import type { ClusterProgress } from '../../../hooks/useClusterProgress'
+import { ConfirmDialog } from '../../../lib/modals'
 
 /** Default namespace for new vCluster instances */
 const VCLUSTER_DEFAULT_NAMESPACE = 'vcluster'
@@ -133,6 +134,10 @@ export function LocalClustersSection() {
   const [vclusterNamespace, setVclusterNamespace] = useState(VCLUSTER_DEFAULT_NAMESPACE)
   const [vclusterHostCluster, setVclusterHostCluster] = useState('')
 
+  // Delete confirmation state
+  const [deleteClusterConfirm, setDeleteClusterConfirm] = useState<{ tool: string; name: string } | null>(null)
+  const [deleteVClusterConfirm, setDeleteVClusterConfirm] = useState<{ name: string; namespace: string } | null>(null)
+
   const { clusters: connectedClusters } = useClusters()
   const healthyClusters = (connectedClusters || []).filter(c => c.healthy !== false)
 
@@ -156,7 +161,6 @@ export function LocalClustersSection() {
   }
 
   const handleDelete = async (tool: string, name: string) => {
-    if (!confirm(t('settings.localClusters.deleteConfirm', { name }))) return
     try {
       await deleteCluster(tool, name)
     } catch {
@@ -180,7 +184,6 @@ export function LocalClustersSection() {
   }
 
   const handleDeleteVCluster = async (name: string, namespace: string) => {
-    if (!confirm(t('settings.localClusters.vclusterDeleteConfirm', { name, namespace }))) return
     try {
       await deleteVCluster(name, namespace)
     } catch {
@@ -448,7 +451,7 @@ After installation, the user can create virtual clusters on this host cluster fr
                         </div>
                       </div>
                       <button
-                        onClick={() => handleDelete(cluster.tool, cluster.name)}
+                        onClick={() => setDeleteClusterConfirm({ tool: cluster.tool, name: cluster.name })}
                         disabled={isDeleting === cluster.name}
                         className="p-2 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 disabled:opacity-50"
                         title="Delete cluster"
@@ -691,7 +694,7 @@ After installation, the user can create virtual clusters on this host cluster fr
                             )}
                             {/* Delete button */}
                             <button
-                              onClick={() => handleDeleteVCluster(instance.name, instance.namespace)}
+                              onClick={() => setDeleteVClusterConfirm({ name: instance.name, namespace: instance.namespace })}
                               disabled={isDeleting === instance.name}
                               className="p-2 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 disabled:opacity-50"
                               title="Delete vCluster"
@@ -727,6 +730,36 @@ After installation, the user can create virtual clusters on this host cluster fr
         isOpen={showKeyPrompt}
         onDismiss={dismissPrompt}
         onGoToSettings={goToSettings}
+      />
+
+      <ConfirmDialog
+        isOpen={deleteClusterConfirm !== null}
+        onClose={() => setDeleteClusterConfirm(null)}
+        onConfirm={() => {
+          if (deleteClusterConfirm) {
+            handleDelete(deleteClusterConfirm.tool, deleteClusterConfirm.name)
+            setDeleteClusterConfirm(null)
+          }
+        }}
+        title={t('actions.delete')}
+        message={t('settings.localClusters.deleteConfirm', { name: deleteClusterConfirm?.name ?? '' })}
+        confirmLabel={t('actions.delete')}
+        variant="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={deleteVClusterConfirm !== null}
+        onClose={() => setDeleteVClusterConfirm(null)}
+        onConfirm={() => {
+          if (deleteVClusterConfirm) {
+            handleDeleteVCluster(deleteVClusterConfirm.name, deleteVClusterConfirm.namespace)
+            setDeleteVClusterConfirm(null)
+          }
+        }}
+        title={t('actions.delete')}
+        message={t('settings.localClusters.vclusterDeleteConfirm', { name: deleteVClusterConfirm?.name ?? '', namespace: deleteVClusterConfirm?.namespace ?? '' })}
+        confirmLabel={t('actions.delete')}
+        variant="danger"
       />
     </div>
   )

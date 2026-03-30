@@ -6,7 +6,7 @@
  */
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Brain, Lightbulb, AlertTriangle, TrendingUp, Gauge, MessageSquare, ChevronRight, Sparkles, Settings2, Zap } from 'lucide-react'
+import { Brain, Lightbulb, AlertTriangle, TrendingUp, Gauge, MessageSquare, ChevronRight, Sparkles, Settings2, Zap, Loader2 } from 'lucide-react'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
@@ -332,6 +332,7 @@ export function LLMdAIInsights() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [chatInput, setChatInput] = useState('')
   const [chatHistory, setChatHistory] = useState<Array<{ role: 'user' | 'ai'; message: string }>>([])
+  const [isGenerating, setIsGenerating] = useState(false)
 
   // Generate insights based on demo mode or real stack
   const insights = useMemo(() => {
@@ -349,11 +350,12 @@ export function LLMdAIInsights() {
   // Handle chat submission
   const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!chatInput.trim()) return
+    if (!chatInput.trim() || isGenerating) return
 
     const userMessage = chatInput
     setChatHistory(prev => [...prev, { role: 'user', message: userMessage }])
     setChatInput('')
+    setIsGenerating(true)
 
     // Generate contextual responses based on stack state
     await new Promise(resolve => setTimeout(resolve, PROGRESS_SIMULATION_MS))
@@ -400,6 +402,7 @@ export function LLMdAIInsights() {
     }
 
     setChatHistory(prev => [...prev, { role: 'ai', message: response }])
+    setIsGenerating(false)
   }
 
   const insightCounts = {
@@ -498,6 +501,12 @@ export function LLMdAIInsights() {
                 {msg.message}
               </div>
             ))}
+            {isGenerating && (
+              <div className="bg-purple-500/10 text-purple-300 mr-8 text-xs p-2 rounded flex items-center gap-2">
+                <Loader2 size={10} className="animate-spin" />
+                <span>{t('llmdAIInsights.thinking')}</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -508,12 +517,14 @@ export function LLMdAIInsights() {
             onChange={e => setChatInput(e.target.value)}
             placeholder={t('llmdAIInsights.scalePlaceholder')}
             className="flex-1 bg-secondary border border-border rounded px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-purple-500"
+            disabled={isGenerating}
           />
           <button
             type="submit"
-            className="px-3 py-2 bg-purple-500/20 text-purple-400 rounded hover:bg-purple-500/30 transition-colors"
+            disabled={isGenerating || !chatInput.trim()}
+            className="px-3 py-2 bg-purple-500/20 text-purple-400 rounded hover:bg-purple-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Zap size={16} />
+            {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
           </button>
         </form>
       </div>

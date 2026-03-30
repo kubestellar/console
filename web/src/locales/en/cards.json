@@ -1676,7 +1676,8 @@
     "manualScalingRec": "Consider enabling Variant Autoscaling (WVA) or HPA for automatic scaling based on load.",
     "limitedHeadroom": "Limited Scaling Headroom",
     "limitedHeadroomDesc": "Autoscaler is at {{current}}/{{max}} replicas. Limited capacity for traffic spikes.",
-    "limitedHeadroomRec": "Consider increasing maxReplicas to allow for traffic bursts, or optimize resource usage."
+    "limitedHeadroomRec": "Consider increasing maxReplicas to allow for traffic bursts, or optimize resource usage.",
+    "thinking": "Thinking..."
   },
   "clusterCosts": {
     "title": "Cluster Costs",
