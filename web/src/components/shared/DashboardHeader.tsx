@@ -75,20 +75,37 @@ export function DashboardHeader({
 
   // Self-managed timestamp: updates when isFetching goes true → false
   const [internalLastUpdated, setInternalLastUpdated] = useState<Date>(() => new Date())
-  // Spin the refresh icon — starts on fetch, completes at least one full turn
+  // Spin the refresh icon — starts on fetch, completes at least one full turn (1s)
   const [spinning, setSpinning] = useState(false)
+  const spinTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const wasFetchingRef = useRef(isFetching)
 
   useEffect(() => {
     if (wasFetchingRef.current && !isFetching) {
       setInternalLastUpdated(new Date())
+      // Keep spinning for one more rotation after fetch ends
+      if (spinTimeoutRef.current) clearTimeout(spinTimeoutRef.current)
+      spinTimeoutRef.current = setTimeout(() => {
+        setSpinning(false)
+        spinTimeoutRef.current = null
+      }, 1000)
     }
     // Start spinning when fetch begins
     if (!wasFetchingRef.current && isFetching) {
+      if (spinTimeoutRef.current) {
+        clearTimeout(spinTimeoutRef.current)
+        spinTimeoutRef.current = null
+      }
       setSpinning(true)
     }
     wasFetchingRef.current = isFetching
   }, [isFetching])
+
+  useEffect(() => {
+    return () => {
+      if (spinTimeoutRef.current) clearTimeout(spinTimeoutRef.current)
+    }
+  }, [])
 
   // Use external override if it has a value, otherwise use self-managed
   const displayTimestamp = externalLastUpdated ?? internalLastUpdated
@@ -163,11 +180,7 @@ export function DashboardHeader({
             title={t('common.refreshClusterData')}
           >
             <RefreshCw
-              className="w-4 h-4"
-              style={spinning ? {
-                animation: `spin 0.6s linear ${isFetching ? 'infinite' : '1'}`,
-              } : undefined}
-              onAnimationEnd={() => setSpinning(false)}
+              className={`w-4 h-4 ${(isFetching || spinning) ? 'animate-spin' : ''}`}
             />
           </button>
         </div>
@@ -182,7 +195,7 @@ export function DashboardHeader({
           >
             <AlertTriangle className="w-3 h-3" aria-hidden="true" />
             <span>{error}</span>
-            <RefreshCw className="w-3 h-3" />
+            <RefreshCw className={`w-3 h-3 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
         ) : displayTimestamp ? (
           <span className="text-xs text-muted-foreground">

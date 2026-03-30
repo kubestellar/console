@@ -19,6 +19,7 @@ interface AgentBackendSettingsProps {
   onSelectKagentAgent: (agent: KagentAgent) => void
   onSelectKagentiAgent: (agent: KagentiProviderAgent) => void
   onRefresh: () => void
+  isRefreshing?: boolean
 }
 
 export function AgentBackendSettings({
@@ -36,6 +37,7 @@ export function AgentBackendSettings({
   onSelectKagentAgent,
   onSelectKagentiAgent,
   onRefresh,
+  isRefreshing = false,
 }: AgentBackendSettingsProps) {
   return (
     <div className="space-y-4">
@@ -51,7 +53,7 @@ export function AgentBackendSettings({
           className="p-1.5 rounded-md hover:bg-accent transition-colors"
           title="Refresh status"
         >
-          <RefreshCw className="w-3.5 h-3.5 text-muted-foreground" />
+          <RefreshCw className={`w-3.5 h-3.5 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
         </button>
       </div>
 

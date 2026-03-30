@@ -118,7 +118,7 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLo
                 disabled={isSaving}
                 className="flex items-center gap-2 px-3 py-1.5 rounded bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs transition-colors disabled:opacity-50"
               >
-                <RefreshCw className="w-3 h-3" />
+                <RefreshCw className={`w-3 h-3 ${isSaving ? 'animate-spin' : ''}`} />
                 {t('settings.profile.retrySave')}
               </button>
             </div>
