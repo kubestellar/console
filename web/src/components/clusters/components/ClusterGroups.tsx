@@ -30,7 +30,7 @@ export function ClusterGroups({
   onSelectGroup,
   onDeleteGroup,
 }: ClusterGroupsProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation()
   const [formState, setFormState] = useState({
     showForm: false,
     name: '',
@@ -185,9 +185,9 @@ export function ClusterGroups({
             setDeleteConfirmId(null)
           }
         }}
-        title="Delete Cluster Group"
-        message="Are you sure you want to delete this cluster group? This action cannot be undone."
-        confirmLabel="Delete"
+        title={t('clusters.groups.deleteTitle')}
+        message={t('clusters.groups.deleteMessage')}
+        confirmLabel={t('actions.delete')}
         variant="danger"
       />
     </div>
