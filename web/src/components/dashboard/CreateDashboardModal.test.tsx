@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { CreateDashboardModal } from './CreateDashboardModal'
 import { useDashboardHealth } from '../../hooks/useDashboardHealth'
 
@@ -22,8 +22,20 @@ vi.mock('../../lib/modals', () => ({
 }))
 
 vi.mock('../ui/Button', () => ({
-  Button: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
-    <button onClick={onClick}>{children}</button>
+  Button: ({
+    children,
+    onClick,
+    disabled,
+    loading,
+  }: {
+    children: React.ReactNode
+    onClick?: () => void
+    disabled?: boolean
+    loading?: boolean
+  }) => (
+    <button onClick={onClick} disabled={disabled || loading}>
+      {children}
+    </button>
   ),
 }))
 
@@ -81,5 +93,82 @@ describe('CreateDashboardModal Component', () => {
     const alert = screen.getByRole('alert')
     expect(alert).toBeInTheDocument()
     expect(alert).toHaveAttribute('aria-label', 'System health: 2 warnings')
+  })
+
+  it('disables Create button while async onCreate is in progress', async () => {
+    let resolveCreate!: () => void
+    const asyncOnCreate = vi.fn(
+      () => new Promise<void>((resolve) => { resolveCreate = resolve })
+    )
+    const onClose = vi.fn()
+    vi.mocked(useDashboardHealth).mockReturnValue(mockHealthHealthy)
+    render(<CreateDashboardModal isOpen={true} onClose={onClose} onCreate={asyncOnCreate} />)
+
+    // Capture button by initial text before click
+    const createBtn = screen.getByRole('button', { name: /title/i })
+    fireEvent.click(createBtn)
+
+    // Button should be disabled while async op is in progress
+    await waitFor(() => {
+      expect(createBtn).toBeDisabled()
+    })
+
+    resolveCreate()
+
+    // After completion, onClose should have been called
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('disables Cancel button while async onCreate is in progress', async () => {
+    let resolveCreate!: () => void
+    const asyncOnCreate = vi.fn(
+      () => new Promise<void>((resolve) => { resolveCreate = resolve })
+    )
+    const onClose = vi.fn()
+    vi.mocked(useDashboardHealth).mockReturnValue(mockHealthHealthy)
+    render(<CreateDashboardModal isOpen={true} onClose={onClose} onCreate={asyncOnCreate} />)
+
+    const createBtn = screen.getByRole('button', { name: /title/i })
+    const cancelBtn = screen.getByRole('button', { name: /cancel/i })
+    fireEvent.click(createBtn)
+
+    // Cancel button should be disabled while async op is in progress
+    await waitFor(() => {
+      expect(cancelBtn).toBeDisabled()
+    })
+
+    resolveCreate()
+
+    // After completion, onClose should have been called
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('prevents double-submission when Create is clicked rapidly', async () => {
+    let resolveCreate!: () => void
+    const asyncOnCreate = vi.fn(
+      () => new Promise<void>((resolve) => { resolveCreate = resolve })
+    )
+    vi.mocked(useDashboardHealth).mockReturnValue(mockHealthHealthy)
+    render(<CreateDashboardModal isOpen={true} onClose={vi.fn()} onCreate={asyncOnCreate} />)
+
+    const createBtn = screen.getByRole('button', { name: /title/i })
+    fireEvent.click(createBtn)
+    fireEvent.click(createBtn)
+    fireEvent.click(createBtn)
+
+    // Despite multiple clicks, onCreate should only be called once
+    await waitFor(() => {
+      expect(asyncOnCreate).toHaveBeenCalledTimes(1)
+    })
+
+    resolveCreate()
+
+    await waitFor(() => {
+      expect(createBtn).not.toBeDisabled()
+    })
   })
 })

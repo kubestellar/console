@@ -825,7 +825,8 @@
       "preConfiguredCards_one": "{{count}} pre-configured card",
       "preConfiguredCards_other": "{{count}} pre-configured cards",
       "selectByCategory": "Select a template by category:",
-      "cards": "cards"
+      "cards": "cards",
+      "creating": "Creating..."
     },
     "templates": {
       "title": "Dashboard Templates",

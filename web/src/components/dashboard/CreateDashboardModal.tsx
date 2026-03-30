@@ -10,7 +10,7 @@ import { useDashboardHealth } from '../../hooks/useDashboardHealth'
 interface CreateDashboardModalProps {
   isOpen: boolean
   onClose: () => void
-  onCreate: (name: string, template?: DashboardTemplate, description?: string) => void
+  onCreate: (name: string, template?: DashboardTemplate, description?: string) => void | Promise<void>
   existingNames?: string[]
 }
 
@@ -45,6 +45,7 @@ function CreateDashboardModalInner({
   const [selectedTemplate, setSelectedTemplate] = useState<DashboardTemplate | null>(null)
   const [showTemplates, setShowTemplates] = useState(false)
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const { t } = useTranslation()
   const health = useDashboardHealth()
@@ -74,10 +75,16 @@ function CreateDashboardModalInner({
     return defaultName
   }
 
-  const handleCreate = () => {
-    const dashboardName = name.trim() || generateDefaultName()
-    onCreate(dashboardName, selectedTemplate || undefined, description.trim() || undefined)
-    onClose()
+  const handleCreate = async () => {
+    if (isCreating) return
+    setIsCreating(true)
+    try {
+      const dashboardName = name.trim() || generateDefaultName()
+      await onCreate(dashboardName, selectedTemplate || undefined, description.trim() || undefined)
+      onClose()
+    } finally {
+      setIsCreating(false)
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -266,16 +273,19 @@ function CreateDashboardModalInner({
           variant="ghost"
           size="lg"
           onClick={onClose}
+          disabled={isCreating}
         >
           {t('actions.cancel')}
         </Button>
         <Button
           variant="accent"
           size="lg"
-          iconRight={<ChevronRight className="w-4 h-4" />}
+          iconRight={isCreating ? undefined : <ChevronRight className="w-4 h-4" />}
           onClick={handleCreate}
+          loading={isCreating}
+          disabled={isCreating}
         >
-          {t('dashboard.create.title')}
+          {isCreating ? t('dashboard.create.creating') : t('dashboard.create.title')}
         </Button>
       </BaseModal.Footer>
     </BaseModal>
