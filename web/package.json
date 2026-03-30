@@ -87,7 +87,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
-    "@types/three": "^0.169.0",
+    "@types/three": "^0.183.1",
     "@vitejs/plugin-react": "^5.1.4",
     "@vitest/ui": "^4.0.18",
     "autoprefixer": "^10.4.27",
