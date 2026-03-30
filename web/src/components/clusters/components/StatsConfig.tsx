@@ -20,6 +20,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { useTranslation } from 'react-i18next'
 import { safeGetItem, safeSetItem } from '../../../lib/utils/localStorage'
+import { useToast } from '../../ui/Toast'
 
 export interface StatBlockConfig {
   id: string
@@ -249,6 +250,7 @@ export function StatsConfigModal({ isOpen, onClose, blocks, onSave }: StatsConfi
 // Hook to manage stats configuration
 export function useStatsConfig(storageKey: string = 'cluster-stats-config') {
   const { t: _t } = useTranslation()
+  const { showToast } = useToast()
   const [blocks, setBlocks] = useState<StatBlockConfig[]>(() => {
     try {
       const saved = safeGetItem(storageKey)
@@ -275,7 +277,7 @@ export function useStatsConfig(storageKey: string = 'cluster-stats-config') {
     try {
       safeSetItem(storageKey, JSON.stringify(newBlocks))
     } catch {
-      // Ignore storage errors
+      showToast('Failed to save stats configuration. Check your browser storage settings.', 'error')
     }
   }
 
