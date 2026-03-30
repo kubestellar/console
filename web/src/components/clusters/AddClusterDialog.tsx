@@ -330,7 +330,6 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         aria-hidden="true"
-        onClick={onClose}
       />
 
       {/* Dialog */}

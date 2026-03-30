@@ -43,7 +43,7 @@ export function RenameModal({ isOpen = true, clusterName, currentDisplayName, on
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="sm">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="sm" closeOnBackdrop={false}>
       <BaseModal.Header
         title="Rename Context"
         icon={Edit3}

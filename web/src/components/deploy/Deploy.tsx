@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { useClusterGroups } from '../../hooks/useClusterGroups'
 import { useClusters, useDeployments } from '../../hooks/useMCP'
@@ -227,6 +227,19 @@ export function Deploy() {
     // Dropped anywhere else (or nowhere) → show group picker
     setGroupPickerWorkload(workload)
   }, [])
+
+  // Handle Escape key to close group picker modal
+  useEffect(() => {
+    if (!groupPickerWorkload) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setGroupPickerWorkload(null)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [groupPickerWorkload])
 
   return (
     <DashboardPage

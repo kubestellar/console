@@ -17,9 +17,9 @@ vi.mock('../../../lib/modals', () => {
   const Content = ({ children }: { children: React.ReactNode }) => <div>{children}</div>
   const Footer = ({ children }: { children: React.ReactNode }) => <div>{children}</div>
 
-  const BaseModal = ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) => {
+  const BaseModal = ({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: React.ReactNode }) => {
     if (!isOpen) return null
-    return <div data-testid="modal">{children}</div>
+    return <div data-testid="modal" onKeyDown={(e) => { if (e.key === 'Escape') onClose() }}>{children}</div>
   }
   BaseModal.Header = Header
   BaseModal.Content = Content
@@ -113,5 +113,12 @@ describe('RenameModal', () => {
   it('does not render when isOpen is false', () => {
     render(<RenameModal {...defaultProps} isOpen={false} />)
     expect(screen.queryByText('Rename Context')).toBeNull()
+  })
+
+  it('calls onClose when Escape key is pressed', () => {
+    render(<RenameModal {...defaultProps} />)
+    const modal = screen.getByTestId('modal')
+    fireEvent.keyDown(modal, { key: 'Escape' })
+    expect(defaultProps.onClose).toHaveBeenCalled()
   })
 })

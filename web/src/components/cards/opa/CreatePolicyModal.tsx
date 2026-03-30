@@ -217,7 +217,7 @@ Please proceed with applying this policy.`,
   const noGatekeeper = installedClusters.length === 0
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnEscape={flow === 'choose'}>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnBackdrop={false} closeOnEscape={flow === 'choose'}>
       <BaseModal.Header
         title="Create OPA Policy"
         description="AI-powered policy creation"

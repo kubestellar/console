@@ -2,7 +2,7 @@
  * GitHub Invite component for inviting users and earning coins
  */
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Github, Send, Coins, CheckCircle2, X, ExternalLink } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useRewards } from '../../hooks/useRewards'
@@ -85,12 +85,25 @@ export function GitHubInviteModal({ isOpen, onClose }: GitHubInviteProps) {
     }
   }
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setSuccess(false)
     setError('')
     setUsername('')
     onClose()
-  }
+  }, [onClose])
+
+  // Handle Escape key to close modal
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        handleClose()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, handleClose])
 
   if (!isOpen) return null
 
