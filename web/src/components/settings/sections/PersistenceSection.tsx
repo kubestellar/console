@@ -175,7 +175,7 @@ export function PersistenceSection() {
               </button>
             </div>
             {testResult && testResult.cluster === localConfig.primaryCluster && (
-              <p className={`text-xs mt-1 ${testResult.success ? 'text-green-500' : 'text-red-500'}`}>
+              <p className={`text-xs mt-1 ${testResult.success ? 'text-green-400' : 'text-red-400'}`}>
                 {testResult.success ? t('settings.persistence.connectionSuccess') : t('settings.persistence.connectionFailed')}
               </p>
             )}
@@ -245,7 +245,7 @@ export function PersistenceSection() {
                 </button>
               </div>
               {testResult && testResult.cluster === localConfig.secondaryCluster && (
-                <p className={`text-xs mt-1 ${testResult.success ? 'text-green-500' : 'text-red-500'}`}>
+                <p className={`text-xs mt-1 ${testResult.success ? 'text-green-400' : 'text-red-400'}`}>
                   {testResult.success ? t('settings.persistence.connectionSuccess') : t('settings.persistence.connectionFailed')}
                 </p>
               )}

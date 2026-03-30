@@ -212,7 +212,7 @@ Please proceed step by step.`,
                   <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-green-500" /> Pass</span>
                   <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-red-500" /> Fail</span>
                   <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-yellow-500" /> Warn</span>
-                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-blue-500" /> Error</span>
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-orange-500" /> Error</span>
                   <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-zinc-500" /> Skip</span>
                 </div>
 
@@ -313,7 +313,7 @@ function ReportBar({ report }: { report: KyvernoPolicyReport }) {
     { value: report.pass, color: 'bg-green-500', label: 'pass' },
     { value: report.fail, color: 'bg-red-500', label: 'fail' },
     { value: report.warn, color: 'bg-yellow-500', label: 'warn' },
-    { value: report.error, color: 'bg-blue-500', label: 'error' },
+    { value: report.error, color: 'bg-orange-500', label: 'error' },
     { value: report.skip, color: 'bg-zinc-500', label: 'skip' },
   ].filter(s => s.value > 0)
 
