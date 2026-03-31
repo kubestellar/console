@@ -77,11 +77,11 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
     }
   }, [clusters, selectedCluster])
 
-  const { issues: allPodIssues, isDemoFallback: podIssuesDemoFallback, isRefreshing: isPodIssuesRefreshing, lastRefresh: podIssuesLastRefresh } = useCachedPodIssues(selectedCluster)
-  const { issues: allDeploymentIssues, isDemoFallback: deploymentIssuesDemoFallback, isRefreshing: isDeploymentIssuesRefreshing, lastRefresh: deploymentIssuesLastRefresh } = useCachedDeploymentIssues(selectedCluster)
+  const { issues: allPodIssues, isDemoFallback: podIssuesDemoFallback, isRefreshing: isPodIssuesRefreshing, isFailed: podIssuesFailed, consecutiveFailures: podIssuesConsecutiveFailures, lastRefresh: podIssuesLastRefresh } = useCachedPodIssues(selectedCluster)
+  const { issues: allDeploymentIssues, isDemoFallback: deploymentIssuesDemoFallback, isRefreshing: isDeploymentIssuesRefreshing, isFailed: deploymentIssuesFailed, consecutiveFailures: deploymentIssuesConsecutiveFailures, lastRefresh: deploymentIssuesLastRefresh } = useCachedDeploymentIssues(selectedCluster)
 
   // Fetch namespaces for the selected cluster
-  const { namespaces } = useCachedNamespaces(selectedCluster || undefined)
+  const { namespaces, isRefreshing: isNamespacesRefreshing, isFailed: namespacesFailed, consecutiveFailures: namespacesConsecutiveFailures, isDemoFallback: namespacesDemoFallback } = useCachedNamespaces(selectedCluster || undefined)
 
   // Auto-select first namespace when cluster is selected and no valid namespace is chosen (#3113)
   useEffect(() => {
@@ -105,9 +105,18 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
 
   const cluster = clusters.find(c => c.name === selectedCluster)
 
-  // Use the most recent refresh time of the two data sources
-  const isRefreshing = isPodIssuesRefreshing || isDeploymentIssuesRefreshing
+  // Use the most recent refresh time of the data sources
+  const isRefreshing = isPodIssuesRefreshing || isDeploymentIssuesRefreshing || isNamespacesRefreshing
   const lastRefresh = Math.max(podIssuesLastRefresh || 0, deploymentIssuesLastRefresh || 0)
+
+  // Combine failure state from all data sources
+  const isFailed = clustersFailed || podIssuesFailed || deploymentIssuesFailed || namespacesFailed
+  const consecutiveFailures = Math.max(
+    clustersConsecutiveFailures || 0,
+    podIssuesConsecutiveFailures || 0,
+    deploymentIssuesConsecutiveFailures || 0,
+    namespacesConsecutiveFailures || 0,
+  )
 
   // Report state to CardWrapper for refresh animation
   const hasData = allClusters.length > 0
@@ -115,9 +124,9 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
     isLoading: clustersLoading && !hasData,
     isRefreshing: clustersRefreshing || isRefreshing,
     hasAnyData: hasData,
-    isDemoData: podIssuesDemoFallback || deploymentIssuesDemoFallback,
-    isFailed: clustersFailed,
-    consecutiveFailures: clustersConsecutiveFailures,
+    isDemoData: podIssuesDemoFallback || deploymentIssuesDemoFallback || namespacesDemoFallback,
+    isFailed,
+    consecutiveFailures,
   })
 
   if (showSkeleton) {
