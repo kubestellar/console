@@ -28,10 +28,13 @@ import { StatusBadge } from '../../ui/StatusBadge'
 import { copyToClipboard } from '../../../lib/clipboard'
 import { useLocalClusterTools } from '../../../hooks/useLocalClusterTools'
 
+/** Minimum duration (ms) the refresh spinner must stay visible for a full rotation */
+const MIN_SPIN_DURATION_MS = 1_000
+
 // Guarantees spinner runs for at least 1 full rotation (1s) even if data returns faster.
 // Uses refs for condition checks to avoid stale closure issues when refreshing
 // transitions true→false faster than React can commit the spinning state update.
-function useMinSpin(refreshing: boolean, minDurationMs = 1000): boolean {
+function useMinSpin(refreshing: boolean, minDurationMs = MIN_SPIN_DURATION_MS): boolean {
   const [spinning, setSpinning] = useState(false)
   const spinningRef = useRef(false)
   const spinStartRef = useRef(0)

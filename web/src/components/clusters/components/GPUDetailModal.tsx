@@ -41,9 +41,12 @@ function extractManufacturer(gpuType: string): string {
   return 'Unknown'
 }
 
+const GPU_UTIL_HIGH = 90 // Utilization % threshold for critical (red) status
+const GPU_UTIL_WARN = 70 // Utilization % threshold for warning (yellow) status
+
 function getUtilizationColor(percentage: number): string {
-  if (percentage >= 90) return 'text-red-400'
-  if (percentage >= 70) return 'text-yellow-400'
+  if (percentage >= GPU_UTIL_HIGH) return 'text-red-400'
+  if (percentage >= GPU_UTIL_WARN) return 'text-yellow-400'
   return 'text-green-400'
 }
 
@@ -366,8 +369,8 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
                       <div className="h-2 bg-secondary rounded-full overflow-hidden">
                         <div
                           className={`h-full transition-all ${
-                            utilPercent >= 90 ? 'bg-red-400' :
-                            utilPercent >= 70 ? 'bg-yellow-400' :
+                            utilPercent >= GPU_UTIL_HIGH ? 'bg-red-400' :
+                            utilPercent >= GPU_UTIL_WARN ? 'bg-yellow-400' :
                             'bg-green-400'
                           }`}
                           style={{ width: `${utilPercent}%` }}
@@ -405,8 +408,8 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
                       <div className="h-2 bg-secondary rounded-full overflow-hidden">
                         <div
                           className={`h-full transition-all ${
-                            utilPercent >= 90 ? 'bg-red-400' :
-                            utilPercent >= 70 ? 'bg-yellow-400' :
+                            utilPercent >= GPU_UTIL_HIGH ? 'bg-red-400' :
+                            utilPercent >= GPU_UTIL_WARN ? 'bg-yellow-400' :
                             'bg-green-400'
                           }`}
                           style={{ width: `${utilPercent}%` }}

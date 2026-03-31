@@ -9,31 +9,36 @@ function formatCardType(type: string): string {
   return formatCardTitle(type)
 }
 
+const MS_PER_MINUTE = 60_000      // Milliseconds in one minute
+const MS_PER_HOUR   = 3_600_000   // Milliseconds in one hour
+const MS_PER_DAY    = 86_400_000  // Milliseconds in one day
+const MS_PER_WEEK   = 604_800_000 // Milliseconds in one week
+
 function formatTimestamp(timestamp: number): string {
   const date = new Date(timestamp)
   const now = new Date()
   const diff = now.getTime() - date.getTime()
 
   // Less than 1 minute
-  if (diff < 60000) {
+  if (diff < MS_PER_MINUTE) {
     return 'Just now'
   }
 
   // Less than 1 hour
-  if (diff < 3600000) {
-    const mins = Math.floor(diff / 60000)
+  if (diff < MS_PER_HOUR) {
+    const mins = Math.floor(diff / MS_PER_MINUTE)
     return `${mins} minute${mins > 1 ? 's' : ''} ago`
   }
 
   // Less than 24 hours
-  if (diff < 86400000) {
-    const hours = Math.floor(diff / 3600000)
+  if (diff < MS_PER_DAY) {
+    const hours = Math.floor(diff / MS_PER_HOUR)
     return `${hours} hour${hours > 1 ? 's' : ''} ago`
   }
 
   // Less than 7 days
-  if (diff < 604800000) {
-    const days = Math.floor(diff / 86400000)
+  if (diff < MS_PER_WEEK) {
+    const days = Math.floor(diff / MS_PER_DAY)
     return `${days} day${days > 1 ? 's' : ''} ago`
   }
 

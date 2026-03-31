@@ -1,6 +1,8 @@
 import { CheckCircle2, XCircle, Loader2, SkipForward, Clock } from 'lucide-react'
 import type { EvidenceStepResult } from '../../lib/runbooks/types'
 
+const MS_PER_SECOND = 1_000 // Milliseconds in one second
+
 interface RunbookProgressProps {
   title: string
   steps: EvidenceStepResult[]
@@ -51,7 +53,7 @@ export function RunbookProgress({ title, steps }: RunbookProgressProps) {
             </span>
             {step.durationMs !== undefined && (
               <span className="text-muted-foreground">
-                {step.durationMs < 1000 ? `${step.durationMs}ms` : `${(step.durationMs / 1000).toFixed(1)}s`}
+                {step.durationMs < MS_PER_SECOND ? `${step.durationMs}ms` : `${(step.durationMs / MS_PER_SECOND).toFixed(1)}s`}
               </span>
             )}
           </div>

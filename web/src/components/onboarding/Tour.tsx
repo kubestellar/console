@@ -18,12 +18,14 @@ interface TooltipPosition {
 const TOOLTIP_WIDTH = 320 // w-80 = 20rem = 320px
 const TOOLTIP_HEIGHT = 300 // Approximate height including all content (header + content + footer + keyboard hints)
 const VIEWPORT_PADDING = 16 // Minimum distance from viewport edge
+const TOOLTIP_GAP = 12 // Gap between tooltip and target element
+const NEAR_TOP_THRESHOLD = 100 // Distance from viewport top (px) at which navbar items trigger top-aligned tooltip
 
 function getTooltipPosition(
   targetRect: DOMRect,
   placement: TourStep['placement']
 ): TooltipPosition {
-  const gap = 12
+  const gap = TOOLTIP_GAP
   // Use clientWidth to exclude scrollbar width for accurate positioning
   const vw = document.documentElement.clientWidth
   const vh = window.innerHeight
@@ -122,7 +124,7 @@ function getTooltipPosition(
 
       // For items near the top of the viewport (like navbar), align tooltip top with target
       // instead of centering. This keeps the tooltip near the top of the page.
-      const isNearTop = targetRect.top < 100
+      const isNearTop = targetRect.top < NEAR_TOP_THRESHOLD
       if (isNearTop) {
         // Align top of tooltip with top of target, with small offset
         top = targetRect.top - 10
