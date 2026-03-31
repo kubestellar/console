@@ -19,85 +19,85 @@ export interface CardInstallInfo {
  */
 export const CARD_INSTALL_MAP: Record<string, CardInstallInfo> = {
   // OPA / Open Policy Agent
-  opa_policies: { project: 'Open Policy Agent (OPA)', missionKey: 'install-open-policy-agent-opa', kbPaths: ['solutions/cncf-install/install-open-policy-agent-opa.json'] },
-  opa_violations: { project: 'Open Policy Agent (OPA)', missionKey: 'install-open-policy-agent-opa', kbPaths: ['solutions/cncf-install/install-open-policy-agent-opa.json'] },
+  opa_policies: { project: 'Open Policy Agent (OPA)', missionKey: 'install-open-policy-agent-opa', kbPaths: ['fixes/cncf-install/install-open-policy-agent-opa.json'] },
+  opa_violations: { project: 'Open Policy Agent (OPA)', missionKey: 'install-open-policy-agent-opa', kbPaths: ['fixes/cncf-install/install-open-policy-agent-opa.json'] },
 
   // Kyverno
-  kyverno_policies: { project: 'Kyverno', missionKey: 'install-kyverno', kbPaths: ['solutions/cncf-install/install-kyverno.json'] },
-  kyverno_violations: { project: 'Kyverno', missionKey: 'install-kyverno', kbPaths: ['solutions/cncf-install/install-kyverno.json'] },
+  kyverno_policies: { project: 'Kyverno', missionKey: 'install-kyverno', kbPaths: ['fixes/cncf-install/install-kyverno.json'] },
+  kyverno_violations: { project: 'Kyverno', missionKey: 'install-kyverno', kbPaths: ['fixes/cncf-install/install-kyverno.json'] },
 
   // Falco
-  falco_alerts: { project: 'Falco', missionKey: 'install-falco', kbPaths: ['solutions/cncf-install/install-falco.json'] },
-  falco_events: { project: 'Falco', missionKey: 'install-falco', kbPaths: ['solutions/cncf-install/install-falco.json'] },
+  falco_alerts: { project: 'Falco', missionKey: 'install-falco', kbPaths: ['fixes/cncf-install/install-falco.json'] },
+  falco_events: { project: 'Falco', missionKey: 'install-falco', kbPaths: ['fixes/cncf-install/install-falco.json'] },
 
   // Istio / Service Mesh
-  istio_traffic: { project: 'Istio', missionKey: 'install-istio', kbPaths: ['solutions/cncf-install/install-istio.json'] },
-  istio_policies: { project: 'Istio', missionKey: 'install-istio', kbPaths: ['solutions/cncf-install/install-istio.json'] },
-  service_mesh: { project: 'Istio', missionKey: 'install-istio', kbPaths: ['solutions/cncf-install/install-istio.json'] },
+  istio_traffic: { project: 'Istio', missionKey: 'install-istio', kbPaths: ['fixes/cncf-install/install-istio.json'] },
+  istio_policies: { project: 'Istio', missionKey: 'install-istio', kbPaths: ['fixes/cncf-install/install-istio.json'] },
+  service_mesh: { project: 'Istio', missionKey: 'install-istio', kbPaths: ['fixes/cncf-install/install-istio.json'] },
 
   // Cert Manager
-  cert_manager: { project: 'cert-manager', missionKey: 'install-cert-manager', kbPaths: ['solutions/cncf-install/install-cert-manager.json'] },
+  cert_manager: { project: 'cert-manager', missionKey: 'install-cert-manager', kbPaths: ['fixes/cncf-install/install-cert-manager.json'] },
 
   // External Secrets
-  external_secrets: { project: 'External Secrets Operator', missionKey: 'install-external-secrets', kbPaths: ['solutions/cncf-install/install-external-secrets.json'] },
+  external_secrets: { project: 'External Secrets Operator', missionKey: 'install-external-secrets', kbPaths: ['fixes/cncf-install/install-external-secrets.json'] },
 
   // Argo CD / GitOps
-  gitops_drift: { project: 'Argo CD', missionKey: 'install-argo-cd', kbPaths: ['solutions/cncf-install/install-argo-cd.json'] },
-  argocd_apps: { project: 'Argo CD', missionKey: 'install-argo-cd', kbPaths: ['solutions/cncf-install/install-argo-cd.json'] },
-  argocd_sync: { project: 'Argo CD', missionKey: 'install-argo-cd', kbPaths: ['solutions/cncf-install/install-argo-cd.json'] },
+  gitops_drift: { project: 'Argo CD', missionKey: 'install-argo-cd', kbPaths: ['fixes/cncf-install/install-argo-cd.json'] },
+  argocd_apps: { project: 'Argo CD', missionKey: 'install-argo-cd', kbPaths: ['fixes/cncf-install/install-argo-cd.json'] },
+  argocd_sync: { project: 'Argo CD', missionKey: 'install-argo-cd', kbPaths: ['fixes/cncf-install/install-argo-cd.json'] },
 
   // Flux
-  flux_status: { project: 'Flux', missionKey: 'install-flux', kbPaths: ['solutions/cncf-install/install-flux.json'] },
-  flux_sources: { project: 'Flux', missionKey: 'install-flux', kbPaths: ['solutions/cncf-install/install-flux.json'] },
+  flux_status: { project: 'Flux', missionKey: 'install-flux', kbPaths: ['fixes/cncf-install/install-flux.json'] },
+  flux_sources: { project: 'Flux', missionKey: 'install-flux', kbPaths: ['fixes/cncf-install/install-flux.json'] },
 
   // Prometheus / Monitoring
-  prometheus_alerts: { project: 'Prometheus', missionKey: 'install-prometheus', kbPaths: ['solutions/cncf-install/install-prometheus.json'] },
-  prometheus_rules: { project: 'Prometheus', missionKey: 'install-prometheus', kbPaths: ['solutions/cncf-install/install-prometheus.json'] },
+  prometheus_alerts: { project: 'Prometheus', missionKey: 'install-prometheus', kbPaths: ['fixes/cncf-install/install-prometheus.json'] },
+  prometheus_rules: { project: 'Prometheus', missionKey: 'install-prometheus', kbPaths: ['fixes/cncf-install/install-prometheus.json'] },
 
   // Grafana
-  grafana_dashboards: { project: 'Grafana', missionKey: 'install-grafana', kbPaths: ['solutions/cncf-install/install-grafana.json'] },
+  grafana_dashboards: { project: 'Grafana', missionKey: 'install-grafana', kbPaths: ['fixes/cncf-install/install-grafana.json'] },
 
   // Helm
-  helm_releases: { project: 'Helm', missionKey: 'install-helm', kbPaths: ['solutions/cncf-install/install-helm.json'] },
-  helm_history: { project: 'Helm', missionKey: 'install-helm', kbPaths: ['solutions/cncf-install/install-helm.json'] },
+  helm_releases: { project: 'Helm', missionKey: 'install-helm', kbPaths: ['fixes/cncf-install/install-helm.json'] },
+  helm_history: { project: 'Helm', missionKey: 'install-helm', kbPaths: ['fixes/cncf-install/install-helm.json'] },
 
   // Tekton / CI-CD
-  tekton_pipelines: { project: 'Tekton', missionKey: 'install-tekton', kbPaths: ['solutions/cncf-install/install-tekton.json'] },
-  tekton_runs: { project: 'Tekton', missionKey: 'install-tekton', kbPaths: ['solutions/cncf-install/install-tekton.json'] },
+  tekton_pipelines: { project: 'Tekton', missionKey: 'install-tekton', kbPaths: ['fixes/cncf-install/install-tekton.json'] },
+  tekton_runs: { project: 'Tekton', missionKey: 'install-tekton', kbPaths: ['fixes/cncf-install/install-tekton.json'] },
 
   // KubeVirt
-  kubevirt_status: { project: 'KubeVirt', missionKey: 'install-kubevirt', kbPaths: ['solutions/cncf-install/install-kubevirt.json'] },
-  kubevirt_vms: { project: 'KubeVirt', missionKey: 'install-kubevirt', kbPaths: ['solutions/cncf-install/install-kubevirt.json'] },
+  kubevirt_status: { project: 'KubeVirt', missionKey: 'install-kubevirt', kbPaths: ['fixes/cncf-install/install-kubevirt.json'] },
+  kubevirt_vms: { project: 'KubeVirt', missionKey: 'install-kubevirt', kbPaths: ['fixes/cncf-install/install-kubevirt.json'] },
 
   // KubeFlex
-  kubeflex_status: { project: 'KubeFlex', missionKey: 'platform-kubeflex', kbPaths: ['solutions/platform-install/platform-kubeflex.json'] },
+  kubeflex_status: { project: 'KubeFlex', missionKey: 'platform-kubeflex', kbPaths: ['fixes/platform-install/platform-kubeflex.json'] },
 
   // OVN
-  ovn_status: { project: 'OVN-Kubernetes', missionKey: 'install-ovn-kubernetes', kbPaths: ['solutions/cncf-install/install-ovn-kubernetes.json'] },
+  ovn_status: { project: 'OVN-Kubernetes', missionKey: 'install-ovn-kubernetes', kbPaths: ['fixes/cncf-install/install-ovn-kubernetes.json'] },
 
   // Vault
-  vault_secrets: { project: 'HashiCorp Vault', missionKey: 'install-vault', kbPaths: ['solutions/cncf-install/install-vault.json'] },
+  vault_secrets: { project: 'HashiCorp Vault', missionKey: 'install-vault', kbPaths: ['fixes/cncf-install/install-vault.json'] },
 
   // NVIDIA GPU Operator
-  gpu_overview: { project: 'NVIDIA GPU Operator', missionKey: 'install-nvidia-gpu-operator', kbPaths: ['solutions/cncf-install/install-nvidia-gpu-operator.json'] },
-  gpu_reservations: { project: 'NVIDIA GPU Operator', missionKey: 'install-nvidia-gpu-operator', kbPaths: ['solutions/cncf-install/install-nvidia-gpu-operator.json'] },
+  gpu_overview: { project: 'NVIDIA GPU Operator', missionKey: 'install-nvidia-gpu-operator', kbPaths: ['fixes/cncf-install/install-nvidia-gpu-operator.json'] },
+  gpu_reservations: { project: 'NVIDIA GPU Operator', missionKey: 'install-nvidia-gpu-operator', kbPaths: ['fixes/cncf-install/install-nvidia-gpu-operator.json'] },
 
   // LLM-d
-  llmd_flow: { project: 'LLM-d', missionKey: 'install-llm-d', kbPaths: ['solutions/platform-install/platform-llm-d.json'] },
-  llmd_benchmarks: { project: 'LLM-d', missionKey: 'install-llm-d', kbPaths: ['solutions/platform-install/platform-llm-d.json'] },
-  pareto_frontier: { project: 'LLM-d', missionKey: 'install-llm-d', kbPaths: ['solutions/platform-install/platform-llm-d.json'] },
+  llmd_flow: { project: 'LLM-d', missionKey: 'install-llm-d', kbPaths: ['fixes/platform-install/platform-llm-d.json'] },
+  llmd_benchmarks: { project: 'LLM-d', missionKey: 'install-llm-d', kbPaths: ['fixes/platform-install/platform-llm-d.json'] },
+  pareto_frontier: { project: 'LLM-d', missionKey: 'install-llm-d', kbPaths: ['fixes/platform-install/platform-llm-d.json'] },
 
   // Kagent / Kagenti
-  kagent_status: { project: 'Kagent', missionKey: 'install-kagent', kbPaths: ['solutions/cncf-install/install-kagent.json'] },
-  kagenti_status: { project: 'Kagenti', missionKey: 'install-kagenti', kbPaths: ['solutions/platform-install/install-kagenti.json'] },
+  kagent_status: { project: 'Kagent', missionKey: 'install-kagent', kbPaths: ['fixes/cncf-install/install-kagent.json'] },
+  kagenti_status: { project: 'Kagenti', missionKey: 'install-kagenti', kbPaths: ['fixes/platform-install/install-kagenti.json'] },
 
   // Trivy
-  trivy_scan: { project: 'Trivy', missionKey: 'install-trivy', kbPaths: ['solutions/cncf-install/install-trivy.json'] },
-  image_vulnerabilities: { project: 'Trivy', missionKey: 'install-trivy', kbPaths: ['solutions/cncf-install/install-trivy.json'] },
+  trivy_scan: { project: 'Trivy', missionKey: 'install-trivy', kbPaths: ['fixes/cncf-install/install-trivy.json'] },
+  image_vulnerabilities: { project: 'Trivy', missionKey: 'install-trivy', kbPaths: ['fixes/cncf-install/install-trivy.json'] },
 
   // Crossplane
-  crossplane_status: { project: 'Crossplane', missionKey: 'install-crossplane', kbPaths: ['solutions/cncf-install/install-crossplane.json'] },
+  crossplane_status: { project: 'Crossplane', missionKey: 'install-crossplane', kbPaths: ['fixes/cncf-install/install-crossplane.json'] },
 
   // Knative
-  knative_services: { project: 'Knative', missionKey: 'install-knative', kbPaths: ['solutions/cncf-install/install-knative.json'] },
+  knative_services: { project: 'Knative', missionKey: 'install-knative', kbPaths: ['fixes/cncf-install/install-knative.json'] },
 }

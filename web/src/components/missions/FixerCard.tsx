@@ -1,5 +1,5 @@
 /**
- * SolutionCard — Card for browsing solution missions (troubleshoot, repair, analyze, etc.).
+ * FixerCard — Card for browsing fixer missions (troubleshoot, repair, analyze, etc.).
  * Shows type badge, category, tags, description, and import button.
  */
 
@@ -19,7 +19,7 @@ const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
   custom: { bg: 'bg-gray-500/15', color: 'text-muted-foreground' },
 }
 
-interface SolutionCardProps {
+interface FixerCardProps {
   mission: MissionExport
   onImport: () => void
   onSelect: () => void
@@ -27,7 +27,7 @@ interface SolutionCardProps {
   compact?: boolean
 }
 
-export function SolutionCard({ mission, onImport, onSelect, onCopyLink, compact }: SolutionCardProps) {
+export function FixerCard({ mission, onImport, onSelect, onCopyLink, compact }: FixerCardProps) {
   const [linkCopied, setLinkCopied] = useState(false)
   const typeStyle = TYPE_COLORS[mission.type] ?? TYPE_COLORS.custom
   const linkCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)

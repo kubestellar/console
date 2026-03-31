@@ -92,15 +92,15 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
 
   // Known KB paths for install missions
   const INSTALL_MISSION_PATHS: Record<string, string[]> = {
-    'install-kagent': ['solutions/cncf-install/install-kagent.json'],
-    'install-kagenti': ['solutions/platform-install/install-kagenti.json'],
+    'install-kagent': ['fixes/cncf-install/install-kagent.json'],
+    'install-kagenti': ['fixes/platform-install/install-kagenti.json'],
   }
 
   const openInstallGuide = useCallback(async (missionId: string) => {
     closeDropdown()
     setInstallGuideLoading(true)
     setInstallGuideError(false)
-    const paths = INSTALL_MISSION_PATHS[missionId] || [`solutions/cncf-install/${missionId}.json`, `solutions/platform-install/${missionId}.json`]
+    const paths = INSTALL_MISSION_PATHS[missionId] || [`fixes/cncf-install/${missionId}.json`, `fixes/platform-install/${missionId}.json`]
     for (const path of paths) {
       try {
         const res = await fetch(`/api/missions/file?path=${encodeURIComponent(path)}`, { signal: AbortSignal.timeout(5000) })
@@ -132,7 +132,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   const handleInstallMission = useCallback(async (missionId: string, displayName: string) => {
     closeDropdown()
     // Fetch the actual mission content
-    const paths = INSTALL_MISSION_PATHS[missionId] || [`solutions/cncf-install/${missionId}.json`, `solutions/platform-install/${missionId}.json`]
+    const paths = INSTALL_MISSION_PATHS[missionId] || [`fixes/cncf-install/${missionId}.json`, `fixes/platform-install/${missionId}.json`]
     let missionData: MissionExport | null = null
     for (const path of paths) {
       try {

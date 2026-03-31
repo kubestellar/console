@@ -71,9 +71,9 @@ function shortenClusterName(name: string): string {
 /** Resolve kbPath for a project — tries explicit kbPath, then convention-based lookup */
 function resolveKbPath(proj: PP): string | undefined {
   if (proj.kbPath) return proj.kbPath
-  // Convention: solutions/cncf-install/install-{name}.json
+  // Convention: fixes/cncf-install/install-{name}.json
   const slug = proj.name.toLowerCase().replace(/\s+/g, '-')
-  return `solutions/cncf-install/install-${slug}.json`
+  return `fixes/cncf-install/install-${slug}.json`
 }
 
 interface FlightPlanBlueprintProps {
@@ -1267,16 +1267,16 @@ function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edges?: Dep
 
     const candidates: string[] = []
     if (info.kbPath) candidates.push(info.kbPath)
-    candidates.push(`solutions/cncf-install/install-${slug}.json`)
+    candidates.push(`fixes/cncf-install/install-${slug}.json`)
     // Try with abbreviation suffix: open-policy-agent → open-policy-agent-opa
     const parts = slug.split('-')
     if (parts.length >= 2) {
       const abbrev = parts.map(p => p[0]).join('')
-      candidates.push(`solutions/cncf-install/install-${slug}-${abbrev}.json`)
+      candidates.push(`fixes/cncf-install/install-${slug}-${abbrev}.json`)
     }
     // Try without trailing "-operator"
     if (slug.endsWith('-operator')) {
-      candidates.push(`solutions/cncf-install/install-${slug.replace(/-operator$/, '')}.json`)
+      candidates.push(`fixes/cncf-install/install-${slug.replace(/-operator$/, '')}.json`)
     }
 
     const tryNext = (idx: number) => {

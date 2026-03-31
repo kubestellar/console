@@ -224,8 +224,8 @@ export function MissionSidebar() {
       'cost-optimization', 'networking', 'observability', 'workloads',
     ]
     const paths = [
-      ...KB_DIRS.map(dir => `solutions/${dir}/${directImportSlug}.json`),
-      `solutions/${directImportSlug}.json`,
+      ...KB_DIRS.map(dir => `fixes/${dir}/${directImportSlug}.json`),
+      `fixes/${directImportSlug}.json`,
     ]
 
     const tryImport = async () => {
@@ -258,7 +258,7 @@ export function MissionSidebar() {
 
       // Fallback: search index.json for nested paths
       try {
-        const res = await fetch('/api/missions/file?path=solutions/index.json', {
+        const res = await fetch('/api/missions/file?path=fixes/index.json', {
           signal: AbortSignal.timeout(MISSION_FILE_FETCH_TIMEOUT_MS),
         })
         if (res.ok) {

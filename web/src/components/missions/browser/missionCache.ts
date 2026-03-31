@@ -77,11 +77,11 @@ export function notifyCacheListeners() {
   missionCache.listeners.forEach(fn => fn())
 }
 
-/** Path to the pre-built solutions index (single file, ~400KB) */
-const SOLUTIONS_INDEX_PATH = 'solutions/index.json'
+/** Path to the pre-built fixes index (single file, ~400KB) */
+const FIXES_INDEX_PATH = 'fixes/index.json'
 
 /**
- * Index entry shape from solutions/index.json — lightweight metadata
+ * Index entry shape from fixes/index.json — lightweight metadata
  * for browsing without loading full mission files.
  */
 interface IndexEntry {
@@ -121,7 +121,7 @@ function indexEntryToMission(entry: IndexEntry): MissionExport {
     tags: entry.tags || [],
     category: entry.category,
     cncfProject: entry.cncfProjects?.[0],
-    missionClass: entry.missionClass === 'install' ? 'install' : 'solution',
+    missionClass: entry.missionClass === 'install' ? 'install' : 'fixer',
     difficulty: entry.difficulty,
     installMethods: entry.installMethods,
     author: entry.author,
@@ -199,7 +199,7 @@ async function fetchAllFromIndex() {
     // Use direct fetch — /api/missions/file is a public endpoint and should not
     // be gated by the api.get() backend-availability check (which can block when
     // the health check hasn't resolved yet on initial page load).
-    const url = `/api/missions/file?path=${encodeURIComponent(SOLUTIONS_INDEX_PATH)}`
+    const url = `/api/missions/file?path=${encodeURIComponent(FIXES_INDEX_PATH)}`
     const response = await fetch(url, { signal: AbortSignal.timeout(INDEX_FETCH_TIMEOUT_MS) })
     if (!response.ok) throw new Error(`Index fetch failed: ${response.status}`)
     const parsed = await response.json()
@@ -277,7 +277,7 @@ interface RecommendationCacheEntry {
   /** Cached recommendation results */
   recommendations: MissionMatch[]
   /** Number of fixes when recommendations were computed (invalidation key) */
-  solutionCount: number
+  fixerCount: number
   /** Timestamp of last computation */
   computedAt: number
   /** Fingerprint of the cluster context used to compute recommendations */
@@ -307,13 +307,13 @@ let recommendationCacheEntry: RecommendationCacheEntry | null = null
 
 /**
  * Get cached recommendations if the cache is still valid.
- * Returns null if the cache is stale, empty, the solution count has changed
+ * Returns null if the cache is stale, empty, the fixer count has changed
  * (indicating new data was fetched), or the cluster context has changed.
  */
 export function getCachedRecommendations(clusterCtx: ClusterContext | null): MissionMatch[] | null {
   if (!recommendationCacheEntry) return null
   // Invalidate if fixes changed (new data arrived)
-  if (recommendationCacheEntry.solutionCount !== missionCache.fixes.length) return null
+  if (recommendationCacheEntry.fixerCount !== missionCache.fixes.length) return null
   // Invalidate if TTL expired
   if (Date.now() - recommendationCacheEntry.computedAt > RECOMMENDATION_CACHE_TTL_MS) return null
   // Invalidate if cluster context changed (different cluster, new operators, etc.)
@@ -327,7 +327,7 @@ export function getCachedRecommendations(clusterCtx: ClusterContext | null): Mis
 export function setCachedRecommendations(recommendations: MissionMatch[], clusterCtx: ClusterContext | null) {
   recommendationCacheEntry = {
     recommendations,
-    solutionCount: missionCache.fixes.length,
+    fixerCount: missionCache.fixes.length,
     computedAt: Date.now(),
     clusterFingerprint: computeClusterFingerprint(clusterCtx),
   }

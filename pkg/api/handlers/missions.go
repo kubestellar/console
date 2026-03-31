@@ -241,7 +241,7 @@ func (h *MissionsHandler) githubGet(url string, clientToken string) (*http.Respo
 // ---------- Browse knowledge base ----------
 
 // BrowseConsoleKB lists directory contents from the kubestellar/console-kb repo.
-// GET /api/missions/browse?path=solutions
+// GET /api/missions/browse?path=fixes
 //
 // Responses are cached server-side for missionsCacheTTL to eliminate redundant
 // GitHub API calls. On rate-limit errors (403/429), stale cache entries are
@@ -360,10 +360,10 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 // ---------- Get a single file ----------
 
 // GetMissionFile fetches raw file content from the kubestellar/console-kb repo.
-// GET /api/missions/file?path=solutions/cncf-generated/kubernetes/kubernetes-42873.json
+// GET /api/missions/file?path=fixes/cncf-generated/kubernetes/kubernetes-42873.json
 //
 // Responses are cached server-side for missionsCacheTTL to avoid redundant
-// GitHub raw content fetches. The solutions/index.json file is the most critical
+// GitHub raw content fetches. The fixes/index.json file is the most critical
 // cache entry — it is fetched once and serves all mission browser listings,
 // eliminating the N+1 request pattern.
 func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {

@@ -1,7 +1,7 @@
 /**
  * Netlify Function: Missions Browse Proxy
  *
- * GET /api/missions/browse?path=solutions
+ * GET /api/missions/browse?path=fixes
  * Lists directory contents from kubestellar/console-kb via GitHub Contents API.
  * Caches responses in Netlify Blobs to avoid hitting GitHub on every request.
  * No GITHUB_TOKEN required — the repo is public.

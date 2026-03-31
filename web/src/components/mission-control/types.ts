@@ -2,7 +2,7 @@
  * Mission Control: Multi-Cluster Solutions Orchestrator
  *
  * Type definitions for the 3-phase wizard:
- *   Phase 1: Define Solution (payload selection)
+ *   Phase 1: Define Fix (payload selection)
  *   Phase 2: Assign Clusters (readiness + assignment)
  *   Phase 3: Flight Plan (blueprint + deploy)
  */
@@ -20,7 +20,7 @@ export interface PayloadProject {
   reason: string
   /** CNCF landscape category */
   category: string
-  /** Is this required for the solution or optional? */
+  /** Is this required for the fix or optional? */
   priority: 'required' | 'recommended' | 'optional'
   /** Other project names this depends on (e.g. ["helm"]) */
   dependencies: string[]
@@ -100,9 +100,9 @@ export type OverlayMode = 'architecture' | 'compute' | 'storage' | 'network' | '
 export interface MissionControlState {
   /** Current wizard phase */
   phase: WizardPhase
-  /** User's natural-language solution description */
+  /** User's natural-language fix description */
   description: string
-  /** Solution title (derived from description or user-edited) */
+  /** Fix title (derived from description or user-edited) */
   title: string
   /** Selected payload projects */
   projects: PayloadProject[]

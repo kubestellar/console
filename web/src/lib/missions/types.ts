@@ -18,7 +18,7 @@ export interface MissionStep {
   validation?: string
 }
 
-export type MissionClass = 'solution' | 'install'
+export type MissionClass = 'fixer' | 'install'
 
 export interface MissionExport {
   version: string

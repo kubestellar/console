@@ -10,7 +10,7 @@ import { test, expect, type Page } from '@playwright/test'
  * imported missions to lose steps in the card view.
  *
  * Approach:
- *   1. Fetch the real solutions/index.json via the API proxy
+ *   1. Fetch the real fixes/index.json via the API proxy
  *   2. Pick 25 random install missions (these always have steps)
  *   3. Fetch each mission file and verify steps survive normalization
  *   4. Run 3 full UI-driven imports through the Mission Browser dialog
@@ -143,12 +143,12 @@ async function setupDemoMode(page: Page) {
 }
 
 /**
- * Fetch the solutions index from the real API proxy.
+ * Fetch the fixes index from the real API proxy.
  * Returns the full list of index entries.
  */
-async function fetchSolutionsIndex(page: Page): Promise<IndexEntry[]> {
+async function fetchFixesIndex(page: Page): Promise<IndexEntry[]> {
   const resp = await page.request.get(
-    '/api/missions/file?path=solutions%2Findex.json',
+    '/api/missions/file?path=fixes%2Findex.json',
     { timeout: 30_000 }
   )
   expect(resp.ok(), `Index fetch failed: ${resp.status()}`).toBeTruthy()
@@ -204,7 +204,7 @@ test.describe('Mission Explorer Import (Nightly)', () => {
     await page.waitForLoadState('domcontentloaded')
 
     // 1. Fetch real index
-    const allMissions = await fetchSolutionsIndex(page)
+    const allMissions = await fetchFixesIndex(page)
 
     // 2. Filter to install missions (these should always have steps)
     const installMissions = allMissions.filter(
@@ -320,7 +320,7 @@ test.describe('Mission Explorer Import (Nightly)', () => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
 
-    const allMissions = await fetchSolutionsIndex(page)
+    const allMissions = await fetchFixesIndex(page)
     const installMissions = allMissions.filter(
       (m) => m.missionClass === 'install'
     )

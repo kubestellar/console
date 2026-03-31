@@ -45,7 +45,7 @@ const RESOURCE_TO_PROJECTS: Record<string, string[]> = {
   kubestellar: ['kubestellar', 'multi-cluster', 'edge'],
 }
 
-/** Map issue patterns to solution categories */
+/** Map issue patterns to fix categories */
 const ISSUE_TO_CATEGORIES: Record<string, string[]> = {
   crashloopbackoff: ['troubleshoot', 'debugging', 'pod-restart'],
   oomkilled: ['resources', 'memory', 'limits', 'troubleshoot'],

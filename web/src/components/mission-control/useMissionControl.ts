@@ -282,7 +282,7 @@ export function useMissionControl() {
         ? `\n\nIMPORTANT — Cluster inspection results (helm releases already installed across clusters):\n${JSON.stringify(helmReleases.map(r => ({ name: r.name, chart: r.chart, namespace: r.namespace, status: r.status, cluster: r.cluster })), null, 2)}\n\nFor each suggested project, check if it is already installed on the clusters. Include a "Cluster Inspection Summary" table in your analysis showing which components are Running vs Not installed on each cluster.`
         : ''
 
-      const prompt = `You are helping plan a Kubernetes solution deployment.
+      const prompt = `You are helping plan a Kubernetes fix deployment.
 User's goal: "${description}"
 ${existingContext}${helmContext}
 
@@ -323,7 +323,7 @@ Include real CNCF projects only. Consider dependencies between projects.`
       if (!missionId) {
         missionId = startMission({
           title: 'Mission Control Planning',
-          description: 'AI-assisted solution planning',
+          description: 'AI-assisted fix planning',
           type: 'custom',
           initialPrompt: prompt,
         })

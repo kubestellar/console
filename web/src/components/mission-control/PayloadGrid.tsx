@@ -44,7 +44,7 @@ export function PayloadGrid({
         <Package className="w-10 h-10 mb-3 opacity-40" />
         <p className="text-sm">No projects selected yet</p>
         <p className="text-xs mt-1">
-          Describe your solution and let AI suggest projects, or add them manually
+          Describe your fix and let AI suggest projects, or add them manually
         </p>
       </div>
     )
