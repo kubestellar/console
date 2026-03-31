@@ -224,6 +224,11 @@ type GitHubIssue struct {
 	Labels []struct {
 		Name string `json:"name"`
 	} `json:"labels"`
+	// PullRequest is non-nil when the issue is actually a pull request.
+	// GitHub's issues API returns PRs as issues with this field populated.
+	PullRequest *struct {
+		URL string `json:"url"`
+	} `json:"pull_request"`
 }
 
 // QueueItem represents an issue in the queue for the frontend
@@ -528,6 +533,12 @@ func (h *FeedbackHandler) getCachedOrFetchPRs() []GitHubPR {
 	}
 
 	h.prCacheMu.Lock()
+	// Re-check: another goroutine may have populated the cache while we fetched.
+	if h.prCache != nil && time.Since(h.prCacheTime) < prCacheTTL {
+		cached := h.prCache
+		h.prCacheMu.Unlock()
+		return cached
+	}
 	h.prCache = allPRs
 	h.prCacheTime = time.Now()
 	h.prCacheMu.Unlock()
@@ -601,32 +612,38 @@ func (h *FeedbackHandler) fetchGitHubIssues(githubLogin string) ([]GitHubIssue, 
 	req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
-	client := &http.Client{Timeout: githubAPITimeout}
+	// Use the shared HTTP client for connection reuse (falls back to default if nil).
+	client := h.httpClient
+	if client == nil {
+		client = &http.Client{Timeout: githubAPITimeout}
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
+	// Read the full body into a buffer so we can use it for both error
+	// reporting and JSON decoding (json.Decoder would consume the stream).
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read GitHub response body: %w", err)
+	}
+
 	if resp.StatusCode != http.StatusOK {
-		body, readErr := io.ReadAll(resp.Body)
-		if readErr != nil {
-			body = []byte("(failed to read response body)")
-		}
 		return nil, fmt.Errorf("GitHub API returned %d: %s", resp.StatusCode, string(body))
 	}
 
 	var issues []GitHubIssue
-	if err := json.NewDecoder(resp.Body).Decode(&issues); err != nil {
+	if err := json.Unmarshal(body, &issues); err != nil {
 		return nil, err
 	}
 
-	// Filter out pull requests (GitHub API returns PRs as issues)
+	// Filter out pull requests — GitHub's issues API returns PRs as issues.
+	// The PullRequest field is non-nil when the item is actually a PR.
 	filtered := make([]GitHubIssue, 0, len(issues))
 	for _, issue := range issues {
-		// PRs have a pull_request field, but our struct doesn't include it
-		// So we check if the URL contains /pull/
-		if issue.HTMLURL != "" && !bytes.Contains([]byte(issue.HTMLURL), []byte("/pull/")) {
+		if issue.PullRequest == nil {
 			filtered = append(filtered, issue)
 		}
 	}
@@ -1138,7 +1155,11 @@ func (h *FeedbackHandler) handleIssueEvent(payload map[string]interface{}) error
 		return nil
 	}
 
-	issueNumber := int(issue["number"].(float64))
+	numF, ok := issue["number"].(float64)
+	if !ok {
+		return fmt.Errorf("missing or invalid issue number in webhook payload")
+	}
+	issueNumber := int(numF)
 	issueURL, _ := issue["html_url"].(string)
 
 	log.Printf("[Webhook] Issue #%d %s", issueNumber, action)
@@ -1341,7 +1362,11 @@ func (h *FeedbackHandler) handlePREvent(payload map[string]interface{}) error {
 		return nil
 	}
 
-	prNumber := int(pr["number"].(float64))
+	prNumF, ok := pr["number"].(float64)
+	if !ok {
+		return fmt.Errorf("missing or invalid PR number in webhook payload")
+	}
+	prNumber := int(prNumF)
 	prURL, _ := pr["html_url"].(string)
 	body, _ := pr["body"].(string)
 
@@ -1476,11 +1501,6 @@ func (h *FeedbackHandler) handleDeploymentStatus(payload map[string]interface{})
 
 	log.Printf("[Webhook] Updated preview URL for request %s: %s", request.ID, targetURL)
 	return nil
-}
-
-// createGitHubIssue creates an issue on GitHub
-func (h *FeedbackHandler) createGitHubIssue(request *models.FeatureRequest, user *models.User) (int, string, error) {
-	return h.createGitHubIssueInRepo(request, user, h.repoOwner, h.repoName, nil)
 }
 
 // createGitHubIssueInRepo creates a GitHub issue in the specified repository.

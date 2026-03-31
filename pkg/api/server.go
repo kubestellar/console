@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"net"
@@ -1285,9 +1287,20 @@ func warnDefaultEnvVars(vars map[string]string) {
 	}
 }
 
+// devSecretBytes is the number of random bytes used to generate a dev secret (32 bytes = 256 bits).
+const devSecretBytes = 32
+
 func generateDevSecret() string {
-	// Dev-only secret - clearly marked as insecure for production
-	return "INSECURE-DEV-ONLY-" + "kubestellar-console-dev-secret"
+	// Generate a cryptographically random secret each time the server starts.
+	// This ensures dev instances don't share a well-known secret.
+	b := make([]byte, devSecretBytes)
+	if _, err := rand.Read(b); err != nil {
+		// crypto/rand.Read should never fail on supported platforms;
+		// if it does, fall back to a logged warning and a best-effort value.
+		log.Printf("WARNING: crypto/rand.Read failed: %v — using fallback", err)
+		return fmt.Sprintf("dev-fallback-%d", b)
+	}
+	return hex.EncodeToString(b)
 }
 
 // detectInstallMethod returns how the console was installed: dev, binary, or helm.
