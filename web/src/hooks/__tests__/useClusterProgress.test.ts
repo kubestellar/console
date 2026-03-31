@@ -59,10 +59,7 @@ vi.mock('../../lib/constants/network', () => ({
 }))
 
 // Assign mock to global before importing the hook
-Object.defineProperty(globalThis, 'WebSocket', {
-  writable: true,
-  value: MockWebSocket,
-})
+vi.stubGlobal('WebSocket', MockWebSocket)
 
 import { useClusterProgress } from '../useClusterProgress'
 
@@ -70,11 +67,13 @@ describe('useClusterProgress', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     wsInstances = []
+    vi.stubGlobal('WebSocket', MockWebSocket)
   })
 
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   // ── Initial state ──────────────────────────────────────────────────────

@@ -57,7 +57,7 @@ describe('useLocalAgent', () => {
     vi.resetModules()
 
     // Set up fresh global fetch mock before importing
-    global.fetch = vi.fn()
+    vi.stubGlobal('fetch', vi.fn())
 
     const mod = await import('../useLocalAgent')
     useLocalAgent = mod.useLocalAgent
@@ -66,6 +66,7 @@ describe('useLocalAgent', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   // ── Initial state ──────────────────────────────────────────────────────
