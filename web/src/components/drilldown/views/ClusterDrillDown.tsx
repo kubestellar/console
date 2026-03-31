@@ -313,7 +313,7 @@ export function ClusterDrillDown({ data }: Props) {
                         <div className="text-xs text-muted-foreground mt-1">
                           {issue.namespace} • {issue.restarts} restarts
                         </div>
-                        {issue.issues.length > 0 && (
+                        {(issue.issues || []).length > 0 && (
                           <div className="text-xs text-red-400 mt-1">{(issue.issues || []).join(', ')}</div>
                         )}
                       </div>

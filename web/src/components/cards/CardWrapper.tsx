@@ -96,13 +96,24 @@ const FULLSCREEN_EXPANDED_CARDS = new Set([
   'kube_craft', 'kube_doom', 'kube_kart',
 ])
 
+/** Dimensions of the card's content container (updated via ResizeObserver) */
+export interface CardContainerSize {
+  width: number
+  height: number
+}
+
 // Context to expose card expanded state to children
 interface CardExpandedContextType {
   isExpanded: boolean
+  /** Live dimensions of the expanded modal content container (0x0 when collapsed) */
+  containerSize: CardContainerSize
 }
-const CardExpandedContext = createContext<CardExpandedContextType>({ isExpanded: false })
+const CardExpandedContext = createContext<CardExpandedContextType>({
+  isExpanded: false,
+  containerSize: { width: 0, height: 0 },
+})
 
-/** Hook for child components to know if their parent card is expanded */
+/** Hook for child components to know if their parent card is expanded and get container size */
 export function useCardExpanded() {
   return useContext(CardExpandedContext)
 }
@@ -352,6 +363,25 @@ export function CardWrapper({
   const { status: agentStatus } = useLocalAgent()
   const isAgentConnected = agentStatus === 'connected'
   const [isExpanded, setIsExpanded] = useState(false)
+  /** Live container dimensions for expanded modal — games use this to scale their boards */
+  const [containerSize, setContainerSize] = useState<CardContainerSize>({ width: 0, height: 0 })
+  const expandedContentRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!isExpanded) {
+      setContainerSize({ width: 0, height: 0 })
+      return
+    }
+    const el = expandedContentRef.current
+    if (!el) return
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect
+        setContainerSize({ width, height })
+      }
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [isExpanded])
   const [showBugReport, setShowBugReport] = useState(false)
   const [showInstallClusterSelect, setShowInstallClusterSelect] = useState(false)
   const [showInstallGuide, setShowInstallGuide] = useState<{ mission: { mission?: { title?: string; description?: string; steps?: { title?: string; description?: string }[] } } } | null>(null)
@@ -737,7 +767,7 @@ export function CardWrapper({
 
   return (
     <CardTypeContext.Provider value={cardType}>
-    <CardExpandedContext.Provider value={{ isExpanded }}>
+    <CardExpandedContext.Provider value={{ isExpanded, containerSize }}>
       <ForceLiveContext.Provider value={!!forceLive}>
       <CardDataReportContext.Provider value={reportCtx}>
         <>
@@ -1209,7 +1239,7 @@ export function CardWrapper({
                   : 'max-h-[calc(80vh-80px)]'
             )}>
               {/* Wrapper ensures children fill available space in expanded mode */}
-              <div className="flex-1 min-h-0 flex flex-col">
+              <div ref={expandedContentRef} className="flex-1 min-h-0 flex flex-col">
                 <DynamicCardErrorBoundary cardId={cardId || cardType}>
                   {children}
                 </DynamicCardErrorBoundary>

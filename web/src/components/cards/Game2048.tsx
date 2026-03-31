@@ -177,7 +177,7 @@ function hasWon(grid: Grid): boolean {
 export function Game2048(_props: CardComponentProps) {
   const { t: _t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
-  const { isExpanded } = useCardExpanded()
+  const { isExpanded, containerSize } = useCardExpanded()
   const gameContainerRef = useRef<HTMLDivElement>(null)
   const [grid, setGrid] = useState<Grid>(initGame)
   const [score, setScore] = useState(0)
@@ -272,9 +272,31 @@ export function Game2048(_props: CardComponentProps) {
     setKeepPlaying(true)
   }, [])
 
-  const cellSize = isExpanded ? 80 : 48
-  const gap = isExpanded ? 8 : 4
-  const fontSize = isExpanded ? 'text-2xl' : 'text-sm'
+  /** Grid columns in 2048 */
+  const GRID_COLS = 4
+  /** Default cell size (px) when card is collapsed */
+  const DEFAULT_CELL_SIZE = 48
+  /** Gap between cells (px) when card is collapsed */
+  const DEFAULT_GAP = 4
+  /** Padding around the grid (px) */
+  const GRID_PADDING = 8
+  /** Vertical space reserved for header and controls hint (px) */
+  const CHROME_HEIGHT = 80
+
+  // When expanded, compute cell size from container dimensions to fill available space
+  const computedCellSize = (() => {
+    if (!isExpanded || containerSize.width === 0 || containerSize.height === 0) {
+      return DEFAULT_CELL_SIZE
+    }
+    const expandedGap = 8
+    const availW = containerSize.width - GRID_PADDING * 2 - expandedGap * (GRID_COLS - 1)
+    const availH = containerSize.height - CHROME_HEIGHT - GRID_PADDING * 2 - expandedGap * (GRID_COLS - 1)
+    const maxCell = Math.floor(Math.min(availW, availH) / GRID_COLS)
+    return Math.max(maxCell, DEFAULT_CELL_SIZE)
+  })()
+  const cellSize = computedCellSize
+  const gap = isExpanded ? 8 : DEFAULT_GAP
+  const fontSize = cellSize >= 64 ? 'text-2xl' : cellSize >= 48 ? 'text-lg' : 'text-sm'
 
   return (
     <div ref={gameContainerRef} className="h-full flex flex-col p-2 select-none">

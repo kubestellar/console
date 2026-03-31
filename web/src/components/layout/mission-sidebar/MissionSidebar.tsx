@@ -41,6 +41,7 @@ import { MissionChat } from './MissionChat'
 import { ClusterSelectionDialog } from '../../missions/ClusterSelectionDialog'
 import { ResolutionKnowledgePanel } from '../../missions/ResolutionKnowledgePanel'
 import { ResolutionHistoryPanel } from '../../missions/ResolutionHistoryPanel'
+import { SaveResolutionDialog } from '../../missions/SaveResolutionDialog'
 import { useResolutions, detectIssueSignature } from '../../../hooks/useResolutions'
 import { useTranslation } from 'react-i18next'
 import { SAVED_TOAST_MS, FOCUS_DELAY_MS } from '../../../lib/constants/network'
@@ -151,6 +152,8 @@ export function MissionSidebar() {
   // Cluster selection for install missions
   const [pendingRunMissionId, setPendingRunMissionId] = useState<string | null>(null)
   const [isDirectImporting, setIsDirectImporting] = useState(false)
+  // Save Resolution dialog state (triggered from ResolutionKnowledgePanel "Save This Resolution" button)
+  const [showSaveResolutionDialog, setShowSaveResolutionDialog] = useState(false)
   // Resolution panel state (fullscreen left sidebar)
   const [resolutionPanelView, setResolutionPanelView] = useState<'related' | 'history'>('related')
   const { findSimilarResolutions, allResolutions } = useResolutions()
@@ -882,7 +885,7 @@ export function MissionSidebar() {
                       <ResolutionKnowledgePanel
                         relatedResolutions={relatedResolutions}
                         onApplyResolution={handleApplyResolution}
-                        onSaveNewResolution={() => {}}
+                        onSaveNewResolution={() => setShowSaveResolutionDialog(true)}
                       />
                     ) : (
                       <ResolutionHistoryPanel
@@ -1083,6 +1086,15 @@ export function MissionSidebar() {
             setPendingRunMissionId(null)
           }}
           onCancel={() => setPendingRunMissionId(null)}
+        />
+      )}
+
+      {/* Save Resolution Dialog — triggered from ResolutionKnowledgePanel "Save This Resolution" button */}
+      {activeMission && (
+        <SaveResolutionDialog
+          mission={activeMission}
+          isOpen={showSaveResolutionDialog}
+          onClose={() => setShowSaveResolutionDialog(false)}
         />
       )}
     </>

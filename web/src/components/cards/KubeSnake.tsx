@@ -8,12 +8,19 @@ import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeys } from '../../hooks/useGameKeys'
 
 // Game constants
-const CANVAS_WIDTH = 400
-const CANVAS_HEIGHT = 400
+/** Default canvas resolution when the card is collapsed (px) */
+const DEFAULT_CANVAS_SIZE = 400
+/** Internal canvas width (logical pixels for game logic) */
+const CANVAS_WIDTH = DEFAULT_CANVAS_SIZE
+/** Internal canvas height (logical pixels for game logic) */
+const CANVAS_HEIGHT = DEFAULT_CANVAS_SIZE
 const GRID_SIZE = 20
+/** Logical pixel size of each grid cell */
 const CELL_SIZE = CANVAS_WIDTH / GRID_SIZE
 const INITIAL_SPEED = 150 // ms per move
 const MIN_SPEED = 60
+/** Vertical space reserved for stats bar and controls (px) */
+const SNAKE_CHROME_HEIGHT = 100
 
 // Colors (Kubernetes theme)
 const COLORS = {
@@ -36,7 +43,15 @@ type Direction = 'up' | 'down' | 'left' | 'right'
 export function KubeSnake() {
   const { t: _t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
-  const { isExpanded } = useCardExpanded()
+  const { isExpanded, containerSize } = useCardExpanded()
+
+  // Compute CSS scale factor so the canvas fills the expanded modal
+  const canvasScale = (() => {
+    if (!isExpanded || containerSize.width === 0 || containerSize.height === 0) return 1
+    const availW = containerSize.width
+    const availH = containerSize.height - SNAKE_CHROME_HEIGHT
+    return Math.max(1, Math.min(availW / DEFAULT_CANVAS_SIZE, availH / DEFAULT_CANVAS_SIZE))
+  })()
   const gameContainerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [gameState, setGameState] = useState<'idle' | 'playing' | 'paused' | 'gameover'>('idle')
@@ -320,7 +335,7 @@ export function KubeSnake() {
     <div ref={gameContainerRef} className="h-full flex flex-col">
       <div className={`flex flex-col items-center gap-3 ${isExpanded ? 'flex-1 min-h-0' : ''}`}>
         {/* Stats bar */}
-        <div className="flex items-center justify-between w-full max-w-[400px] text-sm">
+        <div className="flex items-center justify-between w-full text-sm" style={{ maxWidth: isExpanded ? CANVAS_WIDTH * canvasScale : DEFAULT_CANVAS_SIZE }}>
           <div className="flex items-center gap-2">
             <Apple className="w-4 h-4 text-red-400" />
             <span className="font-bold text-lg">{score}</span>
@@ -336,13 +351,20 @@ export function KubeSnake() {
         </div>
 
         {/* Game canvas */}
-        <div className={`relative ${isExpanded ? 'flex-1 min-h-0' : ''}`}>
+        <div
+          className={`relative ${isExpanded ? 'flex-1 min-h-0' : ''}`}
+          style={isExpanded && canvasScale > 1
+            ? { width: CANVAS_WIDTH * canvasScale, height: CANVAS_HEIGHT * canvasScale }
+            : undefined}
+        >
           <canvas
             ref={canvasRef}
             width={CANVAS_WIDTH}
             height={CANVAS_HEIGHT}
             className="border border-border rounded"
-            style={isExpanded ? { width: '100%', height: '100%', objectFit: 'contain' } : undefined}
+            style={isExpanded && canvasScale > 1
+              ? { transform: `scale(${canvasScale})`, transformOrigin: 'top left' }
+              : undefined}
             tabIndex={0}
           />
 
