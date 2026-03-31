@@ -325,7 +325,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
         ...(screenshotDataURIs.length > 0 && { screenshots: screenshotDataURIs }),
       })
       setSuccess({ issueUrl: result.github_issue_url })
-      // Show thank-you for 5s (extended to give time to copy screenshots) then switch to Updates tab
+      // Keep the success state visible for 5s so users can read the confirmation and open the issue before switching to the Updates tab
       setTimeout(() => {
         setDescription('')
         setDescriptionTab('write')
@@ -1484,7 +1484,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
                   )}
                   {screenshots.length > 0 && (
                     <p className="text-2xs text-muted-foreground mt-1">
-                      Screenshots will be noted in the issue. Paste them directly into GitHub after it&apos;s created.
+                      Screenshots will be uploaded and embedded directly in the GitHub issue.
                     </p>
                   )}
                 </div>

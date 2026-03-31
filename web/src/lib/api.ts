@@ -371,7 +371,7 @@ class ApiClient {
       markBackendSuccess()
       this.checkTokenRefresh(response)
       const data = await response.json().catch(() => null)
-      if (!data) throw new Error('Invalid JSON response from API')
+      if (data === null) throw new Error('Invalid JSON response from API')
       return { data }
     } catch (err) {
       clearTimeout(timeoutId)
@@ -417,7 +417,7 @@ class ApiClient {
       markBackendSuccess()
       this.checkTokenRefresh(response)
       const data = await response.json().catch(() => null)
-      if (!data) throw new Error('Invalid JSON response from API')
+      if (data === null) throw new Error('Invalid JSON response from API')
       return { data }
     } catch (err) {
       clearTimeout(timeoutId)
@@ -463,7 +463,7 @@ class ApiClient {
       markBackendSuccess()
       this.checkTokenRefresh(response)
       const data = await response.json().catch(() => null)
-      if (!data) throw new Error('Invalid JSON response from API')
+      if (data === null) throw new Error('Invalid JSON response from API')
       return { data }
     } catch (err) {
       clearTimeout(timeoutId)
