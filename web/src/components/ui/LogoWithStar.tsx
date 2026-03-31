@@ -6,6 +6,8 @@ interface LogoWithStarProps {
   /** Size of the logo image itself */
   logoClassName?: string
   alt?: string
+  /** Override branding's showStarDecoration — set false to hide the sparkle overlay */
+  showStar?: boolean
 }
 
 /**
@@ -13,8 +15,11 @@ interface LogoWithStarProps {
  * and two flanking plus signs in purple, positioned at the upper-right.
  * Star decoration is controlled by branding config (KubeStellar-specific).
  */
-export function LogoWithStar({ className, logoClassName, alt }: LogoWithStarProps) {
+export function LogoWithStar({ className, logoClassName, alt, showStar }: LogoWithStarProps) {
   const { logoUrl, appShortName, showStarDecoration } = useBranding()
+
+  /** Respect explicit prop override; fall back to branding config */
+  const renderStar = showStar ?? showStarDecoration
 
   return (
     <div className={cn('relative inline-flex items-center justify-center', className)}>
@@ -24,7 +29,7 @@ export function LogoWithStar({ className, logoClassName, alt }: LogoWithStarProp
         className={cn('w-full h-full', logoClassName)}
       />
       {/* Star treatment overlay — only shown for KubeStellar branding */}
-      {showStarDecoration && (
+      {renderStar && (
         <svg
           className="absolute -top-[15%] -right-[20%] w-[55%] h-[55%] pointer-events-none"
           viewBox="0 0 40 40"

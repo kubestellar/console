@@ -5,6 +5,6 @@ Listed below are organizations that have adopted, or benefitted from, KubeStella
 
 | Organization  | Description | Maturity Level | Further Information |
 | ------------- | ------------- | --- | --- |
-| Open Cluster Management | Guided install mission for OCM via KubeStellar Console | Sandbox | [Link](https://console.kubestellar.io/missions/install-open-cluster-management) |
+| Open Cluster Management | Guided install mission for OCM via KubeStellar Console | Sandbox | [OCM Install Mission](https://console.kubestellar.io/missions/install-open-cluster-management) |
 | Notary Project | Guided install mission for Ratify with automated pre-flight checks, Gatekeeper and Ratify deployment via helmfile, signed/unsigned image validation, troubleshooting, and rollback support | Incubating | [Notary Project/Ratify](https://github.com/notaryproject/ratify) |
 | OpenCost | Guided install mission for OpenCost via KubeStellar Console, endorsed by OpenCost contributor peatey in [opencost/opencost#3649](https://github.com/opencost/opencost/issues/3649) | Sandbox | [OpenCost](https://opencost.io) · [Install Mission](https://console.kubestellar.io/missions/install-opencost) |

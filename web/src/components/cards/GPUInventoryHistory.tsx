@@ -65,6 +65,12 @@ const DEMO_GPU_TYPE_COUNT = 3
 const DEMO_NODE_COUNT = 4
 /** Milliseconds per hour — used for demo data time offsets */
 const MS_PER_HOUR = 60 * 60 * 1000
+/** Milliseconds per minute — used for snapshot interval display */
+const MS_PER_MINUTE = 60 * 1000
+/** Default snapshot interval in minutes (used when actual cannot be computed) */
+const DEFAULT_SNAPSHOT_INTERVAL_MIN = 10
+/** Minutes per hour — used for converting interval-based durations */
+const MINUTES_PER_HOUR = 60
 /** Minimum snapshots needed for churn computation (need at least 2 to diff) */
 const MIN_CHURN_SNAPSHOTS = 2
 /** Maximum rows to show in the table view per page */
@@ -483,6 +489,28 @@ export function GPUInventoryHistory() {
     return { arrivalRate, departureRate, avgDurationIntervals }
   }, [history, showDemo, filterGPUNodes, chartData])
 
+  // ── Snapshot interval (computed from history timestamps) ────────────
+  /** Median interval between consecutive snapshots in minutes, used to display churn metrics in real time units */
+  const snapshotIntervalMin = useMemo(() => {
+    if ((history || []).length < MIN_CHURN_SNAPSHOTS) return DEFAULT_SNAPSHOT_INTERVAL_MIN
+    const intervals: number[] = []
+    for (let i = 1; i < (history || []).length; i++) {
+      const deltaMs = new Date((history || [])[i].timestamp).getTime() - new Date((history || [])[i - 1].timestamp).getTime()
+      if (deltaMs > 0) intervals.push(deltaMs / MS_PER_MINUTE)
+    }
+    if (intervals.length === 0) return DEFAULT_SNAPSHOT_INTERVAL_MIN
+    intervals.sort((a, b) => a - b)
+    const mid = Math.floor(intervals.length / 2)
+    return Math.round(intervals.length % 2 === 0 ? (intervals[mid - 1] + intervals[mid]) / 2 : intervals[mid])
+  }, [history])
+
+  /** Format a duration given in snapshot intervals as a human-readable time string (e.g. "~30 min" or "~2.5 hrs") */
+  const formatIntervalDuration = useCallback((intervals: number): string => {
+    const totalMin = intervals * snapshotIntervalMin
+    if (totalMin < MINUTES_PER_HOUR) return `~${Math.round(totalMin)} min`
+    return `~${(totalMin / MINUTES_PER_HOUR).toFixed(1)} hrs`
+  }, [snapshotIntervalMin])
+
   // ── Table data (per-node, per-type breakdown from latest snapshot) ──
   const tableRows = useMemo<NodeTableRow[]>(() => {
     if (showDemo) return generateDemoTableRows()
@@ -769,7 +797,7 @@ export function GPUInventoryHistory() {
                 aria-label={`GPU inventory history chart: ${currentTotals.allocated} of ${currentTotals.total} GPUs in use (${usagePercent}% utilization), trend: ${trend}`}
               >
                 <ResponsiveContainer width="100%" height={CHART_HEIGHT_STANDARD}>
-                  <AreaChart data={displayChartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                  <AreaChart data={displayChartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }} reverseStackOrder>
                     <defs>
                       <linearGradient id="gpuHistAllocated" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#9333ea" stopOpacity={0.6} />
@@ -974,20 +1002,20 @@ export function GPUInventoryHistory() {
               <span title={t('cards:gpuInventoryHistory.arrivalRateTooltip', 'Average GPUs newly allocated per snapshot interval')}>
                 {t('cards:gpuInventoryHistory.arrivalRate', 'Arrival')}:{' '}
                 <span className="text-foreground font-medium">
-                  +{churnMetrics.arrivalRate.toFixed(1)}/int
+                  +{churnMetrics.arrivalRate.toFixed(1)}/{snapshotIntervalMin} min
                 </span>
               </span>
               <span title={t('cards:gpuInventoryHistory.departureRateTooltip', 'Average GPUs freed per snapshot interval')}>
                 {t('cards:gpuInventoryHistory.departureRate', 'Departure')}:{' '}
                 <span className="text-foreground font-medium">
-                  -{churnMetrics.departureRate.toFixed(1)}/int
+                  -{churnMetrics.departureRate.toFixed(1)}/{snapshotIntervalMin} min
                 </span>
               </span>
               {churnMetrics.avgDurationIntervals > 0 && (
                 <span title={t('cards:gpuInventoryHistory.avgDurationTooltip', 'Approximate average allocation duration in snapshot intervals (~10 min each)')}>
                   {t('cards:gpuInventoryHistory.avgDuration', 'Avg Duration')}:{' '}
                   <span className="text-foreground font-medium">
-                    ~{churnMetrics.avgDurationIntervals.toFixed(0)} int
+                    {formatIntervalDuration(churnMetrics.avgDurationIntervals)}
                   </span>
                 </span>
               )}

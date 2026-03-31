@@ -30,7 +30,7 @@ export async function compileCardCode(tsx: string): Promise<CompileResult> {
     // Dynamic import to keep Sucrase out of the main bundle
     const { transform } = await import('sucrase')
     const result = transform(tsx, {
-      transforms: ['typescript', 'jsx'],
+      transforms: ['typescript', 'jsx', 'imports'],
       jsxRuntime: 'classic',
       jsxPragma: 'React.createElement',
       jsxFragmentPragma: 'React.Fragment',

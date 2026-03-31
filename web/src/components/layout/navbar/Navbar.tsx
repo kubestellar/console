@@ -69,7 +69,7 @@ export function Navbar() {
           className="flex items-center gap-2 md:gap-3 p-2 -m-2 min-w-[44px] min-h-[44px] hover:opacity-80 transition-opacity"
           aria-label={t('navbar.goHome')}
         >
-          <LogoWithStar className="w-8 h-8 md:w-9 md:h-9" />
+          <LogoWithStar className="w-8 h-8 md:w-9 md:h-9" showStar={false} />
         </button>
         <button
           type="button"
