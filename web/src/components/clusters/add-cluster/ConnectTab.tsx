@@ -117,14 +117,14 @@ export function ConnectTab({
                     ? 'bg-purple-600 text-white'
                     : connectStep > step
                       ? 'bg-green-600 text-white'
-                      : 'bg-white/10 text-muted-foreground'
+                      : 'bg-black/5 dark:bg-white/10 text-muted-foreground'
                 }`}>
                   {connectStep > step ? <Check className="w-3.5 h-3.5" /> : step}
                 </div>
                 <span className={`text-xs ${connectStep === step ? 'text-foreground' : 'text-muted-foreground'}`}>
                   {t(`cluster.connectStep${step}`)}
                 </span>
-                {step < 3 && <div className={`w-8 h-px ${connectStep > step ? 'bg-green-600' : 'bg-white/10'}`} />}
+                {step < 3 && <div className={`w-8 h-px ${connectStep > step ? 'bg-green-600' : 'bg-black/10 dark:bg-white/10'}`} />}
               </div>
             ))}
           </div>
@@ -138,13 +138,13 @@ export function ConnectTab({
                 value={serverUrl}
                 onChange={(e) => setServerUrl(e.target.value)}
                 placeholder={t('cluster.connectServerPlaceholder')}
-                className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-white/10 focus:border-purple-500 focus:outline-none"
+                className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-none"
               />
               <div className="flex justify-end">
                 <button
                   onClick={() => goToConnectStep(2)}
                   disabled={!serverUrl.trim()}
-                  className="px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
+                  className="px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-border dark:border-white/10"
                 >
                   {t('cluster.connectNext')}
                 </button>
@@ -162,7 +162,7 @@ export function ConnectTab({
                   className={`flex items-center gap-2 p-3 rounded-lg border text-sm text-left transition-colors ${
                     authType === 'token'
                       ? 'border-purple-500 bg-purple-500/10 text-foreground'
-                      : 'border-white/10 bg-secondary text-muted-foreground hover:text-foreground'
+                      : 'border-border dark:border-white/10 bg-secondary text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   <KeyRound className="w-4 h-4 shrink-0" />
@@ -173,7 +173,7 @@ export function ConnectTab({
                   className={`flex items-center gap-2 p-3 rounded-lg border text-sm text-left transition-colors ${
                     authType === 'certificate'
                       ? 'border-purple-500 bg-purple-500/10 text-foreground'
-                      : 'border-white/10 bg-secondary text-muted-foreground hover:text-foreground'
+                      : 'border-border dark:border-white/10 bg-secondary text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   <Shield className="w-4 h-4 shrink-0" />
@@ -184,7 +184,7 @@ export function ConnectTab({
                   className={`flex items-center gap-2 p-3 rounded-lg border text-sm text-left transition-colors ${
                     authType === 'cloud-iam'
                       ? 'border-purple-500 bg-purple-500/10 text-foreground'
-                      : 'border-white/10 bg-secondary text-muted-foreground hover:text-foreground'
+                      : 'border-border dark:border-white/10 bg-secondary text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   <Cloud className="w-4 h-4 shrink-0" />
@@ -200,7 +200,7 @@ export function ConnectTab({
                     value={token}
                     onChange={(e) => setToken(e.target.value)}
                     placeholder={t('cluster.connectTokenPlaceholder')}
-                    className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-white/10 focus:border-purple-500 focus:outline-none font-mono"
+                    className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-none font-mono"
                   />
                 </div>
               )}
@@ -214,7 +214,7 @@ export function ConnectTab({
                       onChange={(e) => setCertData(e.target.value)}
                       rows={3}
                       placeholder="-----BEGIN CERTIFICATE-----"
-                      className="bg-secondary rounded-lg px-4 py-2 text-xs w-full border border-white/10 focus:border-purple-500 focus:outline-none font-mono resize-none"
+                      className="bg-secondary rounded-lg px-4 py-2 text-xs w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-none font-mono resize-none"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -224,7 +224,7 @@ export function ConnectTab({
                       onChange={(e) => setKeyData(e.target.value)}
                       rows={3}
                       placeholder="-----BEGIN RSA PRIVATE KEY-----"
-                      className="bg-secondary rounded-lg px-4 py-2 text-xs w-full border border-white/10 focus:border-purple-500 focus:outline-none font-mono resize-none"
+                      className="bg-secondary rounded-lg px-4 py-2 text-xs w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-none font-mono resize-none"
                     />
                   </div>
                 </div>
@@ -243,7 +243,7 @@ export function ConnectTab({
                         className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border text-xs transition-colors ${
                           selectedCloudProvider === p
                             ? 'border-purple-500 bg-purple-500/10 text-foreground'
-                            : 'border-white/10 bg-secondary text-muted-foreground hover:text-foreground'
+                            : 'border-border dark:border-white/10 bg-secondary text-muted-foreground hover:text-foreground'
                         }`}
                       >
                         <CloudProviderIcon provider={p} size={20} />
@@ -272,7 +272,7 @@ export function ConnectTab({
                     </div>
                   )}
 
-                  <p className="text-xs text-muted-foreground bg-secondary/50 rounded-lg p-3 border border-white/5">
+                  <p className="text-xs text-muted-foreground bg-secondary/50 rounded-lg p-3 border border-border/30 dark:border-white/5">
                     {t('cluster.cloudIAMAutoDetect')}
                   </p>
                 </div>
@@ -298,7 +298,7 @@ export function ConnectTab({
                           onChange={(e) => setCaData(e.target.value)}
                           rows={3}
                           placeholder="-----BEGIN CERTIFICATE-----"
-                          className="bg-secondary rounded-lg px-4 py-2 text-xs w-full border border-white/10 focus:border-purple-500 focus:outline-none font-mono resize-none"
+                          className="bg-secondary rounded-lg px-4 py-2 text-xs w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-none font-mono resize-none"
                         />
                       </div>
                       <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
@@ -306,7 +306,7 @@ export function ConnectTab({
                           type="checkbox"
                           checked={skipTls}
                           onChange={(e) => setSkipTls(e.target.checked)}
-                          className="rounded border-white/20 bg-secondary"
+                          className="rounded border-border dark:border-white/20 bg-secondary"
                         />
                         {t('cluster.connectSkipTls')}
                       </label>
@@ -318,7 +318,7 @@ export function ConnectTab({
               <div className="flex justify-between">
                 <button
                   onClick={() => setConnectStep(1)}
-                  className="px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-white/10 transition-colors border border-white/10"
+                  className="px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors border border-border dark:border-white/10"
                 >
                   {t('cluster.connectBack')}
                 </button>
@@ -326,7 +326,7 @@ export function ConnectTab({
                   <button
                     onClick={() => goToConnectStep(3)}
                     disabled={authType === 'token' ? !token.trim() : (!certData.trim() || !keyData.trim())}
-                    className="px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
+                    className="px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-border dark:border-white/10"
                   >
                     {t('cluster.connectNext')}
                   </button>
@@ -345,7 +345,7 @@ export function ConnectTab({
                   value={contextName}
                   onChange={(e) => setContextName(e.target.value)}
                   placeholder="my-cluster"
-                  className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-white/10 focus:border-purple-500 focus:outline-none"
+                  className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-none"
                 />
               </div>
               <div className="space-y-1.5">
@@ -355,7 +355,7 @@ export function ConnectTab({
                   value={clusterName}
                   onChange={(e) => setClusterName(e.target.value)}
                   placeholder="my-cluster"
-                  className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-white/10 focus:border-purple-500 focus:outline-none"
+                  className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-none"
                 />
               </div>
               <div className="space-y-1.5">
@@ -365,7 +365,7 @@ export function ConnectTab({
                   value={namespace}
                   onChange={(e) => setNamespace(e.target.value)}
                   placeholder="default"
-                  className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-white/10 focus:border-purple-500 focus:outline-none"
+                  className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-none"
                 />
               </div>
 
@@ -399,7 +399,7 @@ export function ConnectTab({
               <div className="flex items-center justify-between gap-2 pt-1">
                 <button
                   onClick={() => setConnectStep(2)}
-                  className="px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-white/10 transition-colors border border-white/10"
+                  className="px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors border border-border dark:border-white/10"
                 >
                   {t('cluster.connectBack')}
                 </button>
@@ -407,7 +407,7 @@ export function ConnectTab({
                   <button
                     onClick={handleTestConnection}
                     disabled={connectState === 'testing' || !contextName.trim() || !clusterName.trim()}
-                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
+                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-border dark:border-white/10"
                   >
                     {connectState === 'testing' ? (
                       <>

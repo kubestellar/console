@@ -241,22 +241,22 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-cluster-dialog-title"
-        className="relative w-full max-w-2xl mx-4 bg-card border border-white/10 rounded-xl shadow-2xl"
+        className="relative w-full max-w-2xl mx-4 bg-card border border-border dark:border-white/10 rounded-xl shadow-2xl"
         aria-busy={isLoading}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border dark:border-white/10">
           <h2 id="add-cluster-dialog-title" className="text-lg font-semibold text-foreground">{t('cluster.addClusterTitle')}</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-white/10 px-6">
+        <div className="flex border-b border-border dark:border-white/10 px-6">
           {tabs.map((tab) => (
             <button
               key={tab.id}

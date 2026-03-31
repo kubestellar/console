@@ -62,7 +62,7 @@ export function ImportTab({
               }}
               rows={6}
               placeholder="apiVersion: v1&#10;kind: Config&#10;..."
-              className="bg-secondary rounded-lg p-4 font-mono text-sm w-full resize-y border border-white/10 focus:border-purple-500 focus:outline-none"
+              className="bg-secondary rounded-lg p-4 font-mono text-sm w-full resize-y border border-border dark:border-white/10 focus:border-purple-500 focus:outline-none"
             />
           </div>
 
@@ -76,7 +76,7 @@ export function ImportTab({
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-secondary text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors border border-white/10"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-secondary text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors border border-border dark:border-white/10"
             >
               <Upload className="w-3.5 h-3.5" />
               {t('cluster.importUpload')}
@@ -135,7 +135,7 @@ export function ImportTab({
                           {t('cluster.importNew')}
                         </StatusBadge>
                       ) : (
-                        <span className="bg-white/10 text-muted-foreground text-xs px-2 py-0.5 rounded">
+                        <span className="bg-black/5 dark:bg-white/10 text-muted-foreground text-xs px-2 py-0.5 rounded">
                           {t('cluster.importExists')}
                         </span>
                       )}
@@ -145,7 +145,7 @@ export function ImportTab({
               </div>
 
               {newCount === 0 ? (
-                <p className="text-xs text-muted-foreground bg-secondary/50 rounded-lg p-3 border border-white/5">
+                <p className="text-xs text-muted-foreground bg-secondary/50 rounded-lg p-3 border border-border/30 dark:border-white/5">
                   {t('cluster.importNoNew')}
                 </p>
               ) : (
