@@ -100,7 +100,7 @@ jobs:
   deploy-vllm-d:
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: [self-hosted, kc]
+    runs-on: [self-hosted, kc, openshift]
     environment: vllm-d
 
     steps:
