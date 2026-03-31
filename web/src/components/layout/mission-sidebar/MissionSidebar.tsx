@@ -22,6 +22,7 @@ import {
   ShieldOff,
   BookOpen,
   Rocket,
+  Search,
 } from 'lucide-react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { useMissions } from '../../../hooks/useMissions'
@@ -288,9 +289,17 @@ export function MissionSidebar() {
     tryImport().finally(() => setIsDirectImporting(false))
   }, [directImportSlug]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Split missions into saved (library) and active
-  const savedMissions = missions.filter(m => m.status === 'saved')
-  const activeMissions = missions.filter(m => m.status !== 'saved')
+  // Mission list search filter (#3944)
+  const [missionSearchQuery, setMissionSearchQuery] = useState('')
+
+  // Split missions into saved (library) and active, applying search filter
+  const matchesSearch = useCallback((m: Mission) => {
+    if (!missionSearchQuery.trim()) return true
+    const q = missionSearchQuery.toLowerCase()
+    return m.title.toLowerCase().includes(q) || m.description.toLowerCase().includes(q)
+  }, [missionSearchQuery])
+  const savedMissions = missions.filter(m => m.status === 'saved' && matchesSearch(m))
+  const activeMissions = missions.filter(m => m.status !== 'saved' && matchesSearch(m))
 
   const handleImportMission = useCallback((mission: MissionExport) => {
     const missionType = mission.missionClass === 'install' ? 'deploy' as const
@@ -913,6 +922,29 @@ export function MissionSidebar() {
           "flex-1 overflow-y-auto scroll-enhanced p-2 space-y-2",
           isFullScreen && "max-w-3xl mx-auto w-full"
         )}>
+          {/* Mission search filter (#3944) */}
+          {missions.length > 1 && (
+            <div className="relative px-1 pb-1">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+              <input
+                type="text"
+                value={missionSearchQuery}
+                onChange={(e) => setMissionSearchQuery(e.target.value)}
+                placeholder={t('missionSidebar.searchMissions', { defaultValue: 'Search missions...' })}
+                className="w-full pl-8 pr-8 py-1.5 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+              />
+              {missionSearchQuery && (
+                <button
+                  onClick={() => setMissionSearchQuery('')}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 p-0.5 hover:bg-secondary rounded transition-colors"
+                  title={t('common.clear', { defaultValue: 'Clear' })}
+                >
+                  <X className="w-3 h-3 text-muted-foreground" />
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Saved missions section */}
           {savedMissions.length > 0 && (
             <div className="mb-3">
@@ -1008,9 +1040,16 @@ export function MissionSidebar() {
           )}
 
           {/* Empty state when only saved missions, no active */}
-          {activeMissions.length === 0 && savedMissions.length > 0 && (
+          {activeMissions.length === 0 && savedMissions.length > 0 && !missionSearchQuery && (
             <div className="text-center py-4">
               <p className="text-xs text-muted-foreground">No active missions. Click <strong>Run</strong> on a saved mission to start it.</p>
+            </div>
+          )}
+          {/* No search results */}
+          {missionSearchQuery && savedMissions.length === 0 && activeMissions.length === 0 && (
+            <div className="text-center py-6">
+              <Search className="w-6 h-6 text-muted-foreground/40 mx-auto mb-2" />
+              <p className="text-xs text-muted-foreground">{t('missionSidebar.noSearchResults', { defaultValue: 'No missions match your search.' })}</p>
             </div>
           )}
         </div>

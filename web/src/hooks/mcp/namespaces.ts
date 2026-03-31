@@ -107,25 +107,41 @@ export function useNamespaces(cluster?: string, forceLive = false) {
       }
     }
 
-    // Fall back to REST API
+    // Fall back to REST API — merge pod-based namespaces with cluster cache
+    // to include namespaces that have no running pods (#3945)
     try {
-      const { data } = await api.get<{ pods: PodInfo[] }>(`/api/mcp/pods?cluster=${encodeURIComponent(cluster)}`)
       const nsSet = new Set<string>()
-      data.pods?.forEach(pod => {
-        if (pod.namespace) nsSet.add(pod.namespace)
-      })
-      setNamespaces(Array.from(nsSet).sort())
-      setError(null)
-    } catch (err) {
-      // Try cluster cache namespaces as last resort
+
+      // Seed with cluster cache namespaces (discovered during health checks)
+      // so namespaces without pods still appear in the dropdown
       const cachedCluster = clusterCacheRef.clusters.find(c => c.name === cluster)
-      if (cachedCluster?.namespaces && cachedCluster.namespaces.length > 0) {
-        setNamespaces(cachedCluster.namespaces)
+      if (cachedCluster?.namespaces) {
+        for (const ns of cachedCluster.namespaces) {
+          nsSet.add(ns)
+        }
+      }
+
+      // Also add namespaces from pods (may discover recently created namespaces
+      // that the cache hasn't seen yet)
+      try {
+        const { data } = await api.get<{ pods: PodInfo[] }>(`/api/mcp/pods?cluster=${encodeURIComponent(cluster)}`)
+        for (const pod of (data.pods || [])) {
+          if (pod.namespace) nsSet.add(pod.namespace)
+        }
+      } catch {
+        // Non-fatal: we may still have cache namespaces above
+      }
+
+      if (nsSet.size > 0) {
+        setNamespaces(Array.from(nsSet).sort())
         setError(null)
       } else {
         setNamespaces(['default', 'kube-system'])
         setError(null)
       }
+    } catch {
+      setNamespaces(['default', 'kube-system'])
+      setError(null)
     } finally {
       setIsLoading(false)
     }
