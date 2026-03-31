@@ -1727,3 +1727,88 @@
   }
 }
 
+
+/* GitHub-flavored markdown preview (dark mode) */
+.ghmd {
+  color: #e6edf3;
+  font-size: 14px;
+  line-height: 1.6;
+  word-wrap: break-word;
+}
+.ghmd h1, .ghmd h2, .ghmd h3, .ghmd h4, .ghmd h5, .ghmd h6 {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #e6edf3;
+}
+.ghmd h1 { font-size: 2em; padding-bottom: 0.3em; border-bottom: 1px solid #30363d; }
+.ghmd h2 { font-size: 1.5em; padding-bottom: 0.3em; border-bottom: 1px solid #30363d; }
+.ghmd h3 { font-size: 1.25em; }
+.ghmd h4 { font-size: 1em; }
+.ghmd p { margin-top: 0; margin-bottom: 16px; }
+.ghmd a { color: #58a6ff; text-decoration: none; }
+.ghmd a:hover { text-decoration: underline; }
+.ghmd ul, .ghmd ol { padding-left: 2em; margin-top: 0; margin-bottom: 16px; }
+.ghmd li { margin-top: 0.25em; }
+.ghmd li + li { margin-top: 0.25em; }
+.ghmd blockquote {
+  margin: 0 0 16px;
+  padding: 0 1em;
+  color: #8b949e;
+  border-left: 0.25em solid #30363d;
+}
+.ghmd hr {
+  height: 0.25em;
+  padding: 0;
+  margin: 24px 0;
+  background-color: #30363d;
+  border: 0;
+}
+.ghmd code:not(pre code) {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  background-color: rgba(110, 118, 129, 0.4);
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+.ghmd pre {
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: #161b22;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+.ghmd pre code {
+  padding: 0;
+  margin: 0;
+  font-size: 100%;
+  background-color: transparent;
+  border-radius: 0;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+.ghmd table {
+  border-spacing: 0;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  width: max-content;
+  max-width: 100%;
+  overflow: auto;
+  display: block;
+}
+.ghmd table th, .ghmd table td {
+  padding: 6px 13px;
+  border: 1px solid #30363d;
+}
+.ghmd table th {
+  font-weight: 600;
+  background-color: #161b22;
+}
+.ghmd table tr { background-color: transparent; border-top: 1px solid #21262d; }
+.ghmd table tr:nth-child(2n) { background-color: #161b22; }
+.ghmd img { max-width: 100%; box-sizing: border-box; }
+.ghmd strong { font-weight: 600; color: #e6edf3; }
+.ghmd em { font-style: italic; }
