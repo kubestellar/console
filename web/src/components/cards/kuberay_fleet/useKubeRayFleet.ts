@@ -237,7 +237,7 @@ export function useKubeRayFleet() {
     : !isFailed // "not detected" is a valid state
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasAnyData,
     isRefreshing,
     hasAnyData,
     isFailed,

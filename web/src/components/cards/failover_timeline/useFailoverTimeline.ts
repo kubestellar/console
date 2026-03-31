@@ -334,7 +334,7 @@ export function useFailoverTimeline(): UseFailoverTimelineResult {
   const hasAnyData = (data.events || []).length > 0
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasAnyData,
     isRefreshing,
     hasAnyData,
     isFailed,

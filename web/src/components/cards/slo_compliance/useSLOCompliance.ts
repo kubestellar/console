@@ -166,7 +166,7 @@ export function useSLOCompliance() {
   const hasAnyData = (data.targets || []).length > 0
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasAnyData,
     isRefreshing,
     hasAnyData,
     isFailed,
