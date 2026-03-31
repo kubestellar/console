@@ -329,12 +329,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
       showExpiryWarningBanner(async () => {
+        // Re-read the token at click time instead of using the stale closure
+        // value — the token may have been silently refreshed since the banner
+        // was shown (#3909).
+        const freshToken = localStorage.getItem(STORAGE_KEY_TOKEN)
+        if (!freshToken || freshToken === DEMO_TOKEN_VALUE) return
         try {
           const response = await fetch('/auth/refresh', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${currentToken}`,
+              Authorization: `Bearer ${freshToken}`,
             },
             signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
           })

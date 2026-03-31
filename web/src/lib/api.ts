@@ -38,14 +38,25 @@ export class UnauthorizedError extends Error {
 
 // Debounce 401 handling to avoid multiple simultaneous logouts
 let handling401 = false
+/** Safety cap: reset the 401 debounce flag after this many ms so future
+ *  auth failures aren't permanently silenced if the redirect doesn't fire (#3899). */
+const HANDLING_401_RESET_MS = 10_000
 
 /**
  * Handle 401 Unauthorized responses by clearing auth state and redirecting to login.
  * This is debounced to avoid multiple simultaneous logouts from parallel API calls.
+ * The flag auto-resets after HANDLING_401_RESET_MS so a failed redirect doesn't
+ * permanently block all API calls.
  */
 function handle401(): void {
   if (handling401) return
   handling401 = true
+
+  // Auto-reset the flag after a safety timeout so the app isn't permanently
+  // blocked if the redirect fails (e.g. service-worker intercept, popup blocker).
+  setTimeout(() => {
+    handling401 = false
+  }, HANDLING_401_RESET_MS)
 
   console.warn('[API] Received 401 Unauthorized - token invalid or expired, logging out')
 

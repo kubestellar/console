@@ -252,25 +252,22 @@ func (s *Server) checkOrigin(r *http.Request) bool {
 	return false
 }
 
-// validateToken checks the authentication token (if configured)
+// validateToken checks the authentication token (if configured).
+// Tokens are accepted ONLY via the Authorization header to keep secrets out
+// of server logs, browser history, and proxy access logs (#3895).
 func (s *Server) validateToken(r *http.Request) bool {
 	// If no token configured, skip token validation
 	if s.agentToken == "" {
 		return true
 	}
 
-	// Check Authorization header first
+	// Accept token exclusively from the Authorization header
 	authHeader := r.Header.Get("Authorization")
 	if strings.HasPrefix(authHeader, "Bearer ") {
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 		if token == s.agentToken {
 			return true
 		}
-	}
-
-	// Check query parameter as fallback (for WebSocket connections)
-	if r.URL.Query().Get("token") == s.agentToken {
-		return true
 	}
 
 	return false

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -256,8 +257,13 @@ func WebSocketUpgrade() fiber.Handler {
 	}
 }
 
-// ValidateJWT validates a JWT token string and returns the claims
-// Used for WebSocket connections where token is passed via query param
+// ErrTokenRevoked is returned when a validated JWT has been server-side revoked.
+var ErrTokenRevoked = fmt.Errorf("token has been revoked")
+
+// ValidateJWT validates a JWT token string and returns the claims.
+// Used for WebSocket connections where token is passed via query param.
+// This performs the same revocation check as the HTTP JWTAuth middleware
+// so that revoked tokens are rejected on WebSocket/exec paths too (#3894).
 func ValidateJWT(tokenString, secret string) (*UserClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &UserClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(secret), nil
@@ -274,6 +280,12 @@ func ValidateJWT(tokenString, secret string) (*UserClaims, error) {
 	claims, ok := token.Claims.(*UserClaims)
 	if !ok {
 		return nil, jwt.ErrTokenInvalidClaims
+	}
+
+	// Check if token has been revoked (server-side logout) — mirrors the
+	// check in JWTAuth middleware so WS/exec paths are equally protected.
+	if claims.ID != "" && IsTokenRevoked(claims.ID) {
+		return nil, ErrTokenRevoked
 	}
 
 	return claims, nil

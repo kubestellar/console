@@ -93,7 +93,6 @@ function parseSSEChunk(
  */
 export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
   const { url, params, onClusterData, onDone, itemsKey, signal } = options
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
 
   const searchParams = new URLSearchParams()
   if (params) {
@@ -170,18 +169,22 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
       })
     }
 
-    const headers: Record<string, string> = {
-      Accept: 'text/event-stream',
-    }
-    if (token) {
-      headers.Authorization = `Bearer ${token}`
-    }
-
     /**
      * Execute one SSE fetch attempt. On recoverable errors, schedules a retry
      * with exponential backoff up to SSE_MAX_RECONNECT_ATTEMPTS.
+     *
+     * The auth token is read from localStorage on EVERY attempt so that
+     * reconnects after a silent token refresh use the fresh token (#3897).
      */
     const attempt = (attemptNumber: number): void => {
+      const headers: Record<string, string> = {
+        Accept: 'text/event-stream',
+      }
+      const currentToken = localStorage.getItem(STORAGE_KEY_TOKEN)
+      if (currentToken) {
+        headers.Authorization = `Bearer ${currentToken}`
+      }
+
       fetch(fullUrl, {
         headers,
         signal: timeoutController.signal,
