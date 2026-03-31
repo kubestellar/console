@@ -5,9 +5,9 @@ import { getPredictionSettings } from './usePredictionSettings'
 
 const STORAGE_KEY = 'kubestellar-metrics-history'
 const HISTORY_CHANGED_EVENT = 'kubestellar-metrics-history-changed'
-const MAX_SNAPSHOTS = 144 // 24 hours at 10-min intervals
-/** Cache TTL: 24 hours — remove snapshots older than this */
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000
+const MAX_SNAPSHOTS = 1008 // 7 days at 10-min intervals (6 per hour * 24 hours * 7 days)
+/** Cache TTL: 7 days — remove snapshots older than this */
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 /** Maximum number of increasing-restart pods to include in AI context */
 const MAX_INCREASING_RESTART_PODS = 10
 
@@ -172,15 +172,16 @@ export function useMetricsHistory() {
           nodeCount: c.nodeCount || 0,
           healthyNodes: c.healthy ? (c.nodeCount || 0) : 0, // Use healthy status as proxy
         })),
-        podIssues: podIssues.map(p => ({
+        podIssues: (podIssues || []).map(p => ({
           name: p.name,
           cluster: p.cluster || '',
           restarts: p.restarts || 0,
           status: p.status || '',
         })),
-        gpuNodes: gpuNodes.map(g => ({
+        gpuNodes: (gpuNodes || []).map(g => ({
           name: g.name,
           cluster: g.cluster,
+          gpuType: g.gpuType || '',
           gpuAllocated: g.gpuAllocated,
           gpuTotal: g.gpuCount,
         })),
@@ -222,9 +223,10 @@ export function useMetricsHistory() {
         restarts: p.restarts || 0,
         status: p.status || '',
       })),
-      gpuNodes: gpuNodes.map(g => ({
+      gpuNodes: (gpuNodes || []).map(g => ({
         name: g.name,
         cluster: g.cluster,
+        gpuType: g.gpuType || '',
         gpuAllocated: g.gpuAllocated,
         gpuTotal: g.gpuCount,
       })),

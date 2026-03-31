@@ -153,6 +153,7 @@ export interface MetricsSnapshot {
   gpuNodes: Array<{
     name: string
     cluster: string
+    gpuType?: string    // Accelerator display name; absent in legacy snapshots
     gpuAllocated: number
     gpuTotal: number
   }>

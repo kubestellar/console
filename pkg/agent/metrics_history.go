@@ -14,9 +14,9 @@ import (
 )
 
 const (
-	maxSnapshots          = 144 // 24 hours at 10-min intervals
+	maxSnapshots          = 1008 // 7 days at 10-min intervals (6 per hour * 24 hours * 7 days)
 	metricsHistoryFile    = "metrics_history.json"
-	snapshotRetentionHrs  = 24
+	snapshotRetentionHrs  = 168 // 7 days of retention
 	metricsHistoryTimeout = 30 * time.Second
 	metricsFileMode       = 0600
 	metricsDirMode        = 0700
@@ -51,6 +51,7 @@ type PodIssueSnapshot struct {
 type GPUNodeMetricSnapshot struct {
 	Name         string `json:"name"`
 	Cluster      string `json:"cluster"`
+	GPUType      string `json:"gpuType"`      // Accelerator display name (e.g. "NVIDIA A100"); empty in legacy snapshots
 	GPUAllocated int    `json:"gpuAllocated"`
 	GPUTotal     int    `json:"gpuTotal"`
 }
@@ -116,7 +117,7 @@ func (mh *MetricsHistory) GetSnapshots() MetricsHistoryResponse {
 
 	return MetricsHistoryResponse{
 		Snapshots: mh.snapshots,
-		Retention: "24h",
+		Retention: "7d",
 	}
 }
 
@@ -229,6 +230,7 @@ func (mh *MetricsHistory) captureSnapshot() error {
 			snapshot.GPUNodes = append(snapshot.GPUNodes, GPUNodeMetricSnapshot{
 				Name:         g.Name,
 				Cluster:      g.Cluster,
+				GPUType:      g.GPUType,
 				GPUAllocated: g.GPUAllocated,
 				GPUTotal:     g.GPUCount,
 			})
