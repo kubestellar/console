@@ -92,13 +92,13 @@ spec:
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: {{ if .Values.watchdog.enabled }}/watchdog/health{{ else }}/health{{ end }}
+              path: {{ if .Values.watchdog.enabled }}/watchdog/health{{ else }}/healthz{{ end }}
               port: http
             initialDelaySeconds: 10
             periodSeconds: 10
           readinessProbe:
             httpGet:
-              path: {{ if .Values.watchdog.enabled }}/watchdog/ready{{ else }}/health{{ end }}
+              path: {{ if .Values.watchdog.enabled }}/watchdog/ready{{ else }}/healthz{{ end }}
               port: http
             initialDelaySeconds: 5
             periodSeconds: 5

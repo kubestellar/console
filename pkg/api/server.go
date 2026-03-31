@@ -402,15 +402,24 @@ p{color:#94a3b8;font-size:.875rem}
 <script>
 // Star field
 (function(){var s=document.getElementById('stars');for(var i=0;i<30;i++){var d=document.createElement('div');d.className='star';d.style.left=Math.random()*100+'%';d.style.top=Math.random()*100+'%';d.style.animationDelay=Math.random()*3+'s';s.appendChild(d)}})();
-// Poll /health and reload when ready
-setInterval(async function(){try{var r=await fetch('/health');if(r.ok){var d=await r.json();if(d.status==='ok')location.reload()}}catch(e){}},2000);
+// Poll /healthz and reload when ready
+setInterval(async function(){try{var r=await fetch('/healthz');if(r.ok){var d=await r.json();if(d.status==='ok')location.reload()}}catch(e){}},2000);
 </script>
 </body>
 </html>`
 
 func (s *Server) setupRoutes() {
-	// Health check — returns version for stale-frontend detection
-	// and "shutting_down" status during graceful shutdown.
+	// Minimal probe endpoint for load balancers and k8s liveness checks.
+	// Returns only status — no configuration metadata.
+	s.app.Get("/healthz", func(c *fiber.Ctx) error {
+		if atomic.LoadInt32(&s.shuttingDown) == 1 {
+			return c.JSON(fiber.Map{"status": "shutting_down"})
+		}
+		return c.JSON(fiber.Map{"status": "ok"})
+	})
+
+	// Health check — returns version and UI configuration for the frontend.
+	// Build metadata (go_version, git_commit, etc.) lives in /api/version.
 	s.app.Get("/health", func(c *fiber.Ctx) error {
 		if atomic.LoadInt32(&s.shuttingDown) == 1 {
 			return c.JSON(fiber.Map{"status": "shutting_down", "version": Version})
@@ -419,14 +428,9 @@ func (s *Server) setupRoutes() {
 		resp := fiber.Map{
 			"status":           "ok",
 			"version":          Version,
-			"go_version":       buildInfo.GoVersion,
-			"git_commit":       buildInfo.VCSRevision,
-			"git_time":         buildInfo.VCSTime,
-			"git_dirty":        buildInfo.VCSModified == "true",
 			"oauth_configured": s.config.GitHubClientID != "",
 			"in_cluster":       inCluster,
 			"install_method":   detectInstallMethod(inCluster),
-			"self_upgrade":     os.Getenv("SELF_UPGRADE_ENABLED") == "true",
 			"project":          s.config.ConsoleProject,
 			"branding": fiber.Map{
 				"appName":           s.config.BrandAppName,

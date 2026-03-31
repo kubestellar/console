@@ -93,6 +93,7 @@ fi
 # Each line: METHOD|PATH|EXPECTED_KEYS (comma-separated, empty = just valid JSON)
 # Unauthenticated endpoints first (no token needed)
 declare -a ENDPOINTS=(
+  "GET|/healthz|status"
   "GET|/health|status"
   "GET|/api/version|version"
   "GET|/api/config|"
