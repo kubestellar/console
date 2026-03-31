@@ -525,7 +525,6 @@ export function Dashboard() {
   }
 
   // Load dashboard on mount and when navigating back to the page.
-  // Always background refresh — localCards are pre-populated from localStorage/defaults.
   // Guard: KeepAlive keeps this component mounted even when the user navigates to
   // a different route.  location.key changes on EVERY navigation, not just when
   // returning to "/".  Without the pathname check the API call fires while the
@@ -533,7 +532,15 @@ export function Dashboard() {
   useEffect(() => {
     const isHomeDashboard = location.pathname === '/' || location.pathname === ''
     if (!isHomeDashboard) return
-    loadDashboard(true)
+
+    // Treat first load with no cached/local cards as a foreground load so that
+    // failures can surface a toast. Use warm/background refresh only when we
+    // already have something to show from cache or localStorage.
+    const hasCachedOrLocalCards =
+      ((dashboardCache?.cards?.length ?? 0) > 0) || localCards.length > 0
+    const isWarmRefresh = hasCachedOrLocalCards
+
+    loadDashboard(isWarmRefresh)
   }, [location.key, location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep cache and localStorage in sync when cards are modified locally
@@ -661,18 +668,20 @@ export function Dashboard() {
           showToast('Failed to load dashboard', 'error')
         }
       }
-      // Preserve local-only cards even on error, only add demo cards if needed
-      setLocalCards((prevCards) => {
-        const localOnlyCards = prevCards.filter(c => isLocalOnlyCard(c.id))
-        if (localOnlyCards.length > 0) {
-          // Keep local cards, don't replace with demo
-          return prevCards
-        }
-        // No local cards, use demo
-        const cards = getDemoCards()
-        dashboardCache = { dashboard: null, cards, timestamp: Date.now() }
-        return cards
-      })
+      // On background refresh failures, preserve whatever the user currently has —
+      // a transient API failure should never silently reset a persisted dashboard
+      // to demo cards. Only fall back to demo on foreground loads with nothing to show.
+      if (isBackground) {
+        // Keep current cards as-is — don't touch state
+      } else {
+        setLocalCards((prevCards) => {
+          if (prevCards.length > 0) return prevCards
+          // No cards at all, use demo
+          const cards = getDemoCards()
+          dashboardCache = { dashboard: null, cards, timestamp: Date.now() }
+          return cards
+        })
+      }
     } finally {
       setIsLoading(false)
     }
