@@ -27,7 +27,6 @@ import { TokenUsageWidget } from './TokenUsageWidget'
 import { ClusterFilterPanel } from './ClusterFilterPanel'
 import { AgentStatusIndicator } from './AgentStatusIndicator'
 import { UpdateIndicator } from './UpdateIndicator'
-import { ActiveUsersWidget } from './ActiveUsersWidget'
 import { ROUTES } from '../../../config/routes'
 
 export function Navbar() {
@@ -119,9 +118,6 @@ export function Navbar() {
           {/* Token Usage */}
           <TokenUsageWidget />
 
-          {/* Active Users */}
-          <ActiveUsersWidget />
-
           {/* Feature Request (includes notifications) */}
           <FeatureRequestButton />
         </div>
@@ -200,9 +196,6 @@ export function Navbar() {
                   </div>
                   <div className="px-3 py-2">
                     <TokenUsageWidget />
-                  </div>
-                  <div className="px-3 py-2">
-                    <ActiveUsersWidget />
                   </div>
                   <div className="px-3 py-2">
                     <FeatureRequestButton />

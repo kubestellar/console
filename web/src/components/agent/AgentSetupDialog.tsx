@@ -96,7 +96,7 @@ export function AgentSetupDialog() {
   }
 
   return (
-    <BaseModal isOpen={show} onClose={() => handleDismiss(false)} size="md">
+    <BaseModal isOpen={show} onClose={() => handleDismiss(false)} size="lg">
       <BaseModal.Header
         title={t('agentSetup.welcomeTitle')}
         description={t('agentSetup.welcomeDescription')}
