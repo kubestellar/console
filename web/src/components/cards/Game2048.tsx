@@ -292,7 +292,10 @@ export function Game2048(_props: CardComponentProps) {
     const availW = containerSize.width - GRID_PADDING * 2 - expandedGap * (GRID_COLS - 1)
     const availH = containerSize.height - CHROME_HEIGHT - GRID_PADDING * 2 - expandedGap * (GRID_COLS - 1)
     const maxCell = Math.floor(Math.min(availW, availH) / GRID_COLS)
-    return Math.max(maxCell, DEFAULT_CELL_SIZE)
+    if (!Number.isFinite(maxCell) || maxCell <= 0) {
+      return DEFAULT_CELL_SIZE
+    }
+    return maxCell
   })()
   const cellSize = computedCellSize
   const gap = isExpanded ? 8 : DEFAULT_GAP

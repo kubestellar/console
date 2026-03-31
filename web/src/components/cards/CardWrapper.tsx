@@ -375,8 +375,10 @@ export function CardWrapper({
     if (!el) return
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const { width, height } = entry.contentRect
-        setContainerSize({ width, height })
+        const w = Math.round(entry.contentRect.width)
+        const h = Math.round(entry.contentRect.height)
+        // Only update when dimensions actually change to avoid unnecessary rerenders
+        setContainerSize(prev => (prev.width === w && prev.height === h) ? prev : { width: w, height: h })
       }
     })
     observer.observe(el)

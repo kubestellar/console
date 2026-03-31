@@ -50,7 +50,7 @@ export function KubeSnake() {
     if (!isExpanded || containerSize.width === 0 || containerSize.height === 0) return 1
     const availW = containerSize.width
     const availH = containerSize.height - SNAKE_CHROME_HEIGHT
-    return Math.max(1, Math.min(availW / DEFAULT_CANVAS_SIZE, availH / DEFAULT_CANVAS_SIZE))
+    return Math.min(availW / DEFAULT_CANVAS_SIZE, availH / DEFAULT_CANVAS_SIZE)
   })()
   const gameContainerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)

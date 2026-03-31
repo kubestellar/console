@@ -155,6 +155,8 @@ export function MissionSidebar() {
   const [isDirectImporting, setIsDirectImporting] = useState(false)
   // Save Resolution dialog state (triggered from ResolutionKnowledgePanel "Save This Resolution" button)
   const [showSaveResolutionDialog, setShowSaveResolutionDialog] = useState(false)
+  // Reset dialog when active mission changes to prevent stale dialog for a different mission
+  useEffect(() => { setShowSaveResolutionDialog(false) }, [activeMission?.id])
   // Resolution panel state (fullscreen left sidebar)
   const [resolutionPanelView, setResolutionPanelView] = useState<'related' | 'history'>('related')
   const { findSimilarResolutions, allResolutions } = useResolutions()
@@ -1128,8 +1130,9 @@ export function MissionSidebar() {
         />
       )}
 
-      {/* Save Resolution Dialog — triggered from ResolutionKnowledgePanel "Save This Resolution" button */}
-      {activeMission && (
+      {/* Save Resolution Dialog — triggered from ResolutionKnowledgePanel "Save This Resolution" button.
+          Reset dialog state when active mission changes to prevent stale dialog reopening. */}
+      {activeMission && showSaveResolutionDialog && (
         <SaveResolutionDialog
           mission={activeMission}
           isOpen={showSaveResolutionDialog}
