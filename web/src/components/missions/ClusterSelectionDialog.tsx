@@ -88,11 +88,11 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-2xl" role="presentation" onClick={onCancel}>
-      <div className="w-full max-w-lg rounded-lg border border-border bg-card shadow-xl flex flex-col max-h-[80vh]" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-lg rounded-lg border border-border bg-card shadow-xl flex flex-col max-h-[80vh]" role="dialog" aria-modal="true" aria-labelledby="cluster-selection-dialog-title" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Select Target Clusters</h3>
+            <h3 id="cluster-selection-dialog-title" className="text-sm font-semibold text-foreground">Select Target Clusters</h3>
             <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[380px]">{missionTitle}</p>
           </div>
           <Button variant="ghost" onClick={onCancel} className="p-1 rounded-md min-h-11 min-w-11" aria-label="Close" icon={<X className="w-4 h-4" />} />

@@ -1259,10 +1259,10 @@ export function CardWrapper({
           {/* Install CTA: manual guide modal (no agent) */}
           {showInstallGuide && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" role="presentation" onClick={() => setShowInstallGuide(null)}>
-              <div className="bg-card border border-border rounded-xl shadow-2xl max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto p-6" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
+              <div className="bg-card border border-border rounded-xl shadow-2xl max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto p-6" role="dialog" aria-modal="true" aria-labelledby="install-guide-title" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">{showInstallGuide.mission.mission?.title ?? `Install ${installInfo?.project ?? 'Component'}`}</h3>
-                  <button onClick={() => setShowInstallGuide(null)} className="p-1 hover:bg-secondary rounded"><X className="w-4 h-4" /></button>
+                  <h3 id="install-guide-title" className="text-lg font-semibold">{showInstallGuide.mission.mission?.title ?? `Install ${installInfo?.project ?? 'Component'}`}</h3>
+                  <button onClick={() => setShowInstallGuide(null)} className="p-1 hover:bg-secondary rounded" aria-label="Close dialog"><X className="w-4 h-4" /></button>
                 </div>
                 {showInstallGuide.mission.mission?.description && (
                   <p className="text-sm text-muted-foreground mb-4">{showInstallGuide.mission.mission.description}</p>
