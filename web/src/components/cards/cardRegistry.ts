@@ -239,6 +239,14 @@ const StrimziStatus = safeLazy(() => import('./strimzi_status'), 'StrimziStatus'
 const KubeVelaStatus = safeLazy(() => import('./kubevela_status'), 'KubeVelaStatus')
 // Karmada multi-cluster orchestration card
 const KarmadaStatus = safeLazy(() => import('./karmada_status'), 'KarmadaStatus')
+// KubeRay fleet monitoring card
+const KubeRayFleet = safeLazy(() => import('./kuberay_fleet'), 'KubeRayFleet')
+// SLO compliance tracking card
+const SLOCompliance = safeLazy(() => import('./slo_compliance'), 'SLOCompliance')
+// Cross-region failover timeline card
+const FailoverTimeline = safeLazy(() => import('./failover_timeline'), 'FailoverTimeline')
+// Trino query gateway monitoring card
+const TrinoGateway = safeLazy(() => import('./trino_gateway'), 'TrinoGateway')
 // Thanos distributed metrics card
 const ThanosStatus = safeLazy(() => import('./thanos_status'), 'ThanosStatus')
 // OpenFeature feature-flag management card
@@ -544,6 +552,14 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   kubevela_status: KubeVelaStatus,
   // Karmada multi-cluster orchestration
   karmada_status: KarmadaStatus,
+  // KubeRay fleet monitoring
+  kuberay_fleet: KubeRayFleet,
+  // SLO compliance tracking
+  slo_compliance: SLOCompliance,
+  // Cross-region failover timeline
+  failover_timeline: FailoverTimeline,
+  // Trino query gateway monitoring
+  trino_gateway: TrinoGateway,
   // Thanos distributed metrics
   thanos_status: ThanosStatus,
   // OpenFeature feature-flag management
@@ -933,6 +949,10 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   kubevela_status: () => import('./kubevela_status'),
   // Karmada multi-cluster orchestration
   karmada_status: () => import('./karmada_status'),
+  kuberay_fleet: () => import('./kuberay_fleet'),
+  slo_compliance: () => import('./slo_compliance'),
+  failover_timeline: () => import('./failover_timeline'),
+  trino_gateway: () => import('./trino_gateway'),
   // Thanos distributed metrics
   thanos_status: () => import('./thanos_status'),
   // OpenFeature feature-flag management
@@ -1112,6 +1132,11 @@ export const LIVE_DATA_CARDS = new Set([
   'crio_status',
   'strimzi_status',
   'kubevela_status',
+  // KubeRay, SLO, Failover, Trino - demo until detected
+  'kuberay_fleet',
+  'slo_compliance',
+  'failover_timeline',
+  'trino_gateway',
   'network_policies',
   'cluster_changelog',
   'predictive_health',
@@ -1256,6 +1281,10 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   cloudevents_status: 6,
   // Karmada
   karmada_status: 6,
+  kuberay_fleet: 6,
+  slo_compliance: 6,
+  failover_timeline: 8,
+  trino_gateway: 6,
   // Thanos distributed metrics
   thanos_status: 6,
   // OpenFeature feature-flag management

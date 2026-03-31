@@ -319,6 +319,10 @@ const CARD_CATALOG = {
     { type: 'keda_status', title: 'KEDA', description: 'KEDA autoscaler status, scaled object metrics, and trigger queue depths', visualization: 'status' },
     { type: 'kubevela_status', title: 'KubeVela', description: 'KubeVela application delivery, component status, and workflow progress', visualization: 'status' },
     { type: 'karmada_status', title: 'Karmada', description: 'Karmada multi-cluster resource propagation status, member clusters, and policy health', visualization: 'status' },
+    { type: 'kuberay_fleet', title: 'KubeRay Fleet', description: 'KubeRay fleet monitoring — RayCluster, RayService, and RayJob status across all clusters with GPU allocation tracking', visualization: 'status' },
+    { type: 'failover_timeline', title: 'Failover Timeline', description: 'Cross-region failover forensics — Karmada ResourceBinding transitions, cluster outages, and recovery events', visualization: 'timeline' },
+    { type: 'trino_gateway', title: 'Trino Gateway', description: 'Trino coordinator/worker fleet status with gateway routing health and per-cluster query metrics', visualization: 'status' },
+    { type: 'slo_compliance', title: 'SLO Compliance', description: 'Service Level Objective tracking with error budget burn rate, compliance gauges, and per-cluster SLO status', visualization: 'metrics' },
   ],
   'Serverless': [
     { type: 'cloudevents_status', title: 'CloudEvents', description: 'CloudEvents message flow, event source tracking, and delivery status', visualization: 'status' },

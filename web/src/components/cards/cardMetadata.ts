@@ -284,6 +284,10 @@ export const CARD_TITLES: Record<string, string> = {
   keda_status: 'KEDA',
   // Karmada multi-cluster orchestration
   karmada_status: 'Karmada',
+  kuberay_fleet: 'KubeRay Fleet',
+  slo_compliance: 'SLO Compliance',
+  failover_timeline: 'Failover Timeline',
+  trino_gateway: 'Trino Gateway',
 
   // Inspektor Gadget
   network_trace: 'Network Traces',
@@ -546,6 +550,10 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   keda_status: 'KEDA (Kubernetes Event-Driven Autoscaling) automatically scales workloads based on external event sources like message queues, databases, or custom metrics. This card shows which workloads are being autoscaled, their current triggers, and queue depths.',
   // Karmada multi-cluster orchestration
   karmada_status: 'Karmada is a multi-cluster orchestration tool that propagates resources (Deployments, Services, etc.) across multiple clusters using placement policies. This card shows propagation status, member cluster health, and policy compliance.',
+  kuberay_fleet: 'Discovers RayCluster, RayService, and RayJob CRDs across all connected clusters. Shows fleet-level Ray workload status including GPU allocations, serving endpoints, and job progress.',
+  slo_compliance: 'Tracks SLO compliance with configurable targets for latency, error rate, and availability. Shows error budget burn rate and per-cluster compliance indicators.',
+  failover_timeline: 'Forensic timeline of cross-region failover events detected from Karmada ResourceBinding status transitions. Shows cluster outages, binding rescheduling, and recovery events.',
+  trino_gateway: 'Discovers Trino coordinator, worker, and Trino Gateway pods across clusters. Shows per-cluster query health, gateway routing status, and worker distribution.',
 
   // Inspektor Gadget
   network_trace: 'Live network connection tracing via Inspektor Gadget eBPF.',

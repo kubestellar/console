@@ -1,0 +1,79 @@
+{
+  "name": "Karmada Data Platform",
+  "author": "KubeStellar Team",
+  "version": "1.0.0",
+  "description": "Multi-cluster data platform operations dashboard for Karmada + Trino environments. Monitors Trino gateway routing, query health, SLO compliance, failover events, and cluster distribution.",
+  "labels": ["cncf", "multi-cluster", "data-platform", "karmada", "trino", "sql"],
+  "cards": [
+    {
+      "type": "karmada_status",
+      "title": "Karmada Status",
+      "w": 6,
+      "h": 4
+    },
+    {
+      "type": "trino_gateway",
+      "title": "Trino Gateway",
+      "w": 6,
+      "h": 4
+    },
+    {
+      "type": "failover_timeline",
+      "title": "Failover Timeline",
+      "w": 6,
+      "h": 4
+    },
+    {
+      "type": "slo_compliance",
+      "title": "SLO Compliance",
+      "w": 6,
+      "h": 4
+    },
+    {
+      "type": "cluster_health",
+      "title": "Cluster Health",
+      "w": 6,
+      "h": 4
+    },
+    {
+      "type": "cluster_locations",
+      "title": "Cluster Locations",
+      "w": 6,
+      "h": 4
+    }
+  ],
+  "layouts": {
+    "lg": [
+      { "i": "0", "x": 0, "y": 0, "w": 6, "h": 4 },
+      { "i": "1", "x": 6, "y": 0, "w": 6, "h": 4 },
+      { "i": "2", "x": 0, "y": 4, "w": 6, "h": 4 },
+      { "i": "3", "x": 6, "y": 4, "w": 6, "h": 4 },
+      { "i": "4", "x": 0, "y": 8, "w": 6, "h": 4 },
+      { "i": "5", "x": 6, "y": 8, "w": 6, "h": 4 }
+    ],
+    "md": [
+      { "i": "0", "x": 0, "y": 0, "w": 5, "h": 4 },
+      { "i": "1", "x": 5, "y": 0, "w": 5, "h": 4 },
+      { "i": "2", "x": 0, "y": 4, "w": 5, "h": 4 },
+      { "i": "3", "x": 5, "y": 4, "w": 5, "h": 4 },
+      { "i": "4", "x": 0, "y": 8, "w": 5, "h": 4 },
+      { "i": "5", "x": 5, "y": 8, "w": 5, "h": 4 }
+    ],
+    "sm": [
+      { "i": "0", "x": 0, "y": 0, "w": 6, "h": 4 },
+      { "i": "1", "x": 0, "y": 4, "w": 6, "h": 4 },
+      { "i": "2", "x": 0, "y": 8, "w": 6, "h": 4 },
+      { "i": "3", "x": 0, "y": 12, "w": 6, "h": 4 },
+      { "i": "4", "x": 0, "y": 16, "w": 6, "h": 4 },
+      { "i": "5", "x": 0, "y": 20, "w": 6, "h": 4 }
+    ],
+    "xs": [
+      { "i": "0", "x": 0, "y": 0, "w": 4, "h": 4 },
+      { "i": "1", "x": 0, "y": 4, "w": 4, "h": 4 },
+      { "i": "2", "x": 0, "y": 8, "w": 4, "h": 4 },
+      { "i": "3", "x": 0, "y": 12, "w": 4, "h": 4 },
+      { "i": "4", "x": 0, "y": 16, "w": 4, "h": 4 },
+      { "i": "5", "x": 0, "y": 20, "w": 4, "h": 4 }
+    ]
+  }
+}
