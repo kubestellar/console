@@ -526,9 +526,9 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* Viewer count */}
+        {/* Viewer count + commit hash */}
         {!isCollapsed && (
-          <div className="mt-auto pt-4 flex items-center justify-center">
+          <div className="mt-auto pt-4 flex items-center justify-center gap-2">
             <div
               className="flex items-center gap-1 px-2 text-muted-foreground/60"
               title={t('sidebar.activeViewers', { count: viewerCount })}
@@ -538,6 +538,9 @@ export function Sidebar() {
                 {viewersError ? '!' : viewersLoading ? '…' : viewerCount}
               </span>
             </div>
+            <span className="text-2xs text-muted-foreground/40 font-mono" title={`Commit: ${__COMMIT_HASH__}`}>
+              {__COMMIT_HASH__.substring(0, 7)}
+            </span>
           </div>
         )}
       </aside>
