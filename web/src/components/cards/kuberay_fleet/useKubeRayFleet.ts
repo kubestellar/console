@@ -110,7 +110,11 @@ function parseRayCluster(item: CRItem): RayClusterInfo {
     for (const c of containers) {
       const limits = getRecord(getRecord(getRecord(c).resources).limits)
       const gpuVal = limits['nvidia.com/gpu']
-      if (gpuVal) gpuCount += safeNumber(gpuVal) * replicas
+      if (gpuVal) {
+        // K8s resource quantities may be strings (e.g. "1") — parse before arithmetic
+        const parsed = typeof gpuVal === 'string' ? Number(gpuVal) : safeNumber(gpuVal)
+        if (!isNaN(parsed)) gpuCount += parsed * replicas
+      }
     }
   }
 
@@ -179,7 +183,16 @@ async function fetchKubeRayFleet(): Promise<KubeRayFleetData> {
   ])
 
   const detected = clusters.length > 0 || services.length > 0 || jobs.length > 0
-  if (!detected) throw new Error('No Ray resources detected')
+  if (!detected) {
+    return {
+      detected: false,
+      rayClusters: [],
+      rayServices: [],
+      rayJobs: [],
+      totalGPUs: 0,
+      lastCheckTime: new Date().toISOString(),
+    }
+  }
 
   const rayClusters = clusters.map(parseRayCluster)
   const rayServices = services.map(parseRayService)

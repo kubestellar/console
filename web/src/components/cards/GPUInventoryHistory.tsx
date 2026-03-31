@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useCallback } from 'react'
+import { useMemo, useState, useRef, useCallback, useEffect } from 'react'
 import {
   Cpu, TrendingUp, TrendingDown, Minus, Clock, Server,
   BarChart3, Table2, ChevronDown, ArrowUpDown,
@@ -241,6 +241,30 @@ export function GPUInventoryHistory() {
     consecutiveFailures,
   })
 
+  // ── Close dropdowns on outside click or Escape ─────────────────────
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (typeDropdownRef.current && !typeDropdownRef.current.contains(e.target as Node)) {
+        setShowTypeDropdown(false)
+      }
+      if (nodeDropdownRef.current && !nodeDropdownRef.current.contains(e.target as Node)) {
+        setShowNodeDropdown(false)
+      }
+    }
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowTypeDropdown(false)
+        setShowNodeDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [])
+
   // ── Available filter options (from history + current data) ──────────
   const availableClusters = useMemo(() => {
     const names = new Set<string>()
@@ -343,8 +367,8 @@ export function GPUInventoryHistory() {
     })
   }, [history, showDemo, filterGPUNodes, chartMode])
 
-  /** Sorted list of GPU types present in chart data (for consistent series ordering) */
-  const chartGPUTypes = useMemo(() => {
+  /** All GPU type keys present in chart data */
+  const allGPUTypeKeys = useMemo(() => {
     if (chartMode !== 'by-type') return []
     const types = new Set<string>()
     for (const dp of (chartData || [])) {
@@ -354,10 +378,32 @@ export function GPUInventoryHistory() {
         }
       }
     }
-    const sorted = Array.from(types).sort()
-    // If more than MAX_CHART_SERIES, we just render them all — Recharts handles it
-    return sorted.slice(0, MAX_CHART_SERIES)
+    return Array.from(types).sort()
   }, [chartData, chartMode])
+
+  /** Sorted list of GPU types for chart series (overflow aggregated into "Other") */
+  const chartGPUTypes = useMemo(() => {
+    if (allGPUTypeKeys.length <= MAX_CHART_SERIES) return allGPUTypeKeys
+    return [...allGPUTypeKeys.slice(0, MAX_CHART_SERIES - 1), 'Other']
+  }, [allGPUTypeKeys])
+
+  /** Chart data with overflow types aggregated into "Other" */
+  const displayChartData = useMemo(() => {
+    if (allGPUTypeKeys.length <= MAX_CHART_SERIES) return chartData
+    const overflowTypes = new Set(allGPUTypeKeys.slice(MAX_CHART_SERIES - 1))
+    return (chartData || []).map(dp => {
+      const next = { ...dp }
+      let otherTotal = 0
+      for (const key of overflowTypes) {
+        if (typeof next[key] === 'number') {
+          otherTotal += next[key] as number
+          delete next[key]
+        }
+      }
+      if (otherTotal > 0) next['Other'] = otherTotal
+      return next
+    })
+  }, [chartData, allGPUTypeKeys])
 
   // ── Current totals ─────────────────────────────────────────────────
   const currentTotals = useMemo(() => {
@@ -401,12 +447,24 @@ export function GPUInventoryHistory() {
       const prev = filterGPUNodes((history || [])[i - 1].gpuNodes || [])
       const curr = filterGPUNodes((history || [])[i].gpuNodes || [])
 
-      const prevAllocated = prev.reduce((s, g) => s + (g.gpuAllocated || 0), 0)
-      const currAllocated = curr.reduce((s, g) => s + (g.gpuAllocated || 0), 0)
-      const delta = currAllocated - prevAllocated
+      // Per-node diffing captures churn even when allocations and frees cancel at aggregate level
+      const prevMap: Record<string, number> = {}
+      for (const g of prev) {
+        const key = g.name
+        prevMap[key] = (prevMap[key] || 0) + (g.gpuAllocated || 0)
+      }
+      const currMap: Record<string, number> = {}
+      for (const g of curr) {
+        const key = g.name
+        currMap[key] = (currMap[key] || 0) + (g.gpuAllocated || 0)
+      }
 
-      if (delta > 0) totalArrivals += delta
-      if (delta < 0) totalDepartures += Math.abs(delta)
+      const allKeys = new Set([...Object.keys(prevMap), ...Object.keys(currMap)])
+      for (const key of allKeys) {
+        const delta = (currMap[key] ?? 0) - (prevMap[key] ?? 0)
+        if (delta > 0) totalArrivals += delta
+        if (delta < 0) totalDepartures += Math.abs(delta)
+      }
       diffCount++
     }
 
@@ -415,11 +473,12 @@ export function GPUInventoryHistory() {
     const arrivalRate = totalArrivals / diffCount
     const departureRate = totalDepartures / diffCount
 
-    // Approximate average duration: if arrival rate > 0, avgDuration ~ totalAllocated / arrivalRate
-    const latestAllocated = (chartData || []).length > 0
-      ? chartData[chartData.length - 1].allocated
+    // Little's Law: L/λ — use mean allocated across all data points (not just latest)
+    const allocatedValues = (chartData || []).map(dp => dp.allocated)
+    const meanAllocated = allocatedValues.length > 0
+      ? allocatedValues.reduce((a, b) => a + b, 0) / allocatedValues.length
       : 0
-    const avgDurationIntervals = arrivalRate > 0 ? latestAllocated / arrivalRate : 0
+    const avgDurationIntervals = arrivalRate > 0 ? meanAllocated / arrivalRate : 0
 
     return { arrivalRate, departureRate, avgDurationIntervals }
   }, [history, showDemo, filterGPUNodes, chartData])
@@ -447,12 +506,15 @@ export function GPUInventoryHistory() {
     })
   }, [history, showDemo, filterGPUNodes])
 
-  const paginatedRows = useMemo(() => {
-    const start = tablePage * TABLE_PAGE_SIZE
-    return (tableRows || []).slice(start, start + TABLE_PAGE_SIZE)
-  }, [tableRows, tablePage])
-
   const totalTablePages = Math.max(1, Math.ceil((tableRows || []).length / TABLE_PAGE_SIZE))
+
+  // Clamp page to valid range when filters shrink the row count
+  const effectivePage = Math.min(tablePage, totalTablePages - 1)
+
+  const paginatedRows = useMemo(() => {
+    const start = effectivePage * TABLE_PAGE_SIZE
+    return (tableRows || []).slice(start, start + TABLE_PAGE_SIZE)
+  }, [tableRows, effectivePage])
 
   const usagePercent = currentTotals.total > 0
     ? Math.round((currentTotals.allocated / currentTotals.total) * PERCENT_MULTIPLIER)
@@ -707,7 +769,7 @@ export function GPUInventoryHistory() {
                 aria-label={`GPU inventory history chart: ${currentTotals.allocated} of ${currentTotals.total} GPUs in use (${usagePercent}% utilization), trend: ${trend}`}
               >
                 <ResponsiveContainer width="100%" height={CHART_HEIGHT_STANDARD}>
-                  <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                  <AreaChart data={displayChartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                     <defs>
                       <linearGradient id="gpuHistAllocated" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#9333ea" stopOpacity={0.6} />

@@ -241,7 +241,7 @@ func (mh *MetricsHistory) captureSnapshot() error {
 	mh.mu.Lock()
 	mh.snapshots = append(mh.snapshots, snapshot)
 
-	// Trim old snapshots (keep last 24 hours)
+	// Trim old snapshots (keep last 7 days)
 	cutoff := time.Now().Add(-time.Duration(snapshotRetentionHrs) * time.Hour)
 	trimmed := make([]MetricsSnapshot, 0, len(mh.snapshots))
 	for _, s := range mh.snapshots {

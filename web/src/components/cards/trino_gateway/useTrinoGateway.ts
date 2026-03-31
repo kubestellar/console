@@ -198,7 +198,16 @@ async function fetchTrinoGatewayData(): Promise<TrinoGatewayData> {
   ])
 
   const detected = coordinators.length > 0 || workers.length > 0 || gatewayPods.length > 0
-  if (!detected) throw new Error('No Trino resources detected')
+  if (!detected) {
+    return {
+      detected: false,
+      trinoClusters: [],
+      gateways: [],
+      totalWorkers: 0,
+      totalActiveQueries: 0,
+      lastCheckTime: new Date().toISOString(),
+    }
+  }
 
   const trinoClusters = aggregateTrinoClusters(coordinators, workers)
   const gateways = aggregateGateways(gatewayPods, trinoClusters)

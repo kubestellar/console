@@ -9,7 +9,7 @@
 import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
 import { authFetch } from '../../../lib/api'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
 import {
   SLO_COMPLIANCE_DEMO_DATA,
   type SLOComplianceData,
@@ -73,7 +73,7 @@ function safeNumber(val: unknown, fallback = 0): number {
 
 async function fetchSLOCompliance(): Promise<SLOComplianceData> {
   // Step 1: Get SLO target configuration from the backend
-  const configResp = await authFetch('/api/mcp/slo-targets', {
+  const configResp = await authFetch(`${LOCAL_AGENT_HTTP_URL}/slo-targets`, {
     headers: { Accept: 'application/json' },
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })
@@ -88,7 +88,7 @@ async function fetchSLOCompliance(): Promise<SLOComplianceData> {
     sloConfigs.map(async (cfg) => {
       try {
         const params = new URLSearchParams({ query: cfg.query })
-        const resp = await authFetch(`/api/mcp/prometheus/query?${params}`, {
+        const resp = await authFetch(`${LOCAL_AGENT_HTTP_URL}/prometheus/query?${params}`, {
           headers: { Accept: 'application/json' },
           signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
         })

@@ -53,6 +53,9 @@ function getBudgetStrokeColor(remaining: number): string {
 }
 
 function calculateBurnRate(target: SLOTarget): number {
+  // Burn rate only applies to percentage-based SLO targets (e.g. 99.9% availability).
+  // For latency/duration thresholds (unit !== '%'), burn rate isn't meaningful.
+  if (target.unit && target.unit !== '%') return 0
   const budgetUsed = FULL_COMPLIANCE - target.currentCompliance
   const budgetAllowed = FULL_COMPLIANCE - target.threshold
   if (budgetAllowed <= 0) return 0

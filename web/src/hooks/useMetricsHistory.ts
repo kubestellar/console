@@ -21,7 +21,7 @@ if (typeof window !== 'undefined') {
   if (stored) {
     try {
       snapshots = JSON.parse(stored)
-      // Remove snapshots older than 24 hours
+      // Remove snapshots older than 7 days
       const cutoff = Date.now() - CACHE_TTL_MS
       snapshots = snapshots.filter(s => new Date(s.timestamp).getTime() > cutoff)
     } catch {

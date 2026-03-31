@@ -191,7 +191,7 @@ function correlateEvents(
 
       // Find binding reschedules within the correlation window
       for (const bt of bindingTransitions) {
-        if (!bt.scheduledTime) continue
+        if (!bt.isRescheduled || !bt.scheduledTime) continue
         const bindingMs = new Date(bt.scheduledTime).getTime()
         if (isNaN(bindingMs)) continue
 
@@ -227,8 +227,9 @@ function correlateEvents(
     const bindingMs = new Date(bt.scheduledTime).getTime()
     if (isNaN(bindingMs)) continue
 
+    const workloadKey = bt.resourceKind ? `${bt.resourceKind}/${bt.bindingName}` : bt.bindingName
     const alreadyCorrelated = events.some(
-      e => e.eventType === 'binding_reschedule' && e.timestamp === bt.scheduledTime,
+      e => e.eventType === 'binding_reschedule' && e.timestamp === bt.scheduledTime && e.workload === workloadKey,
     )
     if (alreadyCorrelated) continue
 
