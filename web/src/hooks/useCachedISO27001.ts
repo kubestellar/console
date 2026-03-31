@@ -265,15 +265,17 @@ async function fetchISO27001AuditViaKubectl(
   const clusters = getAgentClusters()
   if (clusters.length === 0) return []
 
-  const accumulated: ISO27001Finding[] = []
+  // Each task returns its own findings array to avoid shared-state mutation.
+  // Progressive updates are built by collecting all fulfilled results so far.
+  const completed: ISO27001Finding[][] = []
 
   const tasks = clusters
     .filter(c => !cluster || c.name === cluster)
     .map(({ name, context }) => async () => {
       try {
         const clusterFindings = await runISO27001ChecksForCluster(name, context || name)
-        accumulated.push(...clusterFindings)
-        onProgress?.([...accumulated])
+        completed.push(clusterFindings)
+        onProgress?.(completed.flat())
         return clusterFindings
       } catch (err) {
         console.error(`[ISO27001] Audit failed for cluster ${name}:`, err)
@@ -281,8 +283,10 @@ async function fetchISO27001AuditViaKubectl(
       }
     })
 
-  await settledWithConcurrency(tasks)
-  return accumulated
+  const results = await settledWithConcurrency(tasks)
+  return results
+    .filter((r): r is PromiseFulfilledResult<ISO27001Finding[]> => r.status === 'fulfilled')
+    .flatMap(r => r.value)
 }
 
 /**
