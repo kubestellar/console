@@ -263,7 +263,7 @@ export function Deploy() {
       {/* Group Picker — shown when workload is dropped on the card but not a specific group */}
       {groupPickerWorkload && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="presentation" onClick={() => setGroupPickerWorkload(null)}>
-          <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-sm mx-4 p-5" role="presentation" onClick={e => e.stopPropagation()}>
+          <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-sm mx-4 p-5" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
             <h3 className="text-base font-medium text-foreground mb-1">
               Choose a cluster group
             </h3>
