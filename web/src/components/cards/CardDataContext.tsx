@@ -224,6 +224,8 @@ export function useCardLoadingState(options: CardLoadingStateOptions) {
     showEmptyState: !effectiveIsLoading && !hasAnyData,
     /** Whether data is being refreshed (has cache, fetching update) */
     isRefreshing: effectiveIsLoading && hasRealData,
+    /** Whether the loading safety-net timeout fired (data took too long) */
+    loadingTimedOut,
   }
 }
 

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Clock, AlertTriangle, Settings, ChevronRight } from 'lucide-react'
+import { Clock, AlertTriangle, AlertCircle, Settings, RefreshCw, ChevronRight } from 'lucide-react'
 import { useClusters, OperatorSubscription } from '../../hooks/useMCP'
 import { useCachedOperatorSubscriptions } from '../../hooks/useCachedData'
 import { Skeleton } from '../ui/Skeleton'
@@ -55,11 +55,11 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
   const { drillToOperator } = useDrillDownActions()
 
   // Fetch subscriptions - pass undefined to get all clusters
-  const { subscriptions: rawSubscriptions, isLoading: subscriptionsLoading, isRefreshing, consecutiveFailures, isFailed, isDemoFallback: isDemoData } = useCachedOperatorSubscriptions(undefined)
+  const { subscriptions: rawSubscriptions, isLoading: subscriptionsLoading, isRefreshing, consecutiveFailures, isFailed, isDemoFallback: isDemoData, refetch } = useCachedOperatorSubscriptions(undefined)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const hasData = rawSubscriptions.length > 0
-  const { showSkeleton, showEmptyState } = useCardLoadingState({
+  const { showSkeleton, showEmptyState, loadingTimedOut } = useCardLoadingState({
     isLoading: (clustersLoading || subscriptionsLoading) && !hasData,
     isRefreshing,
     hasAnyData: hasData,
@@ -138,6 +138,23 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
   }
 
   if (showEmptyState) {
+    // When fetching failed or timed out, show error state instead of misleading "No subscriptions"
+    if (isFailed || loadingTimedOut) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-3">
+          <AlertCircle className="w-8 h-8 text-red-400" />
+          <p className="text-sm">{t('operatorSubscriptions.errorLoading', 'Unable to load subscriptions')}</p>
+          <p className="text-xs">{t('operatorSubscriptions.errorLoadingHint', 'Failed after {{count}} attempts', { count: consecutiveFailures })}</p>
+          <button
+            onClick={() => refetch()}
+            className="mt-1 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
+          >
+            <RefreshCw className="w-3 h-3" />
+            {t('common:common.retry', 'Retry')}
+          </button>
+        </div>
+      )
+    }
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
         <p className="text-sm">{t('operatorSubscriptions.noSubscriptions')}</p>

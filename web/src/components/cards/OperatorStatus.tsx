@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { CheckCircle, AlertTriangle, XCircle, RefreshCw, ArrowUpCircle, ChevronRight } from 'lucide-react'
+import { CheckCircle, AlertTriangle, AlertCircle, XCircle, RefreshCw, ArrowUpCircle, ChevronRight } from 'lucide-react'
 import { useClusters, Operator } from '../../hooks/useMCP'
 import { useCachedOperators } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -60,11 +60,11 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
   const { drillToOperator } = useDrillDownActions()
 
   // Fetch operators - pass undefined to get all clusters
-  const { operators: rawOperators, isLoading: operatorsLoading, isRefreshing, consecutiveFailures, isFailed, isDemoFallback: isDemoData } = useCachedOperators(undefined)
+  const { operators: rawOperators, isLoading: operatorsLoading, isRefreshing, consecutiveFailures, isFailed, isDemoFallback: isDemoData, refetch } = useCachedOperators(undefined)
 
   // Report card data state
   const hasData = rawOperators.length > 0
-  const { showSkeleton, showEmptyState } = useCardLoadingState({
+  const { showSkeleton, showEmptyState, loadingTimedOut } = useCardLoadingState({
     isLoading: (clustersLoading || operatorsLoading) && !hasData,
     isRefreshing,
     hasAnyData: hasData,
@@ -180,6 +180,23 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
   }
 
   if (showEmptyState) {
+    // When fetching failed or timed out, show error state instead of misleading "No operators"
+    if (isFailed || loadingTimedOut) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-3">
+          <AlertCircle className="w-8 h-8 text-red-400" />
+          <p className="text-sm">{t('operatorStatus.errorLoading', 'Unable to load operators')}</p>
+          <p className="text-xs">{t('operatorStatus.errorLoadingHint', 'Failed after {{count}} attempts', { count: consecutiveFailures })}</p>
+          <button
+            onClick={() => refetch()}
+            className="mt-1 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
+          >
+            <RefreshCw className="w-3 h-3" />
+            {t('common:common.retry', 'Retry')}
+          </button>
+        </div>
+      )
+    }
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
         <p className="text-sm">{t('operatorStatus.noOperators')}</p>
