@@ -5,22 +5,23 @@ import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useCanI } from '../../../hooks/usePermissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
-import { FileText, Terminal, Zap, Code, Info, Tag, ChevronDown, ChevronUp, Loader2, Copy, Check, Box, Layers, Server, AlertTriangle, Pencil, Trash2, Plus, Save, X, RefreshCw, Stethoscope, Wrench, Sparkles, TerminalSquare } from 'lucide-react'
+import { FileText, Terminal, Zap, Code, Info, Tag, Loader2, Box, Layers, Server, AlertTriangle, RefreshCw, TerminalSquare } from 'lucide-react'
 import { PodExecTerminal } from '../../terminal/PodExecTerminal'
 import { cn } from '../../../lib/cn'
-import { Button } from '../../ui/Button'
-import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import { useTranslation } from 'react-i18next'
-import { StatusBadge } from '../../ui/StatusBadge'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import {
   getIssueSeverity,
   UNHEALTHY_STATUSES, RAPID_REOPEN_THRESHOLD_MS,
   getPodCache, setPodCache, cleanupPodCache,
+  PodLabelsTab,
+  PodRelatedTab,
+  PodOutputTab,
+  PodAiAnalysis,
+  PodDeleteSection,
 } from './pod-drilldown'
 import type { TabType, RelatedResource, CachedData } from './pod-drilldown'
 import { copyToClipboard } from '../../../lib/clipboard'
-import { ConfirmDialog } from '../../../lib/modals'
 
 /** Keys that must never be used as object property names (prototype pollution prevention). */
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
@@ -1126,10 +1127,10 @@ Please proceed step by step and ask for confirmation before making any changes.`
 
       // Build owner chain (pod -> replicaset -> deployment)
       const chain: RelatedResource[] = []
-      const ownerMatch = podYaml.match(/ownerReferences:[\s\S]*?kind:\s*(\w+)[\s\S]*?name:\s*([\w-]+)/)
-      if (ownerMatch) {
-        const ownerKind = ownerMatch[1]
-        const ownerName = ownerMatch[2]
+      const ownerRefMatch = podYaml.match(/ownerReferences:[\s\S]*?kind:\s*(\w+)[\s\S]*?name:\s*([\w-]+)/)
+      if (ownerRefMatch) {
+        const ownerKind = ownerRefMatch[1]
+        const ownerName = ownerRefMatch[2]
         chain.push({ kind: ownerKind, name: ownerName, namespace })
 
         // If ReplicaSet, get its owner (Deployment)
@@ -1209,11 +1210,6 @@ Please proceed step by step and ask for confirmation before making any changes.`
     }
     return names
   }, [yamlOutput])
-
-  const labelEntries = Object.entries(labels || {})
-  const annotationEntries = Object.entries(annotations || {})
-  const displayedLabels = showAllLabels ? labelEntries : labelEntries.slice(0, 10)
-  const displayedAnnotations = showAllAnnotations ? annotationEntries : annotationEntries.slice(0, 5)
 
   return (
     <div className="flex flex-col h-full -m-6">
@@ -1380,766 +1376,102 @@ Please proceed step by step and ask for confirmation before making any changes.`
       )}
 
       {activeTab === 'labels' && (
-        <div className="space-y-6">
-          {describeLoading && !labels && !annotations ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <span className="ml-2 text-muted-foreground">{t('drilldown.status.loadingLabels')}</span>
-            </div>
-          ) : (
-            <>
-              {/* Labels */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-foreground">
-                    Labels ({labelEntries.length})
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    {labelEntries.length > 10 && !editingLabels && (
-                      <button
-                        onClick={() => setShowAllLabels(!showAllLabels)}
-                        className="text-xs text-primary hover:text-primary/80 flex items-center gap-1"
-                      >
-                        {showAllLabels ? (
-                          <>{t('drilldown.actions.showLess')} <ChevronUp className="w-3 h-3" /></>
-                        ) : (
-                          <>{t('drilldown.actions.showAll')} <ChevronDown className="w-3 h-3" /></>
-                        )}
-                      </button>
-                    )}
-                    {agentConnected && !editingLabels && (
-                      <button
-                        onClick={() => { setEditingLabels(true); setShowAllLabels(true) }}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 font-medium"
-                      >
-                        <Pencil className="w-3 h-3" />
-                        {t('drilldown.actions.editLabels')}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Error message */}
-                {labelError && (
-                  <div className="mb-3 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
-                    {labelError}
-                  </div>
-                )}
-
-                {editingLabels ? (
-                  <div className="space-y-3">
-                    {/* Existing labels - editable */}
-                    <div className="space-y-2">
-                      {labelEntries.map(([key, value]) => {
-                        const isRemoved = pendingLabelChanges[key] === null
-                        const currentValue = pendingLabelChanges[key] !== undefined && pendingLabelChanges[key] !== null
-                          ? pendingLabelChanges[key]
-                          : value
-                        const isModified = pendingLabelChanges[key] !== undefined
-
-                        return (
-                          <div
-                            key={key}
-                            className={cn(
-                              'flex items-center gap-2 p-2 rounded-lg border',
-                              isRemoved ? 'bg-red-500/10 border-red-500/20 opacity-50' : 'bg-card/50 border-border'
-                            )}
-                          >
-                            <span className="text-xs text-primary font-mono flex-shrink-0">{key}</span>
-                            <span className="text-muted-foreground">=</span>
-                            {isRemoved ? (
-                              <span className="text-xs text-red-400 line-through flex-1">{value}</span>
-                            ) : (
-                              <input
-                                type="text"
-                                value={currentValue || ''}
-                                onChange={(e) => handleLabelChange(key, e.target.value)}
-                                className="flex-1 text-xs font-mono bg-secondary/50 border border-border rounded px-2 py-1 text-foreground min-w-0"
-                              />
-                            )}
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              {isModified && (
-                                <button
-                                  onClick={() => undoLabelChange(key)}
-                                  className="p-1 rounded hover:bg-secondary/50 text-yellow-400"
-                                  title={t('drilldown.tooltips.undoChange')}
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              )}
-                              {!isRemoved && (
-                                <button
-                                  onClick={() => handleLabelRemove(key)}
-                                  className="p-1 rounded hover:bg-red-500/20 text-red-400"
-                                  title={t('drilldown.tooltips.removeLabel')}
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-
-                    {/* Add new label */}
-                    <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20">
-                      <Plus className="w-4 h-4 text-green-400 flex-shrink-0" />
-                      <input
-                        type="text"
-                        placeholder={t('common.key')}
-                        value={newLabelKey}
-                        onChange={(e) => setNewLabelKey(e.target.value)}
-                        className="w-32 text-xs font-mono bg-secondary/50 border border-border rounded px-2 py-1 text-foreground"
-                      />
-                      <span className="text-muted-foreground">=</span>
-                      <input
-                        type="text"
-                        placeholder={t('common.value')}
-                        value={newLabelValue}
-                        onChange={(e) => setNewLabelValue(e.target.value)}
-                        className="flex-1 text-xs font-mono bg-secondary/50 border border-border rounded px-2 py-1 text-foreground min-w-0"
-                      />
-                    </div>
-
-                    {/* Save/Cancel buttons */}
-                    <div className="flex items-center gap-2 pt-2">
-                      <button
-                        onClick={saveLabels}
-                        disabled={labelSaving}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
-                      >
-                        {labelSaving ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Save className="w-4 h-4" />
-                        )}
-                        {t('drilldown.actions.saveChanges')}
-                      </button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={cancelLabelEdit}
-                        disabled={labelSaving}
-                      >
-                        {t('common.cancel')}
-                      </Button>
-                    </div>
-                  </div>
-                ) : labelEntries.length > 0 ? (
-                  <div className="space-y-2">
-                    {displayedLabels.map(([key, value]) => (
-                      <div key={key} className="flex items-center justify-between p-2 rounded-lg bg-card/50 border border-border">
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs text-primary font-mono">{key}</span>
-                          <span className="text-muted-foreground mx-1">=</span>
-                          <span className="text-xs text-foreground font-mono break-all">{value}</span>
-                        </div>
-                        <button
-                          onClick={() => handleCopy(`label-${key}`, `${key}=${value}`)}
-                          className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground flex-shrink-0 ml-2"
-                        >
-                          {copiedField === `label-${key}` ? (
-                            <Check className="w-3 h-3 text-green-400" />
-                          ) : (
-                            <Copy className="w-3 h-3" />
-                          )}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-lg bg-card/50 border border-border text-muted-foreground text-center">
-                    {t('drilldown.empty.noLabels')}
-                    {agentConnected && (
-                      <button
-                        onClick={() => setEditingLabels(true)}
-                        className="block mx-auto mt-2 text-xs text-primary hover:text-primary/80"
-                      >
-                        {t('drilldown.actions.addLabels')}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Annotations */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-foreground">
-                    Annotations ({annotationEntries.length})
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    {annotationEntries.length > 5 && !editingAnnotations && (
-                      <button
-                        onClick={() => setShowAllAnnotations(!showAllAnnotations)}
-                        className="text-xs text-primary hover:text-primary/80 flex items-center gap-1"
-                      >
-                        {showAllAnnotations ? (
-                          <>{t('drilldown.actions.showLess')} <ChevronUp className="w-3 h-3" /></>
-                        ) : (
-                          <>{t('drilldown.actions.showAll')} <ChevronDown className="w-3 h-3" /></>
-                        )}
-                      </button>
-                    )}
-                    {agentConnected && !editingAnnotations && (
-                      <button
-                        onClick={() => { setEditingAnnotations(true); setShowAllAnnotations(true) }}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 font-medium"
-                      >
-                        <Pencil className="w-3 h-3" />
-                        {t('drilldown.actions.editAnnotations')}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Error message */}
-                {annotationError && (
-                  <div className="mb-3 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
-                    {annotationError}
-                  </div>
-                )}
-
-                {editingAnnotations ? (
-                  <div className="space-y-3">
-                    {/* Existing annotations - editable */}
-                    <div className="space-y-2">
-                      {annotationEntries.map(([key, value]) => {
-                        const isRemoved = pendingAnnotationChanges[key] === null
-                        const currentValue = pendingAnnotationChanges[key] !== undefined && pendingAnnotationChanges[key] !== null
-                          ? pendingAnnotationChanges[key]
-                          : value
-                        const isModified = pendingAnnotationChanges[key] !== undefined
-
-                        return (
-                          <div
-                            key={key}
-                            className={cn(
-                              'p-2 rounded-lg border',
-                              isRemoved ? 'bg-red-500/10 border-red-500/20 opacity-50' : 'bg-card/50 border-border'
-                            )}
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs text-primary font-mono truncate">{key}</span>
-                              <div className="flex items-center gap-1 flex-shrink-0">
-                                {isModified && (
-                                  <button
-                                    onClick={() => undoAnnotationChange(key)}
-                                    className="p-1 rounded hover:bg-secondary/50 text-yellow-400"
-                                    title={t('drilldown.tooltips.undoChange')}
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                )}
-                                {!isRemoved && (
-                                  <button
-                                    onClick={() => handleAnnotationRemove(key)}
-                                    className="p-1 rounded hover:bg-red-500/20 text-red-400"
-                                    title={t('drilldown.tooltips.removeAnnotation')}
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                            {isRemoved ? (
-                              <span className="text-xs text-red-400 line-through font-mono break-all">{value}</span>
-                            ) : (
-                              <textarea
-                                value={currentValue || ''}
-                                onChange={(e) => handleAnnotationChange(key, e.target.value)}
-                                rows={2}
-                                className="w-full text-xs font-mono bg-secondary/50 border border-border rounded px-2 py-1 text-foreground resize-y"
-                              />
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-
-                    {/* Add new annotation */}
-                    <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Plus className="w-4 h-4 text-green-400 flex-shrink-0" />
-                        <input
-                          type="text"
-                          placeholder="annotation-key"
-                          value={newAnnotationKey}
-                          onChange={(e) => setNewAnnotationKey(e.target.value)}
-                          className="flex-1 text-xs font-mono bg-secondary/50 border border-border rounded px-2 py-1 text-foreground"
-                        />
-                      </div>
-                      <textarea
-                        placeholder="annotation value"
-                        value={newAnnotationValue}
-                        onChange={(e) => setNewAnnotationValue(e.target.value)}
-                        rows={2}
-                        className="w-full text-xs font-mono bg-secondary/50 border border-border rounded px-2 py-1 text-foreground resize-y"
-                      />
-                    </div>
-
-                    {/* Save/Cancel buttons */}
-                    <div className="flex items-center gap-2 pt-2">
-                      <button
-                        onClick={saveAnnotations}
-                        disabled={annotationSaving}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
-                      >
-                        {annotationSaving ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Save className="w-4 h-4" />
-                        )}
-                        {t('drilldown.actions.saveChanges')}
-                      </button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={cancelAnnotationEdit}
-                        disabled={annotationSaving}
-                      >
-                        {t('common.cancel')}
-                      </Button>
-                    </div>
-                  </div>
-                ) : annotationEntries.length > 0 ? (
-                  <div className="space-y-2">
-                    {displayedAnnotations.map(([key, value]) => (
-                      <div key={key} className="p-2 rounded-lg bg-card/50 border border-border">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs text-primary font-mono truncate">{key}</span>
-                          <button
-                            onClick={() => handleCopy(`annot-${key}`, value)}
-                            className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground flex-shrink-0"
-                          >
-                            {copiedField === `annot-${key}` ? (
-                              <Check className="w-3 h-3 text-green-400" />
-                            ) : (
-                              <Copy className="w-3 h-3" />
-                            )}
-                          </button>
-                        </div>
-                        <div className="text-xs text-foreground font-mono break-all">{value}</div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-lg bg-card/50 border border-border text-muted-foreground text-center">
-                    {t('drilldown.empty.noAnnotations')}
-                    {agentConnected && (
-                      <button
-                        onClick={() => setEditingAnnotations(true)}
-                        className="block mx-auto mt-2 text-xs text-primary hover:text-primary/80"
-                      >
-                        {t('drilldown.actions.addAnnotations')}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
+        <PodLabelsTab
+          labels={labels}
+          annotations={annotations}
+          describeLoading={describeLoading}
+          agentConnected={agentConnected}
+          copiedField={copiedField}
+          showAllLabels={showAllLabels}
+          setShowAllLabels={setShowAllLabels}
+          editingLabels={editingLabels}
+          setEditingLabels={setEditingLabels}
+          pendingLabelChanges={pendingLabelChanges}
+          newLabelKey={newLabelKey}
+          setNewLabelKey={setNewLabelKey}
+          newLabelValue={newLabelValue}
+          setNewLabelValue={setNewLabelValue}
+          labelSaving={labelSaving}
+          labelError={labelError}
+          handleLabelChange={handleLabelChange}
+          handleLabelRemove={handleLabelRemove}
+          undoLabelChange={undoLabelChange}
+          saveLabels={saveLabels}
+          cancelLabelEdit={cancelLabelEdit}
+          showAllAnnotations={showAllAnnotations}
+          setShowAllAnnotations={setShowAllAnnotations}
+          editingAnnotations={editingAnnotations}
+          setEditingAnnotations={setEditingAnnotations}
+          pendingAnnotationChanges={pendingAnnotationChanges}
+          newAnnotationKey={newAnnotationKey}
+          setNewAnnotationKey={setNewAnnotationKey}
+          newAnnotationValue={newAnnotationValue}
+          setNewAnnotationValue={setNewAnnotationValue}
+          annotationSaving={annotationSaving}
+          annotationError={annotationError}
+          handleAnnotationChange={handleAnnotationChange}
+          handleAnnotationRemove={handleAnnotationRemove}
+          undoAnnotationChange={undoAnnotationChange}
+          saveAnnotations={saveAnnotations}
+          cancelAnnotationEdit={cancelAnnotationEdit}
+          handleCopy={handleCopy}
+        />
       )}
 
       {activeTab === 'related' && (
-        <div className="space-y-4">
-          {relatedLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <span className="ml-2 text-muted-foreground">{t('drilldown.status.discoveringRelated')}</span>
-            </div>
-          ) : (
-            <>
-              {/* Tree View of Resource Relationships */}
-              <div className="font-mono text-sm">
-                {/* Owner Chain - show from top (Deployment) down */}
-                {[...ownerChain].reverse().map((resource, index) => {
-                  const isDeployment = resource.kind === 'Deployment'
-                  const isReplicaSet = resource.kind === 'ReplicaSet'
-                  const indent = index * 24
-                  const isLast = index === ownerChain.length - 1
-
-                  return (
-                    <div key={`${resource.kind}-${resource.name}`} className="relative">
-                      {/* Vertical line from parent */}
-                      {index > 0 && (
-                        <div
-                          className="absolute border-l-2 border-muted-foreground/30"
-                          style={{ left: indent - 12, top: -8, height: 20 }}
-                        />
-                      )}
-                      {/* Horizontal connector */}
-                      {index > 0 && (
-                        <div
-                          className="absolute border-t-2 border-muted-foreground/30"
-                          style={{ left: indent - 12, top: 12, width: 12 }}
-                        />
-                      )}
-                      {/* Vertical line to children */}
-                      {!isLast && (
-                        <div
-                          className="absolute border-l-2 border-muted-foreground/30"
-                          style={{ left: indent + 12, top: 24, height: 'calc(100% - 12px)' }}
-                        />
-                      )}
-                      <div style={{ paddingLeft: indent }} className="py-1">
-                        <button
-                          onClick={() => {
-                            if (isDeployment) drillToDeployment(cluster, namespace, resource.name)
-                            else if (isReplicaSet) drillToReplicaSet(cluster, namespace, resource.name)
-                          }}
-                          className={cn(
-                            'px-3 py-2 rounded-lg border inline-flex items-center gap-2 group cursor-pointer transition-all hover:scale-[1.02]',
-                            isDeployment && 'bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20 hover:border-green-500/50',
-                            isReplicaSet && 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20 hover:border-blue-500/50'
-                          )}
-                        >
-                          {isDeployment && (
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                            </svg>
-                          )}
-                          {isReplicaSet && <Layers className="w-4 h-4" />}
-                          <span className="text-xs text-muted-foreground">{resource.kind}</span>
-                          <span>{resource.name}</span>
-                          <svg className="w-3 h-3 opacity-50 group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })}
-
-                {/* Current Pod - the focal point */}
-                <div className="relative">
-                  {ownerChain.length > 0 && (
-                    <>
-                      <div
-                        className="absolute border-l-2 border-muted-foreground/30"
-                        style={{ left: ownerChain.length * 24 - 12, top: -8, height: 20 }}
-                      />
-                      <div
-                        className="absolute border-t-2 border-muted-foreground/30"
-                        style={{ left: ownerChain.length * 24 - 12, top: 12, width: 12 }}
-                      />
-                    </>
-                  )}
-                  {/* Vertical line to children if any */}
-                  {(serviceAccount || configMaps.length > 0 || secrets.length > 0 || pvcs.length > 0) && (
-                    <div
-                      className="absolute border-l-2 border-cyan-500/30"
-                      style={{ left: ownerChain.length * 24 + 12, top: 36, height: 'calc(100% - 24px)' }}
-                    />
-                  )}
-                  <div style={{ paddingLeft: ownerChain.length * 24 }} className="py-1">
-                    <div className="px-3 py-2 rounded-lg bg-cyan-500/20 border-2 border-cyan-500/50 text-cyan-400 inline-flex items-center gap-2 shadow-lg shadow-cyan-500/10">
-                      <Box className="w-4 h-4" />
-                      <span className="text-xs text-cyan-300">{t('common.pod')}</span>
-                      <span className="font-semibold">{podName}</span>
-                      <StatusBadge color="cyan">current</StatusBadge>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Pod's referenced resources as children */}
-                {(() => {
-                  const podIndent = (ownerChain.length + 1) * 24
-                  const children: { type: string; items: string[]; color: string; icon: React.ReactNode; onClick: (name: string) => void }[] = []
-
-                  if (serviceAccount) {
-                    children.push({
-                      type: 'ServiceAccount',
-                      items: [serviceAccount],
-                      color: 'purple',
-                      icon: <Server className="w-4 h-4" />,
-                      onClick: (name) => drillToServiceAccount(cluster, namespace, name)
-                    })
-                  }
-                  if (configMaps.length > 0) {
-                    children.push({
-                      type: 'ConfigMaps',
-                      items: configMaps,
-                      color: 'yellow',
-                      icon: <FileText className="w-4 h-4" />,
-                      onClick: (name) => drillToConfigMap(cluster, namespace, name)
-                    })
-                  }
-                  if (secrets.length > 0) {
-                    children.push({
-                      type: 'Secrets',
-                      items: secrets,
-                      color: 'red',
-                      icon: (
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                      ),
-                      onClick: (name) => drillToSecret(cluster, namespace, name)
-                    })
-                  }
-                  if (pvcs.length > 0) {
-                    children.push({
-                      type: 'PVCs',
-                      items: pvcs,
-                      color: 'green',
-                      icon: (
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
-                        </svg>
-                      ),
-                      onClick: (name) => drillToPVC(cluster, namespace, name)
-                    })
-                  }
-
-                  return children.map((child, childIndex) => {
-                    const isLastChild = childIndex === children.length - 1
-
-                    return (
-                      <div key={child.type} className="relative">
-                        {/* Vertical line continuation */}
-                        {!isLastChild && (
-                          <div
-                            className="absolute border-l-2 border-cyan-500/30"
-                            style={{ left: podIndent - 12, top: 0, height: '100%' }}
-                          />
-                        )}
-                        {/* Connector to this child */}
-                        <div
-                          className="absolute border-l-2 border-cyan-500/30"
-                          style={{ left: podIndent - 12, top: 0, height: child.items.length > 1 ? 20 : 16 }}
-                        />
-                        <div
-                          className="absolute border-t-2 border-cyan-500/30"
-                          style={{ left: podIndent - 12, top: child.items.length > 1 ? 20 : 16, width: 12 }}
-                        />
-
-                        <div style={{ paddingLeft: podIndent }} className="py-1">
-                          {child.items.length === 1 ? (
-                            // Single item - show inline
-                            <button
-                              onClick={() => child.onClick(child.items[0])}
-                              className={cn(
-                                'px-3 py-2 rounded-lg border inline-flex items-center gap-2 group cursor-pointer transition-all hover:scale-[1.02]',
-                                child.color === 'purple' && 'bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20 hover:border-purple-500/50',
-                                child.color === 'yellow' && 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20 hover:border-yellow-500/50',
-                                child.color === 'red' && 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500/50'
-                              )}
-                            >
-                              {child.icon}
-                              <span className="text-xs text-muted-foreground">{child.type.replace(/s$/, '')}</span>
-                              <span>{child.items[0]}</span>
-                              <svg className="w-3 h-3 opacity-50 group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                              </svg>
-                            </button>
-                          ) : (
-                            // Multiple items - show as expandable group
-                            <div className="space-y-1">
-                              <div className={cn(
-                                'px-3 py-1.5 rounded-lg border inline-flex items-center gap-2 text-xs',
-                                child.color === 'yellow' && 'bg-yellow-500/5 border-yellow-500/20 text-yellow-400',
-                                child.color === 'red' && 'bg-red-500/5 border-red-500/20 text-red-400'
-                              )}>
-                                {child.icon}
-                                <span>{child.type}</span>
-                                <span className="px-1.5 py-0.5 rounded bg-current/20">{child.items.length}</span>
-                              </div>
-                              <div className="relative ml-6 space-y-1">
-                                {/* Vertical line for sub-items */}
-                                <div
-                                  className={cn(
-                                    'absolute border-l-2',
-                                    child.color === 'yellow' && 'border-yellow-500/30',
-                                    child.color === 'red' && 'border-red-500/30'
-                                  )}
-                                  style={{ left: -12, top: 0, height: `calc(100% - 16px)` }}
-                                />
-                                {child.items.map((item, itemIndex) => {
-                                  const isLastItem = itemIndex === child.items.length - 1
-                                  return (
-                                    <div key={item} className="relative">
-                                      {/* Connector */}
-                                      <div
-                                        className={cn(
-                                          'absolute border-l-2',
-                                          child.color === 'yellow' && 'border-yellow-500/30',
-                                          child.color === 'red' && 'border-red-500/30'
-                                        )}
-                                        style={{ left: -12, top: 0, height: isLastItem ? 12 : 24 }}
-                                      />
-                                      <div
-                                        className={cn(
-                                          'absolute border-t-2',
-                                          child.color === 'yellow' && 'border-yellow-500/30',
-                                          child.color === 'red' && 'border-red-500/30'
-                                        )}
-                                        style={{ left: -12, top: 12, width: 12 }}
-                                      />
-                                      <button
-                                        onClick={() => child.onClick(item)}
-                                        className={cn(
-                                          'px-2 py-1 rounded border inline-flex items-center gap-2 group cursor-pointer transition-all hover:scale-[1.02]',
-                                          child.color === 'yellow' && 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20 hover:border-yellow-500/50',
-                                          child.color === 'red' && 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500/50'
-                                        )}
-                                      >
-                                        <span className="text-xs">{item}</span>
-                                        <svg className="w-3 h-3 opacity-50 group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                        </svg>
-                                      </button>
-                                    </div>
-                                  )
-                                })}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })
-                })()}
-
-                {/* No owner chain - show pod as root */}
-                {ownerChain.length === 0 && !serviceAccount && configMaps.length === 0 && secrets.length === 0 && (
-                  <div className="py-1">
-                    <div className="px-3 py-2 rounded-lg bg-cyan-500/20 border-2 border-cyan-500/50 text-cyan-400 inline-flex items-center gap-2 shadow-lg shadow-cyan-500/10">
-                      <Box className="w-4 h-4" />
-                      <span className="text-xs text-cyan-300">{t('common.pod')}</span>
-                      <span className="font-semibold">{podName}</span>
-                      <StatusBadge color="cyan">current</StatusBadge>
-                    </div>
-                    <p className="text-muted-foreground text-sm mt-3">{t('drilldown.empty.noRelatedResourcesDiscovered')}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Refresh button */}
-              {agentConnected && (
-                <div className="pt-4 border-t border-border mt-4">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => fetchRelatedResources(true)}
-                    icon={<Loader2 className={cn('w-4 h-4', relatedLoading && 'animate-spin')} />}
-                  >
-                    Refresh
-                  </Button>
-                </div>
-              )}
-
-              {/* Agent not connected warning */}
-              {!agentConnected && ownerChain.length === 0 && configMaps.length === 0 && secrets.length === 0 && !serviceAccount && (
-                <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-                  <p className="text-yellow-400">{t('drilldown.empty.localAgentNotConnected')}</p>
-                  <p className="text-sm text-muted-foreground mt-1">{t('drilldown.empty.connectAgentRelated')}</p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
+        <PodRelatedTab
+          podName={podName}
+          namespace={namespace}
+          cluster={cluster}
+          agentConnected={agentConnected}
+          relatedLoading={relatedLoading}
+          ownerChain={ownerChain}
+          configMaps={configMaps}
+          secrets={secrets}
+          pvcs={pvcs}
+          serviceAccount={serviceAccount}
+          fetchRelatedResources={fetchRelatedResources}
+          drillToDeployment={drillToDeployment}
+          drillToReplicaSet={drillToReplicaSet}
+          drillToConfigMap={drillToConfigMap}
+          drillToSecret={drillToSecret}
+          drillToServiceAccount={drillToServiceAccount}
+          drillToPVC={drillToPVC}
+        />
       )}
 
       {activeTab === 'describe' && (
-        <div>
-          {describeLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <span className="ml-2 text-muted-foreground">{t('drilldown.status.runningDescribe')}</span>
-            </div>
-          ) : describeOutput ? (
-            <div className="relative">
-              <div className="absolute top-2 right-2 flex items-center gap-2">
-                <button
-                  onClick={() => handleCopy('describe', describeOutput)}
-                  className="px-2 py-1 rounded bg-secondary/50 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                >
-                  {copiedField === 'describe' ? (
-                    <><Check className="w-3 h-3 text-green-400" /> {t('common.copied')}</>
-                  ) : (
-                    <><Copy className="w-3 h-3" /> {t('common.copy')}</>
-                  )}
-                </button>
-              </div>
-              <pre className="p-4 rounded-lg bg-black/50 border border-border overflow-auto max-h-[60vh] text-xs text-foreground font-mono whitespace-pre-wrap">
-                <code># kubectl describe pod {podName} -n {namespace}</code>
-                {'\n\n'}
-                {describeOutput}
-              </pre>
-            </div>
-          ) : !agentConnected ? (
-            <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-              <p className="text-yellow-400">{t('drilldown.empty.localAgentNotConnected')}</p>
-              <p className="text-sm text-muted-foreground mt-1">{t('drilldown.empty.connectAgentDescribe')}</p>
-            </div>
-          ) : (
-            <div className="p-4 rounded-lg bg-card/50 border border-border text-center">
-              <p className="text-muted-foreground">{t('drilldown.empty.failedFetchDescribe')}</p>
-              <button
-                onClick={() => fetchDescribe(true)}
-                className="mt-2 px-3 py-1 rounded bg-primary/20 text-primary text-sm"
-              >
-                {t('common.retry')}
-              </button>
-            </div>
-          )}
-        </div>
+        <PodOutputTab
+          output={describeOutput}
+          loading={describeLoading}
+          agentConnected={agentConnected}
+          copyField="describe"
+          copiedField={copiedField}
+          kubectlComment={`# kubectl describe pod ${podName} -n ${namespace}`}
+          loadingMessage={t('drilldown.status.runningDescribe')}
+          notConnectedMessage={t('drilldown.empty.connectAgentDescribe')}
+          emptyMessage={t('drilldown.empty.failedFetchDescribe')}
+          handleCopy={handleCopy}
+          onRefresh={() => fetchDescribe(true)}
+        />
       )}
 
       {activeTab === 'logs' && (
-        <div>
-          {logsLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <span className="ml-2 text-muted-foreground">{t('drilldown.status.fetchingLogs')}</span>
-            </div>
-          ) : logsOutput ? (
-            <div className="relative">
-              <div className="absolute top-2 right-2 flex items-center gap-2">
-                <button
-                  onClick={() => fetchLogs(true)}
-                  className="px-2 py-1 rounded bg-secondary/50 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                  title="Refresh logs"
-                >
-                  <Terminal className="w-3 h-3" /> Refresh
-                </button>
-                <button
-                  onClick={() => handleCopy('logs', logsOutput)}
-                  className="px-2 py-1 rounded bg-secondary/50 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                >
-                  {copiedField === 'logs' ? (
-                    <><Check className="w-3 h-3 text-green-400" /> {t('common.copied')}</>
-                  ) : (
-                    <><Copy className="w-3 h-3" /> {t('common.copy')}</>
-                  )}
-                </button>
-              </div>
-              <pre className="p-4 rounded-lg bg-black/50 border border-border overflow-auto max-h-[60vh] text-xs text-foreground font-mono whitespace-pre-wrap">
-                <code className="text-muted-foreground"># kubectl logs {podName} -n {namespace} --tail=500</code>
-                {'\n\n'}
-                {logsOutput}
-              </pre>
-            </div>
-          ) : !agentConnected ? (
-            <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-              <p className="text-yellow-400">{t('drilldown.empty.localAgentNotConnected')}</p>
-              <p className="text-sm text-muted-foreground mt-1">{t('drilldown.empty.connectAgentLogs')}</p>
-            </div>
-          ) : (
-            <div className="p-4 rounded-lg bg-card/50 border border-border text-center">
-              <p className="text-muted-foreground">{t('drilldown.empty.noLogsAvailable')}</p>
-              <button
-                onClick={() => { fetchLogs(true) }}
-                className="mt-2 px-3 py-1 rounded bg-primary/20 text-primary text-sm"
-              >
-                {t('common.retry')}
-              </button>
-            </div>
-          )}
-        </div>
+        <PodOutputTab
+          output={logsOutput}
+          loading={logsLoading}
+          agentConnected={agentConnected}
+          copyField="logs"
+          copiedField={copiedField}
+          kubectlComment={`# kubectl logs ${podName} -n ${namespace} --tail=500`}
+          loadingMessage={t('drilldown.status.fetchingLogs')}
+          notConnectedMessage={t('drilldown.empty.connectAgentLogs')}
+          emptyMessage={t('drilldown.empty.noLogsAvailable')}
+          handleCopy={handleCopy}
+          onRefresh={() => fetchLogs(true)}
+          refreshIcon={Terminal}
+          refreshLabel="Refresh"
+        />
       )}
 
       {activeTab === 'exec' && (
@@ -2155,254 +1487,64 @@ Please proceed step by step and ask for confirmation before making any changes.`
       )}
 
       {activeTab === 'events' && (
-        <div>
-          {eventsLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <span className="ml-2 text-muted-foreground">{t('drilldown.status.fetchingEvents')}</span>
-            </div>
-          ) : eventsOutput ? (
-            <div className="relative">
-              <div className="absolute top-2 right-2 flex items-center gap-2">
-                <button
-                  onClick={() => fetchEvents(true)}
-                  className="px-2 py-1 rounded bg-secondary/50 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                  title="Refresh events"
-                >
-                  <Zap className="w-3 h-3" /> Refresh
-                </button>
-                <button
-                  onClick={() => handleCopy('events', eventsOutput)}
-                  className="px-2 py-1 rounded bg-secondary/50 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                >
-                  {copiedField === 'events' ? (
-                    <><Check className="w-3 h-3 text-green-400" /> {t('common.copied')}</>
-                  ) : (
-                    <><Copy className="w-3 h-3" /> {t('common.copy')}</>
-                  )}
-                </button>
-              </div>
-              <pre className="p-4 rounded-lg bg-black/50 border border-border overflow-auto max-h-[60vh] text-xs text-foreground font-mono whitespace-pre-wrap">
-                <code className="text-muted-foreground"># kubectl get events -n {namespace} --field-selector involvedObject.name={podName}</code>
-                {'\n\n'}
-                {eventsOutput}
-              </pre>
-            </div>
-          ) : !agentConnected ? (
-            <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-              <p className="text-yellow-400">{t('drilldown.empty.localAgentNotConnected')}</p>
-              <p className="text-sm text-muted-foreground mt-1">{t('drilldown.empty.connectAgentEvents')}</p>
-            </div>
-          ) : (
-            <div className="p-4 rounded-lg bg-card/50 border border-border text-center">
-              <p className="text-muted-foreground">{t('drilldown.empty.noEventsFound', { resource: 'pod' })}</p>
-              <button
-                onClick={() => fetchEvents(true)}
-                className="mt-2 px-3 py-1 rounded bg-primary/20 text-primary text-sm"
-              >
-                {t('common.retry')}
-              </button>
-            </div>
-          )}
-        </div>
+        <PodOutputTab
+          output={eventsOutput}
+          loading={eventsLoading}
+          agentConnected={agentConnected}
+          copyField="events"
+          copiedField={copiedField}
+          kubectlComment={`# kubectl get events -n ${namespace} --field-selector involvedObject.name=${podName}`}
+          loadingMessage={t('drilldown.status.fetchingEvents')}
+          notConnectedMessage={t('drilldown.empty.connectAgentEvents')}
+          emptyMessage={t('drilldown.empty.noEventsFound', { resource: 'pod' })}
+          handleCopy={handleCopy}
+          onRefresh={() => fetchEvents(true)}
+          refreshIcon={Zap}
+          refreshLabel="Refresh"
+        />
       )}
 
       {activeTab === 'yaml' && (
-        <div>
-          {yamlLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <span className="ml-2 text-muted-foreground">{t('drilldown.status.fetchingYaml')}</span>
-            </div>
-          ) : yamlOutput ? (
-            <div className="relative">
-              <div className="absolute top-2 right-2 flex items-center gap-2">
-                <button
-                  onClick={() => fetchYaml(true)}
-                  className="px-2 py-1 rounded bg-secondary/50 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                  title="Refresh YAML"
-                >
-                  <Code className="w-3 h-3" /> Refresh
-                </button>
-                <button
-                  onClick={() => handleCopy('yaml', yamlOutput)}
-                  className="px-2 py-1 rounded bg-secondary/50 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                >
-                  {copiedField === 'yaml' ? (
-                    <><Check className="w-3 h-3 text-green-400" /> {t('common.copied')}</>
-                  ) : (
-                    <><Copy className="w-3 h-3" /> {t('common.copy')}</>
-                  )}
-                </button>
-              </div>
-              <pre className="p-4 rounded-lg bg-black/50 border border-border overflow-auto max-h-[60vh] text-xs text-foreground font-mono whitespace-pre-wrap">
-                <code className="text-muted-foreground"># kubectl get pod {podName} -n {namespace} -o yaml</code>
-                {'\n\n'}
-                {yamlOutput}
-              </pre>
-            </div>
-          ) : !agentConnected ? (
-            <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-              <p className="text-yellow-400">{t('drilldown.empty.localAgentNotConnected')}</p>
-              <p className="text-sm text-muted-foreground mt-1">{t('drilldown.empty.connectAgentYaml')}</p>
-            </div>
-          ) : (
-            <div className="p-4 rounded-lg bg-card/50 border border-border text-center">
-              <p className="text-muted-foreground">{t('drilldown.empty.failedFetchYaml')}</p>
-              <button
-                onClick={() => fetchYaml(true)}
-                className="mt-2 px-3 py-1 rounded bg-primary/20 text-primary text-sm"
-              >
-                {t('common.retry')}
-              </button>
-            </div>
-          )}
-        </div>
+        <PodOutputTab
+          output={yamlOutput}
+          loading={yamlLoading}
+          agentConnected={agentConnected}
+          copyField="yaml"
+          copiedField={copiedField}
+          kubectlComment={`# kubectl get pod ${podName} -n ${namespace} -o yaml`}
+          loadingMessage={t('drilldown.status.fetchingYaml')}
+          notConnectedMessage={t('drilldown.empty.connectAgentYaml')}
+          emptyMessage={t('drilldown.empty.failedFetchYaml')}
+          handleCopy={handleCopy}
+          onRefresh={() => fetchYaml(true)}
+          refreshIcon={Code}
+          refreshLabel="Refresh"
+        />
       )}
       </div>
 
       {/* AI Actions Footer - Always visible */}
       {agentConnected && issues.length > 0 && (
         <div className="border-t border-border bg-card/30">
-          {/* AI Analysis Results - visible on all tabs */}
-          {(aiAnalysis || aiAnalysisLoading) && (
-            <div className="p-4 pb-0">
-              <div className="rounded-lg bg-gradient-to-br from-purple-500/10 via-blue-500/10 to-cyan-500/10 border border-purple-500/30 overflow-hidden">
-                {aiAnalysisLoading ? (
-                  <div className="p-4">
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      <div className="flex gap-1">
-                        <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                      </div>
-                      <span className="font-mono text-xs">Analyzing pod status, events, logs, owner resources...</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-4 max-h-48 overflow-y-auto">
-                    <div className="flex items-center gap-2 text-xs text-purple-400 mb-2">
-                      <ConsoleAIIcon size="sm" />
-                      <span className="font-semibold tracking-wide">{t('drilldown.ai.aiDiagnosis')}</span>
-                      <span className="text-purple-400/75 font-mono">// powered by KubeStellar</span>
-                    </div>
-                    <div className="font-mono text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                      <span className="text-purple-400">{'>'}</span> {aiAnalysis}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          <div className="flex items-center gap-2 p-4">
-            <button
-              onClick={fetchAiAnalysis}
-              disabled={aiAnalysisLoading}
-              className={cn(
-                'flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-2 text-sm font-medium',
-                'bg-purple-600/20 text-purple-200 hover:bg-purple-500/30 border border-purple-500/50',
-                'shadow-[0_0_15px_rgba(147,51,234,0.2)] hover:shadow-[0_0_20px_rgba(147,51,234,0.3)]',
-                aiAnalysisLoading && 'opacity-70 cursor-wait'
-              )}
-            >
-              {aiAnalysisLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>{t('common.analyzing')}</span>
-                </>
-              ) : (
-                <>
-                  <div className="relative">
-                    <Stethoscope className="w-4 h-4" />
-                    <Sparkles className="absolute -top-0.5 -right-0.5 w-2 h-2 text-purple-400 animate-pulse" />
-                  </div>
-                  <span>{aiAnalysis ? t('drilldown.actions.reAnalyze') : t('drilldown.actions.diagnose')}</span>
-                </>
-              )}
-            </button>
-            <button
-              onClick={handleRepairPod}
-              className={cn(
-                'flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-2 text-sm font-medium',
-                'bg-orange-600/20 text-orange-200 hover:bg-orange-500/30 border border-orange-500/50',
-                'shadow-[0_0_15px_rgba(234,88,12,0.2)] hover:shadow-[0_0_20px_rgba(234,88,12,0.3)]'
-              )}
-            >
-              <div className="relative">
-                <Wrench className="w-4 h-4" />
-                <Sparkles className="absolute -top-0.5 -right-0.5 w-2 h-2 text-purple-400 animate-pulse" />
-              </div>
-              <span>{t('drilldown.actions.repair')}</span>
-            </button>
-          </div>
-          {/* Delete Pod button */}
-          <div className="px-4 pb-4">
-            {deleteError && (
-              <div className="mb-2 p-2 rounded bg-red-500/20 border border-red-500/30 text-red-300 text-sm">
-                {deleteError}
-              </div>
-            )}
-            <button
-              onClick={() => setShowDeletePodConfirm(true)}
-              disabled={!agentConnected || canDeletePod === false || deletingPod}
-              title={
-                !agentConnected
-                  ? 'Agent not connected'
-                  : canDeletePod === false
-                  ? 'No permission to delete pods in this namespace'
-                  : canDeletePod === null
-                  ? 'Checking permissions...'
-                  : isManagedPod
-                  ? 'Delete pod (will be recreated by controller)'
-                  : 'Delete pod (will NOT be recreated)'
-              }
-              className={cn(
-                'w-full py-2.5 px-4 rounded-lg transition-all flex items-center justify-center gap-2 text-sm font-medium',
-                canDeletePod === false || !agentConnected
-                  ? 'bg-secondary/30 text-muted-foreground cursor-not-allowed opacity-50'
-                  : 'bg-red-600/20 text-red-300 hover:bg-red-500/30 border border-red-500/40 hover:border-red-500/60'
-              )}
-            >
-              {deletingPod ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>{t('common.deleting')}</span>
-                </>
-              ) : canDeletePod === null ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>{t('drilldown.status.checkingPermissions')}</span>
-                </>
-              ) : (
-                <>
-                  <Trash2 className="w-4 h-4" />
-                  <span>{t('drilldown.actions.deletePod')}</span>
-                  {isManagedPod && (
-                    <span className="text-xs text-red-400/60">{t('drilldown.status.willBeRecreated')}</span>
-                  )}
-                </>
-              )}
-            </button>
-          </div>
+          <PodAiAnalysis
+            aiAnalysis={aiAnalysis}
+            aiAnalysisLoading={aiAnalysisLoading}
+            fetchAiAnalysis={fetchAiAnalysis}
+            handleRepairPod={handleRepairPod}
+          />
+          <PodDeleteSection
+            podName={podName}
+            agentConnected={agentConnected}
+            canDeletePod={canDeletePod}
+            deletingPod={deletingPod}
+            deleteError={deleteError}
+            showDeletePodConfirm={showDeletePodConfirm}
+            setShowDeletePodConfirm={setShowDeletePodConfirm}
+            isManagedPod={isManagedPod}
+            handleDeletePod={handleDeletePod}
+          />
         </div>
       )}
-
-      <ConfirmDialog
-        isOpen={showDeletePodConfirm}
-        onClose={() => setShowDeletePodConfirm(false)}
-        onConfirm={() => {
-          setShowDeletePodConfirm(false)
-          handleDeletePod()
-        }}
-        title={t('drilldown.actions.deletePod')}
-        message={
-          isManagedPod
-            ? t('drilldown.confirmDelete.managedPod', { name: podName })
-            : t('drilldown.confirmDelete.unmanagedPod', { name: podName })
-        }
-        confirmLabel={t('drilldown.actions.deletePod')}
-        variant="danger"
-      />
     </div>
   )
 }
