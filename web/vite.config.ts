@@ -47,6 +47,13 @@ export default defineConfig(({ mode }) => ({
     __DEV_MODE__: process.env.VITE_DEV_MODE !== undefined
       ? JSON.stringify(process.env.VITE_DEV_MODE === 'true')
       : JSON.stringify(mode === 'development'),
+    // Strip console/debugger in production (replaces terser drop_console)
+    ...(mode === 'production' ? {
+      'globalThis.console.log': 'undefined',
+      'globalThis.console.info': 'undefined',
+      'globalThis.console.debug': 'undefined',
+      'globalThis.console.trace': 'undefined',
+    } : {}),
   },
   plugins: [
     react(),
@@ -70,16 +77,9 @@ export default defineConfig(({ mode }) => ({
     exclude: ['@sqlite.org/sqlite-wasm'],
   },
   build: {
-    // Enable minification optimizations
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true, // Remove console.log in production
-        drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.trace'],
-      },
-    },
-    rollupOptions: {
+    // Vite 8 uses Oxc minifier by default (replaces terser/esbuild).
+    // drop_console equivalent is handled via rolldownOptions.output.
+    rolldownOptions: {
       output: {
         manualChunks: (id) => {
           if (!id.includes('node_modules')) return
