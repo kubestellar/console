@@ -68,6 +68,60 @@ export const TECHNICAL_ACRONYMS: Record<string, { full: string; desc: string }> 
     desc: 'Pod is repeatedly crashing and Kubernetes is backing off restart attempts' 
   },
   
+  // Plural compute resources
+  CPUs: {
+    full: 'Central Processing Units',
+    desc: 'The primary processors that execute instructions and manage workloads'
+  },
+  GPUs: {
+    full: 'Graphics Processing Units',
+    desc: 'Hardware accelerators used for parallel processing, AI/ML workloads, and graphics'
+  },
+
+  // Accelerator types
+  TPU: {
+    full: 'Tensor Processing Unit',
+    desc: 'Google-designed hardware accelerator optimized for machine learning and neural network computations'
+  },
+  TPUs: {
+    full: 'Tensor Processing Units',
+    desc: 'Google-designed hardware accelerators optimized for machine learning and neural network computations'
+  },
+  AIU: {
+    full: 'AI Accelerator Unit',
+    desc: 'Purpose-built processor for accelerating artificial intelligence and deep learning workloads'
+  },
+  AIUs: {
+    full: 'AI Accelerator Units',
+    desc: 'Purpose-built processors for accelerating artificial intelligence and deep learning workloads'
+  },
+  XPU: {
+    full: 'Cross-architecture Processing Unit',
+    desc: 'Heterogeneous accelerator supporting multiple compute paradigms (CPU, GPU, FPGA, and more)'
+  },
+  XPUs: {
+    full: 'Cross-architecture Processing Units',
+    desc: 'Heterogeneous accelerators supporting multiple compute paradigms (CPU, GPU, FPGA, and more)'
+  },
+
+  // GPU memory
+  VRAM: {
+    full: 'Video RAM',
+    desc: 'Dedicated GPU memory used to store frame buffers, textures, and model weights during inference'
+  },
+
+  // GPU partitioning
+  MIG: {
+    full: 'Multi-Instance GPU',
+    desc: 'NVIDIA technology that partitions a single GPU into multiple isolated instances for shared workloads'
+  },
+
+  // GPU compute API
+  CUDA: {
+    full: 'Compute Unified Device Architecture',
+    desc: 'NVIDIA parallel computing platform and API for GPU-accelerated applications'
+  },
+
   // Multi-Cluster Services
   MCS: { 
     full: 'Multi-Cluster Services', 
@@ -130,7 +184,10 @@ export function wrapAbbreviations(text: string): ReactNode {
   // Order matters - longer terms first to avoid partial matches
   const abbreviations = [
     'ConfigMaps', 'ConfigMap', 'CrashLoopBackOff', 'OOMKilled',
-    'RBAC', 'CRD', 'PVC', 'GPU', 'CPU', 'OLM', 'MCS', 'Secrets', 'Secret',
+    'RBAC', 'CRD', 'PVC',
+    'GPUs', 'GPU', 'CPUs', 'CPU',
+    'TPUs', 'TPU', 'AIUs', 'AIU', 'XPUs', 'XPU',
+    'VRAM', 'CUDA', 'MIG', 'OLM', 'MCS', 'Secrets', 'Secret',
   ]
   const pattern = new RegExp(`\\b(${abbreviations.join('|')})\\b`, 'g')
   const parts: ReactNode[] = []

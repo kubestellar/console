@@ -7,6 +7,7 @@ import { useDemoMode } from '../../../hooks/useDemoMode'
 import { Skeleton } from '../../ui/Skeleton'
 import { useTranslation } from 'react-i18next'
 import { useModalState } from '../../../lib/modals'
+import { wrapAbbreviations } from '../../shared/TechnicalAcronym'
 
 export interface ClusterStats {
   total: number
@@ -190,7 +191,7 @@ function StatBlock({ blockId, stats, hasData, onClick, color, icon }: StatBlockP
     >
       <div className="flex items-center gap-2 mb-2">
         <IconComponent className={`w-5 h-5 shrink-0 ${colorClass}`} />
-        <span className="text-sm text-muted-foreground truncate">{label}</span>
+        <span className="text-sm text-muted-foreground truncate">{wrapAbbreviations(label)}</span>
       </div>
       <div className={`text-3xl font-bold ${valueColor}`}>{value}</div>
       <div className="text-xs text-muted-foreground">{sublabel}</div>

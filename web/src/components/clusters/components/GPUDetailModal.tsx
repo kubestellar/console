@@ -4,6 +4,7 @@ import { GPUNode, NVIDIAOperatorStatus } from '../../../hooks/useMCP'
 import { BaseModal } from '../../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { wrapAbbreviations } from '../../shared/TechnicalAcronym'
 
 interface GPUDetailModalProps {
   gpuNodes: GPUNode[]
@@ -242,7 +243,7 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
                   <div className="glass p-3 rounded-lg">
                     <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
                       <HardDrive className="w-3 h-3" />
-                      Total VRAM
+                      {wrapAbbreviations('Total VRAM')}
                     </div>
                     <div className="text-lg font-bold text-foreground">{gpuSpecs.totalMemoryGB} GB</div>
                   </div>
@@ -262,7 +263,7 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
                   <div className="glass p-3 rounded-lg">
                     <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
                       <Settings className="w-3 h-3" />
-                      CUDA Driver
+                      {wrapAbbreviations('CUDA Driver')}
                     </div>
                     <div className="text-sm font-medium text-foreground">
                       {(gpuSpecs.cudaDriverVersions || []).join(', ')}
@@ -273,7 +274,7 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
                   <div className="glass p-3 rounded-lg">
                     <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
                       <Layers className="w-3 h-3" />
-                      MIG Capable
+                      {wrapAbbreviations('MIG Capable')}
                     </div>
                     <div className="text-lg font-bold text-purple-400">{gpuSpecs.migCapableCount}</div>
                   </div>
