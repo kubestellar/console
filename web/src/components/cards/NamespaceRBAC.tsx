@@ -7,6 +7,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { StatusBadge } from '../ui/StatusBadge'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { useCardLoadingState } from './CardDataContext'
@@ -42,7 +43,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
     SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
     [t]
   )
-  const { deduplicatedClusters: clusters, isLoading: clustersLoading, error } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, error } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToRBAC } = useDrillDownActions()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
@@ -50,24 +51,27 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   const [activeTab, setActiveTab] = useState<'roles' | 'bindings' | 'serviceaccounts'>('roles')
 
   // Fetch namespaces for the selected cluster (requires a cluster to be selected)
-  const { namespaces, isDemoFallback: namespacesDemoFallback } = useCachedNamespaces(selectedCluster || undefined)
+  const { namespaces, isDemoFallback: namespacesDemoFallback, isRefreshing: namespacesRefreshing } = useCachedNamespaces(selectedCluster || undefined)
 
   // Fetch RBAC data using cached hooks (requires a cluster to be selected)
-  const { roles: k8sRoles, isLoading: rolesLoading, isDemoFallback: rolesDemoFallback } = useCachedK8sRoles(
+  const { roles: k8sRoles, isLoading: rolesLoading, isRefreshing: rolesRefreshing, isDemoFallback: rolesDemoFallback } = useCachedK8sRoles(
     selectedCluster || undefined,
     selectedNamespace || undefined
   )
-  const { bindings: k8sBindings, isLoading: bindingsLoading, isDemoFallback: bindingsDemoFallback } = useCachedK8sRoleBindings(
+  const { bindings: k8sBindings, isLoading: bindingsLoading, isRefreshing: bindingsRefreshing, isDemoFallback: bindingsDemoFallback } = useCachedK8sRoleBindings(
     selectedCluster || undefined,
     selectedNamespace || undefined
   )
-  const { serviceAccounts: k8sServiceAccounts, isLoading: sasLoading, isDemoFallback: sasDemoFallback } = useCachedK8sServiceAccounts(
+  const { serviceAccounts: k8sServiceAccounts, isLoading: sasLoading, isRefreshing: sasRefreshing, isDemoFallback: sasDemoFallback } = useCachedK8sServiceAccounts(
     selectedCluster || undefined,
     selectedNamespace || undefined
   )
 
   // Combine all isDemoFallback values from cached hooks
   const isDemoData = namespacesDemoFallback || rolesDemoFallback || bindingsDemoFallback || sasDemoFallback
+
+  // Combine all isRefreshing values from data hooks
+  const isRefreshing = clustersRefreshing || namespacesRefreshing || rolesRefreshing || bindingsRefreshing || sasRefreshing
 
   // Auto-select first cluster and namespace in demo mode
   useEffect(() => {
@@ -95,6 +99,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isInitialLoading || !!isFetchingRBAC,
+    isRefreshing,
     hasAnyData: clusters.length > 0 || k8sRoles.length > 0 || k8sBindings.length > 0 || k8sServiceAccounts.length > 0,
     isDemoData,
   })
@@ -214,6 +219,10 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
           <StatusBadge color="purple">
             {activeTab === 'roles' ? t('namespaceRBAC.nRoles', { count: rbacRoles.length }) : activeTab === 'bindings' ? t('namespaceRBAC.nBindings', { count: rbacBindings.length }) : t('namespaceRBAC.nServiceAccounts', { count: rbacServiceAccounts.length })}
           </StatusBadge>
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            size="sm"
+          />
         </div>
         <CardControlsRow
           clusterIndicator={{
