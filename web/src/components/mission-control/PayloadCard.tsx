@@ -200,7 +200,7 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
             {showPriorityMenu && (
               <>
                 {/* Backdrop to close on outside click */}
-                <div className="fixed inset-0 z-20" onClick={() => setShowPriorityMenu(false)} />
+                <div className="fixed inset-0 z-20" role="presentation" onClick={() => setShowPriorityMenu(false)} />
                 <div className="absolute right-0 bottom-full mb-1 bg-slate-900 border border-border rounded-lg shadow-lg py-1 z-30 min-w-[100px]">
                   {(['required', 'recommended', 'optional'] as const).map((p) => (
                     <Button

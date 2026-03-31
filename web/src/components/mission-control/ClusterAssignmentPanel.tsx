@@ -179,7 +179,7 @@ export function ClusterAssignmentPanel({
 
             {showClusterPicker && (
               <>
-                <div className="fixed inset-0 z-20" onClick={() => setShowClusterPicker(false)} />
+                <div className="fixed inset-0 z-20" role="presentation" onClick={() => setShowClusterPicker(false)} />
                 <div className="absolute right-0 top-full mt-1 w-72 bg-slate-900 border border-border rounded-lg shadow-xl z-30 py-2 max-h-80 overflow-y-auto">
                   <div className="px-3 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                     Active Clusters

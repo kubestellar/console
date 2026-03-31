@@ -87,8 +87,8 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
   const allSelected = onlineClusters.length > 0 && selected.size === onlineClusters.length
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-2xl" onClick={onCancel}>
-      <div className="w-full max-w-lg rounded-lg border border-border bg-card shadow-xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-2xl" role="presentation" onClick={onCancel}>
+      <div className="w-full max-w-lg rounded-lg border border-border bg-card shadow-xl flex flex-col max-h-[80vh]" role="presentation" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
           <div>

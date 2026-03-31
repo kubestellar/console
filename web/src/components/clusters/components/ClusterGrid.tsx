@@ -168,7 +168,7 @@ const LocalClusterControls = memo(function LocalClusterControls({
   }
 
   return (
-    <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+    <div className="flex items-center gap-0.5" role="presentation" onClick={(e) => e.stopPropagation()}>
       {isStopped ? (
         <button
           onClick={(e) => handleAction('start', e)}
