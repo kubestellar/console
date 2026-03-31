@@ -114,12 +114,18 @@ export function sendNotificationWithDeepLink(
   // Sending both creates duplicate notifications on every alert.
   getNotificationSW().then((reg) => {
     if (reg) {
+      // showNotification returns a Promise that rejects if the SW registration
+      // becomes inactive (e.g., after browser idle). Catch to prevent
+      // unhandled_rejection errors in GA4.
       reg.showNotification(title, {
         body,
         icon: '/kubestellar-logo.svg',
         requireInteraction: true,
         data: { url },
         ...options,
+      }).catch(() => {
+        // SW registration lost — fall back to standard Notification API
+        sendStandardNotification(title, body, url, options)
       })
     } else {
       sendStandardNotification(title, body, url, options)

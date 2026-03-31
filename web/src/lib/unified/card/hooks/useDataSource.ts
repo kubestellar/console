@@ -267,7 +267,10 @@ function useApiDataSourceInternal(
         throw new Error(`API error: ${response.status} ${response.statusText}`)
       }
 
-      const json = await response.json()
+      // Use .catch() on .json() to prevent Firefox from firing unhandledrejection
+      // before the outer try/catch processes the rejection (microtask timing issue).
+      const json = await response.json().catch(() => null)
+      if (!json) throw new Error('Invalid JSON response from API')
       // Assume response is array or has data array property
       const resultData = Array.isArray(json) ? json : json.data ?? json.items ?? []
       setData(resultData)

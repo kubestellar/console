@@ -29,7 +29,9 @@ async function settingsFetch<T>(path: string, options?: RequestInit): Promise<T>
     signal: options?.signal ?? AbortSignal.timeout(15000),
   })
   if (!response.ok) throw new Error(`HTTP ${response.status}`)
-  return response.json()
+  // Use .catch() on .json() to prevent Firefox from firing unhandledrejection
+  // before the caller's try/catch processes the rejection (microtask timing issue).
+  return response.json().catch(() => { throw new Error('Invalid JSON response') })
 }
 
 /**

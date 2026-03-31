@@ -210,7 +210,10 @@ export async function checkOAuthConfigured(): Promise<{ backendUp: boolean; oaut
       signal: AbortSignal.timeout(BACKEND_HEALTH_CHECK_TIMEOUT_MS),
     })
     if (!response.ok) return { backendUp: false, oauthConfigured: false }
-    const data = await response.json()
+    // Use .catch() on .json() to prevent Firefox from firing unhandledrejection
+    // before the outer try/catch processes the rejection (microtask timing issue).
+    const data = await response.json().catch(() => null)
+    if (!data) return { backendUp: false, oauthConfigured: false }
     return {
       backendUp: data.status === 'ok',
       oauthConfigured: !!data.oauth_configured,
@@ -277,8 +280,8 @@ class ApiClient {
           signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
         })
         if (response.ok) {
-          const data = await response.json()
-          if (data.token) {
+          const data = await response.json().catch(() => null)
+          if (data?.token) {
             localStorage.setItem(STORAGE_KEY_TOKEN, data.token)
             // Notify AuthProvider (and other tabs) that the token changed
             window.dispatchEvent(new StorageEvent('storage', {
@@ -367,7 +370,8 @@ class ApiClient {
       }
       markBackendSuccess()
       this.checkTokenRefresh(response)
-      const data = await response.json()
+      const data = await response.json().catch(() => null)
+      if (!data) throw new Error('Invalid JSON response from API')
       return { data }
     } catch (err) {
       clearTimeout(timeoutId)
@@ -412,7 +416,8 @@ class ApiClient {
       }
       markBackendSuccess()
       this.checkTokenRefresh(response)
-      const data = await response.json()
+      const data = await response.json().catch(() => null)
+      if (!data) throw new Error('Invalid JSON response from API')
       return { data }
     } catch (err) {
       clearTimeout(timeoutId)
@@ -457,7 +462,8 @@ class ApiClient {
       }
       markBackendSuccess()
       this.checkTokenRefresh(response)
-      const data = await response.json()
+      const data = await response.json().catch(() => null)
+      if (!data) throw new Error('Invalid JSON response from API')
       return { data }
     } catch (err) {
       clearTimeout(timeoutId)

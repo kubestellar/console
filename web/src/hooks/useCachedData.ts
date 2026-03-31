@@ -370,7 +370,10 @@ async function fetchDeploymentsViaAgent(namespace?: string, onProgress?: (partia
     clearTimeout(timeoutId)
 
     if (!response.ok) throw new Error(`Agent returned ${response.status}`)
-    const data = await response.json()
+    // Use .catch() on .json() to prevent Firefox from firing unhandledrejection
+    // before the outer try/catch processes the rejection (microtask timing issue).
+    const data = await response.json().catch(() => null)
+    if (!data) throw new Error('Invalid JSON response from agent')
     // Always use the short name — agent echoes back context path as cluster
     const tagged = ((data.deployments || []) as Deployment[]).map(d => ({
       ...d,
@@ -737,7 +740,8 @@ export function useCachedDeploymentIssues(
               })
               clearTimeout(tid)
               if (!res.ok) return []
-              const data = await res.json()
+              const data = await res.json().catch(() => null)
+              if (!data) return []
               return ((data.deployments || []) as Deployment[]).map(d => ({ ...d, cluster: cluster }))
           })()
           : await fetchDeploymentsViaAgent(namespace)
@@ -817,7 +821,8 @@ export function useCachedDeployments(
           clearTimeout(timeoutId)
 
           if (response.ok) {
-            const data = await response.json()
+            const data = await response.json().catch(() => null)
+            if (!data) return []
             return ((data.deployments || []) as Deployment[]).map(d => ({
               ...d,
               cluster: cluster,
@@ -956,7 +961,8 @@ async function fetchWorkloadsFromAgent(onProgress?: (partial: Workload[]) => voi
     clearTimeout(tid)
 
     if (!res.ok) throw new Error(`Agent ${res.status}`)
-    const data = await res.json()
+    const data = await res.json().catch(() => null)
+    if (!data) throw new Error('Invalid JSON response from agent')
     const tagged = ((data.deployments || []) as Array<Record<string, unknown>>).map(d => {
       const st = String(d.status || 'running')
       let ws: Workload['status'] = 'Running'
@@ -1017,7 +1023,8 @@ export function useCachedWorkloads(
           signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
         })
         if (res.ok) {
-          const data = await res.json()
+          const data = await res.json().catch(() => null)
+          if (!data) return []
           const items = (data.items || data) as Array<Record<string, unknown>>
           return items.map(d => ({
             name: String(d.name || ''),
@@ -1201,8 +1208,8 @@ export function useCachedSecurityIssues(
             signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
           })
           if (response.ok) {
-            const data = await response.json() as { issues: SecurityIssue[] }
-            if (data.issues && data.issues.length > 0) return data.issues
+            const data = await response.json().catch(() => null) as { issues: SecurityIssue[] } | null
+            if (data?.issues && data.issues.length > 0) return data.issues
           }
         } catch (err) {
           console.error('[useCachedSecurityIssues] API fetch failed:', err)
@@ -1621,8 +1628,8 @@ export const coreFetchers = {
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (response.ok) {
-        const data = await response.json() as { issues: SecurityIssue[] }
-        if (data.issues?.length > 0) return data.issues
+        const data = await response.json().catch(() => null) as { issues: SecurityIssue[] } | null
+        if (data && data.issues && data.issues.length > 0) return data.issues
       }
     }
     return []
@@ -1646,7 +1653,8 @@ export const coreFetchers = {
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => null)
+        if (!data) return []
         const items = (data.items || data) as Array<Record<string, unknown>>
         return items.map(d => ({
           name: String(d.name || ''),
@@ -1813,16 +1821,20 @@ async function fetchHardwareHealth(): Promise<HardwareHealthData> {
     }
 
     if (alertsRes?.ok) {
-      const data: DeviceAlertsResponse = await alertsRes.json()
-      result.alerts = data.alerts || []
-      result.nodeCount = data.nodeCount
+      const data = await alertsRes.json().catch(() => null) as DeviceAlertsResponse | null
+      if (data) {
+        result.alerts = data.alerts || []
+        result.nodeCount = data.nodeCount
+      }
     }
 
     if (inventoryRes?.ok) {
-      const data: DeviceInventoryResponse = await inventoryRes.json()
-      result.inventory = data.nodes || []
-      if (data.nodes && data.nodes.length > 0) {
-        result.nodeCount = data.nodes.length
+      const data = await inventoryRes.json().catch(() => null) as DeviceInventoryResponse | null
+      if (data) {
+        result.inventory = data.nodes || []
+        if (data.nodes && data.nodes.length > 0) {
+          result.nodeCount = data.nodes.length
+        }
       }
     }
 
@@ -2276,7 +2288,7 @@ export function useCachedNamespaces(
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!response.ok) throw new Error(`API error: ${response.status}`)
-      const data = await response.json() as Array<{ name?: string; Name?: string }>
+      const data = await response.json().catch(() => null) as Array<{ name?: string; Name?: string }> | null
       return (data || []).map((ns: { name?: string; Name?: string }) => ns.name || ns.Name || '').filter(Boolean)
     },
   })

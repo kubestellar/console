@@ -157,6 +157,9 @@ export const RECOMMENDATION_INTERVAL_MS = 60_000
 /** Interval for mission suggestion analysis (120 seconds) */
 export const MISSION_SUGGEST_INTERVAL_MS = 120_000
 
+/** Polling interval for nightly E2E run data (5 minutes) */
+export const NIGHTLY_E2E_POLL_INTERVAL_MS = 300_000
+
 // ============================================================================
 // Loading & Timeout Thresholds
 // ============================================================================

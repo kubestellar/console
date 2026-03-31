@@ -53,7 +53,10 @@ export function useGitHubRewards() {
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!res.ok) throw new Error(`API error: ${res.status}`)
-      const result: GitHubRewardsResponse = await res.json()
+      // Use .catch() on .json() to prevent Firefox from firing unhandledrejection
+      // before the outer try/catch processes the rejection (microtask timing issue).
+      const result = await res.json().catch(() => null) as GitHubRewardsResponse | null
+      if (!result) throw new Error('Invalid JSON response')
       setData(result)
       saveCache(result)
       setError(null)

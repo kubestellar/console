@@ -239,7 +239,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!meResponse.ok) throw new Error(`/api/me returned ${meResponse.status}`)
-      const userData: User = await meResponse.json()
+      const userData = await meResponse.json().catch(() => null) as User | null
+      if (!userData) throw new Error('Invalid JSON from /api/me')
       setUser(userData)
       cacheUser(userData)
       // Set anonymous analytics ID (SHA-256 hash — no PII)
@@ -344,8 +345,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
           })
           if (response.ok) {
-            const data = await response.json()
-            if (data.token) {
+            const data = await response.json().catch(() => null)
+            if (data?.token) {
               localStorage.setItem(STORAGE_KEY_TOKEN, data.token)
               setTokenState(data.token)
             }

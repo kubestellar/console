@@ -1116,6 +1116,10 @@ export function startGlobalErrorTracking() {
         msg.includes('JSON Parse error') ||
         msg.includes('Unexpected token')
       ) return
+      // Skip ServiceWorker notification errors — expected when the SW registration
+      // becomes inactive (browser idle, SW update). The calling code catches these
+      // and falls back to the standard Notification API.
+      if (msg.includes('showNotification') || msg.includes('No active registration')) return
       emitError('unhandled_rejection', msg)
     } finally {
       isEmitting = false

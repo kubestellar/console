@@ -795,7 +795,10 @@ async function fetchClusterListFromAgent(): Promise<ClusterInfo[] | null> {
     })
     clearTimeout(timeoutId)
     if (response.ok) {
-      const data = await response.json()
+      // Use .catch() on .json() to prevent Firefox from firing unhandledrejection
+      // before the outer try/catch processes the rejection (microtask timing issue).
+      const data = await response.json().catch(() => null)
+      if (!data) throw new Error('Invalid JSON response from agent')
       // Report successful data fetch - can recover from degraded state
       reportAgentDataSuccess()
       // Transform agent response to ClusterInfo format - mark as "checking" initially
@@ -866,7 +869,10 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
       clearTimeout(timeoutId)
 
       if (response.ok) {
-        const health = await response.json()
+        // Use .catch() on .json() to prevent Firefox from firing unhandledrejection
+        // before the outer try/catch processes the rejection (microtask timing issue).
+        const health = await response.json().catch(() => null)
+        if (!health) throw new Error('Invalid JSON from health endpoint')
         reportAgentDataSuccess()
         return health
       }
@@ -892,7 +898,11 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
     )
     if (response.ok) {
       healthCheckFailures = 0 // Reset on success
-      return await response.json()
+      // Use .catch() on .json() to prevent Firefox from firing unhandledrejection
+      // before the outer try/catch processes the rejection (microtask timing issue).
+      const result = await response.json().catch(() => null)
+      if (!result) throw new Error('Invalid JSON from cluster health endpoint')
+      return result
     }
     // Non-OK response (e.g., 500) - track failure
     healthCheckFailures++
@@ -1013,7 +1023,8 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
     )
     if (response.ok) {
       distributionDetectionFailures = 0 // Reset on success
-      const data = await response.json()
+      const data = await response.json().catch(() => null)
+      if (!data) throw new Error('Invalid JSON')
       const namespaces = extractNamespaces(data.pods || [])
       const distribution = detectDistributionFromNamespaces(namespaces)
       if (distribution) return { distribution, namespaces }
@@ -1034,7 +1045,8 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
     )
     if (response.ok) {
       distributionDetectionFailures = 0
-      const data = await response.json()
+      const data = await response.json().catch(() => null)
+      if (!data) throw new Error('Invalid JSON')
       const namespaces = extractNamespaces(data.events || [])
       const distribution = detectDistributionFromNamespaces(namespaces)
       if (distribution) return { distribution, namespaces }
@@ -1055,7 +1067,8 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
     )
     if (response.ok) {
       distributionDetectionFailures = 0
-      const data = await response.json()
+      const data = await response.json().catch(() => null)
+      if (!data) throw new Error('Invalid JSON')
       const namespaces = extractNamespaces(data.deployments || [])
       const distribution = detectDistributionFromNamespaces(namespaces)
       if (distribution) return { distribution, namespaces }

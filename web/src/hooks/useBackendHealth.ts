@@ -91,7 +91,10 @@ class BackendHealthManager {
 
         // Parse response to check version and status
         try {
-          const data = await response.json()
+          // Use .catch() on .json() to prevent Firefox from firing unhandledrejection
+          // before the outer try/catch processes the rejection (microtask timing issue).
+          const data = await response.json().catch(() => null)
+          if (!data) throw new Error('Invalid JSON')
           const version = data.version as string | undefined
 
           // Track initial version for stale-frontend detection

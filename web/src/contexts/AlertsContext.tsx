@@ -12,7 +12,7 @@ import type { GPUHealthCheckResult } from '../hooks/mcp/types'
 import type { NightlyGuideStatus } from '../lib/llmd/nightlyE2EDemoData'
 import type { AlertsMCPData } from './AlertsDataFetcher'
 import { STORAGE_KEY_AUTH_TOKEN, FETCH_DEFAULT_TIMEOUT_MS, STORAGE_KEY_NOTIFIED_ALERT_KEYS } from '../lib/constants'
-import { INITIAL_FETCH_DELAY_MS, POLL_INTERVAL_SLOW_MS, SECONDARY_FETCH_DELAY_MS } from '../lib/constants/network'
+import { INITIAL_FETCH_DELAY_MS, POLL_INTERVAL_SLOW_MS, SECONDARY_FETCH_DELAY_MS, NIGHTLY_E2E_POLL_INTERVAL_MS } from '../lib/constants/network'
 import { PRESET_ALERT_RULES } from '../types/alerts'
 import { sendNotificationWithDeepLink } from '../hooks/useDeepLink'
 import { findRunbookForCondition } from '../lib/runbooks/builtins'
@@ -286,8 +286,10 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
               { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) }
             )
             if (resp.ok) {
-              const data = await resp.json()
-              if (data.results && data.results.length > 0) {
+              // Use .catch() on .json() to prevent Firefox from firing unhandledrejection
+              // before the outer try/catch processes the rejection (microtask timing issue).
+              const data = await resp.json().catch(() => null)
+              if (data?.results && data.results.length > 0) {
                 results[cluster.name] = data.results
               }
             }
@@ -319,7 +321,9 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
         })
         if (resp.ok) {
-          const data = await resp.json()
+          // Use .catch() on .json() to prevent Firefox from firing unhandledrejection
+          // before the outer try/catch processes the rejection (microtask timing issue).
+          const data = await resp.json().catch(() => null)
           if (Array.isArray(data)) {
             nightlyE2ERef.current = data
           }
@@ -330,7 +334,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     }
 
     const timer = setTimeout(fetchNightlyE2E, SECONDARY_FETCH_DELAY_MS)
-    const interval = setInterval(fetchNightlyE2E, 5 * 60 * 1000)
+    const interval = setInterval(fetchNightlyE2E, NIGHTLY_E2E_POLL_INTERVAL_MS)
     return () => {
       clearTimeout(timer)
       clearInterval(interval)

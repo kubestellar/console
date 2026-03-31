@@ -7,11 +7,13 @@ export interface ActiveUsersInfo {
   totalConnections: number
 }
 
-const POLL_INTERVAL = 10000 // Poll every 10 seconds
-const HEARTBEAT_INTERVAL = 30000 // Heartbeat every 30 seconds
-const HEARTBEAT_JITTER = 3000 // Jitter (0-3s) to spread heartbeats without long delays
-const WS_RECONNECT_DELAY = 5000
-const RECOVERY_DELAY = 30000 // Retry after circuit breaker trips
+const POLL_INTERVAL = 10_000 // Poll every 10 seconds
+const HEARTBEAT_INTERVAL = 30_000 // Heartbeat every 30 seconds
+const HEARTBEAT_JITTER = 3_000 // Jitter (0-3s) to spread heartbeats without long delays
+const WS_RECONNECT_DELAY = 5_000
+const RECOVERY_DELAY = 30_000 // Retry after circuit breaker trips
+/** Timeout for fetch() call to the active-users endpoint */
+const ACTIVE_USERS_FETCH_TIMEOUT_MS = 5_000
 
 // Singleton state to share across all hook instances
 let sharedInfo: ActiveUsersInfo = {
@@ -173,9 +175,12 @@ async function fetchActiveUsers() {
   }
 
   try {
-    const resp = await fetch('/api/active-users', { signal: AbortSignal.timeout(5000) })
+    const resp = await fetch('/api/active-users', { signal: AbortSignal.timeout(ACTIVE_USERS_FETCH_TIMEOUT_MS) })
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-    const data: ActiveUsersInfo = await resp.json()
+    // Use .catch() on .json() to prevent Firefox from firing unhandledrejection
+    // before the outer try/catch processes the rejection (microtask timing issue).
+    const data = await resp.json().catch(() => null) as ActiveUsersInfo | null
+    if (!data) throw new Error('Invalid JSON response')
     consecutiveFailures = 0 // Reset on success
 
     // Smooth the count to handle Netlify Blobs eventual consistency fluctuations

@@ -191,7 +191,10 @@ async function fetchTokenUsage() {
 
     if (response.ok) {
       reportAgentDataSuccess()
-      const data = await response.json()
+      // Use .catch() on .json() to prevent Firefox from firing unhandledrejection
+      // before the outer try/catch processes the rejection (microtask timing issue).
+      const data = await response.json().catch(() => null)
+      if (!data) throw new Error('Invalid JSON response from health endpoint')
       if (data.claude?.tokenUsage?.today) {
         const todayTokens = data.claude.tokenUsage.today
         // Track both input and output tokens
