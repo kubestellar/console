@@ -2210,6 +2210,18 @@
     "inUse": "In Use",
     "usingSimulatedData": "Using simulated data"
   },
+  "gpuInventoryHistory": {
+    "noData": "No GPU History",
+    "noDataDescription": "No historical GPU data available yet. Data is collected every 10 minutes.",
+    "snapshots": "snapshots",
+    "trend": "Trend",
+    "inUse": "In Use",
+    "free": "Free",
+    "collecting": "Collecting data...",
+    "peakUsage": "Peak",
+    "minUsage": "Min",
+    "avgUsage": "Avg"
+  },
   "gpuNamespaceAllocations": {
     "noGPUWorkloads": "No GPU Workloads",
     "noNamespacesWithGPU": "No namespaces with GPU allocations detected",

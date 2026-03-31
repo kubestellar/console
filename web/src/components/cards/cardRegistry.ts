@@ -42,6 +42,7 @@ const GPUStatus = safeLazy(() => import('./GPUStatus'), 'GPUStatus')
 const GPUOverview = safeLazy(() => import('./GPUOverview'), 'GPUOverview')
 const GPUWorkloads = safeLazy(() => import('./GPUWorkloads'), 'GPUWorkloads')
 const GPUNamespaceAllocations = safeLazy(() => import('./GPUNamespaceAllocations'), 'GPUNamespaceAllocations')
+const GPUInventoryHistory = safeLazy(() => import('./GPUInventoryHistory'), 'GPUInventoryHistory')
 const SecurityIssues = safeLazy(() => import('./SecurityIssues'), 'SecurityIssues')
 const EventSummary = safeLazy(() => import('./EventSummary'), 'EventSummary')
 const WarningEvents = safeLazy(() => import('./WarningEvents'), 'WarningEvents')
@@ -322,6 +323,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   gpu_overview: GPUOverview,
   gpu_workloads: GPUWorkloads,
   gpu_namespace_allocations: GPUNamespaceAllocations,
+  gpu_inventory_history: GPUInventoryHistory,
   security_issues: SecurityIssues,
   // Live data trend cards
   events_timeline: EventsTimeline,
@@ -773,6 +775,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   gpu_overview: () => import('./GPUOverview'),
   gpu_workloads: () => import('./GPUWorkloads'),
   gpu_namespace_allocations: () => import('./GPUNamespaceAllocations'),
+  gpu_inventory_history: () => import('./GPUInventoryHistory'),
   security_issues: () => import('./SecurityIssues'),
   events_timeline: () => import('./EventsTimeline'),
   pod_health_trend: () => import('./PodHealthTrend'),
@@ -1062,6 +1065,7 @@ export const LIVE_DATA_CARDS = new Set([
   'pod_health_trend',
   'resource_trend',
   'gpu_usage_trend',
+  'gpu_inventory_history',
   // Real-time status cards
   'cluster_metrics',
   'events_timeline',
@@ -1396,6 +1400,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   resource_capacity: 8,
   gpu_utilization: 8,
   gpu_usage_trend: 8,
+  gpu_inventory_history: 8,
   helm_history: 8,
   helm_values_diff: 8,
   chart_versions: 6,

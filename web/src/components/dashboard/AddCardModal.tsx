@@ -117,6 +117,7 @@ const CARD_CATALOG = {
     { type: 'gpu_inventory', title: 'GPU Inventory', description: 'Detailed GPU list', visualization: 'table' },
     { type: 'gpu_workloads', title: 'GPU Workloads', description: 'Pods running on GPU nodes or in NVIDIA namespaces', visualization: 'table' },
     { type: 'gpu_usage_trend', title: 'GPU Usage Trend', description: 'GPU used vs available over time with stacked area chart', visualization: 'timeseries' },
+    { type: 'gpu_inventory_history', title: 'GPU Inventory History', description: 'Historical GPU allocation trends using metrics snapshots — shows usage over time with peak/min/avg stats', visualization: 'timeseries' },
     { type: 'gpu_node_health', title: 'GPU Node Health Monitor', description: 'Proactive health monitoring for GPU nodes — checks node readiness, GPU operator pods, stuck pods, and GPU reset events', visualization: 'status' },
     { type: 'node_status', title: 'Node Status', description: 'Kubernetes node status with conditions, roles, CPU, and memory capacity', visualization: 'table' },
   ],
@@ -482,6 +483,13 @@ function generateCardSuggestions(query: string): CardSuggestion[] {
         title: 'GPU Workloads',
         description: 'Pods running on GPU nodes',
         visualization: 'table',
+        config: {},
+      },
+      {
+        type: 'gpu_inventory_history',
+        title: 'GPU Inventory History',
+        description: 'Historical GPU allocation trends',
+        visualization: 'timeseries',
         config: {},
       },
     ]

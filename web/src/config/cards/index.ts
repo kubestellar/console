@@ -61,6 +61,7 @@ import { githubActivityConfig } from './github-activity'
 import { githubCiMonitorConfig } from './github-ci-monitor'
 import { gitopsDriftConfig } from './gitops-drift'
 import { gpuInventoryConfig } from './gpu-inventory'
+import { gpuInventoryHistoryConfig } from './gpu-inventory-history'
 import { gpuOverviewConfig } from './gpu-overview'
 import { gpuStatusConfig } from './gpu-status'
 import { gpuUsageTrendConfig } from './gpu-usage-trend'
@@ -223,6 +224,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   github_ci_monitor: githubCiMonitorConfig,
   gitops_drift: gitopsDriftConfig,
   gpu_inventory: gpuInventoryConfig,
+  gpu_inventory_history: gpuInventoryHistoryConfig,
   gpu_node_health: gpuNodeHealthConfig,
   gpu_overview: gpuOverviewConfig,
   gpu_status: gpuStatusConfig,
@@ -474,6 +476,7 @@ export {
   githubCiMonitorConfig,
   gitopsDriftConfig,
   gpuInventoryConfig,
+  gpuInventoryHistoryConfig,
   gpuOverviewConfig,
   gpuStatusConfig,
   gpuUsageTrendConfig,

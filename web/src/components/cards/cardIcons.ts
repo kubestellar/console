@@ -87,6 +87,7 @@ export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: stri
   gpu_inventory: { icon: Cpu, color: 'text-green-400' },
   gpu_workloads: { icon: Cpu, color: 'text-green-400' },
   gpu_usage_trend: { icon: Cpu, color: 'text-green-400' },
+  gpu_inventory_history: { icon: Cpu, color: 'text-purple-400' },
   gpu_utilization: { icon: Cpu, color: 'text-green-400' },
 
   // Security and RBAC

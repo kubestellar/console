@@ -101,6 +101,7 @@ export const CARD_TITLES: Record<string, string> = {
   gpu_utilization: 'GPU Utilization',
   gpu_usage_trend: 'GPU Usage Trend',
   gpu_namespace_allocations: 'GPU Namespace Allocations',
+  gpu_inventory_history: 'GPU Inventory History',
   gpu_node_health: 'GPU Node Health',
   hardware_health: 'Hardware Health',
 
@@ -379,6 +380,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   gpu_utilization: 'Real-time GPU utilization percentage and temperature. Monitor whether GPUs are being fully utilized or sitting idle, and catch thermal issues early.',
   gpu_usage_trend: 'Historical GPU usage trends over time. Identify usage patterns and plan capacity by seeing how GPU demand changes throughout the day or week.',
   gpu_namespace_allocations: 'GPU allocation breakdown by namespace across clusters. Understand which teams or projects are consuming GPU resources to optimize sharing and cost.',
+  gpu_inventory_history: 'Historical view of GPU allocation over time. Uses metrics snapshots captured every 10 minutes to show trends in GPU usage, helping you plan capacity and spot usage patterns.',
   gpu_node_health: 'Proactive GPU node health monitoring with device disappearance detection. Alerts you when GPUs vanish from nodes — a common hardware issue that requires power cycling to fix.',
   hardware_health: 'Detects hardware device disappearances (GPUs, NICs, NVMe, InfiniBand) that often require a power cycle to recover. Common with SuperMicro/HGX systems. Also shows full device inventory per node.',
   security_issues: 'Security vulnerabilities and misconfigurations detected.',

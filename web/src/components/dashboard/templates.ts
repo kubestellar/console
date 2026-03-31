@@ -200,6 +200,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
       { card_type: 'gpu_inventory', position: { w: 6, h: 3 } },
       { card_type: 'gpu_workloads', position: { w: 6, h: 3 } },
       { card_type: 'gpu_utilization', position: { w: 6, h: 3 } },
+      { card_type: 'gpu_inventory_history', position: { w: 6, h: 3 } },
     ],
   },
 
