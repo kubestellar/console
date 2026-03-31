@@ -32,6 +32,7 @@ import { helmDashboardConfig } from './helm'
 import { alertsDashboardConfig } from './alerts'
 import { aiMlDashboardConfig } from './ai-ml'
 import { ciCdDashboardConfig } from './ci-cd'
+import { karmadaOpsDashboardConfig } from './karmada-ops'
 import { logsDashboardConfig } from './logs'
 import { dataComplianceDashboardConfig } from './data-compliance'
 import { arcadeDashboardConfig } from './arcade'
@@ -67,6 +68,7 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   alerts: alertsDashboardConfig,
   'ai-ml': aiMlDashboardConfig,
   'ci-cd': ciCdDashboardConfig,
+  'karmada-ops': karmadaOpsDashboardConfig,
   logs: logsDashboardConfig,
   'data-compliance': dataComplianceDashboardConfig,
   arcade: arcadeDashboardConfig,
@@ -172,6 +174,7 @@ export {
   alertsDashboardConfig,
   aiMlDashboardConfig,
   ciCdDashboardConfig,
+  karmadaOpsDashboardConfig,
   logsDashboardConfig,
   dataComplianceDashboardConfig,
   arcadeDashboardConfig,

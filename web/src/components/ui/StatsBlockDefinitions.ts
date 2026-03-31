@@ -55,6 +55,7 @@ export type DashboardStatsType =
   | 'insights'
   | 'multi-tenancy'
   | 'ci-cd'
+  | 'karmada-ops'
 
 /**
  * Default stat blocks for the Clusters dashboard

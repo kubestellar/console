@@ -76,6 +76,7 @@ export const DISCOVERABLE_DASHBOARDS: SidebarItem[] = [
   { id: 'events', name: 'Events', icon: 'Activity', href: '/events', type: 'link', order: 5 },
   { id: 'gitops', name: 'GitOps', icon: 'GitBranch', href: '/gitops', type: 'link', order: 6 },
   { id: 'gpu-reservations', name: 'GPU Reservations', icon: 'Cpu', href: '/gpu-reservations', type: 'link', order: 7 },
+  { id: 'karmada-ops', name: 'Karmada Ops', icon: 'Globe', href: '/karmada-ops', type: 'link', order: 8 },
   { id: 'helm', name: 'Helm', icon: 'Package', href: '/helm', type: 'link', order: 8 },
   { id: 'llm-d-benchmarks', name: 'llm-d Benchmarks', icon: 'TrendingUp', href: '/llm-d-benchmarks', type: 'link', order: 9 },
   { id: 'logs', name: 'Logs', icon: 'FileText', href: '/logs', type: 'link', order: 10 },

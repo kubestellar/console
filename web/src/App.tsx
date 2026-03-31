@@ -54,6 +54,7 @@ const Cost = safeLazy(() => import('./components/cost/Cost'), 'Cost')
 const Compliance = safeLazy(() => import('./components/compliance/Compliance'), 'Compliance')
 const DataCompliance = safeLazy(() => import('./components/data-compliance/DataCompliance'), 'DataCompliance')
 const GPUReservations = safeLazy(() => import('./components/gpu/GPUReservations'), 'GPUReservations')
+const KarmadaOps = safeLazy(() => import('./components/karmada-ops/KarmadaOps'), 'KarmadaOps')
 const Nodes = safeLazy(() => import('./components/nodes/Nodes'), 'Nodes')
 const Deployments = safeLazy(() => import('./components/deployments/Deployments'), 'Deployments')
 const Services = safeLazy(() => import('./components/services/Services'), 'Services')
@@ -297,6 +298,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/ai-ml': 'AI/ML',
   '/ai-agents': 'AI Agents',
   '/ci-cd': 'CI/CD',
+  '/karmada-ops': 'Karmada Ops',
   '/llm-d-benchmarks': 'llm-d Benchmarks',
   '/multi-tenancy': 'Multi-Tenancy',
   '/arcade': 'Arcade',
@@ -514,6 +516,7 @@ function FullDashboardApp() {
           <Route path={ROUTES.COMPLIANCE} element={<Compliance />} />
           <Route path={ROUTES.DATA_COMPLIANCE} element={<DataCompliance />} />
           <Route path={ROUTES.GPU_RESERVATIONS} element={<GPUReservations />} />
+          <Route path={ROUTES.KARMADA_OPS} element={<KarmadaOps />} />
           <Route path={ROUTES.HISTORY} element={<CardHistoryWithRestore />} />
           <Route path={ROUTES.SETTINGS} element={<Settings />} />
           <Route path={ROUTES.USERS} element={<UserManagementPage />} />

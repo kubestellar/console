@@ -57,6 +57,7 @@ export const ROUTES = {
   AI_ML: '/ai-ml',
   AI_AGENTS: '/ai-agents',
   CI_CD: '/ci-cd',
+  KARMADA_OPS: '/karmada-ops',
   LLM_D_BENCHMARKS: '/llm-d-benchmarks',
   INSIGHTS: '/insights',
 

@@ -80,6 +80,7 @@ const DASHBOARD_NAMES: Record<DashboardStatsType, string> = {
   insights: 'Insights',
   'multi-tenancy': 'Multi-Tenancy',
   'ci-cd': 'CI/CD',
+  'karmada-ops': 'Karmada Ops',
 }
 
 const DASHBOARD_ROUTES: Record<DashboardStatsType, string> = {
@@ -104,6 +105,7 @@ const DASHBOARD_ROUTES: Record<DashboardStatsType, string> = {
   insights: '/insights',
   'multi-tenancy': '/multi-tenancy',
   'ci-cd': '/ci-cd',
+  'karmada-ops': '/karmada-ops',
 }
 
 const ALL_STATS_DASHBOARD_TYPES: DashboardStatsType[] = [
