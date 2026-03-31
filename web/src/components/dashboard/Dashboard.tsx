@@ -524,11 +524,17 @@ export function Dashboard() {
     }
   }
 
-  // Load dashboard on mount and when navigating back to the page
-  // Always background refresh — localCards are pre-populated from localStorage/defaults
+  // Load dashboard on mount and when navigating back to the page.
+  // Always background refresh — localCards are pre-populated from localStorage/defaults.
+  // Guard: KeepAlive keeps this component mounted even when the user navigates to
+  // a different route.  location.key changes on EVERY navigation, not just when
+  // returning to "/".  Without the pathname check the API call fires while the
+  // dashboard is hidden and any failure shows a confusing toast.
   useEffect(() => {
+    const isHomeDashboard = location.pathname === '/' || location.pathname === ''
+    if (!isHomeDashboard) return
     loadDashboard(true)
-  }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [location.key, location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep cache and localStorage in sync when cards are modified locally
   useEffect(() => {
@@ -606,7 +612,7 @@ export function Dashboard() {
       if (dashboards && dashboards.length > 0) {
         const defaultDashboard = dashboards.find((d) => d.is_default) || dashboards[0]
         const { data } = await api.get<DashboardData>(`/api/dashboards/${defaultDashboard.id}`)
-        const apiCards = data.cards.length > 0 ? data.cards : getDemoCards()
+        const apiCards = (data.cards && data.cards.length > 0) ? data.cards : getDemoCards()
         setDashboard(data)
 
         // ALWAYS preserve local-only cards (not yet persisted to backend)
@@ -643,11 +649,17 @@ export function Dashboard() {
           error.message.includes('Failed to fetch') ||
           error.message.includes('NetworkError') ||
           error.message.includes('Load failed') ||
-          error.message.includes('HTTP request to an HTTPS server')
+          error.message.includes('HTTP request to an HTTPS server') ||
+          error.message.includes('API error:') ||
+          error.message.includes('Invalid JSON')
         ))
       if (!isExpectedFailure) {
         console.error('Failed to load dashboard:', error)
-        showToast('Failed to load dashboard', 'error')
+        // Only show toast for foreground loads — background refreshes should
+        // fail silently to avoid confusing the user with unexpected errors.
+        if (!isBackground) {
+          showToast('Failed to load dashboard', 'error')
+        }
       }
       // Preserve local-only cards even on error, only add demo cards if needed
       setLocalCards((prevCards) => {

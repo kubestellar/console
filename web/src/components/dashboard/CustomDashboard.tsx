@@ -324,10 +324,13 @@ export function CustomDashboard() {
       const isExpectedFailure = error instanceof BackendUnavailableError ||
         error instanceof UnauthenticatedError ||
         (error instanceof Error && (
+          error.message.includes('Request timeout') ||
           error.message.includes('Failed to fetch') ||
           error.message.includes('NetworkError') ||
           error.message.includes('Load failed') ||
-          error.message.includes('HTTP request to an HTTPS server')
+          error.message.includes('HTTP request to an HTTPS server') ||
+          error.message.includes('API error:') ||
+          error.message.includes('Invalid JSON')
         ))
       if (!isExpectedFailure) {
         console.error('Failed to load dashboard:', error)
