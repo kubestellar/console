@@ -14,7 +14,7 @@ interface NamespaceCoverage {
 
 export function NetworkPolicyCoverage() {
   const { t } = useTranslation('cards')
-  const { pods, isLoading: podsLoading, isDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPods()
+  const { pods, isLoading: podsLoading, isRefreshing, isDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPods()
   const { networkpolicies, isLoading: policiesLoading, isFailed: policiesFailed } = useNetworkPolicies()
   const [showUncovered, setShowUncovered] = useState(false)
 
@@ -25,6 +25,7 @@ export function NetworkPolicyCoverage() {
 
   const { showSkeleton } = useCardLoadingState({
     isLoading,
+    isRefreshing,
     hasAnyData: pods.length > 0,
     isDemoData: isDemoFallback,
     isFailed,
