@@ -312,18 +312,17 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
       return
     }
 
-    // Append screenshot note to description if screenshots were attached
-    const screenshotNote = screenshots.length > 0
-      ? `\n\n---\n**Screenshots**: ${screenshots.length} screenshot(s) attached — paste images into this issue.`
-      : ''
-    const finalDesc = extractedDesc + screenshotNote
+    // Collect base64 data URIs for screenshots so the backend can upload
+    // them to GitHub and embed them directly in the created issue.
+    const screenshotDataURIs = screenshots.map(s => s.preview)
 
     try {
       const result = await createRequest({
         title: extractedTitle,
-        description: finalDesc,
+        description: extractedDesc,
         request_type: requestType,
         target_repo: targetRepo,
+        ...(screenshotDataURIs.length > 0 && { screenshots: screenshotDataURIs }),
       })
       setSuccess({ issueUrl: result.github_issue_url })
       // Show thank-you for 5s (extended to give time to copy screenshots) then switch to Updates tab
