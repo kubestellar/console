@@ -277,7 +277,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                     }`}
                   >
                     <span className="text-sm font-medium text-foreground">{type.label}</span>
-                    <p className="text-xs text-muted-foreground mt-0.5">{type.description}</p>
+                    <span className="block text-xs text-muted-foreground mt-0.5">{type.description}</span>
                   </button>
                 ))}
               </div>
@@ -611,17 +611,17 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                   : 'bg-secondary border border-border hover:bg-secondary/80'
               }`}
             >
-              <div className="flex items-center gap-2">
+              <span className="flex items-center gap-2">
                 <Bot className={`w-5 h-5 ${aiDiagnose ? 'text-purple-400' : 'text-muted-foreground'}`} />
-                <div>
-                  <span className="text-sm font-medium text-foreground">
+                <span>
+                  <span className="block text-sm font-medium text-foreground">
                     {t('alerts.aiDiagnosis')}
                   </span>
-                  <p className="text-xs text-muted-foreground">
+                  <span className="block text-xs text-muted-foreground">
                     {t('alerts.aiDiagnosisDesc')}
-                  </p>
-                </div>
-              </div>
+                  </span>
+                </span>
+              </span>
             </button>
           </div>
         </div>

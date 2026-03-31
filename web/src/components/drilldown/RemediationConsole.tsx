@@ -388,9 +388,16 @@ Labels:       app=${resourceName.split('-')[0]}
 
   if (!isOpen) return null
 
+  const REMEDIATION_MODAL_TITLE_ID = 'remediation-console-title'
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-2xl flex items-center justify-center z-[60]">
-      <div className="w-[800px] max-h-[80vh] glass rounded-xl flex flex-col overflow-hidden animate-fade-in-up">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={REMEDIATION_MODAL_TITLE_ID}
+        className="w-[800px] max-h-[80vh] glass rounded-xl flex flex-col overflow-hidden animate-fade-in-up"
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-3">
@@ -402,7 +409,7 @@ Labels:       app=${resourceName.split('-')[0]}
               )}
             </div>
             <div>
-              <h2 className="font-semibold text-foreground">
+              <h2 id={REMEDIATION_MODAL_TITLE_ID} className="font-semibold text-foreground">
                 {activeTab === 'ai' ? t('remediation.title') : t('remediation.shellTitle')}
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -412,6 +419,7 @@ Labels:       app=${resourceName.split('-')[0]}
           </div>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground"
           >
             <X className="w-5 h-5" />

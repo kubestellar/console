@@ -2,12 +2,13 @@
  * GitHub Invite component for inviting users and earning coins
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Github, Send, Coins, CheckCircle2, X, ExternalLink } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useRewards } from '../../hooks/useRewards'
 import { useTranslation } from 'react-i18next'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
+import { useModalNavigation, useModalFocusTrap } from '../../lib/modals/useModalNavigation'
 
 interface GitHubInviteProps {
   isOpen: boolean
@@ -41,6 +42,8 @@ function saveInvite(username: string): void {
   safeSetItem(INVITES_STORAGE_KEY, JSON.stringify(invites))
 }
 
+const GITHUB_INVITE_MODAL_TITLE_ID = 'github-invite-modal-title'
+
 export function GitHubInviteModal({ isOpen, onClose }: GitHubInviteProps) {
   const { t: _t } = useTranslation()
   const [username, setUsername] = useState('')
@@ -48,6 +51,7 @@ export function GitHubInviteModal({ isOpen, onClose }: GitHubInviteProps) {
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
   const { awardCoins, hasEarnedAction } = useRewards()
+  const modalRef = useRef<HTMLDivElement>(null)
 
   const alreadyInvited = hasEarnedAction('github_invite')
 
@@ -92,24 +96,22 @@ export function GitHubInviteModal({ isOpen, onClose }: GitHubInviteProps) {
     onClose()
   }, [onClose])
 
-  // Handle Escape key to close modal
-  useEffect(() => {
-    if (!isOpen) return
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        handleClose()
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, handleClose])
+  // Keyboard navigation (ESC to close) and scroll lock
+  useModalNavigation({ isOpen, onClose: handleClose, enableBackspace: false })
+  // Focus trap within modal
+  useModalFocusTrap(modalRef as React.RefObject<HTMLElement>, isOpen)
 
   if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-2xl">
-      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={GITHUB_INVITE_MODAL_TITLE_ID}
+        className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border bg-secondary/30">
           <div className="flex items-center gap-3">
@@ -117,12 +119,13 @@ export function GitHubInviteModal({ isOpen, onClose }: GitHubInviteProps) {
               <Github className="w-5 h-5 text-purple-400" />
             </div>
             <div>
-              <h2 className="font-semibold text-foreground">Invite via GitHub</h2>
+              <h2 id={GITHUB_INVITE_MODAL_TITLE_ID} className="font-semibold text-foreground">Invite via GitHub</h2>
               <p className="text-xs text-muted-foreground">Invite a friend to contribute</p>
             </div>
           </div>
           <button
             onClick={handleClose}
+            aria-label="Close"
             className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-4 h-4" />

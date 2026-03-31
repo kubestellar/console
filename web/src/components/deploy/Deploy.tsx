@@ -299,10 +299,10 @@ export function Deploy() {
                   }}
                   className="w-full text-left px-4 py-3 rounded-lg bg-secondary/50 hover:bg-secondary border border-border/50 hover:border-blue-400/50 transition-colors"
                 >
-                  <div className="font-medium text-sm text-foreground">{g.name}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
+                  <span className="block font-medium text-sm text-foreground">{g.name}</span>
+                  <span className="block text-xs text-muted-foreground mt-0.5">
                     {g.clusters.length} cluster{g.clusters.length !== 1 ? 's' : ''}: {g.clusters.slice(0, 3).join(', ')}{g.clusters.length > 3 ? ` +${g.clusters.length - 3} more` : ''}
-                  </div>
+                  </span>
                 </button>
               ))}
             </div>

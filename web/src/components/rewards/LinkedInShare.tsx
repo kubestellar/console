@@ -2,23 +2,33 @@
  * LinkedIn Share component for sharing KubeStellar and earning coins
  */
 
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { Linkedin, Share2, Coins, CheckCircle2 } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Button } from '../ui/Button'
 import { useRewards } from '../../hooks/useRewards'
 import { useTranslation } from 'react-i18next'
 import { emitLinkedInShare } from '../../lib/analytics'
+import { useModalNavigation, useModalFocusTrap } from '../../lib/modals/useModalNavigation'
 
 const LINKEDIN_SHARE_URL = 'https://www.linkedin.com/sharing/share-offsite/'
 const KUBESTELLAR_URL = 'https://kubestellar.io'
+const LINKEDIN_CONFIRM_MODAL_TITLE_ID = 'linkedin-confirm-modal-title'
 
 export function LinkedInShareButton() {
   const { t: _t } = useTranslation()
   const [showConfirm, setShowConfirm] = useState(false)
   const { awardCoins, getActionCount } = useRewards()
+  const modalRef = useRef<HTMLDivElement>(null)
 
   const shareCount = getActionCount('linkedin_share')
+
+  const handleCloseConfirm = useCallback(() => setShowConfirm(false), [])
+
+  // Keyboard navigation (ESC to close) and scroll lock for confirm modal
+  useModalNavigation({ isOpen: showConfirm, onClose: handleCloseConfirm, enableBackspace: false })
+  // Focus trap within confirm modal
+  useModalFocusTrap(modalRef as React.RefObject<HTMLElement>, showConfirm)
 
   const handleShare = () => {
     // Open LinkedIn share dialog
@@ -50,12 +60,18 @@ export function LinkedInShareButton() {
       {/* Confirmation Modal */}
       {showConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-2xl">
-          <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
+          <div
+            ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={LINKEDIN_CONFIRM_MODAL_TITLE_ID}
+            className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6"
+          >
             <div className="text-center">
               <div className="w-14 h-14 rounded-full bg-blue-600/20 flex items-center justify-center mx-auto mb-4">
                 <Share2 className="w-7 h-7 text-blue-400" />
               </div>
-              <h3 className="text-lg font-medium text-foreground mb-2">
+              <h3 id={LINKEDIN_CONFIRM_MODAL_TITLE_ID} className="text-lg font-medium text-foreground mb-2">
                 Did you share on LinkedIn?
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
