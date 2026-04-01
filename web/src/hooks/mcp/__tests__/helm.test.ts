@@ -12,6 +12,7 @@ const {
   mockFetchSSE,
   mockRegisterRefetch,
   mockRegisterCacheReset,
+  mockSubscribePolling,
 } = vi.hoisted(() => ({
   mockIsDemoMode: vi.fn(() => false),
   mockUseDemoMode: vi.fn(() => ({ isDemoMode: false })),
@@ -19,6 +20,7 @@ const {
   mockFetchSSE: vi.fn(),
   mockRegisterRefetch: vi.fn(() => vi.fn()),
   mockRegisterCacheReset: vi.fn(() => vi.fn()),
+  mockSubscribePolling: vi.fn(() => vi.fn()),
 }))
 
 vi.mock('../../../lib/demoMode', () => ({
@@ -44,6 +46,10 @@ vi.mock('../shared', () => ({
   getEffectiveInterval: (ms: number) => ms,
 }))
 
+vi.mock('../pollingManager', () => ({
+  subscribePolling: (...args: unknown[]) => mockSubscribePolling(...args),
+}))
+
 vi.mock('../../../lib/constants/network', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>
   return { ...actual,
@@ -65,6 +71,48 @@ vi.mock('../../../lib/constants', async (importOriginal) => {
 import { useHelmReleases, useHelmHistory, useHelmValues } from '../helm'
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Generate a unique cluster key per test to avoid module-level cache collisions */
+let testCounter = 0
+function uniqueCluster(prefix = 'test') {
+  return `${prefix}-${++testCounter}-${Date.now()}`
+}
+
+/** Build a minimal valid HelmRelease object */
+function makeRelease(overrides: Partial<{
+  name: string; namespace: string; revision: string; updated: string;
+  status: string; chart: string; app_version: string; cluster: string;
+}> = {}) {
+  return {
+    name: overrides.name ?? 'my-release',
+    namespace: overrides.namespace ?? 'default',
+    revision: overrides.revision ?? '1',
+    updated: overrides.updated ?? new Date().toISOString(),
+    status: overrides.status ?? 'deployed',
+    chart: overrides.chart ?? 'my-chart-1.0.0',
+    app_version: overrides.app_version ?? '1.0.0',
+    cluster: overrides.cluster ?? 'c1',
+  }
+}
+
+/** Build a minimal valid HelmHistoryEntry object */
+function makeHistoryEntry(overrides: Partial<{
+  revision: number; updated: string; status: string;
+  chart: string; app_version: string; description: string;
+}> = {}) {
+  return {
+    revision: overrides.revision ?? 1,
+    updated: overrides.updated ?? new Date().toISOString(),
+    status: overrides.status ?? 'deployed',
+    chart: overrides.chart ?? 'my-chart-1.0.0',
+    app_version: overrides.app_version ?? '1.0.0',
+    description: overrides.description ?? 'Install complete',
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Setup / teardown
 // ---------------------------------------------------------------------------
 
@@ -78,6 +126,7 @@ beforeEach(() => {
   mockUseDemoMode.mockReturnValue({ isDemoMode: false })
   mockIsNetlifyDeployment.value = false
   mockRegisterRefetch.mockReturnValue(vi.fn())
+  mockSubscribePolling.mockReturnValue(vi.fn())
   mockFetchSSE.mockResolvedValue([])
 })
 
@@ -169,6 +218,205 @@ describe('useHelmReleases', () => {
     // Only 1 failure so far
     expect(result.current.isFailed).toBe(false)
   })
+
+  // --- New regression tests ---
+
+  it('returns the complete return shape with all expected keys', async () => {
+    mockFetchSSE.mockResolvedValue([])
+    const { result } = renderHook(() => useHelmReleases())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // Guard against accidental removal of return properties
+    expect(result.current).toHaveProperty('releases')
+    expect(result.current).toHaveProperty('isLoading')
+    expect(result.current).toHaveProperty('isRefreshing')
+    expect(result.current).toHaveProperty('error')
+    expect(result.current).toHaveProperty('refetch')
+    expect(result.current).toHaveProperty('consecutiveFailures')
+    expect(result.current).toHaveProperty('isFailed')
+    expect(result.current).toHaveProperty('lastRefresh')
+  })
+
+  it('skips fetching entirely on Netlify deployment', async () => {
+    mockIsNetlifyDeployment.value = true
+    mockFetchSSE.mockReturnValue(new Promise(() => {})) // should never resolve
+
+    const cluster = uniqueCluster('netlify')
+    const { result } = renderHook(() => useHelmReleases(cluster))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    // No SSE or REST calls should have been attempted
+    expect(result.current.isRefreshing).toBe(false)
+  })
+
+  it('handles REST 500 response as an error', async () => {
+    mockFetchSSE.mockRejectedValue(new Error('SSE unavailable'))
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+    })
+
+    const cluster = uniqueCluster('rest-500')
+    const { result } = renderHook(() => useHelmReleases(cluster))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
+  })
+
+  it('handles REST response with missing releases key', async () => {
+    mockFetchSSE.mockRejectedValue(new Error('SSE unavailable'))
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({}), // no "releases" key
+    })
+
+    const cluster = uniqueCluster('no-releases-key')
+    const { result } = renderHook(() => useHelmReleases(cluster))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    // Should gracefully default to empty array (data.releases || [])
+    expect(result.current.releases).toEqual([])
+    expect(result.current.error).toBeNull()
+  })
+
+  it('keeps cached data on subsequent fetch failure', async () => {
+    const cluster = uniqueCluster('cached-keep')
+    const fakeReleases = [makeRelease({ cluster })]
+
+    // First fetch succeeds via SSE
+    mockFetchSSE.mockResolvedValue(fakeReleases)
+    const { result } = renderHook(() => useHelmReleases(cluster))
+
+    await waitFor(() => expect(result.current.releases).toEqual(fakeReleases))
+
+    // Second fetch fails
+    mockFetchSSE.mockRejectedValue(new Error('now failing'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('now failing'))
+
+    await act(async () => { await result.current.refetch() })
+
+    // Original data should be preserved despite the error
+    expect(result.current.releases).toEqual(fakeReleases)
+    expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
+  })
+
+  it('registers for polling and mode-transition refetch on mount', async () => {
+    mockFetchSSE.mockResolvedValue([])
+    const cluster = uniqueCluster('register')
+    renderHook(() => useHelmReleases(cluster))
+
+    await waitFor(() => {
+      expect(mockSubscribePolling).toHaveBeenCalled()
+    })
+    expect(mockRegisterRefetch).toHaveBeenCalled()
+  })
+
+  it('unsubscribes polling and refetch on unmount', async () => {
+    const unsubPolling = vi.fn()
+    const unregRefetch = vi.fn()
+    mockSubscribePolling.mockReturnValue(unsubPolling)
+    mockRegisterRefetch.mockReturnValue(unregRefetch)
+    mockFetchSSE.mockResolvedValue([])
+
+    const cluster = uniqueCluster('unsub')
+    const { unmount } = renderHook(() => useHelmReleases(cluster))
+
+    await waitFor(() => expect(mockSubscribePolling).toHaveBeenCalled())
+    unmount()
+
+    expect(unsubPolling).toHaveBeenCalled()
+    expect(unregRefetch).toHaveBeenCalled()
+  })
+
+  it('demo releases each have required HelmRelease fields', async () => {
+    mockIsDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+
+    const { result } = renderHook(() => useHelmReleases())
+
+    await waitFor(() => expect(result.current.releases.length).toBeGreaterThan(0))
+
+    for (const rel of result.current.releases) {
+      expect(rel).toHaveProperty('name')
+      expect(rel).toHaveProperty('namespace')
+      expect(rel).toHaveProperty('revision')
+      expect(rel).toHaveProperty('updated')
+      expect(rel).toHaveProperty('status')
+      expect(rel).toHaveProperty('chart')
+      expect(rel).toHaveProperty('app_version')
+      expect(rel).toHaveProperty('cluster')
+    }
+  })
+
+  it('sets lastRefresh after a successful fetch', async () => {
+    const cluster = uniqueCluster('lastRefresh')
+    mockFetchSSE.mockResolvedValue([makeRelease({ cluster })])
+
+    const { result } = renderHook(() => useHelmReleases(cluster))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.lastRefresh).toBeTypeOf('number')
+    expect(result.current.lastRefresh).toBeGreaterThan(0)
+  })
+
+  it('resets error and consecutiveFailures after a successful fetch', async () => {
+    const cluster = uniqueCluster('reset-err')
+
+    // First attempt fails
+    mockFetchSSE.mockRejectedValue(new Error('fail'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('fail'))
+    const { result } = renderHook(() => useHelmReleases(cluster))
+
+    await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1))
+
+    // Second attempt succeeds
+    mockFetchSSE.mockResolvedValue([makeRelease({ cluster })])
+    await act(async () => { await result.current.refetch() })
+
+    expect(result.current.consecutiveFailures).toBe(0)
+    expect(result.current.error).toBeNull()
+  })
+
+  it('sends Authorization header with Bearer token on REST fallback', async () => {
+    mockFetchSSE.mockRejectedValue(new Error('SSE unavailable'))
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ releases: [] }),
+    })
+    globalThis.fetch = mockFetch
+
+    const cluster = uniqueCluster('auth-header')
+    const { result } = renderHook(() => useHelmReleases(cluster))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/gitops/helm-releases'),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'Authorization': 'Bearer test-token',
+        }),
+      })
+    )
+  })
+
+  it('includes cluster query parameter when provided', async () => {
+    mockFetchSSE.mockRejectedValue(new Error('SSE unavailable'))
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ releases: [] }),
+    })
+    globalThis.fetch = mockFetch
+
+    const cluster = uniqueCluster('cluster-param')
+    const { result } = renderHook(() => useHelmReleases(cluster))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    const calledUrl = mockFetch.mock.calls[0]?.[0] as string
+    expect(calledUrl).toContain(`cluster=${encodeURIComponent(cluster)}`)
+  })
 })
 
 // ===========================================================================
@@ -238,6 +486,200 @@ describe('useHelmHistory', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(typeof result.current.refetch).toBe('function')
   })
+
+  // --- New regression tests ---
+
+  it('returns the complete return shape with all expected keys', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ history: [] }),
+    })
+    const cluster = uniqueCluster('hist-shape')
+    const { result } = renderHook(() => useHelmHistory(cluster, 'my-rel', 'default'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current).toHaveProperty('history')
+    expect(result.current).toHaveProperty('isLoading')
+    expect(result.current).toHaveProperty('isRefreshing')
+    expect(result.current).toHaveProperty('error')
+    expect(result.current).toHaveProperty('refetch')
+    expect(result.current).toHaveProperty('isFailed')
+    expect(result.current).toHaveProperty('consecutiveFailures')
+    expect(result.current).toHaveProperty('lastRefresh')
+  })
+
+  it('handles HTTP 404 response as an error', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+    })
+
+    const cluster = uniqueCluster('hist-404')
+    const { result } = renderHook(() => useHelmHistory(cluster, 'nonexistent-release', 'default'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.error).toContain('API error')
+    expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
+  })
+
+  it('handles response with missing history key', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({}), // no "history" key
+    })
+
+    const cluster = uniqueCluster('hist-missing-key')
+    const { result } = renderHook(() => useHelmHistory(cluster, 'my-rel', 'default'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    // Should gracefully default to [] via (data.history || [])
+    expect(result.current.history).toEqual([])
+    expect(result.current.error).toBeNull()
+  })
+
+  it('passes error field from response body', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ history: [], error: 'cluster unreachable' }),
+    })
+
+    const cluster = uniqueCluster('hist-body-err')
+    const { result } = renderHook(() => useHelmHistory(cluster, 'my-rel', 'default'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.error).toBe('cluster unreachable')
+  })
+
+  it('preserves cached history on subsequent fetch failure', async () => {
+    const cluster = uniqueCluster('hist-cache')
+    const fakeHistory = [makeHistoryEntry({ revision: 1 }), makeHistoryEntry({ revision: 2 })]
+
+    // First fetch succeeds
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ history: fakeHistory }),
+    })
+    const { result } = renderHook(() => useHelmHistory(cluster, 'my-rel', 'default'))
+
+    await waitFor(() => expect(result.current.history).toEqual(fakeHistory))
+
+    // Second fetch fails
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('connection refused'))
+    await act(async () => { await result.current.refetch() })
+
+    // Cached data still intact
+    expect(result.current.history).toEqual(fakeHistory)
+    expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
+  })
+
+  it('isFailed is false below 3 failures and true at 3+', async () => {
+    const cluster = uniqueCluster('hist-isFailed')
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('fail'))
+
+    const { result } = renderHook(() => useHelmHistory(cluster, 'my-rel', 'default'))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.isFailed).toBe(false) // 1 failure
+
+    await act(async () => { await result.current.refetch() })
+    expect(result.current.isFailed).toBe(false) // 2 failures
+
+    await act(async () => { await result.current.refetch() })
+    expect(result.current.isFailed).toBe(true) // 3 failures => isFailed
+  })
+
+  it('demo history entries each have required HelmHistoryEntry fields', async () => {
+    mockIsDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+
+    const { result } = renderHook(() => useHelmHistory('c1', 'prometheus', 'monitoring'))
+    await waitFor(() => expect(result.current.history.length).toBeGreaterThan(0))
+
+    for (const entry of result.current.history) {
+      expect(entry).toHaveProperty('revision')
+      expect(entry).toHaveProperty('updated')
+      expect(entry).toHaveProperty('status')
+      expect(entry).toHaveProperty('chart')
+      expect(entry).toHaveProperty('app_version')
+      expect(entry).toHaveProperty('description')
+      expect(typeof entry.revision).toBe('number')
+    }
+  })
+
+  it('sets lastRefresh after successful fetch', async () => {
+    const cluster = uniqueCluster('hist-lastRefresh')
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ history: [makeHistoryEntry()] }),
+    })
+
+    const { result } = renderHook(() => useHelmHistory(cluster, 'my-rel', 'default'))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.lastRefresh).toBeTypeOf('number')
+    expect(result.current.lastRefresh).toBeGreaterThan(0)
+  })
+
+  it('includes cluster, release, and namespace query params in fetch URL', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ history: [] }),
+    })
+    globalThis.fetch = mockFetch
+
+    const cluster = uniqueCluster('hist-params')
+    const { result } = renderHook(() => useHelmHistory(cluster, 'my-rel', 'my-ns'))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    const calledUrl = mockFetch.mock.calls[0]?.[0] as string
+    expect(calledUrl).toContain(`cluster=${encodeURIComponent(cluster)}`)
+    expect(calledUrl).toContain('release=my-rel')
+    expect(calledUrl).toContain('namespace=my-ns')
+  })
+
+  it('sends Authorization header with Bearer token', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ history: [] }),
+    })
+    globalThis.fetch = mockFetch
+
+    const cluster = uniqueCluster('hist-auth')
+    const { result } = renderHook(() => useHelmHistory(cluster, 'my-rel', 'default'))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'Authorization': 'Bearer test-token',
+        }),
+      })
+    )
+  })
+
+  it('registers for mode-transition refetch and cleans up on unmount', async () => {
+    const unregRefetch = vi.fn()
+    mockRegisterRefetch.mockReturnValue(unregRefetch)
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ history: [] }),
+    })
+
+    const cluster = uniqueCluster('hist-unreg')
+    const { unmount } = renderHook(() => useHelmHistory(cluster, 'my-rel', 'default'))
+
+    await waitFor(() => expect(mockRegisterRefetch).toHaveBeenCalled())
+    unmount()
+    expect(unregRefetch).toHaveBeenCalled()
+  })
+
+  it('refetch with no release returns empty array immediately', async () => {
+    const { result } = renderHook(() => useHelmHistory('c1', undefined, 'default'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.history).toEqual([])
+  })
 })
 
 // ===========================================================================
@@ -298,5 +740,222 @@ describe('useHelmValues', () => {
 
     await waitFor(() => expect(result.current.values).toBeDefined())
     expect(typeof result.current.refetch).toBe('function')
+  })
+
+  // --- New regression tests ---
+
+  it('returns the complete return shape with all expected keys', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ values: {}, format: 'json' }),
+    })
+    const cluster = uniqueCluster('val-shape')
+    const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
+
+    await waitFor(() => expect(result.current.values).toBeDefined())
+
+    expect(result.current).toHaveProperty('values')
+    expect(result.current).toHaveProperty('format')
+    expect(result.current).toHaveProperty('isLoading')
+    expect(result.current).toHaveProperty('isRefreshing')
+    expect(result.current).toHaveProperty('error')
+    expect(result.current).toHaveProperty('refetch')
+    expect(result.current).toHaveProperty('isFailed')
+    expect(result.current).toHaveProperty('consecutiveFailures')
+    expect(result.current).toHaveProperty('lastRefresh')
+  })
+
+  it('does not fetch when namespace is missing', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ values: {}, format: 'json' }),
+    })
+    globalThis.fetch = mockFetch
+
+    const cluster = uniqueCluster('val-no-ns')
+    // release provided but no namespace
+    const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', undefined))
+
+    // Wait a tick to give any async effects time to fire
+    await act(async () => { await new Promise(r => setTimeout(r, 50)) })
+
+    // No fetch should have been called - namespace is required
+    expect(mockFetch).not.toHaveBeenCalled()
+    expect(result.current.values).toBeNull()
+  })
+
+  it('handles HTTP 500 response as an error', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+    })
+
+    const cluster = uniqueCluster('val-500')
+    const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.error).toContain('API error')
+    expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
+  })
+
+  it('handles yaml format from server', async () => {
+    const yamlString = 'replicaCount: 2\nimage:\n  tag: v1.0.0'
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ values: yamlString, format: 'yaml' }),
+    })
+
+    const cluster = uniqueCluster('val-yaml')
+    const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
+
+    await waitFor(() => expect(result.current.values).toBeDefined())
+    expect(result.current.values).toBe(yamlString)
+    expect(result.current.format).toBe('yaml')
+  })
+
+  it('defaults format to json when server omits format field', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ values: { key: 'val' } }), // no "format" key
+    })
+
+    const cluster = uniqueCluster('val-no-format')
+    const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
+
+    await waitFor(() => expect(result.current.values).toBeDefined())
+    expect(result.current.format).toBe('json')
+  })
+
+  it('preserves cached values on subsequent fetch failure', async () => {
+    const cluster = uniqueCluster('val-cache-keep')
+    const fakeValues = { replicaCount: 3, env: 'production' }
+
+    // First fetch succeeds
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ values: fakeValues, format: 'json' }),
+    })
+    const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
+
+    await waitFor(() => expect(result.current.values).toEqual(fakeValues))
+
+    // Second fetch fails
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('connection refused'))
+    await act(async () => { await result.current.refetch() })
+
+    // Cached values still intact
+    expect(result.current.values).toEqual(fakeValues)
+    expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
+  })
+
+  it('isFailed is false below 3 failures and true at 3+', async () => {
+    const cluster = uniqueCluster('val-isFailed')
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('fail'))
+
+    const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.isFailed).toBe(false) // 1 failure
+
+    await act(async () => { await result.current.refetch() })
+    expect(result.current.isFailed).toBe(false) // 2 failures
+
+    await act(async () => { await result.current.refetch() })
+    expect(result.current.isFailed).toBe(true) // 3 failures => isFailed
+  })
+
+  it('demo values contain expected structure', async () => {
+    mockIsDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+
+    const cluster = uniqueCluster('val-demo-struct')
+    const { result } = renderHook(() => useHelmValues(cluster, 'prometheus', 'monitoring'))
+
+    await waitFor(() => expect(result.current.values).not.toBeNull())
+
+    const vals = result.current.values as Record<string, unknown>
+    expect(vals).toHaveProperty('replicaCount')
+    expect(vals).toHaveProperty('image')
+    expect(vals).toHaveProperty('service')
+    expect(vals).toHaveProperty('resources')
+  })
+
+  it('clears values when release is deselected', async () => {
+    const cluster = uniqueCluster('val-deselect')
+    const fakeValues = { key: 'val' }
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ values: fakeValues, format: 'json' }),
+    })
+
+    // Start with a release selected
+    const { result, rerender } = renderHook(
+      ({ rel }: { rel: string | undefined }) => useHelmValues(cluster, rel, 'default'),
+      { initialProps: { rel: 'my-rel' as string | undefined } }
+    )
+
+    await waitFor(() => expect(result.current.values).toEqual(fakeValues))
+
+    // Deselect release
+    rerender({ rel: undefined })
+
+    await waitFor(() => expect(result.current.values).toBeNull())
+  })
+
+  it('sends Authorization header with Bearer token', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ values: {}, format: 'json' }),
+    })
+    globalThis.fetch = mockFetch
+
+    const cluster = uniqueCluster('val-auth')
+    const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
+
+    await waitFor(() => expect(result.current.values).toBeDefined())
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'Authorization': 'Bearer test-token',
+        }),
+      })
+    )
+  })
+
+  it('sets lastRefresh after successful fetch', async () => {
+    const cluster = uniqueCluster('val-lastRefresh')
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ values: { a: 1 }, format: 'json' }),
+    })
+
+    const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
+    await waitFor(() => expect(result.current.values).toBeDefined())
+
+    expect(result.current.lastRefresh).toBeTypeOf('number')
+    expect(result.current.lastRefresh).toBeGreaterThan(0)
+  })
+
+  it('resets consecutiveFailures to 0 after a successful refetch', async () => {
+    const cluster = uniqueCluster('val-reset-fail')
+
+    // First fetch fails
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('fail'))
+    const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
+
+    await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1))
+
+    // Second fetch succeeds
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ values: { ok: true }, format: 'json' }),
+    })
+    await act(async () => { await result.current.refetch() })
+
+    expect(result.current.consecutiveFailures).toBe(0)
+    expect(result.current.error).toBeNull()
   })
 })

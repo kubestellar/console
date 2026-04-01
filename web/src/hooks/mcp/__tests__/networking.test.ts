@@ -251,6 +251,296 @@ describe('useServices', () => {
     expect(result.current.services.length).toBeGreaterThan(0)
     expect(result.current.error).toBeNull()
   })
+
+  // -------------------------------------------------------------------------
+  // NEW: Service type parsing - all four Kubernetes service types
+  // -------------------------------------------------------------------------
+
+  it('correctly returns ClusterIP services with clusterIP field', async () => {
+    const clusterIPService = {
+      name: 'internal-api', namespace: 'default', cluster: 'c1',
+      type: 'ClusterIP', clusterIP: '10.96.0.10', ports: ['8080/TCP'],
+    }
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ services: [clusterIPService] }),
+    })
+
+    const { result } = renderHook(() => useServices())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.services).toHaveLength(1)
+    expect(result.current.services[0].type).toBe('ClusterIP')
+    expect(result.current.services[0].clusterIP).toBe('10.96.0.10')
+    expect(result.current.services[0].externalIP).toBeUndefined()
+  })
+
+  it('correctly returns LoadBalancer services with externalIP', async () => {
+    const lbService = {
+      name: 'public-api', namespace: 'production', cluster: 'prod-east',
+      type: 'LoadBalancer', clusterIP: '10.96.10.50', externalIP: '52.14.123.45',
+      ports: ['80/TCP', '443/TCP'],
+    }
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ services: [lbService] }),
+    })
+
+    const { result } = renderHook(() => useServices())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.services[0].type).toBe('LoadBalancer')
+    expect(result.current.services[0].externalIP).toBe('52.14.123.45')
+    expect(result.current.services[0].ports).toEqual(['80/TCP', '443/TCP'])
+  })
+
+  it('correctly returns NodePort services with port mappings', async () => {
+    const nodePortService = {
+      name: 'grafana', namespace: 'monitoring', cluster: 'staging',
+      type: 'NodePort', clusterIP: '10.96.40.20', ports: ['3000:30300/TCP'],
+    }
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ services: [nodePortService] }),
+    })
+
+    const { result } = renderHook(() => useServices())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.services[0].type).toBe('NodePort')
+    expect(result.current.services[0].ports).toEqual(['3000:30300/TCP'])
+  })
+
+  it('correctly returns ExternalName services without clusterIP', async () => {
+    const externalNameService = {
+      name: 'external-db', namespace: 'data', cluster: 'c1',
+      type: 'ExternalName', ports: [],
+    }
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ services: [externalNameService] }),
+    })
+
+    const { result } = renderHook(() => useServices())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.services[0].type).toBe('ExternalName')
+    expect(result.current.services[0].clusterIP).toBeUndefined()
+  })
+
+  // -------------------------------------------------------------------------
+  // NEW: Mixed service types in a single response
+  // -------------------------------------------------------------------------
+
+  it('handles mixed service types in a single response', async () => {
+    const mixedServices = [
+      { name: 'svc-clusterip', namespace: 'ns1', type: 'ClusterIP', clusterIP: '10.0.0.1', ports: ['80/TCP'] },
+      { name: 'svc-lb', namespace: 'ns1', type: 'LoadBalancer', clusterIP: '10.0.0.2', externalIP: '1.2.3.4', ports: ['443/TCP'] },
+      { name: 'svc-nodeport', namespace: 'ns1', type: 'NodePort', clusterIP: '10.0.0.3', ports: ['8080:30080/TCP'] },
+      { name: 'svc-extname', namespace: 'ns1', type: 'ExternalName', ports: [] },
+    ]
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ services: mixedServices }),
+    })
+
+    const { result } = renderHook(() => useServices())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.services).toHaveLength(4)
+    const types = result.current.services.map(s => s.type)
+    expect(types).toEqual(['ClusterIP', 'LoadBalancer', 'NodePort', 'ExternalName'])
+  })
+
+  // -------------------------------------------------------------------------
+  // NEW: Empty response handling
+  // -------------------------------------------------------------------------
+
+  it('handles null services field in API response gracefully', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ services: null }),
+    })
+
+    const { result } = renderHook(() => useServices())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // The hook uses `data.services || []` so null becomes empty array
+    expect(result.current.services).toEqual([])
+    expect(result.current.error).toBeNull()
+  })
+
+  it('handles missing services field in API response gracefully', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    })
+
+    const { result } = renderHook(() => useServices())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.services).toEqual([])
+    expect(result.current.error).toBeNull()
+  })
+
+  // -------------------------------------------------------------------------
+  // NEW: HTTP error status codes
+  // -------------------------------------------------------------------------
+
+  it('increments consecutiveFailures on HTTP 500 error', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+    })
+
+    const { result } = renderHook(() => useServices())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
+    expect(result.current.error).toBeNull() // services are optional, no error surfaced
+  })
+
+  it('sets isFailed to true after 3 consecutive failures', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+    })
+
+    const { result } = renderHook(() => useServices())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // First fetch fails (initial mount)
+    expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
+
+    // Trigger two more refetches to reach 3 consecutive failures
+    await act(async () => { result.current.refetch() })
+    await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(2))
+
+    await act(async () => { result.current.refetch() })
+    await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(3))
+
+    expect(result.current.isFailed).toBe(true)
+  })
+
+  it('resets consecutiveFailures to 0 on successful fetch after failures', async () => {
+    // Start with failures
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 })
+    const { result } = renderHook(() => useServices())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
+
+    // Now succeed
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ services: [{ name: 'svc', namespace: 'ns', type: 'ClusterIP', ports: [] }] }),
+    })
+    await act(async () => { result.current.refetch() })
+    await waitFor(() => expect(result.current.consecutiveFailures).toBe(0))
+    expect(result.current.isFailed).toBe(false)
+  })
+
+  // -------------------------------------------------------------------------
+  // NEW: Demo mode - cluster/namespace filtering
+  // -------------------------------------------------------------------------
+
+  it('filters demo services by cluster when specified', async () => {
+    mockIsDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+
+    const { result } = renderHook(() => useServices('staging'))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // All returned services should belong to the 'staging' cluster
+    expect(result.current.services.length).toBeGreaterThan(0)
+    result.current.services.forEach(s => {
+      expect(s.cluster).toBe('staging')
+    })
+  })
+
+  it('filters demo services by both cluster and namespace', async () => {
+    mockIsDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+
+    const { result } = renderHook(() => useServices('prod-east', 'data'))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.services.length).toBeGreaterThan(0)
+    result.current.services.forEach(s => {
+      expect(s.cluster).toBe('prod-east')
+      expect(s.namespace).toBe('data')
+    })
+  })
+
+  it('returns empty array in demo mode when cluster does not match any demo data', async () => {
+    mockIsDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+
+    const { result } = renderHook(() => useServices('nonexistent-cluster'))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.services).toEqual([])
+    expect(result.current.error).toBeNull()
+  })
+
+  // -------------------------------------------------------------------------
+  // NEW: Cache key correctness
+  // -------------------------------------------------------------------------
+
+  it('generates distinct cache keys for different cluster/namespace combos', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ services: [] }),
+    })
+
+    // Render with one set of params
+    const { unmount } = renderHook(() => useServices('cluster-a', 'ns-a'))
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
+    unmount()
+
+    // Render with different params - registerRefetch should be called with different key
+    renderHook(() => useServices('cluster-b', 'ns-b'))
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
+
+    // registerRefetch calls should have distinct keys
+    const refetchKeys = mockRegisterRefetch.mock.calls.map((c: unknown[]) => c[0])
+    const uniqueKeys = new Set(refetchKeys)
+    expect(uniqueKeys.size).toBeGreaterThanOrEqual(2)
+  })
+
+  // -------------------------------------------------------------------------
+  // NEW: lastUpdated and lastRefresh timestamps
+  // -------------------------------------------------------------------------
+
+  it('sets lastUpdated and lastRefresh timestamps on successful fetch', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ services: [{ name: 's', namespace: 'n', type: 'ClusterIP', ports: [] }] }),
+    })
+
+    const { result } = renderHook(() => useServices())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.lastUpdated).toBeInstanceOf(Date)
+    expect(result.current.lastRefresh).toBeInstanceOf(Date)
+  })
+
+  // -------------------------------------------------------------------------
+  // NEW: Query param encoding without cluster/namespace
+  // -------------------------------------------------------------------------
+
+  it('omits cluster and namespace query params when not provided', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ services: [] }),
+    })
+
+    renderHook(() => useServices())
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
+
+    const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
+    expect(url).not.toContain('cluster=')
+    expect(url).not.toContain('namespace=')
+  })
 })
 
 // ===========================================================================
@@ -325,6 +615,109 @@ describe('useIngresses', () => {
 
     await waitFor(() => expect(mockApiGet.mock.calls.length).toBeGreaterThan(callsBefore))
   })
+
+  // -------------------------------------------------------------------------
+  // NEW: Ingress host extraction
+  // -------------------------------------------------------------------------
+
+  it('preserves ingress hosts array with multiple hostnames', async () => {
+    const multiHostIngress = [
+      {
+        name: 'multi-host-ingress', namespace: 'production', cluster: 'prod',
+        class: 'nginx', hosts: ['app.example.com', 'api.example.com', 'www.example.com'],
+        address: '10.0.0.100',
+      },
+    ]
+    mockApiGet.mockResolvedValue({ data: { ingresses: multiHostIngress } })
+
+    const { result } = renderHook(() => useIngresses('prod', 'production'))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.ingresses[0].hosts).toEqual(['app.example.com', 'api.example.com', 'www.example.com'])
+    expect(result.current.ingresses[0].hosts).toHaveLength(3)
+  })
+
+  it('handles ingresses with empty hosts array', async () => {
+    const noHostIngress = [
+      { name: 'catch-all', namespace: 'default', cluster: 'c1', hosts: [], class: 'nginx' },
+    ]
+    mockApiGet.mockResolvedValue({ data: { ingresses: noHostIngress } })
+
+    const { result } = renderHook(() => useIngresses())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.ingresses[0].hosts).toEqual([])
+    expect(result.current.ingresses[0].name).toBe('catch-all')
+  })
+
+  it('handles ingress with class and address fields', async () => {
+    const ingress = [
+      {
+        name: 'main-ingress', namespace: 'web', cluster: 'prod',
+        class: 'alb', hosts: ['app.example.com'], address: '52.14.0.1', age: '10d',
+      },
+    ]
+    mockApiGet.mockResolvedValue({ data: { ingresses: ingress } })
+
+    const { result } = renderHook(() => useIngresses())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.ingresses[0].class).toBe('alb')
+    expect(result.current.ingresses[0].address).toBe('52.14.0.1')
+    expect(result.current.ingresses[0].age).toBe('10d')
+  })
+
+  // -------------------------------------------------------------------------
+  // NEW: Ingress error handling
+  // -------------------------------------------------------------------------
+
+  it('handles null ingresses field in API response gracefully', async () => {
+    mockApiGet.mockResolvedValue({ data: { ingresses: null } })
+
+    const { result } = renderHook(() => useIngresses())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // The hook uses `data.ingresses || []`
+    expect(result.current.ingresses).toEqual([])
+    expect(result.current.error).toBeNull()
+  })
+
+  it('increments consecutiveFailures on ingress fetch failure', async () => {
+    mockApiGet.mockRejectedValue(new Error('server error'))
+
+    const { result } = renderHook(() => useIngresses())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
+  })
+
+  it('sets isFailed after 3 consecutive ingress failures', async () => {
+    mockApiGet.mockRejectedValue(new Error('server error'))
+
+    const { result } = renderHook(() => useIngresses())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await act(async () => { result.current.refetch() })
+    await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(2))
+
+    await act(async () => { result.current.refetch() })
+    await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(3))
+
+    expect(result.current.isFailed).toBe(true)
+  })
+
+  it('clears ingresses on API failure (unlike services which keep stale data)', async () => {
+    // First succeed with data
+    const fakeIngresses = [{ name: 'ing-1', namespace: 'default', cluster: 'c1', hosts: ['a.com'] }]
+    mockApiGet.mockResolvedValue({ data: { ingresses: fakeIngresses } })
+    const { result } = renderHook(() => useIngresses())
+    await waitFor(() => expect(result.current.ingresses).toHaveLength(1))
+
+    // Then fail
+    mockApiGet.mockRejectedValue(new Error('network error'))
+    await act(async () => { result.current.refetch() })
+    await waitFor(() => expect(result.current.ingresses).toEqual([]))
+  })
 })
 
 // ===========================================================================
@@ -398,5 +791,157 @@ describe('useNetworkPolicies', () => {
     rerender({ demoMode: true })
 
     await waitFor(() => expect(mockApiGet.mock.calls.length).toBeGreaterThan(callsBefore))
+  })
+
+  // -------------------------------------------------------------------------
+  // NEW: Network policy matching - policyTypes and podSelector
+  // -------------------------------------------------------------------------
+
+  it('preserves policyTypes array with Ingress and Egress', async () => {
+    const policies = [
+      {
+        name: 'deny-all', namespace: 'secure', cluster: 'prod',
+        policyTypes: ['Ingress', 'Egress'], podSelector: 'app=api',
+      },
+    ]
+    mockApiGet.mockResolvedValue({ data: { networkpolicies: policies } })
+
+    const { result } = renderHook(() => useNetworkPolicies('prod', 'secure'))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.networkpolicies[0].policyTypes).toEqual(['Ingress', 'Egress'])
+    expect(result.current.networkpolicies[0].podSelector).toBe('app=api')
+  })
+
+  it('handles network policy with Ingress-only policyType', async () => {
+    const policies = [
+      {
+        name: 'ingress-only', namespace: 'web', cluster: 'staging',
+        policyTypes: ['Ingress'], podSelector: 'role=frontend',
+      },
+    ]
+    mockApiGet.mockResolvedValue({ data: { networkpolicies: policies } })
+
+    const { result } = renderHook(() => useNetworkPolicies())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.networkpolicies[0].policyTypes).toEqual(['Ingress'])
+    expect(result.current.networkpolicies[0].podSelector).toBe('role=frontend')
+  })
+
+  it('handles network policy with empty podSelector (selects all pods)', async () => {
+    const policies = [
+      {
+        name: 'default-deny', namespace: 'default', cluster: 'c1',
+        policyTypes: ['Ingress'], podSelector: '',
+      },
+    ]
+    mockApiGet.mockResolvedValue({ data: { networkpolicies: policies } })
+
+    const { result } = renderHook(() => useNetworkPolicies())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.networkpolicies[0].podSelector).toBe('')
+    expect(result.current.networkpolicies[0].name).toBe('default-deny')
+  })
+
+  // -------------------------------------------------------------------------
+  // NEW: Network policy error handling
+  // -------------------------------------------------------------------------
+
+  it('handles null networkpolicies field in API response gracefully', async () => {
+    mockApiGet.mockResolvedValue({ data: { networkpolicies: null } })
+
+    const { result } = renderHook(() => useNetworkPolicies())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.networkpolicies).toEqual([])
+    expect(result.current.error).toBeNull()
+  })
+
+  it('sets isFailed after 3 consecutive network policy failures', async () => {
+    mockApiGet.mockRejectedValue(new Error('server error'))
+
+    const { result } = renderHook(() => useNetworkPolicies())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await act(async () => { result.current.refetch() })
+    await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(2))
+
+    await act(async () => { result.current.refetch() })
+    await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(3))
+
+    expect(result.current.isFailed).toBe(true)
+  })
+
+  it('clears network policies on API failure', async () => {
+    const fakePolicies = [
+      { name: 'np-1', namespace: 'default', cluster: 'c1', policyTypes: ['Ingress'], podSelector: '' },
+    ]
+    mockApiGet.mockResolvedValue({ data: { networkpolicies: fakePolicies } })
+    const { result } = renderHook(() => useNetworkPolicies())
+    await waitFor(() => expect(result.current.networkpolicies).toHaveLength(1))
+
+    mockApiGet.mockRejectedValue(new Error('network error'))
+    await act(async () => { result.current.refetch() })
+    await waitFor(() => expect(result.current.networkpolicies).toEqual([]))
+  })
+
+  it('registers for mode transition refetch with correct key pattern', async () => {
+    mockApiGet.mockResolvedValue({ data: { networkpolicies: [] } })
+    renderHook(() => useNetworkPolicies('test-cluster', 'test-ns'))
+
+    await waitFor(() => expect(mockRegisterRefetch).toHaveBeenCalled())
+
+    const matchingCall = mockRegisterRefetch.mock.calls.find(
+      (c: unknown[]) => typeof c[0] === 'string' && (c[0] as string).includes('network-policies')
+    )
+    expect(matchingCall).toBeDefined()
+    expect(matchingCall![0]).toContain('test-cluster')
+    expect(matchingCall![0]).toContain('test-ns')
+  })
+})
+
+// ===========================================================================
+// subscribeNetworkingCache
+// ===========================================================================
+
+describe('subscribeNetworkingCache', () => {
+  it('notifies subscribers when cache reset is triggered', async () => {
+    const subscriber = vi.fn()
+
+    // Import subscribeNetworkingCache
+    const { subscribeNetworkingCache } = await import('../networking')
+
+    const unsubscribe = subscribeNetworkingCache(subscriber)
+
+    // Trigger the registered cache reset
+    const reset = capturedCacheResets.get('services')
+    if (reset) {
+      reset()
+      expect(subscriber).toHaveBeenCalled()
+      const lastCall = subscriber.mock.calls[0][0]
+      expect(lastCall).toHaveProperty('isResetting', true)
+      expect(lastCall).toHaveProperty('cacheVersion')
+    }
+
+    unsubscribe()
+  })
+
+  it('stops notifying after unsubscribe', async () => {
+    const subscriber = vi.fn()
+    const { subscribeNetworkingCache } = await import('../networking')
+
+    const unsubscribe = subscribeNetworkingCache(subscriber)
+    unsubscribe()
+
+    subscriber.mockClear()
+
+    // Trigger reset - subscriber should NOT be called
+    const reset = capturedCacheResets.get('services')
+    if (reset) {
+      reset()
+      expect(subscriber).not.toHaveBeenCalled()
+    }
   })
 })
