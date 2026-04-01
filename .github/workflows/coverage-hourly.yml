@@ -5,12 +5,12 @@ name: Hourly Coverage Suite
 
 on:
   schedule:
-    - cron: '15 * * * *'  # Every hour at :15
+    - cron: '15 */2 * * *'  # Every 2 hours at :15 (run takes ~25 min)
   workflow_dispatch:
 
 concurrency:
   group: coverage-hourly
-  cancel-in-progress: true
+  cancel-in-progress: false  # Never cancel — let runs complete
 
 permissions:
   contents: read
