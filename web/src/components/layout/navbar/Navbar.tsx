@@ -12,7 +12,6 @@ import { LogoWithStar } from '../../ui/LogoWithStar'
 import { UserProfileDropdown } from '../UserProfileDropdown'
 import { AlertBadge } from '../../ui/AlertBadge'
 import { FeatureRequestButton } from '../../feedback'
-import { ActiveUsersWidget } from './ActiveUsersWidget'
 // Lazy-load SearchDropdown — it imports useSearchIndex which pulls in 5 MCP
 // modules (~135 KB). The search bar appears after the chunk loads (near-instant).
 const SearchDropdown = lazy(() =>
@@ -114,9 +113,6 @@ export function Navbar() {
 
         {/* Extended desktop items: lg+ (1024px) */}
         <div className="hidden lg:flex items-center gap-2">
-          {/* Active Users */}
-          <ActiveUsersWidget />
-
           {/* Update Indicator */}
           <UpdateIndicator />
 
@@ -198,10 +194,7 @@ export function Navbar() {
                     <div className="border-t border-border mx-3 my-1" />
                   </div>
 
-                  {/* Items hidden at <lg (1024px): active users, update, token usage, feature request, tour */}
-                  <div className="px-3 py-2">
-                    <ActiveUsersWidget />
-                  </div>
+                  {/* Items hidden at <lg (1024px): update, token usage, feature request, tour */}
                   <div className="px-3 py-2">
                     <UpdateIndicator />
                   </div>
