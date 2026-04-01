@@ -144,6 +144,26 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
     }
   }, [isPreviewFullscreen, handleFullscreenKeyDown])
 
+  // Handle paste events to capture screenshots pasted into the textarea
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+    const imageItems = Array.from(items).filter(item => item.type.startsWith('image/'))
+    if (imageItems.length === 0) return
+    e.preventDefault()
+    imageItems.forEach(item => {
+      const file = item.getAsFile()
+      if (file) {
+        const reader = new FileReader()
+        reader.onload = (ev) => {
+          setScreenshots(prev => [...prev, { file, preview: ev.target?.result as string }])
+        }
+        reader.readAsDataURL(file)
+      }
+    })
+    showToast(`Screenshot${imageItems.length > 1 ? 's' : ''} added`, 'success')
+  }
+
   const handleScreenshotFiles = (files: FileList | null) => {
     if (!files) return
     const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'))
@@ -1199,36 +1219,14 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
                 </button>
               </div>
 
-              {/* Screenshot paste reminder on success */}
+              {/* Screenshot upload confirmation */}
               {screenshots.length > 0 && (
-                <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-left">
-                  <p className="text-xs text-amber-400 font-medium mb-1">
-                    Attach your screenshots
+                <div className="mt-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <p className="text-xs text-green-400 font-medium">
+                    {screenshots.length === 1
+                      ? 'Screenshot uploaded and attached to the issue.'
+                      : `${screenshots.length} screenshots uploaded and attached to the issue.`}
                   </p>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    Open the GitHub issue above and paste your screenshots. Use the copy buttons:
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {screenshots.map((s, i) => (
-                      <div key={i} className="relative group w-16 h-16 flex-shrink-0">
-                        <img
-                          src={s.preview}
-                          alt={`Screenshot ${i + 1}`}
-                          className="w-16 h-16 object-cover rounded border border-border"
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/60 rounded transition-opacity">
-                          <button
-                            type="button"
-                            onClick={() => void copyScreenshotToClipboard(s.preview, i)}
-                            className="p-1.5 rounded-md bg-secondary/80 text-foreground hover:bg-secondary transition-colors"
-                            title="Copy to clipboard"
-                          >
-                            {copiedIndex === i ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </div>
               )}
             </div>
@@ -1376,6 +1374,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
                     <textarea
                       value={description}
                       onChange={e => setDescription(e.target.value)}
+                      onPaste={handlePaste}
                       placeholder={
                         requestType === 'bug'
                           ? 'Example bug report: (replace this with a detailed bug report)\n\nWhat happened:\nThe GPU utilization card shows 0% even though pods are running.\n\nWhat I expected:\nGPU metrics should reflect actual usage from nvidia-smi.\n\nSteps to reproduce:\n1. Deploy a GPU workload\n2. Open the dashboard\n3. Check the GPU card'
