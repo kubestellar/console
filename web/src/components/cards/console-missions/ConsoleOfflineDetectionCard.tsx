@@ -420,22 +420,50 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
       }
     })
 
-    // 3. GPU nodes with high allocation - risk of GPU exhaustion
+    // 3. Cluster-level GPU exhaustion — only flag when 80%+ of a cluster's
+    // total GPUs are allocated. Individual nodes at 100% is normal utilization.
+    const GPU_CLUSTER_EXHAUSTION_THRESHOLD = 0.8
     const filteredGpuNodes = isAllClustersSelected
       ? gpuNodes
       : gpuNodes.filter(n => selectedClusters.includes(n.cluster))
 
+    // Aggregate GPU counts per cluster
+    const clusterGpuTotals = new Map<string, { total: number; allocated: number }>()
     filteredGpuNodes.forEach(node => {
-      if (node.gpuCount > 0 && node.gpuAllocated >= node.gpuCount) {
+      if (node.gpuCount > 0) {
+        const entry = clusterGpuTotals.get(node.cluster) || { total: 0, allocated: 0 }
+        entry.total += node.gpuCount
+        entry.allocated += node.gpuAllocated
+        clusterGpuTotals.set(node.cluster, entry)
+      }
+    })
+
+    clusterGpuTotals.forEach((gpus, cluster) => {
+      // Flag over-allocation (allocated > capacity) — this is always an error
+      if (gpus.allocated > gpus.total) {
         risks.push({
-          id: generatePredictionId('gpu-exhaustion', node.name, node.cluster),
+          id: generatePredictionId('gpu-over-allocated', cluster, cluster),
+          type: 'gpu-exhaustion',
+          severity: 'critical',
+          name: cluster,
+          cluster,
+          reason: `GPU over-allocation: ${gpus.allocated}/${gpus.total}`,
+          reasonDetailed: `Cluster ${cluster} has more GPUs allocated (${gpus.allocated}) than available (${gpus.total}). This may cause scheduling failures or workload evictions.`,
+          metric: `${gpus.allocated}/${gpus.total} GPUs`,
+          source: 'heuristic',
+        })
+      } else if (gpus.total > 0 && gpus.allocated / gpus.total > GPU_CLUSTER_EXHAUSTION_THRESHOLD) {
+        // Flag cluster-level near-exhaustion (80%+ allocated)
+        const pct = Math.round((gpus.allocated / gpus.total) * 100)
+        risks.push({
+          id: generatePredictionId('gpu-exhaustion', cluster, cluster),
           type: 'gpu-exhaustion',
           severity: 'warning',
-          name: node.name,
-          cluster: node.cluster,
-          reason: `All ${node.gpuCount} GPUs allocated - no capacity`,
-          reasonDetailed: `All ${node.gpuCount} GPUs on this node are fully allocated (${node.gpuAllocated}/${node.gpuCount}). New GPU workloads will not be able to schedule on this node. Consider adding more GPU nodes, optimizing GPU utilization, or implementing GPU sharing strategies.`,
-          metric: `${node.gpuAllocated}/${node.gpuCount} GPUs`,
+          name: cluster,
+          cluster,
+          reason: `Cluster GPU capacity ${pct}% allocated`,
+          reasonDetailed: `Cluster ${cluster} has ${gpus.allocated} of ${gpus.total} GPUs allocated (${pct}%). New GPU workloads may not schedule. Consider adding GPU nodes or optimizing utilization.`,
+          metric: `${gpus.allocated}/${gpus.total} GPUs (${pct}%)`,
           source: 'heuristic',
         })
       }
