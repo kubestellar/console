@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { X } from 'lucide-react'
+import { Settings } from 'lucide-react'
 import { DashboardCard } from '../../../lib/dashboards'
 import { formatCardTitle } from '../../../lib/formatCardTitle'
-import { useModalNavigation } from '../../../lib/modals/useModalNavigation'
+import { BaseModal } from '../../../lib/modals'
 import { useTranslation } from 'react-i18next'
 
 export interface CardConfigModalCluster {
@@ -25,27 +25,20 @@ export function CardConfigModal({
   const { t } = useTranslation()
   const [config, setConfig] = useState<Record<string, unknown>>(card.config || {})
 
-  // Use standardized modal keyboard navigation (Escape to close, body scroll lock)
-  useModalNavigation({ isOpen: true, onClose, enableEscape: true, enableBackspace: false })
-
   const handleSave = () => {
     onSave(config)
   }
 
   return (
-    <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-2xl flex items-center justify-center z-50" 
-    >
-      <div role="dialog" aria-modal="true" className="glass p-6 rounded-lg w-[500px] max-h-[80vh] overflow-auto" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-foreground">
-            Configure {formatCardTitle(card.card_type)}
-          </h3>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <BaseModal isOpen={true} onClose={onClose} size="sm" closeOnBackdrop={false}>
+      <BaseModal.Header
+        title={`Configure ${formatCardTitle(card.card_type)}`}
+        icon={Settings}
+        onClose={onClose}
+        showBack={false}
+      />
 
+      <BaseModal.Content>
         <div className="space-y-4">
           {/* Cluster Filter */}
           <div>
@@ -107,8 +100,11 @@ export function CardConfigModal({
             />
           </div>
         </div>
+      </BaseModal.Content>
 
-        <div className="flex justify-end gap-2 mt-6">
+      <BaseModal.Footer showKeyboardHints>
+        <div className="flex-1" />
+        <div className="flex gap-2">
           <button
             onClick={onClose}
             className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground"
@@ -122,7 +118,7 @@ export function CardConfigModal({
             Save Configuration
           </button>
         </div>
-      </div>
-    </div>
+      </BaseModal.Footer>
+    </BaseModal>
   )
 }

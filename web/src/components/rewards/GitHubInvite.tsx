@@ -111,6 +111,7 @@ export function GitHubInviteModal({ isOpen, onClose }: GitHubInviteProps) {
         aria-modal="true"
         aria-labelledby={GITHUB_INVITE_MODAL_TITLE_ID}
         className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border bg-secondary/30">

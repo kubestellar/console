@@ -128,6 +128,24 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
   const hasData = items.length > 0
   useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData: isDemoMode })
 
+  // Close overlay panels on Escape key
+  useEffect(() => {
+    const hasOpenOverlay = showSettings || showFeedSelector || showFilterEditor || showSourceFilter || showAggregateCreator
+    if (!hasOpenOverlay) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        if (showAggregateCreator) setShowAggregateCreator(false)
+        else if (showFilterEditor) setShowFilterEditor(false)
+        else if (showSourceFilter) setShowSourceFilter(false)
+        else if (showFeedSelector) setShowFeedSelector(false)
+        else if (showSettings) setShowSettings(false)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [showSettings, showFeedSelector, showFilterEditor, showSourceFilter, showAggregateCreator])
+
   const activeFeed = feeds[activeFeedIndex] || feeds[0]
 
   // Get cache key for current feed

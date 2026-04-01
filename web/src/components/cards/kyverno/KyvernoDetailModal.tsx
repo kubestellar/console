@@ -128,7 +128,7 @@ Please proceed step by step.`,
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false}>
       <BaseModal.Header
         title={`Kyverno — ${clusterName}`}
         icon={Shield}

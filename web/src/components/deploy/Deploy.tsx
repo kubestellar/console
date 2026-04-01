@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useRef } from 'react'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { useClusterGroups } from '../../hooks/useClusterGroups'
 import { useClusters, useDeployments } from '../../hooks/useMCP'
@@ -14,6 +14,7 @@ import { useDeployWorkload } from '../../hooks/useWorkloads'
 import { usePersistence } from '../../hooks/usePersistence'
 import { useWorkloadDeployments, useManagedWorkloads } from '../../hooks/useConsoleCRs'
 import { useToast } from '../ui/Toast'
+import { useModalNavigation, useModalFocusTrap } from '../../lib/modals/useModalNavigation'
 import { useTranslation } from 'react-i18next'
 
 const DEPLOY_CARDS_KEY = 'kubestellar-deploy-cards'
@@ -230,18 +231,19 @@ export function Deploy() {
     setGroupPickerWorkload(workload)
   }, [])
 
-  // Handle Escape key to close group picker modal
-  useEffect(() => {
-    if (!groupPickerWorkload) return
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        setGroupPickerWorkload(null)
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [groupPickerWorkload])
+  // Group picker modal ref for focus trap
+  const groupPickerRef = useRef<HTMLDivElement>(null)
+
+  // Standardized keyboard navigation (Escape to close) and body scroll lock
+  useModalNavigation({
+    isOpen: groupPickerWorkload !== null,
+    onClose: () => setGroupPickerWorkload(null),
+    enableEscape: true,
+    enableBackspace: false,
+  })
+
+  // Trap focus within group picker modal
+  useModalFocusTrap(groupPickerRef as React.RefObject<HTMLElement>, groupPickerWorkload !== null)
 
   return (
     <DashboardPage
@@ -277,8 +279,8 @@ export function Deploy() {
 
       {/* Group Picker — shown when workload is dropped on the card but not a specific group */}
       {groupPickerWorkload && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="presentation" onClick={() => setGroupPickerWorkload(null)}>
-          <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-sm mx-4 p-5" role="dialog" aria-modal="true" aria-labelledby="group-picker-dialog-title" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setGroupPickerWorkload(null)}>
+          <div ref={groupPickerRef} className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-sm mx-4 p-5" role="dialog" aria-modal="true" aria-labelledby="group-picker-dialog-title" onClick={e => e.stopPropagation()}>
             <h3 id="group-picker-dialog-title" className="text-base font-medium text-foreground mb-1">
               Choose a cluster group
             </h3>

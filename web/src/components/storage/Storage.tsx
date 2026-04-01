@@ -50,7 +50,7 @@ function PVCListModal({ isOpen, onClose, pvcs, title, statusFilter = 'all', onSe
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false}>
       <BaseModal.Header
         title={title}
         description={`${filteredPVCs.length} PVC${filteredPVCs.length !== 1 ? 's' : ''}`}
