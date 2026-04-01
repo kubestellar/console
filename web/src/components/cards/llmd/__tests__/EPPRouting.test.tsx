@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render } from '@testing-library/react'
 
 vi.mock('../../../../lib/demoMode', () => ({
@@ -34,7 +34,6 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('../../CardDataContext', () => ({
   useCardDemoState: () => ({ shouldUseDemoData: null, showDemoBadge: null }),
-  useReportCardDataState: () => ({ data: [], isLoading: false, error: null }),
   useReportCardDataState: () => {},
 }))
 
@@ -42,11 +41,32 @@ vi.mock('../../../../hooks/usePrometheusMetrics', () => ({
   usePrometheusMetrics: () => ({ metrics: [] }),
 }))
 
+vi.mock('../../../../contexts/StackContext', () => ({
+  useOptionalStack: () => null,
+}))
+
+vi.mock('../../CardWrapper', () => ({
+  useCardExpanded: () => false,
+}))
+
+vi.mock('../../DynamicCardErrorBoundary', () => ({
+  DynamicCardErrorBoundary: ({ children }: { children: React.ReactNode }) => children,
+}))
+
 import EPPRouting from '../EPPRouting'
 
 describe('EPPRouting', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('renders without crashing', () => {
-    const { container } = render(<EPPRouting />)
+    const { container, unmount } = render(<EPPRouting />)
     expect(container).toBeTruthy()
+    unmount()
   })
 })
