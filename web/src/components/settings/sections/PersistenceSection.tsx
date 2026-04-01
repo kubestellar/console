@@ -69,11 +69,11 @@ export function PersistenceSection() {
   const getHealthIcon = (health: ClusterHealth) => {
     switch (health) {
       case 'healthy':
-        return <Check className="w-4 h-4 text-green-500" />
+        return <Check className="w-4 h-4 text-green-400" />
       case 'degraded':
-        return <AlertCircle className="w-4 h-4 text-yellow-500" />
+        return <AlertCircle className="w-4 h-4 text-yellow-400" />
       case 'unreachable':
-        return <X className="w-4 h-4 text-red-500" />
+        return <X className="w-4 h-4 text-red-400" />
       default:
         return <AlertCircle className="w-4 h-4 text-muted-foreground" />
     }
@@ -119,7 +119,7 @@ export function PersistenceSection() {
 
       {error && (
         <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 mb-4">
-          <p className="text-sm text-red-500">{error}</p>
+          <p className="text-sm text-red-400">{error}</p>
         </div>
       )}
 
@@ -295,7 +295,7 @@ export function PersistenceSection() {
                   <span className="text-foreground">
                     {status.activeCluster || t('settings.persistence.none')}
                     {status.failoverActive && (
-                      <span className="ml-2 text-xs text-yellow-500">{t('settings.persistence.failover')}</span>
+                      <span className="ml-2 text-xs text-yellow-400">{t('settings.persistence.failover')}</span>
                     )}
                   </span>
                 </div>
