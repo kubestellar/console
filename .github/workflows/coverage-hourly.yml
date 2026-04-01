@@ -8,6 +8,10 @@ on:
     - cron: '15 * * * *'  # Every hour at :15
   workflow_dispatch:
 
+concurrency:
+  group: coverage-hourly
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
