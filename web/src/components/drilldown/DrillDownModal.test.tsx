@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import React from 'react'
-import * as DrillDownModalModule from './DrillDownModal'
+import { DrillDownModal } from './DrillDownModal'
 import { useDrillDown, DrillDownProvider } from '../../hooks/useDrillDown'
 import type { DrillDownView } from '../../hooks/useDrillDown'
 
@@ -24,8 +24,8 @@ function makeView(overrides: Partial<DrillDownView> = {}): DrillDownView {
 
 describe('DrillDownModal Component', () => {
   it('exports DrillDownModal component', () => {
-    expect(DrillDownModalModule.DrillDownModal).toBeDefined()
-    expect(typeof DrillDownModalModule.DrillDownModal).toBe('function')
+    expect(DrillDownModal).toBeDefined()
+    expect(typeof DrillDownModal).toBe('function')
   })
 
   it('DrillDownProvider and useDrillDown supply back navigation (pop) and close', () => {
