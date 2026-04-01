@@ -194,10 +194,13 @@ func NewServer(cfg Config) (*Server, error) {
 	middleware.InitTokenRevocation(db)
 
 	// Create Fiber app
+	// feedbackBodyLimit allows base64-encoded screenshot uploads (up to ~20 MB)
+	const feedbackBodyLimit = 20 * 1024 * 1024
 	app := fiber.New(fiber.Config{
 		ErrorHandler:   customErrorHandler,
 		ReadBufferSize: 16384,
 		WriteBufferSize: 16384,
+		BodyLimit:       feedbackBodyLimit,
 		ReadTimeout:     30 * time.Second,
 		WriteTimeout:    5 * time.Minute, // large static assets on slow networks
 		IdleTimeout:     2 * time.Minute,

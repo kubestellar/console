@@ -303,7 +303,6 @@ function InfoTooltip({ text }: { text: string }) {
         onMouseLeave={() => setIsVisible(false)}
         className="p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground transition-colors"
         aria-label={t('cardWrapper.cardInfo')}
-        title={t('cardWrapper.cardInfo')}
       >
         <Info className="w-3.5 h-3.5" />
       </button>

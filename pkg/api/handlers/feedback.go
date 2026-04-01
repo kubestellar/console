@@ -30,6 +30,10 @@ import (
 // githubAPITimeout is the timeout for HTTP requests to the GitHub API.
 const githubAPITimeout = 10 * time.Second
 
+// screenshotUploadTimeout is a longer timeout for uploading base64 screenshots
+// to GitHub via the Contents API, which can be slow for large images.
+const screenshotUploadTimeout = 60 * time.Second
+
 // prCacheTTL is how long cached PR data is considered fresh.
 const prCacheTTL = 5 * time.Minute
 
@@ -1659,8 +1663,14 @@ func (h *FeedbackHandler) uploadScreenshotToGitHub(repoOwner, repoName, requestI
 		ext = "webp"
 	}
 
-	// The base64 content (GitHub Contents API expects raw base64, no wrapping)
+	// The base64 content (GitHub Contents API expects raw base64, no wrapping).
+	// Browsers may omit trailing '=' padding, so we normalize first.
 	b64Content := parts[1]
+
+	// Add padding if missing — base64 requires length to be a multiple of 4
+	if remainder := len(b64Content) % 4; remainder != 0 {
+		b64Content += strings.Repeat("=", 4-remainder)
+	}
 
 	// Validate that the base64 content is actually valid
 	if _, err := base64.StdEncoding.DecodeString(b64Content); err != nil {
@@ -1688,7 +1698,9 @@ func (h *FeedbackHandler) uploadScreenshotToGitHub(repoOwner, repoName, requestI
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := h.httpClient.Do(req)
+	// Use a longer timeout for screenshot uploads (large base64 payloads)
+	uploadClient := &http.Client{Timeout: screenshotUploadTimeout}
+	resp, err := uploadClient.Do(req)
 	if err != nil {
 		return "", err
 	}

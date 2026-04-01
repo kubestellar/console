@@ -300,10 +300,10 @@ export function useFeatureRequests(currentUserId?: string) {
     setIsRefreshing(false)
   }, [loadRequests])
 
-  const createRequest = useCallback(async (input: CreateFeatureRequestInput) => {
+  const createRequest = useCallback(async (input: CreateFeatureRequestInput, options?: { timeout?: number }) => {
     try {
       setIsSubmitting(true)
-      const { data } = await api.post<FeatureRequest>('/api/feedback/requests', input)
+      const { data } = await api.post<FeatureRequest>('/api/feedback/requests', input, options)
       setRequests(prev => [data, ...prev])
       return data
     } finally {

@@ -16,6 +16,7 @@ import {
 import { useAuth } from '../../lib/auth'
 import { useRewards } from '../../hooks/useRewards'
 import { BACKEND_DEFAULT_URL, STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
+import { FEEDBACK_UPLOAD_TIMEOUT_MS } from '../../lib/constants/network'
 import { emitLinkedInShare } from '../../lib/analytics'
 import { isDemoModeForced } from '../../lib/demoMode'
 import { useToast } from '../ui/Toast'
@@ -338,13 +339,14 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
     const screenshotDataURIs = screenshots.map(s => s.preview)
 
     try {
+      const hasScreenshots = screenshotDataURIs.length > 0
       const result = await createRequest({
         title: extractedTitle,
         description: extractedDesc,
         request_type: requestType,
         target_repo: targetRepo,
-        ...(screenshotDataURIs.length > 0 && { screenshots: screenshotDataURIs }),
-      })
+        ...(hasScreenshots && { screenshots: screenshotDataURIs }),
+      }, hasScreenshots ? { timeout: FEEDBACK_UPLOAD_TIMEOUT_MS } : undefined)
       setSuccess({ issueUrl: result.github_issue_url })
       // Keep the success state visible for 5s so users can read the confirmation and open the issue before switching to the Updates tab
       setTimeout(() => {

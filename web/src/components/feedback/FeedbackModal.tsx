@@ -20,6 +20,7 @@ import { useToast } from '../ui/Toast'
 import { emitFeedbackSubmitted, emitLinkedInShare } from '../../lib/analytics'
 import { useBranding } from '../../hooks/useBranding'
 import { FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
+import { FEEDBACK_UPLOAD_TIMEOUT_MS } from '../../lib/constants/network'
 import { useFeatureRequests } from '../../hooks/useFeatureRequests'
 import { useAuth } from '../../lib/auth'
 
@@ -158,13 +159,14 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
       // Submit via backend API — creates GitHub issue directly using the
       // server-side token. No GitHub login required from the user.
       // Screenshots are uploaded server-side and embedded as images.
+      const hasScreenshots = screenshotDataURIs.length > 0
       const result = await createRequest({
         title: title.trim(),
         description: description.trim(),
         request_type: type,
         target_repo: 'console',
-        ...(screenshotDataURIs.length > 0 && { screenshots: screenshotDataURIs }),
-      })
+        ...(hasScreenshots && { screenshots: screenshotDataURIs }),
+      }, hasScreenshots ? { timeout: FEEDBACK_UPLOAD_TIMEOUT_MS } : undefined)
 
       emitFeedbackSubmitted(type)
 
