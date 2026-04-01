@@ -38,6 +38,8 @@ jobs:
 
       - name: Run full test suite with coverage
         working-directory: web
+        env:
+          NODE_OPTIONS: '--max-old-space-size=8192'
         run: npx vitest run --coverage
         continue-on-error: true
 
