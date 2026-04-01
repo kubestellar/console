@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
+
+const { mockDrillToCluster } = vi.hoisted(() => ({
+  mockDrillToCluster: vi.fn(),
+}))
 
 vi.mock('../../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
@@ -38,7 +42,7 @@ vi.mock('../../../../hooks/useMCP', () => ({
 }))
 
 vi.mock('../../../../hooks/useDrillDown', () => ({
-  useDrillDownActions: () => ({ drillToPod: vi.fn(), drillToGPUNode: null }),
+  useDrillDownActions: () => ({ drillToPod: vi.fn(), drillToGPUNode: vi.fn(), drillToCluster: mockDrillToCluster }),
 }))
 
 import { GPUNamespaceDrillDown } from '../GPUNamespaceDrillDown'
@@ -47,5 +51,12 @@ describe('GPUNamespaceDrillDown', () => {
   it('renders without crashing', () => {
     const { container } = render(<GPUNamespaceDrillDown data={{ namespace: 'ns1', clusters: ['c1'] }} />)
     expect(container).toBeTruthy()
+  })
+
+  it('calls drillToCluster when a cluster badge button is clicked', () => {
+    render(<GPUNamespaceDrillDown data={{ namespace: 'ns1', clusters: ['test-cluster'] }} />)
+    const clusterButtons = screen.getAllByRole('button', { name: /test-cluster/i })
+    fireEvent.click(clusterButtons[0])
+    expect(mockDrillToCluster).toHaveBeenCalledWith('test-cluster')
   })
 })

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { ChevronRight, Search, Box, Network, HardDrive, Layers } from 'lucide-react'
+import { ChevronRight, Search, Box, Network, HardDrive, Layers, Server } from 'lucide-react'
 import { usePodIssues, useDeploymentIssues, useEvents, useDeployments, useServices, usePVCs, usePods } from '../../../hooks/useMCP'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { ClusterBadge } from '../../ui/ClusterBadge'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { useTranslation } from 'react-i18next'
@@ -18,7 +19,7 @@ export function NamespaceDrillDown({ data }: Props) {
   const { t } = useTranslation()
   const cluster = data.cluster as string
   const namespace = data.namespace as string
-  const { drillToDeployment, drillToPod, drillToEvents } = useDrillDownActions()
+  const { drillToDeployment, drillToPod, drillToEvents, drillToCluster } = useDrillDownActions()
 
   const [activeTab, setActiveTab] = useState<TabType>('issues')
   const [resourceFilter, setResourceFilter] = useState<ResourceFilter>('all')
@@ -96,6 +97,21 @@ export function NamespaceDrillDown({ data }: Props) {
 
   return (
     <div className="space-y-6">
+      {/* Contextual Navigation */}
+      <div className="flex items-center gap-6 text-sm">
+        <button
+          onClick={() => drillToCluster(cluster)}
+          className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
+        >
+          <Server className="w-4 h-4 text-blue-400" />
+          <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
+          <ClusterBadge cluster={clusterShort} size="sm" />
+          <svg className="w-3 h-3 text-blue-400/70 group-hover:text-blue-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+
       {/* Overview Stats */}
       <div className="grid grid-cols-3 gap-4">
         <div className="p-4 rounded-lg bg-card/50 border border-border">
