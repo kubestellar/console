@@ -36,11 +36,14 @@ jobs:
         working-directory: web
         run: npm ci
 
-      - name: Run full test suite with coverage
+      - name: Run tests with coverage (memory-optimized)
         working-directory: web
         env:
-          NODE_OPTIONS: '--max-old-space-size=8192'
-        run: npx vitest run --coverage
+          NODE_OPTIONS: '--max-old-space-size=6144'
+        run: |
+          # Single worker prevents OOM on 7GB GHA runners.
+          # Slower (~25 min) but completes reliably with coverage.
+          npx vitest run --coverage --maxWorkers=1
         continue-on-error: true
 
       - name: Extract coverage percentage
