@@ -738,8 +738,15 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           if (ghFile.content && ghFile.encoding === 'base64') {
             content = atob(ghFile.content.replace(/\n/g, ''))
           } else if (ghFile.download_url) {
-            const rawResp = await fetch(ghFile.download_url)
-            content = await rawResp.text()
+            const GITHUB_RAW_FETCH_TIMEOUT_MS = 30_000 // 30s timeout for raw GitHub file downloads
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), GITHUB_RAW_FETCH_TIMEOUT_MS)
+            try {
+              const rawResp = await fetch(ghFile.download_url, { signal: controller.signal })
+              content = await rawResp.text()
+            } finally {
+              clearTimeout(timeoutId)
+            }
           } else {
             content = JSON.stringify(ghFile)
           }
@@ -1622,7 +1629,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                     const parts = selectedPath.replace('github/', '').split('/')
                     if (parts.length < 3) return {}
                     const [owner, repo, ...rest] = parts
-                    const filePath = rest.join('/')
+                    const filePath = (rest || []).join('/')
                     return {
                       githubSourceUrl: `https://github.com/${owner}/${repo}/blob/main/${filePath}`,
                       githubEditUrl: `https://github.com/${owner}/${repo}/edit/main/${filePath}`,

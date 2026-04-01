@@ -233,10 +233,15 @@ export default defineConfig(({ mode }) => ({
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['node_modules', 'e2e/**/*'],
     teardownTimeout: process.env.CI ? 60_000 : 10_000, // CI runners need more time to terminate workers
+    // CI runners (2-core, 7GB) OOM with 600+ test files at full concurrency
+    maxWorkers: process.env.CI ? 2 : undefined,
+    minWorkers: process.env.CI ? 1 : undefined,
     poolOptions: {
       forks: {
         // Prevent "Timeout terminating forks worker" on slow CI runners
         terminateTimeout: process.env.CI ? 60_000 : 10_000,
+        maxForks: process.env.CI ? 2 : undefined,
+        minForks: process.env.CI ? 1 : undefined,
       },
     },
     coverage: {
