@@ -465,11 +465,11 @@ export const STAT_DISPLAY_MODE_DEFAULTS: Record<string, StatDisplayMode> = {
   'data-compliance:encryption_score': 'horseshoe',
   'data-compliance:gdpr_score': 'horseshoe',
 
-  // Clusters — trend and heatmap
+  // Clusters — trend for healthy/pods, numeric for status counts
   'clusters:healthy': 'sparkline',
   'clusters:pods': 'sparkline',
-  'clusters:unhealthy': 'heatmap',
-  'clusters:unreachable': 'heatmap',
+  'clusters:unhealthy': 'numeric',
+  'clusters:unreachable': 'numeric',
 
   // Workloads — trend delta for issues
   'workloads:critical': 'trend',
