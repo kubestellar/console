@@ -79,6 +79,7 @@ export function BaseModal({
   children,
   closeOnBackdrop = true,
   closeOnEscape = true,
+  enableBackspace = true,
 }: BaseModalProps) {
   const backdropRef = useRef<HTMLDivElement>(null)
   const modalRef = useRef<HTMLDivElement>(null)
@@ -88,7 +89,7 @@ export function BaseModal({
     isOpen,
     onClose,
     enableEscape: closeOnEscape,
-    enableBackspace: true,
+    enableBackspace,
     disableBodyScroll: true,
   })
 

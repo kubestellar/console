@@ -131,7 +131,7 @@ export function K3sStatus() {
         <div
           role="button"
           tabIndex={0}
-          aria-label={`K3s status: ${isHealthy ? 'healthy' : 'degraded'}. Click to view details.`}
+          aria-label={t('k3sStatus.statusAriaLabel', { status: isHealthy ? t('k3sStatus.healthy') : t('k3sStatus.degraded') })}
           onClick={openDetailModal}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium cursor-pointer hover:bg-secondary/50 transition-colors ${
@@ -155,7 +155,7 @@ export function K3sStatus() {
       </div>
 
       {/* Top metrics */}
-      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" role="button" tabIndex={0} aria-label="View K3s pod metrics" onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
+      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" role="button" tabIndex={0} aria-label={t('k3sStatus.viewPodMetrics')} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
         <MetricTile
           label={t('k3sStatus.totalPods')}
           value={data.podCount}
@@ -182,7 +182,7 @@ export function K3sStatus() {
           <p className="text-xs font-medium text-muted-foreground">{t('k3sStatus.serverPodList')}</p>
           <div className="space-y-1.5 max-h-40 overflow-y-auto scrollbar-thin">
             {serverPods.map((pod) => (
-              <div key={pod.name} className="flex items-center justify-between text-xs gap-2 px-2 py-1.5 rounded bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors" role="button" tabIndex={0} aria-label={`View K3s server pod ${pod.name}`} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
+              <div key={pod.name} className="flex items-center justify-between text-xs gap-2 px-2 py-1.5 rounded bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors" role="button" tabIndex={0} aria-label={t('k3sStatus.viewServerPod', { name: pod.name })} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
                 <span className="text-foreground truncate flex-1" title={pod.name}>
                   {pod.name}
                 </span>

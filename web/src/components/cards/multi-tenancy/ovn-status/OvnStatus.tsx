@@ -132,7 +132,7 @@ export function OvnStatus() {
         <div
           role="button"
           tabIndex={0}
-          aria-label={`OVN status: ${isHealthy ? 'healthy' : 'degraded'}. Click to view details.`}
+          aria-label={t('ovnStatus.statusAriaLabel', { status: isHealthy ? t('ovnStatus.healthy') : t('ovnStatus.degraded') })}
           onClick={openDetailModal}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium cursor-pointer hover:bg-secondary/50 transition-colors ${
@@ -156,7 +156,7 @@ export function OvnStatus() {
       </div>
 
       {/* Metric tiles */}
-      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" role="button" tabIndex={0} aria-label="View OVN pod metrics" onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
+      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" role="button" tabIndex={0} aria-label={t('ovnStatus.viewPodMetrics')} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
         <MetricTile
           label={t('ovnStatus.ovnPods')}
           value={data.podCount}
@@ -178,7 +178,7 @@ export function OvnStatus() {
       </div>
 
       {/* UDN summary */}
-      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" role="button" tabIndex={0} aria-label="View OVN UDN network summary" onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
+      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" role="button" tabIndex={0} aria-label={t('ovnStatus.viewUdnSummary')} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
         <MetricTile
           label={t('ovnStatus.udnCount')}
           value={(data.udns || []).length}
@@ -205,7 +205,7 @@ export function OvnStatus() {
           <p className="text-xs font-medium text-muted-foreground">{t('ovnStatus.udnList')}</p>
           <div className="space-y-1.5 max-h-32 overflow-y-auto scrollbar-thin">
             {(data.udns || []).map((udn) => (
-              <div key={udn.name} className="flex items-center justify-between text-xs gap-2 cursor-pointer hover:bg-secondary/50 transition-colors rounded px-1 -mx-1" role="button" tabIndex={0} aria-label={`View UDN ${udn.name}`} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
+              <div key={udn.name} className="flex items-center justify-between text-xs gap-2 cursor-pointer hover:bg-secondary/50 transition-colors rounded px-1 -mx-1" role="button" tabIndex={0} aria-label={t('ovnStatus.viewUdn', { name: udn.name })} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
                 <span className="text-muted-foreground truncate flex-1" title={udn.name}>
                   {udn.name}
                 </span>

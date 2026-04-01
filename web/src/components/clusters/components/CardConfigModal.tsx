@@ -30,7 +30,7 @@ export function CardConfigModal({
   }
 
   return (
-    <BaseModal isOpen={true} onClose={onClose} size="sm" closeOnBackdrop={false}>
+    <BaseModal isOpen={true} onClose={onClose} size="sm" closeOnBackdrop={false} enableBackspace={false}>
       <BaseModal.Header
         title={`Configure ${formatCardTitle(card.card_type)}`}
         icon={Settings}

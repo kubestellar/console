@@ -158,10 +158,10 @@ export function MultiTenancyOverview() {
   return (
     <div className="h-full flex flex-col gap-3">
       {/* Overall score header */}
-      <div className="flex items-center justify-between px-2 py-1.5 bg-secondary/30 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors" role="button" tabIndex={0} aria-label="View multi-tenancy isolation score details" onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
+      <div className="flex items-center justify-between px-2 py-1.5 bg-secondary/30 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors" role="button" tabIndex={0} aria-labelledby="multi-tenancy-isolation-score-header" onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
         <div className="flex items-center gap-2">
           <Shield className="w-4 h-4 text-cyan-400" />
-          <span className="text-xs font-medium text-foreground">
+          <span className="text-xs font-medium text-foreground" id="multi-tenancy-isolation-score-header">
             {t('cards:multiTenancy.isolationScore', 'Isolation Score')}
           </span>
         </div>

@@ -154,7 +154,7 @@ export function KubevirtStatus() {
         <div
           role="button"
           tabIndex={0}
-          aria-label={`KubeVirt status: ${isHealthy ? 'healthy' : 'degraded'}. Click to view details.`}
+          aria-label={t('kubevirtStatus.statusAriaLabel', { status: isHealthy ? t('kubevirtStatus.healthy') : t('kubevirtStatus.degraded') })}
           onClick={openDetailModal}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium cursor-pointer hover:bg-secondary/50 transition-colors ${
@@ -178,7 +178,7 @@ export function KubevirtStatus() {
       </div>
 
       {/* Top metrics: infra pods */}
-      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" role="button" tabIndex={0} aria-label="View KubeVirt infrastructure metrics" onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
+      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" role="button" tabIndex={0} aria-label={t('kubevirtStatus.viewInfraMetrics')} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
         <MetricTile
           label={t('kubevirtStatus.infraPods')}
           value={data.podCount}
@@ -200,7 +200,7 @@ export function KubevirtStatus() {
       </div>
 
       {/* Bottom metrics: VM state breakdown */}
-      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" role="button" tabIndex={0} aria-label="View virtual machine state breakdown" onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
+      <div className="flex gap-3 cursor-pointer hover:bg-secondary/50 transition-colors rounded-lg" role="button" tabIndex={0} aria-label={t('kubevirtStatus.viewVmBreakdown')} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
         <MetricTile
           label={t('kubevirtStatus.runningVMs')}
           value={runningVMs}
@@ -229,7 +229,7 @@ export function KubevirtStatus() {
           <p className="text-xs font-medium text-muted-foreground">{t('kubevirtStatus.vmList')}</p>
           <div className="space-y-1.5 max-h-40 overflow-y-auto scrollbar-thin">
             {vms.map((vm) => (
-              <div key={`${vm.namespace}/${vm.name}`} className="flex items-center justify-between text-xs gap-2 px-2 py-1.5 rounded bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors" role="button" tabIndex={0} aria-label={`View VM ${vm.name} in ${vm.namespace}`} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
+              <div key={`${vm.namespace}/${vm.name}`} className="flex items-center justify-between text-xs gap-2 px-2 py-1.5 rounded bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors" role="button" tabIndex={0} aria-label={t('kubevirtStatus.viewVm', { name: vm.name, namespace: vm.namespace })} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
                 <div className="flex flex-col min-w-0 flex-1">
                   <span className="text-foreground truncate" title={vm.name}>
                     {vm.name}

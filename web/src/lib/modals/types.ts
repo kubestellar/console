@@ -285,6 +285,8 @@ export interface BaseModalProps {
   closeOnBackdrop?: boolean
   /** Whether to close on Escape key */
   closeOnEscape?: boolean
+  /** Whether to enable Backspace/Space to close (default true) */
+  enableBackspace?: boolean
 }
 
 export interface ModalHeaderProps {

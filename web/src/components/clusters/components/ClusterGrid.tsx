@@ -119,10 +119,13 @@ function CopyCmd({ text }: { text: string }) {
     <button
       onClick={handleCopy}
       className="inline-flex items-center p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
-      title={copied ? 'Copied!' : `Copy: ${text}`}
-      aria-label={copied ? 'Copied!' : `Copy: ${text}`}
+      title="Copy command to clipboard"
+      aria-label="Copy command to clipboard"
     >
       {copied ? <Check className="w-2.5 h-2.5 text-green-400" /> : <Copy className="w-2.5 h-2.5" />}
+      <span aria-live="polite" className="sr-only">
+        {copied ? 'Copied!' : ''}
+      </span>
     </button>
   )
 }

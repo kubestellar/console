@@ -2909,7 +2909,11 @@
     "syncedJustNow": "just now",
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
-    "syncedDaysAgo": "{{count}}d ago"
+    "syncedDaysAgo": "{{count}}d ago",
+    "statusAriaLabel": "OVN status: {{status}}. Click to view details.",
+    "viewPodMetrics": "View OVN pod metrics",
+    "viewUdnSummary": "View OVN UDN network summary",
+    "viewUdn": "View UDN {{name}}"
   },
   "kubeFlexStatus": {
     "fetchError": "Failed to fetch KubeFlex status",
@@ -2950,7 +2954,10 @@
     "syncedJustNow": "just now",
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
-    "syncedDaysAgo": "{{count}}d ago"
+    "syncedDaysAgo": "{{count}}d ago",
+    "statusAriaLabel": "K3s status: {{status}}. Click to view details.",
+    "viewPodMetrics": "View K3s pod metrics",
+    "viewServerPod": "View K3s server pod {{name}}"
   },
   "kubevirtStatus": {
     "fetchError": "Failed to fetch KubeVirt status",
@@ -2971,7 +2978,11 @@
     "syncedJustNow": "just now",
     "syncedMinutesAgo": "{{count}}m ago",
     "syncedHoursAgo": "{{count}}h ago",
-    "syncedDaysAgo": "{{count}}d ago"
+    "syncedDaysAgo": "{{count}}d ago",
+    "statusAriaLabel": "KubeVirt status: {{status}}. Click to view details.",
+    "viewInfraMetrics": "View KubeVirt infrastructure metrics",
+    "viewVmBreakdown": "View virtual machine state breakdown",
+    "viewVm": "View VM {{name}} in {{namespace}}"
   },
   "kyvernoPolicies": {
     "scanningClusters": "Scanning clusters..."
@@ -3032,7 +3043,10 @@
     "noDeviations": "No significant compliance deviations detected across the fleet",
     "driftDescription": "Flags clusters deviating from fleet average. Drift indicates inconsistent security posture that needs investigation.",
     "scanningInProgress": "Scanning...",
-    "retry": "Retry"
+    "retry": "Retry",
+    "viewDriftDetailsAria": "View drift details: {{cluster}} {{tool}} score {{value}}% {{direction}}",
+    "aboveFleetAverage": "above fleet average",
+    "belowFleetAverage": "below fleet average"
   },
   "maintenanceWindows": {
     "maintenance": "Maintenance",

@@ -245,7 +245,7 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
             onClick={() => handleDriftClick(d)}
             role="button"
             tabIndex={0}
-            aria-label={`View drift details: ${d.cluster} ${d.tool} score ${d.value}% ${d.direction === 'above' ? 'above' : 'below'} fleet average`}
+            aria-label={t('complianceDrift.viewDriftDetailsAria', { cluster: d.cluster, tool: d.tool, value: d.value, direction: d.direction === 'above' ? t('complianceDrift.aboveFleetAverage') : t('complianceDrift.belowFleetAverage') })}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleDriftClick(d) } }}
           >
             {d.direction === 'above' ? (
