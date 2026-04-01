@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { RotateCcw, ChevronLeft, ChevronRight, Crown, Settings } from 'lucide-react'
@@ -82,6 +82,7 @@ const KNIGHT_TABLE = [
 
 const STORAGE_KEY = 'kube_chess_state'
 const STORAGE_KEY_STATS = 'kube_chess_stats'
+const AI_THINK_DELAY_MS = 300 // delay before AI computation to allow UI to update
 
 // Initialize the starting position
 function createInitialBoard(): Board {
@@ -392,8 +393,18 @@ function evaluateBoard(board: Board, state: GameState): number {
   return score
 }
 
-// Minimax with alpha-beta pruning
-function minimax(state: GameState, depth: number, alpha: number, beta: number, maximizing: boolean): number {
+// Maximum number of positions to evaluate before bailing out
+const MAX_POSITIONS_EVALUATED = 50_000
+
+// Minimax with alpha-beta pruning and position count limit
+function minimax(state: GameState, depth: number, alpha: number, beta: number, maximizing: boolean, counter: { count: number }): number {
+  counter.count++
+
+  // Bail out if we've evaluated too many positions to prevent UI freeze
+  if (counter.count > MAX_POSITIONS_EVALUATED) {
+    return evaluateBoard(state.board, state)
+  }
+
   if (depth === 0) {
     return evaluateBoard(state.board, state)
   }
@@ -408,11 +419,20 @@ function minimax(state: GameState, depth: number, alpha: number, beta: number, m
 
   const moves = getAllLegalMoves(state, state.turn)
 
+  // Sort moves by capture value for better alpha-beta pruning
+  moves.sort((a, b) => {
+    const captureA = state.board[a.to.row][a.to.col]
+    const captureB = state.board[b.to.row][b.to.col]
+    const valueA = captureA ? PIECE_VALUES[captureA.type] : 0
+    const valueB = captureB ? PIECE_VALUES[captureB.type] : 0
+    return valueB - valueA // captures first
+  })
+
   if (maximizing) {
     let maxEval = -Infinity
     for (const move of moves) {
       const newState = makeMove(state, move.from, move.to)
-      const evalScore = minimax(newState, depth - 1, alpha, beta, false)
+      const evalScore = minimax(newState, depth - 1, alpha, beta, false, counter)
       maxEval = Math.max(maxEval, evalScore)
       alpha = Math.max(alpha, evalScore)
       if (beta <= alpha) break
@@ -422,7 +442,7 @@ function minimax(state: GameState, depth: number, alpha: number, beta: number, m
     let minEval = Infinity
     for (const move of moves) {
       const newState = makeMove(state, move.from, move.to)
-      const evalScore = minimax(newState, depth - 1, alpha, beta, true)
+      const evalScore = minimax(newState, depth - 1, alpha, beta, true, counter)
       minEval = Math.min(minEval, evalScore)
       beta = Math.min(beta, evalScore)
       if (beta <= alpha) break
@@ -436,12 +456,25 @@ function findBestMove(state: GameState, depth: number): { from: { row: number; c
   const moves = getAllLegalMoves(state, state.turn)
   if (moves.length === 0) return null
 
+  // Sort moves: captures first for better pruning
+  moves.sort((a, b) => {
+    const captureA = state.board[a.to.row][a.to.col]
+    const captureB = state.board[b.to.row][b.to.col]
+    const valueA = captureA ? PIECE_VALUES[captureA.type] : 0
+    const valueB = captureB ? PIECE_VALUES[captureB.type] : 0
+    return valueB - valueA
+  })
+
+  const counter = { count: 0 }
   let bestMove = moves[0]
   let bestScore = state.turn === 'white' ? -Infinity : Infinity
 
   for (const move of moves) {
+    // If we've hit the position limit, stop searching and use best so far
+    if (counter.count > MAX_POSITIONS_EVALUATED) break
+
     const newState = makeMove(state, move.from, move.to)
-    const score = minimax(newState, depth - 1, -Infinity, Infinity, state.turn === 'black')
+    const score = minimax(newState, depth - 1, -Infinity, Infinity, state.turn === 'black', counter)
 
     if (state.turn === 'white' && score > bestScore) {
       bestScore = score
@@ -471,6 +504,7 @@ function KubeChessInternal() {
   const [playerColor, setPlayerColor] = useState<Color>('white')
   const [difficulty, setDifficulty] = useState<1 | 2 | 3>(2) // 1=easy, 2=medium, 3=hard
   const [isThinking, setIsThinking] = useState(false)
+  const isThinkingRef = useRef(false)
   const [showSettings, setShowSettings] = useState(false)
   const [promotionPending, setPromotionPending] = useState<{ from: { row: number; col: number }; to: { row: number; col: number } } | null>(null)
   const [stats, setStats] = useState(() => {
@@ -498,25 +532,34 @@ function KubeChessInternal() {
     } catch { /* ignore storage errors */ }
   }, [stats])
 
-  // AI move
+  // AI move - use ref to prevent re-triggering loops
   useEffect(() => {
-    if (gameState.turn !== playerColor && gameResult === 'ongoing' && !isThinking) {
+    if (gameState.turn !== playerColor && gameResult === 'ongoing' && !isThinkingRef.current) {
+      isThinkingRef.current = true
       setIsThinking(true)
 
-      // Use setTimeout to allow UI to update
+      // Use setTimeout to allow UI to update before heavy computation
       const id = setTimeout(() => {
-        const depth = difficulty + 1 // 2, 3, or 4
-        const bestMove = findBestMove(gameState, depth)
+        try {
+          const depth = difficulty + 1 // 2, 3, or 4
+          const bestMove = findBestMove(gameState, depth)
 
-        if (bestMove) {
-          setGameState(prev => makeMove(prev, bestMove.from, bestMove.to))
+          if (bestMove) {
+            setGameState(prev => makeMove(prev, bestMove.from, bestMove.to))
+          }
+        } finally {
+          // Always clear thinking state, even if computation errors
+          isThinkingRef.current = false
+          setIsThinking(false)
         }
-
+      }, AI_THINK_DELAY_MS)
+      return () => {
+        clearTimeout(id)
+        isThinkingRef.current = false
         setIsThinking(false)
-      }, 300)
-      return () => clearTimeout(id)
+      }
     }
-  }, [gameState.turn, playerColor, gameResult, difficulty, isThinking, gameState])
+  }, [gameState.turn, playerColor, gameResult, difficulty, gameState])
 
   // Update stats on game end
   useEffect(() => {

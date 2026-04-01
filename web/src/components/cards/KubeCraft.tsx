@@ -76,11 +76,6 @@ export function KubeCraft() {
   })
 
   const isMouseDownRef = useRef(false)
-  // Refs to avoid stale closures in memoized mouse handlers
-  const selectedBlockRef = useRef<BlockType>(selectedBlock)
-  selectedBlockRef.current = selectedBlock
-  const isErasingRef = useRef(isErasing)
-  isErasingRef.current = isErasing
 
   // Generate initial world with terrain
   function generateWorld(): Block[][] {
@@ -280,11 +275,37 @@ export function KubeCraft() {
     return () => clearInterval(interval)
   }, [render])
 
+  // Convert mouse event coordinates to grid cell, accounting for canvas CSS scaling
+  const getGridCoords = useCallback((e: React.MouseEvent<HTMLCanvasElement>): { x: number; y: number } | null => {
+    const canvas = canvasRef.current
+    if (!canvas) return null
+
+    const rect = canvas.getBoundingClientRect()
+    // Scale mouse coordinates to canvas logical size (handles CSS scaling in expanded mode)
+    const scaleX = CANVAS_WIDTH / rect.width
+    const scaleY = CANVAS_HEIGHT / rect.height
+    const x = Math.floor((e.clientX - rect.left) * scaleX / CELL_SIZE)
+    const y = Math.floor((e.clientY - rect.top) * scaleY / CELL_SIZE)
+
+    if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) return null
+    return { x, y }
+  }, [])
+
+  // Place or erase a block at the given grid coordinates
+  const placeBlock = useCallback((gridX: number, gridY: number) => {
+    setWorld(prev => {
+      const newWorld = prev.map(row => row.map(block => ({ ...block })))
+      newWorld[gridY][gridX] = { type: isErasing ? 'air' : selectedBlock }
+      return newWorld
+    })
+  }, [isErasing, selectedBlock])
+
   // Handle mouse events
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     isMouseDownRef.current = true
-    handleClick(e)
-  }, [])
+    const coords = getGridCoords(e)
+    if (coords) placeBlock(coords.x, coords.y)
+  }, [getGridCoords, placeBlock])
 
   const handleMouseUp = useCallback(() => {
     isMouseDownRef.current = false
@@ -292,27 +313,9 @@ export function KubeCraft() {
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isMouseDownRef.current) return
-    handleClick(e)
-  }, [])
-
-  const handleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const rect = canvas.getBoundingClientRect()
-    const x = Math.floor((e.clientX - rect.left) / CELL_SIZE)
-    const y = Math.floor((e.clientY - rect.top) / CELL_SIZE)
-
-    if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) return
-
-    // Read from refs to avoid stale closure from memoized mouse handlers
-    const blockType = isErasingRef.current ? 'air' : selectedBlockRef.current
-    setWorld(prev => {
-      const newWorld = prev.map(row => row.map(block => ({ ...block })))
-      newWorld[y][x] = { type: blockType }
-      return newWorld
-    })
-  }, [])
+    const coords = getGridCoords(e)
+    if (coords) placeBlock(coords.x, coords.y)
+  }, [getGridCoords, placeBlock])
 
   // Save world
   const saveWorld = useCallback(() => {
