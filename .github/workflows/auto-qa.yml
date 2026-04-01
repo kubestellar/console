@@ -1,7 +1,7 @@
 name: Auto-QA Agent
 # Quality checks 4x/day with rotating focus areas.
 # Layer 1 (always): Build, lint, Go build, bundle size, npm audit
-# Layer 2 (always): Resilience, Inventory consistency, UI design principles
+# Layer 2 (always): Resilience, Inventory consistency, UI design principles, ROADMAP/governance
 # Layer 3 (always): NFR coverage (testing, i18n, state, navigation, efficiency)
 # Layer 4 (always): Flicker detection, code centralization, demo data coverage
 # Layer 5 (always): Console error patterns, button/action consistency, stale data
@@ -952,6 +952,64 @@ jobs:
           else
             echo "found=false" >> "$GITHUB_OUTPUT"
             echo "No missing loading/error states detected"
+          fi
+
+      # === GOVERNANCE & ROADMAP (every run) ===
+      - name: "Check: ROADMAP.md governance"
+        id: focus_roadmap
+        continue-on-error: true
+        run: |
+          echo "Checking ROADMAP.md governance health..."
+          ISSUES=""
+          HAS_ERRORS=false
+
+          if [ ! -f "ROADMAP.md" ]; then
+            ISSUES="${ISSUES}### ROADMAP.md not found\nCNCF incubation requires a public roadmap document.\n\n"
+            HAS_ERRORS=true
+          else
+            # Check if ROADMAP.md has been updated in the last 90 days
+            LAST_MODIFIED=$(git log -1 --format="%ci" -- ROADMAP.md 2>/dev/null || echo "")
+            if [ -n "$LAST_MODIFIED" ]; then
+              STALE_THRESHOLD_DAYS=90
+              LAST_EPOCH=$(date -d "$LAST_MODIFIED" +%s 2>/dev/null || date -jf "%Y-%m-%d %H:%M:%S %z" "$LAST_MODIFIED" +%s 2>/dev/null || echo "0")
+              DAYS_AGO=$(( ( $(date +%s) - LAST_EPOCH ) / 86400 ))
+              if [ "$DAYS_AGO" -gt "$STALE_THRESHOLD_DAYS" ]; then
+                ISSUES="${ISSUES}### ROADMAP.md is stale\nLast updated ${DAYS_AGO} days ago (threshold: ${STALE_THRESHOLD_DAYS} days). Roadmap should be reviewed and updated quarterly.\n\n"
+                HAS_ERRORS=true
+              fi
+            fi
+
+            # Check ROADMAP.md references current year
+            CURRENT_YEAR=$(date +%Y)
+            if ! grep -q "$CURRENT_YEAR" ROADMAP.md; then
+              ISSUES="${ISSUES}### ROADMAP.md does not reference ${CURRENT_YEAR}\nRoadmap should include current-year milestones.\n\n"
+              HAS_ERRORS=true
+            fi
+
+            # Check for essential sections
+            for SECTION in "Near-Term\|Short-Term\|Q[1-4]" "Mid-Term\|Medium-Term" "Long-Term\|Future" "Non-Goals\|Out of Scope"; do
+              if ! grep -qiE "$SECTION" ROADMAP.md; then
+                ISSUES="${ISSUES}### ROADMAP.md missing section: ${SECTION%%\\*}\nA well-structured roadmap should include near-term, mid-term, long-term, and non-goals sections.\n\n"
+                HAS_ERRORS=true
+              fi
+            done
+          fi
+
+          # Also check other CNCF governance files
+          for GOV_FILE in GOVERNANCE.md SECURITY.md CODE_OF_CONDUCT.md CONTRIBUTING.md; do
+            if [ ! -f "$GOV_FILE" ]; then
+              ISSUES="${ISSUES}### Missing governance file: ${GOV_FILE}\nCNCF incubation requires this file.\n\n"
+              HAS_ERRORS=true
+            fi
+          done
+
+          if [ "$HAS_ERRORS" = "true" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-roadmap.txt
+            echo "Governance issues found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "ROADMAP.md and governance files verified"
           fi
 
       # === UI DESIGN PRINCIPLES (every run) ===
@@ -3533,6 +3591,8 @@ jobs:
           FOCUS_BUNDLE_ANALYSIS: ${{ steps.focus_bundle_analysis.outputs.found }}
           FOCUS_LARGE_FILES: ${{ steps.focus_large_files.outputs.found }}
           FOCUS_IMPORT_COST: ${{ steps.focus_import_cost.outputs.found }}
+          # Governance & Roadmap
+          FOCUS_ROADMAP: ${{ steps.focus_roadmap.outputs.found }}
           # Tuning (from auto-qa-tuner feedback loop)
           BLOCKED_CATEGORIES: ${{ steps.tuning.outputs.blocked }}
           BOOSTED_CATEGORIES: ${{ steps.tuning.outputs.boosted }}
@@ -4012,6 +4072,19 @@ jobs:
                    'Add new drill-down views to the inventory',
                    'Remove references to deleted modals/dialogs'], true),
                 labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:consistency'],
+              });
+            }
+
+            // Governance & Roadmap (every run)
+            if (process.env.FOCUS_ROADMAP === 'true') {
+              checks.push({
+                title: `${prefix} ROADMAP.md governance issues`,
+                body: buildFocusBody('Governance', 'ROADMAP.md',
+                  readOutput('/tmp/focus-roadmap.txt'),
+                  ['Review and update ROADMAP.md with current-year milestones',
+                   'Ensure near-term, mid-term, long-term, and non-goals sections are present',
+                   'CNCF incubation requires a public, up-to-date roadmap'], false),
+                labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:governance'],
               });
             }
 
