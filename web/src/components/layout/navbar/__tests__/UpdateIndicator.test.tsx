@@ -1,43 +1,51 @@
-/**
- * UpdateIndicator Component Tests
- */
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
+vi.mock('../../../../lib/demoMode', () => ({
+  isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
+  isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
+  toggleDemoMode: vi.fn(), subscribeDemoMode: () => () => {},
+  isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
+  isFeatureEnabled: () => true,
+}))
+
+vi.mock('../../../../hooks/useDemoMode', () => ({
+  getDemoMode: () => true, default: () => true,
+  useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
+  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
+  setGlobalDemoMode: vi.fn(),
+}))
+
+vi.mock('../../../../lib/analytics', () => ({
+  emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
+  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(),
+}))
+
+vi.mock('../../../../hooks/useTokenUsage', () => ({
+  useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
+  tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },
+}))
+
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+  Trans: ({ children }: { children: React.ReactNode }) => children,
 }))
 
 vi.mock('../../../../hooks/useVersionCheck', () => ({
-  useVersionCheck: () => ({
-    hasUpdate: false,
-    latestRelease: null,
-    channel: 'stable',
-    autoUpdateStatus: 'idle',
-    latestMinor: null,
-    latestMajor: null,
-  }),
+  useVersionCheck: () => ({ hasUpdate: null, latestRelease: null, channel: null, autoUpdateStatus: null, latestMainSHA: null, skipVersion: null }),
 }))
 
-vi.mock('../../../../lib/cn', () => ({
-  cn: (...args: string[]) => (args || []).filter(Boolean).join(' '),
+vi.mock('../../../../hooks/useFeatureHints', () => ({
+  useFeatureHints: () => ({ data: [], isLoading: false, error: null }),
 }))
+
+import { UpdateIndicator } from '../UpdateIndicator'
 
 describe('UpdateIndicator', () => {
-  it('exports UpdateIndicator component', async () => {
-    const mod = await import('../UpdateIndicator')
-    expect(mod.UpdateIndicator).toBeDefined()
-    expect(typeof mod.UpdateIndicator).toBe('function')
-  })
-
-  it('renders without crashing', async () => {
-    const { UpdateIndicator } = await import('../UpdateIndicator')
-    const { container } = render(
-      <MemoryRouter>
-        <UpdateIndicator />
-      </MemoryRouter>
-    )
+  it('renders without crashing', () => {
+    const { container } = render(<MemoryRouter><UpdateIndicator /></MemoryRouter>)
     expect(container).toBeTruthy()
   })
 })

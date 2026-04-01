@@ -1,51 +1,61 @@
-/**
- * SnoozedCards Component Tests
- */
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 
+vi.mock('../../../lib/demoMode', () => ({
+  isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
+  isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
+  toggleDemoMode: vi.fn(), subscribeDemoMode: () => () => {},
+  isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
+  isFeatureEnabled: () => true,
+}))
+
+vi.mock('../../../hooks/useDemoMode', () => ({
+  getDemoMode: () => true, default: () => true,
+  useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
+  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
+  setGlobalDemoMode: vi.fn(),
+}))
+
+vi.mock('../../../lib/analytics', () => ({
+  emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
+  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(),
+}))
+
+vi.mock('../../../hooks/useTokenUsage', () => ({
+  useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
+  tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },
+}))
+
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+  Trans: ({ children }: { children: React.ReactNode }) => children,
 }))
 
 vi.mock('../../../hooks/useSnoozedCards', () => ({
-  useSnoozedCards: () => ({ snoozedSwaps: [], dismissSwap: vi.fn(), unsnoozeSwap: vi.fn() }),
-  formatTimeRemaining: () => '5m',
+  useSnoozedCards: () => ({ snoozedSwaps: [], unsnoozeSwap: null, dismissSwap: vi.fn() }),
+  formatTimeRemaining: vi.fn(),
 }))
 
 vi.mock('../../../hooks/useSnoozedRecommendations', () => ({
-  useSnoozedRecommendations: () => ({ snoozedRecommendations: [], dismissSnoozedRecommendation: vi.fn(), unsnooozeRecommendation: vi.fn() }),
-  formatElapsedTime: () => '2m ago',
+  useSnoozedRecommendations: () => ({ snoozedRecommendations: [], unsnooozeRecommendation: null, dismissSnoozedRecommendation: vi.fn() }),
+  formatElapsedTime: vi.fn(),
 }))
 
 vi.mock('../../../hooks/useSnoozedMissions', () => ({
-  useSnoozedMissions: () => ({ snoozedMissions: [], dismissMission: vi.fn(), unsnoozeMission: vi.fn() }),
-  formatTimeRemaining: (ms: number) => '10m',
-}))
-
-vi.mock('../../../hooks/useMissionSuggestions', () => ({}))
-
-vi.mock('../../ui/StatusBadge', () => ({
-  StatusBadge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  useSnoozedMissions: () => ({ snoozedMissions: [], unsnoozeMission: null, dismissMission: vi.fn() }),
+  formatTimeRemaining: vi.fn(),
 }))
 
 vi.mock('../../../lib/cn', () => ({
-  cn: (...args: string[]) => (args || []).filter(Boolean).join(' '),
+  cn: vi.fn(),
 }))
 
-vi.mock('../../../lib/constants/network', () => ({
-  POLL_INTERVAL_SLOW_MS: 30000,
-}))
+import { SnoozedCards } from '../SnoozedCards'
 
 describe('SnoozedCards', () => {
-  it('exports SnoozedCards component', async () => {
-    const mod = await import('../SnoozedCards')
-    expect(mod.SnoozedCards).toBeDefined()
-  })
-
-  it('renders without crashing when no snoozed items', async () => {
-    const { SnoozedCards } = await import('../SnoozedCards')
-    const { container } = render(<SnoozedCards />)
+  it('renders without crashing', () => {
+    const { container } = render(<SnoozedCards {...({} as any)} />)
     expect(container).toBeTruthy()
   })
 })

@@ -1,29 +1,50 @@
-/**
- * ClusterFilterPanel Component Tests
- */
 import { describe, it, expect, vi } from 'vitest'
+import { render } from '@testing-library/react'
+
+vi.mock('../../../../lib/demoMode', () => ({
+  isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
+  isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
+  toggleDemoMode: vi.fn(), subscribeDemoMode: () => () => {},
+  isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
+  isFeatureEnabled: () => true,
+}))
+
+vi.mock('../../../../hooks/useDemoMode', () => ({
+  getDemoMode: () => true, default: () => true,
+  useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
+  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
+  setGlobalDemoMode: vi.fn(),
+}))
+
+vi.mock('../../../../lib/analytics', () => ({
+  emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
+  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(),
+}))
+
+vi.mock('../../../../hooks/useTokenUsage', () => ({
+  useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
+  tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },
+}))
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+  Trans: ({ children }: { children: React.ReactNode }) => children,
 }))
 
 vi.mock('../../../../hooks/useGlobalFilters', () => ({
-  useGlobalFilters: () => ({
-    selectedClusters: [],
-    setSelectedClusters: vi.fn(),
-    selectedNamespaces: [],
-    setSelectedNamespaces: vi.fn(),
-  }),
+  useGlobalFilters: () => ({ selectedClusters: [], toggleCluster: vi.fn(), selectAllClusters: [], deselectAllClusters: [], isAllClustersSelected: null, availableClusters: [], clusterInfoMap: null, clusterGroups: [], addClusterGroup: vi.fn(), deleteClusterGroup: vi.fn(), selectClusterGroup: vi.fn(), selectedSeverities: [], toggleSeverity: vi.fn(), selectAllSeverities: [], deselectAllSeverities: [], isAllSeveritiesSelected: false, selectedStatuses: [], toggleStatus: vi.fn(), selectAllStatuses: [], deselectAllStatuses: [], isAllStatusesSelected: null, customFilter: '', setCustomFilter: vi.fn(), clearCustomFilter: vi.fn(), hasCustomFilter: null, isFiltered: null }),
 }))
 
-vi.mock('../../../../hooks/mcp/clusters', () => ({
-  useClusters: () => ({ deduplicatedClusters: [] }),
+vi.mock('../../../../lib/cn', () => ({
+  cn: vi.fn(),
 }))
+
+import { ClusterFilterPanel } from '../ClusterFilterPanel'
 
 describe('ClusterFilterPanel', () => {
-  it('exports ClusterFilterPanel component', async () => {
-    const mod = await import('../ClusterFilterPanel')
-    expect(mod.ClusterFilterPanel).toBeDefined()
-    expect(typeof mod.ClusterFilterPanel).toBe('function')
+  it('renders without crashing', () => {
+    const { container } = render(<ClusterFilterPanel />)
+    expect(container).toBeTruthy()
   })
 })
