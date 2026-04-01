@@ -520,8 +520,7 @@ func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 
 	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	c.Set("Content-Type", "text/event-stream")
@@ -781,8 +780,7 @@ func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
 
 	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	c.Set("Content-Type", "text/event-stream")
@@ -917,8 +915,7 @@ func (h *GitOpsHandlers) StreamHelmReleases(c *fiber.Ctx) error {
 
 	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	c.Set("Content-Type", "text/event-stream")
@@ -1008,8 +1005,7 @@ func (h *GitOpsHandlers) DetectDrift(c *fiber.Ctx) error {
 	// Fall back to kubectl diff
 	result, err := h.detectDriftViaKubectl(ctx, req)
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	return c.JSON(result)
@@ -1180,8 +1176,7 @@ func (h *GitOpsHandlers) Sync(c *fiber.Ctx) error {
 	// Fall back to kubectl apply
 	result, err := h.syncViaKubectl(ctx, req)
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	return c.JSON(result)

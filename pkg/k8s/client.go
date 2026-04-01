@@ -1299,6 +1299,12 @@ func (m *MultiClusterClient) GetDynamicClient(contextName string) (dynamic.Inter
 	return client, nil
 }
 
+// ClassifyError determines the error type from an error message.
+// Returns one of: "timeout", "auth", "network", "certificate", or "unknown".
+func ClassifyError(errMsg string) string {
+	return classifyError(errMsg)
+}
+
 // classifyError determines the error type from an error message
 func classifyError(errMsg string) string {
 	lowerMsg := strings.ToLower(errMsg)

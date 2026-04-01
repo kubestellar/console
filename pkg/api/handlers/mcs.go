@@ -47,8 +47,7 @@ func (h *MCSHandlers) ListServiceExports(c *fiber.Ctx) error {
 		// Get exports for specific cluster
 		exports, err := h.k8sClient.ListServiceExportsForCluster(ctx, cluster, namespace)
 		if err != nil {
-			log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+			return handleK8sError(c, err)
 		}
 		return c.JSON(fiber.Map{
 			"items":      exports,
@@ -60,8 +59,7 @@ func (h *MCSHandlers) ListServiceExports(c *fiber.Ctx) error {
 	// Get exports across all clusters
 	list, err := h.k8sClient.ListServiceExports(ctx)
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	return c.JSON(list)
@@ -85,8 +83,7 @@ func (h *MCSHandlers) ListServiceImports(c *fiber.Ctx) error {
 		// Get imports for specific cluster
 		imports, err := h.k8sClient.ListServiceImportsForCluster(ctx, cluster, namespace)
 		if err != nil {
-			log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+			return handleK8sError(c, err)
 		}
 		return c.JSON(fiber.Map{
 			"items":      imports,
@@ -98,8 +95,7 @@ func (h *MCSHandlers) ListServiceImports(c *fiber.Ctx) error {
 	// Get imports across all clusters
 	list, err := h.k8sClient.ListServiceImports(ctx)
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	return c.JSON(list)
@@ -117,8 +113,7 @@ func (h *MCSHandlers) GetMCSStatus(c *fiber.Ctx) error {
 
 	clusters, _, err := h.k8sClient.HealthyClusters(ctx)
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	type clusterMCSStatus struct {
@@ -156,8 +151,7 @@ func (h *MCSHandlers) GetServiceExport(c *fiber.Ctx) error {
 
 	exports, err := h.k8sClient.ListServiceExportsForCluster(ctx, cluster, namespace)
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	for _, export := range exports {
@@ -185,8 +179,7 @@ func (h *MCSHandlers) GetServiceImport(c *fiber.Ctx) error {
 
 	imports, err := h.k8sClient.ListServiceImportsForCluster(ctx, cluster, namespace)
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	for _, imp := range imports {

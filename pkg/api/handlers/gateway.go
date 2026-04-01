@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -44,8 +43,7 @@ func (h *GatewayHandlers) ListGateways(c *fiber.Ctx) error {
 		// Get gateways for specific cluster
 		gateways, err := h.k8sClient.ListGatewaysForCluster(ctx, cluster, namespace)
 		if err != nil {
-			log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+			return handleK8sError(c, err)
 		}
 		return c.JSON(fiber.Map{
 			"items":      gateways,
@@ -57,8 +55,7 @@ func (h *GatewayHandlers) ListGateways(c *fiber.Ctx) error {
 	// Get gateways across all clusters
 	list, err := h.k8sClient.ListGateways(ctx)
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	return c.JSON(list)
@@ -82,8 +79,7 @@ func (h *GatewayHandlers) ListHTTPRoutes(c *fiber.Ctx) error {
 		// Get routes for specific cluster
 		routes, err := h.k8sClient.ListHTTPRoutesForCluster(ctx, cluster, namespace)
 		if err != nil {
-			log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+			return handleK8sError(c, err)
 		}
 		return c.JSON(fiber.Map{
 			"items":      routes,
@@ -95,8 +91,7 @@ func (h *GatewayHandlers) ListHTTPRoutes(c *fiber.Ctx) error {
 	// Get routes across all clusters
 	list, err := h.k8sClient.ListHTTPRoutes(ctx)
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	return c.JSON(list)
@@ -114,8 +109,7 @@ func (h *GatewayHandlers) GetGatewayAPIStatus(c *fiber.Ctx) error {
 
 	clusters, _, err := h.k8sClient.HealthyClusters(ctx)
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	type clusterGatewayStatus struct {
@@ -153,8 +147,7 @@ func (h *GatewayHandlers) GetGateway(c *fiber.Ctx) error {
 
 	gateways, err := h.k8sClient.ListGatewaysForCluster(ctx, cluster, namespace)
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	for _, gw := range gateways {
@@ -182,8 +175,7 @@ func (h *GatewayHandlers) GetHTTPRoute(c *fiber.Ctx) error {
 
 	routes, err := h.k8sClient.ListHTTPRoutesForCluster(ctx, cluster, namespace)
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	for _, route := range routes {

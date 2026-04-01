@@ -68,8 +68,7 @@ func (h *WorkloadHandlers) ListWorkloads(c *fiber.Ctx) error {
 
 	workloads, err := h.k8sClient.ListWorkloads(ctx, cluster, namespace, workloadType)
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	return c.JSON(workloads)
@@ -91,8 +90,7 @@ func (h *WorkloadHandlers) GetWorkload(c *fiber.Ctx) error {
 
 	workload, err := h.k8sClient.GetWorkload(ctx, cluster, namespace, name)
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	if workload == nil {
@@ -158,8 +156,7 @@ func (h *WorkloadHandlers) DeployWorkload(c *fiber.Ctx) error {
 
 	result, err := h.k8sClient.DeployWorkload(ctx, req.SourceCluster, req.Namespace, req.WorkloadName, req.TargetClusters, req.Replicas, opts)
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	return c.JSON(result)
@@ -185,8 +182,7 @@ func (h *WorkloadHandlers) ResolveDependencies(c *fiber.Ctx) error {
 			log.Printf("not found: %v", err)
 		return c.Status(404).JSON(fiber.Map{"error": "not found"})
 		}
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	type depDTO struct {
@@ -243,8 +239,7 @@ func (h *WorkloadHandlers) MonitorWorkload(c *fiber.Ctx) error {
 			log.Printf("not found: %v", err)
 		return c.Status(404).JSON(fiber.Map{"error": "not found"})
 		}
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	return c.JSON(result)
@@ -266,8 +261,7 @@ func (h *WorkloadHandlers) GetDeployStatus(c *fiber.Ctx) error {
 
 	workload, err := h.k8sClient.GetWorkload(ctx, cluster, namespace, name)
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	if workload == nil {
@@ -970,8 +964,7 @@ func (h *WorkloadHandlers) ScaleWorkload(c *fiber.Ctx) error {
 
 	result, err := h.k8sClient.ScaleWorkload(ctx, req.Namespace, req.WorkloadName, req.TargetClusters, req.Replicas)
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	return c.JSON(result)
@@ -999,8 +992,7 @@ func (h *WorkloadHandlers) DeleteWorkload(c *fiber.Ctx) error {
 	defer cancel()
 
 	if err := h.k8sClient.DeleteWorkload(ctx, cluster, namespace, name); err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	return c.JSON(fiber.Map{
@@ -1023,8 +1015,7 @@ func (h *WorkloadHandlers) GetClusterCapabilities(c *fiber.Ctx) error {
 
 	capabilities, err := h.k8sClient.GetClusterCapabilities(ctx)
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	return c.JSON(capabilities)
@@ -1042,8 +1033,7 @@ func (h *WorkloadHandlers) ListBindingPolicies(c *fiber.Ctx) error {
 
 	policies, err := h.k8sClient.ListBindingPolicies(ctx)
 	if err != nil {
-		log.Printf("internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return handleK8sError(c, err)
 	}
 
 	return c.JSON(policies)
