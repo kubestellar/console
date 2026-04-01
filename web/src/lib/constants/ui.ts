@@ -58,3 +58,11 @@ export const COPY_FEEDBACK_TIMEOUT_MS = 2000
 
 // ── Pagination ──────────────────────────────────────────────────────────
 export const DEFAULT_PAGE_SIZE = 5
+
+// ── Layout dimensions ──────────────────────────────────────────────────
+/** Height of the top navbar in pixels (h-16 = 64px) */
+export const NAVBAR_HEIGHT_PX = 64
+/** Height of each status banner (network, demo, offline) in pixels */
+export const BANNER_HEIGHT_PX = 36
+/** Height of the green dev-mode indicator bar in pixels (h-5 = 20px) */
+export const DEV_BAR_HEIGHT_PX = 20

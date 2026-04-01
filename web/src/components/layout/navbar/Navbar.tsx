@@ -29,8 +29,14 @@ import { AgentStatusIndicator } from './AgentStatusIndicator'
 import { UpdateIndicator } from './UpdateIndicator'
 import { StreakBadge } from './StreakBadge'
 import { ROUTES } from '../../../config/routes'
+import { NAVBAR_HEIGHT_PX } from '../../../lib/constants/ui'
 
-export function Navbar() {
+interface NavbarProps {
+  /** Pixel offset from top when a dev-mode bar or other element sits above the navbar */
+  topOffset?: number
+}
+
+export function Navbar({ topOffset = 0 }: NavbarProps) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const { theme, toggleTheme } = useTheme()
@@ -47,7 +53,7 @@ export function Navbar() {
   }, [location.pathname])
 
   return (
-    <nav data-tour="navbar" className="fixed top-0 left-0 right-0 h-16 glass z-50 px-3 md:px-6 flex items-center justify-between">
+    <nav data-tour="navbar" style={{ top: topOffset }} className="fixed left-0 right-0 h-16 glass z-50 px-3 md:px-6 flex items-center justify-between">
       {/* Left side: Hamburger + Logo — shrink-0 so logo is never compressed */}
       <div className="flex items-center gap-2 md:gap-3 shrink-0">
         {/* Hamburger menu - mobile only */}
@@ -166,7 +172,7 @@ export function Navbar() {
                 onClick={() => setShowMobileMore(false)}
               />
               {/* Bottom sheet menu on mobile */}
-              <div className={`fixed ${isMobile ? 'inset-x-0 bottom-0 rounded-t-2xl max-h-[60vh]' : 'right-4 top-16 w-64 rounded-lg'} bg-card border border-border shadow-xl z-50 overflow-hidden`}>
+              <div className={`fixed ${isMobile ? 'inset-x-0 bottom-0 rounded-t-2xl max-h-[60vh]' : 'right-4 w-64 rounded-lg'} bg-card border border-border shadow-xl z-50 overflow-hidden`} style={isMobile ? undefined : { top: topOffset + NAVBAR_HEIGHT_PX }}>
                 {/* Drag handle for mobile */}
                 {isMobile && (
                   <div className="flex justify-center py-2">
