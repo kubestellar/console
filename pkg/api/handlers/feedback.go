@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -1690,7 +1691,13 @@ func (h *FeedbackHandler) uploadScreenshotToGitHub(repoOwner, repoName, requestI
 
 	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/contents/%s", repoOwner, repoName, filePath)
 
-	req, err := http.NewRequest("PUT", apiURL, bytes.NewBuffer(jsonData))
+	// Use a per-request timeout for screenshot uploads (large base64 payloads)
+	// instead of creating a separate http.Client, to reuse h.httpClient's
+	// Transport (connection pooling, proxy settings, keep-alive tuning).
+	ctx, cancel := context.WithTimeout(context.Background(), screenshotUploadTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "PUT", apiURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return "", err
 	}
@@ -1698,9 +1705,7 @@ func (h *FeedbackHandler) uploadScreenshotToGitHub(repoOwner, repoName, requestI
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 
-	// Use a longer timeout for screenshot uploads (large base64 payloads)
-	uploadClient := &http.Client{Timeout: screenshotUploadTimeout}
-	resp, err := uploadClient.Do(req)
+	resp, err := h.httpClient.Do(req)
 	if err != nil {
 		return "", err
 	}

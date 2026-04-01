@@ -82,9 +82,11 @@ func TestFeedback_CreateFeatureRequest_InvalidTitleValidation(t *testing.T) {
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
-	body, _ := io.ReadAll(resp.Body)
+	body, readErr := io.ReadAll(resp.Body)
+	require.NoError(t, readErr)
 	assert.Contains(t, string(body), "Title must be at least 10 characters")
 }
 
@@ -98,9 +100,11 @@ func TestFeedback_RequestUpdate_GitHubIssue_NoGitHubLoginForbidden(t *testing.T)
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 
-	body, _ := io.ReadAll(resp.Body)
+	body, readErr := io.ReadAll(resp.Body)
+	require.NoError(t, readErr)
 	assert.Contains(t, string(body), "GitHub login not available")
 }
 
@@ -118,6 +122,7 @@ func TestFeedback_GetNotifications_LimitClampAndUserFilter(t *testing.T) {
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, userID, stub.lastNotificationsUserID)
 	assert.Equal(t, 100, stub.lastNotificationsLimit)
@@ -137,9 +142,11 @@ func TestFeedback_GetNotifications_StoreErrorMapsTo500(t *testing.T) {
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 
-	body, _ := io.ReadAll(resp.Body)
+	body, readErr := io.ReadAll(resp.Body)
+	require.NoError(t, readErr)
 	assert.Contains(t, string(body), "Failed to get notifications")
 }
 
@@ -157,6 +164,7 @@ func TestFeedback_GetUnreadCount_StoreErrorMapsTo500(t *testing.T) {
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 }
 
@@ -174,6 +182,7 @@ func TestFeedback_GetUnreadCount_Success(t *testing.T) {
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, userID, stub.lastUnreadUserID)
 
@@ -188,7 +197,7 @@ const testWebhookSecret = "test-webhook-secret"
 // signWebhookPayload computes the sha256 HMAC signature for a GitHub webhook payload.
 func signWebhookPayload(payload []byte, secret string) string {
 	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write(payload)
+	_, _ = mac.Write(payload)
 	return "sha256=" + hex.EncodeToString(mac.Sum(nil))
 }
 
@@ -218,11 +227,28 @@ func sendWebhook(t *testing.T, app *fiber.App, eventType string, payload []byte)
 	return resp
 }
 
+// requireMarshalJSON marshals v to JSON and fails the test on error.
+func requireMarshalJSON(t *testing.T, v interface{}) []byte {
+	t.Helper()
+	data, err := json.Marshal(v)
+	require.NoError(t, err, "json.Marshal should not fail for test payload")
+	return data
+}
+
+// readBody reads and closes the response body, failing the test on error.
+func readBody(t *testing.T, resp *http.Response) string {
+	t.Helper()
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err, "reading response body should not fail")
+	return string(body)
+}
+
 func TestWebhook_IssueEvent_MissingNumber_Returns400(t *testing.T) {
 	app, _ := setupWebhookTest(t)
 
 	// Payload has an issue object but no "number" field
-	payload, _ := json.Marshal(map[string]interface{}{
+	payload := requireMarshalJSON(t, map[string]interface{}{
 		"action": "opened",
 		"issue":  map[string]interface{}{"html_url": "https://github.com/org/repo/issues/1"},
 	})
@@ -230,15 +256,15 @@ func TestWebhook_IssueEvent_MissingNumber_Returns400(t *testing.T) {
 	resp := sendWebhook(t, app, "issues", payload)
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
-	body, _ := io.ReadAll(resp.Body)
-	assert.Contains(t, string(body), "missing or invalid issue number")
+	body := readBody(t, resp)
+	assert.Contains(t, body, "missing or invalid issue number")
 }
 
 func TestWebhook_IssueEvent_NumberWrongType_Returns400(t *testing.T) {
 	app, _ := setupWebhookTest(t)
 
 	// "number" is a string instead of float64
-	payload, _ := json.Marshal(map[string]interface{}{
+	payload := requireMarshalJSON(t, map[string]interface{}{
 		"action": "opened",
 		"issue":  map[string]interface{}{"number": "not-a-number"},
 	})
@@ -246,19 +272,20 @@ func TestWebhook_IssueEvent_NumberWrongType_Returns400(t *testing.T) {
 	resp := sendWebhook(t, app, "issues", payload)
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
-	body, _ := io.ReadAll(resp.Body)
-	assert.Contains(t, string(body), "missing or invalid issue number")
+	body := readBody(t, resp)
+	assert.Contains(t, body, "missing or invalid issue number")
 }
 
 func TestWebhook_IssueEvent_MissingIssueObject_ReturnsOK(t *testing.T) {
 	app, _ := setupWebhookTest(t)
 
 	// No "issue" key at all — handler returns nil (200)
-	payload, _ := json.Marshal(map[string]interface{}{
+	payload := requireMarshalJSON(t, map[string]interface{}{
 		"action": "opened",
 	})
 
 	resp := sendWebhook(t, app, "issues", payload)
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
@@ -266,7 +293,7 @@ func TestWebhook_PREvent_MissingNumber_Returns400(t *testing.T) {
 	app, _ := setupWebhookTest(t)
 
 	// pull_request object exists but has no "number" field
-	payload, _ := json.Marshal(map[string]interface{}{
+	payload := requireMarshalJSON(t, map[string]interface{}{
 		"action":       "opened",
 		"pull_request": map[string]interface{}{"html_url": "https://github.com/org/repo/pull/1"},
 	})
@@ -274,15 +301,15 @@ func TestWebhook_PREvent_MissingNumber_Returns400(t *testing.T) {
 	resp := sendWebhook(t, app, "pull_request", payload)
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
-	body, _ := io.ReadAll(resp.Body)
-	assert.Contains(t, string(body), "missing or invalid PR number")
+	body := readBody(t, resp)
+	assert.Contains(t, body, "missing or invalid PR number")
 }
 
 func TestWebhook_PREvent_NumberWrongType_Returns400(t *testing.T) {
 	app, _ := setupWebhookTest(t)
 
 	// "number" is a boolean instead of float64
-	payload, _ := json.Marshal(map[string]interface{}{
+	payload := requireMarshalJSON(t, map[string]interface{}{
 		"action":       "opened",
 		"pull_request": map[string]interface{}{"number": true},
 	})
@@ -290,26 +317,27 @@ func TestWebhook_PREvent_NumberWrongType_Returns400(t *testing.T) {
 	resp := sendWebhook(t, app, "pull_request", payload)
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
-	body, _ := io.ReadAll(resp.Body)
-	assert.Contains(t, string(body), "missing or invalid PR number")
+	body := readBody(t, resp)
+	assert.Contains(t, body, "missing or invalid PR number")
 }
 
 func TestWebhook_PREvent_MissingPRObject_ReturnsOK(t *testing.T) {
 	app, _ := setupWebhookTest(t)
 
 	// No "pull_request" key at all — handler returns nil (200)
-	payload, _ := json.Marshal(map[string]interface{}{
+	payload := requireMarshalJSON(t, map[string]interface{}{
 		"action": "opened",
 	})
 
 	resp := sendWebhook(t, app, "pull_request", payload)
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
 func TestWebhook_InvalidSignature_Returns401(t *testing.T) {
 	app, _ := setupWebhookTest(t)
 
-	payload, _ := json.Marshal(map[string]interface{}{"action": "opened"})
+	payload := requireMarshalJSON(t, map[string]interface{}{"action": "opened"})
 	req, err := http.NewRequest(http.MethodPost, "/webhook", bytes.NewReader(payload))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
@@ -318,6 +346,7 @@ func TestWebhook_InvalidSignature_Returns401(t *testing.T) {
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 }
 
@@ -334,8 +363,8 @@ func TestWebhook_InvalidJSON_Returns400(t *testing.T) {
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
-	body, _ := io.ReadAll(resp.Body)
-	assert.Contains(t, string(body), "Invalid JSON payload")
+	body := readBody(t, resp)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.Contains(t, body, "Invalid JSON payload")
 }

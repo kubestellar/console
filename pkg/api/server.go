@@ -194,11 +194,14 @@ func NewServer(cfg Config) (*Server, error) {
 	middleware.InitTokenRevocation(db)
 
 	// Create Fiber app
-	// feedbackBodyLimit allows base64-encoded screenshot uploads (up to ~20 MB)
-	const feedbackBodyLimit = 20 * 1024 * 1024
+	// feedbackBodyLimit is elevated globally to 20 MB to support base64-encoded
+	// screenshot uploads in the POST /api/feedback/requests endpoint. Non-feedback
+	// POST routes are protected by a tighter per-route body-size middleware
+	// (apiDefaultBodyLimit) to limit memory pressure from oversized requests.
+	const feedbackBodyLimit = 20 * 1024 * 1024  // 20 MB — base64 screenshot uploads
 	app := fiber.New(fiber.Config{
-		ErrorHandler:   customErrorHandler,
-		ReadBufferSize: 16384,
+		ErrorHandler:    customErrorHandler,
+		ReadBufferSize:  16384,
 		WriteBufferSize: 16384,
 		BodyLimit:       feedbackBodyLimit,
 		ReadTimeout:     30 * time.Second,
@@ -596,7 +599,21 @@ func (s *Server) setupRoutes() {
 			return c.Status(429).JSON(fiber.Map{"error": "too many requests, try again later"})
 		},
 	})
-	api := s.app.Group("/api", apiLimiter, middleware.JWTAuth(s.config.JWTSecret))
+	// Body-size guard: enforce a 1 MB limit on all API routes except the
+	// feedback creation endpoint which accepts large base64 screenshot payloads
+	// (up to the global 20 MB Fiber BodyLimit).
+	const apiDefaultBodyLimit = 1 * 1024 * 1024 // 1 MB — sufficient for JSON API requests
+	bodyGuard := func(c *fiber.Ctx) error {
+		if c.Method() == fiber.MethodPost && c.Path() == "/api/feedback/requests" {
+			// Allow the elevated feedbackBodyLimit (checked by Fiber global config)
+			return c.Next()
+		}
+		if len(c.Body()) > apiDefaultBodyLimit {
+			return fiber.ErrRequestEntityTooLarge
+		}
+		return c.Next()
+	}
+	api := s.app.Group("/api", apiLimiter, bodyGuard, middleware.JWTAuth(s.config.JWTSecret))
 
 	// User routes
 	user := handlers.NewUserHandler(s.store)

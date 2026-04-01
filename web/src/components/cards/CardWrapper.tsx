@@ -223,6 +223,7 @@ function InfoTooltip({ text }: { text: string }) {
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
+  const tooltipId = useRef(`info-tooltip-${Math.random().toString(36).slice(2, 9)}`).current
 
   // Update position based on trigger element's current bounding rect
   const updatePosition = useCallback(() => {
@@ -301,14 +302,18 @@ function InfoTooltip({ text }: { text: string }) {
         onClick={() => setIsVisible(!isVisible)}
         onMouseEnter={() => setIsVisible(true)}
         onMouseLeave={() => setIsVisible(false)}
+        onFocus={() => setIsVisible(true)}
+        onBlur={() => setIsVisible(false)}
         className="p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground transition-colors"
         aria-label={t('cardWrapper.cardInfo')}
+        aria-describedby={isVisible ? tooltipId : undefined}
       >
         <Info className="w-3.5 h-3.5" />
       </button>
       {isVisible && position && createPortal(
         <div
           ref={tooltipRef}
+          id={tooltipId}
           role="tooltip"
           className="fixed z-[100] max-w-xs px-3 py-2.5 text-xs leading-relaxed rounded-lg bg-background border border-border text-foreground shadow-xl animate-fade-in"
           style={{ top: position.top, left: position.left }}

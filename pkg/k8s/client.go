@@ -2596,11 +2596,11 @@ func (m *MultiClusterClient) InstallGPUHealthCronJob(ctx context.Context, contex
 		if errors.IsAlreadyExists(crErr) {
 			existing, getErr := client.RbacV1().ClusterRoles().Get(ctx, gpuHealthClusterRole, metav1.GetOptions{})
 			if getErr != nil {
-				return fmt.Errorf("getting existing ClusterRole for update: %w", getErr)
+				return fmt.Errorf("getting existing ClusterRole %q for update: %w", gpuHealthClusterRole, getErr)
 			}
 			existing.Rules = rules
 			if _, updateErr := client.RbacV1().ClusterRoles().Update(ctx, existing, metav1.UpdateOptions{}); updateErr != nil {
-				return fmt.Errorf("updating ClusterRole: %w", updateErr)
+				return fmt.Errorf("updating ClusterRole %q: %w", gpuHealthClusterRole, updateErr)
 			}
 		} else {
 			return fmt.Errorf("creating ClusterRole: %w", crErr)

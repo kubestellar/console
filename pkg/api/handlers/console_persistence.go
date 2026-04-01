@@ -785,10 +785,11 @@ func (h *ConsolePersistenceHandlers) SyncNow(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Persistence not enabled"})
 	}
 
-	// Sync logic is not yet implemented — return an honest status
+	// Sync logic is not yet implemented — return a clear, machine-readable status
 	return c.Status(501).JSON(fiber.Map{
 		"synced":    false,
-		"error":     "sync not implemented",
+		"error":     "Sync operation is not implemented for this API endpoint. Please upgrade the console backend to a version that supports /api/persistence/sync.",
+		"errorCode": "SYNC_NOT_IMPLEMENTED",
 		"namespace": h.persistenceStore.GetNamespace(),
 	})
 }
