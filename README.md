@@ -1,6 +1,6 @@
 # KubeStellar Console
 
-![Coverage](https://img.shields.io/badge/coverage-25%25-yellow)
+![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/clubanderson/b9a9ae8469f1897a22d5a40629bc1e82/raw/coverage-badge.json)
 
 AI-powered multi-cluster Kubernetes dashboard with guided install missions for 250+ CNCF projects.
 

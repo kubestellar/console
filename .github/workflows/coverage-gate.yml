@@ -7,13 +7,19 @@ on:
       - 'web/src/**'
       - 'web/vite.config.ts'
       - 'web/package.json'
+  push:
+    branches: [main]
+    paths:
+      - 'web/src/**'
+      - 'web/vite.config.ts'
+      - 'web/package.json'
 
 permissions:
   contents: read
   pull-requests: write
 
 concurrency:
-  group: coverage-gate-${{ github.event.pull_request.number }}
+  group: coverage-gate-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 env:
@@ -152,7 +158,7 @@ jobs:
           retention-days: 14
 
       - name: Comment on PR
-        if: steps.gate.outputs.status != 'skip'
+        if: github.event_name == 'pull_request' && steps.gate.outputs.status != 'skip'
         uses: actions/github-script@v7
         with:
           script: |
@@ -191,4 +197,54 @@ jobs:
                 issue_number: context.issue.number,
                 body: fullBody,
               });
+            }
+
+      # Update coverage badge gist on push to main
+      - name: Update coverage badge
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/github-script@v7
+        env:
+          GIST_ID: 'b9a9ae8469f1897a22d5a40629bc1e82'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const summaryPath = 'web/coverage/coverage-summary.json';
+
+            if (!fs.existsSync(summaryPath)) {
+              console.log('No coverage summary — skipping badge update');
+              return;
+            }
+
+            const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+            const pct = Math.round(summary.total?.lines?.pct ?? 0);
+
+            // Color based on coverage percentage
+            const GOOD_THRESHOLD = 60;
+            const OK_THRESHOLD = 40;
+            let color = 'red';
+            if (pct >= GOOD_THRESHOLD) color = 'brightgreen';
+            else if (pct >= OK_THRESHOLD) color = 'yellow';
+            else color = 'orange';
+
+            const badge = {
+              schemaVersion: 1,
+              label: 'coverage',
+              message: `${pct}%`,
+              color,
+            };
+
+            try {
+              await github.rest.gists.update({
+                gist_id: process.env.GIST_ID,
+                files: {
+                  'coverage-badge.json': {
+                    content: JSON.stringify(badge),
+                  },
+                },
+              });
+              console.log(`Badge updated: ${pct}% (${color})`);
+            } catch (err) {
+              console.log(`Failed to update gist: ${err.message}`);
+              // Non-fatal — don't fail the build for a badge
             }
