@@ -42,7 +42,11 @@ import { DashboardHeader } from '../DashboardHeader'
 
 describe('DashboardHeader', () => {
   it('renders without crashing', () => {
-    const { container } = render(<MemoryRouter><DashboardHeader {...({} as any)} /></MemoryRouter>)
+    const { container } = render(
+      <MemoryRouter>
+        <DashboardHeader title="Test" subtitle="Sub" isFetching={false} onRefresh={vi.fn()} />
+      </MemoryRouter>
+    )
     expect(container).toBeTruthy()
   })
 })

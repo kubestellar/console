@@ -52,7 +52,7 @@ import { ConfigMapDrillDown } from '../ConfigMapDrillDown'
 
 describe('ConfigMapDrillDown', () => {
   it('renders without crashing', () => {
-    const { container } = render(<ConfigMapDrillDown data={{ cluster: 'c1', namespace: 'ns1', configmap: 'cm1' } as any} />)
+    const { container } = render(<ConfigMapDrillDown data={{ cluster: 'c1', namespace: 'ns1', configmap: 'cm1' }} />)
     expect(container).toBeTruthy()
   })
 })

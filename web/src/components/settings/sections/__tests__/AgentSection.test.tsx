@@ -40,7 +40,7 @@ import { AgentSection } from '../AgentSection'
 
 describe('AgentSection', () => {
   it('renders without crashing', () => {
-    const { container } = render(<AgentSection {...({} as any)} />)
+    const { container } = render(<AgentSection isConnected={false} health={null} refresh={vi.fn()} />)
     expect(container).toBeTruthy()
   })
 })

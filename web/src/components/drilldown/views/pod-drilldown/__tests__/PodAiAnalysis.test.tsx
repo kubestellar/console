@@ -40,7 +40,7 @@ import { PodAiAnalysis } from '../PodAiAnalysis'
 
 describe('PodAiAnalysis', () => {
   it('renders without crashing', () => {
-    const { container } = render(<PodAiAnalysis {...({} as any)} />)
+    const { container } = render(<PodAiAnalysis aiAnalysis={null} aiAnalysisLoading={false} fetchAiAnalysis={vi.fn()} handleRepairPod={vi.fn()} />)
     expect(container).toBeTruthy()
   })
 })

@@ -35,7 +35,7 @@ import { StatBlockModePicker } from '../StatBlockModePicker'
 
 describe('StatBlockModePicker', () => {
   it('renders without crashing', () => {
-    const { container } = render(<StatBlockModePicker {...({} as any)} />)
+    const { container } = render(<StatBlockModePicker currentMode="numeric" availableModes={["numeric"]} onModeChange={vi.fn()} />)
     expect(container).toBeTruthy()
   })
 })

@@ -45,7 +45,7 @@ import { ResourcesDrillDown } from '../ResourcesDrillDown'
 
 describe('ResourcesDrillDown', () => {
   it('renders without crashing', () => {
-    const { container } = render(<ResourcesDrillDown {...({} as any)} />)
+    const { container } = render(<ResourcesDrillDown data={{}} />)
     expect(container).toBeTruthy()
   })
 })

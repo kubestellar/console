@@ -44,7 +44,7 @@ import { GPUNodeDrillDown } from '../GPUNodeDrillDown'
 
 describe('GPUNodeDrillDown', () => {
   it('renders without crashing', () => {
-    const { container } = render(<GPUNodeDrillDown data={{ cluster: 'c1', node: 'n1', gpuType: 'A100', gpuCount: 1, gpuAllocated: 0 } as any} />)
+    const { container } = render(<GPUNodeDrillDown data={{ cluster: 'c1', node: 'n1', gpuType: 'A100', gpuCount: 1, gpuAllocated: 0 }} />)
     expect(container).toBeTruthy()
   })
 })

@@ -31,7 +31,7 @@ import { InsightSourceBadge } from '../InsightSourceBadge'
 
 describe('InsightSourceBadge', () => {
   it('renders without crashing', () => {
-    const { container } = render(<InsightSourceBadge {...({} as any)} />)
+    const { container } = render(<InsightSourceBadge source="heuristic" />)
     expect(container).toBeTruthy()
   })
 })

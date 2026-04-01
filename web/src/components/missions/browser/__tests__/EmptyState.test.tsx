@@ -31,7 +31,7 @@ import { EmptyState } from '../EmptyState'
 
 describe('EmptyState', () => {
   it('renders without crashing', () => {
-    const { container } = render(<EmptyState {...({} as any)} />)
+    const { container } = render(<EmptyState message="No missions" />)
     expect(container).toBeTruthy()
   })
 })

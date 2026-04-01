@@ -52,7 +52,7 @@ import { ServiceAccountDrillDown } from '../ServiceAccountDrillDown'
 
 describe('ServiceAccountDrillDown', () => {
   it('renders without crashing', () => {
-    const { container } = render(<ServiceAccountDrillDown data={{ cluster: 'c1', namespace: 'ns1', serviceaccount: 'sa1' } as any} />)
+    const { container } = render(<ServiceAccountDrillDown data={{ cluster: 'c1', namespace: 'ns1', serviceaccount: 'sa1' }} />)
     expect(container).toBeTruthy()
   })
 })

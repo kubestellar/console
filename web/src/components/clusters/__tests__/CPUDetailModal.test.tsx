@@ -36,7 +36,7 @@ import { CPUDetailModal } from '../ResourceDetailModals'
 
 describe('CPUDetailModal', () => {
   it('renders without crashing', () => {
-    const { container } = render(<CPUDetailModal {...({} as any)} />)
+    const { container } = render(<CPUDetailModal clusterName="test" onClose={vi.fn()} totalCores={4} allocatableCores={4} />)
     expect(container).toBeTruthy()
   })
 })

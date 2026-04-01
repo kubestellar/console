@@ -31,7 +31,7 @@ import { ProgressRing } from '../ProgressRing'
 
 describe('ProgressRing', () => {
   it('renders without crashing', () => {
-    const { container } = render(<ProgressRing {...({} as any)} />)
+    const { container } = render(<ProgressRing progress={0.5} />)
     expect(container).toBeTruthy()
   })
 })

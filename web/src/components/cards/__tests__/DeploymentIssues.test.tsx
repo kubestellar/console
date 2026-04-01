@@ -85,7 +85,7 @@ import { DeploymentIssues } from '../DeploymentIssues'
 
 describe('DeploymentIssues', () => {
   it('renders without crashing', () => {
-    const { container } = render(<DeploymentIssues {...({} as any)} />)
+    const { container } = render(<DeploymentIssues/ />)
     expect(container).toBeTruthy()
   })
 })

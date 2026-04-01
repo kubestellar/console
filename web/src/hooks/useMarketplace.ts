@@ -135,8 +135,7 @@ function saveInstalled(map: InstalledMap): void {
 
 export interface InstallResult {
   type: MarketplaceItemType
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data?: any
+  data?: unknown
 }
 
 export function useMarketplace() {

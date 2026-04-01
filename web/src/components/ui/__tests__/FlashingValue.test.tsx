@@ -35,7 +35,7 @@ import { FlashingValue } from '../FlashingValue'
 
 describe('FlashingValue', () => {
   it('renders without crashing', () => {
-    const { container } = render(<FlashingValue {...({} as any)} />)
+    const { container } = render(<FlashingValue value={42} />)
     expect(container).toBeTruthy()
   })
 })

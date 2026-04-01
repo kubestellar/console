@@ -77,7 +77,7 @@ import { ServiceImports } from '../ServiceImports'
 
 describe('ServiceImports', () => {
   it('renders without crashing', () => {
-    const { container } = render(<ServiceImports {...({} as any)} />)
+    const { container } = render(<ServiceImports/ />)
     expect(container).toBeTruthy()
   })
 })

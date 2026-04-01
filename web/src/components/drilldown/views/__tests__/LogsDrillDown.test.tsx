@@ -40,7 +40,7 @@ import { LogsDrillDown } from '../LogsDrillDown'
 
 describe('LogsDrillDown', () => {
   it('renders without crashing', () => {
-    const { container } = render(<LogsDrillDown data={{ cluster: 'c1', namespace: 'ns1', pod: 'pod1' } as any} />)
+    const { container } = render(<LogsDrillDown data={{ cluster: 'c1', namespace: 'ns1', pod: 'pod1' }} />)
     expect(container).toBeTruthy()
   })
 })

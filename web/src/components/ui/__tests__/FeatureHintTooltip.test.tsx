@@ -31,7 +31,7 @@ import { FeatureHintTooltip } from '../FeatureHintTooltip'
 
 describe('FeatureHintTooltip', () => {
   it('renders without crashing', () => {
-    const { container } = render(<FeatureHintTooltip {...({} as any)} />)
+    const { container } = render(<FeatureHintTooltip message="test" onDismiss={vi.fn()} />)
     expect(container).toBeTruthy()
   })
 })

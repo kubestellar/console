@@ -35,7 +35,7 @@ import { ConsoleAIIcon } from '../ConsoleAIIcon'
 
 describe('ConsoleAIIcon', () => {
   it('renders without crashing', () => {
-    const { container } = render(<ConsoleAIIcon {...({} as any)} />)
+    const { container } = render(<ConsoleAIIcon />)
     expect(container).toBeTruthy()
   })
 })

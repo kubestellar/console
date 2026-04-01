@@ -40,7 +40,7 @@ import { PodDeleteSection } from '../PodDeleteSection'
 
 describe('PodDeleteSection', () => {
   it('renders without crashing', () => {
-    const { container } = render(<PodDeleteSection {...({} as any)} />)
+    const { container } = render(<PodDeleteSection podName="pod1" agentConnected={false} canDeletePod={null} deletingPod={false} deleteError={null} showDeletePodConfirm={false} setShowDeletePodConfirm={vi.fn()} isManagedPod={false} handleDeletePod={vi.fn()} />)
     expect(container).toBeTruthy()
   })
 })

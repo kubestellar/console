@@ -36,7 +36,7 @@ import { GitHubTokenSection } from '../GitHubTokenSection'
 
 describe('GitHubTokenSection', () => {
   it('renders without crashing', () => {
-    const { container } = render(<GitHubTokenSection {...({} as any)} />)
+    const { container } = render(<GitHubTokenSection forceVersionCheck={vi.fn()} />)
     expect(container).toBeTruthy()
   })
 })

@@ -36,7 +36,42 @@ import { ConnectTab } from '../ConnectTab'
 
 describe('ConnectTab', () => {
   it('renders without crashing', () => {
-    const { container } = render(<ConnectTab {...({} as any)} />)
+    const { container } = render(
+      <ConnectTab
+        connectStep={1}
+        setConnectStep={vi.fn()}
+        connectState="idle"
+        serverUrl=""
+        setServerUrl={vi.fn()}
+        authType="token"
+        setAuthType={vi.fn()}
+        token=""
+        setToken={vi.fn()}
+        certData=""
+        setCertData={vi.fn()}
+        keyData=""
+        setKeyData={vi.fn()}
+        caData=""
+        setCaData={vi.fn()}
+        skipTls={false}
+        setSkipTls={vi.fn()}
+        contextName=""
+        setContextName={vi.fn()}
+        clusterName=""
+        setClusterName={vi.fn()}
+        namespace=""
+        setNamespace={vi.fn()}
+        testResult={null}
+        connectError=""
+        showAdvanced={false}
+        setShowAdvanced={vi.fn()}
+        selectedCloudProvider="eks"
+        setSelectedCloudProvider={vi.fn()}
+        goToConnectStep={vi.fn()}
+        handleTestConnection={vi.fn()}
+        handleAddCluster={vi.fn()}
+      />
+    )
     expect(container).toBeTruthy()
   })
 })

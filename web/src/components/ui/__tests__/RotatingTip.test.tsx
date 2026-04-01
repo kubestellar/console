@@ -31,7 +31,7 @@ import { RotatingTip } from '../RotatingTip'
 
 describe('RotatingTip', () => {
   it('renders without crashing', () => {
-    const { container } = render(<RotatingTip {...({} as any)} />)
+    const { container } = render(<RotatingTip page="clusters" />)
     expect(container).toBeTruthy()
   })
 })

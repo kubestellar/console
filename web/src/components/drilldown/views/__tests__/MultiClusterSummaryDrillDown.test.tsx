@@ -48,7 +48,7 @@ import { MultiClusterSummaryDrillDown } from '../MultiClusterSummaryDrillDown'
 
 describe('MultiClusterSummaryDrillDown', () => {
   it('renders without crashing', () => {
-    const { container } = render(<MultiClusterSummaryDrillDown data={{ filter: '' } as any} />)
+    const { container } = render(<MultiClusterSummaryDrillDown data={{ filter: '' }} />)
     expect(container).toBeTruthy()
   })
 })

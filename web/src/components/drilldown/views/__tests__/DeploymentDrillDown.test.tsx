@@ -56,7 +56,7 @@ import { DeploymentDrillDown } from '../DeploymentDrillDown'
 
 describe('DeploymentDrillDown', () => {
   it('renders without crashing', () => {
-    const { container } = render(<DeploymentDrillDown data={{ cluster: 'c1', namespace: 'ns1', deployment: 'dep1', replicas: 1 } as any} />)
+    const { container } = render(<DeploymentDrillDown data={{ cluster: 'c1', namespace: 'ns1', deployment: 'dep1', replicas: 1 }} />)
     expect(container).toBeTruthy()
   })
 })

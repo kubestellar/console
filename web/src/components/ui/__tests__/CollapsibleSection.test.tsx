@@ -31,7 +31,7 @@ import { CollapsibleSection } from '../CollapsibleSection'
 
 describe('CollapsibleSection', () => {
   it('renders without crashing', () => {
-    const { container } = render(<CollapsibleSection {...({} as any)} />)
+    const { container } = render(<CollapsibleSection title="test">content</CollapsibleSection>)
     expect(container).toBeTruthy()
   })
 })

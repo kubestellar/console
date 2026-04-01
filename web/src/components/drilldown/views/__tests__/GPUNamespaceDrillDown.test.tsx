@@ -45,7 +45,7 @@ import { GPUNamespaceDrillDown } from '../GPUNamespaceDrillDown'
 
 describe('GPUNamespaceDrillDown', () => {
   it('renders without crashing', () => {
-    const { container } = render(<GPUNamespaceDrillDown data={{ namespace: 'ns1', clusters: ['c1'] } as any} />)
+    const { container } = render(<GPUNamespaceDrillDown data={{ namespace: 'ns1', clusters: ['c1'] }} />)
     expect(container).toBeTruthy()
   })
 })

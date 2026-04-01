@@ -35,7 +35,7 @@ import { GitOpsDriftDetailModal } from '../GitOpsDriftDetailModal'
 
 describe('GitOpsDriftDetailModal', () => {
   it('renders without crashing', () => {
-    const { container } = render(<GitOpsDriftDetailModal isOpen={false} onClose={() => {}} drift={{} as any} />)
+    const { container } = render(<GitOpsDriftDetailModal isOpen={false} onClose={() => {}} drift={null} />)
     expect(container).toBeTruthy()
   })
 })

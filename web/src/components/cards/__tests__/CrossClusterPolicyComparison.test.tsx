@@ -53,7 +53,7 @@ import CrossClusterPolicyComparison from '../CrossClusterPolicyComparison'
 
 describe('CrossClusterPolicyComparison', () => {
   it('renders without crashing', () => {
-    const { container } = render(<CrossClusterPolicyComparison {...({} as any)} />)
+    const { container } = render(<CrossClusterPolicyComparison/ />)
     expect(container).toBeTruthy()
   })
 })

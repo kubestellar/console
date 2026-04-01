@@ -36,7 +36,7 @@ import PortalTooltip from '../PortalTooltip'
 
 describe('PortalTooltip', () => {
   it('renders without crashing', () => {
-    const { container } = render(<PortalTooltip {...({} as any)} />)
+    const { container } = render(<PortalTooltip content="tooltip text">trigger</PortalTooltip>)
     expect(container).toBeTruthy()
   })
 })

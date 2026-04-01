@@ -61,7 +61,7 @@ import { PodDrillDown } from '../PodDrillDown'
 
 describe('PodDrillDown', () => {
   it('renders without crashing', () => {
-    const { container } = render(<PodDrillDown data={{ cluster: 'c1', namespace: 'ns1', pod: 'pod1', status: 'Running' } as any} />)
+    const { container } = render(<PodDrillDown data={{ cluster: 'c1', namespace: 'ns1', pod: 'pod1', status: 'Running' }} />)
     expect(container).toBeTruthy()
   })
 })

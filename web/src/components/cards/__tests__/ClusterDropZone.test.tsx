@@ -49,7 +49,7 @@ import { ClusterDropZone } from '../ClusterDropZone'
 
 describe('ClusterDropZone', () => {
   it('renders without crashing', () => {
-    const { container } = render(<ClusterDropZone {...({} as any)} />)
+    const { container } = render(<ClusterDropZone isDragging={false} />)
     expect(container).toBeTruthy()
   })
 })

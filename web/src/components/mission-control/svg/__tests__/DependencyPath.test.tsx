@@ -31,7 +31,9 @@ import { DependencyPath } from '../DependencyPath'
 
 describe('DependencyPath', () => {
   it('renders without crashing', () => {
-    const { container } = render(<DependencyPath {...({} as any)} />)
+    const { container } = render(
+      <svg><DependencyPath id="test" fromX={0} fromY={0} toX={100} toY={100} crossCluster={false} index={0} /></svg>
+    )
     expect(container).toBeTruthy()
   })
 })

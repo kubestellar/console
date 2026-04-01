@@ -40,7 +40,7 @@ import CostDrillDown from '../CostDrillDown'
 
 describe('CostDrillDown', () => {
   it('renders without crashing', () => {
-    const { container } = render(<CostDrillDown data={{ cluster: 'c1' } as any} />)
+    const { container } = render(<CostDrillDown data={{ cluster: 'c1' }} />)
     expect(container).toBeTruthy()
   })
 })

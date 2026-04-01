@@ -31,7 +31,7 @@ import { TypingIndicator } from '../TypingIndicator'
 
 describe('TypingIndicator', () => {
   it('renders without crashing', () => {
-    const { container } = render(<TypingIndicator {...({} as any)} />)
+    const { container } = render(<TypingIndicator />)
     expect(container).toBeTruthy()
   })
 })

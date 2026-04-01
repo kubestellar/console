@@ -54,7 +54,7 @@ import { NamespaceDrillDown } from '../NamespaceDrillDown'
 
 describe('NamespaceDrillDown', () => {
   it('renders without crashing', () => {
-    const { container } = render(<NamespaceDrillDown data={{ cluster: 'c1', namespace: 'ns1' } as any} />)
+    const { container } = render(<NamespaceDrillDown data={{ cluster: 'c1', namespace: 'ns1' }} />)
     expect(container).toBeTruthy()
   })
 })

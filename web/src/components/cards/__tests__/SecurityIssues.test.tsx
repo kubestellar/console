@@ -85,7 +85,7 @@ import { SecurityIssues } from '../SecurityIssues'
 
 describe('SecurityIssues', () => {
   it('renders without crashing', () => {
-    const { container } = render(<SecurityIssues {...({} as any)} />)
+    const { container } = render(<SecurityIssues/ />)
     expect(container).toBeTruthy()
   })
 })

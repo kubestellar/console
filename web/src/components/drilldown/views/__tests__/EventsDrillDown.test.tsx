@@ -44,7 +44,7 @@ import { EventsDrillDown } from '../EventsDrillDown'
 
 describe('EventsDrillDown', () => {
   it('renders without crashing', () => {
-    const { container } = render(<EventsDrillDown data={{ cluster: 'c1', namespace: 'ns1', events: [] } as any} />)
+    const { container } = render(<EventsDrillDown data={{ cluster: 'c1', namespace: 'ns1', events: [] }} />)
     expect(container).toBeTruthy()
   })
 })

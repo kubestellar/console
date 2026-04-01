@@ -85,7 +85,7 @@ import { TopPods } from '../TopPods'
 
 describe('TopPods', () => {
   it('renders without crashing', () => {
-    const { container } = render(<TopPods {...({} as any)} />)
+    const { container } = render(<TopPods/ />)
     expect(container).toBeTruthy()
   })
 })

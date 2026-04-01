@@ -31,7 +31,7 @@ import { BlueprintDefs } from '../BlueprintDefs'
 
 describe('BlueprintDefs', () => {
   it('renders without crashing', () => {
-    const { container } = render(<BlueprintDefs {...({} as any)} />)
+    const { container } = render(<svg><BlueprintDefs id="test" /></svg>)
     expect(container).toBeTruthy()
   })
 })

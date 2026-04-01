@@ -40,7 +40,7 @@ import { CoinDisplay } from '../CoinDisplay'
 
 describe('CoinDisplay', () => {
   it('renders without crashing', () => {
-    const { container } = render(<CoinDisplay {...({} as any)} />)
+    const { container } = render(<CoinDisplay />)
     expect(container).toBeTruthy()
   })
 })

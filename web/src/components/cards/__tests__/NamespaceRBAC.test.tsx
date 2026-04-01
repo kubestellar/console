@@ -96,7 +96,7 @@ import { NamespaceRBAC } from '../NamespaceRBAC'
 
 describe('NamespaceRBAC', () => {
   it('renders without crashing', () => {
-    const { container } = render(<NamespaceRBAC {...({} as any)} />)
+    const { container } = render(<NamespaceRBAC/ />)
     expect(container).toBeTruthy()
   })
 })

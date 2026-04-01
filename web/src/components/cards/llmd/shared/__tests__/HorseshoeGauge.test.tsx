@@ -36,7 +36,7 @@ import HorseshoeGauge from '../HorseshoeGauge'
 
 describe('HorseshoeGauge', () => {
   it('renders without crashing', () => {
-    const { container } = render(<HorseshoeGauge {...({} as any)} />)
+    const { container } = render(<HorseshoeGauge value={50} label="CPU" />)
     expect(container).toBeTruthy()
   })
 })

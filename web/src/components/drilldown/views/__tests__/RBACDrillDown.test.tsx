@@ -52,7 +52,7 @@ import { RBACDrillDown } from '../RBACDrillDown'
 
 describe('RBACDrillDown', () => {
   it('renders without crashing', () => {
-    const { container } = render(<RBACDrillDown data={{ cluster: 'c1', subject: 'user1', type: 'User', items: [] } as any} />)
+    const { container } = render(<RBACDrillDown data={{ cluster: 'c1', subject: 'user1', type: 'User', items: [] }} />)
     expect(container).toBeTruthy()
   })
 })

@@ -81,7 +81,7 @@ import { ServiceExports } from '../ServiceExports'
 
 describe('ServiceExports', () => {
   it('renders without crashing', () => {
-    const { container } = render(<ServiceExports {...({} as any)} />)
+    const { container } = render(<ServiceExports/ />)
     expect(container).toBeTruthy()
   })
 })

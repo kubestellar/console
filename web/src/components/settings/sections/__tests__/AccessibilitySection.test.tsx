@@ -36,7 +36,16 @@ import { AccessibilitySection } from '../AccessibilitySection'
 
 describe('AccessibilitySection', () => {
   it('renders without crashing', () => {
-    const { container } = render(<AccessibilitySection {...({} as any)} />)
+    const { container } = render(
+      <AccessibilitySection
+        colorBlindMode={false}
+        setColorBlindMode={vi.fn()}
+        reduceMotion={false}
+        setReduceMotion={vi.fn()}
+        highContrast={false}
+        setHighContrast={vi.fn()}
+      />
+    )
     expect(container).toBeTruthy()
   })
 })

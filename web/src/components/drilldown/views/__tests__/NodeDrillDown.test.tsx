@@ -53,7 +53,7 @@ import { NodeDrillDown } from '../NodeDrillDown'
 
 describe('NodeDrillDown', () => {
   it('renders without crashing', () => {
-    const { container } = render(<NodeDrillDown data={{ cluster: 'c1', node: 'node1' } as any} />)
+    const { container } = render(<NodeDrillDown data={{ cluster: 'c1', node: 'node1' }} />)
     expect(container).toBeTruthy()
   })
 })

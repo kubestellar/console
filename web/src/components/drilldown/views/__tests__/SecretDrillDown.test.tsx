@@ -52,7 +52,7 @@ import { SecretDrillDown } from '../SecretDrillDown'
 
 describe('SecretDrillDown', () => {
   it('renders without crashing', () => {
-    const { container } = render(<SecretDrillDown data={{ cluster: 'c1', namespace: 'ns1', secret: 'sec1' } as any} />)
+    const { container } = render(<SecretDrillDown data={{ cluster: 'c1', namespace: 'ns1', secret: 'sec1' }} />)
     expect(container).toBeTruthy()
   })
 })

@@ -36,7 +36,9 @@ import { ProfileSection } from '../ProfileSection'
 
 describe('ProfileSection', () => {
   it('renders without crashing', () => {
-    const { container } = render(<ProfileSection {...({} as any)} />)
+    const { container } = render(
+      <ProfileSection initialEmail="" initialSlackId="" refreshUser={() => Promise.resolve()} />
+    )
     expect(container).toBeTruthy()
   })
 })

@@ -40,7 +40,7 @@ import { PodLabelsTab } from '../PodLabelsTab'
 
 describe('PodLabelsTab', () => {
   it('renders without crashing', () => {
-    const { container } = render(<PodLabelsTab {...({} as any)} />)
+    const { container } = render(<PodLabelsTab labels={null} annotations={null} describeLoading={false} agentConnected={false} copiedField={null} showAllLabels={false} setShowAllLabels={vi.fn()} editingLabels={false} setEditingLabels={vi.fn()} labelDraft={{}} setLabelDraft={vi.fn()} labelSaveError={null} setLabelSaveError={vi.fn()} isSavingLabels={false} handleSaveLabels={vi.fn()} />)
     expect(container).toBeTruthy()
   })
 })

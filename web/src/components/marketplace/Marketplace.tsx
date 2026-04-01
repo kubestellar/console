@@ -625,11 +625,12 @@ export function Marketplace() {
         showToast(`Added "${item.name}" card to your dashboard`, 'success')
       } else if (result.type === 'theme') {
         showToast(`Installed theme "${item.name}" — activate in Settings`, 'success')
-      } else if (result.type === 'dashboard' && result.data?.id) {
+      } else if (result.type === 'dashboard' && result.data && typeof result.data === 'object' && 'id' in result.data) {
         // Use the marketplace slug as the vanity URL
         const href = `/custom-dashboard/${item.id}`
         // Seed localStorage so CustomDashboard loads cards instantly
-        const cards = result.data.cards || []
+        const dashData = result.data as Record<string, unknown>
+        const cards = (Array.isArray(dashData.cards) ? dashData.cards : []) as unknown[]
         try {
           localStorage.setItem(`kubestellar-custom-dashboard-${item.id}-cards`, JSON.stringify(cards))
         } catch { /* non-critical */ }

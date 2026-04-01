@@ -14,6 +14,7 @@ import { useCache } from '../lib/cache'
 import {
   generateDemoNightlyData,
   type NightlyGuideStatus,
+  type NightlyRun,
 } from '../lib/llmd/nightlyE2EDemoData'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
 import { isNetlifyDeployment } from '../lib/demoMode'
@@ -87,16 +88,14 @@ export function useNightlyE2EData() {
           if (res.ok) {
             const data = await res.json()
             if (data.guides && Array.isArray(data.guides)) {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const guides: NightlyGuideStatus[] = data.guides.map((g: any) => ({
+              const guides: NightlyGuideStatus[] = data.guides.map((g: NightlyGuideStatus) => ({
                 guide: g.guide,
                 acronym: g.acronym,
                 platform: g.platform,
                 repo: g.repo,
                 workflowFile: g.workflowFile,
                 runs: (g.runs ?? []).map(
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  (r: any) => ({
+                  (r: NightlyRun) => ({
                     id: r.id,
                     status: r.status,
                     conclusion: r.conclusion,

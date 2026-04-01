@@ -39,7 +39,7 @@ import { LogoWithStar } from '../LogoWithStar'
 
 describe('LogoWithStar', () => {
   it('renders without crashing', () => {
-    const { container } = render(<LogoWithStar {...({} as any)} />)
+    const { container } = render(<LogoWithStar />)
     expect(container).toBeTruthy()
   })
 })

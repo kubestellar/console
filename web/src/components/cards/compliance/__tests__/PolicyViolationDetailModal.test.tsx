@@ -35,7 +35,7 @@ import { PolicyViolationDetailModal } from '../PolicyViolationDetailModal'
 
 describe('PolicyViolationDetailModal', () => {
   it('renders without crashing', () => {
-    const { container } = render(<PolicyViolationDetailModal isOpen={false} onClose={() => {}} violation={{} as any} />)
+    const { container } = render(<PolicyViolationDetailModal isOpen={false} onClose={() => {}} violation={null} />)
     expect(container).toBeTruthy()
   })
 })

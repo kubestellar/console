@@ -40,7 +40,7 @@ import { PostConnectBanner } from '../PostConnectBanner'
 
 describe('PostConnectBanner', () => {
   it('renders without crashing', () => {
-    const { container } = render(<PostConnectBanner {...({} as any)} />)
+    const { container } = render(<PostConnectBanner onRunHealthCheck={vi.fn()} onExploreClusters={vi.fn()} onSetupAlerts={vi.fn()} />)
     expect(container).toBeTruthy()
   })
 })

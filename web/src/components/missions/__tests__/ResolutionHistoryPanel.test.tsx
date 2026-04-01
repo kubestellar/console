@@ -44,7 +44,7 @@ import { ResolutionHistoryPanel } from '../ResolutionHistoryPanel'
 
 describe('ResolutionHistoryPanel', () => {
   it('renders without crashing', () => {
-    const { container } = render(<ResolutionHistoryPanel {...({} as any)} />)
+    const { container } = render(<ResolutionHistoryPanel />)
     expect(container).toBeTruthy()
   })
 })

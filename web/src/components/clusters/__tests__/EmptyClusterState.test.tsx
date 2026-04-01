@@ -36,7 +36,7 @@ import { EmptyClusterState } from '../EmptyClusterState'
 
 describe('EmptyClusterState', () => {
   it('renders without crashing', () => {
-    const { container } = render(<EmptyClusterState {...({} as any)} />)
+    const { container } = render(<EmptyClusterState onAddCluster={vi.fn()} />)
     expect(container).toBeTruthy()
   })
 })

@@ -36,7 +36,7 @@ import { AISettingsSection } from '../AISettingsSection'
 
 describe('AISettingsSection', () => {
   it('renders without crashing', () => {
-    const { container } = render(<AISettingsSection {...({} as any)} />)
+    const { container } = render(<AISettingsSection mode="low" setMode={vi.fn()} description="test" />)
     expect(container).toBeTruthy()
   })
 })

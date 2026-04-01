@@ -81,7 +81,7 @@ import { RSSFeed } from '../RSSFeed'
 
 describe('RSSFeed', () => {
   it('renders without crashing', () => {
-    const { container } = render(<RSSFeed {...({} as any)} />)
+    const { container } = render(<RSSFeed/ />)
     expect(container).toBeTruthy()
   })
 })

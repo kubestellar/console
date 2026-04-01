@@ -52,7 +52,7 @@ import { ReplicaSetDrillDown } from '../ReplicaSetDrillDown'
 
 describe('ReplicaSetDrillDown', () => {
   it('renders without crashing', () => {
-    const { container } = render(<ReplicaSetDrillDown data={{ cluster: 'c1', namespace: 'ns1', replicaset: 'rs1' } as any} />)
+    const { container } = render(<ReplicaSetDrillDown data={{ cluster: 'c1', namespace: 'ns1', replicaset: 'rs1' }} />)
     expect(container).toBeTruthy()
   })
 })

@@ -31,7 +31,24 @@ import { AgentBackendSettings } from '../AgentBackendSettings'
 
 describe('AgentBackendSettings', () => {
   it('renders without crashing', () => {
-    const { container } = render(<AgentBackendSettings {...({} as any)} />)
+    const { container } = render(
+      <AgentBackendSettings
+        kagentAvailable={false}
+        kagentStatus={null}
+        kagentAgents={[]}
+        selectedKagentAgent={null}
+        kagentiAvailable={false}
+        kagentiStatus={null}
+        kagentiAgents={[]}
+        selectedKagentiAgent={null}
+        preferredBackend="kc-agent"
+        activeBackend="kc-agent"
+        onSelectBackend={vi.fn()}
+        onSelectKagentAgent={vi.fn()}
+        onSelectKagentiAgent={vi.fn()}
+        onRefresh={vi.fn()}
+      />
+    )
     expect(container).toBeTruthy()
   })
 })

@@ -36,7 +36,7 @@ import { PodOutputTab } from '../PodOutputTab'
 
 describe('PodOutputTab', () => {
   it('renders without crashing', () => {
-    const { container } = render(<PodOutputTab {...({} as any)} />)
+    const { container } = render(<PodOutputTab output={null} loading={false} agentConnected={false} copyField="logs" copiedField={null} kubectlComment="" loadingMessage="" />)
     expect(container).toBeTruthy()
   })
 })

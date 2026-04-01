@@ -55,7 +55,7 @@ import { SnoozedCards } from '../SnoozedCards'
 
 describe('SnoozedCards', () => {
   it('renders without crashing', () => {
-    const { container } = render(<SnoozedCards {...({} as any)} />)
+    const { container } = render(<SnoozedCards />)
     expect(container).toBeTruthy()
   })
 })

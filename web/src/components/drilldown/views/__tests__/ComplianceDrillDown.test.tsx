@@ -43,7 +43,7 @@ import ComplianceDrillDown from '../ComplianceDrillDown'
 
 describe('ComplianceDrillDown', () => {
   it('renders without crashing', () => {
-    const { container } = render(<ComplianceDrillDown data={{ filterStatus: '' } as any} />)
+    const { container } = render(<ComplianceDrillDown data={{ filterStatus: '' }} />)
     expect(container).toBeTruthy()
   })
 })

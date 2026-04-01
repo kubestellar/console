@@ -35,7 +35,7 @@ import { CopyButton } from '../CopyButton'
 
 describe('CopyButton', () => {
   it('renders without crashing', () => {
-    const { container } = render(<CopyButton {...({} as any)} />)
+    const { container } = render(<CopyButton text="test" />)
     expect(container).toBeTruthy()
   })
 })
