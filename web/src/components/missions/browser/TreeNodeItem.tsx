@@ -6,6 +6,48 @@ import {
 import { cn } from '../../../lib/cn'
 import type { TreeNode } from './types'
 
+/**
+ * Detect a CNCF project's GitHub org from a filename.
+ * Returns the GitHub org name for avatar URL, or null if no match.
+ */
+const FILENAME_TO_ORG: Array<[RegExp, string]> = [
+  [/argo/, 'argoproj'],
+  [/flux/, 'fluxcd'],
+  [/karmada/, 'karmada-io'],
+  [/prometheus|servicemonitor|alertmanager/, 'prometheus'],
+  [/cert.?manager/, 'cert-manager'],
+  [/istio/, 'istio'],
+  [/ray|kuberay/, 'ray-project'],
+  [/keda/, 'kedacore'],
+  [/crossplane/, 'crossplane'],
+  [/velero/, 'vmware-tanzu'],
+  [/falco/, 'falcosecurity'],
+  [/harbor/, 'goharbor'],
+  [/knative/, 'knative'],
+  [/strimzi|kafka/, 'strimzi'],
+  [/nats/, 'nats-io'],
+  [/longhorn/, 'longhorn'],
+  [/kubevirt/, 'kubevirt'],
+  [/tekton/, 'tektoncd'],
+  [/kubeedge/, 'kubeedge'],
+  [/chaos.?mesh/, 'chaos-mesh'],
+  [/litmus/, 'litmuschaos'],
+  [/linkerd/, 'linkerd'],
+  [/contour/, 'projectcontour'],
+  [/kyverno/, 'kyverno'],
+  [/opentelemetry|otel/, 'open-telemetry'],
+  [/jaeger/, 'jaegertracing'],
+  [/trivy/, 'aquasecurity'],
+  [/gitops/, 'fluxcd'],
+]
+
+function detectProjectOrg(filename: string): string | null {
+  for (const [pattern, org] of FILENAME_TO_ORG) {
+    if (pattern.test(filename)) return org
+  }
+  return null
+}
+
 export const TreeNodeItem = memo(function TreeNodeItem({
   node,
   depth,
@@ -87,6 +129,21 @@ export const TreeNodeItem = memo(function TreeNodeItem({
             </>
           ) : (() => {
             const lower = node.name.toLowerCase()
+            const projectOrg = detectProjectOrg(lower)
+            if (projectOrg) {
+              // Show CNCF project avatar
+              return (
+                <>
+                  <span className="w-3.5 flex-shrink-0" />
+                  <img
+                    src={`https://github.com/${projectOrg}.png?size=32`}
+                    alt={projectOrg}
+                    className="w-4 h-4 rounded-sm flex-shrink-0"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                  />
+                </>
+              )
+            }
             const isYaml = lower.endsWith('.yaml') || lower.endsWith('.yml')
             const isMd = lower.endsWith('.md')
             const Icon = isYaml ? FileCode : isMd ? FileText : FileJson

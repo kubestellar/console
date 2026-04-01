@@ -1424,27 +1424,40 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                       saveWatchedPaths(updated)
                       showToast(`Removed path "${child.path}"`, 'info')
                     } : undefined}
-                    onRefresh={(node.id === 'github' || node.id === 'local') ? (child) => {
-                      // Reset node to unloaded state and collapse
+                    onRefresh={(node.id === 'github' || node.id === 'local') ? async (child) => {
+                      // Mark as loading
                       setTreeNodes((prev) =>
-                        updateNodeInTree(prev, child.id, {
-                          loaded: false,
-                          loading: false,
-                          children: [],
-                          isEmpty: false,
-                        })
+                        updateNodeInTree(prev, child.id, { loading: true, isEmpty: false })
                       )
-                      setExpandedNodes((prev) => {
-                        const next = new Set(prev)
-                        next.delete(child.id)
-                        return next
-                      })
-                      // Re-expand with a fresh node reference so toggleNode sees loaded=false
-                      setTimeout(() => {
-                        const freshNode: TreeNode = { ...child, loaded: false, loading: false, children: [] }
-                        toggleNode(freshNode)
-                        selectNode(freshNode)
-                      }, 100)
+                      try {
+                        // Fetch fresh contents directly (bypass toggleNode to avoid stale closure issues)
+                        let children: TreeNode[] = []
+                        if (child.source === 'github' && child.id !== 'github') {
+                          const repoPath = child.path
+                          const { data: ghEntries } = await api.get<Array<{ name: string; path: string; type: string; size?: number }>>(
+                            `/api/github/repos/${repoPath}/contents`
+                          )
+                          children = (ghEntries || [])
+                            .filter(e => e.type === 'dir' || isMissionFile(e.name))
+                            .map(e => ({
+                              id: `${child.id}/${e.name}`,
+                              name: e.name,
+                              path: `${repoPath.split('/').slice(0, 2).join('/')}/${e.path}`,
+                              type: (e.type === 'dir' ? 'directory' : 'file') as TreeNode['type'],
+                              source: 'github' as const,
+                              loaded: e.type !== 'dir',
+                            }))
+                        }
+                        setTreeNodes((prev) =>
+                          updateNodeInTree(prev, child.id, { children, loaded: true, loading: false, isEmpty: children.length === 0 })
+                        )
+                        // Ensure expanded
+                        setExpandedNodes((prev) => new Set(prev).add(child.id))
+                      } catch {
+                        setTreeNodes((prev) =>
+                          updateNodeInTree(prev, child.id, { children: [], loaded: true, loading: false, isEmpty: true })
+                        )
+                      }
                     } : undefined}
                     onAdd={node.id === 'github' ? () => setAddingRepo(!addingRepo)
                       : node.id === 'local' ? () => setAddingPath(!addingPath)
