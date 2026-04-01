@@ -1157,7 +1157,7 @@ func (h *FeedbackHandler) handleIssueEvent(payload map[string]interface{}) error
 
 	numF, ok := issue["number"].(float64)
 	if !ok {
-		return fmt.Errorf("missing or invalid issue number in webhook payload")
+		return fiber.NewError(fiber.StatusBadRequest, "missing or invalid issue number in webhook payload")
 	}
 	issueNumber := int(numF)
 	issueURL, _ := issue["html_url"].(string)
@@ -1364,7 +1364,7 @@ func (h *FeedbackHandler) handlePREvent(payload map[string]interface{}) error {
 
 	prNumF, ok := pr["number"].(float64)
 	if !ok {
-		return fmt.Errorf("missing or invalid PR number in webhook payload")
+		return fiber.NewError(fiber.StatusBadRequest, "missing or invalid PR number in webhook payload")
 	}
 	prNumber := int(prNumF)
 	prURL, _ := pr["html_url"].(string)

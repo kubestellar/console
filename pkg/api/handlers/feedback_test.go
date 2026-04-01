@@ -1,6 +1,10 @@
 package handlers
 
 import (
+	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io"
@@ -176,4 +180,162 @@ func TestFeedback_GetUnreadCount_Success(t *testing.T) {
 	var body map[string]int
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
 	assert.Equal(t, 7, body["count"])
+}
+
+// testWebhookSecret is the shared secret used in webhook tests.
+const testWebhookSecret = "test-webhook-secret"
+
+// signWebhookPayload computes the sha256 HMAC signature for a GitHub webhook payload.
+func signWebhookPayload(payload []byte, secret string) string {
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write(payload)
+	return "sha256=" + hex.EncodeToString(mac.Sum(nil))
+}
+
+// setupWebhookTest creates a Fiber app with the webhook route pre-configured.
+func setupWebhookTest(t *testing.T) (*fiber.App, *FeedbackHandler) {
+	t.Helper()
+	stubStore := &feedbackStoreStub{MockStore: &test.MockStore{}}
+	app := fiber.New()
+	handler := NewFeedbackHandler(stubStore, FeedbackConfig{
+		WebhookSecret: testWebhookSecret,
+	})
+	app.Post("/webhook", handler.HandleGitHubWebhook)
+	return app, handler
+}
+
+// sendWebhook sends a signed webhook request and returns the HTTP response.
+func sendWebhook(t *testing.T, app *fiber.App, eventType string, payload []byte) *http.Response {
+	t.Helper()
+	sig := signWebhookPayload(payload, testWebhookSecret)
+	req, err := http.NewRequest(http.MethodPost, "/webhook", bytes.NewReader(payload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GitHub-Event", eventType)
+	req.Header.Set("X-Hub-Signature-256", sig)
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	return resp
+}
+
+func TestWebhook_IssueEvent_MissingNumber_Returns400(t *testing.T) {
+	app, _ := setupWebhookTest(t)
+
+	// Payload has an issue object but no "number" field
+	payload, _ := json.Marshal(map[string]interface{}{
+		"action": "opened",
+		"issue":  map[string]interface{}{"html_url": "https://github.com/org/repo/issues/1"},
+	})
+
+	resp := sendWebhook(t, app, "issues", payload)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	body, _ := io.ReadAll(resp.Body)
+	assert.Contains(t, string(body), "missing or invalid issue number")
+}
+
+func TestWebhook_IssueEvent_NumberWrongType_Returns400(t *testing.T) {
+	app, _ := setupWebhookTest(t)
+
+	// "number" is a string instead of float64
+	payload, _ := json.Marshal(map[string]interface{}{
+		"action": "opened",
+		"issue":  map[string]interface{}{"number": "not-a-number"},
+	})
+
+	resp := sendWebhook(t, app, "issues", payload)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	body, _ := io.ReadAll(resp.Body)
+	assert.Contains(t, string(body), "missing or invalid issue number")
+}
+
+func TestWebhook_IssueEvent_MissingIssueObject_ReturnsOK(t *testing.T) {
+	app, _ := setupWebhookTest(t)
+
+	// No "issue" key at all — handler returns nil (200)
+	payload, _ := json.Marshal(map[string]interface{}{
+		"action": "opened",
+	})
+
+	resp := sendWebhook(t, app, "issues", payload)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func TestWebhook_PREvent_MissingNumber_Returns400(t *testing.T) {
+	app, _ := setupWebhookTest(t)
+
+	// pull_request object exists but has no "number" field
+	payload, _ := json.Marshal(map[string]interface{}{
+		"action":       "opened",
+		"pull_request": map[string]interface{}{"html_url": "https://github.com/org/repo/pull/1"},
+	})
+
+	resp := sendWebhook(t, app, "pull_request", payload)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	body, _ := io.ReadAll(resp.Body)
+	assert.Contains(t, string(body), "missing or invalid PR number")
+}
+
+func TestWebhook_PREvent_NumberWrongType_Returns400(t *testing.T) {
+	app, _ := setupWebhookTest(t)
+
+	// "number" is a boolean instead of float64
+	payload, _ := json.Marshal(map[string]interface{}{
+		"action":       "opened",
+		"pull_request": map[string]interface{}{"number": true},
+	})
+
+	resp := sendWebhook(t, app, "pull_request", payload)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	body, _ := io.ReadAll(resp.Body)
+	assert.Contains(t, string(body), "missing or invalid PR number")
+}
+
+func TestWebhook_PREvent_MissingPRObject_ReturnsOK(t *testing.T) {
+	app, _ := setupWebhookTest(t)
+
+	// No "pull_request" key at all — handler returns nil (200)
+	payload, _ := json.Marshal(map[string]interface{}{
+		"action": "opened",
+	})
+
+	resp := sendWebhook(t, app, "pull_request", payload)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func TestWebhook_InvalidSignature_Returns401(t *testing.T) {
+	app, _ := setupWebhookTest(t)
+
+	payload, _ := json.Marshal(map[string]interface{}{"action": "opened"})
+	req, err := http.NewRequest(http.MethodPost, "/webhook", bytes.NewReader(payload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GitHub-Event", "issues")
+	req.Header.Set("X-Hub-Signature-256", "sha256=bad_signature")
+
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestWebhook_InvalidJSON_Returns400(t *testing.T) {
+	app, _ := setupWebhookTest(t)
+
+	payload := []byte(`{not json}`)
+	sig := signWebhookPayload(payload, testWebhookSecret)
+	req, err := http.NewRequest(http.MethodPost, "/webhook", bytes.NewReader(payload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GitHub-Event", "issues")
+	req.Header.Set("X-Hub-Signature-256", sig)
+
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	body, _ := io.ReadAll(resp.Body)
+	assert.Contains(t, string(body), "Invalid JSON payload")
 }
