@@ -261,13 +261,18 @@ func (s *Server) validateToken(r *http.Request) bool {
 		return true
 	}
 
-	// Accept token exclusively from the Authorization header
+	// Check Authorization header first
 	authHeader := r.Header.Get("Authorization")
 	if strings.HasPrefix(authHeader, "Bearer ") {
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 		if token == s.agentToken {
 			return true
 		}
+	}
+
+	// Fall back to query parameter (for WebSocket connections that can't set headers)
+	if queryToken := r.URL.Query().Get("token"); queryToken != "" {
+		return queryToken == s.agentToken
 	}
 
 	return false
@@ -616,7 +621,8 @@ func (s *Server) isAllowedOrigin(origin string) bool {
 // For wildcard patterns like "https://*.ibm.com", matches only a single subdomain level
 // (e.g. "https://kc.ibm.com" matches but "https://evil.kc.ibm.com" does not).
 func matchOrigin(origin, allowed string) bool {
-	// Wildcard matching: "https://*.ibm.com" matches a single-level subdomain
+	// Wildcard matching: "https://*.ibm.com" matches any subdomain depth
+	// e.g. "https://*.ibm.com" matches "https://kc.ibm.com" and "https://kc.apps.example.ibm.com"
 	if idx := strings.Index(allowed, "*."); idx != -1 {
 		scheme := allowed[:idx]   // e.g. "https://"
 		suffix := allowed[idx+1:] // e.g. ".ibm.com"
@@ -625,8 +631,8 @@ func matchOrigin(origin, allowed string) bool {
 		}
 		// Extract the subdomain part between the scheme and the suffix
 		middle := origin[len(scheme) : len(origin)-len(suffix)]
-		// Must be non-empty and contain no dots (single-level subdomain only)
-		return len(middle) > 0 && !strings.Contains(middle, ".")
+		// Must be non-empty (at least one subdomain level)
+		return len(middle) > 0
 	}
 	// Exact match
 	if origin == allowed {
