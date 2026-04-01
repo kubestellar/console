@@ -593,18 +593,38 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
               description: e.description,
             }))
         } else if (node.source === 'github') {
-          const { data: repos } = await api.get<Array<{ name: string; full_name: string }>>(
-            '/api/github/repos?hasMissionsDir=true'
-          )
-          children = repos.map((r) => ({
-            id: `github/${r.full_name}`,
-            name: r.name,
-            path: r.full_name,
-            type: 'directory' as const,
-            source: 'github' as const,
-            loaded: false,
-            description: r.full_name,
-          }))
+          if (nodeId === 'github') {
+            // Root "My Repositories" — list user's repos
+            const { data: repos } = await api.get<Array<{ name: string; full_name: string }>>(
+              '/api/github/repos?hasMissionsDir=true'
+            )
+            children = repos.map((r) => ({
+              id: `github/${r.full_name}`,
+              name: r.name,
+              path: r.full_name,
+              type: 'directory' as const,
+              source: 'github' as const,
+              loaded: false,
+              description: r.full_name,
+            }))
+          } else {
+            // Child repo node — list repo contents via GitHub Contents API
+            const repoPath = node.path
+            const { data: ghEntries } = await api.get<Array<{ name: string; path: string; type: string; size?: number }>>(
+              `/api/github/repos/${repoPath}/contents`
+            )
+            children = (ghEntries || [])
+              .filter(e => e.type === 'dir' || isMissionFile(e.name))
+              .map(e => ({
+                id: `${nodeId}/${e.name}`,
+                name: e.name,
+                path: `${repoPath.split('/').slice(0, 2).join('/')}/${e.path}`,
+                type: (e.type === 'dir' ? 'directory' : 'file') as TreeNode['type'],
+                source: 'github' as const,
+                loaded: e.type !== 'dir',
+                description: e.size ? `${e.size} bytes` : undefined,
+              }))
+          }
         }
 
         // For community sub-directories (not root): if no missions remain after filtering,
