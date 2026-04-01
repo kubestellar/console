@@ -20,8 +20,9 @@ permissions:
   pull-requests: write
 
 concurrency:
+  # PRs: cancel stale runs for same PR. Push to main: unique group per SHA so runs never cancel each other.
   group: coverage-gate-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   NODE_VERSION: '22'
