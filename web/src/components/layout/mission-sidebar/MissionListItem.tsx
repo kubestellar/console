@@ -109,7 +109,7 @@ export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpan
               <span className="text-xs text-purple-400">@{mission.cluster}</span>
             )}
             <span className="text-2xs text-muted-foreground/70">
-              {mission.createdAt.toLocaleDateString()} {mission.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {mission.updatedAt.toLocaleDateString()} {mission.updatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
         </button>
