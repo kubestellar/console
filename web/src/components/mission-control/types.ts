@@ -34,6 +34,10 @@ export interface PayloadProject {
   difficulty?: 'beginner' | 'intermediate' | 'advanced'
   /** Original project name if this was swapped from the AI plan */
   originalName?: string
+  /** User-imported YAML/runbook mission that replaces or augments the console-kb install mission */
+  importedMission?: import('../../lib/missions/types').MissionExport
+  /** Whether the user's YAML replaces the AI install mission entirely */
+  replacesInstallMission?: boolean
 }
 
 // ---------------------------------------------------------------------------

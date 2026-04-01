@@ -51,6 +51,10 @@ export interface MissionExport {
     qualityScore?: number
     maturity?: string
     projectVersion?: string
+    /** Original file format before conversion to MissionExport */
+    sourceFormat?: 'json' | 'yaml' | 'markdown'
+    /** K8s API groups detected in the source file (e.g., ["ray.io", "karmada.io"]) */
+    detectedApiGroups?: string[]
     sourceUrls?: {
       docs?: string
       repo?: string

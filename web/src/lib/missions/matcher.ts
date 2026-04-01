@@ -5,6 +5,7 @@
  */
 
 import type { MissionExport, MissionMatch } from './types'
+import { lookupProject } from './apiGroupMapping'
 
 interface ClusterInfo {
   name: string
@@ -77,6 +78,16 @@ export function matchMissionsToCluster(
         if (r.toLowerCase().includes(key)) {
           for (const p of projects) expandedKeywords.add(p)
         }
+      }
+    }
+
+    // Also expand from CRD API groups (e.g., "ray.io" → kuberay tags)
+    for (const r of cluster.resources) {
+      if (!r || !r.includes('.')) continue
+      const mapping = lookupProject(r)
+      if (mapping) {
+        expandedKeywords.add(mapping.project)
+        for (const tag of mapping.tags) expandedKeywords.add(tag)
       }
     }
   }

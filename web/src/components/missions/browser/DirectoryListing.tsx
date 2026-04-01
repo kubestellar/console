@@ -1,8 +1,20 @@
-import { Folder, FileJson, Download } from 'lucide-react'
+import { Folder, FileJson, FileCode, FileText, Download } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import type { BrowseEntry } from '../../../lib/missions/types'
 import type { ViewMode } from './types'
 import { formatBytes } from './helpers'
+
+/** Pick a file icon and color based on file extension */
+function getFileIcon(name: string) {
+  const lower = name.toLowerCase()
+  if (lower.endsWith('.yaml') || lower.endsWith('.yml')) {
+    return { Icon: FileCode, color: 'text-orange-400' }
+  }
+  if (lower.endsWith('.md')) {
+    return { Icon: FileText, color: 'text-emerald-400' }
+  }
+  return { Icon: FileJson, color: 'text-blue-400' }
+}
 
 export function DirectoryListing({
   entries,
@@ -26,9 +38,10 @@ export function DirectoryListing({
           >
             {entry.type === 'directory' ? (
               <Folder className="w-5 h-5 text-yellow-400 flex-shrink-0" />
-            ) : (
-              <FileJson className="w-5 h-5 text-blue-400 flex-shrink-0" />
-            )}
+            ) : (() => {
+              const { Icon, color } = getFileIcon(entry.name)
+              return <Icon className={`w-5 h-5 ${color} flex-shrink-0`} />
+            })()}
             <div className="flex-1 min-w-0">
               <p className="text-sm text-foreground truncate">{entry.name}</p>
               {entry.description && (
@@ -71,9 +84,10 @@ export function DirectoryListing({
         >
           {entry.type === 'directory' ? (
             <Folder className="w-8 h-8 text-yellow-400" />
-          ) : (
-            <FileJson className="w-8 h-8 text-blue-400" />
-          )}
+          ) : (() => {
+            const { Icon, color } = getFileIcon(entry.name)
+            return <Icon className={`w-8 h-8 ${color}`} />
+          })()}
           <p className="text-xs text-foreground truncate w-full">{entry.name}</p>
           {entry.size !== undefined && (
             <span className="text-2xs text-muted-foreground">{formatBytes(entry.size)}</span>

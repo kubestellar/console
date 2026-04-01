@@ -30,6 +30,8 @@ import type {
   FileScanResult,
 } from '../../lib/missions/types'
 import { validateMissionExport } from '../../lib/missions/types'
+import { parseFileContent, type UnstructuredPreview } from '../../lib/missions/fileParser'
+import type { ApiGroupMapping } from '../../lib/missions/apiGroupMapping'
 import { fullScan } from '../../lib/missions/scanner/index'
 import { ScanProgressOverlay } from './ScanProgressOverlay'
 import { CollapsibleSection } from '../ui/CollapsibleSection'
@@ -37,6 +39,7 @@ import { InstallerCard } from './InstallerCard'
 import { SolutionCard } from './SolutionCard'
 import { MissionDetailView } from './MissionDetailView'
 import { ImproveMissionDialog } from './ImproveMissionDialog'
+import { UnstructuredFilePreview } from './UnstructuredFilePreview'
 import { useTranslation } from 'react-i18next'
 import {
   TreeNodeItem, DirectoryListing, RecommendationCard, EmptyState, MissionFetchErrorBanner,
@@ -79,6 +82,16 @@ const CATEGORY_FILTERS = [
 const SIDEBAR_WIDTH = 280
 const WATCHED_REPOS_KEY = 'kc_mission_watched_repos'
 const WATCHED_PATHS_KEY = 'kc_mission_watched_paths'
+
+/** File extensions accepted by the mission browser */
+const MISSION_FILE_EXTENSIONS = ['.json', '.yaml', '.yml', '.md'] as const
+const MISSION_FILE_ACCEPT = '.json,.yaml,.yml,.md,application/json,text/yaml,text/markdown'
+
+/** Check if a filename has a supported mission file extension */
+function isMissionFile(name: string): boolean {
+  const lower = name.toLowerCase()
+  return MISSION_FILE_EXTENSIONS.some(ext => lower.endsWith(ext))
+}
 
 const CNCF_CATEGORIES = [
   'All', 'Observability', 'Orchestration', 'Runtime', 'Provisioning',
@@ -148,6 +161,14 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   const [loading, setLoading] = useState(false)
   const [isMissionLoading, setIsMissionLoading] = useState(false)
   const [missionContentError, setMissionContentError] = useState<string | null>(null)
+
+  // YAML/MD file parsing state
+  const [unstructuredContent, setUnstructuredContent] = useState<{
+    content: string
+    format: 'yaml' | 'markdown'
+    preview: UnstructuredPreview
+    detectedProjects: ApiGroupMapping[]
+  } | null>(null)
 
   // Recommendations
   const [recommendations, setRecommendations] = useState<MissionMatch[]>([])
@@ -640,7 +661,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           const HIDDEN_FILES = new Set(['.gitkeep', 'index.json'])
           setDirectoryEntries(
             entries.filter(e =>
-              (e.type === 'directory' || e.name.endsWith('.json')) && !HIDDEN_FILES.has(e.name)
+              (e.type === 'directory' || isMissionFile(e.name)) && !HIDDEN_FILES.has(e.name)
             )
           )
         } else if (node.source === 'github') {
@@ -677,15 +698,32 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
 
         const raw = typeof content === 'string' ? content : JSON.stringify(content, null, 2)
         setRawContent(raw)
+        setUnstructuredContent(null)
 
-        const parsed = typeof content === 'string' ? JSON.parse(content) : content
-        const validation = validateMissionExport(parsed)
-        if (validation.valid) {
-          setSelectedMission(validation.data)
-          emitSolutionViewed(validation.data.title, validation.data.cncfProject)
-        } else {
-          setSelectedMission(parsed as MissionExport)
-          emitSolutionViewed((parsed as MissionExport).title ?? node.name, (parsed as MissionExport).cncfProject)
+        try {
+          const parseResult = parseFileContent(raw, node.name)
+          if (parseResult.type === 'structured') {
+            const validation = validateMissionExport(parseResult.mission)
+            if (validation.valid) {
+              setSelectedMission(validation.data)
+              emitSolutionViewed(validation.data.title, validation.data.cncfProject)
+            } else {
+              setSelectedMission(parseResult.mission)
+              emitSolutionViewed(parseResult.mission.title ?? node.name, parseResult.mission.cncfProject)
+            }
+          } else {
+            setUnstructuredContent(parseResult)
+            setSelectedMission(null)
+          }
+        } catch {
+          // Fallback: try JSON parse for backwards compatibility
+          try {
+            const parsed = JSON.parse(raw)
+            const validation = validateMissionExport(parsed)
+            setSelectedMission(validation.valid ? validation.data : (parsed as MissionExport))
+          } catch {
+            setSelectedMission(null)
+          }
         }
       } catch {
         setRawContent(null)
@@ -778,36 +816,41 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     const reader = new FileReader()
     reader.onload = (e) => {
       const content = e.target?.result as string
-      try {
-        const parsed = JSON.parse(content)
-        const validation = validateMissionExport(parsed)
 
-        const localNode: TreeNode = {
-          id: `local/${file.name}`,
-          name: file.name,
-          path: file.name,
-          type: 'file',
-          source: 'local',
-          loaded: true,
-        }
+      const localNode: TreeNode = {
+        id: `local/${file.name}`,
+        name: file.name,
+        path: file.name,
+        type: 'file',
+        source: 'local',
+        loaded: true,
+      }
 
-        setTreeNodes((prev) =>
-          prev.map((n) =>
-            n.id === 'local'
-              ? { ...n, children: [...(n.children || []), localNode] }
-              : n
-          )
+      setTreeNodes((prev) =>
+        prev.map((n) =>
+          n.id === 'local'
+            ? { ...n, children: [...(n.children || []), localNode] }
+            : n
         )
-        setExpandedNodes((prev) => new Set(prev).add('local'))
+      )
+      setExpandedNodes((prev) => new Set(prev).add('local'))
+      setRawContent(content)
+      setSelectedPath(`local/${file.name}`)
+      setDirectoryEntries([])
+      setUnstructuredContent(null)
 
-        setRawContent(content)
-        setSelectedMission(validation.valid ? validation.data : (parsed as MissionExport))
-        setSelectedPath(`local/${file.name}`)
-        setDirectoryEntries([])
+      try {
+        const parseResult = parseFileContent(content, file.name)
+
+        if (parseResult.type === 'structured') {
+          const validation = validateMissionExport(parseResult.mission)
+          setSelectedMission(validation.valid ? validation.data : parseResult.mission)
+        } else {
+          setUnstructuredContent(parseResult)
+          setSelectedMission(null)
+        }
       } catch {
-        setRawContent(content)
         setSelectedMission(null)
-        setSelectedPath(`local/${file.name}`)
       }
     }
     reader.readAsText(file)
@@ -817,7 +860,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     e.preventDefault()
     setIsDragging(false)
     const files = Array.from(e.dataTransfer.files).filter(
-      (f) => f.name.endsWith('.json') || f.type === 'application/json'
+      (f) => isMissionFile(f.name) || f.type === 'application/json'
     )
     if (files.length > 0) {
       processLocalFile(files[0])
@@ -1415,13 +1458,13 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             >
               <Upload className="w-5 h-5 text-muted-foreground" />
               <span className="text-xs text-muted-foreground text-center">
-                Drop JSON file or click to browse
+                Drop mission file (JSON, YAML, MD) or click to browse
               </span>
             </div>
             <input
               ref={fileInputRef}
               type="file"
-              accept=".json,application/json"
+              accept={MISSION_FILE_ACCEPT}
               onChange={handleFileSelect}
               className="hidden"
             />
@@ -1476,9 +1519,31 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             )}
 
             {/* ============================================================ */}
+            {/* UNSTRUCTURED FILE PREVIEW (YAML/MD not parseable as a mission) */}
+            {/* ============================================================ */}
+            {!selectedMission && unstructuredContent && (
+              <UnstructuredFilePreview
+                content={unstructuredContent.content}
+                format={unstructuredContent.format}
+                preview={unstructuredContent.preview}
+                detectedProjects={unstructuredContent.detectedProjects}
+                fileName={selectedPath?.split('/').pop() ?? 'file'}
+                onConvert={(mission) => {
+                  setSelectedMission(mission)
+                  setUnstructuredContent(null)
+                }}
+                onBack={() => {
+                  setUnstructuredContent(null)
+                  setRawContent(null)
+                  setSelectedPath(null)
+                }}
+              />
+            )}
+
+            {/* ============================================================ */}
             {/* RECOMMENDED TAB (existing content) */}
             {/* ============================================================ */}
-            {!selectedMission && activeTab === 'recommended' && (<>
+            {!selectedMission && !unstructuredContent && activeTab === 'recommended' && (<>
             {/* Token / rate-limit guidance banner */}
             {tokenError && (
               <div className="mb-4 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4">
@@ -1676,7 +1741,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             {/* ============================================================ */}
             {/* INSTALLERS TAB */}
             {/* ============================================================ */}
-            {!selectedMission && activeTab === 'installers' && (
+            {!selectedMission && !unstructuredContent && activeTab === 'installers' && (
               <div className="space-y-4">
                 {/* Installer filters */}
                 <div className="flex flex-wrap items-center gap-2">
@@ -1761,7 +1826,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             {/* ============================================================ */}
             {/* SOLUTIONS TAB */}
             {/* ============================================================ */}
-            {!selectedMission && activeTab === 'fixes' && (
+            {!selectedMission && !unstructuredContent && activeTab === 'fixes' && (
               <div className="space-y-4">
                 {/* Solution filters */}
                 <div className="flex flex-wrap items-center gap-2">

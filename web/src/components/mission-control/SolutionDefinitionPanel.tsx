@@ -704,6 +704,11 @@ function ProjectDetailPanel({
           )}>
             {project.priority}
           </span>
+          {project.importedMission && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-400 font-medium">
+              {project.replacesInstallMission ? 'your YAML' : 'your YAML + community'}
+            </span>
+          )}
         </div>
       </div>
 
