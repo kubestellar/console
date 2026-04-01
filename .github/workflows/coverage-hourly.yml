@@ -1,14 +1,12 @@
-name: Hourly Coverage Suite
+name: Coverage Suite
 
-# Runs full test suite with coverage every hour and on manual trigger.
+# Runs full test suite with coverage every 2 hours via sharding.
 # Updates the README coverage badge via gist.
 
 on:
   schedule:
-    - cron: '15 */2 * * *'  # Every 2 hours at :15 (run takes ~25 min)
+    - cron: '15 */2 * * *'  # Every 2 hours at :15
   workflow_dispatch:
-
-# No concurrency group — 2-hour schedule won't overlap with 25-min runs
 
 permissions:
   contents: read
@@ -16,15 +14,21 @@ permissions:
 env:
   NODE_VERSION: '22'
   GIST_ID: 'b9a9ae8469f1897a22d5a40629bc1e82'
+  TOTAL_SHARDS: 4
 
 jobs:
-  full-coverage:
+  # Run tests in 4 shards to stay within 7GB runner memory
+  test-shard:
     if: github.repository == 'kubestellar/console'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
 
     steps:
-      - name: Checkout main
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Node.js
@@ -38,24 +42,82 @@ jobs:
         working-directory: web
         run: npm ci
 
-      - name: Run tests with coverage (memory-optimized)
+      - name: Run shard ${{ matrix.shard }}/${{ env.TOTAL_SHARDS }} with coverage
         working-directory: web
         env:
-          NODE_OPTIONS: '--max-old-space-size=6144'
-        run: |
-          # Single worker prevents OOM on 7GB GHA runners.
-          # Slower (~25 min) but completes reliably with coverage.
-          npx vitest run --coverage --maxWorkers=1
+          NODE_OPTIONS: '--max-old-space-size=4096'
+        run: npx vitest run --coverage --shard=${{ matrix.shard }}/${{ env.TOTAL_SHARDS }}
         continue-on-error: true
 
-      - name: Extract coverage percentage
+      - name: Upload shard coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-shard-${{ matrix.shard }}
+          path: web/coverage/coverage-final.json
+          retention-days: 1
+
+  # Merge shards and update badge
+  merge-coverage:
+    needs: test-shard
+    if: github.repository == 'kubestellar/console'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Download all shard coverage
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-shard-*
+          path: /tmp/shards
+
+      - name: Merge coverage and generate summary
         id: cov
         working-directory: web
         run: |
+          # Copy shard coverage files into .nyc_output for merging
+          mkdir -p .nyc_output
+          SHARD_COUNT=0
+          for dir in /tmp/shards/coverage-shard-*; do
+            if [ -f "$dir/coverage-final.json" ]; then
+              SHARD_COUNT=$((SHARD_COUNT + 1))
+              cp "$dir/coverage-final.json" ".nyc_output/shard-${SHARD_COUNT}.json"
+              echo "Found shard $SHARD_COUNT coverage"
+            fi
+          done
+
+          if [ "$SHARD_COUNT" -eq 0 ]; then
+            echo "::warning::No shard coverage files found"
+            echo "pct=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Merging $SHARD_COUNT shard coverage files..."
+
+          # Use nyc to merge and report
+          npx nyc report \
+            --temp-dir .nyc_output \
+            --report-dir coverage \
+            --reporter=json-summary \
+            --reporter=text
+
           SUMMARY="coverage/coverage-summary.json"
           if [ ! -f "$SUMMARY" ]; then
+            echo "::warning::Coverage merge failed"
             echo "pct=0" >> "$GITHUB_OUTPUT"
-            echo "::warning::No coverage summary produced"
             exit 0
           fi
 
@@ -65,11 +127,8 @@ jobs:
           FUNCS=$(jq -r '.total.functions.pct // 0' "$SUMMARY")
 
           echo "pct=${PCT}" >> "$GITHUB_OUTPUT"
-          echo "stmts=${STMTS}" >> "$GITHUB_OUTPUT"
-          echo "branches=${BRANCHES}" >> "$GITHUB_OUTPUT"
-          echo "funcs=${FUNCS}" >> "$GITHUB_OUTPUT"
 
-          echo "## Coverage Summary"
+          echo "## Coverage Summary (merged from $SHARD_COUNT shards)"
           echo "| Metric | Percentage |"
           echo "|--------|-----------|"
           echo "| Lines | ${PCT}% |"
@@ -77,11 +136,11 @@ jobs:
           echo "| Branches | ${BRANCHES}% |"
           echo "| Functions | ${FUNCS}% |"
 
-      - name: Upload coverage artifact
+      - name: Upload merged coverage
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-hourly-${{ github.run_number }}
+          name: coverage-merged-${{ github.run_number }}
           path: web/coverage/coverage-summary.json
           retention-days: 30
 
