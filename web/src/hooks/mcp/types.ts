@@ -32,6 +32,9 @@ export interface ClusterInfo {
   authMethod?: 'exec' | 'token' | 'certificate' | 'auth-provider' | 'unknown'
   // Reachability fields (from health check)
   reachable?: boolean
+  /** External TCP probe result — false when the API server is internally reachable
+   *  but not reachable from outside (e.g. external network outage) (#4202). */
+  externallyReachable?: boolean
   lastSeen?: string
   errorType?: 'timeout' | 'auth' | 'network' | 'certificate' | 'unknown'
   errorMessage?: string
@@ -77,6 +80,9 @@ export interface ClusterHealth {
   issues?: string[]
   // Fields for reachability
   reachable?: boolean
+  /** External TCP probe result — false when the API server is internally reachable
+   *  but not reachable from outside (e.g. external network outage) (#4202). */
+  externallyReachable?: boolean
   lastSeen?: string
   errorType?: 'timeout' | 'auth' | 'network' | 'certificate' | 'unknown'
   errorMessage?: string

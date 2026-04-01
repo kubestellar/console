@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -190,6 +192,8 @@ type ClusterHealth struct {
 	// PVC metrics
 	PVCCount      int `json:"pvcCount,omitempty"`      // Total PVC count
 	PVCBoundCount int `json:"pvcBoundCount,omitempty"` // Bound PVC count
+	// External reachability — TCP probe to the API server URL from this host (#4202)
+	ExternallyReachable *bool `json:"externallyReachable,omitempty"`
 	// Issues and timing
 	Issues    []string `json:"issues,omitempty"`
 	CheckedAt string   `json:"checkedAt,omitempty"`
@@ -1537,6 +1541,22 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 		health.PVCBoundCount = prevCached.PVCBoundCount
 	}
 
+	// Populate the API server URL from the REST config for the frontend to display.
+	// Also run an external TCP probe to distinguish internal-only vs external reachability (#4202).
+	if health.Reachable {
+		m.mu.RLock()
+		cfg := m.configs[contextName]
+		m.mu.RUnlock()
+		if cfg != nil && cfg.Host != "" {
+			health.APIServer = cfg.Host
+			reachable := probeAPIServer(cfg.Host)
+			health.ExternallyReachable = &reachable
+			if !reachable {
+				health.Issues = append(health.Issues, "API server externally unreachable (TCP probe failed)")
+			}
+		}
+	}
+
 	// Only cache successful results — don't cache failures (timeout, context canceled)
 	// so the next request retries immediately instead of serving stale errors
 	if health.Reachable {
@@ -1547,6 +1567,39 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 	}
 
 	return health, nil
+}
+
+// probeAPIServer performs a lightweight TCP dial to the API server URL to verify
+// external reachability. The kc-agent can reach clusters via internal networking
+// or VPN, but users/CI runners may not be able to (#4202).
+func probeAPIServer(host string) bool {
+	// Parse the URL to extract host:port.
+	// rest.Config.Host can be a bare "host:port" or a full URL "https://host:port".
+	addr := host
+	if strings.Contains(host, "://") {
+		parsed, err := url.Parse(host)
+		if err != nil {
+			return false
+		}
+		port := parsed.Port()
+		if port == "" {
+			if parsed.Scheme == "https" {
+				port = "443"
+			} else {
+				port = "80"
+			}
+		}
+		addr = net.JoinHostPort(parsed.Hostname(), port)
+	} else if !strings.Contains(host, ":") {
+		addr = net.JoinHostPort(host, "443")
+	}
+
+	conn, err := net.DialTimeout("tcp", addr, clusterProbeTimeout)
+	if err != nil {
+		return false
+	}
+	conn.Close()
+	return true
 }
 
 // GetPods returns pods for a namespace/cluster

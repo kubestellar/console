@@ -11,6 +11,7 @@ import { AlertTriangle, AlertCircle, Shield, ExternalLink, Info, Loader2, Chevro
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTrivy } from '../../hooks/useTrivy'
 import { useKubescape } from '../../hooks/useKubescape'
 import { useKyverno } from '../../hooks/useKyverno'
@@ -97,36 +98,55 @@ Please help me install one or both of these tools:
 
 Please install at least one tool and verify it is producing scan results.`
 
-// ── Falco (still static — no hook yet) ──────────────────────────────────
+// ── Falco (static demo data — no live hook yet) ───────────────────────
 
 export function FalcoAlerts({ config: _config }: CardConfig) {
-  useCardLoadingState({ isLoading: false, hasAnyData: true, isDemoData: true })
+  const { isDemoMode } = useDemoMode()
+
+  // Falco has no live data hook yet so isDemoData is always true.
+  // However, we still gate the demo content on isDemoMode so the card
+  // correctly shows an empty / install-prompt state when a real agent
+  // is connected but Falco is not installed.
+  const showDemo = isDemoMode
+  useCardLoadingState({ isLoading: false, hasAnyData: showDemo, isDemoData: showDemo })
+
   const demoAlerts = [
     { severity: 'critical', message: 'Container escape attempt detected', time: '2m ago' },
     { severity: 'warning', message: 'Privileged pod spawned', time: '15m ago' },
     { severity: 'info', message: 'Shell spawned in container', time: '1h ago' },
   ]
 
-  return (
-    <div className="space-y-3">
-      <div className="flex items-start gap-2 p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs">
-        <AlertCircle className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-purple-400 font-medium">Falco Integration</p>
-          <p className="text-muted-foreground">
-            Install Falco for runtime security monitoring.{' '}
-            <a
-              href="https://falco.org/docs/install-operate/installation/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-purple-400 hover:underline"
-            >
-              Install guide →
-            </a>
-          </p>
+  if (!showDemo) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-start gap-2 p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs">
+          <AlertCircle className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-purple-400 font-medium">Falco Integration</p>
+            <p className="text-muted-foreground">
+              Install Falco for runtime security monitoring.{' '}
+              <a
+                href="https://falco.org/docs/install-operate/installation/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-purple-400 hover:underline"
+              >
+                Install guide &rarr;
+              </a>
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-col items-center justify-center py-4 text-muted-foreground text-sm">
+          <Shield className="w-6 h-6 mb-2 text-purple-400/50" />
+          <p>No Falco alerts available</p>
+          <p className="text-xs mt-1">Install Falco to see runtime security alerts</p>
         </div>
       </div>
+    )
+  }
 
+  return (
+    <div className="space-y-3">
       <div className="space-y-2">
         {demoAlerts.map((alert, i) => (
           <div

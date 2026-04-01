@@ -226,19 +226,21 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
         </div>
       </div>
 
-      {/* Integration notice */}
-      <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-orange-500/10 border border-orange-500/20 text-xs">
-        <AlertCircle className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-orange-400 font-medium">{t('argoCDApplications.argocdIntegration')}</p>
-          <p className="text-muted-foreground">
-            {t('argoCDApplications.installArgoCD')}{' '}
-            <a href="https://argo-cd.readthedocs.io/en/stable/getting_started/" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline inline-block py-2">
-              {t('argoCDApplications.installGuide')}
-            </a>
-          </p>
+      {/* Integration notice — only shown in demo/fallback mode (#4201) */}
+      {isDemoData && (
+        <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-orange-500/10 border border-orange-500/20 text-xs">
+          <AlertCircle className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-orange-400 font-medium">{t('argoCDApplications.argocdIntegration')}</p>
+            <p className="text-muted-foreground">
+              {t('argoCDApplications.installArgoCD')}{' '}
+              <a href="https://argo-cd.readthedocs.io/en/stable/getting_started/" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline inline-block py-2">
+                {t('argoCDApplications.installGuide')}
+              </a>
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Local Search */}
       <CardSearchInput

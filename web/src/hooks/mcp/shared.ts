@@ -1115,6 +1115,8 @@ async function processClusterHealth(cluster: ClusterInfo): Promise<void> {
           // healthy: true means all nodes are ready; false means some aren't ready but cluster is reachable
           healthy: hasValidData ? health.healthy : false,
           reachable: true,  // We definitely reached the cluster if we have data
+          // External reachability probe result (#4202)
+          externallyReachable: health.externallyReachable,
           nodeCount: health.nodeCount,
           podCount: health.podCount,
           cpuCores: health.cpuCores,
