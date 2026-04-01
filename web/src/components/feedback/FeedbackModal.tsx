@@ -17,7 +17,7 @@ import { ConfirmDialog } from '../../lib/modals'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
 import { useToast } from '../ui/Toast'
-import { emitFeedbackSubmitted, emitLinkedInShare } from '../../lib/analytics'
+import { emitFeedbackSubmitted, emitLinkedInShare, emitScreenshotAttached, emitScreenshotUploadFailed, emitScreenshotUploadSuccess } from '../../lib/analytics'
 import { useBranding } from '../../hooks/useBranding'
 import { FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
 import { FEEDBACK_UPLOAD_TIMEOUT_MS } from '../../lib/constants/network'
@@ -95,6 +95,8 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
     e.preventDefault()
     setIsDragOver(false)
     console.debug(`[Screenshot] Drop event: ${e.dataTransfer.files.length} file(s)`)
+    const imageCount = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')).length
+    if (imageCount > 0) emitScreenshotAttached('drop', imageCount)
     handleScreenshotFiles(e.dataTransfer.files)
   }
 
@@ -132,6 +134,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
         console.debug('[Screenshot] item.getAsFile() returned null for type:', item.type)
       }
     })
+    emitScreenshotAttached('paste', imageItems.length)
     showToast(`Screenshot${imageItems.length > 1 ? 's' : ''} added`, 'success')
   }
 
@@ -208,6 +211,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
         ...(hasScreenshots && { screenshots: screenshotDataURIs }),
       }, hasScreenshots ? { timeout: FEEDBACK_UPLOAD_TIMEOUT_MS } : undefined)
       console.debug('[Screenshot] Submit succeeded:', result.github_issue_url)
+      if (hasScreenshots) emitScreenshotUploadSuccess(screenshotDataURIs.length)
 
       emitFeedbackSubmitted(type)
 
@@ -225,6 +229,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
         if ('response' in err) console.debug('[Screenshot] Response:', (err as Record<string, unknown>).response)
       }
       const message = err instanceof Error ? err.message : 'Failed to submit feedback'
+      if (screenshots.length > 0) emitScreenshotUploadFailed(message, screenshots.length)
       setSubmitError(message)
       showToast('Failed to submit feedback', 'error')
     } finally {
@@ -476,7 +481,11 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                         type="file"
                         accept="image/*"
                         multiple
-                        onChange={e => handleScreenshotFiles(e.target.files)}
+                        onChange={e => {
+                          const files = e.target.files
+                          if (files && files.length > 0) emitScreenshotAttached('file_picker', files.length)
+                          handleScreenshotFiles(files)
+                        }}
                         className="hidden"
                       />
                     </div>
