@@ -437,9 +437,9 @@ describe('sendMessage', () => {
       })
 
       const mission = result.current.missions.find(m => m.id === missionId)
-      expect(mission?.status).toBe('failed')
+      expect(mission?.status).toBe('cancelling')
       const systemMessages = mission?.messages.filter(m => m.role === 'system') ?? []
-      expect(systemMessages.some(m => m.content.includes('cancelled'))).toBe(true)
+      expect(systemMessages.some(m => m.content.includes('Cancellation requested'))).toBe(true)
     },
   )
 })
@@ -447,7 +447,7 @@ describe('sendMessage', () => {
 // ── cancelMission ─────────────────────────────────────────────────────────────
 
 describe('cancelMission', () => {
-  it('sets mission status to failed with a system message', async () => {
+  it('sets mission status to cancelling with a system message', async () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
     const { missionId } = await startMissionWithConnection(result)
 
@@ -456,10 +456,57 @@ describe('cancelMission', () => {
     })
 
     const mission = result.current.missions.find(m => m.id === missionId)
-    expect(mission?.status).toBe('failed')
+    expect(mission?.status).toBe('cancelling')
     const lastMsg = mission?.messages[mission.messages.length - 1]
     expect(lastMsg?.role).toBe('system')
-    expect(lastMsg?.content).toContain('Mission cancelled by user.')
+    expect(lastMsg?.content).toContain('Cancellation requested')
+  })
+
+  it('transitions to failed after backend cancel_ack', async () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    const { missionId } = await startMissionWithConnection(result)
+
+    act(() => {
+      result.current.cancelMission(missionId)
+    })
+    expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('cancelling')
+
+    // Simulate backend acknowledgment
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: `cancel-ack-${Date.now()}`,
+        type: 'cancel_ack',
+        payload: { sessionId: missionId, success: true },
+      })
+    })
+
+    const mission = result.current.missions.find(m => m.id === missionId)
+    expect(mission?.status).toBe('failed')
+    const systemMessages = mission?.messages.filter(m => m.role === 'system') ?? []
+    expect(systemMessages.some(m => m.content.includes('Mission cancelled by user.'))).toBe(true)
+  })
+
+  it('transitions to failed after cancel ack timeout', async () => {
+    vi.useFakeTimers()
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    const { missionId } = await startMissionWithConnection(result)
+
+    act(() => {
+      result.current.cancelMission(missionId)
+    })
+    expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('cancelling')
+
+    // Advance past the cancel ack timeout (10s)
+    act(() => {
+      vi.advanceTimersByTime(10_000)
+    })
+
+    const mission = result.current.missions.find(m => m.id === missionId)
+    expect(mission?.status).toBe('failed')
+    const systemMessages = mission?.messages.filter(m => m.role === 'system') ?? []
+    expect(systemMessages.some(m => m.content.includes('backend did not confirm'))).toBe(true)
+
+    vi.useRealTimers()
   })
 
   it('sends cancel_chat over WebSocket when connected', async () => {
@@ -488,7 +535,7 @@ describe('cancelMission', () => {
     expect(MockWebSocket.lastInstance?.close).not.toHaveBeenCalled()
   })
 
-  it('falls back to HTTP POST when WebSocket is not open', () => {
+  it('falls back to HTTP POST when WebSocket is not open', async () => {
     const missionId = seedMission({ status: 'running' })
     const { result } = renderHook(() => useMissions(), { wrapper })
 
@@ -500,8 +547,14 @@ describe('cancelMission', () => {
       expect.stringContaining('/cancel-chat'),
       expect.objectContaining({ method: 'POST' }),
     )
+    // Should be in cancelling state initially (HTTP response will finalize)
     const mission = result.current.missions.find(m => m.id === missionId)
-    expect(mission?.status).toBe('failed')
+    expect(mission?.status).toBe('cancelling')
+
+    // Let the fetch promise resolve to finalize
+    await act(async () => { await Promise.resolve() })
+    const missionAfter = result.current.missions.find(m => m.id === missionId)
+    expect(missionAfter?.status).toBe('failed')
   })
 })
 

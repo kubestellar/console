@@ -30,6 +30,7 @@ export const THINKING_MESSAGES = [
 export const STATUS_CONFIG: Record<MissionStatus, { icon: typeof Loader2; color: string; label: string }> = {
   pending: { icon: Clock, color: 'text-yellow-400', label: 'Starting...' },
   running: { icon: Loader2, color: 'text-blue-400', label: 'Running' },
+  cancelling: { icon: Loader2, color: 'text-orange-400', label: 'Cancelling...' },
   waiting_input: { icon: MessageSquare, color: 'text-purple-400', label: 'Waiting for input' },
   completed: { icon: CheckCircle, color: 'text-green-400', label: 'Completed' },
   failed: { icon: AlertCircle, color: 'text-red-400', label: 'Failed' },

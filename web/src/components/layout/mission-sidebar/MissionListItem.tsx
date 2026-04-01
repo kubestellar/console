@@ -5,6 +5,7 @@ import {
   Maximize2,
   Trash2,
   StopCircle,
+  Loader2,
 } from 'lucide-react'
 import type { Mission } from '../../../hooks/useMissions'
 import { cn } from '../../../lib/cn'
@@ -71,6 +72,11 @@ export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpan
           <TypeIcon className="w-3 h-3 text-muted-foreground flex-shrink-0" />
           <span className="text-sm font-medium text-foreground truncate">{mission.title}</span>
         </button>
+        {mission.status === 'cancelling' && (
+          <span className="p-0.5 flex-shrink-0" title="Cancelling...">
+            <Loader2 className="w-3.5 h-3.5 text-orange-400 animate-spin" />
+          </span>
+        )}
         {mission.status === 'running' && onTerminate && (
           <button
             onClick={(e) => { e.stopPropagation(); onTerminate() }}

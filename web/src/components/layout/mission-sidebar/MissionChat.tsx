@@ -20,6 +20,7 @@ import {
   RotateCcw,
   StopCircle,
   ListChecks,
+  Loader2,
 } from 'lucide-react'
 import { useMissions, type Mission } from '../../../hooks/useMissions'
 import { useAuth } from '../../../lib/auth'
@@ -405,8 +406,14 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               {t('missionChat.terminateSession', { defaultValue: 'Terminate Session' })}
             </button>
           )}
+          {mission.status === 'cancelling' && (
+            <span className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-orange-500/15 text-orange-400 border border-orange-500/30 rounded-lg">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Cancelling...
+            </span>
+          )}
           <div className={cn('flex items-center gap-1', config.color)}>
-            <StatusIcon className={cn('w-4 h-4', mission.status === 'running' && 'animate-spin')} />
+            <StatusIcon className={cn('w-4 h-4', (mission.status === 'running' || mission.status === 'cancelling') && 'animate-spin')} />
             <span className="text-xs">{config.label}</span>
           </div>
         </div>
@@ -591,7 +598,12 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       {/* Input / Actions — hidden when Run button is inline above */}
       {!(mission.status === 'saved' && mission.messages.length === 0) && (
       <div className="p-4 border-t border-border flex-shrink-0 bg-card min-w-0">
-        {mission.status === 'running' ? (
+        {mission.status === 'cancelling' ? (
+          <div className="flex items-center justify-center gap-2 py-3">
+            <Loader2 className="w-4 h-4 animate-spin text-orange-400" />
+            <span className="text-sm text-orange-400">Cancelling mission...</span>
+          </div>
+        ) : mission.status === 'running' ? (
           <div className="flex flex-col gap-2">
             <div className="flex gap-2 min-w-0">
               <input

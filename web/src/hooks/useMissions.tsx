@@ -10,7 +10,7 @@ import { scanForMaliciousContent } from '../lib/missions/scanner/malicious'
 import { runPreflightCheck, type PreflightError } from '../lib/missions/preflightCheck'
 import { kubectlProxy } from '../lib/kubectlProxy'
 
-export type MissionStatus = 'pending' | 'running' | 'waiting_input' | 'completed' | 'failed' | 'saved' | 'blocked'
+export type MissionStatus = 'pending' | 'running' | 'waiting_input' | 'completed' | 'failed' | 'saved' | 'blocked' | 'cancelling'
 
 export interface MissionMessage {
   id: string
@@ -168,6 +168,12 @@ const MISSION_TIMEOUT_CHECK_INTERVAL_MS = 15_000 // 15 seconds
  * failed early with an actionable message (#3079).
  */
 const MISSION_INACTIVITY_TIMEOUT_MS = 90_000 // 90 seconds of stream silence
+/**
+ * Maximum time (ms) the frontend waits for backend acknowledgment after sending
+ * a cancel request. If the backend doesn't respond within this window, the
+ * frontend transitions the mission from 'cancelling' to 'failed' as a safety net.
+ */
+const CANCEL_ACK_TIMEOUT_MS = 10_000 // 10 seconds
 
 // Load missions from localStorage
 function loadMissions(): Mission[] {
@@ -195,6 +201,23 @@ function loadMissions(): Mission[] {
             context: { ...mission.context, needsReconnect: true }
           }
         }
+        // Missions stuck in 'cancelling' after a page reload should be finalized
+        if (mission.status === 'cancelling') {
+          return {
+            ...mission,
+            status: 'failed',
+            currentStep: undefined,
+            messages: [
+              ...mission.messages,
+              {
+                id: `msg-${Date.now()}`,
+                role: 'system' as const,
+                content: 'Mission cancelled by user (page was reloaded during cancellation).',
+                timestamp: new Date(),
+              }
+            ]
+          }
+        }
         return mission
       })
     }
@@ -220,9 +243,9 @@ function saveMissions(missions: Mission[]) {
       && (e.name === 'QuotaExceededError' || e.code === 22)
     if (isQuotaError) {
       console.warn('[Missions] localStorage quota exceeded, pruning old missions')
-      // Keep active missions (pending/running/waiting_input/blocked) unconditionally
+      // Keep active missions (pending/running/cancelling/waiting_input/blocked) unconditionally
       const active = missions.filter(m =>
-        m.status === 'running' || m.status === 'pending' || m.status === 'waiting_input' || m.status === 'blocked'
+        m.status === 'running' || m.status === 'pending' || m.status === 'waiting_input' || m.status === 'blocked' || m.status === 'cancelling'
       )
       // Keep saved/library missions unconditionally — they are small (no chat history)
       const saved = missions.filter(m => m.status === 'saved')
@@ -286,6 +309,8 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const pendingRequests = useRef<Map<string, string>>(new Map()) // requestId -> missionId
   // Track last stream timestamp per mission to detect tool-use gaps (for creating new chat bubbles)
   const lastStreamTimestamp = useRef<Map<string, number>>(new Map()) // missionId -> timestamp
+  // Track cancel acknowledgment timeouts — missionId -> timeout handle
+  const cancelTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   // Ref to always hold the latest missions state — avoids stale closure in sendMessage (#3322)
   const missionsRef = useRef<Mission[]>(missions)
   missionsRef.current = missions
@@ -626,6 +651,35 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     }
   }, [])
 
+  // Finalize a cancelling mission — transitions from 'cancelling' to 'failed'
+  // and clears any pending cancel timeout.
+  const finalizeCancellation = useCallback((missionId: string, message: string) => {
+    // Clear the timeout if one is pending
+    const timeout = cancelTimeouts.current.get(missionId)
+    if (timeout) {
+      clearTimeout(timeout)
+      cancelTimeouts.current.delete(missionId)
+    }
+
+    setMissions(prev => prev.map(m =>
+      m.id === missionId && m.status === 'cancelling' ? {
+        ...m,
+        status: 'failed',
+        currentStep: undefined,
+        updatedAt: new Date(),
+        messages: [
+          ...m.messages,
+          {
+            id: `msg-${Date.now()}`,
+            role: 'system',
+            content: message,
+            timestamp: new Date(),
+          }
+        ]
+      } : m
+    ))
+  }, [])
+
   // Handle messages from the agent
   const handleAgentMessage = useCallback((message: { id: string; type: string; payload?: unknown }) => {
     // Handle agent-related messages (no mission ID needed)
@@ -671,11 +725,44 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       return
     }
 
+    // Handle cancel acknowledgment from backend — the cancel_chat request uses
+    // a different ID format (cancel-*) so it won't be in pendingRequests. Match
+    // the session ID from the payload instead.
+    if (message.type === 'cancel_ack' || message.type === 'cancel_confirmed') {
+      const payload = message.payload as { sessionId?: string; success?: boolean; message?: string }
+      const cancelledMissionId = payload.sessionId
+      if (cancelledMissionId) {
+        if (payload.success === false) {
+          finalizeCancellation(cancelledMissionId, payload.message || 'Mission cancellation failed — the backend reported an error.')
+        } else {
+          finalizeCancellation(cancelledMissionId, 'Mission cancelled by user.')
+        }
+      }
+      return
+    }
+
     const missionId = pendingRequests.current.get(message.id)
     if (!missionId) return
 
     setMissions(prev => prev.map(m => {
       if (m.id !== missionId) return m
+
+      // If the mission is in 'cancelling' state and we receive a terminal message
+      // (result, error, or stream-done), treat it as backend confirmation of the
+      // cancellation. This handles backends that don't send an explicit cancel_ack.
+      if (m.status === 'cancelling') {
+        const isTerminalMessage =
+          message.type === 'result' ||
+          message.type === 'error' ||
+          (message.type === 'stream' && (message.payload as { done?: boolean })?.done)
+        if (isTerminalMessage) {
+          pendingRequests.current.delete(message.id)
+          finalizeCancellation(missionId, 'Mission cancelled by user.')
+          return m // finalizeCancellation handles the state update via setMissions
+        }
+        // Ignore non-terminal messages (progress, partial stream) while cancelling
+        return m
+      }
 
       if (message.type === 'progress') {
         // Progress update from agent (e.g., "Querying cluster...", "Analyzing logs...")
@@ -914,7 +1001,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
 
       return m
     }))
-  }, [markMissionAsUnread])
+  }, [markMissionAsUnread, finalizeCancellation])
 
   // Keep the ref in sync so ensureConnection always calls the latest handler
   handleAgentMessageRef.current = handleAgentMessage
@@ -1377,6 +1464,8 @@ Install the console locally with the KubeStellar Console agent to use AI mission
 
   // Cancel a running mission — sends cancel signal to backend to kill agent process.
   // Uses WebSocket if connected, otherwise falls back to HTTP POST endpoint.
+  // Sets status to 'cancelling' immediately, then waits for backend acknowledgment
+  // before transitioning to final 'failed' state. Falls back to a timeout if no ack.
   const cancelMission = useCallback((missionId: string) => {
     // Try WebSocket first (fastest path when connected)
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -1386,35 +1475,50 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         payload: { sessionId: missionId },
       }))
     } else {
-      // HTTP fallback — WS may be disconnected during long agent runs
+      // HTTP fallback — WS may be disconnected during long agent runs.
+      // Use the response to determine if cancellation succeeded.
       fetch(`${LOCAL_AGENT_HTTP_URL}/cancel-chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: missionId }),
+      }).then(response => {
+        if (response.ok) {
+          finalizeCancellation(missionId, 'Mission cancelled by user.')
+        } else {
+          finalizeCancellation(missionId, 'Mission cancellation failed — backend returned an error. The mission may still be running.')
+        }
       }).catch(() => {
-        // Best-effort: if both WS and HTTP fail, the local state update
-        // still marks the mission as cancelled in the UI
+        // Both WS and HTTP failed — finalize with a warning
+        finalizeCancellation(missionId, 'Mission cancelled by user (backend unreachable — cancellation may not have taken effect).')
       })
     }
 
+    // Transition to 'cancelling' immediately for visual feedback
     setMissions(prev => prev.map(m =>
       m.id === missionId ? {
         ...m,
-        status: 'failed',
-        currentStep: undefined,
+        status: 'cancelling',
+        currentStep: 'Cancelling mission...',
         updatedAt: new Date(),
         messages: [
           ...m.messages,
           {
             id: `msg-${Date.now()}`,
             role: 'system',
-            content: 'Mission cancelled by user.',
+            content: 'Cancellation requested — waiting for backend confirmation...',
             timestamp: new Date(),
           }
         ]
       } : m
     ))
-  }, [])
+
+    // Safety-net timeout: if the backend never acknowledges, finalize after CANCEL_ACK_TIMEOUT_MS
+    const timeoutHandle = setTimeout(() => {
+      cancelTimeouts.current.delete(missionId)
+      finalizeCancellation(missionId, 'Mission cancelled by user (backend did not confirm cancellation in time).')
+    }, CANCEL_ACK_TIMEOUT_MS)
+    cancelTimeouts.current.set(missionId, timeoutHandle)
+  }, [finalizeCancellation])
 
   // Send a follow-up message
   const sendMessage = useCallback((missionId: string, content: string) => {
@@ -1615,13 +1719,20 @@ Install the console locally with the KubeStellar Console agent to use AI mission
   // Get active mission object
   const activeMission = missions.find(m => m.id === activeMissionId) || null
 
-  // Cleanup on unmount — close WebSocket and cancel any pending reconnection timer (#3318)
+  // Cleanup on unmount — close WebSocket, cancel pending reconnection timer (#3318),
+  // and clear any pending cancel acknowledgment timeouts
   useEffect(() => {
+    const cancelTimeoutsRef = cancelTimeouts.current
     return () => {
       if (wsReconnectTimer.current) {
         clearTimeout(wsReconnectTimer.current)
         wsReconnectTimer.current = null
       }
+      // Clear all cancel acknowledgment timeouts
+      for (const timeout of cancelTimeoutsRef.values()) {
+        clearTimeout(timeout)
+      }
+      cancelTimeoutsRef.clear()
       wsRef.current?.close()
     }
   }, [])
