@@ -17,9 +17,9 @@ type sseClusterStreamConfig struct {
 	// demoKey is the JSON key used in the SSE event data for the items array
 	// (e.g. "pods", "issues", "deployments").
 	demoKey string
-	// namespace is the optional namespace filter. When set it is included in
-	// the cache key so that requests for different namespaces on the same
-	// cluster do not return stale cross-namespace data (#4151).
+	// namespace is the optional namespace filter. Always included in the cache
+	// key (even when empty) so that requests for different namespaces on the
+	// same cluster do not return stale cross-namespace data (#4151).
 	namespace string
 	// clusterTimeout is the per-cluster fetch timeout.
 	clusterTimeout time.Duration

@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -50,7 +51,7 @@ func (m *MultiClusterClient) ListGateways(ctx context.Context) (*v1alpha1.Gatewa
 
 	var combinedErr error
 	if len(errs) > 0 {
-		combinedErr = fmt.Errorf("gateway list errors: %v", errs)
+		combinedErr = fmt.Errorf("gateway list errors: %w", errors.Join(errs...))
 	}
 
 	return &v1alpha1.GatewayList{
@@ -185,7 +186,7 @@ func (m *MultiClusterClient) ListHTTPRoutes(ctx context.Context) (*v1alpha1.HTTP
 
 	var combinedErr error
 	if len(errs) > 0 {
-		combinedErr = fmt.Errorf("httproute list errors: %v", errs)
+		combinedErr = fmt.Errorf("httproute list errors: %w", errors.Join(errs...))
 	}
 
 	return &v1alpha1.HTTPRouteList{
