@@ -1,6 +1,7 @@
 import { ReactNode, Suspense, lazy, useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
+import { ROUTES } from '../../config/routes'
 import { Box, Wifi, WifiOff, X, Settings, Rocket, RotateCcw, Check, Loader2, RefreshCw, Plug } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Navbar } from './navbar/index'
@@ -461,7 +462,7 @@ export function Layout({ children }: LayoutProps) {
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <Link
-                to="/settings"
+                to={ROUTES.SETTINGS}
                 className="flex items-center gap-1 text-xs px-2 py-0.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded transition-colors whitespace-nowrap"
               >
                 <Settings className="w-3 h-3" />

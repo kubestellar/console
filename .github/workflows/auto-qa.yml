@@ -4661,9 +4661,15 @@ jobs:
                   ? ' — CONSOLE_AUTO PAT may be expired (check repo secrets)'
                   : e.status === 403
                   ? ' — token may lack repo scope or Copilot agent is not enabled'
+                  : e.status === 404
+                  ? ' — Copilot coding agent may not be enabled for this repo (check GitHub Copilot settings)'
                   : '';
                 core.warning(`Could not assign Copilot to #${issue.number}: ${e.message}${hint}`);
-                rejections.push({ issueNumber: issue.number, status: e.status || 'unknown', message: e.message });
+                // Only track as rejection if it's a rate-limit or auth issue (429/401/403).
+                // 404 means the Copilot agent endpoint doesn't exist — not a rate limit problem.
+                if (e.status !== 404) {
+                  rejections.push({ issueNumber: issue.number, status: e.status || 'unknown', message: e.message });
+                }
               }
               if (!check.bonus) {
                 created++;

@@ -1,5 +1,6 @@
 import { Bot, Settings } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { ROUTES } from '../../../config/routes'
 import { useMissions } from '../../../hooks/useMissions'
 import type { AIAction, ResourceContext } from '../types/modal.types'
 import { useTranslation } from 'react-i18next'
@@ -108,7 +109,7 @@ export function AIActionBar({
 
         {!isAgentConnected && (
           <Link
-            to="/settings"
+            to={ROUTES.SETTINGS}
             className="flex items-center gap-1 text-xs text-yellow-400 hover:text-yellow-300 transition-colors"
             title="Configure AI agent"
           >
@@ -150,7 +151,7 @@ export function AIActionBar({
       {!isAgentConnected && (
         <p className="mt-2 text-xs text-muted-foreground">
           Connect the local agent to enable AI features.{' '}
-          <Link to="/settings" className="text-purple-400 hover:text-purple-300">
+          <Link to={ROUTES.SETTINGS} className="text-purple-400 hover:text-purple-300">
             Configure →
           </Link>
         </p>
