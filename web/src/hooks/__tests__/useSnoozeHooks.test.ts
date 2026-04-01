@@ -324,6 +324,148 @@ describe('useSnoozedAlerts', () => {
     expect(result.current.snoozedCount).toBe(1)
     expect(result.current.snoozedAlerts[0].duration).toBe('24h')
   })
+
+  // --- NEW REGRESSION TESTS ---
+
+  it('SNOOZE_DURATIONS maps all keys to correct milliseconds', async () => {
+    const { SNOOZE_DURATIONS } = await importHook()
+    const FIVE_MINUTES_MS = 5 * 60 * 1000
+    const FIFTEEN_MINUTES_MS = 15 * 60 * 1000
+    const ONE_HOUR_MS = 60 * 60 * 1000
+    const FOUR_HOURS_MS = 4 * 60 * 60 * 1000
+    const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000
+
+    expect(SNOOZE_DURATIONS['5m']).toBe(FIVE_MINUTES_MS)
+    expect(SNOOZE_DURATIONS['15m']).toBe(FIFTEEN_MINUTES_MS)
+    expect(SNOOZE_DURATIONS['1h']).toBe(ONE_HOUR_MS)
+    expect(SNOOZE_DURATIONS['4h']).toBe(FOUR_HOURS_MS)
+    expect(SNOOZE_DURATIONS['24h']).toBe(TWENTY_FOUR_HOURS_MS)
+  })
+
+  it('snoozeAlert returns the created SnoozedAlert entry', async () => {
+    const { useSnoozedAlerts } = await importHook()
+    const { result } = renderHook(() => useSnoozedAlerts())
+
+    let created: unknown
+    act(() => {
+      created = result.current.snoozeAlert('alert-ret', '4h')
+    })
+
+    expect(created).toHaveProperty('alertId', 'alert-ret')
+    expect(created).toHaveProperty('duration', '4h')
+    expect(created).toHaveProperty('snoozedAt')
+    expect(created).toHaveProperty('expiresAt')
+  })
+
+  it('snoozeAlert computes correct expiresAt for each duration', async () => {
+    const { useSnoozedAlerts, SNOOZE_DURATIONS } = await importHook()
+    const { result } = renderHook(() => useSnoozedAlerts())
+
+    const durations = ['5m', '15m', '1h', '4h', '24h'] as const
+    for (const dur of durations) {
+      const before = Date.now()
+      let created: { snoozedAt: number; expiresAt: number } | undefined
+      act(() => {
+        created = result.current.snoozeAlert(`alert-dur-${dur}`, dur) as typeof created
+      })
+      const expectedExpiry = created!.snoozedAt + SNOOZE_DURATIONS[dur]
+      expect(created!.expiresAt).toBe(expectedExpiry)
+    }
+  })
+
+  it('getSnoozeRemaining returns 0 (not negative) for an expired alert', async () => {
+    const { useSnoozedAlerts } = await importHook()
+    const { result } = renderHook(() => useSnoozedAlerts())
+
+    act(() => {
+      result.current.snoozeAlert('alert-zero', '5m')
+    })
+
+    const TEN_MINUTES_MS = 10 * 60 * 1000
+    vi.advanceTimersByTime(TEN_MINUTES_MS)
+
+    // The alert may have been cleaned up by interval, but if still in array
+    // the remaining should be clamped to 0, never negative
+    const remaining = result.current.getSnoozeRemaining('alert-zero')
+    if (remaining !== null) {
+      expect(remaining).toBe(0)
+    }
+  })
+
+  it('clearAllSnoozed also clears localStorage', async () => {
+    const { useSnoozedAlerts } = await importHook()
+    const { result } = renderHook(() => useSnoozedAlerts())
+
+    act(() => {
+      result.current.snoozeAlert('a1', '1h')
+      result.current.snoozeAlert('a2', '4h')
+    })
+
+    act(() => {
+      result.current.clearAllSnoozed()
+    })
+
+    const stored = JSON.parse(localStorageMock.getItem(STORAGE_KEY)!)
+    expect(stored.snoozed).toEqual([])
+  })
+
+  it('unsnoozeAlert is a no-op for non-existent alert ID', async () => {
+    const { useSnoozedAlerts } = await importHook()
+    const { result } = renderHook(() => useSnoozedAlerts())
+
+    act(() => {
+      result.current.snoozeAlert('keep-me', '1h')
+    })
+    expect(result.current.snoozedCount).toBe(1)
+
+    // Unsnooze a non-existent alert — should not affect existing snoozes
+    act(() => {
+      result.current.unsnoozeAlert('does-not-exist')
+    })
+    expect(result.current.snoozedCount).toBe(1)
+    expect(result.current.isSnoozed('keep-me')).toBe(true)
+  })
+
+  it('snoozeMultiple replaces existing snoozes for the same IDs', async () => {
+    const { useSnoozedAlerts } = await importHook()
+    const { result } = renderHook(() => useSnoozedAlerts())
+
+    act(() => {
+      result.current.snoozeAlert('overlap-1', '5m')
+      result.current.snoozeAlert('overlap-2', '5m')
+    })
+    expect(result.current.snoozedCount).toBe(2)
+
+    act(() => {
+      result.current.snoozeMultiple(['overlap-1', 'overlap-2', 'overlap-3'], '24h')
+    })
+    // All three should exist, no duplicates for overlap-1 and overlap-2
+    expect(result.current.snoozedCount).toBe(3)
+    // Verify the duration was updated
+    const entry = result.current.getSnoozedAlert('overlap-1')
+    expect(entry).not.toBeNull()
+    expect(entry!.duration).toBe('24h')
+  })
+
+  it('corrupted localStorage returns empty state gracefully', async () => {
+    localStorageMock.setItem(STORAGE_KEY, '{this is not valid json!!!')
+
+    const { useSnoozedAlerts } = await importHook()
+    const { result } = renderHook(() => useSnoozedAlerts())
+
+    expect(result.current.snoozedAlerts).toEqual([])
+    expect(result.current.snoozedCount).toBe(0)
+  })
+
+  it('localStorage with missing snoozed array recovers gracefully', async () => {
+    localStorageMock.setItem(STORAGE_KEY, JSON.stringify({}))
+
+    const { useSnoozedAlerts } = await importHook()
+    const { result } = renderHook(() => useSnoozedAlerts())
+
+    expect(result.current.snoozedAlerts).toEqual([])
+    expect(result.current.snoozedCount).toBe(0)
+  })
 })
 
 describe('formatSnoozeRemaining', () => {
@@ -346,6 +488,17 @@ describe('formatSnoozeRemaining', () => {
   it('returns <1m for very small values', async () => {
     const { formatSnoozeRemaining } = await import('../useSnoozedAlerts')
     expect(formatSnoozeRemaining(500)).toBe('<1m')
+  })
+
+  it('returns <1m for exactly 0ms', async () => {
+    const { formatSnoozeRemaining } = await import('../useSnoozedAlerts')
+    expect(formatSnoozeRemaining(0)).toBe('<1m')
+  })
+
+  it('formats exactly 1 hour as "1h 0m"', async () => {
+    const { formatSnoozeRemaining } = await import('../useSnoozedAlerts')
+    const ONE_HOUR_MS = 60 * 60 * 1000
+    expect(formatSnoozeRemaining(ONE_HOUR_MS)).toBe('1h 0m')
   })
 })
 
@@ -485,6 +638,63 @@ describe('useSnoozedCards', () => {
     expect(expired).toHaveLength(1)
     expect(expired[0].originalCardId).toBe('card-1')
   })
+
+  // --- NEW REGRESSION TESTS ---
+
+  it('unsnoozeSwap returns undefined for non-existent ID', async () => {
+    const { useSnoozedCards } = await importHook()
+    const { result } = renderHook(() => useSnoozedCards())
+
+    let returned: unknown
+    act(() => {
+      returned = result.current.unsnoozeSwap('nonexistent-id')
+    })
+
+    expect(returned).toBeUndefined()
+  })
+
+  it('snoozeSwap uses default 1-hour duration when none specified', async () => {
+    const { useSnoozedCards } = await importHook()
+    const { result } = renderHook(() => useSnoozedCards())
+
+    let created: { snoozedAt: Date; snoozedUntil: Date } | undefined
+    act(() => {
+      created = result.current.snoozeSwap(swapInput) as typeof created
+    })
+
+    const ONE_HOUR_MS = 60 * 60 * 1000
+    const diff = created!.snoozedUntil.getTime() - created!.snoozedAt.getTime()
+    expect(diff).toBe(ONE_HOUR_MS)
+  })
+
+  it('multiple swaps with different durations each expire independently', async () => {
+    const { useSnoozedCards } = await importHook()
+    const { result } = renderHook(() => useSnoozedCards())
+
+    const SHORT_MS = 2000
+    const LONG_MS = 10000
+    act(() => {
+      result.current.snoozeSwap(
+        { ...swapInput, originalCardId: 'short-card' },
+        SHORT_MS
+      )
+      result.current.snoozeSwap(
+        { ...swapInput, originalCardId: 'long-card' },
+        LONG_MS
+      )
+    })
+
+    // After short expires but before long expires
+    const AFTER_SHORT_MS = 3000
+    vi.advanceTimersByTime(AFTER_SHORT_MS)
+
+    const active = result.current.getActiveSwaps()
+    const expired = result.current.getExpiredSwaps()
+    expect(active).toHaveLength(1)
+    expect(active[0].originalCardId).toBe('long-card')
+    expect(expired).toHaveLength(1)
+    expect(expired[0].originalCardId).toBe('short-card')
+  })
 })
 
 describe('formatTimeRemaining (cards)', () => {
@@ -522,6 +732,21 @@ describe('formatTimeRemaining (cards)', () => {
     const FORTY_FIVE_MINUTES_MS = 45 * 60 * 1000
     const future = new Date(Date.now() + FORTY_FIVE_MINUTES_MS)
     expect(formatTimeRemaining(future)).toBe('45m')
+  })
+
+  // --- NEW REGRESSION TESTS ---
+
+  it('returns "Expired" for a date exactly at now', async () => {
+    const { formatTimeRemaining } = await import('../useSnoozedCards')
+    const now = new Date(Date.now())
+    expect(formatTimeRemaining(now)).toBe('Expired')
+  })
+
+  it('formats exactly 1 day as "1d 0h"', async () => {
+    const { formatTimeRemaining } = await import('../useSnoozedCards')
+    const ONE_DAY_MS = 24 * 60 * 60 * 1000
+    const future = new Date(Date.now() + ONE_DAY_MS)
+    expect(formatTimeRemaining(future)).toBe('1d 0h')
   })
 })
 
@@ -790,6 +1015,59 @@ describe('useSnoozedMissions', () => {
     expect(remaining).not.toBeNull()
     expect(remaining!).toBeGreaterThan(0)
   })
+
+  // --- NEW REGRESSION TESTS ---
+
+  it('getSnoozeRemaining returns 0 (not negative) after expiry', async () => {
+    const { useSnoozedMissions } = await importHook()
+    const { result } = renderHook(() => useSnoozedMissions())
+
+    const SHORT_SNOOZE_MS = 3000
+    act(() => {
+      result.current.snoozeMission(makeMissionSuggestion('m-zero'), SHORT_SNOOZE_MS)
+    })
+
+    const EXTRA_MS = 2000
+    vi.advanceTimersByTime(SHORT_SNOOZE_MS + EXTRA_MS)
+
+    const remaining = result.current.getSnoozeRemaining('m-zero')
+    if (remaining !== null) {
+      expect(remaining).toBe(0)
+    }
+  })
+
+  it('dismiss and snooze are independent for the same suggestion ID', async () => {
+    const { useSnoozedMissions } = await importHook()
+    const { result } = renderHook(() => useSnoozedMissions())
+    const suggestion = makeMissionSuggestion('m-both')
+
+    act(() => {
+      result.current.dismissMission('m-both')
+      result.current.snoozeMission(suggestion)
+    })
+
+    // Both should be true simultaneously
+    expect(result.current.isDismissed('m-both')).toBe(true)
+    expect(result.current.isSnoozed('m-both')).toBe(true)
+
+    // Clearing snoozed should not affect dismissed
+    act(() => {
+      result.current.clearAllSnoozed()
+    })
+    expect(result.current.isSnoozed('m-both')).toBe(false)
+    expect(result.current.isDismissed('m-both')).toBe(true)
+  })
+
+  it('unsnoozeMission returns undefined for non-existent ID', async () => {
+    const { useSnoozedMissions } = await importHook()
+    const { result } = renderHook(() => useSnoozedMissions())
+
+    let returned: unknown
+    act(() => {
+      returned = result.current.unsnoozeMission('nonexistent-snoozed-id')
+    })
+    expect(returned).toBeUndefined()
+  })
 })
 
 describe('formatTimeRemaining (missions)', () => {
@@ -807,6 +1085,19 @@ describe('formatTimeRemaining (missions)', () => {
     const { formatTimeRemaining } = await import('../useSnoozedMissions')
     const TEN_MINUTES_MS = 10 * 60 * 1000
     expect(formatTimeRemaining(TEN_MINUTES_MS)).toBe('10m')
+  })
+
+  // --- NEW REGRESSION TESTS ---
+
+  it('formats 0ms as "0m"', async () => {
+    const { formatTimeRemaining } = await import('../useSnoozedMissions')
+    expect(formatTimeRemaining(0)).toBe('0m')
+  })
+
+  it('formats exactly 1 hour as "1h 0m"', async () => {
+    const { formatTimeRemaining } = await import('../useSnoozedMissions')
+    const ONE_HOUR_MS = 60 * 60 * 1000
+    expect(formatTimeRemaining(ONE_HOUR_MS)).toBe('1h 0m')
   })
 })
 
@@ -978,6 +1269,66 @@ describe('useSnoozedRecommendations', () => {
     // No new localStorage.setItem calls from this hook
     expect(localStorageMock.setItem.mock.calls.length).toBe(callsBefore)
   })
+
+  // --- NEW REGRESSION TESTS ---
+
+  it('unsnooozeRecommendation returns undefined for non-existent ID', async () => {
+    const { useSnoozedRecommendations } = await importHook()
+    const { result } = renderHook(() => useSnoozedRecommendations())
+
+    let returned: unknown
+    act(() => {
+      returned = result.current.unsnooozeRecommendation('no-such-id')
+    })
+    expect(returned).toBeUndefined()
+  })
+
+  it('can re-snooze a recommendation after dismissing its snoozed entry', async () => {
+    const { useSnoozedRecommendations } = await importHook()
+    const { result } = renderHook(() => useSnoozedRecommendations())
+    const rec = makeCardRecommendation('rec-resnooze')
+
+    let snoozedId: string = ''
+    act(() => {
+      const created = result.current.snoozeRecommendation(rec)
+      snoozedId = created!.id
+    })
+    expect(result.current.snoozedRecommendations).toHaveLength(1)
+
+    // Dismiss the snoozed entry (removes from snoozed list)
+    act(() => {
+      result.current.dismissSnoozedRecommendation(snoozedId)
+    })
+    expect(result.current.snoozedRecommendations).toHaveLength(0)
+
+    // Should be able to snooze again (not return null like a duplicate)
+    let second: unknown
+    act(() => {
+      second = result.current.snoozeRecommendation(rec)
+    })
+    expect(second).not.toBeNull()
+    expect(result.current.snoozedRecommendations).toHaveLength(1)
+  })
+
+  it('dismissRecommendation is independent of snoozed state', async () => {
+    const { useSnoozedRecommendations } = await importHook()
+    const { result } = renderHook(() => useSnoozedRecommendations())
+    const rec = makeCardRecommendation('rec-indep')
+
+    // Dismiss without snoozing first
+    act(() => {
+      result.current.dismissRecommendation('rec-indep')
+    })
+    expect(result.current.isDismissed('rec-indep')).toBe(true)
+    expect(result.current.isSnoozed('rec-indep')).toBe(false)
+
+    // Snooze after dismissing — both should hold
+    act(() => {
+      result.current.snoozeRecommendation(rec)
+    })
+    expect(result.current.isDismissed('rec-indep')).toBe(true)
+    expect(result.current.isSnoozed('rec-indep')).toBe(true)
+  })
 })
 
 describe('formatElapsedTime', () => {
@@ -1022,5 +1373,20 @@ describe('formatElapsedTime', () => {
     const ONE_DAY_MS = 24 * 60 * 60 * 1000
     const past = new Date(Date.now() - ONE_DAY_MS)
     expect(formatElapsedTime(past)).toBe('1 day')
+  })
+
+  // --- NEW REGRESSION TESTS ---
+
+  it('returns "1m" at exactly 60 seconds boundary', async () => {
+    const { formatElapsedTime } = await import('../useSnoozedRecommendations')
+    const SIXTY_SECONDS_MS = 60 * 1000
+    const past = new Date(Date.now() - SIXTY_SECONDS_MS)
+    expect(formatElapsedTime(past)).toBe('1m')
+  })
+
+  it('returns "now" for a date exactly at current time', async () => {
+    const { formatElapsedTime } = await import('../useSnoozedRecommendations')
+    const now = new Date(Date.now())
+    expect(formatElapsedTime(now)).toBe('now')
   })
 })

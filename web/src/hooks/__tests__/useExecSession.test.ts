@@ -434,4 +434,104 @@ describe('useExecSession', () => {
     expect(result.current.status).toBe('disconnected')
     expect(result.current.reconnectAttempt).toBe(0)
   })
+
+  // --- Additional regression tests ---
+
+  // --- Non-zero exit code ---
+  it('passes non-zero exit code to exit callback', () => {
+    const exitCb = vi.fn()
+    const { result } = renderHook(() => useExecSession())
+    act(() => { result.current.onExit(exitCb) })
+    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    act(() => { mockWs.triggerOpen() })
+    act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
+    act(() => { mockWs.triggerMessage({ type: 'exit', exitCode: 137 }) })
+    expect(exitCb).toHaveBeenCalledWith(137)
+    expect(result.current.status).toBe('disconnected')
+  })
+
+  // --- resize is a no-op when not connected ---
+  it('resize is a no-op when WebSocket is not open', () => {
+    const { result } = renderHook(() => useExecSession())
+    act(() => { result.current.resize(120, 40) })
+    expect(mockWs.sentMessages.length).toBe(0)
+  })
+
+  // --- Error clears on new connect ---
+  it('clears error state when a new connection is initiated', () => {
+    const { result } = renderHook(() => useExecSession())
+    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    act(() => { mockWs.triggerOpen() })
+    act(() => { mockWs.triggerMessage({ type: 'error', data: 'Something went wrong' }) })
+    expect(result.current.status).toBe('error')
+    expect(result.current.error).toBe('Something went wrong')
+
+    // Reconnect clears the error
+    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    expect(result.current.error).toBeNull()
+    expect(result.current.status).toBe('connecting')
+  })
+
+  // --- exec_started resets reconnect counter ---
+  it('resets reconnect attempt on successful exec_started', () => {
+    const { result } = renderHook(() => useExecSession())
+    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    act(() => { mockWs.triggerOpen() })
+    act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
+    expect(result.current.reconnectAttempt).toBe(0)
+  })
+
+  // --- Disconnect from disconnected state is a no-op ---
+  it('disconnect from disconnected state does not throw', () => {
+    const { result } = renderHook(() => useExecSession())
+    expect(result.current.status).toBe('disconnected')
+    act(() => { result.current.disconnect() })
+    expect(result.current.status).toBe('disconnected')
+  })
+
+  // --- Status callback receives error info ---
+  it('statusChange callback receives error string', () => {
+    const statusCb = vi.fn()
+    const { result } = renderHook(() => useExecSession())
+    act(() => { result.current.onStatusChange(statusCb) })
+    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    act(() => { mockWs.triggerOpen() })
+    act(() => { mockWs.triggerMessage({ type: 'error', data: 'Pod not found' }) })
+    expect(statusCb).toHaveBeenCalledWith('error', 'Pod not found')
+  })
+
+  // --- Multiple data messages accumulated ---
+  it('receives multiple sequential data messages', () => {
+    const dataCb = vi.fn()
+    const { result } = renderHook(() => useExecSession())
+    act(() => { result.current.onData(dataCb) })
+    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    act(() => { mockWs.triggerOpen() })
+    act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
+    act(() => { mockWs.triggerMessage({ type: 'stdout', data: 'line1\n' }) })
+    act(() => { mockWs.triggerMessage({ type: 'stdout', data: 'line2\n' }) })
+    act(() => { mockWs.triggerMessage({ type: 'stderr', data: 'warn\n' }) })
+    expect(dataCb).toHaveBeenCalledTimes(3)
+    expect(dataCb).toHaveBeenNthCalledWith(1, 'line1\n')
+    expect(dataCb).toHaveBeenNthCalledWith(2, 'line2\n')
+    expect(dataCb).toHaveBeenNthCalledWith(3, 'warn\n')
+  })
+
+  // --- Connect includes all config fields in exec_init ---
+  it('sends namespace and container in exec_init message', () => {
+    const config: ExecSessionConfig = {
+      cluster: 'staging',
+      namespace: 'kube-system',
+      pod: 'coredns-abc123',
+      container: 'coredns',
+    }
+    const { result } = renderHook(() => useExecSession())
+    act(() => { result.current.connect(config) })
+    act(() => { mockWs.triggerOpen() })
+
+    const init = JSON.parse(mockWs.sentMessages[1])
+    expect(init.namespace).toBe('kube-system')
+    expect(init.container).toBe('coredns')
+    expect(init.cluster).toBe('staging')
+  })
 })

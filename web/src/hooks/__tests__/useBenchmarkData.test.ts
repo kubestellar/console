@@ -383,4 +383,185 @@ describe('useCachedBenchmarkReports', () => {
 
     await expect(latestFetcher!()).rejects.toThrow('BENCHMARK_UNAVAILABLE')
   })
+
+  // ---- Additional regression tests ----
+
+  // ---- Cache fetcher throws on non-ok non-503 response ----
+  it('cache fetcher throws on non-ok non-503 response', async () => {
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: false,
+      status: 500,
+      body: null,
+    } as Response)
+
+    const { useCachedBenchmarkReports } = await import('../useBenchmarkData')
+    renderHook(() => useCachedBenchmarkReports())
+
+    expect(latestFetcher).not.toBeNull()
+
+    vi.mocked(global.fetch).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: () => Promise.resolve({}),
+    } as Response)
+
+    await expect(latestFetcher!()).rejects.toThrow('Benchmark API error: 500')
+  })
+
+  // ---- Cache fetcher returns empty array when reports is missing ----
+  it('cache fetcher returns empty array when reports field is missing', async () => {
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: false,
+      status: 500,
+      body: null,
+    } as Response)
+
+    const { useCachedBenchmarkReports } = await import('../useBenchmarkData')
+    renderHook(() => useCachedBenchmarkReports())
+
+    expect(latestFetcher).not.toBeNull()
+
+    vi.mocked(global.fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({}),
+    } as Response)
+
+    const data = await latestFetcher!()
+    expect(data).toEqual([])
+  })
+
+  // ---- streamProgress reflects report count ----
+  it('streamProgress starts at 0', async () => {
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: false,
+      status: 500,
+      body: null,
+    } as Response)
+
+    const { useCachedBenchmarkReports } = await import('../useBenchmarkData')
+    const { result } = renderHook(() => useCachedBenchmarkReports())
+    expect(result.current.streamProgress).toBe(0)
+  })
+
+  // ---- isDemoFallback is false when streamed data exists ----
+  it('isDemoFallback is false when streamed data exists even if cache says demo', async () => {
+    const batchData = [makeReport('stream-1')]
+    const stream = makeSSEStream([
+      sseEvent('batch', batchData),
+      sseEvent('done', {}),
+    ])
+
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      body: stream,
+    } as unknown as Response)
+
+    mockCacheResult.mockReturnValue(defaultCacheResult({
+      isDemoFallback: true,
+      isLoading: false,
+    }))
+
+    const { useCachedBenchmarkReports } = await import('../useBenchmarkData')
+    const { result } = renderHook(() => useCachedBenchmarkReports())
+
+    await waitFor(() => {
+      expect(result.current.data.length).toBe(1)
+    })
+
+    // When we have streamed data, isDemoFallback should be false
+    expect(result.current.isDemoFallback).toBe(false)
+  })
+
+  // ---- getBenchmarkStreamSince returns current since ----
+  it('getBenchmarkStreamSince returns current since value', async () => {
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: false,
+      status: 500,
+      body: null,
+    } as Response)
+
+    const { getBenchmarkStreamSince } = await import('../useBenchmarkData')
+    const since = getBenchmarkStreamSince()
+    expect(typeof since).toBe('string')
+  })
+
+  // ---- resetBenchmarkStream re-starts stream ----
+  it('resetBenchmarkStream clears data and starts new stream', async () => {
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: false,
+      status: 500,
+      body: null,
+    } as Response)
+
+    const { resetBenchmarkStream, getBenchmarkStreamSince } = await import('../useBenchmarkData')
+
+    // Reset with a new since value
+    resetBenchmarkStream('30d')
+
+    // The since should be updated
+    expect(getBenchmarkStreamSince()).toBe('30d')
+
+    // A new fetch should have been called
+    expect(global.fetch).toHaveBeenCalled()
+    const lastCall = vi.mocked(global.fetch).mock.calls[vi.mocked(global.fetch).mock.calls.length - 1]
+    const url = lastCall[0] as string
+    expect(url).toContain('since=30d')
+  })
+
+  // ---- Multiple batch events accumulate reports ----
+  it('accumulates reports from multiple batch events', async () => {
+    const batch1 = [makeReport('batch1-1'), makeReport('batch1-2')]
+    const batch2 = [makeReport('batch2-1')]
+    const stream = makeSSEStream([
+      sseEvent('batch', batch1),
+      sseEvent('batch', batch2),
+      sseEvent('done', {}),
+    ])
+
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      body: stream,
+    } as unknown as Response)
+
+    const { useCachedBenchmarkReports } = await import('../useBenchmarkData')
+    const { result } = renderHook(() => useCachedBenchmarkReports())
+
+    await waitFor(() => {
+      expect(result.current.data.length).toBe(3)
+    })
+  })
+
+  // ---- isRefreshing passthrough ----
+  it('passes through isRefreshing from cache result', async () => {
+    mockCacheResult.mockReturnValue(defaultCacheResult({ isRefreshing: true }))
+
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: false,
+      status: 500,
+      body: null,
+    } as Response)
+
+    const { useCachedBenchmarkReports } = await import('../useBenchmarkData')
+    const { result } = renderHook(() => useCachedBenchmarkReports())
+
+    expect(result.current.isRefreshing).toBe(true)
+  })
+
+  // ---- isFailed passthrough ----
+  it('passes through isFailed from cache result', async () => {
+    mockCacheResult.mockReturnValue(defaultCacheResult({ isFailed: true, consecutiveFailures: 2 }))
+
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: false,
+      status: 500,
+      body: null,
+    } as Response)
+
+    const { useCachedBenchmarkReports } = await import('../useBenchmarkData')
+    const { result } = renderHook(() => useCachedBenchmarkReports())
+
+    expect(result.current.isFailed).toBe(true)
+    expect(result.current.consecutiveFailures).toBe(2)
+  })
 })
