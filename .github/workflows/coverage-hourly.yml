@@ -1,0 +1,115 @@
+name: Hourly Coverage Suite
+
+# Runs full test suite with coverage every hour and on manual trigger.
+# Updates the README coverage badge via gist.
+
+on:
+  schedule:
+    - cron: '15 * * * *'  # Every hour at :15
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+  GIST_ID: 'b9a9ae8469f1897a22d5a40629bc1e82'
+
+jobs:
+  full-coverage:
+    if: github.repository == 'kubestellar/console'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Run full test suite with coverage
+        working-directory: web
+        run: npx vitest run --coverage
+        continue-on-error: true
+
+      - name: Extract coverage percentage
+        id: cov
+        working-directory: web
+        run: |
+          SUMMARY="coverage/coverage-summary.json"
+          if [ ! -f "$SUMMARY" ]; then
+            echo "pct=0" >> "$GITHUB_OUTPUT"
+            echo "::warning::No coverage summary produced"
+            exit 0
+          fi
+
+          PCT=$(jq -r '.total.lines.pct // 0' "$SUMMARY")
+          STMTS=$(jq -r '.total.statements.pct // 0' "$SUMMARY")
+          BRANCHES=$(jq -r '.total.branches.pct // 0' "$SUMMARY")
+          FUNCS=$(jq -r '.total.functions.pct // 0' "$SUMMARY")
+
+          echo "pct=${PCT}" >> "$GITHUB_OUTPUT"
+          echo "stmts=${STMTS}" >> "$GITHUB_OUTPUT"
+          echo "branches=${BRANCHES}" >> "$GITHUB_OUTPUT"
+          echo "funcs=${FUNCS}" >> "$GITHUB_OUTPUT"
+
+          echo "## Coverage Summary"
+          echo "| Metric | Percentage |"
+          echo "|--------|-----------|"
+          echo "| Lines | ${PCT}% |"
+          echo "| Statements | ${STMTS}% |"
+          echo "| Branches | ${BRANCHES}% |"
+          echo "| Functions | ${FUNCS}% |"
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-hourly-${{ github.run_number }}
+          path: web/coverage/coverage-summary.json
+          retention-days: 30
+
+      - name: Update coverage badge gist
+        uses: actions/github-script@v7
+        env:
+          GIST_ID: ${{ env.GIST_ID }}
+          COVERAGE_PCT: ${{ steps.cov.outputs.pct }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pct = Math.round(parseFloat(process.env.COVERAGE_PCT) || 0);
+
+            const EXCELLENT = 80;
+            const GOOD = 60;
+            const OK = 40;
+            let color = 'red';
+            if (pct >= EXCELLENT) color = 'brightgreen';
+            else if (pct >= GOOD) color = 'green';
+            else if (pct >= OK) color = 'yellow';
+            else color = 'orange';
+
+            const badge = {
+              schemaVersion: 1,
+              label: 'coverage',
+              message: `${pct}%`,
+              color,
+            };
+
+            try {
+              await github.rest.gists.update({
+                gist_id: process.env.GIST_ID,
+                files: { 'coverage-badge.json': { content: JSON.stringify(badge) } },
+              });
+              console.log(`Badge updated: ${pct}% (${color})`);
+            } catch (err) {
+              console.log(`Failed to update gist: ${err.message}`);
+            }
