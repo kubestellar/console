@@ -619,4 +619,665 @@ describe('useClusterHealth', () => {
     expect(result.current.health?.nodeCount).toBe(1)
     expect(result.current.error).toBeNull()
   })
+
+  it('resets health state when cluster prop changes', async () => {
+    const healthA: ClusterHealth = {
+      cluster: 'cluster-a',
+      healthy: true,
+      reachable: true,
+      nodeCount: 5,
+      readyNodes: 5,
+      podCount: 40,
+    }
+    const healthB: ClusterHealth = {
+      cluster: 'cluster-b',
+      healthy: true,
+      reachable: true,
+      nodeCount: 10,
+      readyNodes: 10,
+      podCount: 80,
+    }
+    mockFetchSingleClusterHealth
+      .mockResolvedValueOnce(healthA)
+      .mockResolvedValueOnce(healthB)
+
+    const { result, rerender } = renderHook(
+      ({ cluster }) => useClusterHealth(cluster),
+      { initialProps: { cluster: 'cluster-a' } },
+    )
+    await waitFor(() => expect(result.current.health?.cluster).toBe('cluster-a'))
+    expect(result.current.health?.nodeCount).toBe(5)
+
+    // Change to a different cluster
+    rerender({ cluster: 'cluster-b' })
+    await waitFor(() => expect(result.current.health?.cluster).toBe('cluster-b'))
+    expect(result.current.health?.nodeCount).toBe(10)
+  })
+
+  it('handles undefined cluster gracefully', async () => {
+    const { result } = renderHook(() => useClusterHealth(undefined))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.health).toBeNull()
+    expect(result.current.error).toBeNull()
+    // fetchSingleClusterHealth should NOT be called for undefined cluster
+    expect(mockFetchSingleClusterHealth).not.toHaveBeenCalled()
+  })
+
+  it('uses cached cluster data when available on mount', async () => {
+    // Populate the shared cluster cache with a cluster that has nodeCount
+    const cachedClusters: ClusterInfo[] = [
+      {
+        name: 'cached-cluster',
+        context: 'cached-ctx',
+        server: 'https://cached.example.com',
+        healthy: true,
+        reachable: true,
+        nodeCount: 7,
+        podCount: 55,
+        cpuCores: 32,
+        memoryGB: 128,
+        storageGB: 500,
+      },
+    ]
+    await act(async () => {
+      updateClusterCache({ clusters: cachedClusters, isLoading: false })
+    })
+
+    // fetchSingleClusterHealth never resolves - we want to test the cached path
+    mockFetchSingleClusterHealth.mockReturnValue(new Promise(() => {}))
+
+    const { result } = renderHook(() => useClusterHealth('cached-cluster'))
+    // Should show cached data immediately (before fetch resolves)
+    await waitFor(() => expect(result.current.health).not.toBeNull())
+    expect(result.current.health?.cluster).toBe('cached-cluster')
+    expect(result.current.health?.nodeCount).toBe(7)
+    expect(result.current.health?.podCount).toBe(55)
+  })
+
+  it('marks unreachable immediately when agent reports reachable: false', async () => {
+    const unreachableData: ClusterHealth = {
+      cluster: CLUSTER,
+      healthy: false,
+      reachable: false,
+      nodeCount: 0,
+      readyNodes: 0,
+      podCount: 0,
+      errorMessage: 'Connection refused',
+    }
+    mockFetchSingleClusterHealth.mockResolvedValue(unreachableData)
+
+    const { result } = renderHook(() => useClusterHealth(CLUSTER))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // Agent says reachable: false - trust it immediately, no 5 minute delay
+    expect(result.current.health?.reachable).toBe(false)
+    expect(result.current.health?.healthy).toBe(false)
+    expect(result.current.error).toBeNull()
+  })
+
+  it('clears failure tracking on successful fetch after previous failures', async () => {
+    // Record an initial failure
+    recordClusterFailure(CLUSTER)
+
+    const goodHealth: ClusterHealth = {
+      cluster: CLUSTER,
+      healthy: true,
+      reachable: true,
+      nodeCount: 3,
+      readyNodes: 3,
+      podCount: 15,
+    }
+    mockFetchSingleClusterHealth.mockResolvedValue(goodHealth)
+
+    const { result } = renderHook(() => useClusterHealth(CLUSTER))
+    await waitFor(() => expect(result.current.health).toEqual(goodHealth))
+
+    // After successful fetch, failure tracking must be cleared
+    expect(shouldMarkOffline(CLUSTER)).toBe(false)
+  })
+
+  it('falls back to demo health on exception after offline threshold', async () => {
+    vi.useFakeTimers()
+
+    // First call: exception
+    mockFetchSingleClusterHealth.mockRejectedValue(new Error('Network timeout'))
+
+    const { result } = renderHook(() => useClusterHealth(CLUSTER))
+    await act(() => Promise.resolve())
+
+    // Advance past the 5-minute offline threshold
+    vi.advanceTimersByTime(OFFLINE_THRESHOLD_MS + 1)
+
+    // Second call: also exception
+    mockFetchSingleClusterHealth.mockRejectedValue(new Error('Still failing'))
+    await act(async () => { await result.current.refetch() })
+
+    // After threshold, should set error and fall back to demo health
+    expect(result.current.error).toBe('Failed to fetch cluster health')
+    expect(result.current.health).not.toBeNull()
+    expect(result.current.health?.cluster).toBe(CLUSTER)
+  })
+
+  it('preserves previous health on transient exception (before offline threshold)', async () => {
+    const goodHealth: ClusterHealth = {
+      cluster: CLUSTER,
+      healthy: true,
+      reachable: true,
+      nodeCount: 4,
+      readyNodes: 4,
+      podCount: 30,
+    }
+
+    // First fetch succeeds
+    mockFetchSingleClusterHealth.mockResolvedValueOnce(goodHealth)
+    const { result } = renderHook(() => useClusterHealth(CLUSTER))
+    await waitFor(() => expect(result.current.health).toEqual(goodHealth))
+
+    // Second fetch throws (transient error, before 5-minute threshold)
+    mockFetchSingleClusterHealth.mockRejectedValueOnce(new Error('transient'))
+    await act(async () => { await result.current.refetch() })
+
+    // Should still show previous good health, no error
+    expect(result.current.health).toEqual(goodHealth)
+    expect(result.current.error).toBeNull()
+  })
+
+  it('returns default demo metrics for unknown cluster names', async () => {
+    mockIsDemoMode.mockReturnValue(true)
+
+    const { result } = renderHook(() => useClusterHealth('unknown-cluster'))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // Unknown clusters get default demo metrics: nodeCount=3, podCount=45
+    expect(result.current.health?.cluster).toBe('unknown-cluster')
+    expect(result.current.health?.nodeCount).toBe(3)
+    expect(result.current.health?.podCount).toBe(45)
+    expect(result.current.health?.healthy).toBe(true)
+  })
+
+  it('getDemoHealth marks alibaba-ack-shanghai as unhealthy', async () => {
+    mockIsDemoMode.mockReturnValue(true)
+
+    const { result } = renderHook(() => useClusterHealth('alibaba-ack-shanghai'))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.health?.cluster).toBe('alibaba-ack-shanghai')
+    expect(result.current.health?.healthy).toBe(false)
+    expect(result.current.health?.nodeCount).toBe(8)
+  })
+
+  it('passes kubectl context from cluster cache to fetchSingleClusterHealth', async () => {
+    // Populate cache with a cluster that has a different context than name
+    const clusters: ClusterInfo[] = [
+      {
+        name: 'my-cluster',
+        context: 'arn:aws:eks:us-east-1:123456:cluster/my-cluster',
+        server: 'https://eks.amazonaws.com',
+        nodeCount: 2,
+      },
+    ]
+    await act(async () => {
+      updateClusterCache({ clusters, isLoading: false })
+    })
+
+    mockFetchSingleClusterHealth.mockResolvedValue({
+      cluster: 'my-cluster',
+      healthy: true,
+      reachable: true,
+      nodeCount: 2,
+      readyNodes: 2,
+      podCount: 10,
+    })
+
+    renderHook(() => useClusterHealth('my-cluster'))
+    await waitFor(() => expect(mockFetchSingleClusterHealth).toHaveBeenCalled())
+
+    // Should pass the context (not the name) as the kubectlContext arg
+    expect(mockFetchSingleClusterHealth).toHaveBeenCalledWith(
+      'my-cluster',
+      'arn:aws:eks:us-east-1:123456:cluster/my-cluster',
+    )
+  })
+})
+
+// ===========================================================================
+// deduplicateClustersByServer — additional regression cases
+// ===========================================================================
+describe('deduplicateClustersByServer — advanced', () => {
+  it('handles null/undefined clusters array gracefully', () => {
+    // deduplicateClustersByServer guards with (clusters || [])
+    const result = deduplicateClustersByServer(null as unknown as ClusterInfo[])
+    expect(result).toEqual([])
+  })
+
+  it('handles empty clusters array', () => {
+    const result = deduplicateClustersByServer([])
+    expect(result).toEqual([])
+  })
+
+  it('merges best metrics from multiple clusters sharing same server', () => {
+    const clusters: ClusterInfo[] = [
+      {
+        name: 'context-a',
+        context: 'ctx-a',
+        server: 'https://api.shared.example.com:6443',
+        cpuCores: 16,
+        memoryGB: 64,
+        nodeCount: 3,
+        podCount: 20,
+      },
+      {
+        name: 'default/api-shared.example.com:6443/kube:admin',
+        context: 'ctx-b',
+        server: 'https://api.shared.example.com:6443',
+        cpuCores: undefined,
+        nodeCount: undefined,
+        podCount: 50, // higher pod count
+        cpuRequestsCores: 8,
+      },
+    ]
+    const result = deduplicateClustersByServer(clusters)
+    expect(result).toHaveLength(1)
+    // Should pick 'context-a' as primary (shorter, user-friendly)
+    expect(result[0].name).toBe('context-a')
+    // Should merge best metrics: podCount=50 is higher than 20
+    expect(result[0].podCount).toBe(50)
+    // Should keep cpuCores from the cluster that had them
+    expect(result[0].cpuCores).toBe(16)
+    // Should pick up cpuRequestsCores from the other cluster
+    expect(result[0].cpuRequestsCores).toBe(8)
+  })
+
+  it('promotes healthy/reachable status from any duplicate', () => {
+    const clusters: ClusterInfo[] = [
+      {
+        name: 'unhealthy-ctx',
+        context: 'unhealthy-ctx',
+        server: 'https://api.test.com',
+        healthy: false,
+        reachable: false,
+      },
+      {
+        name: 'healthy-ctx',
+        context: 'healthy-ctx',
+        server: 'https://api.test.com',
+        healthy: true,
+        reachable: true,
+      },
+    ]
+    const result = deduplicateClustersByServer(clusters)
+    expect(result).toHaveLength(1)
+    // If ANY duplicate is healthy/reachable, the merged result should be too
+    expect(result[0].healthy).toBe(true)
+    expect(result[0].reachable).toBe(true)
+  })
+
+  it('prefers isCurrent context as primary when names are similar length', () => {
+    const clusters: ClusterInfo[] = [
+      { name: 'cluster-a', context: 'cluster-a', server: 'https://same.example.com', isCurrent: false },
+      { name: 'cluster-b', context: 'cluster-b', server: 'https://same.example.com', isCurrent: true },
+    ]
+    const result = deduplicateClustersByServer(clusters)
+    expect(result).toHaveLength(1)
+    expect(result[0].name).toBe('cluster-b')
+    expect(result[0].aliases).toContain('cluster-a')
+  })
+
+  it('prefers cluster with more namespaces', () => {
+    const clusters: ClusterInfo[] = [
+      { name: 'few-ns', context: 'few-ns', server: 'https://ns-test.example.com', namespaces: ['default'] },
+      { name: 'many-ns', context: 'many-ns', server: 'https://ns-test.example.com', namespaces: ['default', 'kube-system', 'monitoring', 'apps'] },
+    ]
+    const result = deduplicateClustersByServer(clusters)
+    expect(result).toHaveLength(1)
+    expect(result[0].name).toBe('many-ns')
+  })
+
+  it('sets empty aliases array for singleton server groups', () => {
+    const clusters: ClusterInfo[] = [
+      { name: 'solo', context: 'solo', server: 'https://solo.example.com' },
+    ]
+    const result = deduplicateClustersByServer(clusters)
+    expect(result).toHaveLength(1)
+    expect(result[0].aliases).toEqual([])
+  })
+
+  it('detects OpenShift-style auto-generated names as non-primary', () => {
+    const autoGenName = 'default/api-my-cluster.h3s2.p1.openshiftapps.com:6443/kube:admin'
+    const clusters: ClusterInfo[] = [
+      { name: autoGenName, context: autoGenName, server: 'https://api.my-cluster.h3s2.p1.openshiftapps.com:6443' },
+      { name: 'my-ocp-cluster', context: 'my-ocp-cluster', server: 'https://api.my-cluster.h3s2.p1.openshiftapps.com:6443' },
+    ]
+    const result = deduplicateClustersByServer(clusters)
+    expect(result).toHaveLength(1)
+    expect(result[0].name).toBe('my-ocp-cluster')
+    expect(result[0].aliases).toContain(autoGenName)
+  })
+})
+
+// ===========================================================================
+// shareMetricsBetweenSameServerClusters
+// ===========================================================================
+describe('shareMetricsBetweenSameServerClusters', () => {
+  // Import the real implementation through the mock
+  let shareMetricsFn: typeof import('../shared').shareMetricsBetweenSameServerClusters
+
+  beforeEach(async () => {
+    const mod = await import('../shared')
+    shareMetricsFn = mod.shareMetricsBetweenSameServerClusters
+  })
+
+  it('copies metrics from a rich cluster to a bare cluster sharing the same server', () => {
+    const clusters: ClusterInfo[] = [
+      {
+        name: 'rich-ctx',
+        context: 'rich-ctx',
+        server: 'https://shared-srv.example.com',
+        nodeCount: 5,
+        podCount: 40,
+        cpuCores: 32,
+        memoryGB: 128,
+        storageGB: 500,
+        cpuRequestsCores: 12,
+      },
+      {
+        name: 'bare-ctx',
+        context: 'bare-ctx',
+        server: 'https://shared-srv.example.com',
+        // No metrics at all
+      },
+    ]
+    const result = shareMetricsFn(clusters)
+    const bare = result.find(c => c.name === 'bare-ctx')!
+    expect(bare.nodeCount).toBe(5)
+    expect(bare.podCount).toBe(40)
+    expect(bare.cpuCores).toBe(32)
+    expect(bare.cpuRequestsCores).toBe(12)
+  })
+
+  it('does not overwrite existing metrics on target cluster', () => {
+    const clusters: ClusterInfo[] = [
+      {
+        name: 'source',
+        context: 'source',
+        server: 'https://same.example.com',
+        nodeCount: 10,
+        podCount: 100,
+        cpuCores: 64,
+      },
+      {
+        name: 'target',
+        context: 'target',
+        server: 'https://same.example.com',
+        nodeCount: 3, // already has its own nodeCount
+        podCount: 25,
+        cpuCores: 16,
+      },
+    ]
+    const result = shareMetricsFn(clusters)
+    const target = result.find(c => c.name === 'target')!
+    // Should keep its own values since it already has metrics
+    expect(target.cpuCores).toBe(16)
+  })
+
+  it('handles clusters without server URLs (no sharing)', () => {
+    const clusters: ClusterInfo[] = [
+      { name: 'no-server-1', context: 'ctx-1', nodeCount: 5 },
+      { name: 'no-server-2', context: 'ctx-2' },
+    ]
+    const result = shareMetricsFn(clusters)
+    // Clusters without server can't share metrics
+    expect(result.find(c => c.name === 'no-server-2')?.nodeCount).toBeUndefined()
+  })
+
+  it('throws on null input (second-pass .map lacks guard)', () => {
+    // Note: the for...of loop guards with (clusters || []) but the return
+    // clusters.map() does not, so null input throws. This test documents the
+    // current behavior to prevent silent regressions if it gets fixed.
+    expect(() => shareMetricsFn(null as unknown as ClusterInfo[])).toThrow()
+  })
+
+  it('prefers source cluster with higher metric score (nodes > capacity > requests)', () => {
+    const clusters: ClusterInfo[] = [
+      {
+        name: 'has-requests-only',
+        context: 'ctx-req',
+        server: 'https://score-test.example.com',
+        cpuRequestsCores: 4,
+        // score = 1 (requests only)
+      },
+      {
+        name: 'has-nodes-and-capacity',
+        context: 'ctx-full',
+        server: 'https://score-test.example.com',
+        nodeCount: 3,
+        cpuCores: 16,
+        // score = 4 + 2 = 6
+      },
+      {
+        name: 'bare-clone',
+        context: 'ctx-bare',
+        server: 'https://score-test.example.com',
+        // No metrics
+      },
+    ]
+    const result = shareMetricsFn(clusters)
+    const bare = result.find(c => c.name === 'bare-clone')!
+    // The best source (score=6) should be selected, giving nodeCount=3, cpuCores=16
+    expect(bare.nodeCount).toBe(3)
+    expect(bare.cpuCores).toBe(16)
+  })
+})
+
+// ===========================================================================
+// useClusters — deduplication integration
+// ===========================================================================
+describe('useClusters — deduplication integration', () => {
+  beforeEach(() => {
+    resetSharedState()
+    mockFullFetchClusters.mockClear()
+    mockConnectSharedWebSocket.mockClear()
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  })
+
+  it('deduplicatedClusters collapses same-server contexts', async () => {
+    const clusters: ClusterInfo[] = [
+      { name: 'friendly-name', context: 'friendly', server: 'https://api.prod.example.com:6443' },
+      { name: 'default/api-prod.example.com:6443/admin', context: 'long-ctx', server: 'https://api.prod.example.com:6443' },
+      { name: 'unique-cluster', context: 'unique', server: 'https://unique.example.com' },
+    ]
+    await act(async () => {
+      updateClusterCache({ clusters, isLoading: false })
+    })
+
+    const { result } = renderHook(() => useClusters())
+    // Raw clusters should include all 3
+    expect(result.current.clusters).toHaveLength(3)
+    // Deduplicated should collapse the two same-server clusters into 1
+    expect(result.current.deduplicatedClusters).toHaveLength(2)
+    const names = result.current.deduplicatedClusters.map(c => c.name)
+    expect(names).toContain('friendly-name')
+    expect(names).toContain('unique-cluster')
+  })
+
+  it('deduplicatedClusters updates when cache changes', async () => {
+    const { result } = renderHook(() => useClusters())
+    expect(result.current.deduplicatedClusters).toHaveLength(0)
+
+    await act(async () => {
+      updateClusterCache({
+        clusters: [
+          { name: 'c1', context: 'c1', server: 'https://s1.example.com' },
+          { name: 'c2', context: 'c2', server: 'https://s1.example.com' },
+        ],
+        isLoading: false,
+      })
+    })
+
+    // Two clusters same server -> 1 deduplicated
+    expect(result.current.deduplicatedClusters).toHaveLength(1)
+  })
+})
+
+// ===========================================================================
+// useClusters — demo mode transition
+// ===========================================================================
+describe('useClusters — demo mode transitions', () => {
+  beforeEach(() => {
+    resetSharedState()
+    mockFullFetchClusters.mockClear()
+    mockConnectSharedWebSocket.mockClear()
+    mockTriggerAggressiveDetection.mockClear()
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  })
+
+  it('triggers aggressive detection when switching FROM demo to live mode', async () => {
+    // Start in demo mode
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    const { rerender } = renderHook(() => useClusters())
+    mockFullFetchClusters.mockClear()
+    mockTriggerAggressiveDetection.mockClear()
+
+    // Switch to live mode
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    await act(async () => { rerender() })
+
+    expect(mockTriggerAggressiveDetection).toHaveBeenCalledTimes(1)
+    // fullFetchClusters should be called after aggressive detection resolves
+    await waitFor(() => expect(mockFullFetchClusters).toHaveBeenCalled())
+  })
+
+  it('calls fullFetchClusters directly when switching TO demo mode', async () => {
+    // Start in live mode
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    const { rerender } = renderHook(() => useClusters())
+    mockFullFetchClusters.mockClear()
+    mockTriggerAggressiveDetection.mockClear()
+
+    // Switch to demo mode
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+    await act(async () => { rerender() })
+
+    // Should NOT trigger aggressive detection for demo mode
+    expect(mockTriggerAggressiveDetection).not.toHaveBeenCalled()
+    expect(mockFullFetchClusters).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not re-fetch if demo mode value stays the same across rerenders', async () => {
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    const { rerender } = renderHook(() => useClusters())
+    mockFullFetchClusters.mockClear()
+
+    // Rerender with same demo mode value
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+    await act(async () => { rerender() })
+
+    // Should not trigger a re-fetch since isDemoMode didn't change
+    expect(mockFullFetchClusters).not.toHaveBeenCalled()
+  })
+})
+
+// ===========================================================================
+// useClusters — refetch callback
+// ===========================================================================
+describe('useClusters — refetch', () => {
+  beforeEach(() => {
+    resetSharedState()
+    mockFullFetchClusters.mockClear()
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  })
+
+  it('refetch() calls fullFetchClusters', () => {
+    const { result } = renderHook(() => useClusters())
+    mockFullFetchClusters.mockClear()
+
+    act(() => { result.current.refetch() })
+    expect(mockFullFetchClusters).toHaveBeenCalledTimes(1)
+  })
+
+  it('refetch callback identity is stable across renders', async () => {
+    const { result, rerender } = renderHook(() => useClusters())
+    const refetch1 = result.current.refetch
+
+    await act(async () => {
+      updateClusterCache({
+        clusters: [{ name: 'new', context: 'new' }],
+        isLoading: false,
+      })
+    })
+    rerender()
+
+    const refetch2 = result.current.refetch
+    expect(refetch1).toBe(refetch2)
+  })
+})
+
+// ===========================================================================
+// useClusters — cache state fields
+// ===========================================================================
+describe('useClusters — cache state fields', () => {
+  beforeEach(() => {
+    resetSharedState()
+    mockFullFetchClusters.mockClear()
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false })
+  })
+
+  it('exposes consecutiveFailures and isFailed from cache', async () => {
+    const FAILURE_COUNT = 3
+    await act(async () => {
+      updateClusterCache({
+        clusters: [],
+        isLoading: false,
+        consecutiveFailures: FAILURE_COUNT,
+        isFailed: true,
+      })
+    })
+
+    const { result } = renderHook(() => useClusters())
+    expect(result.current.consecutiveFailures).toBe(FAILURE_COUNT)
+    expect(result.current.isFailed).toBe(true)
+  })
+
+  it('exposes lastUpdated and lastRefresh timestamps', async () => {
+    const now = new Date()
+    await act(async () => {
+      updateClusterCache({
+        clusters: [{ name: 'ts-test', context: 'ts-test' }],
+        isLoading: false,
+        lastUpdated: now,
+        lastRefresh: now,
+      })
+    })
+
+    const { result } = renderHook(() => useClusters())
+    expect(result.current.lastUpdated).toEqual(now)
+    expect(result.current.lastRefresh).toEqual(now)
+  })
+
+  it('exposes isRefreshing state', async () => {
+    await act(async () => {
+      updateClusterCache({
+        clusters: [{ name: 'refreshing', context: 'refreshing' }],
+        isLoading: false,
+        isRefreshing: true,
+      })
+    })
+
+    const { result } = renderHook(() => useClusters())
+    expect(result.current.isRefreshing).toBe(true)
+  })
+
+  it('exposes error from cache', async () => {
+    const ERROR_MSG = 'Failed to connect to agent'
+    await act(async () => {
+      updateClusterCache({
+        clusters: [],
+        isLoading: false,
+        error: ERROR_MSG,
+      })
+    })
+
+    const { result } = renderHook(() => useClusters())
+    expect(result.current.error).toBe(ERROR_MSG)
+  })
 })

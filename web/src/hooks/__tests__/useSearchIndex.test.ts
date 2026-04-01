@@ -782,4 +782,441 @@ describe('useSearchIndex', () => {
       renderHook(() => useSearchIndex('test'))
     }).not.toThrow()
   })
+
+  // ── 43. Special characters in queries don't crash ───────────────────────
+
+  it('handles regex special characters in query without crashing', () => {
+    // matchesQuery uses .includes(), not regex, but we verify no edge-case
+    // exceptions from characters like ( ) [ ] * + ? . ^ $ { } | \
+    const specialChars = ['(', ')', '[', ']', '*', '+', '?', '.', '^', '$', '{', '}', '|', '\\']
+    for (const ch of specialChars) {
+      expect(() => {
+        renderHook(() => useSearchIndex(ch))
+      }).not.toThrow()
+    }
+  })
+
+  it('handles unicode characters in query', () => {
+    expect(() => {
+      const { result } = renderHook(() => useSearchIndex('日本語'))
+      // No crash, returns results (likely empty since no items match)
+      expect(result.current.totalCount).toBeGreaterThanOrEqual(0)
+    }).not.toThrow()
+  })
+
+  it('handles emoji characters in query', () => {
+    expect(() => {
+      const { result } = renderHook(() => useSearchIndex('🚀'))
+      expect(result.current.totalCount).toBeGreaterThanOrEqual(0)
+    }).not.toThrow()
+  })
+
+  // ── 44. Single-character query still matches ────────────────────────────
+
+  it('returns results for a single-character query', () => {
+    mockClusters.mockReturnValue({
+      clusters: [{ name: 'a-cluster', context: 'a-cluster', healthy: true }],
+    })
+    const { result } = renderHook(() => useSearchIndex('a'))
+    // 'a' appears in many page names/descriptions, and in 'a-cluster'
+    expect(result.current.totalCount).toBeGreaterThan(0)
+  })
+
+  // ── 45. Very long query that matches nothing ────────────────────────────
+
+  it('returns empty results for a long query matching nothing', () => {
+    const longQuery = 'xyznonexistentquerythatshouldnotmatchanything12345'
+    const { result } = renderHook(() => useSearchIndex(longQuery))
+    expect(result.current.totalCount).toBe(0)
+    expect(result.current.results.size).toBe(0)
+  })
+
+  // ── 46. Deployment matched via image keyword ───────────────────────────
+
+  it('matches deployments via their image keyword', () => {
+    mockDeployments.mockReturnValue({
+      deployments: [
+        { name: 'web-app', cluster: 'prod', namespace: 'default', image: 'myregistry/custom-app:v2.1', status: 'Running' },
+      ],
+    })
+    const { result } = renderHook(() => useSearchIndex('myregistry'))
+    const flat = flattenResults(result.current.results)
+    const deploys = flat.filter(i => i.category === 'deployment')
+    expect(deploys.some(i => i.name === 'web-app')).toBe(true)
+  })
+
+  // ── 47. Helm release matched via chart keyword ─────────────────────────
+
+  it('matches helm releases via chart name in keywords', () => {
+    mockHelmReleases.mockReturnValue({
+      releases: [
+        { name: 'my-grafana', cluster: 'monitoring', namespace: 'obs', chart: 'grafana-7.0.0', app_version: '10.2.3', status: 'deployed' },
+      ],
+    })
+    const { result } = renderHook(() => useSearchIndex('grafana-7.0.0'))
+    const flat = flattenResults(result.current.results)
+    const helms = flat.filter(i => i.category === 'helm')
+    expect(helms.some(i => i.name === 'my-grafana')).toBe(true)
+  })
+
+  it('matches helm releases via app_version in keywords', () => {
+    mockHelmReleases.mockReturnValue({
+      releases: [
+        { name: 'my-prom', cluster: 'mon', namespace: 'obs', chart: 'prometheus-25.0', app_version: '2.48.1', status: 'deployed' },
+      ],
+    })
+    const { result } = renderHook(() => useSearchIndex('2.48.1'))
+    const flat = flattenResults(result.current.results)
+    const helms = flat.filter(i => i.category === 'helm')
+    expect(helms.some(i => i.name === 'my-prom')).toBe(true)
+  })
+
+  // ── 48. Namespace dedup: same namespace from pods + deployments + services ─
+
+  it('deduplicates namespaces across deployments, pods, and services', () => {
+    mockDeployments.mockReturnValue({
+      deployments: [{ name: 'dep-a', cluster: 'c', namespace: 'shared-ns', status: 'Running' }],
+    })
+    mockPods.mockReturnValue({
+      pods: [{ name: 'pod-a', cluster: 'c', namespace: 'shared-ns', status: 'Running' }],
+    })
+    mockServices.mockReturnValue({
+      services: [{ name: 'svc-a', cluster: 'c', namespace: 'shared-ns', type: 'ClusterIP' }],
+    })
+
+    const { result } = renderHook(() => useSearchIndex('shared-ns'))
+    const flat = flattenResults(result.current.results)
+    const nsItems = flat.filter(i => i.category === 'namespace')
+    // Only 1 namespace item even though 3 sources contribute the same namespace
+    expect(nsItems.length).toBe(1)
+    expect(nsItems[0].name).toBe('shared-ns')
+  })
+
+  // ── 49. Multiple unique namespaces from different sources ──────────────
+
+  it('creates separate namespace items from different namespace names', () => {
+    mockDeployments.mockReturnValue({
+      deployments: [{ name: 'dep-a', cluster: 'c', namespace: 'alpha-ns', status: 'Running' }],
+    })
+    mockPods.mockReturnValue({
+      pods: [{ name: 'pod-a', cluster: 'c', namespace: 'beta-ns', status: 'Running' }],
+    })
+    mockServices.mockReturnValue({
+      services: [{ name: 'svc-a', cluster: 'c', namespace: 'gamma-ns', type: 'ClusterIP' }],
+    })
+
+    // Use a query broad enough to match all three namespace names
+    const { result: alphaResult } = renderHook(() => useSearchIndex('alpha-ns'))
+    const { result: betaResult } = renderHook(() => useSearchIndex('beta-ns'))
+    const { result: gammaResult } = renderHook(() => useSearchIndex('gamma-ns'))
+
+    const alphaNs = flattenResults(alphaResult.current.results).filter(i => i.category === 'namespace')
+    const betaNs = flattenResults(betaResult.current.results).filter(i => i.category === 'namespace')
+    const gammaNs = flattenResults(gammaResult.current.results).filter(i => i.category === 'namespace')
+
+    expect(alphaNs.length).toBe(1)
+    expect(betaNs.length).toBe(1)
+    expect(gammaNs.length).toBe(1)
+  })
+
+  // ── 50. Service type appears in description and meta ───────────────────
+
+  it('includes service type in description and meta', () => {
+    mockServices.mockReturnValue({
+      services: [{ name: 'my-lb-svc', cluster: 'prod', namespace: 'web', type: 'LoadBalancer' }],
+    })
+    const { result } = renderHook(() => useSearchIndex('my-lb-svc'))
+    const flat = flattenResults(result.current.results)
+    const svcs = flat.filter(i => i.category === 'service')
+    expect(svcs.length).toBe(1)
+    expect(svcs[0].description).toContain('LoadBalancer')
+    expect(svcs[0].meta).toContain('LoadBalancer')
+  })
+
+  // ── 51. Service matched via type in meta ───────────────────────────────
+
+  it('matches services via their type in the meta field', () => {
+    mockServices.mockReturnValue({
+      services: [{ name: 'internal-api', cluster: 'prod', namespace: 'core', type: 'ClusterIP' }],
+    })
+    const { result } = renderHook(() => useSearchIndex('ClusterIP'))
+    const flat = flattenResults(result.current.results)
+    const svcs = flat.filter(i => i.category === 'service')
+    expect(svcs.some(i => i.name === 'internal-api')).toBe(true)
+  })
+
+  // ── 52. Node roles included in description and meta ────────────────────
+
+  it('includes node roles in description and meta', () => {
+    mockNodes.mockReturnValue({
+      nodes: [{ name: 'cp-node-1', cluster: 'prod', status: 'Ready', roles: ['control-plane', 'master'] }],
+    })
+    const { result } = renderHook(() => useSearchIndex('cp-node-1'))
+    const flat = flattenResults(result.current.results)
+    const nodes = flat.filter(i => i.category === 'node')
+    expect(nodes.length).toBe(1)
+    expect(nodes[0].description).toContain('control-plane')
+    expect(nodes[0].meta).toContain('control-plane')
+    expect(nodes[0].meta).toContain('master')
+  })
+
+  // ── 53. Mission matched via type/status keywords ───────────────────────
+
+  it('matches missions via their type keyword', () => {
+    mockMissions.mockReturnValue({
+      missions: [
+        { id: 'm-scan', title: 'Security Scan', description: 'Run trivy scan', type: 'security-audit', status: 'pending', cluster: 'prod' },
+      ],
+    })
+    const { result } = renderHook(() => useSearchIndex('security-audit'))
+    const flat = flattenResults(result.current.results)
+    const missions = flat.filter(i => i.category === 'mission')
+    expect(missions.some(i => i.name === 'Security Scan')).toBe(true)
+  })
+
+  it('matches missions via their status keyword', () => {
+    mockMissions.mockReturnValue({
+      missions: [
+        { id: 'm-run', title: 'Deploy Monitoring', description: 'Deploy stack', type: 'deploy', status: 'completed' },
+      ],
+    })
+    const { result } = renderHook(() => useSearchIndex('completed'))
+    const flat = flattenResults(result.current.results)
+    const missions = flat.filter(i => i.category === 'mission')
+    expect(missions.some(i => i.name === 'Deploy Monitoring')).toBe(true)
+  })
+
+  // ── 54. Cluster server URL is searchable via keywords ──────────────────
+
+  it('matches clusters via server URL keyword', () => {
+    mockClusters.mockReturnValue({
+      clusters: [{ name: 'eks-prod', context: 'eks-prod', server: 'https://ABCDEF.gr7.us-east-1.eks.amazonaws.com', healthy: true }],
+    })
+    const { result } = renderHook(() => useSearchIndex('ABCDEF'))
+    const flat = flattenResults(result.current.results)
+    const clusters = flat.filter(i => i.category === 'cluster')
+    expect(clusters.some(i => i.name === 'eks-prod')).toBe(true)
+  })
+
+  // ── 55. Placed cards on multiple dashboards appear as separate items ───
+
+  it('creates separate items when same card is placed on multiple dashboards', () => {
+    localStorage.setItem('kubestellar-main-dashboard-cards', JSON.stringify([
+      { card_type: 'cluster_health', title: 'Cluster Health' },
+    ]))
+    localStorage.setItem('kubestellar-clusters-cards', JSON.stringify([
+      { card_type: 'cluster_health', title: 'Cluster Health' },
+    ]))
+
+    const { result } = renderHook(() => useSearchIndex('Cluster Health'))
+    const flat = flattenResults(result.current.results)
+    const placedCards = flat.filter(i => i.category === 'card' && i.scrollTarget === 'cluster_health')
+    // Should have two placed-card entries (one per dashboard) but no catalog dupe
+    expect(placedCards.length).toBe(2)
+    // Verify they have different IDs
+    const ids = placedCards.map(c => c.id)
+    expect(new Set(ids).size).toBe(2)
+  })
+
+  // ── 56. Placed card keywords include raw and humanized card_type ───────
+
+  it('placed card keywords include raw card_type and humanized form', () => {
+    localStorage.setItem('kubestellar-main-dashboard-cards', JSON.stringify([
+      { card_type: 'pod_overview' },
+    ]))
+    // Search by the humanized form 'pod overview' (spaces instead of underscores)
+    const { result } = renderHook(() => useSearchIndex('pod overview'))
+    const flat = flattenResults(result.current.results)
+    const cards = flat.filter(i => i.category === 'card' && i.scrollTarget === 'pod_overview')
+    expect(cards.length).toBeGreaterThan(0)
+  })
+
+  // ── 57. Empty string localStorage value is handled gracefully ──────────
+
+  it('handles empty string localStorage value for card keys', () => {
+    localStorage.setItem('kubestellar-main-dashboard-cards', '')
+    expect(() => {
+      renderHook(() => useSearchIndex('anything'))
+    }).not.toThrow()
+  })
+
+  // ── 58. Namespace href is correctly encoded ────────────────────────────
+
+  it('namespace items have correctly encoded hrefs', () => {
+    mockDeployments.mockReturnValue({
+      deployments: [{ name: 'dep-1', cluster: 'c', namespace: 'my namespace', status: 'Running' }],
+    })
+    const { result } = renderHook(() => useSearchIndex('my namespace'))
+    const flat = flattenResults(result.current.results)
+    const nsItems = flat.filter(i => i.category === 'namespace')
+    expect(nsItems.length).toBe(1)
+    expect(nsItems[0].href).toBe('/namespaces?ns=my%20namespace')
+  })
+
+  // ── 59. Deployment meta combines cluster, namespace, and status ────────
+
+  it('deployment meta field contains cluster, namespace, and status', () => {
+    mockDeployments.mockReturnValue({
+      deployments: [
+        { name: 'api-server', cluster: 'prod-east', namespace: 'backend', image: 'api:v1', status: 'Running' },
+      ],
+    })
+    const { result } = renderHook(() => useSearchIndex('api-server'))
+    const flat = flattenResults(result.current.results)
+    const dep = flat.find(i => i.category === 'deployment')
+    expect(dep).toBeDefined()
+    expect(dep!.meta).toContain('prod-east')
+    expect(dep!.meta).toContain('backend')
+    expect(dep!.meta).toContain('Running')
+  })
+
+  // ── 60. Setting items matched via their keywords ───────────────────────
+
+  it('matches setting items via keyword search', () => {
+    // 'anthropic' is a keyword on the API Keys setting
+    const { result } = renderHook(() => useSearchIndex('anthropic'))
+    const flat = flattenResults(result.current.results)
+    const settings = flat.filter(i => i.category === 'setting')
+    expect(settings.some(i => i.name === 'API Keys')).toBe(true)
+  })
+
+  it('matches theme setting via dark keyword', () => {
+    const { result } = renderHook(() => useSearchIndex('dark'))
+    const flat = flattenResults(result.current.results)
+    const settings = flat.filter(i => i.category === 'setting')
+    expect(settings.some(i => i.name === 'Theme')).toBe(true)
+  })
+
+  // ── 61. Category ordering with sparse categories ───────────────────────
+
+  it('maintains category order even when intermediate categories are empty', () => {
+    // Only clusters and settings match — nothing in between
+    mockClusters.mockReturnValue({
+      clusters: [{ name: 'zzz-unique-cluster', context: 'zzz-unique-cluster', healthy: true }],
+    })
+    const { result } = renderHook(() => useSearchIndex('zzz-unique'))
+    const categories = resultCategories(result.current.results)
+    // Only cluster should appear (no pages/settings match 'zzz-unique')
+    expect(categories).toContain('cluster')
+    // Verify the ordering invariant still holds
+    for (let i = 1; i < categories.length; i++) {
+      const prevIdx = CATEGORY_ORDER.indexOf(categories[i - 1])
+      const currIdx = CATEGORY_ORDER.indexOf(categories[i])
+      expect(prevIdx).toBeLessThan(currIdx)
+    }
+  })
+
+  // ── 62. Stat items from localStorage override defaults ─────────────────
+
+  it('uses stat blocks from localStorage when available', () => {
+    // Override the 'clusters' dashboard stats with a custom block
+    localStorage.setItem('clusters-stats-config', JSON.stringify([
+      { id: 'custom-metric', name: 'Custom Metric XYZ', icon: 'BarChart', visible: true, color: 'red' },
+    ]))
+    const { result } = renderHook(() => useSearchIndex('Custom Metric XYZ'))
+    const flat = flattenResults(result.current.results)
+    const stats = flat.filter(i => i.category === 'stat')
+    expect(stats.some(i => i.name === 'Custom Metric XYZ')).toBe(true)
+  })
+
+  // ── 63. totalCount exceeds displayed count when truncated ──────────────
+
+  it('totalCount is larger than displayed count when results are truncated', () => {
+    // Create 10 deployments and 10 pods that all match
+    const deployments = Array.from({ length: 10 }, (_, i) => ({
+      name: `trunc-test-deploy-${i}`,
+      cluster: 'c',
+      namespace: 'ns',
+      status: 'Running',
+    }))
+    const pods = Array.from({ length: 10 }, (_, i) => ({
+      name: `trunc-test-pod-${i}`,
+      cluster: 'c',
+      namespace: 'ns',
+      status: 'Running',
+    }))
+    mockDeployments.mockReturnValue({ deployments })
+    mockPods.mockReturnValue({ pods })
+
+    const { result } = renderHook(() => useSearchIndex('trunc-test'))
+    const flat = flattenResults(result.current.results)
+    // Each category is capped at 5, so displayed <= 10 but totalCount >= 20
+    expect(result.current.totalCount).toBeGreaterThanOrEqual(20)
+    expect(flat.length).toBeLessThan(result.current.totalCount)
+  })
+
+  // ── 64. Broad query returns multiple categories ────────────────────────
+
+  it('returns results across multiple categories for a broad query', () => {
+    mockClusters.mockReturnValue({
+      clusters: [{ name: 'test-cluster', context: 'test-cluster', healthy: true }],
+    })
+    mockDeployments.mockReturnValue({
+      deployments: [{ name: 'test-deploy', cluster: 'c', namespace: 'ns', status: 'Running' }],
+    })
+    mockNodes.mockReturnValue({
+      nodes: [{ name: 'test-node', cluster: 'c', status: 'Ready', roles: ['worker'] }],
+    })
+
+    const { result } = renderHook(() => useSearchIndex('test'))
+    const categories = resultCategories(result.current.results)
+    // Should span at least cluster, deployment, and node categories
+    expect(categories).toContain('cluster')
+    expect(categories).toContain('deployment')
+    expect(categories).toContain('node')
+  })
+
+  // ── 65. Helm release description includes chart, namespace, cluster ────
+
+  it('helm release description contains chart, namespace, and cluster', () => {
+    mockHelmReleases.mockReturnValue({
+      releases: [
+        { name: 'cert-manager', cluster: 'infra-cluster', namespace: 'cert-manager', chart: 'cert-manager-1.14.0', app_version: '1.14.0', status: 'deployed' },
+      ],
+    })
+    const { result } = renderHook(() => useSearchIndex('cert-manager'))
+    const flat = flattenResults(result.current.results)
+    const helm = flat.find(i => i.category === 'helm' && i.name === 'cert-manager')
+    expect(helm).toBeDefined()
+    expect(helm!.description).toContain('cert-manager-1.14.0')
+    expect(helm!.description).toContain('cert-manager')
+    expect(helm!.description).toContain('infra-cluster')
+  })
+
+  // ── 66. Mission items include cluster in keywords ──────────────────────
+
+  it('matches missions via their cluster keyword', () => {
+    mockMissions.mockReturnValue({
+      missions: [
+        { id: 'm-fix', title: 'Fix DNS', description: 'Repair CoreDNS', type: 'fix', status: 'running', cluster: 'edge-site-42' },
+      ],
+    })
+    const { result } = renderHook(() => useSearchIndex('edge-site-42'))
+    const flat = flattenResults(result.current.results)
+    const missions = flat.filter(i => i.category === 'mission')
+    expect(missions.some(i => i.name === 'Fix DNS')).toBe(true)
+  })
+
+  // ── 67. Page items matched via description substring ───────────────────
+
+  it('matches page items via description substring', () => {
+    // 'Persistent volumes' is in the Storage page description
+    const { result } = renderHook(() => useSearchIndex('Persistent volumes'))
+    const flat = flattenResults(result.current.results)
+    const pages = flat.filter(i => i.category === 'page')
+    expect(pages.some(i => i.name === 'Storage')).toBe(true)
+  })
+
+  // ── 68. Placed cards have meta from CARD_DESCRIPTIONS ──────────────────
+
+  it('placed cards include CARD_DESCRIPTIONS as meta for search', () => {
+    localStorage.setItem('kubestellar-main-dashboard-cards', JSON.stringify([
+      { card_type: 'app_status' },
+    ]))
+    // Search by a word from the mock CARD_DESCRIPTIONS['app_status']
+    const { result } = renderHook(() => useSearchIndex('workload deployment status'))
+    const flat = flattenResults(result.current.results)
+    const cards = flat.filter(i => i.category === 'card' && i.scrollTarget === 'app_status')
+    expect(cards.length).toBeGreaterThan(0)
+  })
 })
