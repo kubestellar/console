@@ -154,6 +154,8 @@ let nodesCache: NodeData[] = []
 let nodesCacheTimestamp = 0
 let nodesFetchInProgress = false
 const NODES_CACHE_TTL = 30000 // 30 seconds
+/** Cluster-level GPU allocation threshold — flag when >80% of a cluster's GPUs are allocated */
+const GPU_CLUSTER_EXHAUSTION_THRESHOLD = 0.8
 const nodesSubscribers = new Set<(nodes: NodeData[]) => void>()
 
 function notifyNodesSubscribers() {
@@ -420,9 +422,8 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
       }
     })
 
-    // 3. Cluster-level GPU exhaustion — only flag when 80%+ of a cluster's
+    // 3. Cluster-level GPU exhaustion — only flag when >80% of a cluster's
     // total GPUs are allocated. Individual nodes at 100% is normal utilization.
-    const GPU_CLUSTER_EXHAUSTION_THRESHOLD = 0.8
     const filteredGpuNodes = isAllClustersSelected
       ? gpuNodes
       : gpuNodes.filter(n => selectedClusters.includes(n.cluster))
@@ -453,7 +454,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
           source: 'heuristic',
         })
       } else if (gpus.total > 0 && gpus.allocated / gpus.total > GPU_CLUSTER_EXHAUSTION_THRESHOLD) {
-        // Flag cluster-level near-exhaustion (80%+ allocated)
+        // Flag cluster-level near-exhaustion (>80% allocated)
         const pct = Math.round((gpus.allocated / gpus.total) * 100)
         risks.push({
           id: generatePredictionId('gpu-exhaustion', cluster, cluster),

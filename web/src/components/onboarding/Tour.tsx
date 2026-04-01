@@ -457,6 +457,7 @@ export function TourTrigger() {
       icon={<LogoWithStar className="w-5 h-5" />}
       className={cn(!hasCompletedTour && 'animate-pulse')}
       title="Take a tour"
+      aria-label="Take a tour"
     >
       {!hasCompletedTour && <span className="hidden xl:inline">Take the tour</span>}
     </Button>

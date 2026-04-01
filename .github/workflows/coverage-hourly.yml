@@ -59,7 +59,7 @@ jobs:
   # Merge shards and update badge
   merge-coverage:
     needs: test-shard
-    if: always() && github.repository == 'kubestellar/console'
+    if: "!cancelled() && needs.test-shard.result == 'success' && github.repository == 'kubestellar/console'"
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
