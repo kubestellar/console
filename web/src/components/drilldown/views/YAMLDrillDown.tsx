@@ -131,7 +131,7 @@ export function YAMLDrillDown({ data }: Props) {
             className="p-2 rounded-lg bg-card/50 border border-border hover:bg-card transition-colors"
             title={t('common.refresh')}
           >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
+            <RefreshCw className={`w-4 h-4 text-muted-foreground ${isLoading ? 'animate-spin' : ''}`} />
           </button>
           <button
             onClick={handleCopy}

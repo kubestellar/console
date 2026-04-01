@@ -169,7 +169,7 @@ export function EventsDrillDown({ data }: Props) {
               onClick={() => refetch?.()}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card border border-border text-sm hover:bg-card/80 transition-colors"
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
               Retry
             </button>
           </div>

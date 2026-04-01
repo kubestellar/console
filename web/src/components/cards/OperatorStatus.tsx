@@ -189,9 +189,10 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
           <p className="text-xs">{t('operatorStatus.errorLoadingHint', 'Failed after {{count}} attempts', { count: consecutiveFailures })}</p>
           <button
             onClick={() => refetch()}
-            className="mt-1 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
+            disabled={isRefreshing}
+            className="mt-1 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors disabled:opacity-50"
           >
-            <RefreshCw className="w-3 h-3" />
+            <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
             {t('common:common.retry', 'Retry')}
           </button>
         </div>

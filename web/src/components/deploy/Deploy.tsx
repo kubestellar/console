@@ -165,12 +165,14 @@ export function Deploy() {
       })
     } catch (err) {
       console.error('Deploy failed:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Deploy failed'
+      showToast(errorMessage, 'error')
       publishCardEvent({
         type: 'deploy:result',
         payload: {
           id: deployId,
           success: false,
-          message: err instanceof Error ? err.message : 'Deploy failed',
+          message: errorMessage,
           deployedTo: [],
           failedClusters: targetClusters,
         },
