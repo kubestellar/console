@@ -150,9 +150,46 @@ const KNOWN_VIOLATIONS: Record<string, Set<string>> = {
   'buildpacks-status/BuildpacksStatus.tsx': new Set(['missing-isRefreshing']),
 }
 
+/**
+ * Known failure-wiring violations — cards that use useCached or useClusters hooks
+ * but do NOT pass isFailed and consecutiveFailures to useCardLoadingState.
+ *
+ * Same ratchet rules as KNOWN_VIOLATIONS: this list MUST ONLY SHRINK.
+ */
+const KNOWN_FAILURE_VIOLATIONS: Record<string, Set<string>> = {
+  'ClusterComparison.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'ClusterGroups.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'ClusterLocations.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'ClusterNetwork.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'console-missions/ConsoleKubeconfigAuditCard.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'console-missions/ConsoleOfflineDetectionCard.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'CrossClusterPolicyComparison.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'FleetComplianceHeatmap.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'GPUNamespaceAllocations.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'GPUStatus.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'GPUWorkloads.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'HelmValuesDiff.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'insights/CrossClusterEventCorrelation.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'Kubectl.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'KustomizationStatus.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'Missions.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'NamespaceEvents.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'NamespaceMonitor.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'NamespaceQuotas.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'NamespaceRBAC.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'OPAPolicies.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'OverlayComparison.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'RecommendedPolicies.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'ResourceMarshall.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'ResourceTrend.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'ResourceUsage.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+  'workload-detection/LLMModels.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
+}
+
 /** Check if a violation is known (grandfathered in) */
 function isKnownViolation(rel: string, check: string): boolean {
-  return KNOWN_VIOLATIONS[rel]?.has(check) ?? false
+  return (KNOWN_VIOLATIONS[rel]?.has(check) ?? false)
+    || (KNOWN_FAILURE_VIOLATIONS[rel]?.has(check) ?? false)
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -298,6 +335,50 @@ describe('Card Loading State Gold Standard', () => {
     }
   })
 
+  describe('isFailed must be wired', () => {
+    for (const filePath of filesWithLoadingHook) {
+      const basename = path.basename(filePath)
+      if (NO_CACHED_HOOK_EXEMPT.has(basename)) continue
+
+      const rel = relPath(filePath)
+      const src = fs.readFileSync(filePath, 'utf-8')
+
+      if (!usesCachedHook(src) && !usesClustersHook(src)) continue
+
+      it(`${rel}: isFailed wired in useCardLoadingState`, () => {
+        if (isKnownViolation(rel, 'missing-isFailed')) return // grandfathered
+
+        const calls = extractLoadingStateCalls(src)
+        if (calls.length === 0) return
+
+        const hasFailed = calls.some(call => call.includes('isFailed'))
+        expect(hasFailed, `${rel}: missing isFailed in useCardLoadingState`).toBe(true)
+      })
+    }
+  })
+
+  describe('consecutiveFailures must be wired', () => {
+    for (const filePath of filesWithLoadingHook) {
+      const basename = path.basename(filePath)
+      if (NO_CACHED_HOOK_EXEMPT.has(basename)) continue
+
+      const rel = relPath(filePath)
+      const src = fs.readFileSync(filePath, 'utf-8')
+
+      if (!usesCachedHook(src) && !usesClustersHook(src)) continue
+
+      it(`${rel}: consecutiveFailures wired in useCardLoadingState`, () => {
+        if (isKnownViolation(rel, 'missing-consecutiveFailures')) return // grandfathered
+
+        const calls = extractLoadingStateCalls(src)
+        if (calls.length === 0) return
+
+        const hasConsecutiveFailures = calls.some(call => call.includes('consecutiveFailures'))
+        expect(hasConsecutiveFailures, `${rel}: missing consecutiveFailures in useCardLoadingState`).toBe(true)
+      })
+    }
+  })
+
   describe('No hardcoded isLoading: false', () => {
     for (const filePath of filesWithLoadingHook) {
       const rel = relPath(filePath)
@@ -323,8 +404,7 @@ describe('Card Loading State Gold Standard', () => {
   })
 
   describe('Ratchet: known violations must not grow', () => {
-    it('no new violations should be added to KNOWN_VIOLATIONS', () => {
-      // Count total known violations
+    it('total KNOWN_VIOLATIONS count must not increase', () => {
       let totalKnown = 0
       for (const checks of Object.values(KNOWN_VIOLATIONS)) {
         totalKnown += checks.size
@@ -335,6 +415,29 @@ describe('Card Loading State Gold Standard', () => {
       // the count dropped, that's great — update the expected count!
       const EXPECTED_KNOWN_VIOLATION_COUNT = 77
       expect(totalKnown).toBeLessThanOrEqual(EXPECTED_KNOWN_VIOLATION_COUNT)
+    })
+
+    it('isRefreshing violation count must not increase', () => {
+      let refreshCount = 0
+      for (const checks of Object.values(KNOWN_VIOLATIONS)) {
+        if (checks.has('missing-isRefreshing')) refreshCount++
+      }
+
+      // Separate ratchet for isRefreshing violations. MUST ONLY DECREASE.
+      const EXPECTED_REFRESH_VIOLATION_COUNT = 28
+      expect(refreshCount).toBeLessThanOrEqual(EXPECTED_REFRESH_VIOLATION_COUNT)
+    })
+
+    it('isFailed/consecutiveFailures violation count must not increase', () => {
+      let failureCount = 0
+      for (const checks of Object.values(KNOWN_FAILURE_VIOLATIONS)) {
+        failureCount += checks.size
+      }
+
+      // Separate ratchet for failure-wiring violations. MUST ONLY DECREASE.
+      // Each card entry has 2 violations (missing-isFailed + missing-consecutiveFailures).
+      const EXPECTED_FAILURE_VIOLATION_COUNT = 54
+      expect(failureCount).toBeLessThanOrEqual(EXPECTED_FAILURE_VIOLATION_COUNT)
     })
   })
 })
