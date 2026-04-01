@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math"
 	"net/http"
 	"os"
 	"os/exec"
@@ -1520,8 +1519,8 @@ func (s *Server) handleResolveDepsHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleScaleHTTP scales a workload (Deployment or StatefulSet) to the given
-// replica count via the Kubernetes API. It accepts POST with JSON body or
-// GET with query parameters for convenience.
+// replica count via the Kubernetes API. Only POST with a JSON body is accepted;
+// GET-based mutations are rejected to prevent CSRF-style attacks (#4150).
 func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
@@ -1529,6 +1528,24 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+
+	// SECURITY: Require auth — scaling is a mutating operation (#4150).
+	if !s.validateToken(r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	// SECURITY: Only allow POST — GET mutations enable CSRF (#4150).
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "POST required",
+		})
+		return
+	}
+
 	if s.k8sClient == nil {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"success": false,
@@ -1537,43 +1554,28 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var req struct {
+		Cluster   string `json:"cluster"`
+		Namespace string `json:"namespace"`
+		Name      string `json:"name"`
+		Replicas  int32  `json:"replicas"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "invalid request body",
+		})
+		return
+	}
+
 	var cluster, namespace, name string
 	var replicas int32
 
-	if r.Method == "POST" {
-		var req struct {
-			Cluster   string `json:"cluster"`
-			Namespace string `json:"namespace"`
-			Name      string `json:"name"`
-			Replicas  int32  `json:"replicas"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			json.NewEncoder(w).Encode(map[string]interface{}{
-				"success": false,
-				"error":   "invalid request body",
-			})
-			return
-		}
-		cluster = req.Cluster
-		namespace = req.Namespace
-		name = req.Name
-		replicas = req.Replicas
-	} else {
-		cluster = r.URL.Query().Get("cluster")
-		namespace = r.URL.Query().Get("namespace")
-		name = r.URL.Query().Get("name")
-		if r.URL.Query().Get("replicas") != "" {
-			n, err := strconv.Atoi(r.URL.Query().Get("replicas"))
-			if err != nil || n < math.MinInt32 || n > math.MaxInt32 {
-				json.NewEncoder(w).Encode(map[string]interface{}{
-					"success": false,
-					"error":   "invalid replicas value",
-				})
-				return
-			}
-			replicas = int32(n) // #nosec G109 -- bounds checked above
-		}
-	}
+	cluster = req.Cluster
+	namespace = req.Namespace
+	name = req.Name
+	replicas = req.Replicas
 
 	if replicas < 0 {
 		w.WriteHeader(http.StatusBadRequest)
@@ -1954,11 +1956,18 @@ func (s *Server) handleAutoUpdateTrigger(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Accept optional channel override from frontend
+	// Accept optional channel override from frontend.
+	// SECURITY: reject malformed JSON instead of silently using zero-value (#4156).
 	var body struct {
 		Channel string `json:"channel"`
 	}
-	_ = json.NewDecoder(r.Body).Decode(&body)
+	if r.Body != nil && r.ContentLength != 0 {
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"error": "invalid JSON body"})
+			return
+		}
+	}
 	if !s.updateChecker.TriggerNow(body.Channel) {
 		w.WriteHeader(http.StatusConflict)
 		json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "update already in progress"})
@@ -4222,10 +4231,14 @@ func (s *Server) handlePredictionsAnalyze(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Parse optional providers from request body
+	// Parse optional providers from request body.
+	// SECURITY: reject malformed JSON instead of silently using zero-value (#4156).
 	var req AIAnalysisRequest
-	if r.Body != nil {
-		json.NewDecoder(r.Body).Decode(&req)
+	if r.Body != nil && r.ContentLength != 0 {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "invalid JSON body", http.StatusBadRequest)
+			return
+		}
 	}
 
 	if s.predictionWorker.IsAnalyzing() {

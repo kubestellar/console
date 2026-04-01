@@ -17,6 +17,10 @@ type sseClusterStreamConfig struct {
 	// demoKey is the JSON key used in the SSE event data for the items array
 	// (e.g. "pods", "issues", "deployments").
 	demoKey string
+	// namespace is the optional namespace filter. When set it is included in
+	// the cache key so that requests for different namespaces on the same
+	// cluster do not return stale cross-namespace data (#4151).
+	namespace string
 	// clusterTimeout is the per-cluster fetch timeout.
 	clusterTimeout time.Duration
 }
@@ -158,7 +162,10 @@ func streamClusters(
 		// Spawn goroutines only for healthy/unknown clusters
 		var wg sync.WaitGroup
 		for _, cl := range healthy {
-			cacheKey := cfg.demoKey + ":" + cl.Name
+			// Include namespace in cache key to prevent cross-namespace
+			// data leakage when the same cluster is queried for different
+			// namespaces (#4151).
+			cacheKey := cfg.demoKey + ":" + cl.Name + ":" + cfg.namespace
 
 			// Check response cache — serve instantly if fresh
 			if cached := sseCacheGet(cacheKey); cached != nil {
@@ -286,6 +293,7 @@ func (h *MCPHandlers) GetPodsStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "pods",
+		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		pods, err := h.k8sClient.GetPods(ctx, cluster, namespace)
@@ -308,6 +316,7 @@ func (h *MCPHandlers) FindPodIssuesStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "issues",
+		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		issues, err := h.k8sClient.FindPodIssues(ctx, cluster, namespace)
@@ -330,6 +339,7 @@ func (h *MCPHandlers) GetDeploymentsStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "deployments",
+		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		deps, err := h.k8sClient.GetDeployments(ctx, cluster, namespace)
@@ -354,6 +364,7 @@ func (h *MCPHandlers) GetEventsStream(c *fiber.Ctx) error {
 
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "events",
+		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		events, err := h.k8sClient.GetEvents(ctx, cluster, namespace, limit)
@@ -376,6 +387,7 @@ func (h *MCPHandlers) GetServicesStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "services",
+		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		svcs, err := h.k8sClient.GetServices(ctx, cluster, namespace)
@@ -398,6 +410,7 @@ func (h *MCPHandlers) CheckSecurityIssuesStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "issues",
+		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		issues, err := h.k8sClient.CheckSecurityIssues(ctx, cluster, namespace)
@@ -420,6 +433,7 @@ func (h *MCPHandlers) FindDeploymentIssuesStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "issues",
+		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		issues, err := h.k8sClient.FindDeploymentIssues(ctx, cluster, namespace)
@@ -493,6 +507,7 @@ func (h *MCPHandlers) GetWarningEventsStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "events",
+		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		return h.k8sClient.GetWarningEvents(ctx, cluster, namespace, 50)
@@ -511,6 +526,7 @@ func (h *MCPHandlers) GetJobsStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "jobs",
+		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		return h.k8sClient.GetJobs(ctx, cluster, namespace)
@@ -529,6 +545,7 @@ func (h *MCPHandlers) GetConfigMapsStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "configmaps",
+		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		return h.k8sClient.GetConfigMaps(ctx, cluster, namespace)
@@ -547,6 +564,7 @@ func (h *MCPHandlers) GetSecretsStream(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "secrets",
+		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		return h.k8sClient.GetSecrets(ctx, cluster, namespace)
@@ -566,6 +584,7 @@ func (h *MCPHandlers) GetWorkloadsStream(c *fiber.Ctx) error {
 	workloadType := c.Query("type")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "workloads",
+		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		workloads, err := h.k8sClient.ListWorkloadsForCluster(ctx, cluster, namespace, workloadType)

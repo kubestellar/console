@@ -98,6 +98,7 @@ var sensitiveEndpoints = []struct {
 	{endpointKubeconfigImport, "POST"},
 	{endpointPods, "GET"},
 	{endpointNodes, "GET"},
+	{endpointScale, "POST"},
 }
 
 // endpointsLackingAuth are endpoints that SHOULD require auth but currently
@@ -106,9 +107,7 @@ var sensitiveEndpoints = []struct {
 var endpointsLackingAuth = []struct {
 	path   string
 	method string
-}{
-	{endpointScale, "POST"},
-}
+}{}
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
