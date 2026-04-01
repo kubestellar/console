@@ -153,7 +153,7 @@ func TestGetClusterCapabilities(t *testing.T) {
 	}
 }
 
-func TestGetClusterCapabilities_UnreachableCluster(t *testing.T) {
+func TestGetClusterCapabilities_ZeroNodeCluster(t *testing.T) {
 	m, _ := NewMultiClusterClient("")
 
 	// c1 has nodes — should be available

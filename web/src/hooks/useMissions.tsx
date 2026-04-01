@@ -1467,6 +1467,9 @@ Install the console locally with the KubeStellar Console agent to use AI mission
   // Sets status to 'cancelling' immediately, then waits for backend acknowledgment
   // before transitioning to final 'failed' state. Falls back to a timeout if no ack.
   const cancelMission = useCallback((missionId: string) => {
+    // Guard against double-cancel: if already cancelling, don't schedule another timeout
+    if (cancelTimeouts.current.has(missionId)) return
+
     // Try WebSocket first (fastest path when connected)
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({

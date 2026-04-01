@@ -978,10 +978,9 @@ func (m *MultiClusterClient) GetClusterCapabilities(ctx context.Context) (*v1alp
 		cap.GPUCount = totalGPUs
 
 		// Use capacity from first node as representative for CPU/Memory
-		if len(nodes) > 0 {
-			cap.CPUCapacity = nodes[0].CPUCapacity
-			cap.MemCapacity = nodes[0].MemoryCapacity
-		}
+		// (nodes is guaranteed non-empty here — zero-node clusters are skipped above)
+		cap.CPUCapacity = nodes[0].CPUCapacity
+		cap.MemCapacity = nodes[0].MemoryCapacity
 
 		capabilities = append(capabilities, cap)
 	}

@@ -253,15 +253,18 @@ func (s *Server) checkOrigin(r *http.Request) bool {
 }
 
 // validateToken checks the authentication token (if configured).
-// Tokens are accepted ONLY via the Authorization header to keep secrets out
-// of server logs, browser history, and proxy access logs (#3895).
+// Tokens are accepted via the Authorization header for HTTP requests.
+// For WebSocket upgrades, tokens are also accepted via the ?token= query
+// parameter since browsers cannot set custom headers on WebSocket handshakes.
+// Query parameter tokens are restricted to Upgrade requests only to keep
+// secrets out of server logs, browser history, and proxy access logs (#3895).
 func (s *Server) validateToken(r *http.Request) bool {
 	// If no token configured, skip token validation
 	if s.agentToken == "" {
 		return true
 	}
 
-	// Check Authorization header first
+	// Check Authorization header (preferred for all requests)
 	authHeader := r.Header.Get("Authorization")
 	if strings.HasPrefix(authHeader, "Bearer ") {
 		token := strings.TrimPrefix(authHeader, "Bearer ")
@@ -270,9 +273,12 @@ func (s *Server) validateToken(r *http.Request) bool {
 		}
 	}
 
-	// Fall back to query parameter (for WebSocket connections that can't set headers)
-	if queryToken := r.URL.Query().Get("token"); queryToken != "" {
-		return queryToken == s.agentToken
+	// Fall back to query parameter ONLY for WebSocket upgrade requests
+	// (browsers cannot set custom headers on WebSocket handshakes)
+	if strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {
+		if queryToken := r.URL.Query().Get("token"); queryToken != "" {
+			return queryToken == s.agentToken
+		}
 	}
 
 	return false
@@ -618,7 +624,7 @@ func (s *Server) isAllowedOrigin(origin string) bool {
 // matchOrigin checks if an origin matches an allowed pattern.
 // For non-wildcard origins, requires an exact match or a match with an additional port
 // (e.g. "http://localhost" matches "http://localhost" and "http://localhost:5174" but NOT "http://localhost.attacker.com").
-// For wildcard patterns like "https://*.ibm.com", matches only a single subdomain level
+// For wildcard patterns like "https://*.ibm.com", matches any subdomain depth
 // (e.g. "https://kc.ibm.com" matches but "https://evil.kc.ibm.com" does not).
 func matchOrigin(origin, allowed string) bool {
 	// Wildcard matching: "https://*.ibm.com" matches any subdomain depth

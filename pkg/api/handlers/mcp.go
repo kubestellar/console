@@ -2694,7 +2694,10 @@ func (h *MCPHandlers) GetWorkloads(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
-	workloads := list.Items
+	var workloads []v1alpha1.Workload
+	if list != nil {
+		workloads = list.Items
+	}
 	if workloads == nil {
 		workloads = make([]v1alpha1.Workload, 0)
 	}
