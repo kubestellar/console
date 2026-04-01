@@ -16,11 +16,13 @@ vi.mock('../useMissionSuggestions', () => ({}))
 vi.mock('../useCardRecommendations', () => ({}))
 
 // Mock constants used by useSnoozedAlerts
-vi.mock('../../lib/constants/network', () => ({
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   POLL_INTERVAL_SLOW_MS: 60_000,
   MISSION_SUGGEST_INTERVAL_MS: 60_000,
   RECOMMENDATION_INTERVAL_MS: 60_000,
-}))
+} })
 
 // ---------------------------------------------------------------------------
 // localStorage mock

@@ -70,10 +70,12 @@ vi.mock('../lib/constants', async (importOriginal) => {
   STORAGE_KEY_TOKEN: 'token',
 } })
 
-vi.mock('../lib/constants/network', () => ({
+vi.mock('../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   FETCH_DEFAULT_TIMEOUT_MS: 10_000,
   AI_PREDICTION_TIMEOUT_MS: 30_000,
-}))
+} })
 
 // ---------------------------------------------------------------------------
 // Import hooks under test (after mocks are set up)

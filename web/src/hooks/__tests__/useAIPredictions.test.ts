@@ -32,13 +32,15 @@ vi.mock('../../lib/constants', async (importOriginal) => {
   LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
 } })
 
-vi.mock('../../lib/constants/network', () => ({
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   FETCH_DEFAULT_TIMEOUT_MS: 10000,
   AI_PREDICTION_TIMEOUT_MS: 30000,
   WS_RECONNECT_DELAY_MS: 5000,
   UI_FEEDBACK_TIMEOUT_MS: 500,
   RETRY_DELAY_MS: 2000,
-}))
+} })
 
 import { useAIPredictions, getRawAIPredictions, isWSConnected, syncSettingsToBackend } from '../useAIPredictions'
 

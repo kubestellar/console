@@ -20,11 +20,13 @@ vi.mock('../../../lib/constants', async (importOriginal) => {
   }
 })
 
-vi.mock('../../../lib/constants/network', () => ({
+vi.mock('../../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   CLOSE_ANIMATION_MS: 300,
   UI_FEEDBACK_TIMEOUT_MS: 2000,
   TOAST_DISMISS_MS: 3000,
-}))
+} })
 
 /** Timeout for importing heavy modules */
 const IMPORT_TIMEOUT_MS = 30000

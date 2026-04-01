@@ -41,9 +41,11 @@ vi.mock('../shared', () => ({
   getEffectiveInterval: (ms: number) => ms,
 }))
 
-vi.mock('../../../lib/constants/network', () => ({
+vi.mock('../../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   MCP_HOOK_TIMEOUT_MS: 5_000,
-}))
+} })
 
 vi.mock('../../../lib/constants', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>

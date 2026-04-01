@@ -54,9 +54,11 @@ class MockWebSocket implements MockWebSocketInstance {
 // Mocks — before module import
 // ---------------------------------------------------------------------------
 
-vi.mock('../../lib/constants/network', () => ({
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   LOCAL_AGENT_WS_URL: 'ws://127.0.0.1:8585/ws',
-}))
+} })
 
 // Assign mock to global before importing the hook
 vi.stubGlobal('WebSocket', MockWebSocket)

@@ -9,9 +9,11 @@ vi.mock('../useMCP', () => ({
   })),
 }))
 
-vi.mock('../../lib/constants/network', () => ({
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   FETCH_DEFAULT_TIMEOUT_MS: 10000,
-}))
+} })
 
 import { useRBACFindings } from '../useRBACFindings'
 

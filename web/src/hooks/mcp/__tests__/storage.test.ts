@@ -71,10 +71,12 @@ vi.mock('../shared', () => ({
   clusterCacheRef: mockClusterCacheRef,
 }))
 
-vi.mock('../../../lib/constants/network', () => ({
+vi.mock('../../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   MCP_HOOK_TIMEOUT_MS: 5_000,
   DEPLOY_ABORT_TIMEOUT_MS: 10_000,
-}))
+} })
 
 vi.mock('../../../lib/constants', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>

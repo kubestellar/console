@@ -84,9 +84,11 @@ vi.mock('../../../hooks/useDashboardHealth', () => ({
   useDashboardHealth: () => mockHealth,
 }))
 
-vi.mock('../../../lib/constants/network', () => ({
+vi.mock('../../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   FOCUS_DELAY_MS: 0,
-}))
+} })
 
 vi.mock('../templates', () => ({
   DASHBOARD_TEMPLATES: [

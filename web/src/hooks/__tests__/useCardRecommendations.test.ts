@@ -33,9 +33,11 @@ vi.mock('../useAIMode', () => ({
   useAIMode: () => mockUseAIMode(),
 }))
 
-vi.mock('../../lib/constants/network', () => ({
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   RECOMMENDATION_INTERVAL_MS: 60_000,
-}))
+} })
 
 // ---------------------------------------------------------------------------
 // Helpers

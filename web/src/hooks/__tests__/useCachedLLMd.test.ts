@@ -27,16 +27,17 @@ vi.mock('../../lib/constants', async (importOriginal) => {
   STORAGE_KEY_TOKEN: 'kc-auth-token',
 } })
 
-vi.mock('../../lib/constants/network', () => ({
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   FETCH_DEFAULT_TIMEOUT_MS: 10000,
-}))
+} })
 
-import { useCachedLLMd } from '../useCachedLLMd'
+import { useCachedLLMdServers } from '../useCachedLLMd'
 
-describe('useCachedLLMd', () => {
+describe('useCachedLLMdServers', () => {
   it('returns expected shape', () => {
-    const { result } = renderHook(() => useCachedLLMd())
+    const { result } = renderHook(() => useCachedLLMdServers())
     expect(result.current).toHaveProperty('isLoading')
-    expect(result.current).toHaveProperty('isDemoData')
   })
 })

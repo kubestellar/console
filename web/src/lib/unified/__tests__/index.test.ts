@@ -174,10 +174,12 @@ vi.mock('../../constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 30000,
 }))
 
-vi.mock('../../../lib/constants/network', () => ({
+vi.mock('../../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   SHORT_DELAY_MS: 0,
   FETCH_DEFAULT_TIMEOUT_MS: 30000,
-}))
+} })
 
 /** Timeout for tests that import the full unified barrel */
 const BARREL_IMPORT_TIMEOUT_MS = 30_000

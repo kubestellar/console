@@ -14,9 +14,11 @@ vi.mock('../../lib/constants', async (importOriginal) => {
   STORAGE_KEY_TOKEN: 'kc-auth-token',
 } })
 
-vi.mock('../../lib/constants/network', () => ({
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   MIN_PERCEIVED_DELAY_MS: 0,
-}))
+} })
 
 import { useFeatureRequests, useNotifications, isTriaged, getStatusDescription } from '../useFeatureRequests'
 import { api } from '../../lib/api'

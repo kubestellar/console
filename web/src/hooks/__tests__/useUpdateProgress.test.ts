@@ -54,10 +54,12 @@ class MockWebSocket implements MockWebSocketInstance {
 // Mocks — before module import
 // ---------------------------------------------------------------------------
 
-vi.mock('../../lib/constants/network', () => ({
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   LOCAL_AGENT_WS_URL: 'ws://127.0.0.1:8585/ws',
   FETCH_DEFAULT_TIMEOUT_MS: 10000,
-}))
+} })
 
 vi.mock('../../lib/demoMode', () => ({
   isNetlifyDeployment: false,

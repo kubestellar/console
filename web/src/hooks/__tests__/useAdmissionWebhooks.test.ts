@@ -14,9 +14,11 @@ vi.mock('../../lib/constants', async (importOriginal) => {
   STORAGE_KEY_TOKEN: 'kc-auth-token',
 } })
 
-vi.mock('../../lib/constants/network', () => ({
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   FETCH_DEFAULT_TIMEOUT_MS: 10000,
-}))
+} })
 
 import { useAdmissionWebhooks } from '../useAdmissionWebhooks'
 

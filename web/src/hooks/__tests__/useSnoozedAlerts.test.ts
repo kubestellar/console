@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
-vi.mock('../../lib/constants/network', () => ({
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   POLL_INTERVAL_SLOW_MS: 60000,
-}))
+} })
 
 vi.mock('../../lib/analytics', () => ({
   emitSnoozed: vi.fn(),

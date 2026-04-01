@@ -11,15 +11,15 @@ vi.mock('../../lib/constants', async (importOriginal) => {
   STORAGE_KEY_TOKEN: 'kc-auth-token',
 } })
 
-import { useUsers } from '../useUsers'
+import { useConsoleUsers } from '../useUsers'
 
-describe('useUsers', () => {
+describe('useConsoleUsers', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   it('returns expected shape', () => {
-    const { result } = renderHook(() => useUsers())
+    const { result } = renderHook(() => useConsoleUsers())
     expect(result.current).toHaveProperty('isLoading')
   })
 })

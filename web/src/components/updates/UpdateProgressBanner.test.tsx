@@ -3,9 +3,11 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { UpdateProgressBanner } from './UpdateProgressBanner'
 import type { UpdateProgress } from '../../types/updates'
 
-vi.mock('../../lib/constants/network', () => ({
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   BANNER_DISMISS_MS: 5000,
-}))
+} })
 
 describe('UpdateProgressBanner', () => {
   const onDismiss = vi.fn()

@@ -26,10 +26,12 @@ vi.mock('../useDemoMode', () => ({
   useDemoMode: vi.fn(() => ({ isDemoMode: false })),
 }))
 
-vi.mock('../../lib/constants/network', () => ({
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   FETCH_DEFAULT_TIMEOUT_MS: 10_000,
   QUICK_ABORT_TIMEOUT_MS: 2_000,
-}))
+} })
 
 vi.mock('../../lib/constants', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>

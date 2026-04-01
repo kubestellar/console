@@ -22,10 +22,12 @@ vi.mock('../../lib/constants', async (importOriginal) => {
   STORAGE_KEY_MISSIONS_HISTORY: 'kc-missions-history',
 } })
 
-vi.mock('../../lib/constants/network', () => ({
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   FETCH_DEFAULT_TIMEOUT_MS: 10000,
   DEPLOY_ABORT_TIMEOUT_MS: 5000,
-}))
+} })
 
 import { useDeployMissions } from '../useDeployMissions'
 

@@ -59,11 +59,13 @@ vi.mock('../../../hooks/usePersistedSettings', () => ({
   }),
 }))
 
-vi.mock('../../../lib/constants/network', () => ({
+vi.mock('../../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   BANNER_DISMISS_MS: 5000,
   UI_FEEDBACK_TIMEOUT_MS: 2000,
   TOOLTIP_HIDE_DELAY_MS: 300,
-}))
+} })
 
 vi.mock('../../../config/routes', () => ({
   ROUTES: { SETTINGS: '/settings', HOME: '/' },

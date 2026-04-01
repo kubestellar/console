@@ -44,9 +44,11 @@ vi.mock('./templates', () => ({
   TEMPLATE_CATEGORIES: [],
 }))
 
-vi.mock('../../lib/constants/network', () => ({
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   FOCUS_DELAY_MS: 0,
-}))
+} })
 
 const mockHealthHealthy = {
   status: 'healthy' as const,
