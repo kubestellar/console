@@ -60,6 +60,8 @@ jobs:
 
       - name: Checkout main
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -987,9 +989,11 @@ jobs:
             fi
 
             # Check for essential sections
-            for SECTION in "Near-Term\|Short-Term\|Q[1-4]" "Mid-Term\|Medium-Term" "Long-Term\|Future" "Non-Goals\|Out of Scope"; do
-              if ! grep -qiE "$SECTION" ROADMAP.md; then
-                ISSUES="${ISSUES}### ROADMAP.md missing section: ${SECTION%%\\*}\nA well-structured roadmap should include near-term, mid-term, long-term, and non-goals sections.\n\n"
+            for SECTION_ENTRY in "Near-Term\|Short-Term\|Q[1-4]::Near-term / short-term" "Mid-Term\|Medium-Term::Mid-term" "Long-Term\|Future::Long-term / future" "Non-Goals\|Out of Scope::Non-goals / out of scope"; do
+              SECTION_REGEX="${SECTION_ENTRY%%::*}"
+              SECTION_LABEL="${SECTION_ENTRY#*::}"
+              if ! grep -qiE "$SECTION_REGEX" ROADMAP.md; then
+                ISSUES="${ISSUES}### ROADMAP.md missing section: ${SECTION_LABEL}\nA well-structured roadmap should include near-term, mid-term, long-term, and non-goals sections.\n\n"
                 HAS_ERRORS=true
               fi
             done

@@ -68,7 +68,7 @@ The dashboard is composed of modular **cards** registered in a card registry (`w
 - **Storage**: SQLite via the `pkg/store` package for user preferences, onboarding state, and settings
 - **API**: RESTful endpoints under `/api/` for cluster data, missions, marketplace, settings
 - **WebSocket**: Real-time event push for cluster state changes, mission progress, and alerts
-- **Metrics**: Prometheus `/metrics` endpoint for operational monitoring
+- **Metrics**: Prometheus `/metrics` endpoint for operational monitoring (served by `kc-agent`)
 
 The backend serves the built frontend as static assets on port 8080 and proxies Kubernetes API requests through the user's kubeconfig.
 

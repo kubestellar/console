@@ -20,7 +20,7 @@ This document follows the [CNCF TAG-Security self-assessment template](https://g
 | **Software** | [KubeStellar Console](https://github.com/kubestellar/console) |
 | **Security Provider** | No — Console is a user-facing dashboard, not a security tool |
 | **Languages** | Go (backend), TypeScript/React (frontend) |
-| **SBOM** | Generated via GoReleaser for each release |
+| **SBOM** | Not currently generated; planned via GoReleaser in future releases |
 
 ## Overview
 
