@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
 vi.mock('../../lib/constants/network', () => ({
@@ -13,6 +13,10 @@ describe('useHelmActions', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ success: true, message: 'OK' }), { status: 200 })
     )
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('starts with idle state', () => {

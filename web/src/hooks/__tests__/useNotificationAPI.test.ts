@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
 vi.mock('../../lib/constants', () => ({
@@ -19,6 +19,10 @@ describe('useNotificationAPI', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ success: true }), { status: 200 })
     )
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('starts with isLoading false and no error', () => {

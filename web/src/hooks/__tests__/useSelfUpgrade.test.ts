@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { renderHook, act } from '@testing-library/react'
 
 vi.mock('../../lib/constants', () => ({
   STORAGE_KEY_TOKEN: 'kc-auth-token',
@@ -18,6 +18,10 @@ describe('useSelfUpgrade', () => {
         latestVersion: '1.1.0',
       }), { status: 200 })
     )
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('starts with null status and not loading', () => {

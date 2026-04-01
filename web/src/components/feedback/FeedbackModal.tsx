@@ -9,7 +9,7 @@
  * in the created issue as markdown images.
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, Linkedin, ImagePlus, Trash2, Copy, Check, AlertTriangle, Loader2 } from 'lucide-react'
@@ -187,7 +187,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
     }
   }
 
-  const forceClose = () => {
+  const forceClose = useCallback(() => {
     setShowDiscardConfirm(false)
     localStorage.removeItem(DRAFT_KEY)
     setSuccess(null)
@@ -196,15 +196,15 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
     setDescription('')
     setScreenshots([])
     onClose()
-  }
+  }, [onClose])
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (!success && (title.trim() !== '' || description.trim() !== '')) {
       setShowDiscardConfirm(true)
       return
     }
     forceClose()
-  }
+  }, [success, title, description, forceClose])
 
   // Keyboard navigation - ESC to close, Space to close when not typing
   useEffect(() => {
@@ -234,7 +234,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen])
+  }, [isOpen, handleClose])
 
   if (!isOpen) return null
 

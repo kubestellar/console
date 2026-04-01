@@ -168,7 +168,7 @@ func TestGetClusterCapabilities_ZeroNodeCluster(t *testing.T) {
 	}
 	fakeWithNodes := k8sfake.NewSimpleClientset(node)
 
-	// c2 has zero nodes — should be unavailable
+	// c2 has zero nodes (reachable but empty) — should be unavailable
 	fakeEmpty := k8sfake.NewSimpleClientset()
 
 	m.clients = map[string]kubernetes.Interface{

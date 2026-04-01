@@ -1,5 +1,4 @@
 import { describe, it, expect, vi } from 'vitest'
-import { renderHook } from '@testing-library/react'
 
 vi.mock('../shared', () => ({
   useMCPHook: vi.fn(() => ({

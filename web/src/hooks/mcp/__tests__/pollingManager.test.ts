@@ -5,9 +5,9 @@ vi.mock('../../../lib/constants/network', () => ({
   POLL_INTERVAL_SLOW_MS: 60000,
 }))
 
-import { PollingManager } from '../pollingManager'
+import { subscribePolling } from '../pollingManager'
 
-describe('PollingManager', () => {
+describe('pollingManager', () => {
   beforeEach(() => {
     vi.useFakeTimers()
   })
@@ -16,7 +16,8 @@ describe('PollingManager', () => {
     vi.useRealTimers()
   })
 
-  it('is importable', () => {
-    expect(PollingManager).toBeDefined()
+  it('exports subscribePolling', () => {
+    expect(subscribePolling).toBeDefined()
+    expect(typeof subscribePolling).toBe('function')
   })
 })

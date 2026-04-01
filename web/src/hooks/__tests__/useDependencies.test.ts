@@ -45,7 +45,8 @@ describe('useResolveDependencies', () => {
     act(() => {
       result.current.resolve('cluster', 'default', 'nginx')
     })
-    // After initiating, loading should be true or already resolved
+    // After initiating, loading should be true
+    expect(result.current.isLoading).toBe(true)
   })
 
   it('reset clears all state', () => {

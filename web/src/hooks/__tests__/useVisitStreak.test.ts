@@ -42,8 +42,8 @@ describe('useVisitStreak', () => {
 
   it('returns a streak of at least 1', async () => {
     vi.mocked(safeGetJSON).mockReturnValue(null)
-    // Use static import — module is already loaded, so calculateStreak
-    // ran at import time. The hook just returns the cached value.
+    // calculateStreak runs when useVisitStreak() is first called via
+    // the useState initializer, not at import time.
     const { useVisitStreak } = await import('../useVisitStreak')
     const { result } = renderHook(() => useVisitStreak())
     expect(result.current.streak).toBeGreaterThanOrEqual(1)

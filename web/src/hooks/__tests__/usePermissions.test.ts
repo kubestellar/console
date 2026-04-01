@@ -12,29 +12,6 @@ vi.mock('../../lib/constants', () => ({
 import { usePermissions, useCanI, clearPermissionsCache } from '../usePermissions'
 import { isBackendUnavailable } from '../../lib/api'
 
-const MOCK_PERMISSIONS_RESPONSE = {
-  clusters: {
-    'prod-cluster': {
-      isClusterAdmin: true,
-      canListNodes: true,
-      canListNamespaces: true,
-      canCreateNamespaces: true,
-      canManageRBAC: true,
-      canViewSecrets: true,
-      accessibleNamespaces: ['default', 'kube-system'],
-    },
-    'staging-cluster': {
-      isClusterAdmin: false,
-      canListNodes: true,
-      canListNamespaces: true,
-      canCreateNamespaces: false,
-      canManageRBAC: false,
-      canViewSecrets: false,
-      accessibleNamespaces: ['default'],
-    },
-  },
-}
-
 describe('usePermissions', () => {
   beforeEach(() => {
     localStorage.clear()

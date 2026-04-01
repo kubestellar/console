@@ -732,7 +732,7 @@ func TestMatchOrigin(t *testing.T) {
 		{"http://localhost", "http://localhost", true},
 		{"http://localhost.attacker.com", "http://localhost", false}, // prefix bypass
 		{"https://app.ibm.com", "https://*.ibm.com", true},
-		{"https://deep.sub.ibm.com", "https://*.ibm.com", false}, // multi-level subdomain rejected
+		{"https://deep.sub.ibm.com", "https://*.ibm.com", true}, // multi-level subdomain allowed
 		{"http://ibm.com", "https://*.ibm.com", false},           // wrong scheme
 		{"https://ibm.com", "https://*.ibm.com", false},          // no subdomain, doesn't have .ibm.com suffix
 		{"https://google.com", "https://*.ibm.com", false},

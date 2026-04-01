@@ -2695,11 +2695,10 @@ func (h *MCPHandlers) GetWorkloads(c *fiber.Ctx) error {
 	}
 
 	var workloads []v1alpha1.Workload
-	if list != nil {
-		workloads = list.Items
-	}
-	if workloads == nil {
+	if list == nil || list.Items == nil {
 		workloads = make([]v1alpha1.Workload, 0)
+	} else {
+		workloads = list.Items
 	}
 
 	return c.JSON(fiber.Map{"workloads": workloads, "source": "k8s"})

@@ -488,25 +488,27 @@ describe('cancelMission', () => {
 
   it('transitions to failed after cancel ack timeout', async () => {
     vi.useFakeTimers()
-    const { result } = renderHook(() => useMissions(), { wrapper })
-    const { missionId } = await startMissionWithConnection(result)
+    try {
+      const { result } = renderHook(() => useMissions(), { wrapper })
+      const { missionId } = await startMissionWithConnection(result)
 
-    act(() => {
-      result.current.cancelMission(missionId)
-    })
-    expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('cancelling')
+      act(() => {
+        result.current.cancelMission(missionId)
+      })
+      expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('cancelling')
 
-    // Advance past the cancel ack timeout (10s)
-    act(() => {
-      vi.advanceTimersByTime(10_000)
-    })
+      // Advance past the cancel ack timeout (10s)
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
 
-    const mission = result.current.missions.find(m => m.id === missionId)
-    expect(mission?.status).toBe('failed')
-    const systemMessages = mission?.messages.filter(m => m.role === 'system') ?? []
-    expect(systemMessages.some(m => m.content.includes('backend did not confirm'))).toBe(true)
-
-    vi.useRealTimers()
+      const mission = result.current.missions.find(m => m.id === missionId)
+      expect(mission?.status).toBe('failed')
+      const systemMessages = mission?.messages.filter(m => m.role === 'system') ?? []
+      expect(systemMessages.some(m => m.content.includes('backend did not confirm'))).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('sends cancel_chat over WebSocket when connected', async () => {

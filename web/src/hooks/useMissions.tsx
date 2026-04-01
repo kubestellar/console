@@ -1516,6 +1516,11 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     ))
 
     // Safety-net timeout: if the backend never acknowledges, finalize after CANCEL_ACK_TIMEOUT_MS
+    // Clear any existing timeout for this mission first to prevent duplicate finalization
+    const existingTimeout = cancelTimeouts.current.get(missionId)
+    if (existingTimeout) {
+      clearTimeout(existingTimeout)
+    }
     const timeoutHandle = setTimeout(() => {
       cancelTimeouts.current.delete(missionId)
       finalizeCancellation(missionId, 'Mission cancelled by user (backend did not confirm cancellation in time).')

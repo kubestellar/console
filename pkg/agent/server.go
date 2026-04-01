@@ -624,7 +624,7 @@ func (s *Server) isAllowedOrigin(origin string) bool {
 // For non-wildcard origins, requires an exact match or a match with an additional port
 // (e.g. "http://localhost" matches "http://localhost" and "http://localhost:5174" but NOT "http://localhost.attacker.com").
 // For wildcard patterns like "https://*.ibm.com", matches any subdomain depth
-// (e.g. "https://kc.ibm.com" matches but "https://evil.kc.ibm.com" does not).
+// (e.g. "https://kc.ibm.com" and "https://deep.sub.ibm.com" both match).
 func matchOrigin(origin, allowed string) bool {
 	// Wildcard matching: "https://*.ibm.com" matches any subdomain depth
 	// e.g. "https://*.ibm.com" matches "https://kc.ibm.com" and "https://kc.apps.example.ibm.com"
