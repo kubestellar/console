@@ -190,7 +190,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
           <button
             onClick={() => refetch()}
             disabled={isRefreshing}
-            className="mt-1 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors disabled:opacity-50"
+            className="mt-1 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
             {t('common:common.retry', 'Retry')}

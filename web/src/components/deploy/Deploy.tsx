@@ -165,7 +165,7 @@ export function Deploy() {
       })
     } catch (err) {
       console.error('Deploy failed:', err)
-      const errorMessage = err instanceof Error ? err.message : 'Deploy failed'
+      const errorMessage = (err instanceof Error && err.message.trim()) ? err.message.trim() : 'Deploy failed'
       showToast(errorMessage, 'error')
       publishCardEvent({
         type: 'deploy:result',

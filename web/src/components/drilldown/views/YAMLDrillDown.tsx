@@ -83,7 +83,7 @@ export function YAMLDrillDown({ data }: Props) {
     emitDataExported('yaml_download', resourceType)
   }
 
-  if (isLoading) {
+  if (isLoading && !yaml) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="spinner w-8 h-8" />

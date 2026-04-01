@@ -148,7 +148,7 @@ export function EventsDrillDown({ data }: Props) {
     setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
   }
 
-  if (isLoading) {
+  if (isLoading && events.length === 0 && !error) {
     return <EventsSkeleton />
   }
 
