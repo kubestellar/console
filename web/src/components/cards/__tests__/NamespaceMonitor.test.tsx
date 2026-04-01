@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 
+// Standard mocks
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
   isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
@@ -9,9 +10,10 @@ vi.mock('../../../lib/demoMode', () => ({
   isFeatureEnabled: () => true,
 }))
 
+const mockUseDemoMode = vi.fn()
 vi.mock('../../../hooks/useDemoMode', () => ({
   getDemoMode: () => true, default: () => true,
-  useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  useDemoMode: () => mockUseDemoMode(),
   hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
   canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
   setGlobalDemoMode: vi.fn(),
@@ -19,7 +21,7 @@ vi.mock('../../../hooks/useDemoMode', () => ({
 
 vi.mock('../../../lib/analytics', () => ({
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(),
+  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(), markErrorReported: vi.fn(),
 }))
 
 vi.mock('../../../hooks/useTokenUsage', () => ({
@@ -32,39 +34,93 @@ vi.mock('react-i18next', () => ({
   Trans: ({ children }: { children: React.ReactNode }) => children,
 }))
 
-vi.mock('../../../hooks/useMCP', () => ({
-  useClusters: () => ({ deduplicatedClusters: [], isLoading: false }),
+const mockUseCardLoadingState = vi.fn()
+vi.mock('../CardDataContext', () => ({
+  useReportCardDataState: vi.fn(),
+  useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
 }))
 
+const mockNamespaces = vi.fn()
+const mockDeployments = vi.fn()
+const mockServices = vi.fn()
+const mockPVCs = vi.fn()
+const mockPods = vi.fn()
+const mockConfigMaps = vi.fn()
+const mockSecrets = vi.fn()
+const mockJobs = vi.fn()
 vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedNamespaces: () => ({ namespaces: [], isDemoFallback: null, isRefreshing: false }),
-  useCachedDeployments: () => ({ deployments: [], isDemoFallback: null }),
-  useCachedServices: () => ({ services: [], isDemoFallback: null }),
-  useCachedPVCs: () => ({ pvcs: [], isDemoFallback: null }),
-  useCachedPods: () => ({ pods: [], isDemoFallback: null }),
-  useCachedConfigMaps: () => ({ configmaps: [], isDemoFallback: null }),
-  useCachedSecrets: () => ({ secrets: [], isDemoFallback: null }),
-  useCachedJobs: () => ({ jobs: [], isDemoFallback: null }),
+  useCachedNamespaces: () => mockNamespaces(),
+  useCachedDeployments: () => mockDeployments(),
+  useCachedServices: () => mockServices(),
+  useCachedPVCs: () => mockPVCs(),
+  useCachedPods: () => mockPods(),
+  useCachedConfigMaps: () => mockConfigMaps(),
+  useCachedSecrets: () => mockSecrets(),
+  useCachedJobs: () => mockJobs(),
+}))
+
+const mockUseClusters = vi.fn()
+vi.mock('../../../hooks/useMCP', () => ({
+  useClusters: () => mockUseClusters(),
+}))
+
+const mockDrillDown = vi.fn()
+vi.mock('../../../hooks/useDrillDown', () => ({
+  useDrillDownActions: () => mockDrillDown(),
 }))
 
 vi.mock('../../../hooks/useGlobalFilters', () => ({
-  useGlobalFilters: () => ({ selectedClusters: [], isAllClustersSelected: null }),
-}))
-
-vi.mock('../../../hooks/useDrillDown', () => ({
-  useDrillDownActions: () => ({ drillToNamespace: vi.fn(), drillToPod: vi.fn(), drillToDeployment: vi.fn(), drillToService: vi.fn(), drillToPVC: null }),
-}))
-
-vi.mock('../CardDataContext', () => ({
-  useCardLoadingState: () => ({ data: [], isLoading: false, error: null }),
-  useCardLoadingState: () => ({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false }),
+  useGlobalFilters: () => ({ selectedClusters: [], isAllClustersSelected: true, selectedSeverities: [], isAllSeveritiesSelected: true, customFilter: '' }),
 }))
 
 import { NamespaceMonitor } from '../NamespaceMonitor'
 
 describe('NamespaceMonitor', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
+    mockNamespaces.mockReturnValue({ namespaces: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockDeployments.mockReturnValue({ deployments: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockServices.mockReturnValue({ services: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockPVCs.mockReturnValue({ pvcs: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockPods.mockReturnValue({ pods: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockConfigMaps.mockReturnValue({ configmaps: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockSecrets.mockReturnValue({ secrets: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockJobs.mockReturnValue({ jobs: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now() })
+    mockDrillDown.mockReturnValue({ drillToNamespace: vi.fn() })
+  })
+
   it('renders without crashing', () => {
     const { container } = render(<NamespaceMonitor />)
     expect(container).toBeTruthy()
   })
+
+  it('calls useCardLoadingState during render', () => {
+    render(<NamespaceMonitor />)
+    expect(mockUseCardLoadingState).toHaveBeenCalled()
+  })
+
+  it('renders correctly in demo mode', () => {
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    const { container } = render(<NamespaceMonitor />)
+    expect(container).toBeTruthy()
+  })
+
+  it('renders correctly in non-demo mode', () => {
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    const { container } = render(<NamespaceMonitor />)
+    expect(container).toBeTruthy()
+  })
+
+  it('renders with cluster data available', () => {
+    mockUseClusters.mockReturnValue({
+      clusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }], deduplicatedClusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }],
+      isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now(),
+    })
+    const { container } = render(<NamespaceMonitor />)
+    expect(container).toBeTruthy()
+  })
+
 })

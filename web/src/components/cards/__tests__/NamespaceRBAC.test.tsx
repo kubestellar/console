@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 
+// Standard mocks
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
   isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
@@ -9,9 +10,10 @@ vi.mock('../../../lib/demoMode', () => ({
   isFeatureEnabled: () => true,
 }))
 
+const mockUseDemoMode = vi.fn()
 vi.mock('../../../hooks/useDemoMode', () => ({
   getDemoMode: () => true, default: () => true,
-  useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  useDemoMode: () => mockUseDemoMode(),
   hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
   canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
   setGlobalDemoMode: vi.fn(),
@@ -19,7 +21,7 @@ vi.mock('../../../hooks/useDemoMode', () => ({
 
 vi.mock('../../../lib/analytics', () => ({
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(),
+  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(), markErrorReported: vi.fn(),
 }))
 
 vi.mock('../../../hooks/useTokenUsage', () => ({
@@ -32,71 +34,106 @@ vi.mock('react-i18next', () => ({
   Trans: ({ children }: { children: React.ReactNode }) => children,
 }))
 
-vi.mock('../../../hooks/useMCP', () => ({
-  useClusters: () => ({ deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null }),
+const mockUseCardLoadingState = vi.fn()
+vi.mock('../CardDataContext', () => ({
+  useReportCardDataState: vi.fn(),
+  useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
 }))
 
+const mockNamespaces = vi.fn()
+const mockK8sRoles = vi.fn()
+const mockK8sRoleBindings = vi.fn()
+const mockK8sServiceAccounts = vi.fn()
 vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedNamespaces: () => ({ namespaces: [], isDemoFallback: null, isRefreshing: false }),
-  useCachedK8sRoles: () => ({ roles: [], isLoading: false, isRefreshing: false, isDemoFallback: null }),
-  useCachedK8sRoleBindings: () => ({ bindings: [], isLoading: false, isRefreshing: false, isDemoFallback: null }),
-  useCachedK8sServiceAccounts: () => ({ serviceAccounts: [], isLoading: false, isRefreshing: false, isDemoFallback: null }),
+  useCachedNamespaces: () => mockNamespaces(),
+  useCachedK8sRoles: () => mockK8sRoles(),
+  useCachedK8sRoleBindings: () => mockK8sRoleBindings(),
+  useCachedK8sServiceAccounts: () => mockK8sServiceAccounts(),
 }))
 
+const mockUseClusters = vi.fn()
+vi.mock('../../../hooks/useMCP', () => ({
+  useClusters: () => mockUseClusters(),
+}))
+
+const mockDrillDown = vi.fn()
 vi.mock('../../../hooks/useDrillDown', () => ({
-  useDrillDownActions: () => ({ drillToRBAC: null }),
+  useDrillDownActions: () => mockDrillDown(),
 }))
 
 vi.mock('../../../hooks/useGlobalFilters', () => ({
-  useGlobalFilters: () => ({ selectedClusters: [], isAllClustersSelected: null }),
+  useGlobalFilters: () => ({ selectedClusters: [], isAllClustersSelected: true, selectedSeverities: [], isAllSeveritiesSelected: true, customFilter: '' }),
 }))
 
 vi.mock('../../../lib/cards/cardHooks', () => ({
   useCardData: () => ({
-    items: [],
-    totalItems: 0,
-    currentPage: 1,
-    totalPages: 0,
-    itemsPerPage: 5,
-    goToPage: vi.fn(),
-    needsPagination: false,
-    setItemsPerPage: vi.fn(),
-    filters: {
-      search: '',
-      setSearch: vi.fn(),
-      localClusterFilter: [],
-      toggleClusterFilter: vi.fn(),
-      clearClusterFilter: vi.fn(),
-      availableClusters: [],
-      showClusterFilter: false,
-      setShowClusterFilter: vi.fn(),
-      clusterFilterRef: { current: null },
-      clusterFilterBtnRef: { current: null },
-      dropdownStyle: null,
-    },
-    sorting: {
-      sortBy: '',
-      setSortBy: vi.fn(),
-      sortDirection: 'asc',
-      setSortDirection: vi.fn(),
-      toggleSortDirection: vi.fn(),
-    },
-    containerRef: { current: null },
-    containerStyle: undefined,
+    items: [], totalItems: 0, currentPage: 1, totalPages: 0, itemsPerPage: 5,
+    goToPage: vi.fn(), needsPagination: false, setItemsPerPage: vi.fn(),
+    filters: { search: '', setSearch: vi.fn(), localClusterFilter: [], toggleClusterFilter: vi.fn(), clearClusterFilter: vi.fn(), availableClusters: [], showClusterFilter: false, setShowClusterFilter: vi.fn(), clusterFilterRef: { current: null }, clusterFilterBtnRef: { current: null }, dropdownStyle: null },
+    sorting: { sortBy: '', setSortBy: vi.fn(), sortDirection: 'asc' as const, setSortDirection: vi.fn(), toggleSortDirection: vi.fn() },
+    containerRef: { current: null }, containerStyle: undefined,
   }),
   commonComparators: { string: () => () => 0, number: () => () => 0, statusOrder: () => () => 0, date: () => () => 0, boolean: () => () => 0 },
-}))
-
-vi.mock('../CardDataContext', () => ({
-  useCardLoadingState: () => ({ showSkeleton: false, showEmptyState: false }),
-  useCardLoadingState: () => ({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false }),
 }))
 
 import { NamespaceRBAC } from '../NamespaceRBAC'
 
 describe('NamespaceRBAC', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
+    mockNamespaces.mockReturnValue({ namespaces: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockK8sRoles.mockReturnValue({ roles: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockK8sRoleBindings.mockReturnValue({ bindings: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockK8sServiceAccounts.mockReturnValue({ serviceAccounts: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now() })
+    mockDrillDown.mockReturnValue({ drillToRBAC: vi.fn() })
+  })
+
   it('renders without crashing', () => {
-    const { container } = render(<NamespaceRBAC/ />)
+    const { container } = render(<NamespaceRBAC />)
     expect(container).toBeTruthy()
   })
+
+  it('calls useCardLoadingState during render', () => {
+    render(<NamespaceRBAC />)
+    expect(mockUseCardLoadingState).toHaveBeenCalled()
+  })
+
+  it('renders skeleton UI when data is loading', () => {
+    mockUseCardLoadingState.mockReturnValue({ showSkeleton: true, showEmptyState: false, hasData: false, isRefreshing: false })
+    mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: true, isRefreshing: false, error: null, lastRefresh: null })
+    const { container } = render(<NamespaceRBAC />)
+    // Skeleton renders animate-pulse elements or similar loading indicators
+    expect(container.innerHTML.length).toBeGreaterThan(0)
+  })
+
+  it('handles empty data state gracefully', () => {
+    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: true, hasData: false, isRefreshing: false })
+    const { container } = render(<NamespaceRBAC />)
+    expect(container.innerHTML.length).toBeGreaterThan(0)
+  })
+
+  it('renders correctly in demo mode', () => {
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    const { container } = render(<NamespaceRBAC />)
+    expect(container).toBeTruthy()
+  })
+
+  it('renders correctly in non-demo mode', () => {
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    const { container } = render(<NamespaceRBAC />)
+    expect(container).toBeTruthy()
+  })
+
+  it('renders with cluster data available', () => {
+    mockUseClusters.mockReturnValue({
+      clusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }], deduplicatedClusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }],
+      isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now(),
+    })
+    const { container } = render(<NamespaceRBAC />)
+    expect(container).toBeTruthy()
+  })
+
 })

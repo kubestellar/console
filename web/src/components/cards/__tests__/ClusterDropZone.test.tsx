@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 
+// Standard mocks
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
   isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
@@ -9,9 +10,10 @@ vi.mock('../../../lib/demoMode', () => ({
   isFeatureEnabled: () => true,
 }))
 
+const mockUseDemoMode = vi.fn()
 vi.mock('../../../hooks/useDemoMode', () => ({
   getDemoMode: () => true, default: () => true,
-  useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  useDemoMode: () => mockUseDemoMode(),
   hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
   canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
   setGlobalDemoMode: vi.fn(),
@@ -19,7 +21,7 @@ vi.mock('../../../hooks/useDemoMode', () => ({
 
 vi.mock('../../../lib/analytics', () => ({
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(),
+  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(), markErrorReported: vi.fn(),
 }))
 
 vi.mock('../../../hooks/useTokenUsage', () => ({
@@ -32,24 +34,45 @@ vi.mock('react-i18next', () => ({
   Trans: ({ children }: { children: React.ReactNode }) => children,
 }))
 
-vi.mock('../../../lib/cn', () => ({
-  cn: vi.fn(),
-}))
-
-vi.mock('../../../hooks/useWorkloads', () => ({
-  useClusterCapabilities: () => ({ data: [], isLoading: false }),
-}))
-
+const mockUseCardLoadingState = vi.fn()
 vi.mock('../CardDataContext', () => ({
-  useCardLoadingState: () => ({ data: [], isLoading: false, error: null }),
-  useCardLoadingState: () => ({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false }),
+  useReportCardDataState: vi.fn(),
+  useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
 }))
+
+vi.mock('@dnd-kit/core', () => ({ useDroppable: () => ({ setNodeRef: vi.fn(), isOver: false }), useDraggable: () => ({ attributes: {}, listeners: {}, setNodeRef: vi.fn(), transform: null, isDragging: false }) }))
+
+vi.mock('../../../hooks/useWorkloads', () => ({ useClusterCapabilities: () => ({ capabilities: [], isLoading: false }) }))
 
 import { ClusterDropZone } from '../ClusterDropZone'
 
 describe('ClusterDropZone', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
+  })
+
   it('renders without crashing', () => {
-    const { container } = render(<ClusterDropZone isDragging={false} />)
+    const { container } = render(<ClusterDropZone />)
     expect(container).toBeTruthy()
   })
+
+  it('calls useCardLoadingState during render', () => {
+    render(<ClusterDropZone />)
+    expect(mockUseCardLoadingState).toHaveBeenCalled()
+  })
+
+  it('renders correctly in demo mode', () => {
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    const { container } = render(<ClusterDropZone />)
+    expect(container).toBeTruthy()
+  })
+
+  it('renders correctly in non-demo mode', () => {
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    const { container } = render(<ClusterDropZone />)
+    expect(container).toBeTruthy()
+  })
+
 })

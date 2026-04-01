@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 
+// Standard mocks
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
   isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
@@ -9,9 +10,10 @@ vi.mock('../../../lib/demoMode', () => ({
   isFeatureEnabled: () => true,
 }))
 
+const mockUseDemoMode = vi.fn()
 vi.mock('../../../hooks/useDemoMode', () => ({
   getDemoMode: () => true, default: () => true,
-  useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  useDemoMode: () => mockUseDemoMode(),
   hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
   canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
   setGlobalDemoMode: vi.fn(),
@@ -19,7 +21,7 @@ vi.mock('../../../hooks/useDemoMode', () => ({
 
 vi.mock('../../../lib/analytics', () => ({
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(),
+  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(), markErrorReported: vi.fn(),
 }))
 
 vi.mock('../../../hooks/useTokenUsage', () => ({
@@ -32,28 +34,56 @@ vi.mock('react-i18next', () => ({
   Trans: ({ children }: { children: React.ReactNode }) => children,
 }))
 
-vi.mock('../../../hooks/useCertManager', () => ({
-  useCertManager: () => ({ status: '', issuers: [], isLoading: false, isRefreshing: false, consecutiveFailures: [], isFailed: false }),
-}))
-
-vi.mock('../../../hooks/useMCP', () => ({
-  useClusters: () => ({ clusters: [] }),
-}))
-
-vi.mock('../../../lib/kubectlProxy', () => ({
-  kubectlProxy: vi.fn(),
-}))
-
+const mockUseCardLoadingState = vi.fn()
 vi.mock('../CardDataContext', () => ({
-  useCardLoadingState: () => ({ data: [], isLoading: false, error: null }),
-  useCardLoadingState: () => ({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false }),
+  useReportCardDataState: vi.fn(),
+  useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
+}))
+
+const mockUseClusters = vi.fn()
+vi.mock('../../../hooks/useMCP', () => ({
+  useClusters: () => mockUseClusters(),
 }))
 
 import { VaultSecrets } from '../DataComplianceCards'
 
 describe('VaultSecrets', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
+    mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now() })
+  })
+
   it('renders without crashing', () => {
     const { container } = render(<VaultSecrets />)
     expect(container).toBeTruthy()
   })
+
+  it('calls useCardLoadingState during render', () => {
+    render(<VaultSecrets />)
+    expect(mockUseCardLoadingState).toHaveBeenCalled()
+  })
+
+  it('renders correctly in demo mode', () => {
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    const { container } = render(<VaultSecrets />)
+    expect(container).toBeTruthy()
+  })
+
+  it('renders correctly in non-demo mode', () => {
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    const { container } = render(<VaultSecrets />)
+    expect(container).toBeTruthy()
+  })
+
+  it('renders with cluster data available', () => {
+    mockUseClusters.mockReturnValue({
+      clusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }], deduplicatedClusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }],
+      isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now(),
+    })
+    const { container } = render(<VaultSecrets />)
+    expect(container).toBeTruthy()
+  })
+
 })

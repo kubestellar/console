@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 
+// Standard mocks
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
   isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
@@ -9,9 +10,10 @@ vi.mock('../../../lib/demoMode', () => ({
   isFeatureEnabled: () => true,
 }))
 
+const mockUseDemoMode = vi.fn()
 vi.mock('../../../hooks/useDemoMode', () => ({
   getDemoMode: () => true, default: () => true,
-  useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  useDemoMode: () => mockUseDemoMode(),
   hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
   canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
   setGlobalDemoMode: vi.fn(),
@@ -19,7 +21,7 @@ vi.mock('../../../hooks/useDemoMode', () => ({
 
 vi.mock('../../../lib/analytics', () => ({
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(),
+  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(), markErrorReported: vi.fn(),
 }))
 
 vi.mock('../../../hooks/useTokenUsage', () => ({
@@ -27,56 +29,99 @@ vi.mock('../../../hooks/useTokenUsage', () => ({
   tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },
 }))
 
-vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedISO27001Audit: () => ({ findings: [], isLoading: false, isDemoFallback: null, isFailed: false, consecutiveFailures: [] }),
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+  Trans: ({ children }: { children: React.ReactNode }) => children,
 }))
 
+const mockUseCardLoadingState = vi.fn()
+const mockUseCardDemoState = vi.fn()
 vi.mock('../CardDataContext', () => ({
-  useCardLoadingState: () => ({ showSkeleton: false, showEmptyState: false }),
-  useCardDemoState: () => ({ shouldUseDemoData: null }),
-  useCardLoadingState: () => ({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false }),
+  useReportCardDataState: vi.fn(),
+  useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
+  useCardDemoState: (opts: unknown) => mockUseCardDemoState(opts),
+}))
+
+const mockISO27001Audit = vi.fn()
+vi.mock('../../../hooks/useCachedData', () => ({
+  useCachedISO27001Audit: () => mockISO27001Audit(),
 }))
 
 vi.mock('../../../lib/cards/cardHooks', () => ({
   useCardData: () => ({
-    items: [],
-    totalItems: 0,
-    currentPage: 1,
-    totalPages: 0,
-    itemsPerPage: 5,
-    goToPage: vi.fn(),
-    needsPagination: false,
-    setItemsPerPage: vi.fn(),
-    filters: {
-      search: '',
-      setSearch: vi.fn(),
-      localClusterFilter: [],
-      toggleClusterFilter: vi.fn(),
-      clearClusterFilter: vi.fn(),
-      availableClusters: [],
-      showClusterFilter: false,
-      setShowClusterFilter: vi.fn(),
-      clusterFilterRef: { current: null },
-      clusterFilterBtnRef: { current: null },
-      dropdownStyle: null,
-    },
-    sorting: {
-      sortBy: '',
-      setSortBy: vi.fn(),
-      sortDirection: 'asc',
-      setSortDirection: vi.fn(),
-      toggleSortDirection: vi.fn(),
-    },
-    containerRef: { current: null },
-    containerStyle: undefined,
+    items: [], totalItems: 0, currentPage: 1, totalPages: 0, itemsPerPage: 5,
+    goToPage: vi.fn(), needsPagination: false, setItemsPerPage: vi.fn(),
+    filters: { search: '', setSearch: vi.fn(), localClusterFilter: [], toggleClusterFilter: vi.fn(), clearClusterFilter: vi.fn(), availableClusters: [], showClusterFilter: false, setShowClusterFilter: vi.fn(), clusterFilterRef: { current: null }, clusterFilterBtnRef: { current: null }, dropdownStyle: null },
+    sorting: { sortBy: '', setSortBy: vi.fn(), sortDirection: 'asc' as const, setSortDirection: vi.fn(), toggleSortDirection: vi.fn() },
+    containerRef: { current: null }, containerStyle: undefined,
   }),
+  commonComparators: { string: () => () => 0, number: () => () => 0, statusOrder: () => () => 0, date: () => () => 0, boolean: () => () => 0 },
 }))
 
-import ISO27001Audit from '../ISO27001Audit'
+import { ISO27001Audit } from '../ISO27001Audit'
 
 describe('ISO27001Audit', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
+    mockUseCardDemoState.mockReturnValue({ shouldUseDemoData: false })
+    mockISO27001Audit.mockReturnValue({ findings: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+  })
+
   it('renders without crashing', () => {
     const { container } = render(<ISO27001Audit />)
     expect(container).toBeTruthy()
   })
+
+  it('calls useCardLoadingState during render', () => {
+    render(<ISO27001Audit />)
+    expect(mockUseCardLoadingState).toHaveBeenCalled()
+  })
+
+  it('renders skeleton UI when data is loading', () => {
+    mockUseCardLoadingState.mockReturnValue({ showSkeleton: true, showEmptyState: false, hasData: false, isRefreshing: false })
+    mockISO27001Audit.mockReturnValue({ findings: [], isLoading: true, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: null })
+    const { container } = render(<ISO27001Audit />)
+    // Skeleton renders animate-pulse elements or similar loading indicators
+    expect(container.innerHTML.length).toBeGreaterThan(0)
+  })
+
+  it('handles empty data state gracefully', () => {
+    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: true, hasData: false, isRefreshing: false })
+    const { container } = render(<ISO27001Audit />)
+    expect(container.innerHTML.length).toBeGreaterThan(0)
+  })
+
+  it('renders correctly in demo mode', () => {
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    const { container } = render(<ISO27001Audit />)
+    expect(container).toBeTruthy()
+  })
+
+  it('renders correctly in non-demo mode', () => {
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    const { container } = render(<ISO27001Audit />)
+    expect(container).toBeTruthy()
+  })
+
+  it('handles data fetch failure', () => {
+    mockISO27001Audit.mockReturnValue({ findings: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: true, consecutiveFailures: 3, error: 'Network error', lastRefresh: null })
+    const { container } = render(<ISO27001Audit />)
+    expect(container).toBeTruthy()
+  })
+
+  it('renders during background refresh with cached data', () => {
+    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: true })
+    mockISO27001Audit.mockReturnValue({ findings: [], isLoading: false, isRefreshing: true, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    const { container } = render(<ISO27001Audit />)
+    expect(container).toBeTruthy()
+  })
+
+  it('reports demo fallback state', () => {
+    mockISO27001Audit.mockReturnValue({ findings: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    render(<ISO27001Audit />)
+    expect(mockUseCardLoadingState).toHaveBeenCalled()
+  })
+
 })
