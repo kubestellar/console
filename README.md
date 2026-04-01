@@ -1,5 +1,7 @@
 # KubeStellar Console
 
+![Coverage](https://img.shields.io/badge/coverage-25%25-yellow)
+
 AI-powered multi-cluster Kubernetes dashboard with guided install missions for 250+ CNCF projects.
 
 [**Live Demo**](https://console.kubestellar.io) | [Contributing](CONTRIBUTING.md)
