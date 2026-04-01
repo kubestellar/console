@@ -1398,6 +1398,27 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                       saveWatchedPaths(updated)
                       showToast(`Removed path "${child.path}"`, 'info')
                     } : undefined}
+                    onRefresh={(node.id === 'github' || node.id === 'local') ? (child) => {
+                      // Mark node as unloaded to force re-fetch
+                      setTreeNodes((prev) =>
+                        updateNodeInTree(prev, child.id, {
+                          loaded: false,
+                          loading: false,
+                          children: [],
+                        })
+                      )
+                      // Collapse and re-expand to trigger load
+                      setExpandedNodes((prev) => {
+                        const next = new Set(prev)
+                        next.delete(child.id)
+                        return next
+                      })
+                      // Re-expand after a tick to trigger the useEffect
+                      setTimeout(() => {
+                        toggleNode(child)
+                        selectNode(child)
+                      }, 50)
+                    } : undefined}
                     onAdd={node.id === 'github' ? () => setAddingRepo(!addingRepo)
                       : node.id === 'local' ? () => setAddingPath(!addingPath)
                       : undefined}

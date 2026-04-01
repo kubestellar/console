@@ -1,7 +1,7 @@
 import { memo, useMemo } from 'react'
 import {
   Folder, FolderOpen, FileJson, ChevronRight, ChevronDown,
-  Loader2, Globe, Github, HardDrive, Trash2, Plus,
+  Loader2, Globe, Github, HardDrive, Trash2, Plus, RefreshCw,
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import type { TreeNode } from './types'
@@ -14,6 +14,7 @@ export const TreeNodeItem = memo(function TreeNodeItem({
   onToggle,
   onSelect,
   onRemove,
+  onRefresh,
   onAdd,
 }: {
   node: TreeNode
@@ -24,6 +25,8 @@ export const TreeNodeItem = memo(function TreeNodeItem({
   onSelect: (node: TreeNode) => void
   /** Optional callback to remove a watched path/repo. When provided and the node is a watched child (source is 'local' or 'github'), a delete button is rendered. */
   onRemove?: (node: TreeNode) => void
+  /** Optional callback to refresh a node's contents (re-fetch from GitHub or re-scan local dir). */
+  onRefresh?: (node: TreeNode) => void
   /** Optional callback for the root-level add (+) button. Rendered in the header row when depth===0. */
   onAdd?: () => void
 }) {
@@ -31,6 +34,7 @@ export const TreeNodeItem = memo(function TreeNodeItem({
   const isSelected = selectedPath === node.id
   const isDir = node.type === 'directory'
   const showRemoveButton = onRemove && depth > 0 && (node.source === 'local' || node.source === 'github')
+  const showRefreshButton = onRefresh && depth > 0 && isDir && (node.source === 'local' || node.source === 'github')
 
   const sourceIcon = () => {
     switch (node.source) {
@@ -43,7 +47,7 @@ export const TreeNodeItem = memo(function TreeNodeItem({
     }
   }
 
-  const showHeaderActions = showRemoveButton || (depth === 0 && !!onAdd)
+  const showHeaderActions = showRemoveButton || showRefreshButton || (depth === 0 && !!onAdd)
 
   // Memoize inline style objects to avoid creating new references on each render
   const paddingStyle = useMemo(() => ({ paddingLeft: `${depth * 16 + 8}px` }), [depth])
@@ -100,6 +104,18 @@ export const TreeNodeItem = memo(function TreeNodeItem({
             <Plus className="w-3.5 h-3.5" />
           </button>
         )}
+        {showRefreshButton && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onRefresh(node)
+            }}
+            className="p-1.5 min-h-8 min-w-8 rounded hover:bg-blue-500/20 text-muted-foreground hover:text-blue-400 transition-colors flex-shrink-0"
+            title="Refresh contents"
+          >
+            <RefreshCw className={`w-3 h-3 ${node.loading ? 'animate-spin' : ''}`} />
+          </button>
+        )}
         {showRemoveButton && (
           <button
             onClick={(e) => {
@@ -126,6 +142,7 @@ export const TreeNodeItem = memo(function TreeNodeItem({
               onToggle={onToggle}
               onSelect={onSelect}
               onRemove={onRemove}
+              onRefresh={onRefresh}
             />
           ))}
           {node.children.length === 0 && node.loaded && (
