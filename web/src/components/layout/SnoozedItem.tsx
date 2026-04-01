@@ -1,0 +1,81 @@
+import { useTranslation } from 'react-i18next'
+import { Clock, X, ArrowRight, Bell } from 'lucide-react'
+import { formatTimeRemaining, SnoozedSwap } from '../../hooks/useSnoozedCards'
+import { useHoverState } from '../../hooks/useHoverState'
+import { cn } from '../../lib/cn'
+
+interface SnoozedItemProps {
+  swap: SnoozedSwap
+  onApply: () => void
+  onDismiss: () => void
+}
+
+export function SnoozedItem({ swap, onApply, onDismiss }: SnoozedItemProps) {
+  const { t } = useTranslation()
+  const { isHovered, hoverProps } = useHoverState()
+  const timeRemaining = formatTimeRemaining(swap.snoozedUntil)
+  const isExpired = timeRemaining === 'Expired'
+
+  return (
+    <div
+      className={cn(
+        'relative p-2 mx-2 rounded-lg text-xs transition-all duration-200',
+        isExpired
+          ? 'bg-yellow-500/10 border border-yellow-500/30'
+          : 'bg-secondary/30 hover:bg-secondary/50'
+      )}
+      {...hoverProps}
+    >
+      {/* Dismiss button */}
+      <button
+        onClick={onDismiss}
+        className="absolute top-1 right-1 p-0.5 rounded hover:bg-secondary text-muted-foreground hover:text-white transition-colors"
+      >
+        <X className="w-3 h-3" />
+      </button>
+
+      {/* Card swap info */}
+      <div className="flex items-center gap-1 pr-4 mb-1">
+        <span className="text-muted-foreground truncate">{swap.originalCardTitle}</span>
+        <ArrowRight className="w-3 h-3 text-purple-400 flex-shrink-0" />
+        <span className="text-foreground truncate">{swap.newCardTitle}</span>
+      </div>
+
+      {/* Time remaining and actions */}
+      <div className="flex items-center justify-between">
+        <span className={cn(
+          'flex items-center gap-1',
+          isExpired ? 'text-yellow-400' : 'text-muted-foreground'
+        )}>
+          {isExpired ? (
+            <>
+              <Bell className="w-3 h-3 animate-pulse" />
+              {t('sidebar.readyToSwap')}
+            </>
+          ) : (
+            <>
+              <Clock className="w-3 h-3" />
+              {timeRemaining}
+            </>
+          )}
+        </span>
+
+        {(isHovered || isExpired) && (
+          <button
+            onClick={onApply}
+            className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
+          >
+            {t('actions.apply')}
+          </button>
+        )}
+      </div>
+
+      {/* Reason tooltip on hover */}
+      {isHovered && swap.reason && (
+        <div className="mt-1 pt-1 border-t border-border/50">
+          <p className="text-muted-foreground line-clamp-2">{swap.reason}</p>
+        </div>
+      )}
+    </div>
+  )
+}

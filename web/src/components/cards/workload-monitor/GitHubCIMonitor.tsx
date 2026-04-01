@@ -17,6 +17,7 @@ import { cn } from '../../../lib/cn'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
 import type { MonitorIssue } from '../../../types/workloadMonitor'
 import { useTranslation } from 'react-i18next'
+import { formatTimeAgo, loadRepos, saveRepos } from './gitHubCIUtils'
 
 interface GitHubCIMonitorProps {
   config?: Record<string, unknown>
@@ -90,38 +91,6 @@ const DEMO_WORKFLOWS: WorkflowRun[] = [
   { id: '8', name: 'Dependabot', repo: 'kubestellar/kubestellar', status: 'completed', conclusion: 'success', branch: 'dependabot/npm/react-19', event: 'pull_request', runNumber: 1230, createdAt: new Date(Date.now() - 7200000).toISOString(), updatedAt: new Date(Date.now() - 3600000).toISOString(), url: '#' },
 ]
 
-function formatTimeAgo(iso: string): string {
-  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
-  if (seconds < 60) return 'just now'
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
-}
-
-const REPOS_STORAGE_KEY = 'github_ci_repos'
-const DEFAULT_REPOS = ['kubestellar/kubestellar', 'kubestellar/console']
-
-function loadRepos(): string[] {
-  try {
-    const stored = localStorage.getItem(REPOS_STORAGE_KEY)
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed
-      }
-    }
-  } catch {
-    // Ignore parse errors
-  }
-  return DEFAULT_REPOS
-}
-
-function saveRepos(repos: string[]) {
-  localStorage.setItem(REPOS_STORAGE_KEY, JSON.stringify(repos))
-}
 
 export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorProps>(function GitHubCIMonitor({ config }, ref) {
   const { t } = useTranslation()
