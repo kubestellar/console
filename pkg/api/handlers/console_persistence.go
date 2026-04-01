@@ -785,13 +785,10 @@ func (h *ConsolePersistenceHandlers) SyncNow(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Persistence not enabled"})
 	}
 
-	// TODO: Implement sync logic
-	// This would re-read all CRs and broadcast updates
-
-	now := time.Now()
-	return c.JSON(fiber.Map{
-		"synced":    true,
-		"syncedAt":  now,
+	// Sync logic is not yet implemented — return an honest status
+	return c.Status(501).JSON(fiber.Map{
+		"synced":    false,
+		"error":     "sync not implemented",
 		"namespace": h.persistenceStore.GetNamespace(),
 	})
 }
