@@ -8,9 +8,7 @@ on:
     - cron: '15 */2 * * *'  # Every 2 hours at :15 (run takes ~25 min)
   workflow_dispatch:
 
-concurrency:
-  group: coverage-hourly
-  cancel-in-progress: false  # Never cancel — let runs complete
+# No concurrency group — 2-hour schedule won't overlap with 25-min runs
 
 permissions:
   contents: read
