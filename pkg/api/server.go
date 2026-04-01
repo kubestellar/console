@@ -737,6 +737,16 @@ func (s *Server) setupRoutes() {
 	api.Get("/mcp/pod-network-stats", mcpHandlers.GetPodNetworkStats)
 	api.Get("/mcp/resource-yaml", mcpHandlers.GetResourceYAML)
 
+	// Widget-friendly aliases — the widget registry references these shorter
+	// paths.  Without explicit routes they fall through to the SPA catch-all
+	// which returns index.html (HTTP 307), breaking exported widgets.
+	// See: #4140, #4141, #4142
+	api.Get("/mcp/workloads", mcpHandlers.GetWorkloads)
+	api.Get("/mcp/security", mcpHandlers.CheckSecurityIssues)
+	api.Get("/mcp/storage", mcpHandlers.GetPVCs)
+	api.Get("/mcp/network", mcpHandlers.GetNetworkPolicies)
+	api.Get("/mcp/namespaces", namespaces.ListNamespaces)
+
 	// SSE streaming variants — stream per-cluster results as they arrive
 	api.Get("/mcp/pods/stream", mcpHandlers.GetPodsStream)
 	api.Get("/mcp/pod-issues/stream", mcpHandlers.FindPodIssuesStream)

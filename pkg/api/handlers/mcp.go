@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/kubestellar/console/pkg/api/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/mcp"
 )
@@ -2713,4 +2714,37 @@ func (h *MCPHandlers) GetResourceYAML(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"yaml": "", "source": "stub"})
+}
+
+// GetWorkloads returns an aggregate view of workloads (Deployments, StatefulSets,
+// DaemonSets) from clusters. This is the non-streaming counterpart of
+// GetWorkloadsStream, used by the widget export system (/api/mcp/workloads).
+func (h *MCPHandlers) GetWorkloads(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return demoResponse(c, "workloads", getDemoWorkloads())
+	}
+
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	}
+
+	cluster := c.Query("cluster")
+	namespace := c.Query("namespace")
+	workloadType := c.Query("type")
+
+	ctx, cancel := context.WithTimeout(c.Context(), maxResponseDeadline)
+	defer cancel()
+
+	list, err := h.k8sClient.ListWorkloads(ctx, cluster, namespace, workloadType)
+	if err != nil {
+		log.Printf("internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+	}
+
+	workloads := list.Items
+	if workloads == nil {
+		workloads = make([]v1alpha1.Workload, 0)
+	}
+
+	return c.JSON(fiber.Map{"workloads": workloads, "source": "k8s"})
 }
