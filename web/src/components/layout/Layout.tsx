@@ -20,7 +20,7 @@ import { useBackendHealth } from '../../hooks/useBackendHealth'
 import { useDeepLink } from '../../hooks/useDeepLink'
 import { cn } from '../../lib/cn'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
-import { NAVBAR_HEIGHT_PX, BANNER_HEIGHT_PX, DEV_BAR_HEIGHT_PX } from '../../lib/constants/ui'
+import { NAVBAR_HEIGHT_PX, BANNER_HEIGHT_PX } from '../../lib/constants/ui'
 import { CLOSE_ANIMATION_MS, UI_FEEDBACK_TIMEOUT_MS, TOAST_DISMISS_MS } from '../../lib/constants/network'
 import { TourOverlay, TourPrompt } from '../onboarding/Tour'
 import { TourProvider } from '../../hooks/useTour'
@@ -250,15 +250,13 @@ export function Layout({ children }: LayoutProps) {
   const showInClusterBanner = isInClusterMode && agentStatus === 'disconnected' && !isDemoMode
 
   // Banner stacking: each banner's top offset depends on how many banners above it are visible.
-  // Dev bar (20px) → Navbar (64px) → Banners (36px each).
-  // Z-index hierarchy: Dev bar (z-60) > Navbar + dropdowns (z-50) > Network banner (z-40) > Demo banner (z-30) > In-cluster / Offline banner (z-20)
-  // When dev mode bar is visible, everything fixed below it must shift down
-  const devBarOffset = __DEV_MODE__ ? DEV_BAR_HEIGHT_PX : 0
+  // Navbar (64px) → Banners (36px each).
+  // Z-index hierarchy: Navbar + dropdowns (z-50) > Network banner (z-40) > Demo banner (z-30) > In-cluster / Offline banner (z-20)
   // Stack order: Network (top) → Demo → In-cluster agent / Agent Offline (bottom)
-  const networkBannerTop = devBarOffset + NAVBAR_HEIGHT_PX
-  const demoBannerTop = devBarOffset + NAVBAR_HEIGHT_PX + (showNetworkBanner ? BANNER_HEIGHT_PX : 0)
-  const inClusterBannerTop = devBarOffset + NAVBAR_HEIGHT_PX + (showNetworkBanner ? BANNER_HEIGHT_PX : 0) + (isDemoMode ? BANNER_HEIGHT_PX : 0)
-  const offlineBannerTop = devBarOffset + NAVBAR_HEIGHT_PX + (showNetworkBanner ? BANNER_HEIGHT_PX : 0) + (isDemoMode ? BANNER_HEIGHT_PX : 0) + (showInClusterBanner ? BANNER_HEIGHT_PX : 0)
+  const networkBannerTop = NAVBAR_HEIGHT_PX
+  const demoBannerTop = NAVBAR_HEIGHT_PX + (showNetworkBanner ? BANNER_HEIGHT_PX : 0)
+  const inClusterBannerTop = NAVBAR_HEIGHT_PX + (showNetworkBanner ? BANNER_HEIGHT_PX : 0) + (isDemoMode ? BANNER_HEIGHT_PX : 0)
+  const offlineBannerTop = NAVBAR_HEIGHT_PX + (showNetworkBanner ? BANNER_HEIGHT_PX : 0) + (isDemoMode ? BANNER_HEIGHT_PX : 0) + (showInClusterBanner ? BANNER_HEIGHT_PX : 0)
   const activeBannerCount = (showNetworkBanner ? 1 : 0) + (isDemoMode ? 1 : 0) + (showInClusterBanner ? 1 : 0) + (showOfflineBanner ? 1 : 0)
   const totalBannerHeight = activeBannerCount * BANNER_HEIGHT_PX
 
@@ -293,12 +291,7 @@ export function Layout({ children }: LayoutProps) {
     <VersionCheckProvider>
     <TourProvider>
     <div className="h-screen bg-background overflow-hidden flex flex-col">
-      {/* Dev mode indicator — visible bar at top of viewport (like VS Code debug mode) */}
-      {__DEV_MODE__ && (
-        <div className="h-5 bg-green-600 flex-shrink-0 z-[60] flex items-center justify-center gap-4">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-white/90">Development Mode</span>
-        </div>
-      )}
+      {/* Dev mode indicator moved to Navbar as a small badge */}
 
       {/* Skip to content link for keyboard users and screen readers */}
       <a
@@ -319,7 +312,7 @@ export function Layout({ children }: LayoutProps) {
         ))}
       </div>
 
-      <Navbar topOffset={devBarOffset} />
+      <Navbar />
 
       {/* Auto-Update Progress Banner */}
       <UpdateProgressBanner progress={updateProgress} onDismiss={dismissUpdateProgress} />
@@ -492,7 +485,7 @@ export function Layout({ children }: LayoutProps) {
         </div>
       )}
 
-      <div className="flex flex-1 overflow-hidden transition-[padding-top] duration-300" style={{ paddingTop: devBarOffset + NAVBAR_HEIGHT_PX + totalBannerHeight }}>
+      <div className="flex flex-1 overflow-hidden transition-[padding-top] duration-300" style={{ paddingTop: NAVBAR_HEIGHT_PX + totalBannerHeight }}>
         {/* Wrap Sidebar in PageErrorBoundary so stale-chunk errors
             (e.g. "Can't find variable: handleSidebarMouseEnter" from cached
             old bundles) are caught at page level instead of propagating to
