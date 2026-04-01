@@ -665,9 +665,20 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             )
           )
         } else if (node.source === 'github') {
-          const { data: entries } = await api.get<BrowseEntry[]>(
-            `/api/github/missions?repo=${encodeURIComponent(node.path)}`
+          // Fetch repo contents via GitHub Contents API proxy
+          // node.path is "owner/repo" for root or "owner/repo/subpath" for subdirs
+          const repoPath = node.path
+          const { data: ghEntries } = await api.get<Array<{ name: string; path: string; type: string; size?: number }>>(
+            `/api/github/repos/${repoPath}/contents/`
           )
+          const entries: BrowseEntry[] = (ghEntries || [])
+            .filter(e => e.type === 'dir' || isMissionFile(e.name))
+            .map(e => ({
+              name: e.name,
+              path: `${repoPath.split('/').slice(0, 2).join('/')}/${e.path}`,
+              type: e.type === 'dir' ? 'directory' as const : 'file' as const,
+              size: e.size,
+            }))
           setDirectoryEntries(entries)
         } else {
           setDirectoryEntries([])
@@ -688,10 +699,24 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           )
           content = data
         } else if (node.source === 'github') {
-          const { data } = await api.get<string>(
-            `/api/github/missions/file?path=${encodeURIComponent(node.path)}`
+          // Fetch raw file content via GitHub Contents API proxy
+          // node.path is "owner/repo/filepath" — extract parts for the API call
+          const parts = node.path.split('/')
+          const owner = parts[0]
+          const repo = parts[1]
+          const filePath = parts.slice(2).join('/')
+          const { data: ghFile } = await api.get<{ content?: string; encoding?: string; download_url?: string }>(
+            `/api/github/repos/${owner}/${repo}/contents/${filePath}`
           )
-          content = data
+          // GitHub returns base64-encoded content for files
+          if (ghFile.content && ghFile.encoding === 'base64') {
+            content = atob(ghFile.content.replace(/\n/g, ''))
+          } else if (ghFile.download_url) {
+            const rawResp = await fetch(ghFile.download_url)
+            content = await rawResp.text()
+          } else {
+            content = JSON.stringify(ghFile)
+          }
         } else {
           return
         }
