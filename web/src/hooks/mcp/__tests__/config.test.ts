@@ -358,3 +358,537 @@ describe('useServiceAccounts', () => {
     expect(result.current.error).toBeNull()
   })
 })
+
+// ===========================================================================
+// Regression tests: local agent path
+// ===========================================================================
+
+describe('useConfigMaps — local agent path', () => {
+  it('fetches from local agent when cluster is provided and agent is available', async () => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+    const agentCMs = [{ name: 'agent-cm', namespace: 'ns1', cluster: 'c1', dataCount: 1, age: '1d' }]
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ configmaps: agentCMs }),
+    })
+
+    const { result } = renderHook(() => useConfigMaps('c1', 'ns1'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.configmaps).toEqual(agentCMs)
+    expect(result.current.error).toBeNull()
+    expect(mockReportAgentDataSuccess).toHaveBeenCalled()
+    // SSE and REST should NOT have been called
+    expect(mockFetchSSE).not.toHaveBeenCalled()
+    expect(mockApiGet).not.toHaveBeenCalled()
+  })
+
+  it('falls through to SSE when local agent returns non-ok response', async () => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 })
+    const sseCMs = [{ name: 'sse-cm', namespace: 'ns1', cluster: 'c1', dataCount: 2, age: '3d' }]
+    mockFetchSSE.mockResolvedValue(sseCMs)
+
+    const { result } = renderHook(() => useConfigMaps('c1', 'ns1'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.configmaps).toEqual(sseCMs)
+    expect(mockReportAgentDataSuccess).not.toHaveBeenCalled()
+  })
+
+  it('falls through to SSE when local agent fetch throws', async () => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('network error'))
+    mockFetchSSE.mockResolvedValue([])
+
+    const { result } = renderHook(() => useConfigMaps('c1'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.configmaps).toEqual([])
+    expect(mockFetchSSE).toHaveBeenCalled()
+  })
+
+  it('skips local agent when cluster is not provided', async () => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+    globalThis.fetch = vi.fn()
+    mockFetchSSE.mockResolvedValue([])
+
+    const { result } = renderHook(() => useConfigMaps())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    // globalThis.fetch should NOT have been called (local agent path requires cluster)
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+    expect(mockFetchSSE).toHaveBeenCalled()
+  })
+
+  it('handles local agent returning empty configmaps array', async () => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ configmaps: [] }),
+    })
+
+    const { result } = renderHook(() => useConfigMaps('c1'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.configmaps).toEqual([])
+    expect(result.current.error).toBeNull()
+    expect(mockReportAgentDataSuccess).toHaveBeenCalled()
+  })
+
+  it('handles local agent returning response without configmaps key (defaults to [])', async () => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({}),
+    })
+
+    const { result } = renderHook(() => useConfigMaps('c1'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.configmaps).toEqual([])
+    expect(mockReportAgentDataSuccess).toHaveBeenCalled()
+  })
+})
+
+describe('useSecrets — local agent path', () => {
+  it('fetches from local agent when cluster is provided and agent is available', async () => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+    const agentSecrets = [
+      { name: 'tls-cert', namespace: 'default', cluster: 'c1', type: 'kubernetes.io/tls', dataCount: 2, age: '5d' },
+    ]
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ secrets: agentSecrets }),
+    })
+
+    const { result } = renderHook(() => useSecrets('c1', 'default'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.secrets).toEqual(agentSecrets)
+    expect(result.current.error).toBeNull()
+    expect(mockReportAgentDataSuccess).toHaveBeenCalled()
+  })
+
+  it('falls through to SSE when local agent returns non-ok', async () => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 403 })
+    const sseSecrets = [
+      { name: 'sse-secret', namespace: 'ns', cluster: 'c1', type: 'Opaque', dataCount: 1, age: '1d' },
+    ]
+    mockFetchSSE.mockResolvedValue(sseSecrets)
+
+    const { result } = renderHook(() => useSecrets('c1'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.secrets).toEqual(sseSecrets)
+  })
+
+  it('handles local agent returning response without secrets key', async () => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({}),
+    })
+
+    const { result } = renderHook(() => useSecrets('c1'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.secrets).toEqual([])
+  })
+})
+
+// ===========================================================================
+// Regression tests: SSE streaming behavior
+// ===========================================================================
+
+describe('useConfigMaps — SSE streaming', () => {
+  it('uses correct SSE URL and itemsKey', async () => {
+    mockFetchSSE.mockResolvedValue([])
+
+    renderHook(() => useConfigMaps('c1', 'ns1'))
+
+    await waitFor(() => expect(mockFetchSSE).toHaveBeenCalled())
+    const sseArg = mockFetchSSE.mock.calls[0][0] as {
+      url: string
+      itemsKey: string
+      params: Record<string, string>
+    }
+    expect(sseArg.url).toBe('/api/mcp/configmaps/stream')
+    expect(sseArg.itemsKey).toBe('configmaps')
+  })
+
+  it('omits cluster/namespace from SSE params when not provided', async () => {
+    mockFetchSSE.mockResolvedValue([])
+
+    renderHook(() => useConfigMaps())
+
+    await waitFor(() => expect(mockFetchSSE).toHaveBeenCalled())
+    const sseArg = mockFetchSSE.mock.calls[0][0] as { params: Record<string, string> }
+    expect(sseArg.params.cluster).toBeUndefined()
+    expect(sseArg.params.namespace).toBeUndefined()
+  })
+
+  it('skips SSE when no token is present and falls through to REST', async () => {
+    localStorage.removeItem('token')
+    const restCMs = [{ name: 'rest-cm', namespace: 'default', cluster: 'c1', dataCount: 1, age: '1d' }]
+    mockApiGet.mockResolvedValue({ data: { configmaps: restCMs } })
+
+    const { result } = renderHook(() => useConfigMaps())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(mockFetchSSE).not.toHaveBeenCalled()
+    expect(result.current.configmaps).toEqual(restCMs)
+  })
+
+  it('skips SSE when token is demo-token and falls through to REST', async () => {
+    localStorage.setItem('token', 'demo-token')
+    const restCMs = [{ name: 'rest-cm', namespace: 'default', cluster: 'c1', dataCount: 1, age: '1d' }]
+    mockApiGet.mockResolvedValue({ data: { configmaps: restCMs } })
+
+    const { result } = renderHook(() => useConfigMaps())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(mockFetchSSE).not.toHaveBeenCalled()
+    expect(result.current.configmaps).toEqual(restCMs)
+  })
+})
+
+describe('useSecrets — SSE streaming', () => {
+  it('uses correct SSE URL and itemsKey', async () => {
+    mockFetchSSE.mockResolvedValue([])
+
+    renderHook(() => useSecrets('c1'))
+
+    await waitFor(() => expect(mockFetchSSE).toHaveBeenCalled())
+    const sseArg = mockFetchSSE.mock.calls[0][0] as {
+      url: string
+      itemsKey: string
+    }
+    expect(sseArg.url).toBe('/api/mcp/secrets/stream')
+    expect(sseArg.itemsKey).toBe('secrets')
+  })
+})
+
+// ===========================================================================
+// Regression tests: REST fallback
+// ===========================================================================
+
+describe('useConfigMaps — REST fallback', () => {
+  it('falls through from SSE failure to REST and returns data', async () => {
+    mockFetchSSE.mockRejectedValue(new Error('SSE broke'))
+    const restCMs = [
+      { name: 'rest-cm-1', namespace: 'default', cluster: 'c1', dataCount: 4, age: '10d' },
+      { name: 'rest-cm-2', namespace: 'kube-system', cluster: 'c1', dataCount: 1, age: '5d' },
+    ]
+    mockApiGet.mockResolvedValue({ data: { configmaps: restCMs } })
+
+    const { result } = renderHook(() => useConfigMaps('c1'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.configmaps).toEqual(restCMs)
+    expect(result.current.error).toBeNull()
+  })
+
+  it('returns empty array when REST response has no configmaps key', async () => {
+    mockFetchSSE.mockRejectedValue(new Error('no SSE'))
+    mockApiGet.mockResolvedValue({ data: {} })
+
+    const { result } = renderHook(() => useConfigMaps())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.configmaps).toEqual([])
+    expect(result.current.error).toBeNull()
+  })
+
+  it('constructs correct REST URL with cluster and namespace params', async () => {
+    mockFetchSSE.mockRejectedValue(new Error('no SSE'))
+    mockApiGet.mockResolvedValue({ data: { configmaps: [] } })
+
+    renderHook(() => useConfigMaps('prod-east', 'monitoring'))
+
+    await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
+    const url: string = mockApiGet.mock.calls[0][0]
+    expect(url).toContain('/api/mcp/configmaps')
+    expect(url).toContain('cluster=prod-east')
+    expect(url).toContain('namespace=monitoring')
+  })
+
+  it('omits namespace param from REST URL when not provided', async () => {
+    mockFetchSSE.mockRejectedValue(new Error('no SSE'))
+    mockApiGet.mockResolvedValue({ data: { configmaps: [] } })
+
+    renderHook(() => useConfigMaps('c1'))
+
+    await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
+    const url: string = mockApiGet.mock.calls[0][0]
+    expect(url).toContain('cluster=c1')
+    expect(url).not.toContain('namespace=')
+  })
+})
+
+// ===========================================================================
+// Regression tests: demo mode filtering
+// ===========================================================================
+
+describe('useConfigMaps — demo mode filtering', () => {
+  beforeEach(() => {
+    mockIsDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+  })
+
+  it('filters demo configmaps by cluster', async () => {
+    const { result } = renderHook(() => useConfigMaps('staging'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.configmaps.length).toBeGreaterThan(0)
+    expect(result.current.configmaps.every(cm => cm.cluster === 'staging')).toBe(true)
+  })
+
+  it('filters demo configmaps by cluster and namespace', async () => {
+    const { result } = renderHook(() => useConfigMaps('staging', 'monitoring'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.configmaps.length).toBeGreaterThan(0)
+    expect(result.current.configmaps.every(
+      cm => cm.cluster === 'staging' && cm.namespace === 'monitoring'
+    )).toBe(true)
+  })
+
+  it('returns empty array when demo filter matches no configmaps', async () => {
+    const { result } = renderHook(() => useConfigMaps('nonexistent-cluster'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.configmaps).toEqual([])
+    expect(result.current.error).toBeNull()
+  })
+
+  it('returns all demo configmaps when no cluster/namespace filter', async () => {
+    const { result } = renderHook(() => useConfigMaps())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    // The demo data has 7 configmaps across multiple clusters
+    expect(result.current.configmaps.length).toBe(7)
+  })
+
+  it('does not call SSE or REST in demo mode', async () => {
+    renderHook(() => useConfigMaps())
+
+    await waitFor(() => expect(mockFetchSSE).not.toHaveBeenCalled())
+    expect(mockApiGet).not.toHaveBeenCalled()
+  })
+})
+
+describe('useSecrets — demo mode filtering', () => {
+  beforeEach(() => {
+    mockIsDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+  })
+
+  it('filters demo secrets by cluster', async () => {
+    const { result } = renderHook(() => useSecrets('prod-east'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.secrets.length).toBeGreaterThan(0)
+    expect(result.current.secrets.every(s => s.cluster === 'prod-east')).toBe(true)
+  })
+
+  it('filters demo secrets by cluster and namespace', async () => {
+    const { result } = renderHook(() => useSecrets('prod-east', 'production'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.secrets.length).toBeGreaterThan(0)
+    expect(result.current.secrets.every(
+      s => s.cluster === 'prod-east' && s.namespace === 'production'
+    )).toBe(true)
+  })
+
+  it('returns all 7 demo secrets when no filter is applied', async () => {
+    const { result } = renderHook(() => useSecrets())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.secrets.length).toBe(7)
+  })
+
+  it('demo secrets include expected types (Opaque, tls, service-account-token, dockerconfigjson)', async () => {
+    const { result } = renderHook(() => useSecrets())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    const types = result.current.secrets.map(s => s.type)
+    expect(types).toContain('Opaque')
+    expect(types).toContain('kubernetes.io/tls')
+    expect(types).toContain('kubernetes.io/service-account-token')
+    expect(types).toContain('kubernetes.io/dockerconfigjson')
+  })
+})
+
+describe('useServiceAccounts — demo mode filtering', () => {
+  beforeEach(() => {
+    mockIsDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+  })
+
+  it('filters demo service accounts by cluster', async () => {
+    const { result } = renderHook(() => useServiceAccounts('staging'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.serviceAccounts.length).toBeGreaterThan(0)
+    expect(result.current.serviceAccounts.every(sa => sa.cluster === 'staging')).toBe(true)
+  })
+
+  it('returns all 6 demo service accounts when no filter is applied', async () => {
+    const { result } = renderHook(() => useServiceAccounts())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.serviceAccounts.length).toBe(6)
+  })
+
+  it('demo service accounts include imagePullSecrets for some accounts', async () => {
+    const { result } = renderHook(() => useServiceAccounts())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    const withPullSecrets = result.current.serviceAccounts.filter(sa => sa.imagePullSecrets && sa.imagePullSecrets.length > 0)
+    expect(withPullSecrets.length).toBeGreaterThan(0)
+  })
+})
+
+// ===========================================================================
+// Regression tests: mode transition registration
+// ===========================================================================
+
+describe('mode transition registration', () => {
+  it('useConfigMaps registers a refetch callback with correct key', async () => {
+    mockFetchSSE.mockResolvedValue([])
+
+    renderHook(() => useConfigMaps('c1', 'ns1'))
+
+    await waitFor(() => expect(mockRegisterRefetch).toHaveBeenCalled())
+    const key = mockRegisterRefetch.mock.calls[0][0] as string
+    expect(key).toBe('configmaps:c1:ns1')
+  })
+
+  it('useConfigMaps uses "all" placeholders when cluster/namespace not provided', async () => {
+    mockFetchSSE.mockResolvedValue([])
+
+    renderHook(() => useConfigMaps())
+
+    await waitFor(() => expect(mockRegisterRefetch).toHaveBeenCalled())
+    const key = mockRegisterRefetch.mock.calls[0][0] as string
+    expect(key).toBe('configmaps:all:all')
+  })
+
+  it('useSecrets registers refetch with correct key', async () => {
+    mockFetchSSE.mockResolvedValue([])
+
+    renderHook(() => useSecrets('c2', 'ns2'))
+
+    await waitFor(() => expect(mockRegisterRefetch).toHaveBeenCalled())
+    const key = mockRegisterRefetch.mock.calls[0][0] as string
+    expect(key).toBe('secrets:c2:ns2')
+  })
+
+  it('useServiceAccounts registers refetch with correct key', async () => {
+    mockApiGet.mockResolvedValue({ data: { serviceAccounts: [] } })
+
+    renderHook(() => useServiceAccounts('c3'))
+
+    await waitFor(() => expect(mockRegisterRefetch).toHaveBeenCalled())
+    const key = mockRegisterRefetch.mock.calls[0][0] as string
+    expect(key).toBe('serviceaccounts:c3:all')
+  })
+
+  it('cleanup function from registerRefetch is called on unmount', async () => {
+    const mockUnregister = vi.fn()
+    mockRegisterRefetch.mockReturnValue(mockUnregister)
+    mockFetchSSE.mockResolvedValue([])
+
+    const { unmount } = renderHook(() => useConfigMaps())
+
+    await waitFor(() => expect(mockRegisterRefetch).toHaveBeenCalled())
+    unmount()
+    expect(mockUnregister).toHaveBeenCalled()
+  })
+})
+
+// ===========================================================================
+// Regression tests: REST error recovery (falls back to demo or empty)
+// ===========================================================================
+
+describe('REST error recovery', () => {
+  it('useConfigMaps returns demo data on REST failure when demo mode is active', async () => {
+    mockFetchSSE.mockRejectedValue(new Error('SSE fail'))
+    mockApiGet.mockRejectedValue(new Error('REST fail'))
+    // isDemoMode returns false during initial refetch, but true during catch
+    // Actually the source checks isDemoMode() in the catch block
+    mockIsDemoMode.mockReturnValue(false)
+      .mockReturnValueOnce(false) // initial check at top of refetch
+      .mockReturnValueOnce(true)  // check in REST catch block
+
+    const { result } = renderHook(() => useConfigMaps())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    // When isDemoMode() returns true in the catch, demo configmaps are returned
+    expect(result.current.configmaps.length).toBeGreaterThan(0)
+    expect(result.current.error).toBeNull()
+  })
+
+  it('useSecrets returns demo data on REST failure when demo mode is active', async () => {
+    mockFetchSSE.mockRejectedValue(new Error('SSE fail'))
+    mockApiGet.mockRejectedValue(new Error('REST fail'))
+    mockIsDemoMode.mockReturnValue(false)
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true)
+
+    const { result } = renderHook(() => useSecrets())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.secrets.length).toBeGreaterThan(0)
+    expect(result.current.error).toBeNull()
+  })
+
+  it('useServiceAccounts returns empty on REST failure in live mode', async () => {
+    mockFetchSSE.mockRejectedValue(new Error('no SSE for SA'))
+    mockApiGet.mockRejectedValue(new Error('REST fail'))
+
+    const { result } = renderHook(() => useServiceAccounts())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.serviceAccounts).toEqual([])
+    expect(result.current.error).toBeNull()
+  })
+})
+
+// ===========================================================================
+// Regression tests: useServiceAccounts — local agent path
+// ===========================================================================
+
+describe('useServiceAccounts — local agent path', () => {
+  it('fetches from local agent when cluster is provided and agent is available', async () => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+    const agentSAs = [
+      { name: 'agent-sa', namespace: 'default', cluster: 'c1', secrets: ['token-1'], age: '2d' },
+    ]
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ serviceaccounts: agentSAs }),
+    })
+
+    const { result } = renderHook(() => useServiceAccounts('c1'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.serviceAccounts).toEqual(agentSAs)
+    expect(mockReportAgentDataSuccess).toHaveBeenCalled()
+  })
+
+  it('falls through to REST when local agent throws', async () => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('agent down'))
+    const restSAs = [{ name: 'rest-sa', namespace: 'ns', cluster: 'c1', secrets: [], age: '1d' }]
+    mockApiGet.mockResolvedValue({ data: { serviceAccounts: restSAs } })
+
+    const { result } = renderHook(() => useServiceAccounts('c1'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.serviceAccounts).toEqual(restSAs)
+  })
+})
