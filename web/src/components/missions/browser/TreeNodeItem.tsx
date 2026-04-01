@@ -1,7 +1,7 @@
 import { memo, useMemo } from 'react'
 import {
   Folder, FolderOpen, FileJson, FileCode, FileText, ChevronRight, ChevronDown,
-  Loader2, Globe, Github, HardDrive, Trash2, Plus, RefreshCw, ExternalLink, GitPullRequest,
+  Loader2, Globe, Github, HardDrive, Trash2, Plus, RefreshCw,
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import type { TreeNode } from './types'
@@ -123,40 +123,7 @@ export const TreeNodeItem = memo(function TreeNodeItem({
             <RefreshCw className={`w-3 h-3 ${node.loading ? 'animate-spin' : ''}`} />
           </button>
         )}
-        {/* GitHub file action buttons — view source and edit/PR */}
-        {!isDir && node.source === 'github' && node.path.split('/').length >= 3 && (() => {
-          const parts = node.path.split('/')
-          const owner = parts[0]
-          const repo = parts[1]
-          const filePath = parts.slice(2).join('/')
-          const sourceUrl = `https://github.com/${owner}/${repo}/blob/main/${filePath}`
-          const editUrl = `https://github.com/${owner}/${repo}/edit/main/${filePath}`
-          return (
-            <>
-              <a
-                href={sourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="p-1 min-h-7 min-w-7 rounded hover:bg-blue-500/20 text-muted-foreground hover:text-blue-400 transition-colors flex-shrink-0 flex items-center justify-center"
-                title="View source on GitHub"
-              >
-                <ExternalLink className="w-3 h-3" />
-              </a>
-              <a
-                href={editUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="p-1 min-h-7 min-w-7 rounded hover:bg-green-500/20 text-muted-foreground hover:text-green-400 transition-colors flex-shrink-0 flex items-center justify-center"
-                title="Edit and create PR on GitHub"
-              >
-                <GitPullRequest className="w-3 h-3" />
-              </a>
-            </>
-          )
-        })()}
-        {showRemoveButton && (
+        {showRemoveButton && isDir && (
           <button
             onClick={(e) => {
               e.stopPropagation()

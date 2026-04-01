@@ -25,6 +25,7 @@ import {
   Shield,
   MessageSquarePlus,
   Link,
+  GitPullRequest,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { StatusBadge } from '../ui/StatusBadge'
@@ -67,6 +68,10 @@ interface MissionDetailViewProps {
   error?: string | null
   /** Retry callback for re-fetching failed mission content */
   onRetry?: () => void
+  /** GitHub source URL for viewing the file */
+  githubSourceUrl?: string
+  /** GitHub edit URL for creating a PR */
+  githubEditUrl?: string
 }
 
 // Extract code blocks from markdown-style description
@@ -207,6 +212,8 @@ export function MissionDetailView({
   loading = false,
   error = null,
   onRetry,
+  githubSourceUrl,
+  githubEditUrl,
 }: MissionDetailViewProps) {
   const [linkCopied, setLinkCopied] = useState(false)
   const linkCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -313,6 +320,18 @@ export function MissionDetailView({
               {linkCopied ? <Check className="w-3.5 h-3.5" /> : <Link className="w-3.5 h-3.5" />}
               {linkCopied ? 'Copied!' : 'Share'}
             </button>
+          )}
+          {githubSourceUrl && (
+            <a href={githubSourceUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors" title="View source file on GitHub">
+              <ExternalLink className="w-3.5 h-3.5" />
+              Source
+            </a>
+          )}
+          {githubEditUrl && (
+            <a href={githubEditUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-green-500/30 text-green-400 hover:bg-green-500/10 transition-colors" title="Edit and create a PR on GitHub">
+              <GitPullRequest className="w-3.5 h-3.5" />
+              PR
+            </a>
           )}
           <button
             onClick={onToggleRaw}

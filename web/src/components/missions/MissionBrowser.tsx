@@ -1604,6 +1604,17 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                     (r) => r.mission.title === selectedMission.title
                   )?.matchPercent}
                   shareUrl={getMissionShareUrl(selectedMission)}
+                  {...(() => {
+                    if (!selectedPath?.startsWith('github/')) return {}
+                    const parts = selectedPath.replace('github/', '').split('/')
+                    if (parts.length < 3) return {}
+                    const [owner, repo, ...rest] = parts
+                    const filePath = rest.join('/')
+                    return {
+                      githubSourceUrl: `https://github.com/${owner}/${repo}/blob/main/${filePath}`,
+                      githubEditUrl: `https://github.com/${owner}/${repo}/edit/main/${filePath}`,
+                    }
+                  })()}
                 />
                 {showImproveDialog && (
                   <ImproveMissionDialog
