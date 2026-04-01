@@ -153,6 +153,54 @@ func TestGetClusterCapabilities(t *testing.T) {
 	}
 }
 
+func TestGetClusterCapabilities_UnreachableCluster(t *testing.T) {
+	m, _ := NewMultiClusterClient("")
+
+	// c1 has nodes — should be available
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+		Status: corev1.NodeStatus{
+			Capacity: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("4"),
+				corev1.ResourceMemory: resource.MustParse("16Gi"),
+			},
+		},
+	}
+	fakeWithNodes := k8sfake.NewSimpleClientset(node)
+
+	// c2 has zero nodes — should be unavailable
+	fakeEmpty := k8sfake.NewSimpleClientset()
+
+	m.clients = map[string]kubernetes.Interface{
+		"c1": fakeWithNodes,
+		"c2": fakeEmpty,
+	}
+	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{
+		"c1": {Cluster: "cl1"},
+		"c2": {Cluster: "cl2"},
+	}}
+
+	caps, err := m.GetClusterCapabilities(context.Background())
+	if err != nil {
+		t.Fatalf("GetClusterCapabilities failed: %v", err)
+	}
+	if len(caps.Items) != 2 {
+		t.Fatalf("Expected 2 capability items, got %d", len(caps.Items))
+	}
+
+	byCluster := make(map[string]bool)
+	for _, c := range caps.Items {
+		byCluster[c.Cluster] = c.Available
+	}
+
+	if !byCluster["c1"] {
+		t.Error("Expected c1 (has nodes) to be available=true")
+	}
+	if byCluster["c2"] {
+		t.Error("Expected c2 (zero nodes) to be available=false")
+	}
+}
+
 func TestNodeLabels_AddAndRemove(t *testing.T) {
 	scheme := runtime.NewScheme()
 	gvrMap := map[schema.GroupVersionResource]string{

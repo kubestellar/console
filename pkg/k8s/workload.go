@@ -942,31 +942,45 @@ func (m *MultiClusterClient) GetClusterCapabilities(ctx context.Context) (*v1alp
 
 	for _, clusterName := range clusters {
 		cap := v1alpha1.ClusterCapability{
-			Cluster:   clusterName,
-			Available: true,
+			Cluster: clusterName,
 		}
 
 		// Get node info to determine capabilities
 		nodes, err := m.GetNodes(ctx, clusterName)
-		if err == nil {
-			cap.NodeCount = len(nodes)
+		if err != nil {
+			// Cluster is unreachable — mark unavailable
+			cap.Available = false
+			capabilities = append(capabilities, cap)
+			continue
+		}
 
-			// Sum up resources from all nodes
-			var totalGPUs int
-			for _, node := range nodes {
-				totalGPUs += node.GPUCount
-				// Use first node with GPU type as representative
-				if cap.GPUType == "" && node.GPUType != "" {
-					cap.GPUType = node.GPUType
-				}
-			}
-			cap.GPUCount = totalGPUs
+		cap.NodeCount = len(nodes)
 
-			// Use capacity from first node as representative for CPU/Memory
-			if len(nodes) > 0 {
-				cap.CPUCapacity = nodes[0].CPUCapacity
-				cap.MemCapacity = nodes[0].MemoryCapacity
+		// A cluster with zero nodes is not a viable deployment target
+		if cap.NodeCount == 0 {
+			cap.Available = false
+			capabilities = append(capabilities, cap)
+			continue
+		}
+
+		// Cluster is reachable and has nodes — mark available
+		cap.Available = true
+
+		// Sum up resources from all nodes
+		var totalGPUs int
+		for _, node := range nodes {
+			totalGPUs += node.GPUCount
+			// Use first node with GPU type as representative
+			if cap.GPUType == "" && node.GPUType != "" {
+				cap.GPUType = node.GPUType
 			}
+		}
+		cap.GPUCount = totalGPUs
+
+		// Use capacity from first node as representative for CPU/Memory
+		if len(nodes) > 0 {
+			cap.CPUCapacity = nodes[0].CPUCapacity
+			cap.MemCapacity = nodes[0].MemoryCapacity
 		}
 
 		capabilities = append(capabilities, cap)

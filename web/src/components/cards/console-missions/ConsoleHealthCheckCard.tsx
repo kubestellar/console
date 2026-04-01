@@ -10,6 +10,7 @@ import { useApiKeyCheck, ApiKeyPromptModal } from './shared'
 import type { ConsoleMissionCardProps } from './shared'
 import { useCardLoadingState } from '../CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { HorseshoeGauge } from '../llmd/shared/HorseshoeGauge'
 
 // Card 3: Cluster Health Check - Overall health assessment
 export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
@@ -142,24 +143,14 @@ Please provide:
       <div className="flex items-center justify-end mb-4">
       </div>
 
-      {/* Health Score */}
+      {/* Health Score — horseshoe gauge */}
       <div className="flex items-center justify-center mb-4">
-        <div className={cn(
-          'w-20 h-20 rounded-full border-4 flex items-center justify-center',
-          healthScore >= 80 ? 'border-green-500 bg-green-500/10' :
-          healthScore >= 60 ? 'border-yellow-500 bg-yellow-500/10' :
-          'border-red-500 bg-red-500/10'
-        )}>
-          <div className="text-center">
-            <div className={cn(
-              'text-2xl font-bold',
-              healthScore >= 80 ? 'text-green-400' :
-              healthScore >= 60 ? 'text-yellow-400' :
-              'text-red-400'
-            )}>{healthScore}%</div>
-            <div className="text-2xs text-muted-foreground">{t('healthCheck.health')}</div>
-          </div>
-        </div>
+        <HorseshoeGauge
+          value={healthScore}
+          maxValue={100}
+          label={t('healthCheck.health')}
+          size={120}
+        />
       </div>
 
       {/* Quick Stats */}
