@@ -281,15 +281,40 @@ export function KubeCraft() {
     if (!canvas) return null
 
     const rect = canvas.getBoundingClientRect()
-    // Scale mouse coordinates to canvas logical size (handles CSS scaling in expanded mode)
-    const scaleX = CANVAS_WIDTH / rect.width
-    const scaleY = CANVAS_HEIGHT / rect.height
-    const x = Math.floor((e.clientX - rect.left) * scaleX / CELL_SIZE)
-    const y = Math.floor((e.clientY - rect.top) * scaleY / CELL_SIZE)
+    // Guard against zero-size rect (e.g. hidden or collapsed element) to avoid NaN
+    if (rect.width <= 0 || rect.height <= 0) return null
+
+    // When objectFit: 'contain' is active (expanded mode), the canvas content may be
+    // letterboxed — the rendered image is centered within the element with padding on
+    // the shorter axis. We must compute the actual rendered content area so that clicks
+    // in the padded region are correctly rejected instead of mapping to wrong tiles.
+    const elementAspect = rect.width / rect.height
+    const canvasAspect = CANVAS_WIDTH / CANVAS_HEIGHT
+    let contentLeft = rect.left
+    let contentTop = rect.top
+    let contentWidth = rect.width
+    let contentHeight = rect.height
+
+    if (isExpanded) {
+      if (elementAspect > canvasAspect) {
+        // Pillarboxing: content is narrower than element, padded on left/right
+        contentWidth = rect.height * canvasAspect
+        contentLeft = rect.left + (rect.width - contentWidth) / 2
+      } else if (elementAspect < canvasAspect) {
+        // Letterboxing: content is shorter than element, padded on top/bottom
+        contentHeight = rect.width / canvasAspect
+        contentTop = rect.top + (rect.height - contentHeight) / 2
+      }
+    }
+
+    const scaleX = CANVAS_WIDTH / contentWidth
+    const scaleY = CANVAS_HEIGHT / contentHeight
+    const x = Math.floor((e.clientX - contentLeft) * scaleX / CELL_SIZE)
+    const y = Math.floor((e.clientY - contentTop) * scaleY / CELL_SIZE)
 
     if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) return null
     return { x, y }
-  }, [])
+  }, [isExpanded])
 
   // Place or erase a block at the given grid coordinates
   const placeBlock = useCallback((gridX: number, gridY: number) => {

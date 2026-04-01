@@ -401,7 +401,7 @@ function minimax(state: GameState, depth: number, alpha: number, beta: number, m
   counter.count++
 
   // Bail out if we've evaluated too many positions to prevent UI freeze
-  if (counter.count > MAX_POSITIONS_EVALUATED) {
+  if (counter.count >= MAX_POSITIONS_EVALUATED) {
     return evaluateBoard(state.board, state)
   }
 
