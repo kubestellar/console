@@ -150,7 +150,7 @@ jobs:
           GIST_ID: ${{ env.GIST_ID }}
           COVERAGE_PCT: ${{ steps.cov.outputs.pct }}
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GIST_TOKEN }}
           script: |
             const pct = Math.round(parseFloat(process.env.COVERAGE_PCT) || 0);
 
