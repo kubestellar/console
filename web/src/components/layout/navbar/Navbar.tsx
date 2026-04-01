@@ -48,7 +48,7 @@ export function Navbar() {
   }, [location.pathname])
 
   return (
-    <nav data-tour="navbar" style={{ top: 0 }} className="fixed left-0 right-0 h-16 glass z-50 px-3 md:px-6 flex items-center justify-between">
+    <nav data-tour="navbar" className="fixed top-0 left-0 right-0 h-16 glass z-50 px-3 md:px-6 flex items-center justify-between">
       {/* Left side: Hamburger + Logo — shrink-0 so logo is never compressed */}
       <div className="flex items-center gap-2 md:gap-3 shrink-0">
         {/* Hamburger menu - mobile only */}
@@ -84,8 +84,10 @@ export function Navbar() {
         </button>
         {__DEV_MODE__ && (
           <span
-            className="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-green-500/20 text-green-400 border border-green-500/30 rounded-full"
+            className="hidden lg:inline-flex items-center justify-center px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-green-500/20 text-green-400 border border-green-500/30 rounded-full"
             title="Development mode"
+            aria-label="Development mode"
+            role="status"
           >
             DEV
           </span>

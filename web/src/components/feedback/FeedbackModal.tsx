@@ -198,13 +198,21 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
     onClose()
   }, [onClose])
 
+  // Use refs for dirty check so handleClose doesn't change on every keystroke
+  const titleRef = useRef(title)
+  const descriptionRef = useRef(description)
+  const successRef = useRef(success)
+  titleRef.current = title
+  descriptionRef.current = description
+  successRef.current = success
+
   const handleClose = useCallback(() => {
-    if (!success && (title.trim() !== '' || description.trim() !== '')) {
+    if (!successRef.current && (titleRef.current.trim() !== '' || descriptionRef.current.trim() !== '')) {
       setShowDiscardConfirm(true)
       return
     }
     forceClose()
-  }, [success, title, description, forceClose])
+  }, [forceClose])
 
   // Keyboard navigation - ESC to close, Space to close when not typing
   useEffect(() => {
