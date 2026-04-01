@@ -16,12 +16,12 @@ import { useAuth } from '../../lib/auth'
 import { matchMissionsToCluster } from '../../lib/missions/matcher'
 import { useClusterContext } from '../../hooks/useClusterContext'
 import {
-  emitSolutionBrowsed,
-  emitSolutionViewed,
-  emitSolutionImported,
-  emitSolutionImportError,
-  emitSolutionGitHubLink,
-  emitSolutionLinkCopied,
+  emitFixerBrowsed,
+  emitFixerViewed,
+  emitFixerImported,
+  emitFixerImportError,
+  emitFixerGitHubLink,
+  emitFixerLinkCopied,
 } from '../../lib/analytics'
 import type {
   MissionExport,
@@ -36,7 +36,7 @@ import { fullScan } from '../../lib/missions/scanner/index'
 import { ScanProgressOverlay } from './ScanProgressOverlay'
 import { CollapsibleSection } from '../ui/CollapsibleSection'
 import { InstallerCard } from './InstallerCard'
-import { SolutionCard } from './SolutionCard'
+import { FixerCard } from './FixerCard'
 import { MissionDetailView } from './MissionDetailView'
 import { ImproveMissionDialog } from './ImproveMissionDialog'
 import { UnstructuredFilePreview } from './UnstructuredFilePreview'
@@ -202,18 +202,18 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   // Tab state
   const [activeTab, setActiveTab] = useState<BrowserTab>('recommended')
 
-  // Installer & Solution missions — backed by module-level cache
+  // Installer & Fixer missions — backed by module-level cache
   const [installerMissions, setInstallerMissions] = useState<MissionExport[]>(missionCache.installers)
-  const [solutionMissions, setSolutionMissions] = useState<MissionExport[]>(missionCache.fixes)
+  const [fixerMissions, setFixerMissions] = useState<MissionExport[]>(missionCache.fixes)
   const [, forceUpdate] = useState(0)
   const loadingInstallers = !missionCache.installersDone
-  const loadingSolutions = !missionCache.fixesDone
+  const loadingFixers = !missionCache.fixesDone
   const [missionFetchError, setMissionFetchError] = useState<string | null>(missionCache.fetchError)
   const [installerCategoryFilter, setInstallerCategoryFilter] = useState<string>('All')
   const [installerMaturityFilter, setInstallerMaturityFilter] = useState<string>('All')
-  const [solutionTypeFilter, setSolutionTypeFilter] = useState<string>('All')
+  const [fixerTypeFilter, setFixerTypeFilter] = useState<string>('All')
   const [installerSearch, setInstallerSearch] = useState('')
-  const [solutionSearch, setSolutionSearch] = useState('')
+  const [fixerSearch, setFixerSearch] = useState('')
 
   // ============================================================================
   // Initialize tree when dialog opens
@@ -226,7 +226,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       {
         id: 'community',
         name: 'KubeStellar Community',
-        path: 'solutions',
+        path: 'fixes',
         type: 'directory',
         source: 'community',
         loaded: false,
@@ -300,7 +300,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       if (allMissions.length === 0) {
         if (!missionCache.fixesDone) {
           setLoadingRecommendations(true)
-          setSearchProgress({ step: 'Scanning', detail: 'Loading solutions...', found: 0, scanned: 0 })
+          setSearchProgress({ step: 'Scanning', detail: 'Loading fixes...', found: 0, scanned: 0 })
         }
         return
       }
@@ -314,7 +314,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
         const done = missionCache.fixesDone
         setSearchProgress({
           step: done ? 'Done' : 'Scanning',
-          detail: `${allMissions.length} solutions`,
+          detail: `${allMissions.length} fixes`,
           found: allMissions.length,
           scanned: allMissions.length,
         })
@@ -331,7 +331,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       const done = missionCache.fixesDone
       setSearchProgress({
         step: done ? 'Done' : 'Scanning',
-        detail: `${allMissions.length} solutions`,
+        detail: `${allMissions.length} fixes`,
         found: allMissions.length,
         scanned: allMissions.length,
       })
@@ -352,12 +352,12 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
 
     // Sync local state from cache immediately (covers re-open with cached data)
     setInstallerMissions([...missionCache.installers])
-    setSolutionMissions([...missionCache.fixes])
+    setFixerMissions([...missionCache.fixes])
 
     // Listen for incremental updates from the background fetch
     const listener = () => {
       setInstallerMissions([...missionCache.installers])
-      setSolutionMissions([...missionCache.fixes])
+      setFixerMissions([...missionCache.fixes])
       setMissionFetchError(missionCache.fetchError)
       forceUpdate(n => n + 1)
     }
@@ -403,7 +403,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     e.stopPropagation()
     const url = getMissionShareUrl(mission)
     copyToClipboard(url)
-    emitSolutionLinkCopied(mission.title, mission.cncfProject)
+    emitFixerLinkCopied(mission.title, mission.cncfProject)
   }, [])
 
   // ============================================================================
@@ -453,7 +453,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       // Exact slug match
       if (getMissionSlug(m) === slug) return 1
 
-      // cncfProject match (installers only — solutions use slug/title matching)
+      // cncfProject match (installers only — fixers use slug/title matching)
       if (isInstaller) {
         const project = (m.cncfProject || '').toLowerCase()
         const slugProject = slug.replace(/^install-/, '')
@@ -479,7 +479,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       return best
     }
 
-    // Search installers first, then solutions
+    // Search installers first, then fixers
     const installerMatch = findBest(installerMissions, true)
     if (installerMatch) {
       setActiveTab('installers')
@@ -488,27 +488,27 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       return
     }
 
-    const solutionMatch = findBest(solutionMissions, false)
-    if (solutionMatch) {
+    const fixerMatch = findBest(fixerMissions, false)
+    if (fixerMatch) {
       setActiveTab('fixes')
-      selectCardMission(solutionMatch)
+      selectCardMission(fixerMatch)
       deepLinkSlugRef.current = null // consumed
       return
     }
 
     // No match yet — switch to installers tab while data loads
-    if (installerMissions.length === 0 && solutionMissions.length === 0 && activeTab !== 'installers') {
+    if (installerMissions.length === 0 && fixerMissions.length === 0 && activeTab !== 'installers') {
       setActiveTab('installers')
     }
-  }, [initialMission, isOpen, installerMissions, solutionMissions, selectedMission, activeTab, selectCardMission])
+  }, [initialMission, isOpen, installerMissions, fixerMissions, selectedMission, activeTab, selectCardMission])
 
   // ============================================================================
-  // Filtered installer & solution lists
+  // Filtered installer & fixer lists
   // ============================================================================
 
   // Effective search: local tab search overrides global search
   const effectiveInstallerSearch = installerSearch || searchQuery
-  const effectiveSolutionSearch = solutionSearch || searchQuery
+  const effectiveFixerSearch = fixerSearch || searchQuery
 
   // AND search: each space-separated term must match somewhere in the mission
   const andMatch = (text: string, query: string) => {
@@ -536,16 +536,16 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     return list
   }, [installerMissions, installerCategoryFilter, installerMaturityFilter, effectiveInstallerSearch])
 
-  const filteredSolutions = useMemo(() => {
-    let list = solutionMissions
-    if (solutionTypeFilter !== 'All') {
-      list = list.filter(m => m.type === solutionTypeFilter.toLowerCase())
+  const filteredFixers = useMemo(() => {
+    let list = fixerMissions
+    if (fixerTypeFilter !== 'All') {
+      list = list.filter(m => m.type === fixerTypeFilter.toLowerCase())
     }
-    if (effectiveSolutionSearch) {
-      list = list.filter(m => matchesMission(m, effectiveSolutionSearch))
+    if (effectiveFixerSearch) {
+      list = list.filter(m => matchesMission(m, effectiveFixerSearch))
     }
     return list
-  }, [solutionMissions, solutionTypeFilter, effectiveSolutionSearch])
+  }, [fixerMissions, fixerTypeFilter, effectiveFixerSearch])
 
   // ============================================================================
   // Tree expansion & lazy loading
@@ -650,7 +650,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     setShowRaw(false)
 
     if (node.type === 'directory') {
-      emitSolutionBrowsed(node.path)
+      emitFixerBrowsed(node.path)
       setLoading(true)
       try {
         if (node.source === 'community') {
@@ -706,10 +706,10 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             const validation = validateMissionExport(parseResult.mission)
             if (validation.valid) {
               setSelectedMission(validation.data)
-              emitSolutionViewed(validation.data.title, validation.data.cncfProject)
+              emitFixerViewed(validation.data.title, validation.data.cncfProject)
             } else {
               setSelectedMission(parseResult.mission)
-              emitSolutionViewed(parseResult.mission.title ?? node.name, parseResult.mission.cncfProject)
+              emitFixerViewed(parseResult.mission.title ?? node.name, parseResult.mission.cncfProject)
             }
           } else {
             setUnstructuredContent(parseResult)
@@ -768,7 +768,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       const missionTitle = (toValidate as Record<string, unknown>)?.title as string
         ?? (toValidate as Record<string, unknown>)?.name as string
         ?? 'unknown'
-      emitSolutionImportError(
+      emitFixerImportError(
         missionTitle,
         validation.errors.length,
         validation.errors[0]?.message ?? 'unknown',
@@ -795,7 +795,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     // updated yet when scan completes synchronously after async fetch
     const mission = pendingImportRef.current
     if (result.valid && mission) {
-      emitSolutionImported(mission.title, mission.cncfProject)
+      emitFixerImported(mission.title, mission.cncfProject)
       onImport(mission)
       onClose()
     }
@@ -1329,7 +1329,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
               <span className="text-2xs bg-secondary px-1.5 py-0.5 rounded-full min-w-[28px] text-center tabular-nums">{installerMissions.length || '–'}</span>
             )}
             {tab.id === 'fixes' && (
-              <span className="text-2xs bg-secondary px-1.5 py-0.5 rounded-full min-w-[28px] text-center tabular-nums">{solutionMissions.length || '–'}</span>
+              <span className="text-2xs bg-secondary px-1.5 py-0.5 rounded-full min-w-[28px] text-center tabular-nums">{fixerMissions.length || '–'}</span>
             )}
           </button>
         ))}
@@ -1556,7 +1556,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                         : 'GitHub token is invalid or expired'}
                     </p>
                     <p className="text-muted-foreground">
-                      The solution browser needs a GitHub personal access token to fetch missions.
+                      The fix browser needs a GitHub personal access token to fetch missions.
                       Add one to your <code className="px-1.5 py-0.5 bg-white/10 rounded text-xs font-mono">.env</code> file and restart the console:
                     </p>
                     <ol className="text-muted-foreground list-decimal list-inside space-y-1.5 ml-1">
@@ -1592,7 +1592,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             {/* Recommended for You */}
             {!selectedMission && (recommendations.length > 0 || loadingRecommendations) && (
               <CollapsibleSection
-                title={hasCluster ? 'Recommended for Your Cluster' : 'Explore CNCF Solutions'}
+                title={hasCluster ? 'Recommended for Your Cluster' : 'Explore CNCF Fixes'}
                 defaultOpen={true}
                 badge={
                   <span className="flex items-center gap-2 text-xs text-purple-400">
@@ -1616,7 +1616,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                   <p className="text-xs text-muted-foreground mb-3 -mt-1">
                     {hasCluster
                       ? '🎯 Matched based on your cluster resources, labels, and detected issues'
-                      : '🌐 Showing popular CNCF community solutions — connect a cluster for personalized recommendations'}
+                      : '🌐 Showing popular CNCF community fixes — connect a cluster for personalized recommendations'}
                   </p>
                 )}
                 {loadingRecommendations ? (
@@ -1678,14 +1678,14 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             {!selectedMission && !loading && (
               <div className="flex items-center gap-2 mb-4 px-1">
                 <a
-                  href="https://github.com/kubestellar/console-kb/tree/master/solutions"
+                  href="https://github.com/kubestellar/console-kb/tree/master/fixes"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-purple-400 transition-colors"
-                  onClick={() => emitSolutionGitHubLink()}
+                  onClick={() => emitFixerGitHubLink()}
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  Browse all solutions on GitHub
+                  Browse all fixes on GitHub
                 </a>
                 {searchProgress.step === 'Done' && searchProgress.found > 0 && (
                   <span className="text-xs text-muted-foreground/60 ml-auto">
@@ -1824,25 +1824,25 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             )}
 
             {/* ============================================================ */}
-            {/* SOLUTIONS TAB */}
+            {/* FIXES TAB */}
             {/* ============================================================ */}
             {!selectedMission && !unstructuredContent && activeTab === 'fixes' && (
               <div className="space-y-4">
-                {/* Solution filters */}
+                {/* Fixer filters */}
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex-1 relative min-w-[200px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                       type="text"
-                      value={solutionSearch}
-                      onChange={(e) => setSolutionSearch(e.target.value)}
-                      placeholder="Search solutions…"
+                      value={fixerSearch}
+                      onChange={(e) => setFixerSearch(e.target.value)}
+                      placeholder="Search fixes…"
                       className="w-full pl-10 pr-4 py-1.5 bg-secondary border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/40"
                     />
                   </div>
                   <select
-                    value={solutionTypeFilter}
-                    onChange={(e) => setSolutionTypeFilter(e.target.value)}
+                    value={fixerTypeFilter}
+                    onChange={(e) => setFixerTypeFilter(e.target.value)}
                     className="px-2.5 py-1.5 text-xs bg-secondary border border-border rounded-lg text-foreground"
                   >
                     {CATEGORY_FILTERS.map(cat => (
@@ -1852,33 +1852,33 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                 </div>
 
                 {/* Fetch error banner */}
-                {missionFetchError && solutionMissions.length === 0 && (
+                {missionFetchError && fixerMissions.length === 0 && (
                   <MissionFetchErrorBanner message={missionFetchError} />
                 )}
 
-                {/* Solution grid */}
-                {loadingSolutions && filteredSolutions.length === 0 ? (
+                {/* Fixer grid */}
+                {loadingFixers && filteredFixers.length === 0 ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
                     <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-                    Loading solutions…
+                    Loading fixes…
                   </div>
-                ) : filteredSolutions.length === 0 && !loadingSolutions ? (
-                  <EmptyState message={solutionMissions.length > 0 ? 'No solutions match your filters' : 'No solution missions found'} />
+                ) : filteredFixers.length === 0 && !loadingFixers ? (
+                  <EmptyState message={fixerMissions.length > 0 ? 'No fixes match your filters' : 'No fixer missions found'} />
                 ) : (
                   <>
-                    {loadingSolutions && (
+                    {loadingFixers && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                         <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-                        Loading… {solutionMissions.length} found so far
+                        Loading… {fixerMissions.length} found so far
                       </div>
                     )}
                     <VirtualizedMissionGrid
-                      items={filteredSolutions}
+                      items={filteredFixers}
                       viewMode={viewMode}
                       maxColumns={3}
                       className="flex-1 h-[calc(90vh-280px)]"
                       renderItem={(mission) => (
-                        <SolutionCard
+                        <FixerCard
                           mission={mission}
                           compact={viewMode === 'list'}
                           onSelect={() => selectCardMission(mission)}
@@ -1891,9 +1891,9 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                 )}
 
                 {/* Count footer */}
-                {filteredSolutions.length > 0 && (
+                {filteredFixers.length > 0 && (
                   <p className="text-xs text-muted-foreground text-center pt-2">
-                    {loadingSolutions ? `${filteredSolutions.length} loaded…` : `Showing ${filteredSolutions.length} of ${solutionMissions.length} solution missions`}
+                    {loadingFixers ? `${filteredFixers.length} loaded…` : `Showing ${filteredFixers.length} of ${fixerMissions.length} fixer missions`}
                   </p>
                 )}
               </div>

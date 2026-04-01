@@ -157,8 +157,8 @@ function resolutionToKBFormat(
     steps,
   }
 
-  // Add troubleshooting section for solution-class missions
-  if (missionClass === 'solution' && resolution.resolution.summary) {
+  // Add troubleshooting section for fixer-class missions
+  if (missionClass === 'fixer' && resolution.resolution.summary) {
     mission.troubleshooting = [
       {
         title: resolution.issueSignature.type,
@@ -207,7 +207,7 @@ function generateFilename(title: string, missionClass: MissionClass): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 60)
-  const prefix = missionClass === 'install' ? 'install' : 'solution'
+  const prefix = missionClass === 'install' ? 'install' : 'fixer'
   return `${prefix}-${slug}.json`
 }
 
@@ -218,7 +218,7 @@ function buildGitHubNewFileUrl(
   description: string,
 ): string {
   // GitHub new file URL: /new/{branch}/{path}?filename=...&value=...&message=...
-  const directory = filepath.includes('/') ? filepath.substring(0, filepath.lastIndexOf('/')) : 'solutions'
+  const directory = filepath.includes('/') ? filepath.substring(0, filepath.lastIndexOf('/')) : 'fixes'
   const filename = filepath.includes('/') ? filepath.substring(filepath.lastIndexOf('/') + 1) : filepath
 
   const params = new URLSearchParams({
@@ -232,7 +232,7 @@ function buildGitHubNewFileUrl(
 }
 
 export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDialogProps) {
-  const [missionClass, setMissionClass] = useState<MissionClass>('solution')
+  const [missionClass, setMissionClass] = useState<MissionClass>('fixer')
   const [cncfProject, setCncfProject] = useState('')
   const [filename, setFilename] = useState('')
   const [scanResult, setScanResult] = useState<FileScanResult | null>(null)
@@ -261,7 +261,7 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
   )
 
   // Determine the target directory based on mission class
-  const targetDir = missionClass === 'install' ? 'solutions/cncf-install' : 'solutions/troubleshoot'
+  const targetDir = missionClass === 'install' ? 'fixes/cncf-install' : 'fixes/troubleshoot'
   const fullPath = `${targetDir}/${filename}`
 
   // Run security scan
@@ -362,17 +362,17 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
             </label>
             <div className="flex gap-3">
               <button
-                onClick={() => setMissionClass('solution')}
+                onClick={() => setMissionClass('fixer')}
                 className={cn(
                   'flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border transition-colors',
-                  missionClass === 'solution'
+                  missionClass === 'fixer'
                     ? 'bg-purple-500/20 border-purple-500/50 text-purple-400'
                     : 'bg-secondary/50 border-border text-muted-foreground hover:text-foreground',
                 )}
               >
                 <Tag className="w-4 h-4" />
                 <div className="text-left">
-                  <span className="text-sm font-medium block">Solution</span>
+                  <span className="text-sm font-medium block">Fixer</span>
                   <span className="text-2xs opacity-70">Troubleshooting fix</span>
                 </div>
               </button>

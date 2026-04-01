@@ -112,22 +112,22 @@ const TABS: TabDef[] = [
 function getPreferredPaths(slug: string): string[] {
   if (slug.startsWith('install-')) {
     return [
-      `solutions/cncf-install/${slug}.json`,
-      `solutions/platform-install/${slug}.json`,
+      `fixes/cncf-install/${slug}.json`,
+      `fixes/platform-install/${slug}.json`,
     ]
   }
   if (slug.startsWith('platform-')) {
-    return [`solutions/platform-install/${slug}.json`]
+    return [`fixes/platform-install/${slug}.json`]
   }
   // For cncf-generated missions, the slug often starts with the project name
   // e.g., "karmada-1234-some-issue" → cncf-generated/karmada/karmada-1234-some-issue.json
   const projectHint = slug.split('-')[0]
   return [
-    `solutions/cncf-generated/${projectHint}/${slug}.json`,
-    `solutions/security/${slug}.json`,
-    `solutions/troubleshoot/${slug}.json`,
-    `solutions/llm-d/${slug}.json`,
-    `solutions/multi-cluster/${slug}.json`,
+    `fixes/cncf-generated/${projectHint}/${slug}.json`,
+    `fixes/security/${slug}.json`,
+    `fixes/troubleshoot/${slug}.json`,
+    `fixes/llm-d/${slug}.json`,
+    `fixes/multi-cluster/${slug}.json`,
   ]
 }
 
@@ -153,7 +153,7 @@ async function fetchMissionBySlug(slug: string): Promise<{ mission: MissionExpor
 
   // Fallback: search index.json for missions in unexpected directories
   try {
-    const res = await fetch('/api/missions/file?path=solutions/index.json', {
+    const res = await fetch('/api/missions/file?path=fixes/index.json', {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     })
     if (res.ok) {

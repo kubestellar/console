@@ -902,40 +902,40 @@ export function emitMissionRated(missionType: string, rating: string) {
 
 // ── Mission Browser / Knowledge Base ──────────────────────────────
 
-export function emitSolutionSearchStarted(clusterConnected: boolean) {
-  send('ksc_solution_search', { cluster_connected: clusterConnected })
+export function emitFixerSearchStarted(clusterConnected: boolean) {
+  send('ksc_fixer_search', { cluster_connected: clusterConnected })
 }
 
-export function emitSolutionSearchCompleted(found: number, scanned: number) {
-  send('ksc_solution_search_done', { found, scanned })
+export function emitFixerSearchCompleted(found: number, scanned: number) {
+  send('ksc_fixer_search_done', { found, scanned })
 }
 
-export function emitSolutionBrowsed(path: string) {
-  send('ksc_solution_browsed', { path })
+export function emitFixerBrowsed(path: string) {
+  send('ksc_fixer_browsed', { path })
 }
 
-export function emitSolutionViewed(title: string, cncfProject?: string) {
-  send('ksc_solution_viewed', { title, cncf_project: cncfProject ?? '' })
+export function emitFixerViewed(title: string, cncfProject?: string) {
+  send('ksc_fixer_viewed', { title, cncf_project: cncfProject ?? '' })
 }
 
-export function emitSolutionImported(title: string, cncfProject?: string) {
-  send('ksc_solution_imported', { title, cncf_project: cncfProject ?? '' })
+export function emitFixerImported(title: string, cncfProject?: string) {
+  send('ksc_fixer_imported', { title, cncf_project: cncfProject ?? '' })
 }
 
-export function emitSolutionImportError(title: string, errorCount: number, firstError: string) {
-  send('ksc_solution_import_error', {
+export function emitFixerImportError(title: string, errorCount: number, firstError: string) {
+  send('ksc_fixer_import_error', {
     title,
     error_count: String(errorCount),
     first_error: firstError.slice(0, 100),
   })
 }
 
-export function emitSolutionLinkCopied(title: string, cncfProject?: string) {
-  send('ksc_solution_link_copied', { title, cncf_project: cncfProject ?? '' })
+export function emitFixerLinkCopied(title: string, cncfProject?: string) {
+  send('ksc_fixer_link_copied', { title, cncf_project: cncfProject ?? '' })
 }
 
-export function emitSolutionGitHubLink() {
-  send('ksc_solution_github_link')
+export function emitFixerGitHubLink() {
+  send('ksc_fixer_github_link')
 }
 
 // ── Auth ───────────────────────────────────────────────────────────

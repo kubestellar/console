@@ -14,12 +14,12 @@ const MISSION_FETCH_TIMEOUT_MS = 10_000
 
 /** Console-kb paths for missions (legacy keys used by multi-tenancy cards) */
 export const MISSION_PATHS: Record<string, string> = {
-  ovn: 'solutions/cncf-install/install-ovn-kubernetes.json',
-  kubeflex: 'solutions/platform-install/platform-kubeflex.json',
-  k3s: 'solutions/platform-install/platform-k3s.json',
-  'kubeconfig-prune': 'solutions/troubleshoot/kubeconfig-prune.json',
-  kubevirt: 'solutions/cncf-install/install-kubevirt.json',
-  'multi-tenancy': 'solutions/multi-cluster/multi-tenancy-setup.json',
+  ovn: 'fixes/cncf-install/install-ovn-kubernetes.json',
+  kubeflex: 'fixes/platform-install/platform-kubeflex.json',
+  k3s: 'fixes/platform-install/platform-k3s.json',
+  'kubeconfig-prune': 'fixes/troubleshoot/kubeconfig-prune.json',
+  kubevirt: 'fixes/cncf-install/install-kubevirt.json',
+  'multi-tenancy': 'fixes/multi-cluster/multi-tenancy-setup.json',
 }
 
 /**

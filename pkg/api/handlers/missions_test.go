@@ -340,7 +340,7 @@ func TestMissions_BrowseConsoleKB_CacheHit(t *testing.T) {
 	handler.githubAPIURL = mock.URL
 
 	// First request — should call GitHub (MISS)
-	req1, err := http.NewRequest("GET", "/api/missions/browse?path=solutions", nil)
+	req1, err := http.NewRequest("GET", "/api/missions/browse?path=fixes", nil)
 	require.NoError(t, err)
 	resp1, err := app.Test(req1, 5000)
 	require.NoError(t, err)
@@ -349,7 +349,7 @@ func TestMissions_BrowseConsoleKB_CacheHit(t *testing.T) {
 	assert.Equal(t, int32(1), callCount.Load(), "first request should call GitHub")
 
 	// Second request — should serve from cache (HIT), NOT call GitHub again
-	req2, err := http.NewRequest("GET", "/api/missions/browse?path=solutions", nil)
+	req2, err := http.NewRequest("GET", "/api/missions/browse?path=fixes", nil)
 	require.NoError(t, err)
 	resp2, err := app.Test(req2, 5000)
 	require.NoError(t, err)
@@ -379,7 +379,7 @@ func TestMissions_GetMissionFile_CacheHit(t *testing.T) {
 	handler.githubRawURL = mock.URL
 
 	// First request — MISS
-	req1, err := http.NewRequest("GET", "/api/missions/file?path=solutions/index.json", nil)
+	req1, err := http.NewRequest("GET", "/api/missions/file?path=fixes/index.json", nil)
 	require.NoError(t, err)
 	resp1, err := app.Test(req1, 5000)
 	require.NoError(t, err)
@@ -388,7 +388,7 @@ func TestMissions_GetMissionFile_CacheHit(t *testing.T) {
 	assert.Equal(t, int32(1), callCount.Load())
 
 	// Second request — HIT
-	req2, err := http.NewRequest("GET", "/api/missions/file?path=solutions/index.json", nil)
+	req2, err := http.NewRequest("GET", "/api/missions/file?path=fixes/index.json", nil)
 	require.NoError(t, err)
 	resp2, err := app.Test(req2, 5000)
 	require.NoError(t, err)

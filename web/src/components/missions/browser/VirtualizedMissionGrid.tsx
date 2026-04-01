@@ -3,7 +3,7 @@
  *
  * Uses @tanstack/react-virtual to only render visible rows, dramatically
  * reducing DOM nodes and improving performance for large mission lists
- * (hundreds of installers/solutions).
+ * (hundreds of installers/fixes).
  *
  * Grid mode: groups items into rows based on container width and column count,
  * then virtualizes by row.
@@ -51,7 +51,7 @@ interface VirtualizedMissionGridProps<T> {
   viewMode: ViewMode
   /** Render a single card */
   renderItem: (item: T, index: number) => React.ReactNode
-  /** Maximum columns in grid mode (e.g. 4 for installers, 3 for solutions) */
+  /** Maximum columns in grid mode (e.g. 4 for installers, 3 for fixes) */
   maxColumns?: number
   /** Custom estimated row height for grid mode */
   gridRowHeight?: number

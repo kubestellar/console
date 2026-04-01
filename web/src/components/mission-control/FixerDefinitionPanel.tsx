@@ -1,5 +1,5 @@
 /**
- * SolutionDefinitionPanel — Phase 1 of Mission Control.
+ * FixerDefinitionPanel — Phase 1 of Mission Control.
  *
  * Left: textarea + AI suggestions + PayloadGrid.
  * Right: Info panel showing hovered project details, mission steps, and alternatives.
@@ -26,7 +26,7 @@ const PLACEHOLDER_EXAMPLES = [
   'Edge computing platform with lightweight clusters and workload distribution...',
 ]
 
-interface SolutionDefinitionPanelProps {
+interface FixerDefinitionPanelProps {
   state: MissionControlState
   onDescriptionChange: (desc: string) => void
   onTitleChange: (title: string) => void
@@ -40,7 +40,7 @@ interface SolutionDefinitionPanelProps {
   installedProjects?: Set<string>
 }
 
-export function SolutionDefinitionPanel({
+export function FixerDefinitionPanel({
   state,
   onDescriptionChange,
   onTitleChange,
@@ -52,7 +52,7 @@ export function SolutionDefinitionPanel({
   aiStreaming,
   planningMission,
   installedProjects,
-}: SolutionDefinitionPanelProps) {
+}: FixerDefinitionPanelProps) {
   const [placeholderIdx, setPlaceholderIdx] = useState(0)
   const [showManualAdd, setShowManualAdd] = useState(false)
   const [manualName, setManualName] = useState('')
@@ -179,7 +179,7 @@ export function SolutionDefinitionPanel({
         {state.projects.length === 0 && (
           <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground/50">
             <Layers className="w-6 h-6 mb-2" />
-            <p className="text-[10px] text-center">Describe your solution to get started</p>
+            <p className="text-[10px] text-center">Describe your fix to get started</p>
           </div>
         )}
       </div>
@@ -190,7 +190,7 @@ export function SolutionDefinitionPanel({
         <div>
           <h2 className="text-2xl font-bold mb-1">Define Your Mission</h2>
           <p className="text-sm text-muted-foreground">
-            Describe the solution you want to deploy. AI will suggest the best CNCF
+            Describe the fix you want to deploy. AI will suggest the best CNCF
             projects and dependencies.
           </p>
         </div>

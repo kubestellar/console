@@ -86,7 +86,7 @@ function missionToMarkdown(mission: MissionExport): string {
   ]
 
   if (mission.resolution?.summary) {
-    lines.push('## Solution', mission.resolution.summary, '')
+    lines.push('## Fix', mission.resolution.summary, '')
   }
 
   if (mission.steps.length > 0) {

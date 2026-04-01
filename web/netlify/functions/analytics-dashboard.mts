@@ -72,7 +72,7 @@ interface DashboardData {
     login: number;
     commandCopied: number;
     agentConnected: number;
-    solutionViewed: number;
+    fixerViewed: number;
     missionStarted: number;
   };
   cncfOutreach: {
@@ -405,7 +405,7 @@ async function fetchDashboardData(
             "login",
             "ksc_install_command_copied",
             "ksc_agent_connected",
-            "ksc_solution_viewed",
+            "ksc_fixer_viewed",
             "ksc_mission_started",
             "page_view",
             "first_visit",
@@ -801,7 +801,7 @@ async function fetchDashboardData(
       login: funnelMap["login"] || 0,
       commandCopied: funnelMap["ksc_install_command_copied"] || 0,
       agentConnected: funnelMap["ksc_agent_connected"] || 0,
-      solutionViewed: funnelMap["ksc_solution_viewed"] || 0,
+      fixerViewed: funnelMap["ksc_fixer_viewed"] || 0,
       missionStarted: funnelMap["ksc_mission_started"] || 0,
     },
     cncfOutreach: cncfRows

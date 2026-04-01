@@ -1,7 +1,7 @@
 /**
  * MissionControlDialog — Full-screen overlay with 3-phase stepper.
  *
- * Phase 1: Define Your Mission (solution description + AI payload suggestions)
+ * Phase 1: Define Your Mission (fix description + AI payload suggestions)
  * Phase 2: Chart Your Course (cluster assignment + readiness)
  * Phase 3: Flight Plan (SVG blueprint + deploy)
  */
@@ -23,7 +23,7 @@ import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'
 import { useToast } from '../ui/Toast'
 import { useMissionControl } from './useMissionControl'
-import { SolutionDefinitionPanel } from './SolutionDefinitionPanel'
+import { FixerDefinitionPanel } from './FixerDefinitionPanel'
 import { ClusterAssignmentPanel } from './ClusterAssignmentPanel'
 import { FlightPlanBlueprint } from './FlightPlanBlueprint'
 import { LaunchSequence } from './LaunchSequence'
@@ -44,7 +44,7 @@ const PHASE_STEPS: {
     key: 'define',
     label: 'Define Mission',
     icon: <Target className="w-4 h-4" />,
-    description: 'Describe your solution and select projects',
+    description: 'Describe your fix and select projects',
   },
   {
     key: 'assign',
@@ -216,7 +216,7 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
             <AnimatePresence mode="wait">
               {state.phase === 'define' && (
                 <PhaseWrapper key="define">
-                  <SolutionDefinitionPanel
+                  <FixerDefinitionPanel
                     state={state}
                     onDescriptionChange={mc.setDescription}
                     onTitleChange={mc.setTitle}

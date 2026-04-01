@@ -62,7 +62,7 @@ function buildIssueUrl(
     ``,
     `---`,
     `_This issue was created via the KubeStellar Console "Improve this AI Mission" feature._`,
-    `_Mission file: \`solutions/cncf-install/install-${(mission.cncfProject || 'unknown').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json\`_`,
+    `_Mission file: \`fixes/cncf-install/install-${(mission.cncfProject || 'unknown').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json\`_`,
   ].filter(Boolean).join('\n')
 
   const labels = ['ai-mission', 'community-improvement', section !== 'general' ? section : ''].filter(Boolean).join(',')

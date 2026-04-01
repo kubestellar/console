@@ -1,7 +1,7 @@
 /**
  * Netlify Function: Missions File Proxy
  *
- * GET /api/missions/file?path=solutions/index.json&ref=master
+ * GET /api/missions/file?path=fixes/index.json&ref=master
  * Fetches raw file content from kubestellar/console-kb on GitHub.
  * Caches responses in Netlify Blobs to avoid hitting GitHub on every request.
  * No GITHUB_TOKEN required — the repo is public.
