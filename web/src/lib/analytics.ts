@@ -2013,3 +2013,8 @@ export function emitWhiteLabelCommandCopy(tab: string, step: number, command: st
 export function emitTipShown(page: string, tip: string) {
   send('ksc_tip_shown', { page, tip })
 }
+
+/** Fired when user's visit streak increments (consecutive days visiting) */
+export function emitStreakDay(streakCount: number) {
+  send('ksc_streak_day', { streak_count: streakCount })
+}

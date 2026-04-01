@@ -17,8 +17,9 @@ import {
   STORAGE_KEY_GETTING_STARTED_DISMISSED,
   STORAGE_KEY_HINTS_SUPPRESSED,
 } from '../../lib/constants/storage'
-import { emitGettingStartedShown, emitGettingStartedActioned } from '../../lib/analytics'
+import { emitGettingStartedShown, emitGettingStartedActioned, emitTipShown } from '../../lib/analytics'
 import { DASHBOARD_CONFIGS } from '../../config/dashboards/index'
+import { getRandomTip } from '../../lib/tips'
 
 const DASHBOARD_COUNT = Object.keys(DASHBOARD_CONFIGS).length
 
@@ -38,13 +39,17 @@ export function GettingStartedBanner({
   )
   const emittedRef = useRef(false)
 
+  // Pick a random tip once on mount (stable across re-renders)
+  const [randomTip] = useState(() => getRandomTip())
+
   // Emit analytics once on first render
   useEffect(() => {
     if (!dismissed && !emittedRef.current) {
       emittedRef.current = true
       emitGettingStartedShown()
+      emitTipShown('dashboard', randomTip.tip)
     }
-  }, [dismissed])
+  }, [dismissed, randomTip.tip])
 
   const [hintsSuppressed] = useState(
     () => safeGetItem(STORAGE_KEY_HINTS_SUPPRESSED) === 'true'
@@ -123,6 +128,11 @@ export function GettingStartedBanner({
           </button>
         ))}
       </div>
+
+      {/* Rotating tip — subtle, single line */}
+      <p className="text-xs text-muted-foreground mt-3">
+        {'\uD83D\uDCA1'} {randomTip.tip}
+      </p>
     </div>
   )
 }

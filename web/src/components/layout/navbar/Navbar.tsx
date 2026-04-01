@@ -27,6 +27,7 @@ import { TokenUsageWidget } from './TokenUsageWidget'
 import { ClusterFilterPanel } from './ClusterFilterPanel'
 import { AgentStatusIndicator } from './AgentStatusIndicator'
 import { UpdateIndicator } from './UpdateIndicator'
+import { StreakBadge } from './StreakBadge'
 import { ROUTES } from '../../../config/routes'
 
 export function Navbar() {
@@ -114,6 +115,9 @@ export function Navbar() {
         <div className="hidden lg:flex items-center gap-2">
           {/* Update Indicator */}
           <UpdateIndicator />
+
+          {/* Visit Streak */}
+          <StreakBadge />
 
           {/* Token Usage */}
           <TokenUsageWidget />

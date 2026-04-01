@@ -61,6 +61,8 @@ export const STORAGE_KEY_POST_CONNECT_DISMISSED = 'kc-post-connect-dismissed'
 export const STORAGE_KEY_DEMO_CTA_DISMISSED = 'kc-demo-cta-dismissed'
 export const STORAGE_KEY_ADOPTER_NUDGE_DISMISSED = 'kc-adopter-nudge-dismissed'
 export const STORAGE_KEY_FIRST_AGENT_CONNECT = 'kc-first-agent-connect'
+export const STORAGE_KEY_VISIT_STREAK = 'ksc-visit-streak'
+export const STORAGE_KEY_SEEN_TIPS = 'ksc-seen-tips'
 
 // ── Notification dedup ────────────────────────────────────────────────
 export const STORAGE_KEY_NOTIFIED_ALERT_KEYS = 'kc-notified-alert-keys'
