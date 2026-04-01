@@ -112,7 +112,7 @@ Return ONLY valid JSON, no markdown code blocks or explanation.`
         payload: {
           prompt: prompt,
           sessionId: `resolution-${mission.id}`,
-          agent: mission.agent || 'claude',
+          agent: mission.agent || undefined,
         }
       }))
     }
