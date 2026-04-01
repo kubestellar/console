@@ -23,6 +23,6 @@ import { useKagentBackend } from '../useKagentBackend'
 describe('useKagentBackend', () => {
   it('returns expected shape', () => {
     const { result } = renderHook(() => useKagentBackend())
-    expect(result.current).toHaveProperty('isLoading')
+    expect(result.current).toHaveProperty('kagentAvailable')
   })
 })
