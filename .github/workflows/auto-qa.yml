@@ -2352,74 +2352,14 @@ jobs:
           fi
 
       # === ACTIVE USER COUNT FEATURE (every run) ===
-      - name: "Check: Active user count feature"
+      - name: "Check: Active user count feature (PERMANENTLY DISABLED)"
         id: focus_user_count
-        working-directory: web
         continue-on-error: true
         run: |
-          echo "Checking active user count feature implementation..."
-          ISSUES=""
-
-          # Find user count component/feature
-          USER_COUNT_FILES=$(find src -name "*user*count*" -o -name "*active*user*" -o -name "*UserCount*" -o -name "*ActiveUser*" 2>/dev/null | grep "\.tsx\|\.ts" || true)
-          USER_COUNT_HOOKS=$(grep -rln "activeUsers\|userCount\|onlineUsers\|connectedUsers" src/ --include="*.tsx" --include="*.ts" 2>/dev/null || true)
-
-          if [ -z "$USER_COUNT_FILES" ] && [ -z "$USER_COUNT_HOOKS" ]; then
-            ISSUES="${ISSUES}### No active user count feature found\nConsider adding a real-time user count for console.kubestellar.io\n\n"
-          else
-            # Check for WebSocket or real-time updates
-            HAS_REALTIME=$(grep -rln "WebSocket\|socket\|useSubscription\|onmessage\|EventSource\|sse" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | head -1 || true)
-            if [ -z "$HAS_REALTIME" ]; then
-              ISSUES="${ISSUES}### User count may not update in real-time\nConsider using WebSocket for live user count updates\n\n"
-            fi
-
-            # Check for demo mode handling in user count
-            USER_COUNT_DEMO=$(grep -rln "activeUser\|userCount" src/ --include="*.tsx" 2>/dev/null | while read f; do
-              HAS_DEMO=$(grep -l "demo\|Demo\|mock\|Mock" "$f" 2>/dev/null || true)
-              if [ -z "$HAS_DEMO" ]; then
-                basename "$f"
-              fi
-            done | head -5 || true)
-
-            if [ -n "$USER_COUNT_DEMO" ]; then
-              ISSUES="${ISSUES}### User count components without demo mode handling\n\`\`\`\n${USER_COUNT_DEMO}\n\`\`\`\n\n"
-            fi
-
-            # Check for error handling in user count
-            USER_COUNT_ERROR=$(grep -rln "activeUser\|userCount" src/ --include="*.tsx" 2>/dev/null | while read f; do
-              HAS_ERROR=$(grep -l "error\|Error\|catch\|fallback" "$f" 2>/dev/null || true)
-              if [ -z "$HAS_ERROR" ]; then
-                basename "$f"
-              fi
-            done | head -5 || true)
-
-            if [ -n "$USER_COUNT_ERROR" ]; then
-              ISSUES="${ISSUES}### User count without error handling\nShow fallback when count unavailable:\n\`\`\`\n${USER_COUNT_ERROR}\n\`\`\`\n\n"
-            fi
-
-            # Check for proper cleanup (unsubscribe)
-            SUBSCRIBE_COUNT=$(grep -rc "subscribe\|addEventListener\|onmessage" src/ --include="*user*" --include="*User*" 2>/dev/null | awk -F: '{sum+=$2} END {print sum}' || echo "0")
-            UNSUBSCRIBE_COUNT=$(grep -rc "unsubscribe\|removeEventListener\|close()" src/ --include="*user*" --include="*User*" 2>/dev/null | awk -F: '{sum+=$2} END {print sum}' || echo "0")
-
-            if [ "$SUBSCRIBE_COUNT" -gt 0 ] && [ "$UNSUBSCRIBE_COUNT" -eq 0 ]; then
-              ISSUES="${ISSUES}### User count subscriptions without cleanup\nEnsure WebSocket/EventSource connections are closed on unmount\n\n"
-            fi
-
-            # Check if user count is visible in header/footer
-            HEADER_USER=$(grep -rln "activeUser\|userCount\|UserCount" src/components/layout --include="*.tsx" src/components/header --include="*.tsx" src/components/Header* 2>/dev/null | head -1 || true)
-            if [ -z "$HEADER_USER" ]; then
-              ISSUES="${ISSUES}### User count not in header/layout\nConsider showing active users in the app header for visibility\n\n"
-            fi
-          fi
-
-          if [ -n "$ISSUES" ]; then
-            echo "found=true" >> "$GITHUB_OUTPUT"
-            printf "%b" "$ISSUES" > /tmp/focus-user-count.txt
-            echo "User count issues found"
-          else
-            echo "found=false" >> "$GITHUB_OUTPUT"
-            echo "User count implementation looks good"
-          fi
+          # Active user count in navbar is explicitly not wanted by maintainer.
+          # This check is permanently disabled to prevent re-filing.
+          echo "found=false" >> "$GITHUB_OUTPUT"
+          echo "Skipped — feature explicitly rejected"
 
       # === TOKEN COUNTER FEATURE (every run) ===
       - name: "Check: Token counter feature"
