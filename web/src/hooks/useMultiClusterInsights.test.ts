@@ -757,3 +757,502 @@ describe('trackRolloutProgress', () => {
     expect(result[0].affectedClusters).toHaveLength(4)
   })
 })
+
+// ══════════════════════════════════════════════════════════════════════
+// REGRESSION-PREVENTION TESTS
+// 18 additional cases covering edge-case logic, severity escalation
+// boundaries, multi-dimensional comparisons, and cross-algorithm
+// interaction guarantees.
+// ══════════════════════════════════════════════════════════════════════
+
+// ── Event Correlations: deeper coverage ──────────────────────────────
+
+describe('detectEventCorrelations — regression', () => {
+  it('aggregates event counts from the same cluster in a window', () => {
+    const ts = new Date('2026-01-15T10:00:00Z').toISOString()
+    const events = [
+      makeEvent({ cluster: 'cluster-1', lastSeen: ts, count: 5, reason: 'BackOff' }),
+      makeEvent({ cluster: 'cluster-1', lastSeen: ts, count: 3, reason: 'OOMKilled' }),
+      makeEvent({ cluster: 'cluster-2', lastSeen: ts, count: 2, reason: 'BackOff' }),
+    ]
+    const result = detectEventCorrelations(events)
+    expect(result).toHaveLength(1)
+    // Total events = 5 + 3 + 2 = 10
+    expect(result[0].description).toContain('10 warning events')
+  })
+
+  it('produces separate insights for multiple distinct time windows', () => {
+    const baseMs = new Date('2026-01-15T00:00:00Z').getTime()
+    // Two windows separated by 2 hours (well beyond the 5-min correlation window)
+    const twoHoursMs = 2 * 60 * 60 * 1000
+    const ts1 = new Date(baseMs).toISOString()
+    const ts2 = new Date(baseMs + twoHoursMs).toISOString()
+    const events = [
+      makeEvent({ cluster: 'cluster-1', lastSeen: ts1 }),
+      makeEvent({ cluster: 'cluster-2', lastSeen: ts1 }),
+      makeEvent({ cluster: 'cluster-3', lastSeen: ts2 }),
+      makeEvent({ cluster: 'cluster-4', lastSeen: ts2 }),
+    ]
+    const result = detectEventCorrelations(events)
+    expect(result).toHaveLength(2)
+    // Each insight should have 2 affected clusters
+    expect(result[0].affectedClusters).toHaveLength(2)
+    expect(result[1].affectedClusters).toHaveLength(2)
+  })
+
+  it('populates relatedResources from event objects (capped at 5)', () => {
+    const ts = new Date('2026-01-15T10:00:00Z').toISOString()
+    const events = Array.from({ length: 8 }, (_, i) =>
+      makeEvent({
+        cluster: i < 4 ? 'cluster-1' : 'cluster-2',
+        lastSeen: ts,
+        object: `pod/unique-pod-${i}`,
+      }),
+    )
+    const result = detectEventCorrelations(events)
+    expect(result).toHaveLength(1)
+    // relatedResources are capped at 5
+    expect(result[0].relatedResources!.length).toBeLessThanOrEqual(5)
+  })
+})
+
+// ── Cluster Deltas: deeper coverage ──────────────────────────────────
+
+describe('detectClusterDeltas — regression', () => {
+  it('detects multiple delta dimensions simultaneously', () => {
+    const deps = [
+      makeDeployment({
+        cluster: 'cluster-1',
+        image: 'api:v1.0',
+        replicas: 3,
+        status: 'running',
+      }),
+      makeDeployment({
+        cluster: 'cluster-2',
+        image: 'api:v2.0',
+        replicas: 10,
+        status: 'failed',
+      }),
+    ]
+    const clusters = [
+      makeCluster({ name: 'cluster-1' }),
+      makeCluster({ name: 'cluster-2' }),
+    ]
+    const result = detectClusterDeltas(deps, clusters)
+    expect(result).toHaveLength(1)
+    const dimensions = result[0].deltas!.map((d) => d.dimension).sort()
+    expect(dimensions).toEqual(['Image Version', 'Replica Count', 'Status'])
+    // severity should be 'warning' because there are high-significance deltas
+    expect(result[0].severity).toBe('warning')
+  })
+
+  it('classifies replica delta significance as medium for 20-49% difference', () => {
+    // 3 vs 5 replicas: diff=2, max=5, pctDiff=40% which is >= 20% but < 50%
+    const deps = [
+      makeDeployment({ cluster: 'cluster-1', replicas: 3, image: 'api:v1.0' }),
+      makeDeployment({ cluster: 'cluster-2', replicas: 5, image: 'api:v1.0' }),
+    ]
+    const clusters = [
+      makeCluster({ name: 'cluster-1' }),
+      makeCluster({ name: 'cluster-2' }),
+    ]
+    const result = detectClusterDeltas(deps, clusters)
+    expect(result).toHaveLength(1)
+    const replicaDelta = result[0].deltas!.find(
+      (d) => d.dimension === 'Replica Count',
+    )
+    expect(replicaDelta!.significance).toBe('medium')
+  })
+
+  it('classifies replica delta significance as low for < 20% difference', () => {
+    // 9 vs 10 replicas: diff=1, max=10, pctDiff=10% which is < 20%
+    const deps = [
+      makeDeployment({ cluster: 'cluster-1', replicas: 9, image: 'api:v1.0' }),
+      makeDeployment({ cluster: 'cluster-2', replicas: 10, image: 'api:v1.0' }),
+    ]
+    const clusters = [
+      makeCluster({ name: 'cluster-1' }),
+      makeCluster({ name: 'cluster-2' }),
+    ]
+    const result = detectClusterDeltas(deps, clusters)
+    expect(result).toHaveLength(1)
+    const replicaDelta = result[0].deltas!.find(
+      (d) => d.dimension === 'Replica Count',
+    )
+    expect(replicaDelta!.significance).toBe('low')
+  })
+
+  it('generates pairwise deltas for 3 clusters (produces 3 pairs)', () => {
+    const deps = [
+      makeDeployment({ cluster: 'cluster-1', image: 'api:v1.0' }),
+      makeDeployment({ cluster: 'cluster-2', image: 'api:v2.0' }),
+      makeDeployment({ cluster: 'cluster-3', image: 'api:v3.0' }),
+    ]
+    const clusters = [
+      makeCluster({ name: 'cluster-1' }),
+      makeCluster({ name: 'cluster-2' }),
+      makeCluster({ name: 'cluster-3' }),
+    ]
+    const result = detectClusterDeltas(deps, clusters)
+    expect(result).toHaveLength(1)
+    // 3 clusters => 3 pairwise image deltas (C(3,2) = 3)
+    const imageDeltas = result[0].deltas!.filter(
+      (d) => d.dimension === 'Image Version',
+    )
+    expect(imageDeltas).toHaveLength(3)
+    expect(result[0].affectedClusters).toHaveLength(3)
+  })
+
+  it('sets severity to info when only low-significance deltas exist', () => {
+    // Only replica difference, no high-significance delta
+    const deps = [
+      makeDeployment({ cluster: 'cluster-1', replicas: 9, image: 'api:v1.0' }),
+      makeDeployment({ cluster: 'cluster-2', replicas: 10, image: 'api:v1.0' }),
+    ]
+    const clusters = [
+      makeCluster({ name: 'cluster-1' }),
+      makeCluster({ name: 'cluster-2' }),
+    ]
+    const result = detectClusterDeltas(deps, clusters)
+    expect(result).toHaveLength(1)
+    expect(result[0].severity).toBe('info')
+  })
+})
+
+// ── Cascade Impact: deeper coverage ──────────────────────────────────
+
+describe('detectCascadeImpact — regression', () => {
+  it('produces multiple independent cascade chains', () => {
+    // Two cascades well separated in time (>15 min apart)
+    const base1 = new Date('2026-01-15T10:00:00Z')
+    const base2 = new Date('2026-01-15T11:00:00Z')
+    const oneMinuteMs = 60000
+    const events = [
+      makeEvent({ cluster: 'cluster-1', lastSeen: base1.toISOString() }),
+      makeEvent({
+        cluster: 'cluster-2',
+        lastSeen: new Date(base1.getTime() + oneMinuteMs).toISOString(),
+      }),
+      makeEvent({ cluster: 'cluster-3', lastSeen: base2.toISOString() }),
+      makeEvent({
+        cluster: 'cluster-4',
+        lastSeen: new Date(base2.getTime() + oneMinuteMs).toISOString(),
+      }),
+    ]
+    const result = detectCascadeImpact(events)
+    expect(result).toHaveLength(2)
+    expect(result[0].affectedClusters).toEqual(
+      expect.arrayContaining(['cluster-1', 'cluster-2']),
+    )
+    expect(result[1].affectedClusters).toEqual(
+      expect.arrayContaining(['cluster-3', 'cluster-4']),
+    )
+  })
+
+  it('does not reuse events already consumed by an earlier cascade', () => {
+    const base = new Date('2026-01-15T10:00:00Z')
+    const oneMinuteMs = 60000
+    const events = [
+      makeEvent({ cluster: 'cluster-1', lastSeen: base.toISOString() }),
+      makeEvent({
+        cluster: 'cluster-2',
+        lastSeen: new Date(base.getTime() + oneMinuteMs).toISOString(),
+      }),
+      // cluster-3 is within 15 min of cluster-1 but cluster-2 is consumed
+      makeEvent({
+        cluster: 'cluster-3',
+        lastSeen: new Date(base.getTime() + 2 * oneMinuteMs).toISOString(),
+      }),
+    ]
+    const result = detectCascadeImpact(events)
+    // All 3 in one cascade (cluster-1 starts it, cluster-2 and cluster-3 join)
+    expect(result).toHaveLength(1)
+    expect(result[0].chain).toHaveLength(3)
+  })
+
+  it('preserves chronological chain ordering', () => {
+    const base = new Date('2026-01-15T10:00:00Z')
+    const oneMinuteMs = 60000
+    const twoMinutesMs = 120000
+    const events = [
+      makeEvent({
+        cluster: 'cluster-3',
+        lastSeen: new Date(base.getTime() + twoMinutesMs).toISOString(),
+        reason: 'CrashLoop',
+      }),
+      makeEvent({
+        cluster: 'cluster-1',
+        lastSeen: base.toISOString(),
+        reason: 'FailedMount',
+      }),
+      makeEvent({
+        cluster: 'cluster-2',
+        lastSeen: new Date(base.getTime() + oneMinuteMs).toISOString(),
+        reason: 'Unhealthy',
+      }),
+    ]
+    const result = detectCascadeImpact(events)
+    expect(result).toHaveLength(1)
+    // Chain should be sorted by timestamp: cluster-1 -> cluster-2 -> cluster-3
+    expect(result[0].chain![0].cluster).toBe('cluster-1')
+    expect(result[0].chain![1].cluster).toBe('cluster-2')
+    expect(result[0].chain![2].cluster).toBe('cluster-3')
+  })
+})
+
+// ── Config Drift: deeper coverage ────────────────────────────────────
+
+describe('detectConfigDrift — regression', () => {
+  it('reports both image and replica drift in the description', () => {
+    const deps = [
+      makeDeployment({ cluster: 'cluster-1', image: 'api:v1', replicas: 3 }),
+      makeDeployment({ cluster: 'cluster-2', image: 'api:v2', replicas: 5 }),
+    ]
+    const result = detectConfigDrift(deps)
+    expect(result).toHaveLength(1)
+    expect(result[0].description).toContain('2 different images')
+    expect(result[0].description).toContain('2 different replica counts')
+    // Image drift present => severity is warning
+    expect(result[0].severity).toBe('warning')
+  })
+
+  it('filters clusters without a cluster field from affectedClusters', () => {
+    const deps = [
+      makeDeployment({ cluster: 'cluster-1', image: 'api:v1' }),
+      makeDeployment({ cluster: undefined, image: 'api:v2' }),
+      makeDeployment({ cluster: 'cluster-2', image: 'api:v3' }),
+    ]
+    const result = detectConfigDrift(deps)
+    expect(result).toHaveLength(1)
+    // undefined cluster should be filtered out
+    expect(result[0].affectedClusters).not.toContain(undefined)
+    expect(result[0].affectedClusters).toEqual(
+      expect.arrayContaining(['cluster-1', 'cluster-2']),
+    )
+  })
+})
+
+// ── Resource Imbalance: deeper coverage ──────────────────────────────
+
+describe('detectResourceImbalance — regression', () => {
+  it('detects both CPU and memory imbalance simultaneously', () => {
+    const clusters = [
+      makeCluster({
+        name: 'cluster-1',
+        cpuCores: 10,
+        cpuUsageCores: 9,  // 90%
+        memoryGB: 32,
+        memoryUsageGB: 28, // 88%
+      }),
+      makeCluster({
+        name: 'cluster-2',
+        cpuCores: 10,
+        cpuUsageCores: 2,  // 20%
+        memoryGB: 32,
+        memoryUsageGB: 5,  // 16%
+      }),
+    ]
+    const result = detectResourceImbalance(clusters)
+    const cpuInsight = result.find((i) => i.title.includes('CPU'))
+    const memInsight = result.find((i) => i.title.includes('Memory'))
+    expect(cpuInsight).toBeDefined()
+    expect(memInsight).toBeDefined()
+  })
+
+  it('uses cpuRequestsCores when cpuUsageCores is absent', () => {
+    const clusters = [
+      makeCluster({
+        name: 'cluster-1',
+        cpuCores: 10,
+        cpuRequestsCores: 9,
+        cpuUsageCores: undefined,
+      }), // 90%
+      makeCluster({
+        name: 'cluster-2',
+        cpuCores: 10,
+        cpuRequestsCores: 2,
+        cpuUsageCores: undefined,
+      }), // 20%
+    ]
+    const result = detectResourceImbalance(clusters)
+    const cpuInsight = result.find((i) => i.title.includes('CPU'))
+    expect(cpuInsight).toBeDefined()
+    expect(cpuInsight!.metrics!['cluster-1']).toBe(90)
+    expect(cpuInsight!.metrics!['cluster-2']).toBe(20)
+  })
+
+  it('marks memory imbalance as critical when utilization exceeds threshold', () => {
+    const clusters = [
+      makeCluster({
+        name: 'cluster-1',
+        cpuCores: 8,
+        memoryGB: 32,
+        memoryUsageGB: 30, // 94% > 85%
+      }),
+      makeCluster({
+        name: 'cluster-2',
+        cpuCores: 8,
+        memoryGB: 32,
+        memoryUsageGB: 5,  // 16%
+      }),
+    ]
+    const result = detectResourceImbalance(clusters)
+    const memInsight = result.find((i) => i.title.includes('Memory'))
+    expect(memInsight).toBeDefined()
+    expect(memInsight!.severity).toBe('critical')
+  })
+
+  it('skips clusters with zero cpuCores (prevents division by zero)', () => {
+    const clusters = [
+      makeCluster({ name: 'cluster-1', cpuCores: 0, cpuUsageCores: 0 }),
+      makeCluster({ name: 'cluster-2', cpuCores: 0, cpuUsageCores: 0 }),
+    ]
+    // cpuCores === 0 means filter excludes them (c.cpuCores > 0)
+    expect(detectResourceImbalance(clusters)).toEqual([])
+  })
+})
+
+// ── Restart Correlation: deeper coverage ─────────────────────────────
+
+describe('detectRestartCorrelation — regression', () => {
+  it('strips pod hash suffix correctly for short names (fewer than 3 segments)', () => {
+    // A pod name with only 1 segment (no dashes) — the fallback keeps the full name
+    const issues = [
+      makePodIssue({ name: 'singleton', cluster: 'cluster-1', restarts: 5 }),
+      makePodIssue({ name: 'singleton', cluster: 'cluster-2', restarts: 5 }),
+    ]
+    const result = detectRestartCorrelation(issues)
+    const appBug = result.find((i) => i.title.includes('app bug'))
+    expect(appBug).toBeDefined()
+    // Workload name is just "singleton" because parts.length <= 2
+    expect(appBug!.relatedResources).toEqual(
+      expect.arrayContaining([expect.stringContaining('singleton')]),
+    )
+  })
+
+  it('produces both horizontal and vertical patterns for the same data set', () => {
+    // api-server restarts in 2 clusters (app bug) + 3 different workloads
+    // restart in cluster-1 (infra issue)
+    const issues = [
+      makePodIssue({
+        name: 'api-server-abc-xyz',
+        cluster: 'cluster-1',
+        restarts: 5,
+      }),
+      makePodIssue({
+        name: 'api-server-def-uvw',
+        cluster: 'cluster-2',
+        restarts: 5,
+      }),
+      makePodIssue({
+        name: 'cache-redis-abc-xyz',
+        cluster: 'cluster-1',
+        restarts: 4,
+      }),
+      makePodIssue({
+        name: 'worker-queue-abc-xyz',
+        cluster: 'cluster-1',
+        restarts: 6,
+      }),
+    ]
+    const result = detectRestartCorrelation(issues)
+    const appBug = result.find((i) => i.title.includes('app bug'))
+    const infraIssue = result.find((i) => i.title.includes('infra issue'))
+    expect(appBug).toBeDefined()
+    expect(infraIssue).toBeDefined()
+  })
+
+  it('accumulates restarts from multiple pods of the same workload in one cluster', () => {
+    // Two pods of "api-server" in cluster-1, different hashes
+    const issues = [
+      makePodIssue({
+        name: 'api-server-abc-111',
+        cluster: 'cluster-1',
+        restarts: 8,
+      }),
+      makePodIssue({
+        name: 'api-server-def-222',
+        cluster: 'cluster-1',
+        restarts: 7,
+      }),
+      makePodIssue({
+        name: 'api-server-ghi-333',
+        cluster: 'cluster-2',
+        restarts: 6,
+      }),
+    ]
+    const result = detectRestartCorrelation(issues)
+    const appBug = result.find((i) => i.title.includes('app bug'))
+    expect(appBug).toBeDefined()
+    // Total restarts across clusters: cluster-1 has 8+7=15, cluster-2 has 6; total = 21
+    // 21 > RESTART_CRITICAL_THRESHOLD(20) → critical
+    expect(appBug!.severity).toBe('critical')
+  })
+})
+
+// ── Rollout Tracking: deeper coverage ────────────────────────────────
+
+describe('trackRolloutProgress — regression', () => {
+  it('populates per-cluster progress and status metrics', () => {
+    const deps = [
+      makeDeployment({
+        cluster: 'cluster-1',
+        image: 'api:v2.0',
+        status: 'running',
+      }),
+      makeDeployment({
+        cluster: 'cluster-2',
+        image: 'api:v1.0',
+        status: 'running',
+      }),
+      makeDeployment({
+        cluster: 'cluster-3',
+        image: 'api:v1.0',
+        status: 'failed',
+      }),
+    ]
+    const result = trackRolloutProgress(deps)
+    expect(result).toHaveLength(1)
+    const metrics = result[0].metrics!
+
+    // v1.0 is most common (2 of 3), so treated as "newest"
+    // cluster-1 has v2.0 (not newest, not failed) => pending, progress=50
+    expect(metrics['cluster-1_progress']).toBe(50)
+    expect(metrics['cluster-1_status']).toBe(1) // ROLLOUT_STATUS_IN_PROGRESS
+
+    // cluster-2 has v1.0 (newest) => completed, progress=100
+    expect(metrics['cluster-2_progress']).toBe(100)
+    expect(metrics['cluster-2_status']).toBe(2) // ROLLOUT_STATUS_COMPLETE
+
+    // cluster-3 has status=failed => progress=0, status=3
+    expect(metrics['cluster-3_progress']).toBe(0)
+    expect(metrics['cluster-3_status']).toBe(3) // ROLLOUT_STATUS_FAILED
+  })
+
+  it('skips workloads deployed to only one cluster', () => {
+    const deps = [
+      makeDeployment({
+        cluster: 'cluster-1',
+        image: 'api:v1.0',
+        name: 'solo-app',
+      }),
+    ]
+    expect(trackRolloutProgress(deps)).toEqual([])
+  })
+
+  it('excludes failed clusters from the pending count', () => {
+    const deps = [
+      makeDeployment({ cluster: 'cluster-1', image: 'api:v2.0', status: 'running' }),
+      makeDeployment({ cluster: 'cluster-2', image: 'api:v2.0', status: 'running' }),
+      makeDeployment({ cluster: 'cluster-3', image: 'api:v1.0', status: 'failed' }),
+    ]
+    const result = trackRolloutProgress(deps)
+    expect(result).toHaveLength(1)
+    const metrics = result[0].metrics!
+    // v2.0 is most common (2/3), cluster-3 has v1.0 with status=failed
+    // pending = deployments with non-newest image AND status !== 'failed' => 0
+    expect(metrics.pending).toBe(0)
+    expect(metrics.failed).toBe(1)
+    expect(metrics.completed).toBe(2)
+  })
+})
