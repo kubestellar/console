@@ -74,7 +74,11 @@ func (h *WebhookHandlers) ListWebhooks(c *fiber.Ctx) error {
 
 	clusters, err := h.k8sClient.DeduplicatedClusters(ctx)
 	if err != nil {
-		clusters, _ = h.k8sClient.ListClusters(ctx)
+		var listErr error
+		clusters, listErr = h.k8sClient.ListClusters(ctx)
+		if listErr != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "cluster discovery failed", "isDemoData": false})
+		}
 	}
 
 	allWebhooks := make([]WebhookSummary, 0)
@@ -122,6 +126,7 @@ func parseWebhookFromUnstructured(item *unstructured.Unstructured, cluster, whTy
 	failurePolicy := "Fail"
 	matchPolicy := "Exact"
 	ruleCount := 0
+	policyExtracted := false
 
 	// The webhook list is under "webhooks" for both mutating and validating
 	if webhooks, ok := item.Object["webhooks"].([]interface{}); ok {
@@ -136,12 +141,15 @@ func parseWebhookFromUnstructured(item *unstructured.Unstructured, cluster, whTy
 				ruleCount += len(rules)
 			}
 
-			// Use failure policy from first webhook entry
-			if fp, ok := whMap["failurePolicy"].(string); ok && ruleCount <= len(webhooks) {
-				failurePolicy = fp
-			}
-			if mp, ok := whMap["matchPolicy"].(string); ok && ruleCount <= len(webhooks) {
-				matchPolicy = mp
+			// Use failure/match policy from the first webhook entry that has them
+			if !policyExtracted {
+				if fp, ok := whMap["failurePolicy"].(string); ok {
+					failurePolicy = fp
+				}
+				if mp, ok := whMap["matchPolicy"].(string); ok {
+					matchPolicy = mp
+				}
+				policyExtracted = true
 			}
 		}
 	}

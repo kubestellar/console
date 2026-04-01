@@ -171,9 +171,11 @@ export function useAdmissionWebhooks(): UseAdmissionWebhooksResult {
 
       const data = (await res.json()) as WebhookListResponse
 
-      if (data.isDemoData || (data.webhooks || []).length === 0) {
-        throw new Error('No webhook data available')
+      if (data.isDemoData) {
+        throw new Error('Backend returned demo data indicator')
       }
+
+      // An empty array is a legitimate result (no webhooks configured)
 
       setWebhooks(data.webhooks || [])
       setIsDemoData(false)

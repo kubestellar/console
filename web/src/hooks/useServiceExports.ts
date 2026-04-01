@@ -187,10 +187,12 @@ export function useServiceExports(): UseServiceExportsResult {
 
       const data = (await res.json()) as ServiceExportListResponse
 
-      if (data.isDemoData || (data.exports || []).length === 0) {
-        // API returned but no real data — fall through to demo
-        throw new Error('No ServiceExport data available')
+      if (data.isDemoData) {
+        // API returned demo data indicator — fall through to demo
+        throw new Error('Backend returned demo data indicator')
       }
+
+      // An empty array is a legitimate result (no ServiceExports configured)
 
       setExports(data.exports || [])
       setIsDemoData(false)

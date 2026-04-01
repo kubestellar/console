@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -10,7 +11,9 @@ import (
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
 )
 
-// ListGateways lists all Gateway resources across all clusters
+// ListGateways lists all Gateway resources across all clusters.
+// Per-cluster errors are collected and returned alongside any successful results
+// so that callers can surface partial failures instead of silently dropping data.
 func (m *MultiClusterClient) ListGateways(ctx context.Context) (*v1alpha1.GatewayList, error) {
 	m.mu.RLock()
 	clusters := make([]string, 0, len(m.clients))
@@ -22,6 +25,7 @@ func (m *MultiClusterClient) ListGateways(ctx context.Context) (*v1alpha1.Gatewa
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	gateways := make([]v1alpha1.Gateway, 0)
+	var errs []error
 
 	for _, clusterName := range clusters {
 		wg.Add(1)
@@ -30,6 +34,9 @@ func (m *MultiClusterClient) ListGateways(ctx context.Context) (*v1alpha1.Gatewa
 
 			clusterGateways, err := m.ListGatewaysForCluster(ctx, cluster, "")
 			if err != nil {
+				mu.Lock()
+				errs = append(errs, fmt.Errorf("cluster %s: %w", cluster, err))
+				mu.Unlock()
 				return
 			}
 
@@ -41,10 +48,15 @@ func (m *MultiClusterClient) ListGateways(ctx context.Context) (*v1alpha1.Gatewa
 
 	wg.Wait()
 
+	var combinedErr error
+	if len(errs) > 0 {
+		combinedErr = fmt.Errorf("gateway list errors: %v", errs)
+	}
+
 	return &v1alpha1.GatewayList{
 		Items:      gateways,
 		TotalCount: len(gateways),
-	}, nil
+	}, combinedErr
 }
 
 // ListGatewaysForCluster lists Gateway resources in a specific cluster
@@ -134,7 +146,9 @@ func (m *MultiClusterClient) parseGatewaysFromList(list interface{}, contextName
 	return gateways, nil
 }
 
-// ListHTTPRoutes lists all HTTPRoute resources across all clusters
+// ListHTTPRoutes lists all HTTPRoute resources across all clusters.
+// Per-cluster errors are collected and returned alongside any successful results
+// so that callers can surface partial failures instead of silently dropping data.
 func (m *MultiClusterClient) ListHTTPRoutes(ctx context.Context) (*v1alpha1.HTTPRouteList, error) {
 	m.mu.RLock()
 	clusters := make([]string, 0, len(m.clients))
@@ -146,6 +160,7 @@ func (m *MultiClusterClient) ListHTTPRoutes(ctx context.Context) (*v1alpha1.HTTP
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	routes := make([]v1alpha1.HTTPRoute, 0)
+	var errs []error
 
 	for _, clusterName := range clusters {
 		wg.Add(1)
@@ -154,6 +169,9 @@ func (m *MultiClusterClient) ListHTTPRoutes(ctx context.Context) (*v1alpha1.HTTP
 
 			clusterRoutes, err := m.ListHTTPRoutesForCluster(ctx, cluster, "")
 			if err != nil {
+				mu.Lock()
+				errs = append(errs, fmt.Errorf("cluster %s: %w", cluster, err))
+				mu.Unlock()
 				return
 			}
 
@@ -165,10 +183,15 @@ func (m *MultiClusterClient) ListHTTPRoutes(ctx context.Context) (*v1alpha1.HTTP
 
 	wg.Wait()
 
+	var combinedErr error
+	if len(errs) > 0 {
+		combinedErr = fmt.Errorf("httproute list errors: %v", errs)
+	}
+
 	return &v1alpha1.HTTPRouteList{
 		Items:      routes,
 		TotalCount: len(routes),
-	}, nil
+	}, combinedErr
 }
 
 // ListHTTPRoutesForCluster lists HTTPRoute resources in a specific cluster

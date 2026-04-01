@@ -190,10 +190,12 @@ export function useCRDs(): UseCRDsResult {
 
       const data = (await res.json()) as CRDListResponse
 
-      if (data.isDemoData || (data.crds || []).length === 0) {
-        // API returned but no real data — fall through to demo
-        throw new Error('No CRD data available')
+      if (data.isDemoData) {
+        // API returned demo data indicator — fall through to demo
+        throw new Error('Backend returned demo data indicator')
       }
+
+      // An empty array is a legitimate result (no CRDs on cluster)
 
       setCRDs(data.crds || [])
       setIsDemoData(false)

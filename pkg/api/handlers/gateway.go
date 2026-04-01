@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -55,6 +56,11 @@ func (h *GatewayHandlers) ListGateways(c *fiber.Ctx) error {
 	// Get gateways across all clusters
 	list, err := h.k8sClient.ListGateways(ctx)
 	if err != nil {
+		// If we got partial results alongside errors, log and return what we have
+		if list != nil && len(list.Items) > 0 {
+			log.Printf("partial gateway list failure: %v", err)
+			return c.JSON(list)
+		}
 		return handleK8sError(c, err)
 	}
 
@@ -91,6 +97,11 @@ func (h *GatewayHandlers) ListHTTPRoutes(c *fiber.Ctx) error {
 	// Get routes across all clusters
 	list, err := h.k8sClient.ListHTTPRoutes(ctx)
 	if err != nil {
+		// If we got partial results alongside errors, log and return what we have
+		if list != nil && len(list.Items) > 0 {
+			log.Printf("partial httproute list failure: %v", err)
+			return c.JSON(list)
+		}
 		return handleK8sError(c, err)
 	}
 
