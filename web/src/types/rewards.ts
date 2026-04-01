@@ -73,7 +73,7 @@ export const REWARD_ACTIONS: Record<RewardActionType, RewardAction> = {
     type: 'linkedin_share',
     coins: 200,
     label: 'LinkedIn Share',
-    description: 'Share KubeStellar on LinkedIn',
+    description: 'Share KubeStellar Console on LinkedIn',
   },
   first_dashboard: {
     type: 'first_dashboard',

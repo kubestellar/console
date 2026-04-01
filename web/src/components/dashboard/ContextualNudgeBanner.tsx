@@ -41,7 +41,7 @@ const NUDGE_CONFIG: Record<NudgeType, {
     titleKey: 'nudge.pwa.title',
     titleFallback: 'Quick access',
     descriptionKey: 'nudge.pwa.description',
-    descriptionFallback: 'Install the KubeStellar widget for instant cluster status from your desktop.',
+    descriptionFallback: 'Install the KubeStellar Console widget for instant cluster status from your desktop.',
     actionKey: 'nudge.pwa.action',
     actionFallback: 'Install widget',
     accentClass: 'border-purple-500/30 bg-purple-500/5',

@@ -3049,7 +3049,7 @@
     },
     "pwa": {
       "title": "Quick access",
-      "description": "Install the KubeStellar widget for instant cluster status from your desktop.",
+      "description": "Install the KubeStellar Console widget for instant cluster status from your desktop.",
       "action": "Install widget"
     }
   },

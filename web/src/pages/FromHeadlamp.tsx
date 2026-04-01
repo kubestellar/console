@@ -49,7 +49,7 @@ interface ComparisonRow {
 
 const COMPARISON_DATA: ComparisonRow[] = [
   { feature: 'Open Source', headlamp: 'Yes', console: 'Yes', headlampNote: 'Apache 2.0', consoleNote: 'Apache 2.0' },
-  { feature: 'CNCF Status', headlamp: 'Sandbox', console: 'KubeStellar is Sandbox' },
+  { feature: 'CNCF Status', headlamp: 'Sandbox', console: 'KubeStellar Console is Sandbox' },
   { feature: 'Plugin System', headlamp: 'Yes', console: 'Cards + Presets', headlampNote: 'Rich plugin ecosystem', consoleNote: 'Drag-and-drop cards' },
   { feature: 'Multi-cluster', headlamp: 'Yes', console: 'Yes', consoleNote: '+ KubeStellar WDS/ITS' },
   { feature: 'AI Assistance', headlamp: 'Not built-in', console: 'AI Missions', consoleNote: 'Natural-language troubleshooting' },

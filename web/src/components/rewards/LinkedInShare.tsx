@@ -75,7 +75,7 @@ export function LinkedInShareButton() {
                 Did you share on LinkedIn?
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Confirm that you shared KubeStellar to earn your coins!
+                Confirm that you shared KubeStellar Console to earn your coins!
               </p>
 
               <div className="flex items-center justify-center gap-2 mb-4 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
@@ -129,7 +129,7 @@ export function LinkedInShareCard() {
         <div className="flex-1">
           <h4 className="font-medium text-foreground">Share on LinkedIn</h4>
           <p className="text-sm text-muted-foreground mb-3">
-            Help spread the word about KubeStellar and earn coins!
+            Help spread the word about KubeStellar Console and earn coins!
           </p>
           <div className="flex items-center justify-between">
             <LinkedInShareButton />
