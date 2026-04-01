@@ -5,9 +5,11 @@ vi.mock('../../lib/api', () => ({
   api: { get: vi.fn(() => Promise.resolve({ data: [] })) },
 }))
 
-vi.mock('../../lib/constants', () => ({
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   STORAGE_KEY_TOKEN: 'kc-auth-token',
-}))
+} })
 
 import { useUsers } from '../useUsers'
 

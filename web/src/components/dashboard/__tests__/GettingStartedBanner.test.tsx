@@ -15,11 +15,13 @@ vi.mock('../../../lib/utils/localStorage', () => ({
   safeSetJSON: vi.fn(),
 }))
 
-vi.mock('../../../lib/constants/storage', () => ({
+vi.mock('../../../lib/constants/storage', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   STORAGE_KEY_GETTING_STARTED_DISMISSED: 'kc-getting-started-dismissed',
   STORAGE_KEY_HINTS_SUPPRESSED: 'kc-hints-suppressed',
   STORAGE_KEY_SEEN_TIPS: 'kc-seen-tips',
-}))
+} })
 
 vi.mock('../../../lib/analytics', () => ({
   emitGettingStartedShown: vi.fn(),

@@ -8,9 +8,11 @@ vi.mock('../useMCP', () => ({
   })),
 }))
 
-vi.mock('../../lib/constants', () => ({
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   STORAGE_KEY_TOKEN: 'kc-auth-token',
-}))
+} })
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 10000,

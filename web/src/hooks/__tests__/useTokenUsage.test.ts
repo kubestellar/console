@@ -11,9 +11,11 @@ vi.mock('../useDemoMode', () => ({
   getDemoMode: vi.fn(() => false),
 }))
 
-vi.mock('../../lib/constants', () => ({
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
-}))
+} })
 
 vi.mock('../../lib/constants/network', () => ({
   QUICK_ABORT_TIMEOUT_MS: 2000,

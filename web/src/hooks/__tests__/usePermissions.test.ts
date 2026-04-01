@@ -5,9 +5,11 @@ vi.mock('../../lib/api', () => ({
   isBackendUnavailable: vi.fn(() => false),
 }))
 
-vi.mock('../../lib/constants', () => ({
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   STORAGE_KEY_TOKEN: 'kc-auth-token',
-}))
+} })
 
 import { usePermissions, useCanI, clearPermissionsCache } from '../usePermissions'
 import { isBackendUnavailable } from '../../lib/api'

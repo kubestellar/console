@@ -7,9 +7,11 @@ vi.mock('../../lib/utils/localStorage', () => ({
   safeSetJSON: vi.fn(),
 }))
 
-vi.mock('../../lib/constants/storage', () => ({
+vi.mock('../../lib/constants/storage', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   STORAGE_KEY_VISIT_STREAK: 'kc-visit-streak',
-}))
+} })
 
 vi.mock('../../lib/analytics', () => ({
   emitStreakDay: vi.fn(),

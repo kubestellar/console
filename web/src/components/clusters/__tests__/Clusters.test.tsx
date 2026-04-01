@@ -74,12 +74,14 @@ vi.mock('../../../lib/analytics', () => ({
   emitClusterStatsDrillDown: vi.fn(),
 }))
 
-vi.mock('../../../lib/constants', () => ({
+vi.mock('../../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   LOCAL_AGENT_HTTP_URL: 'http://localhost:8080',
   STORAGE_KEY_CLUSTER_LAYOUT: 'kc-cluster-layout',
   STORAGE_KEY_CLUSTER_ORDER: 'kc-cluster-order',
   FETCH_DEFAULT_TIMEOUT_MS: 5000,
-}))
+} })
 
 vi.mock('../../../lib/utils/localStorage', () => ({
   safeGetItem: () => null,

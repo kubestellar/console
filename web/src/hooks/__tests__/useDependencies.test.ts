@@ -13,10 +13,12 @@ vi.mock('../../lib/demoMode', () => ({
   isDemoMode: vi.fn(() => false),
 }))
 
-vi.mock('../../lib/constants', () => ({
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
   STORAGE_KEY_TOKEN: 'kc-auth-token',
-}))
+} })
 
 vi.mock('../../lib/constants/network', () => ({
   MCP_HOOK_TIMEOUT_MS: 10000,

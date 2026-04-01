@@ -27,10 +27,12 @@ vi.mock('./useLocalAgent', () => ({
   isAgentUnavailable: () => mockIsAgentUnavailable(),
 }))
 
-vi.mock('../lib/constants', () => ({
+vi.mock('../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
   LOCAL_AGENT_WS_URL: 'ws://127.0.0.1:8585/ws',
-}))
+} })
 
 // ── WebSocket mock ──────────────────────────────────────────────────────────────
 // A lightweight stand-in that captures instances and exposes simulation helpers.

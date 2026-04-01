@@ -74,9 +74,11 @@ vi.mock('../../../lib/constants/network', () => ({
   DEPLOY_ABORT_TIMEOUT_MS: 10_000,
 }))
 
-vi.mock('../../../lib/constants', () => ({
+vi.mock('../../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   STORAGE_KEY_TOKEN: 'token',
-}))
+} })
 
 // ---------------------------------------------------------------------------
 // Imports under test (after mocks are declared)

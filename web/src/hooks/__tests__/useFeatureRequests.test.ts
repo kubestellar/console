@@ -8,9 +8,11 @@ vi.mock('../../lib/api', () => ({
   },
 }))
 
-vi.mock('../../lib/constants', () => ({
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
   STORAGE_KEY_TOKEN: 'kc-auth-token',
-}))
+} })
 
 vi.mock('../../lib/constants/network', () => ({
   MIN_PERCEIVED_DELAY_MS: 0,
