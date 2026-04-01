@@ -7,6 +7,7 @@ import { ROUTES } from '../../config/routes'
 import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_ONBOARDING_RESPONSES, STORAGE_KEY_ONBOARDED } from '../../lib/constants'
 import { safeGetItem, safeSetItem, safeSetJSON } from '../../lib/utils/localStorage'
 import { useTranslation } from 'react-i18next'
+import { Button } from '../ui/Button'
 
 interface Question {
   key: string
@@ -216,22 +217,22 @@ export function Onboarding() {
                   </div>
                   <span className="flex-1 text-foreground">{option}</span>
                   <div className="flex gap-1">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleRankMove(index, 'up')}
                       disabled={index === 0}
-                      className="p-1.5 rounded hover:bg-purple-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      icon={<ArrowUp className="w-4 h-4 text-muted-foreground" aria-hidden="true" />}
                       aria-label={`Move ${option} up`}
-                    >
-                      <ArrowUp className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                    </button>
-                    <button
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleRankMove(index, 'down')}
                       disabled={index === getRankedOrder().length - 1}
-                      className="p-1.5 rounded hover:bg-purple-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      icon={<ArrowDown className="w-4 h-4 text-muted-foreground" aria-hidden="true" />}
                       aria-label={`Move ${option} down`}
-                    >
-                      <ArrowDown className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                    </button>
+                    />
                   </div>
                 </div>
               ))}
@@ -261,42 +262,37 @@ export function Onboarding() {
 
           {/* Navigation */}
           <div className="flex items-center justify-between mt-8">
-            <button
+            <Button
+              variant="ghost"
+              size="lg"
               onClick={handleBack}
               disabled={currentStep === 0}
-              className="flex items-center gap-2 px-4 py-2 text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              icon={<ChevronLeft className="w-4 h-4" />}
             >
-              <ChevronLeft className="w-4 h-4" />
               Back
-            </button>
+            </Button>
 
             {isLastStep ? (
-              <button
+              <Button
+                variant="primary"
+                size="lg"
                 onClick={handleComplete}
                 disabled={!canProceed || isSubmitting}
-                className="btn-primary flex items-center gap-2 disabled:opacity-50"
+                loading={isSubmitting}
+                iconRight={!isSubmitting ? <Check className="w-4 h-4" /> : undefined}
               >
-                {isSubmitting ? (
-                  <>
-                    <div className="spinner w-4 h-4" />
-                    Creating dashboard...
-                  </>
-                ) : (
-                  <>
-                    Complete Setup
-                    <Check className="w-4 h-4" />
-                  </>
-                )}
-              </button>
+                {isSubmitting ? 'Creating dashboard...' : 'Complete Setup'}
+              </Button>
             ) : (
-              <button
+              <Button
+                variant="primary"
+                size="lg"
                 onClick={handleNext}
                 disabled={!canProceed}
-                className="btn-primary flex items-center gap-2 disabled:opacity-50"
+                iconRight={<ChevronRight className="w-4 h-4" />}
               >
                 Continue
-                <ChevronRight className="w-4 h-4" />
-              </button>
+              </Button>
             )}
           </div>
         </div>

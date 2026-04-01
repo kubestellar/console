@@ -5,6 +5,7 @@ import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'
 import { TOOLTIP_POSITION_DELAY_MS } from '../../lib/constants/network'
 import { LogoWithStar } from '../ui/LogoWithStar'
+import { Button } from '../ui/Button'
 
 interface TooltipPosition {
   top?: number
@@ -378,13 +379,13 @@ export function TourOverlay() {
             </div>
             <h3 className="font-semibold text-foreground">{currentStep.title}</h3>
           </div>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={skipTour}
-            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
+            icon={<X className="w-4 h-4" aria-hidden="true" />}
             aria-label="Skip tour"
-          >
-            <X className="w-4 h-4" aria-hidden="true" />
-          </button>
+          />
         </div>
 
         {/* Content */}
@@ -412,27 +413,22 @@ export function TourOverlay() {
           {/* Navigation */}
           <div className="flex items-center gap-2">
             {currentStepIndex > 0 && (
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={prevStep}
-                className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                icon={<ChevronLeft className="w-4 h-4" aria-hidden="true" />}
                 aria-label="Previous step"
-              >
-                <ChevronLeft className="w-4 h-4" aria-hidden="true" />
-              </button>
+              />
             )}
-            <button
+            <Button
+              variant="accent"
+              size="md"
               onClick={nextStep}
-              className="px-3 py-1.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-foreground text-sm font-medium transition-colors flex items-center gap-1"
+              iconRight={currentStepIndex < totalSteps - 1 ? <ChevronRight className="w-4 h-4" /> : undefined}
             >
-              {currentStepIndex === totalSteps - 1 ? (
-                'Finish'
-              ) : (
-                <>
-                  Next
-                  <ChevronRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
+              {currentStepIndex === totalSteps - 1 ? 'Finish' : 'Next'}
+            </Button>
           </div>
         </div>
 
@@ -454,19 +450,16 @@ export function TourTrigger() {
   const { startTour, hasCompletedTour } = useTour()
 
   return (
-    <button
+    <Button
+      variant={hasCompletedTour ? 'ghost' : 'accent'}
+      size="md"
       onClick={startTour}
-      className={cn(
-        'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
-        hasCompletedTour
-          ? 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-          : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 animate-pulse'
-      )}
+      icon={<LogoWithStar className="w-5 h-5" />}
+      className={cn(!hasCompletedTour && 'animate-pulse')}
       title="Take a tour"
     >
-      <LogoWithStar className="w-5 h-5" />
       {!hasCompletedTour && <span className="hidden xl:inline">Take the tour</span>}
-    </button>
+    </Button>
   )
 }
 
