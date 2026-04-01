@@ -159,10 +159,17 @@ function StepCard({ step, index, accentColor }: { step: MissionStep; index: numb
         ))}
         {step.command && (
           <div className="relative mt-2">
-            <code className="block p-2 rounded bg-background text-xs text-foreground font-mono border border-border">
-              {step.command}
-            </code>
+            <pre className="block p-2 rounded bg-background text-xs text-foreground font-mono border border-border whitespace-pre-wrap overflow-x-auto">{step.command}</pre>
             <CopyButton text={step.command} />
+          </div>
+        )}
+        {step.yaml && (
+          <div className="relative mt-2">
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">YAML</span>
+            </div>
+            <pre className="p-3 rounded-lg bg-background text-xs text-foreground font-mono border border-border overflow-x-auto whitespace-pre-wrap">{step.yaml}</pre>
+            <CopyButton text={step.yaml} />
           </div>
         )}
       </div>

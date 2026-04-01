@@ -303,7 +303,7 @@ function wrapCRsAsMission(crDocuments: Record<string, unknown>[]): ParseResult {
         ? `Apply ${kind} resource for ${project.displayName}`
         : `Apply ${kind} resource (${doc.apiVersion})`,
       yaml: yaml.dump(doc, { indent: 2, lineWidth: -1 }),
-      command: `kubectl apply -f - <<'EOF'\n${yaml.dump(doc, { indent: 2, lineWidth: -1 })}EOF`,
+      command: `kubectl apply -f ${name ? name + '.yaml' : '<filename>.yaml'}`,
     }
   })
 
