@@ -8,6 +8,7 @@ on:
       - 'go.mod'
       - 'go.sum'
       - '.github/nilaway-baseline.json'
+      - '.github/array-safety-baseline.txt'
       - 'web/src/**.ts'
       - 'web/src/**.tsx'
   schedule:
@@ -355,4 +356,127 @@ jobs:
           echo "Fix: Use (x ?? []).join() or (x ?? []).map().join()"
           echo ""
           echo "To suppress a false positive, add '// null-safety-ignore' on the same line."
+          exit 1
+
+      - name: Scan for unguarded array methods on potentially-undefined values
+        id: array-safety
+        run: |
+          # ── Array Safety Guards (P1-B) ──────────────────────────────────
+          #
+          # Catches array methods called on values that may be undefined at
+          # runtime — the #1 source of production crashes (see PR #1281).
+          #
+          # Suppression: add '// null-safety-ignore' on the same line.
+          #
+          # ── Ratcheting ──────────────────────────────────────────────────
+          # We count current violations and compare against a checked-in
+          # baseline. The build fails only if the count INCREASES, allowing
+          # gradual cleanup without blocking unrelated PRs.
+          # ────────────────────────────────────────────────────────────────
+
+          SCAN_DIRS="web/src/hooks/ web/src/components/"
+          FINDINGS="/tmp/array-safety-findings.txt"
+          : > "$FINDINGS"
+
+          # Shared exclusions: test files, node_modules, suppressed lines
+          exclude_noise() {
+            grep -v 'node_modules' | \
+            grep -v '\.test\.' | \
+            grep -v '\.spec\.' | \
+            grep -v '__tests__' | \
+            grep -v '// null-safety-ignore'
+          }
+
+          # ── Pattern A: Hook .data.arrayMethod() without guard ──────────
+          # Catches: cache.data.map(…), result.data.filter(…), cacheResult.data.forEach(…)
+          # These crash when the hook returns { data: undefined }.
+          # Safe alternatives: (cache.data ?? []).map(…) or cache.data?.map(…)
+          grep -rn --include='*.ts' --include='*.tsx' \
+            -E '\.(data)\.(map|filter|forEach|join|reduce|find|some|every|flatMap|includes)\(' \
+            $SCAN_DIRS 2>/dev/null | \
+            exclude_noise | \
+            grep -v -E '\?\.\s*(map|filter|forEach|join|reduce|find|some|every|flatMap|includes)\(' | \
+            grep -v -E '\|\|\s*\[\]' | \
+            grep -v -E '\?\?\s*\[\]' >> "$FINDINGS" || true
+
+          # ── Pattern B: data.property.arrayMethod() without guard ───────
+          # Catches: data.predictions.filter(…), data.guides.map(…), data.items.forEach(…)
+          # API response properties may be undefined when the endpoint fails.
+          # Safe alternatives: (data.items ?? []).map(…) or data.items?.map(…)
+          grep -rn --include='*.ts' --include='*.tsx' \
+            -E '\bdata\.[a-zA-Z_]+\.(map|filter|forEach|join|reduce|find|some|every|flatMap|includes)\(' \
+            $SCAN_DIRS 2>/dev/null | \
+            exclude_noise | \
+            grep -v -E '\?\.\s*(map|filter|forEach|join|reduce|find|some|every|flatMap|includes)\(' | \
+            grep -v -E '\|\|\s*\[\]' | \
+            grep -v -E '\?\?\s*\[\]' >> "$FINDINGS" || true
+
+          # ── Pattern C: for…of iterating .data or response properties ───
+          # Catches: for (const x of data.items), for (const x of result.data)
+          # Iterating undefined throws "X is not iterable" at runtime.
+          # Safe alternative: for (const x of (data.items || []))
+          grep -rn --include='*.ts' --include='*.tsx' \
+            -E 'for\s*\(\s*(const|let|var)\s+\w+\s+of\s+\w+\.data\b' \
+            $SCAN_DIRS 2>/dev/null | \
+            exclude_noise | \
+            grep -v -E '\|\|\s*\[\]' | \
+            grep -v -E '\?\?\s*\[\]' >> "$FINDINGS" || true
+
+          grep -rn --include='*.ts' --include='*.tsx' \
+            -E 'for\s*\(\s*(const|let|var)\s+\w+\s+of\s+data\.[a-zA-Z_]+\)' \
+            $SCAN_DIRS 2>/dev/null | \
+            exclude_noise | \
+            grep -v -E '\|\|\s*\[\]' | \
+            grep -v -E '\?\?\s*\[\]' >> "$FINDINGS" || true
+
+          # Deduplicate (a line may match multiple patterns)
+          sort -u "$FINDINGS" -o "$FINDINGS"
+
+          COUNT=$(wc -l < "$FINDINGS" | tr -d ' ')
+          echo "array_safety_count=$COUNT" >> "$GITHUB_OUTPUT"
+
+          # ── Ratchet baseline ────────────────────────────────────────────
+          # Baseline file stores the max allowed count. If missing, treat
+          # current count as baseline (first run bootstraps automatically).
+          BASELINE_FILE=".github/array-safety-baseline.txt"
+          if [ -f "$BASELINE_FILE" ]; then
+            BASELINE=$(cat "$BASELINE_FILE" | tr -d ' \n')
+          else
+            BASELINE="$COUNT"
+          fi
+          echo "array_safety_baseline=$BASELINE" >> "$GITHUB_OUTPUT"
+
+          # ── Summary ─────────────────────────────────────────────────────
+          if [ "$COUNT" -gt "$BASELINE" ]; then
+            echo "### Array Safety: REGRESSION — $COUNT findings (baseline: $BASELINE)" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$COUNT" -gt 0 ]; then
+            echo "### Array Safety: $COUNT findings (at or below baseline $BASELINE)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Array Safety: No unsafe patterns found" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [ "$COUNT" -gt 0 ]; then
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo 'Lines calling array methods on values that may be `undefined` at runtime:' >> "$GITHUB_STEP_SUMMARY"
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            head -50 "$FINDINGS" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo '**Fix:** Guard with `(val ?? [])` or `(val || [])` before calling `.map()`, `.filter()`, `.join()`, etc.' >> "$GITHUB_STEP_SUMMARY"
+            echo '**Suppress false positive:** Add `// null-safety-ignore` on the same line.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Fail on array safety regression
+        if: fromJSON(steps.array-safety.outputs.array_safety_count) > fromJSON(steps.array-safety.outputs.array_safety_baseline)
+        run: |
+          echo "::error::Array safety regression: ${{ steps.array-safety.outputs.array_safety_count }} findings exceeds baseline of ${{ steps.array-safety.outputs.array_safety_baseline }}."
+          echo ""
+          cat /tmp/array-safety-findings.txt
+          echo ""
+          echo "New code is calling .map(), .filter(), .join(), .forEach(), or for...of"
+          echo "on values that may be undefined (e.g., hook .data properties, API responses)."
+          echo ""
+          echo "Fix: Guard with (value ?? []).method() or (value || []).method()"
+          echo "Suppress false positive: Add '// null-safety-ignore' on the same line."
           exit 1
