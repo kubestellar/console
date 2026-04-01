@@ -1,31 +1,41 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { renderHook } from '@testing-library/react'
 
-vi.mock('../../lib/api', () => ({
-  api: {
-    get: vi.fn(),
-  },
+vi.mock('../../lib/cache', () => ({
+  useCache: vi.fn(() => ({
+    data: { guides: [], isDemo: true },
+    isLoading: false,
+    isRefreshing: false,
+    isDemoFallback: true,
+    isFailed: false,
+    consecutiveFailures: 0,
+    refetch: vi.fn(),
+  })),
+}))
+
+vi.mock('../../lib/demoMode', () => ({
+  isNetlifyDeployment: false,
+  isDemoMode: () => true,
+  getDemoMode: () => true,
+}))
+
+vi.mock('../../lib/llmd/nightlyE2EDemoData', () => ({
+  generateDemoNightlyData: () => [],
 }))
 
 import { useNightlyE2EData } from '../useNightlyE2EData'
-import { api } from '../../lib/api'
 
 describe('useNightlyE2EData', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('returns expected shape', () => {
-    vi.mocked(api.get).mockResolvedValue({ data: { runs: [] } })
     const { result } = renderHook(() => useNightlyE2EData())
     expect(result.current).toHaveProperty('isLoading')
-    expect(result.current).toHaveProperty('error')
+    expect(result.current).toHaveProperty('isFailed')
+    expect(result.current).toHaveProperty('guides')
+    expect(result.current).toHaveProperty('isDemoFallback')
+    expect(result.current).toHaveProperty('refetch')
   })
 
-  it('handles API failure gracefully', async () => {
-    vi.mocked(api.get).mockRejectedValue(new Error('fail'))
-    const { result } = renderHook(() => useNightlyE2EData())
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    // Should not throw
+  it('does not throw on mount', () => {
+    expect(() => renderHook(() => useNightlyE2EData())).not.toThrow()
   })
 })

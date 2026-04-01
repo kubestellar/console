@@ -20,6 +20,7 @@ vi.mock('../../../hooks/useDemoMode', () => ({
 vi.mock('../../../lib/analytics', () => ({
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
   emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(),
+  emitTipShown: vi.fn(),
 }))
 
 vi.mock('../../../hooks/useTokenUsage', () => ({

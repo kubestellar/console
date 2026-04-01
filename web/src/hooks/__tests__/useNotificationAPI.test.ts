@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
-vi.mock('../../lib/constants', () => ({
-  BACKEND_DEFAULT_URL: '',
-  STORAGE_KEY_AUTH_TOKEN: 'kc-auth-token',
-}))
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual, BACKEND_DEFAULT_URL: '', STORAGE_KEY_AUTH_TOKEN: 'kc-auth-token' }
+})
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 10000,
@@ -56,11 +56,15 @@ describe('useNotificationAPI', () => {
       new Response(JSON.stringify({ message: 'Invalid webhook' }), { status: 400 })
     )
     const { result } = renderHook(() => useNotificationAPI())
-    await expect(
-      act(async () => {
+    let caughtError: unknown
+    await act(async () => {
+      try {
         await result.current.testNotification('slack', {})
-      })
-    ).rejects.toThrow()
+      } catch (e) {
+        caughtError = e
+      }
+    })
+    expect(caughtError).toBeDefined()
     expect(result.current.error).toBe('Invalid webhook')
   })
 
@@ -80,11 +84,15 @@ describe('useNotificationAPI', () => {
   it('handles network error in testNotification', async () => {
     vi.mocked(fetch).mockRejectedValue(new Error('Network failure'))
     const { result } = renderHook(() => useNotificationAPI())
-    await expect(
-      act(async () => {
+    let caughtError: unknown
+    await act(async () => {
+      try {
         await result.current.testNotification('email', {})
-      })
-    ).rejects.toThrow()
+      } catch (e) {
+        caughtError = e
+      }
+    })
+    expect(caughtError).toBeDefined()
     expect(result.current.error).toBe('Network failure')
   })
 })

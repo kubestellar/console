@@ -7,11 +7,19 @@ vi.mock('../useMCP', () => ({
   useHelmReleases: vi.fn(() => ({ releases: [], isLoading: false })),
 }))
 
+vi.mock('../useDemoMode', () => ({
+  getDemoMode: vi.fn(() => true),
+}))
+
+vi.mock('../../lib/kubectlProxy', () => ({
+  kubectlProxy: { exec: vi.fn() },
+}))
+
 import { useStackDiscovery } from '../useStackDiscovery'
 
 describe('useStackDiscovery', () => {
   it('returns expected shape', () => {
-    const { result } = renderHook(() => useStackDiscovery())
+    const { result } = renderHook(() => useStackDiscovery([]))
     expect(result.current).toHaveProperty('isLoading')
   })
 })

@@ -5,9 +5,10 @@ vi.mock('../useDemoMode', () => ({
   getDemoMode: vi.fn(() => true),
 }))
 
-vi.mock('../../lib/constants', () => ({
-  LOCAL_AGENT_WS_URL: 'ws://localhost:8585/ws',
-}))
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual, LOCAL_AGENT_WS_URL: 'ws://localhost:8585/ws' }
+})
 
 import { useKubectl } from '../useKubectl'
 
@@ -16,14 +17,9 @@ describe('useKubectl', () => {
     vi.clearAllMocks()
   })
 
-  it('returns exec function', () => {
+  it('returns execute function', () => {
     const { result } = renderHook(() => useKubectl())
-    expect(typeof result.current.exec).toBe('function')
-  })
-
-  it('returns isConnected state', () => {
-    const { result } = renderHook(() => useKubectl())
-    expect(typeof result.current.isConnected).toBe('boolean')
+    expect(typeof result.current.execute).toBe('function')
   })
 
   it('cleans up on unmount', () => {

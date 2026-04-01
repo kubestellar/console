@@ -21,6 +21,6 @@ import { usePrometheusMetrics } from '../usePrometheusMetrics'
 describe('usePrometheusMetrics', () => {
   it('returns expected shape', () => {
     const { result } = renderHook(() => usePrometheusMetrics())
-    expect(result.current).toHaveProperty('isLoading')
+    expect(result.current).toHaveProperty('loading')
   })
 })

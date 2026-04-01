@@ -27,7 +27,7 @@ vi.mock('../usePredictionSettings', () => ({
 
 const STORAGE_KEY = 'kubestellar-metrics-history'
 const HISTORY_CHANGED_EVENT = 'kubestellar-metrics-history-changed'
-const MAX_SNAPSHOTS = 144
+const MAX_SNAPSHOTS = 1008
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -142,8 +142,8 @@ describe('useMetricsHistory', () => {
   // ── Trimming old snapshots ─────────────────────────────────────────────
 
   describe('trimming old snapshots', () => {
-    it('removes snapshots older than 24 hours on load', async () => {
-      const oldTimestamp = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString()
+    it('removes snapshots older than 7 days on load', async () => {
+      const oldTimestamp = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString()
       const recentTimestamp = new Date().toISOString()
       const oldSnap = makeSnapshot({ timestamp: oldTimestamp })
       const recentSnap = makeSnapshot({ timestamp: recentTimestamp })
