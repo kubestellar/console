@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Folder, UserPlus, Shield, X } from 'lucide-react'
 import { Button } from '../ui/Button'
-import { BaseModal } from '../../lib/modals'
+import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { api } from '../../lib/api'
 import { useTranslation } from 'react-i18next'
 
@@ -101,8 +101,16 @@ export function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNam
     g => !initialAccess.some(a => a.type === 'Group' && a.name === g)
   )
 
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
+
+  const forceClose = () => {
+    setShowDiscardConfirm(false)
+    onClose()
+  }
+
   const handleClose = () => {
-    if ((name.trim() !== '' || teamLabel.trim() !== '') && !window.confirm(t('common:common.discardUnsavedChanges', 'Discard unsaved changes?'))) {
+    if (name.trim() !== '' || teamLabel.trim() !== '') {
+      setShowDiscardConfirm(true)
       return
     }
     onClose()
@@ -110,6 +118,16 @@ export function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNam
 
   return (
     <BaseModal isOpen={true} onClose={handleClose} size="lg" closeOnBackdrop={false} closeOnEscape={true}>
+      <ConfirmDialog
+        isOpen={showDiscardConfirm}
+        onClose={() => setShowDiscardConfirm(false)}
+        onConfirm={forceClose}
+        title={t('common:common.discardUnsavedChanges', 'Discard unsaved changes?')}
+        message={t('common:common.discardUnsavedChangesMessage', 'You have unsaved changes that will be lost.')}
+        confirmLabel={t('common:common.discard', 'Discard')}
+        cancelLabel={t('common:common.keepEditing', 'Keep editing')}
+        variant="warning"
+      />
       <BaseModal.Header
         title="Create Namespace"
         icon={Folder}

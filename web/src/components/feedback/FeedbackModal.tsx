@@ -13,6 +13,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, Linkedin, ImagePlus, Trash2, Copy, Check, AlertTriangle, Loader2 } from 'lucide-react'
+import { ConfirmDialog } from '../../lib/modals'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
 import { useToast } from '../ui/Toast'
@@ -54,6 +55,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   const [screenshots, setScreenshots] = useState<{ file: File; preview: string }[]>([])
   const [isDragOver, setIsDragOver] = useState(false)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleScreenshotFiles = (files: FileList | null) => {
@@ -183,10 +185,8 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
     }
   }
 
-  const handleClose = () => {
-    if (!success && (title.trim() !== '' || description.trim() !== '') && !window.confirm(t('common:common.discardUnsavedChanges', 'Discard unsaved changes?'))) {
-      return
-    }
+  const forceClose = () => {
+    setShowDiscardConfirm(false)
     localStorage.removeItem(DRAFT_KEY)
     setSuccess(null)
     setSubmitError(null)
@@ -194,6 +194,14 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
     setDescription('')
     setScreenshots([])
     onClose()
+  }
+
+  const handleClose = () => {
+    if (!success && (title.trim() !== '' || description.trim() !== '')) {
+      setShowDiscardConfirm(true)
+      return
+    }
+    forceClose()
   }
 
   // Keyboard navigation - ESC to close, Space to close when not typing
@@ -232,6 +240,16 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-2xl">
+      <ConfirmDialog
+        isOpen={showDiscardConfirm}
+        onClose={() => setShowDiscardConfirm(false)}
+        onConfirm={forceClose}
+        title={t('common:common.discardUnsavedChanges', 'Discard unsaved changes?')}
+        message={t('common:common.discardUnsavedChangesMessage', 'You have unsaved changes that will be lost.')}
+        confirmLabel={t('common:common.discard', 'Discard')}
+        cancelLabel={t('common:common.keepEditing', 'Keep editing')}
+        variant="warning"
+      />
       <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border bg-secondary/30">

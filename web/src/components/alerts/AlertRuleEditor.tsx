@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Trash2, Server, Bell, BellOff, Bot, Slack, Webhook, Siren, ShieldAlert } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
-import { BaseModal } from '../../lib/modals'
+import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import type {
   AlertRule,
   AlertCondition,
@@ -80,10 +80,17 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
 
   // Validation
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
+
+  const forceClose = () => {
+    setShowDiscardConfirm(false)
+    onCancel()
+  }
 
   const handleClose = () => {
     const hasChanges = name.trim() !== '' || description.trim() !== ''
-    if (hasChanges && !window.confirm(t('common:common.discardUnsavedChanges', 'Discard unsaved changes?'))) {
+    if (hasChanges) {
+      setShowDiscardConfirm(true)
       return
     }
     onCancel()
@@ -176,6 +183,16 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
 
   return (
     <BaseModal isOpen={isOpen} onClose={handleClose} size="lg" closeOnBackdrop={false} closeOnEscape={true}>
+      <ConfirmDialog
+        isOpen={showDiscardConfirm}
+        onClose={() => setShowDiscardConfirm(false)}
+        onConfirm={forceClose}
+        title={t('common:common.discardUnsavedChanges', 'Discard unsaved changes?')}
+        message={t('common:common.discardUnsavedChangesMessage', 'You have unsaved changes that will be lost.')}
+        confirmLabel={t('common:common.discard', 'Discard')}
+        cancelLabel={t('common:common.keepEditing', 'Keep editing')}
+        variant="warning"
+      />
       <BaseModal.Header
         title={rule ? t('alerts.editRule') : t('alerts.createRule')}
         icon={Bell}

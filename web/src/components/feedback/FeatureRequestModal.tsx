@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, Pencil, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle, AlertTriangle, Linkedin, Trophy, Monitor, BookOpen, ImagePlus, Trash2, Copy, Maximize2 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { StatusBadge } from '../ui/StatusBadge'
-import { BaseModal } from '../../lib/modals'
+import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import {
   useFeatureRequests,
   useNotifications,
@@ -116,6 +116,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<{ issueUrl?: string } | null>(null)
   const [confirmClose, setConfirmClose] = useState<string | null>(null) // request ID to confirm close
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null) // request ID being acted on
   const [actionError, setActionError] = useState<string | null>(null)
   const [showLoginPrompt, setShowLoginPrompt] = useState(false)
@@ -370,25 +371,41 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
     }
   }
 
+  const forceClose = () => {
+    setShowDiscardConfirm(false)
+    setDescription('')
+    setDescriptionTab('write')
+    setRequestType(initialRequestType || 'bug')
+    setTargetRepo('console')
+    setError(null)
+    setSuccess(null)
+    setScreenshots([])
+    setActiveTab(initialTab || 'submit')
+    onClose()
+  }
+
   const handleClose = () => {
     if (!isSubmitting) {
-      if (description.trim() !== '' && !window.confirm(t('common:common.discardUnsavedChanges', 'Discard unsaved changes?'))) {
+      if (description.trim() !== '') {
+        setShowDiscardConfirm(true)
         return
       }
-      setDescription('')
-      setDescriptionTab('write')
-      setRequestType(initialRequestType || 'bug')
-      setTargetRepo('console')
-      setError(null)
-      setSuccess(null)
-      setScreenshots([])
-      setActiveTab(initialTab || 'submit')
-      onClose()
+      forceClose()
     }
   }
 
   return (
     <BaseModal isOpen={isOpen} onClose={handleClose} size="lg" closeOnBackdrop={false} closeOnEscape={true} className="!h-[80vh]">
+      <ConfirmDialog
+        isOpen={showDiscardConfirm}
+        onClose={() => setShowDiscardConfirm(false)}
+        onConfirm={forceClose}
+        title={t('common:common.discardUnsavedChanges', 'Discard unsaved changes?')}
+        message={t('common:common.discardUnsavedChangesMessage', 'You have unsaved changes that will be lost.')}
+        confirmLabel={t('common:common.discard', 'Discard')}
+        cancelLabel={t('common:common.keepEditing', 'Keep editing')}
+        variant="warning"
+      />
       {/* Login Prompt Dialog */}
       {showLoginPrompt && (
         <>

@@ -26,6 +26,11 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       // Warn on patterns that often indicate unbatched state updates (#3049)
       // Encourages useReducer or single-object setState for related state
+      'no-restricted-globals': ['error',
+        { name: 'alert', message: 'Use ConfirmDialog or Toast instead of browser alert().' },
+        { name: 'confirm', message: 'Use ConfirmDialog instead of browser confirm().' },
+        { name: 'prompt', message: 'Use a styled input modal instead of browser prompt().' },
+      ],
       'no-restricted-syntax': ['warn',
         {
           selector: 'CallExpression[callee.name=/^set[A-Z]/] + CallExpression[callee.name=/^set[A-Z]/]',

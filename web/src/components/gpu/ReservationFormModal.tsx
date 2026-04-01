@@ -7,7 +7,7 @@ import {
   Trash2,
   Loader2,
 } from 'lucide-react'
-import { BaseModal } from '../../lib/modals'
+import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import {
   useNamespaces,
   createOrUpdateResourceQuota,
@@ -72,10 +72,17 @@ export function ReservationFormModal({
   const [extraResources, setExtraResources] = useState<Array<{ key: string; value: string }>>([])
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
+
+  const forceClose = () => {
+    setShowDiscardConfirm(false)
+    onClose()
+  }
 
   const handleClose = () => {
     const hasChanges = title.trim() !== '' || description.trim() !== ''
-    if (hasChanges && !window.confirm(t('common:common.discardUnsavedChanges', 'Discard unsaved changes?'))) {
+    if (hasChanges) {
+      setShowDiscardConfirm(true)
       return
     }
     onClose()
@@ -218,6 +225,16 @@ export function ReservationFormModal({
 
   return (
     <BaseModal isOpen={isOpen} onClose={handleClose} size="lg" closeOnBackdrop={false} closeOnEscape={true}>
+      <ConfirmDialog
+        isOpen={showDiscardConfirm}
+        onClose={() => setShowDiscardConfirm(false)}
+        onConfirm={forceClose}
+        title={t('common:common.discardUnsavedChanges', 'Discard unsaved changes?')}
+        message={t('common:common.discardUnsavedChangesMessage', 'You have unsaved changes that will be lost.')}
+        confirmLabel={t('common:common.discard', 'Discard')}
+        cancelLabel={t('common:common.keepEditing', 'Keep editing')}
+        variant="warning"
+      />
       <BaseModal.Header
         title={editingReservation ? t('gpuReservations.form.editTitle') : t('gpuReservations.form.createTitle')}
         icon={Calendar}

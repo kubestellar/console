@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Shield } from 'lucide-react'
 import { Button } from '../ui/Button'
-import { BaseModal } from '../../lib/modals'
+import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { api } from '../../lib/api'
 import { useTranslation } from 'react-i18next'
 import type { NamespaceDetails, NamespaceAccessEntry } from './types'
@@ -88,8 +88,16 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
     setShowDropdown(false)
   }
 
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
+
+  const forceClose = () => {
+    setShowDiscardConfirm(false)
+    onClose()
+  }
+
   const handleClose = () => {
-    if (subjectName.trim() !== '' && !window.confirm(t('common:common.discardUnsavedChanges', 'Discard unsaved changes?'))) {
+    if (subjectName.trim() !== '') {
+      setShowDiscardConfirm(true)
       return
     }
     onClose()
@@ -97,6 +105,16 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
 
   return (
     <BaseModal isOpen={true} onClose={handleClose} size="md" closeOnBackdrop={false} closeOnEscape={true}>
+      <ConfirmDialog
+        isOpen={showDiscardConfirm}
+        onClose={() => setShowDiscardConfirm(false)}
+        onConfirm={forceClose}
+        title={t('common:common.discardUnsavedChanges', 'Discard unsaved changes?')}
+        message={t('common:common.discardUnsavedChangesMessage', 'You have unsaved changes that will be lost.')}
+        confirmLabel={t('common:common.discard', 'Discard')}
+        cancelLabel={t('common:common.keepEditing', 'Keep editing')}
+        variant="warning"
+      />
       <BaseModal.Header
         title="Grant Access"
         description={`Namespace: ${namespace.name}`}
