@@ -280,4 +280,212 @@ describe('useSidebarConfig', () => {
     expect(PROTECTED_SIDEBAR_IDS).toContain('clusters')
     expect(PROTECTED_SIDEBAR_IDS).toContain('deploy')
   })
+
+  // --- Regression: removeItem with non-existent id does not crash ---
+  it('removeItem with non-existent id is a no-op', () => {
+    const { result } = renderHook(() => useSidebarConfig())
+    const beforePrimary = result.current.config.primaryNav.length
+    const beforeSecondary = result.current.config.secondaryNav.length
+    act(() => { result.current.removeItem('non-existent-id-xyz') })
+    expect(result.current.config.primaryNav.length).toBe(beforePrimary)
+    expect(result.current.config.secondaryNav.length).toBe(beforeSecondary)
+  })
+
+  // --- Regression: updateItem with non-existent id does not crash ---
+  it('updateItem with non-existent id leaves config unchanged', () => {
+    const { result } = renderHook(() => useSidebarConfig())
+    const beforeNames = result.current.config.primaryNav.map(i => i.name)
+    act(() => { result.current.updateItem('non-existent-id-xyz', { name: 'Ghost' }) })
+    const afterNames = result.current.config.primaryNav.map(i => i.name)
+    expect(afterNames).toEqual(beforeNames)
+  })
+
+  // --- Regression: addItem assigns correct order based on target length ---
+  it('addItem assigns order equal to current target length', () => {
+    const { result } = renderHook(() => useSidebarConfig())
+    const expectedOrder = result.current.config.primaryNav.length
+    act(() => {
+      result.current.addItem({ name: 'OrderTest', icon: 'Box', href: '/order-test', type: 'link' }, 'primary')
+    })
+    const added = result.current.config.primaryNav.find(i => i.name === 'OrderTest')!
+    expect(added.order).toBe(expectedOrder)
+    expect(added.isCustom).toBe(true)
+    expect(added.id).toMatch(/^custom-/)
+  })
+
+  // --- Regression: updateItem works across secondary nav ---
+  it('updateItem updates an item in secondary nav', () => {
+    const { result } = renderHook(() => useSidebarConfig())
+    const secItem = result.current.config.secondaryNav[0]
+    act(() => { result.current.updateItem(secItem.id, { name: 'Renamed Secondary' }) })
+    expect(result.current.config.secondaryNav[0].name).toBe('Renamed Secondary')
+  })
+
+  // --- Regression: updateItem works across sections ---
+  it('updateItem updates an item in sections', () => {
+    const { result } = renderHook(() => useSidebarConfig())
+    act(() => {
+      result.current.addItem({ name: 'SectUpdate', icon: 'Box', href: '/sect-update', type: 'section' }, 'sections')
+    })
+    const sectItem = result.current.config.sections.find(i => i.name === 'SectUpdate')!
+    act(() => { result.current.updateItem(sectItem.id, { icon: 'Shield' }) })
+    const updated = result.current.config.sections.find(i => i.id === sectItem.id)!
+    expect(updated.icon).toBe('Shield')
+  })
+
+  // --- Regression: generateFromBehavior matches sub-paths ---
+  it('generateFromBehavior matches sub-paths (e.g. /clusters/details)', () => {
+    const { result } = renderHook(() => useSidebarConfig())
+    act(() => {
+      result.current.generateFromBehavior(['/ai-ml/models', '/clusters/details', '/deploy/wizard'])
+    })
+    const ids = result.current.config.primaryNav.map(i => i.id)
+    // ai-ml should be promoted because /ai-ml/models starts with /ai-ml/
+    expect(ids.indexOf('ai-ml')).toBeLessThan(ids.indexOf('dashboard'))
+  })
+
+  // --- Regression: generateFromBehavior matches query params ---
+  it('generateFromBehavior matches paths with query params', () => {
+    const { result } = renderHook(() => useSidebarConfig())
+    act(() => {
+      result.current.generateFromBehavior(['/alerts?severity=critical', '/arcade?game=tetris'])
+    })
+    const ids = result.current.config.primaryNav.map(i => i.id)
+    // alerts and arcade should be first two because they match /alerts? and /arcade?
+    expect(ids[0]).toBe('alerts')
+    expect(ids[1]).toBe('arcade')
+  })
+
+  // --- Regression: generateFromBehavior with unmatched paths ---
+  it('generateFromBehavior ignores unmatched paths without crashing', () => {
+    const { result } = renderHook(() => useSidebarConfig())
+    const beforeLen = result.current.config.primaryNav.length
+    act(() => {
+      result.current.generateFromBehavior(['/totally-unknown-path', '/another-unknown'])
+    })
+    // All items should still be present; order unchanged since nothing matched
+    expect(result.current.config.primaryNav.length).toBe(beforeLen)
+  })
+
+  // --- Regression: multiple toggleCollapsed calls produce correct state ---
+  it('double toggleCollapsed returns to original state', () => {
+    const { result } = renderHook(() => useSidebarConfig())
+    const original = result.current.config.collapsed
+    act(() => { result.current.toggleCollapsed() })
+    act(() => { result.current.toggleCollapsed() })
+    expect(result.current.config.collapsed).toBe(original)
+  })
+
+  // --- Regression: double toggleClusterStatus returns to original ---
+  it('double toggleClusterStatus returns to original state', () => {
+    const { result } = renderHook(() => useSidebarConfig())
+    const original = result.current.config.showClusterStatus
+    act(() => { result.current.toggleClusterStatus() })
+    act(() => { result.current.toggleClusterStatus() })
+    expect(result.current.config.showClusterStatus).toBe(original)
+  })
+
+  // --- Regression: mobile sidebar open/close/toggle sequence ---
+  it('mobile sidebar toggle cycle produces correct states', () => {
+    const { result } = renderHook(() => useSidebarConfig())
+    // Close first to ensure known state
+    act(() => { result.current.closeMobileSidebar() })
+    expect(result.current.config.isMobileOpen).toBe(false)
+
+    act(() => { result.current.toggleMobileSidebar() })
+    expect(result.current.config.isMobileOpen).toBe(true)
+
+    act(() => { result.current.toggleMobileSidebar() })
+    expect(result.current.config.isMobileOpen).toBe(false)
+
+    act(() => { result.current.openMobileSidebar() })
+    expect(result.current.config.isMobileOpen).toBe(true)
+
+    act(() => { result.current.openMobileSidebar() })
+    // Opening when already open should stay true (idempotent)
+    expect(result.current.config.isMobileOpen).toBe(true)
+  })
+
+  // --- Regression: addItems assigns incrementing orders within a single batch ---
+  it('addItems assigns correct incremental order within a batch', () => {
+    const { result } = renderHook(() => useSidebarConfig())
+    const initialSectionsLen = result.current.config.sections.length
+    act(() => {
+      result.current.addItems([
+        { item: { name: 'Batch1', icon: 'Box', href: '/b1', type: 'section' }, target: 'sections' },
+        { item: { name: 'Batch2', icon: 'Box', href: '/b2', type: 'section' }, target: 'sections' },
+        { item: { name: 'Batch3', icon: 'Box', href: '/b3', type: 'section' }, target: 'sections' },
+      ])
+    })
+    const batch1 = result.current.config.sections.find(i => i.name === 'Batch1')!
+    const batch2 = result.current.config.sections.find(i => i.name === 'Batch2')!
+    const batch3 = result.current.config.sections.find(i => i.name === 'Batch3')!
+    expect(batch1.order).toBe(initialSectionsLen)
+    expect(batch2.order).toBe(initialSectionsLen + 1)
+    expect(batch3.order).toBe(initialSectionsLen + 2)
+  })
+
+  // --- Regression: restoreDashboard preserves original dashboard id ---
+  it('restoreDashboard preserves original dashboard id (not custom- prefix)', () => {
+    const { result } = renderHook(() => useSidebarConfig())
+    const cost = DISCOVERABLE_DASHBOARDS.find(d => d.id === 'cost')!
+    // First remove cost if somehow present (shouldn't be by default)
+    act(() => { result.current.removeItem('cost') })
+    act(() => { result.current.restoreDashboard(cost) })
+    const restored = result.current.config.primaryNav.find(i => i.id === 'cost')
+    expect(restored).toBeDefined()
+    expect(restored!.id).toBe('cost')
+    // Should NOT have a custom- prefix
+    expect(restored!.id).not.toMatch(/^custom-/)
+  })
+
+  // --- Regression: localStorage persistence survives JSON round-trip ---
+  it('persisted config survives JSON round-trip for complex state', () => {
+    const { result } = renderHook(() => useSidebarConfig())
+    act(() => {
+      result.current.setWidth(420)
+      result.current.setCollapsed(true)
+    })
+    act(() => {
+      result.current.addItem(
+        { name: 'Persist Test', icon: 'Database', href: '/persist', type: 'card', cardType: 'mini', description: 'A test card' },
+        'primary'
+      )
+    })
+    const raw = localStorage.getItem(STORAGE_KEY)!
+    const parsed = JSON.parse(raw)
+    expect(parsed.width).toBe(420)
+    expect(parsed.collapsed).toBe(true)
+    const persistedItem = parsed.primaryNav.find((i: SidebarItem) => i.name === 'Persist Test')
+    expect(persistedItem).toBeDefined()
+    expect(persistedItem.cardType).toBe('mini')
+    expect(persistedItem.description).toBe('A test card')
+    expect(persistedItem.isCustom).toBe(true)
+  })
+
+  // --- Regression: exported constants have correct pixel values ---
+  it('exports correct sidebar dimension constants', async () => {
+    const mod = await import('../useSidebarConfig')
+    expect(mod.SIDEBAR_COLLAPSED_WIDTH_PX).toBe(80)
+    expect(mod.SIDEBAR_DEFAULT_WIDTH_PX).toBe(256)
+  })
+
+  // --- Regression: DISCOVERABLE_DASHBOARDS items all have required fields ---
+  it('DISCOVERABLE_DASHBOARDS items all have required SidebarItem fields', () => {
+    DISCOVERABLE_DASHBOARDS.forEach((item) => {
+      expect(item.id).toBeTruthy()
+      expect(item.name).toBeTruthy()
+      expect(item.icon).toBeTruthy()
+      expect(item.href).toMatch(/^\//)
+      expect(item.type).toBe('link')
+      expect(typeof item.order).toBe('number')
+    })
+  })
+
+  // --- Regression: DISCOVERABLE_DASHBOARDS ids are unique ---
+  it('DISCOVERABLE_DASHBOARDS has unique ids', () => {
+    const ids = DISCOVERABLE_DASHBOARDS.map(d => d.id)
+    const uniqueIds = new Set(ids)
+    expect(uniqueIds.size).toBe(ids.length)
+  })
 })

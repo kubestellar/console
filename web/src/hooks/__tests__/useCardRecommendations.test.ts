@@ -83,6 +83,11 @@ import { useCardRecommendations } from '../useCardRecommendations'
 
 const NO_CARDS: string[] = []
 const WITH_POD_AND_DEPLOY: string[] = ['pod_issues', 'deployment_issues']
+const WITH_GPU_OVERVIEW: string[] = ['gpu_overview']
+const WITH_GPU_INVENTORY: string[] = ['gpu_inventory']
+const WITH_CLUSTER_HEALTH: string[] = ['cluster_health']
+const WITH_EVENT_STREAM: string[] = ['event_stream']
+const WITH_SECURITY_ISSUES: string[] = ['security_issues']
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -354,5 +359,298 @@ describe('useCardRecommendations', () => {
 
     expect(result.current.recommendations).toEqual([])
     expect(result.current.hasRecommendations).toBe(false)
+  })
+
+  // ===========================================================================
+  // Deep regression-preventing tests
+  // ===========================================================================
+
+  // ---- Deployment issues boundary: exactly 3 issues stays medium ----
+
+  it('keeps deployment_issues at medium priority for exactly 3 issues (boundary)', () => {
+    setDefaults({ deploymentIssues: makeIssues(3) })
+    const { result } = renderHook(() => useCardRecommendations(NO_CARDS))
+
+    const depRec = result.current.recommendations.find(r => r.cardType === 'deployment_issues')
+    expect(depRec).toBeDefined()
+    expect(depRec!.priority).toBe('medium')
+    expect(depRec!.reason).toContain('3')
+  })
+
+  // ---- GPU utilization at exact 90% threshold does NOT trigger gpu_status ----
+
+  it('does not recommend gpu_status at exactly 90% utilization (boundary)', () => {
+    // 9 allocated out of 10 = 0.9 exactly, which is NOT > 0.9
+    setDefaults({ gpuNodes: makeGPUNodes(10, 9) })
+    const { result } = renderHook(() => useCardRecommendations(NO_CARDS))
+
+    const gpuStatusRec = result.current.recommendations.find(r => r.cardType === 'gpu_status')
+    expect(gpuStatusRec).toBeUndefined()
+
+    // Should still get the low-priority gpu_overview instead
+    const gpuOverviewRec = result.current.recommendations.find(r => r.cardType === 'gpu_overview')
+    expect(gpuOverviewRec).toBeDefined()
+    expect(gpuOverviewRec!.priority).toBe('low')
+  })
+
+  // ---- GPU overview suppressed when gpu_overview already in dashboard ----
+
+  it('does not recommend gpu_overview when gpu_overview is already in currentCardTypes', () => {
+    setDefaults({ gpuNodes: makeGPUNodes(10, 2) }) // low utilization
+    const { result } = renderHook(() => useCardRecommendations(WITH_GPU_OVERVIEW))
+
+    const gpuRec = result.current.recommendations.find(r => r.cardType === 'gpu_overview')
+    expect(gpuRec).toBeUndefined()
+  })
+
+  // ---- GPU overview suppressed when gpu_inventory already in dashboard ----
+
+  it('does not recommend gpu_overview when gpu_inventory is already in currentCardTypes', () => {
+    setDefaults({ gpuNodes: makeGPUNodes(10, 2) }) // low utilization
+    const { result } = renderHook(() => useCardRecommendations(WITH_GPU_INVENTORY))
+
+    const gpuRec = result.current.recommendations.find(r => r.cardType === 'gpu_overview')
+    expect(gpuRec).toBeUndefined()
+  })
+
+  // ---- Security issues reason string accuracy ----
+
+  it('formats security reason with correct high-severity and other counts', () => {
+    setDefaults({
+      securityIssues: [
+        { id: 's1', severity: 'high' },
+        { id: 's2', severity: 'high' },
+        { id: 's3', severity: 'medium' },
+        { id: 's4', severity: 'low' },
+        { id: 's5', severity: 'low' },
+      ],
+    })
+    const { result } = renderHook(() => useCardRecommendations(NO_CARDS))
+
+    const secRec = result.current.recommendations.find(r => r.cardType === 'security_issues')
+    expect(secRec).toBeDefined()
+    expect(secRec!.reason).toBe('2 high severity and 3 other security issues found')
+    expect(secRec!.priority).toBe('high')
+  })
+
+  // ---- All security issues are high severity ----
+
+  it('shows 0 other issues when all security issues are high severity', () => {
+    setDefaults({
+      securityIssues: [
+        { id: 's1', severity: 'high' },
+        { id: 's2', severity: 'high' },
+      ],
+    })
+    const { result } = renderHook(() => useCardRecommendations(NO_CARDS))
+
+    const secRec = result.current.recommendations.find(r => r.cardType === 'security_issues')
+    expect(secRec).toBeDefined()
+    expect(secRec!.reason).toBe('2 high severity and 0 other security issues found')
+  })
+
+  // ---- No duplicate card types in recommendations ----
+
+  it('never produces duplicate cardType entries in recommendations', () => {
+    setDefaults({
+      podIssues: makeIssues(10),
+      deploymentIssues: makeIssues(5),
+      warningEvents: makeEvents(15),
+      gpuNodes: makeGPUNodes(10, 10),
+      clusters: [{ name: 'c1', healthy: false }],
+      securityIssues: [{ id: 's1', severity: 'high' }],
+    })
+    const { result } = renderHook(() => useCardRecommendations(NO_CARDS))
+
+    const cardTypes = result.current.recommendations.map(r => r.cardType)
+    const uniqueCardTypes = new Set(cardTypes)
+    expect(cardTypes.length).toBe(uniqueCardTypes.size)
+  })
+
+  // ---- Unique recommendation IDs ----
+
+  it('assigns unique IDs to all recommendations', () => {
+    setDefaults({
+      podIssues: makeIssues(10),
+      deploymentIssues: makeIssues(5),
+      warningEvents: makeEvents(15),
+      gpuNodes: makeGPUNodes(10, 10),
+      clusters: [{ name: 'c1', healthy: false }],
+      securityIssues: [{ id: 's1', severity: 'high' }],
+    })
+    const { result } = renderHook(() => useCardRecommendations(NO_CARDS))
+
+    const ids = result.current.recommendations.map(r => r.id)
+    const uniqueIds = new Set(ids)
+    expect(ids.length).toBe(uniqueIds.size)
+  })
+
+  // ---- Multiple unhealthy clusters counted in reason ----
+
+  it('counts all unhealthy clusters in the reason string', () => {
+    setDefaults({
+      clusters: [
+        { name: 'c1', healthy: false },
+        { name: 'c2', healthy: false },
+        { name: 'c3', healthy: true },
+        { name: 'c4', healthy: false },
+      ],
+    })
+    const { result } = renderHook(() => useCardRecommendations(NO_CARDS))
+
+    const clusterRec = result.current.recommendations.find(r => r.cardType === 'cluster_health')
+    expect(clusterRec).toBeDefined()
+    expect(clusterRec!.reason).toBe('3 clusters are unhealthy')
+  })
+
+  // ---- MAX_RECOMMENDATIONS favours high priority items ----
+
+  it('keeps high-priority items when capping at MAX_RECOMMENDATIONS', () => {
+    // Generate more than 3 recommendations, most high priority
+    setDefaults({
+      podIssues: makeIssues(10),                              // high
+      deploymentIssues: makeIssues(5),                        // high (>3)
+      clusters: [{ name: 'c1', healthy: false }],             // high
+      securityIssues: [{ id: 's1', severity: 'high' }],       // high
+      warningEvents: makeEvents(15),                          // medium
+      gpuNodes: makeGPUNodes(10, 2),                          // low
+    })
+    const { result } = renderHook(() => useCardRecommendations(NO_CARDS))
+
+    // All 3 returned should be high priority (since there are 4+ high available)
+    expect(result.current.recommendations).toHaveLength(3)
+    result.current.recommendations.forEach(r => {
+      expect(r.priority).toBe('high')
+    })
+  })
+
+  // ---- GPU utilization percentage in reason string ----
+
+  it('includes correct utilization percentage in gpu_status reason', () => {
+    // 19 out of 20 = 95%
+    setDefaults({ gpuNodes: makeGPUNodes(20, 19) })
+    const { result } = renderHook(() => useCardRecommendations(NO_CARDS))
+
+    const gpuRec = result.current.recommendations.find(r => r.cardType === 'gpu_status')
+    expect(gpuRec).toBeDefined()
+    expect(gpuRec!.reason).toContain('95%')
+  })
+
+  // ---- hasRecommendations is true when there are results ----
+
+  it('returns hasRecommendations=true when recommendations exist', () => {
+    setDefaults({ podIssues: makeIssues(10) })
+    const { result } = renderHook(() => useCardRecommendations(NO_CARDS))
+
+    expect(result.current.hasRecommendations).toBe(true)
+    expect(result.current.recommendations.length).toBeGreaterThan(0)
+  })
+
+  // ---- AI mode filtering combined with MAX_RECOMMENDATIONS ----
+
+  it('applies AI mode filter before MAX_RECOMMENDATIONS cap', () => {
+    // With proactive suggestions off, only high-priority items survive.
+    // We trigger 4+ high-priority recs to also test the cap.
+    setDefaults({
+      shouldProactivelySuggest: false,
+      podIssues: makeIssues(10),                              // high
+      deploymentIssues: makeIssues(5),                        // high
+      clusters: [{ name: 'c1', healthy: false }],             // high
+      securityIssues: [{ id: 's1', severity: 'high' }],       // high
+      warningEvents: makeEvents(15),                          // medium (filtered out)
+      gpuNodes: makeGPUNodes(10, 2),                          // low (filtered out)
+    })
+    const { result } = renderHook(() => useCardRecommendations(NO_CARDS))
+
+    // medium and low recs should be gone
+    const nonHighRecs = result.current.recommendations.filter(r => r.priority !== 'high')
+    expect(nonHighRecs).toHaveLength(0)
+
+    // Still capped at 3
+    expect(result.current.recommendations.length).toBeLessThanOrEqual(3)
+  })
+
+  // ---- All clusters healthy produces no cluster_health rec ----
+
+  it('does not recommend cluster_health when all clusters are healthy', () => {
+    setDefaults({
+      clusters: [
+        { name: 'c1', healthy: true },
+        { name: 'c2', healthy: true },
+      ],
+    })
+    const { result } = renderHook(() => useCardRecommendations(NO_CARDS))
+
+    const clusterRec = result.current.recommendations.find(r => r.cardType === 'cluster_health')
+    expect(clusterRec).toBeUndefined()
+  })
+
+  // ---- Skipping cluster_health when already in dashboard ----
+
+  it('does not recommend cluster_health when it is already in currentCardTypes', () => {
+    setDefaults({ clusters: [{ name: 'c1', healthy: false }] })
+    const { result } = renderHook(() => useCardRecommendations(WITH_CLUSTER_HEALTH))
+
+    const clusterRec = result.current.recommendations.find(r => r.cardType === 'cluster_health')
+    expect(clusterRec).toBeUndefined()
+  })
+
+  // ---- Skipping event_stream when already in dashboard ----
+
+  it('does not recommend event_stream when it is already in currentCardTypes', () => {
+    setDefaults({ warningEvents: makeEvents(15) })
+    const { result } = renderHook(() => useCardRecommendations(WITH_EVENT_STREAM))
+
+    const eventRec = result.current.recommendations.find(r => r.cardType === 'event_stream')
+    expect(eventRec).toBeUndefined()
+  })
+
+  // ---- GPU multi-node aggregation ----
+
+  it('aggregates GPU counts across multiple nodes correctly', () => {
+    // 3 nodes, each with 4 GPUs and 4 allocated = 12/12 = 100% utilization
+    setDefaults({
+      gpuNodes: [
+        { name: 'n1', gpuCount: 4, gpuAllocated: 4 },
+        { name: 'n2', gpuCount: 4, gpuAllocated: 4 },
+        { name: 'n3', gpuCount: 4, gpuAllocated: 4 },
+      ],
+    })
+    const { result } = renderHook(() => useCardRecommendations(NO_CARDS))
+
+    const gpuRec = result.current.recommendations.find(r => r.cardType === 'gpu_status')
+    expect(gpuRec).toBeDefined()
+    expect(gpuRec!.reason).toContain('100%')
+    expect(gpuRec!.priority).toBe('high')
+  })
+
+  // ---- GPU overview reason shows correct node count ----
+
+  it('includes total GPU count and node count in gpu_overview reason', () => {
+    setDefaults({
+      gpuNodes: [
+        { name: 'n1', gpuCount: 4, gpuAllocated: 0 },
+        { name: 'n2', gpuCount: 8, gpuAllocated: 0 },
+      ],
+    })
+    const { result } = renderHook(() => useCardRecommendations(NO_CARDS))
+
+    const gpuRec = result.current.recommendations.find(r => r.cardType === 'gpu_overview')
+    expect(gpuRec).toBeDefined()
+    expect(gpuRec!.reason).toContain('12 GPUs')
+    expect(gpuRec!.reason).toContain('2 nodes')
+  })
+
+  // ---- Security issues not suppressed when already in dashboard ----
+  // NOTE: The source code does NOT check currentCardTypes for security_issues.
+  // This test documents the current behavior — security recs always appear.
+
+  it('still recommends security_issues even when already in currentCardTypes (current behavior)', () => {
+    setDefaults({ securityIssues: [{ id: 's1', severity: 'high' }] })
+    const { result } = renderHook(() => useCardRecommendations(WITH_SECURITY_ISSUES))
+
+    const secRec = result.current.recommendations.find(r => r.cardType === 'security_issues')
+    // Current code doesn't filter security issues by currentCardTypes
+    expect(secRec).toBeDefined()
   })
 })
