@@ -21,7 +21,7 @@
 # For more information: https://github.github.com/gh-aw/introduction/overview/
 #
 #
-# gh-aw-metadata: {"schema_version":"v2","frontmatter_hash":"9cd33a41be95dd6256619dba4ba44685f9e6a7d369eb76ab2abd3b16898825e2","compiler_version":"v0.62.1","strict":true}
+# gh-aw-metadata: {"schema_version":"v2","frontmatter_hash":"513cdcdc177cc676e98906a2cad61e5457508c587059b697acb8ce54b4b96a27","compiler_version":"v0.62.1","strict":true}
 
 name: "Complication Handler Workflow"
 "on":
@@ -41,8 +41,8 @@ name: "Complication Handler Workflow"
 permissions: {}
 
 concurrency:
-  group: "gh-aw-${{ github.workflow }}-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}"
   cancel-in-progress: true
+  group: complication-handler-global
 
 run-name: "Complication Handler Workflow"
 

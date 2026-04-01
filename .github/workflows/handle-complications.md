@@ -10,6 +10,10 @@ on:
   issue_comment:
     types: [created]
 
+concurrency:
+  group: complication-handler-global
+  cancel-in-progress: true
+
 safe-outputs:
   report-failure-as-issue: false
   add-comment:
