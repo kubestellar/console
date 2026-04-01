@@ -87,6 +87,7 @@ export function ResourceImbalanceDetector() {
           key={insight.id}
           role="button"
           tabIndex={0}
+          aria-label={`View resource imbalance: ${insight.title}`}
           onClick={() => setModalInsight(insight)}
           onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setModalInsight(insight) } }}
           className="group space-y-2 cursor-pointer hover:bg-secondary/30 rounded-lg p-1 -m-1 transition-colors"

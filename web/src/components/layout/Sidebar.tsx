@@ -388,6 +388,7 @@ export function Sidebar() {
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); removeItem(item.id) } }}
                     className="p-1 rounded hover:bg-red-500/20 hover:text-red-400 text-muted-foreground/50 transition-colors"
                     title={t('sidebar.removeFromSidebar')}
+                    aria-label={t('sidebar.removeFromSidebar')}
                   >
                     <X className="w-3.5 h-3.5" aria-hidden="true" />
                   </span>

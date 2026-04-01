@@ -180,6 +180,7 @@ export function ConfigDriftHeatmap() {
             <div
               role="button"
               tabIndex={0}
+              aria-label={`View config drift insight: ${insight.title}`}
               onClick={() => setSelectedInsight(insight)}
               onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedInsight(insight) } }}
               className="group flex items-center gap-2 text-xs py-1 hover:bg-secondary/30 rounded px-1 cursor-pointer"

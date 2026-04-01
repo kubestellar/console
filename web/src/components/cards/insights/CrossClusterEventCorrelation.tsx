@@ -151,6 +151,7 @@ export function CrossClusterEventCorrelation() {
               key={insight.id}
               role="button"
               tabIndex={0}
+              aria-label={`View event correlation: ${insight.title}`}
               onClick={() => setSelectedInsight(insight)}
               onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedInsight(insight) } }}
               className="group bg-red-500/5 border border-red-500/20 rounded-lg p-2.5 space-y-1 cursor-pointer hover:bg-red-500/10 transition-colors"

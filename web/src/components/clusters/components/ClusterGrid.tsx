@@ -120,6 +120,7 @@ function CopyCmd({ text }: { text: string }) {
       onClick={handleCopy}
       className="inline-flex items-center p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
       title={copied ? 'Copied!' : `Copy: ${text}`}
+      aria-label={copied ? 'Copied!' : `Copy: ${text}`}
     >
       {copied ? <Check className="w-2.5 h-2.5 text-green-400" /> : <Copy className="w-2.5 h-2.5" />}
     </button>
@@ -182,8 +183,9 @@ const LocalClusterControls = memo(function LocalClusterControls({
               : 'text-muted-foreground hover:text-green-400 hover:bg-green-500/20'
           }`}
           title="Start cluster"
+          aria-label="Start cluster"
         >
-          <Play className={`w-3.5 h-3.5 ${actionInProgress === 'start' ? 'animate-pulse' : ''}`} />
+          <Play className={`w-3.5 h-3.5 ${actionInProgress === 'start' ? 'animate-pulse' : ''}`} aria-hidden="true" />
         </button>
       ) : (
         <button
@@ -195,8 +197,9 @@ const LocalClusterControls = memo(function LocalClusterControls({
               : 'text-muted-foreground hover:text-red-400 hover:bg-red-500/20'
           }`}
           title="Stop cluster"
+          aria-label="Stop cluster"
         >
-          <Square className={`w-3 h-3 ${actionInProgress === 'stop' ? 'animate-pulse' : ''}`} />
+          <Square className={`w-3 h-3 ${actionInProgress === 'stop' ? 'animate-pulse' : ''}`} aria-hidden="true" />
         </button>
       )}
       <button
@@ -208,8 +211,9 @@ const LocalClusterControls = memo(function LocalClusterControls({
             : 'text-muted-foreground hover:text-blue-400 hover:bg-blue-500/20'
         }`}
         title="Restart cluster"
+        aria-label="Restart cluster"
       >
-        <RotateCcw className={`w-3.5 h-3.5 ${actionInProgress === 'restart' ? 'animate-spin' : ''}`} />
+        <RotateCcw className={`w-3.5 h-3.5 ${actionInProgress === 'restart' ? 'animate-spin' : ''}`} aria-hidden="true" />
       </button>
     </div>
   )
@@ -345,8 +349,9 @@ const FullClusterCard = memo(function FullClusterCard({
                     'bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground'
                   }`}
                   title={spinning ? t('common.refreshing') : unreachable ? t('common.retryConnection') : t('common.refreshClusterData')}
+                  aria-label={spinning ? t('common.refreshing') : unreachable ? t('common.retryConnection') : t('common.refreshClusterData')}
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${spinning ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`w-3.5 h-3.5 ${spinning ? 'animate-spin' : ''}`} aria-hidden="true" />
                 </button>
               )}
             </div>
@@ -386,8 +391,9 @@ const FullClusterCard = memo(function FullClusterCard({
                     onClick={(e) => { e.stopPropagation(); onRenameCluster() }}
                     className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground flex-shrink-0"
                     title={t('common.renameContext')}
+                    aria-label={t('common.renameContext')}
                   >
-                    <Pencil className="w-3 h-3" />
+                    <Pencil className="w-3 h-3" aria-hidden="true" />
                   </button>
                 )}
               </div>
@@ -677,8 +683,9 @@ const ListClusterCard = memo(function ListClusterCard({
                   'text-muted-foreground hover:bg-secondary hover:text-foreground'
                 }`}
                 title={spinning ? t('common.refreshing') : t('common.refresh')}
+                aria-label={spinning ? t('common.refreshing') : t('common.refresh')}
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${spinning ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-3.5 h-3.5 ${spinning ? 'animate-spin' : ''}`} aria-hidden="true" />
               </button>
             )}
             {!permissionsLoading && !isClusterAdmin && !unreachable && (

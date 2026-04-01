@@ -81,6 +81,7 @@ export function RestartCorrelationMatrix() {
               key={insight.id}
               role="button"
               tabIndex={0}
+              aria-label={`View application bug insight: ${insight.title}`}
               onClick={() => setModalInsight(insight)}
               onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setModalInsight(insight) } }}
               className="group bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-2.5 space-y-1 cursor-pointer hover:bg-yellow-500/10 transition-colors"
@@ -126,6 +127,7 @@ export function RestartCorrelationMatrix() {
               key={insight.id}
               role="button"
               tabIndex={0}
+              aria-label={`View infrastructure insight: ${insight.title}`}
               onClick={() => setModalInsight(insight)}
               onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setModalInsight(insight) } }}
               className="group bg-red-500/5 border border-red-500/20 rounded-lg p-2.5 space-y-1 cursor-pointer hover:bg-red-500/10 transition-colors"
