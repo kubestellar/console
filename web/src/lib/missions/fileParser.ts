@@ -187,7 +187,7 @@ function parseMarkdownFile(content: string): ParseResult {
   )
 
   // Attempt to build a structured mission from markdown structure
-  const title = frontmatter?.title ?? sections[0]?.heading ?? extractFirstHeading(body)
+  const title = frontmatter?.title ?? extractFirstHeading(body) ?? sections[0]?.heading
   const description = frontmatter?.description ?? extractLeadParagraph(body)
 
   const steps: MissionStep[] = []

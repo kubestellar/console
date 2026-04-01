@@ -108,6 +108,7 @@ export const API_GROUP_TO_PROJECT: Record<string, ApiGroupMapping> = {
   'nats.io': { project: 'nats', tags: ['nats', 'messaging'], installMission: 'install-nats.json', displayName: 'NATS' },
 
   // --- Service Mesh ---
+  'istio.io': { project: 'istio', tags: ['istio', 'service-mesh', 'envoy'], installMission: 'install-istio.json', displayName: 'Istio' },
   'networking.istio.io': { project: 'istio', tags: ['istio', 'service-mesh', 'envoy'], installMission: 'install-istio.json', displayName: 'Istio' },
   'security.istio.io': { project: 'istio', tags: ['istio', 'service-mesh'], installMission: 'install-istio.json', displayName: 'Istio' },
   'linkerd.io': { project: 'linkerd', tags: ['linkerd', 'service-mesh'], installMission: 'install-linkerd.json', displayName: 'Linkerd' },
