@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react'
 import { iconRegistry } from '../icons'
 import { cn } from '../cn'
 import { useCardData, commonComparators } from '../cards/cardHooks'
-import { useCardFetch, resetCardFetchCount } from './useCardFetch'
+import { createCardFetchScope } from './useCardFetch'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { Pagination } from '../../components/ui/Pagination'
 
@@ -112,6 +112,7 @@ export function createTimerScope() {
  */
 export function getDynamicScope(): Record<string, unknown> {
   const timers = createTimerScope()
+  const fetches = createCardFetchScope()
 
   return {
     // React core
@@ -135,7 +136,7 @@ export function getDynamicScope(): Record<string, unknown> {
 
     // Data fetching — routes through /api/card-proxy to avoid CORS and keep
     // fetch/XMLHttpRequest blocked. Usage: useCardFetch('https://api.example.com/data')
-    useCardFetch,
+    useCardFetch: fetches.useCardFetch,
 
     // UI components
     Skeleton,
@@ -158,7 +159,7 @@ export function getDynamicScope(): Record<string, unknown> {
     // Internal: used by CardWrapper to clean up leaked timers + fetch state on unmount
     __timerCleanup: () => {
       timers.clearAll()
-      resetCardFetchCount()
+      fetches.resetCount()
     },
   }
 }

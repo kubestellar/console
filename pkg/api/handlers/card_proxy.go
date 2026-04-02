@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -30,15 +32,36 @@ const (
 	cardProxyMaxURLLen = 2048
 )
 
+// cardProxyClient uses a custom DialContext to check resolved IPs at
+// connection time, preventing DNS rebinding / TOCTOU SSRF bypasses.
 var cardProxyClient = &http.Client{
 	Timeout: cardProxyTimeout,
-	// Do not follow redirects automatically — let us inspect the target
 	CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
 		return http.ErrUseLastResponse
 	},
+	Transport: &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			host, port, err := net.SplitHostPort(addr)
+			if err != nil {
+				return nil, err
+			}
+			ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+			if err != nil {
+				return nil, err
+			}
+			for _, ip := range ips {
+				if isBlockedIP(ip.IP) {
+					return nil, fmt.Errorf("blocked: private IP %s for host %s", ip.IP, host)
+				}
+			}
+			// Connect to the first validated IP directly — no second DNS lookup
+			dialer := &net.Dialer{Timeout: cardProxyTimeout}
+			return dialer.DialContext(ctx, network, net.JoinHostPort(ips[0].IP.String(), port))
+		},
+	},
 }
 
-// blockedIPPrefixes contains CIDR ranges that must never be proxied.
+// blockedCIDRs contains CIDR ranges that must never be proxied.
 // This prevents SSRF attacks against internal infrastructure.
 var blockedCIDRs = func() []*net.IPNet {
 	cidrs := []string{
@@ -128,21 +151,9 @@ func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 		})
 	}
 
-	// Resolve hostname and check for private IPs (SSRF protection)
-	ips, err := net.LookupIP(host)
-	if err != nil {
-		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
-			"error": "Could not resolve hostname",
-		})
-	}
-	for _, ip := range ips {
-		if isBlockedIP(ip) {
-			log.Printf("[CardProxy] Blocked private IP for host %s: %s", host, ip)
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-				"error": "Requests to private/internal addresses are not allowed",
-			})
-		}
-	}
+	// SSRF protection: private/internal IP blocking is enforced in the custom
+	// DialContext of cardProxyClient — checked at connection time, preventing
+	// DNS rebinding attacks.
 
 	// Build proxied request — GET only
 	req, err := http.NewRequest(http.MethodGet, rawURL, nil)
