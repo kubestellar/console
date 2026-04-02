@@ -49,7 +49,6 @@ export function MissionSuggestions() {
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [minimized, setMinimized] = useState(true)
   const [countdown, setCountdown] = useState(AUTO_COLLAPSE_SECONDS)
-  const dropdownRef = useRef<HTMLDivElement>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const analyticsEmittedRef = useRef(false)
 
@@ -119,8 +118,9 @@ export function MissionSuggestions() {
     if (!expandedId) return
 
     const handleClickOutside = (e: MouseEvent) => {
-      // Check if click is outside the dropdown content
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      // Use the currently expanded ID to find the correct dropdown element
+      const activeDropdown = document.getElementById(`mission-dropdown-${expandedId}`)
+      if (activeDropdown && !activeDropdown.contains(e.target as Node)) {
         setExpandedId(null)
       }
     }
@@ -262,7 +262,7 @@ export function MissionSuggestions() {
                 {/* Inline dropdown — appears below the chip without expanding the panel */}
                 {isExpanded && (
                   <div
-                    ref={dropdownRef}
+                    id={`mission-dropdown-${suggestion.id}`}
                     role="menu"
                     className="absolute top-full left-0 mt-1 z-50 w-72 rounded-lg border border-border/50 bg-card shadow-xl"
                     style={{ isolation: 'isolate' }}
@@ -416,7 +416,7 @@ export function MissionSuggestions() {
               {/* Expanded dropdown */}
               {isExpanded && (
                 <div
-                  ref={dropdownRef}
+                  id={`mission-dropdown-${suggestion.id}`}
                   role="menu"
                   className="absolute top-full left-0 mt-1 z-50 w-72 rounded-lg border border-border/50 bg-card shadow-xl"
                   style={{ isolation: 'isolate' }}

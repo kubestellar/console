@@ -40,7 +40,6 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
     safeGetItem(STORAGE_KEY_RECS_COLLAPSED) === 'true'
   )
   const [countdown, setCountdown] = useState(AUTO_COLLAPSE_SECONDS)
-  const dropdownRef = useRef<HTMLDivElement>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const analyticsEmittedRef = useRef(false)
 
@@ -96,8 +95,9 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
     if (!expandedRec) return
 
     const handleClickOutside = (e: MouseEvent) => {
-      // Check if click is outside the dropdown content
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      // Use the currently expanded ID to find the correct dropdown element
+      const activeDropdown = document.getElementById(`rec-dropdown-${expandedRec}`)
+      if (activeDropdown && !activeDropdown.contains(e.target as Node)) {
         setExpandedRec(null)
       }
     }
@@ -199,7 +199,6 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
                 {/* Inline dropdown — appears below the chip without expanding the panel */}
                 {isExpanded && (
                   <div
-                    ref={dropdownRef}
                     id={`rec-dropdown-${rec.id}`}
                     role="menu"
                     className="absolute top-full left-0 mt-1 z-50 w-72 rounded-lg border border-border/50 bg-card shadow-xl"
@@ -327,7 +326,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
               {/* Expanded dropdown */}
               {isExpanded && (
                 <div
-                  ref={dropdownRef}
+                  id={`rec-dropdown-${rec.id}`}
                   role="menu"
                   className="absolute top-full left-0 mt-1 z-50 w-72 rounded-lg border border-border/50 bg-card shadow-xl"
                   onKeyDown={(e) => {
