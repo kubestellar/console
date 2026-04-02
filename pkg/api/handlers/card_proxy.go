@@ -77,9 +77,11 @@ var blockedCIDRs = func() []*net.IPNet {
 	nets := make([]*net.IPNet, 0, len(cidrs))
 	for _, cidr := range cidrs {
 		_, ipnet, err := net.ParseCIDR(cidr)
-		if err == nil {
-			nets = append(nets, ipnet)
+		if err != nil {
+			// Hardcoded CIDRs must always parse — a failure here is a programming error.
+			log.Fatalf("[CardProxy] FATAL: failed to parse blocked CIDR %q: %v", cidr, err)
 		}
+		nets = append(nets, ipnet)
 	}
 	return nets
 }()
@@ -155,9 +157,11 @@ func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 	// DialContext of cardProxyClient — checked at connection time, preventing
 	// DNS rebinding attacks.
 
-	// Build proxied request — GET only
-	req, err := http.NewRequest(http.MethodGet, rawURL, nil)
+	// Build proxied request — GET only, tied to the client's request context
+	// so the proxy request is cancelled if the client disconnects.
+	req, err := http.NewRequestWithContext(c.Context(), http.MethodGet, rawURL, nil)
 	if err != nil {
+		log.Printf("[CardProxy] Failed to build request for %s: %v", host, err)
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
 			"error": "Failed to create proxy request",
 		})
@@ -175,19 +179,33 @@ func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 	}
 	defer resp.Body.Close()
 
+	// Detect redirects and return a helpful error instead of an opaque 3xx
+	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+		location := resp.Header.Get("Location")
+		log.Printf("[CardProxy] Redirect from %s (status %d, location=%s)", host, resp.StatusCode, location)
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
+			"error": fmt.Sprintf("External API returned a redirect (%d). Update the URL to the final destination.", resp.StatusCode),
+		})
+	}
+
 	// Read response with size limit
 	limitedReader := io.LimitReader(resp.Body, cardProxyMaxResponseBytes+1)
 	body, err := io.ReadAll(limitedReader)
 	if err != nil {
+		log.Printf("[CardProxy] Failed to read response body from %s: %v", host, err)
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
 			"error": "Failed to read external response",
 		})
 	}
 	if len(body) > cardProxyMaxResponseBytes {
+		log.Printf("[CardProxy] Response too large from %s: %d bytes", host, len(body))
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
 			"error": "Response too large (max 5 MB)",
 		})
 	}
+
+	// Log successful proxy requests for audit trail
+	log.Printf("[CardProxy] %s -> %s (status=%d, size=%d bytes)", c.IP(), host, resp.StatusCode, len(body))
 
 	// Forward Content-Type
 	if ct := resp.Header.Get("Content-Type"); ct != "" {

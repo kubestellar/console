@@ -31,6 +31,15 @@ export interface CardFetchOptions {
   skip?: boolean
 }
 
+/** Safely read from localStorage — returns null if unavailable (sandboxed iframes, etc.) */
+function safeGetToken(): string | null {
+  try {
+    return localStorage.getItem(STORAGE_KEY_TOKEN)
+  } catch {
+    return null
+  }
+}
+
 /**
  * Per-card fetch scope — mirrors createTimerScope() pattern.
  * Each card gets its own counter so unmounting one card doesn't
@@ -60,6 +69,7 @@ export function createCardFetchScope() {
     const [error, setError] = useState<string | null>(null)
     const mountedRef = useRef(true)
     const fetchIdRef = useRef(0)
+    const abortRef = useRef<AbortController | null>(null)
 
     const doFetch = useCallback(() => {
       if (!url) {
@@ -71,9 +81,15 @@ export function createCardFetchScope() {
 
       // Per-card concurrency guard
       if (activeFetchCount >= MAX_CONCURRENT_FETCHES) {
+        setLoading(false)
         setError(`Too many concurrent fetches (max ${MAX_CONCURRENT_FETCHES} per card)`)
         return
       }
+
+      // Abort any previous in-flight request
+      abortRef.current?.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
 
       const id = ++fetchIdRef.current
       setLoading(true)
@@ -81,10 +97,11 @@ export function createCardFetchScope() {
       activeFetchCount++
 
       const proxyURL = `/api/card-proxy?url=${encodeURIComponent(url)}`
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+      const token = safeGetToken()
 
       fetch(proxyURL, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
+        signal: controller.signal,
       })
         .then(res => {
           if (!res.ok) {
@@ -93,7 +110,11 @@ export function createCardFetchScope() {
               () => { throw new Error(`HTTP ${res.status}`) },
             )
           }
-          return res.json()
+          return res.json().catch(() => {
+            throw new Error(
+              'Response is not valid JSON. The external API may be returning HTML, XML, or plain text.',
+            )
+          })
         })
         .then(json => {
           if (!mountedRef.current || id !== fetchIdRef.current) return
@@ -101,6 +122,8 @@ export function createCardFetchScope() {
           setLoading(false)
         })
         .catch(err => {
+          // Ignore abort errors — expected when URL changes or card unmounts
+          if (err instanceof DOMException && err.name === 'AbortError') return
           if (!mountedRef.current || id !== fetchIdRef.current) return
           setError(err instanceof Error ? err.message : String(err))
           setLoading(false)
@@ -127,6 +150,7 @@ export function createCardFetchScope() {
 
       return () => {
         mountedRef.current = false
+        abortRef.current?.abort()
         if (intervalId) clearInterval(intervalId)
       }
     }, [url, options?.refreshInterval, options?.skip, doFetch])
