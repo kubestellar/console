@@ -60,23 +60,14 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleScreenshotFiles = (files: FileList | null) => {
-    if (!files) {
-      console.debug('[Screenshot] handleScreenshotFiles called with null/empty files')
-      return
-    }
+    if (!files) return
     const allFiles = Array.from(files)
-    console.debug(`[Screenshot] Received ${allFiles.length} file(s):`, allFiles.map(f => ({ name: f.name, type: f.type, size: f.size })))
     const imageFiles = allFiles.filter(f => f.type.startsWith('image/'))
-    if (imageFiles.length === 0) {
-      console.debug('[Screenshot] No image files found after filtering. File types:', allFiles.map(f => f.type))
-      return
-    }
-    console.debug(`[Screenshot] Processing ${imageFiles.length} image file(s)`)
+    if (imageFiles.length === 0) return
     imageFiles.forEach(file => {
       const reader = new FileReader()
       reader.onload = (e) => {
         const dataUri = e.target?.result as string
-        console.debug(`[Screenshot] FileReader loaded: ${file.name} (${dataUri?.length ?? 0} chars, prefix: ${dataUri?.substring(0, 30)}...)`)
         setScreenshots(prev => [...prev, { file, preview: dataUri }])
       }
       reader.onerror = (err) => {
@@ -94,7 +85,6 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragOver(false)
-    console.debug(`[Screenshot] Drop event: ${e.dataTransfer.files.length} file(s)`)
     const imageCount = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')).length
     if (imageCount > 0) emitScreenshotAttached('drop', imageCount)
     handleScreenshotFiles(e.dataTransfer.files)
@@ -103,35 +93,24 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   // Handle paste events to capture screenshots pasted into the textarea
   const handlePaste = (e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items
-    if (!items) {
-      console.debug('[Screenshot] Paste event: no clipboardData items')
-      return
-    }
+    if (!items) return
     const allItems = Array.from(items)
-    console.debug(`[Screenshot] Paste event: ${allItems.length} item(s):`, allItems.map(i => ({ kind: i.kind, type: i.type })))
     const imageItems = allItems.filter(item => item.type.startsWith('image/'))
-    if (imageItems.length === 0) {
-      console.debug('[Screenshot] No image items in paste data')
-      return
-    }
+    if (imageItems.length === 0) return
     // Prevent pasting image data as text in the textarea
     e.preventDefault()
     imageItems.forEach(item => {
       const file = item.getAsFile()
       if (file) {
-        console.debug(`[Screenshot] Paste image: ${file.name || '(unnamed)'}, type=${file.type}, size=${file.size}`)
         const reader = new FileReader()
         reader.onload = (ev) => {
           const dataUri = ev.target?.result as string
-          console.debug(`[Screenshot] Paste FileReader loaded: ${dataUri?.length ?? 0} chars`)
           setScreenshots(prev => [...prev, { file, preview: dataUri }])
         }
         reader.onerror = (err) => {
           console.error('[Screenshot] Paste FileReader failed:', err)
         }
         reader.readAsDataURL(file)
-      } else {
-        console.debug('[Screenshot] item.getAsFile() returned null for type:', item.type)
       }
     })
     emitScreenshotAttached('paste', imageItems.length)
@@ -195,14 +174,6 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
       // server-side token. No GitHub login required from the user.
       // Screenshots are uploaded server-side and embedded as images.
       const hasScreenshots = screenshotDataURIs.length > 0
-      console.debug(`[Screenshot] Submitting feedback: type=${type}, screenshots=${screenshotDataURIs.length}, sizes=${screenshotDataURIs.map(s => s.length).join(',')}`)
-      if (hasScreenshots) {
-        screenshotDataURIs.forEach((uri, i) => {
-          const prefix = uri.substring(0, 50)
-          console.debug(`[Screenshot] #${i}: ${uri.length} chars, starts with: ${prefix}...`)
-        })
-        console.debug(`[Screenshot] Using upload timeout: ${FEEDBACK_UPLOAD_TIMEOUT_MS}ms`)
-      }
       const result = await createRequest({
         title: title.trim(),
         description: description.trim(),
@@ -210,7 +181,6 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
         target_repo: 'console',
         ...(hasScreenshots && { screenshots: screenshotDataURIs }),
       }, hasScreenshots ? { timeout: FEEDBACK_UPLOAD_TIMEOUT_MS } : undefined)
-      console.debug('[Screenshot] Submit succeeded:', result.github_issue_url)
       if (hasScreenshots) emitScreenshotUploadSuccess(screenshotDataURIs.length)
 
       emitFeedbackSubmitted(type)
@@ -228,10 +198,6 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
       })
     } catch (err) {
       console.error('[Screenshot] Failed to submit feedback:', err)
-      if (err instanceof Error) {
-        console.debug(`[Screenshot] Error details: name=${err.name}, message=${err.message}`)
-        if ('response' in err) console.debug('[Screenshot] Response:', (err as Record<string, unknown>).response)
-      }
       const message = err instanceof Error ? err.message : 'Failed to submit feedback'
       if (screenshots.length > 0) emitScreenshotUploadFailed(message, screenshots.length)
       setSubmitError(message)
