@@ -94,7 +94,9 @@ export function useCardFilters<T>(
   items: T[],
   config: FilterConfig<T>
 ): UseCardFiltersResult<T> {
-  const { searchFields, clusterField, statusField, customPredicate, storageKey } = config
+  // Guard against undefined config — dynamic/custom cards may pass undefined at runtime
+  const safeConfig = config ?? ({} as FilterConfig<T>)
+  const { searchFields, clusterField, statusField, customPredicate, storageKey } = safeConfig
   const {
     filterByCluster,
     filterByStatus,
@@ -206,7 +208,7 @@ export function useCardFilters<T>(
       const query = globalCustomFilter.toLowerCase()
       result = result.filter(item => {
         // Check searchFields
-        for (const field of searchFields) {
+        for (const field of (searchFields || [])) {
           const value = item[field]
           if (value && String(value).toLowerCase().includes(query)) {
             return true
@@ -225,7 +227,7 @@ export function useCardFilters<T>(
       const query = search.toLowerCase()
       result = result.filter(item => {
         // Check searchFields
-        for (const field of searchFields) {
+        for (const field of (searchFields || [])) {
           const value = item[field]
           if (value && String(value).toLowerCase().includes(query)) {
             return true
@@ -292,16 +294,18 @@ export function useCardSort<T, S extends string>(
   items: T[],
   config: SortConfig<T, S>
 ): UseCardSortResult<T, S> {
-  const { defaultField, defaultDirection, comparators } = config
+  // Guard against undefined config — dynamic/custom cards may pass undefined at runtime
+  const safeConfig = config ?? ({} as SortConfig<T, S>)
+  const { defaultField, defaultDirection, comparators } = safeConfig
   const [sortBy, setSortBy] = useState<S>(defaultField)
-  const [sortDirection, setSortDirection] = useState<SortDirection>(defaultDirection)
+  const [sortDirection, setSortDirection] = useState<SortDirection>(defaultDirection ?? 'asc')
 
   const toggleSortDirection = useCallback(() => {
     setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))
   }, [])
 
   const sorted = useMemo(() => {
-    const comparator = comparators[sortBy]
+    const comparator = comparators?.[sortBy]
     if (!comparator) return items
 
     const sortedItems = [...items].sort((a, b) => {
@@ -357,7 +361,9 @@ export function useCardData<T, S extends string = string>(
   items: T[],
   config: CardDataConfig<T, S>
 ): UseCardDataResult<T, S> {
-  const { filter: filterConfig, sort: sortConfig, defaultLimit = 5 } = config
+  // Guard against undefined config — dynamic/custom cards may pass undefined at runtime
+  const safeConfig = config ?? ({} as CardDataConfig<T, S>)
+  const { filter: filterConfig, sort: sortConfig, defaultLimit = 5 } = safeConfig
   const [itemsPerPage, setItemsPerPage] = useState<number | 'unlimited'>(defaultLimit)
   const [currentPage, setCurrentPage] = useState(1)
 

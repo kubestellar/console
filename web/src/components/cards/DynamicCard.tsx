@@ -22,7 +22,7 @@ import { useTranslation } from 'react-i18next'
  * Registered as `dynamic_card` in CARD_COMPONENTS.
  * config.dynamicCardId determines which definition to render.
  */
-export function DynamicCard({ config }: CardComponentProps) {
+export function DynamicCard({ config = {} }: CardComponentProps) {
   const { t: _t } = useTranslation()
   const dynamicCardId = (config?.dynamicCardId as string) || ''
   const definition = getDynamicCard(dynamicCardId)
@@ -288,7 +288,7 @@ export interface Tier2Props {
   config?: Record<string, unknown>
 }
 
-export function Tier2CardRuntime({ definition, config }: Tier2Props) {
+export function Tier2CardRuntime({ definition, config = {} }: Tier2Props) {
   const [CardComponent, setCardComponent] = useState<CardComponent | null>(null)
   const [compiling, setCompiling] = useState(true)
   const [error, setError] = useState<string | null>(null)

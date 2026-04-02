@@ -77,7 +77,7 @@ export const SortableClusterCard = memo(function SortableClusterCard({
         }
       >
         {CardComponent ? (
-          <CardComponent config={card.config} />
+          <CardComponent config={card.config ?? {}} />
         ) : (
           <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground p-4">
             <AlertTriangle className="w-6 h-6 text-yellow-500" />

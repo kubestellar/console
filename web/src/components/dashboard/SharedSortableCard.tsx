@@ -116,7 +116,7 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
         }
       >
         {CardComponent ? (
-          <CardComponent config={card.config} />
+          <CardComponent config={card.config ?? {}} />
         ) : (
           <div className="flex items-center justify-center h-full text-muted-foreground">
             <p>Card type: {card.card_type}</p>

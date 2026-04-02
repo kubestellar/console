@@ -175,7 +175,7 @@ function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, 
         onRefresh={onRefresh}
         lastUpdated={lastUpdated}
       >
-        <CardComponent config={card.config} />
+        <CardComponent config={card.config ?? {}} />
       </CardWrapper>
     </div>
   )
@@ -196,7 +196,7 @@ function DragPreviewCard({ card }: { card: Card }) {
         title={card.title || formatCardTitle(card.card_type)}
         cardWidth={card.position?.w || 4}
       >
-        {CardComponent ? <CardComponent config={card.config} /> : null}
+        {CardComponent ? <CardComponent config={card.config ?? {}} /> : null}
       </CardWrapper>
     </div>
   )
