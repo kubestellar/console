@@ -37,6 +37,10 @@ export { compileCardCode, createCardComponent } from './compiler'
 // Scope (Tier 2 sandbox)
 export { getDynamicScope } from './scope'
 
+// Data fetching hook (Tier 2 sandbox)
+export { useCardFetch } from './useCardFetch'
+export type { CardFetchResult, CardFetchOptions } from './useCardFetch'
+
 // Dynamic Stats Registry
 export {
   registerDynamicStats,

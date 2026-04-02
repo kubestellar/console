@@ -663,6 +663,10 @@ func (s *Server) setupRoutes() {
 	// Card history
 	api.Get("/card-history", cards.GetHistory)
 
+	// Card proxy — allows Tier 2 custom cards to fetch external API data
+	cardProxy := handlers.NewCardProxyHandler()
+	api.Get("/card-proxy", cardProxy.Proxy)
+
 	// Swap routes
 	swaps := handlers.NewSwapHandler(s.store, s.hub)
 	api.Get("/swaps", swaps.ListPendingSwaps)
