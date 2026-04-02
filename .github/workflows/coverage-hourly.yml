@@ -17,7 +17,7 @@ env:
   TOTAL_SHARDS: 12
 
 jobs:
-  # Run tests in 4 shards to stay within 7GB runner memory
+  # Run tests in 12 shards to stay within 7GB runner memory
   test-shard:
     if: github.repository == 'kubestellar/console'
     runs-on: ubuntu-latest
@@ -47,23 +47,33 @@ jobs:
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
         run: npx vitest run --coverage --shard=${{ matrix.shard }}/${{ env.TOTAL_SHARDS }}
-        continue-on-error: true
 
       - name: Upload shard coverage
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-shard-${{ matrix.shard }}
           path: web/coverage/coverage-final.json
+          if-no-files-found: ignore
           retention-days: 1
 
   # Merge shards and update badge
   merge-coverage:
     needs: test-shard
-    if: "!cancelled() && needs.test-shard.result == 'success' && github.repository == 'kubestellar/console'"
+    # Run even if some shards failed (fail-fast: false lets all shards complete).
+    # Skip only if the entire job was cancelled.
+    if: "!cancelled() && github.repository == 'kubestellar/console'"
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
+      - name: Check shard results
+        run: |
+          echo "Test shard result: ${{ needs.test-shard.result }}"
+          if [ "${{ needs.test-shard.result }}" = "failure" ]; then
+            echo "::warning::One or more test shards failed — coverage may be incomplete"
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -179,3 +189,9 @@ jobs:
             } catch (err) {
               console.log(`Failed to update gist: ${err.message}`);
             }
+
+      - name: Fail if any shard failed
+        if: needs.test-shard.result == 'failure'
+        run: |
+          echo "::error::One or more test shards failed. Coverage was still merged and badge updated, but this workflow is marked as failed."
+          exit 1
