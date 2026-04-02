@@ -1,7 +1,6 @@
 import { ReactNode, Suspense, lazy, useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
-import { ROUTES } from '../../config/routes'
 import { Box, Wifi, WifiOff, X, Settings, Rocket, RotateCcw, Check, Loader2, RefreshCw, Plug } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Navbar } from './navbar/index'
@@ -21,7 +20,7 @@ import { useBackendHealth } from '../../hooks/useBackendHealth'
 import { useDeepLink } from '../../hooks/useDeepLink'
 import { cn } from '../../lib/cn'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
-import { NAVBAR_HEIGHT_PX, BANNER_HEIGHT_PX } from '../../lib/constants/ui'
+import { NAVBAR_HEIGHT_PX, BANNER_HEIGHT_PX, DEV_BAR_HEIGHT_PX } from '../../lib/constants/ui'
 import { CLOSE_ANIMATION_MS, UI_FEEDBACK_TIMEOUT_MS, TOAST_DISMISS_MS } from '../../lib/constants/network'
 import { TourOverlay, TourPrompt } from '../onboarding/Tour'
 import { TourProvider } from '../../hooks/useTour'
@@ -251,7 +250,7 @@ export function Layout({ children }: LayoutProps) {
   const showInClusterBanner = isInClusterMode && agentStatus === 'disconnected' && !isDemoMode
 
   // Banner stacking: each banner's top offset depends on how many banners above it are visible.
-  // Navbar (64px) → Banners (36px each).
+  // Dev bar (20px) → Navbar (64px) → Banners (36px each).
   // Z-index hierarchy: Navbar + dropdowns (z-50) > Network banner (z-40) > Demo banner (z-30) > In-cluster / Offline banner (z-20)
   // Stack order: Network (top) → Demo → In-cluster agent / Agent Offline (bottom)
   const networkBannerTop = NAVBAR_HEIGHT_PX
@@ -292,7 +291,7 @@ export function Layout({ children }: LayoutProps) {
     <VersionCheckProvider>
     <TourProvider>
     <div className="h-screen bg-background overflow-hidden flex flex-col">
-      {/* Dev mode indicator moved to Navbar as a small badge */}
+      {/* Dev mode indicator removed — now shown as a badge in the Navbar */}
 
       {/* Skip to content link for keyboard users and screen readers */}
       <a
@@ -462,7 +461,7 @@ export function Layout({ children }: LayoutProps) {
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <Link
-                to={ROUTES.SETTINGS}
+                to="/settings"
                 className="flex items-center gap-1 text-xs px-2 py-0.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded transition-colors whitespace-nowrap"
               >
                 <Settings className="w-3 h-3" />
