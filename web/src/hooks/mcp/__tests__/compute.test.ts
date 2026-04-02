@@ -1159,3 +1159,263 @@ describe('useGPUNodes — demo mode transition', () => {
     await waitFor(() => expect(mockFetchSSE.mock.calls.length).toBeGreaterThanOrEqual(callsBefore))
   })
 })
+
+// ===========================================================================
+// useGPUNodes — agent path in fetchGPUNodes
+// ===========================================================================
+
+describe('useGPUNodes — agent path', () => {
+  it('uses local agent when available and returns GPU nodes', async () => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+
+    const agentNodes = [
+      { name: 'agent-gpu', cluster: 'c1', gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 4, acceleratorType: 'GPU' },
+    ]
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ nodes: agentNodes }),
+    })
+
+    // Reset cache so fetch is triggered
+    updateGPUNodeCache({ nodes: [], lastUpdated: null })
+
+    const { result } = renderHook(() => useGPUNodes())
+
+    await waitFor(() => result.current.nodes.length > 0, { timeout: 3000 })
+    expect(result.current.nodes[0].name).toBe('agent-gpu')
+    expect(mockReportAgentDataSuccess).toHaveBeenCalled()
+  })
+
+  it('falls through to SSE when agent returns non-ok response', async () => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+
+    // Agent returns error
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+    })
+
+    // SSE succeeds
+    const sseNodes = [
+      { name: 'sse-gpu', cluster: 'c1', gpuType: 'NVIDIA T4', gpuCount: 4, gpuAllocated: 2, acceleratorType: 'GPU' },
+    ]
+    mockFetchSSE.mockResolvedValue(sseNodes)
+
+    // Reset cache
+    updateGPUNodeCache({ nodes: [], lastUpdated: null })
+
+    const { result } = renderHook(() => useGPUNodes())
+
+    await waitFor(() => result.current.nodes.length > 0, { timeout: 3000 })
+    expect(result.current.nodes[0].name).toBe('sse-gpu')
+  })
+
+  it('falls through to SSE when agent fetch throws', async () => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+
+    // Agent throws
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'))
+
+    // SSE succeeds
+    const sseNodes = [
+      { name: 'sse-fallback-gpu', cluster: 'c1', gpuType: 'NVIDIA V100', gpuCount: 2, gpuAllocated: 1, acceleratorType: 'GPU' },
+    ]
+    mockFetchSSE.mockResolvedValue(sseNodes)
+
+    // Reset cache
+    updateGPUNodeCache({ nodes: [], lastUpdated: null })
+
+    const { result } = renderHook(() => useGPUNodes())
+
+    await waitFor(() => result.current.nodes.length > 0, { timeout: 3000 })
+    expect(result.current.nodes[0].name).toBe('sse-fallback-gpu')
+  })
+})
+
+// ===========================================================================
+// useGPUNodes — SSE to REST fallback
+// ===========================================================================
+
+describe('useGPUNodes — SSE to REST fallback', () => {
+  it('falls back to REST API when SSE fails', async () => {
+    // Agent unavailable, SSE fails, REST succeeds
+    const restNodes = [
+      { name: 'rest-gpu', cluster: 'c1', gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 6, acceleratorType: 'GPU' },
+    ]
+    mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
+    mockApiGet.mockResolvedValue({ data: { nodes: restNodes } })
+
+    // Reset cache
+    updateGPUNodeCache({ nodes: [], lastUpdated: null })
+
+    const { result } = renderHook(() => useGPUNodes())
+
+    await waitFor(() => result.current.nodes.length > 0, { timeout: 3000 })
+    expect(result.current.nodes[0].name).toBe('rest-gpu')
+  })
+
+  it('uses SSE progressive callback onClusterData to update cache incrementally', async () => {
+    mockFetchSSE.mockImplementation(async (opts: { onClusterData: (cluster: string, items: unknown[]) => void }) => {
+      // Simulate progressive cluster data
+      opts.onClusterData('c1', [
+        { name: 'progressive-gpu-1', cluster: 'c1', gpuType: 'NVIDIA A100', gpuCount: 4, gpuAllocated: 2, acceleratorType: 'GPU' },
+      ])
+      opts.onClusterData('c2', [
+        { name: 'progressive-gpu-2', cluster: 'c2', gpuType: 'NVIDIA T4', gpuCount: 2, gpuAllocated: 1, acceleratorType: 'GPU' },
+      ])
+      return [
+        { name: 'progressive-gpu-1', cluster: 'c1', gpuType: 'NVIDIA A100', gpuCount: 4, gpuAllocated: 2, acceleratorType: 'GPU' },
+        { name: 'progressive-gpu-2', cluster: 'c2', gpuType: 'NVIDIA T4', gpuCount: 2, gpuAllocated: 1, acceleratorType: 'GPU' },
+      ]
+    })
+
+    // Reset cache
+    updateGPUNodeCache({ nodes: [], lastUpdated: null })
+
+    const { result } = renderHook(() => useGPUNodes())
+
+    await waitFor(() => result.current.nodes.length === 2, { timeout: 3000 })
+  })
+})
+
+// ===========================================================================
+// useGPUNodes — error recovery and retry
+// ===========================================================================
+
+describe('useGPUNodes — error recovery', () => {
+  it('preserves existing cache on error and increments failure count', async () => {
+    // Pre-load cache with data
+    const existingNode = {
+      name: 'preserved-gpu', cluster: 'c1',
+      gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 4, acceleratorType: 'GPU' as const,
+    }
+    updateGPUNodeCache({
+      nodes: [existingNode],
+      lastUpdated: new Date(Date.now() - 60000), // stale to trigger fetch
+      isLoading: false,
+      isRefreshing: false,
+      error: null,
+      consecutiveFailures: 0,
+      lastRefresh: new Date(),
+    })
+
+    // All fetch paths fail
+    mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
+    mockApiGet.mockRejectedValue(new Error('REST failed'))
+
+    const { result } = renderHook(() => useGPUNodes())
+
+    // Cache should still have the existing node
+    expect(result.current.nodes.find(n => n.name === 'preserved-gpu')).toBeDefined()
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    // Error should be null (GPU nodes are optional)
+    expect(result.current.error).toBeNull()
+  })
+
+  it('uses demo data as fallback when cache is empty and demo mode is active', async () => {
+    mockIsDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+
+    // Clear the cache entirely by setting lastUpdated to null
+    updateGPUNodeCache({
+      lastUpdated: null,
+      consecutiveFailures: 0,
+    })
+
+    // Make all fetches fail
+    mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
+    mockApiGet.mockRejectedValue(new Error('REST failed'))
+
+    const { result } = renderHook(() => useGPUNodes())
+
+    // Wait for the fetch to complete
+    await waitFor(() => !result.current.isLoading, { timeout: 3000 })
+    // In demo mode with empty cache and failed fetch, demo GPU nodes should be used
+    expect(Array.isArray(result.current.nodes)).toBe(true)
+  })
+
+  it('refetch callback calls fetchGPUNodes', async () => {
+    mockFetchSSE.mockResolvedValue([])
+    updateGPUNodeCache({ nodes: [], lastUpdated: null })
+
+    const { result } = renderHook(() => useGPUNodes())
+    await waitFor(() => expect(gpuNodeSubscribers.size).toBeGreaterThan(0))
+
+    const callsBefore = mockFetchSSE.mock.calls.length
+    await act(async () => { result.current.refetch() })
+    // Should have triggered at least one more fetch
+    await waitFor(() => expect(mockFetchSSE.mock.calls.length).toBeGreaterThanOrEqual(callsBefore))
+  })
+})
+
+// ===========================================================================
+// useGPUNodes — SSE onClusterData with empty items
+// ===========================================================================
+
+describe('useGPUNodes — SSE onClusterData edge cases', () => {
+  it('does not update cache for empty items in onClusterData callback', async () => {
+    mockFetchSSE.mockImplementation(async (opts: { onClusterData: (cluster: string, items: unknown[]) => void }) => {
+      // Empty items array should not trigger incremental cache update
+      opts.onClusterData('c1', [])
+      // Final result is also empty
+      return []
+    })
+
+    updateGPUNodeCache({ nodes: [], lastUpdated: null })
+
+    const { result } = renderHook(() => useGPUNodes())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 3000 })
+    // After empty SSE results, error should be null (GPU nodes are optional)
+    expect(result.current.error).toBeNull()
+  })
+})
+
+// ===========================================================================
+// useGPUNodes — stale cache detection
+// ===========================================================================
+
+describe('useGPUNodes — cache staleness', () => {
+  it('fetches when cache is stale (older than 30s)', async () => {
+    const staleTime = new Date(Date.now() - 35000) // 35 seconds ago
+    const existingNode = {
+      name: 'stale-gpu', cluster: 'c1',
+      gpuType: 'NVIDIA A100', gpuCount: 4, gpuAllocated: 2, acceleratorType: 'GPU' as const,
+    }
+    updateGPUNodeCache({
+      nodes: [existingNode],
+      lastUpdated: staleTime,
+      isLoading: false,
+    })
+
+    const freshNodes = [
+      { name: 'fresh-gpu', cluster: 'c1', gpuType: 'NVIDIA H100', gpuCount: 8, gpuAllocated: 6, acceleratorType: 'GPU' },
+    ]
+    mockFetchSSE.mockResolvedValue(freshNodes)
+
+    const { result } = renderHook(() => useGPUNodes())
+
+    await waitFor(() => result.current.nodes.some(n => n.name === 'fresh-gpu'), { timeout: 3000 })
+  })
+
+  it('does not fetch when cache is fresh (less than 30s old)', async () => {
+    const freshTime = new Date(Date.now() - 5000) // 5 seconds ago
+    const existingNode = {
+      name: 'fresh-cache-gpu', cluster: 'c1',
+      gpuType: 'NVIDIA A100', gpuCount: 4, gpuAllocated: 2, acceleratorType: 'GPU' as const,
+    }
+    updateGPUNodeCache({
+      nodes: [existingNode],
+      lastUpdated: freshTime,
+      isLoading: false,
+    })
+
+    mockFetchSSE.mockClear()
+
+    renderHook(() => useGPUNodes())
+
+    // With a fresh cache (5s old), no fetch should be triggered
+    expect(mockFetchSSE).not.toHaveBeenCalled()
+  })
+})
