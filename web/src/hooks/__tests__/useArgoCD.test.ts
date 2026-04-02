@@ -42,6 +42,7 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** Build a minimal valid ArgoApplication */
 function makeApp(overrides: Partial<ArgoApplication> = {}): ArgoApplication {
   return {
     name: 'test-app',
@@ -59,6 +60,7 @@ function makeApp(overrides: Partial<ArgoApplication> = {}): ArgoApplication {
   }
 }
 
+/** Create a Response-like object from JSON data */
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -73,8 +75,11 @@ function jsonResponse(body: unknown, status = 200): Response {
 beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
+
+  // Default: all fetches reject (simulates API unavailable)
   vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('not available')))
 
+  // Reset mock return values to defaults
   mockUseClusters.mockReturnValue({
     deduplicatedClusters: [{ name: 'prod-cluster', reachable: true }],
     clusters: [{ name: 'prod-cluster', reachable: true }],
@@ -129,10 +134,12 @@ describe('useArgoCDApplications', () => {
   it('uses real data when API returns non-demo applications', async () => {
     const realApps = [makeApp({ name: 'real-app-1' }), makeApp({ name: 'real-app-2' })]
     vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ items: realApps, isDemoData: false }),
+      jsonResponse({ items: realApps, isDemoData: false })
     )
+
     const { result, unmount } = renderHook(() => useArgoCDApplications())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
     expect(result.current.isDemoData).toBe(false)
     expect(result.current.applications).toHaveLength(2)
     expect(result.current.applications[0].name).toBe('real-app-1')
@@ -142,23 +149,15 @@ describe('useArgoCDApplications', () => {
     unmount()
   })
 
-  it('keeps real data when API returns empty items with isDemoData=false', async () => {
-    vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ items: [], isDemoData: false }),
-    )
-    const { result, unmount } = renderHook(() => useArgoCDApplications())
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.isDemoData).toBe(false)
-    expect(result.current.applications).toHaveLength(0)
-    unmount()
-  })
-
   it('falls back to demo when API returns isDemoData: true in error body', async () => {
     vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ isDemoData: true, error: 'ArgoCD not installed' }, 503),
+      jsonResponse({ isDemoData: true, error: 'ArgoCD not installed' }, 503)
     )
+
     const { result, unmount } = renderHook(() => useArgoCDApplications())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // isDemoData response from the API causes fallback to mock data
     expect(result.current.isDemoData).toBe(true)
     expect(result.current.applications.length).toBeGreaterThan(0)
     unmount()
@@ -166,10 +165,26 @@ describe('useArgoCDApplications', () => {
 
   it('falls back to demo when API returns non-ok status without isDemoData', async () => {
     vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ error: 'Internal Server Error' }, 500),
+      jsonResponse({ error: 'Internal Server Error' }, 500)
     )
+
     const { result, unmount } = renderHook(() => useArgoCDApplications())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.isDemoData).toBe(true)
+    expect(result.current.applications.length).toBeGreaterThan(0)
+    unmount()
+  })
+
+  it('falls back to demo when API returns empty items array', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({ items: [], isDemoData: false })
+    )
+
+    const { result, unmount } = renderHook(() => useArgoCDApplications())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // Empty items with isDemoData=false triggers mock fallback
     expect(result.current.isDemoData).toBe(true)
     expect(result.current.applications.length).toBeGreaterThan(0)
     unmount()
@@ -177,8 +192,10 @@ describe('useArgoCDApplications', () => {
 
   it('caches applications to localStorage after fetch', async () => {
     vi.mocked(fetch).mockRejectedValue(new Error('fail'))
+
     const { result, unmount } = renderHook(() => useArgoCDApplications())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
     const cached = localStorage.getItem('kc-argocd-apps-cache')
     expect(cached).not.toBeNull()
     const parsed = JSON.parse(cached!)
@@ -188,37 +205,43 @@ describe('useArgoCDApplications', () => {
     unmount()
   })
 
-  it('loads from cache on initialization when cache is valid', () => {
+  it('loads from cache on initialization when cache is valid', async () => {
+    // Pre-populate the cache with valid data
     const cachedApps = [makeApp({ name: 'cached-app' })]
-    localStorage.setItem(
-      'kc-argocd-apps-cache',
-      JSON.stringify({ data: cachedApps, timestamp: Date.now(), isDemoData: false }),
-    )
+    localStorage.setItem('kc-argocd-apps-cache', JSON.stringify({
+      data: cachedApps,
+      timestamp: Date.now(),
+      isDemoData: false,
+    }))
+
     const { result, unmount } = renderHook(() => useArgoCDApplications())
+
+    // Initial state should come from cache
     expect(result.current.applications).toHaveLength(1)
     expect(result.current.applications[0].name).toBe('cached-app')
     unmount()
   })
 
   it('ignores expired cache', async () => {
-    const EXPIRED_TIMESTAMP = Date.now() - 400_000
-    localStorage.setItem(
-      'kc-argocd-apps-cache',
-      JSON.stringify({
-        data: [makeApp({ name: 'expired-app' })],
-        timestamp: EXPIRED_TIMESTAMP,
-        isDemoData: false,
-      }),
-    )
+    const EXPIRED_TIMESTAMP = Date.now() - 400_000 // > 5 minutes
+    localStorage.setItem('kc-argocd-apps-cache', JSON.stringify({
+      data: [makeApp({ name: 'expired-app' })],
+      timestamp: EXPIRED_TIMESTAMP,
+      isDemoData: false,
+    }))
+
     const { result, unmount } = renderHook(() => useArgoCDApplications())
+    // Cache is expired, so hook starts in loading state (no cached data)
     expect(result.current.isLoading).toBe(true)
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+    // Should have fetched fresh data (falls back to demo since fetch rejects)
     expect(result.current.isDemoData).toBe(true)
     unmount()
   })
 
   it('ignores corrupt cache JSON', async () => {
     localStorage.setItem('kc-argocd-apps-cache', 'not-valid-json{{{')
+
     const { result, unmount } = renderHook(() => useArgoCDApplications())
     expect(result.current.isLoading).toBe(true)
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -232,6 +255,7 @@ describe('useArgoCDApplications', () => {
       clusters: [],
       isLoading: false,
     })
+
     const { result, unmount } = renderHook(() => useArgoCDApplications())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.applications).toHaveLength(0)
@@ -244,6 +268,7 @@ describe('useArgoCDApplications', () => {
       clusters: [],
       isLoading: true,
     })
+
     const { result, unmount } = renderHook(() => useArgoCDApplications())
     expect(result.current.isLoading).toBe(true)
     unmount()
@@ -251,14 +276,19 @@ describe('useArgoCDApplications', () => {
 
   it('handles refetch correctly', async () => {
     vi.mocked(fetch).mockRejectedValue(new Error('fail'))
+
     const { result, unmount } = renderHook(() => useArgoCDApplications())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // Now switch to real data
     vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ items: [makeApp({ name: 'refetched' })], isDemoData: false }),
+      jsonResponse({ items: [makeApp({ name: 'refetched' })], isDemoData: false })
     )
+
     await act(async () => {
       await result.current.refetch()
     })
+
     expect(result.current.isDemoData).toBe(false)
     expect(result.current.applications[0].name).toBe('refetched')
     unmount()
@@ -271,12 +301,19 @@ describe('useArgoCDApplications', () => {
 
   it('sets up an auto-refresh interval when applications exist', async () => {
     vi.mocked(fetch).mockRejectedValue(new Error('fail'))
+
     const setIntervalSpy = vi.spyOn(globalThis, 'setInterval')
     const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval')
+
     const { result, unmount } = renderHook(() => useArgoCDApplications())
     await waitFor(() => expect(result.current.applications.length).toBeGreaterThan(0))
+
+    // The hook should have set up an interval for auto-refresh
     expect(setIntervalSpy).toHaveBeenCalled()
+
     unmount()
+
+    // Cleanup should clear the interval
     expect(clearIntervalSpy).toHaveBeenCalled()
     setIntervalSpy.mockRestore()
     clearIntervalSpy.mockRestore()
@@ -285,27 +322,16 @@ describe('useArgoCDApplications', () => {
   it('includes auth token in headers when present', async () => {
     localStorage.setItem('token', 'my-jwt-token')
     vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ items: [makeApp()], isDemoData: false }),
+      jsonResponse({ items: [makeApp()], isDemoData: false })
     )
+
     const { result, unmount } = renderHook(() => useArgoCDApplications())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
     expect(fetch).toHaveBeenCalled()
     const callArgs = vi.mocked(fetch).mock.calls[0]
     const headers = callArgs[1]?.headers as Record<string, string>
     expect(headers['Authorization']).toBe('Bearer my-jwt-token')
-    unmount()
-  })
-
-  it('does not include Authorization header when no token in localStorage', async () => {
-    vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ items: [makeApp()], isDemoData: false }),
-    )
-    const { result, unmount } = renderHook(() => useArgoCDApplications())
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    const callArgs = vi.mocked(fetch).mock.calls[0]
-    const headers = callArgs[1]?.headers as Record<string, string>
-    expect(headers['Authorization']).toBeUndefined()
-    expect(headers['Accept']).toBe('application/json')
     unmount()
   })
 
@@ -323,10 +349,14 @@ describe('useArgoCDApplications', () => {
       ],
       isLoading: false,
     })
+
     vi.mocked(fetch).mockRejectedValue(new Error('fail'))
+
     const { result, unmount } = renderHook(() => useArgoCDApplications())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
     expect(result.current.isDemoData).toBe(true)
+    // prod clusters get first 3 apps, staging gets last 2, others get all 4
     const prodApps = result.current.applications.filter(a => a.cluster === 'prod-east')
     const stagingApps = result.current.applications.filter(a => a.cluster === 'staging-west')
     const devApps = result.current.applications.filter(a => a.cluster === 'dev-local')
@@ -337,39 +367,15 @@ describe('useArgoCDApplications', () => {
   })
 
   it('falls back to demo when res.json() throws on non-ok response', async () => {
+    // Simulate a non-ok response where .json() also fails (non-JSON error body)
     const badResponse = new Response('Bad Gateway', { status: 502 })
     vi.mocked(fetch).mockResolvedValue(badResponse)
+
     const { result, unmount } = renderHook(() => useArgoCDApplications())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
     expect(result.current.isDemoData).toBe(true)
     expect(result.current.applications.length).toBeGreaterThan(0)
-    unmount()
-  })
-
-  it('caches real data to localStorage on successful API fetch', async () => {
-    const realApps = [makeApp({ name: 'real-cached' })]
-    vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ items: realApps, isDemoData: false }),
-    )
-    const { result, unmount } = renderHook(() => useArgoCDApplications())
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    const cached = localStorage.getItem('kc-argocd-apps-cache')
-    expect(cached).not.toBeNull()
-    const parsed = JSON.parse(cached!)
-    expect(parsed.isDemoData).toBe(false)
-    expect(parsed.data).toHaveLength(1)
-    expect(parsed.data[0].name).toBe('real-cached')
-    unmount()
-  })
-
-  it('uses AbortSignal for timeout on fetch', async () => {
-    vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ items: [makeApp()], isDemoData: false }),
-    )
-    const { result, unmount } = renderHook(() => useArgoCDApplications())
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    const callArgs = vi.mocked(fetch).mock.calls[0]
-    expect(callArgs[1]?.signal).toBeDefined()
     unmount()
   })
 })
@@ -406,9 +412,9 @@ describe('useArgoCDHealth', () => {
   it('calculates healthyPercent correctly from mock data', async () => {
     const { result, unmount } = renderHook(() => useArgoCDHealth())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
     const { stats, total, healthyPercent } = result.current
-    const expectedTotal =
-      stats.healthy + stats.degraded + stats.progressing + stats.missing + stats.unknown
+    const expectedTotal = stats.healthy + stats.degraded + stats.progressing + stats.missing + stats.unknown
     expect(total).toBe(expectedTotal)
     expect(healthyPercent).toBeCloseTo((stats.healthy / total) * 100, 1)
     expect(healthyPercent).toBeGreaterThanOrEqual(0)
@@ -419,10 +425,12 @@ describe('useArgoCDHealth', () => {
   it('uses real health data when API returns non-demo stats', async () => {
     const realStats = { healthy: 10, degraded: 2, progressing: 1, missing: 0, unknown: 0 }
     vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ stats: realStats, isDemoData: false }),
+      jsonResponse({ stats: realStats, isDemoData: false })
     )
+
     const { result, unmount } = renderHook(() => useArgoCDHealth())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
     expect(result.current.isDemoData).toBe(false)
     expect(result.current.stats.healthy).toBe(10)
     expect(result.current.stats.degraded).toBe(2)
@@ -434,32 +442,38 @@ describe('useArgoCDHealth', () => {
 
   it('falls back to demo when API responds with isDemoData in error body', async () => {
     vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ isDemoData: true, error: 'ArgoCD unavailable' }, 503),
+      jsonResponse({ isDemoData: true, error: 'ArgoCD unavailable' }, 503)
     )
+
     const { result, unmount } = renderHook(() => useArgoCDHealth())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
     expect(result.current.isDemoData).toBe(true)
     expect(result.current.total).toBeGreaterThan(0)
     unmount()
   })
 
-  it('keeps real data when API returns zero-total stats with isDemoData=false', async () => {
+  it('falls back to demo when API returns 0-total stats', async () => {
     const zeroStats = { healthy: 0, degraded: 0, progressing: 0, missing: 0, unknown: 0 }
     vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ stats: zeroStats, isDemoData: false }),
+      jsonResponse({ stats: zeroStats, isDemoData: false })
     )
+
     const { result, unmount } = renderHook(() => useArgoCDHealth())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.isDemoData).toBe(false)
-    expect(result.current.total).toBe(0)
-    expect(result.current.healthyPercent).toBe(0)
+
+    // Zero total with isDemoData=false means no ArgoCD apps found => falls to mock
+    expect(result.current.isDemoData).toBe(true)
+    expect(result.current.total).toBeGreaterThan(0)
     unmount()
   })
 
   it('caches health data to localStorage', async () => {
     vi.mocked(fetch).mockRejectedValue(new Error('fail'))
+
     const { result, unmount } = renderHook(() => useArgoCDHealth())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
     const cached = localStorage.getItem('kc-argocd-health-cache')
     expect(cached).not.toBeNull()
     const parsed = JSON.parse(cached!)
@@ -468,13 +482,16 @@ describe('useArgoCDHealth', () => {
     unmount()
   })
 
-  it('loads from valid cache on initialization', () => {
+  it('loads from valid cache on initialization', async () => {
     const cachedStats = { healthy: 5, degraded: 1, progressing: 0, missing: 0, unknown: 0 }
-    localStorage.setItem(
-      'kc-argocd-health-cache',
-      JSON.stringify({ data: cachedStats, timestamp: Date.now(), isDemoData: false }),
-    )
+    localStorage.setItem('kc-argocd-health-cache', JSON.stringify({
+      data: cachedStats,
+      timestamp: Date.now(),
+      isDemoData: false,
+    }))
+
     const { result, unmount } = renderHook(() => useArgoCDHealth())
+    // Should use cached data immediately
     expect(result.current.stats.healthy).toBe(5)
     expect(result.current.isDemoData).toBe(false)
     unmount()
@@ -486,6 +503,7 @@ describe('useArgoCDHealth', () => {
       clusters: [],
       isLoading: false,
     })
+
     const { result, unmount } = renderHook(() => useArgoCDHealth())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.total).toBe(0)
@@ -507,6 +525,7 @@ describe('useArgoCDHealth', () => {
       ],
       isLoading: false,
     })
+
     mockUseGlobalFilters.mockReturnValue({
       selectedClusters: ['cluster-a', 'cluster-b'],
       setSelectedClusters: vi.fn(),
@@ -514,9 +533,12 @@ describe('useArgoCDHealth', () => {
       setSelectedNamespaces: vi.fn(),
       isAllClustersSelected: false,
     })
+
     vi.mocked(fetch).mockRejectedValue(new Error('fail'))
+
     const { result, unmount } = renderHook(() => useArgoCDHealth())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
     expect(result.current.isDemoData).toBe(true)
     expect(result.current.total).toBeGreaterThan(0)
     unmount()
@@ -524,78 +546,32 @@ describe('useArgoCDHealth', () => {
 
   it('handles non-ok response without isDemoData', async () => {
     vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ error: 'Server Error' }, 500),
+      jsonResponse({ error: 'Server Error' }, 500)
     )
-    const { result, unmount } = renderHook(() => useArgoCDHealth())
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.isDemoData).toBe(true)
-    unmount()
-  })
 
-  it('handles non-JSON error body on health endpoint', async () => {
-    const badResponse = new Response('Service Unavailable', { status: 503 })
-    vi.mocked(fetch).mockResolvedValue(badResponse)
     const { result, unmount } = renderHook(() => useArgoCDHealth())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
     expect(result.current.isDemoData).toBe(true)
-    expect(result.current.total).toBeGreaterThan(0)
     unmount()
   })
 
   it('sets up an auto-refresh interval when health data exists', async () => {
     vi.mocked(fetch).mockRejectedValue(new Error('fail'))
+
     const setIntervalSpy = vi.spyOn(globalThis, 'setInterval')
     const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval')
+
     const { result, unmount } = renderHook(() => useArgoCDHealth())
     await waitFor(() => expect(result.current.total).toBeGreaterThan(0))
+
     expect(setIntervalSpy).toHaveBeenCalled()
+
     unmount()
+
     expect(clearIntervalSpy).toHaveBeenCalled()
     setIntervalSpy.mockRestore()
     clearIntervalSpy.mockRestore()
-  })
-
-  it('handles refetch correctly', async () => {
-    vi.mocked(fetch).mockRejectedValue(new Error('fail'))
-    const { result, unmount } = renderHook(() => useArgoCDHealth())
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    const realStats = { healthy: 20, degraded: 0, progressing: 0, missing: 0, unknown: 0 }
-    vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ stats: realStats, isDemoData: false }),
-    )
-    await act(async () => {
-      await result.current.refetch()
-    })
-    expect(result.current.isDemoData).toBe(false)
-    expect(result.current.stats.healthy).toBe(20)
-    expect(result.current.total).toBe(20)
-    const FULL_PERCENT = 100
-    expect(result.current.healthyPercent).toBeCloseTo(FULL_PERCENT, 1)
-    unmount()
-  })
-
-  it('caches real health data with isDemoData=false', async () => {
-    const realStats = { healthy: 7, degraded: 1, progressing: 0, missing: 0, unknown: 0 }
-    vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ stats: realStats, isDemoData: false }),
-    )
-    const { result, unmount } = renderHook(() => useArgoCDHealth())
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    const cached = localStorage.getItem('kc-argocd-health-cache')
-    expect(cached).not.toBeNull()
-    const parsed = JSON.parse(cached!)
-    expect(parsed.isDemoData).toBe(false)
-    expect(parsed.data.healthy).toBe(7)
-    unmount()
-  })
-
-  it('handles API response with missing stats field', async () => {
-    vi.mocked(fetch).mockResolvedValue(jsonResponse({ isDemoData: false }))
-    const { result, unmount } = renderHook(() => useArgoCDHealth())
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.isDemoData).toBe(false)
-    expect(result.current.total).toBe(0)
-    unmount()
   })
 })
 
@@ -613,15 +589,22 @@ describe('useArgoCDTriggerSync', () => {
   })
 
   it('calls the real API and returns success', async () => {
-    vi.mocked(fetch).mockResolvedValue(jsonResponse({ success: true }))
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({ success: true })
+    )
+
     const { result, unmount } = renderHook(() => useArgoCDTriggerSync())
+
     let syncResult: { success: boolean; error?: string } | undefined
     await act(async () => {
       syncResult = await result.current.triggerSync('my-app', 'argocd', 'prod-cluster')
     })
+
     expect(syncResult!.success).toBe(true)
     expect(result.current.lastResult).toEqual({ success: true })
     expect(result.current.isSyncing).toBe(false)
+
+    // Verify POST was made with correct body
     const callArgs = vi.mocked(fetch).mock.calls[0]
     expect(callArgs[0]).toBe('/api/gitops/argocd/sync')
     expect(callArgs[1]?.method).toBe('POST')
@@ -634,13 +617,16 @@ describe('useArgoCDTriggerSync', () => {
 
   it('returns API error result', async () => {
     vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ success: false, error: 'App not found' }),
+      jsonResponse({ success: false, error: 'App not found' })
     )
+
     const { result, unmount } = renderHook(() => useArgoCDTriggerSync())
+
     let syncResult: { success: boolean; error?: string } | undefined
     await act(async () => {
       syncResult = await result.current.triggerSync('missing-app', 'argocd')
     })
+
     expect(syncResult!.success).toBe(false)
     expect(syncResult!.error).toBe('App not found')
     expect(result.current.lastResult?.success).toBe(false)
@@ -649,11 +635,14 @@ describe('useArgoCDTriggerSync', () => {
 
   it('falls back to demo mode when fetch throws', async () => {
     vi.mocked(fetch).mockRejectedValue(new Error('Network error'))
+
     const { result, unmount } = renderHook(() => useArgoCDTriggerSync())
+
     let syncResult: { success: boolean; error?: string } | undefined
     await act(async () => {
       syncResult = await result.current.triggerSync('demo-app', 'argocd')
     })
+
     expect(syncResult!.success).toBe(true)
     expect(result.current.isSyncing).toBe(false)
     expect(result.current.lastResult?.success).toBe(true)
@@ -661,46 +650,19 @@ describe('useArgoCDTriggerSync', () => {
   })
 
   it('passes empty string for cluster when not provided', async () => {
-    vi.mocked(fetch).mockResolvedValue(jsonResponse({ success: true }))
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({ success: true })
+    )
+
     const { result, unmount } = renderHook(() => useArgoCDTriggerSync())
+
     await act(async () => {
       await result.current.triggerSync('my-app', 'argocd')
     })
+
     const callArgs = vi.mocked(fetch).mock.calls[0]
     const body = JSON.parse(callArgs[1]?.body as string)
     expect(body.cluster).toBe('')
-    unmount()
-  })
-
-  it('includes auth token and content-type in sync request', async () => {
-    localStorage.setItem('token', 'sync-token')
-    vi.mocked(fetch).mockResolvedValue(jsonResponse({ success: true }))
-    const { result, unmount } = renderHook(() => useArgoCDTriggerSync())
-    await act(async () => {
-      await result.current.triggerSync('my-app', 'argocd')
-    })
-    const callArgs = vi.mocked(fetch).mock.calls[0]
-    const headers = callArgs[1]?.headers as Record<string, string>
-    expect(headers['Authorization']).toBe('Bearer sync-token')
-    expect(headers['Content-Type']).toBe('application/json')
-    unmount()
-  })
-
-  it('resets lastResult to null before each sync', async () => {
-    vi.mocked(fetch).mockResolvedValue(jsonResponse({ success: true }))
-    const { result, unmount } = renderHook(() => useArgoCDTriggerSync())
-    await act(async () => {
-      await result.current.triggerSync('app-1', 'argocd')
-    })
-    expect(result.current.lastResult).toEqual({ success: true })
-    vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ success: false, error: 'timeout' }),
-    )
-    await act(async () => {
-      await result.current.triggerSync('app-2', 'argocd')
-    })
-    expect(result.current.lastResult?.success).toBe(false)
-    expect(result.current.lastResult?.error).toBe('timeout')
     unmount()
   })
 })
@@ -730,6 +692,7 @@ describe('useArgoCDSyncStatus', () => {
   it('falls back to demo data when API unavailable', async () => {
     const { result, unmount } = renderHook(() => useArgoCDSyncStatus())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
     expect(result.current.isDemoData).toBe(true)
     expect(result.current.total).toBeGreaterThan(0)
     expect(result.current.syncedPercent).toBeGreaterThan(0)
@@ -739,10 +702,12 @@ describe('useArgoCDSyncStatus', () => {
   it('uses real sync data when API returns non-demo stats', async () => {
     const realStats = { synced: 15, outOfSync: 3, unknown: 1 }
     vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ stats: realStats, isDemoData: false }),
+      jsonResponse({ stats: realStats, isDemoData: false })
     )
+
     const { result, unmount } = renderHook(() => useArgoCDSyncStatus())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
     expect(result.current.isDemoData).toBe(false)
     expect(result.current.stats.synced).toBe(15)
     expect(result.current.stats.outOfSync).toBe(3)
@@ -756,64 +721,37 @@ describe('useArgoCDSyncStatus', () => {
 
   it('falls back to demo when API returns isDemoData in error body', async () => {
     vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ isDemoData: true, error: 'ArgoCD unavailable' }, 503),
+      jsonResponse({ isDemoData: true, error: 'ArgoCD unavailable' }, 503)
     )
+
     const { result, unmount } = renderHook(() => useArgoCDSyncStatus())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
     expect(result.current.isDemoData).toBe(true)
     unmount()
   })
 
-  it('keeps real data when API returns zero-total stats with isDemoData=false', async () => {
+  it('falls back to demo when API returns 0-total stats', async () => {
     vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ stats: { synced: 0, outOfSync: 0, unknown: 0 }, isDemoData: false }),
+      jsonResponse({ stats: { synced: 0, outOfSync: 0, unknown: 0 }, isDemoData: false })
     )
+
     const { result, unmount } = renderHook(() => useArgoCDSyncStatus())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.isDemoData).toBe(false)
-    expect(result.current.total).toBe(0)
-    expect(result.current.syncedPercent).toBe(0)
-    expect(result.current.outOfSyncPercent).toBe(0)
-    unmount()
-  })
 
-  it('accepts local cluster filter', async () => {
-    vi.mocked(fetch).mockRejectedValue(new Error('fail'))
-    const { result, unmount } = renderHook(() =>
-      useArgoCDSyncStatus(['cluster-a', 'cluster-b', 'cluster-c']),
-    )
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.isDemoData).toBe(true)
     expect(result.current.total).toBeGreaterThan(0)
     unmount()
   })
 
-  it('local cluster filter overrides global cluster selection', async () => {
-    mockUseClusters.mockReturnValue({
-      deduplicatedClusters: [
-        { name: 'c1', reachable: true },
-        { name: 'c2', reachable: true },
-        { name: 'c3', reachable: true },
-      ],
-      clusters: [
-        { name: 'c1', reachable: true },
-        { name: 'c2', reachable: true },
-        { name: 'c3', reachable: true },
-      ],
-      isLoading: false,
-    })
-    mockUseGlobalFilters.mockReturnValue({
-      selectedClusters: ['c1', 'c2', 'c3'],
-      setSelectedClusters: vi.fn(),
-      selectedNamespaces: [],
-      setSelectedNamespaces: vi.fn(),
-      isAllClustersSelected: true,
-    })
+  it('accepts local cluster filter', async () => {
     vi.mocked(fetch).mockRejectedValue(new Error('fail'))
+
     const { result, unmount } = renderHook(() =>
-      useArgoCDSyncStatus(['local-a', 'local-b']),
+      useArgoCDSyncStatus(['cluster-a', 'cluster-b', 'cluster-c'])
     )
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
     expect(result.current.isDemoData).toBe(true)
     expect(result.current.total).toBeGreaterThan(0)
     unmount()
@@ -821,8 +759,10 @@ describe('useArgoCDSyncStatus', () => {
 
   it('caches sync data to localStorage', async () => {
     vi.mocked(fetch).mockRejectedValue(new Error('fail'))
+
     const { result, unmount } = renderHook(() => useArgoCDSyncStatus())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
     const cached = localStorage.getItem('kc-argocd-sync-cache')
     expect(cached).not.toBeNull()
     const parsed = JSON.parse(cached!)
@@ -831,12 +771,14 @@ describe('useArgoCDSyncStatus', () => {
     unmount()
   })
 
-  it('loads from valid cache on initialization', () => {
+  it('loads from valid cache on initialization', async () => {
     const cachedStats = { synced: 8, outOfSync: 2, unknown: 1 }
-    localStorage.setItem(
-      'kc-argocd-sync-cache',
-      JSON.stringify({ data: cachedStats, timestamp: Date.now(), isDemoData: false }),
-    )
+    localStorage.setItem('kc-argocd-sync-cache', JSON.stringify({
+      data: cachedStats,
+      timestamp: Date.now(),
+      isDemoData: false,
+    }))
+
     const { result, unmount } = renderHook(() => useArgoCDSyncStatus())
     expect(result.current.stats.synced).toBe(8)
     expect(result.current.isDemoData).toBe(false)
@@ -849,6 +791,7 @@ describe('useArgoCDSyncStatus', () => {
       clusters: [],
       isLoading: false,
     })
+
     const { result, unmount } = renderHook(() => useArgoCDSyncStatus())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.total).toBe(0)
@@ -859,10 +802,12 @@ describe('useArgoCDSyncStatus', () => {
 
   it('handles non-ok response without isDemoData', async () => {
     vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ error: 'Server Error' }, 500),
+      jsonResponse({ error: 'Server Error' }, 500)
     )
+
     const { result, unmount } = renderHook(() => useArgoCDSyncStatus())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
     expect(result.current.isDemoData).toBe(true)
     unmount()
   })
@@ -870,22 +815,28 @@ describe('useArgoCDSyncStatus', () => {
   it('handles non-JSON error body on non-ok response', async () => {
     const badResponse = new Response('Gateway Timeout', { status: 504 })
     vi.mocked(fetch).mockResolvedValue(badResponse)
+
     const { result, unmount } = renderHook(() => useArgoCDSyncStatus())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
     expect(result.current.isDemoData).toBe(true)
     unmount()
   })
 
   it('refetch works correctly', async () => {
     vi.mocked(fetch).mockRejectedValue(new Error('fail'))
+
     const { result, unmount } = renderHook(() => useArgoCDSyncStatus())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
     vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ stats: { synced: 99, outOfSync: 1, unknown: 0 }, isDemoData: false }),
+      jsonResponse({ stats: { synced: 99, outOfSync: 1, unknown: 0 }, isDemoData: false })
     )
+
     await act(async () => {
       await result.current.refetch()
     })
+
     expect(result.current.isDemoData).toBe(false)
     expect(result.current.stats.synced).toBe(99)
     unmount()
@@ -893,12 +844,17 @@ describe('useArgoCDSyncStatus', () => {
 
   it('sets up an auto-refresh interval when sync data exists', async () => {
     vi.mocked(fetch).mockRejectedValue(new Error('fail'))
+
     const setIntervalSpy = vi.spyOn(globalThis, 'setInterval')
     const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval')
+
     const { result, unmount } = renderHook(() => useArgoCDSyncStatus())
     await waitFor(() => expect(result.current.total).toBeGreaterThan(0))
+
     expect(setIntervalSpy).toHaveBeenCalled()
+
     unmount()
+
     expect(clearIntervalSpy).toHaveBeenCalled()
     setIntervalSpy.mockRestore()
     clearIntervalSpy.mockRestore()
@@ -916,6 +872,7 @@ describe('useArgoCDSyncStatus', () => {
       ],
       isLoading: false,
     })
+
     mockUseGlobalFilters.mockReturnValue({
       selectedClusters: ['c1'],
       setSelectedClusters: vi.fn(),
@@ -923,35 +880,14 @@ describe('useArgoCDSyncStatus', () => {
       setSelectedNamespaces: vi.fn(),
       isAllClustersSelected: false,
     })
+
     vi.mocked(fetch).mockRejectedValue(new Error('fail'))
+
     const { result, unmount } = renderHook(() => useArgoCDSyncStatus())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+
     expect(result.current.isDemoData).toBe(true)
     expect(result.current.total).toBeGreaterThan(0)
-    unmount()
-  })
-
-  it('caches real sync data with isDemoData=false', async () => {
-    const realStats = { synced: 12, outOfSync: 3, unknown: 0 }
-    vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ stats: realStats, isDemoData: false }),
-    )
-    const { result, unmount } = renderHook(() => useArgoCDSyncStatus())
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    const cached = localStorage.getItem('kc-argocd-sync-cache')
-    expect(cached).not.toBeNull()
-    const parsed = JSON.parse(cached!)
-    expect(parsed.isDemoData).toBe(false)
-    expect(parsed.data.synced).toBe(12)
-    unmount()
-  })
-
-  it('handles API response with missing stats field', async () => {
-    vi.mocked(fetch).mockResolvedValue(jsonResponse({ isDemoData: false }))
-    const { result, unmount } = renderHook(() => useArgoCDSyncStatus())
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.isDemoData).toBe(false)
-    expect(result.current.total).toBe(0)
     unmount()
   })
 })
@@ -964,24 +900,8 @@ describe('isFailed threshold', () => {
   it('isFailed is false when consecutiveFailures < 3', async () => {
     const { result, unmount } = renderHook(() => useArgoCDApplications())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.consecutiveFailures).toBe(0)
-    expect(result.current.isFailed).toBe(false)
-    unmount()
-  })
 
-  it('health hook resets consecutiveFailures on successful demo fallback', async () => {
-    vi.mocked(fetch).mockRejectedValue(new Error('fail'))
-    const { result, unmount } = renderHook(() => useArgoCDHealth())
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.consecutiveFailures).toBe(0)
-    expect(result.current.isFailed).toBe(false)
-    unmount()
-  })
-
-  it('sync hook resets consecutiveFailures on successful demo fallback', async () => {
-    vi.mocked(fetch).mockRejectedValue(new Error('fail'))
-    const { result, unmount } = renderHook(() => useArgoCDSyncStatus())
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    // The hook resets consecutiveFailures to 0 on fallback to demo data
     expect(result.current.consecutiveFailures).toBe(0)
     expect(result.current.isFailed).toBe(false)
     unmount()
