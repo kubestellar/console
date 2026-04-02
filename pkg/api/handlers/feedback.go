@@ -153,7 +153,7 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	}
 
 	// Create GitHub issue (route to the correct repo)
-	issueNumber, _, err := h.createGitHubIssueInRepo(request, user, h.repoOwner, targetRepoName, input.Screenshots)
+	issueNumber, _, ssResult, err := h.createGitHubIssueInRepo(request, user, h.repoOwner, targetRepoName, input.Screenshots)
 	if err != nil {
 		log.Printf("Failed to create GitHub issue: %v", err)
 		// Clean up the orphaned database record
@@ -181,7 +181,18 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	}
 	h.store.CreateNotification(notification)
 
-	return c.Status(fiber.StatusCreated).JSON(request)
+	// Return the request with screenshot upload status so the frontend can
+	// display an accurate message instead of always claiming success.
+	type createResponse struct {
+		*models.FeatureRequest
+		ScreenshotsUploaded int `json:"screenshots_uploaded"`
+		ScreenshotsFailed   int `json:"screenshots_failed"`
+	}
+	return c.Status(fiber.StatusCreated).JSON(createResponse{
+		FeatureRequest:      request,
+		ScreenshotsUploaded: ssResult.Uploaded,
+		ScreenshotsFailed:   ssResult.Failed,
+	})
 }
 
 // ListFeatureRequests returns the user's feature requests
@@ -1515,7 +1526,14 @@ func (h *FeedbackHandler) handleDeploymentStatus(payload map[string]interface{})
 // If the initial request with labels fails due to insufficient label permissions
 // (HTTP 403 on the "label" resource), the function retries without labels so
 // the issue is still created. Labels can be added later by a maintainer.
-func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest, user *models.User, repoOwner, repoName string, screenshots []string) (int, string, error) {
+// screenshotUploadResult tracks the outcome of screenshot uploads so the
+// frontend can display an accurate status message instead of assuming success.
+type screenshotUploadResult struct {
+	Uploaded int `json:"screenshots_uploaded"`
+	Failed   int `json:"screenshots_failed"`
+}
+
+func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest, user *models.User, repoOwner, repoName string, screenshots []string) (int, string, screenshotUploadResult, error) {
 	// Determine labels based on request type and target repo
 	var labels []string
 	isDocs := request.TargetRepo == models.TargetRepoDocs
@@ -1545,14 +1563,21 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest
 
 	// Upload screenshots to GitHub and build markdown image references
 	screenshotMarkdown := ""
+	var ssResult screenshotUploadResult
 	if len(screenshots) > 0 {
 		var imageLines []string
 		for i, dataURI := range screenshots {
 			url, err := h.uploadScreenshotToGitHub(repoOwner, repoName, request.ID.String(), i, dataURI)
 			if err != nil {
+				ssResult.Failed++
 				log.Printf("[Feedback] Failed to upload screenshot %d: %v", i+1, err)
+				if strings.Contains(err.Error(), "404") {
+					log.Printf("[Feedback] Hint: a 404 from the GitHub Contents API usually means the token lacks 'Contents: Read and write' permission. "+
+						"Ensure FEEDBACK_GITHUB_TOKEN has this scope for %s/%s.", repoOwner, repoName)
+				}
 				continue
 			}
+			ssResult.Uploaded++
 			imageLines = append(imageLines, fmt.Sprintf("![Screenshot %d](%s)", i+1, url))
 		}
 		if len(imageLines) > 0 {
@@ -1585,7 +1610,7 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest
 		number, htmlURL, err = h.postGitHubIssue(repoOwner, repoName, request.Title, issueBody, nil)
 	}
 
-	return number, htmlURL, err
+	return number, htmlURL, ssResult, err
 }
 
 // postGitHubIssue sends a POST request to the GitHub Issues API.

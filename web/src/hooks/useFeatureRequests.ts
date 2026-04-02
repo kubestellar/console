@@ -41,6 +41,10 @@ export interface FeatureRequest {
   closed_by_user?: boolean
   created_at: string
   updated_at?: string
+  /** Number of screenshots successfully uploaded to GitHub (only in create response) */
+  screenshots_uploaded?: number
+  /** Number of screenshots that failed to upload (only in create response) */
+  screenshots_failed?: number
 }
 
 /** Check if a request has been triaged (accepted for review) */

@@ -115,7 +115,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
   const [description, setDescription] = useState('')
   const [descriptionTab, setDescriptionTab] = useState<'write' | 'preview'>('write')
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<{ issueUrl?: string } | null>(null)
+  const [success, setSuccess] = useState<{ issueUrl?: string; screenshotsUploaded?: number; screenshotsFailed?: number } | null>(null)
   const [confirmClose, setConfirmClose] = useState<string | null>(null) // request ID to confirm close
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null) // request ID being acted on
@@ -349,7 +349,11 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
         target_repo: targetRepo,
         ...(hasScreenshots && { screenshots: screenshotDataURIs }),
       }, hasScreenshots ? { timeout: FEEDBACK_UPLOAD_TIMEOUT_MS } : undefined)
-      setSuccess({ issueUrl: result.github_issue_url })
+      setSuccess({
+        issueUrl: result.github_issue_url,
+        screenshotsUploaded: result.screenshots_uploaded,
+        screenshotsFailed: result.screenshots_failed,
+      })
       // Keep the success state visible for 5s so users can read the confirmation and open the issue before switching to the Updates tab
       setTimeout(() => {
         setDescription('')
@@ -1240,13 +1244,27 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
                 </button>
               </div>
 
-              {/* Screenshot upload confirmation */}
-              {screenshots.length > 0 && (
+              {/* Screenshot upload status — show based on actual backend result */}
+              {screenshots.length > 0 && success && (success.screenshotsUploaded ?? 0) > 0 && (
                 <div className="mt-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
                   <p className="text-xs text-green-400 font-medium">
-                    {screenshots.length === 1
+                    {(success.screenshotsUploaded ?? 0) === 1
                       ? 'Screenshot uploaded and attached to the issue.'
-                      : `${screenshots.length} screenshots uploaded and attached to the issue.`}
+                      : `${success.screenshotsUploaded} screenshots uploaded and attached to the issue.`}
+                  </p>
+                </div>
+              )}
+              {screenshots.length > 0 && success && (success.screenshotsFailed ?? 0) > 0 && (success.screenshotsUploaded ?? 0) === 0 && (
+                <div className="mt-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                  <p className="text-xs text-yellow-400 font-medium">
+                    Screenshot could not be uploaded. The issue was created without it. Check that the GitHub token has &quot;Contents: Read and write&quot; permission.
+                  </p>
+                </div>
+              )}
+              {screenshots.length > 0 && success && (success.screenshotsFailed ?? 0) > 0 && (success.screenshotsUploaded ?? 0) > 0 && (
+                <div className="mt-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                  <p className="text-xs text-yellow-400 font-medium">
+                    {success.screenshotsUploaded} of {screenshots.length} screenshots uploaded. {success.screenshotsFailed} failed — check GitHub token permissions.
                   </p>
                 </div>
               )}

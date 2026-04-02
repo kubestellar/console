@@ -50,7 +50,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [success, setSuccess] = useState<{ issueUrl?: string } | null>(null)
+  const [success, setSuccess] = useState<{ issueUrl?: string; screenshotsUploaded?: number; screenshotsFailed?: number } | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const { awardCoins } = useRewards()
   const [screenshots, setScreenshots] = useState<{ file: File; preview: string }[]>([])
@@ -221,7 +221,11 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
 
       // Clear draft on successful submit
       localStorage.removeItem(DRAFT_KEY)
-      setSuccess({ issueUrl: result.github_issue_url })
+      setSuccess({
+        issueUrl: result.github_issue_url,
+        screenshotsUploaded: result.screenshots_uploaded,
+        screenshotsFailed: result.screenshots_failed,
+      })
     } catch (err) {
       console.error('[Screenshot] Failed to submit feedback:', err)
       if (err instanceof Error) {
@@ -366,13 +370,27 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                 </a>
               )}
 
-              {/* Screenshot confirmation */}
-              {screenshots.length > 0 && (
+              {/* Screenshot upload status — show based on actual backend result */}
+              {screenshots.length > 0 && success && (success.screenshotsUploaded ?? 0) > 0 && (
                 <div className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
                   <p className="text-xs text-green-400 font-medium">
-                    {screenshots.length === 1
+                    {(success.screenshotsUploaded ?? 0) === 1
                       ? 'Screenshot uploaded and attached to the issue.'
-                      : `${screenshots.length} screenshots uploaded and attached to the issue.`}
+                      : `${success.screenshotsUploaded} screenshots uploaded and attached to the issue.`}
+                  </p>
+                </div>
+              )}
+              {screenshots.length > 0 && success && (success.screenshotsFailed ?? 0) > 0 && (success.screenshotsUploaded ?? 0) === 0 && (
+                <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                  <p className="text-xs text-yellow-400 font-medium">
+                    Screenshot could not be uploaded. The issue was created without it. Check that the GitHub token has &quot;Contents: Read and write&quot; permission.
+                  </p>
+                </div>
+              )}
+              {screenshots.length > 0 && success && (success.screenshotsFailed ?? 0) > 0 && (success.screenshotsUploaded ?? 0) > 0 && (
+                <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                  <p className="text-xs text-yellow-400 font-medium">
+                    {success.screenshotsUploaded} of {screenshots.length} screenshots uploaded. {success.screenshotsFailed} failed — check GitHub token permissions.
                   </p>
                 </div>
               )}
