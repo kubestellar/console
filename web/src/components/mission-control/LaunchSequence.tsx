@@ -111,13 +111,15 @@ export function LaunchSequence({
           project.kbPath ? [project.kbPath] : undefined,
         )
 
+        const dryRunPrefix = state.isDryRun ? '[DRY RUN] ' : ''
         const clusterContext = `\n\n**Target cluster:** ${clusterName}`
         const missionId = startMission({
-          title: `Install ${project.displayName}`,
-          description: `Automated install of ${project.displayName} as part of Mission Control deployment`,
+          title: `${dryRunPrefix}Install ${project.displayName}`,
+          description: `${state.isDryRun ? 'Dry-run validation' : 'Automated install'} of ${project.displayName} as part of Mission Control deployment`,
           type: 'deploy',
           cluster: clusterName,
           initialPrompt: prompt + clusterContext,
+          dryRun: state.isDryRun,
         })
 
         // Update with missionId
@@ -279,9 +281,9 @@ export function LaunchSequence({
         <h2 className="text-2xl font-bold">
           {allComplete
             ? allSuccess
-              ? 'Mission Complete!'
-              : 'Mission Completed with Issues'
-            : 'Launch Sequence In Progress'}
+              ? state.isDryRun ? 'Dry Run Complete!' : 'Mission Complete!'
+              : state.isDryRun ? 'Dry Run Completed with Issues' : 'Mission Completed with Issues'
+            : state.isDryRun ? 'Dry Run In Progress' : 'Launch Sequence In Progress'}
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
           {allComplete

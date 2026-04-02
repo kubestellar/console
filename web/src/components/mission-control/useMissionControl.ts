@@ -76,6 +76,7 @@ function makeInitialState(persisted?: Partial<MissionControlState> | null): Miss
     phases: persisted?.phases ?? [],
     overlay: persisted?.overlay ?? 'architecture',
     deployMode: persisted?.deployMode ?? 'phased',
+    isDryRun: persisted?.isDryRun ?? false,
     planningMissionId: persisted?.planningMissionId,
     aiStreaming: false,
     launchProgress: persisted?.launchProgress ?? [],
@@ -525,6 +526,10 @@ Order phases by dependency — prerequisites first. Each phase completes before 
     setState((prev) => ({ ...prev, deployMode }))
   }, [])
 
+  const setDryRun = useCallback((isDryRun: boolean) => {
+    setState((prev) => ({ ...prev, isDryRun }))
+  }, [])
+
   // ---------------------------------------------------------------------------
   // Launch
   // ---------------------------------------------------------------------------
@@ -753,6 +758,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
     setPhase,
     setOverlay,
     setDeployMode,
+    setDryRun,
     // Launch
     updateLaunchProgress,
     setGroundControlDashboardId,

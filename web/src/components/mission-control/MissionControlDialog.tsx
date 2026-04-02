@@ -131,7 +131,14 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                 <Rocket className="w-5 h-5" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold">Mission Control</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-lg font-semibold">Mission Control</h1>
+                  {state.isDryRun && (
+                    <span className="px-2 py-0.5 text-2xs font-bold uppercase tracking-wider rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                      DRY RUN
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Multi-Cluster Solutions Orchestrator
                 </p>
@@ -336,7 +343,10 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                     <Button
                       variant="primary"
                       size="sm"
-                      onClick={() => mc.setPhase('launching')}
+                      onClick={() => {
+                        mc.setDryRun(false)
+                        mc.setPhase('launching')
+                      }}
                       className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white border-0 shadow-lg shadow-violet-500/25"
                       icon={<Rocket className="w-4 h-4" />}
                     >
@@ -345,7 +355,10 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => showToast('Dry run mode is not yet available', 'info')}
+                      onClick={() => {
+                        mc.setDryRun(true)
+                        mc.setPhase('launching')
+                      }}
                       icon={<FlaskConical className="w-3.5 h-3.5" />}
                       title="Run against live clusters without deploying — report only"
                     >

@@ -118,6 +118,8 @@ interface StartMissionParams {
   cluster?: string
   initialPrompt: string
   context?: Record<string, unknown>
+  /** When true, injects --dry-run=server instructions into the prompt */
+  dryRun?: boolean
 }
 
 interface SaveMissionParams {
@@ -1019,6 +1021,19 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       } else {
         enhancedPrompt = `Target clusters: ${clusterList.join(', ')}\nIMPORTANT: Perform the following on each cluster using their respective kubectl contexts.\n\n${enhancedPrompt}`
       }
+    }
+
+    // Inject dry-run instructions for server-side validation without actual changes
+    if (params.dryRun) {
+      enhancedPrompt += '\n\nCRITICAL — DRY RUN MODE:\n' +
+        'This is a DRY RUN deployment. You MUST NOT create, modify, or delete any actual resources.\n' +
+        'For every kubectl apply, create, or delete command, append --dry-run=server to perform server-side validation only.\n' +
+        'For every helm install or helm upgrade command, append --dry-run to simulate without installing.\n' +
+        'Report what WOULD be deployed, including:\n' +
+        '- Resources that would be created (with their kinds, names, and namespaces)\n' +
+        '- Any validation errors the server returns\n' +
+        '- Any missing prerequisites (CRDs, namespaces, RBAC)\n' +
+        'Conclude with a summary: "DRY RUN COMPLETE — N resources validated, M errors found."\n'
     }
 
     // Remind the agent that it runs in a non-interactive terminal (no stdin).

@@ -118,6 +118,8 @@ export interface MissionControlState {
   overlay: OverlayMode
   /** Whether to deploy all at once or phased */
   deployMode: 'phased' | 'yolo'
+  /** Whether to use server-side dry-run (no actual resource creation) */
+  isDryRun?: boolean
   /** AI planning mission ID (for the hidden conversation) */
   planningMissionId?: string
   /** Whether AI is currently streaming a response */
