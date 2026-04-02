@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, Pencil, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle, AlertTriangle, Linkedin, Trophy, Monitor, BookOpen, ImagePlus, Trash2, Copy, Maximize2 } from 'lucide-react'
+import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, Pencil, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle, AlertTriangle, Linkedin, Trophy, Monitor, BookOpen, ImagePlus, Trash2, Copy, Maximize2, FileText, Save, RotateCcw } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { StatusBadge } from '../ui/StatusBadge'
-import { BaseModal, ConfirmDialog } from '../../lib/modals'
+import { BaseModal } from '../../lib/modals'
 import {
   useFeatureRequests,
   useNotifications,
@@ -29,6 +29,8 @@ import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { ContributorBanner } from '../rewards/ContributorLadder'
 import { GITHUB_REWARD_LABELS, REWARD_ACTIONS } from '../../types/rewards'
 import type { GitHubContribution } from '../../types/rewards'
+import { useFeedbackDrafts, extractDraftTitle } from '../../hooks/useFeedbackDrafts'
+import type { FeedbackDraft } from '../../hooks/useFeedbackDrafts'
 
 // Time thresholds for relative time formatting
 const MINUTES_PER_HOUR = 60 // Minutes in an hour
@@ -47,7 +49,7 @@ interface FeatureRequestModalProps {
   }
 }
 
-type TabType = 'submit' | 'updates'
+type TabType = 'submit' | 'drafts' | 'updates'
 
 // Format relative time
 function formatRelativeTime(dateString: string | undefined): string {
@@ -95,7 +97,11 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
   const { createRequest, isSubmitting, requests, isLoading: requestsLoading, isRefreshing: requestsRefreshing, refresh: refreshRequests, requestUpdate, closeRequest, isDemoMode: _isDemoMode } = useFeatureRequests(currentGitHubLogin)
   const { notifications, isRefreshing: notificationsRefreshing, refresh: refreshNotifications, getUnreadCountForRequest, markRequestNotificationsAsRead } = useNotifications()
   const { githubRewards, githubPoints, refreshGitHubRewards } = useRewards()
+  const { drafts, draftCount, saveDraft, deleteDraft, clearAllDrafts } = useFeedbackDrafts()
   const [isGitHubRefreshing, setIsGitHubRefreshing] = useState(false)
+  const [editingDraftId, setEditingDraftId] = useState<string | null>(null)
+  const [confirmDeleteDraft, setConfirmDeleteDraft] = useState<string | null>(null)
+  const [showClearAllDrafts, setShowClearAllDrafts] = useState(false)
   const isRefreshing = requestsRefreshing || notificationsRefreshing
 
   // Exclude notifications for closed requests from the unread count
@@ -312,6 +318,39 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
     }
   }
 
+  /** Save current form content as a draft (new or update existing) */
+  const handleSaveDraft = useCallback(() => {
+    if (description.trim().length < 5) {
+      showToast('Draft is too short to save', 'error')
+      return
+    }
+    const id = saveDraft({ requestType, targetRepo, description }, editingDraftId || undefined)
+    if (id) {
+      setEditingDraftId(id)
+      showToast(editingDraftId ? 'Draft updated' : 'Draft saved', 'success')
+    }
+  }, [description, requestType, targetRepo, editingDraftId, saveDraft, showToast])
+
+  /** Restore a draft into the submit form */
+  const handleRestoreDraft = useCallback((draft: FeedbackDraft) => {
+    setRequestType(draft.requestType)
+    setTargetRepo(draft.targetRepo)
+    setDescription(draft.description)
+    setEditingDraftId(draft.id)
+    setActiveTab('submit')
+    showToast('Draft loaded into editor', 'success')
+  }, [showToast])
+
+  /** Delete a draft and remove from editing state if it was active */
+  const handleDeleteDraft = useCallback((id: string) => {
+    deleteDraft(id)
+    if (editingDraftId === id) {
+      setEditingDraftId(null)
+    }
+    setConfirmDeleteDraft(null)
+    showToast('Draft deleted', 'success')
+  }, [deleteDraft, editingDraftId, showToast])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -355,6 +394,11 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
         screenshotsUploaded: result.screenshots_uploaded,
         screenshotsFailed: result.screenshots_failed,
       })
+      // If submitting from a draft, delete it now that it's been submitted
+      if (editingDraftId) {
+        deleteDraft(editingDraftId)
+        setEditingDraftId(null)
+      }
       // Keep the success state visible for 5s so users can read the confirmation and open the issue before switching to the Updates tab
       setTimeout(() => {
         setDescription('')
@@ -389,8 +433,15 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
     setError(null)
     setSuccess(null)
     setScreenshots([])
+    setEditingDraftId(null)
     setActiveTab(initialTab || 'submit')
     onClose()
+  }
+
+  /** Save draft and close the modal */
+  const handleSaveAndClose = () => {
+    handleSaveDraft()
+    forceClose()
   }
 
   const handleClose = () => {
@@ -405,16 +456,47 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
 
   return (
     <BaseModal isOpen={isOpen} onClose={handleClose} size="lg" closeOnBackdrop={false} closeOnEscape={true} className="!h-[80vh]">
-      <ConfirmDialog
-        isOpen={showDiscardConfirm}
-        onClose={() => setShowDiscardConfirm(false)}
-        onConfirm={forceClose}
-        title={t('common:common.discardUnsavedChanges', 'Discard unsaved changes?')}
-        message={t('common:common.discardUnsavedChangesMessage', 'You have unsaved changes that will be lost.')}
-        confirmLabel={t('common:common.discard', 'Discard')}
-        cancelLabel={t('common:common.keepEditing', 'Keep editing')}
-        variant="warning"
-      />
+      {/* Discard/Save Draft confirmation — 3-way choice: Save Draft, Discard, Keep Editing */}
+      {showDiscardConfirm && (
+        <div className="fixed inset-0 z-[10002] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-background border border-border rounded-lg shadow-xl p-6 max-w-sm w-full mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-yellow-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground">
+                {t('common:common.discardUnsavedChanges', 'Unsaved changes')}
+              </h3>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              You have unsaved content. Would you like to save it as a draft for later?
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={handleSaveAndClose}
+                className="w-full px-4 py-2 text-sm rounded-lg bg-purple-500 hover:bg-purple-600 text-white transition-colors flex items-center justify-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                Save Draft & Close
+              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={forceClose}
+                  className="flex-1 px-4 py-2 text-sm rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors"
+                >
+                  {t('common:common.discard', 'Discard')}
+                </button>
+                <button
+                  onClick={() => setShowDiscardConfirm(false)}
+                  className="flex-1 px-4 py-2 text-sm rounded-lg border border-border hover:bg-secondary/50 text-foreground transition-colors"
+                >
+                  {t('common:common.keepEditing', 'Keep editing')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Login Prompt Dialog */}
       {showLoginPrompt && (
         <>
@@ -591,6 +673,21 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
               {t('feedback.submit')}
             </button>
             <button
+              onClick={() => setActiveTab('drafts')}
+              className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                activeTab === 'drafts'
+                  ? 'text-foreground border-b-2 border-purple-500'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Drafts
+              {draftCount > 0 && (
+                <span className="min-w-5 h-5 px-1 text-xs rounded-full bg-orange-500 text-white flex items-center justify-center">
+                  {draftCount}
+                </span>
+              )}
+            </button>
+            <button
               onClick={() => setActiveTab('updates')}
               className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
                 activeTab === 'updates'
@@ -624,7 +721,143 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
 
       {/* Content - scrollable area with fixed flex layout */}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        {activeTab === 'updates' ? (
+        {activeTab === 'drafts' ? (
+          /* Drafts Tab — list saved drafts with restore/delete actions */
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            {/* Drafts header */}
+            <div className="p-2 border-b border-border/50 flex items-center justify-between flex-shrink-0">
+              <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">
+                Saved Drafts ({draftCount})
+              </span>
+              {draftCount > 1 && (
+                showClearAllDrafts ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground">Delete all?</span>
+                    <button
+                      onClick={() => { clearAllDrafts(); setShowClearAllDrafts(false); showToast('All drafts deleted', 'success') }}
+                      className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                    >
+                      Confirm
+                    </button>
+                    <button
+                      onClick={() => setShowClearAllDrafts(false)}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowClearAllDrafts(true)}
+                    className="text-xs text-muted-foreground hover:text-red-400 flex items-center gap-1 transition-colors"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Clear All
+                  </button>
+                )
+              )}
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              {draftCount === 0 ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No saved drafts</p>
+                  <p className="text-xs mt-1">
+                    Save your work-in-progress bug reports and feature requests here
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('submit')}
+                    className="mt-3 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                  >
+                    Start writing a new report
+                  </button>
+                </div>
+              ) : (
+                [...drafts].reverse().map(draft => {
+                  const title = extractDraftTitle(draft.description)
+                  const isEditing = editingDraftId === draft.id
+                  const isConfirmingDelete = confirmDeleteDraft === draft.id
+                  return (
+                    <div
+                      key={draft.id}
+                      className={`p-3 border-b border-border/50 hover:bg-secondary/30 transition-colors ${
+                        isEditing ? 'bg-purple-500/5 border-l-2 border-l-purple-500' : ''
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`px-1.5 py-0.5 text-2xs font-medium rounded ${
+                              draft.requestType === 'bug' ? 'bg-red-500/20 text-red-400' : 'bg-purple-500/20 text-purple-400'
+                            }`}>
+                              {draft.requestType === 'bug' ? 'Bug' : 'Feature'}
+                            </span>
+                            <span className={`px-1.5 py-0.5 text-2xs font-medium rounded ${
+                              draft.targetRepo === 'docs' ? 'bg-amber-500/20 text-amber-400' : 'bg-blue-500/20 text-blue-400'
+                            }`}>
+                              {draft.targetRepo === 'docs' ? 'Docs' : 'Console'}
+                            </span>
+                            {isEditing && (
+                              <StatusBadge color="purple" size="xs">Editing</StatusBadge>
+                            )}
+                          </div>
+                          <p className="text-sm font-medium text-foreground mt-1 truncate">
+                            {draft.requestType === 'bug' ? 'Bug: ' : 'Feature: '}{title}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              Saved {formatRelativeTime(draft.updatedAt)}
+                            </span>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
+                            {isConfirmingDelete ? (
+                              <>
+                                <span className="text-xs text-muted-foreground">Delete this draft?</span>
+                                <button
+                                  onClick={() => handleDeleteDraft(draft.id)}
+                                  className="px-2 py-1 text-xs rounded bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors"
+                                >
+                                  Confirm
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDeleteDraft(null)}
+                                  className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-muted-foreground transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => handleRestoreDraft(draft)}
+                                  className="px-2 py-1 text-xs rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-colors flex items-center gap-1"
+                                >
+                                  <RotateCcw className="w-3 h-3" />
+                                  {isEditing ? 'Reload' : 'Edit'}
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDeleteDraft(draft.id)}
+                                  className="px-2 py-1 text-xs rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-1"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  Delete
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
+        ) : activeTab === 'updates' ? (
           /* Updates Tab — unified scrollable view */
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               {/* Contributor banner — coins + level + progress */}
@@ -1303,6 +1536,26 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
                   </div>
                 )}
 
+                {/* Editing draft banner */}
+                {editingDraftId && (
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                    <FileText className="w-4 h-4 text-orange-400 flex-shrink-0" />
+                    <span className="text-xs text-orange-400">Editing a saved draft</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingDraftId(null)
+                        setDescription('')
+                        setRequestType(initialRequestType || 'bug')
+                        setTargetRepo('console')
+                      }}
+                      className="ml-auto text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+
                 {/* Type Selection */}
                 <div className="flex gap-2">
                   <button
@@ -1578,6 +1831,19 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
             >
               Cancel
             </Button>
+            {/* Save Draft button — visible when description has content */}
+            {description.trim().length >= 5 && (
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                disabled={isSubmitting}
+                className="px-3 py-2 text-sm rounded-lg border border-orange-500/30 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                title={editingDraftId ? 'Update saved draft' : 'Save as draft for later'}
+              >
+                <Save className="w-3.5 h-3.5" />
+                {editingDraftId ? 'Update Draft' : 'Save Draft'}
+              </button>
+            )}
             {canPerformActions ? (
               <button
                 type="submit"
@@ -1611,6 +1877,26 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
               </button>
             )}
           </>
+        ) : activeTab === 'drafts' ? (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab('submit')}
+              className="px-3 py-2 text-sm rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-colors flex items-center gap-1.5"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              New Report
+            </button>
+            <Button
+              variant="secondary"
+              size="lg"
+              type="button"
+              onClick={handleClose}
+              className="border border-border"
+            >
+              Close
+            </Button>
+          </div>
         ) : (
           <Button
             variant="secondary"
