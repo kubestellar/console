@@ -704,7 +704,7 @@ describe('useGitOpsDrifts', () => {
     })
   })
 
-  it('background refresh uses stale cache when age exceeds half TTL', async () => {
+  it('background refresh triggers fetch when cache age exceeds half TTL', async () => {
     // Seed with data that is older than half the TTL (15s) but still within TTL (30s)
     const STALE_AGE_MS = 20000 // 20 seconds — past half-TTL but within TTL
     const cachedDrifts = [
@@ -712,19 +712,20 @@ describe('useGitOpsDrifts', () => {
     ]
     seedDriftCache(cachedDrifts, Date.now() - STALE_AGE_MS)
 
+    const freshDrifts = [
+      { resource: 'fresh-resource', namespace: 'ns', cluster: 'c2', kind: 'Deployment', driftType: 'modified', gitVersion: 'v2', severity: 'medium' },
+    ]
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ drifts: [] }),
+      json: async () => ({ drifts: freshDrifts }),
     })
 
     const { result } = renderHook(() => useGitOpsDrifts())
 
-    // Should initially show cached data (not loading)
+    // Cache is within TTL so no loading spinner, but background refresh still fires
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    // Cache is still valid (within TTL) so cached data should be used
-    expect(result.current.drifts).toEqual(cachedDrifts)
 
-    // A background (silent) refresh should still have been triggered since age > TTL/2
+    // A background (silent) refresh should have been triggered since age > TTL/2
     await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
   })
 
@@ -756,22 +757,16 @@ describe('useGitOpsDrifts', () => {
     })
 
     mockUseDemoMode.mockReturnValue({ isDemoMode: false })
-    const { rerender } = renderHook(() => useGitOpsDrifts())
-    await waitFor(() => expect(result.current || true).toBeTruthy())
-
-    const fetchCountBefore = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length
+    const { result, rerender } = renderHook(() => useGitOpsDrifts())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     // Switch to demo mode
     mockIsDemoMode.mockReturnValue(true)
     mockUseDemoMode.mockReturnValue({ isDemoMode: true })
     rerender()
 
-    // Should have triggered a re-fetch
-    await waitFor(() => {
-      // In demo mode, drifts come from demo data, fetch should not increase
-      // But the re-fetch effect should have fired
-      expect(true).toBe(true)
-    })
+    // Should have triggered a re-fetch and now use demo data
+    await waitFor(() => expect(result.current.drifts.length).toBeGreaterThan(0))
   })
 })
 

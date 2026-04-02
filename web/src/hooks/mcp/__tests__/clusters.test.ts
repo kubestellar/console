@@ -1335,9 +1335,11 @@ describe('useClusterHealth — additional branch coverage', () => {
     const { result } = renderHook(() => useClusterHealth(undefined))
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    // With undefined cluster, isDemoMode returns demo health with cluster='default'
-    // But the hook early-returns for undefined cluster before hitting demo path
-    expect(result.current.health).toBeNull()
+    // In demo mode, even undefined cluster gets demo health with cluster='default'
+    // because the demo check runs before the !cluster early-return
+    expect(result.current.health?.cluster).toBe('default')
+    expect(result.current.health?.nodeCount).toBe(3)
+    expect(result.current.health?.podCount).toBe(45)
   })
 
   it('handles known cluster eks-prod-us-east-1 demo data correctly', async () => {

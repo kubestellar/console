@@ -123,6 +123,9 @@ describe('useMissionSuggestions', () => {
     mockClusters.mockReturnValue({ clusters: [] })
     mockNodes.mockReturnValue({ nodes: [] })
     mockPods.mockReturnValue({ pods: [] })
+    // Reset snooze/dismiss mocks
+    mockIsSnoozed.mockImplementation(() => false)
+    mockIsDismissed.mockImplementation(() => false)
   })
 
   afterEach(() => {

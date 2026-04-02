@@ -235,7 +235,7 @@ describe('useModalNavigation', () => {
   // -------------------------------------------------------------------------
 
   it('does not handle Backspace when target is contentEditable', () => {
-    renderHook(() =>
+    const { result } = renderHook(() =>
       useModalNavigation({
         isOpen: true,
         onClose,
@@ -244,15 +244,24 @@ describe('useModalNavigation', () => {
       })
     )
 
-    const div = createContentEditable()
-    div.focus()
+    // jsdom does not implement isContentEditable on DOM elements, so we
+    // create a real HTMLElement and patch isContentEditable onto it so
+    // the source code's `instanceof HTMLElement && e.target.isContentEditable`
+    // check passes correctly.
+    const div = document.createElement('div')
+    Object.defineProperty(div, 'isContentEditable', { value: true })
+    document.body.appendChild(div)
+
     const event = new KeyboardEvent('keydown', {
       key: 'Backspace',
       bubbles: true,
       cancelable: true,
     })
     Object.defineProperty(event, 'target', { value: div })
-    window.dispatchEvent(event)
+
+    // Call the handler directly since the window listener receives the
+    // event with target=window, not the element.
+    result.current.handleKeyDown(event)
 
     expect(onBack).not.toHaveBeenCalled()
   })

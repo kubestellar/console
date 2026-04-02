@@ -17,7 +17,7 @@ vi.mock('../../lib/auth', () => ({
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 10_000,
-  POLL_INTERVAL_MS: 30_000,
+  POLL_INTERVAL_MS: 60_000_000, // Very large so interval never fires during tests
 }))
 
 import { usePersistence, useShouldUsePersistence } from '../usePersistence'
@@ -46,32 +46,22 @@ const mockStatusResponse: PersistenceStatus = {
   message: 'All systems operational',
 }
 
-function mockFetchSuccess(data: unknown, status = 200) {
-  return vi.fn().mockResolvedValue({
-    ok: status >= 200 && status < 300,
-    status,
-    json: () => Promise.resolve(data),
-  })
-}
-
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe('usePersistence', () => {
   beforeEach(() => {
-    vi.useFakeTimers()
     vi.clearAllMocks()
     mockAgentStatus = 'connected'
     mockToken = 'real-token-123'
     // Default: config returns enabled config, status returns active
     global.fetch = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockConfigResponse) }) // fetchConfig
-      .mockResolvedValue({ ok: true, json: () => Promise.resolve(mockStatusResponse) }) // fetchStatus
+      .mockResolvedValue({ ok: true, json: () => Promise.resolve(mockStatusResponse) }) // fetchStatus (any subsequent call)
   })
 
   afterEach(() => {
-    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
@@ -81,7 +71,6 @@ describe('usePersistence', () => {
 
   it('starts in a loading state', () => {
     const { result } = renderHook(() => usePersistence())
-    // loading should be true initially (before the fetch resolves)
     expect(result.current.loading).toBe(true)
   })
 
@@ -176,7 +165,7 @@ describe('usePersistence', () => {
     const updatedConfig = { ...mockConfigResponse, namespace: 'new-ns' }
     global.fetch = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockConfigResponse) }) // initial fetchConfig
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockStatusResponse) }) // initial fetchStatus (from enabled config)
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockStatusResponse) }) // initial fetchStatus
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(updatedConfig) }) // updateConfig PUT
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockStatusResponse) }) // fetchStatus after update
 
@@ -197,12 +186,12 @@ describe('usePersistence', () => {
   })
 
   // -------------------------------------------------------------------------
-  // 8. Update config failure
+  // 8. Update config failure (non-ok response)
   // -------------------------------------------------------------------------
 
   it('sets error when updateConfig returns non-ok', async () => {
     global.fetch = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockConfigResponse) }) // initial
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockConfigResponse) }) // initial config
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockStatusResponse) }) // initial status
       .mockResolvedValueOnce({
         ok: false,
@@ -249,8 +238,8 @@ describe('usePersistence', () => {
 
   it('enablePersistence sets enabled=true with cluster and options', async () => {
     global.fetch = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ ...mockConfigResponse, enabled: false }) }) // initial
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockConfigResponse) }) // PUT
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ ...mockConfigResponse, enabled: false }) }) // initial config
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockConfigResponse) }) // PUT response
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockStatusResponse) }) // status refresh
 
     const { result } = renderHook(() => usePersistence())
@@ -281,7 +270,7 @@ describe('usePersistence', () => {
 
   it('disablePersistence sets enabled=false', async () => {
     global.fetch = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockConfigResponse) }) // initial
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockConfigResponse) }) // initial config
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockStatusResponse) }) // initial status
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ ...mockConfigResponse, enabled: false }) }) // PUT
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ ...mockStatusResponse, active: false }) }) // status
@@ -306,7 +295,7 @@ describe('usePersistence', () => {
 
   it('testConnection returns health info on success', async () => {
     global.fetch = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockConfigResponse) }) // initial
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockConfigResponse) }) // initial config
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockStatusResponse) }) // initial status
       .mockResolvedValueOnce({
         ok: true,
@@ -351,7 +340,7 @@ describe('usePersistence', () => {
 
   it('testConnection returns fallback on network error', async () => {
     global.fetch = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockConfigResponse) }) // initial
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockConfigResponse) }) // initial config
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockStatusResponse) }) // initial status
       .mockRejectedValueOnce(new Error('Network error')) // test connection
 
@@ -419,12 +408,10 @@ describe('usePersistence', () => {
   it('exposes computed properties from config and status', async () => {
     global.fetch = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockConfigResponse) })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockStatusResponse) })
+      .mockResolvedValue({ ok: true, json: () => Promise.resolve(mockStatusResponse) })
 
     const { result } = renderHook(() => usePersistence())
-    await waitFor(() => expect(result.current.loading).toBe(false))
 
-    // Wait for status to be fetched as well (from the interval effect)
     await waitFor(() => {
       expect(result.current.isEnabled).toBe(true)
     })
@@ -454,8 +441,8 @@ describe('usePersistence', () => {
 
   it('sets generic error on updateConfig network failure', async () => {
     global.fetch = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockConfigResponse) }) // initial
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockStatusResponse) }) // status
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockConfigResponse) }) // initial config
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockStatusResponse) }) // initial status
       .mockRejectedValueOnce(new Error('Connection refused')) // PUT
 
     const { result } = renderHook(() => usePersistence())
@@ -477,8 +464,8 @@ describe('usePersistence', () => {
   it('enablePersistence uses defaults for namespace and syncMode', async () => {
     global.fetch = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ ...mockConfigResponse, enabled: false }) })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockConfigResponse) }) // PUT
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockStatusResponse) }) // status
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockConfigResponse) }) // PUT response
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockStatusResponse) }) // status refresh
 
     const { result } = renderHook(() => usePersistence())
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -514,7 +501,7 @@ describe('useShouldUsePersistence', () => {
   it('returns true when enabled AND active', async () => {
     global.fetch = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockConfigResponse) })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockStatusResponse) })
+      .mockResolvedValue({ ok: true, json: () => Promise.resolve(mockStatusResponse) })
 
     const { result } = renderHook(() => useShouldUsePersistence())
 
