@@ -2006,7 +2006,7 @@ describe('tryChunkReloadRecovery — reload throttle', () => {
 
   it('triggers reload when no recent reload exists', () => {
     const CHUNK_RELOAD_TS_KEY = 'chunk-reload-ts'
-    const GLOBAL_RELOAD_THROTTLE_MS = 30000
+    const GLOBAL_RELOAD_THROTTLE_MS = 5000
     const msg = 'Failed to fetch dynamically imported module /assets/foo.js'
 
     // Simulate isChunkLoadMessage
@@ -2025,8 +2025,8 @@ describe('tryChunkReloadRecovery — reload throttle', () => {
 
   it('skips reload when recent reload is within throttle window', () => {
     const CHUNK_RELOAD_TS_KEY = 'chunk-reload-ts'
-    const GLOBAL_RELOAD_THROTTLE_MS = 30000
-    const recentTs = String(Date.now() - 5000) // 5s ago — within throttle
+    const GLOBAL_RELOAD_THROTTLE_MS = 5000
+    const recentTs = String(Date.now() - 2000) // 2s ago — within throttle
 
     sessionStorage.setItem(CHUNK_RELOAD_TS_KEY, recentTs)
 
@@ -2043,8 +2043,8 @@ describe('tryChunkReloadRecovery — reload throttle', () => {
 
   it('allows reload when last reload exceeds throttle window', () => {
     const CHUNK_RELOAD_TS_KEY = 'chunk-reload-ts'
-    const GLOBAL_RELOAD_THROTTLE_MS = 30000
-    const oldTs = String(Date.now() - GLOBAL_RELOAD_THROTTLE_MS - 1000) // 31s ago
+    const GLOBAL_RELOAD_THROTTLE_MS = 5000
+    const oldTs = String(Date.now() - GLOBAL_RELOAD_THROTTLE_MS - 1000) // 6s ago
 
     sessionStorage.setItem(CHUNK_RELOAD_TS_KEY, oldTs)
 

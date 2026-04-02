@@ -33,6 +33,12 @@ export function isChunkLoadMessage(msg: string): boolean {
     // Safari/WebKit uses this message for failed dynamic import()
     msg.includes('Importing a module script failed') ||
     // safeLazy() throws this when a named export is missing from a stale chunk
-    msg.includes('chunk may be stale')
+    msg.includes('chunk may be stale') ||
+    // Generic fetch failure — often occurs when a chunk 404s on the CDN
+    msg.includes('Failed to fetch') ||
+    // Network error variant seen in Firefox for missing chunks
+    msg.includes('NetworkError when attempting to fetch resource') ||
+    // Chrome: TypeError when dynamic import() receives a non-JS response (e.g. 404 HTML)
+    msg.includes("Unexpected token '<'")
   )
 }

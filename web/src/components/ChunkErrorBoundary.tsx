@@ -4,8 +4,8 @@ import i18next from 'i18next'
 import { emitError, emitChunkReloadRecoveryFailed, markErrorReported } from '../lib/analytics'
 import { isChunkLoadError, CHUNK_RELOAD_TS_KEY } from '../lib/chunkErrors'
 
-// Reload throttle interval in milliseconds to prevent infinite reload loops
-const RELOAD_THROTTLE_MS = 30_000 // 30 seconds
+/** Reload throttle interval in milliseconds to prevent infinite reload loops */
+const RELOAD_THROTTLE_MS = 5_000 // 5 seconds — fast enough for back-to-back deploys
 
 interface Props {
   children: ReactNode

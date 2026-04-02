@@ -59,6 +59,14 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
+    // Inject build commit hash into the HTML <meta name="app-build-id"> tag
+    // so the stale-HTML detection script can compare against the server.
+    {
+      name: 'inject-build-id',
+      transformIndexHtml(html) {
+        return html.replace('__COMMIT_HASH__', process.env.VITE_COMMIT_HASH || getGitCommitHash())
+      },
+    },
     // Pre-compress assets at build time — avoids chunked encoding on slow networks
     compression({ algorithm: 'gzip', exclude: [/\.(br)$/], threshold: 1024 }),
     compression({ algorithm: 'brotliCompress', exclude: [/\.(gz)$/], threshold: 1024 }),

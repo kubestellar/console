@@ -30,7 +30,8 @@ import { prefetchTopDashboards } from './lib/dashboardVisits'
 // Vite fires `vite:preloadError` before React error boundaries see the error.
 // Auto-reload once to pick up fresh HTML with correct chunk references.
 const CHUNK_RELOAD_KEY = 'chunk-reload-ts'
-const CHUNK_RELOAD_COOLDOWN_MS = 30_000
+/** Cooldown between auto-reloads to prevent infinite reload loops on persistent errors */
+const CHUNK_RELOAD_COOLDOWN_MS = 5_000
 window.addEventListener('vite:preloadError', (event) => {
   const lastReload = sessionStorage.getItem(CHUNK_RELOAD_KEY)
   const now = Date.now()
@@ -41,6 +42,56 @@ window.addEventListener('vite:preloadError', (event) => {
     window.location.reload()
   }
 })
+
+// ── Proactive stale-HTML detection ───────────────────────────────────────
+// On visibility change (user returns to tab) or periodic interval, fetch
+// index.html and compare the app-build-id <meta> tag. If the server has a
+// newer build, reload immediately to pick up correct chunk references.
+const STALE_CHECK_INTERVAL_MS = 120_000 // check every 2 minutes
+const STALE_CHECK_KEY = 'stale-check-ts'
+
+function getLocalBuildId(): string | null {
+  const meta = document.querySelector('meta[name="app-build-id"]')
+  return meta?.getAttribute('content') ?? null
+}
+
+async function checkForStaleHtml(): Promise<void> {
+  // Throttle: at most once per interval
+  const lastCheck = sessionStorage.getItem(STALE_CHECK_KEY)
+  const now = Date.now()
+  if (lastCheck && now - parseInt(lastCheck) < STALE_CHECK_INTERVAL_MS) return
+  sessionStorage.setItem(STALE_CHECK_KEY, String(now))
+
+  const localId = getLocalBuildId()
+  if (!localId) return // dev mode or missing meta — skip
+
+  try {
+    const resp = await fetch('/?_stale_check=' + now, {
+      cache: 'no-store',
+      headers: { Accept: 'text/html' },
+    })
+    if (!resp.ok) return
+    const html = await resp.text()
+    const match = html.match(/meta\s+name="app-build-id"\s+content="([^"]+)"/)
+    if (match && match[1] !== localId) {
+      // Server has a newer build — force reload
+      sessionStorage.setItem(CHUNK_RELOAD_KEY, String(now))
+      window.location.reload()
+    }
+  } catch {
+    // Network error — skip silently
+  }
+}
+
+// Check when user returns to the tab (common scenario: deploy happened while tab was backgrounded)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    checkForStaleHtml()
+  }
+})
+
+// Also check on a periodic interval for long-lived tabs
+setInterval(checkForStaleHtml, STALE_CHECK_INTERVAL_MS)
 
 // Suppress recharts dimension warnings (these occur when charts render before container is sized)
 const originalWarn = console.warn

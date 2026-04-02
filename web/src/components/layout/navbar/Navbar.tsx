@@ -1,7 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Sun, Moon, Monitor, Menu, X, MoreVertical, ExternalLink } from 'lucide-react'
+import { Sun, Moon, Monitor, Menu, X, MoreVertical, ExternalLink, Sparkles } from 'lucide-react'
 import { useAuth } from '../../../lib/auth'
 import { useSidebarConfig } from '../../../hooks/useSidebarConfig'
 import { useTheme } from '../../../hooks/useTheme'
@@ -23,6 +23,7 @@ const SearchDropdown = lazy(() =>
 const AgentSelector = lazy(() =>
   import('../../agent/AgentSelector').then(m => ({ default: m.AgentSelector }))
 )
+import { useMissions } from '../../../hooks/useMissions'
 import { TokenUsageWidget } from './TokenUsageWidget'
 import { ClusterFilterPanel } from './ClusterFilterPanel'
 import { AgentStatusIndicator } from './AgentStatusIndicator'
@@ -46,6 +47,10 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
   const { isMobile } = useMobile()
   const { t } = useTranslation()
   const branding = useBranding()
+  const { missions, isSidebarOpen, openSidebar } = useMissions()
+  const missionsNeedingAttention = missions.filter(m =>
+    m.status === 'waiting_input' || m.status === 'failed'
+  ).length
 
   // Close mobile more menu on route change
   useEffect(() => {
@@ -127,6 +132,24 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
           {/* Update Indicator */}
           <UpdateIndicator />
 
+          {/* AI Missions — opens the mission sidebar */}
+          {!isSidebarOpen && (
+            <button
+              onClick={openSidebar}
+              className="relative flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20"
+              aria-label={t('missionSidebar.openAIMissions')}
+              title={t('missionSidebar.openAIMissions')}
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>{t('missionSidebar.aiMissions')}</span>
+              {missionsNeedingAttention > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-purple-500 text-white rounded-full animate-pulse">
+                  {missionsNeedingAttention}
+                </span>
+              )}
+            </button>
+          )}
+
           {/* Visit Streak */}
           <StreakBadge />
 
@@ -205,7 +228,24 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
                     <div className="border-t border-border mx-3 my-1" />
                   </div>
 
-                  {/* Items hidden at <lg (1024px): update, token usage, feature request, tour */}
+                  {/* Items hidden at <lg (1024px): AI missions, update, token usage, feature request, tour */}
+                  {!isSidebarOpen && (
+                    <div className="px-3 py-2">
+                      <button
+                        onClick={() => { openSidebar(); setShowMobileMore(false) }}
+                        className="relative flex items-center gap-2 w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors bg-purple-500/10 hover:bg-purple-500/20 text-purple-400"
+                        aria-label={t('missionSidebar.openAIMissions')}
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        <span>{t('missionSidebar.aiMissions')}</span>
+                        {missionsNeedingAttention > 0 && (
+                          <span className="flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-purple-500 text-white rounded-full animate-pulse">
+                            {missionsNeedingAttention}
+                          </span>
+                        )}
+                      </button>
+                    </div>
+                  )}
                   <div className="px-3 py-2">
                     <UpdateIndicator />
                   </div>

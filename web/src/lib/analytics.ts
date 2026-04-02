@@ -1042,7 +1042,8 @@ function checkChunkReloadRecovery() {
 }
 
 // Reload throttle interval — must match ChunkErrorBoundary to prevent loops
-const GLOBAL_RELOAD_THROTTLE_MS = 30_000 // 30 seconds
+/** Global throttle for chunk-error auto-reload — 5s is fast enough for back-to-back deploys */
+const GLOBAL_RELOAD_THROTTLE_MS = 5_000
 
 /**
  * If the error message indicates a stale-chunk failure, auto-reload once

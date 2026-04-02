@@ -41,6 +41,18 @@ describe('isChunkLoadMessage', () => {
     expect(isChunkLoadMessage('Export "Foo" not found in module — chunk may be stale')).toBe(true)
   })
 
+  it('detects generic "Failed to fetch"', () => {
+    expect(isChunkLoadMessage('Failed to fetch')).toBe(true)
+  })
+
+  it('detects Firefox NetworkError for missing chunks', () => {
+    expect(isChunkLoadMessage('NetworkError when attempting to fetch resource')).toBe(true)
+  })
+
+  it('detects "Unexpected token \'<\'" from HTML returned for missing chunk', () => {
+    expect(isChunkLoadMessage("Unexpected token '<'")).toBe(true)
+  })
+
   it('returns false for unrelated errors', () => {
     expect(isChunkLoadMessage('TypeError: Cannot read properties of null')).toBe(false)
     expect(isChunkLoadMessage('')).toBe(false)
