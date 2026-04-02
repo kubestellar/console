@@ -473,7 +473,7 @@ export async function initCacheWorker(): Promise<CacheWorkerRpc> {
     cacheStorage = new WorkerStorage(rpc)
     return rpc
   } catch (e) {
-    console.error('[Cache] SQLite Worker failed, using IndexedDB fallback:', e)
+    console.warn('[Cache] SQLite Worker unavailable, using IndexedDB fallback:', e)
     // Reuse the existing _idbStorage instance so that the snapshot hydrated by
     // preloadAll() remains consistent with the active storage backend.
     cacheStorage = _idbStorage

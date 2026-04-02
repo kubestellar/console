@@ -165,7 +165,7 @@ enableMocking()
         const { meta } = await rpc.preloadAll()
         initPreloadedMeta(meta)
       } catch (e) {
-        console.error('[Cache] SQLite worker init failed, using IndexedDB fallback:', e)
+        console.warn('[Cache] SQLite worker init: using IndexedDB fallback:', e)
         try { await migrateFromLocalStorage() } catch { /* ignore */ }
       }
     })()

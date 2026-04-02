@@ -64,7 +64,7 @@ async function initDatabase(): Promise<void> {
       // WAL may not be supported on all VFS backends
     }
   } catch (e) {
-    console.error('[CacheWorker] Failed to initialize SQLite:', e)
+    console.warn('[CacheWorker] SQLite OPFS unavailable, falling back to IndexedDB:', e)
     throw e
   }
 }
@@ -375,7 +375,7 @@ initDatabase()
   })
   .catch((e) => {
     const reason = e instanceof Error ? e.message : String(e)
-    console.error('[CacheWorker] Init failed:', e)
+    console.warn('[CacheWorker] Init using IndexedDB fallback:', e)
     // Reject all queued messages so callers aren't left waiting
     for (const queued of pendingMessages) {
       respondError(queued.id, `Worker init failed: ${reason}`)
