@@ -40,9 +40,7 @@ function pass(msg) {
 // replace occurrences in vendor code, turning `console.log(...)` into
 // `undefined(...)` → `TypeError: (void 0) is not a function` at runtime.
 
-const vendorFiles = allFiles.filter(
-  (name) => name.startsWith('vendor-') && name.endsWith('.js'),
-)
+const vendorFiles = allFiles.filter((name) => name.endsWith('.js'))
 
 let defineCorrupted = false
 for (const file of vendorFiles) {
@@ -67,20 +65,23 @@ const CRITICAL_PREFIXES = ['index-', 'vendor-', 'react-vendor-']
 /** Minimum size in bytes — anything below this is likely an empty/broken chunk */
 const MIN_CHUNK_SIZE_BYTES = 1_000
 
+let check2Failed = false
 for (const prefix of CRITICAL_PREFIXES) {
   const chunk = allFiles.find(
     (name) => name.startsWith(prefix) && name.endsWith('.js'),
   )
   if (!chunk) {
     fail(`Missing critical chunk: ${prefix}*.js`)
+    check2Failed = true
     continue
   }
   const size = statSync(join(ASSETS_DIR, chunk)).size
   if (size < MIN_CHUNK_SIZE_BYTES) {
     fail(`${chunk} is suspiciously small (${size} bytes) — likely broken`)
+    check2Failed = true
   }
 }
-if (!failed || defineCorrupted) pass('Critical chunks present and non-empty')
+if (!check2Failed) pass('Critical chunks present and non-empty')
 
 // ── Check 3: MSW not leaked into non-demo builds ────────────────────────
 // In demo mode (VITE_DEMO_MODE=true), MSW is expected. But if it somehow
@@ -93,12 +94,16 @@ const indexChunk = allFiles.find(
 )
 if (indexChunk) {
   const indexContent = readFileSync(join(ASSETS_DIR, indexChunk), 'utf8')
-  // The MSW import should be behind a dynamic import() — not statically bundled.
-  // If `setupWorker` appears directly in the index chunk, MSW was statically imported.
-  if (indexContent.includes('setupWorker') && !indexContent.includes('import(')) {
+  // Detect MSW being statically bundled by looking for MSW-specific module
+  // identifiers. A dynamic import would keep these out of the index chunk.
+  // Note: the string 'mockServiceWorker' is a legitimate URL reference and is
+  // NOT a reliable signal — only the actual MSW API symbols indicate static bundling.
+  const mswSignals = ['msw/browser', 'setupWorker']
+  const leaked = mswSignals.filter((sig) => indexContent.includes(sig))
+  if (leaked.length > 0) {
     fail(
-      `MSW \`setupWorker\` is statically bundled in ${indexChunk}. ` +
-      `It must be behind a dynamic import() so it only loads in demo mode.`,
+      `MSW identifiers (${leaked.join(', ')}) found statically in ${indexChunk}. ` +
+      `MSW must be behind a dynamic import() so it only loads in demo mode.`,
     )
   } else {
     pass('MSW is not statically bundled in index chunk')
