@@ -21,6 +21,7 @@ import { emitFeedbackSubmitted, emitLinkedInShare, emitScreenshotAttached, emitS
 import { useBranding } from '../../hooks/useBranding'
 import { FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
 import { FEEDBACK_UPLOAD_TIMEOUT_MS } from '../../lib/constants/network'
+import { GITHUB_TOKEN_MANAGE_URL, GITHUB_TOKEN_FINE_GRAINED_PERMISSIONS, GITHUB_TOKEN_CLASSIC_SCOPE } from '../../lib/constants/github-token'
 import { useFeatureRequests } from '../../hooks/useFeatureRequests'
 import { useAuth } from '../../lib/auth'
 
@@ -350,24 +351,24 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                 <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
                   <p className="text-xs text-yellow-400 font-medium">
                     Screenshot could not be uploaded — the issue was created without it.
-                    The token needs <em>Contents: Read and write</em> permission (fine-grained PAT) or <em>repo</em> scope (classic PAT).
+                    The token needs <em>{GITHUB_TOKEN_FINE_GRAINED_PERMISSIONS[1].scope}</em> permission (fine-grained PAT) or <em>{GITHUB_TOKEN_CLASSIC_SCOPE}</em> scope (classic PAT).
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Update token on GitHub</a>
+                    <a href={GITHUB_TOKEN_MANAGE_URL} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Update token on GitHub</a>
                     {' · '}
-                    <button type="button" onClick={() => { window.location.href = '/settings' }} className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Console Settings</button>
+                    <button type="button" onClick={() => { window.location.href = '/settings#github-token' }} className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Console Settings</button>
                   </p>
                 </div>
               )}
               {screenshots.length > 0 && success && (success.screenshotsFailed ?? 0) > 0 && (success.screenshotsUploaded ?? 0) > 0 && (
                 <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
                   <p className="text-xs text-yellow-400 font-medium">
-                    {success.screenshotsUploaded} of {screenshots.length} screenshots uploaded. {success.screenshotsFailed} failed — token may need <em>Contents: Read and write</em> permission.
+                    {success.screenshotsUploaded} of {screenshots.length} screenshots uploaded. {success.screenshotsFailed} failed — token may need <em>{GITHUB_TOKEN_FINE_GRAINED_PERMISSIONS[1].scope}</em> permission.
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Update token on GitHub</a>
+                    <a href={GITHUB_TOKEN_MANAGE_URL} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Update token on GitHub</a>
                     {' · '}
-                    <button type="button" onClick={() => { window.location.href = '/settings' }} className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Console Settings</button>
+                    <button type="button" onClick={() => { window.location.href = '/settings#github-token' }} className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Console Settings</button>
                   </p>
                 </div>
               )}

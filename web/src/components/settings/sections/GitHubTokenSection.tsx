@@ -4,6 +4,7 @@ import { Save, RefreshCw, Check, X, Github, ExternalLink, Loader2, Server } from
 import { STORAGE_KEY_TOKEN, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_DISMISSED, FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
 import { emitGitHubTokenConfigured, emitGitHubTokenRemoved, emitConversionStep } from '../../../lib/analytics'
 import { UI_FEEDBACK_TIMEOUT_MS, SCROLL_COMPLETE_MS } from '../../../lib/constants/network'
+import { GITHUB_TOKEN_CREATE_URL, GITHUB_TOKEN_CLASSIC_URL } from '../../../lib/constants/github-token'
 import { ConfirmDialog } from '../../../lib/modals'
 
 interface GitHubTokenSectionProps {
@@ -353,25 +354,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
                   <span className="text-purple-400 font-medium">{t('settings.github.option1')}</span>
                   <div>
                     <a
-                      href="https://github.com/settings/personal-access-tokens/new"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline inline-flex items-center gap-1"
-                    >
-                      {t('settings.github.createFineGrained')}
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                    <p className="text-muted-foreground text-xs mt-0.5">
-                      {t('settings.github.fineGrainedInstructions')}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-2">
-                  <span className="text-purple-400 font-medium">{t('settings.github.option2')}</span>
-                  <div>
-                    <a
-                      href="https://github.com/settings/tokens/new?description=KubeStellar%20Console&scopes="
+                      href={GITHUB_TOKEN_CLASSIC_URL}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-primary hover:underline inline-flex items-center gap-1"
@@ -381,6 +364,24 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
                     </a>
                     <p className="text-muted-foreground text-xs mt-0.5">
                       {t('settings.github.classicInstructions')}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <span className="text-purple-400 font-medium">{t('settings.github.option2')}</span>
+                  <div>
+                    <a
+                      href={GITHUB_TOKEN_CREATE_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline inline-flex items-center gap-1"
+                    >
+                      {t('settings.github.createFineGrained')}
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                    <p className="text-muted-foreground text-xs mt-0.5">
+                      {t('settings.github.fineGrainedInstructions')}
                     </p>
                   </div>
                 </div>

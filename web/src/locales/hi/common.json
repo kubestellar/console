@@ -276,11 +276,13 @@
       "howToCreate": "How to create a token:",
       "option1": "Option 1:",
       "option2": "Option 2:",
-      "createFineGrained": "Create Fine-grained Token (Recommended)",
-      "createClassic": "Create Classic Token",
-      "fineGrainedInstructions": "Set expiration, select 'Public repositories (read-only)'. No additional permissions needed for public repos.",
-      "classicInstructions": "No scopes needed for public repos. For private repos, check the 'repo' scope.",
-      "securityWarning": "Token is stored in browser localStorage (not encrypted). Use a token with minimal permissions and set an expiration date."
+      "createFineGrained": "Create Fine-grained Token (self-hosted only)",
+      "createClassic": "Create Classic Token (Recommended)",
+      "fineGrainedInstructions": "Only for self-hosted deployments where you control the target repo. Grant 'Issues: Read and write' and 'Contents: Read and write'. Fine-grained tokens cannot access org repos like kubestellar/console unless the org explicitly allows them.",
+      "classicInstructions": "Check the 'repo' scope. This covers issue creation, screenshot uploads, and all other GitHub features. Works with any public repo — no org membership required.",
+      "securityWarning": "Token is stored in browser localStorage (not encrypted). Use a token with minimal permissions and set an expiration date.",
+      "feedbackTokenDescription": "Used for all GitHub operations: bug/feature submission, screenshot uploads, activity card, CI monitoring, and missions. Classic PAT: 'repo' scope. Fine-grained PAT: 'Issues' + 'Contents' read/write.",
+      "feedbackTokenSetupHint": "To enable full GitHub integration, add a GitHub PAT here or set FEEDBACK_GITHUB_TOKEN in your .env file. Classic PAT: 'repo' scope. Fine-grained PAT: 'Issues' + 'Contents' read/write."
     },
     "predictions": {
       "title": "Predictive Failure Detection",

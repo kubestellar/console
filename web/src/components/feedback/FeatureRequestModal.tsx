@@ -17,6 +17,7 @@ import { useAuth } from '../../lib/auth'
 import { useRewards } from '../../hooks/useRewards'
 import { BACKEND_DEFAULT_URL, STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
 import { FEEDBACK_UPLOAD_TIMEOUT_MS } from '../../lib/constants/network'
+import { GITHUB_TOKEN_MANAGE_URL, GITHUB_TOKEN_CREATE_URL, GITHUB_TOKEN_FINE_GRAINED_PERMISSIONS, GITHUB_TOKEN_CLASSIC_SCOPE } from '../../lib/constants/github-token'
 import { emitLinkedInShare } from '../../lib/analytics'
 import { isDemoModeForced } from '../../lib/demoMode'
 import { useToast } from '../ui/Toast'
@@ -1258,24 +1259,24 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
                 <div className="mt-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
                   <p className="text-xs text-yellow-400 font-medium">
                     Screenshot could not be uploaded — the issue was created without it.
-                    The token needs <em>Contents: Read and write</em> permission (fine-grained PAT) or <em>repo</em> scope (classic PAT).
+                    The token needs <em>{GITHUB_TOKEN_FINE_GRAINED_PERMISSIONS[1].scope}</em> permission (fine-grained PAT) or <em>{GITHUB_TOKEN_CLASSIC_SCOPE}</em> scope (classic PAT).
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Update token on GitHub</a>
+                    <a href={GITHUB_TOKEN_MANAGE_URL} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Update token on GitHub</a>
                     {' · '}
-                    <button type="button" onClick={() => { window.location.href = '/settings' }} className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Console Settings</button>
+                    <button type="button" onClick={() => { window.location.href = '/settings#github-token' }} className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Console Settings</button>
                   </p>
                 </div>
               )}
               {screenshots.length > 0 && success && (success.screenshotsFailed ?? 0) > 0 && (success.screenshotsUploaded ?? 0) > 0 && (
                 <div className="mt-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
                   <p className="text-xs text-yellow-400 font-medium">
-                    {success.screenshotsUploaded} of {screenshots.length} screenshots uploaded. {success.screenshotsFailed} failed — token may need <em>Contents: Read and write</em> permission.
+                    {success.screenshotsUploaded} of {screenshots.length} screenshots uploaded. {success.screenshotsFailed} failed — token may need <em>{GITHUB_TOKEN_FINE_GRAINED_PERMISSIONS[1].scope}</em> permission.
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Update token on GitHub</a>
+                    <a href={GITHUB_TOKEN_MANAGE_URL} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Update token on GitHub</a>
                     {' · '}
-                    <button type="button" onClick={() => { window.location.href = '/settings' }} className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Console Settings</button>
+                    <button type="button" onClick={() => { window.location.href = '/settings#github-token' }} className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Console Settings</button>
                   </p>
                 </div>
               )}
@@ -1296,15 +1297,16 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
                         not set. Issue submission requires a GitHub personal access token with these permissions:
                       </p>
                       <ul className="text-muted-foreground text-xs list-disc ml-4 mt-1 space-y-0.5">
-                        <li><em>Issues: Read and write</em> — to create GitHub issues</li>
-                        <li><em>Contents: Read and write</em> — to upload screenshots</li>
+                        {GITHUB_TOKEN_FINE_GRAINED_PERMISSIONS.map(p => (
+                          <li key={p.scope}><em>{p.scope}</em> — to {p.reason}</li>
+                        ))}
                       </ul>
                       <p className="text-muted-foreground text-xs mt-1.5">
-                        <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Create token on GitHub</a>
+                        <a href={GITHUB_TOKEN_CREATE_URL} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Create token on GitHub</a>
                         {' · '}
                         <button
                           type="button"
-                          onClick={() => { window.location.href = '/settings' }}
+                          onClick={() => { window.location.href = '/settings#github-token' }}
                           className="text-purple-400 hover:text-purple-300 underline underline-offset-2"
                         >
                           Console Settings
