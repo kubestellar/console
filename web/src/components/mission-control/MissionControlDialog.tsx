@@ -1,5 +1,9 @@
 /**
- * MissionControlDialog — Full-screen overlay with 3-phase stepper.
+ * MissionControlDialog — Modal overlay with 3-phase stepper.
+ *
+ * Renders as a proper modal dialog with a backdrop, rounded corners,
+ * and clear "Back to Dashboard" navigation so users know they can
+ * return to the page they came from.
  *
  * Phase 1: Define Your Mission (fix description + AI payload suggestions)
  * Phase 2: Chart Your Course (cluster assignment + readiness)
@@ -18,6 +22,7 @@ import {
   RotateCcw,
   FlaskConical,
   Monitor,
+  ArrowLeft,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'
@@ -87,6 +92,16 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [open, handleKeyDown])
 
+  // Lock body scroll while modal is open so users cannot scroll the page behind it
+  useEffect(() => {
+    if (!open) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [open])
+
   if (!open) return null
 
   const isLaunching = state.phase === 'launching'
@@ -114,272 +129,306 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
     mc.reset()
   }
 
+  /** Inset (in px) from viewport edges so the backdrop peeks through */
+  const MODAL_INSET_PX = 16
+
   return (
     <AnimatePresence>
       {open && (
-        <motion.div
-          className="fixed inset-0 z-[200] flex flex-col bg-background"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          {/* ── Header ─────────────────────────────────────────────── */}
-          <header className="flex items-center justify-between px-6 py-3 border-b border-border bg-card">
-            <div className="flex items-center gap-3">
-              <div className="p-1.5 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 text-white">
-                <Rocket className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-lg font-semibold">Mission Control</h1>
-                  {state.isDryRun && (
-                    <span className="px-2 py-0.5 text-2xs font-bold uppercase tracking-wider rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                      DRY RUN
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Multi-Cluster Solutions Orchestrator
-                </p>
-              </div>
-            </div>
+        <>
+          {/* ── Backdrop ──────────────────────────────────────────── */}
+          <motion.div
+            className="fixed inset-0 z-[199] bg-black/60 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={onClose}
+            aria-hidden="true"
+          />
 
-            {/* ── Stepper ─────────────────────────────────────────── */}
-            <nav className="hidden md:flex items-center gap-1">
-              {PHASE_STEPS.map((step, i) => {
-                const isCurrent = step.key === state.phase
-                const isPast = currentStepIndex > i
-                const isLaunchOrComplete = isLaunching || isComplete
-                return (
-                  <div key={step.key} className="flex items-center gap-1">
-                    {i > 0 && (
-                      <ChevronRight className="w-3 h-3 text-muted-foreground/40 mx-1" />
+          {/* ── Modal panel ───────────────────────────────────────── */}
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mission Control"
+            className="fixed z-[200] flex flex-col bg-background rounded-xl border border-border shadow-2xl shadow-black/30 overflow-hidden"
+            style={{
+              inset: `${MODAL_INSET_PX}px`,
+            }}
+            initial={{ opacity: 0, scale: 0.97, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.97, y: 12 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+          >
+            {/* ── Header ─────────────────────────────────────────────── */}
+            <header className="flex items-center justify-between px-6 py-3 border-b border-border bg-card rounded-t-xl">
+              <div className="flex items-center gap-3">
+                {/* Back to Dashboard link */}
+                <button
+                  onClick={onClose}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mr-2 shrink-0"
+                  title="Close Mission Control and return to the dashboard"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Back to Dashboard</span>
+                </button>
+                <span className="w-px h-5 bg-border hidden sm:block" />
+                <div className="p-1.5 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 text-white">
+                  <Rocket className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-lg font-semibold">Mission Control</h1>
+                    {state.isDryRun && (
+                      <span className="px-2 py-0.5 text-2xs font-bold uppercase tracking-wider rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                        DRY RUN
+                      </span>
                     )}
-                    <button
-                      onClick={() => {
-                        if (i <= highestReached && !isLaunchOrComplete) mc.setPhase(step.key)
-                      }}
-                      disabled={i > highestReached || isLaunchOrComplete}
-                      className={cn(
-                        'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all',
-                        isCurrent && 'bg-primary/10 text-primary font-medium',
-                        isPast &&
-                          !isLaunchOrComplete &&
-                          'text-muted-foreground hover:text-foreground cursor-pointer',
-                        !isCurrent && !isPast && i <= highestReached &&
-                          !isLaunchOrComplete &&
-                          'text-muted-foreground hover:text-foreground cursor-pointer',
-                        !isCurrent &&
-                          !isPast && i > highestReached &&
-                          'text-muted-foreground/50 cursor-default'
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Multi-Cluster Solutions Orchestrator
+                  </p>
+                </div>
+              </div>
+
+              {/* ── Stepper ─────────────────────────────────────────── */}
+              <nav className="hidden md:flex items-center gap-1">
+                {PHASE_STEPS.map((step, i) => {
+                  const isCurrent = step.key === state.phase
+                  const isPast = currentStepIndex > i
+                  const isLaunchOrComplete = isLaunching || isComplete
+                  return (
+                    <div key={step.key} className="flex items-center gap-1">
+                      {i > 0 && (
+                        <ChevronRight className="w-3 h-3 text-muted-foreground/40 mx-1" />
                       )}
-                    >
-                      <span
+                      <button
+                        onClick={() => {
+                          if (i <= highestReached && !isLaunchOrComplete) mc.setPhase(step.key)
+                        }}
+                        disabled={i > highestReached || isLaunchOrComplete}
                         className={cn(
-                          'flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold transition-colors',
-                          isCurrent &&
-                            'bg-primary text-primary-foreground',
+                          'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all',
+                          isCurrent && 'bg-primary/10 text-primary font-medium',
                           isPast &&
-                            'bg-green-500/20 text-green-400',
+                            !isLaunchOrComplete &&
+                            'text-muted-foreground hover:text-foreground cursor-pointer',
+                          !isCurrent && !isPast && i <= highestReached &&
+                            !isLaunchOrComplete &&
+                            'text-muted-foreground hover:text-foreground cursor-pointer',
                           !isCurrent &&
-                            !isPast &&
-                            'bg-muted text-muted-foreground/50'
+                            !isPast && i > highestReached &&
+                            'text-muted-foreground/50 cursor-default'
                         )}
                       >
-                        {isPast ? '✓' : i + 1}
-                      </span>
-                      {step.label}
-                    </button>
-                  </div>
-                )
-              })}
-            </nav>
+                        <span
+                          className={cn(
+                            'flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold transition-colors',
+                            isCurrent &&
+                              'bg-primary text-primary-foreground',
+                            isPast &&
+                              'bg-green-500/20 text-green-400',
+                            !isCurrent &&
+                              !isPast &&
+                              'bg-muted text-muted-foreground/50'
+                          )}
+                        >
+                          {isPast ? '✓' : i + 1}
+                        </span>
+                        {step.label}
+                      </button>
+                    </div>
+                  )
+                })}
+              </nav>
 
-            <div className="flex items-center gap-2">
-              {(isComplete || isLaunching) && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleNewMission}
-                  icon={<RotateCcw className="w-3.5 h-3.5" />}
-                >
-                  New Mission
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClose}
-                className="p-1.5"
-                aria-label="Close Mission Control"
-                icon={<X className="w-4 h-4" />}
-              />
-            </div>
-          </header>
-
-          {/* ── Content ────────────────────────────────────────────── */}
-          <div className="flex-1 overflow-hidden">
-            <AnimatePresence mode="wait">
-              {state.phase === 'define' && (
-                <PhaseWrapper key="define">
-                  <FixerDefinitionPanel
-                    state={state}
-                    onDescriptionChange={mc.setDescription}
-                    onTitleChange={mc.setTitle}
-                    onAskAI={mc.askAIForSuggestions}
-                    onAddProject={mc.addProject}
-                    onRemoveProject={mc.removeProject}
-                    onUpdatePriority={mc.updateProjectPriority}
-                    onReplaceProject={mc.replaceProject}
-                    aiStreaming={state.aiStreaming}
-                    planningMission={mc.planningMission}
-                    installedProjects={mc.installedProjects}
-                  />
-                </PhaseWrapper>
-              )}
-              {state.phase === 'assign' && (
-                <PhaseWrapper key="assign">
-                  <ClusterAssignmentPanel
-                    state={state}
-                    onAskAI={mc.askAIForAssignments}
-                    onAutoAssign={mc.autoAssignProjects}
-                    onSetAssignment={mc.setAssignment}
-                    aiStreaming={state.aiStreaming}
-                    planningMission={mc.planningMission}
-                    installedOnCluster={mc.installedOnCluster}
-                  />
-                </PhaseWrapper>
-              )}
-              {state.phase === 'blueprint' && (
-                <PhaseWrapper key="blueprint">
-                  <FlightPlanBlueprint
-                    state={state}
-                    onOverlayChange={mc.setOverlay}
-                    onDeployModeChange={mc.setDeployMode}
-                    onMoveProject={mc.moveProjectToCluster}
-                    installedProjects={mc.installedProjects}
-                  />
-                </PhaseWrapper>
-              )}
-              {(isLaunching || isComplete) && (
-                <PhaseWrapper key="launch">
-                  <LaunchSequence
-                    state={state}
-                    onUpdateProgress={mc.updateLaunchProgress}
-                    onComplete={(dashboardId) => {
-                      if (dashboardId) mc.setGroundControlDashboardId(dashboardId)
-                      mc.setPhase('complete')
-                    }}
-                  />
-                </PhaseWrapper>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* ── Footer nav ─────────────────────────────────────────── */}
-          {!isLaunching && !isComplete && (
-            <footer className="flex items-center justify-between px-6 py-3 border-t border-border bg-card">
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                {state.projects.length > 0 && (
-                  <span>
-                    {state.projects.length} project
-                    {state.projects.length !== 1 ? 's' : ''} selected
-                  </span>
-                )}
-                {state.assignments.length > 0 && (
-                  <span>
-                    → {state.assignments.filter((a) => a.projectNames.length > 0).length} cluster
-                    {state.assignments.filter((a) => a.projectNames.length > 0).length !== 1
-                      ? 's'
-                      : ''}
-                  </span>
-                )}
-                {/* Legend (only on blueprint phase) */}
-                {state.phase === 'blueprint' && (
-                  <>
-                    <span className="w-px h-4 bg-border" />
-                    <span className="flex items-center gap-1.5 text-2xs">
-                      <span className="w-4 h-0 border-t border-amber-500 inline-block" />
-                      Cross-cluster
-                    </span>
-                    <span className="flex items-center gap-1.5 text-2xs">
-                      <span className="w-4 h-0 border-t border-dashed border-indigo-500 inline-block" />
-                      Intra-cluster
-                    </span>
-                    <span className="flex items-center gap-1.5 text-2xs">
-                      <span className="w-3 h-3 rounded-full border-2 border-green-500 inline-block" />
-                      Installed
-                    </span>
-                    <span className="flex items-center gap-1.5 text-2xs">
-                      <span className="w-3 h-3 rounded-full border border-dashed border-slate-500 inline-block" />
-                      Needs deploy
-                    </span>
-                  </>
-                )}
-              </div>
               <div className="flex items-center gap-2">
-                {canGoBack && (
+                {(isComplete || isLaunching) && (
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={handleBack}
-                    icon={<ChevronLeft className="w-3.5 h-3.5" />}
+                    onClick={handleNewMission}
+                    icon={<RotateCcw className="w-3.5 h-3.5" />}
                   >
-                    Back
+                    New Mission
                   </Button>
                 )}
-                {state.phase === 'blueprint' ? (
-                  <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onClose}
+                  className="p-1.5 hover:bg-destructive/10 hover:text-destructive"
+                  aria-label="Close Mission Control"
+                  title="Close (Esc)"
+                  icon={<X className="w-5 h-5" />}
+                />
+              </div>
+            </header>
+
+            {/* ── Content ────────────────────────────────────────────── */}
+            <div className="flex-1 overflow-hidden">
+              <AnimatePresence mode="wait">
+                {state.phase === 'define' && (
+                  <PhaseWrapper key="define">
+                    <FixerDefinitionPanel
+                      state={state}
+                      onDescriptionChange={mc.setDescription}
+                      onTitleChange={mc.setTitle}
+                      onAskAI={mc.askAIForSuggestions}
+                      onAddProject={mc.addProject}
+                      onRemoveProject={mc.removeProject}
+                      onUpdatePriority={mc.updateProjectPriority}
+                      onReplaceProject={mc.replaceProject}
+                      aiStreaming={state.aiStreaming}
+                      planningMission={mc.planningMission}
+                      installedProjects={mc.installedProjects}
+                    />
+                  </PhaseWrapper>
+                )}
+                {state.phase === 'assign' && (
+                  <PhaseWrapper key="assign">
+                    <ClusterAssignmentPanel
+                      state={state}
+                      onAskAI={mc.askAIForAssignments}
+                      onAutoAssign={mc.autoAssignProjects}
+                      onSetAssignment={mc.setAssignment}
+                      aiStreaming={state.aiStreaming}
+                      planningMission={mc.planningMission}
+                      installedOnCluster={mc.installedOnCluster}
+                    />
+                  </PhaseWrapper>
+                )}
+                {state.phase === 'blueprint' && (
+                  <PhaseWrapper key="blueprint">
+                    <FlightPlanBlueprint
+                      state={state}
+                      onOverlayChange={mc.setOverlay}
+                      onDeployModeChange={mc.setDeployMode}
+                      onMoveProject={mc.moveProjectToCluster}
+                      installedProjects={mc.installedProjects}
+                    />
+                  </PhaseWrapper>
+                )}
+                {(isLaunching || isComplete) && (
+                  <PhaseWrapper key="launch">
+                    <LaunchSequence
+                      state={state}
+                      onUpdateProgress={mc.updateLaunchProgress}
+                      onComplete={(dashboardId) => {
+                        if (dashboardId) mc.setGroundControlDashboardId(dashboardId)
+                        mc.setPhase('complete')
+                      }}
+                    />
+                  </PhaseWrapper>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* ── Footer nav ─────────────────────────────────────────── */}
+            {!isLaunching && !isComplete && (
+              <footer className="flex items-center justify-between px-6 py-3 border-t border-border bg-card rounded-b-xl">
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  {state.projects.length > 0 && (
+                    <span>
+                      {state.projects.length} project
+                      {state.projects.length !== 1 ? 's' : ''} selected
+                    </span>
+                  )}
+                  {state.assignments.length > 0 && (
+                    <span>
+                      → {state.assignments.filter((a) => a.projectNames.length > 0).length} cluster
+                      {state.assignments.filter((a) => a.projectNames.length > 0).length !== 1
+                        ? 's'
+                        : ''}
+                    </span>
+                  )}
+                  {/* Legend (only on blueprint phase) */}
+                  {state.phase === 'blueprint' && (
+                    <>
+                      <span className="w-px h-4 bg-border" />
+                      <span className="flex items-center gap-1.5 text-2xs">
+                        <span className="w-4 h-0 border-t border-amber-500 inline-block" />
+                        Cross-cluster
+                      </span>
+                      <span className="flex items-center gap-1.5 text-2xs">
+                        <span className="w-4 h-0 border-t border-dashed border-indigo-500 inline-block" />
+                        Intra-cluster
+                      </span>
+                      <span className="flex items-center gap-1.5 text-2xs">
+                        <span className="w-3 h-3 rounded-full border-2 border-green-500 inline-block" />
+                        Installed
+                      </span>
+                      <span className="flex items-center gap-1.5 text-2xs">
+                        <span className="w-3 h-3 rounded-full border border-dashed border-slate-500 inline-block" />
+                        Needs deploy
+                      </span>
+                    </>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {canGoBack && (
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => showToast('Local cluster simulation is not yet available', 'info')}
-                      icon={<Monitor className="w-3.5 h-3.5" />}
-                      title="Create local clusters to simulate the deployment"
+                      onClick={handleBack}
+                      icon={<ChevronLeft className="w-3.5 h-3.5" />}
                     >
-                      Deploy Local
+                      Back
                     </Button>
+                  )}
+                  {state.phase === 'blueprint' ? (
+                    <>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => showToast('Local cluster simulation is not yet available', 'info')}
+                        icon={<Monitor className="w-3.5 h-3.5" />}
+                        title="Create local clusters to simulate the deployment"
+                      >
+                        Deploy Local
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => {
+                          mc.setDryRun(false)
+                          mc.setPhase('launching')
+                        }}
+                        className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white border-0 shadow-lg shadow-violet-500/25"
+                        icon={<Rocket className="w-4 h-4" />}
+                      >
+                        Deploy to Clusters
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          mc.setDryRun(true)
+                          mc.setPhase('launching')
+                        }}
+                        icon={<FlaskConical className="w-3.5 h-3.5" />}
+                        title="Run against live clusters without deploying — report only"
+                      >
+                        Dry Run
+                      </Button>
+                    </>
+                  ) : (
                     <Button
                       variant="primary"
                       size="sm"
-                      onClick={() => {
-                        mc.setDryRun(false)
-                        mc.setPhase('launching')
-                      }}
-                      className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white border-0 shadow-lg shadow-violet-500/25"
-                      icon={<Rocket className="w-4 h-4" />}
+                      onClick={handleNext}
+                      disabled={!canAdvance}
                     >
-                      Deploy to Clusters
+                      Next
+                      <ChevronRight className="w-3.5 h-3.5 ml-1" />
                     </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        mc.setDryRun(true)
-                        mc.setPhase('launching')
-                      }}
-                      icon={<FlaskConical className="w-3.5 h-3.5" />}
-                      title="Run against live clusters without deploying — report only"
-                    >
-                      Dry Run
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={handleNext}
-                    disabled={!canAdvance}
-                  >
-                    Next
-                    <ChevronRight className="w-3.5 h-3.5 ml-1" />
-                  </Button>
-                )}
-              </div>
-            </footer>
-          )}
-        </motion.div>
+                  )}
+                </div>
+              </footer>
+            )}
+          </motion.div>
+        </>
       )}
     </AnimatePresence>
   )
