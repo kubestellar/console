@@ -15,7 +15,6 @@ env:
   NODE_VERSION: '22'
   GIST_ID: 'b9a9ae8469f1897a22d5a40629bc1e82'
   TOTAL_SHARDS: 12
-  TOTAL_SHARDS: 10
 
 jobs:
   # Run tests in 4 shards to stay within 7GB runner memory
@@ -27,7 +26,6 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
     steps:
       - name: Checkout
