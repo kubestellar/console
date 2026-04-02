@@ -1,53 +1,158 @@
 #!/usr/bin/env node
 /**
- * Post-build safety check: ensures Vite's `define` config hasn't corrupted
- * vendor/dependency bundles by replacing `console.*` calls with `undefined()`.
+ * Post-build safety checks for production bundles.
  *
- * Background: Vite's `define` does literal text replacement. A rule like
- * `'console.log': 'undefined'` replaces ALL occurrences — including inside
- * vendor code — turning `console.log(...)` into `undefined(...)` which
- * crashes at runtime as `TypeError: (void 0) is not a function`.
+ * Runs automatically via the `postbuild` npm script after every `npm run build`.
+ * Catches classes of bugs that pass tsc + vite build but crash at runtime.
  *
- * This script scans all vendor-*.js bundles in dist/assets/ for the pattern
- * `void 0(` which is the minified form of `undefined(...)`. If found, the
- * build fails before deployment.
+ * Checks:
+ * 1. Vite define corruption — vendor code with `undefined()` calls
+ * 2. Critical chunks exist and are non-empty
+ * 3. MSW not leaked into non-demo production builds
+ * 4. Bundle size regression — catches accidental dependency inlining
  */
 
-import { readdirSync, readFileSync, existsSync } from 'node:fs'
+import { readdirSync, readFileSync, existsSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
 const ASSETS_DIR = join(import.meta.dirname, '..', 'dist', 'assets')
+const DIST_DIR = join(import.meta.dirname, '..', 'dist')
 
 if (!existsSync(ASSETS_DIR)) {
-  // No dist yet (dev mode) — skip
+  // No dist yet (dev mode) — skip silently
   process.exit(0)
 }
 
-const vendorFiles = readdirSync(ASSETS_DIR).filter(
+const allFiles = readdirSync(ASSETS_DIR)
+let failed = false
+
+function fail(msg) {
+  console.error(`\x1b[31m✗ ${msg}\x1b[0m`)
+  failed = true
+}
+
+function pass(msg) {
+  console.log(`\x1b[32m✓\x1b[0m ${msg}`)
+}
+
+// ── Check 1: Vite define corruption ──────────────────────────────────────
+// Vite's `define` does literal text replacement. Bare `console.log` rules
+// replace occurrences in vendor code, turning `console.log(...)` into
+// `undefined(...)` → `TypeError: (void 0) is not a function` at runtime.
+
+const vendorFiles = allFiles.filter(
   (name) => name.startsWith('vendor-') && name.endsWith('.js'),
 )
 
-let failed = false
+let defineCorrupted = false
 for (const file of vendorFiles) {
   const content = readFileSync(join(ASSETS_DIR, file), 'utf8')
-  // Match `void 0(` — the minified form of `undefined(...)` which is always a bug
   const matches = content.match(/void 0\(/g)
   if (matches && matches.length > 0) {
-    console.error(
-      `\x1b[31mERROR: ${file} contains ${matches.length} \`undefined()\` calls.\x1b[0m`,
+    fail(
+      `${file} contains ${matches.length} \`undefined()\` calls — ` +
+      `Vite define likely replaced \`console.*\` in vendor code. ` +
+      `Only use \`globalThis.console.*\` in vite.config.ts define.`,
     )
-    console.error(
-      `  Vite's \`define\` config likely replaced \`console.*\` in vendor code.`,
+    defineCorrupted = true
+  }
+}
+if (!defineCorrupted) pass('No Vite define corruption in vendor bundles')
+
+// ── Check 2: Critical chunks exist and are non-empty ─────────────────────
+// Code splitting must produce these chunks. If any are missing or empty,
+// the app will fail to load with a blank page or chunk load error.
+
+const CRITICAL_PREFIXES = ['index-', 'vendor-', 'react-vendor-']
+/** Minimum size in bytes — anything below this is likely an empty/broken chunk */
+const MIN_CHUNK_SIZE_BYTES = 1_000
+
+for (const prefix of CRITICAL_PREFIXES) {
+  const chunk = allFiles.find(
+    (name) => name.startsWith(prefix) && name.endsWith('.js'),
+  )
+  if (!chunk) {
+    fail(`Missing critical chunk: ${prefix}*.js`)
+    continue
+  }
+  const size = statSync(join(ASSETS_DIR, chunk)).size
+  if (size < MIN_CHUNK_SIZE_BYTES) {
+    fail(`${chunk} is suspiciously small (${size} bytes) — likely broken`)
+  }
+}
+if (!failed || defineCorrupted) pass('Critical chunks present and non-empty')
+
+// ── Check 3: MSW not leaked into non-demo builds ────────────────────────
+// In demo mode (VITE_DEMO_MODE=true), MSW is expected. But if it somehow
+// activates unconditionally, real API calls get intercepted and the app
+// shows mock data to real users. Check: the MSW browser import should only
+// appear in the demo/mock chunk, not in the main index bundle.
+
+const indexChunk = allFiles.find(
+  (name) => name.startsWith('index-') && name.endsWith('.js'),
+)
+if (indexChunk) {
+  const indexContent = readFileSync(join(ASSETS_DIR, indexChunk), 'utf8')
+  // The MSW import should be behind a dynamic import() — not statically bundled.
+  // If `setupWorker` appears directly in the index chunk, MSW was statically imported.
+  if (indexContent.includes('setupWorker') && !indexContent.includes('import(')) {
+    fail(
+      `MSW \`setupWorker\` is statically bundled in ${indexChunk}. ` +
+      `It must be behind a dynamic import() so it only loads in demo mode.`,
     )
-    console.error(
-      `  Only use \`globalThis.console.*\` in vite.config.ts define — never bare \`console.*\`.`,
-    )
-    failed = true
+  } else {
+    pass('MSW is not statically bundled in index chunk')
   }
 }
 
+// ── Check 4: Bundle size regression ──────────────────────────────────────
+// Catches accidental dependency inlining (e.g., Three.js, Chart.js, or
+// the entire node_modules ending up in one chunk). Thresholds are generous
+// — they should only trip on catastrophic regressions, not normal growth.
+
+/** Size limits in bytes — ~2x current sizes to catch catastrophic inlining */
+const SIZE_LIMITS = {
+  'index-':        1_500_000,  // ~430KB currently → fail at 1.5MB
+  'vendor-':       3_000_000,  // ~1.2MB currently → fail at 3MB
+  'react-vendor-':   500_000,  // ~135KB currently → fail at 500KB
+}
+
+let sizeOk = true
+for (const [prefix, limit] of Object.entries(SIZE_LIMITS)) {
+  const chunk = allFiles.find(
+    (name) => name.startsWith(prefix) && name.endsWith('.js'),
+  )
+  if (!chunk) continue // Already caught by check 2
+  const size = statSync(join(ASSETS_DIR, chunk)).size
+  if (size > limit) {
+    const limitMB = (limit / 1_000_000).toFixed(1)
+    const sizeMB = (size / 1_000_000).toFixed(1)
+    fail(
+      `${chunk} is ${sizeMB}MB — exceeds ${limitMB}MB limit. ` +
+      `A dependency may have been accidentally inlined.`,
+    )
+    sizeOk = false
+  }
+}
+if (sizeOk) pass('Bundle sizes within limits')
+
+// ── Check 5: index.html exists and references JS entry ───────────────────
+const indexHtml = join(DIST_DIR, 'index.html')
+if (!existsSync(indexHtml)) {
+  fail('dist/index.html is missing')
+} else {
+  const html = readFileSync(indexHtml, 'utf8')
+  if (!html.includes('assets/index-')) {
+    fail('index.html does not reference an index-*.js entry point')
+  } else {
+    pass('index.html references JS entry point')
+  }
+}
+
+// ── Result ───────────────────────────────────────────────────────────────
 if (failed) {
+  console.error('\n\x1b[31mPost-build safety check FAILED\x1b[0m')
   process.exit(1)
 } else {
-  console.log('✓ Vendor bundle safety check passed')
+  console.log('\n\x1b[32mAll post-build safety checks passed\x1b[0m')
 }
