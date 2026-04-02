@@ -350,7 +350,7 @@ Please proceed step by step.`,
       {/* Footer links */}
       <div className="flex items-center justify-center gap-3 pt-2 mt-2 border-t border-border/50 text-2xs">
         <a
-          href="https://kyverno.io/docs/"
+          href="https://kyverno.io/docs/introduction/"
           target="_blank"
           rel="noopener noreferrer"
           className="text-muted-foreground hover:text-purple-400 transition-colors"

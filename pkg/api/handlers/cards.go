@@ -199,7 +199,9 @@ func (h *CardHandler) RecordFocus(c *fiber.Ctx) error {
 	var input struct {
 		Summary string `json:"summary"`
 	}
-	c.BodyParser(&input)
+	if err := c.BodyParser(&input); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
+	}
 
 	if err := h.store.UpdateCardFocus(cardID, input.Summary); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to update focus")
