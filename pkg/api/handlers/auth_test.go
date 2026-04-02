@@ -48,7 +48,8 @@ func TestDevModeLogin(t *testing.T) {
 		assert.Equal(t, http.StatusTemporaryRedirect, resp.StatusCode)
 
 		loc, _ := resp.Location()
-		assert.Contains(t, loc.String(), "token=")
+		// Token must NOT appear in the redirect URL (#4278 — prevent JWT leakage)
+		assert.NotContains(t, loc.String(), "token=")
 		assert.Contains(t, loc.String(), "onboarded=true") // Dev user is auto-onboarded
 	})
 
@@ -71,7 +72,8 @@ func TestDevModeLogin(t *testing.T) {
 		assert.Equal(t, http.StatusTemporaryRedirect, resp.StatusCode)
 
 		loc, _ := resp.Location()
-		assert.Contains(t, loc.String(), "token=")
+		// Token must NOT appear in the redirect URL (#4278 — prevent JWT leakage)
+		assert.NotContains(t, loc.String(), "token=")
 		assert.Contains(t, loc.String(), "onboarded=false")
 	})
 }

@@ -256,8 +256,11 @@ func (s *Server) checkOrigin(r *http.Request) bool {
 // Tokens are accepted via the Authorization header for HTTP requests.
 // For WebSocket upgrades, tokens are also accepted via the ?token= query
 // parameter since browsers cannot set custom headers on WebSocket handshakes.
-// Query parameter tokens are restricted to Upgrade requests only to keep
-// secrets out of server logs, browser history, and proxy access logs (#3895).
+// Query parameter tokens are restricted to genuine WebSocket upgrade requests
+// to keep secrets out of server logs, browser history, and proxy access logs
+// (#3895). To prevent spoofed Upgrade headers from enabling the query-param
+// fallback (#4264), we verify all three headers that browsers always send for
+// real WebSocket handshakes: Upgrade, Connection, and Sec-WebSocket-Key.
 func (s *Server) validateToken(r *http.Request) bool {
 	// If no token configured, skip token validation
 	if s.agentToken == "" {
@@ -273,15 +276,50 @@ func (s *Server) validateToken(r *http.Request) bool {
 		}
 	}
 
-	// Fall back to query parameter ONLY for WebSocket upgrade requests
-	// (browsers cannot set custom headers on WebSocket handshakes)
-	if strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {
+	// Fall back to query parameter ONLY for genuine WebSocket upgrade requests.
+	// Browsers always send all three headers; a plain HTTP client spoofing just
+	// the Upgrade header will be missing Connection and/or Sec-WebSocket-Key.
+	if isRealWebSocketUpgrade(r) {
 		if queryToken := r.URL.Query().Get("token"); queryToken != "" {
 			return queryToken == s.agentToken
 		}
 	}
 
 	return false
+}
+
+// isRealWebSocketUpgrade returns true only when the request carries all
+// three headers that a browser sends for a genuine WebSocket handshake:
+//   - Upgrade: websocket
+//   - Connection: upgrade  (the value list must include "upgrade")
+//   - Sec-WebSocket-Key: <non-empty>
+//
+// A plain HTTP client can easily set the Upgrade header alone; requiring
+// all three makes spoofing significantly harder (#4264).
+func isRealWebSocketUpgrade(r *http.Request) bool {
+	if !strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {
+		return false
+	}
+
+	// Connection header may contain a comma-separated list (e.g. "keep-alive, Upgrade").
+	hasConnectionUpgrade := false
+	for _, v := range strings.Split(r.Header.Get("Connection"), ",") {
+		if strings.EqualFold(strings.TrimSpace(v), "upgrade") {
+			hasConnectionUpgrade = true
+			break
+		}
+	}
+	if !hasConnectionUpgrade {
+		return false
+	}
+
+	// Sec-WebSocket-Key is a base64-encoded 16-byte nonce that browsers
+	// always include. Its absence is a strong signal of a non-browser client.
+	if r.Header.Get("Sec-WebSocket-Key") == "" {
+		return false
+	}
+
+	return true
 }
 
 // Start starts the agent server

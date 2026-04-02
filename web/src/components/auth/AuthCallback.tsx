@@ -8,6 +8,12 @@ import { useToast } from '../ui/Toast'
 import { safeGetItem, safeRemoveItem } from '../../lib/utils/localStorage'
 import { emitGitHubConnected } from '../../lib/analytics'
 
+/** Timeout (ms) for the /auth/refresh call that exchanges the HttpOnly cookie for a token. */
+const AUTH_REFRESH_TIMEOUT_MS = 5_000
+
+/** Short delay (ms) before navigating after a partial failure. */
+const NAVIGATE_AFTER_ERROR_DELAY_MS = 500
+
 export function AuthCallback() {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
@@ -22,7 +28,6 @@ export function AuthCallback() {
     if (hasProcessed.current) return
     hasProcessed.current = true
 
-    const token = searchParams.get('token')
     const error = searchParams.get('error')
 
     if (error) {
@@ -30,38 +35,55 @@ export function AuthCallback() {
       return
     }
 
-    if (token) {
-      setToken(token, true)
-      emitGitHubConnected()
-      setStatus(t('authCallback.fetchingUserInfo'))
+    // The backend sets the JWT in an HttpOnly cookie during the OAuth redirect.
+    // We call POST /auth/refresh (which reads that cookie) to obtain the token
+    // for localStorage, avoiding JWT exposure in the URL (#4278).
+    const onboarded = searchParams.get('onboarded') === 'true'
 
-      // Check for a return-to URL saved by ProtectedRoute (deep-link through OAuth),
-      // then fall back to the last visited dashboard route, then '/'.
-      const RETURN_TO_KEY = 'kubestellar-return-to'
-      const returnTo = safeGetItem(RETURN_TO_KEY)
-      if (returnTo) safeRemoveItem(RETURN_TO_KEY)
-      const destination = returnTo || getLastRoute() || ROUTES.HOME
+    // Check for a return-to URL saved by ProtectedRoute (deep-link through OAuth),
+    // then fall back to the last visited dashboard route, then '/'.
+    const RETURN_TO_KEY = 'kubestellar-return-to'
+    const returnTo = safeGetItem(RETURN_TO_KEY)
+    if (returnTo) safeRemoveItem(RETURN_TO_KEY)
+    const destination = returnTo || getLastRoute() || ROUTES.HOME
 
-      // Add timeout to prevent hanging forever
-      const timeoutId = setTimeout(() => {
-        navigate(destination)
-      }, 5000)
+    setStatus(t('authCallback.fetchingUserInfo'))
 
-      refreshUser(token).then(() => {
+    // Exchange the HttpOnly cookie for a token via /auth/refresh
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), AUTH_REFRESH_TIMEOUT_MS)
+
+    fetch('/auth/refresh', {
+      method: 'POST',
+      credentials: 'same-origin', // send the HttpOnly cookie
+      signal: controller.signal,
+    })
+      .then((res) => {
         clearTimeout(timeoutId)
+        if (!res.ok) throw new Error(`refresh failed: ${res.status}`)
+        return res.json()
+      })
+      .then((data: { token?: string; onboarded?: boolean }) => {
+        const token = data.token
+        if (!token) throw new Error('No token in refresh response')
+
+        const isOnboarded = data.onboarded ?? onboarded
+        setToken(token, isOnboarded)
+        emitGitHubConnected()
+
+        return refreshUser(token)
+      })
+      .then(() => {
         navigate(destination)
-      }).catch((_err) => {
+      })
+      .catch((_err) => {
         clearTimeout(timeoutId)
         showToast(t('authCallback.failedToFetchUser'), 'warning')
-        // Still try to proceed if we have a token
         setStatus(t('authCallback.completingSignIn'))
         setTimeout(() => {
           navigate(destination)
-        }, 500)
+        }, NAVIGATE_AFTER_ERROR_DELAY_MS)
       })
-    } else {
-      navigate(ROUTES.LOGIN)
-    }
   }, [searchParams, setToken, refreshUser, navigate, showToast])
 
   return (

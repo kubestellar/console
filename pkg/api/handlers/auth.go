@@ -301,12 +301,13 @@ func (h *AuthHandler) devModeLogin(c *fiber.Ctx) error {
 		return c.Redirect(h.frontendURL+"/login?error=jwt_failed", fiber.StatusTemporaryRedirect)
 	}
 
-	// Set HttpOnly cookie (primary auth) and pass token in URL (migration fallback)
+	// Set HttpOnly cookie (primary auth) — the token is NOT passed in the URL
+	// to prevent leakage via browser history, Referer headers, and server logs (#4278).
+	// The frontend reads the token from the cookie via POST /auth/refresh.
 	h.setJWTCookie(c, jwtToken)
 
-	// Redirect to frontend with token
 	c.Set("Cache-Control", "no-store")
-	redirectURL := fmt.Sprintf("%s/auth/callback?token=%s&onboarded=%t", h.frontendURL, jwtToken, user.Onboarded)
+	redirectURL := fmt.Sprintf("%s/auth/callback?onboarded=%t", h.frontendURL, user.Onboarded)
 	return c.Redirect(redirectURL, fiber.StatusTemporaryRedirect)
 }
 
@@ -433,12 +434,13 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 		return h.oauthErrorRedirect(c, "jwt_failed", "")
 	}
 
-	// Set HttpOnly cookie (primary auth) and pass token in URL (migration fallback)
+	// Set HttpOnly cookie (primary auth) — the token is NOT passed in the URL
+	// to prevent leakage via browser history, Referer headers, and server logs (#4278).
+	// The frontend reads the token from the cookie via POST /auth/refresh.
 	h.setJWTCookie(c, jwtToken)
 
-	// Redirect to frontend with token
 	c.Set("Cache-Control", "no-store")
-	redirectURL := fmt.Sprintf("%s/auth/callback?token=%s&onboarded=%t", h.frontendURL, jwtToken, user.Onboarded)
+	redirectURL := fmt.Sprintf("%s/auth/callback?onboarded=%t", h.frontendURL, user.Onboarded)
 	return c.Redirect(redirectURL, fiber.StatusTemporaryRedirect)
 }
 
@@ -484,19 +486,31 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"success": true, "message": "Token revoked"})
 }
 
-// RefreshToken refreshes the JWT token
+// RefreshToken refreshes the JWT token.
+// Token resolution order: Authorization header -> HttpOnly cookie.
+// The cookie fallback is required for the OAuth callback flow where the
+// frontend has no token in localStorage yet — it was set as an HttpOnly
+// cookie by the backend redirect (#4278).
 func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
-	// Get current user from context
+	var tokenString string
+
+	// Prefer Authorization header (existing callers send this)
 	authHeader := c.Get("Authorization")
-	if authHeader == "" {
+	if authHeader != "" {
+		if len(authHeader) < bearerPrefixLen || !strings.HasPrefix(authHeader, bearerPrefix) {
+			return fiber.NewError(fiber.StatusUnauthorized, "Invalid authorization format")
+		}
+		tokenString = authHeader[bearerPrefixLen:]
+	}
+
+	// Fallback: read from HttpOnly cookie (OAuth callback flow)
+	if tokenString == "" {
+		tokenString = c.Cookies(jwtCookieName)
+	}
+
+	if tokenString == "" {
 		return fiber.NewError(fiber.StatusUnauthorized, "Missing authorization")
 	}
-
-	if len(authHeader) < bearerPrefixLen || !strings.HasPrefix(authHeader, bearerPrefix) {
-		return fiber.NewError(fiber.StatusUnauthorized, "Invalid authorization format")
-	}
-
-	tokenString := authHeader[bearerPrefixLen:]
 	token, err := jwt.ParseWithClaims(tokenString, &middleware.UserClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(h.jwtSecret), nil
 	})

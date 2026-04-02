@@ -601,12 +601,14 @@ func TestServer_SettingsAll(t *testing.T) {
 
 func TestServer_ValidateToken(t *testing.T) {
 	tests := []struct {
-		name           string
-		agentToken     string // configured token
-		authHeader     string
-		queryToken     string
-		upgradeHeader  string // set to "websocket" for WebSocket upgrade requests
-		expectResult   bool
+		name              string
+		agentToken        string // configured token
+		authHeader        string
+		queryToken        string
+		upgradeHeader     string // set to "websocket" for WebSocket upgrade requests
+		connectionHeader  string // "upgrade" for real WebSocket handshakes
+		secWebSocketKey   string // base64 nonce sent by browsers
+		expectResult      bool
 	}{
 		{
 			name:         "No token configured - skip validation",
@@ -630,12 +632,14 @@ func TestServer_ValidateToken(t *testing.T) {
 			expectResult: false,
 		},
 		{
-			name:          "Valid query parameter token on WebSocket upgrade",
-			agentToken:    "secret123",
-			authHeader:    "",
-			queryToken:    "secret123",
-			upgradeHeader: "websocket",
-			expectResult:  true,
+			name:             "Valid query parameter token on genuine WebSocket upgrade",
+			agentToken:       "secret123",
+			authHeader:       "",
+			queryToken:       "secret123",
+			upgradeHeader:    "websocket",
+			connectionHeader: "Upgrade",
+			secWebSocketKey:  "dGhlIHNhbXBsZSBub25jZQ==",
+			expectResult:     true,
 		},
 		{
 			name:         "Query parameter token rejected on non-upgrade request",
@@ -645,12 +649,14 @@ func TestServer_ValidateToken(t *testing.T) {
 			expectResult: false, // query tokens only accepted for WebSocket upgrades
 		},
 		{
-			name:          "Invalid query parameter token on WebSocket upgrade",
-			agentToken:    "secret123",
-			authHeader:    "",
-			queryToken:    "wrongtoken",
-			upgradeHeader: "websocket",
-			expectResult:  false,
+			name:             "Invalid query parameter token on WebSocket upgrade",
+			agentToken:       "secret123",
+			authHeader:       "",
+			queryToken:       "wrongtoken",
+			upgradeHeader:    "websocket",
+			connectionHeader: "Upgrade",
+			secWebSocketKey:  "dGhlIHNhbXBsZSBub25jZQ==",
+			expectResult:     false,
 		},
 		{
 			name:         "Missing token when required",
@@ -665,6 +671,37 @@ func TestServer_ValidateToken(t *testing.T) {
 			authHeader:   "Basic secret123",
 			queryToken:   "",
 			expectResult: false,
+		},
+		{
+			// #4264: spoofed Upgrade header without Connection header
+			name:          "Spoofed Upgrade header only - missing Connection",
+			agentToken:    "secret123",
+			authHeader:    "",
+			queryToken:    "secret123",
+			upgradeHeader: "websocket",
+			// connectionHeader deliberately empty
+			secWebSocketKey: "dGhlIHNhbXBsZSBub25jZQ==",
+			expectResult:    false,
+		},
+		{
+			// #4264: spoofed Upgrade+Connection but missing Sec-WebSocket-Key
+			name:             "Spoofed Upgrade+Connection - missing Sec-WebSocket-Key",
+			agentToken:       "secret123",
+			authHeader:       "",
+			queryToken:       "secret123",
+			upgradeHeader:    "websocket",
+			connectionHeader: "Upgrade",
+			// secWebSocketKey deliberately empty
+			expectResult: false,
+		},
+		{
+			// #4264: only Upgrade header, nothing else
+			name:          "Spoofed Upgrade header alone",
+			agentToken:    "secret123",
+			authHeader:    "",
+			queryToken:    "secret123",
+			upgradeHeader: "websocket",
+			expectResult:  false,
 		},
 	}
 
@@ -684,6 +721,12 @@ func TestServer_ValidateToken(t *testing.T) {
 			}
 			if tt.upgradeHeader != "" {
 				req.Header.Set("Upgrade", tt.upgradeHeader)
+			}
+			if tt.connectionHeader != "" {
+				req.Header.Set("Connection", tt.connectionHeader)
+			}
+			if tt.secWebSocketKey != "" {
+				req.Header.Set("Sec-WebSocket-Key", tt.secWebSocketKey)
 			}
 
 			result := server.validateToken(req)
