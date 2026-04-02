@@ -246,7 +246,6 @@ export default defineConfig(({ mode }) => ({
     },
     coverage: {
       provider: 'v8',
-      all: true,
       reporter: ['text', 'json', 'json-summary', 'html'],
       include: [
         'src/hooks/**',
