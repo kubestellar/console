@@ -438,19 +438,16 @@ export function useTrestle() {
       return
     }
 
-    // Real mode: check all clusters with bounded concurrency, stream results progressively
+    // Real mode: check all clusters with bounded concurrency.
+    // Buffer results and apply a single state update at the end to prevent
+    // the card from flickering through intermediate states (#4266).
     const allStatuses: Record<string, TrestleClusterStatus> = {}
+    let checked = 0
 
     const tasks = (clusterNames || []).map(cluster => async () => {
       const status = await fetchSingleCluster(cluster)
       allStatuses[cluster] = status
-      if (mountedRef.current) {
-        // Stream each result immediately — card re-renders progressively
-        setStatuses(prev => ({ ...prev, [cluster]: status }))
-        setClustersChecked(prev => prev + 1)
-        // Clear initial loading after first result arrives
-        setIsLoading(false)
-      }
+      checked++
     })
 
     await settledWithConcurrency(tasks)
@@ -468,6 +465,8 @@ export function useTrestle() {
         setStatuses(demoStatuses)
         setClustersChecked(demoNames.length)
       } else {
+        setStatuses(allStatuses)
+        setClustersChecked(checked)
         saveToCache(allStatuses)
       }
       setIsLoading(false)

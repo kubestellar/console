@@ -406,12 +406,6 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               {t('missionChat.terminateSession', { defaultValue: 'Terminate Session' })}
             </button>
           )}
-          {mission.status === 'cancelling' && (
-            <span className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-orange-500/15 text-orange-400 border border-orange-500/30 rounded-lg">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Cancelling...
-            </span>
-          )}
           <div className={cn('flex items-center gap-1', config.color)}>
             <StatusIcon className={cn('w-4 h-4', (mission.status === 'running' || mission.status === 'cancelling') && 'animate-spin')} />
             <span className="text-xs">{config.label}</span>
