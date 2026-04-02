@@ -735,11 +735,42 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 	}
 
 	// Backup current binary
-	os.Rename(consolePath, consolePath+".backup")
+	if err := os.Rename(consolePath, consolePath+".backup"); err != nil {
+		uc.recordError(fmt.Sprintf("backup rename failed: %v", err))
+		uc.broadcast("update_progress", UpdateProgressPayload{
+			Status:  "failed",
+			Message: "Failed to back up current binary",
+			Error:   err.Error(),
+		})
+		return
+	}
 
-	// Replace
-	os.Rename(stagingDir+"/console", consolePath)
-	os.Chmod(consolePath, 0755)
+	// Replace with new binary
+	if err := os.Rename(stagingDir+"/console", consolePath); err != nil {
+		// Attempt to restore the backup before returning
+		os.Rename(consolePath+".backup", consolePath) //nolint:errcheck
+		uc.recordError(fmt.Sprintf("replace rename failed: %v", err))
+		uc.broadcast("update_progress", UpdateProgressPayload{
+			Status:  "failed",
+			Message: "Failed to install new binary, rolled back",
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	// fileModeBinary is the permission bits for the installed console binary.
+	const fileModeBinary = 0755
+	if err := os.Chmod(consolePath, fileModeBinary); err != nil {
+		// Attempt to restore the backup before returning
+		os.Rename(consolePath+".backup", consolePath) //nolint:errcheck
+		uc.recordError(fmt.Sprintf("chmod failed: %v", err))
+		uc.broadcast("update_progress", UpdateProgressPayload{
+			Status:  "failed",
+			Message: "Failed to set binary permissions, rolled back",
+			Error:   err.Error(),
+		})
+		return
+	}
 
 	uc.broadcast("update_progress", UpdateProgressPayload{
 		Status:   "restarting",

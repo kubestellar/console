@@ -15,6 +15,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
@@ -2508,6 +2509,12 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 		return
 	}
 
+	// Generate a unique session ID when the client omits one so that
+	// concurrent anonymous chats do not collide in activeChatCtxs (#4263).
+	if req.SessionID == "" {
+		req.SessionID = uuid.New().String()
+	}
+
 	// Create a context with both cancel and timeout so that:
 	//   1. cancel_chat messages can stop this session immediately, and
 	//   2. a hard deadline prevents missions from running forever when the
@@ -2862,6 +2869,12 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string) prot
 
 	if req.Prompt == "" {
 		return s.errorResponse(msg.ID, "empty_prompt", "Prompt cannot be empty")
+	}
+
+	// Generate a unique session ID when the client omits one so that
+	// concurrent anonymous chats do not collide (#4263).
+	if req.SessionID == "" {
+		req.SessionID = uuid.New().String()
 	}
 
 	// Determine which agent to use

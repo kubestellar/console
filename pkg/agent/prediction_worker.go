@@ -427,7 +427,11 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 
 	// Get GPU nodes from healthy clusters only
 	if clusters == nil {
-		clusters, _ = w.k8sClient.ListClusters(ctx)
+		var fallbackErr error
+		clusters, fallbackErr = w.k8sClient.ListClusters(ctx)
+		if fallbackErr != nil {
+			log.Printf("[PredictionWorker] Fallback ListClusters for GPU nodes failed: %v", fallbackErr)
+		}
 	}
 	for _, cluster := range clusters {
 		if !healthyClusterSet[cluster.Name] {

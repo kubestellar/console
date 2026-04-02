@@ -373,7 +373,11 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 
 		switch msg.Type {
 		case "ping":
-			client.send <- []byte(`{"type":"pong"}`)
+			select {
+			case client.send <- []byte(`{"type":"pong"}`):
+			default:
+				log.Printf("[WebSocket] Dropping pong for client %s: send channel full", client.userID)
+			}
 		}
 	}
 }

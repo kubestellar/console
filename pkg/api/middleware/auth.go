@@ -250,7 +250,7 @@ func GetGitHubLogin(c *fiber.Ctx) string {
 // WebSocketUpgrade handles WebSocket upgrade
 func WebSocketUpgrade() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		if c.Get("Upgrade") != "websocket" {
+		if !strings.EqualFold(c.Get("Upgrade"), "websocket") {
 			return fiber.ErrUpgradeRequired
 		}
 		return c.Next()
