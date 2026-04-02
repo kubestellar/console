@@ -2,7 +2,8 @@
  * Tests for useUpdateProgress hook.
  *
  * Validates WebSocket connection, parsing of update_progress messages,
- * step history tracking, dismiss behaviour, and cleanup on unmount.
+ * step history tracking, dismiss behaviour, stale detection, reconnect
+ * logic, and cleanup on unmount.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -70,6 +71,15 @@ vi.stubGlobal('WebSocket', MockWebSocket)
 
 import { useUpdateProgress } from '../useUpdateProgress'
 
+/** Helper to send an update_progress message to the latest WebSocket */
+function sendProgress(ws: MockWebSocketInstance, payload: Record<string, unknown>) {
+  act(() => {
+    ws.onmessage!({
+      data: JSON.stringify({ type: 'update_progress', payload }),
+    })
+  })
+}
+
 describe('useUpdateProgress', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -107,18 +117,12 @@ describe('useUpdateProgress', () => {
     const { result } = renderHook(() => useUpdateProgress())
     const ws = wsInstances[0]
 
-    const payload = {
+    sendProgress(ws, {
       status: 'pulling',
       message: 'Pulling latest changes...',
       progress: 15,
       step: 1,
       totalSteps: 7,
-    }
-
-    act(() => {
-      ws.onmessage!({
-        data: JSON.stringify({ type: 'update_progress', payload }),
-      })
     })
 
     expect(result.current.progress).toMatchObject({
@@ -168,43 +172,30 @@ describe('useUpdateProgress', () => {
   // ── Tracks step history ────────────────────────────────────────────────
 
   it('builds step history from update_progress messages with step info', () => {
+    const TOTAL_STEPS = 7
     const { result } = renderHook(() => useUpdateProgress())
     const ws = wsInstances[0]
 
     // Step 1 active
-    act(() => {
-      ws.onmessage!({
-        data: JSON.stringify({
-          type: 'update_progress',
-          payload: {
-            status: 'pulling',
-            message: 'Git pull',
-            progress: 14,
-            step: 1,
-            totalSteps: 7,
-          },
-        }),
-      })
+    sendProgress(ws, {
+      status: 'pulling',
+      message: 'Git pull',
+      progress: 14,
+      step: 1,
+      totalSteps: TOTAL_STEPS,
     })
 
-    expect(result.current.stepHistory.length).toBe(7)
+    expect(result.current.stepHistory.length).toBe(TOTAL_STEPS)
     expect(result.current.stepHistory[0].status).toBe('active')
     expect(result.current.stepHistory[1].status).toBe('pending')
 
     // Step 2 active (step 1 becomes completed)
-    act(() => {
-      ws.onmessage!({
-        data: JSON.stringify({
-          type: 'update_progress',
-          payload: {
-            status: 'building',
-            message: 'npm install',
-            progress: 28,
-            step: 2,
-            totalSteps: 7,
-          },
-        }),
-      })
+    sendProgress(ws, {
+      status: 'building',
+      message: 'npm install',
+      progress: 28,
+      step: 2,
+      totalSteps: TOTAL_STEPS,
     })
 
     expect(result.current.stepHistory[0].status).toBe('completed')
@@ -220,19 +211,12 @@ describe('useUpdateProgress', () => {
     const ws = wsInstances[0]
 
     // Jump straight to step 7
-    act(() => {
-      ws.onmessage!({
-        data: JSON.stringify({
-          type: 'update_progress',
-          payload: {
-            status: 'restarting',
-            message: 'Restart',
-            progress: 95,
-            step: TOTAL_STEPS,
-            totalSteps: TOTAL_STEPS,
-          },
-        }),
-      })
+    sendProgress(ws, {
+      status: 'restarting',
+      message: 'Restart',
+      progress: 95,
+      step: TOTAL_STEPS,
+      totalSteps: TOTAL_STEPS,
     })
 
     // Steps 1-6 should be completed
@@ -244,29 +228,66 @@ describe('useUpdateProgress', () => {
     expect(result.current.stepHistory[TOTAL_STEPS - 1].status).toBe('active')
   })
 
-  // ── Dismiss clears progress and step history ───────────────────────────
+  // ── Step history uses known labels from DEV_UPDATE_STEP_LABELS ────────
 
-  it('dismiss() clears both progress and step history', () => {
+  it('uses known step labels for developer channel steps', () => {
+    const TOTAL_STEPS = 7
     const { result } = renderHook(() => useUpdateProgress())
     const ws = wsInstances[0]
 
-    act(() => {
-      ws.onmessage!({
-        data: JSON.stringify({
-          type: 'update_progress',
-          payload: {
-            status: 'done',
-            message: 'Update complete',
-            progress: 100,
-            step: 7,
-            totalSteps: 7,
-          },
-        }),
-      })
+    sendProgress(ws, {
+      status: 'pulling',
+      message: 'Running git pull...',
+      progress: 10,
+      step: 1,
+      totalSteps: TOTAL_STEPS,
+    })
+
+    // Active step should use the message from the payload
+    expect(result.current.stepHistory[0].message).toBe('Running git pull...')
+    // Pending steps should use the label map
+    expect(result.current.stepHistory[1].message).toBe('npm install')
+    expect(result.current.stepHistory[2].message).toBe('Frontend build')
+    expect(result.current.stepHistory[3].message).toBe('Build console binary')
+    expect(result.current.stepHistory[4].message).toBe('Build kc-agent binary')
+    expect(result.current.stepHistory[5].message).toBe('Stopping services')
+    expect(result.current.stepHistory[6].message).toBe('Restart')
+  })
+
+  // ── Messages without step info do not alter step history ──────────────
+
+  it('does not update step history if step or totalSteps is missing', () => {
+    const { result } = renderHook(() => useUpdateProgress())
+    const ws = wsInstances[0]
+
+    sendProgress(ws, {
+      status: 'checking',
+      message: 'Checking for updates...',
+      progress: 5,
+    })
+
+    expect(result.current.progress).toMatchObject({ status: 'checking' })
+    // No step history should be built
+    expect(result.current.stepHistory).toEqual([])
+  })
+
+  // ── Dismiss clears progress and step history ───────────────────────────
+
+  it('dismiss() clears both progress and step history', () => {
+    const TOTAL_STEPS = 7
+    const { result } = renderHook(() => useUpdateProgress())
+    const ws = wsInstances[0]
+
+    sendProgress(ws, {
+      status: 'done',
+      message: 'Update complete',
+      progress: 100,
+      step: TOTAL_STEPS,
+      totalSteps: TOTAL_STEPS,
     })
 
     expect(result.current.progress).not.toBeNull()
-    expect(result.current.stepHistory.length).toBe(7)
+    expect(result.current.stepHistory.length).toBe(TOTAL_STEPS)
 
     act(() => {
       result.current.dismiss()
@@ -298,6 +319,23 @@ describe('useUpdateProgress', () => {
     expect(wsInstances.length).toBe(2)
   })
 
+  // ── Multiple reconnects ───────────────────────────────────────────────
+
+  it('reconnects multiple times on repeated disconnects', () => {
+    const WS_RECONNECT_MS = 5000
+    const RECONNECT_COUNT = 3
+    renderHook(() => useUpdateProgress())
+    expect(wsInstances.length).toBe(1)
+
+    for (let i = 0; i < RECONNECT_COUNT; i++) {
+      act(() => { wsInstances[wsInstances.length - 1].close() })
+      act(() => { vi.advanceTimersByTime(WS_RECONNECT_MS) })
+    }
+
+    // Original + 3 reconnects
+    expect(wsInstances.length).toBe(1 + RECONNECT_COUNT)
+  })
+
   // ── Cleanup on unmount ─────────────────────────────────────────────────
 
   it('closes WebSocket and clears timers on unmount', () => {
@@ -322,5 +360,176 @@ describe('useUpdateProgress', () => {
     })
 
     expect(result.current.progress).toBeNull()
+  })
+
+  // ── WebSocket onerror triggers close ──────────────────────────────────
+
+  it('closes the WebSocket on error (which triggers reconnect)', () => {
+    const WS_RECONNECT_MS = 5000
+    renderHook(() => useUpdateProgress())
+    const ws = wsInstances[0]
+
+    act(() => {
+      ws.onerror!()
+    })
+
+    // onerror calls ws.close(), which triggers onclose and schedules reconnect
+    expect(ws.close).toHaveBeenCalled()
+
+    act(() => { vi.advanceTimersByTime(WS_RECONNECT_MS) })
+    expect(wsInstances.length).toBe(2)
+  })
+
+  // ── Stale detection during active update ──────────────────────────────
+
+  it('transitions to failed status when WebSocket stays disconnected during active update', () => {
+    const STALE_TIMEOUT_MS = 45_000
+    const STALE_CHECK_INTERVAL_MS = 5_000
+    const WS_RECONNECT_MS = 5_000
+    const { result } = renderHook(() => useUpdateProgress())
+    const ws = wsInstances[0]
+
+    // Trigger onopen to set lastMessageTimeRef
+    act(() => { vi.advanceTimersByTime(0) })
+
+    // Start an active update
+    sendProgress(ws, {
+      status: 'building',
+      message: 'Building...',
+      progress: 50,
+      step: 3,
+      totalSteps: 7,
+    })
+
+    expect(result.current.progress?.status).toBe('building')
+
+    // Make all future WebSocket connections throw (simulating agent being completely down).
+    // This causes the `catch` block in connect() to fire, setting wsRef to null and
+    // scheduling another reconnect attempt (which also throws, keeping wsRef null).
+    vi.stubGlobal('WebSocket', class {
+      constructor() { throw new Error('Connection refused') }
+    })
+
+    // Close the current WebSocket to simulate agent crash
+    act(() => {
+      ws.readyState = MockWebSocket.CLOSED
+      if (ws.onclose) ws.onclose()
+    })
+
+    // Advance past reconnect delay (the reconnect attempt throws, wsRef stays null)
+    act(() => { vi.advanceTimersByTime(WS_RECONNECT_MS) })
+
+    // Now advance past the stale timeout + one check interval
+    act(() => {
+      vi.advanceTimersByTime(STALE_TIMEOUT_MS + STALE_CHECK_INTERVAL_MS)
+    })
+
+    // The hook should have detected the stale state (no WS, active update, long silence)
+    expect(result.current.progress?.status).toBe('failed')
+    expect(result.current.progress?.message).toContain('stopped responding')
+  })
+
+  // ── Stale detection stops when update completes ───────────────────────
+
+  it('stops stale detection timer when update status is done', () => {
+    const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval')
+    const { result } = renderHook(() => useUpdateProgress())
+    const ws = wsInstances[0]
+
+    // Trigger onopen
+    act(() => { vi.advanceTimersByTime(0) })
+
+    // Start active update (starts stale detection)
+    sendProgress(ws, {
+      status: 'building',
+      message: 'Building...',
+      progress: 50,
+      step: 3,
+      totalSteps: 7,
+    })
+
+    // Finish the update
+    sendProgress(ws, {
+      status: 'done',
+      message: 'Update complete',
+      progress: 100,
+      step: 7,
+      totalSteps: 7,
+    })
+
+    expect(result.current.progress?.status).toBe('done')
+    // clearInterval should have been called for the stale timer
+    expect(clearIntervalSpy).toHaveBeenCalled()
+    clearIntervalSpy.mockRestore()
+  })
+
+  // ── Stale detection stops when update fails ───────────────────────────
+
+  it('stops stale detection timer when update status is failed', () => {
+    const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval')
+    const { result } = renderHook(() => useUpdateProgress())
+    const ws = wsInstances[0]
+
+    act(() => { vi.advanceTimersByTime(0) })
+
+    sendProgress(ws, {
+      status: 'building',
+      message: 'Building...',
+      progress: 50,
+    })
+
+    sendProgress(ws, {
+      status: 'failed',
+      message: 'Build failed',
+      progress: 50,
+      error: 'npm install failed',
+    })
+
+    expect(result.current.progress?.status).toBe('failed')
+    expect(clearIntervalSpy).toHaveBeenCalled()
+    clearIntervalSpy.mockRestore()
+  })
+
+  // ── Step history preserves completed step timestamps ───────────────────
+
+  it('preserves timestamps of previously completed steps', () => {
+    const TOTAL_STEPS = 7
+    const { result } = renderHook(() => useUpdateProgress())
+    const ws = wsInstances[0]
+
+    // Step 1
+    sendProgress(ws, {
+      status: 'pulling', message: 'Git pull', progress: 14,
+      step: 1, totalSteps: TOTAL_STEPS,
+    })
+
+    const step1Timestamp = result.current.stepHistory[0].timestamp
+
+    // Step 2 — step 1 becomes completed, its timestamp should be preserved
+    sendProgress(ws, {
+      status: 'building', message: 'npm install', progress: 28,
+      step: 2, totalSteps: TOTAL_STEPS,
+    })
+
+    expect(result.current.stepHistory[0].status).toBe('completed')
+    expect(result.current.stepHistory[0].timestamp).toBe(step1Timestamp)
+  })
+
+  // ── Step history for unknown step labels ──────────────────────────────
+
+  it('falls back to "Step N" for steps beyond the known label map', () => {
+    const TOTAL_STEPS = 10 // beyond the 7-step dev label map
+    const { result } = renderHook(() => useUpdateProgress())
+    const ws = wsInstances[0]
+
+    sendProgress(ws, {
+      status: 'building', message: 'Extra step', progress: 80,
+      step: 9, totalSteps: TOTAL_STEPS,
+    })
+
+    // Steps 8, 9, 10 are beyond the 7-step label map
+    expect(result.current.stepHistory[7].message).toBe('Step 8')
+    expect(result.current.stepHistory[8].message).toBe('Extra step') // active step uses payload message
+    expect(result.current.stepHistory[9].message).toBe('Step 10')
   })
 })

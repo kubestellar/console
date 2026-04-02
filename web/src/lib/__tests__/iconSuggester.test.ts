@@ -1,5 +1,37 @@
-import { describe, it, expect } from 'vitest'
-import { suggestIconSync } from '../iconSuggester'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { suggestIconSync, suggestDashboardIcon } from '../iconSuggester'
+
+// Mock the getDemoMode dependency
+vi.mock('../../hooks/useDemoMode', () => ({
+  getDemoMode: vi.fn(() => false),
+}))
+
+// Mock WebSocket so askAgentForIcon does not open real connections
+const mockWsSend = vi.fn()
+const mockWsClose = vi.fn()
+
+class MockWebSocket {
+  onopen: (() => void) | null = null
+  onmessage: ((event: { data: string }) => void) | null = null
+  onerror: (() => void) | null = null
+  onclose: (() => void) | null = null
+
+  send = mockWsSend
+  close = mockWsClose
+
+  constructor() {
+    // Simulate immediate error (agent not available) by default
+    setTimeout(() => {
+      this.onerror?.()
+    }, 0)
+  }
+}
+
+beforeEach(() => {
+  vi.stubGlobal('WebSocket', MockWebSocket)
+  mockWsSend.mockClear()
+  mockWsClose.mockClear()
+})
 
 describe('suggestIconSync', () => {
   it('returns LayoutDashboard for empty string', () => {
@@ -51,5 +83,205 @@ describe('suggestIconSync', () => {
     // Just check both are valid strings
     expect(typeof icon1).toBe('string')
     expect(typeof icon2).toBe('string')
+  })
+
+  // -----------------------------------------------------------------------
+  // Additional keyword coverage
+  // -----------------------------------------------------------------------
+
+  it('matches gateway/service/endpoint/mesh keywords to Network', () => {
+    expect(suggestIconSync('API Gateway')).toBe('Network')
+    expect(suggestIconSync('Service Mesh')).toBe('Network')
+    expect(suggestIconSync('Endpoint Health')).toBe('Network')
+  })
+
+  it('matches job/batch workload keywords', () => {
+    // "job" keyword matches Wrench (appears before "cronjob" in the map)
+    expect(suggestIconSync('Job Runner')).toBe('Wrench')
+    // "batch" alone matches RefreshCw
+    expect(suggestIconSync('Batch Processing')).toBe('RefreshCw')
+  })
+
+  it('matches cache/redis/queue keywords to Zap', () => {
+    expect(suggestIconSync('Redis Cache')).toBe('Zap')
+    expect(suggestIconSync('Message Queue')).toBe('Zap')
+    expect(suggestIconSync('Kafka Streams')).toBe('Zap')
+  })
+
+  it('matches RBAC/policy/compliance security keywords', () => {
+    expect(suggestIconSync('RBAC Manager')).toBe('Shield')
+    expect(suggestIconSync('Policy Engine')).toBe('ShieldCheck')
+    expect(suggestIconSync('Compliance Dashboard')).toBe('ShieldCheck')
+    expect(suggestIconSync('Audit Log')).toBe('ShieldAlert')
+  })
+
+  it('matches identity/access/permission keywords', () => {
+    expect(suggestIconSync('Identity Provider')).toBe('Fingerprint')
+    expect(suggestIconSync('Access Control')).toBe('Key')
+    expect(suggestIconSync('Permission Manager')).toBe('Key')
+  })
+
+  it('matches scan keyword to ScanLine', () => {
+    // "Container Scan" matches "container" first -> Box. Use a name where "scan" is the first keyword.
+    expect(suggestIconSync('Scan Results')).toBe('ScanLine')
+  })
+
+  it('matches log/trace/event observability keywords', () => {
+    expect(suggestIconSync('Log Viewer')).toBe('Terminal')
+    expect(suggestIconSync('Trace Explorer')).toBe('Activity')
+    // "Event Monitor" — "monitor" keyword appears first in the map iteration
+    expect(suggestIconSync('Event Tracker')).toBe('Activity')
+  })
+
+  it('matches chart/graph/analytics keywords', () => {
+    expect(suggestIconSync('Analytics Panel')).toBe('TrendingUp')
+    expect(suggestIconSync('Graph Explorer')).toBe('TrendingUp')
+  })
+
+  it('matches health/status keywords', () => {
+    expect(suggestIconSync('Health Check')).toBe('CheckCircle')
+    expect(suggestIconSync('Status Page')).toBe('CheckCircle')
+  })
+
+  it('matches CI/CD and pipeline keywords', () => {
+    expect(suggestIconSync('CICD Pipeline')).toBe('GitPullRequest')
+    // "Pipeline Status" — "status" maps to CheckCircle first. Use standalone pipeline.
+    expect(suggestIconSync('Pipeline View')).toBe('GitPullRequest')
+    expect(suggestIconSync('Webhook Manager')).toBe('Webhook')
+  })
+
+  it('matches user/team/group keywords', () => {
+    expect(suggestIconSync('User Management')).toBe('Users')
+    // "Team Dashboard" — "dashboard" keyword appears first. Use a name without other keywords.
+    expect(suggestIconSync('Team Page')).toBe('Users')
+  })
+
+  it('matches config/settings keywords', () => {
+    expect(suggestIconSync('Configuration')).toBe('Settings')
+  })
+
+  it('matches cost/billing/budget keywords', () => {
+    expect(suggestIconSync('Cost Analysis')).toBe('TrendingUp')
+    expect(suggestIconSync('Budget Tracker')).toBe('TrendingUp')
+  })
+
+  it('matches GPU/AI/ML keywords', () => {
+    expect(suggestIconSync('GPU Allocation')).toBe('Cpu')
+    expect(suggestIconSync('AI Insights')).toBe('Microscope')
+    // "ML Pipeline" — "pipeline" maps to GitPullRequest before "ml" maps to Microscope
+    expect(suggestIconSync('ML Workbench')).toBe('Microscope')
+  })
+
+  it('matches edge/IoT/remote keywords', () => {
+    // "Edge Nodes" — "node" keyword maps to Server first. Use standalone "edge".
+    expect(suggestIconSync('Edge Computing')).toBe('Satellite')
+    expect(suggestIconSync('IoT Devices')).toBe('Radio')
+  })
+
+  it('matches game/demo/playground keywords', () => {
+    expect(suggestIconSync('Demo Mode')).toBe('Gamepad2')
+    expect(suggestIconSync('Playground')).toBe('Gamepad2')
+  })
+
+  it('matches fire/hot/critical/urgent keywords', () => {
+    expect(suggestIconSync('Hot Reload')).toBe('Flame')
+    // "Critical Alerts" — "alert" maps to Bell first. Use standalone "critical".
+    expect(suggestIconSync('Critical Issues')).toBe('Flame')
+  })
+
+  it('matches cool/freeze/cold keywords', () => {
+    // "Cold Storage" — "storage" maps to HardDrive first, "Cold Standby" — "db" in "standby" -> Database
+    expect(suggestIconSync('Cold Tier')).toBe('Snowflake')
+    expect(suggestIconSync('Freeze It')).toBe('Snowflake')
+  })
+
+  it('matches green/eco/sustainable keywords', () => {
+    expect(suggestIconSync('Green IT')).toBe('Leaf')
+    // "Eco Dashboard" — "dashboard" maps to LayoutDashboard first
+    expect(suggestIconSync('Eco Footprint')).toBe('Leaf')
+  })
+
+  it('matches search/find/discover/explore keywords', () => {
+    // "Search Pods" — "pod" matches first -> Box. Use standalone search.
+    expect(suggestIconSync('Search Tool')).toBe('Search')
+    expect(suggestIconSync('Explore Region')).toBe('Compass')
+  })
+
+  it('matches map/location/navigation keywords', () => {
+    // "Geo Dashboard" — "dashboard" maps to LayoutDashboard first
+    expect(suggestIconSync('Geo View')).toBe('Map')
+    expect(suggestIconSync('Location Viewer')).toBe('Navigation')
+  })
+
+  it('matches cloud provider keywords', () => {
+    expect(suggestIconSync('AWS Regions')).toBe('Cloud')
+    // "Azure Status" — "status" maps to CheckCircle first
+    expect(suggestIconSync('Azure Portal')).toBe('Cloud')
+    // "GCP Billing" — "billing" maps to TrendingUp first
+    expect(suggestIconSync('GCP Stuff')).toBe('Cloud')
+  })
+
+  it('matches overview/summary/main keywords', () => {
+    expect(suggestIconSync('Overview')).toBe('LayoutDashboard')
+    expect(suggestIconSync('Summary')).toBe('LayoutDashboard')
+  })
+
+  it('returns a valid string icon for every input', () => {
+    const names = ['', '   ', 'random', 'a', '123', 'My Custom Dashboard!!!']
+    for (const name of names) {
+      const icon = suggestIconSync(name)
+      expect(typeof icon).toBe('string')
+      expect(icon.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('is case-insensitive for keyword matching', () => {
+    expect(suggestIconSync('CLUSTER')).toBe('Server')
+    expect(suggestIconSync('cluster')).toBe('Server')
+    expect(suggestIconSync('Cluster')).toBe('Server')
+    expect(suggestIconSync('cLuStEr')).toBe('Server')
+  })
+
+  it('matches partial keyword in longer name', () => {
+    // "node" is inside "Node Health Dashboard"
+    expect(suggestIconSync('Node Health Dashboard')).toBe('Server')
+  })
+})
+
+describe('suggestDashboardIcon', () => {
+  it('returns LayoutDashboard for empty/whitespace name', async () => {
+    expect(await suggestDashboardIcon('')).toBe('LayoutDashboard')
+    expect(await suggestDashboardIcon('   ')).toBe('LayoutDashboard')
+  })
+
+  it('falls back to keyword match when agent is unavailable', async () => {
+    // MockWebSocket triggers onerror immediately, so askAgentForIcon returns null
+    const icon = await suggestDashboardIcon('Cluster Health')
+    expect(icon).toBe('Server')
+  })
+
+  it('falls back to deterministic random icon for unknown name', async () => {
+    const icon = await suggestDashboardIcon('xyzabc_totally_unknown_9876')
+    expect(typeof icon).toBe('string')
+    expect(icon.length).toBeGreaterThan(0)
+    // Should be deterministic
+    const icon2 = await suggestDashboardIcon('xyzabc_totally_unknown_9876')
+    expect(icon2).toBe(icon)
+  })
+
+  it('returns keyword icon for security-related names', async () => {
+    const icon = await suggestDashboardIcon('Secret Rotation')
+    expect(icon).toBe('Lock')
+  })
+
+  it('skips WebSocket in demo mode and falls back', async () => {
+    const { getDemoMode } = await import('../../hooks/useDemoMode')
+    vi.mocked(getDemoMode).mockReturnValue(true)
+
+    const icon = await suggestDashboardIcon('Pod Monitor')
+    // Should still resolve via keyword fallback
+    expect(icon).toBe('Box')
+
+    vi.mocked(getDemoMode).mockReturnValue(false)
   })
 })
