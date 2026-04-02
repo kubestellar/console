@@ -231,8 +231,7 @@ export function TourOverlay() {
     prevStep,
     skipTour,
   } = useTour()
-  const [tooltipPosition, setTooltipPosition] = useState<TooltipPosition>({})
-  const [targetRect, setTargetRect] = useState<DOMRect | null>(null)
+  const [overlay, setOverlay] = useState<{ position: TooltipPosition; rect: DOMRect | null }>({ position: {}, rect: null })
   const tooltipRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -247,8 +246,7 @@ export function TourOverlay() {
       const target = document.querySelector(currentStep.target)
       if (target) {
         const rect = target.getBoundingClientRect()
-        setTargetRect(rect)
-        setTooltipPosition(getTooltipPosition(rect, currentStep.placement))
+        setOverlay({ rect, position: getTooltipPosition(rect, currentStep.placement) })
       }
     }
 
@@ -275,10 +273,12 @@ export function TourOverlay() {
         }
       } else {
         // Center the tooltip when target not found
-        setTargetRect(null)
-        setTooltipPosition({
-          top: window.innerHeight / 2 - 100,
-          left: window.innerWidth / 2,
+        setOverlay({
+          rect: null,
+          position: {
+            top: window.innerHeight / 2 - 100,
+            left: window.innerWidth / 2,
+          },
         })
       }
     }, 100))
@@ -320,7 +320,7 @@ export function TourOverlay() {
   return (
     <div className="fixed inset-0 z-[100] pointer-events-none">
       {/* Overlay with cutout for target */}
-      {targetRect && currentStep.highlight ? (
+      {overlay.rect && currentStep.highlight ? (
         // Use box-shadow trick to create cutout - the highlighted area stays clear.
         // Split into two elements so that animate-pulse only affects the border,
         // not the backdrop (box-shadow), which previously caused the background to blink.
@@ -329,10 +329,10 @@ export function TourOverlay() {
           <div
             className="absolute rounded-lg pointer-events-none"
             style={{
-              top: targetRect.top - 8,
-              left: targetRect.left - 8,
-              width: targetRect.width + 16,
-              height: targetRect.height + 16,
+              top: overlay.rect.top - 8,
+              left: overlay.rect.left - 8,
+              width: overlay.rect.width + 16,
+              height: overlay.rect.height + 16,
               boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.75)',
             }}
           />
@@ -340,10 +340,10 @@ export function TourOverlay() {
           <div
             className="absolute border-4 border-purple-500 rounded-lg animate-pulse pointer-events-none"
             style={{
-              top: targetRect.top - 8,
-              left: targetRect.left - 8,
-              width: targetRect.width + 16,
-              height: targetRect.height + 16,
+              top: overlay.rect.top - 8,
+              left: overlay.rect.left - 8,
+              width: overlay.rect.width + 16,
+              height: overlay.rect.height + 16,
             }}
           />
         </>
@@ -359,16 +359,16 @@ export function TourOverlay() {
           'absolute z-10 w-80 p-4 rounded-lg glass border border-purple-500/30 shadow-xl animate-fade-in-up pointer-events-auto',
           // Center horizontally only for top/bottom placements when NOT using absolute edge positioning
           (currentStep.placement === 'top' || currentStep.placement === 'bottom' || !currentStep.placement) &&
-            !tooltipPosition.useAbsoluteLeft && '-translate-x-1/2',
+            !overlay.position.useAbsoluteLeft && '-translate-x-1/2',
           // Center vertically for left/right placements, unless using absolute positioning (navbar items)
           (currentStep.placement === 'left' || currentStep.placement === 'right') &&
-            !tooltipPosition.useAbsoluteLeft && '-translate-y-1/2'
+            !overlay.position.useAbsoluteLeft && '-translate-y-1/2'
         )}
         style={{
-          top: tooltipPosition.top,
-          bottom: tooltipPosition.bottom,
-          left: tooltipPosition.left,
-          right: tooltipPosition.right,
+          top: overlay.position.top,
+          bottom: overlay.position.bottom,
+          left: overlay.position.left,
+          right: overlay.position.right,
         }}
       >
         {/* Header */}
