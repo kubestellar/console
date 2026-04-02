@@ -1,0 +1,113 @@
+name: Process Issue Screenshots
+
+# When a new issue is created with embedded base64 screenshots, this workflow
+# decodes them, commits the images to .github/screenshots/, and replaces the
+# base64 blocks in the issue body with rendered markdown images.
+#
+# This avoids requiring end users' PATs to have push access to the repo.
+# The workflow's GITHUB_TOKEN has write access automatically.
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  process-screenshots:
+    # Only run if the issue body contains our base64 screenshot marker
+    if: contains(github.event.issue.body, '<!-- screenshot-base64:')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Process base64 screenshots
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = context.issue.number;
+            let body = context.payload.issue.body;
+
+            // Find all screenshot-base64 markers
+            const markerRegex = /<!-- screenshot-base64:(\d+) -->\n<details>\n<summary>Screenshot \d+ \(processing\.\.\.\)<\/summary>\n\n```\n(data:image\/[^;]+;base64,[A-Za-z0-9+/=\n]+)\n```\n\n<\/details>/g;
+
+            let match;
+            const screenshots = [];
+            while ((match = markerRegex.exec(body)) !== null) {
+              screenshots.push({
+                fullMatch: match[0],
+                index: parseInt(match[1]),
+                dataUri: match[2].replace(/\n/g, ''),
+              });
+            }
+
+            if (screenshots.length === 0) {
+              console.log('No base64 screenshots found in issue body');
+              return;
+            }
+
+            console.log(`Found ${screenshots.length} screenshot(s) to process`);
+
+            // Extract issue ID from body for folder naming
+            const idMatch = body.match(/Console Request ID:\*\* ([a-f0-9-]+)/);
+            const requestId = idMatch ? idMatch[1] : `issue-${issueNumber}`;
+
+            let updatedBody = body;
+
+            for (const ss of screenshots) {
+              try {
+                // Parse data URI
+                const [header, b64Content] = ss.dataUri.split(',');
+                const extMatch = header.match(/image\/(\w+)/);
+                const ext = extMatch ? extMatch[1].replace('jpeg', 'jpg') : 'png';
+
+                // Decode base64 to verify it's valid
+                const content = b64Content;
+
+                // Commit the image to the repo
+                const filePath = `.github/screenshots/${requestId}/screenshot-${ss.index}.${ext}`;
+                console.log(`Uploading ${filePath}...`);
+
+                const { data } = await github.rest.repos.createOrUpdateFileContents({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  path: filePath,
+                  message: `Add screenshot ${ss.index} for issue #${issueNumber}`,
+                  content: content,
+                  committer: {
+                    name: 'github-actions[bot]',
+                    email: '41898282+github-actions[bot]@users.noreply.github.com',
+                  },
+                });
+
+                const downloadUrl = data.content.download_url;
+                console.log(`Uploaded: ${downloadUrl}`);
+
+                // Replace the base64 block with a rendered image
+                updatedBody = updatedBody.replace(
+                  ss.fullMatch,
+                  `![Screenshot ${ss.index}](${downloadUrl})`
+                );
+              } catch (err) {
+                console.error(`Failed to process screenshot ${ss.index}:`, err.message);
+                // Replace with error message instead of leaving base64 blob
+                updatedBody = updatedBody.replace(
+                  ss.fullMatch,
+                  `> ⚠️ Screenshot ${ss.index} could not be processed: ${err.message}`
+                );
+              }
+            }
+
+            // Update the issue body with rendered images
+            if (updatedBody !== body) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: updatedBody,
+              });
+              console.log(`Issue #${issueNumber} updated with ${screenshots.length} rendered screenshot(s)`);
+            }

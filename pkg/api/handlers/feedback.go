@@ -1565,27 +1565,33 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest
 		repoLabel = "Console Documentation"
 	}
 
-	// Upload screenshots to GitHub and build markdown image references
+	// Embed screenshots as base64 in the issue body inside collapsible blocks.
+	// A GitHub Actions workflow (process-screenshots.yml) watches for new issues
+	// with these markers, decodes the base64, commits the images to the repo
+	// (using the workflow's GITHUB_TOKEN which has write access), and replaces
+	// the base64 blocks with rendered markdown images. This avoids requiring
+	// the user's PAT to have push access to the repo.
 	screenshotMarkdown := ""
 	var ssResult screenshotUploadResult
 	if len(screenshots) > 0 {
-		var imageLines []string
+		var blocks []string
 		for i, dataURI := range screenshots {
-			url, err := h.uploadScreenshotToGitHub(repoOwner, repoName, request.ID.String(), i, dataURI)
-			if err != nil {
+			// Validate the data URI format
+			parts := strings.SplitN(dataURI, ",", 2)
+			if len(parts) != 2 {
 				ssResult.Failed++
-				log.Printf("[Feedback] Failed to upload screenshot %d: %v", i+1, err)
-				if strings.Contains(err.Error(), "404") {
-					log.Printf("[Feedback] Hint: a 404 from the GitHub Contents API usually means the token lacks 'Contents: Read and write' permission. "+
-						"Ensure FEEDBACK_GITHUB_TOKEN has this scope for %s/%s.", repoOwner, repoName)
-				}
+				log.Printf("[Feedback] Screenshot %d: invalid data URI format", i+1)
 				continue
 			}
 			ssResult.Uploaded++
-			imageLines = append(imageLines, fmt.Sprintf("![Screenshot %d](%s)", i+1, url))
+			// Wrap in a collapsible <details> block with a machine-readable marker
+			// that the GHA workflow can find and process.
+			blocks = append(blocks, fmt.Sprintf(
+				"<!-- screenshot-base64:%d -->\n<details>\n<summary>Screenshot %d (processing...)</summary>\n\n```\n%s\n```\n\n</details>",
+				i+1, i+1, dataURI))
 		}
-		if len(imageLines) > 0 {
-			screenshotMarkdown = "\n\n## Screenshots\n\n" + strings.Join(imageLines, "\n\n")
+		if len(blocks) > 0 {
+			screenshotMarkdown = "\n\n## Screenshots\n\n" + strings.Join(blocks, "\n\n")
 		}
 	}
 

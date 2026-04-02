@@ -17,7 +17,7 @@ import { useAuth } from '../../lib/auth'
 import { useRewards } from '../../hooks/useRewards'
 import { BACKEND_DEFAULT_URL, STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
 import { FEEDBACK_UPLOAD_TIMEOUT_MS } from '../../lib/constants/network'
-import { GITHUB_TOKEN_MANAGE_URL, GITHUB_TOKEN_CREATE_URL, GITHUB_TOKEN_FINE_GRAINED_PERMISSIONS, GITHUB_TOKEN_CLASSIC_SCOPE } from '../../lib/constants/github-token'
+import { GITHUB_TOKEN_CREATE_URL, GITHUB_TOKEN_FINE_GRAINED_PERMISSIONS } from '../../lib/constants/github-token'
 import { emitLinkedInShare } from '../../lib/analytics'
 import { isDemoModeForced } from '../../lib/demoMode'
 import { useToast } from '../ui/Toast'
@@ -1245,41 +1245,28 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
                 </button>
               </div>
 
-              {/* Screenshot upload status — show based on actual backend result */}
+              {/* Screenshot status — screenshots are embedded as base64 in the issue body
+                  and processed into images by a GitHub Actions workflow */}
               {screenshots.length > 0 && success && (success.screenshotsUploaded ?? 0) > 0 && (
                 <div className="mt-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
                   <p className="text-xs text-green-400 font-medium">
                     {(success.screenshotsUploaded ?? 0) === 1
-                      ? 'Screenshot uploaded and attached to the issue.'
-                      : `${success.screenshotsUploaded} screenshots uploaded and attached to the issue.`}
+                      ? 'Screenshot attached to the issue. It will render as an image shortly.'
+                      : `${success.screenshotsUploaded} screenshots attached to the issue. They will render as images shortly.`}
                   </p>
                 </div>
               )}
-              {screenshots.length > 0 && success && (success.screenshotsFailed ?? 0) > 0 && (success.screenshotsUploaded ?? 0) === 0 && (
+              {screenshots.length > 0 && success && (success.screenshotsFailed ?? 0) > 0 && (
                 <div className="mt-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
                   <p className="text-xs text-yellow-400 font-medium">
-                    Screenshot could not be uploaded — the issue was created without it.
-                    The token needs <em>{GITHUB_TOKEN_FINE_GRAINED_PERMISSIONS[1].scope}</em> permission (fine-grained PAT) or <em>{GITHUB_TOKEN_CLASSIC_SCOPE}</em> scope (classic PAT).
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    <a href={GITHUB_TOKEN_MANAGE_URL} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Update token on GitHub</a>
-                    {' · '}
-                    <button type="button" onClick={() => { window.location.href = '/settings#github-token' }} className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Console Settings</button>
+                    {success.screenshotsFailed === 1
+                      ? 'Screenshot could not be attached — invalid image format.'
+                      : `${success.screenshotsFailed} screenshots could not be attached — invalid image format.`}
                   </p>
                 </div>
               )}
-              {screenshots.length > 0 && success && (success.screenshotsFailed ?? 0) > 0 && (success.screenshotsUploaded ?? 0) > 0 && (
-                <div className="mt-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                  <p className="text-xs text-yellow-400 font-medium">
-                    {success.screenshotsUploaded} of {screenshots.length} screenshots uploaded. {success.screenshotsFailed} failed — token may need <em>{GITHUB_TOKEN_FINE_GRAINED_PERMISSIONS[1].scope}</em> permission.
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    <a href={GITHUB_TOKEN_MANAGE_URL} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Update token on GitHub</a>
-                    {' · '}
-                    <button type="button" onClick={() => { window.location.href = '/settings#github-token' }} className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Console Settings</button>
-                  </p>
-                </div>
-              )}
+              {/* Token permission warnings removed — screenshots are now embedded as base64,
+                  no push access needed. GHA workflow processes them into images. */}
             </div>
           ) : (
             <form id="feedback-form" onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
