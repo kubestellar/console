@@ -39,9 +39,10 @@ function isManagedCluster(allPods: PodInfo[], cluster: string): boolean {
 export function EtcdStatus() {
   const { t } = useTranslation('cards')
   // Fetch from all namespaces so we catch etcd pods outside kube-system
-  const { pods, isLoading, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods()
+  const { pods, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods()
   const { showSkeleton } = useCardLoadingState({
     isLoading,
+    isRefreshing,
     hasAnyData: pods.length > 0,
     isDemoData: isDemoFallback,
     isFailed,

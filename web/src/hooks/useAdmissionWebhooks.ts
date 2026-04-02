@@ -131,6 +131,7 @@ export interface UseAdmissionWebhooksResult {
   webhooks: WebhookData[]
   isDemoData: boolean
   isLoading: boolean
+  isRefreshing: boolean
   isFailed: boolean
   consecutiveFailures: number
   lastRefresh: number | null
@@ -144,6 +145,7 @@ export function useAdmissionWebhooks(): UseAdmissionWebhooksResult {
   const [webhooks, setWebhooks] = useState<WebhookData[]>(cachedData.current?.data || [])
   const [isDemoData, setIsDemoData] = useState(cachedData.current?.isDemoData ?? true)
   const [isLoading, setIsLoading] = useState(!cachedData.current)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<number | null>(
     cachedData.current?.timestamp || null
@@ -153,6 +155,9 @@ export function useAdmissionWebhooks(): UseAdmissionWebhooksResult {
   const refetch = useCallback(async (silent = false) => {
     if (!silent && !initialLoadDone.current) {
       setIsLoading(true)
+    }
+    if (silent) {
+      setIsRefreshing(true)
     }
 
     try {
@@ -194,6 +199,7 @@ export function useAdmissionWebhooks(): UseAdmissionWebhooksResult {
       saveToCache(demoWebhooks, true)
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [clusters])
 
@@ -219,6 +225,7 @@ export function useAdmissionWebhooks(): UseAdmissionWebhooksResult {
     webhooks,
     isDemoData,
     isLoading: isLoading || clustersLoading,
+    isRefreshing,
     isFailed: consecutiveFailures >= FAILURE_THRESHOLD,
     consecutiveFailures,
     lastRefresh,

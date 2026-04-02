@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCachedPods } from '../../hooks/useCachedData'
+import { useCardLoadingState } from './CardDataContext'
 
 interface NamespaceUsage {
   namespace: string
@@ -11,8 +12,18 @@ interface NamespaceUsage {
 
 export function QuotaHeatmap() {
   const { t } = useTranslation('cards')
-  const { pods, isLoading } = useCachedPods(undefined, undefined, { limit: 500 })
+  const { pods, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods(undefined, undefined, { limit: 500 })
   const [selectedNs, setSelectedNs] = useState<string | null>(null)
+
+  const hasData = pods.length > 0
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: isLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
+    isDemoData: isDemoFallback,
+    isFailed,
+    consecutiveFailures,
+  })
 
   const namespaceData = useMemo(() => {
     const map = new Map<string, NamespaceUsage>()
@@ -32,7 +43,7 @@ export function QuotaHeatmap() {
 
   const maxPods = useMemo(() => Math.max(1, ...namespaceData.map(d => d.podCount)), [namespaceData])
 
-  if (isLoading && pods.length === 0) {
+  if (showSkeleton) {
     return (
       <div className="grid grid-cols-6 gap-1 p-1">
         {Array.from({ length: 24 }).map((_, i) => (

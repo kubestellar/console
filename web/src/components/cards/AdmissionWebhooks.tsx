@@ -8,10 +8,11 @@ import { CardSkeleton } from '../../lib/cards/CardComponents'
 export function AdmissionWebhooks() {
   const { t } = useTranslation('cards')
   const [tab, setTab] = useState<'all' | 'mutating' | 'validating'>('all')
-  const { webhooks, isLoading, isDemoData, isFailed, consecutiveFailures, lastRefresh } = useAdmissionWebhooks()
+  const { webhooks, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures, lastRefresh } = useAdmissionWebhooks()
   const hasData = webhooks.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasData,
+    isRefreshing,
     hasAnyData: hasData,
     isDemoData,
     isFailed,
