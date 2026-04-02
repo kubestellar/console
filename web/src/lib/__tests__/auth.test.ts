@@ -10,7 +10,6 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
-import { renderHook } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Mocks — declared before importing the module under test
