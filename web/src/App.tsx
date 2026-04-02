@@ -442,6 +442,18 @@ function App() {
         <LightweightShell><MissionBrowseLink /></LightweightShell>
       } />
 
+      {/* ── Public landing pages ──────────────────────────────────────
+          Marketing/comparison pages that must render without auth.
+          On Netlify (no Go backend), AuthProvider blocks forever
+          waiting for /api/me — these pages skip that entirely. */}
+      <Route path={ROUTES.FROM_LENS} element={<LightweightShell><FromLens /></LightweightShell>} />
+      <Route path={ROUTES.FROM_HEADLAMP} element={<LightweightShell><FromHeadlamp /></LightweightShell>} />
+      <Route path={ROUTES.FROM_HOLMESGPT} element={<LightweightShell><FromHolmesGPT /></LightweightShell>} />
+      <Route path={ROUTES.FEATURE_INSPEKTORGADGET} element={<LightweightShell><FeatureInspektorGadget /></LightweightShell>} />
+      <Route path={ROUTES.FEATURE_KAGENT} element={<LightweightShell><FeatureKagent /></LightweightShell>} />
+      <Route path={ROUTES.WHITE_LABEL} element={<LightweightShell><WhiteLabel /></LightweightShell>} />
+      <Route path={ROUTES.WELCOME} element={<LightweightShell><Welcome /></LightweightShell>} />
+
       {/* ── Full dashboard routes ─────────────────────────────────────
           Everything else gets the full provider stack. */}
       <Route path="*" element={<FullDashboardApp />} />
@@ -473,13 +485,6 @@ function FullDashboardApp() {
       <Suspense fallback={<LoadingFallback />}>
       <Routes>
         <Route path={ROUTES.LOGIN} element={<Login />} />
-        <Route path={ROUTES.WELCOME} element={<Welcome />} />
-        <Route path={ROUTES.FROM_LENS} element={<FromLens />} />
-        <Route path={ROUTES.FROM_HEADLAMP} element={<FromHeadlamp />} />
-        <Route path={ROUTES.FROM_HOLMESGPT} element={<FromHolmesGPT />} />
-        <Route path={ROUTES.FEATURE_INSPEKTORGADGET} element={<FeatureInspektorGadget />} />
-        <Route path={ROUTES.FEATURE_KAGENT} element={<FeatureKagent />} />
-        <Route path={ROUTES.WHITE_LABEL} element={<WhiteLabel />} />
         <Route path={ROUTES.AUTH_CALLBACK} element={<AuthCallback />} />
         {/* PWA Mini Dashboard - lightweight widget mode (no auth required for local monitoring) */}
         <Route path={ROUTES.WIDGET} element={<MiniDashboard />} />
