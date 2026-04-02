@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { recordDashboardVisit, getTopVisitedDashboards, prefetchTopDashboards } from '../dashboardVisits'
+import { DASHBOARD_CHUNKS } from '../dashboardChunks'
 
 describe('recordDashboardVisit', () => {
   beforeEach(() => {
@@ -268,5 +269,123 @@ describe('prefetchTopDashboards', () => {
 
     // Prefetch only top 2 — should not throw
     expect(() => prefetchTopDashboards(undefined, 2)).not.toThrow()
+  })
+
+  it('calls loader for root path which maps to "dashboard" chunk', () => {
+    // Record root path visits -- exercises pathToChunkId returning 'dashboard' for '/'
+    recordDashboardVisit('/')
+    recordDashboardVisit('/')
+
+    const mockLoader = vi.fn().mockResolvedValue({})
+    vi.spyOn(DASHBOARD_CHUNKS, 'dashboard' as never).mockReturnValue(undefined)
+    // Replace the loader directly
+    const originalLoader = DASHBOARD_CHUNKS['dashboard']
+    DASHBOARD_CHUNKS['dashboard'] = mockLoader
+
+    // Stub requestIdleCallback to call the callback immediately
+    vi.stubGlobal('requestIdleCallback', (cb: () => void) => cb())
+
+    prefetchTopDashboards('/other-path')
+
+    expect(mockLoader).toHaveBeenCalledTimes(1)
+
+    // Restore
+    DASHBOARD_CHUNKS['dashboard'] = originalLoader
+    vi.unstubAllGlobals()
+  })
+
+  it('calls loaders for non-root paths (strips leading slash)', () => {
+    recordDashboardVisit('/clusters')
+
+    const mockLoader = vi.fn().mockResolvedValue({})
+    const originalLoader = DASHBOARD_CHUNKS['clusters']
+    DASHBOARD_CHUNKS['clusters'] = mockLoader
+
+    vi.stubGlobal('requestIdleCallback', (cb: () => void) => cb())
+
+    prefetchTopDashboards('/other-path')
+
+    expect(mockLoader).toHaveBeenCalledTimes(1)
+
+    DASHBOARD_CHUNKS['clusters'] = originalLoader
+    vi.unstubAllGlobals()
+  })
+
+  it('handles loader that rejects (fire-and-forget)', () => {
+    recordDashboardVisit('/clusters')
+
+    const mockLoader = vi.fn().mockRejectedValue(new Error('chunk load failed'))
+    const originalLoader = DASHBOARD_CHUNKS['clusters']
+    DASHBOARD_CHUNKS['clusters'] = mockLoader
+
+    vi.stubGlobal('requestIdleCallback', (cb: () => void) => cb())
+
+    // Should not throw even when loader rejects
+    expect(() => prefetchTopDashboards()).not.toThrow()
+
+    expect(mockLoader).toHaveBeenCalledTimes(1)
+
+    DASHBOARD_CHUNKS['clusters'] = originalLoader
+    vi.unstubAllGlobals()
+  })
+
+  it('skips paths with no matching chunk in DASHBOARD_CHUNKS', () => {
+    // Record visits to a path that has no chunk entry
+    recordDashboardVisit('/nonexistent-dashboard')
+
+    vi.stubGlobal('requestIdleCallback', (cb: () => void) => cb())
+
+    // Should not throw when chunk ID doesn't exist
+    expect(() => prefetchTopDashboards()).not.toThrow()
+
+    vi.unstubAllGlobals()
+  })
+
+  it('skips exact currentPath match and prefetches others', () => {
+    recordDashboardVisit('/clusters')
+    recordDashboardVisit('/clusters')
+    recordDashboardVisit('/pods')
+
+    const clusterLoader = vi.fn().mockResolvedValue({})
+    const podsLoader = vi.fn().mockResolvedValue({})
+
+    const origClusters = DASHBOARD_CHUNKS['clusters']
+    const origPods = DASHBOARD_CHUNKS['pods']
+    DASHBOARD_CHUNKS['clusters'] = clusterLoader
+    DASHBOARD_CHUNKS['pods'] = podsLoader
+
+    vi.stubGlobal('requestIdleCallback', (cb: () => void) => cb())
+
+    prefetchTopDashboards('/clusters')
+
+    // clusters should be skipped (it's the current path)
+    expect(clusterLoader).not.toHaveBeenCalled()
+    // pods should be prefetched
+    expect(podsLoader).toHaveBeenCalledTimes(1)
+
+    DASHBOARD_CHUNKS['clusters'] = origClusters
+    DASHBOARD_CHUNKS['pods'] = origPods
+    vi.unstubAllGlobals()
+  })
+
+  it('uses setTimeout fallback and actually fires the prefetch callback', () => {
+    recordDashboardVisit('/pods')
+
+    const mockLoader = vi.fn().mockResolvedValue({})
+    const origPods = DASHBOARD_CHUNKS['pods']
+    DASHBOARD_CHUNKS['pods'] = mockLoader
+
+    // Remove requestIdleCallback
+    vi.stubGlobal('requestIdleCallback', undefined)
+
+    prefetchTopDashboards()
+
+    // Advance timers to fire the setTimeout
+    vi.advanceTimersByTime(2000)
+
+    expect(mockLoader).toHaveBeenCalledTimes(1)
+
+    DASHBOARD_CHUNKS['pods'] = origPods
+    vi.unstubAllGlobals()
   })
 })

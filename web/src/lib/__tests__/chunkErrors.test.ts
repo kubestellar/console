@@ -63,4 +63,69 @@ describe('isChunkLoadError', () => {
     const error = new Error('')
     expect(isChunkLoadError(error)).toBe(false)
   })
+
+  it('handles error with undefined message property', () => {
+    const error = new Error()
+    ;(error as unknown as Record<string, unknown>).message = undefined as unknown as string
+    expect(isChunkLoadError(error)).toBe(false)
+  })
+
+  it('detects chunk load error with extra context in message', () => {
+    const error = new Error(
+      'Uncaught (in promise): Failed to fetch dynamically imported module https://example.com/assets/Card-abc123.js'
+    )
+    expect(isChunkLoadError(error)).toBe(true)
+  })
+
+  it('detects Loading CSS chunk error from Error object', () => {
+    const error = new Error('Loading CSS chunk dashboard-xyz failed')
+    expect(isChunkLoadError(error)).toBe(true)
+  })
+
+  it('detects Unable to preload CSS from Error object', () => {
+    const error = new Error('Unable to preload CSS for /assets/theme-dark.css')
+    expect(isChunkLoadError(error)).toBe(true)
+  })
+
+  it('detects MIME type error from Error object', () => {
+    const error = new Error('text/html is not a valid JavaScript MIME type')
+    expect(isChunkLoadError(error)).toBe(true)
+  })
+
+  it('detects Safari import failure from Error object', () => {
+    const error = new Error('Importing a module script failed.')
+    expect(isChunkLoadError(error)).toBe(true)
+  })
+
+  it('detects stale chunk error from Error object', () => {
+    const error = new Error('Export "default" not found in module -- chunk may be stale')
+    expect(isChunkLoadError(error)).toBe(true)
+  })
+})
+
+describe('isChunkLoadMessage edge cases', () => {
+  it('matches substrings regardless of surrounding case', () => {
+    // includes() is case-sensitive, but the full known substring appears in the message
+    expect(isChunkLoadMessage('failed to fetch dynamically imported module')).toBe(true)
+    // 'dynamically imported module' is a checked substring
+    expect(isChunkLoadMessage('loading chunk 42 failed')).toBe(false)
+    // 'Loading chunk' starts uppercase; lowercase 'loading' does not match
+  })
+
+  it('detects message embedded in longer string', () => {
+    expect(isChunkLoadMessage('Error: Loading chunk abc123 failed (https://...)')).toBe(true)
+  })
+
+  it('returns false for partial keyword matches that do not form a known phrase', () => {
+    expect(isChunkLoadMessage('Loading')).toBe(false)
+    expect(isChunkLoadMessage('chunk')).toBe(false)
+    expect(isChunkLoadMessage('dynamically')).toBe(false)
+    expect(isChunkLoadMessage('imported')).toBe(false)
+  })
+
+  it('returns false for similar but non-matching phrases', () => {
+    expect(isChunkLoadMessage('Failed to fetch static module')).toBe(false)
+    expect(isChunkLoadMessage('Unable to preload JS')).toBe(false)
+    expect(isChunkLoadMessage('is not a valid JSON MIME type')).toBe(false)
+  })
 })

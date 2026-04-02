@@ -177,4 +177,156 @@ describe('useBuildpackImages', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.lastRefresh).toBeDefined()
   })
+
+  it('handles non-Error exceptions in catch block', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue('string error')
+
+    const { result } = renderHook(() => useBuildpackImages('str-err-cluster'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.error).toBe('Failed to fetch Buildpack images')
+    expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
+  })
+
+  it('handles API error (non-404, non-ok response)', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+    })
+
+    const { result } = renderHook(() => useBuildpackImages('api-err-cluster'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.error).toBe('API error: 500')
+    expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
+  })
+
+  it('does not fetch on Netlify deployment', async () => {
+    mockIsNetlifyDeployment.value = true
+    globalThis.fetch = vi.fn()
+
+    const { result } = renderHook(() => useBuildpackImages('netlify-cluster'))
+
+    // Should resolve to non-loading state without calling fetch
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.isRefreshing).toBe(false)
+  })
+
+  it('returns images filtered by cluster param when multiple images exist', async () => {
+    const images = [
+      { name: 'app1', namespace: 'ns1', builder: 'paketo', image: 'img1', status: 'succeeded', updated: new Date().toISOString(), cluster: 'c1' },
+      { name: 'app2', namespace: 'ns2', builder: 'paketo', image: 'img2', status: 'building', updated: new Date().toISOString(), cluster: 'c2' },
+    ]
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ images }),
+    })
+
+    const { result } = renderHook(() => useBuildpackImages('c1'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    // The hook returns whatever the server returns for the given cluster filter
+    expect(result.current.images).toEqual(images)
+  })
+
+  it('handles response with missing images key gracefully', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    })
+
+    const { result } = renderHook(() => useBuildpackImages('empty-key-cluster'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.images).toEqual([])
+    expect(result.current.error).toBeNull()
+  })
+
+  it('sends Authorization header when token exists', async () => {
+    localStorage.setItem('token', 'my-secret-token')
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ images: [] }),
+    })
+
+    const { result } = renderHook(() => useBuildpackImages('auth-cluster'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/gitops/buildpack-images'),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer my-secret-token',
+        }),
+      })
+    )
+  })
+
+  it('calls fetch without Authorization header when no token exists', async () => {
+    localStorage.removeItem('token')
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ images: [] }),
+    })
+
+    const { result } = renderHook(() => useBuildpackImages('no-auth-cluster'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    const callArgs = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
+    const headers = callArgs[1].headers as Record<string, string>
+    expect(headers['Authorization']).toBeUndefined()
+  })
+
+  it('appends cluster param to fetch URL when specified', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ images: [] }),
+    })
+
+    const { result } = renderHook(() => useBuildpackImages('my-cluster'))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('cluster=my-cluster'),
+      expect.anything()
+    )
+  })
+
+  it('does not append cluster param when not specified', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ images: [] }),
+    })
+
+    const { result } = renderHook(() => useBuildpackImages())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
+    expect(url).not.toContain('cluster=')
+  })
+
+  it('resets error and consecutiveFailures on successful fetch after failure', async () => {
+    // First render with failure
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('fail'))
+
+    const { result, rerender } = renderHook(
+      ({ cluster }) => useBuildpackImages(cluster),
+      { initialProps: { cluster: 'recovery-cluster-1' } }
+    )
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.error).toBeTruthy()
+
+    // Now succeed
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ images: [{ name: 'recovered', namespace: 'ns', builder: 'b', image: 'i', status: 'succeeded', updated: new Date().toISOString(), cluster: 'c1' }] }),
+    })
+
+    rerender({ cluster: 'recovery-cluster-2' })
+
+    await waitFor(() => expect(result.current.error).toBeNull())
+    expect(result.current.consecutiveFailures).toBe(0)
+    expect(result.current.isDemoData).toBe(false)
+  })
 })
