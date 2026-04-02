@@ -12,7 +12,19 @@ export const worker = setupWorker(...handlers)
  *  Called from main.tsx via dynamic import so MSW code stays code-split. */
 export async function startMocking(): Promise<void> {
   await worker.start({
-    onUnhandledRequest: 'bypass',
+    onUnhandledRequest(request, print) {
+      const url = new URL(request.url)
+      // API calls that MSW doesn't handle should NOT fall through to Netlify's
+      // SPA catch-all (which returns index.html as 200 OK). That causes
+      // `SyntaxError: Unexpected token '<'` when code tries `.json()`.
+      // Silently ignore unhandled /api/* requests — they'll fail with a network
+      // error which hooks already handle, instead of a misleading HTML 200.
+      if (url.pathname.startsWith('/api/')) {
+        return
+      }
+      // Non-API requests (fonts, images, external scripts) pass through normally
+      print.warning()
+    },
     serviceWorker: {
       url: MSW_SERVICE_WORKER_URL,
     },
