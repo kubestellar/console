@@ -103,7 +103,7 @@ export function getLatestForChannel(
  * Check if a version string is a development version.
  * Development versions are simple semver without nightly/weekly suffix.
  */
-function isDevVersion(version: string): boolean {
+export function isDevVersion(version: string): boolean {
   // Dev versions: 0.1.0, 1.0.0, unknown, dev
   if (version === 'unknown' || version === 'dev') return true
   // Simple semver without suffix (no nightly/weekly)
@@ -120,7 +120,7 @@ function isDevVersion(version: string): boolean {
  * For developer channel, comparison is done via SHA (not here — see autoUpdateStatus).
  * For release channels, compares tag dates or semver parts.
  */
-function isNewerVersion(currentTag: string, latestTag: string, channel: UpdateChannel): boolean {
+export function isNewerVersion(currentTag: string, latestTag: string, channel: UpdateChannel): boolean {
   if (currentTag === latestTag) return false
 
   // Developer channel uses SHA comparison, not tag comparison
