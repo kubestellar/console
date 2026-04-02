@@ -321,6 +321,11 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   activeMissionIdRef.current = activeMissionId
   const isSidebarOpenRef = useRef(isSidebarOpen)
   isSidebarOpenRef.current = isSidebarOpen
+  // Refs to always hold the latest selectedAgent and defaultAgent — avoids stale closures in startMission/executeMission (#4228)
+  const selectedAgentRef = useRef(selectedAgent)
+  selectedAgentRef.current = selectedAgent
+  const defaultAgentRef = useRef(defaultAgent)
+  defaultAgentRef.current = defaultAgent
   // Ref to always hold the latest handleAgentMessage — avoids reconnecting WebSocket when the handler changes
   const handleAgentMessageRef = useRef<(message: { id: string; type: string; payload?: unknown }) => void>(() => {})
   // Ref to track pending WebSocket reconnection timeout so it can be cleared on unmount (#3318)
@@ -1124,7 +1129,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       createdAt: new Date(),
       updatedAt: new Date(),
       context: params.context,
-      agent: selectedAgent || defaultAgent || undefined,
+      agent: selectedAgentRef.current || defaultAgentRef.current || undefined,
       matchedResolutions: matchedResolutions.length > 0 ? matchedResolutions : undefined,
     }
 
@@ -1132,7 +1137,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     setActiveMissionId(missionId)
     setIsSidebarOpen(true)
     setIsSidebarMinimized(false)
-    emitMissionStarted(params.type, selectedAgent || defaultAgent || 'unknown')
+    emitMissionStarted(params.type, selectedAgentRef.current || defaultAgentRef.current || 'unknown')
 
     // Run preflight permission check for missions that target a cluster.
     // This catches missing credentials, expired tokens, RBAC denials, etc.
@@ -1207,7 +1212,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         payload: {
           prompt: enhancedPrompt, // Send enhanced prompt with resolution context to AI
           sessionId: missionId,
-          agent: selectedAgent || undefined,
+          agent: selectedAgentRef.current || undefined,
           // Include mission context for the agent to use
           context: params.context,
         }
@@ -1230,7 +1235,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       setTimeout(() => {
         setMissions(prev => prev.map(m =>
           m.id === missionId && m.currentStep === 'Waiting for response...'
-            ? { ...m, currentStep: `Processing with ${selectedAgent || 'AI'}...` }
+            ? { ...m, currentStep: `Processing with ${selectedAgentRef.current || 'AI'}...` }
             : m
         ))
       }, STATUS_PROCESSING_DELAY_MS)
@@ -1453,7 +1458,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         payload: {
           prompt: initialPrompt,
           sessionId: missionId,
-          agent: selectedAgent || undefined,
+          agent: selectedAgentRef.current || undefined,
         }
       }), () => {
         setMissions(prev => prev.map(m =>
@@ -1475,7 +1480,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         } : m
       ))
     })
-  }, [missions, ensureConnection, selectedAgent])
+  }, [missions, ensureConnection])
 
   // Cancel a running mission — sends cancel signal to backend to kill agent process.
   // Uses WebSocket if connected, otherwise falls back to HTTP POST endpoint.
@@ -1603,7 +1608,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         payload: {
           prompt: content,
           sessionId: missionId,
-          agent: selectedAgent || undefined,
+          agent: selectedAgentRef.current || undefined,
           history: history, // Include conversation history for context
         }
       }), () => {
@@ -1629,7 +1634,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         } : m
       ))
     })
-  }, [cancelMission, ensureConnection, selectedAgent])
+  }, [cancelMission, ensureConnection])
 
   // Dismiss/remove a mission from the list
   const dismissMission = useCallback((missionId: string) => {
