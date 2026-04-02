@@ -62,16 +62,10 @@ const enableMocking = async () => {
   }
 
   try {
-    const { worker } = await import('./mocks/browser')
-
-    // Start the worker with onUnhandledRequest set to bypass
-    // to allow external resources (fonts, images) to load normally
-    await worker.start({
-      onUnhandledRequest: 'bypass',
-      serviceWorker: {
-        url: '/mockServiceWorker.js',
-      },
-    })
+    // Import and start MSW via the dynamically-imported chunk so the
+    // mockServiceWorker.js URL string never appears in the index bundle.
+    const { startMocking: start } = await import('./mocks/browser')
+    await start()
   } catch (error) {
     // If service worker fails to start (e.g., in some browser contexts),
     // log the error but continue rendering the app without mocking

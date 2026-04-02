@@ -408,13 +408,15 @@ function DataPrefetchInit() {
 // LightweightShell loads only ~200KB. If you move mission routes back into
 // FullDashboardApp, the CNCF outreach links will be unusably slow.
 //
-/** Lightweight shell for standalone pages that don't need the full dashboard provider stack */
+/** Lightweight shell for standalone pages that don't need the full dashboard provider stack.
+ *  Includes PageViewTracker so GA4 page_view events fire for landing pages too. */
 function LightweightShell({ children }: { children: React.ReactNode }) {
   return (
     <BrandingProvider>
     <ThemeProvider>
     <AppErrorBoundary>
     <ChunkErrorBoundary>
+    <PageViewTracker />
     <Suspense fallback={<LoadingFallback />}>
       {children}
     </Suspense>

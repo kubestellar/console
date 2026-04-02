@@ -39,11 +39,13 @@ function pass(msg) {
 // Vite's `define` does literal text replacement. Bare `console.log` rules
 // replace occurrences in vendor code, turning `console.log(...)` into
 // `undefined(...)` → `TypeError: (void 0) is not a function` at runtime.
+// Scan ALL .js files (not just vendor-prefixed) since the build produces
+// react-vendor-*, charts-vendor-*, ui-vendor-*, etc.
 
-const vendorFiles = allFiles.filter((name) => name.endsWith('.js'))
+const jsFiles = allFiles.filter((name) => name.endsWith('.js'))
 
 let defineCorrupted = false
-for (const file of vendorFiles) {
+for (const file of jsFiles) {
   const content = readFileSync(join(ASSETS_DIR, file), 'utf8')
   const matches = content.match(/void 0\(/g)
   if (matches && matches.length > 0) {
@@ -55,7 +57,7 @@ for (const file of vendorFiles) {
     defineCorrupted = true
   }
 }
-if (!defineCorrupted) pass('No Vite define corruption in vendor bundles')
+if (!defineCorrupted) pass('No Vite define corruption in JS bundles')
 
 // ── Check 2: Critical chunks exist and are non-empty ─────────────────────
 // Code splitting must produce these chunks. If any are missing or empty,
@@ -94,15 +96,14 @@ const indexChunk = allFiles.find(
 )
 if (indexChunk) {
   const indexContent = readFileSync(join(ASSETS_DIR, indexChunk), 'utf8')
-  // Detect MSW being statically bundled by looking for MSW-specific module
-  // identifiers. A dynamic import would keep these out of the index chunk.
-  // Note: the string 'mockServiceWorker' is a legitimate URL reference and is
-  // NOT a reliable signal — only the actual MSW API symbols indicate static bundling.
-  const mswSignals = ['msw/browser', 'setupWorker']
-  const leaked = mswSignals.filter((sig) => indexContent.includes(sig))
-  if (leaked.length > 0) {
+  // Detect MSW being statically bundled. If `mockServiceWorker.js` appears as
+  // a static string in the index chunk (not behind a dynamic import), MSW's
+  // service worker registration could fire unconditionally, intercepting real
+  // API calls. A proper dynamic import keeps the reference in a separate chunk.
+  const hasMswStaticRef = indexContent.includes('mockServiceWorker.js')
+  if (hasMswStaticRef) {
     fail(
-      `MSW identifiers (${leaked.join(', ')}) found statically in ${indexChunk}. ` +
+      `'mockServiceWorker.js' found as a static string in ${indexChunk}. ` +
       `MSW must be behind a dynamic import() so it only loads in demo mode.`,
     )
   } else {

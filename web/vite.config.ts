@@ -47,12 +47,14 @@ export default defineConfig(({ mode }) => ({
     __DEV_MODE__: process.env.VITE_DEV_MODE !== undefined
       ? JSON.stringify(process.env.VITE_DEV_MODE === 'true')
       : JSON.stringify(mode === 'development'),
-    // Strip console/debugger in production (replaces terser drop_console)
+    // Strip console/debugger in production (replaces terser drop_console).
+    // Use a no-op arrow function instead of 'undefined' to avoid
+    // `undefined()` crashes in vendor code that calls globalThis.console.*.
     ...(mode === 'production' ? {
-      'globalThis.console.log': 'undefined',
-      'globalThis.console.info': 'undefined',
-      'globalThis.console.debug': 'undefined',
-      'globalThis.console.trace': 'undefined',
+      'globalThis.console.log': '(()=>{})',
+      'globalThis.console.info': '(()=>{})',
+      'globalThis.console.debug': '(()=>{})',
+      'globalThis.console.trace': '(()=>{})',
     } : {}),
   },
   plugins: [
