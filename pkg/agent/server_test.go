@@ -106,7 +106,7 @@ func TestServer_IsAllowedOrigin(t *testing.T) {
 	}{
 		{"http://localhost", true},
 		{"https://sub.ibm.com", true},
-		{"https://deep.sub.ibm.com", false}, // Wildcard only matches single-level subdomain
+		{"https://deep.sub.ibm.com", true}, // Wildcard matches any subdomain depth
 		{"http://ibm.com", false},          // Wrong scheme
 		{"https://google.com", false},
 		{"", false}, // Empty origin usually treated as allowed in checkOrigin logic, but isAllowedOrigin likely returns false map lookup
@@ -601,11 +601,12 @@ func TestServer_SettingsAll(t *testing.T) {
 
 func TestServer_ValidateToken(t *testing.T) {
 	tests := []struct {
-		name         string
-		agentToken   string // configured token
-		authHeader   string
-		queryToken   string
-		expectResult bool
+		name           string
+		agentToken     string // configured token
+		authHeader     string
+		queryToken     string
+		upgradeHeader  string // set to "websocket" for WebSocket upgrade requests
+		expectResult   bool
 	}{
 		{
 			name:         "No token configured - skip validation",
@@ -629,18 +630,27 @@ func TestServer_ValidateToken(t *testing.T) {
 			expectResult: false,
 		},
 		{
-			name:         "Valid query parameter token",
+			name:          "Valid query parameter token on WebSocket upgrade",
+			agentToken:    "secret123",
+			authHeader:    "",
+			queryToken:    "secret123",
+			upgradeHeader: "websocket",
+			expectResult:  true,
+		},
+		{
+			name:         "Query parameter token rejected on non-upgrade request",
 			agentToken:   "secret123",
 			authHeader:   "",
 			queryToken:   "secret123",
-			expectResult: true,
+			expectResult: false, // query tokens only accepted for WebSocket upgrades
 		},
 		{
-			name:         "Invalid query parameter token",
-			agentToken:   "secret123",
-			authHeader:   "",
-			queryToken:   "wrongtoken",
-			expectResult: false,
+			name:          "Invalid query parameter token on WebSocket upgrade",
+			agentToken:    "secret123",
+			authHeader:    "",
+			queryToken:    "wrongtoken",
+			upgradeHeader: "websocket",
+			expectResult:  false,
 		},
 		{
 			name:         "Missing token when required",
@@ -671,6 +681,9 @@ func TestServer_ValidateToken(t *testing.T) {
 			req := httptest.NewRequest("GET", url, nil)
 			if tt.authHeader != "" {
 				req.Header.Set("Authorization", tt.authHeader)
+			}
+			if tt.upgradeHeader != "" {
+				req.Header.Set("Upgrade", tt.upgradeHeader)
 			}
 
 			result := server.validateToken(req)
