@@ -1,0 +1,251 @@
+name: Post-Merge Build Verification
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: post-merge-verify-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  # Timeout for the entire verification job (minutes)
+  JOB_TIMEOUT_MINUTES: 15
+
+jobs:
+  verify:
+    name: Verify build after merge
+    # Only run when PR was actually merged, not just closed
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.repository == 'kubestellar/console'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout merged code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Verify Go build
+        id: go_build
+        continue-on-error: true
+        run: |
+          echo "::group::Go build output"
+          go build ./... 2>&1 | tee /tmp/go-build-output.txt
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo "::endgroup::"
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+          exit "$EXIT_CODE"
+
+      - name: Install npm dependencies
+        id: npm_install
+        continue-on-error: true
+        run: |
+          echo "::group::npm ci output"
+          cd web && npm ci 2>&1 | tee /tmp/npm-install-output.txt
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo "::endgroup::"
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+          exit "$EXIT_CODE"
+
+      - name: Verify frontend build
+        id: frontend_build
+        if: steps.npm_install.outcome == 'success'
+        continue-on-error: true
+        run: |
+          echo "::group::Frontend build output"
+          cd web && npm run build 2>&1 | tee /tmp/frontend-build-output.txt
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo "::endgroup::"
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+          exit "$EXIT_CODE"
+
+      - name: Collect changed files
+        if: steps.go_build.outcome == 'failure' || steps.npm_install.outcome == 'failure' || steps.frontend_build.outcome == 'failure'
+        id: changed_files
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FILES=$(gh pr view "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            --json files \
+            --jq '[.files[].path] | join("\n")' 2>/dev/null || echo "Unable to retrieve file list")
+
+          # Truncate to avoid hitting issue body limits
+          MAX_FILES_CHARS=3000
+          if [ ${#FILES} -gt $MAX_FILES_CHARS ]; then
+            FILES="${FILES:0:$MAX_FILES_CHARS}
+          ... (truncated)"
+          fi
+          # Write to file for later use (avoids shell quoting issues)
+          echo "$FILES" > /tmp/changed-files.txt
+
+      - name: Collect error output
+        if: steps.go_build.outcome == 'failure' || steps.npm_install.outcome == 'failure' || steps.frontend_build.outcome == 'failure'
+        id: errors
+        run: |
+          {
+            echo "error_summary<<ERREOF"
+
+            if [ "${{ steps.go_build.outcome }}" = "failure" ]; then
+              echo "### Go Build Failure"
+              echo '```'
+              tail -100 /tmp/go-build-output.txt
+              echo '```'
+              echo ""
+            fi
+
+            if [ "${{ steps.npm_install.outcome }}" = "failure" ]; then
+              echo "### npm Install Failure"
+              echo '```'
+              tail -100 /tmp/npm-install-output.txt
+              echo '```'
+              echo ""
+            fi
+
+            if [ "${{ steps.frontend_build.outcome }}" = "failure" ]; then
+              echo "### Frontend Build Failure"
+              echo '```'
+              tail -100 /tmp/frontend-build-output.txt
+              echo '```'
+              echo ""
+            fi
+
+            echo "ERREOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Ensure labels exist
+        if: steps.go_build.outcome == 'failure' || steps.npm_install.outcome == 'failure' || steps.frontend_build.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "kind/bug" \
+            --repo "${{ github.repository }}" \
+            --description "Something is broken" \
+            --color "d93f0b" \
+            2>/dev/null || true
+          gh label create "priority/critical" \
+            --repo "${{ github.repository }}" \
+            --description "Critical priority — blocks development" \
+            --color "b60205" \
+            2>/dev/null || true
+
+      - name: Check for existing issue
+        if: steps.go_build.outcome == 'failure' || steps.npm_install.outcome == 'failure' || steps.frontend_build.outcome == 'failure'
+        id: check_issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          SEARCH_TITLE="Build broken after merging PR #${PR_NUMBER}"
+          EXISTING=$(gh issue list \
+            --repo "${{ github.repository }}" \
+            --state open \
+            --label "kind/bug" \
+            --search "in:title \"${SEARCH_TITLE}\"" \
+            --json number,title \
+            --jq ".[] | select(.title | contains(\"PR #${PR_NUMBER}\")) | .number" \
+          )
+          if [ -n "$EXISTING" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Found existing issue #${EXISTING}, skipping creation"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create issue for build failure
+        if: >-
+          (steps.go_build.outcome == 'failure' || steps.npm_install.outcome == 'failure' || steps.frontend_build.outcome == 'failure') &&
+          steps.check_issue.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          CHANGED_FILES=$(cat /tmp/changed-files.txt)
+
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "$(printf '\xF0\x9F\x90\x9B') Build broken after merging PR #${PR_NUMBER}" \
+            --label "kind/bug,priority/critical" \
+            --body "$(cat <<EOF
+          ## Build Broken After Merge
+
+          The post-merge build verification detected a **build failure** after merging PR #${PR_NUMBER}.
+
+          | Detail | Value |
+          |--------|-------|
+          | **PR** | [#${PR_NUMBER} — ${PR_TITLE}](${PR_URL}) |
+          | **Author** | @${PR_AUTHOR} |
+          | **Merge commit** | \`${MERGE_SHA}\` |
+          | **Detected at** | $(date -u '+%Y-%m-%d %H:%M UTC') |
+
+          ## Build Errors
+
+          ${{ steps.errors.outputs.error_summary }}
+
+          ## Files Changed in PR
+
+          <details>
+          <summary>Click to expand file list</summary>
+
+          \`\`\`
+          ${CHANGED_FILES}
+          \`\`\`
+
+          </details>
+
+          ## Next Steps
+
+          1. Check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for full logs
+          2. Identify the breaking change from the files listed above
+          3. Submit a fix PR or revert the merge commit
+
+          ---
+          *This issue was automatically created by the post-merge build verification workflow.*
+          EOF
+          )"
+
+      - name: Comment on PR — verification passed
+        if: >-
+          steps.go_build.outcome == 'success' &&
+          (steps.npm_install.outcome == 'success' && steps.frontend_build.outcome == 'success')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            --body "$(cat <<EOF
+          **Post-merge build verification passed** :white_check_mark:
+
+          Both Go and frontend builds compiled successfully against merge commit \`${{ github.event.pull_request.merge_commit_sha }}\`.
+          EOF
+          )"
+
+      - name: Fail workflow if builds failed
+        if: steps.go_build.outcome == 'failure' || steps.npm_install.outcome == 'failure' || steps.frontend_build.outcome == 'failure'
+        run: |
+          echo "::error::Post-merge build verification failed. An issue has been created."
+          exit 1
