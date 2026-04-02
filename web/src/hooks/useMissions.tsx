@@ -93,6 +93,7 @@ interface MissionContextValue {
   startMission: (params: StartMissionParams) => string
   saveMission: (params: SaveMissionParams) => string
   runSavedMission: (missionId: string, cluster?: string) => void
+  updateSavedMission: (missionId: string, updates: SavedMissionUpdates) => void
   sendMessage: (missionId: string, content: string) => void
   retryPreflight: (missionId: string) => void
   cancelMission: (missionId: string) => void
@@ -131,6 +132,12 @@ interface SaveMissionParams {
   steps?: Array<{ title: string; description: string }>
   tags?: string[]
   initialPrompt: string
+}
+
+/** Fields that can be updated on a saved (not-yet-run) mission */
+export interface SavedMissionUpdates {
+  description?: string
+  steps?: Array<{ title: string; description: string }>
 }
 
 const MissionContext = createContext<MissionContextValue | null>(null)
@@ -1656,6 +1663,24 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     }))
   }, [])
 
+  // Update a saved mission's description and/or steps before running
+  const updateSavedMission = useCallback((missionId: string, updates: SavedMissionUpdates) => {
+    setMissions(prev => prev.map(m => {
+      if (m.id !== missionId || m.status !== 'saved') return m
+      const next = { ...m, updatedAt: new Date() }
+      if (updates.description !== undefined) {
+        next.description = updates.description
+        if (next.importedFrom) {
+          next.importedFrom = { ...next.importedFrom, description: updates.description }
+        }
+      }
+      if (updates.steps !== undefined && next.importedFrom) {
+        next.importedFrom = { ...next.importedFrom, steps: updates.steps }
+      }
+      return next
+    }))
+  }, [])
+
   // Rate a mission (thumbs up/down feedback)
   const rateMission = useCallback((missionId: string, feedback: MissionFeedback) => {
     setMissions(prev => prev.map(m => {
@@ -1782,6 +1807,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       startMission,
       saveMission,
       runSavedMission,
+      updateSavedMission,
       sendMessage,
       retryPreflight,
       cancelMission,
@@ -1829,6 +1855,7 @@ const MISSIONS_FALLBACK: MissionContextValue = {
   startMission: () => '',
   saveMission: () => '',
   runSavedMission: () => {},
+  updateSavedMission: () => {},
   sendMessage: () => {},
   retryPreflight: () => {},
   cancelMission: () => {},

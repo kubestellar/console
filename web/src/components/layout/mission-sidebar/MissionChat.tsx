@@ -41,7 +41,7 @@ import { MemoizedMessage } from './MemoizedMessage'
 
 export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontSize, onToggleFullScreen }: { mission: Mission; isFullScreen?: boolean; fontSize?: FontSize; onToggleFullScreen?: () => void }) {
   const { t } = useTranslation('common')
-  const { sendMessage, retryPreflight, cancelMission, rateMission, setActiveMission, dismissMission, renameMission, runSavedMission, selectedAgent } = useMissions()
+  const { sendMessage, retryPreflight, cancelMission, rateMission, setActiveMission, dismissMission, renameMission, runSavedMission, updateSavedMission, selectedAgent } = useMissions()
   const { user } = useAuth()
   const { isDemoMode } = useDemoMode()
   const { findSimilarResolutions, recordUsage } = useResolutions()
@@ -68,6 +68,47 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [editTitleValue, setEditTitleValue] = useState('')
   const titleInputRef = useRef<HTMLInputElement>(null)
+
+  // Pre-run editing state — lets users tweak description/steps before executing
+  const isSavedPreRun = mission.status === 'saved' && mission.messages.length === 0
+  const [isEditingMission, setIsEditingMission] = useState(false)
+  const [editDescription, setEditDescription] = useState(mission.description)
+  const [editSteps, setEditSteps] = useState<Array<{ title: string; description: string }>>(
+    () => (mission.importedFrom?.steps || []).map(s => ({ title: s.title, description: s.description }))
+  )
+  const descriptionRef = useRef<HTMLTextAreaElement>(null)
+
+  // Reset editing state when switching to a different mission.
+  // We intentionally only depend on mission.id — we want to reset the form
+  // when the user navigates to a different mission, not on every description
+  // update (which would discard in-progress edits).
+  useEffect(() => {
+    setEditDescription(mission.description)
+    setEditSteps((mission.importedFrom?.steps || []).map(s => ({ title: s.title, description: s.description })))
+    setIsEditingMission(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mission.id])
+
+  /** Persist edits and exit editing mode */
+  const saveEdits = useCallback(() => {
+    updateSavedMission(mission.id, {
+      description: editDescription.trim(),
+      steps: editSteps.map(s => ({ title: s.title.trim(), description: s.description.trim() })),
+    })
+    setIsEditingMission(false)
+  }, [mission.id, editDescription, editSteps, updateSavedMission])
+
+  /** Discard edits and exit editing mode */
+  const cancelEdits = useCallback(() => {
+    setEditDescription(mission.description)
+    setEditSteps((mission.importedFrom?.steps || []).map(s => ({ title: s.title, description: s.description })))
+    setIsEditingMission(false)
+  }, [mission.description, mission.importedFrom?.steps])
+
+  /** Update a single step's field */
+  const updateStep = useCallback((idx: number, field: 'title' | 'description', value: string) => {
+    setEditSteps(prev => prev.map((s, i) => i === idx ? { ...s, [field]: value } : s))
+  }, [])
 
   // Find related resolutions based on mission content
   const relatedResolutions = useMemo(() => {
@@ -461,12 +502,18 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto scroll-enhanced p-4 space-y-4 min-h-0 min-w-0"
       >
-        {/* Inline Run button + mission steps for saved missions with no conversation yet (#3917) */}
-        {mission.status === 'saved' && mission.messages.length === 0 && (
-          <div className="flex flex-col gap-4 py-4">
-            <div className="flex flex-col items-center gap-3">
-              <button
-                onClick={() => {
+        {/* Inline Run button + editable mission description/steps for saved missions (#3917, #4273) */}
+        {isSavedPreRun && (
+          <div
+            className="flex flex-col gap-4 py-4"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              // Enter (without modifier) on the container triggers Run when not editing
+              if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey && !e.shiftKey && !isEditingMission) {
+                // Only handle if the target is the container itself (not a child input/textarea)
+                const tag = (e.target as HTMLElement).tagName
+                if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
+                  e.preventDefault()
                   if (isNetlifyDeployment) {
                     window.dispatchEvent(new CustomEvent('open-install'))
                   } else if (isDemoMode) {
@@ -474,12 +521,75 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                   } else {
                     runSavedMission(mission.id)
                   }
-                }}
-                className="flex items-center justify-center gap-2 px-8 py-3 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <Play className="w-4 h-4" />
-                Run Mission
-              </button>
+                }
+              }
+            }}
+            data-testid="saved-mission-prerun"
+          >
+            {/* Action buttons: Run + Edit toggle + Back */}
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    if (isNetlifyDeployment) {
+                      window.dispatchEvent(new CustomEvent('open-install'))
+                    } else if (isDemoMode) {
+                      window.dispatchEvent(new CustomEvent('open-agent-setup'))
+                    } else {
+                      // Persist any pending edits before running
+                      if (isEditingMission) saveEdits()
+                      runSavedMission(mission.id)
+                    }
+                  }}
+                  className="flex items-center justify-center gap-2 px-8 py-3 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  data-testid="run-mission-btn"
+                >
+                  <Play className="w-4 h-4" />
+                  {t('missionChat.runMission', { defaultValue: 'Run Mission' })}
+                </button>
+                {!isEditingMission && (
+                  <button
+                    onClick={() => {
+                      setIsEditingMission(true)
+                      // Focus the description textarea on next frame
+                      requestAnimationFrame(() => descriptionRef.current?.focus())
+                    }}
+                    className="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium border border-border rounded-lg hover:bg-secondary/50 transition-all"
+                    title={t('missionChat.editBeforeRunning', { defaultValue: 'Edit before running' })}
+                    data-testid="edit-mission-btn"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    {t('missionChat.edit', { defaultValue: 'Edit' })}
+                  </button>
+                )}
+                {isEditingMission && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={saveEdits}
+                      className="flex items-center justify-center gap-1 px-3 py-3 text-sm font-medium text-green-400 border border-green-500/30 rounded-lg hover:bg-green-500/10 transition-all"
+                      title={t('common.save', { defaultValue: 'Save' })}
+                      data-testid="save-mission-edits-btn"
+                    >
+                      <Check className="w-4 h-4" />
+                      {t('common.save', { defaultValue: 'Save' })}
+                    </button>
+                    <button
+                      onClick={cancelEdits}
+                      className="flex items-center justify-center gap-1 px-3 py-3 text-sm font-medium text-muted-foreground border border-border rounded-lg hover:bg-secondary/50 transition-all"
+                      title={t('common.cancel', { defaultValue: 'Cancel' })}
+                      data-testid="cancel-mission-edits-btn"
+                    >
+                      <X className="w-4 h-4" />
+                      {t('common.cancel', { defaultValue: 'Cancel' })}
+                    </button>
+                  </div>
+                )}
+              </div>
+              <p className="text-2xs text-muted-foreground">
+                {isEditingMission
+                  ? t('missionChat.editHint', { defaultValue: 'Edit the description and steps below, then Run or press Enter' })
+                  : t('missionChat.runHint', { defaultValue: 'Press Enter to run, or Edit to customize first' })}
+              </p>
               <button
                 onClick={() => setActiveMission(null)}
                 className="flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"
@@ -489,35 +599,128 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               </button>
             </div>
 
-            {/* Mission steps overview — visible without AI provider (#3917) */}
-            {mission.importedFrom?.steps && mission.importedFrom.steps.length > 0 && (
-              <div className="mx-1 rounded-lg border border-border bg-secondary/30 overflow-hidden">
+            {/* Editable description */}
+            {isEditingMission ? (
+              <div className="mx-1 rounded-lg border border-primary/30 bg-secondary/30 overflow-hidden">
+                <div className="flex items-center gap-2 px-3 py-2 border-b border-border/50 bg-secondary/50">
+                  <Pencil className="w-4 h-4 text-primary" />
+                  <span className="text-xs font-semibold text-foreground">
+                    {t('missionChat.missionDescription', { defaultValue: 'Mission Description' })}
+                  </span>
+                </div>
+                <div className="p-2">
+                  <textarea
+                    ref={descriptionRef}
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                        e.preventDefault()
+                        saveEdits()
+                        runSavedMission(mission.id)
+                      } else if (e.key === 'Escape') {
+                        e.preventDefault()
+                        cancelEdits()
+                      }
+                    }}
+                    className="w-full min-h-[60px] p-2 text-sm bg-background border border-border rounded-md resize-y focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground"
+                    placeholder={t('missionChat.descriptionPlaceholder', { defaultValue: 'Describe what this mission should do...' })}
+                    data-testid="edit-mission-description"
+                  />
+                </div>
+              </div>
+            ) : (
+              mission.description && (
+                <div className="mx-1 px-3 py-2 text-sm text-muted-foreground whitespace-pre-wrap rounded-lg bg-secondary/20 border border-border/50">
+                  {mission.description}
+                </div>
+              )
+            )}
+
+            {/* Mission steps — editable or read-only */}
+            {((isEditingMission && editSteps.length > 0) ||
+              (!isEditingMission && mission.importedFrom?.steps && mission.importedFrom.steps.length > 0)) && (
+              <div className={cn(
+                'mx-1 rounded-lg border bg-secondary/30 overflow-hidden',
+                isEditingMission ? 'border-primary/30' : 'border-border',
+              )}>
                 <div className="flex items-center gap-2 px-3 py-2 border-b border-border/50 bg-secondary/50">
                   <ListChecks className="w-4 h-4 text-purple-400" />
                   <span className="text-xs font-semibold text-foreground">
                     {t('missionChat.missionSteps', { defaultValue: 'Mission Steps' })}
                   </span>
                   <span className="ml-auto text-2xs text-muted-foreground">
-                    {mission.importedFrom.steps.length} {mission.importedFrom.steps.length === 1 ? 'step' : 'steps'}
+                    {isEditingMission
+                      ? editSteps.length
+                      : (mission.importedFrom?.steps || []).length}{' '}
+                    {((isEditingMission ? editSteps.length : (mission.importedFrom?.steps || []).length) === 1) ? 'step' : 'steps'}
                   </span>
                 </div>
                 <div className="p-2 space-y-2 max-h-[50vh] overflow-y-auto scroll-enhanced">
-                  {mission.importedFrom.steps.map((step, idx) => (
-                    <div
-                      key={idx}
-                      className="flex gap-2.5 p-2.5 rounded-md bg-background/50 border border-border/50"
-                    >
-                      <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-purple-500/20 text-purple-400 text-2xs font-bold">
-                        {idx + 1}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground">{step.title}</p>
-                        {step.description && (
-                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-3 whitespace-pre-wrap">{step.description}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                  {isEditingMission
+                    ? editSteps.map((step, idx) => (
+                        <div
+                          key={idx}
+                          className="flex gap-2.5 p-2.5 rounded-md bg-background/50 border border-primary/20"
+                        >
+                          <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-purple-500/20 text-purple-400 text-2xs font-bold mt-1">
+                            {idx + 1}
+                          </span>
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <input
+                              type="text"
+                              value={step.title}
+                              onChange={(e) => updateStep(idx, 'title', e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                                  e.preventDefault()
+                                  saveEdits()
+                                  runSavedMission(mission.id)
+                                } else if (e.key === 'Escape') {
+                                  e.preventDefault()
+                                  cancelEdits()
+                                }
+                              }}
+                              className="w-full px-2 py-1 text-sm font-medium bg-background border border-border rounded text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                              placeholder={t('missionChat.stepTitlePlaceholder', { defaultValue: 'Step title...' })}
+                              data-testid={`edit-step-title-${idx}`}
+                            />
+                            <textarea
+                              value={step.description}
+                              onChange={(e) => updateStep(idx, 'description', e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                                  e.preventDefault()
+                                  saveEdits()
+                                  runSavedMission(mission.id)
+                                } else if (e.key === 'Escape') {
+                                  e.preventDefault()
+                                  cancelEdits()
+                                }
+                              }}
+                              className="w-full px-2 py-1 text-xs bg-background border border-border rounded text-muted-foreground resize-y min-h-[40px] focus:outline-none focus:ring-1 focus:ring-primary/50"
+                              placeholder={t('missionChat.stepDescPlaceholder', { defaultValue: 'Step description...' })}
+                              data-testid={`edit-step-desc-${idx}`}
+                            />
+                          </div>
+                        </div>
+                      ))
+                    : (mission.importedFrom?.steps || []).map((step, idx) => (
+                        <div
+                          key={idx}
+                          className="flex gap-2.5 p-2.5 rounded-md bg-background/50 border border-border/50"
+                        >
+                          <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-purple-500/20 text-purple-400 text-2xs font-bold">
+                            {idx + 1}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground">{step.title}</p>
+                            {step.description && (
+                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-3 whitespace-pre-wrap">{step.description}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                 </div>
               </div>
             )}
@@ -590,7 +793,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       </div>
 
       {/* Input / Actions — hidden when Run button is inline above */}
-      {!(mission.status === 'saved' && mission.messages.length === 0) && (
+      {!isSavedPreRun && (
       <div className="p-4 border-t border-border flex-shrink-0 bg-card min-w-0">
         {mission.status === 'cancelling' ? (
           <div className="flex items-center justify-center gap-2 py-3">
