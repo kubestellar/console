@@ -18,6 +18,7 @@ import { useRewards } from '../../hooks/useRewards'
 import { BACKEND_DEFAULT_URL, STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
 import { FEEDBACK_UPLOAD_TIMEOUT_MS } from '../../lib/constants/network'
 import { GITHUB_TOKEN_CREATE_URL, GITHUB_TOKEN_FINE_GRAINED_PERMISSIONS } from '../../lib/constants/github-token'
+import { compressScreenshot } from '../../lib/imageCompression'
 import { emitLinkedInShare } from '../../lib/analytics'
 import { isDemoModeForced } from '../../lib/demoMode'
 import { useToast } from '../ui/Toast'
@@ -337,9 +338,14 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
       return
     }
 
-    // Collect base64 data URIs for screenshots so the backend can upload
-    // them to GitHub and embed them directly in the created issue.
-    const screenshotDataURIs = screenshots.map(s => s.preview)
+    // Compress screenshots to fit within GitHub's 65K comment limit.
+    // Images are embedded as base64 in issue comments and processed into
+    // rendered images by a GitHub Actions workflow.
+    const screenshotDataURIs: string[] = []
+    for (const s of screenshots) {
+      const compressed = await compressScreenshot(s.preview)
+      if (compressed) screenshotDataURIs.push(compressed)
+    }
 
     try {
       const hasScreenshots = screenshotDataURIs.length > 0

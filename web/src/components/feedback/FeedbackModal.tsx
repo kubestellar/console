@@ -21,7 +21,7 @@ import { emitFeedbackSubmitted, emitLinkedInShare, emitScreenshotAttached, emitS
 import { useBranding } from '../../hooks/useBranding'
 import { FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
 import { FEEDBACK_UPLOAD_TIMEOUT_MS } from '../../lib/constants/network'
-// github-token constants no longer needed here — screenshots are embedded as base64
+import { compressScreenshot } from '../../lib/imageCompression'
 import { useFeatureRequests } from '../../hooks/useFeatureRequests'
 import { useAuth } from '../../lib/auth'
 
@@ -167,9 +167,14 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
     setSubmitError(null)
 
     try {
-      // Collect base64 data URIs for any attached screenshots so the
-      // backend can upload them to GitHub and embed them in the issue.
-      const screenshotDataURIs = screenshots.map(s => s.preview)
+      // Compress screenshots to fit within GitHub's 65K issue body limit.
+      // Images are embedded as base64 and processed into rendered images
+      // by a GitHub Actions workflow after the issue is created.
+      const screenshotDataURIs: string[] = []
+      for (const s of screenshots) {
+        const compressed = await compressScreenshot(s.preview)
+        if (compressed) screenshotDataURIs.push(compressed)
+      }
 
       // Submit via backend API — creates GitHub issue directly using the
       // server-side token. No GitHub login required from the user.

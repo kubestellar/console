@@ -5,10 +5,11 @@
  * and backend log messages. Keep this in sync if requirements change.
  */
 
-/** Fine-grained PAT permissions required for end-user feedback features */
+/** Fine-grained PAT permissions required for end-user feedback features.
+ *  Note: Contents scope is NOT needed — screenshots are added as issue
+ *  comments and processed into images by a GitHub Actions workflow. */
 export const GITHUB_TOKEN_FINE_GRAINED_PERMISSIONS = [
-  { scope: 'Issues: Read and write', reason: 'create and manage GitHub issues' },
-  { scope: 'Contents: Read and write', reason: 'upload screenshots to issues' },
+  { scope: 'Issues: Read and write', reason: 'create issues, add comments, and attach screenshots' },
 ] as const
 
 /** Classic PAT scope required (covers all of the above) */

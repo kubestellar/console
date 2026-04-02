@@ -1565,34 +1565,23 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest
 		repoLabel = "Console Documentation"
 	}
 
-	// Embed screenshots as base64 in the issue body inside collapsible blocks.
-	// A GitHub Actions workflow (process-screenshots.yml) watches for new issues
-	// with these markers, decodes the base64, commits the images to the repo
-	// (using the workflow's GITHUB_TOKEN which has write access), and replaces
-	// the base64 blocks with rendered markdown images. This avoids requiring
-	// the user's PAT to have push access to the repo.
-	screenshotMarkdown := ""
+	// Validate screenshots upfront so we can report accurate counts.
+	// Screenshots are NOT embedded in the issue body (GitHub limits bodies to
+	// 65,536 chars and base64 screenshots easily exceed that). Instead, they
+	// are added as separate comments after issue creation. A GitHub Actions
+	// workflow (process-screenshots.yml) then decodes the base64, commits
+	// images to the repo, and replaces the comment with a rendered image.
+	var validScreenshots []string
 	var ssResult screenshotUploadResult
-	if len(screenshots) > 0 {
-		var blocks []string
-		for i, dataURI := range screenshots {
-			// Validate the data URI format
-			parts := strings.SplitN(dataURI, ",", 2)
-			if len(parts) != 2 {
-				ssResult.Failed++
-				log.Printf("[Feedback] Screenshot %d: invalid data URI format", i+1)
-				continue
-			}
-			ssResult.Uploaded++
-			// Wrap in a collapsible <details> block with a machine-readable marker
-			// that the GHA workflow can find and process.
-			blocks = append(blocks, fmt.Sprintf(
-				"<!-- screenshot-base64:%d -->\n<details>\n<summary>Screenshot %d (processing...)</summary>\n\n```\n%s\n```\n\n</details>",
-				i+1, i+1, dataURI))
+	for i, dataURI := range screenshots {
+		parts := strings.SplitN(dataURI, ",", 2)
+		if len(parts) != 2 {
+			ssResult.Failed++
+			log.Printf("[Feedback] Screenshot %d: invalid data URI format", i+1)
+			continue
 		}
-		if len(blocks) > 0 {
-			screenshotMarkdown = "\n\n## Screenshots\n\n" + strings.Join(blocks, "\n\n")
-		}
+		validScreenshots = append(validScreenshots, dataURI)
+		ssResult.Uploaded++
 	}
 
 	issueBody := fmt.Sprintf(`## User Request
@@ -1604,11 +1593,11 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest
 
 ## Description
 
-%s%s
+%s
 
 ---
 *This issue was automatically created from the KubeStellar Console.*
-`, request.RequestType, repoLabel, user.GitHubLogin, request.ID.String(), request.Description, screenshotMarkdown)
+`, request.RequestType, repoLabel, user.GitHubLogin, request.ID.String(), request.Description)
 
 	// First attempt: create issue with labels
 	number, htmlURL, err := h.postGitHubIssue(repoOwner, repoName, request.Title, issueBody, labels)
@@ -1618,6 +1607,20 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest
 		// so maintainers can triage and label it manually.
 		log.Printf("[Feedback] Label permission denied on %s/%s, retrying without labels", repoOwner, repoName)
 		number, htmlURL, err = h.postGitHubIssue(repoOwner, repoName, request.Title, issueBody, nil)
+	}
+
+	// Add screenshots as separate comments (one per screenshot) so they
+	// don't blow up the 65K issue body limit. Each comment contains a
+	// base64 data URI in a collapsible <details> block with a marker
+	// that the process-screenshots GHA workflow can find and process.
+	if err == nil && len(validScreenshots) > 0 {
+		for i, dataURI := range validScreenshots {
+			commentBody := fmt.Sprintf(
+				"<!-- screenshot-base64:%d -->\n<details>\n<summary>Screenshot %d (processing...)</summary>\n\n```\n%s\n```\n\n</details>",
+				i+1, i+1, dataURI)
+			h.addIssueComment(number, commentBody, repoName)
+		}
+		log.Printf("[Feedback] Added %d screenshot comment(s) to issue #%d", len(validScreenshots), number)
 	}
 
 	return number, htmlURL, ssResult, err
