@@ -78,15 +78,19 @@ jobs:
                 },
               });
 
-              const downloadUrl = data.content.download_url;
-              console.log(`Uploaded: ${downloadUrl}`);
+              // Use a commit-SHA-based URL instead of the branch-based
+              // download_url so the link survives file deletion when the
+              // cleanup-screenshots workflow removes old images.
+              const commitSha = data.commit.sha;
+              const permanentUrl = `https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/${commitSha}/${filePath}`;
+              console.log(`Uploaded: ${permanentUrl} (commit ${commitSha})`);
 
               // Replace the comment with a rendered image
               await github.rest.issues.updateComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 comment_id: commentId,
-                body: `![Screenshot ${index}](${downloadUrl})`,
+                body: `![Screenshot ${index}](${permanentUrl})`,
               });
 
               console.log(`Comment ${commentId} updated with rendered screenshot`);
