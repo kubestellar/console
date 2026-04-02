@@ -15,6 +15,18 @@ const RECOVERY_DELAY = 30_000 // Retry after circuit breaker trips
 /** Timeout for fetch() call to the active-users endpoint */
 const ACTIVE_USERS_FETCH_TIMEOUT_MS = 5_000
 
+/**
+ * Guard against non-JSON responses (e.g. Netlify SPA catch-all returning index.html).
+ * On Netlify without a Go backend, API calls can fall through to the `/* -> /index.html`
+ * redirect if MSW hasn't registered yet or the Netlify Function fails. The response
+ * has status 200 but content-type text/html, causing `response.json()` to throw
+ * `SyntaxError: Unexpected token '<'`. Checking content-type prevents the parse attempt.
+ */
+function isJsonResponse(resp: Response): boolean {
+  const ct = resp.headers.get('content-type') || ''
+  return ct.includes('application/json')
+}
+
 // Singleton state to share across all hook instances
 let sharedInfo: ActiveUsersInfo = {
   activeUsers: 0,
@@ -177,6 +189,10 @@ async function fetchActiveUsers() {
   try {
     const resp = await fetch('/api/active-users', { signal: AbortSignal.timeout(ACTIVE_USERS_FETCH_TIMEOUT_MS) })
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+    // Guard: if the response is HTML (e.g. Netlify SPA catch-all returning
+    // index.html because MSW hasn't intercepted yet), skip JSON parsing
+    // entirely to avoid SyntaxError: Unexpected token '<' console noise.
+    if (!isJsonResponse(resp)) throw new Error('Non-JSON response (likely HTML fallback)')
     // Use .catch() on .json() to prevent Firefox from firing unhandledrejection
     // before the outer try/catch processes the rejection (microtask timing issue).
     const data = await resp.json().catch(() => null) as ActiveUsersInfo | null

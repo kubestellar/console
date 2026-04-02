@@ -20,7 +20,10 @@ describe('useActiveUsers', () => {
     localStorage.clear()
     vi.clearAllMocks()
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ activeUsers: 5, totalConnections: 8 }), { status: 200 })
+      new Response(JSON.stringify({ activeUsers: 5, totalConnections: 8 }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
     )
   })
 
@@ -160,7 +163,10 @@ describe('useActiveUsers', () => {
 
     // Now fix fetch and refetch
     vi.mocked(fetch).mockResolvedValue(
-      new Response(JSON.stringify({ activeUsers: 3, totalConnections: 5 }), { status: 200 })
+      new Response(JSON.stringify({ activeUsers: 3, totalConnections: 5 }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
     )
 
     act(() => { result.current.refetch() })
@@ -175,7 +181,10 @@ describe('useActiveUsers', () => {
   // --- Updates counts when API returns new data ---
   it('updates active user counts when API returns new data', async () => {
     vi.mocked(fetch).mockResolvedValue(
-      new Response(JSON.stringify({ activeUsers: 10, totalConnections: 15 }), { status: 200 })
+      new Response(JSON.stringify({ activeUsers: 10, totalConnections: 15 }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
     )
 
     const { result } = renderHook(() => useActiveUsers())
@@ -185,6 +194,22 @@ describe('useActiveUsers', () => {
       expect(result.current.activeUsers).toBe(10)
       expect(result.current.totalConnections).toBe(10) // smoothed to same value since smoothing uses max
     })
+  })
+
+  // --- Handles HTML fallback response (Netlify SPA catch-all) ---
+  it('handles HTML response without SyntaxError (Netlify SPA fallback)', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response('<!doctype html><html><body>SPA</body></html>', {
+        status: 200,
+        headers: { 'Content-Type': 'text/html' },
+      })
+    )
+
+    const { result } = renderHook(() => useActiveUsers())
+    await act(async () => { await vi.advanceTimersByTimeAsync(100) })
+
+    // Should not crash or throw SyntaxError — gracefully treated as error
+    expect(typeof result.current.activeUsers).toBe('number')
   })
 
   // --- Handles invalid JSON gracefully ---
