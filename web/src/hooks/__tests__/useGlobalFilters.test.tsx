@@ -3,7 +3,7 @@ import { renderHook, act } from '@testing-library/react'
 import { ReactNode } from 'react'
 
 // ---------------------------------------------------------------------------
-// Hoisted mocks — must be created before any import resolution
+// Hoisted mocks -- must be created before any import resolution
 // ---------------------------------------------------------------------------
 const mockUseClusters = vi.hoisted(() =>
   vi.fn().mockReturnValue({
@@ -17,20 +17,31 @@ const mockUseClusters = vi.hoisted(() =>
   }),
 )
 
+const mockEmitCluster = vi.hoisted(() => vi.fn())
+const mockEmitSeverity = vi.hoisted(() => vi.fn())
+const mockEmitStatus = vi.hoisted(() => vi.fn())
+
 vi.mock('../mcp/clusters', () => ({
   useClusters: mockUseClusters,
 }))
 
 vi.mock('../../lib/analytics', () => ({
-  emitGlobalClusterFilterChanged: vi.fn(),
-  emitGlobalSeverityFilterChanged: vi.fn(),
-  emitGlobalStatusFilterChanged: vi.fn(),
+  emitGlobalClusterFilterChanged: mockEmitCluster,
+  emitGlobalSeverityFilterChanged: mockEmitSeverity,
+  emitGlobalStatusFilterChanged: mockEmitStatus,
 }))
 
 // ---------------------------------------------------------------------------
 // Imports (resolved after mocks are installed)
 // ---------------------------------------------------------------------------
-import { GlobalFiltersProvider, useGlobalFilters } from '../useGlobalFilters'
+import {
+  GlobalFiltersProvider,
+  useGlobalFilters,
+  SEVERITY_LEVELS,
+  STATUS_LEVELS,
+  SEVERITY_CONFIG,
+  STATUS_CONFIG,
+} from '../useGlobalFilters'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -62,6 +73,40 @@ beforeEach(() => {
     isLoading: false,
     error: null,
   })
+  mockEmitCluster.mockClear()
+  mockEmitSeverity.mockClear()
+  mockEmitStatus.mockClear()
+})
+
+// ===========================================================================
+// Exported constants
+// ===========================================================================
+describe('exported constants', () => {
+  it('SEVERITY_LEVELS contains all expected levels', () => {
+    expect(SEVERITY_LEVELS).toEqual(['critical', 'warning', 'high', 'medium', 'low', 'info'])
+  })
+
+  it('STATUS_LEVELS contains all expected levels', () => {
+    expect(STATUS_LEVELS).toEqual(['pending', 'failed', 'running', 'init', 'bound'])
+  })
+
+  it('SEVERITY_CONFIG has an entry for every severity level', () => {
+    for (const level of SEVERITY_LEVELS) {
+      expect(SEVERITY_CONFIG[level]).toBeDefined()
+      expect(SEVERITY_CONFIG[level].label).toBeTruthy()
+      expect(SEVERITY_CONFIG[level].color).toBeTruthy()
+      expect(SEVERITY_CONFIG[level].bgColor).toBeTruthy()
+    }
+  })
+
+  it('STATUS_CONFIG has an entry for every status level', () => {
+    for (const level of STATUS_LEVELS) {
+      expect(STATUS_CONFIG[level]).toBeDefined()
+      expect(STATUS_CONFIG[level].label).toBeTruthy()
+      expect(STATUS_CONFIG[level].color).toBeTruthy()
+      expect(STATUS_CONFIG[level].bgColor).toBeTruthy()
+    }
+  })
 })
 
 // ===========================================================================
@@ -78,9 +123,1101 @@ describe('useGlobalFilters without provider', () => {
 })
 
 // ===========================================================================
-// filterItems — no active filters
+// Initial state (no localStorage)
 // ===========================================================================
-describe('filterItems with no active filters', () => {
+describe('initial state without localStorage', () => {
+  it('starts with all clusters selected (empty array = all)', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+    expect(result.current.isAllClustersSelected).toBe(true)
+    expect(result.current.isClustersFiltered).toBe(false)
+  })
+
+  it('exposes available clusters from useClusters hook', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+    expect(result.current.availableClusters).toEqual(['cluster-a', 'cluster-b'])
+  })
+
+  it('exposes clusterInfoMap keyed by name', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+    expect(result.current.clusterInfoMap['cluster-a']).toEqual(
+      expect.objectContaining({ name: 'cluster-a', context: 'cluster-a' }),
+    )
+    expect(result.current.clusterInfoMap['cluster-b']).toEqual(
+      expect.objectContaining({ name: 'cluster-b', context: 'cluster-b' }),
+    )
+  })
+
+  it('starts with all severities selected', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+    expect(result.current.isAllSeveritiesSelected).toBe(true)
+    expect(result.current.isSeveritiesFiltered).toBe(false)
+  })
+
+  it('starts with all statuses selected', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+    expect(result.current.isAllStatusesSelected).toBe(true)
+    expect(result.current.isStatusesFiltered).toBe(false)
+  })
+
+  it('starts with empty custom filter', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+    expect(result.current.customFilter).toBe('')
+    expect(result.current.hasCustomFilter).toBe(false)
+  })
+
+  it('starts with isFiltered false', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+    expect(result.current.isFiltered).toBe(false)
+  })
+
+  it('starts with empty cluster groups', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+    expect(result.current.clusterGroups).toEqual([])
+  })
+
+  it('selectedClusters returns availableClusters when all selected', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+    expect(result.current.selectedClusters).toEqual(['cluster-a', 'cluster-b'])
+  })
+
+  it('selectedSeverities returns all severity levels when all selected', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+    expect(result.current.selectedSeverities).toEqual(SEVERITY_LEVELS)
+  })
+
+  it('selectedStatuses returns all status levels when all selected', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+    expect(result.current.selectedStatuses).toEqual(STATUS_LEVELS)
+  })
+})
+
+// ===========================================================================
+// localStorage persistence
+// ===========================================================================
+describe('localStorage persistence', () => {
+  it('persists selected clusters to localStorage', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedClusters(['cluster-a'])
+    })
+
+    expect(JSON.parse(localStorage.getItem('globalFilter:clusters')!)).toEqual(['cluster-a'])
+  })
+
+  it('persists null to localStorage when all clusters selected', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.selectAllClusters()
+    })
+
+    expect(JSON.parse(localStorage.getItem('globalFilter:clusters')!)).toBeNull()
+  })
+
+  it('restores selected clusters from localStorage on mount', () => {
+    localStorage.setItem('globalFilter:clusters', JSON.stringify(['cluster-b']))
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    expect(result.current.isClustersFiltered).toBe(true)
+    // When clusters are filtered, selectedClusters should include cluster-b
+    expect(result.current.selectedClusters).toContain('cluster-b')
+  })
+
+  it('restores null in localStorage as all-clusters mode', () => {
+    localStorage.setItem('globalFilter:clusters', JSON.stringify(null))
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    expect(result.current.isAllClustersSelected).toBe(true)
+  })
+
+  it('persists selected severities to localStorage', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedSeverities(['critical', 'warning'])
+    })
+
+    expect(JSON.parse(localStorage.getItem('globalFilter:severities')!)).toEqual(['critical', 'warning'])
+  })
+
+  it('persists null to localStorage when all severities selected', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.selectAllSeverities()
+    })
+
+    expect(JSON.parse(localStorage.getItem('globalFilter:severities')!)).toBeNull()
+  })
+
+  it('restores selected severities from localStorage on mount', () => {
+    localStorage.setItem('globalFilter:severities', JSON.stringify(['warning']))
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    expect(result.current.isSeveritiesFiltered).toBe(true)
+  })
+
+  it('restores null in localStorage as all-severities mode', () => {
+    localStorage.setItem('globalFilter:severities', JSON.stringify(null))
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    expect(result.current.isAllSeveritiesSelected).toBe(true)
+  })
+
+  it('persists selected statuses to localStorage', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedStatuses(['running', 'failed'])
+    })
+
+    expect(JSON.parse(localStorage.getItem('globalFilter:statuses')!)).toEqual(['running', 'failed'])
+  })
+
+  it('persists null to localStorage when all statuses selected', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.selectAllStatuses()
+    })
+
+    expect(JSON.parse(localStorage.getItem('globalFilter:statuses')!)).toBeNull()
+  })
+
+  it('restores selected statuses from localStorage on mount', () => {
+    localStorage.setItem('globalFilter:statuses', JSON.stringify(['pending']))
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    expect(result.current.isStatusesFiltered).toBe(true)
+  })
+
+  it('restores null in localStorage as all-statuses mode', () => {
+    localStorage.setItem('globalFilter:statuses', JSON.stringify(null))
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    expect(result.current.isAllStatusesSelected).toBe(true)
+  })
+
+  it('persists custom text filter to localStorage', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setCustomFilter('my-search')
+    })
+
+    expect(localStorage.getItem('globalFilter:customText')).toBe('my-search')
+  })
+
+  it('restores custom text filter from localStorage on mount', () => {
+    localStorage.setItem('globalFilter:customText', 'restored-text')
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    expect(result.current.customFilter).toBe('restored-text')
+    expect(result.current.hasCustomFilter).toBe(true)
+  })
+
+  it('persists cluster groups to localStorage', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.addClusterGroup({ name: 'prod', clusters: ['cluster-a'] })
+    })
+
+    const stored = JSON.parse(localStorage.getItem('globalFilter:clusterGroups')!)
+    expect(stored).toHaveLength(1)
+    expect(stored[0].name).toBe('prod')
+    expect(stored[0].clusters).toEqual(['cluster-a'])
+  })
+
+  it('restores cluster groups from localStorage on mount', () => {
+    const groups = [{ id: 'group-123', name: 'staging', clusters: ['cluster-b'] }]
+    localStorage.setItem('globalFilter:clusterGroups', JSON.stringify(groups))
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    expect(result.current.clusterGroups).toEqual(groups)
+  })
+
+  it('handles corrupt localStorage gracefully for clusters', () => {
+    localStorage.setItem('globalFilter:clusters', 'not-valid-json{{')
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+    // Falls back to default (all selected)
+    expect(result.current.isAllClustersSelected).toBe(true)
+  })
+
+  it('handles corrupt localStorage gracefully for severities', () => {
+    localStorage.setItem('globalFilter:severities', 'bad-json')
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+    expect(result.current.isAllSeveritiesSelected).toBe(true)
+  })
+
+  it('handles corrupt localStorage gracefully for statuses', () => {
+    localStorage.setItem('globalFilter:statuses', '}{invalid')
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+    expect(result.current.isAllStatusesSelected).toBe(true)
+  })
+
+  it('handles corrupt localStorage gracefully for cluster groups', () => {
+    localStorage.setItem('globalFilter:clusterGroups', '{{bad')
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+    expect(result.current.clusterGroups).toEqual([])
+  })
+})
+
+// ===========================================================================
+// Cluster selection
+// ===========================================================================
+describe('cluster selection', () => {
+  it('setSelectedClusters sets specific clusters', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedClusters(['cluster-a'])
+    })
+
+    expect(result.current.isClustersFiltered).toBe(true)
+    expect(result.current.isAllClustersSelected).toBe(false)
+  })
+
+  it('setSelectedClusters emits analytics event', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedClusters(['cluster-a'])
+    })
+
+    expect(mockEmitCluster).toHaveBeenCalledWith(1, 2)
+  })
+
+  it('selectAllClusters resets to all-clusters mode', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedClusters(['cluster-a'])
+    })
+    expect(result.current.isClustersFiltered).toBe(true)
+
+    act(() => {
+      result.current.selectAllClusters()
+    })
+    expect(result.current.isAllClustersSelected).toBe(true)
+    expect(result.current.isClustersFiltered).toBe(false)
+  })
+
+  it('deselectAllClusters sets __none__ sentinel', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.deselectAllClusters()
+    })
+
+    expect(result.current.isClustersFiltered).toBe(true)
+    // Filter should return empty because __none__ doesn't match any cluster
+    const filtered = result.current.filterByCluster(SAMPLE_ITEMS)
+    expect(filtered).toEqual([])
+  })
+
+  describe('toggleCluster', () => {
+    it('toggles off a cluster from all-selected mode (selects all except toggled)', () => {
+      const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+      act(() => {
+        result.current.toggleCluster('cluster-a')
+      })
+
+      expect(result.current.isClustersFiltered).toBe(true)
+      // All except cluster-a => only cluster-b
+      const filtered = result.current.filterByCluster(SAMPLE_ITEMS)
+      expect(filtered.every(item => item.cluster === 'cluster-b')).toBe(true)
+    })
+
+    it('toggles off a cluster that is currently selected', () => {
+      const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+      // Start with both explicitly selected
+      act(() => {
+        result.current.setSelectedClusters(['cluster-a', 'cluster-b'])
+      })
+
+      // Note: setting both explicitly = all-selected mode (length === available.length => [])
+      // Let's start from one cluster selected instead
+      act(() => {
+        result.current.setSelectedClusters(['cluster-a'])
+      })
+
+      act(() => {
+        result.current.toggleCluster('cluster-a')
+      })
+
+      // Removing the last one reverts to all-selected mode
+      expect(result.current.isAllClustersSelected).toBe(true)
+    })
+
+    it('toggles on a cluster that is not currently selected', () => {
+      const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+      // Start with just cluster-a via toggle from all mode
+      act(() => {
+        result.current.toggleCluster('cluster-a')
+      })
+      // Now only cluster-b is selected (toggled off cluster-a from all)
+
+      act(() => {
+        result.current.toggleCluster('cluster-a')
+      })
+      // Re-adding cluster-a means both selected => back to all mode
+      expect(result.current.isAllClustersSelected).toBe(true)
+    })
+
+    it('reverts to all-selected when toggling creates a full set', () => {
+      const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+      act(() => {
+        result.current.setSelectedClusters(['cluster-a'])
+      })
+
+      act(() => {
+        result.current.toggleCluster('cluster-b')
+      })
+
+      // Both clusters selected => reverts to all-selected
+      expect(result.current.isAllClustersSelected).toBe(true)
+    })
+
+    it('reverts to all-selected when removing the last cluster', () => {
+      const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+      act(() => {
+        result.current.setSelectedClusters(['cluster-a'])
+      })
+
+      act(() => {
+        result.current.toggleCluster('cluster-a')
+      })
+
+      // Removing last one => reverts to all
+      expect(result.current.isAllClustersSelected).toBe(true)
+    })
+  })
+})
+
+// ===========================================================================
+// Severity selection
+// ===========================================================================
+describe('severity selection', () => {
+  it('setSelectedSeverities sets specific severities', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedSeverities(['critical'])
+    })
+
+    expect(result.current.isSeveritiesFiltered).toBe(true)
+    expect(result.current.isAllSeveritiesSelected).toBe(false)
+  })
+
+  it('setSelectedSeverities emits analytics event', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedSeverities(['critical', 'warning'])
+    })
+
+    expect(mockEmitSeverity).toHaveBeenCalledWith(2)
+  })
+
+  it('selectAllSeverities resets to all-severities mode', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedSeverities(['critical'])
+    })
+    expect(result.current.isSeveritiesFiltered).toBe(true)
+
+    act(() => {
+      result.current.selectAllSeverities()
+    })
+    expect(result.current.isAllSeveritiesSelected).toBe(true)
+  })
+
+  it('deselectAllSeverities sets __none__ sentinel', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.deselectAllSeverities()
+    })
+
+    expect(result.current.isSeveritiesFiltered).toBe(true)
+    const filtered = result.current.filterBySeverity(SAMPLE_ITEMS)
+    expect(filtered).toEqual([])
+  })
+
+  describe('toggleSeverity', () => {
+    it('toggles off a severity from all-selected mode', () => {
+      const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+      act(() => {
+        result.current.toggleSeverity('info')
+      })
+
+      expect(result.current.isSeveritiesFiltered).toBe(true)
+      // All except info
+      const filtered = result.current.filterBySeverity(SAMPLE_ITEMS)
+      expect(filtered.every(item => item.severity !== 'info')).toBe(true)
+    })
+
+    it('toggles off a severity that is currently selected', () => {
+      const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+      act(() => {
+        result.current.setSelectedSeverities(['critical', 'warning'])
+      })
+
+      act(() => {
+        result.current.toggleSeverity('critical')
+      })
+
+      // Only warning remains
+      const filtered = result.current.filterBySeverity(SAMPLE_ITEMS)
+      expect(filtered.every(item => item.severity === 'warning')).toBe(true)
+    })
+
+    it('toggles on a severity that is not currently selected', () => {
+      const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+      act(() => {
+        result.current.setSelectedSeverities(['critical'])
+      })
+
+      act(() => {
+        result.current.toggleSeverity('warning')
+      })
+
+      // Both critical and warning should now be selected
+      const filtered = result.current.filterBySeverity(SAMPLE_ITEMS)
+      expect(filtered.every(item => ['critical', 'warning'].includes(item.severity))).toBe(true)
+    })
+
+    it('reverts to all-selected when toggling creates a full set', () => {
+      const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+      // Select all except 'info'
+      const allExceptInfo = SEVERITY_LEVELS.filter(s => s !== 'info')
+      act(() => {
+        result.current.setSelectedSeverities(allExceptInfo)
+      })
+
+      act(() => {
+        result.current.toggleSeverity('info')
+      })
+
+      expect(result.current.isAllSeveritiesSelected).toBe(true)
+    })
+
+    it('reverts to all-selected when removing the last severity', () => {
+      const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+      act(() => {
+        result.current.setSelectedSeverities(['critical'])
+      })
+
+      act(() => {
+        result.current.toggleSeverity('critical')
+      })
+
+      expect(result.current.isAllSeveritiesSelected).toBe(true)
+    })
+  })
+})
+
+// ===========================================================================
+// Status selection
+// ===========================================================================
+describe('status selection', () => {
+  it('setSelectedStatuses sets specific statuses', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedStatuses(['running'])
+    })
+
+    expect(result.current.isStatusesFiltered).toBe(true)
+    expect(result.current.isAllStatusesSelected).toBe(false)
+  })
+
+  it('setSelectedStatuses emits analytics event', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedStatuses(['running', 'pending'])
+    })
+
+    expect(mockEmitStatus).toHaveBeenCalledWith(2)
+  })
+
+  it('selectAllStatuses resets to all-statuses mode', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedStatuses(['running'])
+    })
+    expect(result.current.isStatusesFiltered).toBe(true)
+
+    act(() => {
+      result.current.selectAllStatuses()
+    })
+    expect(result.current.isAllStatusesSelected).toBe(true)
+  })
+
+  it('deselectAllStatuses sets __none__ sentinel', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.deselectAllStatuses()
+    })
+
+    expect(result.current.isStatusesFiltered).toBe(true)
+    const filtered = result.current.filterByStatus(SAMPLE_ITEMS)
+    expect(filtered).toEqual([])
+  })
+
+  describe('toggleStatus', () => {
+    it('toggles off a status from all-selected mode', () => {
+      const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+      act(() => {
+        result.current.toggleStatus('running')
+      })
+
+      expect(result.current.isStatusesFiltered).toBe(true)
+      const filtered = result.current.filterByStatus(SAMPLE_ITEMS)
+      expect(filtered.every(item => item.status !== 'running')).toBe(true)
+    })
+
+    it('toggles off a status that is currently selected', () => {
+      const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+      act(() => {
+        result.current.setSelectedStatuses(['running', 'failed'])
+      })
+
+      act(() => {
+        result.current.toggleStatus('running')
+      })
+
+      const filtered = result.current.filterByStatus(SAMPLE_ITEMS)
+      expect(filtered.every(item => item.status === 'failed')).toBe(true)
+    })
+
+    it('toggles on a status that is not currently selected', () => {
+      const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+      act(() => {
+        result.current.setSelectedStatuses(['running'])
+      })
+
+      act(() => {
+        result.current.toggleStatus('failed')
+      })
+
+      const filtered = result.current.filterByStatus(SAMPLE_ITEMS)
+      expect(filtered.every(item => ['running', 'failed'].includes(item.status))).toBe(true)
+    })
+
+    it('reverts to all-selected when toggling creates a full set', () => {
+      const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+      const allExceptBound = STATUS_LEVELS.filter(s => s !== 'bound')
+      act(() => {
+        result.current.setSelectedStatuses(allExceptBound)
+      })
+
+      act(() => {
+        result.current.toggleStatus('bound')
+      })
+
+      expect(result.current.isAllStatusesSelected).toBe(true)
+    })
+
+    it('reverts to all-selected when removing the last status', () => {
+      const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+      act(() => {
+        result.current.setSelectedStatuses(['running'])
+      })
+
+      act(() => {
+        result.current.toggleStatus('running')
+      })
+
+      expect(result.current.isAllStatusesSelected).toBe(true)
+    })
+  })
+})
+
+// ===========================================================================
+// Custom text filter
+// ===========================================================================
+describe('custom text filter', () => {
+  it('setCustomFilter updates the filter value', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setCustomFilter('hello')
+    })
+
+    expect(result.current.customFilter).toBe('hello')
+    expect(result.current.hasCustomFilter).toBe(true)
+  })
+
+  it('clearCustomFilter resets to empty string', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setCustomFilter('something')
+    })
+    expect(result.current.hasCustomFilter).toBe(true)
+
+    act(() => {
+      result.current.clearCustomFilter()
+    })
+    expect(result.current.customFilter).toBe('')
+    expect(result.current.hasCustomFilter).toBe(false)
+  })
+
+  it('hasCustomFilter is false for whitespace-only input', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setCustomFilter('   ')
+    })
+
+    expect(result.current.hasCustomFilter).toBe(false)
+  })
+})
+
+// ===========================================================================
+// Cluster groups
+// ===========================================================================
+describe('cluster groups', () => {
+  it('addClusterGroup adds a new group with auto-generated id', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.addClusterGroup({ name: 'production', clusters: ['cluster-a'] })
+    })
+
+    expect(result.current.clusterGroups).toHaveLength(1)
+    expect(result.current.clusterGroups[0].name).toBe('production')
+    expect(result.current.clusterGroups[0].clusters).toEqual(['cluster-a'])
+    expect(result.current.clusterGroups[0].id).toMatch(/^group-\d+$/)
+  })
+
+  it('addClusterGroup supports optional color and labelSelector', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.addClusterGroup({
+        name: 'labeled',
+        clusters: ['cluster-b'],
+        color: '#ff0000',
+        labelSelector: { env: 'prod' },
+      })
+    })
+
+    expect(result.current.clusterGroups[0].color).toBe('#ff0000')
+    expect(result.current.clusterGroups[0].labelSelector).toEqual({ env: 'prod' })
+  })
+
+  it('updateClusterGroup updates fields of an existing group', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.addClusterGroup({ name: 'dev', clusters: ['cluster-a'] })
+    })
+    const groupId = result.current.clusterGroups[0].id
+
+    act(() => {
+      result.current.updateClusterGroup(groupId, { name: 'development', color: '#00ff00' })
+    })
+
+    const updated = result.current.clusterGroups.find(g => g.id === groupId)!
+    expect(updated.name).toBe('development')
+    expect(updated.color).toBe('#00ff00')
+    // Unchanged fields remain
+    expect(updated.clusters).toEqual(['cluster-a'])
+  })
+
+  it('updateClusterGroup does nothing for non-existent id', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.addClusterGroup({ name: 'test', clusters: ['cluster-a'] })
+    })
+
+    act(() => {
+      result.current.updateClusterGroup('non-existent-id', { name: 'nope' })
+    })
+
+    expect(result.current.clusterGroups).toHaveLength(1)
+    expect(result.current.clusterGroups[0].name).toBe('test')
+  })
+
+  it('deleteClusterGroup removes a group by id', () => {
+    let now = 1000
+    const dateSpy = vi.spyOn(Date, 'now').mockImplementation(() => now++)
+
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.addClusterGroup({ name: 'group1', clusters: ['cluster-a'] })
+    })
+
+    act(() => {
+      result.current.addClusterGroup({ name: 'group2', clusters: ['cluster-b'] })
+    })
+
+    expect(result.current.clusterGroups).toHaveLength(2)
+
+    const idToDelete = result.current.clusterGroups[0].id
+
+    act(() => {
+      result.current.deleteClusterGroup(idToDelete)
+    })
+
+    expect(result.current.clusterGroups).toHaveLength(1)
+    expect(result.current.clusterGroups[0].name).toBe('group2')
+
+    dateSpy.mockRestore()
+  })
+
+  it('deleteClusterGroup does nothing for non-existent id', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.addClusterGroup({ name: 'group1', clusters: ['cluster-a'] })
+    })
+
+    act(() => {
+      result.current.deleteClusterGroup('non-existent')
+    })
+
+    expect(result.current.clusterGroups).toHaveLength(1)
+  })
+
+  it('selectClusterGroup sets selected clusters to the group clusters', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.addClusterGroup({ name: 'prod', clusters: ['cluster-b'] })
+    })
+    const groupId = result.current.clusterGroups[0].id
+
+    act(() => {
+      result.current.selectClusterGroup(groupId)
+    })
+
+    expect(result.current.isClustersFiltered).toBe(true)
+    const filtered = result.current.filterByCluster(SAMPLE_ITEMS)
+    expect(filtered.every(item => item.cluster === 'cluster-b')).toBe(true)
+  })
+
+  it('selectClusterGroup does nothing for non-existent group id', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    // Start with all selected
+    expect(result.current.isAllClustersSelected).toBe(true)
+
+    act(() => {
+      result.current.selectClusterGroup('non-existent-group')
+    })
+
+    // Should remain unchanged
+    expect(result.current.isAllClustersSelected).toBe(true)
+  })
+})
+
+// ===========================================================================
+// filterByCluster
+// ===========================================================================
+describe('filterByCluster', () => {
+  it('returns all items when all clusters selected', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+    expect(result.current.filterByCluster(SAMPLE_ITEMS)).toEqual(SAMPLE_ITEMS)
+  })
+
+  it('filters items to only selected cluster', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedClusters(['cluster-a'])
+    })
+
+    const filtered = result.current.filterByCluster(SAMPLE_ITEMS)
+    expect(filtered).toHaveLength(3)
+    expect(filtered.every(item => item.cluster === 'cluster-a')).toBe(true)
+  })
+
+  it('returns empty when __none__ sentinel is set', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.deselectAllClusters()
+    })
+
+    expect(result.current.filterByCluster(SAMPLE_ITEMS)).toEqual([])
+  })
+
+  it('excludes items without a cluster field', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedClusters(['cluster-a'])
+    })
+
+    const items = [
+      { name: 'has-cluster', cluster: 'cluster-a' },
+      { name: 'no-cluster' },  // no cluster field
+    ]
+    const filtered = result.current.filterByCluster(items)
+    expect(filtered).toHaveLength(1)
+    expect(filtered[0].name).toBe('has-cluster')
+  })
+})
+
+// ===========================================================================
+// filterBySeverity
+// ===========================================================================
+describe('filterBySeverity', () => {
+  it('returns all items when all severities selected', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+    expect(result.current.filterBySeverity(SAMPLE_ITEMS)).toEqual(SAMPLE_ITEMS)
+  })
+
+  it('filters items to only selected severity', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedSeverities(['critical'])
+    })
+
+    const filtered = result.current.filterBySeverity(SAMPLE_ITEMS)
+    expect(filtered).toHaveLength(2)
+    expect(filtered.every(item => item.severity === 'critical')).toBe(true)
+  })
+
+  it('returns empty when __none__ sentinel is set', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.deselectAllSeverities()
+    })
+
+    expect(result.current.filterBySeverity(SAMPLE_ITEMS)).toEqual([])
+  })
+
+  it('defaults missing severity to info', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedSeverities(['info'])
+    })
+
+    const items = [
+      { name: 'has-severity', severity: 'info' },
+      { name: 'no-severity' },  // no severity field => defaults to 'info'
+    ]
+    const filtered = result.current.filterBySeverity(items)
+    expect(filtered).toHaveLength(2)
+  })
+
+  it('matches severity case-insensitively', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedSeverities(['critical'])
+    })
+
+    const items = [
+      { name: 'upper', severity: 'Critical' },
+      { name: 'lower', severity: 'critical' },
+    ]
+    const filtered = result.current.filterBySeverity(items)
+    expect(filtered).toHaveLength(2)
+  })
+})
+
+// ===========================================================================
+// filterByStatus
+// ===========================================================================
+describe('filterByStatus', () => {
+  it('returns all items when all statuses selected', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+    expect(result.current.filterByStatus(SAMPLE_ITEMS)).toEqual(SAMPLE_ITEMS)
+  })
+
+  it('filters items to only selected status', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedStatuses(['running'])
+    })
+
+    const filtered = result.current.filterByStatus(SAMPLE_ITEMS)
+    expect(filtered).toHaveLength(2)
+    expect(filtered.every(item => item.status === 'running')).toBe(true)
+  })
+
+  it('returns empty when __none__ sentinel is set', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.deselectAllStatuses()
+    })
+
+    expect(result.current.filterByStatus(SAMPLE_ITEMS)).toEqual([])
+  })
+
+  it('uses exact match and does not match substrings', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedStatuses(['run' as any])
+    })
+
+    const items = [
+      { name: 'running-item', status: 'running' },
+    ]
+    // 'run' should NOT match 'running' (exact match)
+    const filtered = result.current.filterByStatus(items)
+    expect(filtered).toHaveLength(0)
+  })
+
+  it('matches status case-insensitively', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedStatuses(['running'])
+    })
+
+    const items = [
+      { name: 'upper', status: 'Running' },
+      { name: 'lower', status: 'running' },
+    ]
+    const filtered = result.current.filterByStatus(items)
+    expect(filtered).toHaveLength(2)
+  })
+
+  it('treats missing status as empty string (no match)', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedStatuses(['running'])
+    })
+
+    const items = [
+      { name: 'has-status', status: 'running' },
+      { name: 'no-status' },  // no status field
+    ]
+    const filtered = result.current.filterByStatus(items)
+    expect(filtered).toHaveLength(1)
+    expect(filtered[0].name).toBe('has-status')
+  })
+})
+
+// ===========================================================================
+// filterByCustomText
+// ===========================================================================
+describe('filterByCustomText', () => {
+  it('returns all items when custom filter is empty', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+    expect(result.current.filterByCustomText(SAMPLE_ITEMS)).toEqual(SAMPLE_ITEMS)
+  })
+
+  it('returns all items when custom filter is whitespace only', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setCustomFilter('   ')
+    })
+
+    expect(result.current.filterByCustomText(SAMPLE_ITEMS)).toEqual(SAMPLE_ITEMS)
+  })
+
+  it('searches default fields: name, namespace, cluster, message', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setCustomFilter('alpha')
+    })
+
+    const filtered = result.current.filterByCustomText(SAMPLE_ITEMS)
+    expect(filtered).toHaveLength(1)
+    expect(filtered[0].name).toBe('pod-alpha')
+  })
+
+  it('searches by cluster field', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setCustomFilter('cluster-b')
+    })
+
+    const filtered = result.current.filterByCustomText(SAMPLE_ITEMS)
+    expect(filtered.every(item => item.cluster === 'cluster-b')).toBe(true)
+  })
+
+  it('is case-insensitive', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setCustomFilter('POD-ALPHA')
+    })
+
+    const filtered = result.current.filterByCustomText(SAMPLE_ITEMS)
+    expect(filtered).toHaveLength(1)
+  })
+
+  it('supports custom search fields', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    const items = [
+      { name: 'item1', customField: 'match-me', cluster: 'cluster-a' },
+      { name: 'item2', customField: 'no-hit', cluster: 'cluster-b' },
+    ]
+
+    act(() => {
+      result.current.setCustomFilter('match-me')
+    })
+
+    // Only search 'customField', not default fields
+    const filtered = result.current.filterByCustomText(items, ['customField'])
+    expect(filtered).toHaveLength(1)
+    expect(filtered[0].name).toBe('item1')
+  })
+
+  it('skips non-string fields gracefully', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    const items = [
+      { name: 'item1', count: 42 as unknown },
+      { name: 'item2', count: null as unknown },
+    ]
+
+    act(() => {
+      result.current.setCustomFilter('42')
+    })
+
+    // count is a number, not a string, so it shouldn't match
+    const filtered = result.current.filterByCustomText(items, ['name', 'count'])
+    expect(filtered).toHaveLength(0)
+  })
+})
+
+// ===========================================================================
+// filterItems -- combined pipeline
+// ===========================================================================
+describe('filterItems -- no active filters', () => {
   it('returns all items when no filters are set', () => {
     const { result } = renderHook(() => useGlobalFilters(), { wrapper })
     expect(result.current.filterItems(SAMPLE_ITEMS)).toEqual(SAMPLE_ITEMS)
@@ -92,10 +1229,7 @@ describe('filterItems with no active filters', () => {
   })
 })
 
-// ===========================================================================
-// filterItems — cluster filter
-// ===========================================================================
-describe('filterItems — cluster filter', () => {
+describe('filterItems -- cluster filter', () => {
   it('filters items by a single selected cluster', () => {
     const { result } = renderHook(() => useGlobalFilters(), { wrapper })
 
@@ -119,10 +1253,7 @@ describe('filterItems — cluster filter', () => {
   })
 })
 
-// ===========================================================================
-// filterItems — severity filter
-// ===========================================================================
-describe('filterItems — severity filter', () => {
+describe('filterItems -- severity filter', () => {
   it('filters items by a single severity', () => {
     const { result } = renderHook(() => useGlobalFilters(), { wrapper })
 
@@ -148,10 +1279,7 @@ describe('filterItems — severity filter', () => {
   })
 })
 
-// ===========================================================================
-// filterItems — status filter  (regression test for the #3352 bug fix)
-// ===========================================================================
-describe('filterItems — status filter', () => {
+describe('filterItems -- status filter', () => {
   it('filters items by a single status', () => {
     const { result } = renderHook(() => useGlobalFilters(), { wrapper })
 
@@ -194,16 +1322,12 @@ describe('filterItems — status filter', () => {
     })
 
     const filtered = result.current.filterItems(SAMPLE_ITEMS)
-    // Both cluster-a and cluster-b items with status=running should appear
     expect(filtered.some(item => item.cluster === 'cluster-a')).toBe(true)
     expect(filtered.some(item => item.cluster === 'cluster-b')).toBe(true)
   })
 })
 
-// ===========================================================================
-// filterItems — custom text filter  (regression test for the #3352 bug fix)
-// ===========================================================================
-describe('filterItems — custom text filter', () => {
+describe('filterItems -- custom text filter', () => {
   it('filters items by name using custom text', () => {
     const { result } = renderHook(() => useGlobalFilters(), { wrapper })
 
@@ -264,10 +1388,7 @@ describe('filterItems — custom text filter', () => {
   })
 })
 
-// ===========================================================================
-// filterItems — all four filters combined
-// ===========================================================================
-describe('filterItems — all four filters combined', () => {
+describe('filterItems -- all four filters combined', () => {
   it('applies cluster + severity + status + custom text in sequence', () => {
     const { result } = renderHook(() => useGlobalFilters(), { wrapper })
 
@@ -324,6 +1445,26 @@ describe('isFiltered flag', () => {
     expect(result.current.isFiltered).toBe(false)
   })
 
+  it('is true when a cluster filter is active', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedClusters(['cluster-a'])
+    })
+
+    expect(result.current.isFiltered).toBe(true)
+  })
+
+  it('is true when a severity filter is active', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedSeverities(['critical'])
+    })
+
+    expect(result.current.isFiltered).toBe(true)
+  })
+
   it('is true when a status filter is active', () => {
     const { result } = renderHook(() => useGlobalFilters(), { wrapper })
 
@@ -348,6 +1489,8 @@ describe('isFiltered flag', () => {
     const { result } = renderHook(() => useGlobalFilters(), { wrapper })
 
     act(() => {
+      result.current.setSelectedClusters(['cluster-a'])
+      result.current.setSelectedSeverities(['critical'])
       result.current.setSelectedStatuses(['running'])
       result.current.setCustomFilter('test')
     })
@@ -357,5 +1500,314 @@ describe('isFiltered flag', () => {
       result.current.clearAllFilters()
     })
     expect(result.current.isFiltered).toBe(false)
+  })
+
+  it('is true when only one of multiple filter dimensions is active', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    // Only severity is filtered, rest are all-selected
+    act(() => {
+      result.current.setSelectedSeverities(['warning'])
+    })
+
+    expect(result.current.isFiltered).toBe(true)
+    expect(result.current.isClustersFiltered).toBe(false)
+    expect(result.current.isSeveritiesFiltered).toBe(true)
+    expect(result.current.isStatusesFiltered).toBe(false)
+    expect(result.current.hasCustomFilter).toBe(false)
+  })
+})
+
+// ===========================================================================
+// clearAllFilters
+// ===========================================================================
+describe('clearAllFilters', () => {
+  it('resets all four filter dimensions simultaneously', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedClusters(['cluster-a'])
+      result.current.setSelectedSeverities(['critical'])
+      result.current.setSelectedStatuses(['running'])
+      result.current.setCustomFilter('test')
+    })
+
+    act(() => {
+      result.current.clearAllFilters()
+    })
+
+    expect(result.current.isAllClustersSelected).toBe(true)
+    expect(result.current.isAllSeveritiesSelected).toBe(true)
+    expect(result.current.isAllStatusesSelected).toBe(true)
+    expect(result.current.customFilter).toBe('')
+    expect(result.current.hasCustomFilter).toBe(false)
+    expect(result.current.isFiltered).toBe(false)
+  })
+})
+
+// ===========================================================================
+// Dynamic cluster list changes
+// ===========================================================================
+describe('dynamic cluster list changes', () => {
+  it('updates availableClusters when useClusters returns new data', () => {
+    const { result, rerender } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    expect(result.current.availableClusters).toEqual(['cluster-a', 'cluster-b'])
+
+    mockUseClusters.mockReturnValue({
+      deduplicatedClusters: [
+        { name: 'cluster-a', context: 'cluster-a', server: 'https://a.example.com' },
+        { name: 'cluster-b', context: 'cluster-b', server: 'https://b.example.com' },
+        { name: 'cluster-c', context: 'cluster-c', server: 'https://c.example.com' },
+      ],
+      clusters: [],
+      isLoading: false,
+      error: null,
+    })
+
+    rerender()
+
+    expect(result.current.availableClusters).toEqual(['cluster-a', 'cluster-b', 'cluster-c'])
+  })
+
+  it('updates clusterInfoMap when useClusters returns new data', () => {
+    const { result, rerender } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    mockUseClusters.mockReturnValue({
+      deduplicatedClusters: [
+        { name: 'new-cluster', context: 'new-ctx', server: 'https://new.example.com' },
+      ],
+      clusters: [],
+      isLoading: false,
+      error: null,
+    })
+
+    rerender()
+
+    expect(result.current.clusterInfoMap['new-cluster']).toEqual(
+      expect.objectContaining({ name: 'new-cluster', context: 'new-ctx' }),
+    )
+  })
+
+  it('selectedClusters reflects all available when in all-selected mode after cluster list change', () => {
+    const { result, rerender } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    // In all-selected mode
+    expect(result.current.isAllClustersSelected).toBe(true)
+    expect(result.current.selectedClusters).toEqual(['cluster-a', 'cluster-b'])
+
+    mockUseClusters.mockReturnValue({
+      deduplicatedClusters: [
+        { name: 'x', context: 'x', server: 'https://x.example.com' },
+        { name: 'y', context: 'y', server: 'https://y.example.com' },
+        { name: 'z', context: 'z', server: 'https://z.example.com' },
+      ],
+      clusters: [],
+      isLoading: false,
+      error: null,
+    })
+
+    rerender()
+
+    // All-selected mode should now return the new full list
+    expect(result.current.selectedClusters).toEqual(['x', 'y', 'z'])
+    expect(result.current.isAllClustersSelected).toBe(true)
+  })
+})
+
+// ===========================================================================
+// Analytics emissions
+// ===========================================================================
+describe('analytics emissions', () => {
+  it('emits cluster filter changed with correct counts', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedClusters(['cluster-a'])
+    })
+
+    expect(mockEmitCluster).toHaveBeenCalledTimes(1)
+    expect(mockEmitCluster).toHaveBeenCalledWith(1, 2)  // 1 selected, 2 available
+  })
+
+  it('emits severity filter changed with correct count', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedSeverities(['critical', 'high', 'medium'])
+    })
+
+    expect(mockEmitSeverity).toHaveBeenCalledTimes(1)
+    expect(mockEmitSeverity).toHaveBeenCalledWith(3)
+  })
+
+  it('emits status filter changed with correct count', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedStatuses(['running'])
+    })
+
+    expect(mockEmitStatus).toHaveBeenCalledTimes(1)
+    expect(mockEmitStatus).toHaveBeenCalledWith(1)
+  })
+
+  it('does not emit analytics for toggle operations (only setState)', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.toggleCluster('cluster-a')
+    })
+
+    // toggleCluster uses setSelectedClustersState directly, not setSelectedClusters
+    expect(mockEmitCluster).not.toHaveBeenCalled()
+  })
+
+  it('does not emit analytics for selectAll/deselectAll operations', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.selectAllClusters()
+      result.current.deselectAllClusters()
+      result.current.selectAllSeverities()
+      result.current.deselectAllSeverities()
+      result.current.selectAllStatuses()
+      result.current.deselectAllStatuses()
+    })
+
+    expect(mockEmitCluster).not.toHaveBeenCalled()
+    expect(mockEmitSeverity).not.toHaveBeenCalled()
+    expect(mockEmitStatus).not.toHaveBeenCalled()
+  })
+})
+
+// ===========================================================================
+// Edge cases and regression guards
+// ===========================================================================
+describe('edge cases', () => {
+  it('handles empty deduplicatedClusters from useClusters', () => {
+    mockUseClusters.mockReturnValue({
+      deduplicatedClusters: [],
+      clusters: [],
+      isLoading: false,
+      error: null,
+    })
+
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+    expect(result.current.availableClusters).toEqual([])
+    expect(result.current.isAllClustersSelected).toBe(true)
+    expect(result.current.filterItems(SAMPLE_ITEMS)).toEqual(SAMPLE_ITEMS)
+  })
+
+  it('filterItems handles items with missing optional fields', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    const items = [
+      { name: 'minimal' },  // no cluster, severity, or status
+    ]
+
+    // With no filters active, should pass through
+    expect(result.current.filterItems(items)).toEqual(items)
+  })
+
+  it('multiple rapid filter changes settle to final state', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.setSelectedClusters(['cluster-a'])
+      result.current.setSelectedClusters(['cluster-b'])
+      result.current.setSelectedClusters(['cluster-a', 'cluster-b'])
+    })
+
+    // Last write wins; setting both clusters = all-selected mode
+    // Because the context exposes effectiveSelectedClusters, need to check the flags
+    // Setting both clusters explicitly doesn't auto-collapse to all-selected;
+    // that only happens via toggleCluster. So both should still be set.
+    expect(result.current.isClustersFiltered).toBe(true)
+  })
+
+  it('toggleCluster with three clusters scenario', () => {
+    mockUseClusters.mockReturnValue({
+      deduplicatedClusters: [
+        { name: 'c1', context: 'c1', server: 'https://c1.example.com' },
+        { name: 'c2', context: 'c2', server: 'https://c2.example.com' },
+        { name: 'c3', context: 'c3', server: 'https://c3.example.com' },
+      ],
+      clusters: [],
+      isLoading: false,
+      error: null,
+    })
+
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    // Start all-selected, toggle off c1 => c2, c3 selected
+    act(() => {
+      result.current.toggleCluster('c1')
+    })
+    expect(result.current.isClustersFiltered).toBe(true)
+
+    // Toggle off c2 => only c3 selected
+    act(() => {
+      result.current.toggleCluster('c2')
+    })
+    expect(result.current.isClustersFiltered).toBe(true)
+
+    // Toggle c1 back on => c1 and c3 selected
+    act(() => {
+      result.current.toggleCluster('c1')
+    })
+    expect(result.current.isClustersFiltered).toBe(true)
+
+    // Toggle c2 back on => all three selected => all mode
+    act(() => {
+      result.current.toggleCluster('c2')
+    })
+    expect(result.current.isAllClustersSelected).toBe(true)
+  })
+
+  it('toggleSeverity with all levels scenario', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    // Toggle off all severities one by one (from all-selected mode)
+    // First toggle: all except 'critical'
+    act(() => {
+      result.current.toggleSeverity('critical')
+    })
+    expect(result.current.isSeveritiesFiltered).toBe(true)
+
+    // Toggle 'critical' back on (adds it to the selection)
+    act(() => {
+      result.current.toggleSeverity('critical')
+    })
+    // All 6 levels selected => back to all mode
+    expect(result.current.isAllSeveritiesSelected).toBe(true)
+  })
+
+  it('toggleStatus with all levels scenario', () => {
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+
+    act(() => {
+      result.current.toggleStatus('pending')
+    })
+    expect(result.current.isStatusesFiltered).toBe(true)
+
+    act(() => {
+      result.current.toggleStatus('pending')
+    })
+    expect(result.current.isAllStatusesSelected).toBe(true)
+  })
+
+  it('localStorage getItem throwing does not crash initialization', () => {
+    const originalGetItem = localStorage.getItem
+    localStorage.getItem = () => { throw new Error('Storage access denied') }
+
+    // Should not throw
+    const { result } = renderHook(() => useGlobalFilters(), { wrapper })
+    expect(result.current.isAllClustersSelected).toBe(true)
+    expect(result.current.isAllSeveritiesSelected).toBe(true)
+    expect(result.current.isAllStatusesSelected).toBe(true)
+    expect(result.current.customFilter).toBe('')
+
+    localStorage.getItem = originalGetItem
   })
 })
