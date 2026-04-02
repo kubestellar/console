@@ -66,7 +66,9 @@ type FeedbackConfig struct {
 // NewFeedbackHandler creates a new feedback handler
 func NewFeedbackHandler(s store.Store, cfg FeedbackConfig) *FeedbackHandler {
 	if cfg.GitHubToken == "" {
-		log.Printf("[Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file (requires repo scope).")
+		log.Printf("[Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. " +
+			"Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. " +
+			"Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.")
 	}
 	return &FeedbackHandler{
 		store:         s,
@@ -120,7 +122,9 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 
 	// Reject early if GitHub issue creation is not configured
 	if h.getEffectiveToken() == "" || h.repoOwner == "" || h.repoName == "" {
-		return fiber.NewError(fiber.StatusServiceUnavailable, "Issue submission is not available: FEEDBACK_GITHUB_TOKEN is not configured. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file (requires a GitHub personal access token with repo scope).")
+		return fiber.NewError(fiber.StatusServiceUnavailable, "Issue submission is not available: FEEDBACK_GITHUB_TOKEN is not configured. "+
+			"Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. "+
+			"Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.")
 	}
 
 	// Determine target repo — default to console if not specified or invalid

@@ -383,14 +383,25 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
               {screenshots.length > 0 && success && (success.screenshotsFailed ?? 0) > 0 && (success.screenshotsUploaded ?? 0) === 0 && (
                 <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
                   <p className="text-xs text-yellow-400 font-medium">
-                    Screenshot could not be uploaded. The issue was created without it. Check that the GitHub token has &quot;Contents: Read and write&quot; permission.
+                    Screenshot could not be uploaded — the issue was created without it.
+                    The token needs <em>Contents: Read and write</em> permission (fine-grained PAT) or <em>repo</em> scope (classic PAT).
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Update token on GitHub</a>
+                    {' · '}
+                    <button type="button" onClick={() => { window.location.href = '/settings' }} className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Console Settings</button>
                   </p>
                 </div>
               )}
               {screenshots.length > 0 && success && (success.screenshotsFailed ?? 0) > 0 && (success.screenshotsUploaded ?? 0) > 0 && (
                 <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
                   <p className="text-xs text-yellow-400 font-medium">
-                    {success.screenshotsUploaded} of {screenshots.length} screenshots uploaded. {success.screenshotsFailed} failed — check GitHub token permissions.
+                    {success.screenshotsUploaded} of {screenshots.length} screenshots uploaded. {success.screenshotsFailed} failed — token may need <em>Contents: Read and write</em> permission.
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Update token on GitHub</a>
+                    {' · '}
+                    <button type="button" onClick={() => { window.location.href = '/settings' }} className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Console Settings</button>
                   </p>
                 </div>
               )}
