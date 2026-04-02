@@ -92,7 +92,7 @@ This self-assessment is created by the KubeStellar Console maintainers to perfor
 | **CORS configuration** | API restricts cross-origin requests to known Console origins |
 | **Input sanitization** | User inputs (search queries, mission parameters) sanitized before rendering |
 | **Dependency scanning** | Dependabot, npm audit, and CodeQL identify vulnerable dependencies |
-| **Secret scanning** | CI/CD pipeline scans for accidentally committed secrets |
+| **Secret scanning** | GitHub repository-level secret scanning enabled (not yet integrated into CI/CD workflows) |
 
 ## Project Compliance
 
@@ -112,8 +112,8 @@ KubeStellar Console does not currently hold formal compliance certifications. Th
 | **Static Analysis (Go)** | CodeQL with extended security queries, gosec, nilaway |
 | **Static Analysis (TypeScript)** | CodeQL with extended queries, ESLint, TypeScript strict mode null checks |
 | **Dependency Management** | Dependabot (Go, npm, GitHub Actions), weekly automated updates |
-| **Container Scanning** | Container image scanning via CI/CD |
-| **Secret Detection** | Automated secret scanning in CI pipeline |
+| **Container Scanning** | Planned — container image vulnerability scanning not yet integrated into CI/CD |
+| **Secret Detection** | GitHub repository-level secret scanning enabled; CI/CD integration planned |
 | **Code Review** | All changes require PR review; direct commits to main prohibited |
 | **Signed Commits** | DCO sign-off required on all commits |
 | **Branch Protection** | Main branch protected; CI must pass before merge |
