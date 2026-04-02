@@ -136,8 +136,9 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
     setExpandedRec(null)
   }
 
-  const handleDismiss = (e: React.MouseEvent) => {
+  const handleDismiss = (e: React.MouseEvent, rec: CardRecommendation) => {
     e.stopPropagation()
+    dismissRecommendation(rec.id)
     setExpandedRec(null)
   }
 
@@ -242,7 +243,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
                           variant="secondary"
                           size="sm"
                           icon={<X className="w-3 h-3" />}
-                          onClick={handleDismiss}
+                          onClick={(e) => handleDismiss(e, rec)}
                           title={t('dashboard.recommendations.dismiss')}
                         />
                       </div>
@@ -374,7 +375,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
                         variant="secondary"
                         size="sm"
                         icon={<X className="w-3 h-3" />}
-                        onClick={handleDismiss}
+                        onClick={(e) => handleDismiss(e, rec)}
                         title={t('dashboard.recommendations.dismiss')}
                       />
                     </div>
