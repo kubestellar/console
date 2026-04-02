@@ -51,6 +51,17 @@ vi.stubGlobal('fetch', mockFetch)
 // ---------------------------------------------------------------------------
 // Import hook under test AFTER mocks
 // ---------------------------------------------------------------------------
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
+  LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
+  STORAGE_KEY_TOKEN: 'kc-auth-token',
+} })
+
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
+  MCP_HOOK_TIMEOUT_MS: 10000,
+} })
 
 import { useResolveDependencies } from '../useDependencies'
 import type { DependencyResolution } from '../useDependencies'

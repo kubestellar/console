@@ -4,56 +4,56 @@
  * Validates that all drilldown view components are properly exported.
  */
 import { describe, it, expect } from 'vitest'
-import * as BuildpackDrillDown from '../BuildpackDrillDown'
-import * as ComplianceDrillDown from '../ComplianceDrillDown'
-import * as ConfigMapDrillDown from '../ConfigMapDrillDown'
-import * as CostDrillDown from '../CostDrillDown'
-import * as CRDDrillDown from '../CRDDrillDown'
-import * as DeploymentDrillDown from '../DeploymentDrillDown'
-import * as DriftDrillDown from '../DriftDrillDown'
-import * as EventsDrillDown from '../EventsDrillDown'
-import * as GPUNamespaceDrillDown from '../GPUNamespaceDrillDown'
-import * as GPUNodeDrillDown from '../GPUNodeDrillDown'
-import * as HelmReleaseDrillDown from '../HelmReleaseDrillDown'
-import * as KustomizationDrillDown from '../KustomizationDrillDown'
-import * as LogsDrillDown from '../LogsDrillDown'
-import * as MultiClusterSummaryDrillDown from '../MultiClusterSummaryDrillDown'
-import * as NamespaceDrillDown from '../NamespaceDrillDown'
-import * as NodeDrillDown from '../NodeDrillDown'
-import * as PodDrillDown from '../PodDrillDown'
-import * as RBACDrillDown from '../RBACDrillDown'
-import * as ReplicaSetDrillDown from '../ReplicaSetDrillDown'
-import * as ResourcesDrillDown from '../ResourcesDrillDown'
-import * as SecretDrillDown from '../SecretDrillDown'
-import * as ServiceAccountDrillDown from '../ServiceAccountDrillDown'
+import { BuildpackDrillDown } from '../BuildpackDrillDown'
+import { ComplianceDrillDown } from '../ComplianceDrillDown'
+import { ConfigMapDrillDown } from '../ConfigMapDrillDown'
+import { CostDrillDown } from '../CostDrillDown'
+import { CRDDrillDown } from '../CRDDrillDown'
+import { DeploymentDrillDown } from '../DeploymentDrillDown'
+import { DriftDrillDown } from '../DriftDrillDown'
+import { EventsDrillDown } from '../EventsDrillDown'
+import { GPUNamespaceDrillDown } from '../GPUNamespaceDrillDown'
+import { GPUNodeDrillDown } from '../GPUNodeDrillDown'
+import { HelmReleaseDrillDown } from '../HelmReleaseDrillDown'
+import { KustomizationDrillDown } from '../KustomizationDrillDown'
+import { LogsDrillDown } from '../LogsDrillDown'
+import { MultiClusterSummaryDrillDown } from '../MultiClusterSummaryDrillDown'
+import { NamespaceDrillDown } from '../NamespaceDrillDown'
+import { NodeDrillDown } from '../NodeDrillDown'
+import { PodDrillDown } from '../PodDrillDown'
+import { RBACDrillDown } from '../RBACDrillDown'
+import { ReplicaSetDrillDown } from '../ReplicaSetDrillDown'
+import { ResourcesDrillDown } from '../ResourcesDrillDown'
+import { SecretDrillDown } from '../SecretDrillDown'
+import { ServiceAccountDrillDown } from '../ServiceAccountDrillDown'
 
-const modules = [
-  { name: 'BuildpackDrillDown', mod: BuildpackDrillDown },
-  { name: 'ComplianceDrillDown', mod: ComplianceDrillDown },
-  { name: 'ConfigMapDrillDown', mod: ConfigMapDrillDown },
-  { name: 'CostDrillDown', mod: CostDrillDown },
-  { name: 'CRDDrillDown', mod: CRDDrillDown },
-  { name: 'DeploymentDrillDown', mod: DeploymentDrillDown },
-  { name: 'DriftDrillDown', mod: DriftDrillDown },
-  { name: 'EventsDrillDown', mod: EventsDrillDown },
-  { name: 'GPUNamespaceDrillDown', mod: GPUNamespaceDrillDown },
-  { name: 'GPUNodeDrillDown', mod: GPUNodeDrillDown },
-  { name: 'HelmReleaseDrillDown', mod: HelmReleaseDrillDown },
-  { name: 'KustomizationDrillDown', mod: KustomizationDrillDown },
-  { name: 'LogsDrillDown', mod: LogsDrillDown },
-  { name: 'MultiClusterSummaryDrillDown', mod: MultiClusterSummaryDrillDown },
-  { name: 'NamespaceDrillDown', mod: NamespaceDrillDown },
-  { name: 'NodeDrillDown', mod: NodeDrillDown },
-  { name: 'PodDrillDown', mod: PodDrillDown },
-  { name: 'RBACDrillDown', mod: RBACDrillDown },
-  { name: 'ReplicaSetDrillDown', mod: ReplicaSetDrillDown },
-  { name: 'ResourcesDrillDown', mod: ResourcesDrillDown },
-  { name: 'SecretDrillDown', mod: SecretDrillDown },
-  { name: 'ServiceAccountDrillDown', mod: ServiceAccountDrillDown },
+const components = [
+  { name: 'BuildpackDrillDown', component: BuildpackDrillDown },
+  { name: 'ComplianceDrillDown', component: ComplianceDrillDown },
+  { name: 'ConfigMapDrillDown', component: ConfigMapDrillDown },
+  { name: 'CostDrillDown', component: CostDrillDown },
+  { name: 'CRDDrillDown', component: CRDDrillDown },
+  { name: 'DeploymentDrillDown', component: DeploymentDrillDown },
+  { name: 'DriftDrillDown', component: DriftDrillDown },
+  { name: 'EventsDrillDown', component: EventsDrillDown },
+  { name: 'GPUNamespaceDrillDown', component: GPUNamespaceDrillDown },
+  { name: 'GPUNodeDrillDown', component: GPUNodeDrillDown },
+  { name: 'HelmReleaseDrillDown', component: HelmReleaseDrillDown },
+  { name: 'KustomizationDrillDown', component: KustomizationDrillDown },
+  { name: 'LogsDrillDown', component: LogsDrillDown },
+  { name: 'MultiClusterSummaryDrillDown', component: MultiClusterSummaryDrillDown },
+  { name: 'NamespaceDrillDown', component: NamespaceDrillDown },
+  { name: 'NodeDrillDown', component: NodeDrillDown },
+  { name: 'PodDrillDown', component: PodDrillDown },
+  { name: 'RBACDrillDown', component: RBACDrillDown },
+  { name: 'ReplicaSetDrillDown', component: ReplicaSetDrillDown },
+  { name: 'ResourcesDrillDown', component: ResourcesDrillDown },
+  { name: 'SecretDrillDown', component: SecretDrillDown },
+  { name: 'ServiceAccountDrillDown', component: ServiceAccountDrillDown },
 ]
 
 describe('Drilldown view exports', () => {
-  it.each(modules)('$name is exported', ({ name, mod }) => {
-    expect((mod as Record<string, unknown>)[name]).toBeDefined()
+  it.each(components)('$name is exported', ({ component }) => {
+    expect(component).toBeDefined()
   })
 })

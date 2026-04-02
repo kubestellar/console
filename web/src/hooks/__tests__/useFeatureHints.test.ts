@@ -13,6 +13,12 @@ vi.mock('../../lib/constants/storage', async (importOriginal) => {
     STORAGE_KEY_HINTS_SUPPRESSED: 'kc-hints-suppressed',
   }
 })
+vi.mock('../../lib/constants/storage', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
+  STORAGE_KEY_FEATURE_HINTS_DISMISSED: 'kc-hints-dismissed',
+  STORAGE_KEY_HINTS_SUPPRESSED: 'kc-hints-suppressed',
+} })
 
 vi.mock('../../lib/analytics', () => ({
   emitFeatureHintShown: vi.fn(),

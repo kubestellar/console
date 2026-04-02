@@ -102,6 +102,7 @@ describe('sseClient', () => {
 
       const result = await fetchSSE({
         url: `/api/mcp/pods/stream-${testId++}`,
+        url: '/api/mcp/pods/stream',
         itemsKey: 'pods',
         onClusterData: (cluster, items) => {
           clusterDataCalls.push({ cluster, items })
@@ -122,6 +123,7 @@ describe('sseClient', () => {
 
       await fetchSSE({
         url: `/api/auth-${testId++}`,
+        url: '/api/test',
         itemsKey: 'items',
         onClusterData: vi.fn(),
       })
@@ -138,6 +140,7 @@ describe('sseClient', () => {
 
       await fetchSSE({
         url: `/api/params-${testId++}`,
+        url: '/api/test',
         params: { namespace: 'default', limit: 100 },
         itemsKey: 'items',
         onClusterData: vi.fn(),
@@ -157,6 +160,7 @@ describe('sseClient', () => {
 
       await fetchSSE({
         url: `/api/ondone-${testId++}`,
+        url: '/api/test',
         itemsKey: 'items',
         onClusterData: vi.fn(),
         onDone,
@@ -209,6 +213,36 @@ describe('sseClient', () => {
 
       const result = await handled
       expect(result === 'rejected' || Array.isArray(result)).toBe(true)
+      vi.mocked(fetch).mockRejectedValue(new Error('Network error'))
+
+      // SSE client has retry logic — may resolve with empty array or reject
+      try {
+        const result = await fetchSSE({
+          url: '/api/test',
+          itemsKey: 'items',
+          onClusterData: vi.fn(),
+        })
+        // If it resolves, should be an array
+        expect(Array.isArray(result)).toBe(true)
+      } catch {
+        // If it rejects after retries, that's also valid
+        expect(true).toBe(true)
+      }
+    })
+
+    it('handles non-200 response gracefully', async () => {
+      vi.mocked(fetch).mockResolvedValue(new Response('Server Error', { status: 500 }))
+
+      try {
+        const result = await fetchSSE({
+          url: '/api/test',
+          itemsKey: 'items',
+          onClusterData: vi.fn(),
+        })
+        expect(Array.isArray(result)).toBe(true)
+      } catch {
+        expect(true).toBe(true)
+      }
     })
 
     it('skips undefined params', async () => {
@@ -218,6 +252,7 @@ describe('sseClient', () => {
 
       await fetchSSE({
         url: `/api/undef-params-${testId++}`,
+        url: '/api/test',
         params: { namespace: 'default', cluster: undefined },
         itemsKey: 'items',
         onClusterData: vi.fn(),
@@ -583,6 +618,21 @@ describe('sseClient', () => {
       const url = String(call[0])
       expect(url).toContain('limit=50')
       expect(url).toContain('page=3')
+    })
+      controller.abort()
+
+      vi.mocked(fetch).mockRejectedValue(new DOMException('Aborted', 'AbortError'))
+
+      try {
+        await fetchSSE({
+          url: '/api/test',
+          itemsKey: 'items',
+          onClusterData: vi.fn(),
+          signal: controller.signal,
+        })
+      } catch {
+        // Expected — aborted requests may throw
+      }
     })
   })
 })

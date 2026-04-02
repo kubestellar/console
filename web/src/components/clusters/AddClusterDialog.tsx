@@ -68,8 +68,8 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
     setNamespace(''); setTestResult(null); setConnectError(''); setShowAdvanced(false)
   }, [])
 
-  const resetImportState = useCallback(() => {
-    setKubeconfigYaml('')
+  const resetImportState = useCallback((initialYaml = '') => {
+    setKubeconfigYaml(initialYaml)
     setImportState('idle')
     setPreviewContexts([])
     setErrorMessage('')
@@ -81,14 +81,11 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
     if (!file) return
     const reader = new FileReader()
     reader.onload = (ev) => {
-      setKubeconfigYaml(ev.target?.result as string)
-      setImportState('idle')
-      setPreviewContexts([])
-      setErrorMessage('')
+      resetImportState(ev.target?.result as string)
     }
     reader.readAsText(file)
     if (fileInputRef.current) fileInputRef.current.value = ''
-  }, [])
+  }, [resetImportState])
 
   const handlePreview = useCallback(async () => {
     setImportState('previewing')

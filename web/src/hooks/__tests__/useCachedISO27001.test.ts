@@ -871,5 +871,12 @@ describe('useCachedISO27001Audit', () => {
       expect.any(Array),
       expect.objectContaining({ context: 'real-ctx' }),
     )
+import { useCachedISO27001Audit } from '../useCachedISO27001'
+
+describe('useCachedISO27001Audit', () => {
+  it('returns expected shape', () => {
+    const { result } = renderHook(() => useCachedISO27001Audit())
+    expect(result.current).toHaveProperty('isLoading')
+    expect(result.current).toHaveProperty('isDemoFallback')
   })
 })

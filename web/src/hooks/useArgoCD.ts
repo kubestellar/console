@@ -368,19 +368,21 @@ export function useArgoCDApplications(): UseArgoCDApplicationsResult {
       // Try real API first
       const result = await fetchArgoApplications()
 
-      if (!result.isDemoData && (result.items || []).length > 0) {
-        // Real data from ArgoCD
-        setApplications(result.items)
+      if (!result.isDemoData) {
+        // Real data from ArgoCD — use it even if empty (ArgoCD installed
+        // but no applications deployed yet).  Previously an empty list
+        // was treated as "no ArgoCD" which triggered mock fallback (#4201).
+        setApplications(result.items || [])
         setIsDemoData(false)
         setError(null)
         setConsecutiveFailures(0)
         setLastRefresh(Date.now())
         initialLoadDone.current = true
-        saveToCache(APPS_CACHE_KEY, result.items, false)
+        saveToCache(APPS_CACHE_KEY, result.items || [], false)
         return
       }
 
-      // API returned but no real data (ArgoCD not installed) — fall through to mock
+      // API explicitly indicated demo data — fall through to mock
       throw new Error('No ArgoCD data available')
     } catch {
       // API failed or returned demo indicator — fall back to mock data
@@ -493,18 +495,18 @@ export function useArgoCDHealth(): UseArgoCDHealthResult {
       const result = await fetchArgoHealth()
 
       if (!result.isDemoData) {
-        const total = result.stats.healthy + result.stats.degraded +
-          result.stats.progressing + result.stats.missing + result.stats.unknown
-        if (total > 0) {
-          setStats(result.stats)
-          setIsDemoData(false)
-          setError(null)
-          setConsecutiveFailures(0)
-          setLastRefresh(Date.now())
-          initialLoadDone.current = true
-          saveToCache(HEALTH_CACHE_KEY, result.stats, false)
-          return
-        }
+        // Real data from ArgoCD — use it even if totals are zero
+        // (ArgoCD installed but no applications yet).  Previously a
+        // zero total was treated as "no ArgoCD" which triggered mock
+        // fallback even when ArgoCD was running (#4201).
+        setStats(result.stats)
+        setIsDemoData(false)
+        setError(null)
+        setConsecutiveFailures(0)
+        setLastRefresh(Date.now())
+        initialLoadDone.current = true
+        saveToCache(HEALTH_CACHE_KEY, result.stats, false)
+        return
       }
 
       // No real data — fall through to mock
@@ -671,17 +673,15 @@ export function useArgoCDSyncStatus(localClusterFilter: string[] = []): UseArgoC
       const result = await fetchArgoSync()
 
       if (!result.isDemoData) {
-        const total = result.stats.synced + result.stats.outOfSync + result.stats.unknown
-        if (total > 0) {
-          setStats(result.stats)
-          setIsDemoData(false)
-          setError(null)
-          setConsecutiveFailures(0)
-          setLastRefresh(Date.now())
-          initialLoadDone.current = true
-          saveToCache(SYNC_CACHE_KEY, result.stats, false)
-          return
-        }
+        // Real data from ArgoCD — use it even if totals are zero (#4201).
+        setStats(result.stats)
+        setIsDemoData(false)
+        setError(null)
+        setConsecutiveFailures(0)
+        setLastRefresh(Date.now())
+        initialLoadDone.current = true
+        saveToCache(SYNC_CACHE_KEY, result.stats, false)
+        return
       }
 
       // No real data — fall through to mock

@@ -113,8 +113,12 @@ export function DeploymentDrillDown({ data }: Props) {
   const [scaleError, setScaleError] = useState<string | null>(null)
   const { checkPermission } = useCanI()
 
-  const reason = data.reason as string
-  const message = data.message as string
+  // Track reason/message from the initial click payload but reconcile with
+  // live data: if the live fetch shows the deployment is now healthy
+  // (readyReplicas === replicas), clear stale failure reason/message to
+  // prevent the contradictory "Healthy + DeploymentFailed" display (#4200).
+  const [liveReason, setLiveReason] = useState<string | undefined>(data.reason as string | undefined)
+  const [liveMessage, setLiveMessage] = useState<string | undefined>(data.message as string | undefined)
 
   // Helper to run kubectl commands
   const runKubectl = (args: string[]): Promise<string> => {
@@ -166,9 +170,32 @@ export function DeploymentDrillDown({ data }: Props) {
       const output = await runKubectl(['get', 'deployment', deploymentName, '-n', namespace, '-o', 'json'])
       if (output) {
         const deploy = JSON.parse(output)
-        setReplicas(deploy.spec?.replicas || 0)
-        setReadyReplicas(deploy.status?.readyReplicas || 0)
+        const liveReplicas = deploy.spec?.replicas || 0
+        const liveReady = deploy.status?.readyReplicas || 0
+        setReplicas(liveReplicas)
+        setReadyReplicas(liveReady)
         setLabels(deploy.metadata?.labels || {})
+
+        // Reconcile reason/message with live state (#4200):
+        // If live data shows healthy, clear the stale failure reason/message.
+        // If still unhealthy, derive reason from deployment conditions.
+        if (liveReady === liveReplicas && liveReplicas > 0) {
+          setLiveReason(undefined)
+          setLiveMessage(undefined)
+        } else {
+          // Extract current condition from the deployment status
+          const conditions = (deploy.status?.conditions || []) as Array<{ type: string; status: string; reason?: string; message?: string }>
+          const failedCondition = conditions.find(
+            (c: { type: string; status: string }) =>
+              (c.type === 'Available' && c.status === 'False') ||
+              (c.type === 'Progressing' && c.status === 'False') ||
+              (c.type === 'ReplicaFailure' && c.status === 'True')
+          )
+          if (failedCondition) {
+            setLiveReason(failedCondition.reason || liveReason)
+            setLiveMessage(failedCondition.message || liveMessage)
+          }
+        }
 
         // Get ReplicaSets using the deployment's actual selector (matchLabels + matchExpressions)
         const rsSelector = buildLabelSelector(
@@ -415,7 +442,7 @@ export function DeploymentDrillDown({ data }: Props) {
                     <div className="text-lg font-semibold text-foreground">
                       {isHealthy ? 'Healthy' : 'Degraded'}
                     </div>
-                    {reason && <div className="text-sm text-muted-foreground">{reason}</div>}
+                    {liveReason && <div className="text-sm text-muted-foreground">{liveReason}</div>}
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -431,8 +458,8 @@ export function DeploymentDrillDown({ data }: Props) {
                   </div>
                 </div>
               </div>
-              {message && (
-                <div className="mt-3 p-2 rounded bg-card/50 text-sm text-muted-foreground">{message}</div>
+              {liveMessage && (
+                <div className="mt-3 p-2 rounded bg-card/50 text-sm text-muted-foreground">{liveMessage}</div>
               )}
             </div>
 

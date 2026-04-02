@@ -954,6 +954,18 @@ export function emitFeedbackSubmitted(type: string) {
   send('ksc_feedback_submitted', { feedback_type: type })
 }
 
+export function emitScreenshotAttached(method: 'paste' | 'drop' | 'file_picker', count: number) {
+  send('ksc_screenshot_attached', { method, count })
+}
+
+export function emitScreenshotUploadFailed(error: string, screenshotCount: number) {
+  send('ksc_screenshot_upload_failed', { error: error.substring(0, ERROR_DETAIL_MAX_LEN), screenshot_count: screenshotCount })
+}
+
+export function emitScreenshotUploadSuccess(screenshotCount: number) {
+  send('ksc_screenshot_upload_success', { screenshot_count: screenshotCount })
+}
+
 // ── Errors ─────────────────────────────────────────────────────────
 
 // Maximum length for error detail strings to avoid oversized payloads

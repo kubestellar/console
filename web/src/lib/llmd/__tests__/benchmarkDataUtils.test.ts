@@ -7,6 +7,8 @@ import {
   CONFIG_TYPE_COLORS,
 } from '../benchmarkDataUtils'
 import type { BenchmarkReport } from '../benchmarkMockData'
+import { describe, it, expect } from 'vitest'
+import { extractExperimentMeta, groupByExperiment, getFilterOptions, buildHeatmapData, CONFIG_TYPE_COLORS } from '../benchmarkDataUtils'
 
 // ---------------------------------------------------------------------------
 // Helper: build a minimal BenchmarkReport-like object
@@ -369,6 +371,81 @@ describe('buildHeatmapData', () => {
 // ---------------------------------------------------------------------------
 // CONFIG_TYPE_COLORS
 // ---------------------------------------------------------------------------
+  it('groups multiple reports with same category/variant', () => {
+    const makeGroupReport = (qps: number) => ({
+      run: { eid: 'Cat/var' },
+      scenario: {
+        stack: [],
+        load: { standardized: { rate_qps: qps, input_seq_len: { value: 100 }, output_seq_len: { value: 50 } } },
+      },
+      results: {
+        request_performance: {
+          aggregate: {
+            latency: { ttft_ms: { p50: 50 }, tpot_ms: { p50: 20 }, itl_ms: { p50: 10 }, e2e_latency_ms: { p99: 200 } },
+            throughput: { output_tokens_per_s: 100 },
+            requests: { total: 100, failures: 0, request_rate: qps, mean_latency_ms: 80 },
+          },
+        },
+      },
+    })
+
+    const groups = groupByExperiment([
+      makeGroupReport(5),
+      makeGroupReport(10),
+    ] as Parameters<typeof groupByExperiment>[0])
+
+    expect(groups.length).toBeGreaterThanOrEqual(1)
+    const group = groups[0]
+    expect(group.category).toBe('Cat')
+    expect(group.variant).toBe('var')
+    expect(group.points.length).toBeGreaterThanOrEqual(1)
+    expect(group.color).toMatch(/^#/)
+  })
+})
+
+describe('getFilterOptions', () => {
+  const makeFilterReport = (eid: string) => ({
+    run: { eid },
+    scenario: {
+      stack: [],
+      load: { standardized: { rate_qps: 10, input_seq_len: { value: 100 }, output_seq_len: { value: 50 } } },
+    },
+    results: {
+      request_performance: {
+        aggregate: {
+          latency: {},
+          throughput: {},
+          requests: { total: 10, failures: 0 },
+        },
+      },
+    },
+  })
+
+  it('returns empty arrays for empty input', () => {
+    const opts = getFilterOptions([])
+    expect(opts.categories).toEqual([])
+  })
+
+  it('extracts unique categories', () => {
+    const reports = [
+      makeFilterReport('Cat A/var1'),
+      makeFilterReport('Cat A/var2'),
+      makeFilterReport('Cat B/var3'),
+    ]
+    const opts = getFilterOptions(reports as Parameters<typeof getFilterOptions>[0])
+    expect(opts.categories).toContain('Cat A')
+    expect(opts.categories).toContain('Cat B')
+    expect(opts.categories.length).toBe(2)
+  })
+})
+
+describe('buildHeatmapData', () => {
+  it('returns object for empty input', () => {
+    const result = buildHeatmapData([])
+    expect(result).toBeDefined()
+  })
+})
+
 describe('CONFIG_TYPE_COLORS', () => {
   it('has colors for standalone, disaggregated, scheduling', () => {
     expect(CONFIG_TYPE_COLORS).toHaveProperty('standalone')

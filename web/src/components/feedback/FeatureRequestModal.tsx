@@ -129,8 +129,10 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
   const [isDragOver, setIsDragOver] = useState(false)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const [isPreviewFullscreen, setIsPreviewFullscreen] = useState(false)
+  const [previewImageSrc, setPreviewImageSrc] = useState<string | null>(null)
   const screenshotInputRef = useRef<HTMLInputElement>(null)
   const fullscreenOverlayRef = useRef<HTMLDivElement>(null)
+  const screenshotPreviewRef = useRef<HTMLDivElement>(null)
 
   // Close fullscreen preview on Escape key
   const handleFullscreenKeyDown = useCallback((e: KeyboardEvent) => {
@@ -1457,6 +1459,15 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
                           <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 bg-black/60 rounded-lg transition-opacity">
                             <button
                               type="button"
+                              onClick={e => { e.stopPropagation(); setPreviewImageSrc(s.preview) }}
+                              className="p-1.5 rounded-md bg-secondary/80 text-foreground hover:bg-secondary transition-colors"
+                              title="Preview screenshot"
+                              aria-label="Preview screenshot"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
                               onClick={e => { e.stopPropagation(); void copyScreenshotToClipboard(s.preview, i) }}
                               className="p-1.5 rounded-md bg-secondary/80 text-foreground hover:bg-secondary transition-colors"
                               title="Copy to clipboard"
@@ -1623,6 +1634,51 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
               <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
                 {description}
               </ReactMarkdown>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Screenshot image preview overlay */}
+      {previewImageSrc && (
+        <div
+          ref={screenshotPreviewRef}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          onClick={(e) => {
+            if (e.target === screenshotPreviewRef.current) {
+              setPreviewImageSrc(null)
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setPreviewImageSrc(null)
+            }
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Screenshot preview"
+        >
+          <div className="relative max-w-[90vw] max-h-[85vh] bg-background border border-border rounded-xl shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <Maximize2 className="w-4 h-4" />
+                Screenshot Preview
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewImageSrc(null)}
+                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
+                aria-label="Close screenshot preview"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
+              <img
+                src={previewImageSrc}
+                alt="Screenshot preview"
+                className="max-w-full max-h-[75vh] object-contain rounded-lg"
+              />
             </div>
           </div>
         </div>

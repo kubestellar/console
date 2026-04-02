@@ -18,6 +18,17 @@ interface GlobeAnimationProps {
 /** Simulated loading delay before revealing the 3-D globe in milliseconds */
 const GLOBE_LOAD_DELAY_MS = 1000
 
+/** Check if WebGL is available — returns false in headless browsers and CI */
+function isWebGLAvailable(): boolean {
+  try {
+    const canvas = document.createElement('canvas')
+    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+    return gl instanceof WebGLRenderingContext || gl instanceof WebGL2RenderingContext
+  } catch {
+    return false
+  }
+}
+
 const GlobeAnimation = ({
   width = "100%",
   height = "600px",
@@ -29,15 +40,17 @@ const GlobeAnimation = ({
   style = {},
 }: GlobeAnimationProps) => {
   const [isLoaded, setIsLoaded] = useState(false)
+  const [hasWebGL] = useState(isWebGLAvailable)
 
   useEffect(() => {
+    if (!hasWebGL) return
     // Simulate loading delay to show progressive animation
     const timer = setTimeout(() => {
       setIsLoaded(true)
     }, GLOBE_LOAD_DELAY_MS)
 
     return () => clearTimeout(timer)
-  }, [])
+  }, [hasWebGL])
 
   return (
     <div
@@ -51,8 +64,13 @@ const GlobeAnimation = ({
         </div>
       )}
 
-      {/* Three.js Canvas */}
-      <Canvas className="w-full h-full bg-transparent">
+      {/* Three.js Canvas — skipped when WebGL is unavailable (headless browsers, CI) */}
+      {!hasWebGL ? (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-32 h-32 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/30" />
+        </div>
+      ) : null}
+      {hasWebGL && <Canvas className="w-full h-full bg-transparent">
         {/* Camera */}
         <PerspectiveCamera
           makeDefault
@@ -88,7 +106,7 @@ const GlobeAnimation = ({
         <Suspense fallback={null}>
           <NetworkGlobe isLoaded={isLoaded} />
         </Suspense>
-      </Canvas>
+      </Canvas>}
     </div>
   )
 }

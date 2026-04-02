@@ -39,7 +39,7 @@ export function GPUNamespaceDrillDown({ data }: Props) {
 
   const { nodes: gpuNodes } = useGPUNodes()
   const { pods: allPods } = useAllPods()
-  const { drillToPod, drillToGPUNode } = useDrillDownActions()
+  const { drillToPod, drillToGPUNode, drillToCluster } = useDrillDownActions()
 
   // Find GPU pods in this namespace
   const gpuPods = useMemo(() => {
@@ -120,7 +120,13 @@ export function GPUNamespaceDrillDown({ data }: Props) {
             <div className="text-sm text-muted-foreground">Clusters</div>
             <div className="flex items-center gap-1 mt-1 flex-wrap">
               {clusters.slice(0, 3).map(c => (
-                <ClusterBadge key={c} cluster={c} size="sm" />
+                <button
+                  key={c}
+                  onClick={() => drillToCluster(c)}
+                  className="hover:opacity-80 transition-opacity cursor-pointer"
+                >
+                  <ClusterBadge cluster={c} size="sm" />
+                </button>
               ))}
               {clusters.length > 3 && (
                 <span className="text-xs text-muted-foreground">+{clusters.length - 3}</span>

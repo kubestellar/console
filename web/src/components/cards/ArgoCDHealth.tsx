@@ -93,19 +93,21 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
         </div>
       </div>
 
-      {/* Integration notice */}
-      <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-orange-500/10 border border-orange-500/20 text-xs">
-        <AlertCircle className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-orange-400 font-medium">{t('argoCDHealth.argocdIntegration')}</p>
-          <p className="text-muted-foreground">
-            {t('argoCDHealth.installArgoCD')}{' '}
-            <a href="https://argo-cd.readthedocs.io/en/stable/getting_started/" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline inline-block py-2">
-              {t('argoCDHealth.installGuide')}
-            </a>
-          </p>
+      {/* Integration notice — only shown in demo/fallback mode (#4201) */}
+      {isDemoData && (
+        <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-orange-500/10 border border-orange-500/20 text-xs">
+          <AlertCircle className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-orange-400 font-medium">{t('argoCDHealth.argocdIntegration')}</p>
+            <p className="text-muted-foreground">
+              {t('argoCDHealth.installArgoCD')}{' '}
+              <a href="https://argo-cd.readthedocs.io/en/stable/getting_started/" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline inline-block py-2">
+                {t('argoCDHealth.installGuide')}
+              </a>
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Health gauge */}
       <div className="flex items-center justify-center gap-4 mb-4 p-4 rounded-lg bg-secondary/30">

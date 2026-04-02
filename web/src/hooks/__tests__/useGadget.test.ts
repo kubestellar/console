@@ -98,6 +98,17 @@ function resetMocks() {
 // ---------------------------------------------------------------------------
 // useGadgetStatus
 // ---------------------------------------------------------------------------
+vi.mock('../../lib/api', () => ({
+  authFetch: vi.fn(),
+}))
+
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
+  FETCH_DEFAULT_TIMEOUT_MS: 10000,
+} })
+
+import { useGadgetStatus, useCachedNetworkTraces, useCachedDNSTraces, useCachedProcessTraces, useCachedSecurityAudit } from '../useGadget'
 
 describe('useGadgetStatus', () => {
   beforeEach(resetMocks)

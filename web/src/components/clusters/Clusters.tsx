@@ -97,18 +97,26 @@ export function Clusters() {
     }
     setSearchParams(searchParams, { replace: true })
   }, [searchParams, setSearchParams])
-  const [sortBy, setSortBy] = useState<'name' | 'nodes' | 'pods' | 'health' | 'provider' | 'custom'>(() => {
-    // Default to custom if user has a saved order
-    const savedOrder = safeGetItem(STORAGE_KEY_CLUSTER_ORDER)
-    return savedOrder ? 'custom' : 'name'
+  const [sortState, setSortState] = useState<{ by: 'name' | 'nodes' | 'pods' | 'health' | 'provider' | 'custom'; customOrder: string[] }>(() => {
+    try {
+      const savedOrder = safeGetItem(STORAGE_KEY_CLUSTER_ORDER)
+      return {
+        by: savedOrder ? 'custom' : 'name',
+        customOrder: savedOrder ? JSON.parse(savedOrder) : [],
+      }
+    } catch {
+      return { by: 'name', customOrder: [] }
+    }
   })
   const [sortAsc, setSortAsc] = useState(true)
-  const [customOrder, setCustomOrder] = useState<string[]>(() => {
-    try {
-      const saved = safeGetItem(STORAGE_KEY_CLUSTER_ORDER)
-      return saved ? JSON.parse(saved) : []
-    } catch { return [] }
-  })
+  // Convenience aliases so downstream code stays unchanged
+  const sortBy = sortState.by
+  const customOrder = sortState.customOrder
+  const setSortBy = useCallback(
+    (by: 'name' | 'nodes' | 'pods' | 'health' | 'provider' | 'custom') =>
+      setSortState(prev => ({ ...prev, by })),
+    []
+  )
   const [layoutMode, setLayoutMode] = useState<ClusterLayoutMode>(() => {
     const stored = safeGetItem(STORAGE_KEY_CLUSTER_LAYOUT)
     return (stored as ClusterLayoutMode) || 'grid'
@@ -141,8 +149,7 @@ export function Clusters() {
   }
 
   const handleReorder = useCallback((newOrder: string[]) => {
-    setCustomOrder(newOrder)
-    setSortBy('custom')
+    setSortState({ by: 'custom', customOrder: newOrder })
     safeSetItem(STORAGE_KEY_CLUSTER_ORDER, JSON.stringify(newOrder))
   }, [])
 

@@ -32,6 +32,11 @@ vi.stubGlobal('fetch', mockFetch)
 // ---------------------------------------------------------------------------
 // Import hook under test AFTER mocks
 // ---------------------------------------------------------------------------
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
+  FETCH_DEFAULT_TIMEOUT_MS: 10000,
+} })
 
 import { useServiceExports } from '../useServiceExports'
 import type { UseServiceExportsResult } from '../useServiceExports'

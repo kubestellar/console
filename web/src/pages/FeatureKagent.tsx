@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { ROUTES } from '../config/routes'
 import {
   ArrowRight,
   ExternalLink,
@@ -114,7 +115,7 @@ export function FeatureKagent() {
           </p>
           <div className="flex items-center justify-center gap-4">
             <Link
-              to="/settings"
+              to={ROUTES.SETTINGS}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-purple-500 text-white font-medium hover:bg-purple-600 transition-colors"
             >
               Configure in Settings
@@ -178,7 +179,7 @@ export function FeatureKagent() {
       <section className="max-w-4xl mx-auto px-6 py-16 text-center">
         <div className="flex items-center justify-center gap-4 flex-wrap">
           <Link
-            to="/settings"
+            to={ROUTES.SETTINGS}
             className="inline-flex items-center gap-2 px-8 py-4 rounded-lg bg-purple-500 text-white font-medium text-lg hover:bg-purple-600 transition-colors"
           >
             <Sparkles className="w-5 h-5" />
