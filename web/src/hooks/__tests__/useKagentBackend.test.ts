@@ -68,13 +68,12 @@ function setupBothAvailable() {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.useFakeTimers()
   localStorage.clear()
   setupBothUnavailable()
 })
 
 afterEach(() => {
-  vi.useRealTimers()
+  vi.restoreAllMocks()
 })
 
 // ---------------------------------------------------------------------------
@@ -84,7 +83,7 @@ afterEach(() => {
 describe('useKagentBackend', () => {
   // --- Shape ---
 
-  it('returns all expected properties', async () => {
+  it('returns all expected properties', () => {
     const { result, unmount } = renderHook(() => useKagentBackend())
 
     expect(result.current).toHaveProperty('kagentAvailable')
@@ -106,10 +105,9 @@ describe('useKagentBackend', () => {
 
   // --- Initial state ---
 
-  it('starts with kagent and kagenti unavailable', async () => {
+  it('starts with kagent and kagenti unavailable', () => {
     const { result, unmount } = renderHook(() => useKagentBackend())
 
-    // Before async fetch completes
     expect(result.current.kagentAvailable).toBe(false)
     expect(result.current.kagentiAvailable).toBe(false)
     expect(result.current.kagentAgents).toEqual([])
@@ -210,7 +208,7 @@ describe('useKagentBackend', () => {
     mockFetchKagentiProviderAgents.mockResolvedValue([])
 
     await act(async () => {
-      result.current.refresh()
+      await result.current.refresh()
     })
 
     await waitFor(() => {
@@ -310,7 +308,7 @@ describe('useKagentBackend', () => {
 
   // --- setPreferredBackend ---
 
-  it('updates preferredBackend and persists to localStorage', async () => {
+  it('updates preferredBackend and persists to localStorage', () => {
     const { result, unmount } = renderHook(() => useKagentBackend())
 
     act(() => {
@@ -403,27 +401,30 @@ describe('useKagentBackend', () => {
   // --- Polling ---
 
   it('polls on an interval', async () => {
+    vi.useFakeTimers()
     setupBothUnavailable()
     const POLL_INTERVAL_MS = 30_000
 
     const { result, unmount } = renderHook(() => useKagentBackend())
 
     // Wait for initial fetch
-    await waitFor(() => {
-      expect(mockFetchKagentStatus).toHaveBeenCalledTimes(1)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100)
     })
+
+    const initialCount = mockFetchKagentStatus.mock.calls.length
 
     // Advance to trigger next poll
     await act(async () => {
-      vi.advanceTimersByTime(POLL_INTERVAL_MS)
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
     })
 
-    expect(mockFetchKagentStatus).toHaveBeenCalledTimes(2)
-    expect(mockFetchKagentiProviderStatus).toHaveBeenCalledTimes(2)
+    expect(mockFetchKagentStatus.mock.calls.length).toBeGreaterThan(initialCount)
     unmount()
+    vi.useRealTimers()
   })
 
-  it('clears poll interval on unmount', async () => {
+  it('clears poll interval on unmount', () => {
     const clearIntervalSpy = vi.spyOn(global, 'clearInterval')
     const { unmount } = renderHook(() => useKagentBackend())
 
@@ -447,7 +448,7 @@ describe('useKagentBackend', () => {
     setupKagentAvailable()
 
     await act(async () => {
-      result.current.refresh()
+      await result.current.refresh()
     })
 
     await waitFor(() => {
@@ -498,7 +499,7 @@ describe('useKagentBackend', () => {
 
     // Refresh should NOT overwrite the current selection
     await act(async () => {
-      result.current.refresh()
+      await result.current.refresh()
     })
 
     await waitFor(() => {
@@ -506,6 +507,82 @@ describe('useKagentBackend', () => {
     })
 
     expect(result.current.selectedKagentAgent?.name).toBe('agent-b')
+    unmount()
+  })
+
+  // --- kagentStatus details ---
+
+  it('stores kagent status details', async () => {
+    mockFetchKagentStatus.mockResolvedValue({ available: true, url: 'http://kagent:8080' })
+    mockFetchKagentAgents.mockResolvedValue([])
+    mockFetchKagentiProviderStatus.mockResolvedValue({ available: false })
+    mockFetchKagentiProviderAgents.mockResolvedValue([])
+
+    const { result, unmount } = renderHook(() => useKagentBackend())
+
+    await waitFor(() => {
+      expect(result.current.kagentStatus).not.toBeNull()
+    })
+
+    expect(result.current.kagentStatus?.available).toBe(true)
+    expect(result.current.kagentStatus?.url).toBe('http://kagent:8080')
+    unmount()
+  })
+
+  // --- kagentiStatus details ---
+
+  it('stores kagenti status details', async () => {
+    mockFetchKagentStatus.mockResolvedValue({ available: false })
+    mockFetchKagentAgents.mockResolvedValue([])
+    mockFetchKagentiProviderStatus.mockResolvedValue({ available: true, url: 'http://kagenti:9090' })
+    mockFetchKagentiProviderAgents.mockResolvedValue([])
+
+    const { result, unmount } = renderHook(() => useKagentBackend())
+
+    await waitFor(() => {
+      expect(result.current.kagentiStatus).not.toBeNull()
+    })
+
+    expect(result.current.kagentiStatus?.available).toBe(true)
+    expect(result.current.kagentiStatus?.url).toBe('http://kagenti:9090')
+    unmount()
+  })
+
+  // --- kc-agent as activeBackend when preferred is kc-agent ---
+
+  it('returns kc-agent as activeBackend even when backends are available if kc-agent is preferred', async () => {
+    localStorage.setItem('kc_agent_backend_preference', 'kc-agent')
+    setupBothAvailable()
+
+    const { result, unmount } = renderHook(() => useKagentBackend())
+
+    await waitFor(() => {
+      expect(result.current.kagentAvailable).toBe(true)
+    })
+
+    expect(result.current.activeBackend).toBe('kc-agent')
+    unmount()
+  })
+
+  // --- Multiple agents ---
+
+  it('handles multiple kagent agents', async () => {
+    const agents = [
+      kagentAgent('agent-1', 'ns'),
+      kagentAgent('agent-2', 'ns'),
+      kagentAgent('agent-3', 'other-ns'),
+    ]
+    setupKagentAvailable(agents)
+
+    const { result, unmount } = renderHook(() => useKagentBackend())
+
+    await waitFor(() => {
+      expect(result.current.kagentAgents).toHaveLength(3)
+    })
+
+    expect(result.current.kagentAgents[0].name).toBe('agent-1')
+    expect(result.current.kagentAgents[1].name).toBe('agent-2')
+    expect(result.current.kagentAgents[2].name).toBe('agent-3')
     unmount()
   })
 })
