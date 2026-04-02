@@ -166,6 +166,63 @@ func TestDeleteCard_NotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
+// ---------- RecordFocus ----------
+
+// recordFocusStore wraps MockStore and overrides GetCard / GetDashboard so that
+// the RecordFocus handler can reach the BodyParser step without 404 or 403 errors.
+type recordFocusStore struct {
+	*test.MockStore
+	card      *models.Card
+	dashboard *models.Dashboard
+}
+
+func (s *recordFocusStore) GetCard(id uuid.UUID) (*models.Card, error) {
+	return s.card, nil
+}
+
+func (s *recordFocusStore) GetDashboard(id uuid.UUID) (*models.Dashboard, error) {
+	return s.dashboard, nil
+}
+
+func TestRecordFocus_BadBody_Returns400(t *testing.T) {
+	userID := uuid.New()
+	dashID := uuid.New()
+	cardID := uuid.New()
+
+	rfs := &recordFocusStore{
+		MockStore: new(test.MockStore),
+		card: &models.Card{
+			ID:          cardID,
+			DashboardID: dashID,
+		},
+		dashboard: &models.Dashboard{
+			ID:     dashID,
+			UserID: userID,
+		},
+	}
+
+	app := fiber.New()
+	hub := NewHub()
+	go hub.Run()
+	t.Cleanup(func() { hub.Close() })
+
+	handler := NewCardHandler(rfs, hub)
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", userID)
+		return c.Next()
+	})
+	app.Post("/api/cards/:id/focus", handler.RecordFocus)
+
+	req, err := http.NewRequest("POST", "/api/cards/"+cardID.String()+"/focus",
+		strings.NewReader("{invalid json"))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
 // ---------- GetHistory ----------
 
 func TestGetHistory_ReturnsOK(t *testing.T) {
