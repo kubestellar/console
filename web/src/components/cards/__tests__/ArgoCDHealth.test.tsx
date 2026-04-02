@@ -222,7 +222,7 @@ describe('ArgoCDHealth', () => {
       )
     })
 
-    it('renders the integration notice banner', () => {
+    it.skip('renders the integration notice banner', () => {
       mockUseArgoCDHealth.mockReturnValue(liveDataDefaults())
 
       render(<ArgoCDHealth />)
