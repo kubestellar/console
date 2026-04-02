@@ -33,14 +33,20 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { execSync } = require('child_process');
+            const { execFileSync } = require('child_process');
 
             const RETENTION_DAYS = 7;
             const SCREENSHOT_DIR = '.github/screenshots';
 
             // ── helpers ──────────────────────────────────────────────
-            function run(cmd) {
-              return execSync(cmd, { encoding: 'utf8' }).trim();
+            // Use execFileSync (no shell) to avoid injection from
+            // untrusted path components (request IDs come from issue bodies).
+            function git(...args) {
+              return execFileSync('git', args, { encoding: 'utf8' }).trim();
+            }
+
+            function findFiles(...args) {
+              return execFileSync('find', args, { encoding: 'utf8' }).trim();
             }
 
             function daysBetween(a, b) {
@@ -51,7 +57,7 @@ jobs:
             // ── collect screenshot files ─────────────────────────────
             let files;
             try {
-              files = run(`find ${SCREENSHOT_DIR} -type f -name 'screenshot-*'`)
+              files = findFiles(SCREENSHOT_DIR, '-type', 'f', '-name', 'screenshot-*')
                 .split('\n')
                 .filter(Boolean);
             } catch {
@@ -69,7 +75,11 @@ jobs:
             const expired = [];
 
             for (const file of files) {
-              const logLine = run(`git log -1 --format='%H %aI' -- "${file}"`);
+              // --diff-filter=A finds the commit that *added* the file,
+              // not the most recent commit that touched it (which could be
+              // a merge or sibling deletion). This gives the true age and
+              // the correct SHA for permanent URL construction.
+              const logLine = git('log', '--diff-filter=A', '-1', '--format=%H %aI', '--', file);
               if (!logLine) continue;
 
               const [commitSha, commitDate] = logLine.split(' ');
@@ -95,7 +105,7 @@ jobs:
 
             for (const { file, commitSha } of expired) {
               // Extract issue number from the commit that added this file
-              const commitMsg = run(`git log -1 --format='%s' ${commitSha}`);
+              const commitMsg = git('log', '-1', '--format=%s', commitSha);
               const issueMatch = commitMsg.match(/#(\d+)/);
               if (!issueMatch) {
                 console.log(`  ${file}: no issue number in commit message, skipping URL rewrite`);
@@ -107,12 +117,11 @@ jobs:
               const permanentUrl = `${RAW_PREFIX}/${commitSha}/${file}`;
 
               try {
-                const { data: comments } = await github.rest.issues.listComments({
-                  owner,
-                  repo,
-                  issue_number: issueNumber,
-                  per_page: 100,
-                });
+                // Paginate to cover issues with more than 100 comments
+                const comments = await github.paginate(
+                  github.rest.issues.listComments,
+                  { owner, repo, issue_number: issueNumber, per_page: 100 },
+                );
 
                 for (const comment of comments) {
                   if (comment.body && comment.body.includes(branchUrl)) {
@@ -120,7 +129,7 @@ jobs:
                       owner,
                       repo,
                       comment_id: comment.id,
-                      body: comment.body.replace(branchUrl, permanentUrl),
+                      body: comment.body.replaceAll(branchUrl, permanentUrl),
                     });
                     console.log(`  Rewrote URL in comment ${comment.id} on issue #${issueNumber}`);
                   }
@@ -134,17 +143,22 @@ jobs:
 
             // ── delete expired files ─────────────────────────────────
             for (const { file } of expired) {
-              run(`git rm "${file}"`);
+              git('rm', file);
               console.log(`  Removed ${file}`);
             }
 
             // Remove empty request-ID directories
-            run(`find ${SCREENSHOT_DIR} -mindepth 1 -type d -empty -delete 2>/dev/null || true`);
+            try {
+              findFiles(SCREENSHOT_DIR, '-mindepth', '1', '-type', 'd', '-empty', '-delete');
+            } catch { /* no empty dirs is fine */ }
 
             // ── commit and push ──────────────────────────────────────
-            run('git config user.name "github-actions[bot]"');
-            run('git config user.email "41898282+github-actions[bot]@users.noreply.github.com"');
-            run(`git commit -m "Clean up ${expired.length} screenshot(s) older than ${RETENTION_DAYS} days"`);
-            run('git push');
+            git('config', 'user.name', 'github-actions[bot]');
+            git('config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com');
+            git('commit', '-m', `Clean up ${expired.length} screenshot(s) older than ${RETENTION_DAYS} days`);
+            // Rebase before pushing in case another workflow (e.g.
+            // process-screenshots) committed to main during our run.
+            git('pull', '--rebase', 'origin', 'main');
+            git('push');
 
             console.log(`Cleaned up ${expired.length} screenshot(s)`);
