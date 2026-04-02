@@ -137,7 +137,7 @@ export function FalcoAlerts({ config: _config }: CardConfig) {
           </div>
         </div>
         <div className="flex flex-col items-center justify-center py-4 text-muted-foreground text-sm">
-          <Shield className="w-6 h-6 mb-2 text-purple-400/50" />
+          <Shield className="w-6 h-6 mb-2 text-purple-400" />
           <p>No Falco alerts available</p>
           <p className="text-xs mt-1">Install Falco to see runtime security alerts</p>
         </div>

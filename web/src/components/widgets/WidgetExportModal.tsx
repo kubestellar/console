@@ -721,7 +721,7 @@ function CardPreview({ cardType }: { cardType: string }) {
             ].map((a) => (
               <div key={a.name} style={{ ...ps.row, padding: PREV_ITEM_PAD, backgroundColor: a.severity === 'critical' ? 'rgba(239,68,68,0.1)' : 'rgba(234,179,8,0.1)', borderRadius: PREV_XS, borderLeft: `4px solid ${a.severity === 'critical' ? ps.colors.error : ps.colors.warning}` }}>
                 <span style={{ fontSize: '10px', color: a.severity === 'critical' ? ps.colors.error : ps.colors.warning, fontWeight: 600 }}>{a.name}</span>
-                <span style={{ fontSize: '9px', color: '#6b7280', marginLeft: 'auto' }}>{a.ns}</span>
+                <span style={{ fontSize: '9px', color: '#9ca3af', marginLeft: 'auto' }}>{a.ns}</span>
               </div>
             ))}
           </div>
@@ -742,7 +742,7 @@ function CardPreview({ cardType }: { cardType: string }) {
               <div key={r.name} style={{ ...ps.row, justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '10px', fontWeight: 500 }}>{r.name}</span>
                 <span style={{ fontSize: '9px', color: r.status === 'deployed' ? ps.colors.healthy : ps.colors.error }}>{r.status}</span>
-                <span style={{ fontSize: '9px', color: '#6b7280' }}>{r.ver}</span>
+                <span style={{ fontSize: '9px', color: '#9ca3af' }}>{r.ver}</span>
               </div>
             ))}
           </div>
