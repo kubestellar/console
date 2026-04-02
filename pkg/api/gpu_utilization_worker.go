@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -29,6 +30,7 @@ type GPUUtilizationWorker struct {
 	k8sClient *k8s.MultiClusterClient
 	interval  time.Duration
 	stopCh    chan struct{}
+	stopOnce  sync.Once // protects stopCh from double-close panic
 }
 
 // NewGPUUtilizationWorker creates a new GPU utilization worker
@@ -72,9 +74,12 @@ func (w *GPUUtilizationWorker) Start() {
 	log.Printf("GPU utilization worker started (interval: %v)", w.interval)
 }
 
-// Stop signals the worker to stop
+// Stop signals the worker to stop. It is safe to call multiple times;
+// only the first call actually closes the stop channel.
 func (w *GPUUtilizationWorker) Stop() {
-	close(w.stopCh)
+	w.stopOnce.Do(func() {
+		close(w.stopCh)
+	})
 }
 
 // collectUtilization queries active reservations and records utilization snapshots

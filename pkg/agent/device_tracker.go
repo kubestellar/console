@@ -119,6 +119,12 @@ func (t *DeviceTracker) runLoop() {
 }
 
 func (t *DeviceTracker) scanDevices() {
+	// Guard against nil client — k8s client initialisation may have failed
+	// at startup, leaving DeviceTracker running with a nil reference.
+	if t.k8sClient == nil {
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), deviceTrackerTimeout)
 	defer cancel()
 

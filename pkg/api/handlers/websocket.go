@@ -45,8 +45,9 @@ type Hub struct {
 	unregister   chan *Client
 	mu           sync.RWMutex
 	done         chan struct{}
-	jwtSecret    string // JWT secret for WebSocket auth
-	devMode      bool   // when true, demo-token bypass is allowed
+	closeOnce    sync.Once // protects done channel from double-close panic
+	jwtSecret    string    // JWT secret for WebSocket auth
+	devMode      bool      // when true, demo-token bypass is allowed
 }
 
 type broadcastMessage struct {
@@ -128,9 +129,12 @@ func (h *Hub) Run() {
 	}
 }
 
-// Close shuts down the hub
+// Close shuts down the hub. It is safe to call multiple times;
+// only the first call actually closes the done channel.
 func (h *Hub) Close() {
-	close(h.done)
+	h.closeOnce.Do(func() {
+		close(h.done)
+	})
 }
 
 // Broadcast sends a message to all clients of a user.

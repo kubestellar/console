@@ -2280,8 +2280,9 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
+	wsc := &wsClient{}
 	s.clientsMux.Lock()
-	s.clients[conn] = &wsClient{}
+	s.clients[conn] = wsc
 	s.clientsMux.Unlock()
 
 	defer func() {
@@ -2292,8 +2293,11 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Client connected: %s (origin: %s)", conn.RemoteAddr(), r.Header.Get("Origin"))
 
-	// writeMu protects concurrent WebSocket writes from goroutine-based handlers
-	var writeMu sync.Mutex
+	// writeMu is the single per-connection mutex shared by broadcasts
+	// (prediction_worker) and request/stream handlers. Using the same
+	// mutex prevents concurrent gorilla/websocket writes that would
+	// panic or corrupt connection state.
+	writeMu := &wsc.writeMu
 	// closed is set when the read loop exits; goroutines check it before writing
 	var closed atomic.Bool
 
@@ -2351,11 +2355,11 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 						log.Printf("[Chat] recovered from panic in streaming handler: %v", r)
 					}
 				}()
-				s.handleChatMessageStreaming(conn, m, fa, &writeMu, &closed)
+				s.handleChatMessageStreaming(conn, m, fa, writeMu, &closed)
 			}(msg, forceAgent)
 		} else if msg.Type == protocol.TypeCancelChat {
 			// Cancel an in-progress chat by session ID
-			s.handleCancelChat(conn, msg, &writeMu)
+			s.handleCancelChat(conn, msg, writeMu)
 		} else if msg.Type == protocol.TypeKubectl {
 			// Handle kubectl messages concurrently so one slow cluster
 			// doesn't block the entire WebSocket message loop.
