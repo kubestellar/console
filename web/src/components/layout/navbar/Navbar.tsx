@@ -25,6 +25,7 @@ const AgentSelector = lazy(() =>
 )
 import { useMissions } from '../../../hooks/useMissions'
 import { TokenUsageWidget } from './TokenUsageWidget'
+import { ProjectSelector } from './ProjectSelector'
 import { ClusterFilterPanel } from './ClusterFilterPanel'
 import { AgentStatusIndicator } from './AgentStatusIndicator'
 import { UpdateIndicator } from './UpdateIndicator'
@@ -119,7 +120,8 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
       <div className="flex items-center gap-1 md:gap-3 shrink-0">
         {/* Core desktop items: md+ (768px) */}
         <div className="hidden md:flex items-center gap-2">
-          {/* Global Filters (includes Clear Filters button) */}
+          {/* Project + Cluster Filters */}
+          <ProjectSelector />
           <ClusterFilterPanel />
 
           {/* Agent Status + Selector — status (Demo/AI pill) on left, selector on right */}

@@ -8,6 +8,7 @@ import { BrandingProvider, useBranding } from './hooks/useBranding'
 import { DrillDownProvider } from './hooks/useDrillDown'
 import { DashboardProvider, useDashboardContext } from './hooks/useDashboardContext'
 import { GlobalFiltersProvider } from './hooks/useGlobalFilters'
+import { ProjectFilterProvider } from './hooks/useProjectFilter'
 import { MissionProvider } from './hooks/useMissions'
 import { CardEventProvider } from './lib/cardEvents'
 import { ToastProvider } from './components/ui/Toast'
@@ -475,6 +476,7 @@ function FullDashboardApp() {
     <UnifiedDemoProvider>
       <RewardsProvider>
       <ToastProvider>
+      <ProjectFilterProvider>
       <GlobalFiltersProvider>
       <MissionProvider>
       <CardEventProvider>
@@ -566,6 +568,7 @@ function FullDashboardApp() {
       </CardEventProvider>
       </MissionProvider>
       </GlobalFiltersProvider>
+      </ProjectFilterProvider>
       </ToastProvider>
       </RewardsProvider>
     </UnifiedDemoProvider>
