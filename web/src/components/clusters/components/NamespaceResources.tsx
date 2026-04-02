@@ -290,15 +290,17 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
         <div className="flex items-center gap-1 p-0.5 rounded bg-secondary/50">
           <button
             onClick={() => setViewMode('list')}
-            className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`min-h-11 min-w-11 flex items-center justify-center rounded transition-colors ${viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
             title="List view"
+            aria-label="List view"
           >
             <List className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => setViewMode('tree')}
-            className={`p-1.5 rounded transition-colors ${viewMode === 'tree' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`min-h-11 min-w-11 flex items-center justify-center rounded transition-colors ${viewMode === 'tree' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
             title="Tree view"
+            aria-label="Tree view"
           >
             <GitBranch className="w-3.5 h-3.5" />
           </button>
@@ -311,7 +313,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
           {allResources.slice(0, 50).map((resource, idx) => (
             <div
               key={`${resource.kind}-${resource.name}-${idx}`}
-              className="flex items-center justify-between p-2 rounded bg-card/30 text-sm group hover:bg-card/50 transition-colors cursor-pointer"
+              className="flex items-center justify-between p-2 min-h-11 rounded bg-card/30 text-sm group hover:bg-card/50 transition-colors cursor-pointer"
               onClick={() => handleResourceClick(resource.kind, resource.name, resource.namespace || namespace, resource.data)}
             >
               <div className="flex items-center gap-2 min-w-0">
@@ -349,13 +351,13 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
                       const isExpanded = expandedItems.has(`dep-${dep.name}`)
                       return (
                         <div key={dep.name} className="mb-0.5">
-                          <div className="flex items-center gap-2 py-1 px-1 rounded hover:bg-card/30">
-                            <button onClick={() => depPods.length > 0 && toggleItem(`dep-${dep.name}`)} className="flex items-center">
+                          <div className="flex items-center gap-2 min-h-11 px-1 rounded hover:bg-card/30">
+                            <button onClick={() => depPods.length > 0 && toggleItem(`dep-${dep.name}`)} className="min-h-11 min-w-[44px] flex items-center justify-center">
                               {depPods.length > 0 ? (isExpanded ? <ChevronDown className="w-3 h-3 text-muted-foreground" /> : <ChevronRight className="w-3 h-3 text-muted-foreground" />) : <span className="w-3" />}
                             </button>
                             <button
                               onClick={() => handleResourceClick('Deployment', dep.name, dep.namespace, { replicas: dep.replicas, readyReplicas: dep.readyReplicas, status: dep.status })}
-                              className="flex items-center gap-2 flex-1"
+                              className="flex items-center gap-2 flex-1 min-h-11"
                             >
                               <span className="text-foreground">{dep.name}</span>
                               <span className={`text-xs ${dep.readyReplicas === dep.replicas ? 'text-green-400' : 'text-orange-400'}`}>{dep.readyReplicas}/{dep.replicas}</span>
@@ -368,7 +370,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
                               {depPods.slice(0, 10).map(pod => (
                                 <div
                                   key={pod.name}
-                                  className="flex items-center gap-2 py-0.5 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
+                                  className="flex items-center gap-2 min-h-11 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
                                   onClick={() => handleResourceClick('Pod', pod.name, pod.namespace, { status: pod.status, restarts: pod.restarts })}
                                 >
                                   <Box className="w-3 h-3 text-blue-400" />
@@ -400,7 +402,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
                     {podsByDeployment.standalone.slice(0, 20).map(pod => (
                       <div
                         key={pod.name}
-                        className="flex items-center gap-2 py-0.5 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
+                        className="flex items-center gap-2 min-h-11 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
                         onClick={() => handleResourceClick('Pod', pod.name, pod.namespace, { status: pod.status, restarts: pod.restarts })}
                       >
                         <Box className="w-3 h-3 text-blue-400" />
@@ -427,7 +429,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
                     {services.map(svc => (
                       <div
                         key={svc.name}
-                        className="flex items-center gap-2 py-0.5 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
+                        className="flex items-center gap-2 min-h-11 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
                         onClick={() => handleResourceClick('Service', svc.name, svc.namespace, { type: svc.type, clusterIP: svc.clusterIP, ports: svc.ports })}
                       >
                         <Network className="w-3 h-3 text-cyan-400" />
@@ -454,7 +456,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
                     {jobs.map(job => (
                       <div
                         key={job.name}
-                        className="flex items-center gap-2 py-0.5 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
+                        className="flex items-center gap-2 min-h-11 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
                         onClick={() => handleResourceClick('Job', job.name, job.namespace, { status: job.status, completions: job.completions })}
                       >
                         <Briefcase className="w-3 h-3 text-yellow-400" />
@@ -481,7 +483,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
                     {hpas.map(hpa => (
                       <div
                         key={hpa.name}
-                        className="flex items-center gap-2 py-0.5 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
+                        className="flex items-center gap-2 min-h-11 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
                         onClick={() => handleResourceClick('HPA', hpa.name, hpa.namespace, { reference: hpa.reference, minReplicas: hpa.minReplicas, maxReplicas: hpa.maxReplicas })}
                       >
                         <Activity className="w-3 h-3 text-purple-400" />
@@ -508,7 +510,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
                     {serviceAccounts.slice(0, 20).map(sa => (
                       <div
                         key={sa.name}
-                        className="flex items-center gap-2 py-0.5 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
+                        className="flex items-center gap-2 min-h-11 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
                         onClick={() => handleResourceClick('ServiceAccount', sa.name, sa.namespace, { secrets: sa.secrets, imagePullSecrets: sa.imagePullSecrets })}
                       >
                         <User className="w-3 h-3 text-cyan-400" />
@@ -535,7 +537,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
                     {pvcs.slice(0, 20).map(pvc => (
                       <div
                         key={pvc.name}
-                        className="flex items-center gap-2 py-0.5 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
+                        className="flex items-center gap-2 min-h-11 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
                         onClick={() => handleResourceClick('PVC', pvc.name, pvc.namespace, { status: pvc.status, storageClass: pvc.storageClass, capacity: pvc.capacity })}
                       >
                         <HardDrive className="w-3 h-3 text-green-400" />
@@ -563,7 +565,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
                     {configmaps.slice(0, 20).map(cm => (
                       <div
                         key={cm.name}
-                        className="flex items-center gap-2 py-0.5 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
+                        className="flex items-center gap-2 min-h-11 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
                         onClick={() => handleResourceClick('ConfigMap', cm.name, cm.namespace, { dataCount: cm.dataCount })}
                       >
                         <Settings className="w-3 h-3 text-orange-400" />
@@ -590,7 +592,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
                     {secrets.slice(0, 20).map(secret => (
                       <div
                         key={secret.name}
-                        className="flex items-center gap-2 py-0.5 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
+                        className="flex items-center gap-2 min-h-11 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
                         onClick={() => handleResourceClick('Secret', secret.name, secret.namespace, { type: secret.type, dataCount: secret.dataCount })}
                       >
                         <Lock className="w-3 h-3 text-purple-400" />
