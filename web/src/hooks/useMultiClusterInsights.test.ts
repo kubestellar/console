@@ -814,6 +814,31 @@ describe('detectEventCorrelations — regression', () => {
     // relatedResources are capped at 5
     expect(result[0].relatedResources!.length).toBeLessThanOrEqual(5)
   })
+
+  it('uses "unknown" for events without cluster field', () => {
+    const ts = new Date('2026-01-15T10:00:00Z').toISOString()
+    const events = [
+      makeEvent({ cluster: undefined, lastSeen: ts }),
+      makeEvent({ cluster: 'cluster-2', lastSeen: ts }),
+    ]
+    // Events without cluster get cluster='unknown' but the initial filter
+    // requires e.cluster to be truthy, so these get filtered out
+    const result = detectEventCorrelations(events)
+    // The event with cluster=undefined is excluded by the filter
+    expect(result).toEqual([])
+  })
+
+  it('handles events with default count of 1 when count is undefined', () => {
+    const ts = new Date('2026-01-15T10:00:00Z').toISOString()
+    const events = [
+      makeEvent({ cluster: 'cluster-1', lastSeen: ts, count: undefined }),
+      makeEvent({ cluster: 'cluster-2', lastSeen: ts, count: undefined }),
+    ]
+    const result = detectEventCorrelations(events)
+    expect(result).toHaveLength(1)
+    // Each event has count=undefined => fallback to 1, so total = 2
+    expect(result[0].description).toContain('2 warning events')
+  })
 })
 
 // ── Cluster Deltas: deeper coverage ──────────────────────────────────
@@ -916,6 +941,66 @@ describe('detectClusterDeltas — regression', () => {
     const result = detectClusterDeltas(deps, clusters)
     expect(result).toHaveLength(1)
     expect(result[0].severity).toBe('info')
+  })
+
+  it('skips deployments without cluster field when building workload map', () => {
+    const deps = [
+      makeDeployment({ cluster: undefined, image: 'api:v1.0' }),
+      makeDeployment({ cluster: 'cluster-1', image: 'api:v1.0' }),
+      makeDeployment({ cluster: 'cluster-2', image: 'api:v2.0' }),
+    ]
+    const clusters = [
+      makeCluster({ name: 'cluster-1' }),
+      makeCluster({ name: 'cluster-2' }),
+    ]
+    const result = detectClusterDeltas(deps, clusters)
+    expect(result).toHaveLength(1)
+    // Only cluster-1 and cluster-2 should appear in deltas
+    expect(result[0].affectedClusters).toEqual(
+      expect.arrayContaining(['cluster-1', 'cluster-2']),
+    )
+    expect(result[0].affectedClusters).not.toContain(undefined)
+  })
+
+  it('returns empty when only one cluster is provided', () => {
+    const deps = [
+      makeDeployment({ cluster: 'cluster-1', image: 'api:v1.0' }),
+    ]
+    const clusters = [makeCluster({ name: 'cluster-1' })]
+    expect(detectClusterDeltas(deps, clusters)).toEqual([])
+  })
+
+  it('detects status delta with non-failed status as medium significance', () => {
+    const deps = [
+      makeDeployment({ cluster: 'cluster-1', status: 'running', image: 'api:v1.0' }),
+      makeDeployment({ cluster: 'cluster-2', status: 'deploying', image: 'api:v1.0' }),
+    ]
+    const clusters = [
+      makeCluster({ name: 'cluster-1' }),
+      makeCluster({ name: 'cluster-2' }),
+    ]
+    const result = detectClusterDeltas(deps, clusters)
+    expect(result).toHaveLength(1)
+    const statusDelta = result[0].deltas!.find(d => d.dimension === 'Status')
+    expect(statusDelta!.significance).toBe('medium')
+  })
+
+  it('sorts insights by delta count descending', () => {
+    // Create two workloads: one with 3 deltas and one with 1 delta
+    const deps = [
+      makeDeployment({ name: 'many-deltas', cluster: 'cluster-1', image: 'a:v1', replicas: 1, status: 'running' }),
+      makeDeployment({ name: 'many-deltas', cluster: 'cluster-2', image: 'a:v2', replicas: 5, status: 'failed' }),
+      makeDeployment({ name: 'one-delta', cluster: 'cluster-1', image: 'b:v1', replicas: 3 }),
+      makeDeployment({ name: 'one-delta', cluster: 'cluster-2', image: 'b:v2', replicas: 3 }),
+    ]
+    const clusters = [
+      makeCluster({ name: 'cluster-1' }),
+      makeCluster({ name: 'cluster-2' }),
+    ]
+    const result = detectClusterDeltas(deps, clusters)
+    expect(result.length).toBe(2)
+    // The one with more deltas should come first (sorted by delta count desc)
+    expect(result[0].deltas!.length).toBeGreaterThanOrEqual(result[1].deltas!.length)
   })
 })
 
@@ -1030,6 +1115,27 @@ describe('detectConfigDrift — regression', () => {
       expect.arrayContaining(['cluster-1', 'cluster-2']),
     )
   })
+
+  it('filters out empty image strings when counting drift', () => {
+    const deps = [
+      makeDeployment({ cluster: 'cluster-1', image: '' }),
+      makeDeployment({ cluster: 'cluster-2', image: '' }),
+    ]
+    const result = detectConfigDrift(deps)
+    // Empty strings are filtered out by .filter(Boolean), so only 0 images
+    expect(result).toEqual([])
+  })
+
+  it('truncates results to MAX_INSIGHTS_PER_CATEGORY', () => {
+    // Create 12 different workloads, each with drift
+    const deps: ReturnType<typeof makeDeployment>[] = []
+    for (let i = 0; i < MAX_INSIGHTS_PER_CATEGORY + 2; i++) {
+      deps.push(makeDeployment({ name: `app-${i}`, cluster: 'cluster-1', image: `img:v${i}` }))
+      deps.push(makeDeployment({ name: `app-${i}`, cluster: 'cluster-2', image: `img:v${i + 100}` }))
+    }
+    const result = detectConfigDrift(deps)
+    expect(result.length).toBeLessThanOrEqual(MAX_INSIGHTS_PER_CATEGORY)
+  })
 })
 
 // ── Resource Imbalance: deeper coverage ──────────────────────────────
@@ -1110,6 +1216,66 @@ describe('detectResourceImbalance — regression', () => {
     // cpuCores === 0 means filter excludes them (c.cpuCores > 0)
     expect(detectResourceImbalance(clusters)).toEqual([])
   })
+
+  it('uses memoryRequestsGB when memoryUsageGB is absent', () => {
+    const clusters = [
+      makeCluster({
+        name: 'cluster-1',
+        cpuCores: 8,
+        memoryGB: 32,
+        memoryRequestsGB: 28,
+        memoryUsageGB: undefined,
+      }), // 88%
+      makeCluster({
+        name: 'cluster-2',
+        cpuCores: 8,
+        memoryGB: 32,
+        memoryRequestsGB: 5,
+        memoryUsageGB: undefined,
+      }), // 16%
+    ]
+    const result = detectResourceImbalance(clusters)
+    const memInsight = result.find((i) => i.title.includes('Memory'))
+    expect(memInsight).toBeDefined()
+    expect(memInsight!.metrics!['cluster-1']).toBe(88)
+    expect(memInsight!.metrics!['cluster-2']).toBe(16)
+  })
+
+  it('skips memory imbalance when fewer than 2 clusters have memoryGB', () => {
+    const clusters = [
+      makeCluster({
+        name: 'cluster-1',
+        cpuCores: 10,
+        cpuUsageCores: 5,
+        memoryGB: 32,
+        memoryUsageGB: 16,
+      }),
+      makeCluster({
+        name: 'cluster-2',
+        cpuCores: 10,
+        cpuUsageCores: 5,
+        memoryGB: 0, // memoryGB is 0, so filtered out of memory analysis
+        memoryUsageGB: 0,
+      }),
+    ]
+    const result = detectResourceImbalance(clusters)
+    // CPU is balanced (both at 50%), no imbalance. Memory has < 2 clusters.
+    const memInsight = result.find((i) => i.title.includes('Memory'))
+    expect(memInsight).toBeUndefined()
+  })
+
+  it('reports CPU warning severity when no cluster exceeds critical threshold', () => {
+    const clusters = [
+      makeCluster({ name: 'cluster-1', cpuCores: 10, cpuUsageCores: 8 }), // 80%
+      makeCluster({ name: 'cluster-2', cpuCores: 10, cpuUsageCores: 1 }), // 10%
+    ]
+    // avg = 45%, cluster-1 is 80-45=35 > 30 threshold, so it's imbalanced
+    // 80% < 85% critical threshold, so severity should be warning
+    const result = detectResourceImbalance(clusters)
+    const cpuInsight = result.find((i) => i.title.includes('CPU'))
+    expect(cpuInsight).toBeDefined()
+    expect(cpuInsight!.severity).toBe('warning')
+  })
 })
 
 // ── Restart Correlation: deeper coverage ─────────────────────────────
@@ -1188,6 +1354,46 @@ describe('detectRestartCorrelation — regression', () => {
     // 21 > RESTART_CRITICAL_THRESHOLD(20) → critical
     expect(appBug!.severity).toBe('critical')
   })
+
+  it('uses "unknown" for pods without cluster field', () => {
+    // Pods without cluster are filtered out by the initial filter (p.cluster is falsy)
+    const issues = [
+      makePodIssue({ name: 'api-server-abc-xyz', cluster: undefined, restarts: 5 }),
+    ]
+    const result = detectRestartCorrelation(issues)
+    expect(result).toEqual([])
+  })
+
+  it('truncates infra issue related resources to 10', () => {
+    // Create many different workloads in one cluster
+    const issues = Array.from({ length: 15 }, (_, i) =>
+      makePodIssue({
+        name: `workload-${i}-abc-xyz`,
+        cluster: 'cluster-1',
+        restarts: 5,
+      }),
+    )
+    const result = detectRestartCorrelation(issues)
+    const infraIssue = result.find((i) => i.title.includes('infra issue'))
+    expect(infraIssue).toBeDefined()
+    expect(infraIssue!.relatedResources!.length).toBeLessThanOrEqual(10)
+  })
+
+  it('truncates infra issue description to 5 workloads', () => {
+    const issues = Array.from({ length: 8 }, (_, i) =>
+      makePodIssue({
+        name: `workload-${i}-abc-xyz`,
+        cluster: 'cluster-1',
+        restarts: 5,
+      }),
+    )
+    const result = detectRestartCorrelation(issues)
+    const infraIssue = result.find((i) => i.title.includes('infra issue'))
+    expect(infraIssue).toBeDefined()
+    // Description slices first 5 workloads
+    const workloadMentions = infraIssue!.description.match(/default\/workload-/g)
+    expect(workloadMentions!.length).toBeLessThanOrEqual(5)
+  })
 })
 
 // ── Rollout Tracking: deeper coverage ────────────────────────────────
@@ -1254,5 +1460,33 @@ describe('trackRolloutProgress — regression', () => {
     expect(metrics.pending).toBe(0)
     expect(metrics.failed).toBe(1)
     expect(metrics.completed).toBe(2)
+  })
+
+  it('skips deployments without a cluster field in per-cluster metrics', () => {
+    const deps = [
+      makeDeployment({ cluster: 'cluster-1', image: 'api:v2.0' }),
+      makeDeployment({ cluster: undefined, image: 'api:v1.0' }),
+      makeDeployment({ cluster: 'cluster-2', image: 'api:v1.0' }),
+    ]
+    const result = trackRolloutProgress(deps)
+    expect(result).toHaveLength(1)
+    // Should not have undefined_progress or undefined_status keys
+    const metrics = result[0].metrics!
+    expect(metrics['undefined_progress']).toBeUndefined()
+    expect(metrics['undefined_status']).toBeUndefined()
+    // Should have proper metrics for real clusters
+    expect(metrics['cluster-1_progress']).toBeDefined()
+    expect(metrics['cluster-2_progress']).toBeDefined()
+  })
+
+  it('sets info severity when no failed clusters', () => {
+    const deps = [
+      makeDeployment({ cluster: 'cluster-1', image: 'api:v2.0', status: 'running' }),
+      makeDeployment({ cluster: 'cluster-2', image: 'api:v1.0', status: 'running' }),
+    ]
+    const result = trackRolloutProgress(deps)
+    expect(result).toHaveLength(1)
+    // No failures => severity is info
+    expect(result[0].severity).toBe('info')
   })
 })

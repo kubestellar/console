@@ -353,6 +353,424 @@ describe('useWorkloads', () => {
     const callUrl = fetchSpy.mock.calls[0]?.[0] as string
     expect(callUrl).toBe('/api/workloads')
   })
+
+  it('tries agent first when agent is available and clusters exist', async () => {
+    mockAgentUnavailable = false
+    mockClusterCacheRef.clusters = [
+      { name: 'prod-cluster', context: 'prod-ctx', reachable: true },
+    ]
+
+    const concurrency = await import('../../lib/utils/concurrency')
+    const mockMapSettled = concurrency.mapSettledWithConcurrency as ReturnType<typeof vi.fn>
+    mockMapSettled.mockResolvedValue([
+      {
+        status: 'fulfilled',
+        value: [
+          {
+            name: 'web-app',
+            namespace: 'default',
+            type: 'Deployment',
+            cluster: 'prod-cluster',
+            targetClusters: ['prod-cluster'],
+            replicas: 2,
+            readyReplicas: 2,
+            status: 'Running',
+            image: 'web:v1',
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      },
+    ])
+
+    const { useWorkloads } = await importFresh()
+
+    const { result } = renderHook(() => useWorkloads())
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined()
+      expect(result.current.data!.length).toBe(1)
+      expect(result.current.data![0].name).toBe('web-app')
+      expect(result.current.isLoading).toBe(false)
+    })
+
+    mockMapSettled.mockReset()
+  })
+
+  it('filters clusters with "/" in name from agent requests', async () => {
+    mockAgentUnavailable = false
+    mockClusterCacheRef.clusters = [
+      { name: 'valid-cluster', context: 'ctx-1', reachable: true },
+      { name: 'context/with-slash', context: 'ctx-2', reachable: true },
+    ]
+
+    const concurrency = await import('../../lib/utils/concurrency')
+    const mockMapSettled = concurrency.mapSettledWithConcurrency as ReturnType<typeof vi.fn>
+    mockMapSettled.mockResolvedValue([])
+
+    const { useWorkloads } = await importFresh()
+
+    renderHook(() => useWorkloads())
+
+    await flushPromises()
+
+    // The mock is called with (targets, callback). targets should exclude clusters with /
+    const lastCallArgs = mockMapSettled.mock.calls[mockMapSettled.mock.calls.length - 1]
+    const firstArg = lastCallArgs?.[0]
+    expect(firstArg).toBeDefined()
+    // Only valid-cluster (without slash) should be passed
+    const names = firstArg.map((c: { name: string }) => c.name)
+    expect(names).toContain('valid-cluster')
+    expect(names).not.toContain('context/with-slash')
+
+    mockMapSettled.mockReset()
+  })
+
+  it('filters unreachable clusters from agent requests', async () => {
+    mockAgentUnavailable = false
+    mockClusterCacheRef.clusters = [
+      { name: 'reachable', context: 'ctx-1', reachable: true },
+      { name: 'down', context: 'ctx-2', reachable: false },
+    ]
+
+    const concurrency = await import('../../lib/utils/concurrency')
+    const mockMapSettled = concurrency.mapSettledWithConcurrency as ReturnType<typeof vi.fn>
+    mockMapSettled.mockResolvedValue([])
+
+    const { useWorkloads } = await importFresh()
+
+    renderHook(() => useWorkloads())
+
+    await flushPromises()
+
+    const lastCallArgs = mockMapSettled.mock.calls[mockMapSettled.mock.calls.length - 1]
+    const firstArg = lastCallArgs?.[0]
+    expect(firstArg).toBeDefined()
+    const names = firstArg.map((c: { name: string }) => c.name)
+    expect(names).toContain('reachable')
+    expect(names).not.toContain('down')
+
+    mockMapSettled.mockReset()
+  })
+
+  it('returns null from agent when no clusters are cached', async () => {
+    mockAgentUnavailable = false
+    mockClusterCacheRef.clusters = []
+
+    // Agent returns null (no clusters), so falls through to REST
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ items: [] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
+    const { useWorkloads } = await importFresh()
+
+    renderHook(() => useWorkloads())
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalled()
+    })
+
+    // Should fall back to REST API
+    const url = fetchSpy.mock.calls[0]?.[0] as string
+    expect(url).toContain('/api/workloads')
+  })
+
+  it('falls through to REST when agent returns empty results', async () => {
+    mockAgentUnavailable = false
+    mockClusterCacheRef.clusters = [
+      { name: 'cluster-1', context: 'ctx-1', reachable: true },
+    ]
+
+    const concurrency = await import('../../lib/utils/concurrency')
+    const mockMapSettled = concurrency.mapSettledWithConcurrency as ReturnType<typeof vi.fn>
+    // All results rejected (no fulfilled items)
+    mockMapSettled.mockResolvedValue([
+      { status: 'rejected', reason: new Error('timeout') },
+    ])
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ items: [] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
+
+    const { useWorkloads } = await importFresh()
+
+    renderHook(() => useWorkloads())
+
+    await waitFor(() => {
+      // Should eventually try REST since agent returned no results
+      expect(fetchSpy).toHaveBeenCalled()
+    })
+
+    mockMapSettled.mockReset()
+  })
+
+  it('filters by specific cluster when agent fetches via agent', async () => {
+    mockAgentUnavailable = false
+    mockClusterCacheRef.clusters = [
+      { name: 'cluster-a', context: 'ctx-a', reachable: true },
+      { name: 'cluster-b', context: 'ctx-b', reachable: true },
+    ]
+
+    const concurrency = await import('../../lib/utils/concurrency')
+    const mockMapSettled = concurrency.mapSettledWithConcurrency as ReturnType<typeof vi.fn>
+    mockMapSettled.mockResolvedValue([])
+
+    const { useWorkloads } = await importFresh()
+
+    renderHook(() => useWorkloads({ cluster: 'cluster-a' }))
+
+    await flushPromises()
+
+    // Should only pass cluster-a (the requested one)
+    const lastCallArgs = mockMapSettled.mock.calls[mockMapSettled.mock.calls.length - 1]
+    const targets = lastCallArgs?.[0]
+    expect(targets).toHaveLength(1)
+    expect(targets[0].name).toBe('cluster-a')
+
+    mockMapSettled.mockReset()
+  })
+
+  it('falls through to REST when agent throws an error', async () => {
+    mockAgentUnavailable = false
+    mockClusterCacheRef.clusters = [
+      { name: 'cluster-1', context: 'ctx', reachable: true },
+    ]
+
+    const concurrency = await import('../../lib/utils/concurrency')
+    const mockMapSettled = concurrency.mapSettledWithConcurrency as ReturnType<typeof vi.fn>
+    // Simulate agent throwing
+    mockMapSettled.mockRejectedValue(new Error('Agent connection failed'))
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ items: [] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
+
+    const { useWorkloads } = await importFresh()
+
+    renderHook(() => useWorkloads())
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalled()
+    })
+
+    mockMapSettled.mockReset()
+  })
+
+  it('agent fetch callback correctly maps deployment data to Workload objects', async () => {
+    mockAgentUnavailable = false
+    mockClusterCacheRef.clusters = [
+      { name: 'agent-cluster', context: 'agent-ctx', reachable: true },
+    ]
+
+    const concurrency = await import('../../lib/utils/concurrency')
+    const mockMapSettled = concurrency.mapSettledWithConcurrency as ReturnType<typeof vi.fn>
+
+    // Instead of mocking the entire function, capture the callback and invoke it
+    let capturedCallback: ((arg: { name: string; context?: string }) => Promise<unknown>) | null = null
+    mockMapSettled.mockImplementation(async (targets: Array<{ name: string; context?: string }>, cb: (arg: { name: string; context?: string }) => Promise<unknown>) => {
+      capturedCallback = cb
+      const results = []
+      for (const target of targets) {
+        try {
+          const value = await cb(target)
+          results.push({ status: 'fulfilled', value })
+        } catch (reason) {
+          results.push({ status: 'rejected', reason })
+        }
+      }
+      return results
+    })
+
+    // Mock the fetch for agent
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({
+        deployments: [
+          { name: 'web-app', namespace: 'prod', status: 'running', replicas: 3, readyReplicas: 3, image: 'web:v1' },
+          { name: 'api-svc', namespace: 'default', status: 'failed', replicas: 2, readyReplicas: 0, image: 'api:v2' },
+          { name: 'worker', status: 'deploying', replicas: 1, readyReplicas: 0, image: 'worker:v1' },
+          { name: 'degraded-app', replicas: 5, readyReplicas: 3, image: 'deg:v1' },
+        ]
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    )
+
+    const { useWorkloads } = await importFresh()
+
+    const { result } = renderHook(() => useWorkloads())
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined()
+      expect(result.current.isLoading).toBe(false)
+    })
+
+    // Verify the mappings
+    const data = result.current.data!
+    expect(data.length).toBe(4)
+
+    // Running status (default)
+    const web = data.find(w => w.name === 'web-app')
+    expect(web).toBeDefined()
+    expect(web!.status).toBe('Running')
+    expect(web!.namespace).toBe('prod')
+    expect(web!.cluster).toBe('agent-cluster')
+
+    // Failed status
+    const api = data.find(w => w.name === 'api-svc')
+    expect(api).toBeDefined()
+    expect(api!.status).toBe('Failed')
+
+    // Deploying => Pending
+    const worker = data.find(w => w.name === 'worker')
+    expect(worker).toBeDefined()
+    expect(worker!.status).toBe('Pending')
+    expect(worker!.namespace).toBe('default') // Falls back to 'default'
+
+    // Degraded: readyReplicas < replicas
+    const degraded = data.find(w => w.name === 'degraded-app')
+    expect(degraded).toBeDefined()
+    expect(degraded!.status).toBe('Degraded')
+
+    mockMapSettled.mockReset()
+  })
+
+  it('agent fetch callback uses context when available, name as fallback', async () => {
+    mockAgentUnavailable = false
+    mockClusterCacheRef.clusters = [
+      { name: 'cluster-no-ctx', reachable: true },
+    ]
+
+    const concurrency = await import('../../lib/utils/concurrency')
+    const mockMapSettled = concurrency.mapSettledWithConcurrency as ReturnType<typeof vi.fn>
+
+    const capturedFetchUrls: string[] = []
+    mockMapSettled.mockImplementation(async (targets: Array<{ name: string; context?: string }>, cb: (arg: { name: string; context?: string }) => Promise<unknown>) => {
+      const results = []
+      for (const target of targets) {
+        try {
+          const value = await cb(target)
+          results.push({ status: 'fulfilled', value })
+        } catch (reason) {
+          results.push({ status: 'rejected', reason })
+        }
+      }
+      return results
+    })
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      capturedFetchUrls.push(String(url))
+      return new Response(JSON.stringify({ deployments: [] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+
+    const { useWorkloads } = await importFresh()
+
+    renderHook(() => useWorkloads())
+
+    await flushPromises()
+
+    // The first fetch call goes to the agent; when context is undefined, should use name
+    const agentUrl = capturedFetchUrls.find(u => u.includes('/deployments'))
+    expect(agentUrl).toBeDefined()
+    expect(agentUrl).toContain('cluster=cluster-no-ctx')
+
+    mockMapSettled.mockReset()
+  })
+
+  it('agent fetch callback passes namespace param when provided', async () => {
+    mockAgentUnavailable = false
+    mockClusterCacheRef.clusters = [
+      { name: 'ns-cluster', context: 'ns-ctx', reachable: true },
+    ]
+
+    const concurrency = await import('../../lib/utils/concurrency')
+    const mockMapSettled = concurrency.mapSettledWithConcurrency as ReturnType<typeof vi.fn>
+
+    const capturedFetchUrls: string[] = []
+    mockMapSettled.mockImplementation(async (targets: Array<{ name: string; context?: string }>, cb: (arg: { name: string; context?: string }) => Promise<unknown>) => {
+      const results = []
+      for (const target of targets) {
+        try {
+          const value = await cb(target)
+          results.push({ status: 'fulfilled', value })
+        } catch (reason) {
+          results.push({ status: 'rejected', reason })
+        }
+      }
+      return results
+    })
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      capturedFetchUrls.push(String(url))
+      return new Response(JSON.stringify({ deployments: [] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+
+    const { useWorkloads } = await importFresh()
+
+    renderHook(() => useWorkloads({ namespace: 'kube-system' }))
+
+    await flushPromises()
+
+    // Find the agent fetch URL (includes /deployments)
+    const agentUrl = capturedFetchUrls.find(u => u.includes('/deployments'))
+    expect(agentUrl).toBeDefined()
+    expect(agentUrl).toContain('namespace=kube-system')
+    // Should use context when available
+    expect(agentUrl).toContain('cluster=ns-ctx')
+
+    mockMapSettled.mockReset()
+  })
+
+  it('agent fetch callback throws on non-ok response', async () => {
+    mockAgentUnavailable = false
+    mockClusterCacheRef.clusters = [
+      { name: 'fail-cluster', context: 'fail-ctx', reachable: true },
+    ]
+
+    const concurrency = await import('../../lib/utils/concurrency')
+    const mockMapSettled = concurrency.mapSettledWithConcurrency as ReturnType<typeof vi.fn>
+
+    mockMapSettled.mockImplementation(async (targets: Array<{ name: string; context?: string }>, cb: (arg: { name: string; context?: string }) => Promise<unknown>) => {
+      const results = []
+      for (const target of targets) {
+        try {
+          const value = await cb(target)
+          results.push({ status: 'fulfilled', value })
+        } catch (reason) {
+          results.push({ status: 'rejected', reason })
+        }
+      }
+      return results
+    })
+
+    // Return non-ok response from agent
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('Agent Error', { status: 503 })
+    )
+
+    const { useWorkloads } = await importFresh()
+
+    const { result } = renderHook(() => useWorkloads())
+
+    await waitFor(() => {
+      // Agent callback throws on non-ok, result is rejected,
+      // items array stays empty, agent returns null,
+      // then falls through to REST which also fails
+      expect(result.current.error).toBeDefined()
+    })
+
+    mockMapSettled.mockReset()
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -482,6 +900,54 @@ describe('useDeployWorkload', () => {
     expect(result.current.error).toBeDefined()
     expect(result.current.error!.message).toBe('Cluster unreachable')
   })
+
+  it('wraps non-Error throws into Error objects', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce('string-error')
+    const { useDeployWorkload } = await importFresh()
+
+    const { result } = renderHook(() => useDeployWorkload())
+    await act(async () => {
+      try {
+        await result.current.mutate({
+          workloadName: 'api-server',
+          namespace: 'production',
+          sourceCluster: 'staging',
+          targetClusters: ['prod'],
+        })
+      } catch {
+        // expected
+      }
+    })
+
+    expect(result.current.error).toBeInstanceOf(Error)
+    expect(result.current.error!.message).toBe('Unknown error')
+  })
+
+  it('uses fallback message when error body has no error field', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({}), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
+    const { useDeployWorkload } = await importFresh()
+
+    const { result } = renderHook(() => useDeployWorkload())
+    await act(async () => {
+      try {
+        await result.current.mutate({
+          workloadName: 'api-server',
+          namespace: 'production',
+          sourceCluster: 'staging',
+          targetClusters: ['prod'],
+        })
+      } catch {
+        // expected
+      }
+    })
+
+    expect(result.current.error!.message).toBe('Failed to deploy workload')
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -529,6 +995,55 @@ describe('useScaleWorkload', () => {
 
     expect(result.current.error).toBeInstanceOf(Error)
     expect(result.current.error!.message).toBe('Unknown error')
+  })
+
+  it('handles scale error response with custom error message', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: 'Cannot scale below 0' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
+    const { useScaleWorkload } = await importFresh()
+    const onError = vi.fn()
+
+    const { result } = renderHook(() => useScaleWorkload())
+    await act(async () => {
+      try {
+        await result.current.mutate(
+          { workloadName: 'x', namespace: 'y', replicas: -1 },
+          { onError }
+        )
+      } catch {
+        // expected
+      }
+    })
+
+    expect(onError).toHaveBeenCalled()
+    expect(result.current.error!.message).toBe('Cannot scale below 0')
+  })
+
+  it('uses fallback message when error body has no error field', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({}), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
+    const { useScaleWorkload } = await importFresh()
+
+    const { result } = renderHook(() => useScaleWorkload())
+    await act(async () => {
+      try {
+        await result.current.mutate(
+          { workloadName: 'x', namespace: 'y', replicas: 1 }
+        )
+      } catch {
+        // expected
+      }
+    })
+
+    expect(result.current.error!.message).toBe('Failed to scale workload')
   })
 })
 

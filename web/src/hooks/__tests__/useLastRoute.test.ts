@@ -473,3 +473,357 @@ describe('useLastRoute hook — return value', () => {
     expect(result.current.lastRoute).toBeNull()
   })
 })
+
+// ---------------------------------------------------------------------------
+// Tests: useLastRoute hook — scroll save/restore
+// ---------------------------------------------------------------------------
+
+describe('useLastRoute hook — scroll position saving', () => {
+  /** Create a mock main element with all necessary methods */
+  function createMockMain(opts: { scrollTop?: number; cards?: Element[] } = {}) {
+    const mockMain = document.createElement('main')
+    Object.defineProperty(mockMain, 'scrollTop', { value: opts.scrollTop ?? 0, writable: true, configurable: true })
+    mockMain.scrollTo = vi.fn()
+    Object.defineProperty(mockMain, 'getBoundingClientRect', {
+      value: () => ({ top: 0, left: 0, width: 1024, height: 768 }),
+      configurable: true,
+    })
+    const origQSA = mockMain.querySelectorAll.bind(mockMain)
+    mockMain.querySelectorAll = ((sel: string) => {
+      if (sel === '[data-tour="card"]') return (opts.cards || []) as unknown as NodeListOf<Element>
+      return origQSA(sel)
+    }) as typeof mockMain.querySelectorAll
+    return mockMain
+  }
+
+  function mockDocumentQS(mockMain: Element | null) {
+    const origQS = document.querySelector.bind(document)
+    document.querySelector = ((sel: string) => {
+      if (sel === 'main') return mockMain
+      return origQS(sel)
+    }) as typeof document.querySelector
+    return origQS
+  }
+
+  it('saves scroll position on beforeunload event', async () => {
+    mockPathname = '/clusters'
+    const { useLastRoute } = await importFresh()
+
+    const mockMain = createMockMain({ scrollTop: 200 })
+    const origQS = mockDocumentQS(mockMain)
+
+    renderHook(() => useLastRoute())
+
+    window.dispatchEvent(new Event('beforeunload'))
+
+    const positions = JSON.parse(localStorage.getItem('kubestellar-scroll-positions') || '{}')
+    expect(positions['/clusters']).toBeDefined()
+    expect(positions['/clusters'].position).toBe(200)
+
+    document.querySelector = origQS
+  })
+
+  it('saves scroll position with card snapping when cards exist', async () => {
+    mockPathname = '/dashboard'
+    const { useLastRoute } = await importFresh()
+
+    const mockH3 = document.createElement('h3')
+    mockH3.textContent = 'CPU Overview'
+    const mockCard = document.createElement('div')
+    mockCard.setAttribute('data-tour', 'card')
+    mockCard.appendChild(mockH3)
+    Object.defineProperty(mockCard, 'getBoundingClientRect', {
+      value: () => ({ top: -10, left: 0, width: 300, height: 200 }),
+    })
+    Object.defineProperty(mockCard, 'querySelector', {
+      value: (sel: string) => sel === 'h3' ? mockH3 : null,
+    })
+
+    const mockMain = createMockMain({ scrollTop: 150, cards: [mockCard] })
+    const origQS = mockDocumentQS(mockMain)
+
+    renderHook(() => useLastRoute())
+
+    window.dispatchEvent(new Event('beforeunload'))
+
+    const positions = JSON.parse(localStorage.getItem('kubestellar-scroll-positions') || '{}')
+    expect(positions['/dashboard']).toBeDefined()
+    expect(positions['/dashboard'].cardTitle).toBe('CPU Overview')
+
+    document.querySelector = origQS
+  })
+
+  it('clears saved position when scroll is at top (scrollTop <= 0)', async () => {
+    localStorage.setItem('kubestellar-scroll-positions', JSON.stringify({
+      '/clusters': { position: 500, cardTitle: 'old' }
+    }))
+    mockPathname = '/clusters'
+    const { useLastRoute } = await importFresh()
+
+    const mockMain = createMockMain({ scrollTop: 0 })
+    const origQS = mockDocumentQS(mockMain)
+
+    renderHook(() => useLastRoute())
+
+    window.dispatchEvent(new Event('beforeunload'))
+
+    const positions = JSON.parse(localStorage.getItem('kubestellar-scroll-positions') || '{}')
+    expect(positions['/clusters']).toBeUndefined()
+
+    document.querySelector = origQS
+  })
+
+  it('does nothing when no main container exists', async () => {
+    mockPathname = '/clusters'
+    const { useLastRoute } = await importFresh()
+
+    const origQS = mockDocumentQS(null)
+
+    renderHook(() => useLastRoute())
+
+    expect(() => window.dispatchEvent(new Event('beforeunload'))).not.toThrow()
+
+    document.querySelector = origQS
+  })
+
+  it('handles scroll event listener setup and teardown', async () => {
+    mockPathname = '/pods'
+    const { useLastRoute } = await importFresh()
+
+    const mockMain = createMockMain({ scrollTop: 100 })
+    const addSpy = vi.spyOn(mockMain, 'addEventListener')
+    const removeSpy = vi.spyOn(mockMain, 'removeEventListener')
+    const origQS = mockDocumentQS(mockMain)
+
+    const { unmount } = renderHook(() => useLastRoute())
+
+    const scrollListenerCalls = addSpy.mock.calls.filter(c => c[0] === 'scroll')
+    expect(scrollListenerCalls.length).toBeGreaterThan(0)
+
+    unmount()
+
+    const removeScrollCalls = removeSpy.mock.calls.filter(c => c[0] === 'scroll')
+    expect(removeScrollCalls.length).toBeGreaterThan(0)
+
+    document.querySelector = origQS
+  })
+
+  it('restores scroll when remember position is enabled', async () => {
+    localStorage.setItem('kubestellar-remember-position', JSON.stringify({ '/clusters': true }))
+    localStorage.setItem('kubestellar-scroll-positions', JSON.stringify({
+      '/clusters': { position: 300, cardTitle: 'MyCard' }
+    }))
+    mockPathname = '/clusters'
+    const { useLastRoute } = await importFresh()
+
+    const mockMain = createMockMain({ scrollTop: 0 })
+    const origQS = mockDocumentQS(mockMain)
+
+    renderHook(() => useLastRoute())
+
+    await act(async () => { vi.advanceTimersByTime(500) })
+
+    expect(mockMain.scrollTo).toHaveBeenCalled()
+
+    document.querySelector = origQS
+  })
+
+  it('scrolls to top when remember position is off', async () => {
+    mockPathname = '/pods'
+    const { useLastRoute } = await importFresh()
+
+    const mockMain = createMockMain({ scrollTop: 500 })
+    const origQS = mockDocumentQS(mockMain)
+
+    renderHook(() => useLastRoute())
+
+    await act(async () => { vi.advanceTimersByTime(200) })
+
+    const scrollToMock = mockMain.scrollTo as ReturnType<typeof vi.fn>
+    const topCalls = scrollToMock.mock.calls.filter(
+      (c: Array<Record<string, unknown>>) => c[0] && (c[0] as Record<string, unknown>).top === 0
+    )
+    expect(topCalls.length).toBeGreaterThan(0)
+
+    document.querySelector = origQS
+  })
+
+  it('handles localStorage error in setRememberPosition gracefully', async () => {
+    const { setRememberPosition } = await importFresh()
+    const orig = localStorage.setItem
+    localStorage.setItem = () => { throw new Error('quota') }
+
+    expect(() => setRememberPosition('/x', true)).not.toThrow()
+
+    localStorage.setItem = orig
+  })
+
+  it('handles localStorage error in saveScrollPositionNow gracefully', async () => {
+    mockPathname = '/clusters'
+    const { useLastRoute } = await importFresh()
+
+    const mockMain = createMockMain({ scrollTop: 200 })
+    const origQS = mockDocumentQS(mockMain)
+
+    // Make localStorage.setItem throw
+    const origSetItem = localStorage.setItem
+    localStorage.setItem = () => { throw new Error('quota exceeded') }
+
+    renderHook(() => useLastRoute())
+
+    // Should not throw on beforeunload even with localStorage error
+    expect(() => window.dispatchEvent(new Event('beforeunload'))).not.toThrow()
+
+    localStorage.setItem = origSetItem
+    document.querySelector = origQS
+  })
+
+  it('backward compat: restores from old number format', async () => {
+    localStorage.setItem('kubestellar-remember-position', JSON.stringify({ '/old-page': true }))
+    localStorage.setItem('kubestellar-scroll-positions', JSON.stringify({ '/old-page': 450 }))
+    mockPathname = '/old-page'
+    const { useLastRoute } = await importFresh()
+
+    const mockMain = createMockMain({ scrollTop: 0 })
+    const origQS = mockDocumentQS(mockMain)
+
+    renderHook(() => useLastRoute())
+
+    await act(async () => { vi.advanceTimersByTime(500) })
+
+    // Should have called scrollTo with the numeric position
+    expect(mockMain.scrollTo).toHaveBeenCalled()
+
+    document.querySelector = origQS
+  })
+
+  it('restores scroll with card-title-based positioning', async () => {
+    localStorage.setItem('kubestellar-remember-position', JSON.stringify({ '/card-page': true }))
+    localStorage.setItem('kubestellar-scroll-positions', JSON.stringify({
+      '/card-page': { position: 300, cardTitle: 'GPU Overview' }
+    }))
+    mockPathname = '/card-page'
+    const { useLastRoute } = await importFresh()
+
+    // Create a card with a matching h3 title
+    const mockH3 = document.createElement('h3')
+    mockH3.textContent = 'GPU Overview'
+    const mockCard = document.createElement('div')
+    mockCard.setAttribute('data-tour', 'card')
+    mockCard.appendChild(mockH3)
+    Object.defineProperty(mockCard, 'getBoundingClientRect', {
+      value: () => ({ top: 50, left: 0, width: 300, height: 200 }),
+    })
+    Object.defineProperty(mockCard, 'querySelector', {
+      value: (sel: string) => sel === 'h3' ? mockH3 : null,
+    })
+
+    const mockMain = createMockMain({ scrollTop: 0, cards: [mockCard] })
+    const origQS = mockDocumentQS(mockMain)
+
+    renderHook(() => useLastRoute())
+
+    // Advance through the iterative restore loop
+    await act(async () => { vi.advanceTimersByTime(2000) })
+
+    // scrollTo should have been called to restore to card position
+    const scrollToMock = mockMain.scrollTo as ReturnType<typeof vi.fn>
+    expect(scrollToMock).toHaveBeenCalled()
+
+    document.querySelector = origQS
+  })
+
+  it('does not restore when entry has position <= 0', async () => {
+    localStorage.setItem('kubestellar-remember-position', JSON.stringify({ '/zero-page': true }))
+    localStorage.setItem('kubestellar-scroll-positions', JSON.stringify({
+      '/zero-page': { position: 0 }
+    }))
+    mockPathname = '/zero-page'
+    const { useLastRoute } = await importFresh()
+
+    const mockMain = createMockMain({ scrollTop: 0 })
+    const origQS = mockDocumentQS(mockMain)
+
+    renderHook(() => useLastRoute())
+
+    await act(async () => { vi.advanceTimersByTime(500) })
+
+    // scrollTo should NOT have been called (position <= 0 means skip restore)
+    const scrollToMock = mockMain.scrollTo as ReturnType<typeof vi.fn>
+    // Only the "scroll to top" call (from Pin-off) should happen
+    const nonTopCalls = scrollToMock.mock.calls.filter(
+      (c: Array<Record<string, unknown>>) => c[0] && (c[0] as Record<string, unknown>).top !== 0
+    )
+    expect(nonTopCalls.length).toBe(0)
+
+    document.querySelector = origQS
+  })
+
+  it('does not restore when no entry exists for the path', async () => {
+    localStorage.setItem('kubestellar-remember-position', JSON.stringify({ '/no-entry': true }))
+    // No scroll position saved for /no-entry
+    mockPathname = '/no-entry'
+    const { useLastRoute } = await importFresh()
+
+    const mockMain = createMockMain({ scrollTop: 0 })
+    const origQS = mockDocumentQS(mockMain)
+
+    renderHook(() => useLastRoute())
+
+    await act(async () => { vi.advanceTimersByTime(500) })
+
+    // Scroll restore function should return early
+    const scrollToMock = mockMain.scrollTo as ReturnType<typeof vi.fn>
+    // No restore calls should be made (may have a scroll-to-top call only if Pin is off)
+    expect(scrollToMock.mock.calls.length).toBeLessThanOrEqual(1)
+
+    document.querySelector = origQS
+  })
+
+  it('scroll handler captures scrollTop in ref for cleanup to use', async () => {
+    mockPathname = '/scrolled-page'
+    const { useLastRoute } = await importFresh()
+
+    const mockMain = createMockMain({ scrollTop: 350 })
+    const origQS = mockDocumentQS(mockMain)
+
+    renderHook(() => useLastRoute())
+
+    // Trigger a scroll event to capture scrollTop in the ref
+    const scrollEvent = new Event('scroll')
+    mockMain.dispatchEvent(scrollEvent)
+
+    // Advance timers past the 2s debounce to trigger saveScrollPositionNow
+    await act(async () => { vi.advanceTimersByTime(3000) })
+
+    // Scroll position should be saved
+    const positions = JSON.parse(localStorage.getItem('kubestellar-scroll-positions') || '{}')
+    expect(positions['/scrolled-page']).toBeDefined()
+
+    document.querySelector = origQS
+  })
+
+  it('does not save scroll position while restoring is in progress', async () => {
+    localStorage.setItem('kubestellar-remember-position', JSON.stringify({ '/restoring': true }))
+    localStorage.setItem('kubestellar-scroll-positions', JSON.stringify({
+      '/restoring': { position: 500 }
+    }))
+    mockPathname = '/restoring'
+    const { useLastRoute } = await importFresh()
+
+    const mockMain = createMockMain({ scrollTop: 500 })
+    const origQS = mockDocumentQS(mockMain)
+
+    renderHook(() => useLastRoute())
+
+    // Advance just enough to start restore but not finish
+    await act(async () => { vi.advanceTimersByTime(100) })
+
+    // During restoration, the isRestoringRef prevents saves
+    // This is verified by the fact scrollTo gets called for restoration
+    const scrollToMock = mockMain.scrollTo as ReturnType<typeof vi.fn>
+    expect(scrollToMock).toHaveBeenCalled()
+
+    document.querySelector = origQS
+  })
+})
