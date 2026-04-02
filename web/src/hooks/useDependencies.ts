@@ -148,7 +148,7 @@ export function useResolveDependencies() {
         return result
       } catch (restErr) {
         restError = restErr
-        console.warn('[useDependencies] REST API failed, trying agent:', restErr)
+        console.error('[useDependencies] REST API failed, trying agent:', restErr)
       }
 
       // Fall back to agent's dynamic resolve-deps endpoint
@@ -161,7 +161,7 @@ export function useResolveDependencies() {
         }
       } catch (agentErr) {
         agentError = agentErr
-        console.warn('[useDependencies] Agent resolve-deps failed:', agentErr)
+        console.error('[useDependencies] Agent resolve-deps failed:', agentErr)
       }
 
       // Both sources failed — build a descriptive error for UI consumers

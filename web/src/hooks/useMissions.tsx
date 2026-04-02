@@ -587,7 +587,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
             wsReconnectTimer.current = setTimeout(() => {
               wsReconnectTimer.current = null
               ensureConnection().catch((err: unknown) => {
-                console.warn('[Missions] WebSocket reconnection failed:', err)
+                console.error('[Missions] WebSocket reconnection failed:', err)
               })
             }, delay)
           } else if (!getDemoMode()) {
