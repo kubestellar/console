@@ -94,7 +94,7 @@ function CreateDashboardModalInner({
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnBackdrop={false}>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false}>
       <BaseModal.Header
         title={t('dashboard.create.title', 'Create Dashboard')}
         description={t('dashboard.create.descriptionCollection', 'Name your dashboard and optionally start with a card collection.')}
@@ -253,7 +253,7 @@ function CreateDashboardModalInner({
         </div>
       </BaseModal.Content>
 
-      <BaseModal.Footer>
+      <BaseModal.Footer showKeyboardHints={false} className="justify-end">
         <Button
           variant="ghost"
           size="lg"
@@ -270,7 +270,7 @@ function CreateDashboardModalInner({
           loading={isCreating}
           disabled={isCreating}
         >
-          {isCreating ? t('dashboard.create.creating') : t('dashboard.create.title')}
+          {isCreating ? t('dashboard.create.creating') : t('dashboard.create.title', 'Create Dashboard')}
         </Button>
       </BaseModal.Footer>
     </BaseModal>
