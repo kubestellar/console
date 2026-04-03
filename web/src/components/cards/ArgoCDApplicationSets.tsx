@@ -252,8 +252,8 @@ function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
           </div>
         ) : (
           appSets.map((appSet, idx) => {
-            const config = statusConfig[appSet.status] || statusConfig.Unknown
-            const StatusIcon = config.icon
+            const statusCfg = statusConfig[appSet.status] || statusConfig.Unknown
+            const StatusIcon = statusCfg.icon
 
             return (
               <div
@@ -264,7 +264,7 @@ function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
                   <div className="flex items-center gap-2">
                     <Layers className="w-4 h-4 text-purple-400" />
                     <span className="text-sm font-medium text-foreground">{appSet.name}</span>
-                    <span className={`text-xs px-1.5 py-0.5 rounded ${config.bg} ${config.color}`}>
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${statusCfg.bg} ${statusCfg.color}`}>
                       <StatusIcon className="w-3 h-3 inline mr-1" />
                       {appSet.status}
                     </span>
@@ -289,7 +289,7 @@ function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
                   </div>
                   <div className="flex items-center gap-1">
                     <GitBranch className="w-3 h-3" />
-                    <span>{appSet.generators.join(', ')}</span>
+                    <span>{(appSet.generators || []).join(', ')}</span>
                   </div>
                 </div>
                 {appSet.template && (

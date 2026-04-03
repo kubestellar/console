@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -2191,11 +2192,20 @@ func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
 			"success": false,
 		})
 	}
+	
+	if err := validateK8sName(req.AppName, "appName"); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error(), "success": false})
+	}
+	if err := validateK8sName(req.Cluster, "cluster"); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error(), "success": false})
+	}
 
 	// Default namespace for ArgoCD applications
 	namespace := req.Namespace
 	if namespace == "" {
 		namespace = "argocd"
+	} else if err := validateK8sName(namespace, "namespace"); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error(), "success": false})
 	}
 
 	log.Printf("[ArgoCD] Triggering sync for %s/%s on cluster %s", namespace, req.AppName, req.Cluster)
@@ -2205,7 +2215,7 @@ func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
 	if argoToken != "" {
 		argoServerURL := h.discoverArgoServerURL(c.Context(), req.Cluster)
 		if argoServerURL != "" {
-			syncURL := fmt.Sprintf("%s/api/v1/applications/%s/sync", argoServerURL, req.AppName)
+			syncURL := fmt.Sprintf("%s/api/v1/applications/%s/sync", argoServerURL, url.PathEscape(req.AppName))
 			syncBody := []byte(`{"prune":true}`)
 
 			httpReq, err := http.NewRequestWithContext(c.Context(), "POST", syncURL, bytes.NewReader(syncBody))
@@ -2213,10 +2223,11 @@ func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
 				httpReq.Header.Set("Authorization", "Bearer "+argoToken)
 				httpReq.Header.Set("Content-Type", "application/json")
 
+				skipVerify := os.Getenv("ARGOCD_TLS_INSECURE") == "true"
 				client := &http.Client{
 					Timeout: argocdQueryTimeout,
 					Transport: &http.Transport{
-						TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // ArgoCD often uses self-signed certs
+						TLSClientConfig: &tls.Config{InsecureSkipVerify: skipVerify},
 					},
 				}
 				resp, err := client.Do(httpReq)
@@ -2246,17 +2257,14 @@ func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
 		)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
-			log.Printf("[ArgoCD] CLI sync failed: %v, output: %s", err, string(output))
-			return c.Status(500).JSON(fiber.Map{
-				"error":   fmt.Sprintf("ArgoCD sync failed: %v", err),
-				"success": false,
+			log.Printf("[ArgoCD] CLI sync failed: %v, output: %s, falling back to Annotation Patching", err, string(output))
+		} else {
+			return c.JSON(fiber.Map{
+				"success": true,
+				"message": "Sync triggered via ArgoCD CLI",
+				"method":  "cli",
 			})
 		}
-		return c.JSON(fiber.Map{
-			"success": true,
-			"message": "Sync triggered via ArgoCD CLI",
-			"method":  "cli",
-		})
 	}
 
 	// Strategy 3: Fallback — annotate the Application to trigger a refresh
@@ -2321,6 +2329,7 @@ func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
 func (h *GitOpsHandlers) discoverArgoServerURL(ctx context.Context, cluster string) string {
 	clientset, err := h.k8sClient.GetClient(cluster)
 	if err != nil {
+		log.Printf("[ArgoCD] Server discovery failed: cannot get client for cluster %s: %v", cluster, err)
 		return ""
 	}
 
@@ -2329,10 +2338,15 @@ func (h *GitOpsHandlers) discoverArgoServerURL(ctx context.Context, cluster stri
 	for _, ns := range namespaces {
 		svc, err := clientset.CoreV1().Services(ns).Get(ctx, "argocd-server", metav1.GetOptions{})
 		if err == nil {
-			// Use cluster-internal DNS: <service>.<namespace>.svc
-			return fmt.Sprintf("https://%s.%s.svc:%d", svc.Name, svc.Namespace, svc.Spec.Ports[0].Port)
+			if len(svc.Spec.Ports) > 0 {
+				// Use cluster-internal DNS: <service>.<namespace>.svc
+				return fmt.Sprintf("https://%s.%s.svc:%d", svc.Name, svc.Namespace, svc.Spec.Ports[0].Port)
+			} else {
+				log.Printf("[ArgoCD] Server discovery warning: argocd-server service found in %s but has no ports", ns)
+			}
 		}
 	}
+	log.Printf("[ArgoCD] Server discovery empty: argocd-server service not found in cluster %s", cluster)
 	return ""
 }
 

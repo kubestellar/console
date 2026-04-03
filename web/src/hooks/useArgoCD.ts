@@ -916,16 +916,21 @@ export function useArgoApplicationSets(): UseArgoApplicationSetsResult {
 
       // API explicitly indicated demo data — fall through to mock
       throw new Error('No ArgoCD ApplicationSet data available')
-    } catch {
-      // API failed or returned demo indicator — fall back to mock data
-      const appSets = getMockArgoApplicationSets(clusterNames)
-      setApplicationSets(appSets)
-      setIsDemoData(true)
-      setError(null)
-      setConsecutiveFailures(0)
-      setLastRefresh(Date.now())
-      initialLoadDone.current = true
-      saveToCache(APPSET_CACHE_KEY, appSets, true)
+    } catch (err: any) {
+      // API failed or returned demo indicator
+      const msg = err?.message || 'Failed to fetch ArgoCD data'
+      setError(msg)
+      setConsecutiveFailures(prev => prev + 1)
+      
+      const failures = consecutiveFailures + 1
+      if (failures >= FAILURE_THRESHOLD || msg.includes('No ArgoCD')) {
+        const appSets = getMockArgoApplicationSets(clusterNames)
+        setApplicationSets(appSets)
+        setIsDemoData(true)
+        setLastRefresh(Date.now())
+        initialLoadDone.current = true
+        saveToCache(APPSET_CACHE_KEY, appSets, true)
+      }
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)

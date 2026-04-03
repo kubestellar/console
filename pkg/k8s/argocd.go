@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"log"
 	"sync"
 	"time"
 
@@ -187,6 +188,7 @@ func (m *MultiClusterClient) ListArgoApplicationSets(ctx context.Context) (*v1al
 
 			clusterAppSets, err := m.ListArgoApplicationSetsForCluster(ctx, cluster)
 			if err != nil {
+				log.Printf("[ArgoCD] Skipping cluster %s for ApplicationSets: %v", cluster, err)
 				return // CRD not installed or cluster unreachable — skip silently
 			}
 
@@ -256,15 +258,8 @@ func (m *MultiClusterClient) parseArgoApplicationSetsFromList(list interface{}, 
 				}
 			}
 
-			// Parse spec.syncPolicy
-			if syncPolicy, spFound, _ := unstructuredNestedMap(spec, "syncPolicy"); spFound {
-				if _, hasPreserve := syncPolicy["preserveResourcesOnDeletion"]; hasPreserve {
-					appSet.SyncPolicy = "Automated"
-				} else {
-					appSet.SyncPolicy = "Manual"
-				}
-			}
-			// Check for automated sync via spec.template.spec.syncPolicy.automated
+			// Parse spec.syncPolicy logic correctly
+			appSet.SyncPolicy = "Manual"
 			if tmpl, tmplFound, _ := unstructuredNestedMap(spec, "template"); tmplFound {
 				if tmplSpec, tsFound, _ := unstructuredNestedMap(tmpl, "spec"); tsFound {
 					if sp, spFound, _ := unstructuredNestedMap(tmplSpec, "syncPolicy"); spFound {
