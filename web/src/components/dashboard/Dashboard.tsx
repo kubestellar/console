@@ -41,9 +41,9 @@ import { MissionSuggestions } from './MissionSuggestions'
 import { GettingStartedBanner } from './GettingStartedBanner'
 import { SidebarCustomizer } from '../layout/SidebarCustomizer'
 import { useMissions } from '../../hooks/useMissions'
-import { TemplatesModal } from './TemplatesModal'
 import { CreateDashboardModal } from './CreateDashboardModal'
 import { FloatingDashboardActions } from './FloatingDashboardActions'
+import { DashboardCustomizer } from './customizer/DashboardCustomizer'
 import { DashboardTemplate } from './templates'
 import { SortableCard, DragPreviewCard } from './SharedSortableCard'
 import type { Card, DashboardData } from './dashboardUtils'
@@ -78,7 +78,7 @@ import { STORAGE_KEY_MAIN_DASHBOARD_CARDS } from '../../lib/constants/storage'
 
 // Lazy-load modal components — only shown on explicit user action,
 // so deferring their chunk until first use reduces the initial dashboard bundle.
-const AddCardModal = safeLazy(() => import('./AddCardModal'), 'AddCardModal')
+// AddCardModal replaced by DashboardCustomizer (imported above)
 const ConfigureCardModal = safeLazy(() => import('./ConfigureCardModal'), 'ConfigureCardModal')
 
 // Module-level cache for dashboard data (survives navigation)
@@ -131,9 +131,10 @@ export function Dashboard() {
     openAddCardModal,
     pendingOpenAddCardModal,
     setPendingOpenAddCardModal,
-    isTemplatesModalOpen,
-    closeTemplatesModal,
-    openTemplatesModal,
+    // Templates modal state no longer needed — accessed via DashboardCustomizer
+    isTemplatesModalOpen: _isTemplatesModalOpen,
+    closeTemplatesModal: _closeTemplatesModal,
+    openTemplatesModal: _openTemplatesModal,
     pendingRestoreCard,
     clearPendingRestoreCard,
   } = useDashboardContext()
@@ -142,7 +143,7 @@ export function Dashboard() {
   const { openSidebar: openMissionSidebar, startMission } = useMissions()
 
   // Get all dashboards for cross-dashboard dragging
-  const { dashboards, moveCardToDashboard, createDashboard, exportDashboard, importDashboard } = useDashboards()
+  const { dashboards, moveCardToDashboard, createDashboard, exportDashboard } = useDashboards()
   const { showToast } = useToast()
   const { t } = useTranslation()
   const { recordCardRemoved, recordCardAdded, recordCardConfigured } = useCardHistory()
@@ -1132,16 +1133,23 @@ export function Dashboard() {
         </DragOverlay>
       </DndContext>
 
-      {/* Floating action buttons for Add Card and Templates */}
+      {/* Floating action button — opens Dashboard Studio */}
       <FloatingDashboardActions
-        onAddCard={openAddCardModal}
-        onOpenTemplates={openTemplatesModal}
-        onReset={reset}
-        isCustomized={isCustomized}
+        onOpenCustomizer={openAddCardModal}
         onUndo={undo}
         onRedo={redo}
         canUndo={canUndo}
         canRedo={canRedo}
+      />
+
+      {/* Dashboard Studio — unified customization panel */}
+      <DashboardCustomizer
+        isOpen={isAddCardModalOpen}
+        onClose={() => { closeAddCardModal(); setAddCardSearch(''); setInsertAtIndex(null) }}
+        onAddCards={handleAddCards}
+        existingCardTypes={currentCardTypes}
+        initialSearch={addCardSearch}
+        onApplyTemplate={handleApplyTemplate}
         onExport={dashboard?.id ? async () => {
           try {
             const data = await exportDashboard(dashboard.id)
@@ -1157,26 +1165,13 @@ export function Dashboard() {
             showToast('Failed to export dashboard', 'error')
           }
         } : undefined}
-        onImport={async (json) => {
-          try {
-            await importDashboard(json)
-            showToast('Dashboard imported', 'success')
-          } catch {
-            showToast('Failed to import dashboard', 'error')
-          }
-        }}
+        onReset={() => reset('replace')}
+        isCustomized={isCustomized}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={canUndo}
+        canRedo={canRedo}
       />
-
-      {/* Add Card Modal */}
-      <Suspense fallback={null}>
-        <AddCardModal
-          isOpen={isAddCardModalOpen}
-          onClose={() => { closeAddCardModal(); setAddCardSearch(''); setInsertAtIndex(null) }}
-          onAddCards={handleAddCards}
-          existingCardTypes={currentCardTypes}
-          initialSearch={addCardSearch}
-        />
-      </Suspense>
 
       {/* Configure Card Modal */}
       <Suspense fallback={null}>
@@ -1192,12 +1187,7 @@ export function Dashboard() {
         />
       </Suspense>
 
-      {/* Templates Modal */}
-      <TemplatesModal
-        isOpen={isTemplatesModalOpen}
-        onClose={closeTemplatesModal}
-        onApplyTemplate={handleApplyTemplate}
-      />
+      {/* Templates are now accessed via Dashboard Studio */}
 
       {/* Create Dashboard Modal */}
       <CreateDashboardModal
