@@ -12,6 +12,8 @@ Most code in this repo is written by coding agents — Claude Opus 4.5/4.6, Gemi
 
 **Manual coding PRs are discouraged.** They take significantly longer to complete and review compared to agent-generated code. PRs that miss required patterns (isDemoData wiring, useCardLoadingState, locale strings, marketplace vs console) will be sent back — these are things coding agents catch automatically.
 
+**All PRs — human or AI — must pass the same 9 hard CI gates before merge.** There is no separate path for AI-generated code. See [docs/AI-QUALITY-ASSURANCE.md](docs/AI-QUALITY-ASSURANCE.md) for the full list of quality gates, post-build safety checks, and our regression response model.
+
 If you want to contribute code, use one of the supported agents:
 
 - **Claude Code** (Claude Opus 4.5 or 4.6) — **strongly recommended**. Knows the full codebase, all CLAUDE.md rules, isDemoData wiring, card loading state patterns, and locale requirements. Install: `npm install -g @anthropic-ai/claude-code`

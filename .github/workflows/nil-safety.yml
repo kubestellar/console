@@ -480,3 +480,145 @@ jobs:
           echo "Fix: Guard with (value ?? []).method() or (value || []).method()"
           echo "Suppress false positive: Add '// null-safety-ignore' on the same line."
           exit 1
+
+      # ── AI Code Quality Checks (ratcheted baselines) ────────────────
+      # These catch patterns that AI tools commonly generate.
+      # Each has a baseline file — the check fails only if the count INCREASES.
+      # Suppress with '// ai-quality-ignore' on the same line.
+
+      - name: Scan for AI antipatterns
+        id: ai-quality
+        run: |
+          SCAN_DIRS="web/src/"
+          EXCLUDE_PATTERNS='node_modules|__tests__|\.test\.|\.spec\.|// ai-quality-ignore|// magic-number-ignore'
+          SUMMARY=""
+          FAILED=false
+
+          filter_noise() {
+            grep -v -E "$EXCLUDE_PATTERNS"
+          }
+
+          # ── Pattern 1: Magic numbers in timers ─────────────────────
+          # AI tools write setTimeout(fn, 5000) instead of using named constants.
+          MAGIC_FILE="/tmp/ai-magic-numbers.txt"
+          grep -rn --include='*.ts' --include='*.tsx' \
+            -E '(setTimeout|setInterval)\s*\([^,]+,\s*[0-9]{2,}' \
+            $SCAN_DIRS 2>/dev/null | filter_noise | sort -u > "$MAGIC_FILE" || true
+          MAGIC_COUNT=$(wc -l < "$MAGIC_FILE" | tr -d ' ')
+
+          MAGIC_BASELINE_FILE=".github/ai-magic-numbers-baseline.txt"
+          MAGIC_BASELINE=$(cat "$MAGIC_BASELINE_FILE" 2>/dev/null | tr -d ' \n' || echo "$MAGIC_COUNT")
+
+          if [ "$MAGIC_COUNT" -gt "$MAGIC_BASELINE" ]; then
+            SUMMARY="$SUMMARY\n❌ Magic numbers in timers: $MAGIC_COUNT (baseline: $MAGIC_BASELINE)"
+            FAILED=true
+          else
+            SUMMARY="$SUMMARY\n✅ Magic numbers in timers: $MAGIC_COUNT (baseline: $MAGIC_BASELINE)"
+          fi
+
+          # ── Pattern 2: No-op test assertions ───────────────────────
+          # AI "fixes" failing tests by replacing real assertions with expect(true).toBe(true).
+          NOOP_FILE="/tmp/ai-noop-assertions.txt"
+          grep -rn --include='*.ts' --include='*.tsx' \
+            -E 'expect\((true|1|false)\)\.(toBe|toEqual)\((true|1|false)\)' \
+            $SCAN_DIRS 2>/dev/null | filter_noise | sort -u > "$NOOP_FILE" || true
+          NOOP_COUNT=$(wc -l < "$NOOP_FILE" | tr -d ' ')
+
+          NOOP_BASELINE_FILE=".github/ai-noop-assertions-baseline.txt"
+          NOOP_BASELINE=$(cat "$NOOP_BASELINE_FILE" 2>/dev/null | tr -d ' \n' || echo "$NOOP_COUNT")
+
+          if [ "$NOOP_COUNT" -gt "$NOOP_BASELINE" ]; then
+            SUMMARY="$SUMMARY\n❌ No-op assertions: $NOOP_COUNT (baseline: $NOOP_BASELINE)"
+            FAILED=true
+          else
+            SUMMARY="$SUMMARY\n✅ No-op assertions: $NOOP_COUNT (baseline: $NOOP_BASELINE)"
+          fi
+
+          # ── Pattern 3: Hardcoded route strings ─────────────────────
+          # AI writes '/settings' instead of ROUTES.SETTINGS.
+          ROUTES_FILE="/tmp/ai-hardcoded-routes.txt"
+          grep -rn --include='*.ts' --include='*.tsx' \
+            -E "(href|to|navigate\(|push\(|replace\()['\"]/(settings|clusters|workloads|events|security|compliance|deploy|alerts|nodes|pods|services|operators)" \
+            $SCAN_DIRS 2>/dev/null | filter_noise | \
+            grep -v 'routes.ts' | grep -v 'ROUTES\.' | sort -u > "$ROUTES_FILE" || true
+          ROUTES_COUNT=$(wc -l < "$ROUTES_FILE" | tr -d ' ')
+
+          ROUTES_BASELINE_FILE=".github/ai-hardcoded-routes-baseline.txt"
+          ROUTES_BASELINE=$(cat "$ROUTES_BASELINE_FILE" 2>/dev/null | tr -d ' \n' || echo "$ROUTES_COUNT")
+
+          if [ "$ROUTES_COUNT" -gt "$ROUTES_BASELINE" ]; then
+            SUMMARY="$SUMMARY\n❌ Hardcoded routes: $ROUTES_COUNT (baseline: $ROUTES_BASELINE)"
+            FAILED=true
+          else
+            SUMMARY="$SUMMARY\n✅ Hardcoded routes: $ROUTES_COUNT (baseline: $ROUTES_BASELINE)"
+          fi
+
+          # ── Pattern 4: Cards missing unified controls ──────────────
+          # AI-generated cards skip useCardLoadingState, breaking the CardWrapper state system.
+          UNIFIED_FILE="/tmp/ai-missing-unified.txt"
+          : > "$UNIFIED_FILE"
+          for card in web/src/components/cards/*.tsx; do
+            base=$(basename "$card")
+            case "$base" in
+              *test*|*spec*|*index*|*Error*|*registry*|*CardData*|*Wrapper*|*Dynamic*|*Boundary*) continue ;;
+            esac
+            if ! grep -q 'useCardLoadingState' "$card" 2>/dev/null; then
+              echo "$card: missing useCardLoadingState" >> "$UNIFIED_FILE"
+            fi
+          done
+          UNIFIED_COUNT=$(wc -l < "$UNIFIED_FILE" | tr -d ' ')
+
+          UNIFIED_BASELINE_FILE=".github/ai-missing-unified-baseline.txt"
+          UNIFIED_BASELINE=$(cat "$UNIFIED_BASELINE_FILE" 2>/dev/null | tr -d ' \n' || echo "$UNIFIED_COUNT")
+
+          if [ "$UNIFIED_COUNT" -gt "$UNIFIED_BASELINE" ]; then
+            SUMMARY="$SUMMARY\n❌ Cards missing unified controls: $UNIFIED_COUNT (baseline: $UNIFIED_BASELINE)"
+            FAILED=true
+          else
+            SUMMARY="$SUMMARY\n✅ Cards missing unified controls: $UNIFIED_COUNT (baseline: $UNIFIED_BASELINE)"
+          fi
+
+          # ── Pattern 5: Non-localized user-facing strings ──────────
+          # AI writes title="Some Text" instead of title={t('key')} for i18n.
+          LOCALE_FILE="/tmp/ai-non-localized.txt"
+          grep -rn --include='*.tsx' \
+            -E '(title|label|placeholder|aria-label)="[A-Z][a-z]{2,}' \
+            web/src/components/cards/ web/src/components/dashboard/ \
+            2>/dev/null | filter_noise | \
+            grep -v 'className' | sort -u > "$LOCALE_FILE" || true
+          LOCALE_COUNT=$(wc -l < "$LOCALE_FILE" | tr -d ' ')
+
+          LOCALE_BASELINE_FILE=".github/ai-non-localized-baseline.txt"
+          LOCALE_BASELINE=$(cat "$LOCALE_BASELINE_FILE" 2>/dev/null | tr -d ' \n' || echo "$LOCALE_COUNT")
+
+          if [ "$LOCALE_COUNT" -gt "$LOCALE_BASELINE" ]; then
+            SUMMARY="$SUMMARY\n❌ Non-localized strings: $LOCALE_COUNT (baseline: $LOCALE_BASELINE)"
+            FAILED=true
+          else
+            SUMMARY="$SUMMARY\n✅ Non-localized strings: $LOCALE_COUNT (baseline: $LOCALE_BASELINE)"
+          fi
+
+          # ── Output ─────────────────────────────────────────────────
+          echo "### AI Code Quality Checks" >> "$GITHUB_STEP_SUMMARY"
+          printf "$SUMMARY\n" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$FAILED" = "true" ]; then
+            echo ""
+            echo "ai_quality_failed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ai_quality_failed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fail on AI quality regression
+        if: steps.ai-quality.outputs.ai_quality_failed == 'true'
+        run: |
+          echo "::error::AI code quality regression detected. See step summary for details."
+          echo ""
+          echo "Common AI antipatterns detected above baseline:"
+          echo "  - Magic numbers: use named constants (e.g., const RETRY_DELAY_MS = 5000)"
+          echo "  - No-op assertions: fix the test, don't weaken the assertion"
+          echo "  - Hardcoded routes: use ROUTES.* from config/routes.ts"
+          echo "  - Missing unified controls: add useCardLoadingState to card components"
+          echo ""
+          echo "Suppress false positive: add '// ai-quality-ignore' on the same line."
+          exit 1

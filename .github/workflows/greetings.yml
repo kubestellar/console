@@ -15,3 +15,42 @@ jobs:
   greet:
     uses: kubestellar/infra/.github/workflows/reusable-greetings.yml@main
     secrets: inherit
+    with:
+      pr_message: |
+        👋 Welcome to the KubeStellar Console community! 💖
+
+        Thanks and congrats 🎉 for opening your first PR here! We're excited to have you contributing.
+
+        **Before merge, please ensure:**
+        - ✅ **DCO Sign-off** — All commits signed with `git commit -s` ([DCO](https://developercertificate.org/))
+        - ✅ **PR Title** — Starts with an emoji: ✨ feature | 🐛 bug fix | 📖 docs | 🌱 infra/tests | ⚠️ breaking
+        - ✅ **Build passes** — Run `cd web && npm run build && npm run lint` before pushing
+
+        **How we maintain quality:** This project uses AI-assisted development with layered automated feedback loops — every PR (human or AI) triggers the same checks. See [AI Quality Assurance](https://github.com/kubestellar/console/blob/main/docs/AI-QUALITY-ASSURANCE.md) for details on all CI gates and our regression response model.
+
+        **Resources:**
+        - 🖥️ [KubeStellar Console](https://console.kubestellar.io) — Try the live multi-cluster dashboard
+        - 📖 [Console Docs](https://kubestellar.io/docs/console/overview/introduction) — Installation, features, and architecture
+        - 🔒 [AI Quality Assurance](https://github.com/kubestellar/console/blob/main/docs/AI-QUALITY-ASSURANCE.md) — CI gates, feedback loops, antipattern checks
+        - 📖 [Full Documentation](https://kubestellar.io/docs) | 🤝 [Contributor Handbook](https://kubestellar.io/contribute-handbook) | 💬 [Slack](https://cloud-native.slack.com/archives/C097094RZ3M)
+
+        A maintainer will review your PR soon. Hope you have a great time here!
+      issue_message: |
+        👋 Welcome to the KubeStellar Console community! 💖
+
+        Thanks and congrats 🎉 for opening your first issue here! Every issue helps make KubeStellar Console better.
+
+        **To work on this issue**, comment `/assign` to assign yourself (use `/unassign` to remove).
+
+        **How we work:** This project uses AI-assisted development with [layered automated feedback loops](https://github.com/kubestellar/console/blob/main/docs/AI-QUALITY-ASSURANCE.md) to prevent regressions. Every PR — human or AI — triggers the same automated checks before merge.
+
+        **Find Issues to Work On:**
+        - [`good first issue`](https://github.com/search?q=org%3Akubestellar+is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) | [`help wanted`](https://github.com/search?q=org%3Akubestellar+is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) | [CLOTributor](https://clotributor.dev/search?project=kubestellar)
+
+        **Resources:**
+        - 🖥️ [KubeStellar Console](https://console.kubestellar.io) — Try the live multi-cluster dashboard
+        - 📖 [Console Docs](https://kubestellar.io/docs/console/overview/introduction) — Installation, features, and architecture
+        - 🔒 [AI Quality Assurance](https://github.com/kubestellar/console/blob/main/docs/AI-QUALITY-ASSURANCE.md) — CI gates, feedback loops, antipattern checks
+        - 📖 [Full Documentation](https://kubestellar.io/docs) | 🤝 [Contributor Handbook](https://kubestellar.io/contribute-handbook) | 💬 [Slack](https://cloud-native.slack.com/archives/C097094RZ3M)
+
+        Hope you have a great time here!

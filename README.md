@@ -81,6 +81,17 @@ See the full [Architecture documentation](https://kubestellar.io/docs/console/ov
 - **[homebrew-tap](https://github.com/kubestellar/homebrew-tap)** — Homebrew formulae for KubeStellar tools
 - **[KubeStellar](https://kubestellar.io)** — Multi-cluster configuration management
 
+## Quality Assurance
+
+Console uses AI tools (GitHub Copilot, Claude Code) to accelerate development. Quality is maintained through **layered feedback loops** — every PR triggers the same automated checks regardless of author, and continuous monitoring catches what PR checks miss.
+
+- **Before commit**: TypeScript build + Go build + 5 post-build safety checks + lint
+- **Before merge**: nil-safety, ts-null-safety, array-safety, API contract, Playwright E2E, coverage gate, TTFI performance, CodeQL, Copilot code review
+- **After merge**: Targeted Playwright tests run against production (`console.kubestellar.io`); failures reopen the original issue
+- **Continuous**: Hourly coverage (12 shards), 4x daily QA, nightly E2E, nightly security scanning, real-time GA4 error tracking
+
+When a regression class is identified, a maintainer adds an automated check to the earliest possible loop. See [docs/AI-QUALITY-ASSURANCE.md](docs/AI-QUALITY-ASSURANCE.md) for the full breakdown.
+
 ## License
 
 Apache License 2.0 — see [LICENSE](LICENSE).
