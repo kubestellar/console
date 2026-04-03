@@ -125,7 +125,7 @@ func (h *WorkloadHandlers) DeployWorkload(c *fiber.Ctx) error {
 
 	var req DeployRequest
 	if err := c.BodyParser(&req); err != nil {
-		slog.Info(fmt.Sprintf("invalid request body: %v", err))
+		slog.Info("[Workloads] invalid request body", "error", err)
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 
@@ -179,7 +179,7 @@ func (h *WorkloadHandlers) ResolveDependencies(c *fiber.Ctx) error {
 	workloadKind, bundle, err := h.k8sClient.ResolveWorkloadDependencies(ctx, cluster, namespace, name)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			slog.Info(fmt.Sprintf("not found: %v", err))
+			slog.Info("[Workloads] not found", "error", err)
 			return c.Status(404).JSON(fiber.Map{"error": "not found"})
 		}
 		return handleK8sError(c, err)
@@ -236,7 +236,7 @@ func (h *WorkloadHandlers) MonitorWorkload(c *fiber.Ctx) error {
 	result, err := h.k8sClient.MonitorWorkload(ctx, cluster, namespace, name)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			slog.Info(fmt.Sprintf("not found: %v", err))
+			slog.Info("[Workloads] not found", "error", err)
 			return c.Status(404).JSON(fiber.Map{"error": "not found"})
 		}
 		return handleK8sError(c, err)
@@ -372,7 +372,7 @@ func (h *WorkloadHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 
 	var group ClusterGroup
 	if err := c.BodyParser(&group); err != nil {
-		slog.Info(fmt.Sprintf("invalid request body: %v", err))
+		slog.Info("[Workloads] invalid request body", "error", err)
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 	if group.Name == "" {
@@ -400,7 +400,7 @@ func (h *WorkloadHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 			if err := h.k8sClient.LabelClusterNodes(ctx, cluster, map[string]string{
 				"kubestellar.io/group": group.Name,
 			}); err != nil {
-				slog.Error(fmt.Sprintf("failed to label cluster %s: %v", cluster, err))
+				slog.Error("[Workloads] failed to label cluster", "cluster", cluster, "error", err)
 				labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: %v", cluster, err))
 			}
 		}
@@ -432,7 +432,7 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 
 	var group ClusterGroup
 	if err := c.BodyParser(&group); err != nil {
-		slog.Info(fmt.Sprintf("invalid request body: %v", err))
+		slog.Info("[Workloads] invalid request body", "error", err)
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 	group.Name = name
@@ -459,7 +459,7 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 		for _, cluster := range oldGroup.Clusters {
 			if !newSet[cluster] {
 				if err := h.k8sClient.RemoveClusterNodeLabels(ctx, cluster, []string{"kubestellar.io/group"}); err != nil {
-					slog.Error(fmt.Sprintf("failed to remove label from cluster %s: %v", cluster, err))
+					slog.Error("[Workloads] failed to remove label from cluster", "cluster", cluster, "error", err)
 					labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: %v", cluster, err))
 				}
 			}
@@ -469,7 +469,7 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 				if err := h.k8sClient.LabelClusterNodes(ctx, cluster, map[string]string{
 					"kubestellar.io/group": group.Name,
 				}); err != nil {
-					slog.Error(fmt.Sprintf("failed to label cluster %s: %v", cluster, err))
+					slog.Error("[Workloads] failed to label cluster", "cluster", cluster, "error", err)
 					labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: %v", cluster, err))
 				}
 			}
@@ -513,7 +513,7 @@ func (h *WorkloadHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
 		var labelErrors []string
 		for _, cluster := range group.Clusters {
 			if err := h.k8sClient.RemoveClusterNodeLabels(ctx, cluster, []string{"kubestellar.io/group"}); err != nil {
-				slog.Error(fmt.Sprintf("failed to remove label from cluster %s: %v", cluster, err))
+				slog.Error("[Workloads] failed to remove label from cluster", "cluster", cluster, "error", err)
 				labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: %v", cluster, err))
 			}
 		}
@@ -566,7 +566,7 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 
 	var query ClusterGroupQuery
 	if err := c.BodyParser(&query); err != nil {
-		slog.Info(fmt.Sprintf("invalid query: %v", err))
+		slog.Info("[Workloads] invalid query", "error", err)
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 
@@ -578,7 +578,7 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 	// We only want one result per unique server URL.
 	dedupClusters, _, err := h.k8sClient.HealthyClusters(ctx)
 	if err != nil {
-		slog.Error(fmt.Sprintf("failed to list clusters: %v", err))
+		slog.Error("[Workloads] failed to list clusters", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 	primaryNames := make(map[string]bool, len(dedupClusters))
@@ -589,7 +589,7 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 	// Get all cluster health data and keep only deduplicated entries
 	allHealth, err := h.k8sClient.GetAllClusterHealth(ctx)
 	if err != nil {
-		slog.Error(fmt.Sprintf("failed to get cluster health: %v", err))
+		slog.Error("[Workloads] failed to get cluster health", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 	healthData := make([]k8s.ClusterHealth, 0, len(dedupClusters))
@@ -830,7 +830,7 @@ func (h *WorkloadHandlers) GenerateClusterQuery(c *fiber.Ctx) error {
 	registry := agent.GetRegistry()
 	provider, err := registry.GetDefault()
 	if err != nil {
-		slog.Info(fmt.Sprintf("no ai provider available: %v", err))
+		slog.Info("[Workloads] no AI provider available", "error", err)
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -877,7 +877,7 @@ If the user's request doesn't need label selectors, omit the labelSelector field
 
 	resp, err := provider.Chat(aiCtx, chatReq)
 	if err != nil {
-		slog.Error(fmt.Sprintf("ai query generation failed: %v", err))
+		slog.Error("[Workloads] AI query generation failed", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 	if resp == nil {
@@ -898,7 +898,7 @@ If the user's request doesn't need label selectors, omit the labelSelector field
 		Query         ClusterGroupQuery `json:"query"`
 	}
 	if err := json.Unmarshal([]byte(content), &result); err != nil {
-		slog.Info(fmt.Sprintf("could not parse AI response as structured query: %v", err))
+		slog.Info("[Workloads] could not parse AI response as structured query", "error", err)
 		return c.JSON(fiber.Map{
 			"raw":   resp.Content,
 			"error": "could not parse AI response as structured query",
@@ -947,7 +947,7 @@ func (h *WorkloadHandlers) ScaleWorkload(c *fiber.Ctx) error {
 
 	var req ScaleRequest
 	if err := c.BodyParser(&req); err != nil {
-		slog.Info(fmt.Sprintf("invalid request body: %v", err))
+		slog.Info("[Workloads] invalid request body", "error", err)
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 

@@ -74,7 +74,7 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 	if cluster != "" {
 		nodes, err := s.k8sClient.GetGPUNodes(ctx, cluster)
 		if err != nil {
-			slog.Info(fmt.Sprintf("error fetching nodes: %v", err))
+			slog.Info("error fetching nodes", "error", err)
 			json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
 			return
 		}
@@ -83,7 +83,7 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		// Query all clusters
 		clusters, err := s.k8sClient.ListClusters(ctx)
 		if err != nil {
-			slog.Info(fmt.Sprintf("error fetching nodes: %v", err))
+			slog.Info("error fetching nodes", "error", err)
 			json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
 			return
 		}
@@ -96,7 +96,7 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 				defer wg.Done()
 				defer func() {
 					if r := recover(); r != nil {
-						slog.Info(fmt.Sprintf("[GPUNodes] recovered from panic for cluster %s: %v", clusterName, r))
+						slog.Info("[GPUNodes] recovered from panic", "cluster", clusterName, "panic", r)
 					}
 				}()
 				clusterCtx, clusterCancel := context.WithTimeout(ctx, agentDefaultTimeout)
@@ -145,7 +145,7 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		// Query specific cluster
 		nodes, err := s.k8sClient.GetNodes(ctx, cluster)
 		if err != nil {
-			slog.Info(fmt.Sprintf("error fetching nodes: %v", err))
+			slog.Info("error fetching nodes", "error", err)
 			json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
 			return
 		}
@@ -154,7 +154,7 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		// Query all clusters
 		clusters, err := s.k8sClient.ListClusters(ctx)
 		if err != nil {
-			slog.Info(fmt.Sprintf("error fetching nodes: %v", err))
+			slog.Info("error fetching nodes", "error", err)
 			json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
 			return
 		}
@@ -168,7 +168,7 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 				defer wg.Done()
 				defer func() {
 					if r := recover(); r != nil {
-						slog.Info(fmt.Sprintf("[Nodes] recovered from panic for cluster %s: %v", clusterName, r))
+						slog.Info("[Nodes] recovered from panic", "cluster", clusterName, "panic", r)
 					}
 				}()
 				clusterCtx, clusterCancel := context.WithTimeout(ctx, agentDefaultTimeout)
@@ -232,7 +232,7 @@ func (s *Server) handleEventsHTTP(w http.ResponseWriter, r *http.Request) {
 	// Get events from the cluster
 	events, err := s.k8sClient.GetEvents(ctx, cluster, namespace, limit)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching events: %v", err))
+		slog.Info("error fetching events", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"events": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -277,7 +277,7 @@ func (s *Server) handleNamespacesHTTP(w http.ResponseWriter, r *http.Request) {
 
 	namespaces, err := s.k8sClient.ListNamespacesWithDetails(ctx, cluster)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching namespaces: %v", err))
+		slog.Info("error fetching namespaces", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"namespaces": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -317,7 +317,7 @@ func (s *Server) handleDeploymentsHTTP(w http.ResponseWriter, r *http.Request) {
 
 	deployments, err := s.k8sClient.GetDeployments(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching deployments: %v", err))
+		slog.Info("error fetching deployments", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"deployments": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -347,7 +347,7 @@ func (s *Server) handleReplicaSetsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	replicasets, err := s.k8sClient.GetReplicaSets(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching replicasets: %v", err))
+		slog.Info("error fetching replicasets", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"replicasets": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -376,7 +376,7 @@ func (s *Server) handleStatefulSetsHTTP(w http.ResponseWriter, r *http.Request) 
 	defer cancel()
 	statefulsets, err := s.k8sClient.GetStatefulSets(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching statefulsets: %v", err))
+		slog.Info("error fetching statefulsets", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"statefulsets": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -405,7 +405,7 @@ func (s *Server) handleDaemonSetsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	daemonsets, err := s.k8sClient.GetDaemonSets(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching daemonsets: %v", err))
+		slog.Info("error fetching daemonsets", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"daemonsets": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -434,7 +434,7 @@ func (s *Server) handleCronJobsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	cronjobs, err := s.k8sClient.GetCronJobs(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching cronjobs: %v", err))
+		slog.Info("error fetching cronjobs", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"cronjobs": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -463,7 +463,7 @@ func (s *Server) handleIngressesHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	ingresses, err := s.k8sClient.GetIngresses(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching ingresses: %v", err))
+		slog.Info("error fetching ingresses", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"ingresses": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -492,7 +492,7 @@ func (s *Server) handleNetworkPoliciesHTTP(w http.ResponseWriter, r *http.Reques
 	defer cancel()
 	policies, err := s.k8sClient.GetNetworkPolicies(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching networkpolicies: %v", err))
+		slog.Info("error fetching networkpolicies", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"networkpolicies": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -521,7 +521,7 @@ func (s *Server) handleServicesHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	services, err := s.k8sClient.GetServices(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching services: %v", err))
+		slog.Info("error fetching services", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"services": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -550,7 +550,7 @@ func (s *Server) handleConfigMapsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	configmaps, err := s.k8sClient.GetConfigMaps(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching configmaps: %v", err))
+		slog.Info("error fetching configmaps", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"configmaps": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -586,7 +586,7 @@ func (s *Server) handleSecretsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	secrets, err := s.k8sClient.GetSecrets(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching secrets: %v", err))
+		slog.Info("error fetching secrets", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"secrets": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -615,7 +615,7 @@ func (s *Server) handleServiceAccountsHTTP(w http.ResponseWriter, r *http.Reques
 	defer cancel()
 	serviceaccounts, err := s.k8sClient.GetServiceAccounts(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching serviceaccounts: %v", err))
+		slog.Info("error fetching serviceaccounts", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"serviceaccounts": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -644,7 +644,7 @@ func (s *Server) handleJobsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	jobs, err := s.k8sClient.GetJobs(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching jobs: %v", err))
+		slog.Info("error fetching jobs", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"jobs": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -673,7 +673,7 @@ func (s *Server) handleHPAsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	hpas, err := s.k8sClient.GetHPAs(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching hpas: %v", err))
+		slog.Info("error fetching hpas", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"hpas": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -702,7 +702,7 @@ func (s *Server) handlePVCsHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	pvcs, err := s.k8sClient.GetPVCs(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching pvcs: %v", err))
+		slog.Info("error fetching pvcs", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"pvcs": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -731,7 +731,7 @@ func (s *Server) handleRolesHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	roles, err := s.k8sClient.ListRoles(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching roles: %v", err))
+		slog.Info("error fetching roles", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"roles": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -760,7 +760,7 @@ func (s *Server) handleRoleBindingsHTTP(w http.ResponseWriter, r *http.Request) 
 	defer cancel()
 	bindings, err := s.k8sClient.ListRoleBindings(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching rolebindings: %v", err))
+		slog.Info("error fetching rolebindings", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"rolebindings": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -789,7 +789,7 @@ func (s *Server) handleResourceQuotasHTTP(w http.ResponseWriter, r *http.Request
 	defer cancel()
 	quotas, err := s.k8sClient.GetResourceQuotas(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching resourcequotas: %v", err))
+		slog.Info("error fetching resourcequotas", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"resourcequotas": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -818,7 +818,7 @@ func (s *Server) handleLimitRangesHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	ranges, err := s.k8sClient.GetLimitRanges(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching limitranges: %v", err))
+		slog.Info("error fetching limitranges", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"limitranges": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -857,7 +857,7 @@ func (s *Server) handleResolveDepsHTTP(w http.ResponseWriter, r *http.Request) {
 
 	kind, bundle, err := s.k8sClient.ResolveWorkloadDependencies(ctx, cluster, namespace, name)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error resolving dependencies for %s/%s in %s: %v", namespace, name, cluster, err))
+		slog.Info("error resolving dependencies", "namespace", namespace, "name", name, "cluster", cluster, "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"workload":     name,
 			"kind":         "Deployment",
@@ -973,7 +973,7 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 
 	result, err := s.k8sClient.ScaleWorkload(ctx, namespace, name, []string{cluster}, replicas)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error scaling %s/%s in %s: %v", namespace, name, cluster, err))
+		slog.Info("error scaling resource", "namespace", namespace, "name", name, "cluster", cluster, "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"success": false,
 			"error":   err.Error(),
@@ -1023,7 +1023,7 @@ func (s *Server) handlePodsHTTP(w http.ResponseWriter, r *http.Request) {
 
 	pods, err := s.k8sClient.GetPods(ctx, cluster, namespace)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching pods: %v", err))
+		slog.Info("error fetching pods", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"pods": []interface{}{}, "error": "internal server error"})
 		return
 	}
@@ -1065,7 +1065,7 @@ func (s *Server) handleClusterHealthHTTP(w http.ResponseWriter, r *http.Request)
 
 	health, err := s.k8sClient.GetClusterHealth(ctx, cluster)
 	if err != nil {
-		slog.Error(fmt.Sprintf("request error: %v", err))
+		slog.Error("request error", "error", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{"error": "internal server error"})
 		return
 	}
@@ -1117,7 +1117,7 @@ func (s *Server) handleRestartBackend(w http.ResponseWriter, r *http.Request) {
 	killed := s.killBackendProcess()
 
 	if err := s.startBackendProcess(); err != nil {
-		slog.Error(fmt.Sprintf("[RestartBackend] Failed to start backend: %v", err))
+		slog.Error("[RestartBackend] failed to start backend", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"success": false,
@@ -1130,7 +1130,7 @@ func (s *Server) handleRestartBackend(w http.ResponseWriter, r *http.Request) {
 	time.Sleep(stabilizationDelay)
 	healthy := s.checkBackendHealth()
 
-	slog.Info(fmt.Sprintf("[RestartBackend] Backend restarted (killed=%v, healthy=%v)", killed, healthy))
+	slog.Info("[RestartBackend] backend restarted", "killed", killed, "healthy", healthy)
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 		"killed":  killed,
@@ -1186,7 +1186,7 @@ func (s *Server) startBackendProcess() error {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				slog.Info(fmt.Sprintf("[Backend] recovered from panic in process reaper: %v", r))
+				slog.Info("[Backend] recovered from panic in process reaper", "panic", r)
 			}
 		}()
 		cmd.Wait()
@@ -1392,13 +1392,13 @@ func (s *Server) handleRenameContextHTTP(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := s.kubectl.RenameContext(req.OldName, req.NewName); err != nil {
-		slog.Error(fmt.Sprintf("rename context error: %v", err))
+		slog.Error("rename context error", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "rename_failed", Message: "failed to rename context"})
 		return
 	}
 
-	slog.Info(fmt.Sprintf("Renamed context: %s -> %s", req.OldName, req.NewName))
+	slog.Info("renamed context", "from", req.OldName, "to", req.NewName)
 	json.NewEncoder(w).Encode(protocol.RenameContextResponse{Success: true, OldName: req.OldName, NewName: req.NewName})
 }
 
@@ -1462,7 +1462,7 @@ func (s *Server) handleKubeconfigPreviewHTTP(w http.ResponseWriter, r *http.Requ
 
 	entries, err := s.kubectl.PreviewKubeconfig(req.Kubeconfig)
 	if err != nil {
-		slog.Error(fmt.Sprintf("kubeconfig preview error: %v", err))
+		slog.Error("kubeconfig preview error", "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "preview_failed", Message: "invalid kubeconfig"})
 		return
@@ -1513,13 +1513,13 @@ func (s *Server) handleKubeconfigImportHTTP(w http.ResponseWriter, r *http.Reque
 
 	added, skipped, err := s.kubectl.ImportKubeconfig(req.Kubeconfig)
 	if err != nil {
-		slog.Error(fmt.Sprintf("kubeconfig import error: %v", err))
+		slog.Error("kubeconfig import error", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(kubeconfigImportResponse{Success: false, Error: "failed to import kubeconfig"})
 		return
 	}
 
-	slog.Info(fmt.Sprintf("Kubeconfig import: added %d contexts, skipped %d", len(added), len(skipped)))
+	slog.Info("kubeconfig import complete", "added", len(added), "skipped", len(skipped))
 	json.NewEncoder(w).Encode(kubeconfigImportResponse{Success: true, Added: added, Skipped: skipped})
 }
 
@@ -1564,13 +1564,13 @@ func (s *Server) handleKubeconfigAddHTTP(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := s.kubectl.AddCluster(req); err != nil {
-		slog.Error(fmt.Sprintf("add cluster error: %v", err))
+		slog.Error("add cluster error", "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(kubeconfigAddResponse{Success: false, Error: "failed to add cluster"})
 		return
 	}
 
-	slog.Info(fmt.Sprintf("Added cluster via form: context=%s cluster=%s", req.ContextName, req.ClusterName))
+	slog.Info("added cluster via form", "context", req.ContextName, "cluster", req.ClusterName)
 	json.NewEncoder(w).Encode(kubeconfigAddResponse{Success: true})
 }
 
@@ -1610,7 +1610,7 @@ func (s *Server) handleKubeconfigTestHTTP(w http.ResponseWriter, r *http.Request
 
 	result, err := s.kubectl.TestClusterConnection(req)
 	if err != nil {
-		slog.Error(fmt.Sprintf("test connection error: %v", err))
+		slog.Error("test connection error", "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(TestConnectionResult{Reachable: false, Error: "connection test failed"})
 		return

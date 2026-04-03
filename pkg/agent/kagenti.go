@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -139,7 +138,7 @@ func (s *Server) handleKagentiAgents(w http.ResponseWriter, r *http.Request) {
 
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching agents: %v", err))
+		slog.Info("error fetching agents", "error", err)
 		json.NewEncoder(w).Encode(map[string]any{"agents": []any{}, "error": "internal server error"})
 		return
 	}
@@ -216,7 +215,7 @@ func (s *Server) handleKagentiBuilds(w http.ResponseWriter, r *http.Request) {
 
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching builds: %v", err))
+		slog.Info("error fetching builds", "error", err)
 		json.NewEncoder(w).Encode(map[string]any{"builds": []any{}, "error": "internal server error"})
 		return
 	}
@@ -288,7 +287,7 @@ func (s *Server) handleKagentiCards(w http.ResponseWriter, r *http.Request) {
 
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching cards: %v", err))
+		slog.Info("error fetching cards", "error", err)
 		json.NewEncoder(w).Encode(map[string]any{"cards": []any{}, "error": "internal server error"})
 		return
 	}
@@ -352,7 +351,7 @@ func (s *Server) handleKagentiTools(w http.ResponseWriter, r *http.Request) {
 
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching tools: %v", err))
+		slog.Info("error fetching tools", "error", err)
 		json.NewEncoder(w).Encode(map[string]any{"tools": []any{}, "error": "internal server error"})
 		return
 	}
@@ -419,7 +418,7 @@ func (s *Server) handleKagentiSummary(w http.ResponseWriter, r *http.Request) {
 
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
-		slog.Info(fmt.Sprintf("error fetching kagenti summary: %v", err))
+		slog.Info("error fetching kagenti summary", "error", err)
 		json.NewEncoder(w).Encode(map[string]any{
 			"agentCount": 0, "readyAgents": 0, "buildCount": 0,
 			"activeBuilds": 0, "toolCount": 0, "cardCount": 0,

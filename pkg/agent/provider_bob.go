@@ -84,7 +84,7 @@ func (b *BobProvider) detectCLI() {
 		for _, p := range commonPaths {
 			if _, statErr := os.Stat(p); statErr == nil {
 				path = p
-				slog.Info(fmt.Sprintf("Found Bob CLI at: %s", p))
+				slog.Info("found Bob CLI", "path", p)
 				break
 			}
 		}
@@ -93,7 +93,7 @@ func (b *BobProvider) detectCLI() {
 			return
 		}
 	} else {
-		slog.Info(fmt.Sprintf("Found Bob CLI in PATH: %s", path))
+		slog.Info("found Bob CLI in PATH", "path", path)
 	}
 	b.cliPath = path
 
@@ -105,9 +105,9 @@ func (b *BobProvider) detectCLI() {
 	output, err := cmd.Output()
 	if err == nil {
 		b.version = strings.TrimSpace(string(output))
-		slog.Info(fmt.Sprintf("Bob CLI version: %s", b.version))
+		slog.Info("Bob CLI version detected", "version", b.version)
 	} else {
-		slog.Info(fmt.Sprintf("Could not get Bob CLI version: %v", err))
+		slog.Info("could not get Bob CLI version", "error", err)
 	}
 }
 

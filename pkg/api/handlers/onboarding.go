@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 
 	"github.com/gofiber/fiber/v2"
@@ -164,7 +163,7 @@ func generateDefaultCards(responses []models.OnboardingResponse) []models.Card {
 		// Add config for GPU filtering
 		gpuConfig, err := json.Marshal(map[string]string{"resource_type": "gpu"})
 		if err != nil {
-			slog.Error(fmt.Sprintf("Failed to marshal GPU config: %v", err))
+			slog.Error("[Onboarding] failed to marshal GPU config", "error", err)
 			gpuConfig = []byte(`{"resource_type":"gpu"}`)
 		}
 		cards = append(cards, models.Card{

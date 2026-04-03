@@ -97,7 +97,7 @@ func (s *Server) handleSettingsKeyByProvider(w http.ResponseWriter, r *http.Requ
 	}
 
 	if err := cm.RemoveAPIKey(provider); err != nil {
-		slog.Error(fmt.Sprintf("delete API key error: %v", err))
+		slog.Error("delete API key error", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "delete_failed", Message: "failed to delete API key"})
 		return
@@ -109,7 +109,7 @@ func (s *Server) handleSettingsKeyByProvider(w http.ResponseWriter, r *http.Requ
 	// Refresh provider availability
 	s.refreshProviderAvailability()
 
-	slog.Info(fmt.Sprintf("API key removed for provider: %s", provider))
+	slog.Info("API key removed", "provider", provider)
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
@@ -141,7 +141,7 @@ func (s *Server) handleSettingsAll(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		all, err := sm.GetAll()
 		if err != nil {
-			slog.Error(fmt.Sprintf("[settings] GetAll error: %v", err))
+			slog.Error("[settings] GetAll error", "error", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "settings_load_failed", Message: "Failed to load settings"})
 			return
@@ -165,7 +165,7 @@ func (s *Server) handleSettingsAll(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err := sm.SaveAll(&all); err != nil {
-			slog.Error(fmt.Sprintf("[settings] SaveAll error: %v", err))
+			slog.Error("[settings] SaveAll error", "error", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "settings_save_failed", Message: "Failed to save settings"})
 			return
@@ -211,7 +211,7 @@ func (s *Server) handleSettingsExport(w http.ResponseWriter, r *http.Request) {
 	sm := settings.GetSettingsManager()
 	data, err := sm.ExportEncrypted()
 	if err != nil {
-		slog.Error(fmt.Sprintf("[settings] Export error: %v", err))
+		slog.Error("[settings] export error", "error", err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "export_failed", Message: "Failed to export settings"})
@@ -261,7 +261,7 @@ func (s *Server) handleSettingsImport(w http.ResponseWriter, r *http.Request) {
 
 	sm := settings.GetSettingsManager()
 	if err := sm.ImportEncrypted(body); err != nil {
-		slog.Error(fmt.Sprintf("[settings] Import error: %v", err))
+		slog.Error("[settings] import error", "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "import_failed", Message: "failed to import settings"})
 		return
@@ -308,7 +308,7 @@ func (s *Server) handleGetKeysStatus(w http.ResponseWriter, r *http.Request) {
 			// Cache the validity for IsAvailable() checks
 			cm.SetKeyValidity(p.name, valid)
 			if err != nil {
-				slog.Error(fmt.Sprintf("API key validation error for %s: %v", p.name, err))
+				slog.Error("API key validation error", "provider", p.name, "error", err)
 				status.Error = "validation failed"
 			}
 		}
@@ -348,7 +348,7 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 	if !valid {
 		w.WriteHeader(http.StatusBadRequest)
 		if validationErr != nil {
-			slog.Error(fmt.Sprintf("API key validation error: %v", validationErr))
+			slog.Error("API key validation error", "error", validationErr)
 		}
 		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_key", Message: "Invalid API key"})
 		return
@@ -358,7 +358,7 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 
 	// Save the key
 	if err := cm.SetAPIKey(req.Provider, req.APIKey); err != nil {
-		slog.Error(fmt.Sprintf("save API key error: %v", err))
+		slog.Error("save API key error", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "save_failed", Message: "failed to save API key"})
 		return
@@ -370,14 +370,14 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 	// Save model if provided
 	if req.Model != "" {
 		if err := cm.SetModel(req.Provider, req.Model); err != nil {
-			slog.Error(fmt.Sprintf("Warning: failed to save model preference: %v", err))
+			slog.Error("failed to save model preference", "error", err)
 		}
 	}
 
 	// Refresh provider availability
 	s.refreshProviderAvailability()
 
-	slog.Info(fmt.Sprintf("API key configured for provider: %s", req.Provider))
+	slog.Info("API key configured", "provider", req.Provider)
 	json.NewEncoder(w).Encode(map[string]any{
 		"success":  true,
 		"provider": req.Provider,
@@ -442,18 +442,18 @@ func (s *Server) ValidateAllKeys() {
 				continue // Already validated
 			}
 			// Validate the key
-			slog.Info(fmt.Sprintf("Validating %s API key...", provider))
+			slog.Info("validating API key", "provider", provider)
 			valid, err := s.validateAPIKey(provider)
 			if err != nil {
 				// Network or other error - don't cache, will try again later
-				slog.Error(fmt.Sprintf("Warning: %s API key validation error (will retry): %v", provider, err))
+				slog.Error("API key validation error (will retry)", "provider", provider, "error", err)
 			} else {
 				// Cache the validity result
 				cm.SetKeyValidity(provider, valid)
 				if valid {
-					slog.Info(fmt.Sprintf("%s API key is valid", provider))
+					slog.Info("API key is valid", "provider", provider)
 				} else {
-					slog.Warn(fmt.Sprintf("Warning: %s API key is INVALID", provider))
+					slog.Warn("API key is INVALID", "provider", provider)
 				}
 			}
 		}
@@ -609,7 +609,7 @@ func (s *Server) handleProvidersHealth(w http.ResponseWriter, r *http.Request) {
 			defer wg.Done()
 			defer func() {
 				if r := recover(); r != nil {
-					slog.Info(fmt.Sprintf("[ProviderHealth] recovered from panic checking %s: %v", providerID, r))
+					slog.Info("[ProviderHealth] recovered from panic checking provider", "provider", providerID, "panic", r)
 				}
 			}()
 			status := checkStatuspageHealth(client, url)
@@ -626,7 +626,7 @@ func (s *Server) handleProvidersHealth(w http.ResponseWriter, r *http.Request) {
 			defer wg.Done()
 			defer func() {
 				if r := recover(); r != nil {
-					slog.Info(fmt.Sprintf("[ProviderHealth] recovered from panic pinging %s: %v", providerID, r))
+					slog.Info("[ProviderHealth] recovered from panic pinging provider", "provider", providerID, "panic", r)
 				}
 			}()
 			status := checkPingHealth(client, url)
@@ -772,7 +772,7 @@ func (s *Server) handlePredictionsAnalyze(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := s.predictionWorker.TriggerAnalysis(req.Providers); err != nil {
-		slog.Error(fmt.Sprintf("prediction analysis error: %v", err))
+		slog.Error("prediction analysis error", "error", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -823,7 +823,7 @@ func (s *Server) handlePredictionsFeedback(w http.ResponseWriter, r *http.Reques
 
 	// For now, just acknowledge - feedback is stored client-side
 	// In the future, this could store to a database for model improvement
-	slog.Info(fmt.Sprintf("[Predictions] Feedback received: %s = %s", req.PredictionID, req.Feedback))
+	slog.Info("[Predictions] feedback received", "predictionID", req.PredictionID, "feedback", req.Feedback)
 
 	json.NewEncoder(w).Encode(map[string]string{
 		"status": "recorded",
@@ -1040,7 +1040,7 @@ func (s *Server) sendNativeNotification(alerts []DeviceAlert) {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				slog.Info(fmt.Sprintf("[DeviceTracker] recovered from panic in notification: %v", r))
+				slog.Info("[DeviceTracker] recovered from panic in notification", "panic", r)
 			}
 		}()
 
@@ -1054,7 +1054,7 @@ func (s *Server) sendNativeNotification(alerts []DeviceAlert) {
 				"-sender", "com.google.Chrome",
 			)
 			if err := cmd.Run(); err != nil {
-				slog.Error(fmt.Sprintf("[DeviceTracker] terminal-notifier failed: %v, falling back to osascript", err))
+				slog.Error("[DeviceTracker] terminal-notifier failed, falling back to osascript", "error", err)
 			} else {
 				return
 			}
@@ -1065,7 +1065,7 @@ func (s *Server) sendNativeNotification(alerts []DeviceAlert) {
 			message, title)
 		cmd := exec.Command("osascript", "-e", script)
 		if err := cmd.Run(); err != nil {
-			slog.Error(fmt.Sprintf("[DeviceTracker] Failed to send notification: %v", err))
+			slog.Error("[DeviceTracker] failed to send notification", "error", err)
 		}
 	}()
 }
@@ -1195,11 +1195,11 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
-					slog.Info(fmt.Sprintf("[LocalClusters] recovered from panic creating cluster %s: %v", req.Name, r))
+					slog.Info("[LocalClusters] recovered from panic creating cluster", "cluster", req.Name, "panic", r)
 				}
 			}()
 			if err := s.localClusters.CreateCluster(req.Tool, req.Name); err != nil {
-				slog.Error(fmt.Sprintf("[LocalClusters] Failed to create cluster %s with %s: %v", req.Name, req.Tool, err))
+				slog.Error("[LocalClusters] failed to create cluster", "cluster", req.Name, "tool", req.Tool, "error", err)
 				errMsg := sanitizeClusterError(err)
 				s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
 					"tool":     req.Tool,
@@ -1215,7 +1215,7 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 					"error": errMsg,
 				})
 			} else {
-				slog.Info(fmt.Sprintf("[LocalClusters] Created cluster %s with %s", req.Name, req.Tool))
+				slog.Info("[LocalClusters] created cluster", "cluster", req.Name, "tool", req.Tool)
 				s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
 					"tool":     req.Tool,
 					"name":     req.Name,
@@ -1252,11 +1252,11 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
-					slog.Info(fmt.Sprintf("[LocalClusters] recovered from panic deleting cluster %s: %v", name, r))
+					slog.Info("[LocalClusters] recovered from panic deleting cluster", "cluster", name, "panic", r)
 				}
 			}()
 			if err := s.localClusters.DeleteCluster(tool, name); err != nil {
-				slog.Error(fmt.Sprintf("[LocalClusters] Failed to delete cluster %s: %v", name, err))
+				slog.Error("[LocalClusters] failed to delete cluster", "cluster", name, "error", err)
 				errMsg := sanitizeClusterError(err)
 				s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
 					"tool":     tool,
@@ -1272,7 +1272,7 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 					"error": errMsg,
 				})
 			} else {
-				slog.Info(fmt.Sprintf("[LocalClusters] Deleted cluster %s", name))
+				slog.Info("[LocalClusters] deleted cluster", "cluster", name)
 				s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
 					"tool":     tool,
 					"name":     name,
@@ -1342,7 +1342,7 @@ func (s *Server) handleLocalClusterLifecycle(w http.ResponseWriter, r *http.Requ
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				slog.Info(fmt.Sprintf("[LocalClusters] recovered from panic during %s of cluster %s: %v", req.Action, req.Name, r))
+				slog.Info("[LocalClusters] recovered from panic during lifecycle action", "action", req.Action, "cluster", req.Name, "panic", r)
 			}
 		}()
 
@@ -1360,7 +1360,7 @@ func (s *Server) handleLocalClusterLifecycle(w http.ResponseWriter, r *http.Requ
 		}
 
 		if err != nil {
-			slog.Error(fmt.Sprintf("[LocalClusters] Failed to %s cluster %s: %v", req.Action, req.Name, err))
+			slog.Error("[LocalClusters] lifecycle action failed", "action", req.Action, "cluster", req.Name, "error", err)
 			errMsg := sanitizeClusterError(err)
 			s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
 				"tool":     req.Tool,
@@ -1370,7 +1370,7 @@ func (s *Server) handleLocalClusterLifecycle(w http.ResponseWriter, r *http.Requ
 				"progress": 0,
 			})
 		} else {
-			slog.Info(fmt.Sprintf("[LocalClusters] %s cluster %s completed", req.Action, req.Name))
+			slog.Info("[LocalClusters] lifecycle action completed", "action", req.Action, "cluster", req.Name)
 			s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
 				"tool":     req.Tool,
 				"name":     req.Name,
@@ -1406,7 +1406,7 @@ func (s *Server) handleVClusterList(w http.ResponseWriter, r *http.Request) {
 
 	instances, err := s.localClusters.ListVClusters()
 	if err != nil {
-		slog.Error(fmt.Sprintf("[vCluster] Failed to list vclusters: %v", err))
+		slog.Error("[vCluster] failed to list vclusters", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -1453,11 +1453,11 @@ func (s *Server) handleVClusterCreate(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				slog.Info(fmt.Sprintf("[vCluster] recovered from panic creating vcluster %s: %v", req.Name, r))
+				slog.Info("[vCluster] recovered from panic creating vcluster", "name", req.Name, "panic", r)
 			}
 		}()
 		if err := s.localClusters.CreateVCluster(req.Name, req.Namespace); err != nil {
-			slog.Error(fmt.Sprintf("[vCluster] Failed to create vcluster %s: %v", req.Name, err))
+			slog.Error("[vCluster] failed to create vcluster", "name", req.Name, "error", err)
 			s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
 				"tool":     "vcluster",
 				"name":     req.Name,
@@ -1466,7 +1466,7 @@ func (s *Server) handleVClusterCreate(w http.ResponseWriter, r *http.Request) {
 				"progress": progressFailed,
 			})
 		} else {
-			slog.Info(fmt.Sprintf("[vCluster] Created vcluster %s in namespace %s", req.Name, req.Namespace))
+			slog.Info("[vCluster] created vcluster", "name", req.Name, "namespace", req.Namespace)
 			s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
 				"tool":     "vcluster",
 				"name":     req.Name,
@@ -1519,12 +1519,12 @@ func (s *Server) handleVClusterConnect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.localClusters.ConnectVCluster(req.Name, req.Namespace); err != nil {
-		slog.Error(fmt.Sprintf("[vCluster] Failed to connect to vcluster %s: %v", req.Name, err))
+		slog.Error("[vCluster] failed to connect to vcluster", "name", req.Name, "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	slog.Info(fmt.Sprintf("[vCluster] Connected to vcluster %s in namespace %s", req.Name, req.Namespace))
+	slog.Info("[vCluster] connected to vcluster", "name", req.Name, "namespace", req.Namespace)
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":    "connected",
 		"name":      req.Name,
@@ -1567,12 +1567,12 @@ func (s *Server) handleVClusterDisconnect(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := s.localClusters.DisconnectVCluster(req.Name, req.Namespace); err != nil {
-		slog.Error(fmt.Sprintf("[vCluster] Failed to disconnect from vcluster %s: %v", req.Name, err))
+		slog.Error("[vCluster] failed to disconnect from vcluster", "name", req.Name, "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	slog.Info(fmt.Sprintf("[vCluster] Disconnected from vcluster %s", req.Name))
+	slog.Info("[vCluster] disconnected from vcluster", "name", req.Name)
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":    "disconnected",
 		"name":      req.Name,
@@ -1618,11 +1618,11 @@ func (s *Server) handleVClusterDelete(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				slog.Info(fmt.Sprintf("[vCluster] recovered from panic deleting vcluster %s: %v", req.Name, r))
+				slog.Info("[vCluster] recovered from panic deleting vcluster", "name", req.Name, "panic", r)
 			}
 		}()
 		if err := s.localClusters.DeleteVCluster(req.Name, req.Namespace); err != nil {
-			slog.Error(fmt.Sprintf("[vCluster] Failed to delete vcluster %s: %v", req.Name, err))
+			slog.Error("[vCluster] failed to delete vcluster", "name", req.Name, "error", err)
 			s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
 				"tool":     "vcluster",
 				"name":     req.Name,
@@ -1631,7 +1631,7 @@ func (s *Server) handleVClusterDelete(w http.ResponseWriter, r *http.Request) {
 				"progress": progressFailed,
 			})
 		} else {
-			slog.Info(fmt.Sprintf("[vCluster] Deleted vcluster %s from namespace %s", req.Name, req.Namespace))
+			slog.Info("[vCluster] deleted vcluster", "name", req.Name, "namespace", req.Namespace)
 			s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
 				"tool":     "vcluster",
 				"name":     req.Name,
@@ -1687,7 +1687,7 @@ func (s *Server) handleInsightsEnrich(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := s.insightWorker.Enrich(req)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[insights] enrichment error: %v", err))
+		slog.Error("[insights] enrichment error", "error", err)
 		// Return empty enrichments on error, not HTTP error
 		json.NewEncoder(w).Encode(InsightEnrichmentResponse{
 			Enrichments: []AIInsightEnrichment{},

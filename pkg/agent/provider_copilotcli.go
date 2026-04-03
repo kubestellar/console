@@ -106,7 +106,7 @@ func (c *CopilotCLIProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 	}
 
 	prompt := buildPromptWithHistoryGeneric(req)
-	slog.Info(fmt.Sprintf("[CopilotCLI] Starting with prompt length=%d", len(prompt)))
+	slog.Info("[CopilotCLI] starting", "promptLength", len(prompt))
 
 	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
 		var cancel context.CancelFunc
@@ -145,7 +145,7 @@ func (c *CopilotCLIProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("failed to start copilot CLI: %w", err)
 	}
-	slog.Info(fmt.Sprintf("[CopilotCLI] Process started (PID=%d)", cmd.Process.Pid))
+	slog.Info("[CopilotCLI] process started", "pid", cmd.Process.Pid)
 
 	// Capture stderr in background for diagnostics
 	var stderrContent strings.Builder
@@ -173,18 +173,18 @@ func (c *CopilotCLIProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 	}
 
 	if scanErr := scanner.Err(); scanErr != nil {
-		slog.Error(fmt.Sprintf("[CopilotCLI] Scanner error: %v", scanErr))
+		slog.Error("[CopilotCLI] scanner error", "error", scanErr)
 	}
 
 	waitErr := cmd.Wait()
 	if waitErr != nil {
-		slog.Error(fmt.Sprintf("[CopilotCLI] Command finished with error: %v", waitErr))
+		slog.Error("[CopilotCLI] command finished with error", "error", waitErr)
 		if se := stderrContent.String(); se != "" {
-			slog.Info(fmt.Sprintf("[CopilotCLI] stderr: %s", se))
+			slog.Info("[CopilotCLI] stderr output", "stderr", se)
 		}
 	}
 
-	slog.Info(fmt.Sprintf("[CopilotCLI] Completed: %d lines, %d bytes", lineCount, fullResponse.Len()))
+	slog.Info("[CopilotCLI] completed", "lines", lineCount, "bytes", fullResponse.Len())
 
 	content := fullResponse.String()
 

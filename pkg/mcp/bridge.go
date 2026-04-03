@@ -116,7 +116,7 @@ func (b *Bridge) Start(ctx context.Context) error {
 	// Start kubestellar-ops if path is configured and binary exists
 	if b.config.KubestellarOpsPath != "" {
 		if _, err := exec.LookPath(b.config.KubestellarOpsPath); err != nil {
-			slog.Info(fmt.Sprintf("kubestellar-ops binary not found on PATH (%q) — MCP ops tools will be unavailable. Install via: brew install kubestellar/tap/kubestellar-ops", b.config.KubestellarOpsPath))
+			slog.Info("kubestellar-ops binary not found on PATH — MCP ops tools will be unavailable", "path", b.config.KubestellarOpsPath, "install", "brew install kubestellar/tap/kubestellar-ops")
 		} else {
 			wg.Add(1)
 			go func() {
@@ -131,7 +131,7 @@ func (b *Bridge) Start(ctx context.Context) error {
 	// Start kubestellar-deploy if path is configured and binary exists
 	if b.config.KubestellarDeployPath != "" {
 		if _, err := exec.LookPath(b.config.KubestellarDeployPath); err != nil {
-			slog.Info(fmt.Sprintf("kubestellar-deploy binary not found on PATH (%q) — MCP deploy tools will be unavailable. Install via: brew install kubestellar/tap/kubestellar-deploy", b.config.KubestellarDeployPath))
+			slog.Info("kubestellar-deploy binary not found on PATH — MCP deploy tools will be unavailable", "path", b.config.KubestellarDeployPath, "install", "brew install kubestellar/tap/kubestellar-deploy")
 		} else {
 			wg.Add(1)
 			go func() {
@@ -146,7 +146,7 @@ func (b *Bridge) Start(ctx context.Context) error {
 	// Start inspektor-gadget if path is configured and binary exists
 	if b.config.InspektorGadgetPath != "" {
 		if _, err := exec.LookPath(b.config.InspektorGadgetPath); err != nil {
-			slog.Info(fmt.Sprintf("inspektor-gadget MCP binary not found on PATH (%q) — Gadget tools will be unavailable.", b.config.InspektorGadgetPath))
+			slog.Info("inspektor-gadget MCP binary not found on PATH — Gadget tools will be unavailable", "path", b.config.InspektorGadgetPath)
 		} else {
 			wg.Add(1)
 			go func() {

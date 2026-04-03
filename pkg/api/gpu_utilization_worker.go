@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
@@ -72,7 +71,7 @@ func (w *GPUUtilizationWorker) Start() {
 			}
 		}
 	}()
-	slog.Info(fmt.Sprintf("GPU utilization worker started (interval: %v)", w.interval))
+	slog.Info("GPU utilization worker started", "interval", w.interval)
 }
 
 // Stop signals the worker to stop. It is safe to call multiple times;
@@ -91,7 +90,7 @@ func (w *GPUUtilizationWorker) collectUtilization() {
 
 	reservations, err := w.store.ListActiveGPUReservations()
 	if err != nil {
-		slog.Error(fmt.Sprintf("GPU utilization worker: failed to list active reservations: %v", err))
+		slog.Error("GPU utilization worker: failed to list active reservations", "error", err)
 		return
 	}
 
@@ -115,14 +114,14 @@ func (w *GPUUtilizationWorker) collectForReservation(ctx context.Context, reserv
 	// Get pods in this namespace/cluster
 	pods, err := w.k8sClient.GetPods(ctx, cluster, namespace)
 	if err != nil {
-		slog.Error(fmt.Sprintf("GPU utilization worker: failed to get pods for %s/%s: %v", cluster, namespace, err))
+		slog.Error("GPU utilization worker: failed to get pods", "cluster", cluster, "namespace", namespace, "error", err)
 		return
 	}
 
 	// Get GPU nodes for this cluster to know which nodes have GPUs
 	gpuNodes, err := w.k8sClient.GetGPUNodes(ctx, cluster)
 	if err != nil {
-		slog.Error(fmt.Sprintf("GPU utilization worker: failed to get GPU nodes for %s: %v", cluster, err))
+		slog.Error("GPU utilization worker: failed to get GPU nodes", "cluster", cluster, "error", err)
 		return
 	}
 
@@ -174,7 +173,7 @@ func (w *GPUUtilizationWorker) collectForReservation(ctx context.Context, reserv
 	}
 
 	if err := w.store.InsertUtilizationSnapshot(snapshot); err != nil {
-		slog.Error(fmt.Sprintf("GPU utilization worker: failed to insert snapshot for reservation %s: %v", reservation.ID, err))
+		slog.Error("GPU utilization worker: failed to insert snapshot", "reservation", reservation.ID, "error", err)
 	}
 }
 
@@ -183,10 +182,10 @@ func (w *GPUUtilizationWorker) cleanupOldSnapshots() {
 	cutoff := time.Now().AddDate(0, 0, -snapshotRetentionDays)
 	deleted, err := w.store.DeleteOldUtilizationSnapshots(cutoff)
 	if err != nil {
-		slog.Error(fmt.Sprintf("GPU utilization worker: failed to cleanup old snapshots: %v", err))
+		slog.Error("GPU utilization worker: failed to cleanup old snapshots", "error", err)
 		return
 	}
 	if deleted > 0 {
-		slog.Info(fmt.Sprintf("GPU utilization worker: cleaned up %d old snapshots", deleted))
+		slog.Info("GPU utilization worker: cleaned up old snapshots", "deleted", deleted)
 	}
 }

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -61,14 +60,14 @@ func handleK8sError(c *fiber.Ctx, err error) error {
 	errType := k8s.ClassifyError(err.Error())
 	switch errType {
 	case "network", "auth", "timeout", "certificate":
-		slog.Info(fmt.Sprintf("cluster unavailable (%s): %v", errType, err))
+		slog.Info("[MCP] cluster unavailable", "errorType", errType, "error", err)
 		return c.JSON(fiber.Map{
 			"clusterStatus": "unavailable",
 			"errorType":     errType,
 			"errorMessage":  err.Error(),
 		})
 	default:
-		slog.Error(fmt.Sprintf("internal error: %v", err))
+		slog.Error("[MCP] internal error", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 }

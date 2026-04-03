@@ -133,13 +133,13 @@ func NewServer(cfg Config) (*Server, error) {
 	// Initialize k8s client for rich cluster data queries
 	k8sClient, err := k8s.NewMultiClusterClient(cfg.Kubeconfig)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Warning: failed to initialize k8s client: %v", err))
+		slog.Error("failed to initialize k8s client", "error", err)
 		// Don't fail - kubectl functionality still works
 	}
 
 	// Initialize AI providers
 	if err := InitializeProviders(); err != nil {
-		slog.Warn(fmt.Sprintf("Warning: %v", err))
+		slog.Warn("provider initialization issue", "error", err)
 		// Don't fail - kubectl functionality still works without AI
 	}
 
@@ -166,7 +166,7 @@ func NewServer(cfg Config) (*Server, error) {
 
 	// Log non-default origins so users can verify their configuration
 	if len(allowedOrigins) > len(defaultAllowedOrigins) {
-		slog.Info(fmt.Sprintf("Custom allowed origins: %v", allowedOrigins[len(defaultAllowedOrigins):]))
+		slog.Info("custom allowed origins configured", "origins", allowedOrigins[len(defaultAllowedOrigins):])
 	}
 
 	// Optional shared secret for authentication
@@ -244,7 +244,7 @@ func (s *Server) checkOrigin(r *http.Request) bool {
 		}
 	}
 
-	slog.Warn(fmt.Sprintf("SECURITY: Rejected WebSocket connection from unauthorized origin: %s", origin))
+	slog.Warn("SECURITY: rejected WebSocket connection from unauthorized origin", "origin", origin)
 	return false
 }
 
@@ -460,9 +460,9 @@ func (s *Server) Start() error {
 	})
 
 	addr := fmt.Sprintf("127.0.0.1:%d", s.config.Port)
-	slog.Info(fmt.Sprintf("KC Agent v%s starting on %s", Version, addr))
-	slog.Info(fmt.Sprintf("Health: http://%s/health", addr))
-	slog.Info(fmt.Sprintf("WebSocket: ws://%s/ws", addr))
+	slog.Info("KC Agent starting", "version", Version, "addr", addr)
+	slog.Info("health endpoint available", "url", "http://"+addr+"/health")
+	slog.Info("WebSocket endpoint available", "url", "ws://"+addr+"/ws")
 
 	// Validate all configured API keys on startup (run in background to not delay startup)
 	go s.ValidateAllKeys()
@@ -477,10 +477,10 @@ func (s *Server) Start() error {
 				Clusters: clusters,
 				Current:  current,
 			})
-			slog.Info(fmt.Sprintf("[Server] Broadcasted %d clusters to clients", len(clusters)))
+			slog.Info("[Server] broadcasted clusters to clients", "count", len(clusters))
 		})
 		if err := s.k8sClient.StartWatching(); err != nil {
-			slog.Error(fmt.Sprintf("Warning: failed to start kubeconfig watcher: %v", err))
+			slog.Error("failed to start kubeconfig watcher", "error", err)
 		}
 	}
 
@@ -509,7 +509,7 @@ func (s *Server) Start() error {
 				channel = "stable"
 			}
 			s.updateChecker.Configure(true, channel)
-			slog.Info(fmt.Sprintf("Auto-update started (channel=%s)", channel))
+			slog.Info("auto-update started", "channel", channel)
 		}
 	}
 
@@ -627,7 +627,7 @@ func (s *Server) handleProviderCheck(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	result := hp.Handshake(ctx)
-	slog.Info(fmt.Sprintf("[ProviderCheck] %s: state=%s ready=%v msg=%s", providerName, result.State, result.Ready, result.Message))
+	slog.Info("[ProviderCheck] result", "provider", providerName, "state", result.State, "ready", result.Ready, "message", result.Message)
 
 	json.NewEncoder(w).Encode(protocol.ProviderCheckResponse{
 		Provider:      providerName,

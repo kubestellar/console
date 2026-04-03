@@ -53,7 +53,7 @@ func GetSettingsManager() *SettingsManager {
 			keyPath:      filepath.Join(kcDir, keyFileName),
 		}
 		if err := globalSettingsManager.init(); err != nil {
-			slog.Error(fmt.Sprintf("[settings] initialization error: %v", err))
+			slog.Error("[settings] initialization error", "error", err)
 			// Ensure settings is never nil even when init fails
 			globalSettingsManager.settings = DefaultSettings()
 		}
@@ -166,7 +166,7 @@ func (sm *SettingsManager) GetAll() (*AllSettings, error) {
 		sm.mu.Lock()
 		sm.migrateLegacyGitHubToken()
 		if err := sm.saveLocked(); err != nil {
-			slog.Error(fmt.Sprintf("[settings] failed to persist legacy token migration: %v", err))
+			slog.Error("[settings] failed to persist legacy token migration", "error", err)
 		}
 		sm.mu.Unlock()
 	}
@@ -201,11 +201,11 @@ func (sm *SettingsManager) GetAll() (*AllSettings, error) {
 	if sm.settings.Encrypted.APIKeys != nil {
 		plaintext, err := decrypt(sm.key, sm.settings.Encrypted.APIKeys)
 		if err != nil {
-			slog.Error(fmt.Sprintf("[settings] failed to decrypt API keys: %v", err))
+			slog.Error("[settings] failed to decrypt API keys", "error", err)
 		} else if plaintext != nil {
 			var keys map[string]APIKeyEntry
 			if err := json.Unmarshal(plaintext, &keys); err != nil {
-				slog.Error(fmt.Sprintf("[settings] failed to parse decrypted API keys: %v", err))
+				slog.Error("[settings] failed to parse decrypted API keys", "error", err)
 			} else {
 				all.APIKeys = keys
 			}
@@ -216,7 +216,7 @@ func (sm *SettingsManager) GetAll() (*AllSettings, error) {
 	if sm.settings.Encrypted.FeedbackGitHubToken != nil {
 		plaintext, err := decrypt(sm.key, sm.settings.Encrypted.FeedbackGitHubToken)
 		if err != nil {
-			slog.Error(fmt.Sprintf("[settings] failed to decrypt GitHub token: %v", err))
+			slog.Error("[settings] failed to decrypt GitHub token", "error", err)
 		} else if plaintext != nil {
 			all.FeedbackGitHubToken = string(plaintext)
 			all.FeedbackGitHubTokenSource = GitHubTokenSourceSettings
@@ -236,11 +236,11 @@ func (sm *SettingsManager) GetAll() (*AllSettings, error) {
 	if sm.settings.Encrypted.Notifications != nil {
 		plaintext, err := decrypt(sm.key, sm.settings.Encrypted.Notifications)
 		if err != nil {
-			slog.Error(fmt.Sprintf("[settings] failed to decrypt notifications: %v", err))
+			slog.Error("[settings] failed to decrypt notifications", "error", err)
 		} else if plaintext != nil {
 			var notif NotificationSecrets
 			if err := json.Unmarshal(plaintext, &notif); err != nil {
-				slog.Error(fmt.Sprintf("[settings] failed to parse decrypted notifications: %v", err))
+				slog.Error("[settings] failed to parse decrypted notifications", "error", err)
 			} else {
 				all.Notifications = notif
 			}
@@ -362,7 +362,7 @@ func (sm *SettingsManager) MigrateFromConfigYaml(cp ConfigProvider) error {
 	}
 	sm.settings.Encrypted.APIKeys = enc
 
-	slog.Info(fmt.Sprintf("[settings] migrated %d API key(s) from config.yaml", len(keys)))
+	slog.Info("[settings] migrated API keys from config.yaml", "count", len(keys))
 	return sm.saveLocked()
 }
 

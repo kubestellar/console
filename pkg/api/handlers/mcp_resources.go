@@ -766,7 +766,7 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 		// Auto-create namespace if requested (used by GPU reservation flow)
 		if req.EnsureNamespace {
 			if err := h.k8sClient.EnsureNamespaceExists(ctx, req.Cluster, req.Namespace); err != nil {
-				slog.Error(fmt.Sprintf("failed to create namespace: %v", err))
+				slog.Error("[MCP] failed to create namespace", "error", err)
 				return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 			}
 		}
@@ -954,7 +954,7 @@ func validateToolName(name string, allowedTools map[string]bool) error {
 	// Check if tool is in allowlist
 	allowed, exists := allowedTools[name]
 	if !exists || !allowed {
-		slog.Warn(fmt.Sprintf("SECURITY: Blocked attempt to call unauthorized tool: %s", name))
+		slog.Warn("[MCP] SECURITY: blocked unauthorized tool call", "tool", name)
 		return fiber.NewError(fiber.StatusForbidden, "tool not allowed: "+name)
 	}
 
@@ -1261,7 +1261,7 @@ func (h *MCPHandlers) GetPodNetworkStats(c *fiber.Ctx) error {
 
 	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 	if err != nil {
-		slog.Error(fmt.Sprintf("internal error listing healthy clusters for network stats: %v", err))
+		slog.Error("[MCP] internal error listing healthy clusters for network stats", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
@@ -1282,7 +1282,7 @@ func (h *MCPHandlers) GetPodNetworkStats(c *fiber.Ctx) error {
 
 			client, clientErr := h.k8sClient.GetClient(clusterName)
 			if clientErr != nil {
-				slog.Info(fmt.Sprintf("network stats: cannot get client for %s: %v", clusterName, clientErr))
+				slog.Info("[MCP] network stats: cannot get client", "cluster", clusterName, "error", clientErr)
 				return
 			}
 
@@ -1299,7 +1299,7 @@ func (h *MCPHandlers) GetPodNetworkStats(c *fiber.Ctx) error {
 							continue
 						}
 					}
-					slog.Info(fmt.Sprintf("network stats: list pods (app=%s) on %s: %v", label, clusterName, listErr))
+					slog.Info("[MCP] network stats: list pods failed", "app", label, "cluster", clusterName, "error", listErr)
 					continue
 				}
 
@@ -1382,7 +1382,7 @@ func fetchPodInterfaceStats(
 
 	var summary kubeletStatsSummary
 	if jsonErr := json.Unmarshal(raw, &summary); jsonErr != nil {
-		slog.Error(fmt.Sprintf("network stats: failed to parse kubelet summary from node %s: %v", nodeName, jsonErr))
+		slog.Error("[MCP] network stats: failed to parse kubelet summary", "node", nodeName, "error", jsonErr)
 		return nil
 	}
 

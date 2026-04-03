@@ -136,7 +136,7 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 
 	var authMsg execAuthMessage
 	if err := c.ReadJSON(&authMsg); err != nil {
-		slog.Error(fmt.Sprintf("SECURITY: exec: failed to read auth message: %v", err))
+		slog.Error("[Exec] SECURITY: failed to read auth message", "error", err)
 		writeError(c, "authentication required")
 		return
 	}
@@ -162,12 +162,12 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 
 	claims, err := middleware.ValidateJWT(authMsg.Token, h.jwtSecret)
 	if err != nil {
-		slog.Warn(fmt.Sprintf("SECURITY: exec: rejected invalid token: %v", err))
+		slog.Warn("[Exec] SECURITY: rejected invalid token", "error", err)
 		writeError(c, "invalid token")
 		return
 	}
 
-	slog.Info(fmt.Sprintf("exec: authenticated user %s for pod exec", claims.GitHubLogin))
+	slog.Info("[Exec] authenticated user for pod exec", "user", claims.GitHubLogin)
 
 	// Clear read deadline after successful auth
 	c.SetReadDeadline(time.Time{})
@@ -180,7 +180,7 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 	// Read the init message
 	_, msg, err := c.ReadMessage()
 	if err != nil {
-		slog.Error(fmt.Sprintf("exec: failed to read init message: %v", err))
+		slog.Error("[Exec] failed to read init message", "error", err)
 		return
 	}
 
@@ -329,7 +329,7 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 	exitCode := 0
 	if execErr != nil {
 		exitCode = 1
-		slog.Error(fmt.Sprintf("exec: stream ended with error: %v", execErr))
+		slog.Error("[Exec] stream ended with error", "error", execErr)
 	}
 
 	exitMsg, _ := json.Marshal(execMessage{Type: "exit", ExitCode: exitCode})

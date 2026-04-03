@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -132,7 +131,7 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 	// Security: only allow specific GitHub API prefixes (see allowedGitHubPrefixes)
 	apiPath := "/" + path
 	if !isAllowedGitHubPath(apiPath) {
-		slog.Info(fmt.Sprintf("[GitHubProxy] Blocked disallowed path: %s", apiPath))
+		slog.Info("[GitHubProxy] blocked disallowed path", "path", apiPath)
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "GitHub API path not allowed",
 		})
@@ -168,7 +167,7 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 	// Execute request
 	resp, err := githubProxyClient.Do(req)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[GitHubProxy] Request failed for %s: %v", apiPath, err))
+		slog.Error("[GitHubProxy] request failed", "path", apiPath, "error", err)
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
 			"error": "GitHub API request failed",
 		})
@@ -238,7 +237,7 @@ func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
 	all.FeedbackGitHubToken = body.Token
 	all.FeedbackGitHubTokenSource = settings.GitHubTokenSourceSettings
 	if err := sm.SaveAll(all); err != nil {
-		slog.Error(fmt.Sprintf("[GitHubProxy] Failed to save token: %v", err))
+		slog.Error("[GitHubProxy] failed to save token", "error", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to save token",
 		})

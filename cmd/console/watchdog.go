@@ -49,7 +49,7 @@ type WatchdogConfig struct {
 func runWatchdog(cfg WatchdogConfig) error {
 	// Write PID file so startup-oauth.sh can detect us
 	if err := writePidFile(watchdogPidFile); err != nil {
-		slog.Warn(fmt.Sprintf("[Watchdog] Warning: could not write PID file: %v", err))
+		slog.Warn("[Watchdog] could not write PID file", "error", err)
 	}
 	defer os.Remove(watchdogPidFile)
 
@@ -95,7 +95,7 @@ func runWatchdog(cfg WatchdogConfig) error {
 			strings.Contains(errMsg, "client disconnected") ||
 			strings.Contains(errMsg, "write: broken pipe")
 		if isClientGone {
-			slog.Info(fmt.Sprintf("[Watchdog] Client disconnected (backend still healthy): %v", err))
+			slog.Info("[Watchdog] client disconnected (backend still healthy)", "error", err)
 			return
 		}
 
@@ -103,13 +103,13 @@ func runWatchdog(cfg WatchdogConfig) error {
 		isTimeout := strings.Contains(errMsg, "timeout awaiting response headers") ||
 			strings.Contains(errMsg, "context deadline exceeded")
 		if isTimeout {
-			slog.Info(fmt.Sprintf("[Watchdog] Proxy timeout (backend still healthy): %v", err))
+			slog.Info("[Watchdog] proxy timeout (backend still healthy)", "error", err)
 			http.Error(w, "Gateway Timeout", http.StatusGatewayTimeout)
 			return
 		}
 
 		// Hard connection failure — backend is genuinely down.
-		slog.Error(fmt.Sprintf("[Watchdog] Proxy error (backend down): %v", err))
+		slog.Error("[Watchdog] proxy error (backend down)", "error", err)
 		atomic.StoreInt32(&backendHealthy, 0)
 		serveFallback(w, r)
 	}
@@ -190,7 +190,7 @@ func runWatchdog(cfg WatchdogConfig) error {
 		srv.Shutdown(shutdownCtx)
 	}()
 
-	slog.Info(fmt.Sprintf("[Watchdog] Listening on %s, proxying to %s", addr, backendURL.String()))
+	slog.Info("[Watchdog] listening", "addr", addr, "backend", backendURL.String())
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("watchdog listen error: %w", err)
 	}

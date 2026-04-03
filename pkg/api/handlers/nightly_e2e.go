@@ -731,7 +731,7 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 
 	req, err := http.NewRequest("GET", jobsURL, nil)
 	if err != nil {
-		slog.Error(fmt.Sprintf("internal error: %v", err))
+		slog.Error("[NightlyE2E] internal error", "error", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
@@ -741,7 +741,7 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 
 	resp, err := h.httpClient.Do(req)
 	if err != nil {
-		slog.Info(fmt.Sprintf("bad gateway: %v", err))
+		slog.Info("[NightlyE2E] bad gateway", "error", err)
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "bad gateway"})
 	}
 	defer resp.Body.Close()
@@ -764,7 +764,7 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 		} `json:"jobs"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&jobData); err != nil {
-		slog.Error(fmt.Sprintf("internal error: %v", err))
+		slog.Error("[NightlyE2E] internal error", "error", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
 	}
 

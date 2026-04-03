@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -88,7 +87,7 @@ func (h *Hub) Run() {
 			h.clients[client] = true
 			h.userIndex[client.userID] = append(h.userIndex[client.userID], client)
 			h.mu.Unlock()
-			slog.Info(fmt.Sprintf("WebSocket client connected: %s", client.userID))
+			slog.Info("[WebSocket] client connected", "user", client.userID)
 
 		case client := <-h.unregister:
 			h.mu.Lock()
@@ -109,7 +108,7 @@ func (h *Hub) Run() {
 				}
 			}
 			h.mu.Unlock()
-			slog.Info(fmt.Sprintf("WebSocket client disconnected: %s", client.userID))
+			slog.Info("[WebSocket] client disconnected", "user", client.userID)
 
 		case msg := <-h.broadcast:
 			h.mu.RLock()
@@ -145,7 +144,7 @@ func (h *Hub) Close() {
 func (h *Hub) Broadcast(userID uuid.UUID, msg Message) {
 	data, err := json.Marshal(msg)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to marshal message: %v", err))
+		slog.Error("[WebSocket] failed to marshal message", "error", err)
 		return
 	}
 
@@ -154,10 +153,10 @@ func (h *Hub) Broadcast(userID uuid.UUID, msg Message) {
 		// Message queued successfully
 	case <-h.done:
 		// Hub is shut down; discard the message
-		slog.Info(fmt.Sprintf("Hub closed, dropping broadcast for user %s", userID))
+		slog.Info("[WebSocket] hub closed, dropping broadcast", "user", userID)
 	default:
 		// Broadcast buffer is full; drop the message to avoid blocking the sender
-		slog.Info(fmt.Sprintf("Broadcast buffer full, dropping message for user %s (type: %s)", userID, msg.Type))
+		slog.Info("[WebSocket] broadcast buffer full, dropping message", "user", userID, "type", msg.Type)
 	}
 }
 
@@ -206,14 +205,14 @@ func (h *Hub) BroadcastAll(msg Message) {
 	// Check if the hub has been shut down before doing any work
 	select {
 	case <-h.done:
-		slog.Info(fmt.Sprintf("Hub closed, dropping broadcast-all (type: %s)", msg.Type))
+		slog.Info("[WebSocket] hub closed, dropping broadcast-all", "type", msg.Type)
 		return
 	default:
 	}
 
 	data, err := json.Marshal(msg)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to marshal message: %v", err))
+		slog.Error("[WebSocket] failed to marshal message", "error", err)
 		return
 	}
 
@@ -247,7 +246,7 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 	}
 
 	if err := conn.ReadJSON(&authMsg); err != nil {
-		slog.Error(fmt.Sprintf("SECURITY: Failed to read auth message: %v", err))
+		slog.Error("[WebSocket] SECURITY: failed to read auth message", "error", err)
 		conn.WriteJSON(Message{Type: "error", Data: map[string]string{"message": "authentication required"}})
 		conn.Close()
 		return
@@ -275,14 +274,14 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 	} else if h.jwtSecret != "" {
 		claims, err := middleware.ValidateJWT(authMsg.Token, h.jwtSecret)
 		if err != nil {
-			slog.Warn(fmt.Sprintf("SECURITY: Rejected WebSocket - invalid token: %v", err))
+			slog.Warn("[WebSocket] SECURITY: rejected invalid token", "error", err)
 			conn.WriteJSON(Message{Type: "error", Data: map[string]string{"message": "invalid token"}})
 			conn.Close()
 			return
 		}
 		userID = claims.UserID
 		authenticated = true
-		slog.Info(fmt.Sprintf("Authenticated WebSocket connection for user: %s", claims.GitHubLogin))
+		slog.Info("[WebSocket] authenticated connection", "user", claims.GitHubLogin)
 	} else {
 		// No JWT secret configured - accept connection anyway for dev compatibility
 		userID = uuid.Nil
@@ -336,7 +335,7 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 					return
 				}
 				if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
-					slog.Error(fmt.Sprintf("WebSocket write error: %v", err))
+					slog.Error("[WebSocket] write error", "error", err)
 					return
 				}
 			case <-pingTicker.C:
@@ -357,7 +356,7 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				slog.Error(fmt.Sprintf("WebSocket error: %v", err))
+				slog.Error("[WebSocket] unexpected close error", "error", err)
 			}
 			break
 		}
@@ -377,7 +376,7 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 			select {
 			case client.send <- []byte(`{"type":"pong"}`):
 			default:
-				slog.Info(fmt.Sprintf("[WebSocket] Dropping pong for client %s: send channel full", client.userID))
+				slog.Info("[WebSocket] dropping pong, send channel full", "user", client.userID)
 			}
 		}
 	}

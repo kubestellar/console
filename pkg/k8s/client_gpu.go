@@ -593,9 +593,9 @@ func (m *MultiClusterClient) GetGPUHealthCronJobStatus(ctx context.Context, cont
 		// Auto-reconcile: update CronJob if version is outdated and user has permissions
 		if status.UpdateAvailable && status.CanInstall {
 			if reconcileErr := m.InstallGPUHealthCronJob(ctx, contextName, ns, cj.Spec.Schedule, status.Tier); reconcileErr != nil {
-				slog.Error(fmt.Sprintf("[GPUHealthCronJob] Auto-reconcile failed for %s: %v", contextName, reconcileErr))
+				slog.Error("[GPUHealthCronJob] auto-reconcile failed", "cluster", contextName, "error", reconcileErr)
 			} else {
-				slog.Info(fmt.Sprintf("[GPUHealthCronJob] Auto-reconciled %s to script version %d", contextName, gpuHealthScriptVersion))
+				slog.Info("[GPUHealthCronJob] auto-reconciled to latest version", "cluster", contextName, "version", gpuHealthScriptVersion)
 				status.Version = gpuHealthScriptVersion
 				status.UpdateAvailable = false
 			}
@@ -657,7 +657,7 @@ func readGPUHealthResults(ctx context.Context, client kubernetes.Interface, name
 		Nodes []GPUHealthCheckResult `json:"nodes"`
 	}
 	if jsonErr := json.Unmarshal([]byte(resultsJSON), &wrapper); jsonErr != nil {
-		slog.Error(fmt.Sprintf("[GPUHealthCronJob] Failed to parse ConfigMap results: %v", jsonErr))
+		slog.Error("[GPUHealthCronJob] failed to parse ConfigMap results", "error", jsonErr)
 		return nil
 	}
 	return wrapper.Nodes
@@ -842,7 +842,7 @@ func (m *MultiClusterClient) InstallGPUHealthCronJob(ctx context.Context, contex
 		}
 	}
 
-	slog.Info(fmt.Sprintf("[GPUHealthCronJob] Installed on cluster %s in namespace %s (schedule=%s, tier=%d, version=%d)", contextName, namespace, schedule, tier, gpuHealthScriptVersion))
+	slog.Info("[GPUHealthCronJob] installed", "cluster", contextName, "namespace", namespace, "schedule", schedule, "tier", tier, "version", gpuHealthScriptVersion)
 	return nil
 }
 
@@ -1170,32 +1170,32 @@ func (m *MultiClusterClient) UninstallGPUHealthCronJob(ctx context.Context, cont
 
 	// Delete results ConfigMap
 	if delErr := client.CoreV1().ConfigMaps(namespace).Delete(ctx, gpuHealthConfigMapName, metav1.DeleteOptions{}); delErr != nil && !errors.IsNotFound(delErr) {
-		slog.Warn(fmt.Sprintf("[GPUHealthCronJob] Warning: could not delete results ConfigMap: %v", delErr))
+		slog.Warn("[GPUHealthCronJob] could not delete results ConfigMap", "error", delErr)
 	}
 
 	// Delete associated Jobs
 	if delErr := client.BatchV1().Jobs(namespace).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{
 		LabelSelector: "app=" + gpuHealthCronJobName,
 	}); delErr != nil {
-		slog.Warn(fmt.Sprintf("[GPUHealthCronJob] Warning: could not clean up jobs: %v", delErr))
+		slog.Warn("[GPUHealthCronJob] could not clean up jobs", "error", delErr)
 	}
 
 	// Delete ClusterRoleBinding
 	if delErr := client.RbacV1().ClusterRoleBindings().Delete(ctx, gpuHealthClusterRoleBinding, metav1.DeleteOptions{}); delErr != nil && !errors.IsNotFound(delErr) {
-		slog.Warn(fmt.Sprintf("[GPUHealthCronJob] Warning: could not delete ClusterRoleBinding: %v", delErr))
+		slog.Warn("[GPUHealthCronJob] could not delete ClusterRoleBinding", "error", delErr)
 	}
 
 	// Delete ClusterRole
 	if delErr := client.RbacV1().ClusterRoles().Delete(ctx, gpuHealthClusterRole, metav1.DeleteOptions{}); delErr != nil && !errors.IsNotFound(delErr) {
-		slog.Warn(fmt.Sprintf("[GPUHealthCronJob] Warning: could not delete ClusterRole: %v", delErr))
+		slog.Warn("[GPUHealthCronJob] could not delete ClusterRole", "error", delErr)
 	}
 
 	// Delete ServiceAccount
 	if delErr := client.CoreV1().ServiceAccounts(namespace).Delete(ctx, gpuHealthServiceAccount, metav1.DeleteOptions{}); delErr != nil && !errors.IsNotFound(delErr) {
-		slog.Warn(fmt.Sprintf("[GPUHealthCronJob] Warning: could not delete ServiceAccount: %v", delErr))
+		slog.Warn("[GPUHealthCronJob] could not delete ServiceAccount", "error", delErr)
 	}
 
-	slog.Info(fmt.Sprintf("[GPUHealthCronJob] Uninstalled from cluster %s namespace %s", contextName, namespace))
+	slog.Info("[GPUHealthCronJob] uninstalled", "cluster", contextName, "namespace", namespace)
 	return nil
 }
 

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"sort"
 	"sync"
@@ -28,7 +27,7 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 		if err == nil && len(clusters) > 0 {
 			return c.JSON(fiber.Map{"clusters": clusters, "source": "mcp"})
 		}
-		slog.Error(fmt.Sprintf("MCP bridge ListClusters failed, falling back to k8s client: %v", err))
+		slog.Error("[MCP] bridge ListClusters failed, falling back to k8s client", "error", err)
 	}
 
 	// Fall back to direct k8s client
@@ -88,7 +87,7 @@ func (h *MCPHandlers) GetClusterHealth(c *fiber.Ctx) error {
 		if err == nil {
 			return c.JSON(health)
 		}
-		slog.Error(fmt.Sprintf("MCP bridge GetClusterHealth failed, falling back: %v", err))
+		slog.Error("[MCP] bridge GetClusterHealth failed, falling back", "error", err)
 	}
 
 	// Fall back to direct k8s client
@@ -206,7 +205,7 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 		if err == nil {
 			return c.JSON(fiber.Map{"events": events, "source": "mcp"})
 		}
-		slog.Error(fmt.Sprintf("MCP bridge GetEvents failed, falling back: %v", err))
+		slog.Error("[MCP] bridge GetEvents failed, falling back", "error", err)
 	}
 
 	// Fall back to direct k8s client
@@ -302,7 +301,7 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 		if err == nil {
 			return c.JSON(fiber.Map{"events": events, "source": "mcp"})
 		}
-		slog.Error(fmt.Sprintf("MCP bridge GetWarningEvents failed, falling back: %v", err))
+		slog.Error("[MCP] bridge GetWarningEvents failed, falling back", "error", err)
 	}
 
 	// Fall back to direct k8s client

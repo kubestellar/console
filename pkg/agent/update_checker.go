@@ -196,7 +196,7 @@ func (uc *UpdateChecker) Status() AutoUpdateStatusResponse {
 			resp.LatestSHA = sha
 			resp.HasUpdate = sha != resp.CurrentSHA && resp.CurrentSHA != ""
 		} else {
-			slog.Error(fmt.Sprintf("[AutoUpdate] Failed to fetch latest SHA: %v", err))
+			slog.Error("[AutoUpdate] failed to fetch latest SHA", "error", err)
 		}
 	}
 
@@ -217,7 +217,7 @@ func (uc *UpdateChecker) TriggerNow(channelOverride string) bool {
 			defer atomic.StoreInt32(&uc.updating, 0)
 			defer func() {
 				if r := recover(); r != nil {
-					slog.Error(fmt.Sprintf("[AutoUpdate] PANIC recovered in update goroutine: %v", r))
+					slog.Error("[AutoUpdate] PANIC recovered in update goroutine", "panic", r)
 				}
 			}()
 
@@ -237,7 +237,7 @@ func (uc *UpdateChecker) TriggerNow(channelOverride string) bool {
 			defer atomic.StoreInt32(&uc.updating, 0)
 			defer func() {
 				if r := recover(); r != nil {
-					slog.Error(fmt.Sprintf("[AutoUpdate] PANIC recovered in update goroutine: %v", r))
+					slog.Error("[AutoUpdate] PANIC recovered in update goroutine", "panic", r)
 				}
 			}()
 			uc.checkAndUpdate()
@@ -315,7 +315,7 @@ func (uc *UpdateChecker) checkDeveloperChannel() {
 
 	latestSHA, err := fetchLatestMainSHAWithRepo(repoPath)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[AutoUpdate] Failed to check main SHA: %v", err))
+		slog.Error("[AutoUpdate] failed to check main SHA", "error", err)
 		return
 	}
 
@@ -328,7 +328,7 @@ func (uc *UpdateChecker) checkDeveloperChannel() {
 	}
 
 	if latestSHA == currentSHA || currentSHA == "" {
-		slog.Info(fmt.Sprintf("[AutoUpdate] Already up to date (%s), no update needed", short(currentSHA)))
+		slog.Info("[AutoUpdate] already up to date, no update needed", "sha", short(currentSHA))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:   "done",
 			Message:  "Already up to date — no changes on main",
@@ -337,7 +337,7 @@ func (uc *UpdateChecker) checkDeveloperChannel() {
 		return
 	}
 
-	slog.Info(fmt.Sprintf("[AutoUpdate] New commit on main: %s -> %s", short(currentSHA), short(latestSHA)))
+	slog.Info("[AutoUpdate] new commit on main", "from", short(currentSHA), "to", short(latestSHA))
 	uc.executeDeveloperUpdate(latestSHA)
 }
 
@@ -349,10 +349,10 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 
 	start := time.Now()
 	total := devUpdateTotalSteps
-	slog.Info(fmt.Sprintf("[AutoUpdate] === Starting update: %s -> %s ===", short(previousSHA), short(newSHA)))
+	slog.Info("[AutoUpdate] starting update", "from", short(previousSHA), "to", short(newSHA))
 
 	// Step 1/7: Git pull
-	slog.Info(fmt.Sprintf("[AutoUpdate] Step 1/%d: git pull --rebase origin main", total))
+	slog.Info("[AutoUpdate] step progress", "step", 1, "total", total, "description", "git pull --rebase origin main")
 	uc.broadcast("update_progress", UpdateProgressPayload{
 		Status:     "pulling",
 		Message:    fmt.Sprintf("Pulling %s from main...", short(newSHA)),
@@ -362,7 +362,7 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	})
 
 	if err := runGitPullWithTimeout(repoPath, gitPullTimeout); err != nil {
-		slog.Error(fmt.Sprintf("[AutoUpdate] FAILED at step 1 (git pull) after %s: %v", time.Since(start), err))
+		slog.Error("[AutoUpdate] FAILED at step 1 (git pull)", "elapsed", time.Since(start), "error", err)
 		uc.recordError(fmt.Sprintf("git pull failed: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
@@ -371,11 +371,11 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 		})
 		return
 	}
-	slog.Info(fmt.Sprintf("[AutoUpdate] Step 1/%d complete (git pull) in %s", total, time.Since(start)))
+	slog.Info("[AutoUpdate] step complete", "step", 1, "total", total, "description", "git pull", "elapsed", time.Since(start))
 
 	// Step 2/7: npm install (with automatic cache recovery)
 	webDir := repoPath + "/web"
-	slog.Info(fmt.Sprintf("[AutoUpdate] Step 2/%d: npm install", total))
+	slog.Info("[AutoUpdate] step progress", "step", 2, "total", total, "description", "npm install")
 	uc.broadcast("update_progress", UpdateProgressPayload{
 		Status:     "building",
 		Message:    "Installing npm dependencies...",
@@ -386,7 +386,7 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 
 	stepStart := time.Now()
 	if err := uc.resilientNpmInstall(webDir, 2, total, npmInstallTimeout); err != nil {
-		slog.Error(fmt.Sprintf("[AutoUpdate] FAILED at step 2 (npm install) after %s: %v", time.Since(start), err))
+		slog.Error("[AutoUpdate] FAILED at step 2 (npm install)", "elapsed", time.Since(start), "error", err)
 		uc.recordError(fmt.Sprintf("npm install failed: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
@@ -395,14 +395,14 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 		})
 		rollbackGit(repoPath, previousSHA)
 		if rbErr := rebuildFrontend(repoPath); rbErr != nil {
-			slog.Error(fmt.Sprintf("[AutoUpdate] WARNING: rollback rebuildFrontend failed: %v", rbErr))
+			slog.Error("[AutoUpdate] rollback rebuildFrontend failed", "error", rbErr)
 		}
 		return
 	}
-	slog.Info(fmt.Sprintf("[AutoUpdate] Step 2/%d complete (npm install) in %s", total, time.Since(stepStart)))
+	slog.Info("[AutoUpdate] step complete", "step", 2, "total", total, "description", "npm install", "elapsed", time.Since(stepStart))
 
 	// Step 3/7: Frontend build (Vite)
-	slog.Info(fmt.Sprintf("[AutoUpdate] Step 3/%d: npm run build", total))
+	slog.Info("[AutoUpdate] step progress", "step", 3, "total", total, "description", "npm run build")
 	uc.broadcast("update_progress", UpdateProgressPayload{
 		Status:     "building",
 		Message:    "Building frontend with Vite...",
@@ -415,7 +415,7 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	res := uc.runBuildCmd(frontendBuildTimeout, "Building frontend with Vite", 3, total, 30,
 		"npm", []string{"run", "build"}, webDir, nil)
 	if res.err != nil {
-		slog.Error(fmt.Sprintf("[AutoUpdate] FAILED at step 3 (frontend build) after %s: %v", time.Since(start), res.err))
+		slog.Error("[AutoUpdate] FAILED at step 3 (frontend build)", "elapsed", time.Since(start), "error", res.err)
 		uc.recordError(fmt.Sprintf("frontend build failed: %v", res.err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
@@ -424,14 +424,14 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 		})
 		rollbackGit(repoPath, previousSHA)
 		if rbErr := rebuildFrontend(repoPath); rbErr != nil {
-			slog.Error(fmt.Sprintf("[AutoUpdate] WARNING: rollback rebuildFrontend failed: %v", rbErr))
+			slog.Error("[AutoUpdate] rollback rebuildFrontend failed", "error", rbErr)
 		}
 		return
 	}
-	slog.Info(fmt.Sprintf("[AutoUpdate] Step 3/%d complete (frontend build) in %s", total, time.Since(stepStart)))
+	slog.Info("[AutoUpdate] step complete", "step", 3, "total", total, "description", "frontend build", "elapsed", time.Since(stepStart))
 
 	// Step 4/7: Build console binary
-	slog.Info(fmt.Sprintf("[AutoUpdate] Step 4/%d: go build ./cmd/console", total))
+	slog.Info("[AutoUpdate] step progress", "step", 4, "total", total, "description", "go build ./cmd/console")
 	uc.broadcast("update_progress", UpdateProgressPayload{
 		Status:     "building",
 		Message:    "Building console binary...",
@@ -452,7 +452,7 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 		"go", []string{"build", "-o", consoleTmp, "./cmd/console"}, repoPath, []string{"GOWORK=off"})
 	if res.err != nil {
 		os.Remove(consoleTmp) // clean up partial build
-		slog.Error(fmt.Sprintf("[AutoUpdate] FAILED at step 4 (console build) after %s: %v", time.Since(start), res.err))
+		slog.Error("[AutoUpdate] FAILED at step 4 (console build)", "elapsed", time.Since(start), "error", res.err)
 		uc.recordError(fmt.Sprintf("go build console failed: %v", res.err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
@@ -461,21 +461,21 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 		})
 		rollbackGit(repoPath, previousSHA)
 		if rbErr := rebuildFrontend(repoPath); rbErr != nil {
-			slog.Error(fmt.Sprintf("[AutoUpdate] WARNING: rollback rebuildFrontend failed: %v", rbErr))
+			slog.Error("[AutoUpdate] rollback rebuildFrontend failed", "error", rbErr)
 		}
 		if rbErr := rebuildGoBinaries(repoPath); rbErr != nil {
-			slog.Error(fmt.Sprintf("[AutoUpdate] WARNING: rollback rebuildGoBinaries failed: %v", rbErr))
+			slog.Error("[AutoUpdate] rollback rebuildGoBinaries failed", "error", rbErr)
 		}
 		return
 	}
 	if err := os.Rename(consoleTmp, consolePath); err != nil {
-		slog.Error(fmt.Sprintf("[AutoUpdate] Failed to move console binary: %v", err))
+		slog.Error("[AutoUpdate] failed to move console binary", "error", err)
 		os.Remove(consoleTmp)
 	}
-	slog.Info(fmt.Sprintf("[AutoUpdate] Step 4/%d complete (console binary) in %s", total, time.Since(stepStart)))
+	slog.Info("[AutoUpdate] step complete", "step", 4, "total", total, "description", "console binary", "elapsed", time.Since(stepStart))
 
 	// Step 5/7: Build kc-agent binary
-	slog.Info(fmt.Sprintf("[AutoUpdate] Step 5/%d: go build ./cmd/kc-agent", total))
+	slog.Info("[AutoUpdate] step progress", "step", 5, "total", total, "description", "go build ./cmd/kc-agent")
 	uc.broadcast("update_progress", UpdateProgressPayload{
 		Status:     "building",
 		Message:    "Building kc-agent binary...",
@@ -495,7 +495,7 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 		"go", []string{"build", "-o", agentTmp, "./cmd/kc-agent"}, repoPath, []string{"GOWORK=off"})
 	if res.err != nil {
 		os.Remove(agentTmp) // clean up partial build
-		slog.Error(fmt.Sprintf("[AutoUpdate] FAILED at step 5 (kc-agent build) after %s: %v", time.Since(start), res.err))
+		slog.Error("[AutoUpdate] FAILED at step 5 (kc-agent build)", "elapsed", time.Since(start), "error", res.err)
 		uc.recordError(fmt.Sprintf("go build kc-agent failed: %v", res.err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
@@ -504,21 +504,21 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 		})
 		rollbackGit(repoPath, previousSHA)
 		if rbErr := rebuildFrontend(repoPath); rbErr != nil {
-			slog.Error(fmt.Sprintf("[AutoUpdate] WARNING: rollback rebuildFrontend failed: %v", rbErr))
+			slog.Error("[AutoUpdate] rollback rebuildFrontend failed", "error", rbErr)
 		}
 		if rbErr := rebuildGoBinaries(repoPath); rbErr != nil {
-			slog.Error(fmt.Sprintf("[AutoUpdate] WARNING: rollback rebuildGoBinaries failed: %v", rbErr))
+			slog.Error("[AutoUpdate] rollback rebuildGoBinaries failed", "error", rbErr)
 		}
 		return
 	}
 	if err := os.Rename(agentTmp, agentPath); err != nil {
-		slog.Error(fmt.Sprintf("[AutoUpdate] Failed to move kc-agent binary: %v", err))
+		slog.Error("[AutoUpdate] failed to move kc-agent binary", "error", err)
 		os.Remove(agentTmp)
 	}
-	slog.Info(fmt.Sprintf("[AutoUpdate] Step 5/%d complete (kc-agent binary) in %s", total, time.Since(stepStart)))
+	slog.Info("[AutoUpdate] step complete", "step", 5, "total", total, "description", "kc-agent binary", "elapsed", time.Since(stepStart))
 
 	// Step 6/7: Stopping services
-	slog.Info(fmt.Sprintf("[AutoUpdate] Step 6/%d: preparing restart", total))
+	slog.Info("[AutoUpdate] step progress", "step", 6, "total", total, "description", "preparing restart")
 	uc.broadcast("update_progress", UpdateProgressPayload{
 		Status:     "restarting",
 		Message:    "Stopping current services...",
@@ -533,10 +533,10 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	uc.lastUpdateError = ""
 	uc.mu.Unlock()
 
-	slog.Info(fmt.Sprintf("[AutoUpdate] === Build complete: %s -> %s (total: %s), restarting... ===", short(previousSHA), short(newSHA), time.Since(start)))
+	slog.Info("[AutoUpdate] build complete, restarting", "from", short(previousSHA), "to", short(newSHA), "elapsed", time.Since(start))
 
 	// Step 7/7: Restart via startup-oauth.sh
-	slog.Info(fmt.Sprintf("[AutoUpdate] Step 7/%d: restart via startup-oauth.sh", total))
+	slog.Info("[AutoUpdate] step progress", "step", 7, "total", total, "description", "restart via startup-oauth.sh")
 	uc.broadcast("update_progress", UpdateProgressPayload{
 		Status:     "restarting",
 		Message:    "Restarting via startup-oauth.sh...",
@@ -558,7 +558,7 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 func (uc *UpdateChecker) restartViaStartupScript(repoPath string) {
 	scriptPath := repoPath + "/startup-oauth.sh"
 	if _, err := os.Stat(scriptPath); err != nil {
-		slog.Info(fmt.Sprintf("[AutoUpdate] startup-oauth.sh not found at %s, falling back to exec", scriptPath))
+		slog.Info("[AutoUpdate] startup-oauth.sh not found, falling back to exec", "path", scriptPath)
 		uc.selfUpdateFallback(repoPath)
 		return
 	}
@@ -569,7 +569,7 @@ func (uc *UpdateChecker) restartViaStartupScript(repoPath string) {
 	logPath := repoPath + "/data/auto-update-restart.log"
 	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		slog.Info(fmt.Sprintf("[AutoUpdate] Cannot create restart log at %s: %v", logPath, err))
+		slog.Info("[AutoUpdate] cannot create restart log", "path", logPath, "error", err)
 		logFile = nil
 	}
 
@@ -583,7 +583,7 @@ func (uc *UpdateChecker) restartViaStartupScript(repoPath string) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	if err := cmd.Start(); err != nil {
-		slog.Error(fmt.Sprintf("[AutoUpdate] Failed to spawn startup-oauth.sh: %v", err))
+		slog.Error("[AutoUpdate] failed to spawn startup-oauth.sh", "error", err)
 		if logFile != nil {
 			logFile.Close()
 		}
@@ -591,7 +591,7 @@ func (uc *UpdateChecker) restartViaStartupScript(repoPath string) {
 		return
 	}
 
-	slog.Info(fmt.Sprintf("[AutoUpdate] startup-oauth.sh spawned (pid %d), log: %s, exiting for restart...", cmd.Process.Pid, logPath))
+	slog.Info("[AutoUpdate] startup-oauth.sh spawned, exiting for restart", "pid", cmd.Process.Pid, "log", logPath)
 
 	// Give the script a moment to start before we exit
 	time.Sleep(1 * time.Second)
@@ -613,7 +613,7 @@ func (uc *UpdateChecker) restartViaStartupScript(repoPath string) {
 func (uc *UpdateChecker) selfUpdateFallback(repoPath string) {
 	currentBinary, err := os.Executable()
 	if err != nil {
-		slog.Info(fmt.Sprintf("[AutoUpdate] Cannot determine kc-agent binary path: %v", err))
+		slog.Info("[AutoUpdate] cannot determine kc-agent binary path", "error", err)
 		return
 	}
 
@@ -622,12 +622,12 @@ func (uc *UpdateChecker) selfUpdateFallback(repoPath string) {
 	// Kill and restart backend using the pre-built binary
 	uc.killBackend()
 	if err := uc.restartBackend(); err != nil {
-		slog.Error(fmt.Sprintf("[AutoUpdate] Backend restart failed: %v", err))
+		slog.Error("[AutoUpdate] backend restart failed", "error", err)
 	}
 
 	// Re-exec with the same args — replaces this process atomically
 	if err := syscall.Exec(currentBinary, os.Args, os.Environ()); err != nil {
-		slog.Error(fmt.Sprintf("[AutoUpdate] exec into new kc-agent failed: %v", err))
+		slog.Error("[AutoUpdate] exec into new kc-agent failed", "error", err)
 	}
 	// If exec succeeds, this line is never reached
 }
@@ -645,7 +645,7 @@ func (uc *UpdateChecker) checkReleaseChannel(channel string) {
 
 	releases, err := fetchGitHubReleases()
 	if err != nil {
-		slog.Error(fmt.Sprintf("[AutoUpdate] Failed to fetch releases: %v", err))
+		slog.Error("[AutoUpdate] failed to fetch releases", "error", err)
 		return
 	}
 
@@ -658,7 +658,7 @@ func (uc *UpdateChecker) checkReleaseChannel(channel string) {
 	}
 
 	if latest == nil || latest.TagName == currentVersion {
-		slog.Info(fmt.Sprintf("[AutoUpdate] Already on latest %s release (%s)", channel, currentVersion))
+		slog.Info("[AutoUpdate] already on latest release", "channel", channel, "version", currentVersion)
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:   "done",
 			Message:  fmt.Sprintf("Already up to date — running latest %s release", channel),
@@ -667,7 +667,7 @@ func (uc *UpdateChecker) checkReleaseChannel(channel string) {
 		return
 	}
 
-	slog.Info(fmt.Sprintf("[AutoUpdate] New release available: %s -> %s", currentVersion, latest.TagName))
+	slog.Info("[AutoUpdate] new release available", "current", currentVersion, "latest", latest.TagName)
 
 	switch installMethod {
 	case "binary":
@@ -761,7 +761,7 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 	if err := os.Rename(stagingDir+"/console", consolePath); err != nil {
 		// Attempt to restore the backup before returning
 		if rbErr := os.Rename(consolePath+".backup", consolePath); rbErr != nil {
-			slog.Error(fmt.Sprintf("[AutoUpdate] WARNING: backup restore failed after rename error: %v", rbErr))
+			slog.Error("[AutoUpdate] backup restore failed after rename error", "error", rbErr)
 		}
 		uc.recordError(fmt.Sprintf("replace rename failed: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
@@ -777,7 +777,7 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 	if err := os.Chmod(consolePath, fileModeBinary); err != nil {
 		// Attempt to restore the backup before returning
 		if rbErr := os.Rename(consolePath+".backup", consolePath); rbErr != nil {
-			slog.Error(fmt.Sprintf("[AutoUpdate] WARNING: backup restore failed after chmod error: %v", rbErr))
+			slog.Error("[AutoUpdate] backup restore failed after chmod error", "error", rbErr)
 		}
 		uc.recordError(fmt.Sprintf("chmod failed: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
@@ -798,7 +798,7 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 	if err := uc.restartBackend(); err != nil {
 		// Rollback
 		if rbErr := os.Rename(consolePath+".backup", consolePath); rbErr != nil {
-			slog.Error(fmt.Sprintf("[AutoUpdate] WARNING: backup restore failed after restart error: %v", rbErr))
+			slog.Error("[AutoUpdate] backup restore failed after restart error", "error", rbErr)
 		}
 		uc.recordError(fmt.Sprintf("restart failed: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
@@ -811,11 +811,11 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 
 	if !waitForBackendHealth() {
 		if rbErr := os.Rename(consolePath+".backup", consolePath); rbErr != nil {
-			slog.Error(fmt.Sprintf("[AutoUpdate] WARNING: backup restore failed after health check failure: %v", rbErr))
+			slog.Error("[AutoUpdate] backup restore failed after health check failure", "error", rbErr)
 		}
 		uc.killBackend()
 		if rbErr := uc.restartBackend(); rbErr != nil {
-			slog.Error(fmt.Sprintf("[AutoUpdate] WARNING: rollback restartBackend failed: %v", rbErr))
+			slog.Error("[AutoUpdate] rollback restartBackend failed", "error", rbErr)
 		}
 		uc.recordError("new version failed health check")
 		uc.broadcast("update_progress", UpdateProgressPayload{
@@ -836,7 +836,7 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 	uc.lastUpdateError = ""
 	uc.mu.Unlock()
 
-	slog.Info(fmt.Sprintf("[AutoUpdate] Binary updated to %s", release.TagName))
+	slog.Info("[AutoUpdate] binary updated", "version", release.TagName)
 	uc.broadcast("update_progress", UpdateProgressPayload{
 		Status:   "done",
 		Message:  fmt.Sprintf("Updated to %s", release.TagName),
@@ -917,7 +917,7 @@ func (uc *UpdateChecker) executeDevReleaseUpdate(release *githubReleaseInfo) {
 	uc.lastUpdateError = ""
 	uc.mu.Unlock()
 
-	slog.Info(fmt.Sprintf("[AutoUpdate] Build complete for %s, restarting via startup-oauth.sh...", release.TagName))
+	slog.Info("[AutoUpdate] build complete, restarting via startup-oauth.sh", "version", release.TagName)
 	uc.restartViaStartupScript(repoPath)
 }
 
@@ -926,7 +926,7 @@ func (uc *UpdateChecker) recordError(msg string) {
 	uc.lastUpdateError = msg
 	uc.lastUpdateTime = time.Now()
 	uc.mu.Unlock()
-	slog.Error(fmt.Sprintf("[AutoUpdate] Error: %s", msg))
+	slog.Error("[AutoUpdate] error", "message", msg)
 }
 
 // --- npm install with resilience ---
@@ -954,7 +954,7 @@ func (uc *UpdateChecker) resilientNpmInstall(webDir string, step, totalSteps int
 		}
 
 		// Broadcast retry status
-		slog.Error(fmt.Sprintf("[AutoUpdate] npm install failed (attempt %d/%d), cleaning cache...", attempt, npmInstallMaxRetries))
+		slog.Error("[AutoUpdate] npm install failed, cleaning cache", "attempt", attempt, "maxRetries", npmInstallMaxRetries)
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:     "building",
 			Message:    fmt.Sprintf("npm install failed — cleaning cache (attempt %d/%d)...", attempt, npmInstallMaxRetries),
@@ -968,7 +968,7 @@ func (uc *UpdateChecker) resilientNpmInstall(webDir string, step, totalSteps int
 		cacheClean.Stdout = os.Stdout
 		cacheClean.Stderr = os.Stderr
 		if cleanErr := cacheClean.Run(); cleanErr != nil {
-			slog.Error(fmt.Sprintf("[AutoUpdate] npm cache clean also failed: %v (user may need: sudo chown -R $(id -u):$(id -g) ~/.npm)", cleanErr))
+			slog.Error("[AutoUpdate] npm cache clean also failed (user may need: sudo chown -R $(id -u):$(id -g) ~/.npm)", "error", cleanErr)
 		}
 
 		// On 2nd+ attempt, remove node_modules for a completely clean install
@@ -1051,7 +1051,7 @@ func fetchLatestMainSHAWithRepo(repoPath string) (string, error) {
 		if err == nil {
 			return sha, nil
 		}
-		slog.Error(fmt.Sprintf("[AutoUpdate] git fetch failed (%v), falling back to GitHub API", err))
+		slog.Error("[AutoUpdate] git fetch failed, falling back to GitHub API", "error", err)
 	}
 
 	// Fallback: GitHub API (unauthenticated, 60 req/hour rate limit)
@@ -1171,7 +1171,7 @@ func gitStash(repoPath string) bool {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		slog.Error(fmt.Sprintf("[AutoUpdate] git stash failed: %v", err))
+		slog.Error("[AutoUpdate] git stash failed", "error", err)
 		return false
 	}
 	return true
@@ -1185,7 +1185,7 @@ func gitStashPop(repoPath string) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		slog.Error(fmt.Sprintf("[AutoUpdate] git stash pop failed (changes saved in stash): %v", err))
+		slog.Error("[AutoUpdate] git stash pop failed (changes saved in stash)", "error", err)
 	}
 }
 
@@ -1205,12 +1205,12 @@ func rebuildFrontend(repoPath string) error {
 		if npmErr = npmInstall.Run(); npmErr == nil {
 			break
 		}
-		slog.Error(fmt.Sprintf("[AutoUpdate] rebuildFrontend: npm install failed (attempt %d/%d), cleaning cache...", attempt, npmInstallMaxRetries))
+		slog.Error("[AutoUpdate] rebuildFrontend: npm install failed, cleaning cache", "attempt", attempt, "maxRetries", npmInstallMaxRetries)
 		cacheClean := exec.Command("npm", "cache", "clean", "--force")
 		cacheClean.Stdout = os.Stdout
 		cacheClean.Stderr = os.Stderr
 		if cleanErr := cacheClean.Run(); cleanErr != nil {
-			slog.Error(fmt.Sprintf("[AutoUpdate] WARNING: npm cache clean failed: %v", cleanErr))
+			slog.Error("[AutoUpdate] npm cache clean failed", "error", cleanErr)
 		}
 		if attempt >= 2 {
 			os.RemoveAll(webDir + "/node_modules")
@@ -1270,7 +1270,7 @@ func rollbackGit(repoPath, sha string) {
 	cmd := exec.Command("git", "reset", "--hard", sha)
 	cmd.Dir = repoPath
 	if err := cmd.Run(); err != nil {
-		slog.Error(fmt.Sprintf("[AutoUpdate] Rollback to %s failed: %v", short(sha), err))
+		slog.Error("[AutoUpdate] rollback failed", "sha", short(sha), "error", err)
 	}
 }
 

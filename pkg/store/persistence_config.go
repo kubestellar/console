@@ -163,8 +163,7 @@ func (p *PersistenceStore) Save() error {
 		return fmt.Errorf("failed to write persistence config: %w", err)
 	}
 
-	slog.Info(fmt.Sprintf("[PersistenceStore] Config saved: enabled=%v, primary=%s, secondary=%s",
-		p.config.Enabled, p.config.PrimaryCluster, p.config.SecondaryCluster))
+	slog.Info("[PersistenceStore] config saved", "enabled", p.config.Enabled, "primary", p.config.PrimaryCluster, "secondary", p.config.SecondaryCluster)
 
 	return nil
 }

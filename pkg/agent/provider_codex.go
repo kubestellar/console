@@ -128,7 +128,7 @@ func (c *CodexProvider) StreamChat(ctx context.Context, req *ChatRequest, onChun
 	}
 
 	if err := cmd.Wait(); err != nil {
-		slog.Error(fmt.Sprintf("[Codex] Command finished with error: %v", err))
+		slog.Error("[Codex] command finished with error", "error", err)
 	}
 
 	return &ChatResponse{

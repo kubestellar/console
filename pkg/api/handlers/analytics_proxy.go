@@ -3,7 +3,6 @@ package handlers
 import (
 	"bytes"
 	"encoding/base64"
-	"fmt"
 	"io"
 	"log/slog"
 	"net"
@@ -72,7 +71,7 @@ func GA4ScriptProxy(c *fiber.Ctx) error {
 	target := "https://www.googletagmanager.com/gtag/js?" + qs
 	resp, err := analyticsClient.Get(target)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[GA4] Failed to fetch gtag.js: %v", err))
+		slog.Error("[GA4] failed to fetch gtag.js", "error", err)
 		return c.SendStatus(fiber.StatusBadGateway)
 	}
 	defer resp.Body.Close()
@@ -276,7 +275,7 @@ func UmamiScriptProxy(c *fiber.Ctx) error {
 	target := umamiUpstreamBase + "/ksc"
 	resp, err := analyticsClient.Get(target)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[Umami] Failed to fetch tracking script: %v", err))
+		slog.Error("[Umami] failed to fetch tracking script", "error", err)
 		return c.SendStatus(fiber.StatusBadGateway)
 	}
 	defer resp.Body.Close()

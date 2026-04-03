@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -59,7 +58,7 @@ func (h *GatewayHandlers) ListGateways(c *fiber.Ctx) error {
 	if err != nil {
 		// If we got partial results alongside errors, log and return what we have
 		if list != nil && len(list.Items) > 0 {
-			slog.Info(fmt.Sprintf("partial gateway list failure: %v", err))
+			slog.Info("partial gateway list failure", "error", err)
 			return c.JSON(list)
 		}
 		return handleK8sError(c, err)
@@ -100,7 +99,7 @@ func (h *GatewayHandlers) ListHTTPRoutes(c *fiber.Ctx) error {
 	if err != nil {
 		// If we got partial results alongside errors, log and return what we have
 		if list != nil && len(list.Items) > 0 {
-			slog.Info(fmt.Sprintf("partial httproute list failure: %v", err))
+			slog.Info("partial httproute list failure", "error", err)
 			return c.JSON(list)
 		}
 		return handleK8sError(c, err)

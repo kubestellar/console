@@ -159,7 +159,7 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	// Create GitHub issue (route to the correct repo)
 	issueNumber, _, ssResult, err := h.createGitHubIssueInRepo(request, user, h.repoOwner, targetRepoName, input.Screenshots)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to create GitHub issue: %v", err))
+		slog.Error("[Feedback] failed to create GitHub issue", "error", err)
 		// Clean up the orphaned database record
 		h.store.CloseFeatureRequest(request.ID, false)
 		return fiber.NewError(fiber.StatusBadGateway, fmt.Sprintf("Failed to create GitHub issue: %v", err))
@@ -287,7 +287,7 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 	// Fetch issues created by the logged-in user from GitHub
 	issues, err := h.fetchGitHubIssues(currentGitHubLogin)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to fetch GitHub issues: %v", err))
+		slog.Error("[Feedback] failed to fetch GitHub issues", "error", err)
 		// Fall back to local database if GitHub fetch fails
 		return h.listLocalFeatureRequests(c, userID)
 	}
@@ -907,7 +907,7 @@ func (h *FeedbackHandler) closeGitHubIssue(issueNumber int, repoName string) {
 	payload := map[string]string{"state": "closed"}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to marshal close issue payload: %v", err))
+		slog.Error("[Feedback] failed to marshal close issue payload", "error", err)
 		return
 	}
 
@@ -916,7 +916,7 @@ func (h *FeedbackHandler) closeGitHubIssue(issueNumber int, repoName string) {
 
 	req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to create close issue request: %v", err))
+		slog.Error("[Feedback] failed to create close issue request", "error", err)
 		return
 	}
 
@@ -927,7 +927,7 @@ func (h *FeedbackHandler) closeGitHubIssue(issueNumber int, repoName string) {
 	client := &http.Client{Timeout: githubAPITimeout}
 	resp, err := client.Do(req)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to close GitHub issue: %v", err))
+		slog.Error("[Feedback] failed to close GitHub issue", "error", err)
 		return
 	}
 	defer resp.Body.Close()
@@ -937,7 +937,7 @@ func (h *FeedbackHandler) closeGitHubIssue(issueNumber int, repoName string) {
 		if readErr != nil {
 			body = []byte("(failed to read response body)")
 		}
-		slog.Info(fmt.Sprintf("GitHub API returned %d when closing issue: %s", resp.StatusCode, string(body)))
+		slog.Info("[Feedback] GitHub API error closing issue", "status", resp.StatusCode, "body", string(body))
 	}
 }
 
@@ -946,7 +946,7 @@ func (h *FeedbackHandler) addIssueComment(issueNumber int, comment string, repoN
 	payload := map[string]string{"body": comment}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to marshal issue comment payload: %v", err))
+		slog.Error("[Feedback] failed to marshal issue comment payload", "error", err)
 		return
 	}
 
@@ -955,7 +955,7 @@ func (h *FeedbackHandler) addIssueComment(issueNumber int, comment string, repoN
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to create issue comment request: %v", err))
+		slog.Error("[Feedback] failed to create issue comment request", "error", err)
 		return
 	}
 
@@ -966,7 +966,7 @@ func (h *FeedbackHandler) addIssueComment(issueNumber int, comment string, repoN
 	client := &http.Client{Timeout: githubAPITimeout}
 	resp, err := client.Do(req)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to add issue comment: %v", err))
+		slog.Error("[Feedback] failed to add issue comment", "error", err)
 		return
 	}
 	defer resp.Body.Close()
@@ -976,7 +976,7 @@ func (h *FeedbackHandler) addIssueComment(issueNumber int, comment string, repoN
 		if readErr != nil {
 			body = []byte("(failed to read response body)")
 		}
-		slog.Info(fmt.Sprintf("GitHub API returned %d when adding comment: %s", resp.StatusCode, string(body)))
+		slog.Info("[Feedback] GitHub API error adding comment", "status", resp.StatusCode, "body", string(body))
 	}
 }
 
@@ -1182,7 +1182,7 @@ func (h *FeedbackHandler) handleIssueEvent(payload map[string]interface{}) error
 	issueNumber := int(numF)
 	issueURL, _ := issue["html_url"].(string)
 
-	slog.Info(fmt.Sprintf("[Webhook] Issue #%d %s", issueNumber, action))
+	slog.Info("[Webhook] issue event", "issue", issueNumber, "action", action)
 
 	// Handle label events — track pipeline progression
 	if action == "labeled" {
@@ -1202,7 +1202,7 @@ func (h *FeedbackHandler) handleIssueEvent(payload map[string]interface{}) error
 		if info, ok := pipelineLabels[labelName]; ok {
 			request := h.findFeatureRequest(issueNumber)
 			if request == nil {
-				slog.Info(fmt.Sprintf("[Webhook] No DB record for issue #%d, skipping label update", issueNumber))
+				slog.Info("[Webhook] no DB record, skipping label update", "issue", issueNumber)
 				return nil
 			}
 
@@ -1222,7 +1222,7 @@ func (h *FeedbackHandler) handleIssueEvent(payload map[string]interface{}) error
 		if labelName == "ai-fix-requested" {
 			request := h.findFeatureRequest(issueNumber)
 			if request == nil {
-				slog.Info(fmt.Sprintf("[Webhook] No DB record for issue #%d, skipping ai-fix-requested", issueNumber))
+				slog.Info("[Webhook] no DB record, skipping ai-fix-requested", "issue", issueNumber)
 			}
 			return nil
 		}
@@ -1230,7 +1230,7 @@ func (h *FeedbackHandler) handleIssueEvent(payload map[string]interface{}) error
 
 	// Handle issue opened — only log, don't auto-create DB records
 	if action == "opened" {
-		slog.Info(fmt.Sprintf("[Webhook] Issue #%d opened, no DB record auto-created (GitHub is source of truth)", issueNumber))
+		slog.Info("[Webhook] issue opened, no DB record auto-created (GitHub is source of truth)", "issue", issueNumber)
 	}
 
 	// Handle issue closed
@@ -1246,7 +1246,7 @@ func (h *FeedbackHandler) handleAIProcessingComplete(issueNumber int, issueURL s
 	// Find feature request by issue number
 	request, err := h.store.GetFeatureRequestByIssueNumber(issueNumber)
 	if err != nil || request == nil {
-		slog.Info(fmt.Sprintf("[Webhook] Feature request not found for issue #%d", issueNumber))
+		slog.Info("[Webhook] feature request not found", "issue", issueNumber)
 		return nil
 	}
 
@@ -1400,7 +1400,7 @@ func (h *FeedbackHandler) handlePREvent(payload map[string]interface{}) error {
 		var err error
 		request, err = h.store.GetFeatureRequest(requestID)
 		if err != nil {
-			slog.Error(fmt.Sprintf("[Webhook] Error getting feature request %s: %v", requestID, err))
+			slog.Error("[Webhook] error getting feature request", "requestID", requestID, "error", err)
 		}
 	}
 
@@ -1412,7 +1412,7 @@ func (h *FeedbackHandler) handlePREvent(payload map[string]interface{}) error {
 			request, err = h.store.GetFeatureRequestByIssueNumber(issueNum)
 			if err == nil && request != nil {
 				requestID = request.ID
-				slog.Info(fmt.Sprintf("[Webhook] PR #%d linked to feature request via issue #%d", prNumber, issueNum))
+				slog.Info("[Webhook] PR linked to feature request via issue", "pr", prNumber, "issue", issueNum)
 				break
 			}
 		}
@@ -1433,7 +1433,7 @@ func (h *FeedbackHandler) handlePREvent(payload map[string]interface{}) error {
 			// Not linked to any feature request and not AI-generated, ignore
 			return nil
 		}
-		slog.Info(fmt.Sprintf("[Webhook] PR #%d has ai-generated label but no linked feature request", prNumber))
+		slog.Info("[Webhook] PR has ai-generated label but no linked feature request", "pr", prNumber)
 		return nil
 	}
 
@@ -1465,7 +1465,7 @@ func (h *FeedbackHandler) handlePREvent(payload map[string]interface{}) error {
 		}
 	}
 
-	slog.Info(fmt.Sprintf("[Webhook] PR #%d %s for request %s", prNumber, action, requestID))
+	slog.Info("[Webhook] PR event processed", "pr", prNumber, "action", action, "requestID", requestID)
 	return nil
 }
 
@@ -1498,18 +1498,18 @@ func (h *FeedbackHandler) handleDeploymentStatus(payload map[string]interface{})
 		return nil
 	}
 
-	slog.Info(fmt.Sprintf("[Webhook] Deployment success for PR #%d: %s", prNumber, targetURL))
+	slog.Info("[Webhook] deployment success", "pr", prNumber, "targetURL", targetURL)
 
 	// Find feature request by PR number and update preview URL
 	request, err := h.store.GetFeatureRequestByPRNumber(prNumber)
 	if err != nil || request == nil {
-		slog.Info(fmt.Sprintf("[Webhook] No feature request found for PR #%d", prNumber))
+		slog.Info("[Webhook] no feature request found for PR", "pr", prNumber)
 		return nil
 	}
 
 	// Update preview URL
 	if err := h.store.UpdateFeatureRequestPreview(request.ID, targetURL); err != nil {
-		slog.Error(fmt.Sprintf("[Webhook] Failed to update preview URL: %v", err))
+		slog.Error("[Webhook] failed to update preview URL", "error", err)
 		return err
 	}
 
@@ -1519,7 +1519,7 @@ func (h *FeedbackHandler) handleDeploymentStatus(payload map[string]interface{})
 		fmt.Sprintf("A preview for '%s' is now available.", request.Title),
 		targetURL)
 
-	slog.Info(fmt.Sprintf("[Webhook] Updated preview URL for request %s: %s", request.ID, targetURL))
+	slog.Info("[Webhook] updated preview URL", "requestID", request.ID, "targetURL", targetURL)
 	return nil
 }
 
@@ -1577,7 +1577,7 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest
 		parts := strings.SplitN(dataURI, ",", 2)
 		if len(parts) != 2 {
 			ssResult.Failed++
-			slog.Info(fmt.Sprintf("[Feedback] Screenshot %d: invalid data URI format", i+1))
+			slog.Info("[Feedback] screenshot has invalid data URI format", "index", i+1)
 			continue
 		}
 		validScreenshots = append(validScreenshots, dataURI)
@@ -1605,7 +1605,7 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest
 		// The token lacks permission to create/apply labels on this repo.
 		// Retry without labels — the issue body includes the request type
 		// so maintainers can triage and label it manually.
-		slog.Info(fmt.Sprintf("[Feedback] Label permission denied on %s/%s, retrying without labels", repoOwner, repoName))
+		slog.Info("[Feedback] label permission denied, retrying without labels", "repo", repoOwner+"/"+repoName)
 		number, htmlURL, err = h.postGitHubIssue(repoOwner, repoName, request.Title, issueBody, nil)
 	}
 
@@ -1620,7 +1620,7 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(request *models.FeatureRequest
 				i+1, i+1, dataURI)
 			h.addIssueComment(number, commentBody, repoName)
 		}
-		slog.Info(fmt.Sprintf("[Feedback] Added %d screenshot comment(s) to issue #%d", len(validScreenshots), number))
+		slog.Info("[Feedback] added screenshot comments to issue", "count", len(validScreenshots), "issue", number)
 	}
 
 	return number, htmlURL, ssResult, err
@@ -1799,7 +1799,7 @@ func (h *FeedbackHandler) addPRComment(request *models.FeatureRequest, feedback 
 	payload := map[string]string{"body": commentBody}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to marshal PR comment payload: %v", err))
+		slog.Error("[Feedback] failed to marshal PR comment payload", "error", err)
 		return
 	}
 
@@ -1808,7 +1808,7 @@ func (h *FeedbackHandler) addPRComment(request *models.FeatureRequest, feedback 
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to create PR comment request: %v", err))
+		slog.Error("[Feedback] failed to create PR comment request", "error", err)
 		return
 	}
 
@@ -1819,7 +1819,7 @@ func (h *FeedbackHandler) addPRComment(request *models.FeatureRequest, feedback 
 	client := &http.Client{Timeout: githubAPITimeout}
 	resp, err := client.Do(req)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to add PR comment: %v", err))
+		slog.Error("[Feedback] failed to add PR comment", "error", err)
 		return
 	}
 	defer resp.Body.Close()
@@ -1829,7 +1829,7 @@ func (h *FeedbackHandler) addPRComment(request *models.FeatureRequest, feedback 
 		if readErr != nil {
 			body = []byte("(failed to read response body)")
 		}
-		slog.Info(fmt.Sprintf("GitHub API returned %d when adding PR comment: %s", resp.StatusCode, string(body)))
+		slog.Info("[Feedback] GitHub API error adding PR comment", "status", resp.StatusCode, "body", string(body))
 	}
 }
 
@@ -1857,7 +1857,7 @@ func (h *FeedbackHandler) createNotification(userID uuid.UUID, requestID *uuid.U
 		ActionURL:        actionURL,
 	}
 	if err := h.store.CreateNotification(notification); err != nil {
-		slog.Error(fmt.Sprintf("Failed to create notification: %v", err))
+		slog.Error("[Feedback] failed to create notification", "error", err)
 	}
 }
 
@@ -1941,9 +1941,8 @@ func LoadFeedbackConfig() FeedbackConfig {
 	}
 	for envVar, defaultVal := range feedbackEnvVars {
 		if os.Getenv(envVar) == "" {
-			slog.Warn(fmt.Sprintf("WARNING: %s is not set, using default %q — "+
-				"set this env var for fork/enterprise deployments to avoid "+
-				"routing feedback to the upstream repository", envVar, defaultVal))
+			slog.Warn("[Feedback] env var not set, using default — set this for fork/enterprise deployments",
+				"envVar", envVar, "default", defaultVal)
 		}
 	}
 

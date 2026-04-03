@@ -277,16 +277,16 @@ func NewServer(cfg Config) (*Server, error) {
 	persistenceConfigPath := filepath.Join(filepath.Dir(cfg.DatabasePath), "persistence.json")
 	persistenceStore := store.NewPersistenceStore(persistenceConfigPath)
 	if err := persistenceStore.Load(); err != nil {
-		slog.Error(fmt.Sprintf("Warning: Failed to load persistence config: %v", err))
+		slog.Error("[Server] failed to load persistence config", "error", err)
 	}
 	slog.Info("Persistence store initialized")
 
 	// Initialize persistent settings manager
 	settingsManager := settings.GetSettingsManager()
 	if err := settingsManager.MigrateFromConfigYaml(agent.GetConfigManager()); err != nil {
-		slog.Error(fmt.Sprintf("Warning: Failed to migrate settings from config.yaml: %v", err))
+		slog.Error("[Server] failed to migrate settings from config.yaml", "error", err)
 	}
-	slog.Info(fmt.Sprintf("Settings manager initialized (%s)", settingsManager.GetSettingsPath()))
+	slog.Info("[Server] settings manager initialized", "path", settingsManager.GetSettingsPath())
 
 	server := &Server{
 		app:                 app,
@@ -329,9 +329,9 @@ func startLoadingServer(addr string) *http.Server {
 
 	srv := &http.Server{Addr: addr, Handler: mux}
 	go func() {
-		slog.Info(fmt.Sprintf("Loading page available on %s", addr))
+		slog.Info("[Server] loading page available", "addr", addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error(fmt.Sprintf("Loading server error: %v", err))
+			slog.Error("[Server] loading server error", "error", err)
 		}
 	}()
 	// Give the listener time to bind
@@ -1145,11 +1145,11 @@ func (s *Server) Start() error {
 		// Wait for the OS to fully release the port instead of a fixed sleep.
 		// The previous 50ms sleep was insufficient on some systems.
 		if err := waitForPortRelease(listenPort, portReleaseTimeout); err != nil {
-			slog.Warn(fmt.Sprintf("Warning: port %d may not be fully released: %v", listenPort, err))
+			slog.Warn("[Server] port may not be fully released", "port", listenPort, "error", err)
 		}
 	}
 
-	slog.Info(fmt.Sprintf("Starting server on %s (dev=%v)", addr, s.config.DevMode))
+	slog.Info("[Server] starting", "addr", addr, "devMode", s.config.DevMode)
 	return s.app.Listen(addr)
 }
 
@@ -1192,7 +1192,7 @@ func (s *Server) Shutdown() error {
 	}
 	if s.bridge != nil {
 		if err := s.bridge.Stop(); err != nil {
-			slog.Error(fmt.Sprintf("Warning: MCP bridge shutdown error: %v", err))
+			slog.Error("[Server] MCP bridge shutdown error", "error", err)
 		}
 	}
 	if err := s.store.Close(); err != nil {
@@ -1225,7 +1225,7 @@ func LoadConfigFromEnv() Config {
 	var backendPort int
 	if p := os.Getenv("BACKEND_PORT"); p != "" {
 		if v, err := strconv.Atoi(p); err != nil {
-			slog.Warn(fmt.Sprintf("WARNING: invalid BACKEND_PORT %q, ignoring: %v", p, err))
+			slog.Warn("[Server] invalid BACKEND_PORT, ignoring", "value", p, "error", err)
 		} else {
 			backendPort = v
 		}
@@ -1326,9 +1326,8 @@ func warnDefaultEnvVars(vars map[string]string) {
 	for _, envVar := range keys {
 		defaultVal := vars[envVar]
 		if os.Getenv(envVar) == "" {
-			slog.Warn(fmt.Sprintf("WARNING: %s is not set, using default %q — "+
-				"set this env var for fork/enterprise deployments to avoid "+
-				"routing actions to the upstream repository", envVar, defaultVal))
+			slog.Warn("[Server] env var not set, using default — set this for fork/enterprise deployments",
+				"envVar", envVar, "default", defaultVal)
 		}
 	}
 }
@@ -1343,7 +1342,7 @@ func generateDevSecret() string {
 	if _, err := rand.Read(b); err != nil {
 		// crypto/rand.Read should never fail on supported platforms;
 		// if it does, fall back to a logged warning and a best-effort value.
-		slog.Error(fmt.Sprintf("WARNING: crypto/rand.Read failed: %v — using fallback", err))
+		slog.Error("[Server] crypto/rand.Read failed, using fallback", "error", err)
 		return fmt.Sprintf("dev-fallback-%d", b)
 	}
 	return hex.EncodeToString(b)

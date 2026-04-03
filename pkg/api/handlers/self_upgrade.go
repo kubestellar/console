@@ -133,7 +133,7 @@ func (h *SelfUpgradeHandler) canPatchDeployment(ctx context.Context, client kube
 	}
 	result, err := client.AuthorizationV1().SelfSubjectAccessReviews().Create(ctx, review, metav1.CreateOptions{})
 	if err != nil {
-		slog.Error(fmt.Sprintf("[self-upgrade] RBAC check failed: %v", err))
+		slog.Error("[self-upgrade] RBAC check failed", "error", err)
 		return false
 	}
 	return result.Status.Allowed
@@ -269,7 +269,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 	}
 	newImage := repo + ":" + req.ImageTag
 
-	slog.Info(fmt.Sprintf("[self-upgrade] Upgrading %s/%s: %s → %s", namespace, dep.Name, currentImage, newImage))
+	slog.Info("[self-upgrade] upgrading deployment", "namespace", namespace, "deployment", dep.Name, "from", currentImage, "to", newImage)
 
 	// Broadcast progress to all WebSocket clients
 	h.hub.BroadcastAll(Message{
@@ -306,7 +306,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 		metav1.PatchOptions{},
 	)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[self-upgrade] Patch failed: %v", err))
+		slog.Error("[self-upgrade] patch failed", "error", err)
 		h.hub.BroadcastAll(Message{
 			Type: "update_progress",
 			Data: map[string]any{

@@ -59,7 +59,7 @@ KubeStellar Console - Local Agent v%s
 		AllowedOrigins: origins,
 	})
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to create server: %v", err))
+		slog.Error("failed to create server", "error", err)
 		os.Exit(1)
 	}
 
@@ -72,7 +72,7 @@ KubeStellar Console - Local Agent v%s
 	}()
 
 	if err := server.Start(); err != nil {
-		slog.Error(fmt.Sprintf("Server error: %v", err))
+		slog.Error("server error", "error", err)
 		os.Exit(1)
 	}
 }

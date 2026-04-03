@@ -131,7 +131,7 @@ func (w *InsightWorker) Enrich(req InsightEnrichmentRequest) (*InsightEnrichment
 	// Try to get AI enrichments from a connected provider
 	enrichments, provider, err := w.callAIProvider(needsEnrichment)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[InsightWorker] AI enrichment failed: %v", err))
+		slog.Error("[InsightWorker] AI enrichment failed", "error", err)
 		// Fall back to rule-based enrichments
 		enrichments = w.generateRuleBasedEnrichments(needsEnrichment)
 		provider = "rules"
@@ -188,7 +188,7 @@ func (w *InsightWorker) callAIProvider(insights []InsightSummary) ([]AIInsightEn
 
 		resp, err := provider.Chat(ctx, req)
 		if err != nil {
-			slog.Error(fmt.Sprintf("[InsightWorker] Provider %s failed: %v", name, err))
+			slog.Error("[InsightWorker] provider failed", "provider", name, "error", err)
 			continue
 		}
 		if resp == nil {
@@ -197,7 +197,7 @@ func (w *InsightWorker) callAIProvider(insights []InsightSummary) ([]AIInsightEn
 
 		enrichments, err := parseEnrichmentResponse(resp.Content, insights)
 		if err != nil {
-			slog.Error(fmt.Sprintf("[InsightWorker] Failed to parse response from %s: %v", name, err))
+			slog.Error("[InsightWorker] failed to parse response", "provider", name, "error", err)
 			continue
 		}
 

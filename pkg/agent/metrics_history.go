@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -143,7 +142,7 @@ func (mh *MetricsHistory) CaptureNow() error {
 func (mh *MetricsHistory) runLoop(interval time.Duration) {
 	// Capture initial snapshot
 	if err := mh.captureSnapshot(); err != nil {
-		slog.Error(fmt.Sprintf("[MetricsHistory] Error capturing initial snapshot: %v", err))
+		slog.Error("[MetricsHistory] error capturing initial snapshot", "error", err)
 	}
 
 	ticker := time.NewTicker(interval)
@@ -153,7 +152,7 @@ func (mh *MetricsHistory) runLoop(interval time.Duration) {
 		select {
 		case <-ticker.C:
 			if err := mh.captureSnapshot(); err != nil {
-				slog.Error(fmt.Sprintf("[MetricsHistory] Error capturing snapshot: %v", err))
+				slog.Error("[MetricsHistory] error capturing snapshot", "error", err)
 			}
 		case <-mh.stopCh:
 			slog.Info("[MetricsHistory] Stopping")
@@ -180,7 +179,7 @@ func (mh *MetricsHistory) captureSnapshot() error {
 	if err != nil {
 		if !mh.loggedClusterError {
 			mh.loggedClusterError = true
-			slog.Info(fmt.Sprintf("[MetricsHistory] Cluster data unavailable (will retry silently): %v", err))
+			slog.Info("[MetricsHistory] cluster data unavailable (will retry silently)", "error", err)
 		}
 	} else {
 		for _, h := range healthList {
@@ -263,8 +262,7 @@ func (mh *MetricsHistory) captureSnapshot() error {
 	// Persist to disk
 	go mh.saveToDisk()
 
-	slog.Info(fmt.Sprintf("[MetricsHistory] Captured snapshot: %d clusters, %d pod issues, %d GPU nodes",
-		len(snapshot.Clusters), len(snapshot.PodIssues), len(snapshot.GPUNodes)))
+	slog.Info("[MetricsHistory] captured snapshot", "clusters", len(snapshot.Clusters), "podIssues", len(snapshot.PodIssues), "gpuNodes", len(snapshot.GPUNodes))
 
 	return nil
 }
@@ -276,19 +274,19 @@ func (mh *MetricsHistory) saveToDisk() {
 	mh.mu.RUnlock()
 
 	if err != nil {
-		slog.Error(fmt.Sprintf("[MetricsHistory] Error marshaling history: %v", err))
+		slog.Error("[MetricsHistory] error marshaling history", "error", err)
 		return
 	}
 
 	// Ensure directory exists
 	if err := os.MkdirAll(mh.dataDir, metricsDirMode); err != nil {
-		slog.Error(fmt.Sprintf("[MetricsHistory] Error creating data dir: %v", err))
+		slog.Error("[MetricsHistory] error creating data dir", "error", err)
 		return
 	}
 
 	filePath := filepath.Join(mh.dataDir, metricsHistoryFile)
 	if err := os.WriteFile(filePath, data, metricsFileMode); err != nil {
-		slog.Error(fmt.Sprintf("[MetricsHistory] Error writing history file: %v", err))
+		slog.Error("[MetricsHistory] error writing history file", "error", err)
 	}
 }
 
@@ -299,14 +297,14 @@ func (mh *MetricsHistory) loadFromDisk() {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			slog.Error(fmt.Sprintf("[MetricsHistory] Error reading history file: %v", err))
+			slog.Error("[MetricsHistory] error reading history file", "error", err)
 		}
 		return
 	}
 
 	var snapshots []MetricsSnapshot
 	if err := json.Unmarshal(data, &snapshots); err != nil {
-		slog.Error(fmt.Sprintf("[MetricsHistory] Error parsing history file: %v", err))
+		slog.Error("[MetricsHistory] error parsing history file", "error", err)
 		return
 	}
 
@@ -324,7 +322,7 @@ func (mh *MetricsHistory) loadFromDisk() {
 	mh.snapshots = filtered
 	mh.mu.Unlock()
 
-	slog.Info(fmt.Sprintf("[MetricsHistory] Loaded %d snapshots from disk", len(filtered)))
+	slog.Info("[MetricsHistory] loaded snapshots from disk", "count", len(filtered))
 }
 
 // GetTrendContext returns formatted history for AI prompt

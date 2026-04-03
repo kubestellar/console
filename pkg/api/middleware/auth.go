@@ -94,7 +94,7 @@ func (c *revokedTokenCache) Revoke(jti string, expiresAt time.Time) {
 	// Write-through to persistent store (best-effort; log on failure).
 	if store != nil {
 		if err := store.RevokeToken(jti, expiresAt); err != nil {
-			slog.Error(fmt.Sprintf("[Auth] failed to persist token revocation for jti %s: %v", jti, err))
+			slog.Error("[Auth] failed to persist token revocation", "jti", jti, "error", err)
 		}
 	}
 }
@@ -114,7 +114,7 @@ func (c *revokedTokenCache) IsRevoked(jti string) bool {
 	if store != nil {
 		revoked, err := store.IsTokenRevoked(jti)
 		if err != nil {
-			slog.Error(fmt.Sprintf("[Auth] failed to check token revocation for jti %s: %v", jti, err))
+			slog.Error("[Auth] failed to check token revocation", "jti", jti, "error", err)
 			return false
 		}
 		if revoked {
@@ -156,9 +156,9 @@ func (c *revokedTokenCache) cleanup() {
 	// Also prune expired rows from the persistent store.
 	if store != nil {
 		if n, err := store.CleanupExpiredTokens(); err != nil {
-			slog.Error(fmt.Sprintf("[Auth] failed to cleanup expired tokens: %v", err))
+			slog.Error("[Auth] failed to cleanup expired tokens", "error", err)
 		} else if n > 0 {
-			slog.Info(fmt.Sprintf("[Auth] cleaned up %d expired revoked tokens from store", n))
+			slog.Info("[Auth] cleaned up expired revoked tokens", "count", n)
 		}
 	}
 }
@@ -187,7 +187,7 @@ func JWTAuth(secret string) fiber.Handler {
 		if authHeader != "" {
 			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
 			if tokenString == authHeader {
-				slog.Info(fmt.Sprintf("[Auth] Invalid authorization format for %s", c.Path()))
+				slog.Info("[Auth] invalid authorization format", "path", c.Path())
 				return fiber.NewError(fiber.StatusUnauthorized, "Invalid authorization format")
 			}
 		}
@@ -204,31 +204,31 @@ func JWTAuth(secret string) fiber.Handler {
 		}
 
 		if tokenString == "" {
-			slog.Info(fmt.Sprintf("[Auth] Missing authorization for %s", c.Path()))
+			slog.Info("[Auth] missing authorization", "path", c.Path())
 			return fiber.NewError(fiber.StatusUnauthorized, "Missing authorization")
 		}
 
 		token, err := ParseJWT(tokenString, secret)
 
 		if err != nil {
-			slog.Error(fmt.Sprintf("[Auth] Token parse error for %s: %v", c.Path(), err))
+			slog.Error("[Auth] token parse error", "path", c.Path(), "error", err)
 			return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
 		}
 
 		if !token.Valid {
-			slog.Info(fmt.Sprintf("[Auth] Invalid token for %s", c.Path()))
+			slog.Info("[Auth] invalid token", "path", c.Path())
 			return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
 		}
 
 		claims, ok := token.Claims.(*UserClaims)
 		if !ok {
-			slog.Info(fmt.Sprintf("[Auth] Invalid token claims for %s", c.Path()))
+			slog.Info("[Auth] invalid token claims", "path", c.Path())
 			return fiber.NewError(fiber.StatusUnauthorized, "Invalid token claims")
 		}
 
 		// Check if token has been revoked (server-side logout)
 		if claims.ID != "" && IsTokenRevoked(claims.ID) {
-			slog.Info(fmt.Sprintf("[Auth] Revoked token used for %s", c.Path()))
+			slog.Info("[Auth] revoked token used", "path", c.Path())
 			return fiber.NewError(fiber.StatusUnauthorized, "Token has been revoked")
 		}
 

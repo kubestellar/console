@@ -40,7 +40,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		slog.Error(fmt.Sprintf("WebSocket upgrade failed: %v", err))
+		slog.Error("WebSocket upgrade failed", "error", err)
 		return
 	}
 	defer conn.Close()
@@ -56,7 +56,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		s.clientsMux.Unlock()
 	}()
 
-	slog.Info(fmt.Sprintf("Client connected: %s (origin: %s)", conn.RemoteAddr(), r.Header.Get("Origin")))
+	slog.Info("client connected", "addr", conn.RemoteAddr(), "origin", r.Header.Get("Origin"))
 
 	// writeMu is the single per-connection mutex shared by broadcasts
 	// (prediction_worker) and request/stream handlers. Using the same
@@ -101,7 +101,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		var msg protocol.Message
 		if err := conn.ReadJSON(&msg); err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				slog.Error(fmt.Sprintf("WebSocket error: %v", err))
+				slog.Error("WebSocket error", "error", err)
 			}
 			break
 		}
@@ -117,7 +117,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			go func(m protocol.Message, fa string) {
 				defer func() {
 					if r := recover(); r != nil {
-						slog.Info(fmt.Sprintf("[Chat] recovered from panic in streaming handler: %v", r))
+						slog.Info("[Chat] recovered from panic in streaming handler", "panic", r)
 					}
 				}()
 				s.handleChatMessageStreaming(conn, m, fa, writeMu, &closed)
@@ -131,7 +131,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			go func(m protocol.Message) {
 				defer func() {
 					if r := recover(); r != nil {
-						slog.Info(fmt.Sprintf("[Kubectl] recovered from panic in message handler: %v", r))
+						slog.Info("[Kubectl] recovered from panic in message handler", "panic", r)
 					}
 				}()
 				response := s.handleMessage(m)
@@ -141,7 +141,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				writeMu.Lock()
 				defer writeMu.Unlock()
 				if err := conn.WriteJSON(response); err != nil {
-					slog.Error(fmt.Sprintf("Write error: %v", err))
+					slog.Error("write error", "error", err)
 				}
 			}(msg)
 		} else {
@@ -150,7 +150,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			err := conn.WriteJSON(response)
 			writeMu.Unlock()
 			if err != nil {
-				slog.Error(fmt.Sprintf("Write error: %v", err))
+				slog.Error("write error", "error", err)
 				break
 			}
 		}
@@ -158,7 +158,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	closed.Store(true)
 	close(stopPing) // signal pinger goroutine to exit
 
-	slog.Info(fmt.Sprintf("Client disconnected: %s", conn.RemoteAddr()))
+	slog.Info("client disconnected", "addr", conn.RemoteAddr())
 }
 
 // handleMessage processes incoming messages (non-streaming)
@@ -352,15 +352,14 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 	// Smart agent routing: if the prompt suggests command execution, prefer tool-capable agents
 	// Also check conversation history for tool execution context
 	needsTools := s.promptNeedsToolExecution(req.Prompt)
-	slog.Info(fmt.Sprintf("[Chat] Smart routing: prompt=%q, needsTools=%v, currentAgent=%q, isToolCapable=%v",
-		truncateString(req.Prompt, 50), needsTools, agentName, s.isToolCapableAgent(agentName)))
+	slog.Info("[Chat] smart routing", "prompt", truncateString(req.Prompt, 50), "needsTools", needsTools, "currentAgent", agentName, "isToolCapable", s.isToolCapableAgent(agentName))
 
 	if !needsTools && len(req.History) > 0 {
 		// Check if any message in history suggests tool execution was requested
 		for _, h := range req.History {
 			if s.promptNeedsToolExecution(h.Content) {
 				needsTools = true
-				slog.Info(fmt.Sprintf("[Chat] History contains tool execution request: %q", truncateString(h.Content, 50)))
+				slog.Info("[Chat] history contains tool execution request", "content", truncateString(h.Content, 50))
 				break
 			}
 		}
@@ -369,28 +368,27 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 	if needsTools && !s.isToolCapableAgent(agentName) {
 		// Try mixed-mode: use thinking agent + CLI execution agent
 		if toolAgent := s.findToolCapableAgent(); toolAgent != "" {
-			slog.Info(fmt.Sprintf("[Chat] Mixed-mode: thinking=%s, execution=%s", agentName, toolAgent))
+			slog.Info("[Chat] mixed-mode routing", "thinking", agentName, "execution", toolAgent)
 			s.handleMixedModeChat(ctx, conn, msg, req, agentName, toolAgent, req.SessionID, writeMu, closed)
 			return
 		}
-		slog.Info(fmt.Sprintf("[Chat] No tool-capable agent available, keeping %s (best-effort)", agentName))
+		slog.Info("[Chat] no tool-capable agent available, keeping current (best-effort)", "agent", agentName)
 	}
 
-	slog.Info(fmt.Sprintf("[Chat] Final agent selection: requested=%q, forceAgent=%q, selected=%q, sessionID=%q",
-		req.Agent, forceAgent, agentName, req.SessionID))
+	slog.Info("[Chat] final agent selection", "requested", req.Agent, "forceAgent", forceAgent, "selected", agentName, "sessionID", req.SessionID)
 
 	// Get the provider
 	provider, err := s.registry.Get(agentName)
 	if err != nil {
 		// Try default agent
-		slog.Info(fmt.Sprintf("[Chat] Agent %q not found, trying default", agentName))
+		slog.Info("[Chat] agent not found, trying default", "agent", agentName)
 		provider, err = s.registry.GetDefault()
 		if err != nil {
 			safeWrite(ctx, s.errorResponse(msg.ID, "no_agent", "No AI agent available. Please configure an API key"))
 			return
 		}
 		agentName = provider.Name()
-		slog.Info(fmt.Sprintf("[Chat] Using default agent: %s", agentName))
+		slog.Info("[Chat] using default agent", "agent", agentName)
 	}
 
 	if !provider.IsAvailable() {
@@ -475,15 +473,15 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 			if ctx.Err() != nil {
 				// Distinguish timeout from user-initiated cancel (#2375)
 				if ctx.Err() == context.DeadlineExceeded {
-					slog.Info(fmt.Sprintf("[Chat] Session %s timed out after %v", req.SessionID, missionExecutionTimeout))
+					slog.Info("[Chat] session timed out", "sessionID", req.SessionID, "timeout", missionExecutionTimeout)
 					safeWrite(context.Background(), s.errorResponse(msg.ID, "mission_timeout",
 						fmt.Sprintf("Mission timed out after %d minutes. The AI provider did not respond in time. You can retry or try a simpler prompt.", int(missionExecutionTimeout.Minutes()))))
 					return
 				}
-				slog.Info(fmt.Sprintf("[Chat] Session %s cancelled", req.SessionID))
+				slog.Info("[Chat] session cancelled", "sessionID", req.SessionID)
 				return
 			}
-			slog.Error(fmt.Sprintf("[Chat] streaming execution error for %s: %v", agentName, err))
+			slog.Error("[Chat] streaming execution error", "agent", agentName, "error", err)
 			code, msg2 := classifyProviderError(err)
 			safeWrite(ctx, s.errorResponse(msg.ID, code, msg2))
 			return
@@ -500,15 +498,15 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 			if ctx.Err() != nil {
 				// Distinguish timeout from user-initiated cancel (#2375)
 				if ctx.Err() == context.DeadlineExceeded {
-					slog.Info(fmt.Sprintf("[Chat] Session %s timed out after %v", req.SessionID, missionExecutionTimeout))
+					slog.Info("[Chat] session timed out", "sessionID", req.SessionID, "timeout", missionExecutionTimeout)
 					safeWrite(context.Background(), s.errorResponse(msg.ID, "mission_timeout",
 						fmt.Sprintf("Mission timed out after %d minutes. The AI provider did not respond in time. You can retry or try a simpler prompt.", int(missionExecutionTimeout.Minutes()))))
 					return
 				}
-				slog.Info(fmt.Sprintf("[Chat] Session %s cancelled", req.SessionID))
+				slog.Info("[Chat] session cancelled", "sessionID", req.SessionID)
 				return
 			}
-			slog.Error(fmt.Sprintf("[Chat] execution error for %s: %v", agentName, err))
+			slog.Error("[Chat] execution error", "agent", agentName, "error", err)
 			code, msg2 := classifyProviderError(err)
 			safeWrite(ctx, s.errorResponse(msg.ID, code, msg2))
 			return
@@ -518,12 +516,12 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 	// Don't send result if cancelled
 	if ctx.Err() != nil {
 		if ctx.Err() == context.DeadlineExceeded {
-			slog.Info(fmt.Sprintf("[Chat] Session %s timed out after completion", req.SessionID))
+			slog.Info("[Chat] session timed out after completion", "sessionID", req.SessionID)
 			safeWrite(context.Background(), s.errorResponse(msg.ID, "mission_timeout",
 				fmt.Sprintf("Mission timed out after %d minutes. The AI provider did not respond in time. You can retry or try a simpler prompt.", int(missionExecutionTimeout.Minutes()))))
 			return
 		}
-		slog.Info(fmt.Sprintf("[Chat] Session %s cancelled after completion", req.SessionID))
+		slog.Info("[Chat] session cancelled after completion", "sessionID", req.SessionID)
 		return
 	}
 
@@ -570,14 +568,14 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 func (s *Server) handleCancelChat(conn *websocket.Conn, msg protocol.Message, writeMu *sync.Mutex) {
 	payloadBytes, err := json.Marshal(msg.Payload)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[Chat] Failed to marshal cancel chat payload: %v", err))
+		slog.Error("[Chat] failed to marshal cancel chat payload", "error", err)
 		return
 	}
 	var req struct {
 		SessionID string `json:"sessionId"`
 	}
 	if err := json.Unmarshal(payloadBytes, &req); err != nil {
-		slog.Error(fmt.Sprintf("[Chat] Failed to unmarshal cancel chat request: %v", err))
+		slog.Error("[Chat] failed to unmarshal cancel chat request", "error", err)
 		return
 	}
 
@@ -587,9 +585,9 @@ func (s *Server) handleCancelChat(conn *websocket.Conn, msg protocol.Message, wr
 
 	if ok {
 		cancelFn()
-		slog.Info(fmt.Sprintf("[Chat] Cancelled chat for session %s", req.SessionID))
+		slog.Info("[Chat] cancelled chat", "sessionID", req.SessionID)
 	} else {
-		slog.Info(fmt.Sprintf("[Chat] No active chat to cancel for session %s", req.SessionID))
+		slog.Info("[Chat] no active chat to cancel", "sessionID", req.SessionID)
 	}
 
 	writeMu.Lock()
@@ -643,9 +641,9 @@ func (s *Server) handleCancelChatHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if ok {
 		cancelFn()
-		slog.Info(fmt.Sprintf("[Chat] Cancelled chat via HTTP for session %s", req.SessionID))
+		slog.Info("[Chat] cancelled chat via HTTP", "sessionID", req.SessionID)
 	} else {
-		slog.Info(fmt.Sprintf("[Chat] No active chat to cancel via HTTP for session %s", req.SessionID))
+		slog.Info("[Chat] no active chat to cancel via HTTP", "sessionID", req.SessionID)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -727,7 +725,7 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string) prot
 
 	resp, err := provider.Chat(context.Background(), chatReq)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[Chat] execution error for %s: %v", agentName, err))
+		slog.Error("[Chat] execution error", "agent", agentName, "error", err)
 		return s.errorResponse(msg.ID, "execution_error", fmt.Sprintf("Failed to execute %s", agentName))
 	}
 
@@ -816,11 +814,11 @@ func (s *Server) handleSelectAgentMessage(msg protocol.Message) protocol.Message
 	// For now, update the default agent
 	previousAgent := s.registry.GetDefaultName()
 	if err := s.registry.SetDefault(req.Agent); err != nil {
-		slog.Error(fmt.Sprintf("set default agent error: %v", err))
+		slog.Error("set default agent error", "error", err)
 		return s.errorResponse(msg.ID, "invalid_agent", "invalid agent selection")
 	}
 
-	slog.Info(fmt.Sprintf("Agent selected: %s (was: %s)", req.Agent, previousAgent))
+	slog.Info("agent selected", "agent", req.Agent, "previous", previousAgent)
 
 	return protocol.Message{
 		ID:   msg.ID,
@@ -934,10 +932,10 @@ User request: %s`, req.Prompt)
 	thinkingResp, err := thinkingProvider.Chat(ctx, &thinkingReq)
 	if err != nil {
 		if ctx.Err() != nil {
-			slog.Info(fmt.Sprintf("[MixedMode] Session %s cancelled", sessionID))
+			slog.Info("[MixedMode] session cancelled", "sessionID", sessionID)
 			return
 		}
-		slog.Error(fmt.Sprintf("[MixedMode] Thinking agent error: %v", err))
+		slog.Error("[MixedMode] thinking agent error", "error", err)
 		safeWrite(s.errorResponse(msg.ID, "mixed_mode_error", fmt.Sprintf("Thinking agent error: %v", err)))
 		return
 	}
@@ -1008,10 +1006,10 @@ User request: %s`, req.Prompt)
 	execResp, err := execProvider.Chat(ctx, &execReq)
 	if err != nil {
 		if ctx.Err() != nil {
-			slog.Info(fmt.Sprintf("[MixedMode] Session %s cancelled during execution", sessionID))
+			slog.Info("[MixedMode] session cancelled during execution", "sessionID", sessionID)
 			return
 		}
-		slog.Error(fmt.Sprintf("[MixedMode] Execution agent error: %v", err))
+		slog.Error("[MixedMode] execution agent error", "error", err)
 		execContent = fmt.Sprintf("Execution Error: %v", err)
 		safeWrite(protocol.Message{
 			ID:   msg.ID,
@@ -1064,10 +1062,10 @@ Command output:
 	analysisResp, err := thinkingProvider.Chat(ctx, &analysisReq)
 	if err != nil {
 		if ctx.Err() != nil {
-			slog.Info(fmt.Sprintf("[MixedMode] Session %s cancelled during analysis", sessionID))
+			slog.Info("[MixedMode] session cancelled during analysis", "sessionID", sessionID)
 			return
 		}
-		slog.Error(fmt.Sprintf("[MixedMode] Analysis error: %v", err))
+		slog.Error("[MixedMode] analysis error", "error", err)
 	} else if analysisResp != nil {
 		safeWrite(protocol.Message{
 			ID:   msg.ID,
@@ -1264,7 +1262,7 @@ func (s *Server) loadTokenUsage() {
 
 	var usage tokenUsageData
 	if err := json.Unmarshal(data, &usage); err != nil {
-		slog.Warn(fmt.Sprintf("Warning: could not parse token usage file: %v", err))
+		slog.Warn("could not parse token usage file", "error", err)
 		return
 	}
 
@@ -1277,7 +1275,7 @@ func (s *Server) loadTokenUsage() {
 		s.todayTokensIn = usage.InputIn
 		s.todayTokensOut = usage.OutputOut
 		s.todayDate = today
-		slog.Info(fmt.Sprintf("Loaded token usage: %d input, %d output tokens for today", usage.InputIn, usage.OutputOut))
+		slog.Info("loaded token usage", "inputTokens", usage.InputIn, "outputTokens", usage.OutputOut)
 	}
 }
 
@@ -1298,7 +1296,7 @@ func (s *Server) saveTokenUsage() {
 
 	path := getTokenUsagePath()
 	if err := os.WriteFile(path, data, agentFileMode); err != nil {
-		slog.Warn(fmt.Sprintf("Warning: could not save token usage: %v", err))
+		slog.Warn("could not save token usage", "error", err)
 	}
 }
 

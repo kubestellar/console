@@ -98,7 +98,7 @@ func (c *ClaudeCodeProvider) detectCLI() {
 		for _, p := range commonPaths {
 			if _, statErr := os.Stat(p); statErr == nil {
 				path = p
-				slog.Info(fmt.Sprintf("Found Claude Code CLI at: %s", p))
+				slog.Info("found Claude Code CLI", "path", p)
 				break
 			}
 		}
@@ -107,7 +107,7 @@ func (c *ClaudeCodeProvider) detectCLI() {
 			return
 		}
 	} else {
-		slog.Info(fmt.Sprintf("Found Claude Code CLI in PATH: %s", path))
+		slog.Info("found Claude Code CLI in PATH", "path", path)
 	}
 	c.cliPath = path
 
@@ -120,9 +120,9 @@ func (c *ClaudeCodeProvider) detectCLI() {
 	output, err := cmd.Output()
 	if err == nil {
 		c.version = strings.TrimSpace(string(output))
-		slog.Info(fmt.Sprintf("Claude Code CLI version: %s", c.version))
+		slog.Info("Claude Code CLI version detected", "version", c.version)
 	} else {
-		slog.Info(fmt.Sprintf("Could not get Claude Code CLI version: %v", err))
+		slog.Info("could not get Claude Code CLI version", "error", err)
 	}
 }
 
@@ -319,7 +319,7 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 
 		var event claudeCodeStreamEvent
 		if err := json.Unmarshal([]byte(line), &event); err != nil {
-			slog.Error(fmt.Sprintf("Warning: failed to parse stream event: %v (line: %s)", err, truncateString(line, 100)))
+			slog.Error("failed to parse stream event", "error", err, "line", truncateString(line, 100))
 			continue
 		}
 
@@ -331,7 +331,7 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 		case "tool_use":
 			// Tool is being called
 			lastToolName = event.Tool
-			slog.Info(fmt.Sprintf("[Claude Code] Tool use: %s", event.Tool))
+			slog.Info("[Claude Code] tool use", "tool", event.Tool)
 			if onProgress != nil {
 				onProgress(StreamEvent{
 					Type:  "tool_use",
@@ -347,7 +347,7 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 			if event.Tool != "" && lastToolName == "" {
 				lastToolName = event.Tool
 			}
-			slog.Info(fmt.Sprintf("[Claude Code] Tool result: %s (%d bytes)", event.Tool, len(event.Output)))
+			slog.Info("[Claude Code] tool result", "tool", event.Tool, "bytes", len(event.Output))
 			if onProgress != nil {
 				onProgress(StreamEvent{
 					Type:   "tool_result",
@@ -361,14 +361,14 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 			// The "user" event wraps tool results in the stream-json format
 			if event.ToolUseResult != nil && event.ToolUseResult.Stdout != "" {
 				lastToolOutput = event.ToolUseResult.Stdout
-				slog.Info(fmt.Sprintf("[Claude Code] Captured tool output (%d bytes)", len(lastToolOutput)))
+				slog.Info("[Claude Code] captured tool output", "bytes", len(lastToolOutput))
 			}
 			// Also check message content for tool results
 			if event.Message != nil {
 				for _, content := range event.Message.Content {
 					if content.Type == "tool_result" && content.Content != "" {
 						lastToolOutput = content.Content
-						slog.Info(fmt.Sprintf("[Claude Code] Captured tool result from message (%d bytes)", len(lastToolOutput)))
+						slog.Info("[Claude Code] captured tool result from message", "bytes", len(lastToolOutput))
 					}
 				}
 			}
@@ -417,7 +417,7 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 	}
 
 	if err := scanner.Err(); err != nil {
-		slog.Error(fmt.Sprintf("Warning: scanner error: %v", err))
+		slog.Error("scanner error", "error", err)
 	}
 
 	// Wait for command to complete

@@ -137,7 +137,7 @@ func (g *GooseProvider) StreamChat(ctx context.Context, req *ChatRequest, onChun
 	go func() {
 		defer close(stderrDone)
 		if _, copyErr := io.Copy(&stderrBuf, stderr); copyErr != nil {
-			slog.Error(fmt.Sprintf("[Goose] Error reading stderr: %v", copyErr))
+			slog.Error("[Goose] error reading stderr", "error", copyErr)
 		}
 	}()
 
@@ -153,7 +153,7 @@ func (g *GooseProvider) StreamChat(ctx context.Context, req *ChatRequest, onChun
 		}
 	}
 	if scanErr := scanner.Err(); scanErr != nil {
-		slog.Error(fmt.Sprintf("[Goose] Scanner error: %v", scanErr))
+		slog.Error("[Goose] scanner error", "error", scanErr)
 	}
 
 	// Wait for stderr drain before calling cmd.Wait.
@@ -167,7 +167,7 @@ func (g *GooseProvider) StreamChat(ctx context.Context, req *ChatRequest, onChun
 			}
 			return nil, fmt.Errorf("goose exited with error: %w", waitErr)
 		}
-		slog.Error(fmt.Sprintf("[Goose] Command finished with error: %v", waitErr))
+		slog.Error("[Goose] command finished with error", "error", waitErr)
 	}
 
 	return &ChatResponse{

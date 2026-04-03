@@ -655,7 +655,7 @@ func NewMultiClusterClient(kubeconfig string) (*MultiClusterClient, error) {
 			slog.Info("Using in-cluster config (no kubeconfig file found)")
 			client.inClusterConfig = inClusterConfig
 			client.inClusterName = detectInClusterName(inClusterConfig)
-			slog.Info(fmt.Sprintf("Detected in-cluster name: %s", client.inClusterName))
+			slog.Info("detected in-cluster name", "name", client.inClusterName)
 		}
 	}
 
@@ -773,11 +773,11 @@ func (m *MultiClusterClient) StartWatching() error {
 	// Also watch the directory (for editors that do atomic saves)
 	dir := filepath.Dir(m.kubeconfig)
 	if err := watcher.Add(dir); err != nil {
-		slog.Warn(fmt.Sprintf("Warning: could not watch kubeconfig directory: %v", err))
+		slog.Warn("could not watch kubeconfig directory", "error", err)
 	}
 
 	go m.watchLoop()
-	slog.Info(fmt.Sprintf("Watching kubeconfig for changes: %s", m.kubeconfig))
+	slog.Info("watching kubeconfig for changes", "path", m.kubeconfig)
 	return nil
 }
 
@@ -787,7 +787,7 @@ func (m *MultiClusterClient) StartWatching() error {
 func (m *MultiClusterClient) reloadAndNotify() {
 	slog.Info("Kubeconfig changed, reloading...")
 	if err := m.LoadConfig(); err != nil {
-		slog.Info(fmt.Sprintf("Error reloading kubeconfig: %v", err))
+		slog.Error("error reloading kubeconfig", "error", err)
 		return
 	}
 	slog.Info("Kubeconfig reloaded successfully")
@@ -797,7 +797,7 @@ func (m *MultiClusterClient) reloadAndNotify() {
 	if m.watcher != nil {
 		_ = m.watcher.Remove(m.kubeconfig)
 		if err := m.watcher.Add(m.kubeconfig); err != nil {
-			slog.Warn(fmt.Sprintf("Warning: could not re-watch kubeconfig file: %v", err))
+			slog.Warn("could not re-watch kubeconfig file", "error", err)
 		}
 	}
 
@@ -856,7 +856,7 @@ func (m *MultiClusterClient) watchLoop() {
 			if !ok {
 				return
 			}
-			slog.Error(fmt.Sprintf("Kubeconfig watcher error: %v", err))
+			slog.Error("kubeconfig watcher error", "error", err)
 		case <-pollTicker.C:
 			// Polling fallback: detect changes that fsnotify missed
 			info, err := os.Stat(m.kubeconfig)
@@ -1033,11 +1033,11 @@ func (m *MultiClusterClient) WarmupHealthCache() {
 
 	clusters, err := m.DeduplicatedClusters(ctx)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[Warmup] failed to list clusters: %v", err))
+		slog.Error("[Warmup] failed to list clusters", "error", err)
 		return
 	}
 
-	slog.Info(fmt.Sprintf("[Warmup] probing %d clusters for reachability...", len(clusters)))
+	slog.Info("[Warmup] probing clusters for reachability", "clusterCount", len(clusters))
 	var wg sync.WaitGroup
 	for _, cl := range clusters {
 		wg.Add(1)
@@ -1061,9 +1061,9 @@ func (m *MultiClusterClient) WarmupHealthCache() {
 				m.cacheTime[ctxName] = time.Now()
 				m.mu.Unlock()
 				if errType == "auth" {
-					slog.Info(fmt.Sprintf("[Warmup] %s: auth failure — run credential refresh (e.g. tsh kube login) to restore access", name))
+					slog.Info("[Warmup] auth failure — run credential refresh to restore access", "cluster", name)
 				} else {
-					slog.Error(fmt.Sprintf("[Warmup] %s: unreachable (client error)", name))
+					slog.Error("[Warmup] unreachable (client error)", "cluster", name)
 				}
 				return
 			}
@@ -1083,9 +1083,9 @@ func (m *MultiClusterClient) WarmupHealthCache() {
 				m.cacheTime[ctxName] = time.Now()
 				m.mu.Unlock()
 				if errType == "auth" {
-					slog.Info(fmt.Sprintf("[Warmup] %s: auth failure (will cache for %v to avoid exec-plugin spam)", name, authFailureCacheTTL))
+					slog.Info("[Warmup] auth failure (will cache to avoid exec-plugin spam)", "cluster", name, "cacheTTL", authFailureCacheTTL)
 				} else {
-					slog.Info(fmt.Sprintf("[Warmup] %s: unreachable (%v)", name, listErr))
+					slog.Info("[Warmup] unreachable", "cluster", name, "error", listErr)
 				}
 			} else {
 				m.mu.Lock()
@@ -1097,7 +1097,7 @@ func (m *MultiClusterClient) WarmupHealthCache() {
 				}
 				m.cacheTime[ctxName] = time.Now()
 				m.mu.Unlock()
-				slog.Info(fmt.Sprintf("[Warmup] %s: reachable", name))
+				slog.Info("[Warmup] reachable", "cluster", name)
 			}
 		}(cl.Name, cl.Context)
 	}
@@ -1123,7 +1123,7 @@ func (m *MultiClusterClient) WarmupHealthCache() {
 		}
 	}
 	m.mu.RUnlock()
-	slog.Info(fmt.Sprintf("[Warmup] done: %d reachable, %d unreachable", reachable, unreachable))
+	slog.Info("[Warmup] done", "reachable", reachable, "unreachable", unreachable)
 }
 
 // HealthyClusters returns deduplicated clusters split into two lists:
@@ -1157,7 +1157,7 @@ func (m *MultiClusterClient) MarkSlow(clusterName string) {
 	m.mu.Lock()
 	m.slowClusters[clusterName] = time.Now()
 	m.mu.Unlock()
-	slog.Info(fmt.Sprintf("[Slow] cluster %s marked as slow (reduced timeout for %v)", clusterName, slowClusterTTL))
+	slog.Info("[Slow] cluster marked as slow", "cluster", clusterName, "duration", slowClusterTTL)
 }
 
 // IsSlow returns true if the cluster was recently marked as slow.

@@ -105,7 +105,7 @@ func (g *GHCopilotProvider) StreamChat(ctx context.Context, req *ChatRequest, on
 	}
 
 	if err := cmd.Wait(); err != nil {
-		slog.Error(fmt.Sprintf("[GHCopilot] Command finished with error: %v", err))
+		slog.Error("[GHCopilot] command finished with error", "error", err)
 	}
 
 	return &ChatResponse{

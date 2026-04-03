@@ -124,7 +124,7 @@ func (g *GeminiCLIProvider) StreamChat(ctx context.Context, req *ChatRequest, on
 	}
 
 	if err := cmd.Wait(); err != nil {
-		slog.Error(fmt.Sprintf("[GeminiCLI] Command finished with error: %v", err))
+		slog.Error("[GeminiCLI] command finished with error", "error", err)
 	}
 
 	return &ChatResponse{

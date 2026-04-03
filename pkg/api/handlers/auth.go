@@ -175,7 +175,7 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 	}
 
 	if ghURL != "https://github.com" {
-		slog.Info(fmt.Sprintf("GitHub Enterprise: OAuth via %s, API via %s", ghURL, apiBase))
+		slog.Info("[Auth] GitHub Enterprise configured", "oauthURL", ghURL, "apiBase", apiBase)
 	}
 
 	return &AuthHandler{
@@ -366,7 +366,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	// or the OAuth app is misconfigured (e.g., suspended, wrong callback URL).
 	if ghError := c.Query("error"); ghError != "" {
 		ghDescription := c.Query("error_description", ghError)
-		slog.Error(fmt.Sprintf("[Auth] GitHub returned error: %s — %s", ghError, ghDescription))
+		slog.Error("[Auth] GitHub returned error", "error", ghError, "description", ghDescription)
 		if ghError == "access_denied" {
 			return h.oauthErrorRedirect(c, "access_denied", ghDescription)
 		}
@@ -392,14 +392,14 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	token, err := h.oauthConfig.Exchange(ctx, code)
 	if err != nil {
 		errCode, detail := classifyExchangeError(err)
-		slog.Error(fmt.Sprintf("[Auth] Token exchange failed (%s): %v", errCode, err))
+		slog.Error("[Auth] token exchange failed", "code", errCode, "error", err)
 		return h.oauthErrorRedirect(c, errCode, detail)
 	}
 
 	// Get user info from GitHub
 	ghUser, err := h.getGitHubUser(token.AccessToken)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[Auth] Failed to get GitHub user: %v", err))
+		slog.Error("[Auth] failed to get GitHub user", "error", err)
 		detail := err.Error()
 		return h.oauthErrorRedirect(c, "user_fetch_failed", detail)
 	}
@@ -407,7 +407,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	// Find or create user
 	user, err := h.store.GetUserByGitHubID(fmt.Sprintf("%d", ghUser.ID))
 	if err != nil {
-		slog.Error(fmt.Sprintf("[Auth] Database error getting user: %v", err))
+		slog.Error("[Auth] database error getting user", "error", err)
 		return h.oauthErrorRedirect(c, "db_error", "")
 	}
 
@@ -421,7 +421,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 			Onboarded:   h.skipOnboarding, // Skip questionnaire if SKIP_ONBOARDING=true
 		}
 		if err := h.store.CreateUser(user); err != nil {
-			slog.Error(fmt.Sprintf("[Auth] Failed to create user: %v", err))
+			slog.Error("[Auth] failed to create user", "error", err)
 			return h.oauthErrorRedirect(c, "create_user_failed", "")
 		}
 	} else {
@@ -438,7 +438,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	// Generate JWT
 	jwtToken, err := h.generateJWT(user)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[Auth] JWT generation failed: %v", err))
+		slog.Error("[Auth] JWT generation failed", "error", err)
 		return h.oauthErrorRedirect(c, "jwt_failed", "")
 	}
 
@@ -488,7 +488,7 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	// Clear the HttpOnly cookie so the browser stops sending it
 	h.clearJWTCookie(c)
 
-	slog.Info(fmt.Sprintf("[Auth] Token revoked for user %s (jti: %s)", claims.GitHubLogin, claims.ID))
+	slog.Info("[Auth] token revoked", "user", claims.GitHubLogin, "jti", claims.ID)
 	return c.JSON(fiber.Map{"success": true, "message": "Token revoked"})
 }
 

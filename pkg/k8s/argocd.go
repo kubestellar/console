@@ -54,7 +54,7 @@ func (m *MultiClusterClient) ListArgoApplications(ctx context.Context) (*v1alpha
 
 			clusterApps, err := m.ListArgoApplicationsForCluster(ctx, cluster, "")
 			if err != nil {
-				slog.Error(fmt.Sprintf("[argocd] Error listing applications on cluster %s: %v", cluster, err))
+				slog.Error("[argocd] error listing applications", "cluster", cluster, "error", err)
 				return
 			}
 
@@ -93,7 +93,7 @@ func (m *MultiClusterClient) ListArgoApplicationsForCluster(ctx context.Context,
 			return []v1alpha1.ArgoApplication{}, nil
 		}
 		// Real error (auth, network, RBAC) — log and propagate
-		slog.Error(fmt.Sprintf("[argocd] Error listing applications on cluster %s: %v", contextName, err))
+		slog.Error("[argocd] error listing applications", "cluster", contextName, "error", err)
 		return nil, err
 	}
 
@@ -208,7 +208,7 @@ func (m *MultiClusterClient) ListArgoApplicationSets(ctx context.Context) (*v1al
 
 			clusterAppSets, err := m.ListArgoApplicationSetsForCluster(ctx, cluster)
 			if err != nil {
-				slog.Info(fmt.Sprintf("[ArgoCD] Skipping cluster %s for ApplicationSets: %v", cluster, err))
+				slog.Info("[ArgoCD] skipping cluster for ApplicationSets", "cluster", cluster, "error", err)
 				return // CRD not installed or cluster unreachable — skip silently
 			}
 

@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
@@ -133,7 +132,7 @@ func (t *DeviceTracker) scanDevices() {
 	if err != nil {
 		if !t.loggedClusterError {
 			t.loggedClusterError = true
-			slog.Info(fmt.Sprintf("[DeviceTracker] Cluster data unavailable (will retry silently): %v", err))
+			slog.Info("[DeviceTracker] cluster data unavailable (will retry silently)", "error", err)
 		}
 		return
 	}
@@ -357,8 +356,7 @@ func (t *DeviceTracker) checkForDrop(key, nodeName, cluster, deviceType string, 
 	}
 	t.alerts[alertKey] = alert
 
-	slog.Info(fmt.Sprintf("[DeviceTracker] ALERT: %s on %s/%s dropped from %d to %d",
-		deviceType, cluster, nodeName, maxCount, currentCount))
+	slog.Info("[DeviceTracker] ALERT: device count dropped", "device", deviceType, "cluster", cluster, "node", nodeName, "previous", maxCount, "current", currentCount)
 
 	return alert
 }
@@ -401,8 +399,7 @@ func (t *DeviceTracker) checkForBoolDrop(key, nodeName, cluster, deviceType stri
 	}
 	t.alerts[alertKey] = alert
 
-	slog.Info(fmt.Sprintf("[DeviceTracker] ALERT: %s on %s/%s is no longer available",
-		deviceType, cluster, nodeName))
+	slog.Info("[DeviceTracker] ALERT: capability no longer available", "device", deviceType, "cluster", cluster, "node", nodeName)
 
 	return alert
 }

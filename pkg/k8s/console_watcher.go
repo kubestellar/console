@@ -62,7 +62,7 @@ func (w *ConsoleWatcher) Start(ctx context.Context) error {
 	w.started = true
 	w.mu.Unlock()
 
-	slog.Info(fmt.Sprintf("[ConsoleWatcher] Starting watch on namespace %s", w.namespace))
+	slog.Info("[ConsoleWatcher] starting watch", "namespace", w.namespace)
 
 	// Start watchers for each resource type
 	gvrs := []struct {
@@ -93,7 +93,7 @@ func (w *ConsoleWatcher) Stop() {
 	close(w.stopCh)
 
 	for gvr, watcher := range w.watchers {
-		slog.Info(fmt.Sprintf("[ConsoleWatcher] Stopping watch for %s", gvr.Resource))
+		slog.Info("[ConsoleWatcher] stopping watch", "resource", gvr.Resource)
 		watcher.Stop()
 	}
 
@@ -118,7 +118,7 @@ func (w *ConsoleWatcher) watchResource(ctx context.Context, gvr schema.GroupVers
 
 		err := w.doWatch(ctx, gvr, resourceType)
 		if err != nil {
-			slog.Error(fmt.Sprintf("[ConsoleWatcher] Watch error for %s: %v, retrying in %v", resourceType, err, backoff))
+			slog.Error("[ConsoleWatcher] watch error, retrying", "resourceType", resourceType, "error", err, "retryIn", backoff)
 
 			timer := time.NewTimer(backoff)
 			select {
@@ -145,7 +145,7 @@ func (w *ConsoleWatcher) watchResource(ctx context.Context, gvr schema.GroupVers
 
 // doWatch performs the actual watch operation
 func (w *ConsoleWatcher) doWatch(ctx context.Context, gvr schema.GroupVersionResource, resourceType string) error {
-	slog.Info(fmt.Sprintf("[ConsoleWatcher] Starting watch for %s in namespace %s", resourceType, w.namespace))
+	slog.Info("[ConsoleWatcher] starting watch for resource", "resourceType", resourceType, "namespace", w.namespace)
 
 	watcher, err := w.client.Resource(gvr).Namespace(w.namespace).Watch(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -175,7 +175,7 @@ func (w *ConsoleWatcher) doWatch(ctx context.Context, gvr schema.GroupVersionRes
 			}
 
 			if err := w.handleEvent(event, resourceType); err != nil {
-				slog.Error(fmt.Sprintf("[ConsoleWatcher] Error handling %s event: %v", resourceType, err))
+				slog.Error("[ConsoleWatcher] error handling event", "resourceType", resourceType, "error", err)
 			}
 		}
 	}
@@ -229,7 +229,7 @@ func (w *ConsoleWatcher) handleEvent(event watch.Event, resourceType string) err
 		Resource:     resource,
 	}
 
-	slog.Info(fmt.Sprintf("[ConsoleWatcher] %s %s: %s/%s", eventType, resourceType, u.GetNamespace(), u.GetName()))
+	slog.Info("[ConsoleWatcher] resource event", "eventType", eventType, "resourceType", resourceType, "namespace", u.GetNamespace(), "name", u.GetName())
 
 	// Call handler
 	if w.handler != nil {

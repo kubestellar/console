@@ -80,7 +80,7 @@ var blockedCIDRs = func() []*net.IPNet {
 		_, ipnet, err := net.ParseCIDR(cidr)
 		if err != nil {
 			// Hardcoded CIDRs must always parse — a failure here is a programming error.
-			slog.Error(fmt.Sprintf("[CardProxy] FATAL: failed to parse blocked CIDR %q: %v", cidr, err))
+			slog.Error("[CardProxy] failed to parse blocked CIDR", "cidr", cidr, "error", err)
 			os.Exit(1)
 		}
 		nets = append(nets, ipnet)
@@ -163,7 +163,7 @@ func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 	// so the proxy request is cancelled if the client disconnects.
 	req, err := http.NewRequestWithContext(c.Context(), http.MethodGet, rawURL, nil)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[CardProxy] Failed to build request for %s: %v", host, err))
+		slog.Error("[CardProxy] failed to build request", "host", host, "error", err)
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
 			"error": "Failed to create proxy request",
 		})
@@ -174,7 +174,7 @@ func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 	// Execute request
 	resp, err := cardProxyClient.Do(req)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[CardProxy] Request failed for %s: %v", host, err))
+		slog.Error("[CardProxy] request failed", "host", host, "error", err)
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
 			"error": "External request failed",
 		})
@@ -184,7 +184,7 @@ func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 	// Detect redirects and return a helpful error instead of an opaque 3xx
 	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
 		location := resp.Header.Get("Location")
-		slog.Info(fmt.Sprintf("[CardProxy] Redirect from %s (status %d, location=%s)", host, resp.StatusCode, location))
+		slog.Info("[CardProxy] redirect detected", "host", host, "status", resp.StatusCode, "location", location)
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
 			"error": fmt.Sprintf("External API returned a redirect (%d). Update the URL to the final destination.", resp.StatusCode),
 		})
@@ -194,20 +194,20 @@ func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 	limitedReader := io.LimitReader(resp.Body, cardProxyMaxResponseBytes+1)
 	body, err := io.ReadAll(limitedReader)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[CardProxy] Failed to read response body from %s: %v", host, err))
+		slog.Error("[CardProxy] failed to read response body", "host", host, "error", err)
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
 			"error": "Failed to read external response",
 		})
 	}
 	if len(body) > cardProxyMaxResponseBytes {
-		slog.Info(fmt.Sprintf("[CardProxy] Response too large from %s: %d bytes", host, len(body)))
+		slog.Info("[CardProxy] response too large", "host", host, "bytes", len(body))
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
 			"error": "Response too large (max 5 MB)",
 		})
 	}
 
 	// Log successful proxy requests for audit trail
-	slog.Info(fmt.Sprintf("[CardProxy] %s -> %s (status=%d, size=%d bytes)", c.IP(), host, resp.StatusCode, len(body)))
+	slog.Info("[CardProxy] proxied request", "clientIP", c.IP(), "host", host, "status", resp.StatusCode, "bytes", len(body))
 
 	// Forward Content-Type
 	if ct := resp.Header.Get("Content-Type"); ct != "" {

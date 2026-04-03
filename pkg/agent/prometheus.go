@@ -110,6 +110,6 @@ func (s *Server) handlePrometheusQuery(w http.ResponseWriter, r *http.Request) {
 	// Stream the raw Prometheus response back to the caller
 	w.WriteHeader(resp.StatusCode)
 	if _, copyErr := io.Copy(w, resp.Body); copyErr != nil {
-		slog.Error(fmt.Sprintf("failed to stream Prometheus response: %v", copyErr))
+		slog.Error("failed to stream Prometheus response", "error", copyErr)
 	}
 }

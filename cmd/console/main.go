@@ -50,7 +50,7 @@ func main() {
 			BackendPort: *backendPort,
 		}
 		if err := runWatchdog(cfg); err != nil {
-			slog.Error(fmt.Sprintf("Watchdog error: %v", err))
+			slog.Error("watchdog error", "error", err)
 			os.Exit(1)
 		}
 		return
@@ -79,7 +79,7 @@ func main() {
 	// page, then initializes services (DB, k8s, MCP, etc.) in the background.
 	server, err := api.NewServer(cfg)
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to create server: %v", err))
+		slog.Error("failed to create server", "error", err)
 		os.Exit(1)
 	}
 
@@ -91,14 +91,14 @@ func main() {
 
 		slog.Info("Shutting down...")
 		if err := server.Shutdown(); err != nil {
-			slog.Error(fmt.Sprintf("Shutdown error: %v", err))
+			slog.Error("shutdown error", "error", err)
 		}
 		os.Exit(0)
 	}()
 
 	// Block until shutdown (HTTP listener runs in background from NewServer)
 	if err := server.Start(); err != nil {
-		slog.Error(fmt.Sprintf("Server error: %v", err))
+		slog.Error("server error", "error", err)
 		os.Exit(1)
 	}
 }

@@ -66,7 +66,7 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 	if cluster != "" {
 		items, err := h.listCR(c.Context(), cluster, namespace, gvr)
 		if err != nil {
-			slog.Info(fmt.Sprintf("custom-resources: cluster %s: %v", cluster, err))
+			slog.Info("custom-resources: cluster error", "cluster", cluster, "error", err)
 			return c.Status(500).JSON(fiber.Map{"error": fmt.Sprintf("failed to list %s: %v", resource, err)})
 		}
 		return c.JSON(CustomResourceResponse{Items: items, IsDemoData: false})
@@ -75,7 +75,7 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 	// Fan-out across all healthy clusters
 	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 	if err != nil {
-		slog.Info(fmt.Sprintf("custom-resources: HealthyClusters: %v", err))
+		slog.Info("custom-resources: HealthyClusters failed", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 

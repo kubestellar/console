@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"sync"
 
@@ -32,7 +31,7 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 		if err == nil {
 			return c.JSON(fiber.Map{"pods": pods, "source": "mcp"})
 		}
-		slog.Error(fmt.Sprintf("MCP bridge GetPods failed, falling back: %v", err))
+		slog.Error("[MCP] bridge GetPods failed, falling back", "error", err)
 	}
 
 	// Fall back to direct k8s client
@@ -107,7 +106,7 @@ func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 		if err == nil {
 			return c.JSON(fiber.Map{"issues": issues, "source": "mcp"})
 		}
-		slog.Error(fmt.Sprintf("MCP bridge FindPodIssues failed, falling back: %v", err))
+		slog.Error("[MCP] bridge FindPodIssues failed, falling back", "error", err)
 	}
 
 	// Fall back to direct k8s client
@@ -734,7 +733,7 @@ func (h *MCPHandlers) GetWorkloads(c *fiber.Ctx) error {
 
 	list, err := h.k8sClient.ListWorkloads(ctx, cluster, namespace, workloadType)
 	if err != nil {
-		slog.Error(fmt.Sprintf("internal error: %v", err))
+		slog.Error("[MCP] internal error listing workloads", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 

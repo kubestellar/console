@@ -112,7 +112,7 @@ func (h *RewardsHandler) GetGitHubRewards(c *fiber.Ctx) error {
 	// Cache miss — fetch from GitHub
 	resp, err := h.fetchUserRewards(githubLogin, token)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[rewards] Failed to fetch GitHub rewards for %s: %v", githubLogin, err))
+		slog.Error("[rewards] failed to fetch GitHub rewards", "user", githubLogin, "error", err)
 
 		// Return stale cache if available
 		h.mu.RLock()
@@ -156,7 +156,7 @@ func (h *RewardsHandler) fetchUserRewards(login, token string) (*GitHubRewardsRe
 	// 1. Fetch issues authored by user
 	issues, err := h.searchItems(login, "issue", token)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[rewards] Warning: failed to search issues for %s: %v", login, err))
+		slog.Error("[rewards] failed to search issues", "user", login, "error", err)
 		fetchErr = fmt.Errorf("issue search failed: %w", err)
 	} else {
 		for _, item := range issues {
@@ -168,7 +168,7 @@ func (h *RewardsHandler) fetchUserRewards(login, token string) (*GitHubRewardsRe
 	// 2. Fetch PRs authored by user
 	prs, err := h.searchItems(login, "pr", token)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[rewards] Warning: failed to search PRs for %s: %v", login, err))
+		slog.Error("[rewards] failed to search PRs", "user", login, "error", err)
 		fetchErr = fmt.Errorf("PR search failed: %w", err)
 	} else {
 		for _, item := range prs {

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -208,7 +207,7 @@ func (h *MCSHandlers) CreateServiceExport(c *fiber.Ctx) error {
 
 	var req CreateServiceExportRequest
 	if err := c.BodyParser(&req); err != nil {
-		slog.Info(fmt.Sprintf("invalid request body: %v", err))
+		slog.Info("[MCS] invalid request body", "error", err)
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 
@@ -228,7 +227,7 @@ func (h *MCSHandlers) CreateServiceExport(c *fiber.Ctx) error {
 
 	// Create the ServiceExport
 	if err := h.k8sClient.CreateServiceExport(ctx, req.Cluster, req.Namespace, req.ServiceName); err != nil {
-		slog.Error(fmt.Sprintf("failed to create serviceexport: %v", err))
+		slog.Error("[MCS] failed to create serviceexport", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
@@ -255,7 +254,7 @@ func (h *MCSHandlers) DeleteServiceExport(c *fiber.Ctx) error {
 	defer cancel()
 
 	if err := h.k8sClient.DeleteServiceExport(ctx, cluster, namespace, name); err != nil {
-		slog.Error(fmt.Sprintf("failed to delete serviceexport: %v", err))
+		slog.Error("[MCS] failed to delete serviceexport", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
