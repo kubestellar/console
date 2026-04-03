@@ -416,7 +416,7 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors text-sm font-medium"
             >
               <FolderPlus className="w-4 h-4" />
-              Create Dashboard
+              Create Custom Dashboard
             </button>
             <button
               onClick={handleGenerateFromBehavior}
