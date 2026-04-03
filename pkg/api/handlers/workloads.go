@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"log"
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math"
 	"sort"
 	"strconv"
@@ -125,7 +125,7 @@ func (h *WorkloadHandlers) DeployWorkload(c *fiber.Ctx) error {
 
 	var req DeployRequest
 	if err := c.BodyParser(&req); err != nil {
-		log.Printf("invalid request body: %v", err)
+		slog.Info(fmt.Sprintf("invalid request body: %v", err))
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 
@@ -179,8 +179,8 @@ func (h *WorkloadHandlers) ResolveDependencies(c *fiber.Ctx) error {
 	workloadKind, bundle, err := h.k8sClient.ResolveWorkloadDependencies(ctx, cluster, namespace, name)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			log.Printf("not found: %v", err)
-		return c.Status(404).JSON(fiber.Map{"error": "not found"})
+			slog.Info(fmt.Sprintf("not found: %v", err))
+			return c.Status(404).JSON(fiber.Map{"error": "not found"})
 		}
 		return handleK8sError(c, err)
 	}
@@ -236,8 +236,8 @@ func (h *WorkloadHandlers) MonitorWorkload(c *fiber.Ctx) error {
 	result, err := h.k8sClient.MonitorWorkload(ctx, cluster, namespace, name)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			log.Printf("not found: %v", err)
-		return c.Status(404).JSON(fiber.Map{"error": "not found"})
+			slog.Info(fmt.Sprintf("not found: %v", err))
+			return c.Status(404).JSON(fiber.Map{"error": "not found"})
 		}
 		return handleK8sError(c, err)
 	}
@@ -303,8 +303,8 @@ type ClusterGroupQuery struct {
 // ClusterGroup represents a user-defined group of clusters (static or dynamic)
 type ClusterGroup struct {
 	Name          string             `json:"name"`
-	Kind          string             `json:"kind"`                    // "static" or "dynamic"
-	Clusters      []string           `json:"clusters"`                // static: user-selected; dynamic: last evaluation result
+	Kind          string             `json:"kind"`     // "static" or "dynamic"
+	Clusters      []string           `json:"clusters"` // static: user-selected; dynamic: last evaluation result
 	Color         string             `json:"color,omitempty"`
 	Icon          string             `json:"icon,omitempty"`
 	Query         *ClusterGroupQuery `json:"query,omitempty"`         // only for dynamic groups
@@ -372,7 +372,7 @@ func (h *WorkloadHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 
 	var group ClusterGroup
 	if err := c.BodyParser(&group); err != nil {
-		log.Printf("invalid request body: %v", err)
+		slog.Info(fmt.Sprintf("invalid request body: %v", err))
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 	if group.Name == "" {
@@ -400,7 +400,7 @@ func (h *WorkloadHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 			if err := h.k8sClient.LabelClusterNodes(ctx, cluster, map[string]string{
 				"kubestellar.io/group": group.Name,
 			}); err != nil {
-				log.Printf("failed to label cluster %s: %v", cluster, err)
+				slog.Error(fmt.Sprintf("failed to label cluster %s: %v", cluster, err))
 				labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: %v", cluster, err))
 			}
 		}
@@ -432,7 +432,7 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 
 	var group ClusterGroup
 	if err := c.BodyParser(&group); err != nil {
-		log.Printf("invalid request body: %v", err)
+		slog.Info(fmt.Sprintf("invalid request body: %v", err))
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 	group.Name = name
@@ -459,7 +459,7 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 		for _, cluster := range oldGroup.Clusters {
 			if !newSet[cluster] {
 				if err := h.k8sClient.RemoveClusterNodeLabels(ctx, cluster, []string{"kubestellar.io/group"}); err != nil {
-					log.Printf("failed to remove label from cluster %s: %v", cluster, err)
+					slog.Error(fmt.Sprintf("failed to remove label from cluster %s: %v", cluster, err))
 					labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: %v", cluster, err))
 				}
 			}
@@ -469,7 +469,7 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 				if err := h.k8sClient.LabelClusterNodes(ctx, cluster, map[string]string{
 					"kubestellar.io/group": group.Name,
 				}); err != nil {
-					log.Printf("failed to label cluster %s: %v", cluster, err)
+					slog.Error(fmt.Sprintf("failed to label cluster %s: %v", cluster, err))
 					labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: %v", cluster, err))
 				}
 			}
@@ -513,7 +513,7 @@ func (h *WorkloadHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
 		var labelErrors []string
 		for _, cluster := range group.Clusters {
 			if err := h.k8sClient.RemoveClusterNodeLabels(ctx, cluster, []string{"kubestellar.io/group"}); err != nil {
-				log.Printf("failed to remove label from cluster %s: %v", cluster, err)
+				slog.Error(fmt.Sprintf("failed to remove label from cluster %s: %v", cluster, err))
 				labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: %v", cluster, err))
 			}
 		}
@@ -566,7 +566,7 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 
 	var query ClusterGroupQuery
 	if err := c.BodyParser(&query); err != nil {
-		log.Printf("invalid query: %v", err)
+		slog.Info(fmt.Sprintf("invalid query: %v", err))
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 
@@ -578,7 +578,7 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 	// We only want one result per unique server URL.
 	dedupClusters, _, err := h.k8sClient.HealthyClusters(ctx)
 	if err != nil {
-		log.Printf("failed to list clusters: %v", err)
+		slog.Error(fmt.Sprintf("failed to list clusters: %v", err))
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 	primaryNames := make(map[string]bool, len(dedupClusters))
@@ -589,7 +589,7 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 	// Get all cluster health data and keep only deduplicated entries
 	allHealth, err := h.k8sClient.GetAllClusterHealth(ctx)
 	if err != nil {
-		log.Printf("failed to get cluster health: %v", err)
+		slog.Error(fmt.Sprintf("failed to get cluster health: %v", err))
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 	healthData := make([]k8s.ClusterHealth, 0, len(dedupClusters))
@@ -830,7 +830,7 @@ func (h *WorkloadHandlers) GenerateClusterQuery(c *fiber.Ctx) error {
 	registry := agent.GetRegistry()
 	provider, err := registry.GetDefault()
 	if err != nil {
-		log.Printf("no ai provider available: %v", err)
+		slog.Info(fmt.Sprintf("no ai provider available: %v", err))
 		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
 	}
 
@@ -877,11 +877,11 @@ If the user's request doesn't need label selectors, omit the labelSelector field
 
 	resp, err := provider.Chat(aiCtx, chatReq)
 	if err != nil {
-		log.Printf("ai query generation failed: %v", err)
+		slog.Error(fmt.Sprintf("ai query generation failed: %v", err))
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 	if resp == nil {
-		log.Printf("ai query generation returned nil response")
+		slog.Info("ai query generation returned nil response")
 		return c.Status(500).JSON(fiber.Map{"error": "empty response from AI provider"})
 	}
 
@@ -894,11 +894,11 @@ If the user's request doesn't need label selectors, omit the labelSelector field
 	content = strings.TrimSpace(content)
 
 	var result struct {
-		SuggestedName string           `json:"suggestedName"`
+		SuggestedName string            `json:"suggestedName"`
 		Query         ClusterGroupQuery `json:"query"`
 	}
 	if err := json.Unmarshal([]byte(content), &result); err != nil {
-		log.Printf("could not parse AI response as structured query: %v", err)
+		slog.Info(fmt.Sprintf("could not parse AI response as structured query: %v", err))
 		return c.JSON(fiber.Map{
 			"raw":   resp.Content,
 			"error": "could not parse AI response as structured query",
@@ -947,7 +947,7 @@ func (h *WorkloadHandlers) ScaleWorkload(c *fiber.Ctx) error {
 
 	var req ScaleRequest
 	if err := c.BodyParser(&req); err != nil {
-		log.Printf("invalid request body: %v", err)
+		slog.Info(fmt.Sprintf("invalid request body: %v", err))
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 

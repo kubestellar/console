@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
@@ -84,16 +84,16 @@ func (b *BobProvider) detectCLI() {
 		for _, p := range commonPaths {
 			if _, statErr := os.Stat(p); statErr == nil {
 				path = p
-				log.Printf("Found Bob CLI at: %s", p)
+				slog.Info(fmt.Sprintf("Found Bob CLI at: %s", p))
 				break
 			}
 		}
 		if path == "" {
-			log.Printf("Bob CLI not found in PATH or common locations")
+			slog.Info("Bob CLI not found in PATH or common locations")
 			return
 		}
 	} else {
-		log.Printf("Found Bob CLI in PATH: %s", path)
+		slog.Info(fmt.Sprintf("Found Bob CLI in PATH: %s", path))
 	}
 	b.cliPath = path
 
@@ -105,9 +105,9 @@ func (b *BobProvider) detectCLI() {
 	output, err := cmd.Output()
 	if err == nil {
 		b.version = strings.TrimSpace(string(output))
-		log.Printf("Bob CLI version: %s", b.version)
+		slog.Info(fmt.Sprintf("Bob CLI version: %s", b.version))
 	} else {
-		log.Printf("Could not get Bob CLI version: %v", err)
+		slog.Info(fmt.Sprintf("Could not get Bob CLI version: %v", err))
 	}
 }
 

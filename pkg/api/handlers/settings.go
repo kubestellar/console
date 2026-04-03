@@ -1,7 +1,8 @@
 package handlers
 
 import (
-	"log"
+	"fmt"
+	"log/slog"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/api/middleware"
@@ -32,7 +33,7 @@ func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
 
 	all, err := h.manager.GetAll()
 	if err != nil {
-		log.Printf("[settings] GetAll error: %v", err)
+		slog.Error(fmt.Sprintf("[settings] GetAll error: %v", err))
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to load settings",
 		})
@@ -58,7 +59,7 @@ func (h *SettingsHandler) SaveSettings(c *fiber.Ctx) error {
 	}
 
 	if err := h.manager.SaveAll(&all); err != nil {
-		log.Printf("[settings] SaveAll error: %v", err)
+		slog.Error(fmt.Sprintf("[settings] SaveAll error: %v", err))
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to save settings",
 		})
@@ -82,7 +83,7 @@ func (h *SettingsHandler) ExportSettings(c *fiber.Ctx) error {
 
 	data, err := h.manager.ExportEncrypted()
 	if err != nil {
-		log.Printf("[settings] Export error: %v", err)
+		slog.Error(fmt.Sprintf("[settings] Export error: %v", err))
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to export settings",
 		})
@@ -111,7 +112,7 @@ func (h *SettingsHandler) ImportSettings(c *fiber.Ctx) error {
 	}
 
 	if err := h.manager.ImportEncrypted(body); err != nil {
-		log.Printf("[settings] Import error: %v", err)
+		slog.Error(fmt.Sprintf("[settings] Import error: %v", err))
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   "Failed to import settings",
 			"message": "invalid settings data",

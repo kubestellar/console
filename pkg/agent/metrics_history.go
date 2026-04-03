@@ -3,7 +3,8 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -51,7 +52,7 @@ type PodIssueSnapshot struct {
 type GPUNodeMetricSnapshot struct {
 	Name         string `json:"name"`
 	Cluster      string `json:"cluster"`
-	GPUType      string `json:"gpuType"`      // Accelerator display name (e.g. "NVIDIA A100"); empty in legacy snapshots
+	GPUType      string `json:"gpuType"` // Accelerator display name (e.g. "NVIDIA A100"); empty in legacy snapshots
 	GPUAllocated int    `json:"gpuAllocated"`
 	GPUTotal     int    `json:"gpuTotal"`
 }
@@ -142,7 +143,7 @@ func (mh *MetricsHistory) CaptureNow() error {
 func (mh *MetricsHistory) runLoop(interval time.Duration) {
 	// Capture initial snapshot
 	if err := mh.captureSnapshot(); err != nil {
-		log.Printf("[MetricsHistory] Error capturing initial snapshot: %v", err)
+		slog.Error(fmt.Sprintf("[MetricsHistory] Error capturing initial snapshot: %v", err))
 	}
 
 	ticker := time.NewTicker(interval)
@@ -152,10 +153,10 @@ func (mh *MetricsHistory) runLoop(interval time.Duration) {
 		select {
 		case <-ticker.C:
 			if err := mh.captureSnapshot(); err != nil {
-				log.Printf("[MetricsHistory] Error capturing snapshot: %v", err)
+				slog.Error(fmt.Sprintf("[MetricsHistory] Error capturing snapshot: %v", err))
 			}
 		case <-mh.stopCh:
-			log.Println("[MetricsHistory] Stopping")
+			slog.Info("[MetricsHistory] Stopping")
 			return
 		}
 	}
@@ -179,7 +180,7 @@ func (mh *MetricsHistory) captureSnapshot() error {
 	if err != nil {
 		if !mh.loggedClusterError {
 			mh.loggedClusterError = true
-			log.Printf("[MetricsHistory] Cluster data unavailable (will retry silently): %v", err)
+			slog.Info(fmt.Sprintf("[MetricsHistory] Cluster data unavailable (will retry silently): %v", err))
 		}
 	} else {
 		for _, h := range healthList {
@@ -262,8 +263,8 @@ func (mh *MetricsHistory) captureSnapshot() error {
 	// Persist to disk
 	go mh.saveToDisk()
 
-	log.Printf("[MetricsHistory] Captured snapshot: %d clusters, %d pod issues, %d GPU nodes",
-		len(snapshot.Clusters), len(snapshot.PodIssues), len(snapshot.GPUNodes))
+	slog.Info(fmt.Sprintf("[MetricsHistory] Captured snapshot: %d clusters, %d pod issues, %d GPU nodes",
+		len(snapshot.Clusters), len(snapshot.PodIssues), len(snapshot.GPUNodes)))
 
 	return nil
 }
@@ -275,19 +276,19 @@ func (mh *MetricsHistory) saveToDisk() {
 	mh.mu.RUnlock()
 
 	if err != nil {
-		log.Printf("[MetricsHistory] Error marshaling history: %v", err)
+		slog.Error(fmt.Sprintf("[MetricsHistory] Error marshaling history: %v", err))
 		return
 	}
 
 	// Ensure directory exists
 	if err := os.MkdirAll(mh.dataDir, metricsDirMode); err != nil {
-		log.Printf("[MetricsHistory] Error creating data dir: %v", err)
+		slog.Error(fmt.Sprintf("[MetricsHistory] Error creating data dir: %v", err))
 		return
 	}
 
 	filePath := filepath.Join(mh.dataDir, metricsHistoryFile)
 	if err := os.WriteFile(filePath, data, metricsFileMode); err != nil {
-		log.Printf("[MetricsHistory] Error writing history file: %v", err)
+		slog.Error(fmt.Sprintf("[MetricsHistory] Error writing history file: %v", err))
 	}
 }
 
@@ -298,14 +299,14 @@ func (mh *MetricsHistory) loadFromDisk() {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			log.Printf("[MetricsHistory] Error reading history file: %v", err)
+			slog.Error(fmt.Sprintf("[MetricsHistory] Error reading history file: %v", err))
 		}
 		return
 	}
 
 	var snapshots []MetricsSnapshot
 	if err := json.Unmarshal(data, &snapshots); err != nil {
-		log.Printf("[MetricsHistory] Error parsing history file: %v", err)
+		slog.Error(fmt.Sprintf("[MetricsHistory] Error parsing history file: %v", err))
 		return
 	}
 
@@ -323,7 +324,7 @@ func (mh *MetricsHistory) loadFromDisk() {
 	mh.snapshots = filtered
 	mh.mu.Unlock()
 
-	log.Printf("[MetricsHistory] Loaded %d snapshots from disk", len(filtered))
+	slog.Info(fmt.Sprintf("[MetricsHistory] Loaded %d snapshots from disk", len(filtered)))
 }
 
 // GetTrendContext returns formatted history for AI prompt

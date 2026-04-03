@@ -1,0 +1,1328 @@
+package agent
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"os"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
+	"github.com/kubestellar/console/pkg/agent/protocol"
+)
+
+func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	// Handle CORS preflight for Private Network Access (required by Chrome 104+)
+	if r.Method == http.MethodOptions {
+		origin := r.Header.Get("Origin")
+		if s.isAllowedOrigin(origin) {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		}
+		w.Header().Set("Access-Control-Allow-Private-Network", "true")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Upgrade, Connection, Sec-WebSocket-Key, Sec-WebSocket-Version, Sec-WebSocket-Protocol")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// SECURITY: Validate token if configured
+	if !s.validateToken(r) {
+		slog.Warn("SECURITY: Rejected WebSocket connection - invalid or missing token")
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	conn, err := s.upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		slog.Error(fmt.Sprintf("WebSocket upgrade failed: %v", err))
+		return
+	}
+	defer conn.Close()
+
+	wsc := &wsClient{}
+	s.clientsMux.Lock()
+	s.clients[conn] = wsc
+	s.clientsMux.Unlock()
+
+	defer func() {
+		s.clientsMux.Lock()
+		delete(s.clients, conn)
+		s.clientsMux.Unlock()
+	}()
+
+	slog.Info(fmt.Sprintf("Client connected: %s (origin: %s)", conn.RemoteAddr(), r.Header.Get("Origin")))
+
+	// writeMu is the single per-connection mutex shared by broadcasts
+	// (prediction_worker) and request/stream handlers. Using the same
+	// mutex prevents concurrent gorilla/websocket writes that would
+	// panic or corrupt connection state.
+	writeMu := &wsc.writeMu
+	// closed is set when the read loop exits; goroutines check it before writing
+	var closed atomic.Bool
+
+	// --- Ping/pong keepalive to detect dead connections ---
+	// Set initial read deadline; each pong resets it.
+	conn.SetReadDeadline(time.Now().Add(wsPongTimeout))
+	conn.SetPongHandler(func(string) error {
+		conn.SetReadDeadline(time.Now().Add(wsPongTimeout))
+		return nil
+	})
+
+	// Pinger goroutine: sends pings periodically. Exits when connection closes
+	// or the read loop exits (stopPing closed).
+	stopPing := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(wsPingInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				writeMu.Lock()
+				conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
+				err := conn.WriteMessage(websocket.PingMessage, nil)
+				conn.SetWriteDeadline(time.Time{}) // clear deadline for normal writes
+				writeMu.Unlock()
+				if err != nil {
+					return // connection dead
+				}
+			case <-stopPing:
+				return
+			}
+		}
+	}()
+
+	for {
+		var msg protocol.Message
+		if err := conn.ReadJSON(&msg); err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				slog.Error(fmt.Sprintf("WebSocket error: %v", err))
+			}
+			break
+		}
+		// Reset read deadline after each successful read (active client)
+		conn.SetReadDeadline(time.Now().Add(wsPongTimeout))
+
+		// For chat messages, run in a goroutine so cancel messages can be received
+		if msg.Type == protocol.TypeChat || msg.Type == protocol.TypeClaude {
+			forceAgent := ""
+			if msg.Type == protocol.TypeClaude {
+				forceAgent = "claude"
+			}
+			go func(m protocol.Message, fa string) {
+				defer func() {
+					if r := recover(); r != nil {
+						slog.Info(fmt.Sprintf("[Chat] recovered from panic in streaming handler: %v", r))
+					}
+				}()
+				s.handleChatMessageStreaming(conn, m, fa, writeMu, &closed)
+			}(msg, forceAgent)
+		} else if msg.Type == protocol.TypeCancelChat {
+			// Cancel an in-progress chat by session ID
+			s.handleCancelChat(conn, msg, writeMu)
+		} else if msg.Type == protocol.TypeKubectl {
+			// Handle kubectl messages concurrently so one slow cluster
+			// doesn't block the entire WebSocket message loop.
+			go func(m protocol.Message) {
+				defer func() {
+					if r := recover(); r != nil {
+						slog.Info(fmt.Sprintf("[Kubectl] recovered from panic in message handler: %v", r))
+					}
+				}()
+				response := s.handleMessage(m)
+				if closed.Load() {
+					return
+				}
+				writeMu.Lock()
+				defer writeMu.Unlock()
+				if err := conn.WriteJSON(response); err != nil {
+					slog.Error(fmt.Sprintf("Write error: %v", err))
+				}
+			}(msg)
+		} else {
+			response := s.handleMessage(msg)
+			writeMu.Lock()
+			err := conn.WriteJSON(response)
+			writeMu.Unlock()
+			if err != nil {
+				slog.Error(fmt.Sprintf("Write error: %v", err))
+				break
+			}
+		}
+	}
+	closed.Store(true)
+	close(stopPing) // signal pinger goroutine to exit
+
+	slog.Info(fmt.Sprintf("Client disconnected: %s", conn.RemoteAddr()))
+}
+
+// handleMessage processes incoming messages (non-streaming)
+func (s *Server) handleMessage(msg protocol.Message) protocol.Message {
+	switch msg.Type {
+	case protocol.TypeHealth:
+		return s.handleHealthMessage(msg)
+	case protocol.TypeClusters:
+		return s.handleClustersMessage(msg)
+	case protocol.TypeKubectl:
+		return s.handleKubectlMessage(msg)
+	// TypeChat and TypeClaude are handled by handleChatMessageStreaming in the WebSocket loop
+	case protocol.TypeListAgents:
+		return s.handleListAgentsMessage(msg)
+	case protocol.TypeSelectAgent:
+		return s.handleSelectAgentMessage(msg)
+	default:
+		return protocol.Message{
+			ID:   msg.ID,
+			Type: protocol.TypeError,
+			Payload: protocol.ErrorPayload{
+				Code:    "unknown_type",
+				Message: fmt.Sprintf("Unknown message type: %s", msg.Type),
+			},
+		}
+	}
+}
+
+func (s *Server) handleHealthMessage(msg protocol.Message) protocol.Message {
+	clusters, _ := s.kubectl.ListContexts()
+	return protocol.Message{
+		ID:   msg.ID,
+		Type: protocol.TypeResult,
+		Payload: protocol.HealthPayload{
+			Status:    "ok",
+			Version:   Version,
+			Clusters:  len(clusters),
+			HasClaude: s.checkClaudeAvailable(),
+			Claude:    s.getClaudeInfo(),
+		},
+	}
+}
+
+func (s *Server) handleClustersMessage(msg protocol.Message) protocol.Message {
+	clusters, current := s.kubectl.ListContexts()
+	return protocol.Message{
+		ID:   msg.ID,
+		Type: protocol.TypeResult,
+		Payload: protocol.ClustersPayload{
+			Clusters: clusters,
+			Current:  current,
+		},
+	}
+}
+
+// destructiveKubectlVerbs are kubectl subcommands that modify or destroy resources
+// and require explicit user confirmation before execution.
+var destructiveKubectlVerbs = map[string]bool{
+	"delete":  true,
+	"drain":   true,
+	"cordon":  true,
+	"taint":   true,
+	"replace": true,
+}
+
+// isDestructiveKubectlCommand checks whether the given kubectl args contain a
+// destructive verb that requires user confirmation before execution.
+func isDestructiveKubectlCommand(args []string) bool {
+	if len(args) == 0 {
+		return false
+	}
+	verb := strings.ToLower(args[0])
+	if destructiveKubectlVerbs[verb] {
+		return true
+	}
+	// "replace --force" is destructive even though plain "replace" is blocked
+	if verb == "replace" {
+		for _, a := range args[1:] {
+			if a == "--force" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (s *Server) handleKubectlMessage(msg protocol.Message) protocol.Message {
+	// Parse payload
+	payloadBytes, err := json.Marshal(msg.Payload)
+	if err != nil {
+		return s.errorResponse(msg.ID, "invalid_payload", "Failed to parse kubectl request")
+	}
+
+	var req protocol.KubectlRequest
+	if err := json.Unmarshal(payloadBytes, &req); err != nil {
+		return s.errorResponse(msg.ID, "invalid_payload", "Invalid kubectl request format")
+	}
+
+	// Check for destructive commands that require confirmation
+	if isDestructiveKubectlCommand(req.Args) && !req.Confirmed {
+		return protocol.Message{
+			ID:   msg.ID,
+			Type: protocol.TypeResult,
+			Payload: protocol.KubectlResponse{
+				RequiresConfirmation: true,
+				Command:              "kubectl " + strings.Join(req.Args, " "),
+				ExitCode:             0,
+			},
+		}
+	}
+
+	// Execute kubectl
+	result := s.kubectl.Execute(req.Context, req.Namespace, req.Args)
+	return protocol.Message{
+		ID:      msg.ID,
+		Type:    protocol.TypeResult,
+		Payload: result,
+	}
+}
+
+// handleChatMessageStreaming handles chat messages with streaming support.
+// Runs in a goroutine so the WebSocket read loop stays free to receive cancel messages.
+// writeMu/closed are shared with the read loop for safe concurrent WebSocket writes.
+func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.Message, forceAgent string, writeMu *sync.Mutex, closed *atomic.Bool) {
+	// safeWrite sends a WebSocket message only if the connection is still open and not cancelled
+	safeWrite := func(ctx context.Context, outMsg protocol.Message) {
+		if closed.Load() || ctx.Err() != nil {
+			return
+		}
+		writeMu.Lock()
+		defer writeMu.Unlock()
+		conn.WriteJSON(outMsg)
+	}
+
+	// Parse payload
+	payloadBytes, err := json.Marshal(msg.Payload)
+	if err != nil {
+		safeWrite(context.Background(), s.errorResponse(msg.ID, "invalid_payload", "Failed to parse chat request"))
+		return
+	}
+
+	var req protocol.ChatRequest
+	if err := json.Unmarshal(payloadBytes, &req); err != nil {
+		// Try legacy ClaudeRequest format for backward compatibility
+		var legacyReq protocol.ClaudeRequest
+		if err := json.Unmarshal(payloadBytes, &legacyReq); err != nil {
+			safeWrite(context.Background(), s.errorResponse(msg.ID, "invalid_payload", "Invalid chat request format"))
+			return
+		}
+		req.Prompt = legacyReq.Prompt
+		req.SessionID = legacyReq.SessionID
+	}
+
+	if req.Prompt == "" {
+		safeWrite(context.Background(), s.errorResponse(msg.ID, "empty_prompt", "Prompt cannot be empty"))
+		return
+	}
+
+	// Generate a unique session ID when the client omits one so that
+	// concurrent anonymous chats do not collide in activeChatCtxs (#4263).
+	if req.SessionID == "" {
+		req.SessionID = uuid.New().String()
+	}
+
+	// Create a context with both cancel and timeout so that:
+	//   1. cancel_chat messages can stop this session immediately, and
+	//   2. a hard deadline prevents missions from running forever when the
+	//      AI provider hangs or never responds (#2375).
+	ctx, cancel := context.WithTimeout(context.Background(), missionExecutionTimeout)
+	defer cancel()
+
+	// Register cancel function so handleCancelChat can stop this session
+	s.activeChatCtxsMu.Lock()
+	s.activeChatCtxs[req.SessionID] = cancel
+	s.activeChatCtxsMu.Unlock()
+	defer func() {
+		s.activeChatCtxsMu.Lock()
+		delete(s.activeChatCtxs, req.SessionID)
+		s.activeChatCtxsMu.Unlock()
+	}()
+
+	// Determine which agent to use
+	agentName := req.Agent
+	if forceAgent != "" {
+		agentName = forceAgent
+	}
+	if agentName == "" {
+		agentName = s.registry.GetSelectedAgent(req.SessionID)
+	}
+
+	// Smart agent routing: if the prompt suggests command execution, prefer tool-capable agents
+	// Also check conversation history for tool execution context
+	needsTools := s.promptNeedsToolExecution(req.Prompt)
+	slog.Info(fmt.Sprintf("[Chat] Smart routing: prompt=%q, needsTools=%v, currentAgent=%q, isToolCapable=%v",
+		truncateString(req.Prompt, 50), needsTools, agentName, s.isToolCapableAgent(agentName)))
+
+	if !needsTools && len(req.History) > 0 {
+		// Check if any message in history suggests tool execution was requested
+		for _, h := range req.History {
+			if s.promptNeedsToolExecution(h.Content) {
+				needsTools = true
+				slog.Info(fmt.Sprintf("[Chat] History contains tool execution request: %q", truncateString(h.Content, 50)))
+				break
+			}
+		}
+	}
+
+	if needsTools && !s.isToolCapableAgent(agentName) {
+		// Try mixed-mode: use thinking agent + CLI execution agent
+		if toolAgent := s.findToolCapableAgent(); toolAgent != "" {
+			slog.Info(fmt.Sprintf("[Chat] Mixed-mode: thinking=%s, execution=%s", agentName, toolAgent))
+			s.handleMixedModeChat(ctx, conn, msg, req, agentName, toolAgent, req.SessionID, writeMu, closed)
+			return
+		}
+		slog.Info(fmt.Sprintf("[Chat] No tool-capable agent available, keeping %s (best-effort)", agentName))
+	}
+
+	slog.Info(fmt.Sprintf("[Chat] Final agent selection: requested=%q, forceAgent=%q, selected=%q, sessionID=%q",
+		req.Agent, forceAgent, agentName, req.SessionID))
+
+	// Get the provider
+	provider, err := s.registry.Get(agentName)
+	if err != nil {
+		// Try default agent
+		slog.Info(fmt.Sprintf("[Chat] Agent %q not found, trying default", agentName))
+		provider, err = s.registry.GetDefault()
+		if err != nil {
+			safeWrite(ctx, s.errorResponse(msg.ID, "no_agent", "No AI agent available. Please configure an API key"))
+			return
+		}
+		agentName = provider.Name()
+		slog.Info(fmt.Sprintf("[Chat] Using default agent: %s", agentName))
+	}
+
+	if !provider.IsAvailable() {
+		safeWrite(ctx, s.errorResponse(msg.ID, "agent_unavailable", fmt.Sprintf("Agent %s is not available", agentName)))
+		return
+	}
+
+	// Convert protocol history to provider history
+	var history []ChatMessage
+	for _, m := range req.History {
+		history = append(history, ChatMessage{
+			Role:    m.Role,
+			Content: m.Content,
+		})
+	}
+
+	chatReq := &ChatRequest{
+		SessionID: req.SessionID,
+		Prompt:    req.Prompt,
+		History:   history,
+	}
+
+	// Send initial progress message so user sees feedback immediately
+	safeWrite(ctx, protocol.Message{
+		ID:   msg.ID,
+		Type: protocol.TypeProgress,
+		Payload: protocol.ProgressPayload{
+			Step: fmt.Sprintf("Processing with %s...", agentName),
+		},
+	})
+
+	// Check if provider supports streaming with progress events
+	var resp *ChatResponse
+	if streamingProvider, ok := provider.(StreamingProvider); ok {
+		// Use streaming with progress callbacks
+		var streamedContent strings.Builder
+
+		onChunk := func(chunk string) {
+			streamedContent.WriteString(chunk)
+			safeWrite(ctx, protocol.Message{
+				ID:   msg.ID,
+				Type: protocol.TypeStream,
+				Payload: protocol.ChatStreamPayload{
+					Content:   chunk,
+					Agent:     agentName,
+					SessionID: req.SessionID,
+					Done:      false,
+				},
+			})
+		}
+
+		const maxCmdDisplayLen = 60
+		onProgress := func(event StreamEvent) {
+			// Build human-readable step description
+			step := event.Tool
+			if event.Type == "tool_use" {
+				// For tool_use, show what tool is being called
+				if cmd, ok := event.Input["command"].(string); ok {
+					if len(cmd) > maxCmdDisplayLen {
+						cmd = cmd[:maxCmdDisplayLen] + "..."
+					}
+					step = fmt.Sprintf("%s: %s", event.Tool, cmd)
+				}
+			} else if event.Type == "tool_result" {
+				step = fmt.Sprintf("%s completed", event.Tool)
+			}
+
+			safeWrite(ctx, protocol.Message{
+				ID:   msg.ID,
+				Type: protocol.TypeProgress,
+				Payload: protocol.ProgressPayload{
+					Step:   step,
+					Tool:   event.Tool,
+					Input:  event.Input,
+					Output: event.Output,
+				},
+			})
+		}
+
+		resp, err = streamingProvider.StreamChatWithProgress(ctx, chatReq, onChunk, onProgress)
+		if err != nil {
+			if ctx.Err() != nil {
+				// Distinguish timeout from user-initiated cancel (#2375)
+				if ctx.Err() == context.DeadlineExceeded {
+					slog.Info(fmt.Sprintf("[Chat] Session %s timed out after %v", req.SessionID, missionExecutionTimeout))
+					safeWrite(context.Background(), s.errorResponse(msg.ID, "mission_timeout",
+						fmt.Sprintf("Mission timed out after %d minutes. The AI provider did not respond in time. You can retry or try a simpler prompt.", int(missionExecutionTimeout.Minutes()))))
+					return
+				}
+				slog.Info(fmt.Sprintf("[Chat] Session %s cancelled", req.SessionID))
+				return
+			}
+			slog.Error(fmt.Sprintf("[Chat] streaming execution error for %s: %v", agentName, err))
+			code, msg2 := classifyProviderError(err)
+			safeWrite(ctx, s.errorResponse(msg.ID, code, msg2))
+			return
+		}
+
+		// Use streamed content if result content is empty
+		if resp.Content == "" {
+			resp.Content = streamedContent.String()
+		}
+	} else {
+		// Fall back to non-streaming for providers that don't support progress
+		resp, err = provider.Chat(ctx, chatReq)
+		if err != nil {
+			if ctx.Err() != nil {
+				// Distinguish timeout from user-initiated cancel (#2375)
+				if ctx.Err() == context.DeadlineExceeded {
+					slog.Info(fmt.Sprintf("[Chat] Session %s timed out after %v", req.SessionID, missionExecutionTimeout))
+					safeWrite(context.Background(), s.errorResponse(msg.ID, "mission_timeout",
+						fmt.Sprintf("Mission timed out after %d minutes. The AI provider did not respond in time. You can retry or try a simpler prompt.", int(missionExecutionTimeout.Minutes()))))
+					return
+				}
+				slog.Info(fmt.Sprintf("[Chat] Session %s cancelled", req.SessionID))
+				return
+			}
+			slog.Error(fmt.Sprintf("[Chat] execution error for %s: %v", agentName, err))
+			code, msg2 := classifyProviderError(err)
+			safeWrite(ctx, s.errorResponse(msg.ID, code, msg2))
+			return
+		}
+	}
+
+	// Don't send result if cancelled
+	if ctx.Err() != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			slog.Info(fmt.Sprintf("[Chat] Session %s timed out after completion", req.SessionID))
+			safeWrite(context.Background(), s.errorResponse(msg.ID, "mission_timeout",
+				fmt.Sprintf("Mission timed out after %d minutes. The AI provider did not respond in time. You can retry or try a simpler prompt.", int(missionExecutionTimeout.Minutes()))))
+			return
+		}
+		slog.Info(fmt.Sprintf("[Chat] Session %s cancelled after completion", req.SessionID))
+		return
+	}
+
+	// Ensure we have a valid response object to avoid nil panics
+	if resp == nil {
+		resp = &ChatResponse{
+			Content:    "",
+			Agent:      agentName,
+			TokenUsage: &ProviderTokenUsage{},
+		}
+	}
+
+	// Track token usage
+	if resp.TokenUsage != nil {
+		s.addTokenUsage(resp.TokenUsage)
+	}
+
+	var inputTokens, outputTokens, totalTokens int
+	if resp.TokenUsage != nil {
+		inputTokens = resp.TokenUsage.InputTokens
+		outputTokens = resp.TokenUsage.OutputTokens
+		totalTokens = resp.TokenUsage.TotalTokens
+	}
+
+	// Send final result
+	safeWrite(ctx, protocol.Message{
+		ID:   msg.ID,
+		Type: protocol.TypeResult,
+		Payload: protocol.ChatStreamPayload{
+			Content:   resp.Content,
+			Agent:     resp.Agent,
+			SessionID: req.SessionID,
+			Done:      true,
+			Usage: &protocol.ChatTokenUsage{
+				InputTokens:  inputTokens,
+				OutputTokens: outputTokens,
+				TotalTokens:  totalTokens,
+			},
+		},
+	})
+}
+
+// handleCancelChat cancels an in-progress chat session by calling its context cancel function
+func (s *Server) handleCancelChat(conn *websocket.Conn, msg protocol.Message, writeMu *sync.Mutex) {
+	payloadBytes, err := json.Marshal(msg.Payload)
+	if err != nil {
+		slog.Error(fmt.Sprintf("[Chat] Failed to marshal cancel chat payload: %v", err))
+		return
+	}
+	var req struct {
+		SessionID string `json:"sessionId"`
+	}
+	if err := json.Unmarshal(payloadBytes, &req); err != nil {
+		slog.Error(fmt.Sprintf("[Chat] Failed to unmarshal cancel chat request: %v", err))
+		return
+	}
+
+	s.activeChatCtxsMu.Lock()
+	cancelFn, ok := s.activeChatCtxs[req.SessionID]
+	s.activeChatCtxsMu.Unlock()
+
+	if ok {
+		cancelFn()
+		slog.Info(fmt.Sprintf("[Chat] Cancelled chat for session %s", req.SessionID))
+	} else {
+		slog.Info(fmt.Sprintf("[Chat] No active chat to cancel for session %s", req.SessionID))
+	}
+
+	writeMu.Lock()
+	conn.WriteJSON(protocol.Message{
+		ID:   msg.ID,
+		Type: protocol.TypeResult,
+		Payload: map[string]interface{}{
+			"cancelled": ok,
+			"sessionId": req.SessionID,
+		},
+	})
+	writeMu.Unlock()
+}
+
+// handleCancelChatHTTP is the HTTP fallback for cancelling in-progress chat sessions.
+// Used when the WebSocket connection is unavailable (e.g., disconnected during long agent runs).
+func (s *Server) handleCancelChatHTTP(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		SessionID string `json:"sessionId"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.SessionID == "" {
+		http.Error(w, `{"error":"sessionId is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	s.activeChatCtxsMu.Lock()
+	cancelFn, ok := s.activeChatCtxs[req.SessionID]
+	s.activeChatCtxsMu.Unlock()
+
+	if ok {
+		cancelFn()
+		slog.Info(fmt.Sprintf("[Chat] Cancelled chat via HTTP for session %s", req.SessionID))
+	} else {
+		slog.Info(fmt.Sprintf("[Chat] No active chat to cancel via HTTP for session %s", req.SessionID))
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"cancelled": ok,
+		"sessionId": req.SessionID,
+	})
+}
+
+// handleChatMessage handles chat messages (both legacy claude and new chat types)
+// This is the non-streaming version, kept for API compatibility
+func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string) protocol.Message {
+	// Parse payload
+	payloadBytes, err := json.Marshal(msg.Payload)
+	if err != nil {
+		return s.errorResponse(msg.ID, "invalid_payload", "Failed to parse chat request")
+	}
+
+	var req protocol.ChatRequest
+	if err := json.Unmarshal(payloadBytes, &req); err != nil {
+		// Try legacy ClaudeRequest format for backward compatibility
+		var legacyReq protocol.ClaudeRequest
+		if err := json.Unmarshal(payloadBytes, &legacyReq); err != nil {
+			return s.errorResponse(msg.ID, "invalid_payload", "Invalid chat request format")
+		}
+		req.Prompt = legacyReq.Prompt
+		req.SessionID = legacyReq.SessionID
+	}
+
+	if req.Prompt == "" {
+		return s.errorResponse(msg.ID, "empty_prompt", "Prompt cannot be empty")
+	}
+
+	// Generate a unique session ID when the client omits one so that
+	// concurrent anonymous chats do not collide (#4263).
+	if req.SessionID == "" {
+		req.SessionID = uuid.New().String()
+	}
+
+	// Determine which agent to use
+	agentName := req.Agent
+	if forceAgent != "" {
+		agentName = forceAgent
+	}
+	if agentName == "" {
+		agentName = s.registry.GetSelectedAgent(req.SessionID)
+	}
+
+	// Get the provider
+	provider, err := s.registry.Get(agentName)
+	if err != nil {
+		// Try default agent
+		provider, err = s.registry.GetDefault()
+		if err != nil {
+			return s.errorResponse(msg.ID, "no_agent", "No AI agent available. Please configure an API key (ANTHROPIC_API_KEY, OPENAI_API_KEY, or GOOGLE_API_KEY)")
+		}
+		agentName = provider.Name()
+	}
+
+	if !provider.IsAvailable() {
+		return s.errorResponse(msg.ID, "agent_unavailable", fmt.Sprintf("Agent %s is not available - API key may be missing", agentName))
+	}
+
+	// Convert protocol history to provider history
+	var history []ChatMessage
+	for _, msg := range req.History {
+		history = append(history, ChatMessage{
+			Role:    msg.Role,
+			Content: msg.Content,
+		})
+	}
+
+	// Execute chat (non-streaming for WebSocket single response)
+	chatReq := &ChatRequest{
+		SessionID: req.SessionID,
+		Prompt:    req.Prompt,
+		History:   history,
+	}
+
+	resp, err := provider.Chat(context.Background(), chatReq)
+	if err != nil {
+		slog.Error(fmt.Sprintf("[Chat] execution error for %s: %v", agentName, err))
+		return s.errorResponse(msg.ID, "execution_error", fmt.Sprintf("Failed to execute %s", agentName))
+	}
+
+	if resp == nil {
+		resp = &ChatResponse{
+			Content:    "",
+			Agent:      agentName,
+			TokenUsage: &ProviderTokenUsage{},
+		}
+	}
+
+	// Track token usage
+	if resp.TokenUsage != nil {
+		s.addTokenUsage(resp.TokenUsage)
+	}
+
+	var inputTokens, outputTokens, totalTokens int
+	if resp.TokenUsage != nil {
+		inputTokens = resp.TokenUsage.InputTokens
+		outputTokens = resp.TokenUsage.OutputTokens
+		totalTokens = resp.TokenUsage.TotalTokens
+	}
+
+	// Return response in format compatible with both legacy and new clients
+	return protocol.Message{
+		ID:   msg.ID,
+		Type: protocol.TypeResult,
+		Payload: protocol.ChatStreamPayload{
+			Content:   resp.Content,
+			Agent:     resp.Agent,
+			SessionID: req.SessionID,
+			Done:      true,
+			Usage: &protocol.ChatTokenUsage{
+				InputTokens:  inputTokens,
+				OutputTokens: outputTokens,
+				TotalTokens:  totalTokens,
+			},
+		},
+	}
+}
+
+// handleListAgentsMessage returns the list of available AI agents
+func (s *Server) handleListAgentsMessage(msg protocol.Message) protocol.Message {
+	providers := s.registry.List()
+	agents := make([]protocol.AgentInfo, len(providers))
+
+	for i, p := range providers {
+		agents[i] = protocol.AgentInfo{
+			Name:         p.Name,
+			DisplayName:  p.DisplayName,
+			Description:  p.Description,
+			Provider:     p.Provider,
+			Available:    p.Available,
+			Capabilities: int(p.Capabilities),
+		}
+	}
+
+	return protocol.Message{
+		ID:   msg.ID,
+		Type: protocol.TypeAgentsList,
+		Payload: protocol.AgentsListPayload{
+			Agents:       agents,
+			DefaultAgent: s.registry.GetDefaultName(),
+			Selected:     s.registry.GetDefaultName(), // Use default for new connections
+		},
+	}
+}
+
+// handleSelectAgentMessage handles agent selection for a session
+func (s *Server) handleSelectAgentMessage(msg protocol.Message) protocol.Message {
+	payloadBytes, err := json.Marshal(msg.Payload)
+	if err != nil {
+		return s.errorResponse(msg.ID, "invalid_payload", "Failed to parse select agent request")
+	}
+
+	var req protocol.SelectAgentRequest
+	if err := json.Unmarshal(payloadBytes, &req); err != nil {
+		return s.errorResponse(msg.ID, "invalid_payload", "Invalid select agent request format")
+	}
+
+	if req.Agent == "" {
+		return s.errorResponse(msg.ID, "empty_agent", "Agent name cannot be empty")
+	}
+
+	// For session-based selection, we'd need a session ID from the request
+	// For now, update the default agent
+	previousAgent := s.registry.GetDefaultName()
+	if err := s.registry.SetDefault(req.Agent); err != nil {
+		slog.Error(fmt.Sprintf("set default agent error: %v", err))
+		return s.errorResponse(msg.ID, "invalid_agent", "invalid agent selection")
+	}
+
+	slog.Info(fmt.Sprintf("Agent selected: %s (was: %s)", req.Agent, previousAgent))
+
+	return protocol.Message{
+		ID:   msg.ID,
+		Type: protocol.TypeAgentSelected,
+		Payload: protocol.AgentSelectedPayload{
+			Agent:    req.Agent,
+			Previous: previousAgent,
+		},
+	}
+}
+
+func (s *Server) errorResponse(id, code, message string) protocol.Message {
+	return protocol.Message{
+		ID:   id,
+		Type: protocol.TypeError,
+		Payload: protocol.ErrorPayload{
+			Code:    code,
+			Message: message,
+		},
+	}
+}
+
+// classifyProviderError inspects an AI provider error and returns a
+// specific error code + user-friendly message.  This lets the frontend
+// show targeted guidance (e.g. "run /login") instead of a raw JSON blob.
+func classifyProviderError(err error) (code, message string) {
+	errText := strings.ToLower(err.Error())
+
+	// Authentication / token expiry (HTTP 401 / 403)
+	if strings.Contains(errText, "status 401") ||
+		strings.Contains(errText, "status 403") ||
+		strings.Contains(errText, "authentication_error") ||
+		strings.Contains(errText, "permission_error") ||
+		strings.Contains(errText, "oauth token") ||
+		strings.Contains(errText, "token has expired") ||
+		strings.Contains(errText, "invalid x-api-key") ||
+		strings.Contains(errText, "invalid_api_key") ||
+		strings.Contains(errText, "unauthorized") {
+		return "authentication_error", "Failed to authenticate. API Error: " + err.Error()
+	}
+
+	// Rate limit (HTTP 429)
+	if strings.Contains(errText, "status 429") ||
+		strings.Contains(errText, "rate_limit") ||
+		strings.Contains(errText, "rate limit") ||
+		strings.Contains(errText, "too many requests") ||
+		strings.Contains(errText, "resource_exhausted") {
+		return "rate_limit", "Rate limit exceeded. " + err.Error()
+	}
+
+	return "execution_error", "Failed to get response from AI provider. " + err.Error()
+}
+
+// handleMixedModeChat orchestrates a dual-agent chat:
+// 1. Thinking agent (API) analyzes the prompt and generates a plan
+// 2. Execution agent (CLI) runs any commands
+// 3. Thinking agent analyzes the results
+func (s *Server) handleMixedModeChat(ctx context.Context, conn *websocket.Conn, msg protocol.Message, req protocol.ChatRequest, thinkingAgent, executionAgent string, sessionID string, writeMu *sync.Mutex, closed *atomic.Bool) {
+	// safeWrite sends a WebSocket message only if the connection is still open and not cancelled
+	safeWrite := func(outMsg protocol.Message) {
+		if closed.Load() || ctx.Err() != nil {
+			return
+		}
+		writeMu.Lock()
+		defer writeMu.Unlock()
+		conn.WriteJSON(outMsg)
+	}
+
+	thinkingProvider, err := s.registry.Get(thinkingAgent)
+	if err != nil {
+		safeWrite(s.errorResponse(msg.ID, "agent_error", fmt.Sprintf("Thinking agent %s not found", thinkingAgent)))
+		return
+	}
+	execProvider, err := s.registry.Get(executionAgent)
+	if err != nil {
+		safeWrite(s.errorResponse(msg.ID, "agent_error", fmt.Sprintf("Execution agent %s not found", executionAgent)))
+		return
+	}
+
+	// Convert protocol history to provider history
+	var history []ChatMessage
+	for _, m := range req.History {
+		history = append(history, ChatMessage{Role: m.Role, Content: m.Content})
+	}
+
+	// Phase 1: Send thinking phase indicator
+	safeWrite(protocol.Message{
+		ID:   msg.ID,
+		Type: protocol.TypeMixedModeThinking,
+		Payload: map[string]interface{}{
+			"agent":   thinkingProvider.DisplayName(),
+			"phase":   "thinking",
+			"message": fmt.Sprintf("🧠 %s is analyzing your request...", thinkingProvider.DisplayName()),
+		},
+	})
+
+	// Ask thinking agent to analyze and generate commands
+	thinkingPrompt := fmt.Sprintf(`You are helping with a Kubernetes/infrastructure task. Analyze the following request and respond with:
+1. A brief analysis of what needs to be done
+2. The exact commands that need to be executed (one per line, prefixed with "CMD: ")
+3. What to look for in the output
+
+User request: %s`, req.Prompt)
+
+	thinkingReq := ChatRequest{
+		Prompt:    thinkingPrompt,
+		SessionID: sessionID,
+		History:   history,
+	}
+
+	thinkingResp, err := thinkingProvider.Chat(ctx, &thinkingReq)
+	if err != nil {
+		if ctx.Err() != nil {
+			slog.Info(fmt.Sprintf("[MixedMode] Session %s cancelled", sessionID))
+			return
+		}
+		slog.Error(fmt.Sprintf("[MixedMode] Thinking agent error: %v", err))
+		safeWrite(s.errorResponse(msg.ID, "mixed_mode_error", fmt.Sprintf("Thinking agent error: %v", err)))
+		return
+	}
+	if thinkingResp == nil {
+		slog.Info("[MixedMode] Thinking agent returned nil response")
+		safeWrite(s.errorResponse(msg.ID, "mixed_mode_error", "Thinking agent returned empty response"))
+		return
+	}
+
+	// Stream the thinking response
+	safeWrite(protocol.Message{
+		ID:   msg.ID,
+		Type: protocol.TypeStreamChunk,
+		Payload: map[string]interface{}{
+			"content": fmt.Sprintf("**🧠 %s Analysis:**\n%s\n\n", thinkingProvider.DisplayName(), thinkingResp.Content),
+			"agent":   thinkingAgent,
+			"phase":   "thinking",
+		},
+	})
+
+	// Extract commands from thinking response (lines starting with CMD:)
+	var commands []string
+	for _, line := range strings.Split(thinkingResp.Content, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "CMD: ") {
+			commands = append(commands, strings.TrimPrefix(trimmed, "CMD: "))
+		} else if strings.HasPrefix(trimmed, "CMD:") {
+			commands = append(commands, strings.TrimPrefix(trimmed, "CMD:"))
+		}
+	}
+
+	if len(commands) == 0 {
+		// No commands to execute - just return thinking response
+		safeWrite(protocol.Message{
+			ID:   msg.ID,
+			Type: protocol.TypeStreamEnd,
+			Payload: map[string]interface{}{
+				"agent": thinkingAgent,
+				"phase": "complete",
+			},
+		})
+		return
+	}
+
+	// Phase 2: Execute commands via CLI agent
+	safeWrite(protocol.Message{
+		ID:   msg.ID,
+		Type: protocol.TypeMixedModeExecuting,
+		Payload: map[string]interface{}{
+			"agent":    execProvider.DisplayName(),
+			"phase":    "executing",
+			"message":  fmt.Sprintf("🔧 %s is executing %d command(s)...", execProvider.DisplayName(), len(commands)),
+			"commands": commands,
+		},
+	})
+
+	// Build execution prompt for CLI agent
+	execPrompt := fmt.Sprintf("Execute the following commands and return the output:\n%s",
+		strings.Join(commands, "\n"))
+
+	execReq := ChatRequest{
+		Prompt:    execPrompt,
+		SessionID: sessionID,
+	}
+
+	var execContent string
+
+	execResp, err := execProvider.Chat(ctx, &execReq)
+	if err != nil {
+		if ctx.Err() != nil {
+			slog.Info(fmt.Sprintf("[MixedMode] Session %s cancelled during execution", sessionID))
+			return
+		}
+		slog.Error(fmt.Sprintf("[MixedMode] Execution agent error: %v", err))
+		execContent = fmt.Sprintf("Execution Error: %v", err)
+		safeWrite(protocol.Message{
+			ID:   msg.ID,
+			Type: protocol.TypeStreamChunk,
+			Payload: map[string]interface{}{
+				"content": fmt.Sprintf("\n**🔧 %s Execution Error:** %v\n", execProvider.DisplayName(), err),
+				"agent":   executionAgent,
+				"phase":   "executing",
+			},
+		})
+	} else {
+		if execResp != nil {
+			execContent = execResp.Content
+		}
+		safeWrite(protocol.Message{
+			ID:   msg.ID,
+			Type: protocol.TypeStreamChunk,
+			Payload: map[string]interface{}{
+				"content": fmt.Sprintf("**🔧 %s Output:**\n```\n%s\n```\n\n", execProvider.DisplayName(), execContent),
+				"agent":   executionAgent,
+				"phase":   "executing",
+			},
+		})
+	}
+
+	// Phase 3: Feed results back to thinking agent for analysis
+	safeWrite(protocol.Message{
+		ID:   msg.ID,
+		Type: protocol.TypeMixedModeThinking,
+		Payload: map[string]interface{}{
+			"agent":   thinkingProvider.DisplayName(),
+			"phase":   "analyzing",
+			"message": fmt.Sprintf("🧠 %s is analyzing the results...", thinkingProvider.DisplayName()),
+		},
+	})
+
+	analysisPrompt := fmt.Sprintf(`Based on the original request and the command output below, provide a clear summary and any recommended next steps.
+
+Original request: %s
+
+Command output:
+%s`, req.Prompt, execContent)
+
+	analysisReq := ChatRequest{
+		Prompt:    analysisPrompt,
+		SessionID: sessionID,
+		History:   append(history, ChatMessage{Role: "assistant", Content: thinkingResp.Content}),
+	}
+
+	analysisResp, err := thinkingProvider.Chat(ctx, &analysisReq)
+	if err != nil {
+		if ctx.Err() != nil {
+			slog.Info(fmt.Sprintf("[MixedMode] Session %s cancelled during analysis", sessionID))
+			return
+		}
+		slog.Error(fmt.Sprintf("[MixedMode] Analysis error: %v", err))
+	} else if analysisResp != nil {
+		safeWrite(protocol.Message{
+			ID:   msg.ID,
+			Type: protocol.TypeStreamChunk,
+			Payload: map[string]interface{}{
+				"content": fmt.Sprintf("**🧠 %s Summary:**\n%s", thinkingProvider.DisplayName(), analysisResp.Content),
+				"agent":   thinkingAgent,
+				"phase":   "analyzing",
+			},
+		})
+	}
+
+	// End stream
+	safeWrite(protocol.Message{
+		ID:   msg.ID,
+		Type: protocol.TypeStreamEnd,
+		Payload: map[string]interface{}{
+			"agent": thinkingAgent,
+			"phase": "complete",
+			"mode":  "mixed",
+		},
+	})
+}
+
+// promptNeedsToolExecution checks if the prompt or history suggests command execution
+func (s *Server) promptNeedsToolExecution(prompt string) bool {
+	prompt = strings.ToLower(prompt)
+	// Keywords that suggest command execution is needed
+	executionKeywords := []string{
+		"run ", "execute", "kubectl", "helm", "check ", "show me", "get ",
+		"list ", "describe", "analyze", "investigate", "fix ", "repair",
+		"uncordon", "cordon", "drain", "scale", "restart", "delete",
+		"apply", "create", "patch", "rollout", "logs", "status",
+		"deploy", "install", "upgrade", "rollback",
+	}
+	for _, keyword := range executionKeywords {
+		if strings.Contains(prompt, keyword) {
+			return true
+		}
+	}
+	// Also check for retry/continuation requests which imply tool execution
+	retryKeywords := []string{"try again", "retry", "do it", "run it", "execute it", "yes", "proceed", "go ahead", "please do"}
+	for _, keyword := range retryKeywords {
+		if strings.Contains(prompt, keyword) {
+			return true
+		}
+	}
+	return false
+}
+
+// isToolCapableAgent checks if an agent has tool execution capabilities
+func (s *Server) isToolCapableAgent(agentName string) bool {
+	provider, err := s.registry.Get(agentName)
+	if err != nil {
+		return false
+	}
+	return provider.Capabilities().HasCapability(CapabilityToolExec)
+}
+
+// findToolCapableAgent finds the best available agent with tool execution capabilities.
+// Agents that can execute commands directly (claude-code, codex, gemini-cli) are
+// preferred over agents that only suggest commands (copilot-cli). This prevents
+// missions from returning kubectl suggestions instead of executing them (#3609).
+func (s *Server) findToolCapableAgent() string {
+	// Priority order: agents that execute commands directly first,
+	// then agents that may only suggest commands.
+	preferredOrder := []string{"claude-code", "codex", "gemini-cli", "antigravity", "bob"}
+	suggestOnlyAgents := []string{"copilot-cli", "gh-copilot"}
+
+	allProviders := s.registry.List()
+
+	// First pass: try preferred agents in priority order
+	for _, name := range preferredOrder {
+		for _, info := range allProviders {
+			if info.Name == name && info.Available && ProviderCapability(info.Capabilities).HasCapability(CapabilityToolExec) {
+				return info.Name
+			}
+		}
+	}
+
+	// Second pass: any tool-capable agent that is NOT in the suggest-only list
+	suggestOnly := make(map[string]bool, len(suggestOnlyAgents))
+	for _, name := range suggestOnlyAgents {
+		suggestOnly[name] = true
+	}
+	for _, info := range allProviders {
+		if ProviderCapability(info.Capabilities).HasCapability(CapabilityToolExec) && info.Available && !suggestOnly[info.Name] {
+			return info.Name
+		}
+	}
+
+	// Last resort: even suggest-only agents are better than nothing
+	for _, info := range allProviders {
+		if ProviderCapability(info.Capabilities).HasCapability(CapabilityToolExec) && info.Available {
+			return info.Name
+		}
+	}
+
+	return ""
+}
+
+func (s *Server) checkClaudeAvailable() bool {
+	// Check if any AI provider is available
+	return s.registry.HasAvailableProviders()
+}
+
+// getClaudeInfo returns AI provider info (for backward compatibility)
+func (s *Server) getClaudeInfo() *protocol.ClaudeInfo {
+	if !s.registry.HasAvailableProviders() {
+		return nil
+	}
+
+	// Return info about available providers
+	available := s.registry.ListAvailable()
+	var providerNames []string
+	for _, p := range available {
+		providerNames = append(providerNames, p.DisplayName)
+	}
+
+	// Get current token usage
+	s.tokenMux.RLock()
+	sessionIn := s.sessionTokensIn
+	sessionOut := s.sessionTokensOut
+	todayIn := s.todayTokensIn
+	todayOut := s.todayTokensOut
+	s.tokenMux.RUnlock()
+
+	return &protocol.ClaudeInfo{
+		Installed: true,
+		Version:   fmt.Sprintf("Multi-agent: %s", strings.Join(providerNames, ", ")),
+		TokenUsage: protocol.TokenUsage{
+			Session: protocol.TokenCount{
+				Input:  sessionIn,
+				Output: sessionOut,
+			},
+			Today: protocol.TokenCount{
+				Input:  todayIn,
+				Output: todayOut,
+			},
+		},
+	}
+}
+
+// addTokenUsage accumulates token usage from a chat response
+func (s *Server) addTokenUsage(usage *ProviderTokenUsage) {
+	if usage == nil {
+		return
+	}
+
+	s.tokenMux.Lock()
+	defer s.tokenMux.Unlock()
+
+	// Check if day changed - reset daily counters
+	today := time.Now().Format("2006-01-02")
+	if today != s.todayDate {
+		s.todayDate = today
+		s.todayTokensIn = 0
+		s.todayTokensOut = 0
+	}
+
+	// Accumulate tokens
+	s.sessionTokensIn += int64(usage.InputTokens)
+	s.sessionTokensOut += int64(usage.OutputTokens)
+	s.todayTokensIn += int64(usage.InputTokens)
+	s.todayTokensOut += int64(usage.OutputTokens)
+
+	// Persist to disk (non-blocking)
+	go s.saveTokenUsage()
+}
+
+// tokenUsageData is persisted to disk
+type tokenUsageData struct {
+	Date      string `json:"date"`
+	InputIn   int64  `json:"inputIn"`
+	OutputOut int64  `json:"outputOut"`
+}
+
+// getTokenUsagePath returns the path to the token usage file
+func getTokenUsagePath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "/tmp/kc-agent-tokens.json"
+	}
+	return home + "/.kc-agent-tokens.json"
+}
+
+// loadTokenUsage loads token usage from disk on startup
+func (s *Server) loadTokenUsage() {
+	path := getTokenUsagePath()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return // File doesn't exist yet
+	}
+
+	var usage tokenUsageData
+	if err := json.Unmarshal(data, &usage); err != nil {
+		slog.Warn(fmt.Sprintf("Warning: could not parse token usage file: %v", err))
+		return
+	}
+
+	s.tokenMux.Lock()
+	defer s.tokenMux.Unlock()
+
+	// Only load if same day
+	today := time.Now().Format("2006-01-02")
+	if usage.Date == today {
+		s.todayTokensIn = usage.InputIn
+		s.todayTokensOut = usage.OutputOut
+		s.todayDate = today
+		slog.Info(fmt.Sprintf("Loaded token usage: %d input, %d output tokens for today", usage.InputIn, usage.OutputOut))
+	}
+}
+
+// saveTokenUsage persists token usage to disk
+func (s *Server) saveTokenUsage() {
+	s.tokenMux.RLock()
+	usage := tokenUsageData{
+		Date:      s.todayDate,
+		InputIn:   s.todayTokensIn,
+		OutputOut: s.todayTokensOut,
+	}
+	s.tokenMux.RUnlock()
+
+	data, err := json.Marshal(usage)
+	if err != nil {
+		return
+	}
+
+	path := getTokenUsagePath()
+	if err := os.WriteFile(path, data, agentFileMode); err != nil {
+		slog.Warn(fmt.Sprintf("Warning: could not save token usage: %v", err))
+	}
+}
+
+// KeyStatus represents the status of an API key for a provider
+type KeyStatus struct {
+	Provider    string `json:"provider"`
+	DisplayName string `json:"displayName"`
+	Configured  bool   `json:"configured"`
+	Source      string `json:"source,omitempty"` // "env" or "config"
+	Valid       *bool  `json:"valid,omitempty"`  // nil = not tested, true/false = test result
+	Error       string `json:"error,omitempty"`
+}
+
+// KeysStatusResponse is the response for GET /settings/keys
+type KeysStatusResponse struct {
+	Keys       []KeyStatus `json:"keys"`
+	ConfigPath string      `json:"configPath"`
+}
+
+// SetKeyRequest is the request body for POST /settings/keys
+type SetKeyRequest struct {
+	Provider string `json:"provider"`
+	APIKey   string `json:"apiKey"`
+	Model    string `json:"model,omitempty"`
+}
+
+// handleSettingsKeys handles GET and POST for /settings/keys

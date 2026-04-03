@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
@@ -29,7 +29,7 @@ type claudeCodeStreamEvent struct {
 		Content []struct {
 			Type      string `json:"type"`
 			Text      string `json:"text,omitempty"`
-			Content   string `json:"content,omitempty"`   // Tool result content
+			Content   string `json:"content,omitempty"`     // Tool result content
 			ToolUseID string `json:"tool_use_id,omitempty"` // For tool results
 		} `json:"content,omitempty"`
 		Usage *struct {
@@ -98,16 +98,16 @@ func (c *ClaudeCodeProvider) detectCLI() {
 		for _, p := range commonPaths {
 			if _, statErr := os.Stat(p); statErr == nil {
 				path = p
-				log.Printf("Found Claude Code CLI at: %s", p)
+				slog.Info(fmt.Sprintf("Found Claude Code CLI at: %s", p))
 				break
 			}
 		}
 		if path == "" {
-			log.Printf("Claude Code CLI not found in PATH or common locations")
+			slog.Info("Claude Code CLI not found in PATH or common locations")
 			return
 		}
 	} else {
-		log.Printf("Found Claude Code CLI in PATH: %s", path)
+		slog.Info(fmt.Sprintf("Found Claude Code CLI in PATH: %s", path))
 	}
 	c.cliPath = path
 
@@ -120,9 +120,9 @@ func (c *ClaudeCodeProvider) detectCLI() {
 	output, err := cmd.Output()
 	if err == nil {
 		c.version = strings.TrimSpace(string(output))
-		log.Printf("Claude Code CLI version: %s", c.version)
+		slog.Info(fmt.Sprintf("Claude Code CLI version: %s", c.version))
 	} else {
-		log.Printf("Could not get Claude Code CLI version: %v", err)
+		slog.Info(fmt.Sprintf("Could not get Claude Code CLI version: %v", err))
 	}
 }
 
@@ -309,7 +309,7 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 	scanner := bufio.NewScanner(stdout)
 	// Increase buffer size for potentially large JSON lines
 	buf := make([]byte, 0, 1024*1024) // 1MB buffer
-	scanner.Buffer(buf, 10*1024*1024)  // 10MB max
+	scanner.Buffer(buf, 10*1024*1024) // 10MB max
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -319,19 +319,19 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 
 		var event claudeCodeStreamEvent
 		if err := json.Unmarshal([]byte(line), &event); err != nil {
-			log.Printf("Warning: failed to parse stream event: %v (line: %s)", err, truncateString(line, 100))
+			slog.Error(fmt.Sprintf("Warning: failed to parse stream event: %v (line: %s)", err, truncateString(line, 100)))
 			continue
 		}
 
 		switch event.Type {
 		case "system":
 			// Init event - can log available tools, MCP servers, etc.
-			log.Printf("[Claude Code] Session initialized")
+			slog.Info("[Claude Code] Session initialized")
 
 		case "tool_use":
 			// Tool is being called
 			lastToolName = event.Tool
-			log.Printf("[Claude Code] Tool use: %s", event.Tool)
+			slog.Info(fmt.Sprintf("[Claude Code] Tool use: %s", event.Tool))
 			if onProgress != nil {
 				onProgress(StreamEvent{
 					Type:  "tool_use",
@@ -347,7 +347,7 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 			if event.Tool != "" && lastToolName == "" {
 				lastToolName = event.Tool
 			}
-			log.Printf("[Claude Code] Tool result: %s (%d bytes)", event.Tool, len(event.Output))
+			slog.Info(fmt.Sprintf("[Claude Code] Tool result: %s (%d bytes)", event.Tool, len(event.Output)))
 			if onProgress != nil {
 				onProgress(StreamEvent{
 					Type:   "tool_result",
@@ -361,14 +361,14 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 			// The "user" event wraps tool results in the stream-json format
 			if event.ToolUseResult != nil && event.ToolUseResult.Stdout != "" {
 				lastToolOutput = event.ToolUseResult.Stdout
-				log.Printf("[Claude Code] Captured tool output (%d bytes)", len(lastToolOutput))
+				slog.Info(fmt.Sprintf("[Claude Code] Captured tool output (%d bytes)", len(lastToolOutput)))
 			}
 			// Also check message content for tool results
 			if event.Message != nil {
 				for _, content := range event.Message.Content {
 					if content.Type == "tool_result" && content.Content != "" {
 						lastToolOutput = content.Content
-						log.Printf("[Claude Code] Captured tool result from message (%d bytes)", len(lastToolOutput))
+						slog.Info(fmt.Sprintf("[Claude Code] Captured tool result from message (%d bytes)", len(lastToolOutput)))
 					}
 				}
 			}
@@ -380,7 +380,7 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 					if content.Type == "text" && content.Text != "" {
 						// Check if this is an API error message
 						if strings.Contains(content.Text, "API Error:") && strings.Contains(content.Text, "tool_use") {
-							log.Printf("[Claude Code] API error detected, will use tool output if available")
+							slog.Error("[Claude Code] API error detected, will use tool output if available")
 							// Don't send the error as a chunk, we'll handle it below
 							continue
 						}
@@ -402,7 +402,7 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 		case "result":
 			// Final result - check if it's an API error
 			if event.IsError || strings.Contains(event.Result, "API Error:") {
-				log.Printf("[Claude Code] Completed with error, will check for tool output fallback")
+				slog.Error("[Claude Code] Completed with error, will check for tool output fallback")
 				// Don't use the error as the result, we'll use tool output fallback
 			} else {
 				finalResult = event.Result
@@ -417,7 +417,7 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Printf("Warning: scanner error: %v", err)
+		slog.Error(fmt.Sprintf("Warning: scanner error: %v", err))
 	}
 
 	// Wait for command to complete
@@ -441,7 +441,7 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 	// If we have tool output but no final response (likely due to API error),
 	// make a follow-up call to analyze the output (workaround for CLI bug)
 	if responseContent == "" && lastToolOutput != "" {
-		log.Printf("[Claude Code] API error recovery: making follow-up call to analyze tool output")
+		slog.Error("[Claude Code] API error recovery: making follow-up call to analyze tool output")
 
 		// Build a follow-up prompt asking to analyze the output
 		analysisPrompt := fmt.Sprintf(`The following command was executed and produced this output. Please analyze the results and provide a helpful summary for the user.
@@ -499,7 +499,7 @@ Provide a clear, concise analysis of what this output shows.`, lastToolOutput)
 
 		// If analysis also failed, fall back to simple formatted output
 		if responseContent == "" {
-			log.Printf("[Claude Code] Analysis call also failed, using formatted output")
+			slog.Error("[Claude Code] Analysis call also failed, using formatted output")
 			responseContent = fmt.Sprintf("Here are the results:\n\n```\n%s\n```", lastToolOutput)
 			if onChunk != nil {
 				onChunk(responseContent)

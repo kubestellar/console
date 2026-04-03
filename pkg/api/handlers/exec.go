@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -136,38 +136,38 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 
 	var authMsg execAuthMessage
 	if err := c.ReadJSON(&authMsg); err != nil {
-		log.Printf("SECURITY: exec: failed to read auth message: %v", err)
+		slog.Error(fmt.Sprintf("SECURITY: exec: failed to read auth message: %v", err))
 		writeError(c, "authentication required")
 		return
 	}
 
 	if authMsg.Type != "auth" || authMsg.Token == "" {
-		log.Printf("SECURITY: exec: invalid or missing auth message")
+		slog.Warn("SECURITY: exec: invalid or missing auth message")
 		writeError(c, "authentication required")
 		return
 	}
 
 	// Validate JWT token
 	if authMsg.Token == "demo-token" {
-		log.Printf("SECURITY: exec: rejected demo-token (exec requires real authentication)")
+		slog.Warn("SECURITY: exec: rejected demo-token (exec requires real authentication)")
 		writeError(c, "exec requires real authentication, demo-token not allowed")
 		return
 	}
 
 	if h.jwtSecret == "" {
-		log.Printf("SECURITY: exec: rejected connection (JWT secret not configured)")
+		slog.Warn("SECURITY: exec: rejected connection (JWT secret not configured)")
 		writeError(c, "server misconfiguration: authentication unavailable")
 		return
 	}
 
 	claims, err := middleware.ValidateJWT(authMsg.Token, h.jwtSecret)
 	if err != nil {
-		log.Printf("SECURITY: exec: rejected invalid token: %v", err)
+		slog.Warn(fmt.Sprintf("SECURITY: exec: rejected invalid token: %v", err))
 		writeError(c, "invalid token")
 		return
 	}
 
-	log.Printf("exec: authenticated user %s for pod exec", claims.GitHubLogin)
+	slog.Info(fmt.Sprintf("exec: authenticated user %s for pod exec", claims.GitHubLogin))
 
 	// Clear read deadline after successful auth
 	c.SetReadDeadline(time.Time{})
@@ -180,7 +180,7 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 	// Read the init message
 	_, msg, err := c.ReadMessage()
 	if err != nil {
-		log.Printf("exec: failed to read init message: %v", err)
+		slog.Error(fmt.Sprintf("exec: failed to read init message: %v", err))
 		return
 	}
 
@@ -329,7 +329,7 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 	exitCode := 0
 	if execErr != nil {
 		exitCode = 1
-		log.Printf("exec: stream ended with error: %v", execErr)
+		slog.Error(fmt.Sprintf("exec: stream ended with error: %v", execErr))
 	}
 
 	exitMsg, _ := json.Marshal(execMessage{Type: "exit", ExitCode: exitCode})

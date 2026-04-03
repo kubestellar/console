@@ -3,7 +3,7 @@ package k8s
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"math"
 	"strings"
 	"sync"
@@ -85,7 +85,7 @@ func (m *MultiClusterClient) ListWorkloads(ctx context.Context, cluster, namespa
 	var mu sync.Mutex
 	workloads := make([]v1alpha1.Workload, 0)
 
-	log.Printf("[ListWorkloads] Listing workloads across %d clusters: %v", len(clusterNames), clusterNames)
+	slog.Info(fmt.Sprintf("[ListWorkloads] Listing workloads across %d clusters: %v", len(clusterNames), clusterNames))
 	for _, clusterName := range clusterNames {
 		wg.Add(1)
 		go func(c string) {
@@ -93,10 +93,10 @@ func (m *MultiClusterClient) ListWorkloads(ctx context.Context, cluster, namespa
 
 			clusterWorkloads, err := m.ListWorkloadsForCluster(ctx, c, namespace, workloadType)
 			if err != nil {
-				log.Printf("[ListWorkloads] Error listing workloads for cluster %q: %v", c, err)
+				slog.Error(fmt.Sprintf("[ListWorkloads] Error listing workloads for cluster %q: %v", c, err))
 				return
 			}
-			log.Printf("[ListWorkloads] Found %d workloads in cluster %q", len(clusterWorkloads), c)
+			slog.Info(fmt.Sprintf("[ListWorkloads] Found %d workloads in cluster %q", len(clusterWorkloads), c))
 
 			mu.Lock()
 			workloads = append(workloads, clusterWorkloads...)
@@ -130,7 +130,7 @@ func (m *MultiClusterClient) ListWorkloadsForCluster(ctx context.Context, contex
 			deployments, err = dynamicClient.Resource(gvrDeployments).Namespace(namespace).List(ctx, metav1.ListOptions{})
 		}
 		if err != nil {
-			log.Printf("[ListWorkloadsForCluster] %s: error listing deployments: %v", contextName, err)
+			slog.Error(fmt.Sprintf("[ListWorkloadsForCluster] %s: error listing deployments: %v", contextName, err))
 		} else {
 			parsed := m.parseDeploymentsAsWorkloads(deployments, contextName)
 			workloads = append(workloads, parsed...)
@@ -146,7 +146,7 @@ func (m *MultiClusterClient) ListWorkloadsForCluster(ctx context.Context, contex
 			statefulsets, err = dynamicClient.Resource(gvrStatefulSets).Namespace(namespace).List(ctx, metav1.ListOptions{})
 		}
 		if err != nil {
-			log.Printf("[ListWorkloadsForCluster] %s: error listing statefulsets: %v", contextName, err)
+			slog.Error(fmt.Sprintf("[ListWorkloadsForCluster] %s: error listing statefulsets: %v", contextName, err))
 		} else {
 			parsed := m.parseStatefulSetsAsWorkloads(statefulsets, contextName)
 			workloads = append(workloads, parsed...)
@@ -162,7 +162,7 @@ func (m *MultiClusterClient) ListWorkloadsForCluster(ctx context.Context, contex
 			daemonsets, err = dynamicClient.Resource(gvrDaemonSets).Namespace(namespace).List(ctx, metav1.ListOptions{})
 		}
 		if err != nil {
-			log.Printf("[ListWorkloadsForCluster] %s: error listing daemonsets: %v", contextName, err)
+			slog.Error(fmt.Sprintf("[ListWorkloadsForCluster] %s: error listing daemonsets: %v", contextName, err))
 		} else {
 			parsed := m.parseDaemonSetsAsWorkloads(daemonsets, contextName)
 			workloads = append(workloads, parsed...)
@@ -472,12 +472,12 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 	// 2. Resolve dependencies (ConfigMaps, Secrets, SA, RBAC, PVCs, Services, Ingress, NetworkPolicy, HPA, PDB)
 	bundle, err := m.ResolveDependencies(ctx, sourceCluster, namespace, sourceObj, opts)
 	if err != nil {
-		log.Printf("[deploy] Warning: dependency resolution failed: %v", err)
+		slog.Error(fmt.Sprintf("[deploy] Warning: dependency resolution failed: %v", err))
 		bundle = &DependencyBundle{Workload: sourceObj}
 	}
 	if len(bundle.Warnings) > 0 {
 		for _, w := range bundle.Warnings {
-			log.Printf("[deploy] %s", w)
+			slog.Info(fmt.Sprintf("[deploy] %s", w))
 		}
 	}
 
@@ -519,7 +519,7 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 			// 4a. Ensure namespace exists on target
 			nsErr := m.ensureNamespace(clusterCtx, targetClient, namespace, opts)
 			if nsErr != nil {
-				log.Printf("[deploy] Warning: namespace ensure failed on %s: %v", targetCluster, nsErr)
+				slog.Error(fmt.Sprintf("[deploy] Warning: namespace ensure failed on %s: %v", targetCluster, nsErr))
 			}
 
 			// 4b. Apply dependencies in order before the workload
@@ -670,7 +670,7 @@ func applyDependencies(
 				// Not managed by console — skip to avoid overwriting user resources
 				result.Action = "skipped"
 				results = append(results, result)
-				log.Printf("[deploy] Skipped %s %s (not console-managed)", dep.Kind, dep.Name)
+				slog.Info(fmt.Sprintf("[deploy] Skipped %s %s (not console-managed)", dep.Kind, dep.Name))
 				continue
 			}
 			// Console-managed — update
@@ -678,25 +678,25 @@ func applyDependencies(
 			_, err = resource.Update(ctx, objCopy, metav1.UpdateOptions{})
 			if err != nil {
 				result.Action = "failed"
-				log.Printf("[deploy] Failed to update %s %s: %v", dep.Kind, dep.Name, err)
+				slog.Error(fmt.Sprintf("[deploy] Failed to update %s %s: %v", dep.Kind, dep.Name, err))
 			} else {
 				result.Action = "updated"
-				log.Printf("[deploy] Updated %s %s", dep.Kind, dep.Name)
+				slog.Info(fmt.Sprintf("[deploy] Updated %s %s", dep.Kind, dep.Name))
 			}
 		} else if apierrors.IsNotFound(err) {
 			// Resource doesn't exist — create
 			_, err = resource.Create(ctx, objCopy, metav1.CreateOptions{})
 			if err != nil {
 				result.Action = "failed"
-				log.Printf("[deploy] Failed to create %s %s: %v", dep.Kind, dep.Name, err)
+				slog.Error(fmt.Sprintf("[deploy] Failed to create %s %s: %v", dep.Kind, dep.Name, err))
 			} else {
 				result.Action = "created"
-				log.Printf("[deploy] Created %s %s", dep.Kind, dep.Name)
+				slog.Info(fmt.Sprintf("[deploy] Created %s %s", dep.Kind, dep.Name))
 			}
 		} else {
 			// Real error (network, RBAC, etc.) — do not assume resource is missing
 			result.Action = "failed"
-			log.Printf("[deploy] Failed to check %s %s: %v", dep.Kind, dep.Name, err)
+			slog.Error(fmt.Sprintf("[deploy] Failed to check %s %s: %v", dep.Kind, dep.Name, err))
 		}
 
 		results = append(results, result)
@@ -966,7 +966,7 @@ func (m *MultiClusterClient) DeleteWorkload(ctx context.Context, cluster, namesp
 			}
 			return fmt.Errorf("failed to delete %s %s/%s on cluster %s: %w", g.kind, namespace, name, cluster, err)
 		}
-		log.Printf("[delete] Deleted %s %s/%s from cluster %s", g.kind, namespace, name, cluster)
+		slog.Info(fmt.Sprintf("[delete] Deleted %s %s/%s from cluster %s", g.kind, namespace, name, cluster))
 		return nil
 	}
 
@@ -1108,4 +1108,3 @@ func (m *MultiClusterClient) ListBindingPolicies(ctx context.Context) (*v1alpha1
 		TotalCount: 0,
 	}, nil
 }
-

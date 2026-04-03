@@ -1,7 +1,8 @@
 package handlers
 
 import (
-	"log"
+	"fmt"
+	"log/slog"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/notifications"
@@ -30,7 +31,7 @@ type TestNotificationRequest struct {
 
 // SendAlertNotificationRequest represents a request to send an alert notification
 type SendAlertNotificationRequest struct {
-	Alert    notifications.Alert              `json:"alert"`
+	Alert    notifications.Alert                 `json:"alert"`
 	Channels []notifications.NotificationChannel `json:"channels"`
 }
 
@@ -52,7 +53,7 @@ func (h *NotificationHandler) TestNotification(c *fiber.Ctx) error {
 
 	err := h.service.TestNotifier(req.Type, req.Config)
 	if err != nil {
-		log.Printf("Notification test failed: %v", err)
+		slog.Error(fmt.Sprintf("Notification test failed: %v", err))
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   "Notification test failed",
 			"message": "notification test failed",
@@ -78,7 +79,7 @@ func (h *NotificationHandler) SendAlertNotification(c *fiber.Ctx) error {
 	// Send alert to specified channels
 	err := h.service.SendAlertToChannels(req.Alert, req.Channels)
 	if err != nil {
-		log.Printf("Failed to send alert notification: %v", err)
+		slog.Error(fmt.Sprintf("Failed to send alert notification: %v", err))
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   "Failed to send notification",
 			"message": "failed to send notification",

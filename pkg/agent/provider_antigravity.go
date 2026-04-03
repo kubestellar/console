@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -102,7 +102,7 @@ func (a *AntigravityProvider) Handshake(ctx context.Context) *HandshakeResult {
 
 	out, err := exec.CommandContext(checkCtx, a.cliPath, "--version").CombinedOutput()
 	if err != nil {
-		log.Printf("[Antigravity] Handshake failed: %v (output: %s)", err, string(out))
+		slog.Error(fmt.Sprintf("[Antigravity] Handshake failed: %v (output: %s)", err, string(out)))
 		return &HandshakeResult{
 			Ready:   false,
 			State:   "failed",
@@ -177,7 +177,7 @@ func (a *AntigravityProvider) StreamChat(ctx context.Context, req *ChatRequest, 
 	}
 
 	if err := cmd.Wait(); err != nil {
-		log.Printf("[Antigravity] Command finished with error: %v", err)
+		slog.Error(fmt.Sprintf("[Antigravity] Command finished with error: %v", err))
 	}
 
 	return &ChatResponse{

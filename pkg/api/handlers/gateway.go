@@ -2,7 +2,8 @@ package handlers
 
 import (
 	"context"
-	"log"
+	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -58,7 +59,7 @@ func (h *GatewayHandlers) ListGateways(c *fiber.Ctx) error {
 	if err != nil {
 		// If we got partial results alongside errors, log and return what we have
 		if list != nil && len(list.Items) > 0 {
-			log.Printf("partial gateway list failure: %v", err)
+			slog.Info(fmt.Sprintf("partial gateway list failure: %v", err))
 			return c.JSON(list)
 		}
 		return handleK8sError(c, err)
@@ -99,7 +100,7 @@ func (h *GatewayHandlers) ListHTTPRoutes(c *fiber.Ctx) error {
 	if err != nil {
 		// If we got partial results alongside errors, log and return what we have
 		if list != nil && len(list.Items) > 0 {
-			log.Printf("partial httproute list failure: %v", err)
+			slog.Info(fmt.Sprintf("partial httproute list failure: %v", err))
 			return c.JSON(list)
 		}
 		return handleK8sError(c, err)
@@ -124,7 +125,7 @@ func (h *GatewayHandlers) GetGatewayAPIStatus(c *fiber.Ctx) error {
 	}
 
 	type clusterGatewayStatus struct {
-		Cluster            string `json:"cluster"`
+		Cluster             string `json:"cluster"`
 		GatewayAPIAvailable bool   `json:"gatewayApiAvailable"`
 	}
 
@@ -132,7 +133,7 @@ func (h *GatewayHandlers) GetGatewayAPIStatus(c *fiber.Ctx) error {
 	for _, cluster := range clusters {
 		available := h.k8sClient.IsGatewayAPIAvailable(ctx, cluster.Name)
 		status = append(status, clusterGatewayStatus{
-			Cluster:            cluster.Name,
+			Cluster:             cluster.Name,
 			GatewayAPIAvailable: available,
 		})
 	}

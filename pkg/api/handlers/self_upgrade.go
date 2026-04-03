@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"strings"
 	"time"
@@ -39,12 +39,12 @@ func NewSelfUpgradeHandler(k8sClient *k8sclient.MultiClusterClient, hub *Hub) *S
 
 // SelfUpgradeStatusResponse is the response for GET /api/self-upgrade/status.
 type SelfUpgradeStatusResponse struct {
-	Available      bool   `json:"available"`       // Whether self-upgrade is possible
-	CanPatch       bool   `json:"canPatch"`        // Whether RBAC allows Deployment patching
-	Namespace      string `json:"namespace"`       // Pod namespace (from env)
-	DeploymentName string `json:"deploymentName"`  // Deployment name (discovered)
-	CurrentImage   string `json:"currentImage"`    // Current container image:tag
-	ReleaseName    string `json:"releaseName"`     // Helm release name (from env)
+	Available      bool   `json:"available"`        // Whether self-upgrade is possible
+	CanPatch       bool   `json:"canPatch"`         // Whether RBAC allows Deployment patching
+	Namespace      string `json:"namespace"`        // Pod namespace (from env)
+	DeploymentName string `json:"deploymentName"`   // Deployment name (discovered)
+	CurrentImage   string `json:"currentImage"`     // Current container image:tag
+	ReleaseName    string `json:"releaseName"`      // Helm release name (from env)
 	Reason         string `json:"reason,omitempty"` // Why unavailable
 }
 
@@ -133,7 +133,7 @@ func (h *SelfUpgradeHandler) canPatchDeployment(ctx context.Context, client kube
 	}
 	result, err := client.AuthorizationV1().SelfSubjectAccessReviews().Create(ctx, review, metav1.CreateOptions{})
 	if err != nil {
-		log.Printf("[self-upgrade] RBAC check failed: %v", err)
+		slog.Error(fmt.Sprintf("[self-upgrade] RBAC check failed: %v", err))
 		return false
 	}
 	return result.Status.Allowed
@@ -269,7 +269,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 	}
 	newImage := repo + ":" + req.ImageTag
 
-	log.Printf("[self-upgrade] Upgrading %s/%s: %s → %s", namespace, dep.Name, currentImage, newImage)
+	slog.Info(fmt.Sprintf("[self-upgrade] Upgrading %s/%s: %s → %s", namespace, dep.Name, currentImage, newImage))
 
 	// Broadcast progress to all WebSocket clients
 	h.hub.BroadcastAll(Message{
@@ -306,7 +306,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 		metav1.PatchOptions{},
 	)
 	if err != nil {
-		log.Printf("[self-upgrade] Patch failed: %v", err)
+		slog.Error(fmt.Sprintf("[self-upgrade] Patch failed: %v", err))
 		h.hub.BroadcastAll(Message{
 			Type: "update_progress",
 			Data: map[string]any{
@@ -320,7 +320,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 		})
 	}
 
-	log.Printf("[self-upgrade] Deployment patched successfully, rollout starting")
+	slog.Info("[self-upgrade] Deployment patched successfully, rollout starting")
 
 	// Broadcast success — the pod will be terminated shortly by the rollout
 	h.hub.BroadcastAll(Message{

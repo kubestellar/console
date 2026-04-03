@@ -3,7 +3,7 @@ package settings
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -53,7 +53,7 @@ func GetSettingsManager() *SettingsManager {
 			keyPath:      filepath.Join(kcDir, keyFileName),
 		}
 		if err := globalSettingsManager.init(); err != nil {
-			log.Printf("[settings] initialization error: %v", err)
+			slog.Error(fmt.Sprintf("[settings] initialization error: %v", err))
 			// Ensure settings is never nil even when init fails
 			globalSettingsManager.settings = DefaultSettings()
 		}
@@ -166,7 +166,7 @@ func (sm *SettingsManager) GetAll() (*AllSettings, error) {
 		sm.mu.Lock()
 		sm.migrateLegacyGitHubToken()
 		if err := sm.saveLocked(); err != nil {
-			log.Printf("[settings] failed to persist legacy token migration: %v", err)
+			slog.Error(fmt.Sprintf("[settings] failed to persist legacy token migration: %v", err))
 		}
 		sm.mu.Unlock()
 	}
@@ -179,14 +179,14 @@ func (sm *SettingsManager) GetAll() (*AllSettings, error) {
 	}
 
 	all := &AllSettings{
-		AIMode:        sm.settings.Settings.AIMode,
-		Predictions:   sm.settings.Settings.Predictions,
-		TokenUsage:    sm.settings.Settings.TokenUsage,
-		Theme:         sm.settings.Settings.Theme,
-		CustomThemes:  sm.settings.Settings.CustomThemes,
-		Accessibility: sm.settings.Settings.Accessibility,
-		Profile:       sm.settings.Settings.Profile,
-		Widget:        sm.settings.Settings.Widget,
+		AIMode:              sm.settings.Settings.AIMode,
+		Predictions:         sm.settings.Settings.Predictions,
+		TokenUsage:          sm.settings.Settings.TokenUsage,
+		Theme:               sm.settings.Settings.Theme,
+		CustomThemes:        sm.settings.Settings.CustomThemes,
+		Accessibility:       sm.settings.Settings.Accessibility,
+		Profile:             sm.settings.Settings.Profile,
+		Widget:              sm.settings.Settings.Widget,
 		APIKeys:             make(map[string]APIKeyEntry),
 		FeedbackGitHubToken: "",
 		Notifications:       NotificationSecrets{},
@@ -201,11 +201,11 @@ func (sm *SettingsManager) GetAll() (*AllSettings, error) {
 	if sm.settings.Encrypted.APIKeys != nil {
 		plaintext, err := decrypt(sm.key, sm.settings.Encrypted.APIKeys)
 		if err != nil {
-			log.Printf("[settings] failed to decrypt API keys: %v", err)
+			slog.Error(fmt.Sprintf("[settings] failed to decrypt API keys: %v", err))
 		} else if plaintext != nil {
 			var keys map[string]APIKeyEntry
 			if err := json.Unmarshal(plaintext, &keys); err != nil {
-				log.Printf("[settings] failed to parse decrypted API keys: %v", err)
+				slog.Error(fmt.Sprintf("[settings] failed to parse decrypted API keys: %v", err))
 			} else {
 				all.APIKeys = keys
 			}
@@ -216,7 +216,7 @@ func (sm *SettingsManager) GetAll() (*AllSettings, error) {
 	if sm.settings.Encrypted.FeedbackGitHubToken != nil {
 		plaintext, err := decrypt(sm.key, sm.settings.Encrypted.FeedbackGitHubToken)
 		if err != nil {
-			log.Printf("[settings] failed to decrypt GitHub token: %v", err)
+			slog.Error(fmt.Sprintf("[settings] failed to decrypt GitHub token: %v", err))
 		} else if plaintext != nil {
 			all.FeedbackGitHubToken = string(plaintext)
 			all.FeedbackGitHubTokenSource = GitHubTokenSourceSettings
@@ -236,11 +236,11 @@ func (sm *SettingsManager) GetAll() (*AllSettings, error) {
 	if sm.settings.Encrypted.Notifications != nil {
 		plaintext, err := decrypt(sm.key, sm.settings.Encrypted.Notifications)
 		if err != nil {
-			log.Printf("[settings] failed to decrypt notifications: %v", err)
+			slog.Error(fmt.Sprintf("[settings] failed to decrypt notifications: %v", err))
 		} else if plaintext != nil {
 			var notif NotificationSecrets
 			if err := json.Unmarshal(plaintext, &notif); err != nil {
-				log.Printf("[settings] failed to parse decrypted notifications: %v", err)
+				slog.Error(fmt.Sprintf("[settings] failed to parse decrypted notifications: %v", err))
 			} else {
 				all.Notifications = notif
 			}
@@ -362,7 +362,7 @@ func (sm *SettingsManager) MigrateFromConfigYaml(cp ConfigProvider) error {
 	}
 	sm.settings.Encrypted.APIKeys = enc
 
-	log.Printf("[settings] migrated %d API key(s) from config.yaml", len(keys))
+	slog.Info(fmt.Sprintf("[settings] migrated %d API key(s) from config.yaml", len(keys)))
 	return sm.saveLocked()
 }
 
@@ -385,7 +385,7 @@ func (sm *SettingsManager) migrateLegacyGitHubToken() {
 	// Copy legacy GitHubToken → FeedbackGitHubToken
 	sm.settings.Encrypted.FeedbackGitHubToken = sm.settings.Encrypted.GitHubToken
 	sm.settings.Encrypted.GitHubToken = nil
-	log.Printf("[settings] migrated legacy GitHubToken → FeedbackGitHubToken")
+	slog.Info("[settings] migrated legacy GitHubToken → FeedbackGitHubToken")
 }
 
 // ExportEncrypted returns the raw settings file contents for backup
@@ -420,9 +420,9 @@ func (sm *SettingsManager) ImportEncrypted(data []byte) error {
 	// Import encrypted fields only if the key fingerprint matches
 	if imported.KeyFingerprint == keyFingerprint(sm.key) {
 		sm.settings.Encrypted = imported.Encrypted
-		log.Printf("[settings] imported settings with encrypted fields (same key)")
+		slog.Info("[settings] imported settings with encrypted fields (same key)")
 	} else {
-		log.Printf("[settings] imported plaintext settings only (different key, encrypted fields skipped)")
+		slog.Info("[settings] imported plaintext settings only (different key, encrypted fields skipped)")
 	}
 
 	return sm.saveLocked()

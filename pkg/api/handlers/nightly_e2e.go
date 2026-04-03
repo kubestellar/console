@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"strings"
@@ -52,9 +52,9 @@ type NightlyWorkflow struct {
 	Model        string            `json:"model"`
 	GPUType      string            `json:"gpuType"`
 	GPUCount     int               `json:"gpuCount"`
-	GuidePath    string            `json:"-"`            // directory under guides/ in llm-d/llm-d repo
-	LLMDImages   map[string]string `json:"llmdImages"`   // llm-d component → tag (populated dynamically)
-	OtherImages  map[string]string `json:"otherImages"`  // non-llm-d containers → tag
+	GuidePath    string            `json:"-"`           // directory under guides/ in llm-d/llm-d repo
+	LLMDImages   map[string]string `json:"llmdImages"`  // llm-d component → tag (populated dynamically)
+	OtherImages  map[string]string `json:"otherImages"` // non-llm-d containers → tag
 }
 
 // NightlyRun represents a single workflow run from the GitHub Actions API.
@@ -731,7 +731,7 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 
 	req, err := http.NewRequest("GET", jobsURL, nil)
 	if err != nil {
-		log.Printf("internal error: %v", err)
+		slog.Error(fmt.Sprintf("internal error: %v", err))
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
@@ -741,7 +741,7 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 
 	resp, err := h.httpClient.Do(req)
 	if err != nil {
-		log.Printf("bad gateway: %v", err)
+		slog.Info(fmt.Sprintf("bad gateway: %v", err))
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "bad gateway"})
 	}
 	defer resp.Body.Close()
@@ -764,7 +764,7 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 		} `json:"jobs"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&jobData); err != nil {
-		log.Printf("internal error: %v", err)
+		slog.Error(fmt.Sprintf("internal error: %v", err))
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
 	}
 

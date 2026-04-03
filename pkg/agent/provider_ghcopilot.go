@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
@@ -13,7 +13,7 @@ import (
 
 // GHCopilotProvider implements the AIProvider interface for GitHub Copilot CLI
 type GHCopilotProvider struct {
-	ghPath          string
+	ghPath           string
 	copilotAvailable bool
 }
 
@@ -105,7 +105,7 @@ func (g *GHCopilotProvider) StreamChat(ctx context.Context, req *ChatRequest, on
 	}
 
 	if err := cmd.Wait(); err != nil {
-		log.Printf("[GHCopilot] Command finished with error: %v", err)
+		slog.Error(fmt.Sprintf("[GHCopilot] Command finished with error: %v", err))
 	}
 
 	return &ChatResponse{

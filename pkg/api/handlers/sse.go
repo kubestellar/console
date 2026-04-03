@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -29,7 +29,7 @@ type sseClusterStreamConfig struct {
 func writeSSEEvent(w *bufio.Writer, eventName string, data interface{}) {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		log.Printf("[SSE] marshal error: %v", err)
+		slog.Error(fmt.Sprintf("[SSE] marshal error: %v", err))
 		return
 	}
 	fmt.Fprintf(w, "event: %s\ndata: %s\n\n", eventName, jsonData)
@@ -129,7 +129,7 @@ func streamClusters(
 ) error {
 	healthy, offline, err := h.k8sClient.HealthyClusters(c.Context())
 	if err != nil {
-		log.Printf("internal error: %v", err)
+		slog.Error(fmt.Sprintf("internal error: %v", err))
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
@@ -200,7 +200,7 @@ func streamClusters(
 				elapsed := time.Since(start)
 
 				if fetchErr != nil {
-					log.Printf("[SSE] cluster %s fetch failed (%v): %v", clusterName, elapsed, fetchErr)
+					slog.Error(fmt.Sprintf("[SSE] cluster %s fetch failed (%v): %v", clusterName, elapsed, fetchErr))
 					if elapsed > 5*time.Second {
 						h.k8sClient.MarkSlow(clusterName)
 					}
@@ -239,7 +239,7 @@ func streamClusters(
 		case <-done:
 			// All healthy clusters finished
 		case <-streamCtx.Done():
-			log.Printf("[SSE] stream context done, sending partial results: %v", streamCtx.Err())
+			slog.Info(fmt.Sprintf("[SSE] stream context done, sending partial results: %v", streamCtx.Err()))
 			// Cancel all in-flight goroutines immediately.
 			streamCancel()
 		}

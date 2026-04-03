@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -42,17 +42,17 @@ func DefaultPredictionSettings() PredictionSettings {
 // AIPrediction represents an AI-generated prediction
 type AIPrediction struct {
 	ID             string `json:"id"`
-	Category       string `json:"category"`       // pod-crash, resource-trend, capacity-risk, anomaly
-	Severity       string `json:"severity"`       // warning, critical
-	Name           string `json:"name"`           // affected resource name
-	Cluster        string `json:"cluster"`        // cluster name
+	Category       string `json:"category"`            // pod-crash, resource-trend, capacity-risk, anomaly
+	Severity       string `json:"severity"`            // warning, critical
+	Name           string `json:"name"`                // affected resource name
+	Cluster        string `json:"cluster"`             // cluster name
 	Namespace      string `json:"namespace,omitempty"` // namespace if applicable
-	Reason         string `json:"reason"`         // brief summary
-	ReasonDetailed string `json:"reasonDetailed"` // full explanation
-	Confidence     int    `json:"confidence"`     // 0-100
-	GeneratedAt    string `json:"generatedAt"`    // ISO timestamp
-	Provider       string `json:"provider"`       // AI provider name
-	Trend          string `json:"trend,omitempty"` // worsening, improving, stable
+	Reason         string `json:"reason"`              // brief summary
+	ReasonDetailed string `json:"reasonDetailed"`      // full explanation
+	Confidence     int    `json:"confidence"`          // 0-100
+	GeneratedAt    string `json:"generatedAt"`         // ISO timestamp
+	Provider       string `json:"provider"`            // AI provider name
+	Trend          string `json:"trend,omitempty"`     // worsening, improving, stable
 }
 
 // AIPredictionsResponse is the HTTP response format
@@ -117,8 +117,8 @@ func (w *PredictionWorker) UpdateSettings(settings PredictionSettings) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	w.settings = settings
-	log.Printf("[PredictionWorker] Settings updated: interval=%dm, minConfidence=%d%%, aiEnabled=%v",
-		settings.Interval, settings.MinConfidence, settings.AIEnabled)
+	slog.Info(fmt.Sprintf("[PredictionWorker] Settings updated: interval=%dm, minConfidence=%d%%, aiEnabled=%v",
+		settings.Interval, settings.MinConfidence, settings.AIEnabled))
 }
 
 // GetSettings returns current settings
@@ -212,7 +212,7 @@ func (w *PredictionWorker) runLoop() {
 		case <-time.After(interval):
 			continue
 		case <-w.stopCh:
-			log.Println("[PredictionWorker] Stopping")
+			slog.Info("[PredictionWorker] Stopping")
 			return
 		}
 	}
@@ -220,7 +220,7 @@ func (w *PredictionWorker) runLoop() {
 
 // runAnalysis performs the AI analysis
 func (w *PredictionWorker) runAnalysis(specificProviders []string) {
-	log.Println("[PredictionWorker] Starting AI prediction analysis")
+	slog.Info("[PredictionWorker] Starting AI prediction analysis")
 
 	// Gather cluster data
 	ctx, cancel := context.WithTimeout(context.Background(), predictionTimeout)
@@ -230,7 +230,7 @@ func (w *PredictionWorker) runAnalysis(specificProviders []string) {
 	if err != nil {
 		if !w.loggedClusterError {
 			w.loggedClusterError = true
-			log.Printf("[PredictionWorker] Cluster data unavailable (will retry silently): %v", err)
+			slog.Info(fmt.Sprintf("[PredictionWorker] Cluster data unavailable (will retry silently): %v", err))
 		}
 		return
 	}
@@ -245,7 +245,7 @@ func (w *PredictionWorker) runAnalysis(specificProviders []string) {
 	}
 
 	if len(providers) == 0 {
-		log.Println("[PredictionWorker] No AI providers available")
+		slog.Info("[PredictionWorker] No AI providers available")
 		return
 	}
 
@@ -267,7 +267,7 @@ func (w *PredictionWorker) runAnalysis(specificProviders []string) {
 
 		predictions, err := w.analyzeWithProvider(ctx, provider, prompt)
 		if err != nil {
-			log.Printf("[PredictionWorker] Error with provider %s: %v", providerName, err)
+			slog.Error(fmt.Sprintf("[PredictionWorker] Error with provider %s: %v", providerName, err))
 			continue
 		}
 
@@ -301,7 +301,7 @@ func (w *PredictionWorker) runAnalysis(specificProviders []string) {
 	w.lastRun = time.Now()
 	w.mu.Unlock()
 
-	log.Printf("[PredictionWorker] Analysis complete: %d predictions from %v", len(filtered), usedProviders)
+	slog.Info(fmt.Sprintf("[PredictionWorker] Analysis complete: %d predictions from %v", len(filtered), usedProviders))
 
 	// Broadcast to WebSocket clients
 	if w.broadcast != nil {
@@ -315,11 +315,11 @@ func (w *PredictionWorker) runAnalysis(specificProviders []string) {
 
 // ClusterAnalysisData holds data for AI analysis
 type ClusterAnalysisData struct {
-	Clusters     []ClusterSummary `json:"clusters"`
+	Clusters     []ClusterSummary  `json:"clusters"`
 	PodIssues    []PodIssueSummary `json:"podIssues"`
-	GPUNodes     []GPUNodeSummary `json:"gpuNodes"`
-	OfflineNodes []NodeSummary    `json:"offlineNodes"`
-	Timestamp    string           `json:"timestamp"`
+	GPUNodes     []GPUNodeSummary  `json:"gpuNodes"`
+	OfflineNodes []NodeSummary     `json:"offlineNodes"`
+	Timestamp    string            `json:"timestamp"`
 }
 
 // ClusterSummary is a simplified cluster view for AI
@@ -401,16 +401,16 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 	// Get pod issues from healthy clusters only
 	clusters, err := w.k8sClient.ListClusters(ctx)
 	if err != nil {
-		log.Printf("[PredictionWorker] Error listing clusters: %v", err)
+		slog.Error(fmt.Sprintf("[PredictionWorker] Error listing clusters: %v", err))
 	} else {
 		for _, cluster := range clusters {
 			if !healthyClusterSet[cluster.Name] {
-				log.Printf("[PredictionWorker] Skipping offline cluster: %s", cluster.Name)
+				slog.Info(fmt.Sprintf("[PredictionWorker] Skipping offline cluster: %s", cluster.Name))
 				continue
 			}
 			pods, err := w.k8sClient.FindPodIssues(ctx, cluster.Context, "")
 			if err != nil {
-				log.Printf("[PredictionWorker] Error getting pod issues for %s: %v", cluster.Name, err)
+				slog.Error(fmt.Sprintf("[PredictionWorker] Error getting pod issues for %s: %v", cluster.Name, err))
 				continue
 			}
 			for _, p := range pods {
@@ -430,7 +430,7 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 		var fallbackErr error
 		clusters, fallbackErr = w.k8sClient.ListClusters(ctx)
 		if fallbackErr != nil {
-			log.Printf("[PredictionWorker] Fallback ListClusters for GPU nodes failed: %v", fallbackErr)
+			slog.Error(fmt.Sprintf("[PredictionWorker] Fallback ListClusters for GPU nodes failed: %v", fallbackErr))
 		}
 	}
 	for _, cluster := range clusters {
@@ -439,7 +439,7 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 		}
 		gpuNodes, err := w.k8sClient.GetGPUNodes(ctx, cluster.Context)
 		if err != nil {
-			log.Printf("[PredictionWorker] Error getting GPU nodes for %s: %v", cluster.Name, err)
+			slog.Error(fmt.Sprintf("[PredictionWorker] Error getting GPU nodes for %s: %v", cluster.Name, err))
 			continue
 		}
 		for _, g := range gpuNodes {
@@ -459,7 +459,7 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 		}
 		nodes, err := w.k8sClient.GetNodes(ctx, cluster.Context)
 		if err != nil {
-			log.Printf("[PredictionWorker] Error getting nodes for %s: %v", cluster.Name, err)
+			slog.Error(fmt.Sprintf("[PredictionWorker] Error getting nodes for %s: %v", cluster.Name, err))
 			continue
 		}
 		for _, n := range nodes {
@@ -494,7 +494,7 @@ func (w *PredictionWorker) buildAnalysisPrompt(data *ClusterAnalysisData) string
 
 	dataJSON, err := json.MarshalIndent(filteredData, "", "  ")
 	if err != nil {
-		log.Printf("[PredictionWorker] Failed to marshal filtered data: %v", err)
+		slog.Error(fmt.Sprintf("[PredictionWorker] Failed to marshal filtered data: %v", err))
 		return ""
 	}
 
@@ -683,7 +683,7 @@ func (s *Server) BroadcastToClients(msgType string, payload interface{}) {
 
 	data, err := json.Marshal(message)
 	if err != nil {
-		log.Printf("[Server] Error marshaling broadcast message: %v", err)
+		slog.Error(fmt.Sprintf("[Server] Error marshaling broadcast message: %v", err))
 		return
 	}
 
@@ -706,7 +706,7 @@ func (s *Server) BroadcastToClients(msgType string, payload interface{}) {
 		c.wsc.writeMu.Lock()
 		c.conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
 		if err := c.conn.WriteMessage(websocket.TextMessage, data); err != nil {
-			log.Printf("[Server] Error broadcasting to client %s: %v", c.conn.RemoteAddr(), err)
+			slog.Error(fmt.Sprintf("[Server] Error broadcasting to client %s: %v", c.conn.RemoteAddr(), err))
 			dead = append(dead, c.conn)
 		}
 		c.conn.SetWriteDeadline(time.Time{}) // clear for normal writes
@@ -721,6 +721,6 @@ func (s *Server) BroadcastToClients(msgType string, payload interface{}) {
 			conn.Close()
 		}
 		s.clientsMux.Unlock()
-		log.Printf("[Server] Removed %d dead client(s) during broadcast", len(dead))
+		slog.Info(fmt.Sprintf("[Server] Removed %d dead client(s) during broadcast", len(dead)))
 	}
 }

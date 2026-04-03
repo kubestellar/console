@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"sync"
@@ -25,19 +25,19 @@ type BridgeConfig struct {
 	KubestellarOpsPath    string
 	KubestellarDeployPath string
 	InspektorGadgetPath   string
-	Kubeconfig       string
+	Kubeconfig            string
 }
 
 // ClusterInfo represents basic cluster information
 type ClusterInfo struct {
-	Name       string `json:"name"`
-	Context    string `json:"context"`
-	Server     string `json:"server,omitempty"`
-	User       string `json:"user,omitempty"`
-	Healthy    bool   `json:"healthy"`
-	Source     string `json:"source,omitempty"`
-	NodeCount  int    `json:"nodeCount,omitempty"`
-	PodCount   int    `json:"podCount,omitempty"`
+	Name      string `json:"name"`
+	Context   string `json:"context"`
+	Server    string `json:"server,omitempty"`
+	User      string `json:"user,omitempty"`
+	Healthy   bool   `json:"healthy"`
+	Source    string `json:"source,omitempty"`
+	NodeCount int    `json:"nodeCount,omitempty"`
+	PodCount  int    `json:"podCount,omitempty"`
 }
 
 // ClusterHealth represents cluster health status
@@ -65,25 +65,25 @@ type ClusterHealth struct {
 
 // PodInfo represents pod information
 type PodInfo struct {
-	Name       string `json:"name"`
-	Namespace  string `json:"namespace"`
-	Cluster    string `json:"cluster,omitempty"`
-	Status     string `json:"status"`
-	Ready      string `json:"ready"`
-	Restarts   int    `json:"restarts"`
-	Age        string `json:"age"`
-	Node       string `json:"node,omitempty"`
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	Cluster   string `json:"cluster,omitempty"`
+	Status    string `json:"status"`
+	Ready     string `json:"ready"`
+	Restarts  int    `json:"restarts"`
+	Age       string `json:"age"`
+	Node      string `json:"node,omitempty"`
 }
 
 // PodIssue represents a pod with issues
 type PodIssue struct {
-	Name       string   `json:"name"`
-	Namespace  string   `json:"namespace"`
-	Cluster    string   `json:"cluster,omitempty"`
-	Status     string   `json:"status"`
-	Reason     string   `json:"reason,omitempty"`
-	Issues     []string `json:"issues"`
-	Restarts   int      `json:"restarts"`
+	Name      string   `json:"name"`
+	Namespace string   `json:"namespace"`
+	Cluster   string   `json:"cluster,omitempty"`
+	Status    string   `json:"status"`
+	Reason    string   `json:"reason,omitempty"`
+	Issues    []string `json:"issues"`
+	Restarts  int      `json:"restarts"`
 }
 
 // Event represents a Kubernetes event
@@ -116,7 +116,7 @@ func (b *Bridge) Start(ctx context.Context) error {
 	// Start kubestellar-ops if path is configured and binary exists
 	if b.config.KubestellarOpsPath != "" {
 		if _, err := exec.LookPath(b.config.KubestellarOpsPath); err != nil {
-			log.Printf("kubestellar-ops binary not found on PATH (%q) — MCP ops tools will be unavailable. Install via: brew install kubestellar/tap/kubestellar-ops", b.config.KubestellarOpsPath)
+			slog.Info(fmt.Sprintf("kubestellar-ops binary not found on PATH (%q) — MCP ops tools will be unavailable. Install via: brew install kubestellar/tap/kubestellar-ops", b.config.KubestellarOpsPath))
 		} else {
 			wg.Add(1)
 			go func() {
@@ -131,7 +131,7 @@ func (b *Bridge) Start(ctx context.Context) error {
 	// Start kubestellar-deploy if path is configured and binary exists
 	if b.config.KubestellarDeployPath != "" {
 		if _, err := exec.LookPath(b.config.KubestellarDeployPath); err != nil {
-			log.Printf("kubestellar-deploy binary not found on PATH (%q) — MCP deploy tools will be unavailable. Install via: brew install kubestellar/tap/kubestellar-deploy", b.config.KubestellarDeployPath)
+			slog.Info(fmt.Sprintf("kubestellar-deploy binary not found on PATH (%q) — MCP deploy tools will be unavailable. Install via: brew install kubestellar/tap/kubestellar-deploy", b.config.KubestellarDeployPath))
 		} else {
 			wg.Add(1)
 			go func() {
@@ -146,7 +146,7 @@ func (b *Bridge) Start(ctx context.Context) error {
 	// Start inspektor-gadget if path is configured and binary exists
 	if b.config.InspektorGadgetPath != "" {
 		if _, err := exec.LookPath(b.config.InspektorGadgetPath); err != nil {
-			log.Printf("inspektor-gadget MCP binary not found on PATH (%q) — Gadget tools will be unavailable.", b.config.InspektorGadgetPath)
+			slog.Info(fmt.Sprintf("inspektor-gadget MCP binary not found on PATH (%q) — Gadget tools will be unavailable.", b.config.InspektorGadgetPath))
 		} else {
 			wg.Add(1)
 			go func() {
@@ -649,7 +649,7 @@ func DefaultBridgeConfig() BridgeConfig {
 		KubestellarOpsPath:    getEnvOrDefault("KUBESTELLAR_OPS_PATH", "kubestellar-ops"),
 		KubestellarDeployPath: getEnvOrDefault("KUBESTELLAR_DEPLOY_PATH", "kubestellar-deploy"),
 		InspektorGadgetPath:   getEnvOrDefault("INSPEKTOR_GADGET_MCP_PATH", "ig-mcp-server"),
-		Kubeconfig:       os.Getenv("KUBECONFIG"),
+		Kubeconfig:            os.Getenv("KUBECONFIG"),
 	}
 }
 

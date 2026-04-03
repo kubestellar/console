@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,6 +15,15 @@ import (
 func main() {
 	// Load .env file if it exists (silently ignore if not found)
 	_ = godotenv.Load()
+
+	// Set up structured logging — JSON for production, human-readable text for dev.
+	var logHandler slog.Handler
+	if os.Getenv("DEV_MODE") == "true" {
+		logHandler = slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug})
+	} else {
+		logHandler = slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})
+	}
+	slog.SetDefault(slog.New(logHandler))
 
 	// Parse flags
 	devMode := flag.Bool("dev", false, "Run in development mode")
@@ -41,7 +50,8 @@ func main() {
 			BackendPort: *backendPort,
 		}
 		if err := runWatchdog(cfg); err != nil {
-			log.Fatalf("Watchdog error: %v", err)
+			slog.Error(fmt.Sprintf("Watchdog error: %v", err))
+			os.Exit(1)
 		}
 		return
 	}
@@ -69,7 +79,8 @@ func main() {
 	// page, then initializes services (DB, k8s, MCP, etc.) in the background.
 	server, err := api.NewServer(cfg)
 	if err != nil {
-		log.Fatalf("Failed to create server: %v", err)
+		slog.Error(fmt.Sprintf("Failed to create server: %v", err))
+		os.Exit(1)
 	}
 
 	// Handle graceful shutdown
@@ -78,16 +89,17 @@ func main() {
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 		<-sigCh
 
-		log.Println("Shutting down...")
+		slog.Info("Shutting down...")
 		if err := server.Shutdown(); err != nil {
-			log.Printf("Shutdown error: %v", err)
+			slog.Error(fmt.Sprintf("Shutdown error: %v", err))
 		}
 		os.Exit(0)
 	}()
 
 	// Block until shutdown (HTTP listener runs in background from NewServer)
 	if err := server.Start(); err != nil {
-		log.Fatalf("Server error: %v", err)
+		slog.Error(fmt.Sprintf("Server error: %v", err))
+		os.Exit(1)
 	}
 }
 

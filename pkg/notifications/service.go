@@ -2,7 +2,7 @@ package notifications
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 )
 
@@ -22,7 +22,7 @@ func NewService() *Service {
 func (s *Service) RegisterSlackNotifier(id, webhookURL, channel string) {
 	if webhookURL != "" {
 		s.notifiers[fmt.Sprintf("slack:%s", id)] = NewSlackNotifier(webhookURL, channel)
-		log.Printf("Registered Slack notifier: %s", id)
+		slog.Info(fmt.Sprintf("Registered Slack notifier: %s", id))
 	}
 }
 
@@ -30,7 +30,7 @@ func (s *Service) RegisterSlackNotifier(id, webhookURL, channel string) {
 func (s *Service) RegisterPagerDutyNotifier(id, routingKey string) {
 	if routingKey != "" {
 		s.notifiers[fmt.Sprintf("pagerduty:%s", id)] = NewPagerDutyNotifier(routingKey)
-		log.Printf("Registered PagerDuty notifier: %s", id)
+		slog.Info(fmt.Sprintf("Registered PagerDuty notifier: %s", id))
 	}
 }
 
@@ -38,7 +38,7 @@ func (s *Service) RegisterPagerDutyNotifier(id, routingKey string) {
 func (s *Service) RegisterOpsGenieNotifier(id, apiKey string) {
 	if apiKey != "" {
 		s.notifiers[fmt.Sprintf("opsgenie:%s", id)] = NewOpsGenieNotifier(apiKey)
-		log.Printf("Registered OpsGenie notifier: %s", id)
+		slog.Info(fmt.Sprintf("Registered OpsGenie notifier: %s", id))
 	}
 }
 
@@ -50,14 +50,14 @@ func (s *Service) RegisterEmailNotifier(id, smtpHost string, smtpPort int, usern
 			recipients[i] = strings.TrimSpace(r)
 		}
 		s.notifiers[fmt.Sprintf("email:%s", id)] = NewEmailNotifier(smtpHost, smtpPort, username, password, from, recipients)
-		log.Printf("Registered Email notifier: %s", id)
+		slog.Info(fmt.Sprintf("Registered Email notifier: %s", id))
 	}
 }
 
 // SendAlert sends an alert to all configured notifiers
 func (s *Service) SendAlert(alert Alert) error {
 	if len(s.notifiers) == 0 {
-		log.Println("No notifiers configured, alert will not be sent externally")
+		slog.Info("No notifiers configured, alert will not be sent externally")
 		return nil
 	}
 
@@ -65,10 +65,10 @@ func (s *Service) SendAlert(alert Alert) error {
 	for id, notifier := range s.notifiers {
 		if err := notifier.Send(alert); err != nil {
 			errMsg := fmt.Sprintf("failed to send notification via %s: %v", id, err)
-			log.Println(errMsg)
+			slog.Info(errMsg)
 			errors = append(errors, errMsg)
 		} else {
-			log.Printf("Successfully sent alert notification via %s", id)
+			slog.Info(fmt.Sprintf("Successfully sent alert notification via %s", id))
 		}
 	}
 
@@ -135,10 +135,10 @@ func (s *Service) SendAlertToChannels(alert Alert, channels []NotificationChanne
 		if notifier != nil {
 			if err := notifier.Send(alert); err != nil {
 				errMsg := fmt.Sprintf("failed to send notification via %s channel %s: %v", channel.Type, channelID, err)
-				log.Println(errMsg)
+				slog.Info(errMsg)
 				errors = append(errors, errMsg)
 			} else {
-				log.Printf("Successfully sent alert notification via %s channel %s", channel.Type, channelID)
+				slog.Info(fmt.Sprintf("Successfully sent alert notification via %s channel %s", channel.Type, channelID))
 			}
 		}
 	}

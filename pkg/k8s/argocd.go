@@ -3,7 +3,7 @@ package k8s
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -28,7 +28,7 @@ func isNoMatchError(err error) bool {
 
 // ISO 8601 layouts used by ArgoCD for timestamp fields
 var argoTimestampLayouts = []string{
-	time.RFC3339,                // 2006-01-02T15:04:05Z07:00
+	time.RFC3339,               // 2006-01-02T15:04:05Z07:00
 	"2006-01-02T15:04:05Z",     // UTC explicit
 	"2006-01-02T15:04:05.000Z", // millisecond precision
 }
@@ -54,7 +54,7 @@ func (m *MultiClusterClient) ListArgoApplications(ctx context.Context) (*v1alpha
 
 			clusterApps, err := m.ListArgoApplicationsForCluster(ctx, cluster, "")
 			if err != nil {
-				log.Printf("[argocd] Error listing applications on cluster %s: %v", cluster, err)
+				slog.Error(fmt.Sprintf("[argocd] Error listing applications on cluster %s: %v", cluster, err))
 				return
 			}
 
@@ -93,7 +93,7 @@ func (m *MultiClusterClient) ListArgoApplicationsForCluster(ctx context.Context,
 			return []v1alpha1.ArgoApplication{}, nil
 		}
 		// Real error (auth, network, RBAC) — log and propagate
-		log.Printf("[argocd] Error listing applications on cluster %s: %v", contextName, err)
+		slog.Error(fmt.Sprintf("[argocd] Error listing applications on cluster %s: %v", contextName, err))
 		return nil, err
 	}
 
@@ -208,7 +208,7 @@ func (m *MultiClusterClient) ListArgoApplicationSets(ctx context.Context) (*v1al
 
 			clusterAppSets, err := m.ListArgoApplicationSetsForCluster(ctx, cluster)
 			if err != nil {
-				log.Printf("[ArgoCD] Skipping cluster %s for ApplicationSets: %v", cluster, err)
+				slog.Info(fmt.Sprintf("[ArgoCD] Skipping cluster %s for ApplicationSets: %v", cluster, err))
 				return // CRD not installed or cluster unreachable — skip silently
 			}
 
@@ -355,4 +355,3 @@ func parseAppSetConditionStatus(conditions []interface{}) string {
 	}
 	return "Progressing"
 }
-

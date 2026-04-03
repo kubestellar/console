@@ -3,7 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -55,15 +55,15 @@ var (
 
 // kagentCRDAgent is the JSON response shape for a kagent.dev Agent CR
 type kagentCRDAgent struct {
-	Name          string `json:"name"`
-	Namespace     string `json:"namespace"`
-	Cluster       string `json:"cluster"`
-	Type          string `json:"type"`
-	Runtime       string `json:"runtime"`
-	Ready         bool   `json:"ready"`
-	Accepted      bool   `json:"accepted"`
+	Name           string `json:"name"`
+	Namespace      string `json:"namespace"`
+	Cluster        string `json:"cluster"`
+	Type           string `json:"type"`
+	Runtime        string `json:"runtime"`
+	Ready          bool   `json:"ready"`
+	Accepted       bool   `json:"accepted"`
 	ModelConfigRef string `json:"modelConfigRef"`
-	ToolCount     int    `json:"toolCount"`
+	ToolCount      int    `json:"toolCount"`
 }
 
 // kagentCRDTool is the JSON response shape for a kagent.dev ToolServer or RemoteMCPServer CR
@@ -84,12 +84,12 @@ type discoveredToolRef struct {
 
 // kagentCRDModel is the JSON response shape for a kagent.dev ModelConfig or ModelProviderConfig CR
 type kagentCRDModel struct {
-	Name             string              `json:"name"`
-	Namespace        string              `json:"namespace"`
-	Cluster          string              `json:"cluster"`
-	Kind             string              `json:"kind"`
-	Provider         string              `json:"provider"`
-	Model            string              `json:"model"`
+	Name             string               `json:"name"`
+	Namespace        string               `json:"namespace"`
+	Cluster          string               `json:"cluster"`
+	Kind             string               `json:"kind"`
+	Provider         string               `json:"provider"`
+	Model            string               `json:"model"`
 	DiscoveredModels []discoveredModelRef `json:"discoveredModels,omitempty"`
 }
 
@@ -100,10 +100,10 @@ type discoveredModelRef struct {
 
 // kagentCRDMemory is the JSON response shape for a kagent.dev Memory CR
 type kagentCRDMemory struct {
-	Name     string `json:"name"`
+	Name      string `json:"name"`
 	Namespace string `json:"namespace"`
-	Cluster  string `json:"cluster"`
-	Provider string `json:"provider"`
+	Cluster   string `json:"cluster"`
+	Provider  string `json:"provider"`
 }
 
 // handleKagentCRDAgents returns kagent.dev Agent CRDs for a cluster
@@ -132,7 +132,7 @@ func (s *Server) handleKagentCRDAgents(w http.ResponseWriter, r *http.Request) {
 
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
-		log.Printf("error fetching kagent agents for cluster request")
+		slog.Info("error fetching kagent agents for cluster request")
 		json.NewEncoder(w).Encode(map[string]any{"agents": []any{}, "error": "internal server error"})
 		return
 	}
@@ -222,7 +222,7 @@ func (s *Server) handleKagentCRDTools(w http.ResponseWriter, r *http.Request) {
 
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
-		log.Printf("error fetching kagent tools for cluster request")
+		slog.Info("error fetching kagent tools for cluster request")
 		json.NewEncoder(w).Encode(map[string]any{"tools": []any{}, "error": "internal server error"})
 		return
 	}
@@ -336,7 +336,7 @@ func (s *Server) handleKagentCRDModels(w http.ResponseWriter, r *http.Request) {
 
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
-		log.Printf("error fetching kagent models for cluster request")
+		slog.Info("error fetching kagent models for cluster request")
 		json.NewEncoder(w).Encode(map[string]any{"models": []any{}, "error": "internal server error"})
 		return
 	}
@@ -446,7 +446,7 @@ func (s *Server) handleKagentCRDMemories(w http.ResponseWriter, r *http.Request)
 
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
-		log.Printf("error fetching kagent memories for cluster request")
+		slog.Info("error fetching kagent memories for cluster request")
 		json.NewEncoder(w).Encode(map[string]any{"memories": []any{}, "error": "internal server error"})
 		return
 	}
@@ -509,7 +509,7 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
-		log.Printf("error fetching kagent CRD summary for cluster request")
+		slog.Info("error fetching kagent CRD summary for cluster request")
 		json.NewEncoder(w).Encode(map[string]any{
 			"agentCount": 0, "toolServerCount": 0, "remoteMCPServerCount": 0,
 			"modelConfigCount": 0, "modelProviderConfigCount": 0, "memoryCount": 0,
@@ -589,7 +589,7 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 		"modelConfigCount":         modelConfigCount,
 		"modelProviderConfigCount": modelProviderConfigCount,
 		"memoryCount":              memoryCount,
-		"byCluster":               byCluster,
+		"byCluster":                byCluster,
 		"byProvider":               byProvider,
 		"source":                   "agent",
 	})

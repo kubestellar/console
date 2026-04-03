@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -49,7 +49,7 @@ type WatchdogConfig struct {
 func runWatchdog(cfg WatchdogConfig) error {
 	// Write PID file so startup-oauth.sh can detect us
 	if err := writePidFile(watchdogPidFile); err != nil {
-		log.Printf("[Watchdog] Warning: could not write PID file: %v", err)
+		slog.Warn(fmt.Sprintf("[Watchdog] Warning: could not write PID file: %v", err))
 	}
 	defer os.Remove(watchdogPidFile)
 
@@ -59,8 +59,8 @@ func runWatchdog(cfg WatchdogConfig) error {
 	}
 
 	// Track backend health with atomic for lock-free reads
-	var backendHealthy int32 // 0 = unhealthy, 1 = healthy
-	var fallbacksServed int64 // count of fallback pages served (for observability)
+	var backendHealthy int32       // 0 = unhealthy, 1 = healthy
+	var fallbacksServed int64      // count of fallback pages served (for observability)
 	var backendStatus atomic.Value // raw status string from /health ("ok", "starting", "")
 
 	// Create reverse proxy
@@ -95,7 +95,7 @@ func runWatchdog(cfg WatchdogConfig) error {
 			strings.Contains(errMsg, "client disconnected") ||
 			strings.Contains(errMsg, "write: broken pipe")
 		if isClientGone {
-			log.Printf("[Watchdog] Client disconnected (backend still healthy): %v", err)
+			slog.Info(fmt.Sprintf("[Watchdog] Client disconnected (backend still healthy): %v", err))
 			return
 		}
 
@@ -103,13 +103,13 @@ func runWatchdog(cfg WatchdogConfig) error {
 		isTimeout := strings.Contains(errMsg, "timeout awaiting response headers") ||
 			strings.Contains(errMsg, "context deadline exceeded")
 		if isTimeout {
-			log.Printf("[Watchdog] Proxy timeout (backend still healthy): %v", err)
+			slog.Info(fmt.Sprintf("[Watchdog] Proxy timeout (backend still healthy): %v", err))
 			http.Error(w, "Gateway Timeout", http.StatusGatewayTimeout)
 			return
 		}
 
 		// Hard connection failure — backend is genuinely down.
-		log.Printf("[Watchdog] Proxy error (backend down): %v", err)
+		slog.Error(fmt.Sprintf("[Watchdog] Proxy error (backend down): %v", err))
 		atomic.StoreInt32(&backendHealthy, 0)
 		serveFallback(w, r)
 	}
@@ -184,13 +184,13 @@ func runWatchdog(cfg WatchdogConfig) error {
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 		<-sigCh
-		log.Println("[Watchdog] Shutting down...")
+		slog.Info("[Watchdog] Shutting down...")
 		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), watchdogShutdownTimeout)
 		defer shutdownCancel()
 		srv.Shutdown(shutdownCtx)
 	}()
 
-	log.Printf("[Watchdog] Listening on %s, proxying to %s", addr, backendURL.String())
+	slog.Info(fmt.Sprintf("[Watchdog] Listening on %s, proxying to %s", addr, backendURL.String()))
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("watchdog listen error: %w", err)
 	}
@@ -229,12 +229,12 @@ func pollBackendHealth(ctx context.Context, backendBase string, healthy *int32, 
 
 		if isHealthy {
 			if !wasHealthy {
-				log.Printf("[Watchdog] Backend is healthy")
+				slog.Info("[Watchdog] Backend is healthy")
 			}
 			atomic.StoreInt32(healthy, 1)
 		} else {
 			if wasHealthy {
-				log.Printf("[Watchdog] Backend unreachable")
+				slog.Info("[Watchdog] Backend unreachable")
 			}
 			atomic.StoreInt32(healthy, 0)
 		}

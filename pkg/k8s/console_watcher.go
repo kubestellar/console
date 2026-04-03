@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -62,7 +62,7 @@ func (w *ConsoleWatcher) Start(ctx context.Context) error {
 	w.started = true
 	w.mu.Unlock()
 
-	log.Printf("[ConsoleWatcher] Starting watch on namespace %s", w.namespace)
+	slog.Info(fmt.Sprintf("[ConsoleWatcher] Starting watch on namespace %s", w.namespace))
 
 	// Start watchers for each resource type
 	gvrs := []struct {
@@ -93,13 +93,13 @@ func (w *ConsoleWatcher) Stop() {
 	close(w.stopCh)
 
 	for gvr, watcher := range w.watchers {
-		log.Printf("[ConsoleWatcher] Stopping watch for %s", gvr.Resource)
+		slog.Info(fmt.Sprintf("[ConsoleWatcher] Stopping watch for %s", gvr.Resource))
 		watcher.Stop()
 	}
 
 	w.started = false
 	w.watchers = make(map[schema.GroupVersionResource]watch.Interface)
-	log.Printf("[ConsoleWatcher] All watches stopped")
+	slog.Info("[ConsoleWatcher] All watches stopped")
 }
 
 // watchResource watches a single resource type with retry logic
@@ -118,7 +118,7 @@ func (w *ConsoleWatcher) watchResource(ctx context.Context, gvr schema.GroupVers
 
 		err := w.doWatch(ctx, gvr, resourceType)
 		if err != nil {
-			log.Printf("[ConsoleWatcher] Watch error for %s: %v, retrying in %v", resourceType, err, backoff)
+			slog.Error(fmt.Sprintf("[ConsoleWatcher] Watch error for %s: %v, retrying in %v", resourceType, err, backoff))
 
 			timer := time.NewTimer(backoff)
 			select {
@@ -145,7 +145,7 @@ func (w *ConsoleWatcher) watchResource(ctx context.Context, gvr schema.GroupVers
 
 // doWatch performs the actual watch operation
 func (w *ConsoleWatcher) doWatch(ctx context.Context, gvr schema.GroupVersionResource, resourceType string) error {
-	log.Printf("[ConsoleWatcher] Starting watch for %s in namespace %s", resourceType, w.namespace)
+	slog.Info(fmt.Sprintf("[ConsoleWatcher] Starting watch for %s in namespace %s", resourceType, w.namespace))
 
 	watcher, err := w.client.Resource(gvr).Namespace(w.namespace).Watch(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -175,7 +175,7 @@ func (w *ConsoleWatcher) doWatch(ctx context.Context, gvr schema.GroupVersionRes
 			}
 
 			if err := w.handleEvent(event, resourceType); err != nil {
-				log.Printf("[ConsoleWatcher] Error handling %s event: %v", resourceType, err)
+				slog.Error(fmt.Sprintf("[ConsoleWatcher] Error handling %s event: %v", resourceType, err))
 			}
 		}
 	}
@@ -229,7 +229,7 @@ func (w *ConsoleWatcher) handleEvent(event watch.Event, resourceType string) err
 		Resource:     resource,
 	}
 
-	log.Printf("[ConsoleWatcher] %s %s: %s/%s", eventType, resourceType, u.GetNamespace(), u.GetName())
+	slog.Info(fmt.Sprintf("[ConsoleWatcher] %s %s: %s/%s", eventType, resourceType, u.GetNamespace(), u.GetName()))
 
 	// Call handler
 	if w.handler != nil {

@@ -3,8 +3,9 @@ package handlers
 import (
 	"bytes"
 	"encoding/base64"
+	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -20,7 +21,7 @@ var analyticsClient = &http.Client{Timeout: 10 * time.Second}
 
 // allowedOrigins lists hostnames that may send analytics through the proxy.
 var allowedOrigins = map[string]bool{
-	"localhost":               true,
+	"localhost":              true,
 	"127.0.0.1":              true,
 	"console.kubestellar.io": true,
 }
@@ -71,7 +72,7 @@ func GA4ScriptProxy(c *fiber.Ctx) error {
 	target := "https://www.googletagmanager.com/gtag/js?" + qs
 	resp, err := analyticsClient.Get(target)
 	if err != nil {
-		log.Printf("[GA4] Failed to fetch gtag.js: %v", err)
+		slog.Error(fmt.Sprintf("[GA4] Failed to fetch gtag.js: %v", err))
 		return c.SendStatus(fiber.StatusBadGateway)
 	}
 	defer resp.Body.Close()
@@ -275,7 +276,7 @@ func UmamiScriptProxy(c *fiber.Ctx) error {
 	target := umamiUpstreamBase + "/ksc"
 	resp, err := analyticsClient.Get(target)
 	if err != nil {
-		log.Printf("[Umami] Failed to fetch tracking script: %v", err)
+		slog.Error(fmt.Sprintf("[Umami] Failed to fetch tracking script: %v", err))
 		return c.SendStatus(fiber.StatusBadGateway)
 	}
 	defer resp.Body.Close()

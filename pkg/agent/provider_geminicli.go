@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -124,7 +124,7 @@ func (g *GeminiCLIProvider) StreamChat(ctx context.Context, req *ChatRequest, on
 	}
 
 	if err := cmd.Wait(); err != nil {
-		log.Printf("[GeminiCLI] Command finished with error: %v", err)
+		slog.Error(fmt.Sprintf("[GeminiCLI] Command finished with error: %v", err))
 	}
 
 	return &ChatResponse{

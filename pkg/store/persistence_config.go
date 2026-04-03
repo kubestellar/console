@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -163,8 +163,8 @@ func (p *PersistenceStore) Save() error {
 		return fmt.Errorf("failed to write persistence config: %w", err)
 	}
 
-	log.Printf("[PersistenceStore] Config saved: enabled=%v, primary=%s, secondary=%s",
-		p.config.Enabled, p.config.PrimaryCluster, p.config.SecondaryCluster)
+	slog.Info(fmt.Sprintf("[PersistenceStore] Config saved: enabled=%v, primary=%s, secondary=%s",
+		p.config.Enabled, p.config.PrimaryCluster, p.config.SecondaryCluster))
 
 	return nil
 }

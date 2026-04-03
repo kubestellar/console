@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -40,10 +40,10 @@ type BenchmarkStatistics struct {
 }
 
 type BenchmarkAccelerator struct {
-	Model       string                  `json:"model"`
-	Count       int                     `json:"count"`
-	Memory      *int                    `json:"memory,omitempty"`
-	Parallelism *BenchmarkParallelism   `json:"parallelism,omitempty"`
+	Model       string                `json:"model"`
+	Count       int                   `json:"count"`
+	Memory      *int                  `json:"memory,omitempty"`
+	Parallelism *BenchmarkParallelism `json:"parallelism,omitempty"`
 }
 
 type BenchmarkParallelism struct {
@@ -81,9 +81,9 @@ type BenchmarkLoadConfig struct {
 		Description string `json:"description,omitempty"`
 	} `json:"metadata"`
 	Standardized struct {
-		Tool       string                   `json:"tool"`
-		ToolVersion string                  `json:"tool_version"`
-		Source      string                  `json:"source"`
+		Tool         string                 `json:"tool"`
+		ToolVersion  string                 `json:"tool_version"`
+		Source       string                 `json:"source"`
 		InputSeqLen  *BenchmarkDistribution `json:"input_seq_len,omitempty"`
 		OutputSeqLen *BenchmarkDistribution `json:"output_seq_len,omitempty"`
 		RateQPS      *float64               `json:"rate_qps,omitempty"`
@@ -97,11 +97,11 @@ type BenchmarkDistribution struct {
 }
 
 type BenchmarkLatencyStats struct {
-	TimeToFirstToken          *BenchmarkStatistics `json:"time_to_first_token,omitempty"`
-	TimePerOutputToken        *BenchmarkStatistics `json:"time_per_output_token,omitempty"`
-	InterTokenLatency         *BenchmarkStatistics `json:"inter_token_latency,omitempty"`
+	TimeToFirstToken             *BenchmarkStatistics `json:"time_to_first_token,omitempty"`
+	TimePerOutputToken           *BenchmarkStatistics `json:"time_per_output_token,omitempty"`
+	InterTokenLatency            *BenchmarkStatistics `json:"inter_token_latency,omitempty"`
 	NormalizedTimePerOutputToken *BenchmarkStatistics `json:"normalized_time_per_output_token,omitempty"`
-	RequestLatency            *BenchmarkStatistics `json:"request_latency,omitempty"`
+	RequestLatency               *BenchmarkStatistics `json:"request_latency,omitempty"`
 }
 
 type BenchmarkThroughputStats struct {
@@ -120,8 +120,8 @@ type BenchmarkRequestStats struct {
 }
 
 type BenchmarkReport struct {
-	Version  string `json:"version"`
-	Run      struct {
+	Version string `json:"version"`
+	Run     struct {
 		UID  string `json:"uid"`
 		EID  string `json:"eid"`
 		CID  string `json:"cid,omitempty"`
@@ -140,8 +140,8 @@ type BenchmarkReport struct {
 		RequestPerformance struct {
 			Aggregate struct {
 				Requests   BenchmarkRequestStats    `json:"requests"`
-				Latency    BenchmarkLatencyStats     `json:"latency"`
-				Throughput BenchmarkThroughputStats  `json:"throughput"`
+				Latency    BenchmarkLatencyStats    `json:"latency"`
+				Throughput BenchmarkThroughputStats `json:"throughput"`
 			} `json:"aggregate"`
 		} `json:"request_performance"`
 		Observability *struct {
@@ -429,7 +429,7 @@ func (h *BenchmarkHandlers) driveGetWithRetry(url string) (*http.Response, error
 	for attempt := 0; attempt <= driveMaxRetries; attempt++ {
 		if attempt > 0 {
 			backoff := driveRetryBaseDelay * time.Duration(1<<(attempt-1))
-			log.Printf("[benchmarks] Retrying after %v (attempt %d/%d)", backoff, attempt, driveMaxRetries)
+			slog.Info(fmt.Sprintf("[benchmarks] Retrying after %v (attempt %d/%d)", backoff, attempt, driveMaxRetries))
 			time.Sleep(backoff)
 		}
 		resp, err := h.driveGet(url)
@@ -480,7 +480,7 @@ func (h *BenchmarkHandlers) GetReports(c *fiber.Ctx) error {
 	// Fetch from Google Drive
 	reports, parseFailures, err := h.fetchAllReports(cutoff)
 	if err != nil {
-		log.Printf("[benchmarks] Google Drive fetch error: %v", err)
+		slog.Error(fmt.Sprintf("[benchmarks] Google Drive fetch error: %v", err))
 		h.cache.mu.RLock()
 		stale := h.cache.reports
 		h.cache.mu.RUnlock()
@@ -491,7 +491,7 @@ func (h *BenchmarkHandlers) GetReports(c *fiber.Ctx) error {
 	}
 
 	h.cache.set(reports, since)
-	log.Printf("[benchmarks] Fetched %d reports from Google Drive (since=%s, parseFailures=%d)", len(reports), since, parseFailures)
+	slog.Info(fmt.Sprintf("[benchmarks] Fetched %d reports from Google Drive (since=%s, parseFailures=%d)", len(reports), since, parseFailures))
 	resp := fiber.Map{"reports": reports, "source": "live"}
 	if parseFailures > 0 {
 		resp["parse_failures"] = parseFailures
@@ -557,12 +557,12 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 			}
 			batch, err := json.Marshal(pendingBatch)
 			if err != nil {
-				log.Printf("[benchmarks] Failed to marshal batch: %v", err)
+				slog.Error(fmt.Sprintf("[benchmarks] Failed to marshal batch: %v", err))
 				return
 			}
 			fmt.Fprintf(w, "event: batch\ndata: %s\n\n", batch)
 			w.Flush()
-			log.Printf("[benchmarks] Flushed batch of %d (total: %d)", len(pendingBatch), totalSent)
+			slog.Info(fmt.Sprintf("[benchmarks] Flushed batch of %d (total: %d)", len(pendingBatch), totalSent))
 			pendingBatch = pendingBatch[:0]
 		}
 
@@ -589,7 +589,7 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 
 		topLevel, err := h.listDriveFolder(h.folderID)
 		if err != nil {
-			log.Printf("error listing drive folder: %v", err)
+			slog.Info(fmt.Sprintf("error listing drive folder: %v", err))
 			fmt.Fprintf(w, "event: error\ndata: {\"error\":\"failed to fetch benchmark data\"}\n\n")
 			w.Flush()
 			return
@@ -609,7 +609,7 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 		}
 
 		if skippedFolders > 0 {
-			log.Printf("[benchmarks] Skipped %d experiment folders older than %s", skippedFolders, since)
+			slog.Info(fmt.Sprintf("[benchmarks] Skipped %d experiment folders older than %s", skippedFolders, since))
 		}
 		fmt.Fprintf(w, "event: progress\ndata: {\"status\":\"fetching\",\"experiments\":%d,\"total\":0,\"skipped\":%d}\n\n", len(experiments), skippedFolders)
 		w.Flush()
@@ -617,7 +617,7 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 		for _, item := range experiments {
 			runFolders, err := h.listDriveFolder(item.ID)
 			if err != nil {
-				log.Printf("[benchmarks] Error listing experiment %q: %v", item.Name, err)
+				slog.Error(fmt.Sprintf("[benchmarks] Error listing experiment %q: %v", item.Name, err))
 				continue
 			}
 			for _, runItem := range runFolders {
@@ -639,7 +639,7 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 				})
 				totalParseFailures += failures
 				if err != nil {
-					log.Printf("[benchmarks] Error in %q/%q: %v", item.Name, runItem.Name, err)
+					slog.Error(fmt.Sprintf("[benchmarks] Error in %q/%q: %v", item.Name, runItem.Name, err))
 					continue
 				}
 				// Flush any remaining reports after each run folder for timely delivery
@@ -647,7 +647,7 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 					flushBatch()
 				}
 				if len(reports) > 0 {
-					log.Printf("[benchmarks] Streamed %d from %q/%q (total: %d)", len(reports), item.Name, runItem.Name, totalSent)
+					slog.Info(fmt.Sprintf("[benchmarks] Streamed %d from %q/%q (total: %d)", len(reports), item.Name, runItem.Name, totalSent))
 				}
 			}
 		}
@@ -656,7 +656,7 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 		flushBatch()
 
 		h.cache.set(allReports, since)
-		log.Printf("[benchmarks] Stream complete: %d total reports, %d folders skipped, %d parse failures (since=%s)", totalSent, skippedFolders, totalParseFailures, since)
+		slog.Info(fmt.Sprintf("[benchmarks] Stream complete: %d total reports, %d folders skipped, %d parse failures (since=%s)", totalSent, skippedFolders, totalParseFailures, since))
 		fmt.Fprintf(w, "event: done\ndata: {\"total\":%d,\"source\":\"live\",\"parse_failures\":%d}\n\n", totalSent, totalParseFailures)
 		w.Flush()
 	})
@@ -697,7 +697,7 @@ func (h *BenchmarkHandlers) fetchAllReports(cutoff time.Time) ([]BenchmarkReport
 		}
 		runFolders, err := h.listDriveFolder(item.ID)
 		if err != nil {
-			log.Printf("[benchmarks] Error listing experiment %q: %v", item.Name, err)
+			slog.Error(fmt.Sprintf("[benchmarks] Error listing experiment %q: %v", item.Name, err))
 			continue
 		}
 		for _, runItem := range runFolders {
@@ -709,7 +709,7 @@ func (h *BenchmarkHandlers) fetchAllReports(cutoff time.Time) ([]BenchmarkReport
 			}
 			reports, failures, err := h.fetchRunFolder(runItem.ID, item.Name, runItem.Name)
 			if err != nil {
-				log.Printf("[benchmarks] Error in %q/%q: %v", item.Name, runItem.Name, err)
+				slog.Error(fmt.Sprintf("[benchmarks] Error in %q/%q: %v", item.Name, runItem.Name, err))
 				continue
 			}
 			allReports = append(allReports, reports...)
@@ -757,7 +757,7 @@ func (h *BenchmarkHandlers) fetchRunFolder(folderID, experimentName, runName str
 		}
 		resultFolders, err := h.listDriveFolder(sub.ID)
 		if err != nil {
-			log.Printf("[benchmarks] Error listing results in %q/%q: %v", experimentName, runName, err)
+			slog.Error(fmt.Sprintf("[benchmarks] Error listing results in %q/%q: %v", experimentName, runName, err))
 			continue
 		}
 		for _, rf := range resultFolders {
@@ -804,12 +804,12 @@ func (h *BenchmarkHandlers) collectBenchmarkFiles(folderID, experimentName, runN
 func (h *BenchmarkHandlers) downloadAndParseReport(f driveFile, experimentName, runName string) (BenchmarkReport, error) {
 	data, err := h.downloadDriveFile(f.ID)
 	if err != nil {
-		log.Printf("[benchmarks] Error downloading %q: %v", f.Name, err)
+		slog.Error(fmt.Sprintf("[benchmarks] Error downloading %q: %v", f.Name, err))
 		return BenchmarkReport{}, err
 	}
 	var raw rawV1Report
 	if err := yaml.Unmarshal(data, &raw); err != nil {
-		log.Printf("[benchmarks] Error parsing %q: %v", f.Name, err)
+		slog.Error(fmt.Sprintf("[benchmarks] Error parsing %q: %v", f.Name, err))
 		return BenchmarkReport{}, err
 	}
 	return adaptV1ToV2(raw, experimentName, runName, f.CreatedTime), nil
@@ -933,9 +933,9 @@ func adaptV1ToV2(raw rawV1Report, experimentName, runName, fileCreatedTime strin
 	if inputRate > 0 {
 		agg.Throughput.InputTokenRate = scalarToStats(inputRate, "tokens/s")
 	} else if inputRate < 0 {
-		log.Printf("[benchmarks] WARNING: negative derived input_token_rate (%.2f) for %s/%s stage %d — total=%.2f output=%.2f; skipping field",
+		slog.Warn(fmt.Sprintf("[benchmarks] WARNING: negative derived input_token_rate (%.2f) for %s/%s stage %d — total=%.2f output=%.2f; skipping field",
 			inputRate, experimentName, runName, raw.Scenario.Load.Metadata.Stage,
-			raw.Metrics.Throughput.TotalTokensPerSec, raw.Metrics.Throughput.OutputTokensPerSec)
+			raw.Metrics.Throughput.TotalTokensPerSec, raw.Metrics.Throughput.OutputTokensPerSec))
 	}
 
 	// Results — requests

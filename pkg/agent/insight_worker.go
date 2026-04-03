@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -23,14 +23,14 @@ type InsightEnrichmentRequest struct {
 
 // InsightSummary is a lightweight view of a heuristic insight sent for enrichment
 type InsightSummary struct {
-	ID               string            `json:"id"`
-	Category         string            `json:"category"`
-	Title            string            `json:"title"`
-	Description      string            `json:"description"`
-	Severity         string            `json:"severity"`
-	AffectedClusters []string          `json:"affectedClusters"`
-	Chain            json.RawMessage   `json:"chain,omitempty"`
-	Deltas           json.RawMessage   `json:"deltas,omitempty"`
+	ID               string             `json:"id"`
+	Category         string             `json:"category"`
+	Title            string             `json:"title"`
+	Description      string             `json:"description"`
+	Severity         string             `json:"severity"`
+	AffectedClusters []string           `json:"affectedClusters"`
+	Chain            json.RawMessage    `json:"chain,omitempty"`
+	Deltas           json.RawMessage    `json:"deltas,omitempty"`
 	Metrics          map[string]float64 `json:"metrics,omitempty"`
 }
 
@@ -131,7 +131,7 @@ func (w *InsightWorker) Enrich(req InsightEnrichmentRequest) (*InsightEnrichment
 	// Try to get AI enrichments from a connected provider
 	enrichments, provider, err := w.callAIProvider(needsEnrichment)
 	if err != nil {
-		log.Printf("[InsightWorker] AI enrichment failed: %v", err)
+		slog.Error(fmt.Sprintf("[InsightWorker] AI enrichment failed: %v", err))
 		// Fall back to rule-based enrichments
 		enrichments = w.generateRuleBasedEnrichments(needsEnrichment)
 		provider = "rules"
@@ -188,7 +188,7 @@ func (w *InsightWorker) callAIProvider(insights []InsightSummary) ([]AIInsightEn
 
 		resp, err := provider.Chat(ctx, req)
 		if err != nil {
-			log.Printf("[InsightWorker] Provider %s failed: %v", name, err)
+			slog.Error(fmt.Sprintf("[InsightWorker] Provider %s failed: %v", name, err))
 			continue
 		}
 		if resp == nil {
@@ -197,7 +197,7 @@ func (w *InsightWorker) callAIProvider(insights []InsightSummary) ([]AIInsightEn
 
 		enrichments, err := parseEnrichmentResponse(resp.Content, insights)
 		if err != nil {
-			log.Printf("[InsightWorker] Failed to parse response from %s: %v", name, err)
+			slog.Error(fmt.Sprintf("[InsightWorker] Failed to parse response from %s: %v", name, err))
 			continue
 		}
 

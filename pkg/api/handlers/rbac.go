@@ -1,8 +1,9 @@
 package handlers
 
 import (
-	"log"
 	"context"
+	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -178,8 +179,8 @@ func (h *RBACHandler) ListK8sServiceAccounts(c *fiber.Ctx) error {
 		// Get SAs from specific cluster
 		sas, err := h.k8sClient.ListServiceAccounts(ctx, cluster, namespace)
 		if err != nil {
-			log.Printf("failed to list service accounts: %v", err)
-		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
+			slog.Error(fmt.Sprintf("failed to list service accounts: %v", err))
+			return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
 		}
 		return c.JSON(sas)
 	}
@@ -326,7 +327,7 @@ func (h *RBACHandler) CreateServiceAccount(c *fiber.Ctx) error {
 
 	sa, err := h.k8sClient.CreateServiceAccount(ctx, req.Cluster, req.Namespace, req.Name)
 	if err != nil {
-		log.Printf("failed to create service account: %v", err)
+		slog.Error(fmt.Sprintf("failed to create service account: %v", err))
 		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
 	}
 
@@ -358,7 +359,7 @@ func (h *RBACHandler) CreateRoleBinding(c *fiber.Ctx) error {
 	}
 
 	if err := h.k8sClient.CreateRoleBinding(ctx, req); err != nil {
-		log.Printf("failed to create role binding: %v", err)
+		slog.Error(fmt.Sprintf("failed to create role binding: %v", err))
 		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
 	}
 
@@ -404,7 +405,7 @@ func (h *RBACHandler) ListOpenShiftUsers(c *fiber.Ctx) error {
 
 	users, err := h.k8sClient.ListOpenShiftUsers(ctx, cluster)
 	if err != nil {
-		log.Printf("failed to list openshift users: %v", err)
+		slog.Error(fmt.Sprintf("failed to list openshift users: %v", err))
 		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
 	}
 
@@ -422,7 +423,7 @@ func (h *RBACHandler) GetPermissionsSummary(c *fiber.Ctx) error {
 
 	summaries, err := h.k8sClient.GetAllPermissionsSummaries(ctx)
 	if err != nil {
-		log.Printf("failed to get permissions summary: %v", err)
+		slog.Error(fmt.Sprintf("failed to get permissions summary: %v", err))
 		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
 	}
 
@@ -466,7 +467,7 @@ func (h *RBACHandler) CheckCanI(c *fiber.Ctx) error {
 
 	result, err := h.k8sClient.CheckCanI(ctx, req.Cluster, req)
 	if err != nil {
-		log.Printf("failed to check permission: %v", err)
+		slog.Error(fmt.Sprintf("failed to check permission: %v", err))
 		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
 	}
 

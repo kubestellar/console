@@ -2,7 +2,8 @@ package agent
 
 import (
 	"context"
-	"log"
+	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -11,24 +12,24 @@ import (
 )
 
 const (
-	deviceTrackerPoll           = 60 * time.Second
-	deviceTrackerTimeout        = 30 * time.Second
+	deviceTrackerPoll              = 60 * time.Second
+	deviceTrackerTimeout           = 30 * time.Second
 	deviceTrackerPerClusterTimeout = 5 * time.Second
 )
 
 // DeviceCounts tracks hardware device counts for a node
 type DeviceCounts struct {
-	GPUCount        int  `json:"gpuCount"`
-	NICCount        int  `json:"nicCount"`
-	NVMECount       int  `json:"nvmeCount"`
-	InfiniBandCount int  `json:"infinibandCount"`
-	SRIOVCapable    bool `json:"sriovCapable"`    // SR-IOV networking
-	RDMAAvailable   bool `json:"rdmaAvailable"`   // RDMA/RoCE capability
-	MellanoxPresent bool `json:"mellanoxPresent"` // Mellanox NIC (pci-15b3)
+	GPUCount         int  `json:"gpuCount"`
+	NICCount         int  `json:"nicCount"`
+	NVMECount        int  `json:"nvmeCount"`
+	InfiniBandCount  int  `json:"infinibandCount"`
+	SRIOVCapable     bool `json:"sriovCapable"`     // SR-IOV networking
+	RDMAAvailable    bool `json:"rdmaAvailable"`    // RDMA/RoCE capability
+	MellanoxPresent  bool `json:"mellanoxPresent"`  // Mellanox NIC (pci-15b3)
 	NVIDIANICPresent bool `json:"nvidiaNicPresent"` // NVIDIA NIC (pci-10de)
-	SpectrumScale   bool `json:"spectrumScale"`   // IBM Spectrum Scale daemon
-	MOFEDReady      bool `json:"mofedReady"`      // Mellanox OFED driver ready
-	GPUDriverReady  bool `json:"gpuDriverReady"`  // GPU driver ready
+	SpectrumScale    bool `json:"spectrumScale"`    // IBM Spectrum Scale daemon
+	MOFEDReady       bool `json:"mofedReady"`       // Mellanox OFED driver ready
+	GPUDriverReady   bool `json:"gpuDriverReady"`   // GPU driver ready
 }
 
 // DeviceSnapshot represents device counts at a point in time
@@ -41,16 +42,16 @@ type DeviceSnapshot struct {
 
 // DeviceAlert represents a detected device disappearance
 type DeviceAlert struct {
-	ID           string       `json:"id"`
-	NodeName     string       `json:"nodeName"`
-	Cluster      string       `json:"cluster"`
-	DeviceType   string       `json:"deviceType"` // "gpu", "nic", "nvme", "infiniband"
-	PreviousCount int         `json:"previousCount"`
-	CurrentCount  int         `json:"currentCount"`
-	DroppedCount  int         `json:"droppedCount"`
-	FirstSeen    time.Time    `json:"firstSeen"`
-	LastSeen     time.Time    `json:"lastSeen"`
-	Severity     string       `json:"severity"` // "warning", "critical"
+	ID            string    `json:"id"`
+	NodeName      string    `json:"nodeName"`
+	Cluster       string    `json:"cluster"`
+	DeviceType    string    `json:"deviceType"` // "gpu", "nic", "nvme", "infiniband"
+	PreviousCount int       `json:"previousCount"`
+	CurrentCount  int       `json:"currentCount"`
+	DroppedCount  int       `json:"droppedCount"`
+	FirstSeen     time.Time `json:"firstSeen"`
+	LastSeen      time.Time `json:"lastSeen"`
+	Severity      string    `json:"severity"` // "warning", "critical"
 }
 
 // DeviceAlertsResponse is the HTTP response format
@@ -65,14 +66,14 @@ type DeviceTracker struct {
 	k8sClient *k8s.MultiClusterClient
 
 	// Historical snapshots per node (key: "cluster/nodeName")
-	history   map[string][]DeviceSnapshot
+	history map[string][]DeviceSnapshot
 	// Maximum counts ever seen per node (baseline)
 	maxCounts map[string]DeviceCounts
 	// Current alerts
-	alerts    map[string]*DeviceAlert
+	alerts map[string]*DeviceAlert
 
-	mu        sync.RWMutex
-	stopCh    chan struct{}
+	mu     sync.RWMutex
+	stopCh chan struct{}
 
 	// Broadcast function for WebSocket updates
 	broadcast          func(msgType string, payload interface{})
@@ -132,7 +133,7 @@ func (t *DeviceTracker) scanDevices() {
 	if err != nil {
 		if !t.loggedClusterError {
 			t.loggedClusterError = true
-			log.Printf("[DeviceTracker] Cluster data unavailable (will retry silently): %v", err)
+			slog.Info(fmt.Sprintf("[DeviceTracker] Cluster data unavailable (will retry silently): %v", err))
 		}
 		return
 	}
@@ -356,8 +357,8 @@ func (t *DeviceTracker) checkForDrop(key, nodeName, cluster, deviceType string, 
 	}
 	t.alerts[alertKey] = alert
 
-	log.Printf("[DeviceTracker] ALERT: %s on %s/%s dropped from %d to %d",
-		deviceType, cluster, nodeName, maxCount, currentCount)
+	slog.Info(fmt.Sprintf("[DeviceTracker] ALERT: %s on %s/%s dropped from %d to %d",
+		deviceType, cluster, nodeName, maxCount, currentCount))
 
 	return alert
 }
@@ -400,8 +401,8 @@ func (t *DeviceTracker) checkForBoolDrop(key, nodeName, cluster, deviceType stri
 	}
 	t.alerts[alertKey] = alert
 
-	log.Printf("[DeviceTracker] ALERT: %s on %s/%s is no longer available",
-		deviceType, cluster, nodeName)
+	slog.Info(fmt.Sprintf("[DeviceTracker] ALERT: %s on %s/%s is no longer available",
+		deviceType, cluster, nodeName))
 
 	return alert
 }
@@ -439,10 +440,10 @@ func (t *DeviceTracker) GetNodeHistory(cluster, nodeName string) []DeviceSnapsho
 
 // NodeDeviceInventory represents a node's device counts
 type NodeDeviceInventory struct {
-	NodeName        string       `json:"nodeName"`
-	Cluster         string       `json:"cluster"`
-	Devices         DeviceCounts `json:"devices"`
-	LastSeen        string       `json:"lastSeen"`
+	NodeName string       `json:"nodeName"`
+	Cluster  string       `json:"cluster"`
+	Devices  DeviceCounts `json:"devices"`
+	LastSeen string       `json:"lastSeen"`
 }
 
 // DeviceInventoryResponse is the HTTP response for device inventory

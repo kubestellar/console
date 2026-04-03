@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
@@ -164,10 +164,10 @@ func sanitizeRef(ref string) (string, error) {
 // MissionsHandler handles mission-related API endpoints (knowledge base browsing,
 // validation, sharing).
 type MissionsHandler struct {
-	httpClient    *http.Client
-	githubAPIURL  string // defaults to "https://api.github.com"
-	githubRawURL  string // defaults to "https://raw.githubusercontent.com"
-	cache         *missionsResponseCache
+	httpClient   *http.Client
+	githubAPIURL string // defaults to "https://api.github.com"
+	githubRawURL string // defaults to "https://raw.githubusercontent.com"
+	cache        *missionsResponseCache
 }
 
 // NewMissionsHandler creates a new MissionsHandler with default settings.
@@ -218,7 +218,7 @@ func (h *MissionsHandler) githubGet(url string, clientToken string) (*http.Respo
 	// If auth failed (401/403) or got 404 with a token (raw.githubusercontent returns 404 for bad tokens),
 	// retry without auth — the target repo is public
 	if hasToken && (resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusNotFound) {
-		log.Printf("[missions] GitHub token returned %d for %s — retrying without auth (token may be expired)", resp.StatusCode, url)
+		slog.Info(fmt.Sprintf("[missions] GitHub token returned %d for %s — retrying without auth (token may be expired)", resp.StatusCode, url))
 		resp.Body.Close()
 		retryReq, err := http.NewRequest("GET", url, nil)
 		if err != nil {
@@ -230,7 +230,7 @@ func (h *MissionsHandler) githubGet(url string, clientToken string) (*http.Respo
 			return nil, err
 		}
 		if retryResp.StatusCode == http.StatusForbidden || retryResp.StatusCode == http.StatusTooManyRequests {
-			log.Printf("[missions] Unauthenticated retry also failed (%d) for %s — likely rate-limited (check GITHUB_TOKEN in .env)", retryResp.StatusCode, url)
+			slog.Error(fmt.Sprintf("[missions] Unauthenticated retry also failed (%d) for %s — likely rate-limited (check GITHUB_TOKEN in .env)", retryResp.StatusCode, url))
 		}
 		return retryResp, nil
 	}
@@ -256,7 +256,7 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 
 	// Check fresh cache first
 	if cached := h.cache.get(cacheKey, missionsCacheTTL); cached != nil {
-		log.Printf("[missions] Cache HIT (browse) path=%q", path)
+		slog.Info(fmt.Sprintf("[missions] Cache HIT (browse) path=%q", path))
 		c.Set("Content-Type", cached.contentType)
 		c.Set("X-Cache", "HIT")
 		return c.Status(cached.statusCode).Send(cached.body)
@@ -268,7 +268,7 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 	if err != nil {
 		// Upstream failed — try stale cache
 		if stale := h.cache.getStale(cacheKey, missionsCacheStaleTTL); stale != nil {
-			log.Printf("[missions] Upstream error, serving STALE cache (browse) path=%q err=%v", path, err)
+			slog.Error(fmt.Sprintf("[missions] Upstream error, serving STALE cache (browse) path=%q err=%v", path, err))
 			c.Set("Content-Type", stale.contentType)
 			c.Set("X-Cache", "STALE")
 			return c.Status(stale.statusCode).Send(stale.body)
@@ -286,7 +286,7 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 	// Rate-limited — serve stale cache if available
 	if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
 		if stale := h.cache.getStale(cacheKey, missionsCacheStaleTTL); stale != nil {
-			log.Printf("[missions] Rate-limited (%d), serving STALE cache (browse) path=%q", resp.StatusCode, path)
+			slog.Info(fmt.Sprintf("[missions] Rate-limited (%d), serving STALE cache (browse) path=%q", resp.StatusCode, path))
 			c.Set("Content-Type", stale.contentType)
 			c.Set("X-Cache", "STALE")
 			return c.Status(stale.statusCode).Send(stale.body)
@@ -350,7 +350,7 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 			statusCode:  http.StatusOK,
 			fetchedAt:   time.Now(),
 		})
-		log.Printf("[missions] Cache MISS → stored (browse) path=%q", path)
+		slog.Info(fmt.Sprintf("[missions] Cache MISS → stored (browse) path=%q", path))
 	}
 
 	c.Set("X-Cache", "MISS")
@@ -385,7 +385,7 @@ func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
 
 	// Check fresh cache first
 	if cached := h.cache.get(cacheKey, missionsCacheTTL); cached != nil {
-		log.Printf("[missions] Cache HIT (file) ref=%q path=%q", ref, path)
+		slog.Info(fmt.Sprintf("[missions] Cache HIT (file) ref=%q path=%q", ref, path))
 		c.Set("Content-Type", cached.contentType)
 		c.Set("X-Cache", "HIT")
 		return c.Status(cached.statusCode).Send(cached.body)
@@ -397,7 +397,7 @@ func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
 	if err != nil {
 		// Upstream failed — try stale cache
 		if stale := h.cache.getStale(cacheKey, missionsCacheStaleTTL); stale != nil {
-			log.Printf("[missions] Upstream error, serving STALE cache (file) ref=%q path=%q err=%v", ref, path, err)
+			slog.Error(fmt.Sprintf("[missions] Upstream error, serving STALE cache (file) ref=%q path=%q err=%v", ref, path, err))
 			c.Set("Content-Type", stale.contentType)
 			c.Set("X-Cache", "STALE")
 			return c.Status(stale.statusCode).Send(stale.body)
@@ -415,7 +415,7 @@ func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
 	// Rate-limited — serve stale cache if available
 	if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
 		if stale := h.cache.getStale(cacheKey, missionsCacheStaleTTL); stale != nil {
-			log.Printf("[missions] Rate-limited (%d), serving STALE cache (file) ref=%q path=%q", resp.StatusCode, ref, path)
+			slog.Info(fmt.Sprintf("[missions] Rate-limited (%d), serving STALE cache (file) ref=%q path=%q", resp.StatusCode, ref, path))
 			c.Set("Content-Type", stale.contentType)
 			c.Set("X-Cache", "STALE")
 			return c.Status(stale.statusCode).Send(stale.body)
@@ -441,7 +441,7 @@ func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
 		statusCode:  http.StatusOK,
 		fetchedAt:   time.Now(),
 	})
-	log.Printf("[missions] Cache MISS → stored (file) ref=%q path=%q (%d bytes)", ref, path, len(body))
+	slog.Info(fmt.Sprintf("[missions] Cache MISS → stored (file) ref=%q path=%q (%d bytes)", ref, path, len(body)))
 
 	c.Set("Content-Type", "text/plain")
 	c.Set("X-Cache", "MISS")
@@ -636,8 +636,8 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 
 		// If this is not the last attempt, wait before retrying
 		if attempt < forkHeadSHAMaxRetries-1 {
-			log.Printf("[missions] Fork HEAD SHA not yet available (attempt %d/%d, status %d) — retrying in %v",
-				attempt+1, forkHeadSHAMaxRetries, mainRefResp.StatusCode, backoff)
+			slog.Info(fmt.Sprintf("[missions] Fork HEAD SHA not yet available (attempt %d/%d, status %d) — retrying in %v",
+				attempt+1, forkHeadSHAMaxRetries, mainRefResp.StatusCode, backoff))
 			time.Sleep(backoff)
 			backoff *= forkHeadSHABackoffMultiplier
 		}

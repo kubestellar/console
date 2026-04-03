@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
@@ -106,7 +106,7 @@ func (c *CopilotCLIProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 	}
 
 	prompt := buildPromptWithHistoryGeneric(req)
-	log.Printf("[CopilotCLI] Starting with prompt length=%d", len(prompt))
+	slog.Info(fmt.Sprintf("[CopilotCLI] Starting with prompt length=%d", len(prompt)))
 
 	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
 		var cancel context.CancelFunc
@@ -145,7 +145,7 @@ func (c *CopilotCLIProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("failed to start copilot CLI: %w", err)
 	}
-	log.Printf("[CopilotCLI] Process started (PID=%d)", cmd.Process.Pid)
+	slog.Info(fmt.Sprintf("[CopilotCLI] Process started (PID=%d)", cmd.Process.Pid))
 
 	// Capture stderr in background for diagnostics
 	var stderrContent strings.Builder
@@ -173,18 +173,18 @@ func (c *CopilotCLIProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 	}
 
 	if scanErr := scanner.Err(); scanErr != nil {
-		log.Printf("[CopilotCLI] Scanner error: %v", scanErr)
+		slog.Error(fmt.Sprintf("[CopilotCLI] Scanner error: %v", scanErr))
 	}
 
 	waitErr := cmd.Wait()
 	if waitErr != nil {
-		log.Printf("[CopilotCLI] Command finished with error: %v", waitErr)
+		slog.Error(fmt.Sprintf("[CopilotCLI] Command finished with error: %v", waitErr))
 		if se := stderrContent.String(); se != "" {
-			log.Printf("[CopilotCLI] stderr: %s", se)
+			slog.Info(fmt.Sprintf("[CopilotCLI] stderr: %s", se))
 		}
 	}
 
-	log.Printf("[CopilotCLI] Completed: %d lines, %d bytes", lineCount, fullResponse.Len())
+	slog.Info(fmt.Sprintf("[CopilotCLI] Completed: %d lines, %d bytes", lineCount, fullResponse.Len()))
 
 	content := fullResponse.String()
 

@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"strings"
@@ -13,6 +13,15 @@ import (
 )
 
 func main() {
+	// Set up structured logging — JSON for production, human-readable text for dev.
+	var logHandler slog.Handler
+	if os.Getenv("DEV_MODE") == "true" {
+		logHandler = slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug})
+	} else {
+		logHandler = slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})
+	}
+	slog.SetDefault(slog.New(logHandler))
+
 	port := flag.Int("port", 8585, "Port to listen on")
 	kubeconfig := flag.String("kubeconfig", "", "Path to kubeconfig file")
 	allowedOrigins := flag.String("allowed-origins", "", "Comma-separated list of additional allowed WebSocket origins")
@@ -50,7 +59,8 @@ KubeStellar Console - Local Agent v%s
 		AllowedOrigins: origins,
 	})
 	if err != nil {
-		log.Fatalf("Failed to create server: %v", err)
+		slog.Error(fmt.Sprintf("Failed to create server: %v", err))
+		os.Exit(1)
 	}
 
 	sigChan := make(chan os.Signal, 1)
@@ -62,6 +72,7 @@ KubeStellar Console - Local Agent v%s
 	}()
 
 	if err := server.Start(); err != nil {
-		log.Fatalf("Server error: %v", err)
+		slog.Error(fmt.Sprintf("Server error: %v", err))
+		os.Exit(1)
 	}
 }

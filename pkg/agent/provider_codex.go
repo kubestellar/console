@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -128,7 +128,7 @@ func (c *CodexProvider) StreamChat(ctx context.Context, req *ChatRequest, onChun
 	}
 
 	if err := cmd.Wait(); err != nil {
-		log.Printf("[Codex] Command finished with error: %v", err)
+		slog.Error(fmt.Sprintf("[Codex] Command finished with error: %v", err))
 	}
 
 	return &ChatResponse{
