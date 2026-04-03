@@ -275,6 +275,7 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                       state={state}
                       onDescriptionChange={mc.setDescription}
                       onTitleChange={mc.setTitle}
+                      onTargetClustersChange={mc.setTargetClusters}
                       onAskAI={mc.askAIForSuggestions}
                       onAddProject={mc.addProject}
                       onRemoveProject={mc.removeProject}

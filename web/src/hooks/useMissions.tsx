@@ -138,6 +138,7 @@ interface SaveMissionParams {
 export interface SavedMissionUpdates {
   description?: string
   steps?: Array<{ title: string; description: string }>
+  cluster?: string
 }
 
 const MissionContext = createContext<MissionContextValue | null>(null)
@@ -1676,6 +1677,9 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       }
       if (updates.steps !== undefined && next.importedFrom) {
         next.importedFrom = { ...next.importedFrom, steps: updates.steps }
+      }
+      if (updates.cluster !== undefined) {
+        next.cluster = updates.cluster || undefined
       }
       return next
     }))

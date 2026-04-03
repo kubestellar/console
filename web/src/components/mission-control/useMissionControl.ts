@@ -77,6 +77,7 @@ function makeInitialState(persisted?: Partial<MissionControlState> | null): Miss
     overlay: persisted?.overlay ?? 'architecture',
     deployMode: persisted?.deployMode ?? 'phased',
     isDryRun: persisted?.isDryRun ?? false,
+    targetClusters: persisted?.targetClusters ?? [],
     planningMissionId: persisted?.planningMissionId,
     aiStreaming: false,
     launchProgress: persisted?.launchProgress ?? [],
@@ -267,6 +268,10 @@ export function useMissionControl() {
 
   const setTitle = useCallback((title: string) => {
     setState((prev) => ({ ...prev, title }))
+  }, [])
+
+  const setTargetClusters = useCallback((targetClusters: string[]) => {
+    setState((prev) => ({ ...prev, targetClusters }))
   }, [])
 
   const askAIForSuggestions = useCallback(
@@ -744,6 +749,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
     // Phase 1
     setDescription,
     setTitle,
+    setTargetClusters,
     askAIForSuggestions,
     addProject,
     removeProject,

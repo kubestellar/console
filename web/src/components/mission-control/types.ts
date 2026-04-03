@@ -122,6 +122,8 @@ export interface MissionControlState {
   isDryRun?: boolean
   /** AI planning mission ID (for the hidden conversation) */
   planningMissionId?: string
+  /** Target clusters selected by user in Phase 1 — scopes AI analysis */
+  targetClusters: string[]
   /** Whether AI is currently streaming a response */
   aiStreaming: boolean
   /** Launch progress */

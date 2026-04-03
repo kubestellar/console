@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, Loader2, Plus, Search, Info, Shield, Eye, Network, Box, Lock, Layers } from 'lucide-react'
+import { Sparkles, Loader2, Plus, Search, Info, Shield, Eye, Network, Box, Lock, Layers, Server, X as XIcon } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { PayloadGrid } from './PayloadGrid'
 import type { MissionControlState, PayloadProject } from './types'
@@ -17,6 +17,7 @@ import type { MissionExport } from '../../lib/missions/types'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { cn } from '../../lib/cn'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 
 const PLACEHOLDER_EXAMPLES = [
   'Production-grade security compliance with runtime protection and policy enforcement...',
@@ -30,6 +31,7 @@ interface FixerDefinitionPanelProps {
   state: MissionControlState
   onDescriptionChange: (desc: string) => void
   onTitleChange: (title: string) => void
+  onTargetClustersChange: (clusters: string[]) => void
   onAskAI: (description: string, existing?: PayloadProject[]) => void
   onAddProject: (project: PayloadProject) => void
   onRemoveProject: (name: string) => void
@@ -44,6 +46,7 @@ export function FixerDefinitionPanel({
   state,
   onDescriptionChange,
   onTitleChange,
+  onTargetClustersChange,
   onAskAI,
   onAddProject,
   onRemoveProject,
@@ -252,6 +255,12 @@ export function FixerDefinitionPanel({
             </div>
           </div>
         </div>
+
+        {/* Target clusters — scope which clusters AI analyzes */}
+        <TargetClusterSelector
+          selected={state.targetClusters}
+          onChange={onTargetClustersChange}
+        />
 
         {/* AI streaming indicator — shows live AI text as it arrives */}
         {aiStreaming && (
@@ -902,5 +911,142 @@ function AIStreamingPreview({ planningMission }: { planningMission: Mission | nu
         <span className="inline-block w-1.5 h-3.5 bg-primary/60 ml-0.5 animate-pulse align-text-bottom" />
       </div>
     </motion.div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Target Cluster Selector — lets users scope which clusters AI analyzes
+// ---------------------------------------------------------------------------
+
+/** Minimum height for the cluster chip container */
+const CLUSTER_CHIP_MIN_HEIGHT_PX = 40
+
+function TargetClusterSelector({
+  selected,
+  onChange,
+}: {
+  selected: string[]
+  onChange: (clusters: string[]) => void
+}) {
+  const { availableClusters, clusterInfoMap } = useGlobalFilters()
+  const [isOpen, setIsOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setIsOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  // Use deduplicated short names
+  const clusters = availableClusters
+
+  const toggleCluster = (name: string) => {
+    if (selected.includes(name)) {
+      onChange(selected.filter(c => c !== name))
+    } else {
+      onChange([...selected, name])
+    }
+  }
+
+  const isAllSelected = selected.length === 0 || selected.length === clusters.length
+
+  return (
+    <div ref={ref}>
+      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        Target Clusters
+      </label>
+      <p className="text-xs text-muted-foreground/60 mt-0.5 mb-1">
+        {isAllSelected
+          ? 'All clusters — AI will analyze your full fleet'
+          : `${selected.length} cluster${selected.length === 1 ? '' : 's'} selected — AI analysis scoped to these`}
+      </p>
+
+      {/* Selected chips + dropdown trigger */}
+      <div
+        className="relative mt-1 flex flex-wrap items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-secondary/30 cursor-pointer hover:border-primary/30 transition-colors"
+        style={{ minHeight: CLUSTER_CHIP_MIN_HEIGHT_PX }}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        {selected.length === 0 ? (
+          <span className="text-sm text-muted-foreground/50 flex items-center gap-1.5">
+            <Server className="w-3.5 h-3.5" />
+            All clusters (click to scope)
+          </span>
+        ) : (
+          <>
+            {selected.map(name => {
+              const info = clusterInfoMap[name]
+              const isHealthy = info?.healthy !== false && info?.reachable !== false
+              return (
+                <span
+                  key={name}
+                  className={cn(
+                    'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium',
+                    isHealthy
+                      ? 'bg-primary/10 text-primary border border-primary/20'
+                      : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20',
+                  )}
+                  onClick={(e) => { e.stopPropagation(); toggleCluster(name) }}
+                >
+                  <span className={cn('w-1.5 h-1.5 rounded-full', isHealthy ? 'bg-green-400' : 'bg-yellow-400')} />
+                  {name}
+                  <XIcon className="w-3 h-3 opacity-50 hover:opacity-100" />
+                </span>
+              )
+            })}
+            {selected.length > 0 && (
+              <button
+                className="text-[10px] text-muted-foreground/50 hover:text-foreground ml-1"
+                onClick={(e) => { e.stopPropagation(); onChange([]) }}
+              >
+                Clear
+              </button>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Dropdown */}
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-64 max-h-48 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg">
+          {/* All clusters toggle */}
+          <button
+            className={cn(
+              'w-full px-3 py-2 text-left text-sm hover:bg-secondary/50 flex items-center gap-2 border-b border-border/50',
+              isAllSelected && 'text-primary font-medium',
+            )}
+            onClick={() => { onChange([]); setIsOpen(false) }}
+          >
+            <Server className="w-3.5 h-3.5" />
+            All clusters
+            {isAllSelected && <span className="ml-auto text-primary">✓</span>}
+          </button>
+
+          {clusters.map(name => {
+            const info = clusterInfoMap[name]
+            const isHealthy = info?.healthy !== false && info?.reachable !== false
+            const isSelected = selected.includes(name)
+            return (
+              <button
+                key={name}
+                className={cn(
+                  'w-full px-3 py-1.5 text-left text-sm hover:bg-secondary/50 flex items-center gap-2',
+                  isSelected && 'bg-primary/5',
+                )}
+                onClick={() => toggleCluster(name)}
+              >
+                <span className={cn('w-2 h-2 rounded-full shrink-0', isHealthy ? 'bg-green-400' : 'bg-yellow-400')} />
+                <span className="truncate">{name}</span>
+                {isSelected && <span className="ml-auto text-primary text-xs">✓</span>}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }

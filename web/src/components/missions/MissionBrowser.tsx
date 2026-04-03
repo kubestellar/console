@@ -232,6 +232,17 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
         loaded: false,
         description: 'console-kb',
       },
+      {
+        id: 'kubara',
+        name: 'Kubara Platform Catalog',
+        path: 'go-binary/templates/embedded/managed-service-catalog/helm',
+        type: 'directory',
+        source: 'github',
+        loaded: false,
+        description: 'Production-tested Helm values from kubara-io/kubara',
+        repoOwner: 'kubara-io',
+        repoName: 'kubara',
+      },
     ]
 
     if (isAuthenticated && user) {
