@@ -34,11 +34,14 @@ interface TemplateGallerySectionProps {
 export function TemplateGallerySection({ onApplyTemplate, dashboardName }: TemplateGallerySectionProps) {
   const { t } = useTranslation()
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [searchText, setSearchText] = useState('')
   const [appliedTemplate, setAppliedTemplate] = useState<string | null>(null)
 
-  const filteredTemplates = selectedCategory === 'all'
-    ? DASHBOARD_TEMPLATES
-    : DASHBOARD_TEMPLATES.filter(tpl => tpl.category === selectedCategory)
+  const filteredTemplates = DASHBOARD_TEMPLATES.filter(tpl => {
+    const matchesCategory = selectedCategory === 'all' || tpl.category === selectedCategory
+    const matchesSearch = !searchText.trim() || tpl.name.toLowerCase().includes(searchText.toLowerCase()) || tpl.description.toLowerCase().includes(searchText.toLowerCase())
+    return matchesCategory && matchesSearch
+  })
 
   const handleApply = (template: DashboardTemplate) => {
     onApplyTemplate(template)
@@ -54,17 +57,15 @@ export function TemplateGallerySection({ onApplyTemplate, dashboardName }: Templ
           Pre-built card sets you can add to the {dashboardName ? `${dashboardName} dashboard` : 'current dashboard'} or use to replace all existing cards
         </p>
         {/* Search/filter bar — matches Cards section layout */}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              value={selectedCategory === 'all' ? '' : selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value || 'all')}
-              placeholder="Filter collections by category..."
-              className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-            />
-          </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            type="text"
+            value={searchText}
+            onChange={(e) => { setSearchText(e.target.value); if (!e.target.value) setSelectedCategory('all') }}
+            placeholder="Search collections..."
+            className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+          />
         </div>
         {/* Category quick-filter pills */}
         <div className="flex flex-wrap items-center gap-1.5 mt-2">

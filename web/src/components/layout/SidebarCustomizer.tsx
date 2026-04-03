@@ -366,13 +366,13 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
               Search for a dashboard to add to your sidebar
             </p>
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 type="text"
                 value={routeSearch}
                 onChange={(e) => setRouteSearch(e.target.value)}
                 placeholder="Search dashboards..."
-                className="w-full pl-8 pr-3 py-2 text-sm bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 border border-border"
+                className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
               />
             </div>
           </div>
