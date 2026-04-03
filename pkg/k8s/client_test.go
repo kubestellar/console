@@ -588,6 +588,129 @@ func TestGetDeploymentsNilReplicas(t *testing.T) {
 	}
 }
 
+// TestGetDeploymentsAvailableFalseNotFailed verifies that a deployment with
+// Available=False but without Progressing=False is reported as "deploying",
+// not "failed" (#4470). Available=False alone is a transient state during
+// normal rolling updates and should not be treated as a hard failure.
+func TestGetDeploymentsAvailableFalseNotFailed(t *testing.T) {
+	m, _ := NewMultiClusterClient("")
+
+	replicas := int32(3)
+	dep := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "rolling-dep",
+			Namespace:         "default",
+			CreationTimestamp: metav1.Time{Time: time.Now().Add(-5 * time.Minute)},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &replicas,
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{Containers: []corev1.Container{{Image: "nginx"}}},
+			},
+		},
+		Status: appsv1.DeploymentStatus{
+			ReadyReplicas: 2, // still rolling out
+			Conditions: []appsv1.DeploymentCondition{
+				{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionFalse, Message: "not all replicas available"},
+				{Type: appsv1.DeploymentProgressing, Status: corev1.ConditionTrue, Reason: "ReplicaSetUpdated"},
+			},
+		},
+	}
+
+	fakeCS := k8sfake.NewSimpleClientset(dep)
+	m.clients["c1"] = fakeCS
+
+	deps, err := m.GetDeployments(context.Background(), "c1", "default")
+	if err != nil {
+		t.Fatalf("GetDeployments failed: %v", err)
+	}
+	if len(deps) != 1 {
+		t.Fatalf("Expected 1 deployment, got %d", len(deps))
+	}
+	if deps[0].Status != "deploying" {
+		t.Errorf("Expected 'deploying' status for Available=False+Progressing=True, got %q", deps[0].Status)
+	}
+}
+
+// TestGetDeploymentsProgressingFalseFailed verifies that a deployment with
+// Progressing=False is reported as "failed" (#4470).
+func TestGetDeploymentsProgressingFalseFailed(t *testing.T) {
+	m, _ := NewMultiClusterClient("")
+
+	replicas := int32(3)
+	dep := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "stuck-dep",
+			Namespace:         "default",
+			CreationTimestamp: metav1.Time{Time: time.Now().Add(-30 * time.Minute)},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &replicas,
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{Containers: []corev1.Container{{Image: "bad-image"}}},
+			},
+		},
+		Status: appsv1.DeploymentStatus{
+			ReadyReplicas: 0,
+			Conditions: []appsv1.DeploymentCondition{
+				{Type: appsv1.DeploymentProgressing, Status: corev1.ConditionFalse, Reason: "ProgressDeadlineExceeded"},
+				{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionFalse, Message: "unavailable"},
+			},
+		},
+	}
+
+	fakeCS := k8sfake.NewSimpleClientset(dep)
+	m.clients["c1"] = fakeCS
+
+	deps, err := m.GetDeployments(context.Background(), "c1", "default")
+	if err != nil {
+		t.Fatalf("GetDeployments failed: %v", err)
+	}
+	if len(deps) != 1 {
+		t.Fatalf("Expected 1 deployment, got %d", len(deps))
+	}
+	if deps[0].Status != "failed" {
+		t.Errorf("Expected 'failed' status for Progressing=False, got %q", deps[0].Status)
+	}
+}
+
+// TestFindDeploymentIssuesProgressDeadlineExceeded verifies that Progressing=False
+// takes precedence over Available=False when determining the issue reason (#4470).
+func TestFindDeploymentIssuesProgressDeadlineExceeded(t *testing.T) {
+	m, _ := NewMultiClusterClient("")
+
+	replicas := int32(3)
+	dep := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "stuck-dep",
+			Namespace: "default",
+		},
+		Spec: appsv1.DeploymentSpec{Replicas: &replicas},
+		Status: appsv1.DeploymentStatus{
+			ReadyReplicas: 0,
+			Conditions: []appsv1.DeploymentCondition{
+				// Available=False comes first in the slice (old code would pick this)
+				{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionFalse, Message: "unavailable"},
+				{Type: appsv1.DeploymentProgressing, Status: corev1.ConditionFalse, Reason: "ProgressDeadlineExceeded", Message: "deadline exceeded"},
+			},
+		},
+	}
+
+	fakeCS := k8sfake.NewSimpleClientset(dep)
+	m.clients["c1"] = fakeCS
+
+	issues, err := m.FindDeploymentIssues(context.Background(), "c1", "default")
+	if err != nil {
+		t.Fatalf("FindDeploymentIssues failed: %v", err)
+	}
+	if len(issues) != 1 {
+		t.Fatalf("Expected 1 issue, got %d", len(issues))
+	}
+	if issues[0].Reason != "ProgressDeadlineExceeded" {
+		t.Errorf("Expected reason 'ProgressDeadlineExceeded', got %q", issues[0].Reason)
+	}
+}
+
 func TestGetServices(t *testing.T) {
 	m, _ := NewMultiClusterClient("")
 

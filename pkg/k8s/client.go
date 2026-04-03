@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	appsv1 "k8s.io/api/apps/v1"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -3361,17 +3362,25 @@ func (m *MultiClusterClient) FindDeploymentIssues(ctx context.Context, contextNa
 
 		// Check if not all replicas are ready
 		if deploy.Status.ReadyReplicas < desiredReplicas {
-			// Check conditions for more details
+			// Check conditions for more details. Progressing=False
+			// (ProgressDeadlineExceeded) is the more severe/specific condition
+			// and must take precedence over Available=False regardless of slice
+			// order (#4470). Use a two-pass scan: look for Progressing=False
+			// first, then fall back to Available=False.
 			for _, condition := range deploy.Status.Conditions {
-				if condition.Type == "Available" && condition.Status == "False" {
-					reason = "Unavailable"
-					message = condition.Message
-					break
-				}
-				if condition.Type == "Progressing" && condition.Status == "False" {
+				if condition.Type == appsv1.DeploymentProgressing && condition.Status == corev1.ConditionFalse {
 					reason = "ProgressDeadlineExceeded"
 					message = condition.Message
 					break
+				}
+			}
+			if reason == "" {
+				for _, condition := range deploy.Status.Conditions {
+					if condition.Type == appsv1.DeploymentAvailable && condition.Status == corev1.ConditionFalse {
+						reason = "Unavailable"
+						message = condition.Message
+						break
+					}
 				}
 			}
 
@@ -3420,14 +3429,12 @@ func (m *MultiClusterClient) GetDeployments(ctx context.Context, contextName, na
 		status := "running"
 		if deploy.Status.ReadyReplicas < desired {
 			status = "deploying"
-			// Check if stuck/failed
+			// Only mark as failed when Progressing=False (ProgressDeadlineExceeded).
+			// Available=False alone is a transient state during normal rolling updates
+			// and should remain "deploying", not "failed", to avoid false positives
+			// that contradict live drilldown data (#4470).
 			for _, condition := range deploy.Status.Conditions {
-				if condition.Type == "Progressing" && condition.Status == "False" {
-					status = "failed"
-					break
-				}
-				if condition.Type == "Available" && condition.Status == "False" &&
-					deploy.Status.ObservedGeneration >= deploy.Generation {
+				if condition.Type == appsv1.DeploymentProgressing && condition.Status == corev1.ConditionFalse {
 					status = "failed"
 					break
 				}
