@@ -71,10 +71,10 @@ export function DashboardCustomizer({
   const effectiveSearch = globalSearch || initialSearch
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="xl" closeOnBackdrop={false} className="!max-w-[75vw] !min-h-[70vh] !max-h-[75vh]">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="xl" closeOnBackdrop={false} className="!max-w-[75vw] !h-[75vh]">
       <BaseModal.Header
         title={t('dashboard.studio.title', 'Console Studio')}
-        description={t('dashboard.studio.subtitle', 'Add cards, apply card collections, and manage your dashboards')}
+        description={t('dashboard.studio.subtitle', 'Your console is built from dashboards, each containing cards that show real-time cluster data. Browse cards, apply pre-built collections, or create custom visualizations.')}
         icon={Palette}
         onClose={onClose}
         showBack={false}
