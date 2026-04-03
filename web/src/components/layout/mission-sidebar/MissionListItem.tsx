@@ -92,7 +92,7 @@ export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpan
         <button
           onClick={(e) => { e.stopPropagation(); onExpand() }}
           className="p-0.5 hover:bg-secondary/50 rounded transition-colors flex-shrink-0"
-          title={t('missionSidebar.fullScreen')}
+          title={t('layout.missionSidebar.expandToFullScreen')}
         >
           <Maximize2 className="w-3.5 h-3.5 text-muted-foreground" />
         </button>

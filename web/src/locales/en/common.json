@@ -3137,7 +3137,7 @@
       "resets": "Resets {{date}}",
       "breakdownByFeature": "Breakdown by Feature",
       "configureLimitsInSettings": "Configure limits in Settings",
-      "dayStreak": "{{count}}-day streak",
+      "dayStreak": "{{days}}-day streak",
       "devModeTitle": "Development mode — not connected to production",
       "demoModeActive": "Demo mode active",
       "learn": {
@@ -3194,7 +3194,8 @@
     },
     "issueItem": {
       "issues": "Issues",
-      "troubleshoot": "Troubleshoot"
+      "troubleshoot": "Troubleshoot",
+      "replicasReady": "{{readyReplicas}}/{{replicas}} ready"
     }
   }
 }

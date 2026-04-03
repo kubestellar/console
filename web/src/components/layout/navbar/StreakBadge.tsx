@@ -21,7 +21,7 @@ export function StreakBadge() {
   return (
     <span
       className="text-xs text-muted-foreground select-none"
-      title={t('layout.navbar.dayStreak', { count: streak })}
+      title={t('layout.navbar.dayStreak', { days: streak })}
     >
       {'\uD83D\uDD25'} {streak}
     </span>

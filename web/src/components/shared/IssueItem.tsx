@@ -80,7 +80,7 @@ export function IssueItem({
           <span className="text-xs text-muted-foreground">({issue.namespace})</span>
         </div>
         <span className={cn('text-xs px-2 py-1 rounded', statusBgClass)}>
-          {isPod ? (issue as PodIssue).status : `${(issue as DeploymentIssue).readyReplicas}/${(issue as DeploymentIssue).replicas} ${t('common.ready').toLowerCase()}`}
+          {isPod ? (issue as PodIssue).status : `${(issue as DeploymentIssue).readyReplicas}/${(issue as DeploymentIssue).replicas} ${t('common.ready')}`}
         </span>
       </button>
 
@@ -120,7 +120,10 @@ export function IssueItem({
                 <div>
                   <span className="text-muted-foreground">{t('common.replicas')}:</span>
                   <span className="ml-2 text-foreground">
-                    {(issue as DeploymentIssue).readyReplicas}/{(issue as DeploymentIssue).replicas} {t('common.ready').toLowerCase()}
+                    {t('shared.issueItem.replicasReady', {
+                      readyReplicas: (issue as DeploymentIssue).readyReplicas,
+                      replicas: (issue as DeploymentIssue).replicas,
+                    })}
                   </span>
                 </div>
                 {(issue as DeploymentIssue).message && (
