@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
 /**
  * Visual regression tests for UI components via Storybook.
@@ -16,7 +16,7 @@ import { test, expect } from '@playwright/test'
 /** Wait for story to fully render (fonts, animations disabled by config) */
 const RENDER_WAIT_MS = 500
 
-async function navigateToStory(page: ReturnType<typeof test.info>['_test'] extends never ? never : Awaited<ReturnType<typeof import('@playwright/test')['test']['info']>>['_test'] extends never ? never : import('@playwright/test').Page, storyId: string) {
+async function navigateToStory(page: Page, storyId: string) {
   await page.goto(`/iframe.html?id=${storyId}&viewMode=story`, { waitUntil: 'networkidle' })
   await page.waitForTimeout(RENDER_WAIT_MS)
 }
@@ -78,7 +78,7 @@ test.describe('StatusBadge', () => {
 
 test.describe('Skeleton', () => {
   test('text variant', async ({ page }) => {
-    await navigateToStory(page, 'ui-skeleton--text')
+    await navigateToStory(page, 'ui-skeleton--text-variant')
     await expect(page.locator('#storybook-root')).toHaveScreenshot('skeleton-text.png')
   })
 
@@ -88,7 +88,7 @@ test.describe('Skeleton', () => {
   })
 
   test('card skeleton', async ({ page }) => {
-    await navigateToStory(page, 'ui-skeleton--card')
+    await navigateToStory(page, 'ui-skeleton--card-skeleton')
     await expect(page.locator('#storybook-root')).toHaveScreenshot('skeleton-card.png')
   })
 })

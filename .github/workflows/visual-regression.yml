@@ -44,7 +44,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: visual-regression-report
-          path: web/visual-report/
+          path: web/e2e/visual-report/
           retention-days: 14
 
       - name: Upload updated snapshots

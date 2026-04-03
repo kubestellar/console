@@ -38,7 +38,7 @@ export default defineConfig({
     { name: 'chromium', use: { browserName: 'chromium' } },
   ],
   webServer: {
-    command: `npx serve ../storybook-static -l ${STORYBOOK_PORT} --no-clipboard`,
+    command: `npx serve ../../storybook-static -l ${STORYBOOK_PORT} --no-clipboard`,
     url: `http://127.0.0.1:${STORYBOOK_PORT}`,
     reuseExistingServer: true,
     timeout: IS_CI ? 60_000 : 30_000,
