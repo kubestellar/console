@@ -3,24 +3,10 @@
  */
 import { describe, it, expect } from 'vitest'
 import {
-  LEARNING_VIDEOS,
   getYouTubeThumbnailUrl,
   getYouTubeWatchUrl,
   YOUTUBE_PLAYLIST_URL,
 } from '../learningVideos'
-
-describe('LEARNING_VIDEOS', () => {
-  it('is an array', () => {
-    expect(Array.isArray(LEARNING_VIDEOS)).toBe(true)
-  })
-
-  it('each video has id and title when array is populated', () => {
-    LEARNING_VIDEOS.forEach(video => {
-      expect(video.id).toBeTruthy()
-      expect(video.title).toBeTruthy()
-    })
-  })
-})
 
 describe('YouTube URL helpers', () => {
   it('getYouTubeThumbnailUrl returns valid URL', () => {

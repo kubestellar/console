@@ -582,6 +582,9 @@ func (s *Server) setupRoutes() {
 	// Dev mode only affects things like frontend URLs and default users,
 	// NOT authentication requirements
 
+	// YouTube playlist (public — proxies to YouTube RSS feed, cached 1h)
+	s.app.Get("/api/youtube/playlist", handlers.YouTubePlaylistHandler)
+
 	// Mission knowledge base browse/file (public — proxies to public GitHub repo)
 	missions := handlers.NewMissionsHandler()
 	missions.RegisterPublicRoutes(s.app.Group("/api/missions"))

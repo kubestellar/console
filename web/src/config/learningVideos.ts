@@ -1,20 +1,10 @@
 /**
- * YouTube video tutorials for the Learn dropdown.
+ * YouTube video tutorial helpers.
  *
- * Add entries here as videos are published to the playlist.
- * Thumbnails and watch URLs are derived from the video ID automatically.
+ * Videos are fetched dynamically from the YouTube playlist via
+ * /api/youtube/playlist (see usePlaylistVideos hook).
+ * These helpers generate thumbnail and watch URLs from a video ID.
  */
-
-export interface LearningVideo {
-  id: string       // YouTube video ID (the ?v= parameter)
-  title: string
-  description?: string
-}
-
-/** Videos from the KubeStellar Console playlist */
-export const LEARNING_VIDEOS: LearningVideo[] = [
-  // Populated as videos are added to the playlist
-]
 
 export const getYouTubeThumbnailUrl = (videoId: string) =>
   `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`

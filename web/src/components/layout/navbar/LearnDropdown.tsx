@@ -1,29 +1,29 @@
 import { useRef, useEffect } from 'react'
 import { useModalState } from '../../../lib/modals'
 import { useLocation } from 'react-router-dom'
-import { BookOpen, Play, ExternalLink, GraduationCap, Video } from 'lucide-react'
+import { BookOpen, Play, ExternalLink, GraduationCap, Video, Loader2 } from 'lucide-react'
 import { useTour } from '../../../hooks/useTour'
 import { LogoWithStar } from '../../ui/LogoWithStar'
 import {
-  LEARNING_VIDEOS,
-  YOUTUBE_PLAYLIST_URL,
   getYouTubeThumbnailUrl,
   getYouTubeWatchUrl,
 } from '../../../config/learningVideos'
+import { usePlaylistVideos } from '../../../hooks/usePlaylistVideos'
 import { cn } from '../../../lib/cn'
-
-const RESOURCES = [
-  { label: 'Documentation', href: 'https://console-docs.kubestellar.io', description: 'Console docs and guides' },
-  { label: 'Getting Started', href: 'https://kubestellar.io/docs/console/overview/introduction', description: 'Quick start guide' },
-  { label: 'Blog', href: 'https://kubestellar.io/blog', description: 'News and updates' },
-  { label: 'YouTube Channel', href: YOUTUBE_PLAYLIST_URL, description: 'Video tutorials playlist' },
-]
 
 export function LearnDropdown() {
   const { isOpen, close, toggle } = useModalState()
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { startTour, hasCompletedTour } = useTour()
   const location = useLocation()
+  const { videos, playlistUrl, loading } = usePlaylistVideos()
+
+  const RESOURCES = [
+    { label: 'Documentation', href: 'https://console-docs.kubestellar.io', description: 'Console docs and guides' },
+    { label: 'Getting Started', href: 'https://kubestellar.io/docs/console/overview/introduction', description: 'Quick start guide' },
+    { label: 'Blog', href: 'https://kubestellar.io/blog', description: 'News and updates' },
+    { label: 'YouTube Channel', href: playlistUrl, description: 'Video tutorials playlist' },
+  ]
 
   // Close on route change
   useEffect(() => {
@@ -102,9 +102,13 @@ export function LearnDropdown() {
             </div>
           </div>
 
-          {LEARNING_VIDEOS.length > 0 ? (
+          {loading ? (
+            <div className="px-4 py-4 flex items-center justify-center">
+              <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
+            </div>
+          ) : videos.length > 0 ? (
             <div className="px-2 pb-2 max-h-48 overflow-y-auto">
-              {LEARNING_VIDEOS.map(video => (
+              {videos.map(video => (
                 <a
                   key={video.id}
                   href={getYouTubeWatchUrl(video.id)}
@@ -136,7 +140,7 @@ export function LearnDropdown() {
               <GraduationCap className="w-8 h-8 text-muted-foreground/40 mb-2" />
               <div className="text-xs text-muted-foreground">Coming soon</div>
               <a
-                href={YOUTUBE_PLAYLIST_URL}
+                href={playlistUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-primary hover:underline mt-1"
