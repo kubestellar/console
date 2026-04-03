@@ -1018,7 +1018,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
               tabIndex={tab === t.id ? 0 : -1}
               onClick={() => handleTabChange(t.id)}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors',
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
                 tab === t.id
                   ? 'bg-purple-500/20 text-purple-400'
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary',
