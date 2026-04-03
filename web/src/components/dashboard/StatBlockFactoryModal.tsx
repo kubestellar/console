@@ -609,7 +609,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                           <div className="mt-1.5 ml-7">
                             <button
                               onClick={() => applySmartDefault(idx, smartDefault)}
-                              className="text-2xs text-purple-400/60 hover:text-purple-400 transition-colors"
+                              className="text-xs text-purple-400/60 hover:text-purple-400 transition-colors"
                             >
                               Suggested: {(() => { const SugIcon = getIcon(smartDefault.icon); return <SugIcon className="w-3 h-3 inline mr-0.5" /> })()}
                               {smartDefault.icon} · {smartDefault.color}
@@ -655,7 +655,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                 <div className="flex items-center justify-between px-3 py-1.5 border-b border-border/30">
                   <div className="flex items-center gap-1.5">
                     <Eye className="w-3 h-3 text-muted-foreground" />
-                    <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wide">{t('dashboard.preview.header')}</span>
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('dashboard.preview.header')}</span>
                     <StatusBadge color="purple" size="xs">
                       {t('dashboard.preview.sampleValues')}
                     </StatusBadge>
@@ -780,7 +780,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                         return (
                           <span
                             key={block.id}
-                            className="inline-flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded bg-secondary/50 text-muted-foreground"
+                            className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-secondary/50 text-muted-foreground"
                           >
                             <BlockIcon className={cn('w-3 h-3', COLOR_CLASSES[block.color])} />
                             {block.label}
@@ -788,7 +788,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                         )
                       })}
                       {stats.blocks.length > 8 && (
-                        <span className="text-2xs px-1.5 py-0.5 text-muted-foreground">
+                        <span className="text-xs px-1.5 py-0.5 text-muted-foreground">
                           +{stats.blocks.length - 8} more
                         </span>
                       )}

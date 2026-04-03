@@ -245,7 +245,7 @@ const T2_TEMPLATES: T2Template[] = [
         {clusters.map(c => (
           <div key={c.name} className={\`rounded-lg \${getColor(c.health)} p-3 flex flex-col items-center justify-center\`}>
             <span className={\`text-xl font-bold \${getTextColor(c.health)}\`}>{c.health}%</span>
-            <span className="text-2xs text-muted-foreground mt-1">{c.name}</span>
+            <span className="text-xs text-muted-foreground mt-1">{c.name}</span>
           </div>
         ))}
       </div>
@@ -321,7 +321,7 @@ const T2_TEMPLATES: T2Template[] = [
         {data.map(d => (
           <div key={d.label} className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full" style={{ background: d.color }} />
-            <span className="text-2xs text-muted-foreground">{d.label}</span>
+            <span className="text-xs text-muted-foreground">{d.label}</span>
           </div>
         ))}
       </div>
@@ -359,7 +359,7 @@ const T2_TEMPLATES: T2Template[] = [
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs text-foreground truncate">{e.msg}</p>
-              <p className="text-2xs text-muted-foreground">{e.time}</p>
+              <p className="text-xs text-muted-foreground">{e.time}</p>
             </div>
           </div>
         ))}
@@ -407,7 +407,7 @@ const T2_TEMPLATES: T2Template[] = [
           <Timer className="w-4 h-4 text-purple-400" />
           <span className="text-sm font-medium text-foreground">Service Latency</span>
         </div>
-        <span className="text-2xs text-muted-foreground">tick #{tick}</span>
+        <span className="text-xs text-muted-foreground">tick #{tick}</span>
       </div>
       <div className="flex-1 space-y-2">
         {items.map(item => {
@@ -585,7 +585,7 @@ const T2_TEMPLATES: T2Template[] = [
         <div className="flex items-center gap-2">
           <Cable className="w-4 h-4 text-purple-400" />
           <span className="text-sm font-medium text-foreground">Port Forwards</span>
-          <span className="text-2xs px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">
+          <span className="text-xs px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">
             {forwards.filter(f => f.active).length} active
           </span>
         </div>
@@ -622,7 +622,7 @@ const T2_TEMPLATES: T2Template[] = [
           <div className="h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
             <Cable className="w-6 h-6 opacity-30" />
             <p className="text-xs">No port forwards configured</p>
-            <p className="text-2xs">Click Add to track a kubectl port-forward session</p>
+            <p className="text-xs">Click Add to track a kubectl port-forward session</p>
           </div>
         ) : forwards.map(f => (
           <div key={f.id} className={\`flex items-center gap-2 px-2 py-1.5 rounded \${f.active ? 'bg-green-500/10 border border-green-500/20' : 'bg-secondary/20 border border-border/30'}\`}>
@@ -634,9 +634,9 @@ const T2_TEMPLATES: T2Template[] = [
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-medium text-foreground truncate">{f.resource}</span>
-                <span className="text-2xs text-muted-foreground">({f.namespace})</span>
+                <span className="text-xs text-muted-foreground">({f.namespace})</span>
               </div>
-              <span className="text-2xs text-muted-foreground font-mono">
+              <span className="text-xs text-muted-foreground font-mono">
                 :{f.localPort} → :{f.remotePort}
               </span>
             </div>
@@ -696,7 +696,7 @@ function FieldSuggestChips({
 
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
-      <span className="text-2xs text-muted-foreground/50">Fields:</span>
+      <span className="text-xs text-muted-foreground/50">Fields:</span>
       {suggestedFields.map(field => {
         const sampleValues = (() => {
           try {
@@ -715,7 +715,7 @@ function FieldSuggestChips({
               format: detected.format,
               badgeColors: detected.badgeColors,
             })}
-            className="text-2xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400/70 hover:bg-purple-500/20 hover:text-purple-400 transition-colors"
+            className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400/70 hover:bg-purple-500/20 hover:text-purple-400 transition-colors"
           >
             + {field}
           </button>
@@ -1318,7 +1318,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                 {/* Available APIs info */}
                 <div className="rounded-lg bg-secondary/30 border border-border/50 p-3">
                   <p className="text-xs font-medium text-muted-foreground mb-1">{t('dashboard.cardFactory.availableInScope')}</p>
-                  <p className="text-2xs text-muted-foreground leading-relaxed">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
                     React, useState, useEffect, useMemo, useCallback, useRef, useReducer,
                     cn, useCardData, commonComparators, Skeleton, Pagination,
                     and all lucide-react icons.
@@ -1381,7 +1381,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-foreground">{wrapAbbreviations(card.title)}</span>
                         <span className={cn(
-                          'text-2xs px-1.5 py-0.5 rounded',
+                          'text-xs px-1.5 py-0.5 rounded',
                           card.tier === 'tier1' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400',
                         )}>
                           {card.tier === 'tier1' ? t('dashboard.cardFactory.declarativeBadge') : t('dashboard.cardFactory.customCodeBadge')}
@@ -1390,7 +1390,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                       {card.description && (
                         <p className="text-xs text-muted-foreground mt-0.5">{wrapAbbreviations(card.description)}</p>
                       )}
-                      <p className="text-2xs text-muted-foreground/70 mt-1">
+                      <p className="text-xs text-muted-foreground/70 mt-1">
                         ID: {card.id} · Created: {new Date(card.createdAt).toLocaleDateString()}
                       </p>
                     </div>
@@ -1563,7 +1563,7 @@ function T1Preview({ result }: { result: AiCardT1Result }) {
                 if (col.format === 'badge' && col.badgeColors) {
                   const badgeClass = col.badgeColors[val] || 'bg-gray-500/20 text-muted-foreground dark:bg-gray-900/30 dark:text-muted-foreground'
                   return (
-                    <span key={col.field} className={cn('flex-1 truncate text-2xs px-1 py-0.5 rounded', badgeClass)}>
+                    <span key={col.field} className={cn('flex-1 truncate text-xs px-1 py-0.5 rounded', badgeClass)}>
                       {val}
                     </span>
                   )
@@ -1595,7 +1595,7 @@ function T2Preview({ result }: { result: AiCardT2Result }) {
       {result.description && (
         <p className="text-xs text-muted-foreground mb-2">{wrapAbbreviations(result.description)}</p>
       )}
-      <pre className="text-2xs px-3 py-2 rounded-lg bg-secondary text-foreground font-mono max-h-48 overflow-y-auto whitespace-pre-wrap">
+      <pre className="text-xs px-3 py-2 rounded-lg bg-secondary text-foreground font-mono max-h-48 overflow-y-auto whitespace-pre-wrap">
         {result.sourceCode}
       </pre>
     </div>

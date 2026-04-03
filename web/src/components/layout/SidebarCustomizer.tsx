@@ -83,7 +83,7 @@ function SortableItem({ item, onRemove, renderIcon }: SortableItemProps) {
       <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
       {renderIcon(item.icon, 'w-4 h-4 text-muted-foreground')}
       <span className="text-sm text-foreground">{item.name}</span>
-      <span className="text-2xs text-muted-foreground/50">{item.href}</span>
+      <span className="text-xs text-muted-foreground/50">{item.href}</span>
       <span className="flex-1" />
       {/* Allow removing any item except the main Dashboard (/) */}
       {item.href !== '/' && (
@@ -430,7 +430,7 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
                       {renderIcon(route.icon, 'w-4 h-4 text-muted-foreground')}
                       <div className="flex-1 min-w-0">
                         <span className="text-sm font-medium text-foreground">{route.name}</span>
-                        <span className="text-2xs text-muted-foreground/50 ml-1.5">{route.description}</span>
+                        <span className="text-xs text-muted-foreground/50 ml-1.5">{route.description}</span>
                       </div>
                       <Plus className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
                     </button>

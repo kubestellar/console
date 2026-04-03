@@ -981,9 +981,9 @@
     },
     "cardFactory": {
       "title": "Card Factory",
-      "declarativeTab": "Declarative",
-      "customCodeTab": "Custom Code",
-      "aiCreateTab": "AI Create",
+      "declarativeTab": "Build",
+      "customCodeTab": "Code",
+      "aiCreateTab": "AI Assist",
       "manageTab": "Manage",
       "titleRequired": "Title *",
       "widthLabel": "Width (columns)",
@@ -1027,7 +1027,7 @@
     "statFactory": {
       "title": "Stat Block Factory",
       "buildTab": "Build",
-      "aiGenerateTab": "AI Generate",
+      "aiGenerateTab": "AI Assist",
       "manageTab": "Manage",
       "titleLabel": "Title",
       "typeIdLabel": "Type ID",
