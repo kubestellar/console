@@ -148,7 +148,19 @@ if command -v go &>/dev/null; then
     GO_VULNS=$(grep -c "^Vulnerability #" "$GOVULN_OUTPUT" 2>/dev/null | head -1 | tr -d '[:space:]' || true)
     GO_VULNS="${GO_VULNS:-0}"
 
-    if [ "$GO_VULNS" -eq 0 ] 2>/dev/null; then
+    if [ "$GO_STATUS" = "skip" ] && [ "$GO_VULNS" -gt 0 ] 2>/dev/null; then
+      # Timed out but partial vulnerability output was captured — surface it and fail
+      echo -e "  ${RED}❌ ${GO_VULNS} vulnerability/ies found (scan timed out; results may be incomplete)${NC}"
+      grep -A 2 "^Vulnerability #" "$GOVULN_OUTPUT" 2>/dev/null | head -15 | while IFS= read -r line; do
+        echo -e "    ${DIM}${line}${NC}"
+      done
+      GO_STATUS="fail"
+    elif [ "$GO_STATUS" = "skip" ]; then
+      : # timeout warning already printed above; do not claim a clean scan
+    elif [ "$GO_VULNS" -eq 0 ] 2>/dev/null && [ "$GOVULN_EXIT" -ne 0 ] 2>/dev/null; then
+      echo -e "  ${YELLOW}⚠️  govulncheck failed with exit code ${GOVULN_EXIT} — skipping Go vulnerability result${NC}"
+      GO_STATUS="skip"
+    elif [ "$GO_VULNS" -eq 0 ] 2>/dev/null; then
       echo -e "  ${GREEN}✓ No vulnerabilities found${NC}"
     else
       echo -e "  ${RED}❌ ${GO_VULNS} vulnerability/ies found${NC}"
