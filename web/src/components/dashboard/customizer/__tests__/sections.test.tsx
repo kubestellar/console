@@ -55,72 +55,64 @@ vi.mock('../../../cards/cardDescriptor', () => ({
 }))
 
 describe('CardCatalogSection', () => {
-  it('exports CardCatalogSection component', async () => {
+  it('is a function component', async () => {
     const mod = await import('../sections/CardCatalogSection')
-    expect(mod.CardCatalogSection).toBeDefined()
     expect(typeof mod.CardCatalogSection).toBe('function')
   })
 })
 
 describe('AISuggestionsSection', () => {
-  it('exports AISuggestionsSection component', async () => {
+  it('is a function component', async () => {
     const mod = await import('../sections/AISuggestionsSection')
-    expect(mod.AISuggestionsSection).toBeDefined()
     expect(typeof mod.AISuggestionsSection).toBe('function')
   })
 })
 
 describe('TemplateGallerySection', () => {
-  it('exports TemplateGallerySection component', async () => {
+  it('is a function component', async () => {
     const mod = await import('../sections/TemplateGallerySection')
-    expect(mod.TemplateGallerySection).toBeDefined()
     expect(typeof mod.TemplateGallerySection).toBe('function')
   })
 })
 
 describe('DashboardSettingsSection', () => {
-  it('exports DashboardSettingsSection component', async () => {
+  it('is a function component', async () => {
     const mod = await import('../sections/DashboardSettingsSection')
-    expect(mod.DashboardSettingsSection).toBeDefined()
     expect(typeof mod.DashboardSettingsSection).toBe('function')
   })
 })
 
 describe('shared/cardCatalog', () => {
-  it('exports CARD_CATALOG with multiple categories', async () => {
+  it('CARD_CATALOG has more than 10 categories', async () => {
     const mod = await import('../../shared/cardCatalog')
-    expect(mod.CARD_CATALOG).toBeDefined()
     const categories = Object.keys(mod.CARD_CATALOG)
     expect(categories.length).toBeGreaterThan(10)
   })
 
-  it('exports generateCardSuggestions function', async () => {
+  it('generateCardSuggestions returns typed results for gpu query', async () => {
     const mod = await import('../../shared/cardCatalog')
-    expect(typeof mod.generateCardSuggestions).toBe('function')
     const results = mod.generateCardSuggestions('gpu')
     expect(results.length).toBeGreaterThan(0)
-    expect(results[0].type).toBeDefined()
-    expect(results[0].visualization).toBeDefined()
+    expect(typeof results[0].type).toBe('string')
+    expect(typeof results[0].visualization).toBe('string')
   })
 
-  it('exports RECOMMENDED_CARD_TYPES', async () => {
+  it('RECOMMENDED_CARD_TYPES is a non-empty array', async () => {
     const mod = await import('../../shared/cardCatalog')
-    expect(mod.RECOMMENDED_CARD_TYPES).toBeDefined()
     expect(mod.RECOMMENDED_CARD_TYPES.length).toBeGreaterThan(0)
   })
 
-  it('exports visualizationIcons', async () => {
+  it('visualizationIcons maps known types to emoji strings', async () => {
     const mod = await import('../../shared/cardCatalog')
-    expect(mod.visualizationIcons).toBeDefined()
-    expect(mod.visualizationIcons['gauge']).toBeDefined()
-    expect(mod.visualizationIcons['table']).toBeDefined()
+    expect(typeof mod.visualizationIcons['gauge']).toBe('string')
+    expect(typeof mod.visualizationIcons['table']).toBe('string')
+    expect(typeof mod.visualizationIcons['status']).toBe('string')
   })
 })
 
 describe('shared/CardPreview', () => {
-  it('exports CardPreview component', async () => {
+  it('is a function component', async () => {
     const mod = await import('../../shared/CardPreview')
-    expect(mod.CardPreview).toBeDefined()
     expect(typeof mod.CardPreview).toBe('function')
   })
 })

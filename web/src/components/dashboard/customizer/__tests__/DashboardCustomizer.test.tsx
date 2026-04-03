@@ -26,44 +26,37 @@ vi.mock('../../../cards/cardRegistry', () => ({
 }))
 
 describe('DashboardCustomizer', () => {
-  it('exports DashboardCustomizer component', async () => {
+  it('exports DashboardCustomizer as a function component', async () => {
     const mod = await import('../DashboardCustomizer')
-    expect(mod.DashboardCustomizer).toBeDefined()
     expect(typeof mod.DashboardCustomizer).toBe('function')
   })
 })
 
 describe('DashboardCustomizerSidebar', () => {
-  it('exports DashboardCustomizerSidebar component', async () => {
+  it('exports DashboardCustomizerSidebar as a function component', async () => {
     const mod = await import('../DashboardCustomizerSidebar')
-    expect(mod.DashboardCustomizerSidebar).toBeDefined()
     expect(typeof mod.DashboardCustomizerSidebar).toBe('function')
   })
 })
 
 describe('PreviewPanel', () => {
-  it('exports PreviewPanel component', async () => {
+  it('exports PreviewPanel as a function component', async () => {
     const mod = await import('../PreviewPanel')
-    expect(mod.PreviewPanel).toBeDefined()
     expect(typeof mod.PreviewPanel).toBe('function')
   })
 })
 
 describe('customizerNav', () => {
-  it('exports CUSTOMIZER_NAV with expected structure', async () => {
+  it('CUSTOMIZER_NAV has at least 3 groups with items', async () => {
     const mod = await import('../customizerNav')
-    expect(mod.CUSTOMIZER_NAV).toBeDefined()
-    expect(Array.isArray(mod.CUSTOMIZER_NAV)).toBe(true)
-    expect(mod.CUSTOMIZER_NAV.length).toBeGreaterThan(0)
-    // Each group has items
+    expect(mod.CUSTOMIZER_NAV.length).toBeGreaterThanOrEqual(3)
     for (const group of mod.CUSTOMIZER_NAV) {
-      expect(group.labelKey).toBeDefined()
-      expect(Array.isArray(group.items)).toBe(true)
+      expect(typeof group.labelKey).toBe('string')
       expect(group.items.length).toBeGreaterThan(0)
     }
   })
 
-  it('exports DEFAULT_SECTION as cards-browse', async () => {
+  it('DEFAULT_SECTION is cards-browse', async () => {
     const mod = await import('../customizerNav')
     expect(mod.DEFAULT_SECTION).toBe('cards-browse')
   })

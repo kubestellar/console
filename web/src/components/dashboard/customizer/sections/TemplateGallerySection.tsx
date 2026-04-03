@@ -22,6 +22,9 @@ const CARD_COLORS: Record<string, string> = {
 
 const DEFAULT_CARD_COLOR = 'bg-secondary/60'
 
+/** Duration to show "Applied" confirmation before reverting button text */
+const APPLIED_CONFIRMATION_MS = 2000
+
 interface TemplateGallerySectionProps {
   onApplyTemplate: (template: DashboardTemplate) => void
 }
@@ -38,7 +41,7 @@ export function TemplateGallerySection({ onApplyTemplate }: TemplateGallerySecti
   const handleApply = (template: DashboardTemplate) => {
     onApplyTemplate(template)
     setAppliedTemplate(template.id)
-    setTimeout(() => setAppliedTemplate(null), 2000)
+    setTimeout(() => setAppliedTemplate(null), APPLIED_CONFIRMATION_MS)
   }
 
   return (
