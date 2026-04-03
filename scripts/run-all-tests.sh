@@ -15,7 +15,7 @@
 #   0 — all suites passed
 #   1 — one or more suites failed
 
-set -uo pipefail
+set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
@@ -126,7 +126,7 @@ extract_failure_reason() {
     | sed 's/|$//' \
     | sed 's/|/\\n/g' \
     | sed 's/"/\\"/g' \
-    | cut -c1-500)
+    | cut -c1-500) || true
   echo "$reason"
 }
 
@@ -214,8 +214,8 @@ PREVIEW_PID=""
 
 stop_preview_server() {
   if [ -n "$PREVIEW_PID" ]; then
-    kill "$PREVIEW_PID" 2>/dev/null
-    wait "$PREVIEW_PID" 2>/dev/null
+    kill "$PREVIEW_PID" 2>/dev/null || true
+    wait "$PREVIEW_PID" 2>/dev/null || true
     PREVIEW_PID=""
   fi
 }
