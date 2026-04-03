@@ -200,6 +200,22 @@ export const handlers = [
   http.all('https://www.googletagmanager.com/*', () => passthrough()),
   http.all(/^https:\/\/[^/]*google-analytics\.com\//, () => passthrough()),
 
+  // ── External resource passthrough ──────────────────────────────────
+  // Pass through external resources so MSW doesn't warn about them
+  http.all('https://api.dicebear.com/*', () => passthrough()),
+  http.all('https://fonts.gstatic.com/*', () => passthrough()),
+  http.all('https://fonts.googleapis.com/*', () => passthrough()),
+
+  // ── Auth refresh (OAuth token exchange) ────────────────────────────
+  // Mock the /auth/refresh endpoint used by AuthCallback and silent token refresh
+  http.post('/auth/refresh', async () => {
+    await delay(100)
+    return HttpResponse.json({
+      token: 'mock-jwt-token-for-testing-only', // SECURITY: Safe - NOT A REAL TOKEN
+      onboarded: true,
+    })
+  }),
+
   // Auth endpoints
   http.get('/api/auth/me', async () => {
     await delay(100)

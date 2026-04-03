@@ -22,13 +22,16 @@ export async function startMocking(): Promise<void> {
         return
       }
 
-      // Silently ignore static assets (JS chunks, images, WASM, CSS).
-      // These are code-split chunks and resources that don't need mocking.
+      // Silently ignore static assets and known resource types.
+      // These are code-split chunks, fonts, images, etc. that don't need mocking.
       if (
         path.startsWith('/assets/') ||
         path.endsWith('.js') ||
         path.endsWith('.css') ||
         path.endsWith('.wasm') ||
+        path.endsWith('.woff2') ||
+        path.endsWith('.woff') ||
+        path.endsWith('.ttf') ||
         path.endsWith('.svg') ||
         path.endsWith('.png') ||
         path.endsWith('.jpg') ||
@@ -39,6 +42,11 @@ export async function startMocking(): Promise<void> {
 
       // Silently ignore known application paths that don't need mocking
       if (path === '/health' || path === '/mockServiceWorker.js') {
+        return
+      }
+
+      // Silently ignore cross-origin requests (fonts, avatars, analytics, etc.)
+      if (url.origin !== window.location.origin) {
         return
       }
 
