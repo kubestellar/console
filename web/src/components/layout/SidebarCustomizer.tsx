@@ -12,7 +12,6 @@ import {
   Loader2,
   LayoutDashboard,
   Search,
-  FolderPlus,
 } from 'lucide-react'
 import {
   DndContext,
@@ -287,6 +286,10 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
     }
 
     setIsGenerating(false)
+
+    // Auto-dismiss after 5 seconds
+    const AUTO_DISMISS_MS = 5000
+    setTimeout(() => setGenerationResult(null), AUTO_DISMISS_MS)
   }
 
   // Handle creating a new custom dashboard
@@ -419,14 +422,8 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
           })()}
 
           {/* Action buttons */}
+          {/* Create Custom Dashboard moved to Console Studio nav */}
           <div className="flex flex-wrap gap-2 mb-4">
-            <button
-              onClick={openCreateDashboard}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors text-sm font-medium"
-            >
-              <FolderPlus className="w-4 h-4" />
-              Create Custom Dashboard
-            </button>
             <button
               onClick={handleGenerateFromBehavior}
               disabled={isGenerating}

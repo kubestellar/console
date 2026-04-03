@@ -11,6 +11,8 @@ interface CreateDashboardModalProps {
   onClose: () => void
   onCreate: (name: string, template?: DashboardTemplate, description?: string) => void | Promise<void>
   existingNames?: string[]
+  /** When true, renders content inline without BaseModal wrapper (used by Console Studio) */
+  embedded?: boolean
 }
 
 export function CreateDashboardModal({
@@ -18,6 +20,7 @@ export function CreateDashboardModal({
   onClose,
   onCreate,
   existingNames = [],
+  embedded = false,
 }: CreateDashboardModalProps) {
   // Only mount inner content (and its hooks) when the modal is open.
   // This avoids health-check API polling when the modal is closed.
@@ -29,6 +32,7 @@ export function CreateDashboardModal({
       onClose={onClose}
       onCreate={onCreate}
       existingNames={existingNames}
+      embedded={embedded}
     />
   )
 }
@@ -38,6 +42,7 @@ function CreateDashboardModalInner({
   onClose,
   onCreate,
   existingNames = [],
+  embedded = false,
 }: CreateDashboardModalProps) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -93,17 +98,8 @@ function CreateDashboardModalInner({
     }
   }
 
-  return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false}>
-      <BaseModal.Header
-        title={t('dashboard.create.title', 'Create Dashboard')}
-        description={t('dashboard.create.descriptionCollection', 'Name your dashboard and optionally start with a card collection.')}
-        icon={LayoutDashboard}
-        onClose={onClose}
-        showBack={false}
-      />
-
-      <BaseModal.Content>
+  const formContent = (
+    <>
         {/* Health alert removed — not relevant in a Create Dashboard form */}
 
         {/* Dashboard name input */}
@@ -251,27 +247,55 @@ function CreateDashboardModalInner({
             </div>
           )}
         </div>
-      </BaseModal.Content>
+    </>
+  )
 
+  const createButton = (
+    <Button
+      variant="accent"
+      size="lg"
+      iconRight={isCreating ? undefined : <ChevronRight className="w-4 h-4" />}
+      onClick={handleCreate}
+      loading={isCreating}
+      disabled={isCreating}
+    >
+      {isCreating ? t('dashboard.create.creating') : t('dashboard.create.title', 'Create Dashboard')}
+    </Button>
+  )
+
+  // Embedded mode: render inline within Console Studio
+  if (embedded) {
+    return (
+      <div className="h-full flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto p-4">
+          <p className="text-xs text-muted-foreground mb-4">Name your dashboard and optionally start with a card collection.</p>
+          {formContent}
+        </div>
+        <div className="border-t border-border px-4 py-3 flex items-center justify-end gap-2">
+          {createButton}
+        </div>
+      </div>
+    )
+  }
+
+  // Standard modal mode
+  return (
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false}>
+      <BaseModal.Header
+        title={t('dashboard.create.title', 'Create Dashboard')}
+        description={t('dashboard.create.descriptionCollection', 'Name your dashboard and optionally start with a card collection.')}
+        icon={LayoutDashboard}
+        onClose={onClose}
+        showBack={false}
+      />
+      <BaseModal.Content>
+        {formContent}
+      </BaseModal.Content>
       <BaseModal.Footer showKeyboardHints={false} className="justify-end">
-        <Button
-          variant="ghost"
-          size="lg"
-          onClick={onClose}
-          disabled={isCreating}
-        >
+        <Button variant="ghost" size="lg" onClick={onClose} disabled={isCreating}>
           {t('actions.cancel')}
         </Button>
-        <Button
-          variant="accent"
-          size="lg"
-          iconRight={isCreating ? undefined : <ChevronRight className="w-4 h-4" />}
-          onClick={handleCreate}
-          loading={isCreating}
-          disabled={isCreating}
-        >
-          {isCreating ? t('dashboard.create.creating') : t('dashboard.create.title', 'Create Dashboard')}
-        </Button>
+        {createButton}
       </BaseModal.Footer>
     </BaseModal>
   )

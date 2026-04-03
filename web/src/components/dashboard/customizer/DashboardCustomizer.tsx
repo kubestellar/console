@@ -15,7 +15,9 @@ import { NavigationSection } from './sections/NavigationSection'
 import { TemplateGallerySection } from './sections/TemplateGallerySection'
 import { CardFactoryModal } from '../CardFactoryModal'
 import { StatBlockFactoryModal } from '../StatBlockFactoryModal'
+import { CreateDashboardModal } from '../CreateDashboardModal'
 import { DEFAULT_SECTION, type CustomizerSection } from './customizerNav'
+import { useDashboards } from '../../../hooks/useDashboards'
 import type { CardSuggestion, HoveredCard } from '../shared/cardCatalog'
 import type { DashboardTemplate } from '../templates'
 
@@ -62,7 +64,7 @@ export function DashboardCustomizer({
   // Global search reserved for future use
   const globalSearch = ''
   const [hoveredCard, setHoveredCard] = useState<HoveredCard | null>(null)
-  // Factories render inline via embedded prop — no separate modal state needed
+  const { dashboards, createDashboard: _createDashboard } = useDashboards()
 
   const handleHoverCard = useCallback((card: HoveredCard | null) => setHoveredCard(card), [])
   const handleAddCards = useCallback((cards: CardSuggestion[]) => onAddCards(cards), [onAddCards])
@@ -109,6 +111,19 @@ export function DashboardCustomizer({
             <TemplateGallerySection
               onApplyTemplate={handleApplyTemplate}
               dashboardName={dashboardName}
+            />
+          )}
+
+          {activeSection === 'create-dashboard' && (
+            <CreateDashboardModal
+              isOpen={true}
+              onClose={() => setActiveSection('dashboards')}
+              onCreate={async (name) => {
+                await _createDashboard(name)
+                setActiveSection('dashboards')
+              }}
+              existingNames={dashboards.map(d => d.name)}
+              embedded
             />
           )}
 
