@@ -68,10 +68,10 @@ export function TemplateGallerySection({ onApplyTemplate, dashboardName }: Templ
         </div>
         {/* Category quick-filter pills */}
         <div className="flex flex-wrap items-center gap-1.5 mt-2">
-          <span className="text-2xs text-muted-foreground mr-1">Filter:</span>
+          <span className="text-xs text-muted-foreground mr-1">Filter:</span>
           <button
             onClick={() => setSelectedCategory('all')}
-            className={`px-2 py-0.5 text-2xs rounded-full transition-colors ${
+            className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
               selectedCategory === 'all'
                 ? 'bg-purple-500/20 text-purple-400'
                 : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
@@ -83,7 +83,7 @@ export function TemplateGallerySection({ onApplyTemplate, dashboardName }: Templ
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`px-2 py-0.5 text-2xs rounded-full transition-colors ${
+              className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
                 selectedCategory === cat.id
                   ? 'bg-purple-500/20 text-purple-400'
                   : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
@@ -119,11 +119,11 @@ export function TemplateGallerySection({ onApplyTemplate, dashboardName }: Templ
             <div className="p-3">
               <h4 className="text-sm font-medium text-foreground">{template.name} Collection</h4>
               <p className="text-xs text-muted-foreground mt-1">{template.description}</p>
-              <p className="text-2xs text-muted-foreground/70 mt-1">
+              <p className="text-xs text-muted-foreground/70 mt-1">
                 {(template.cards || []).map(c => formatCardTitle(c.card_type)).join(', ')}
               </p>
               <div className="flex items-center justify-between mt-3">
-                <span className="text-2xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   {(template.cards || []).length} {t('dashboard.addCard.cards', 'cards')}
                 </span>
                 {appliedTemplate === template.id ? (

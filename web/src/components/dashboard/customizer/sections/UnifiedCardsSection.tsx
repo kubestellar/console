@@ -237,12 +237,12 @@ export function UnifiedCardsSection({
           </div>
           {/* Quick AI prompts — click to auto-generate card suggestions */}
           <div className="flex flex-wrap items-center gap-1.5 mt-2">
-            <span className="text-2xs text-muted-foreground mr-1">Try:</span>
+            <span className="text-xs text-muted-foreground mr-1">Try:</span>
             {aiExamples.map((example) => (
               <button
                 key={example}
                 onClick={() => { handleUnifiedSearch(example); handleGenerateWithQuery(example) }}
-                className="px-2 py-0.5 text-2xs bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground rounded-full transition-colors"
+                className="px-2 py-0.5 text-xs bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground rounded-full transition-colors"
               >
                 {example}
               </button>
@@ -260,7 +260,7 @@ export function UnifiedCardsSection({
               </p>
               <button
                 onClick={() => { setAiSuggestions([]); setSelectedAiCards(new Set()); setBrowseSearch('') }}
-                className="text-2xs text-muted-foreground hover:text-foreground transition-colors"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 Clear &amp; show all cards
               </button>
@@ -286,7 +286,7 @@ export function UnifiedCardsSection({
                       <span className="text-sm">{visualizationIcons[card.visualization]}</span>
                       <span className="text-xs font-medium text-foreground">{tCard(`cards:titles.${card.type}`, card.title)}</span>
                     </div>
-                    <p className="text-2xs text-muted-foreground line-clamp-1">{wrapAbbreviations(tCard(`cards:descriptions.${card.type}`, card.description))}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-1">{wrapAbbreviations(tCard(`cards:descriptions.${card.type}`, card.description))}</p>
                   </button>
                 )
               })}
