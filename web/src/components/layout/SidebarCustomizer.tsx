@@ -83,8 +83,9 @@ function SortableItem({ item, onRemove, renderIcon }: SortableItemProps) {
     >
       <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
       {renderIcon(item.icon, 'w-4 h-4 text-muted-foreground')}
-      <span className="flex-1 text-sm text-foreground">{item.name}</span>
-      <span className="text-xs text-muted-foreground">{item.href}</span>
+      <span className="text-sm text-foreground">{item.name}</span>
+      <span className="text-2xs text-muted-foreground/50">{item.href}</span>
+      <span className="flex-1" />
       {/* Allow removing any item except the main Dashboard (/) */}
       {item.href !== '/' && (
         <button
