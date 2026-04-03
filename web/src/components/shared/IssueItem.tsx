@@ -80,7 +80,7 @@ export function IssueItem({
           <span className="text-xs text-muted-foreground">({issue.namespace})</span>
         </div>
         <span className={cn('text-xs px-2 py-1 rounded', statusBgClass)}>
-          {isPod ? (issue as PodIssue).status : `${(issue as DeploymentIssue).readyReplicas}/${(issue as DeploymentIssue).replicas} ready`}
+          {isPod ? (issue as PodIssue).status : `${(issue as DeploymentIssue).readyReplicas}/${(issue as DeploymentIssue).replicas} ${t('common.ready').toLowerCase()}`}
         </span>
       </button>
 
@@ -95,7 +95,7 @@ export function IssueItem({
             {isPod ? (
               <>
                 <div>
-                  <span className="text-muted-foreground">Status:</span>
+                  <span className="text-muted-foreground">{t('common.status')}:</span>
                   <span className="ml-2 text-red-400">{(issue as PodIssue).status}</span>
                 </div>
                 {(issue as PodIssue).restarts !== undefined && (issue as PodIssue).restarts! > 0 && (
@@ -106,7 +106,7 @@ export function IssueItem({
                 )}
                 {(issue as PodIssue).issues.length > 0 && (
                   <div>
-                    <span className="text-muted-foreground">Issues:</span>
+                    <span className="text-muted-foreground">{t('shared.issueItem.issues')}:</span>
                     <ul className="ml-4 mt-1 list-disc list-inside text-red-400">
                       {(issue as PodIssue).issues.map((msg, j) => (
                         <li key={j}>{msg}</li>
@@ -118,9 +118,9 @@ export function IssueItem({
             ) : (
               <>
                 <div>
-                  <span className="text-muted-foreground">Replicas:</span>
+                  <span className="text-muted-foreground">{t('common.replicas')}:</span>
                   <span className="ml-2 text-foreground">
-                    {(issue as DeploymentIssue).readyReplicas}/{(issue as DeploymentIssue).replicas} ready
+                    {(issue as DeploymentIssue).readyReplicas}/{(issue as DeploymentIssue).replicas} {t('common.ready').toLowerCase()}
                   </span>
                 </div>
                 {(issue as DeploymentIssue).message && (
@@ -140,7 +140,7 @@ export function IssueItem({
                   className="flex items-center gap-2 px-3 py-1.5 rounded bg-secondary/50 text-foreground hover:bg-secondary transition-colors text-xs"
                 >
                   <Eye className="w-3 h-3" />
-                  View Details
+                  {t('common.viewDetails')}
                 </button>
               )}
               {onTroubleshoot && (
@@ -152,7 +152,7 @@ export function IssueItem({
                   )}
                 >
                   <Wrench className="w-3 h-3" />
-                  Troubleshoot
+                  {t('shared.issueItem.troubleshoot')}
                 </button>
               )}
             </div>

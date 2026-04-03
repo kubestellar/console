@@ -16,6 +16,7 @@ import {
   Package,
   HardDrive,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useSearchIndex, CATEGORY_ORDER, type SearchCategory, type SearchItem } from '../../../hooks/useSearchIndex'
 import { useMissions } from '../../../hooks/useMissions'
 import { useSidebarConfig, DISCOVERABLE_DASHBOARDS } from '../../../hooks/useSidebarConfig'
@@ -66,6 +67,7 @@ function SearchResultsPanel({
   /** Called when results change so the parent can handle Enter key selection and analytics */
   onResultsChange: (flatResults: SearchItem[], totalCount: number) => void
 }) {
+  const { t } = useTranslation()
   const { results, totalCount } = useSearchIndex(searchQuery)
 
   // Flatten results into a single list for keyboard navigation
@@ -140,7 +142,7 @@ function SearchResultsPanel({
           {/* Total count footer */}
           {totalCount > flatResults.length && (
             <div className="px-4 py-2 text-xs text-muted-foreground/50 text-center border-t border-border/50">
-              Showing {flatResults.length} of {totalCount} results
+              {t('layout.navbar.showingResults', { shown: flatResults.length, total: totalCount })}
             </div>
           )}
 
@@ -157,7 +159,7 @@ function SearchResultsPanel({
             >
               <Bot className="w-4 h-4 text-muted-foreground shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">Ask AI about this</p>
+                <p className="text-sm font-medium">{t('layout.navbar.askAIAboutThis')}</p>
                 <p className="text-xs text-muted-foreground truncate">&quot;{searchQuery}&quot;</p>
               </div>
               <kbd className="text-2xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground/70 shrink-0">
@@ -170,7 +172,7 @@ function SearchResultsPanel({
         <div className="py-4">
           {/* No results - show Ask AI prominently */}
           <div className="px-4 py-2 text-center mb-2">
-            <p className="text-muted-foreground text-sm">No results for &quot;{searchQuery}&quot;</p>
+            <p className="text-muted-foreground text-sm">{t('layout.navbar.noResultsFor', { query: searchQuery })}</p>
           </div>
           <div className="border-t border-border/50">
             <button
@@ -184,8 +186,8 @@ function SearchResultsPanel({
             >
               <Bot className="w-5 h-5 text-muted-foreground shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">Ask AI instead</p>
-                <p className="text-xs text-muted-foreground truncate">Start a mission: &quot;{searchQuery}&quot;</p>
+                <p className="text-sm font-medium">{t('layout.navbar.askAIInstead')}</p>
+                <p className="text-xs text-muted-foreground truncate">{t('layout.navbar.startMission', { query: searchQuery })}</p>
               </div>
               <kbd className="text-2xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground/70 shrink-0">
                 &crarr;
@@ -199,6 +201,7 @@ function SearchResultsPanel({
 }
 
 export function SearchDropdown() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
   const { openSidebar, setActiveMission, startMission } = useMissions()
@@ -388,7 +391,7 @@ export function SearchDropdown() {
           }}
           onFocus={() => { openSearch(); cmdKHint.action(); emitGlobalSearchOpened('click') }}
           onBlur={() => { if (searchQuery.trim()) emitGlobalSearchQueried(searchQuery.trim().length, totalCountRef.current) }}
-          placeholder="Search or ask AI anything..."
+          placeholder={t('layout.navbar.searchPlaceholder')}
           className="w-full pl-10 pr-16 py-2 bg-secondary rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
         />
         <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 px-1.5 py-0.5 text-xs text-muted-foreground bg-secondary rounded">

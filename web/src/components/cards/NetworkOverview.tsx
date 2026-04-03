@@ -11,7 +11,7 @@ import { ClusterStatusDot } from '../ui/ClusterStatusBadge'
 import { useTranslation } from 'react-i18next'
 
 export function NetworkOverview() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['common', 'cards'])
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { services, isLoading: servicesLoading, isRefreshing, isDemoFallback, consecutiveFailures, isFailed } = useCachedServices()
 
@@ -103,7 +103,7 @@ export function NetworkOverview() {
   if (showSkeleton) {
     return (
       <div className="h-full flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading network data...</div>
+        <div className="animate-pulse text-muted-foreground">{t('cards:networkOverview.loadingNetwork')}</div>
       </div>
     )
   }
@@ -111,8 +111,8 @@ export function NetworkOverview() {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No network services</p>
-        <p className="text-xs mt-1">Services will appear when deployed</p>
+        <p className="text-sm">{t('cards:networkOverview.noNetworkServices')}</p>
+        <p className="text-xs mt-1">{t('cards:networkOverview.servicesWillAppear')}</p>
       </div>
     )
   }
@@ -123,7 +123,7 @@ export function NetworkOverview() {
       {filteredClusters.length > 0 && (
         <div className="flex items-center gap-2 mb-3 px-2 py-1.5 bg-secondary/30 rounded-lg">
           <Activity className="w-3 h-3 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">Cluster Health:</span>
+          <span className="text-xs text-muted-foreground">{t('cards:networkOverview.clusterHealth')}</span>
           {stats.healthyClusters > 0 && (
             <span className="flex items-center gap-1 text-xs">
               <ClusterStatusDot state="healthy" size="sm" />

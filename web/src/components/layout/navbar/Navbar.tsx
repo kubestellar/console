@@ -93,7 +93,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
           <span className="text-[10px] text-muted-foreground tracking-wide">{branding.tagline}</span>
         </button>
         {__DEV_MODE__ && (
-          <span className="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-green-500/20 text-green-400 border border-green-500/30 rounded-full" title="Development mode — not connected to production">
+          <span className="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-green-500/20 text-green-400 border border-green-500/30 rounded-full" title={t('layout.navbar.devModeTitle')}>
             DEV
           </span>
         )}

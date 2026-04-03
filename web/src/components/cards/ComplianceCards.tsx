@@ -101,6 +101,7 @@ Please install at least one tool and verify it is producing scan results.`
 // ── Falco (static demo data — no live hook yet) ───────────────────────
 
 export function FalcoAlerts({ config: _config }: CardConfig) {
+  const { t } = useTranslation(['common', 'cards'])
   const { isDemoMode } = useDemoMode()
 
   // Falco has no live data hook yet so isDemoData is always true.
@@ -122,24 +123,24 @@ export function FalcoAlerts({ config: _config }: CardConfig) {
         <div className="flex items-start gap-2 p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs">
           <AlertCircle className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-purple-400 font-medium">Falco Integration</p>
+            <p className="text-purple-400 font-medium">{t('cards:falcoAlerts.integration')}</p>
             <p className="text-muted-foreground">
-              Install Falco for runtime security monitoring.{' '}
+              {t('cards:falcoAlerts.installDescription')}{' '}
               <a
                 href="https://falco.org/docs/install-operate/installation/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-purple-400 hover:underline"
               >
-                Install guide &rarr;
+                {t('cards:falcoAlerts.installGuide')} &rarr;
               </a>
             </p>
           </div>
         </div>
         <div className="flex flex-col items-center justify-center py-4 text-muted-foreground text-sm">
           <Shield className="w-6 h-6 mb-2 text-purple-400" />
-          <p>No Falco alerts available</p>
-          <p className="text-xs mt-1">Install Falco to see runtime security alerts</p>
+          <p>{t('cards:falcoAlerts.noAlertsAvailable')}</p>
+          <p className="text-xs mt-1">{t('cards:falcoAlerts.installToSee')}</p>
         </div>
       </div>
     )
@@ -172,7 +173,7 @@ export function FalcoAlerts({ config: _config }: CardConfig) {
 // ── Trivy Vulnerability Scanner ─────────────────────────────────────────
 
 export function TrivyScan({ config: _config }: CardConfig) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['common', 'cards'])
   const { statuses, aggregated, isLoading, isRefreshing, installed, hasErrors, isDemoData, clustersChecked, totalClusters, refetch } = useTrivy()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
@@ -243,7 +244,7 @@ Please proceed step by step.`,
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         {totalClusters > 0 && (
           <span className="text-xs text-muted-foreground">
-            Checking clusters... {clustersChecked}/{totalClusters}
+            {t('cards:trivyScan.checkingClusters', { checked: clustersChecked, total: totalClusters })}
           </span>
         )}
       </div>
@@ -256,7 +257,7 @@ Please proceed step by step.`,
       {!allChecked && totalClusters > 0 && !isRefreshing && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="w-3 h-3 animate-spin" />
-          <span>Checking clusters... {clustersChecked}/{totalClusters}</span>
+          <span>{t('cards:trivyScan.checkingClusters', { checked: clustersChecked, total: totalClusters })}</span>
         </div>
       )}
 
@@ -265,11 +266,11 @@ Please proceed step by step.`,
         <div className="flex items-start gap-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-xs">
           <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-red-400 font-medium">Failed to fetch scanner data</p>
+            <p className="text-red-400 font-medium">{t('cards:trivyScan.failedToFetch')}</p>
             <p className="text-muted-foreground">
-              Check API connectivity or scanner service status.{' '}
+              {t('cards:trivyScan.checkConnectivity')}{' '}
               <button onClick={() => refetch()} className="text-red-400 hover:underline">
-                Retry →
+                {t('cards:trivyScan.retry')} →
               </button>
             </p>
           </div>
@@ -281,11 +282,11 @@ Please proceed step by step.`,
         <div className="flex items-start gap-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs">
           <AlertCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-cyan-400 font-medium">Trivy Integration</p>
+            <p className="text-cyan-400 font-medium">{t('cards:trivyScan.integration')}</p>
             <p className="text-muted-foreground">
-              Install Trivy Operator for vulnerability scanning.{' '}
+              {t('cards:trivyScan.installDescription')}{' '}
               <button onClick={handleInstall} className="text-cyan-400 hover:underline">
-                Install with an AI Mission →
+                {t('cards:trivyScan.installWithMission')} →
               </button>
             </p>
           </div>
@@ -297,11 +298,11 @@ Please proceed step by step.`,
         <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs">
           <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-amber-400 font-medium">No Scan Data</p>
+            <p className="text-amber-400 font-medium">{t('cards:trivyScan.noScanData')}</p>
             <p className="text-muted-foreground">
-              Trivy is installed but no vulnerability reports found.{' '}
+              {t('cards:trivyScan.installedNoReports')}{' '}
               <button onClick={handleTroubleshoot} className="text-amber-400 hover:underline">
-                Fix with an AI Mission →
+                {t('cards:trivyScan.fixWithMission')} →
               </button>
             </p>
           </div>
@@ -331,7 +332,7 @@ Please proceed step by step.`,
           if (first) setModalCluster(first.cluster)
         }}
         role="button"
-        aria-label="View vulnerability scan details"
+        aria-label={t('cards:trivyScan.viewDetailsAria')}
         tabIndex={0}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -350,17 +351,17 @@ Please proceed step by step.`,
         </div>
         <div className="p-2 rounded-lg bg-orange-500/10 text-center hover:bg-orange-500/20 transition-colors group/sev relative">
           <p className="text-xl font-bold text-orange-400">{filtered.high}</p>
-          <p className="text-xs text-muted-foreground">High</p>
+          <p className="text-xs text-muted-foreground">{t('cards:trivyScan.high')}</p>
           <p className="text-[9px] text-orange-400/70 mt-0.5 leading-tight">{TRIVY_SEVERITY.high.description}</p>
         </div>
         <div className="p-2 rounded-lg bg-yellow-500/10 text-center hover:bg-yellow-500/20 transition-colors group/sev relative">
           <p className="text-xl font-bold text-yellow-400">{filtered.medium}</p>
-          <p className="text-xs text-muted-foreground">Medium</p>
+          <p className="text-xs text-muted-foreground">{t('cards:trivyScan.medium')}</p>
           <p className="text-[9px] text-yellow-400/70 mt-0.5 leading-tight">{TRIVY_SEVERITY.medium.description}</p>
         </div>
         <div className="p-2 rounded-lg bg-blue-500/10 text-center hover:bg-blue-500/20 transition-colors group/sev relative">
           <p className="text-xl font-bold text-blue-400">{filtered.low}</p>
-          <p className="text-xs text-muted-foreground">Low</p>
+          <p className="text-xs text-muted-foreground">{t('cards:trivyScan.low')}</p>
           <p className="text-[9px] text-blue-400/70 mt-0.5 leading-tight">{TRIVY_SEVERITY.low.description}</p>
         </div>
       </div>
@@ -391,6 +392,7 @@ Please proceed step by step.`,
 // ── Kubescape Security Posture ──────────────────────────────────────────
 
 export function KubescapeScan({ config: _config }: CardConfig) {
+  const { t } = useTranslation(['common', 'cards'])
   const { statuses, aggregated, isLoading, isRefreshing, installed, hasErrors, isDemoData, clustersChecked, totalClusters, refetch } = useKubescape()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
@@ -465,7 +467,7 @@ Please proceed step by step.`,
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         {totalClusters > 0 && (
           <span className="text-xs text-muted-foreground">
-            Checking clusters... {clustersChecked}/{totalClusters}
+            {t('cards:kubescapeScan.checkingClusters', { checked: clustersChecked, total: totalClusters })}
           </span>
         )}
       </div>
@@ -478,7 +480,7 @@ Please proceed step by step.`,
       {!allChecked && totalClusters > 0 && !isRefreshing && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="w-3 h-3 animate-spin" />
-          <span>Checking clusters... {clustersChecked}/{totalClusters}</span>
+          <span>{t('cards:kubescapeScan.checkingClusters', { checked: clustersChecked, total: totalClusters })}</span>
         </div>
       )}
 
@@ -487,11 +489,11 @@ Please proceed step by step.`,
         <div className="flex items-start gap-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-xs">
           <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-red-400 font-medium">Failed to fetch scanner data</p>
+            <p className="text-red-400 font-medium">{t('cards:kubescapeScan.failedToFetch')}</p>
             <p className="text-muted-foreground">
-              Check API connectivity or scanner service status.{' '}
+              {t('cards:kubescapeScan.checkConnectivity')}{' '}
               <button onClick={() => refetch()} className="text-red-400 hover:underline">
-                Retry →
+                {t('cards:kubescapeScan.retry')} →
               </button>
             </p>
           </div>
@@ -503,11 +505,11 @@ Please proceed step by step.`,
         <div className="flex items-start gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-xs">
           <AlertCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-green-400 font-medium">Kubescape Integration</p>
+            <p className="text-green-400 font-medium">{t('cards:kubescapeScan.integration')}</p>
             <p className="text-muted-foreground">
-              Install Kubescape for security posture management.{' '}
+              {t('cards:kubescapeScan.installDescription')}{' '}
               <button onClick={handleInstall} className="text-green-400 hover:underline">
-                Install with an AI Mission →
+                {t('cards:kubescapeScan.installWithMission')} →
               </button>
             </p>
           </div>
@@ -519,11 +521,11 @@ Please proceed step by step.`,
         <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs">
           <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-amber-400 font-medium">No Scan Data</p>
+            <p className="text-amber-400 font-medium">{t('cards:kubescapeScan.noScanData')}</p>
             <p className="text-muted-foreground">
-              Kubescape is installed but no scan results detected.{' '}
+              {t('cards:kubescapeScan.installedNoResults')}{' '}
               <button onClick={handleTroubleshoot} className="text-amber-400 hover:underline">
-                Fix with an AI Mission →
+                {t('cards:kubescapeScan.fixWithMission')} →
               </button>
             </p>
           </div>
@@ -552,7 +554,7 @@ Please proceed step by step.`,
           if (first) setModalCluster(first.cluster)
         }}
         role="button"
-        aria-label="View compliance scan details"
+        aria-label={t('cards:kubescapeScan.viewDetailsAria')}
         tabIndex={0}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -594,11 +596,11 @@ Please proceed step by step.`,
 
         {/* Controls summary */}
         <div className="flex items-center justify-center gap-3 mb-2 text-[10px] text-muted-foreground">
-          <span>{filtered.passedControls} passed</span>
+          <span>{filtered.passedControls} {t('cards:kubescapeScan.passed')}</span>
           <span className="text-muted-foreground/30">|</span>
-          <span className={filtered.failedControls > 0 ? 'text-red-400' : ''}>{filtered.failedControls} failed</span>
+          <span className={filtered.failedControls > 0 ? 'text-red-400' : ''}>{filtered.failedControls} {t('cards:kubescapeScan.failed')}</span>
           <span className="text-muted-foreground/30">|</span>
-          <span>{filtered.totalControls} total</span>
+          <span>{filtered.totalControls} {t('cards:kubescapeScan.total')}</span>
         </div>
 
         {/* Framework list with descriptions */}
@@ -619,7 +621,7 @@ Please proceed step by step.`,
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
                         className="text-muted-foreground/50 hover:text-blue-400 transition-colors flex-shrink-0"
-                        title="View framework specification"
+                        title={t('cards:kubescapeScan.viewFrameworkSpec')}
                       >
                         <ExternalLink className="w-2.5 h-2.5" />
                       </a>
@@ -663,6 +665,7 @@ Please proceed step by step.`,
 // ── Policy Violations Aggregated ────────────────────────────────────────
 
 export function PolicyViolations({ config: _config }: CardConfig) {
+  const { t } = useTranslation(['common', 'cards'])
   const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, isDemoData: kyvernoDemoData, installed: kyvernoInstalled, hasErrors: kyvernoHasErrors, clustersChecked: kyvernoChecked, totalClusters: kyvernoTotal, refetch: kyvernoRefetch } = useKyverno()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
@@ -752,11 +755,11 @@ export function PolicyViolations({ config: _config }: CardConfig) {
         <div className="space-y-3">
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
             <Loader2 className="w-8 h-8 mb-2 opacity-50 animate-spin" />
-            <p className="text-sm">Scanning for policy violations...</p>
+            <p className="text-sm">{t('cards:policyViolations.scanning')}</p>
             {kyvernoTotal > 0 ? (
-              <p className="text-xs mt-1">Checking clusters... {kyvernoChecked}/{kyvernoTotal}</p>
+              <p className="text-xs mt-1">{t('cards:policyViolations.checkingClusters', { checked: kyvernoChecked, total: kyvernoTotal })}</p>
             ) : (
-              <p className="text-xs mt-1">Checking Kyverno reports across clusters</p>
+              <p className="text-xs mt-1">{t('cards:policyViolations.checkingReports')}</p>
             )}
           </div>
         </div>
@@ -769,11 +772,11 @@ export function PolicyViolations({ config: _config }: CardConfig) {
           <div className="flex items-start gap-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-xs">
             <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-red-400 font-medium">Failed to fetch scanner data</p>
+              <p className="text-red-400 font-medium">{t('cards:policyViolations.failedToFetch')}</p>
               <p className="text-muted-foreground">
-                Check API connectivity or scanner service status.{' '}
+                {t('cards:policyViolations.checkConnectivity')}{' '}
                 <button onClick={() => kyvernoRefetch()} className="text-red-400 hover:underline">
-                  Retry →
+                  {t('cards:policyViolations.retry')} →
                 </button>
               </p>
             </div>
@@ -788,11 +791,11 @@ export function PolicyViolations({ config: _config }: CardConfig) {
           <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs">
             <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-amber-400 font-medium">No Policies Configured</p>
+              <p className="text-amber-400 font-medium">{t('cards:policyViolations.noPoliciesConfigured')}</p>
               <p className="text-muted-foreground">
-                Kyverno is installed but no policies are active.{' '}
+                {t('cards:policyViolations.kyvernoNoPolicies')}{' '}
                 <button onClick={handleTroubleshoot} className="text-amber-400 hover:underline">
-                  Fix with an AI Mission →
+                  {t('cards:policyViolations.fixWithMission')} →
                 </button>
               </p>
             </div>
@@ -800,8 +803,8 @@ export function PolicyViolations({ config: _config }: CardConfig) {
         )}
         <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
           <Shield className="w-8 h-8 mb-2 opacity-50" />
-          <p className="text-sm">No policy violations detected</p>
-          <p className="text-xs mt-1">All resources comply with active policies</p>
+          <p className="text-sm">{t('cards:policyViolations.noViolationsDetected')}</p>
+          <p className="text-xs mt-1">{t('cards:policyViolations.allResourcesComply')}</p>
         </div>
       </div>
     )
@@ -813,7 +816,7 @@ export function PolicyViolations({ config: _config }: CardConfig) {
       {!kyvernoAllChecked && kyvernoTotal > 0 && !kyvernoRefreshing && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="w-3 h-3 animate-spin" />
-          <span>Checking clusters... {kyvernoChecked}/{kyvernoTotal}</span>
+          <span>{t('cards:policyViolations.checkingClusters', { checked: kyvernoChecked, total: kyvernoTotal })}</span>
         </div>
       )}
 
@@ -839,7 +842,7 @@ export function PolicyViolations({ config: _config }: CardConfig) {
             className="group flex items-center justify-between p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
             onClick={() => setSelectedViolation(v)}
             role="button"
-            aria-label={`View violation details for ${v.policy}`}
+            aria-label={t('cards:policyViolations.viewViolationAria', { policy: v.policy })}
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -892,6 +895,7 @@ export function PolicyViolations({ config: _config }: CardConfig) {
 // ── Compliance Score Gauge ──────────────────────────────────────────────
 
 export function ComplianceScore({ config: _config }: CardConfig) {
+  const { t } = useTranslation(['common', 'cards'])
   const { statuses: kubescapeStatuses, aggregated: kubescapeAgg, isLoading: ksLoading, isDemoData: ksDemoData, installed: ksInstalled, clustersChecked: ksChecked, totalClusters: ksTotal } = useKubescape()
   const { statuses: kyvernoStatuses, isLoading: kyLoading, isDemoData: kyDemoData, installed: kyInstalled, clustersChecked: kyChecked, totalClusters: kyTotal } = useKyverno()
   const { selectedClusters } = useGlobalFilters()
@@ -1013,7 +1017,7 @@ export function ComplianceScore({ config: _config }: CardConfig) {
       {!allChecked && totalChecking > 0 && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="w-3 h-3 animate-spin" />
-          <span>Checking clusters... {minChecked}/{totalChecking}</span>
+          <span>{t('cards:complianceScore.checkingClusters', { checked: minChecked, total: totalChecking })}</span>
         </div>
       )}
 
@@ -1037,8 +1041,7 @@ export function ComplianceScore({ config: _config }: CardConfig) {
         <div className="flex items-center gap-1.5 text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-md px-2 py-1.5">
           <AlertTriangle className="w-3 h-3 flex-shrink-0" />
           <span>
-            Partial coverage — {scoreClusters.length} of {totalChecking} clusters reporting.
-            Score may not reflect full cluster state.
+            {t('cards:complianceScore.partialCoverage', { reporting: scoreClusters.length, total: totalChecking })}
           </span>
         </div>
       )}
@@ -1048,11 +1051,11 @@ export function ComplianceScore({ config: _config }: CardConfig) {
         <div className="flex items-start gap-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs">
           <AlertCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-cyan-400 font-medium">No Compliance Tools Detected</p>
+            <p className="text-cyan-400 font-medium">{t('cards:complianceScore.noToolsDetected')}</p>
             <p className="text-muted-foreground">
-              Install Kubescape or Kyverno to see live compliance scores.{' '}
+              {t('cards:complianceScore.installDescription')}{' '}
               <button onClick={handleInstallCompliance} className="text-cyan-400 hover:underline">
-                Install with an AI Mission →
+                {t('cards:complianceScore.installWithMission')} →
               </button>
             </p>
           </div>
@@ -1066,7 +1069,7 @@ export function ComplianceScore({ config: _config }: CardConfig) {
             className="flex items-center justify-center py-4 cursor-pointer group"
             onClick={() => setShowBreakdown(true)}
             role="button"
-            aria-label="View detailed compliance score breakdown"
+            aria-label={t('cards:complianceScore.viewBreakdownAria')}
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -1074,7 +1077,7 @@ export function ComplianceScore({ config: _config }: CardConfig) {
                 setShowBreakdown(true)
               }
             }}
-            title="Click for detailed breakdown"
+            title={t('cards:complianceScore.clickForBreakdown')}
           >
             <div className="relative w-24 h-24 group-hover:scale-105 transition-transform">
               <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">

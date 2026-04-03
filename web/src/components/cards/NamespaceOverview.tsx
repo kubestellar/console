@@ -21,7 +21,7 @@ interface NamespaceOverviewProps {
 }
 
 export function NamespaceOverview({ config }: NamespaceOverviewProps) {
-  const { t } = useTranslation('common')
+  const { t } = useTranslation(['common', 'cards'])
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersConsecutiveFailures } = useClusters()
 
   // Initialize from config prop (card-level override) or persisted localStorage value (#3115)
@@ -147,8 +147,8 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No namespaces</p>
-        <p className="text-xs mt-1">Connect to clusters to see namespaces</p>
+        <p className="text-sm">{t('cards:namespaceOverview.noNamespaces')}</p>
+        <p className="text-xs mt-1">{t('cards:namespaceOverview.connectToClusters')}</p>
       </div>
     )
   }
@@ -177,7 +177,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
             setSelectedNamespace('')
           }}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
-          title="Select a cluster to view namespace details"
+          title={t('cards:namespaceOverview.selectClusterTitle')}
         >
           <option value="">{t('selectors.selectCluster')}</option>
           {clusters.map(c => (
@@ -189,7 +189,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
           onChange={(e) => setSelectedNamespace(e.target.value)}
           disabled={!selectedCluster}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
-          title={selectedCluster ? "Select a namespace to view details" : "Select a cluster first"}
+          title={selectedCluster ? t('cards:namespaceOverview.selectNamespaceTitle') : t('cards:namespaceOverview.selectClusterFirst')}
         >
           <option value="">{t('selectors.selectNamespace')}</option>
           {namespaces.map(ns => (
@@ -200,12 +200,12 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
 
       {needsSelection ? (
         <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-          Select a cluster and namespace to view details
+          {t('cards:namespaceOverview.selectClusterAndNamespace')}
         </div>
       ) : (
         <>
           {/* Scope badge */}
-          <div className="flex items-center gap-2 mb-4 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 cursor-default min-w-0 overflow-hidden" title={`Viewing namespace ${selectedNamespace} in cluster ${selectedCluster}`}>
+          <div className="flex items-center gap-2 mb-4 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 cursor-default min-w-0 overflow-hidden" title={t('cards:namespaceOverview.viewingNamespace', { namespace: selectedNamespace, cluster: selectedCluster })}>
             <div className="shrink-0"><ClusterBadge cluster={selectedCluster} /></div>
             <span className="text-blue-400 shrink-0">/</span>
             <span className="text-sm font-medium text-blue-300 truncate min-w-0">{selectedNamespace}</span>
@@ -220,7 +220,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
             >
               <div className="flex items-center gap-2 mb-1">
                 <Box className={`w-4 h-4 ${podIssues.length > 0 ? 'text-red-400' : 'text-green-400'}`} />
-                <span className="text-xs text-muted-foreground">Pods with Issues</span>
+                <span className="text-xs text-muted-foreground">{t('cards:namespaceOverview.podsWithIssues')}</span>
               </div>
               <span className="text-2xl font-bold text-foreground">{podIssues.length}</span>
             </div>
@@ -231,7 +231,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
             >
               <div className="flex items-center gap-2 mb-1">
                 <Activity className={`w-4 h-4 ${deploymentIssues.length > 0 ? 'text-red-400' : 'text-green-400'}`} />
-                <span className="text-xs text-muted-foreground">Deployment Issues</span>
+                <span className="text-xs text-muted-foreground">{t('cards:namespaceOverview.deploymentIssues')}</span>
               </div>
               <span className="text-2xl font-bold text-foreground">{deploymentIssues.length}</span>
             </div>
@@ -240,14 +240,14 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
           {/* Issues list */}
           <div className="flex-1 space-y-2 overflow-y-auto">
             {podIssues.length === 0 && deploymentIssues.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center" title="All pods and deployments in this namespace are healthy">
+              <div className="flex flex-col items-center justify-center h-full text-center" title={t('cards:namespaceOverview.allHealthy')}>
                 <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center mb-2">
                   <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <p className="text-sm text-foreground">Namespace Healthy</p>
-                <p className="text-xs text-muted-foreground">No issues detected</p>
+                <p className="text-sm text-foreground">{t('cards:namespaceOverview.namespaceHealthy')}</p>
+                <p className="text-xs text-muted-foreground">{t('cards:namespaceOverview.noIssuesDetected')}</p>
               </div>
             ) : (
               <>

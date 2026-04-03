@@ -139,7 +139,7 @@ const SORT_OPTIONS: { value: SortByOption; label: string }[] = [
 const CLUSTER_FILTER_STORAGE_KEY = 'kubestellar-card-filter:deployment-missions-clusters'
 
 export function Missions(_props: MissionsProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['common', 'cards'])
   const { missions: liveMissions, activeMissions: liveActive, completedMissions: liveCompleted } = useDeployMissions()
   const { deduplicatedClusters, isLoading, isRefreshing } = useClusters()
   const { isDemoMode: demoMode } = useDemoMode()
@@ -415,7 +415,7 @@ Please:
       {visibleMissions.length === 0 ? (
         <CardEmptyState
           icon={Rocket}
-          title="No missions found"
+          title={t('cards:missionsCard.noMissionsFound')}
           message={localSearch || clusterFilter.length > 0
             ? 'Try adjusting your filters'
             : 'Deploy a workload to start a mission'}
@@ -491,6 +491,7 @@ interface MissionRowProps {
 }
 
 function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRepair }: MissionRowProps) {
+  const { t } = useTranslation(['common', 'cards'])
   const config = STATUS_CONFIG[mission.status] || STATUS_CONFIG.launching
   const StatusIcon = config.icon
   const elapsed = getElapsed(mission.startedAt, mission.completedAt)
@@ -612,7 +613,7 @@ function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRep
           <button
             onClick={() => onDiagnose(mission)}
             className="flex items-center gap-1.5 text-2xs px-2 py-1 rounded bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 border border-purple-500/20 transition-colors"
-            title="AI will analyze pod events, logs, and resource limits to diagnose the failure"
+            title={t('cards:missionsCard.diagnoseTitle')}
           >
             <Stethoscope className="w-3 h-3" />
             Diagnose
@@ -620,7 +621,7 @@ function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRep
           <button
             onClick={() => onRepair(mission)}
             className="flex items-center gap-1.5 text-2xs px-2 py-1 rounded bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 border border-blue-500/20 transition-colors"
-            title="AI will attempt to fix the issue (restart pods, adjust resources, etc.)"
+            title={t('cards:missionsCard.repairTitle')}
           >
             <Wrench className="w-3 h-3" />
             Repair

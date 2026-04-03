@@ -71,7 +71,7 @@ function getStatusColor(status: string) {
 }
 
 function PVCStatusInternal() {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['common', 'cards'])
   const { pvcs, isLoading, isRefreshing, error, consecutiveFailures, isFailed, isDemoFallback, lastRefresh } = useCachedPVCs()
   const { drillToPVC } = useDrillDownActions()
   const { isDemoMode: demoMode } = useDemoMode()
@@ -222,7 +222,7 @@ function PVCStatusInternal() {
       <CardSearchInput
         value={search}
         onChange={setSearch}
-        placeholder="Search PVCs..."
+        placeholder={t('cards:pvcStatus.searchPlaceholder')}
         className="mb-4"
       />
 

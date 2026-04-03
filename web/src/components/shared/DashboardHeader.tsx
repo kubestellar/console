@@ -126,7 +126,7 @@ export function DashboardHeader({
         {/* Reserve fixed width to prevent layout shift */}
         <span
           className={`flex items-center gap-1 text-xs w-[72px] ${isFetching ? 'text-yellow-400 animate-pulse' : 'invisible'}`}
-          title="Updating..."
+          title={t('common.updating')}
           aria-busy={isLoading}
         >
           <Hourglass className="w-3 h-3" />
@@ -142,7 +142,7 @@ export function DashboardHeader({
           <label
             htmlFor={`remember-position-${autoRefreshId || 'default'}`}
             className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground"
-            title="Remember scroll position when navigating away"
+            title={t('shared.dashboardHeader.rememberPosition')}
           >
             <input
               type="checkbox"
@@ -154,13 +154,13 @@ export function DashboardHeader({
               }}
               className="rounded border-border w-3.5 h-3.5"
             />
-            Pin
+            {t('shared.dashboardHeader.pin')}
           </label>
           {onAutoRefreshChange && (
             <label
               htmlFor={autoRefreshId || 'auto-refresh'}
               className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground"
-              title="Auto-refresh every 30s"
+              title={t('shared.dashboardHeader.autoRefreshTitle')}
             >
               <input
                 type="checkbox"
@@ -169,7 +169,7 @@ export function DashboardHeader({
                 onChange={(e) => onAutoRefreshChange(e.target.checked)}
                 className="rounded border-border w-3.5 h-3.5"
               />
-              Auto
+              {t('shared.dashboardHeader.auto')}
             </label>
           )}
           <button
@@ -191,7 +191,7 @@ export function DashboardHeader({
             className="text-xs text-red-400 flex items-center gap-1.5 hover:text-red-300 transition-colors disabled:opacity-50 cursor-pointer"
             role="alert"
             aria-live="polite"
-            title="Click to retry"
+            title={t('shared.dashboardHeader.clickToRetry')}
           >
             <AlertTriangle className="w-3 h-3" aria-hidden="true" />
             <span>{error}</span>
@@ -199,7 +199,7 @@ export function DashboardHeader({
           </button>
         ) : displayTimestamp ? (
           <span className="text-xs text-muted-foreground">
-            Updated {displayTimestamp.toLocaleTimeString()}
+            {t('shared.dashboardHeader.updated', { time: displayTimestamp.toLocaleTimeString() })}
           </span>
         ) : null}
       </div>

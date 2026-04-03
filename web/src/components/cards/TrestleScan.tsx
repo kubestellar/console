@@ -11,6 +11,7 @@
 
 import { useState, useMemo } from 'react'
 import { Shield, ExternalLink, Info, Loader2, ChevronRight, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useTrestle, type OscalProfile } from '../../hooks/useTrestle'
@@ -48,6 +49,7 @@ Please diagnose step by step and fix any issues found.`,
 }
 
 export function TrestleScan({ config: _config }: CardConfig) {
+  const { t } = useTranslation(['common', 'cards'])
   const { statuses, aggregated, isLoading, isRefreshing, installed, isDemoData, lastRefresh, clustersChecked, totalClusters } = useTrestle()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
@@ -152,7 +154,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         {totalClusters > 0 && (
           <span className="text-xs text-muted-foreground">
-            Checking clusters... {clustersChecked}/{totalClusters}
+            {t('cards:trestleScan.checkingClusters', { checked: clustersChecked, total: totalClusters })}
           </span>
         )}
       </div>
@@ -166,17 +168,16 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
         <div className="flex items-start gap-2 p-3 rounded-lg bg-teal-500/10 border border-teal-500/20 text-xs">
           <Shield className="w-4 h-4 text-teal-400 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-teal-400 font-medium">Compliance Trestle (CNCF Sandbox)</p>
+            <p className="text-teal-400 font-medium">{t('cards:trestleScan.cncfSandbox')}</p>
             <p className="text-muted-foreground mt-1">
-              Compliance-as-code using NIST OSCAL. Automates compliance assessment
-              and bridges OSCAL to Kubernetes policy engines.
+              {t('cards:trestleScan.complianceAsCode')}
             </p>
             <div className="flex items-center gap-3 mt-2">
               <button
                 onClick={handleInstall}
                 className="text-teal-400 hover:underline font-medium"
               >
-                Install with AI Mission →
+                {t('cards:trestleScan.installWithMission')} →
               </button>
               <a
                 href="https://oscal-compass.github.io/compliance-trestle/"
@@ -184,7 +185,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
               >
-                Docs <ExternalLink className="w-3 h-3" />
+                {t('cards:trestleScan.docs')} <ExternalLink className="w-3 h-3" />
               </a>
             </div>
           </div>
@@ -200,15 +201,15 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
         <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs">
           <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-amber-400 font-medium">Trestle Installed — No Assessments</p>
+            <p className="text-amber-400 font-medium">{t('cards:trestleScan.installedNoAssessments')}</p>
             <p className="text-muted-foreground mt-1">
-              Compliance Trestle is deployed but no OSCAL assessment results have been generated yet.
+              {t('cards:trestleScan.noAssessmentsDescription')}
             </p>
             <button
               onClick={handleTroubleshoot}
               className="text-amber-400 hover:underline font-medium mt-1"
             >
-              Troubleshoot with AI →
+              {t('cards:trestleScan.troubleshootWithAI')} →
             </button>
           </div>
         </div>
@@ -248,7 +249,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
           <button
             onClick={() => drillToCompliance('', {})}
             className="flex flex-col items-center hover:opacity-80 transition-opacity cursor-pointer"
-            title="View all compliance controls"
+            title={t('cards:trestleScan.viewAllControls')}
           >
             <span className={`text-3xl font-bold ${scoreColor}`}>{filtered.overallScore}%</span>
             <span className={`text-xs ${scoreColor}`}>{scoreLabel}</span>
@@ -257,37 +258,37 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
             <button
               onClick={() => drillToCompliance('pass', {})}
               className="flex items-center gap-1 hover:text-green-400 transition-colors cursor-pointer"
-              title="View passing controls"
+              title={t('cards:trestleScan.viewPassingControls')}
             >
               <CheckCircle className="w-3 h-3 text-green-400" />
-              <span>{filtered.passedControls} passed</span>
+              <span>{filtered.passedControls} {t('cards:trestleScan.passed')}</span>
             </button>
             <button
               onClick={() => drillToCompliance('fail', {})}
               className="flex items-center gap-1 hover:text-red-400 transition-colors cursor-pointer"
-              title="View failing controls"
+              title={t('cards:trestleScan.viewFailingControls')}
             >
               <XCircle className="w-3 h-3 text-red-400" />
-              <span>{filtered.failedControls} failed</span>
+              <span>{filtered.failedControls} {t('cards:trestleScan.failed')}</span>
             </button>
             {filtered.otherControls > 0 && (
               <button
                 onClick={() => drillToCompliance('other', {})}
                 className="flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer"
-                title="View other controls"
+                title={t('cards:trestleScan.viewOtherControls')}
               >
                 <Info className="w-3 h-3 text-muted-foreground" />
-                <span>{filtered.otherControls} other</span>
+                <span>{filtered.otherControls} {t('cards:trestleScan.other')}</span>
               </button>
             )}
           </div>
         </div>
-        <button onClick={() => drillToCompliance('', {})} className="cursor-pointer" title="View all compliance controls">
+        <button onClick={() => drillToCompliance('', {})} className="cursor-pointer" title={t('cards:trestleScan.viewAllControls')}>
           <StatusBadge
             color={filtered.overallScore >= SCORE_GOOD_THRESHOLD ? 'green' : filtered.overallScore >= SCORE_WARNING_THRESHOLD ? 'yellow' : 'red'}
             size="xs"
           >
-            {filtered.totalControls} controls
+            {t('cards:trestleScan.controls', { count: filtered.totalControls })}
           </StatusBadge>
         </button>
       </div>
@@ -296,15 +297,14 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
       <div className="flex items-start gap-2 p-2 rounded-lg bg-teal-500/5 border border-teal-500/10 text-xs">
         <Info className="w-3.5 h-3.5 text-teal-400 flex-shrink-0 mt-0.5" />
         <p className="text-muted-foreground">
-          <span className="text-teal-400 font-medium">OSCAL Compliance</span> — Automated assessment
-          using NIST OSCAL framework via Compliance Trestle (CNCF Sandbox).
+          <span className="text-teal-400 font-medium">{t('cards:trestleScan.oscalCompliance')}</span> — {t('cards:trestleScan.oscalDescription')}
         </p>
       </div>
 
       {/* Profile Breakdown */}
       <div className="flex-1 overflow-y-auto space-y-2">
         {allProfiles.length === 0 && (
-          <p className="text-xs text-muted-foreground text-center py-2">No profiles assessed</p>
+          <p className="text-xs text-muted-foreground text-center py-2">{t('cards:trestleScan.noProfilesAssessed')}</p>
         )}
         {(allProfiles || []).map((profile) => {
           const profileScore = profile.totalControls > 0
@@ -321,7 +321,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
                 <button
                   onClick={() => setExpandedProfile(isExpanded ? null : profile.name)}
                   className="flex-1 text-left"
-                  title={`Toggle ${profile.name} details`}
+                  title={t('cards:trestleScan.toggleProfileDetails', { name: profile.name })}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -343,13 +343,13 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
                 <button
                   onClick={() => drillToCompliance('', { profile: profile.name })}
                   className="cursor-pointer"
-                  title={`View ${profile.name} controls`}
+                  title={t('cards:trestleScan.viewProfileControls', { name: profile.name })}
                 >
                   <StatusBadge
                     color={profileScore >= SCORE_GOOD_THRESHOLD ? 'green' : profileScore >= SCORE_WARNING_THRESHOLD ? 'yellow' : 'red'}
                     size="xs"
                   >
-                    {profile.totalControls} controls
+                    {t('cards:trestleScan.controls', { count: profile.totalControls })}
                   </StatusBadge>
                 </button>
               </div>
@@ -371,26 +371,26 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
                   <button
                     onClick={() => drillToCompliance('pass', { profile: profile.name })}
                     className="flex items-center gap-1 text-green-400 hover:opacity-80 transition-opacity cursor-pointer"
-                    title={`View passing controls for ${profile.name}`}
+                    title={t('cards:trestleScan.viewPassingProfileControls', { name: profile.name })}
                   >
                     <CheckCircle className="w-3 h-3" />
-                    <span>{profile.controlsPassed} pass</span>
+                    <span>{profile.controlsPassed} {t('cards:trestleScan.pass')}</span>
                   </button>
                   <button
                     onClick={() => drillToCompliance('fail', { profile: profile.name })}
                     className="flex items-center gap-1 text-red-400 hover:opacity-80 transition-opacity cursor-pointer"
-                    title={`View failing controls for ${profile.name}`}
+                    title={t('cards:trestleScan.viewFailingProfileControls', { name: profile.name })}
                   >
                     <XCircle className="w-3 h-3" />
-                    <span>{profile.controlsFailed} fail</span>
+                    <span>{profile.controlsFailed} {t('cards:trestleScan.fail')}</span>
                   </button>
                   <button
                     onClick={() => drillToCompliance('other', { profile: profile.name })}
                     className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                    title={`View other controls for ${profile.name}`}
+                    title={t('cards:trestleScan.viewOtherProfileControls', { name: profile.name })}
                   >
                     <Info className="w-3 h-3" />
-                    <span>{profile.controlsOther} other</span>
+                    <span>{profile.controlsOther} {t('cards:trestleScan.other')}</span>
                   </button>
                 </div>
               )}
@@ -402,7 +402,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
       {/* Per-cluster status (if multiple clusters) */}
       {Object.values(statuses).filter(s => s.installed).length > 1 && (
         <div className="pt-2 border-t border-border/50">
-          <p className="text-2xs text-muted-foreground mb-1">Per-cluster compliance</p>
+          <p className="text-2xs text-muted-foreground mb-1">{t('cards:trestleScan.perClusterCompliance')}</p>
           <div className="flex flex-wrap gap-1">
             {Object.values(statuses)
               .filter(s => s.installed && (selectedClusters.length === 0 || selectedClusters.includes(s.cluster)))

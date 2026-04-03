@@ -416,14 +416,14 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
           <button
             onClick={saveTranscript}
             className="p-1 hover:bg-secondary rounded transition-colors"
-            title="Save transcript"
+            title={t('layout.missionSidebar.saveTranscript')}
           >
             <Download className="w-4 h-4 text-muted-foreground" />
           </button>
           <button
             onClick={() => setShowDeleteConfirm(true)}
             className="p-1 hover:bg-red-500/20 rounded transition-colors"
-            title="Delete mission"
+            title={t('layout.missionSidebar.deleteMission')}
           >
             <Trash2 className="w-4 h-4 text-muted-foreground hover:text-red-400" />
           </button>
@@ -431,7 +431,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
             <button
               onClick={onToggleFullScreen}
               className="p-1 hover:bg-secondary rounded transition-colors"
-              title="Expand to full screen"
+              title={t('layout.missionSidebar.expandToFullScreen')}
             >
               <Maximize2 className="w-4 h-4 text-muted-foreground" />
             </button>
@@ -1056,7 +1056,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               {conversationSummary.hasToolExecution && (
                 <div className="flex items-center gap-2 text-sm text-green-400">
                   <CheckCircle className="w-3.5 h-3.5" />
-                  <span>Commands executed</span>
+                  <span>{t('layout.missionSidebar.commandsExecuted')}</span>
                 </div>
               )}
 
@@ -1143,9 +1143,9 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
         dismissMission(mission.id)
         setActiveMission(null)
       }}
-      title="Delete Mission"
-      message="Are you sure you want to delete this mission? This action cannot be undone."
-      confirmLabel="Delete"
+      title={t('layout.missionSidebar.deleteMission')}
+      message={t('layout.missionSidebar.deleteMissionConfirm')}
+      confirmLabel={t('common.delete')}
       variant="danger"
     />
     </>

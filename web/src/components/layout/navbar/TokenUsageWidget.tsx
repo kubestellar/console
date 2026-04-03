@@ -63,11 +63,11 @@ export function TokenUsageWidget() {
             ? 'bg-yellow-500/10 text-yellow-400'
             : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
         }`}
-        title={`Token usage: ${percentage.toFixed(0)}%${isDemoData ? ' (Demo Data)' : ''}`}
+        title={t('layout.navbar.tokenUsageTitle', { percentage: percentage.toFixed(0), suffix: isDemoData ? ` (${t('layout.navbar.demoData')})` : '' })}
       >
         <Coins className={cn("w-4 h-4 transition-transform", tokenAnimating && "animate-bounce text-yellow-400 scale-125")} />
         {isDemoData && (
-          <StatusBadge color="yellow" role="img" aria-label="Demo mode active">Demo</StatusBadge>
+          <StatusBadge color="yellow" role="img" aria-label={t('layout.navbar.demoModeActive')}>{t('layout.demo')}</StatusBadge>
         )}
         <span className="text-xs font-medium hidden sm:inline">{percentage.toFixed(0)}%</span>
         <div className="w-12 h-1.5 bg-secondary rounded-full overflow-hidden hidden sm:block">
@@ -90,15 +90,15 @@ export function TokenUsageWidget() {
       {showTokenDetails && (
         <div className="absolute top-full right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-xl p-4 z-50">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-medium text-foreground">Token Usage</h4>
+            <h4 className="text-sm font-medium text-foreground">{t('layout.navbar.tokenUsage')}</h4>
             {isDemoData && (
-              <StatusBadge color="yellow" variant="outline">Demo Data</StatusBadge>
+              <StatusBadge color="yellow" variant="outline">{t('layout.navbar.demoData')}</StatusBadge>
             )}
           </div>
           {isDemoData && (
             <div className="mb-3 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
               <p className="text-xs text-yellow-400/80">
-                Showing simulated token usage. Connect to kc-agent for live data.
+                {t('layout.navbar.simulatedTokenUsage')}
               </p>
             </div>
           )}
@@ -108,11 +108,11 @@ export function TokenUsageWidget() {
               <span className="text-foreground font-mono">{usage.used.toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Limit</span>
+              <span className="text-muted-foreground">{t('layout.navbar.limit')}</span>
               <span className="text-foreground font-mono">{usage.limit.toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Remaining</span>
+              <span className="text-muted-foreground">{t('layout.navbar.remaining')}</span>
               <span className="text-foreground font-mono">{remaining.toLocaleString()}</span>
             </div>
             <div className="h-2 bg-secondary rounded-full overflow-hidden mt-2">
@@ -142,24 +142,24 @@ export function TokenUsageWidget() {
                   : 'text-green-400'
               }`}>
                 {isDemoData
-                  ? 'Demo Mode'
+                  ? t('layout.demoMode')
                   : alertLevel === 'stopped'
-                  ? 'AI Disabled'
+                  ? t('layout.navbar.aiDisabled')
                   : alertLevel === 'critical'
-                  ? 'Critical'
+                  ? t('common.critical')
                   : alertLevel === 'warning'
-                  ? 'Warning'
-                  : 'Normal'}
+                  ? t('common.warning')
+                  : t('common.normal')}
               </span>
               <span className="text-muted-foreground">
-                Resets {new Date(usage.resetDate).toLocaleDateString()}
+                {t('layout.navbar.resets', { date: new Date(usage.resetDate).toLocaleDateString() })}
               </span>
             </div>
           </div>
           {/* Category breakdown - always show all features */}
           {usage.byCategory && (
             <div className="mt-3 pt-3 border-t border-border">
-              <div className="text-xs text-muted-foreground mb-2">Breakdown by Feature</div>
+              <div className="text-xs text-muted-foreground mb-2">{t('layout.navbar.breakdownByFeature')}</div>
               {/* Category list with token counts */}
               <div className="space-y-1.5">
                 {(['missions', 'diagnose', 'insights', 'predictions', 'other'] as TokenCategory[])
@@ -213,7 +213,7 @@ export function TokenUsageWidget() {
               onClick={() => navigate(getSettingsWithHash('token-usage-settings'))}
               className="w-full text-xs text-purple-400 hover:text-purple-300 text-center"
             >
-              Configure limits in Settings
+              {t('layout.navbar.configureLimitsInSettings')}
             </button>
           </div>
         </div>

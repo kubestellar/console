@@ -178,7 +178,7 @@ Please proceed step by step.`,
           target="_blank"
           rel="noopener noreferrer"
           className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
-          title="Kyverno Documentation"
+          title={t('cards:kyvernoPolicies.documentation')}
         >
           <ExternalLink className="w-4 h-4" />
         </a>

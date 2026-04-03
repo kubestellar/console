@@ -36,6 +36,7 @@ function FilterSection<T extends string>({
   onSelectAll: () => void
   onDeselectAll: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <div className="p-3 border-b border-border">
       <div className="flex items-center justify-between mb-2">
@@ -45,10 +46,10 @@ function FilterSection<T extends string>({
         </div>
         <div className="flex gap-2">
           <button onClick={onSelectAll} className="text-xs text-purple-400 hover:text-purple-300">
-            All
+            {t('common.all')}
           </button>
           <button onClick={onDeselectAll} className="text-xs text-muted-foreground hover:text-foreground">
-            None
+            {t('common.none')}
           </button>
         </div>
       </div>
@@ -119,20 +120,20 @@ export function ClusterFilterPanel() {
   // Helper to get cluster status tooltip
   const getClusterStatusTooltip = (clusterName: string) => {
     const info = clusterInfoMap[clusterName]
-    if (!info) return 'Unknown status'
-    if (info.healthy) return `Healthy - ${info.nodeCount || 0} nodes, ${info.podCount || 0} pods`
-    if (info.errorMessage) return `Error: ${info.errorMessage}`
+    if (!info) return t('layout.navbar.unknownStatus')
+    if (info.healthy) return t('layout.navbar.healthyStatus', { nodeCount: info.nodeCount || 0, podCount: info.podCount || 0 })
+    if (info.errorMessage) return `${t('common.error')}: ${info.errorMessage}`
     if (info.errorType) {
       const errorMessages: Record<string, string> = {
-        timeout: 'Connection timed out - cluster may be offline',
-        auth: 'Authentication failed - check credentials',
-        network: 'Network error - unable to reach cluster',
-        certificate: 'Certificate error - check TLS configuration',
-        unknown: 'Unknown error - check cluster status',
+        timeout: t('layout.navbar.errorTimeout'),
+        auth: t('layout.navbar.errorAuth'),
+        network: t('layout.navbar.errorNetwork'),
+        certificate: t('layout.navbar.errorCertificate'),
+        unknown: t('layout.navbar.errorUnknown'),
       }
-      return errorMessages[info.errorType] || 'Cluster unavailable'
+      return errorMessages[info.errorType] || t('layout.navbar.clusterUnavailable')
     }
-    return 'Cluster unavailable'
+    return t('layout.navbar.clusterUnavailable')
   }
 
   const handleSave = () => {
@@ -172,7 +173,7 @@ export function ClusterFilterPanel() {
               ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_6px_rgba(139,92,246,0.2)]'
               : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
           )}
-          title={isFiltered ? 'Filters active - click to modify' : 'No filters - click to filter'}
+          title={isFiltered ? t('layout.navbar.filtersActive') : t('layout.navbar.noFilters')}
         >
           <Filter className="w-4 h-4" />
           {/* Color dot from active filter set, or generic purple dot */}
@@ -315,13 +316,13 @@ export function ClusterFilterPanel() {
                     onClick={selectAllClusters}
                     className="text-xs text-purple-400 hover:text-purple-300"
                   >
-                    All
+                    {t('common.all')}
                   </button>
                   <button
                     onClick={deselectAllClusters}
                     className="text-xs text-muted-foreground hover:text-foreground"
                   >
-                    None
+                    {t('common.none')}
                   </button>
                 </div>
               </div>

@@ -1081,7 +1081,13 @@
     "tls": "TLS",
     "noNetworkPolicies": "No network policies found",
     "noServices": "No services found",
-    "noIngresses": "No ingresses found"
+    "noIngresses": "No ingresses found",
+    "loadingNetwork": "Loading network data...",
+    "noNetworkServices": "No network services",
+    "servicesWillAppear": "Services will appear when deployed",
+    "clusterHealth": "Cluster Health:",
+    "healthy": "healthy",
+    "topNamespaces": "Top Namespaces"
   },
   "dataCompliance": {
     "gdpr": "GDPR",
@@ -1289,7 +1295,9 @@
     "constraintTemplate": "Constraint Template",
     "targetResources": "Target Resources",
     "matchLabels": "Match Labels",
-    "excludeNamespaces": "Exclude Namespaces"
+    "excludeNamespaces": "Exclude Namespaces",
+    "createOPAPolicy": "Create OPA Policy",
+    "documentation": "OPA Gatekeeper Documentation"
   },
   "weather": {
     "location": "Location",
@@ -2985,7 +2993,8 @@
     "viewVm": "View VM {{name}} in {{namespace}}"
   },
   "kyvernoPolicies": {
-    "scanningClusters": "Scanning clusters..."
+    "scanningClusters": "Scanning clusters...",
+    "documentation": "Kyverno Documentation"
   },
   "recommendedPolicies": {
     "scanningClusters": "Scanning clusters..."
@@ -3054,5 +3063,210 @@
   },
   "kagentAgentPicker": {
     "noAgentsAvailable": "No kagent agents available"
+  },
+  "falcoAlerts": {
+    "integration": "Falco Integration",
+    "installDescription": "Install Falco for runtime security monitoring.",
+    "installGuide": "Install guide",
+    "noAlertsAvailable": "No Falco alerts available",
+    "installToSee": "Install Falco to see runtime security alerts"
+  },
+  "trivyScan": {
+    "checkingClusters": "Checking clusters... {{checked}}/{{total}}",
+    "failedToFetch": "Failed to fetch scanner data",
+    "checkConnectivity": "Check API connectivity or scanner service status.",
+    "retry": "Retry",
+    "integration": "Trivy Integration",
+    "installDescription": "Install Trivy Operator for vulnerability scanning.",
+    "installWithMission": "Install with an AI Mission",
+    "noScanData": "No Scan Data",
+    "installedNoReports": "Trivy is installed but no vulnerability reports found.",
+    "fixWithMission": "Fix with an AI Mission",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+    "viewDetailsAria": "View vulnerability scan details"
+  },
+  "kubescapeScan": {
+    "checkingClusters": "Checking clusters... {{checked}}/{{total}}",
+    "failedToFetch": "Failed to fetch scanner data",
+    "checkConnectivity": "Check API connectivity or scanner service status.",
+    "retry": "Retry",
+    "integration": "Kubescape Integration",
+    "installDescription": "Install Kubescape for security posture management.",
+    "installWithMission": "Install with an AI Mission",
+    "noScanData": "No Scan Data",
+    "installedNoResults": "Kubescape is installed but no scan results detected.",
+    "fixWithMission": "Fix with an AI Mission",
+    "passed": "passed",
+    "failed": "failed",
+    "total": "total",
+    "viewFrameworkSpec": "View framework specification",
+    "viewDetailsAria": "View compliance scan details"
+  },
+  "policyViolations": {
+    "scanning": "Scanning for policy violations...",
+    "checkingClusters": "Checking clusters... {{checked}}/{{total}}",
+    "checkingReports": "Checking Kyverno reports across clusters",
+    "failedToFetch": "Failed to fetch scanner data",
+    "checkConnectivity": "Check API connectivity or scanner service status.",
+    "retry": "Retry",
+    "noPoliciesConfigured": "No Policies Configured",
+    "kyvernoNoPolicies": "Kyverno is installed but no policies are active.",
+    "fixWithMission": "Fix with an AI Mission",
+    "noViolationsDetected": "No policy violations detected",
+    "allResourcesComply": "All resources comply with active policies",
+    "viewViolationAria": "View violation details for {{policy}}"
+  },
+  "complianceScore": {
+    "checkingClusters": "Checking clusters... {{checked}}/{{total}}",
+    "partialCoverage": "Partial coverage — {{reporting}} of {{total}} clusters reporting. Score may not reflect full cluster state.",
+    "noToolsDetected": "No Compliance Tools Detected",
+    "installDescription": "Install Kubescape or Kyverno to see live compliance scores.",
+    "installWithMission": "Install with an AI Mission",
+    "viewBreakdownAria": "View detailed compliance score breakdown",
+    "clickForBreakdown": "Click for detailed breakdown"
+  },
+  "trestleScan": {
+    "checkingClusters": "Checking clusters... {{checked}}/{{total}}",
+    "cncfSandbox": "Compliance Trestle (CNCF Sandbox)",
+    "complianceAsCode": "Compliance-as-code using NIST OSCAL. Automates compliance assessment and bridges OSCAL to Kubernetes policy engines.",
+    "installWithMission": "Install with AI Mission",
+    "docs": "Docs",
+    "installedNoAssessments": "Trestle Installed — No Assessments",
+    "noAssessmentsDescription": "Compliance Trestle is deployed but no OSCAL assessment results have been generated yet.",
+    "troubleshootWithAI": "Troubleshoot with AI",
+    "viewAllControls": "View all compliance controls",
+    "viewPassingControls": "View passing controls",
+    "viewFailingControls": "View failing controls",
+    "viewOtherControls": "View other controls",
+    "passed": "passed",
+    "failed": "failed",
+    "other": "other",
+    "controls": "{{count}} controls",
+    "oscalCompliance": "OSCAL Compliance",
+    "oscalDescription": "Automated assessment using NIST OSCAL framework via Compliance Trestle (CNCF Sandbox).",
+    "noProfilesAssessed": "No profiles assessed",
+    "toggleProfileDetails": "Toggle {{name}} details",
+    "viewProfileControls": "View {{name}} controls",
+    "viewPassingProfileControls": "View passing controls for {{name}}",
+    "viewFailingProfileControls": "View failing controls for {{name}}",
+    "viewOtherProfileControls": "View other controls for {{name}}",
+    "pass": "pass",
+    "fail": "fail",
+    "perClusterCompliance": "Per-cluster compliance"
+  },
+  "gpuNodeHealth": {
+    "sortStatus": "Status",
+    "sortNode": "Node",
+    "sortCluster": "Cluster",
+    "sortGPUCount": "GPU Count",
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "unhealthy": "Unhealthy",
+    "installed": "Installed",
+    "notInstalled": "Not installed",
+    "tier": "Tier {{tier}}",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "install": "Install",
+    "update": "Update",
+    "noPermissions": "No permissions",
+    "installCronJob": "Install GPU Health CronJob",
+    "namespace": "Namespace",
+    "scheduleCron": "Schedule (cron)",
+    "checkTier": "Check Tier",
+    "tier4Warning": "Tier 4 creates debug pods on GPU nodes for hardware inspection",
+    "last": "Last: {{result}}",
+    "active": "{{count}} active",
+    "succeeded": "{{count}} succeeded",
+    "jobsFailed": "{{count}} failed",
+    "jobs": "Jobs:",
+    "latestResults": "Latest CronJob Results",
+    "issues": "Issues",
+    "viewNodeDetails": "View Node Details",
+    "noGPUNodes": "No GPU Nodes Found",
+    "connectClusters": "Connect clusters with GPU nodes to enable health monitoring",
+    "cronJobSetup": "CronJob Setup",
+    "searchPlaceholder": "Search nodes, clusters, GPU types...",
+    "cronJobTitle": "GPU Health CronJob",
+    "automatedChecks": "Automated health checks per cluster",
+    "noGPUClusters": "No GPU clusters available",
+    "clearSearch": "Clear search",
+    "cronJobManagement": "CronJob Management",
+    "checking": "Checking {{cluster}}...",
+    "viewResults": "View results",
+    "uninstallCronJob": "Uninstall CronJob",
+    "retry": "Retry",
+    "tierLabel": "Tier:"
+  },
+  "iframeEmbed": {
+    "configureUrl": "Configure URL",
+    "openInNewTab": "Open in new tab",
+    "settings": "Settings",
+    "embedConfiguration": "Embed Configuration",
+    "urlLabel": "URL",
+    "titleLabel": "Title",
+    "autoRefreshLabel": "Auto-refresh (seconds)",
+    "heightLabel": "Height (px)",
+    "quickPresets": "Quick presets",
+    "saveAndLoad": "Save & Load",
+    "clear": "Clear",
+    "iframeNote": "Note: Some sites block iframe embedding. If content doesn't load, try opening in a new tab.",
+    "unableToLoad": "Unable to load content",
+    "retryButton": "Retry",
+    "openButton": "Open",
+    "noUrlConfigured": "No URL configured",
+    "clickSettings": "Click settings to add a URL",
+    "autoRefreshEvery": "Auto-refreshes every {{seconds}}s",
+    "titlePlaceholder": "My Dashboard"
+  },
+  "namespaceOverview": {
+    "noNamespaces": "No namespaces",
+    "connectToClusters": "Connect to clusters to see namespaces",
+    "selectClusterAndNamespace": "Select a cluster and namespace to view details",
+    "viewingNamespace": "Viewing namespace {{namespace}} in cluster {{cluster}}",
+    "podsWithIssues": "Pods with Issues",
+    "podIssueCount": "{{count}} pod issue(s) - Click to view first issue",
+    "noPodIssues": "No pod issues detected",
+    "deploymentIssues": "Deployment Issues",
+    "deploymentIssueCount": "{{count}} deployment issue(s) - Click to view first issue",
+    "noDeploymentIssues": "No deployment issues detected",
+    "namespaceHealthy": "Namespace Healthy",
+    "noIssuesDetected": "No issues detected",
+    "allHealthy": "All pods and deployments in this namespace are healthy",
+    "replicasReady": "{{ready}}/{{total}} replicas ready - Click to view details",
+    "podStatusClick": "Pod {{name}} in {{status}} state - Click to view details",
+    "selectClusterTitle": "Select a cluster to view namespace details",
+    "selectNamespaceTitle": "Select a namespace to view details",
+    "selectClusterFirst": "Select a cluster first"
+  },
+  "recentEvents": {
+    "searchPlaceholder": "Search events..."
+  },
+  "appStatus": {
+    "searchPlaceholder": "Search workloads..."
+  },
+  "rbacExplorer": {
+    "searchPlaceholder": "Search subjects, bindings, clusters..."
+  },
+  "iso27001Audit": {
+    "searchPlaceholder": "Search checks..."
+  },
+  "pvcStatus": {
+    "searchPlaceholder": "Search PVCs..."
+  },
+  "podHealthTrend": {
+    "selectTimeRange": "Select time range"
+  },
+  "missionsCard": {
+    "noMissionsFound": "No missions found",
+    "diagnoseTitle": "AI will analyze pod events, logs, and resource limits to diagnose the failure",
+    "repairTitle": "AI will attempt to fix the issue (restart pods, adjust resources, etc.)"
+  },
+  "githubActivity": {
+    "addRepo": "Add repo",
+    "done": "Done",
+    "removeRepo": "Remove repo"
   }
 }

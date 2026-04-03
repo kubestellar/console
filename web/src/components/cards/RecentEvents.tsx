@@ -25,7 +25,7 @@ function getMinutesAgo(timestamp: string | undefined): string {
 }
 
 export function RecentEvents() {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['common', 'cards'])
   const { isDemoMode } = useDemoMode()
   const {
     events,
@@ -154,7 +154,7 @@ export function RecentEvents() {
       </div>
 
       {/* Search */}
-      <CardSearchInput value={filters.search} onChange={filters.setSearch} placeholder="Search events..." />
+      <CardSearchInput value={filters.search} onChange={filters.setSearch} placeholder={t('cards:recentEvents.searchPlaceholder')} />
 
       {/* Error Display */}
       {isFailed && (

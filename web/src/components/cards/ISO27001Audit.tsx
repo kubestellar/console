@@ -7,6 +7,7 @@
  */
 
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Shield, CheckCircle2, XCircle, AlertTriangle, MinusCircle, Terminal, ChevronDown, ChevronRight } from 'lucide-react'
 import { useCachedISO27001Audit, type ISO27001Finding } from '../../hooks/useCachedData'
 import { useCardLoadingState, useCardDemoState } from './CardDataContext'
@@ -90,6 +91,7 @@ interface ISO27001AuditProps {
 }
 
 export function ISO27001Audit({ config }: ISO27001AuditProps) {
+  const { t } = useTranslation(['common', 'cards'])
   const clusterConfig = config?.cluster as string | undefined
 
   // 1. Demo mode detection
@@ -258,7 +260,7 @@ export function ISO27001Audit({ config }: ISO27001AuditProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search checks..."
+        placeholder={t('cards:iso27001Audit.searchPlaceholder')}
         className="mb-2"
       />
 

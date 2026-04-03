@@ -76,11 +76,12 @@ function NavigationProgress() {
 
 // Lightweight fallback shown while a lazy route chunk loads.
 export function ContentLoadingSkeleton() {
+  const { t } = useTranslation()
   return (
     <div className="flex items-center justify-center h-64">
       <div className="flex flex-col items-center gap-3">
         <div className="h-6 w-6 border-2 border-muted border-t-foreground rounded-full animate-spin" />
-        <span className="text-sm text-muted-foreground">Loading…</span>
+        <span className="text-sm text-muted-foreground">{t('labels.loading')}</span>
       </div>
     </div>
   )
@@ -332,17 +333,17 @@ export function Layout({ children }: LayoutProps) {
               <>
                 <Wifi className="w-4 h-4 text-green-400" aria-hidden="true" />
                 <span className="text-sm text-green-400 font-medium">
-                  Network Reconnected
+                  {t('layout.networkReconnected')}
                 </span>
               </>
             ) : (
               <>
                 <WifiOff className="w-4 h-4 text-red-400" aria-hidden="true" />
                 <span className="text-sm text-red-400 font-medium">
-                  Network Disconnected
+                  {t('layout.networkDisconnected')}
                 </span>
                 <span className="text-xs text-red-400/70">
-                  Check your internet connection
+                  {t('layout.checkInternetConnection')}
                 </span>
               </>
             )}
@@ -367,12 +368,12 @@ export function Layout({ children }: LayoutProps) {
                 : <Box className="w-4 h-4 text-yellow-400" aria-hidden="true" />
               }
               <span className="text-sm text-yellow-400 font-medium">
-                {isAuthenticatedNoAgent ? 'Agent Not Connected' : 'Demo Mode'}
+                {isAuthenticatedNoAgent ? t('layout.agentNotConnected') : t('layout.demoMode')}
               </span>
               <span className="hidden md:inline text-xs text-yellow-400/70">
                 {isAuthenticatedNoAgent
-                  ? 'Showing sample data — connect the kc-agent to monitor your real clusters'
-                  : 'Showing sample data only — install locally to monitor your real clusters'
+                  ? t('layout.sampleDataConnectAgent')
+                  : t('layout.sampleDataInstallLocally')
                 }
               </span>
               <Button
@@ -384,14 +385,14 @@ export function Layout({ children }: LayoutProps) {
                 {isAuthenticatedNoAgent ? (
                   <>
                     <Plug className="w-3.5 h-3.5" aria-hidden="true" />
-                    <span className="hidden lg:inline">How to connect the agent</span>
-                    <span className="lg:hidden">Connect</span>
+                    <span className="hidden lg:inline">{t('layout.howToConnectAgent')}</span>
+                    <span className="lg:hidden">{t('layout.connect')}</span>
                   </>
                 ) : (
                   <>
                     <Rocket className="w-3.5 h-3.5" aria-hidden="true" />
-                    <span className="hidden lg:inline">Want your own local KubeStellar Console?</span>
-                    <span className="lg:hidden">Get Console</span>
+                    <span className="hidden lg:inline">{t('layout.wantYourOwnConsole')}</span>
+                    <span className="lg:hidden">{t('layout.getConsole')}</span>
                   </>
                 )}
               </Button>
@@ -418,10 +419,10 @@ export function Layout({ children }: LayoutProps) {
           <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 py-1.5 px-3 md:px-4">
             <Plug className="w-4 h-4 text-blue-400" aria-hidden="true" />
             <span className="text-sm text-blue-400 font-medium">
-              Agent Not Detected
+              {t('layout.agentNotDetected')}
             </span>
             <span className="hidden md:inline text-xs text-blue-400/70">
-              Install the kc-agent or configure CORS to connect your clusters
+              {t('layout.installAgentOrCORS')}
             </span>
             <Button
               variant="accent"
@@ -430,14 +431,14 @@ export function Layout({ children }: LayoutProps) {
               className="hidden sm:flex ml-2 rounded-full"
             >
               <Plug className="w-3.5 h-3.5" aria-hidden="true" />
-              <span className="hidden lg:inline">Setup Guide</span>
-              <span className="lg:hidden">Setup</span>
+              <span className="hidden lg:inline">{t('layout.setupGuide')}</span>
+              <span className="lg:hidden">{t('layout.setup')}</span>
             </Button>
             <button
               onClick={() => setShowInClusterAgentDialog(true)}
               className="sm:hidden ml-1 p-2 min-h-11 min-w-11 flex items-center justify-center hover:bg-blue-500/20 rounded-full transition-colors"
-              aria-label="Open agent setup guide"
-              title="Open agent setup guide"
+              aria-label={t('layout.openAgentSetupGuide')}
+              title={t('layout.openAgentSetupGuide')}
             >
               <Plug className="w-3.5 h-3.5 text-blue-400" aria-hidden="true" />
             </button>
@@ -465,18 +466,18 @@ export function Layout({ children }: LayoutProps) {
                 className="flex items-center gap-1 text-xs px-2 py-0.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded transition-colors whitespace-nowrap"
               >
                 <Settings className="w-3 h-3" />
-                <span className="hidden sm:inline">Settings</span>
+                <span className="hidden sm:inline">{t('navigation.settings')}</span>
               </Link>
               <button
                 onClick={toggleDemoMode}
                 className="text-xs px-2 py-0.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded transition-colors whitespace-nowrap"
               >
-                <span className="hidden sm:inline">Switch to </span>Demo
+                <span className="hidden sm:inline">{t('layout.switchTo')} </span>{t('layout.demo')}
               </button>
               <button
                 onClick={() => setOfflineBannerDismissed(true)}
                 className="p-2 min-h-11 min-w-11 flex items-center justify-center hover:bg-orange-500/20 rounded-full transition-colors"
-                title="Dismiss"
+                title={t('actions.dismiss')}
               >
                 <X className="w-3.5 h-3.5 text-orange-400" />
               </button>
@@ -544,37 +545,37 @@ export function Layout({ children }: LayoutProps) {
             {backendDown ? (
               <>
                 <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
-                <span>Connection lost</span>
+                <span>{t('layout.connectionLost')}</span>
                 {restartState === 'restarting' ? (
                   <button disabled className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-muted text-muted-foreground rounded text-xs cursor-wait">
                     <Loader2 className="w-3 h-3 animate-spin" />
-                    Restarting&hellip;
+                    {t('layout.restarting')}
                   </button>
                 ) : restartState === 'waiting' ? (
                   <span className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-muted text-muted-foreground rounded text-xs">
                     <Loader2 className="w-3 h-3 animate-spin" />
-                    Restarted, waiting for connection&hellip;
+                    {t('layout.restartedWaiting')}
                   </span>
                 ) : restartState === 'copied' ? (
                   <span className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-green-800/50 text-green-300 rounded text-xs">
                     <Check className="w-3 h-3" />
-                    Copied!
+                    {t('actions.copied')}
                   </span>
                 ) : (
                   <button
                     onClick={handleRestartBackend}
                     className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-muted hover:bg-muted/80 text-foreground rounded text-xs transition-colors"
-                    title={restartError ?? 'Restart the backend server'}
+                    title={restartError ?? t('layout.restartBackendServer')}
                   >
                     <RotateCcw className="w-3 h-3" />
-                    Restart
+                    {t('layout.restart')}
                   </button>
                 )}
               </>
             ) : (
               <>
                 <div className="w-2 h-2 rounded-full bg-green-400" />
-                Reconnected
+                {t('layout.reconnected')}
               </>
             )}
           </div>
@@ -585,7 +586,7 @@ export function Layout({ children }: LayoutProps) {
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg text-sm bg-blue-950/90 border-blue-800/50 text-blue-200">
             <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
-            <span>Starting up&hellip;</span>
+            <span>{t('layout.startingUp')}</span>
           </div>
         </div>
       )}
@@ -595,14 +596,14 @@ export function Layout({ children }: LayoutProps) {
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg text-sm bg-blue-950/90 border-blue-800/50 text-blue-200">
             <RefreshCw className="w-4 h-4 text-blue-400" />
-            <span>A new version is available</span>
+            <span>{t('layout.newVersionAvailable')}</span>
             <Button
               variant="primary"
               size="sm"
               onClick={() => window.location.reload()}
               className="ml-1 rounded"
             >
-              Reload
+              {t('layout.reload')}
             </Button>
           </div>
         </div>

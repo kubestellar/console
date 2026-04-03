@@ -684,7 +684,7 @@ Let's start by discussing what kind of policy I need.`,
               <button
                 onClick={() => openCreatePolicyModal()}
                 className="p-1 hover:bg-purple-500/10 rounded transition-colors text-muted-foreground hover:text-purple-400"
-                title="Create OPA Policy"
+                title={t('cards:opaPolicies.createOPAPolicy')}
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -693,7 +693,7 @@ Let's start by discussing what kind of policy I need.`,
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
-                title="OPA Gatekeeper Documentation"
+                title={t('cards:opaPolicies.documentation')}
               >
                 <ExternalLink className="w-4 h-4" />
               </a>

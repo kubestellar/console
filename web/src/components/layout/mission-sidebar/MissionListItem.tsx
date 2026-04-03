@@ -7,6 +7,7 @@ import {
   StopCircle,
   Loader2,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { Mission } from '../../../hooks/useMissions'
 import { cn } from '../../../lib/cn'
 import { ConfirmDialog } from '../../../lib/modals'
@@ -22,6 +23,7 @@ export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpan
   isCollapsed: boolean
   onToggleCollapse: () => void
 }) {
+  const { t } = useTranslation()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const config = STATUS_CONFIG[mission.status] || STATUS_CONFIG.pending
   const StatusIcon = config.icon
@@ -36,9 +38,9 @@ export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpan
         setShowDeleteConfirm(false)
         onDismiss()
       }}
-      title="Delete Mission"
-      message="Are you sure you want to delete this mission? This action cannot be undone."
-      confirmLabel="Delete"
+      title={t('layout.missionSidebar.deleteMission')}
+      message={t('layout.missionSidebar.deleteMissionConfirm')}
+      confirmLabel={t('common.delete')}
       variant="danger"
     />
     <div
@@ -54,7 +56,7 @@ export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpan
         <button
           onClick={(e) => { e.stopPropagation(); onToggleCollapse() }}
           className="p-0.5 hover:bg-secondary/50 rounded transition-colors"
-          title={isCollapsed ? "Expand" : "Collapse"}
+          title={isCollapsed ? t('common.expand') : t('common.collapse')}
         >
           {isCollapsed ? (
             <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
@@ -73,7 +75,7 @@ export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpan
           <span className="text-sm font-medium text-foreground truncate">{mission.title}</span>
         </button>
         {mission.status === 'cancelling' && (
-          <span className="p-0.5 flex-shrink-0" title="Cancelling...">
+          <span className="p-0.5 flex-shrink-0" title={t('layout.missionSidebar.cancelling')}>
             <Loader2 className="w-3.5 h-3.5 text-orange-400 animate-spin" />
           </span>
         )}
@@ -81,7 +83,7 @@ export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpan
           <button
             onClick={(e) => { e.stopPropagation(); onTerminate() }}
             className="p-0.5 hover:bg-red-500/20 rounded transition-colors flex-shrink-0"
-            title="Terminate Session"
+            title={t('layout.missionSidebar.terminateSession')}
             data-testid="terminate-session-list-btn"
           >
             <StopCircle className="w-3.5 h-3.5 text-red-400 hover:text-red-300" />
@@ -90,14 +92,14 @@ export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpan
         <button
           onClick={(e) => { e.stopPropagation(); onExpand() }}
           className="p-0.5 hover:bg-secondary/50 rounded transition-colors flex-shrink-0"
-          title="Open full screen"
+          title={t('missionSidebar.fullScreen')}
         >
           <Maximize2 className="w-3.5 h-3.5 text-muted-foreground" />
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true) }}
           className="p-0.5 hover:bg-red-500/20 rounded transition-colors flex-shrink-0"
-          title="Delete mission"
+          title={t('layout.missionSidebar.deleteMission')}
         >
           <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-red-400" />
         </button>

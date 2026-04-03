@@ -43,7 +43,7 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; points: number }[] 
 ]
 
 export function PodHealthTrend() {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['common', 'cards'])
   const { deduplicatedClusters: clusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersFailures } = useClusters()
   const { issues, isLoading: issuesLoading, isRefreshing: issuesRefreshing, isDemoFallback, isFailed: issuesFailed, consecutiveFailures: issuesFailures } = useCachedPodIssues()
 
@@ -277,7 +277,7 @@ export function PodHealthTrend() {
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value as TimeRange)}
               className="px-2 py-1 text-xs rounded-lg bg-secondary border border-border text-foreground cursor-pointer"
-              title="Select time range"
+              title={t('cards:podHealthTrend.selectTimeRange')}
             >
               {TIME_RANGE_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>

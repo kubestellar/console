@@ -9,6 +9,7 @@ import {
   getYouTubeWatchUrl,
 } from '../../../config/learningVideos'
 import { usePlaylistVideos } from '../../../hooks/usePlaylistVideos'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../../lib/cn'
 
 export function LearnDropdown() {
@@ -16,13 +17,14 @@ export function LearnDropdown() {
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { startTour, hasCompletedTour } = useTour()
   const location = useLocation()
+  const { t } = useTranslation()
   const { videos, playlistUrl, loading } = usePlaylistVideos()
 
   const RESOURCES = [
-    { label: 'Documentation', href: 'https://console-docs.kubestellar.io', description: 'Console docs and guides' },
-    { label: 'Getting Started', href: 'https://kubestellar.io/docs/console/overview/introduction', description: 'Quick start guide' },
-    { label: 'Blog', href: 'https://kubestellar.io/blog', description: 'News and updates' },
-    { label: 'YouTube Channel', href: playlistUrl, description: 'Video tutorials playlist' },
+    { label: t('layout.navbar.learn.documentation'), href: 'https://console-docs.kubestellar.io', description: t('layout.navbar.learn.docsDescription') },
+    { label: t('layout.navbar.learn.gettingStarted'), href: 'https://kubestellar.io/docs/console/overview/introduction', description: t('layout.navbar.learn.gettingStartedDescription') },
+    { label: t('layout.navbar.learn.blog'), href: 'https://kubestellar.io/blog', description: t('layout.navbar.learn.blogDescription') },
+    { label: t('layout.navbar.learn.youtubeChannel'), href: playlistUrl, description: t('layout.navbar.learn.youtubeDescription') },
   ]
 
   // Close on route change
@@ -68,10 +70,10 @@ export function LearnDropdown() {
             ? 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
             : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 animate-pulse'
         )}
-        title="Learn"
+        title={t('layout.navbar.learn.title')}
       >
         <BookOpen className="w-5 h-5" />
-        <span className="hidden xl:inline">Learn</span>
+        <span className="hidden xl:inline">{t('layout.navbar.learn.title')}</span>
       </button>
 
       {/* Dropdown */}
@@ -84,11 +86,11 @@ export function LearnDropdown() {
           >
             <LogoWithStar className="w-5 h-5 shrink-0" />
             <div>
-              <div className="text-sm font-medium text-foreground">Take the Tour</div>
-              <div className="text-xs text-muted-foreground">Interactive walkthrough of the console</div>
+              <div className="text-sm font-medium text-foreground">{t('layout.navbar.learn.takeTheTour')}</div>
+              <div className="text-xs text-muted-foreground">{t('layout.navbar.learn.tourDescription')}</div>
             </div>
             {!hasCompletedTour && (
-              <span className="ml-auto text-[10px] font-medium bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">New</span>
+              <span className="ml-auto text-[10px] font-medium bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">{t('layout.navbar.learn.new')}</span>
             )}
           </button>
 
@@ -98,7 +100,7 @@ export function LearnDropdown() {
           <div className="px-4 pt-3 pb-1">
             <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               <Video className="w-3 h-3" />
-              Video Tutorials
+              {t('layout.navbar.learn.videoTutorials')}
             </div>
           </div>
 
@@ -138,14 +140,14 @@ export function LearnDropdown() {
           ) : (
             <div className="px-4 py-4 flex flex-col items-center text-center">
               <GraduationCap className="w-8 h-8 text-muted-foreground/40 mb-2" />
-              <div className="text-xs text-muted-foreground">Coming soon</div>
+              <div className="text-xs text-muted-foreground">{t('layout.navbar.learn.comingSoon')}</div>
               <a
                 href={playlistUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-primary hover:underline mt-1"
               >
-                Subscribe to playlist
+                {t('layout.navbar.learn.subscribeToPlaylist')}
               </a>
             </div>
           )}
@@ -156,7 +158,7 @@ export function LearnDropdown() {
           <div className="px-4 pt-3 pb-1">
             <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               <BookOpen className="w-3 h-3" />
-              Resources
+              {t('layout.navbar.learn.resources')}
             </div>
           </div>
           <div className="px-2 pb-2">

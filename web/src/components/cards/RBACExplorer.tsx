@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from 'react'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { useVirtualizer } from '@tanstack/react-virtual'
+import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { CardSkeleton, CardSearchInput, CardPaginationFooter } from '../../lib/cards/CardComponents'
@@ -56,6 +57,7 @@ const RISK_LEVELS: readonly RiskLevel[] = ['critical', 'high', 'medium', 'low'] 
 // ---------------------------------------------------------------------------
 
 export function RBACExplorer() {
+  const { t } = useTranslation(['common', 'cards'])
   // ---- Live data via hook -------------------------------------------------
   const { findings, isLoading, error, isDemoData, refetch } = useRBACFindings()
 
@@ -204,7 +206,7 @@ export function RBACExplorer() {
       <CardSearchInput
         value={search}
         onChange={setSearch}
-        placeholder="Search subjects, bindings, clusters..."
+        placeholder={t('cards:rbacExplorer.searchPlaceholder')}
         className="mb-2"
       />
 

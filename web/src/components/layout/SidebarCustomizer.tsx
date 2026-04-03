@@ -611,10 +611,10 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
               <div className="mb-4 rounded-xl border border-blue-500/20 bg-blue-500/5 p-3">
                 <h4 className="text-xs font-medium text-blue-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5" />
-                  Recommended Dashboards
+                  {t('sidebar.customizer.recommendedDashboards')}
                 </h4>
                 <p className="text-xs text-muted-foreground mb-2">
-                  Add topic-specific dashboards to your sidebar
+                  {t('sidebar.customizer.addTopicDashboards')}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {available.map(dashboard => (

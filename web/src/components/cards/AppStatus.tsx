@@ -46,7 +46,7 @@ interface AppData {
 }
 
 export function AppStatus(_props: AppStatusProps) {
-  const { t: _t } = useTranslation()
+  const { t } = useTranslation(['common', 'cards'])
   const { drillToDeployment } = useDrillDownActions()
   const { deployments, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, lastRefresh } = useCachedDeployments()
 
@@ -225,7 +225,7 @@ export function AppStatus(_props: AppStatusProps) {
       <CardSearchInput
         value={search}
         onChange={setSearch}
-        placeholder="Search workloads..."
+        placeholder={t('cards:appStatus.searchPlaceholder')}
         className="mb-3"
       />
 

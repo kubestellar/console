@@ -569,7 +569,7 @@ export function Sidebar() {
             }}
             aria-expanded={!config.collapsed}
             className="p-1.5 rounded-full border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 shadow-md transition-colors"
-            title={config.collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={config.collapsed ? t('layout.sidebar.expandSidebar') : t('layout.sidebar.collapseSidebar')}
           >
             {config.collapsed ? <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" /> : <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />}
           </button>
@@ -581,7 +581,7 @@ export function Sidebar() {
                 ? "bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 border-purple-500/30"
                 : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
             )}
-            title={isPinned ? 'Unpin sidebar (auto-collapse on mouse leave)' : 'Pin sidebar open'}
+            title={isPinned ? t('layout.sidebar.unpinSidebar') : t('layout.sidebar.pinSidebar')}
           >
             {isPinned ? <Pin className="w-3.5 h-3.5" /> : <PinOff className="w-3.5 h-3.5" />}
           </button>

@@ -885,14 +885,14 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
               onClick={handleAddRepo}
               disabled={!repoInput.trim()}
               className="p-1 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Add repo"
+              title={t('cards:githubActivity.addRepo')}
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => setIsEditingRepos(false)}
               className="p-1 rounded hover:bg-secondary text-muted-foreground"
-              title="Done"
+              title={t('cards:githubActivity.done')}
             >
               <Check className="w-3.5 h-3.5" />
             </button>
@@ -914,7 +914,7 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
                   <button
                     onClick={(e) => { e.stopPropagation(); handleRemoveRepo(repo) }}
                     className="hover:text-red-400 transition-colors"
-                    title="Remove repo"
+                    title={t('cards:githubActivity.removeRepo')}
                   >
                     <X className="w-3 h-3" />
                   </button>

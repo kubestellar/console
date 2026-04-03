@@ -6,12 +6,14 @@
  * doesn't demand attention.
  */
 
+import { useTranslation } from 'react-i18next'
 import { useVisitStreak } from '../../../hooks/useVisitStreak'
 
 /** Minimum streak to display the badge — showing "1" is meaningless */
 const MIN_DISPLAY_STREAK = 2
 
 export function StreakBadge() {
+  const { t } = useTranslation()
   const { streak } = useVisitStreak()
 
   if (streak < MIN_DISPLAY_STREAK) return null
@@ -19,7 +21,7 @@ export function StreakBadge() {
   return (
     <span
       className="text-xs text-muted-foreground select-none"
-      title={`${streak}-day streak`}
+      title={t('layout.navbar.dayStreak', { count: streak })}
     >
       {'\uD83D\uDD25'} {streak}
     </span>

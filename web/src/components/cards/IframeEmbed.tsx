@@ -35,7 +35,7 @@ const PRESET_EMBEDS = [
 ]
 
 export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['common', 'cards'])
   const { isExpanded } = useCardExpanded()
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
@@ -186,7 +186,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
                 {url}
               </span>
             ) : (
-              <span className="text-xs text-muted-foreground">Configure URL</span>
+              <span className="text-xs text-muted-foreground">{t('cards:iframeEmbed.configureUrl')}</span>
             )}
           </div>
           <div className="flex items-center gap-1">
@@ -195,7 +195,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
                 <button
                   onClick={openInNewTab}
                   className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-foreground"
-                  title="Open in new tab"
+                  title={t('cards:iframeEmbed.openInNewTab')}
                 >
                   <ExternalLink className="w-4 h-4" />
                 </button>
@@ -208,7 +208,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
                   ? 'bg-primary/20 text-primary'
                   : 'hover:bg-secondary text-muted-foreground hover:text-foreground'
               }`}
-              title="Settings"
+              title={t('cards:iframeEmbed.settings')}
             >
               <Settings className="w-4 h-4" />
             </button>
@@ -219,7 +219,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
         {showSettings && (
           <div className="mb-3 p-3 rounded-lg bg-secondary/30 border border-border/50">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium">Embed Configuration</span>
+              <span className="text-sm font-medium">{t('cards:iframeEmbed.embedConfiguration')}</span>
               {url && (
                 <button
                   onClick={() => setShowSettings(false)}
@@ -233,7 +233,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
             {/* URL input */}
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-muted-foreground block mb-1">URL</label>
+                <label className="text-xs text-muted-foreground block mb-1">{t('cards:iframeEmbed.urlLabel')}</label>
                 <input
                   type="url"
                   value={urlInput}
@@ -244,19 +244,19 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
               </div>
 
               <div>
-                <label className="text-xs text-muted-foreground block mb-1">Title</label>
+                <label className="text-xs text-muted-foreground block mb-1">{t('cards:iframeEmbed.titleLabel')}</label>
                 <input
                   type="text"
                   value={titleInput}
                   onChange={(e) => setTitleInput(e.target.value)}
-                  placeholder="My Dashboard"
+                  placeholder={t('cards:iframeEmbed.titlePlaceholder')}
                   className="w-full px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-muted-foreground block mb-1">Auto-refresh (seconds)</label>
+                  <label className="text-xs text-muted-foreground block mb-1">{t('cards:iframeEmbed.autoRefreshLabel')}</label>
                   <input
                     type="number"
                     min="0"
@@ -268,7 +268,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground block mb-1">Height (px)</label>
+                  <label className="text-xs text-muted-foreground block mb-1">{t('cards:iframeEmbed.heightLabel')}</label>
                   <input
                     type="number"
                     min="200"
@@ -282,7 +282,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
 
               {/* Preset buttons */}
               <div>
-                <label className="text-xs text-muted-foreground block mb-1">Quick presets</label>
+                <label className="text-xs text-muted-foreground block mb-1">{t('cards:iframeEmbed.quickPresets')}</label>
                 <div className="flex flex-wrap gap-1">
                   {PRESET_EMBEDS.map(preset => (
                     <button
@@ -304,7 +304,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
                   className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Save className="w-4 h-4" />
-                  Save & Load
+                  {t('cards:iframeEmbed.saveAndLoad')}
                 </button>
                 {url && (
                   <button
@@ -312,14 +312,14 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
                     className="flex items-center justify-center gap-1 px-3 py-1.5 text-sm bg-red-500/20 text-red-400 rounded hover:bg-red-500/30"
                   >
                     <Trash2 className="w-4 h-4" />
-                    Clear
+                    {t('cards:iframeEmbed.clear')}
                   </button>
                 )}
               </div>
             </div>
 
             <p className="text-xs text-muted-foreground mt-3">
-              Note: Some sites block iframe embedding. If content doesn't load, try opening in a new tab.
+              {t('cards:iframeEmbed.iframeNote')}
             </p>
           </div>
         )}
@@ -342,7 +342,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
               <div className="absolute inset-0 flex items-center justify-center bg-background/90 z-10">
                 <div className="flex flex-col items-center gap-3 text-center p-4 max-w-xs">
                   <AlertTriangle className="w-10 h-10 text-yellow-500" />
-                  <p className="text-sm text-foreground">Unable to load content</p>
+                  <p className="text-sm text-foreground">{t('cards:iframeEmbed.unableToLoad')}</p>
                   <p className="text-xs text-muted-foreground">{loadError}</p>
                   <div className="flex gap-2">
                     <button
@@ -350,14 +350,14 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
                       className="flex items-center gap-1 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90"
                     >
                       <RotateCcw className="w-4 h-4" />
-                      Retry
+                      {t('cards:iframeEmbed.retryButton')}
                     </button>
                     <button
                       onClick={openInNewTab}
                       className="flex items-center gap-1 px-3 py-1.5 text-sm bg-secondary text-foreground rounded hover:bg-secondary/80"
                     >
                       <ExternalLink className="w-4 h-4" />
-                      Open
+                      {t('cards:iframeEmbed.openButton')}
                     </button>
                   </div>
                 </div>
@@ -385,8 +385,8 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
               >
                 <div className="text-center">
                   <Globe className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No URL configured</p>
-                  <p className="text-xs">Click settings to add a URL</p>
+                  <p className="text-sm">{t('cards:iframeEmbed.noUrlConfigured')}</p>
+                  <p className="text-xs">{t('cards:iframeEmbed.clickSettings')}</p>
                 </div>
               </div>
             )}
@@ -396,7 +396,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
         {/* Refresh interval indicator */}
         {!showSettings && url && refreshInterval > 0 && (
           <div className="mt-2 text-xs text-muted-foreground text-center">
-            Auto-refreshes every {refreshInterval}s
+            {t('cards:iframeEmbed.autoRefreshEvery', { seconds: refreshInterval })}
           </div>
         )}
       </div>
