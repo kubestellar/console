@@ -76,7 +76,7 @@ export function LearnDropdown() {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-card border border-border rounded-lg shadow-xl z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-96 bg-card border border-border rounded-lg shadow-xl z-50 overflow-hidden">
           {/* Tour */}
           <button
             onClick={handleStartTour}
@@ -107,29 +107,30 @@ export function LearnDropdown() {
               <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
             </div>
           ) : videos.length > 0 ? (
-            <div className="px-2 pb-2 max-h-48 overflow-y-auto">
+            <div className="px-2 pb-2 max-h-64 overflow-y-auto">
               {videos.map(video => (
                 <a
                   key={video.id}
                   href={getYouTubeWatchUrl(video.id)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-secondary/50 transition-colors group"
+                  className="flex items-start gap-3 px-2 py-2 rounded-md hover:bg-secondary/50 transition-colors group"
                 >
-                  <div className="relative w-16 h-9 rounded overflow-hidden bg-muted shrink-0">
+                  <div className="relative w-24 h-14 rounded overflow-hidden bg-muted shrink-0">
                     <img
                       src={getYouTubeThumbnailUrl(video.id)}
                       alt={video.title}
                       className="w-full h-full object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                     />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Play className="w-4 h-4 text-white fill-white" />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
+                      <Play className="w-5 h-5 text-white/70 fill-white/70 group-hover:text-white group-hover:fill-white transition-colors" />
                     </div>
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-sm text-foreground truncate">{video.title}</div>
+                  <div className="min-w-0 pt-0.5">
+                    <div className="text-sm text-foreground leading-snug">{video.title}</div>
                     {video.description && (
-                      <div className="text-xs text-muted-foreground truncate">{video.description}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{video.description}</div>
                     )}
                   </div>
                 </a>
