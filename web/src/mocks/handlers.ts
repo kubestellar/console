@@ -205,6 +205,7 @@ export const handlers = [
   http.all('https://api.dicebear.com/*', () => passthrough()),
   http.all('https://fonts.gstatic.com/*', () => passthrough()),
   http.all('https://fonts.googleapis.com/*', () => passthrough()),
+  http.all('https://img.youtube.com/*', () => passthrough()),
 
   // ── Auth refresh (OAuth token exchange) ────────────────────────────
   // Mock the /auth/refresh endpoint used by AuthCallback and silent token refresh

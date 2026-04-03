@@ -121,7 +121,7 @@ export function LearnDropdown() {
                       src={getYouTubeThumbnailUrl(video.id)}
                       alt={video.title}
                       className="w-full h-full object-cover"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                      loading="lazy"
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
                       <Play className="w-5 h-5 text-white/70 fill-white/70 group-hover:text-white group-hover:fill-white transition-colors" />
