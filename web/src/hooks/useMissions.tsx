@@ -676,6 +676,14 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       cancelTimeouts.current.delete(missionId)
     }
 
+    // Purge ALL pending request IDs that map to this mission so that late
+    // responses (from earlier failed or in-flight requests) are dropped at
+    // the lookup stage in handleAgentMessage (#4499).
+    for (const [reqId, mId] of pendingRequests.current.entries()) {
+      if (mId === missionId) pendingRequests.current.delete(reqId)
+    }
+    lastStreamTimestamp.current.delete(missionId)
+
     setMissions(prev => prev.map(m =>
       m.id === missionId && m.status === 'cancelling' ? {
         ...m,
@@ -761,6 +769,14 @@ Install the console locally with the KubeStellar Console agent to use AI mission
 
     setMissions(prev => prev.map(m => {
       if (m.id !== missionId) return m
+
+      // Discard messages for missions that have already reached a terminal state
+      // (failed, completed). This prevents stale responses from a previously
+      // failed request from overwriting state after cancellation (#4499).
+      if (m.status === 'failed' || m.status === 'completed') {
+        pendingRequests.current.delete(message.id)
+        return m
+      }
 
       // If the mission is in 'cancelling' state and we receive a terminal message
       // (result, error, or stream-done), treat it as backend confirmation of the
@@ -1497,6 +1513,14 @@ Install the console locally with the KubeStellar Console agent to use AI mission
   const cancelMission = useCallback((missionId: string) => {
     // Guard against double-cancel: if already cancelling, don't schedule another timeout
     if (cancelTimeouts.current.has(missionId)) return
+
+    // Immediately purge ALL pending request IDs for this mission so that late
+    // responses (from earlier failed or in-flight requests) are dropped before
+    // finalizeCancellation runs (#4499).
+    for (const [reqId, mId] of pendingRequests.current.entries()) {
+      if (mId === missionId) pendingRequests.current.delete(reqId)
+    }
+    lastStreamTimestamp.current.delete(missionId)
 
     // Try WebSocket first (fastest path when connected)
     if (wsRef.current?.readyState === WebSocket.OPEN) {
