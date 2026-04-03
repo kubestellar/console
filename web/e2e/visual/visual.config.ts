@@ -24,6 +24,7 @@ export default defineConfig({
   testDir: '.',
   timeout: IS_CI ? 120_000 : 60_000,
   expect: {
+    timeout: IS_CI ? 30_000 : 10_000,
     toHaveScreenshot: {
       maxDiffPixelRatio: 0.01,
       animations: 'disabled',
