@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -35,6 +35,11 @@ import { useDashboards } from '../../hooks/useDashboards'
 import { DashboardTemplate } from '../dashboard/templates'
 import { CreateDashboardModal } from '../dashboard/CreateDashboardModal'
 // StatusBadge and Button removed — no longer needed after Dashboards section cleanup
+
+/** Auto-dismiss delay for generation result messages */
+const AUTO_DISMISS_MS = 5000
+/** Shorter dismiss for "applied" confirmations */
+const AUTO_DISMISS_APPLIED_MS = 3000
 import { cn } from '../../lib/cn'
 // formatCardTitle removed — no longer needed
 import { STORAGE_KEY_NAV_HISTORY } from '../../lib/constants'
@@ -257,6 +262,10 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
   // Preview state for generate-from-behavior
   const [pendingChanges, setPendingChanges] = useState<{ proposed: ReturnType<typeof previewGenerateFromBehavior>['proposed']; changes: string[] } | null>(null)
 
+  // Timer ref for auto-dismiss — prevents memory leak on unmount
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  useEffect(() => () => { if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current) }, [])
+
   const handleGenerateFromBehavior = async () => {
     setIsGenerating(true)
     setGenerationResult(null)
@@ -283,15 +292,14 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
       const preview = previewGenerateFromBehavior(sortedPaths)
       if (preview.changes.length === 1 && preview.changes[0] === 'No changes needed') {
         setGenerationResult('No changes needed — your sidebar already matches your usage.')
-        const AUTO_DISMISS_MS = 5000
-        setTimeout(() => setGenerationResult(null), AUTO_DISMISS_MS)
+        dismissTimerRef.current = setTimeout(() => setGenerationResult(null), AUTO_DISMISS_MS)
       } else {
         setPendingChanges(preview)
       }
     } else {
       setGenerationResult(t('sidebar.customizer.notEnoughData'))
       const AUTO_DISMISS_MS = 5000
-      setTimeout(() => setGenerationResult(null), AUTO_DISMISS_MS)
+      dismissTimerRef.current = setTimeout(() => setGenerationResult(null), AUTO_DISMISS_MS)
     }
 
     setIsGenerating(false)
@@ -302,8 +310,7 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
       applyGeneratedConfig(pendingChanges.proposed)
       setGenerationResult(`Applied ${pendingChanges.changes.length} changes`)
       setPendingChanges(null)
-      const AUTO_DISMISS_MS = 3000
-      setTimeout(() => setGenerationResult(null), AUTO_DISMISS_MS)
+      dismissTimerRef.current = setTimeout(() => setGenerationResult(null), AUTO_DISMISS_APPLIED_MS)
     }
   }
 

@@ -436,7 +436,7 @@ export function DashboardPage({
         initialSection={customizerInitialSection}
         initialSearch={addCardSearch}
         onApplyTemplate={applyTemplate}
-        onExport={undefined}
+        /* onExport not available on generic DashboardPage — only on Dashboard.tsx */
         onReset={reset}
         isCustomized={isCustomized}
         onUndo={undo}

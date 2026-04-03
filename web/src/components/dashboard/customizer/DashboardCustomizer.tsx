@@ -4,7 +4,7 @@
  * Combines cards (AI + browse), card factories, dashboards, and card collections
  * into a single modal with flat left navigation.
  */
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Palette, Undo2, Redo2, RotateCcw } from 'lucide-react'
 import { BaseModal } from '../../../lib/modals'
@@ -61,6 +61,12 @@ export function DashboardCustomizer({
   const { t: _t } = useTranslation()
   const t = _t as (key: string, defaultValue?: string) => string
   const [activeSection, setActiveSection] = useState<CustomizerSection>(initialSection || DEFAULT_SECTION)
+
+  // Reset section when modal opens — prevents stale section from previous open
+  useEffect(() => {
+    if (isOpen) setActiveSection(initialSection || DEFAULT_SECTION)
+  }, [isOpen, initialSection])
+
   // Global search reserved for future use
   const globalSearch = ''
   const [hoveredCard, setHoveredCard] = useState<HoveredCard | null>(null)

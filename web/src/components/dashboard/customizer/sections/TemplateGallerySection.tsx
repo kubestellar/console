@@ -3,7 +3,7 @@
  *
  * Reuses the existing TemplatesModal content inline.
  */
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, Search } from 'lucide-react'
 import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from '../../templates'
@@ -40,6 +40,8 @@ export function TemplateGallerySection({ onReplaceWithTemplate, onAddTemplate, d
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [searchText, setSearchText] = useState('')
   const [appliedTemplate, setAppliedTemplate] = useState<string | null>(null)
+  const appliedTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  useEffect(() => () => { if (appliedTimerRef.current) clearTimeout(appliedTimerRef.current) }, [])
 
   const filteredTemplates = DASHBOARD_TEMPLATES.filter(tpl => {
     const matchesCategory = selectedCategory === 'all' || tpl.category === selectedCategory
@@ -50,13 +52,13 @@ export function TemplateGallerySection({ onReplaceWithTemplate, onAddTemplate, d
   const handleAdd = (template: DashboardTemplate) => {
     onAddTemplate(template)
     setAppliedTemplate(template.id)
-    setTimeout(() => setAppliedTemplate(null), APPLIED_CONFIRMATION_MS)
+    appliedTimerRef.current = setTimeout(() => setAppliedTemplate(null), APPLIED_CONFIRMATION_MS)
   }
 
   const handleReplace = (template: DashboardTemplate) => {
     onReplaceWithTemplate(template)
     setAppliedTemplate(template.id)
-    setTimeout(() => setAppliedTemplate(null), APPLIED_CONFIRMATION_MS)
+    appliedTimerRef.current = setTimeout(() => setAppliedTemplate(null), APPLIED_CONFIRMATION_MS)
   }
 
   return (
