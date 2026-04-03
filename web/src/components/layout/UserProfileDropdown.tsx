@@ -147,7 +147,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
 
       {/* Dropdown menu */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-72 bg-card border border-border rounded-xl shadow-2xl overflow-hidden z-50">
+        <div className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-1rem)] bg-card border border-border rounded-xl shadow-2xl overflow-hidden z-50">
           {/* Header with avatar and name */}
           <div className="p-4 bg-secondary border-b border-border">
             <div className="flex items-center gap-3">
@@ -171,15 +171,15 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
 
           {/* User details section */}
           <div className="p-3 space-y-2 border-b border-border">
-            <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
-              <Mail className="w-4 h-4 text-muted-foreground" />
-              <span className="text-muted-foreground">{t('profile.email')}</span>
+            <div className="flex items-center gap-3 px-2 py-1.5 text-sm min-w-0">
+              <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-muted-foreground flex-shrink-0">{t('profile.email')}</span>
               <span className="text-foreground truncate">{user.email || t('profile.notSet')}</span>
             </div>
-            <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
-              <MessageSquare className="w-4 h-4 text-muted-foreground" />
-              <span className="text-muted-foreground">{t('profile.slack')}</span>
-              <span className="text-foreground">{user.slackId || t('profile.notConnected')}</span>
+            <div className="flex items-center gap-3 px-2 py-1.5 text-sm min-w-0">
+              <MessageSquare className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-muted-foreground flex-shrink-0">{t('profile.slack')}</span>
+              <span className="text-foreground truncate">{user.slackId || t('profile.notConnected')}</span>
             </div>
             <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
               <Shield className="w-4 h-4 text-muted-foreground" />
