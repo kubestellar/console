@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -9,11 +9,8 @@ import {
   Sparkles,
   Eye,
   EyeOff,
-  ChevronDown,
-  ChevronRight,
   Loader2,
   LayoutDashboard,
-  Square,
   Search,
   FolderPlus,
 } from 'lucide-react'
@@ -35,13 +32,12 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useSidebarConfig, SidebarItem } from '../../hooks/useSidebarConfig'
-import { useDashboards, Dashboard } from '../../hooks/useDashboards'
-import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from '../dashboard/templates'
+import { useDashboards } from '../../hooks/useDashboards'
+import { DashboardTemplate } from '../dashboard/templates'
 import { CreateDashboardModal } from '../dashboard/CreateDashboardModal'
-import { StatusBadge } from '../ui/StatusBadge'
-import { Button } from '../ui/Button'
+// StatusBadge and Button removed — no longer needed after Dashboards section cleanup
 import { cn } from '../../lib/cn'
-import { formatCardTitle } from '../../lib/formatCardTitle'
+// formatCardTitle removed — no longer needed
 import { STORAGE_KEY_NAV_HISTORY } from '../../lib/constants'
 import { NAV_AFTER_ANIMATION_MS } from '../../lib/constants/network'
 import { suggestDashboardIcon, suggestIconSync } from '../../lib/iconSuggester'
@@ -155,11 +151,9 @@ const KNOWN_ROUTES: KnownRoute[] = [
 ]
 
 // Group routes by category
-const ROUTE_CATEGORIES = [...new Set(KNOWN_ROUTES.map(r => r.category))]
+// ROUTE_CATEGORIES removed — search-to-add replaces category browsing
 
-function formatCardType(type: string): string {
-  return formatCardTitle(type)
-}
+// formatCardType removed — no longer needed after section cleanup
 
 interface SidebarCustomizerProps {
   isOpen: boolean
@@ -212,7 +206,7 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
     }
   }
 
-  const { getAllDashboardsWithCards, createDashboard, dashboards } = useDashboards()
+  const { createDashboard, dashboards } = useDashboards()
 
   const [isGenerating, setIsGenerating] = useState(false)
   const { isOpen: isCreateDashboardOpen, open: openCreateDashboard, close: closeCreateDashboard } = useModalState()
@@ -221,20 +215,8 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
   const [showAddForm, setShowAddForm] = useState(false)
   const [selectedKnownRoutes, setSelectedKnownRoutes] = useState<Set<string>>(new Set())
   const [routeSearch, setRouteSearch] = useState('')
-  const [expandedSection, setExpandedSection] = useState<string | null>('primary')
-  const [dashboardsWithCards, setDashboardsWithCards] = useState<Dashboard[]>([])
-  const [isLoadingDashboards, setIsLoadingDashboards] = useState(false)
-
-  // Load dashboards with cards when customizer opens
-  useEffect(() => {
-    if (isOpen) {
-      setIsLoadingDashboards(true)
-      getAllDashboardsWithCards()
-        .then(setDashboardsWithCards)
-        .catch(() => { /* getAllDashboardsWithCards always resolves — defensive catch */ })
-        .finally(() => setIsLoadingDashboards(false))
-    }
-  }, [isOpen, getAllDashboardsWithCards])
+  // expandedSection removed — all sections now always visible
+  // Dashboard cards section removed — cards are managed via Console Studio's Cards tab
 
   // Handle adding all selected routes
   const handleAddSelectedRoutes = () => {
@@ -267,16 +249,7 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
     setShowAddForm(false)
   }
 
-  // Toggle selection of a known route
-  const toggleKnownRoute = (routeHref: string) => {
-    const newSelected = new Set(selectedKnownRoutes)
-    if (newSelected.has(routeHref)) {
-      newSelected.delete(routeHref)
-    } else {
-      newSelected.add(routeHref)
-    }
-    setSelectedKnownRoutes(newSelected)
-  }
+  // toggleKnownRoute removed — search-to-add replaces checkbox selection
 
   const handleGenerateFromBehavior = async () => {
     setIsGenerating(true)
@@ -383,38 +356,83 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
   // Shared content rendered in both modal and embedded modes
   const sidebarContent = (
     <>
-          {/* Actions — uniform purple-themed styling */}
+          {/* Search to add dashboards — always visible */}
+          <div className="mb-4">
+            <p className="text-xs text-muted-foreground mb-2">
+              Search for a dashboard to add to your sidebar
+            </p>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={routeSearch}
+                onChange={(e) => setRouteSearch(e.target.value)}
+                placeholder="Search dashboards..."
+                className="w-full pl-8 pr-3 py-2 text-sm bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 border border-border"
+              />
+            </div>
+          </div>
+
+          {/* Search results — shown when typing */}
+          {routeSearch.trim() && (() => {
+            const searchLower = routeSearch.toLowerCase()
+            const matchingRoutes = KNOWN_ROUTES.filter(r =>
+              (r.name.toLowerCase().includes(searchLower) ||
+               r.description.toLowerCase().includes(searchLower)) &&
+              !config.primaryNav.some(item => item.href === r.href) &&
+              !config.secondaryNav.some(item => item.href === r.href)
+            )
+            if (matchingRoutes.length === 0) {
+              return <div className="mb-4 text-sm text-muted-foreground text-center py-2">No matching dashboards found</div>
+            }
+            return (
+              <div className="mb-4 space-y-1 max-h-48 overflow-y-auto rounded-lg border border-border">
+                {matchingRoutes.map(route => (
+                  <button
+                    key={route.href}
+                    onClick={() => {
+                      addItem({ name: route.name, icon: route.icon, href: route.href, type: 'link' }, 'primary')
+                      setRouteSearch('')
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
+                  >
+                    {renderIcon(route.icon, 'w-4 h-4 text-muted-foreground')}
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-foreground">{route.name}</span>
+                      <span className="text-xs text-muted-foreground ml-2">{route.description}</span>
+                    </div>
+                    <Plus className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+                  </button>
+                ))}
+              </div>
+            )
+          })()}
+
+          {/* Action buttons */}
           <div className="flex flex-wrap gap-2 mb-4">
-            <button
-              onClick={() => setShowAddForm(!showAddForm)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors text-sm font-medium"
-            >
-              <Plus className="w-4 h-4" />
-              {t('sidebar.customizer.addItem')}
-            </button>
             <button
               onClick={openCreateDashboard}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors text-sm font-medium"
             >
               <FolderPlus className="w-4 h-4" />
-              {t('sidebar.customizer.createDashboard', 'Create Dashboard')}
+              Create Dashboard
             </button>
             <button
               onClick={handleGenerateFromBehavior}
               disabled={isGenerating}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors text-sm font-medium disabled:opacity-50"
-              title={t('sidebar.customizer.generateTooltip', 'Analyzes your navigation history to suggest dashboards you actually use')}
+              title="Analyzes your navigation history to suggest dashboards you actually use"
             >
               {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              {isGenerating ? t('sidebar.customizer.analyzing') : t('sidebar.customizer.generateFromBehavior')}
+              {isGenerating ? 'Analyzing...' : 'Suggest from History'}
             </button>
             <button
               onClick={resetToDefault}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-              title={t('sidebar.customizer.resetTooltip', 'Restore the default sidebar navigation items')}
+              title="Restore the default sidebar navigation items"
             >
               <RotateCcw className="w-4 h-4" />
-              {t('sidebar.customizer.resetSidebar', 'Reset Sidebar')}
+              Reset Sidebar
             </button>
           </div>
 
@@ -430,341 +448,20 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
             </div>
           )}
 
-          {/* Add Item Form - Inline checklist (no dropdown) */}
-          {showAddForm && (
-            <div className="mb-6 p-4 rounded-lg bg-secondary/30 border border-border/50">
-              <h3 className="text-sm font-medium text-foreground mb-3">{t('sidebar.customizer.addDashboards')}</h3>
-
-              {/* Search filter */}
-              <div className="mb-3">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input
-                    type="text"
-                    value={routeSearch}
-                    onChange={(e) => setRouteSearch(e.target.value)}
-                    placeholder={t('sidebar.customizer.filterDashboards')}
-                    className="w-full pl-8 pr-3 py-2 text-sm bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 border border-border"
-                  />
-                </div>
-              </div>
-
-              {/* Inline checklist grouped by category */}
-              <div className="space-y-1">
-                {(() => {
-                  const searchLower = routeSearch.toLowerCase()
-                  const filteredCategories = ROUTE_CATEGORIES.filter(category => {
-                    const routes = KNOWN_ROUTES.filter(r => r.category === category)
-                    if (!searchLower) return true
-                    return routes.some(r =>
-                      r.name.toLowerCase().includes(searchLower) ||
-                      r.description.toLowerCase().includes(searchLower) ||
-                      r.href.toLowerCase().includes(searchLower)
-                    )
-                  })
-
-                  if (filteredCategories.length === 0) {
-                    return (
-                      <div className="py-4 text-center text-sm text-muted-foreground">
-                        {t('sidebar.customizer.noDashboardsFound', { query: routeSearch })}
-                      </div>
-                    )
-                  }
-
-                  return filteredCategories.map(category => {
-                    const routes = KNOWN_ROUTES.filter(r => r.category === category)
-                    const filteredRoutes = searchLower
-                      ? routes.filter(r =>
-                          r.name.toLowerCase().includes(searchLower) ||
-                          r.description.toLowerCase().includes(searchLower) ||
-                          r.href.toLowerCase().includes(searchLower)
-                        )
-                      : routes
-
-                    if (filteredRoutes.length === 0) return null
-
-                    // Get available routes in category (not already added)
-                    const availableRoutes = filteredRoutes.filter(r =>
-                      !config.primaryNav.some(item => item.href === r.href) &&
-                      !config.secondaryNav.some(item => item.href === r.href)
-                    )
-                    const allCategorySelected = availableRoutes.length > 0 &&
-                      availableRoutes.every(r => selectedKnownRoutes.has(r.href))
-
-                    return (
-                      <div key={category} className="rounded-lg border border-border/50 overflow-hidden">
-                        {/* Category header */}
-                        <div className="px-3 py-2 text-xs font-medium uppercase tracking-wider bg-secondary/80 flex items-center justify-between text-muted-foreground">
-                          <span>{category}</span>
-                          {availableRoutes.length > 0 && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                const newSelected = new Set(selectedKnownRoutes)
-                                if (allCategorySelected) {
-                                  availableRoutes.forEach(r => newSelected.delete(r.href))
-                                } else {
-                                  availableRoutes.forEach(r => newSelected.add(r.href))
-                                }
-                                setSelectedKnownRoutes(newSelected)
-                              }}
-                              className={cn(
-                                'text-2xs px-1.5 py-0.5 rounded transition-colors',
-                                allCategorySelected
-                                  ? 'bg-purple-500/30 text-purple-300 hover:bg-purple-500/40'
-                                  : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'
-                              )}
-                            >
-                              {allCategorySelected ? t('sidebar.customizer.deselectAll') : t('sidebar.customizer.selectAll')}
-                            </button>
-                          )}
-                        </div>
-                        {/* Routes in this category */}
-                        <div className="divide-y divide-border/30">
-                          {filteredRoutes.map(route => {
-                            const isAlreadyAdded = config.primaryNav.some(item => item.href === route.href) ||
-                                                    config.secondaryNav.some(item => item.href === route.href)
-                            const isSelected = selectedKnownRoutes.has(route.href)
-                            return (
-                              <button
-                                key={route.href}
-                                onClick={() => !isAlreadyAdded && toggleKnownRoute(route.href)}
-                                disabled={isAlreadyAdded}
-                                className={cn(
-                                  'w-full px-3 py-2 text-left transition-colors',
-                                  isAlreadyAdded
-                                    ? 'opacity-50 cursor-not-allowed bg-secondary/20'
-                                    : 'hover:bg-secondary/50',
-                                  isSelected && !isAlreadyAdded && 'bg-purple-500/10'
-                                )}
-                              >
-                                <div className="flex items-center gap-2">
-                                  {/* Checkbox */}
-                                  <div className={cn(
-                                    'w-4 h-4 rounded border flex items-center justify-center flex-shrink-0',
-                                    isAlreadyAdded ? 'border-green-500/50 bg-green-500/20' :
-                                    isSelected ? 'border-purple-500 bg-purple-500' : 'border-border bg-secondary'
-                                  )}>
-                                    {(isSelected || isAlreadyAdded) && (
-                                      <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
-                                        <path d="M2 6l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                      </svg>
-                                    )}
-                                  </div>
-                                  {renderIcon(route.icon, 'w-4 h-4 text-muted-foreground flex-shrink-0')}
-                                  <span className={cn(
-                                    'text-sm font-medium truncate',
-                                    isSelected && !isAlreadyAdded ? 'text-purple-400' : 'text-foreground'
-                                  )}>
-                                    {route.name}
-                                  </span>
-                                  {isAlreadyAdded && (
-                                    <StatusBadge color="green" className="flex-shrink-0 ml-auto">{t('sidebar.customizer.added')}</StatusBadge>
-                                  )}
-                                </div>
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )
-                  })
-                })()}
-              </div>
-
-              {/* Selection summary */}
-              {selectedKnownRoutes.size > 0 && (
-                <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    {t('sidebar.customizer.dashboardsSelected', { count: selectedKnownRoutes.size, plural: selectedKnownRoutes.size !== 1 ? 's' : '' })}
-                  </span>
-                  <button
-                    onClick={() => setSelectedKnownRoutes(new Set())}
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    {t('sidebar.customizer.clearSelection')}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Static recommendations removed — "Generate from Behavior" is smarter */}
-
-          {/* Primary Navigation */}
+          {/* Your Dashboards — flat list, always visible */}
           <div className="mb-4">
-            <button
-              onClick={() => setExpandedSection(expandedSection === 'primary' ? null : 'primary')}
-              className="flex items-center gap-2 w-full text-left mb-2"
-            >
-              {expandedSection === 'primary' ? (
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              )}
-              <span className="text-sm font-medium text-foreground">{t('sidebar.customizer.primaryNavigation')}</span>
-              <span className="text-xs text-muted-foreground">({t('sidebar.customizer.itemsCount', { count: config.primaryNav.length })})</span>
-            </button>
-            {expandedSection === 'primary' && renderItemList(config.primaryNav, 'primary')}
-          </div>
-
-          {/* Secondary Navigation */}
-          <div className="mb-4">
-            <button
-              onClick={() => setExpandedSection(expandedSection === 'secondary' ? null : 'secondary')}
-              className="flex items-center gap-2 w-full text-left mb-2"
-            >
-              {expandedSection === 'secondary' ? (
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              )}
-              <span className="text-sm font-medium text-foreground">{t('sidebar.customizer.secondaryNavigation')}</span>
-              <span className="text-xs text-muted-foreground">({t('sidebar.customizer.itemsCount', { count: config.secondaryNav.length })})</span>
-            </button>
-            {expandedSection === 'secondary' && renderItemList(config.secondaryNav, 'secondary')}
-          </div>
-
-          {/* Dashboard Cards */}
-          <div className="mb-4">
-            <button
-              onClick={() => setExpandedSection(expandedSection === 'dashboards' ? null : 'dashboards')}
-              className="flex items-center gap-2 w-full text-left mb-2"
-            >
-              {expandedSection === 'dashboards' ? (
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              )}
-              <LayoutDashboard className="w-4 h-4 text-purple-400" />
-              <span className="text-sm font-medium text-foreground">{t('sidebar.customizer.dashboardCards')}</span>
-              <span className="text-xs text-muted-foreground">
-                ({t('sidebar.customizer.cardsCount', { count: dashboardsWithCards.reduce((sum, d) => sum + (d.cards?.length || 0), 0) })})
-              </span>
-            </button>
-            {expandedSection === 'dashboards' && (
-              <div className="space-y-3 pl-2">
-                {isLoadingDashboards ? (
-                  <div className="flex items-center gap-2 p-3 text-muted-foreground">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-sm">{t('sidebar.customizer.loadingDashboards')}</span>
-                  </div>
-                ) : dashboardsWithCards.length === 0 ? (
-                  <div className="p-3 text-sm text-muted-foreground">
-                    {t('sidebar.customizer.noDashboards')}
-                  </div>
-                ) : (
-                  dashboardsWithCards.map((dashboard) => (
-                    <div key={dashboard.id} className="space-y-1">
-                      <div className="flex items-center gap-2 text-sm text-foreground/80 font-medium">
-                        <LayoutDashboard className="w-3.5 h-3.5 text-muted-foreground" />
-                        {dashboard.name}
-                        {dashboard.is_default && (
-                          <StatusBadge color="purple">{t('sidebar.customizer.default')}</StatusBadge>
-                        )}
-                      </div>
-                      {dashboard.cards && dashboard.cards.length > 0 ? (
-                        <div className="space-y-1 pl-5">
-                          {dashboard.cards.map((card) => (
-                            <div
-                              key={card.id}
-                              className="flex items-center gap-2 p-2 rounded-lg bg-secondary/20 text-sm"
-                            >
-                              <Square className="w-3 h-3 text-muted-foreground" />
-                              <span className="text-foreground/70">
-                                {card.title || formatCardType(card.card_type)}
-                              </span>
-                              <span className="text-xs text-muted-foreground ml-auto">
-                                {formatCardType(card.card_type)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="pl-5 text-xs text-muted-foreground">
-                          {t('sidebar.customizer.noCardsInDashboard')}
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Available Card Collections */}
-          <div className="mb-4">
-            <button
-              onClick={() => setExpandedSection(expandedSection === 'templates' ? null : 'templates')}
-              className="flex items-center gap-2 w-full text-left mb-2"
-            >
-              {expandedSection === 'templates' ? (
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              )}
-              <Sparkles className="w-4 h-4 text-purple-400" />
-              <span className="text-sm font-medium text-foreground">Card Collections</span>
-              <span className="text-xs text-muted-foreground">({DASHBOARD_TEMPLATES.length} collections)</span>
-            </button>
-            {expandedSection === 'templates' && (
-              <div className="space-y-2 pl-2">
-                {TEMPLATE_CATEGORIES.map((category) => {
-                  const templatesInCategory = DASHBOARD_TEMPLATES.filter(t => t.category === category.id)
-                  if (templatesInCategory.length === 0) return null
-
-                  return (
-                    <div key={category.id} className="space-y-1">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wider py-1">
-                        <span>{category.icon}</span>
-                        <span>{category.name}</span>
-                      </div>
-                      {templatesInCategory.map((template) => {
-                        const isInSidebar = config.primaryNav.some(item =>
-                          item.href === `/dashboard/${template.id}` || item.id === template.id
-                        )
-
-                        return (
-                          <div
-                            key={template.id}
-                            className="flex items-center gap-2 p-2 rounded-lg bg-secondary/20"
-                          >
-                            <span className="text-lg">{template.icon}</span>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm text-foreground truncate">{template.name}</div>
-                              <div className="text-xs text-muted-foreground truncate">{template.description}</div>
-                            </div>
-                            {isInSidebar ? (
-                              <StatusBadge color="green">{t('sidebar.customizer.added')}</StatusBadge>
-                            ) : (
-                              <Button
-                                variant="accent"
-                                size="sm"
-                                onClick={() => {
-                                  addItem({
-                                    name: template.name,
-                                    icon: 'LayoutDashboard',
-                                    href: `/dashboard/${template.id}`,
-                                    type: 'link',
-                                  }, 'primary')
-                                }}
-                                className="whitespace-nowrap rounded"
-                              >
-                                {t('sidebar.customizer.add')}
-                              </Button>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )
-                })}
-              </div>
+            <h3 className="text-sm font-medium text-foreground mb-2">Your Dashboards ({config.primaryNav.length + config.secondaryNav.length})</h3>
+            {renderItemList(config.primaryNav, 'primary')}
+            {config.secondaryNav.length > 0 && (
+              <>
+                <div className="my-2 border-t border-border/30" />
+                {renderItemList(config.secondaryNav, 'secondary')}
+              </>
             )}
           </div>
 
           {/* Cluster Status Toggle */}
-          <div className="p-4 rounded-lg bg-secondary/30 border border-border/50">
+          <div className="p-3 rounded-lg bg-secondary/30 border border-border/50">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-medium text-foreground">{t('sidebar.customizer.clusterStatusPanel')}</h3>
