@@ -248,12 +248,12 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     if (isAuthenticated && user) {
       rootNodes.push({
         id: 'github',
-        name: 'My Repositories',
+        name: 'GitHub Repositories',
         path: '',
         type: 'directory',
         source: 'github',
         loaded: true,
-        description: user.github_login,
+        description: 'Add any repo — your own, Kubara forks, or team knowledge bases',
         children: watchedRepos.map((repo) => ({
           id: `github/${repo}`,
           name: repo.split('/').pop() || repo,
@@ -1479,7 +1479,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                         type="text"
                         value={newRepoValue}
                         onChange={(e) => setNewRepoValue(e.target.value)}
-                        placeholder="owner/repo"
+                        placeholder="owner/repo (e.g., kubara-io/kubara or your-org/runbooks)"
                         className="flex-1 px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/40"
                         autoFocus
                         onKeyDown={(e) => { if (e.key === 'Escape') { setAddingRepo(false); setNewRepoValue('') } }}
