@@ -5,7 +5,7 @@
  */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check } from 'lucide-react'
+import { Check, Search } from 'lucide-react'
 import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from '../../templates'
 import { formatCardTitle } from '../../../../lib/formatCardTitle'
 
@@ -48,38 +48,51 @@ export function TemplateGallerySection({ onApplyTemplate, dashboardName }: Templ
 
   return (
     <div className="h-full overflow-y-auto p-4">
-      {/* Explanation banner */}
-      <div className="mb-4 p-3 rounded-lg bg-purple-500/5 border border-purple-500/20">
-        <p className="text-sm text-muted-foreground">
-          Card collections are pre-built sets of cards for common use cases. You can <strong className="text-foreground">add</strong> a collection&apos;s cards to the {dashboardName ? `${dashboardName} dashboard` : 'current dashboard'} or <strong className="text-foreground">replace</strong> all existing cards.
+      {/* Description — same pattern as Cards section */}
+      <div className="mb-3">
+        <p className="text-xs text-muted-foreground mb-2">
+          Pre-built card sets you can add to the {dashboardName ? `${dashboardName} dashboard` : 'current dashboard'} or use to replace all existing cards
         </p>
-      </div>
-
-      {/* Category filter */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        <button
-          onClick={() => setSelectedCategory('all')}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-            selectedCategory === 'all'
-              ? 'bg-purple-500/20 text-purple-400 ring-1 ring-purple-500/50'
-              : 'bg-secondary text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          {t('dashboard.templates.all', 'All')}
-        </button>
-        {(TEMPLATE_CATEGORIES || []).map(cat => (
+        {/* Search/filter bar — matches Cards section layout */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              value={selectedCategory === 'all' ? '' : selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value || 'all')}
+              placeholder="Filter collections by category..."
+              className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+            />
+          </div>
+        </div>
+        {/* Category quick-filter pills */}
+        <div className="flex flex-wrap items-center gap-1.5 mt-2">
+          <span className="text-2xs text-muted-foreground mr-1">Filter:</span>
           <button
-            key={cat.id}
-            onClick={() => setSelectedCategory(cat.id)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-              selectedCategory === cat.id
-                ? 'bg-purple-500/20 text-purple-400 ring-1 ring-purple-500/50'
-                : 'bg-secondary text-muted-foreground hover:text-foreground'
+            onClick={() => setSelectedCategory('all')}
+            className={`px-2 py-0.5 text-2xs rounded-full transition-colors ${
+              selectedCategory === 'all'
+                ? 'bg-purple-500/20 text-purple-400'
+                : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
             }`}
           >
-            {cat.icon} {cat.name}
+            All
           </button>
-        ))}
+          {(TEMPLATE_CATEGORIES || []).map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`px-2 py-0.5 text-2xs rounded-full transition-colors ${
+                selectedCategory === cat.id
+                  ? 'bg-purple-500/20 text-purple-400'
+                  : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {cat.icon} {cat.name}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Template grid */}

@@ -13,6 +13,8 @@ import { PreviewPanel } from './PreviewPanel'
 import { UnifiedCardsSection } from './sections/UnifiedCardsSection'
 import { NavigationSection } from './sections/NavigationSection'
 import { TemplateGallerySection } from './sections/TemplateGallerySection'
+import { CardFactoryModal } from '../CardFactoryModal'
+import { StatBlockFactoryModal } from '../StatBlockFactoryModal'
 import { DEFAULT_SECTION, type CustomizerSection } from './customizerNav'
 import type { CardSuggestion, HoveredCard } from '../shared/cardCatalog'
 import type { DashboardTemplate } from '../templates'
@@ -60,6 +62,7 @@ export function DashboardCustomizer({
   // Global search reserved for future use
   const globalSearch = ''
   const [hoveredCard, setHoveredCard] = useState<HoveredCard | null>(null)
+  const [factoryModal, setFactoryModal] = useState<'card' | 'stat' | null>(null)
 
   const handleHoverCard = useCallback((card: HoveredCard | null) => setHoveredCard(card), [])
   const handleAddCards = useCallback((cards: CardSuggestion[]) => onAddCards(cards), [onAddCards])
@@ -69,6 +72,7 @@ export function DashboardCustomizer({
   const effectiveSearch = globalSearch || initialSearch
 
   return (
+    <>
     <BaseModal isOpen={isOpen} onClose={onClose} size="xl" closeOnBackdrop={false} className="!max-w-[75vw] !h-[75vh]">
       <BaseModal.Header
         title={t('dashboard.studio.title', 'Console Studio')}
@@ -106,6 +110,35 @@ export function DashboardCustomizer({
               onApplyTemplate={handleApplyTemplate}
               dashboardName={dashboardName}
             />
+          )}
+
+          {/* Factory sections — show a prompt, clicking opens the modal */}
+          {activeSection === 'card-factory' && (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="text-center space-y-3">
+                <p className="text-sm text-muted-foreground">Create a custom card with your own data, layout, and columns</p>
+                <button
+                  onClick={() => setFactoryModal('card')}
+                  className="px-4 py-2 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Open Card Builder
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'stat-factory' && (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="text-center space-y-3">
+                <p className="text-sm text-muted-foreground">Create a custom stats block with metrics, icons, and colors</p>
+                <button
+                  onClick={() => setFactoryModal('stat')}
+                  className="px-4 py-2 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Open Stats Builder
+                </button>
+              </div>
+            </div>
           )}
         </div>
 
@@ -148,5 +181,26 @@ export function DashboardCustomizer({
         </div>
       )}
     </BaseModal>
+
+      {/* Factory modals — opened from nav items */}
+      <CardFactoryModal
+        isOpen={factoryModal === 'card'}
+        onClose={() => setFactoryModal(null)}
+        onCardCreated={(cardId) => {
+          onAddCards([{
+            type: 'dynamic_card',
+            title: 'Custom Card',
+            description: 'Dynamically created card',
+            visualization: 'status',
+            config: { dynamicCardId: cardId },
+          }])
+          setFactoryModal(null)
+        }}
+      />
+      <StatBlockFactoryModal
+        isOpen={factoryModal === 'stat'}
+        onClose={() => setFactoryModal(null)}
+      />
+    </>
   )
 }

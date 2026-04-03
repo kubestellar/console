@@ -80,6 +80,8 @@ export function UnifiedCardsSection({
     setAiSuggestions(results)
     setSelectedAiCards(new Set(results.map((card, i) => existingCardTypes.includes(card.type) ? -1 : i).filter(i => i !== -1)))
     setIsGenerating(false)
+    // Clear browse search so full catalog shows below AI suggestions
+    setBrowseSearch('')
   }
 
   const toggleAiCard = (index: number) => {
@@ -208,7 +210,7 @@ export function UnifiedCardsSection({
         {/* Single unified search bar */}
         <div className="mb-3">
           <p className="text-xs text-muted-foreground mb-2">
-            Search the card catalog or describe what you need — cards will be added to the <strong className="text-foreground">{dashboardLabel}</strong> dashboard
+            Search the card catalog or describe what you need — cards will be added to the {dashboardLabel} dashboard
           </p>
           <div className="flex gap-2">
             <div className="relative flex-1">
@@ -251,10 +253,18 @@ export function UnifiedCardsSection({
         {/* AI suggestions (shown when generated, above catalog results) */}
         {aiSuggestions.length > 0 && (
           <div className="mb-4 p-3 rounded-lg border border-purple-500/20 bg-purple-500/5">
-            <p className="text-xs font-medium text-purple-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5" />
-              AI Suggestions ({selectedAiCards.size} selected)
-            </p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                AI Suggestions ({selectedAiCards.size} selected)
+              </p>
+              <button
+                onClick={() => { setAiSuggestions([]); setSelectedAiCards(new Set()); setBrowseSearch('') }}
+                className="text-2xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Clear &amp; show all cards
+              </button>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               {aiSuggestions.map((card, index) => {
                 const isAlreadyAdded = existingCardTypes.includes(card.type)

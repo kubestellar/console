@@ -1,18 +1,21 @@
 /**
  * Navigation data structure for Console Studio.
- * Flat nav — clean list of sections.
  */
 import {
   LayoutGrid,
   LayoutDashboard,
   Layout,
+  Wand2,
+  Activity,
   type LucideIcon,
 } from 'lucide-react'
 
 export type CustomizerSection =
   | 'cards'
-  | 'dashboards'
   | 'collections'
+  | 'dashboards'
+  | 'card-factory'
+  | 'stat-factory'
 
 export interface NavItem {
   id: CustomizerSection
@@ -21,9 +24,11 @@ export interface NavItem {
 }
 
 export const CUSTOMIZER_NAV: NavItem[] = [
-  { id: 'cards', label: 'Cards', icon: LayoutGrid },
-  { id: 'collections', label: 'Card Collections', icon: Layout },
-  { id: 'dashboards', label: 'Dashboards', icon: LayoutDashboard },
+  { id: 'cards', label: 'Add Cards', icon: LayoutGrid },
+  { id: 'collections', label: 'Add Card Collections', icon: Layout },
+  { id: 'dashboards', label: 'Manage Dashboards', icon: LayoutDashboard },
+  { id: 'card-factory', label: 'Create Custom Card', icon: Wand2 },
+  { id: 'stat-factory', label: 'Create Stats Card', icon: Activity },
 ]
 
 export const DEFAULT_SECTION: CustomizerSection = 'cards'
