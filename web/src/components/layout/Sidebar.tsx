@@ -444,10 +444,12 @@ export function Sidebar() {
           {config.primaryNav.map(item => renderNavItem(item, 'primary'))}
         </nav>
 
-        {/* Add more dashboards */}
+        {/* Add more dashboards — opens Console Studio at Dashboards section */}
         {!isCollapsed && (
           <button
-            onClick={() => setShowCustomizer(true)}
+            onClick={() => {
+              navigate('?customizeSidebar=true')
+            }}
             className="w-full flex items-center gap-3 px-3 py-1.5 mt-1 text-xs text-muted-foreground/60 hover:text-muted-foreground hover:bg-secondary/30 rounded-lg transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
