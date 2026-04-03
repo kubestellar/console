@@ -83,6 +83,39 @@ fi
 
 cd "$SCRIPT_DIR"
 
+# Safely kill a process on a port only if it belongs to this project.
+# Unrelated processes (e.g., local databases, other dev servers) are warned
+# and left running to avoid disrupting non-project services.
+kill_project_port() {
+    local port="$1"
+    local pids
+    pids=$(lsof -ti ":${port}" 2>/dev/null || true)
+    [ -z "$pids" ] && return 0
+
+    local to_kill=()
+    for pid in $pids; do
+        local cmd
+        cmd=$(ps -p "$pid" -o args= 2>/dev/null || true)
+        if echo "$cmd" | grep -qF "$SCRIPT_DIR" \
+           || echo "$cmd" | grep -q "cmd/console" \
+           || echo "$cmd" | grep -q "kc-agent"; then
+            to_kill+=("$pid")
+            echo "Stopping project process on port ${port} (PID ${pid})..."
+            kill -TERM "$pid" 2>/dev/null || true
+        else
+            echo "Warning: Port ${port} is in use by an unrelated process (PID ${pid}: ${cmd:-unknown}). Skipping."
+        fi
+    done
+
+    [ ${#to_kill[@]} -eq 0 ] && return 0
+    sleep 2
+
+    # Fall back to SIGKILL for project processes that did not exit gracefully
+    for pid in "${to_kill[@]}"; do
+        kill -9 "$pid" 2>/dev/null || true
+    done
+}
+
 # Load .env file if it exists (overrides any existing env vars)
 if [ -f .env ]; then
     echo "Loading .env file..."
@@ -109,16 +142,9 @@ fi
 export DEV_MODE=${DEV_MODE:-true}
 export FRONTEND_URL=${FRONTEND_URL:-http://localhost:5174}
 
-# Kill any existing instances on required ports
+# Kill any existing project instances on required ports
 for p in 8080 5174 8585; do
-    EXISTING_PID=$(lsof -ti :$p 2>/dev/null || true)
-    if [ -n "$EXISTING_PID" ]; then
-        echo "Killing existing process on port $p (PID: $EXISTING_PID)..."
-        kill -TERM $EXISTING_PID 2>/dev/null || true
-        sleep 2
-        # Fall back to SIGKILL if process did not exit gracefully
-        kill -9 $EXISTING_PID 2>/dev/null || true
-    fi
+    kill_project_port "$p"
 done
 
 echo "Starting KubeStellar Console (dev mode)..."

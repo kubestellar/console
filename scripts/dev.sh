@@ -3,6 +3,40 @@
 
 set -e
 
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# Safely kill a project process on a port. Unrelated processes are warned and
+# left running to avoid disrupting non-project services.
+kill_project_port() {
+    local port="$1"
+    local pids
+    pids=$(lsof -ti ":${port}" 2>/dev/null || true)
+    [ -z "$pids" ] && return 0
+
+    local to_kill=()
+    for pid in $pids; do
+        local cmd
+        cmd=$(ps -p "$pid" -o args= 2>/dev/null || true)
+        if echo "$cmd" | grep -qF "$PROJECT_DIR" \
+           || echo "$cmd" | grep -q "cmd/console" \
+           || echo "$cmd" | grep -q "kc-agent"; then
+            to_kill+=("$pid")
+            echo -e "${YELLOW}Stopping project process on port ${port} (PID ${pid})...${NC}"
+            kill -TERM "$pid" 2>/dev/null || true
+        else
+            echo -e "${YELLOW}Warning: Port ${port} is in use by an unrelated process (PID ${pid}: ${cmd:-unknown}). Skipping.${NC}"
+        fi
+    done
+
+    [ ${#to_kill[@]} -eq 0 ] && return 0
+    sleep 2
+
+    # Fall back to SIGKILL for project processes that did not exit gracefully
+    for pid in "${to_kill[@]}"; do
+        kill -9 "$pid" 2>/dev/null || true
+    done
+}
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -51,22 +85,9 @@ echo "  MCP Ops: ${KUBESTELLAR_OPS_PATH:-kubestellar-ops}"
 echo "  MCP Deploy: ${KUBESTELLAR_DEPLOY_PATH:-kubestellar-deploy}"
 echo ""
 
-# Clear ports if in use (kill existing processes)
-if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null 2>&1 ; then
-    echo -e "${YELLOW}Port $PORT is in use, killing existing process...${NC}"
-    lsof -ti:$PORT | xargs kill -TERM 2>/dev/null || true
-    sleep 2
-    # Fall back to SIGKILL if process did not exit gracefully
-    lsof -ti:$PORT | xargs kill -9 2>/dev/null || true
-fi
-
-if lsof -Pi :5174 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
-    echo -e "${YELLOW}Port 5174 is in use, killing existing process...${NC}"
-    lsof -ti:5174 | xargs kill -TERM 2>/dev/null || true
-    sleep 2
-    # Fall back to SIGKILL if process did not exit gracefully
-    lsof -ti:5174 | xargs kill -9 2>/dev/null || true
-fi
+# Clear project processes on required ports; unrelated services are left running
+kill_project_port "$PORT"
+kill_project_port 5174
 
 # Function to cleanup on exit
 cleanup() {

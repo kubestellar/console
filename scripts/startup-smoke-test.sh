@@ -14,6 +14,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+PROJECT_DIR="$(pwd)"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -31,14 +32,44 @@ fi
 
 PIDS_TO_KILL=()
 
+# Kill a process on a port only if it belongs to this project. Unrelated
+# processes are warned and left running to avoid disrupting local services.
+kill_project_port() {
+    local port="$1"
+    local pids
+    pids=$(lsof -ti ":${port}" 2>/dev/null || true)
+    [ -z "$pids" ] && return 0
+
+    local to_kill=()
+    for pid in $pids; do
+        local cmd
+        cmd=$(ps -p "$pid" -o args= 2>/dev/null || true)
+        if echo "$cmd" | grep -qF "$PROJECT_DIR" \
+           || echo "$cmd" | grep -q "cmd/console" \
+           || echo "$cmd" | grep -q "kc-agent"; then
+            to_kill+=("$pid")
+            kill "$pid" 2>/dev/null || true
+        else
+            echo -e "${DIM}  Skipping unrelated process on port ${port} (PID ${pid}: ${cmd:-unknown})${NC}"
+        fi
+    done
+
+    [ ${#to_kill[@]} -eq 0 ] && return 0
+    sleep 1
+
+    for pid in "${to_kill[@]}"; do
+        kill -9 "$pid" 2>/dev/null || true
+    done
+}
+
 cleanup() {
   echo -e "\n${DIM}Cleaning up...${NC}"
   for pid in "${PIDS_TO_KILL[@]}"; do
     kill "$pid" 2>/dev/null || true
   done
-  # Kill any processes we started on known ports
+  # Kill any project processes still running on known ports
   for port in 8080 8081 5174; do
-    lsof -ti ":$port" 2>/dev/null | xargs -r kill 2>/dev/null || true
+    kill_project_port "$port"
   done
   # Stop docker container if running
   docker rm -f kc-smoke-test 2>/dev/null || true

@@ -7,7 +7,40 @@
 #   ./startup-demo.sh &     # run in background
 
 set -e
-cd "$(dirname "$0")"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Safely kill a project process on a port. Unrelated processes are warned and
+# left running to avoid disrupting non-project services.
+kill_project_port() {
+    local port="$1"
+    local pids
+    pids=$(lsof -ti ":${port}" 2>/dev/null || true)
+    [ -z "$pids" ] && return 0
+
+    local to_kill=()
+    for pid in $pids; do
+        local cmd
+        cmd=$(ps -p "$pid" -o args= 2>/dev/null || true)
+        if echo "$cmd" | grep -qF "$SCRIPT_DIR" \
+           || echo "$cmd" | grep -q "cmd/console" \
+           || echo "$cmd" | grep -q "kc-agent"; then
+            to_kill+=("$pid")
+            echo -e "${YELLOW}Stopping project process on port ${port} (PID ${pid})...${NC}"
+            kill -TERM "$pid" 2>/dev/null || true
+        else
+            echo -e "${YELLOW}Warning: Port ${port} is in use by an unrelated process (PID ${pid}: ${cmd:-unknown}). Skipping.${NC}"
+        fi
+    done
+
+    [ ${#to_kill[@]} -eq 0 ] && return 0
+    sleep 2
+
+    # Fall back to SIGKILL for project processes that did not exit gracefully
+    for pid in "${to_kill[@]}"; do
+        kill -9 "$pid" 2>/dev/null || true
+    done
+}
 
 # Colors
 RED='\033[0;31m'
@@ -28,15 +61,9 @@ export FRONTEND_URL=http://localhost:5174
 # Create data directory
 mkdir -p ./data
 
-# Port cleanup
+# Port cleanup — only kill project processes; unrelated services are left running
 for p in 8080 5174; do
-    if lsof -Pi :$p -sTCP:LISTEN -t >/dev/null 2>&1; then
-        echo -e "${YELLOW}Port $p is in use, killing existing process...${NC}"
-        lsof -ti:$p | xargs kill -TERM 2>/dev/null || true
-        sleep 2
-        # Fall back to SIGKILL if process did not exit gracefully
-        lsof -ti:$p | xargs kill -9 2>/dev/null || true
-    fi
+    kill_project_port "$p"
 done
 
 # Cleanup on exit
