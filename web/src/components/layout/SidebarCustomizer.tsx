@@ -422,10 +422,10 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
               onClick={handleGenerateFromBehavior}
               disabled={isGenerating}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors text-sm font-medium disabled:opacity-50"
-              title="Analyzes your navigation history to suggest dashboards you actually use"
+              title="Reorders your dashboards by most visited and adds any missing ones you use frequently"
             >
               {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              {isGenerating ? 'Analyzing...' : 'Suggest from History'}
+              {isGenerating ? 'Analyzing...' : 'Auto-organize'}
             </button>
             <button
               onClick={resetToDefault}
