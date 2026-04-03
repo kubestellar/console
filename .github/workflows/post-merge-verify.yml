@@ -86,16 +86,16 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Find the PR that produced this merge commit
-          PR_NUMBER=$(gh pr list --state merged --search "${{ github.sha }}" --json number --jq '.[0].number' 2>/dev/null || echo "")
-          if [ -z "$PR_NUMBER" ]; then
+          PR_NUMBER=$(gh pr list --state merged --search "${{ github.sha }}" --json number --jq '.[0].number // empty' 2>/dev/null || echo "")
+          if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ]; then
             # Fallback: search by commit message
-            PR_NUMBER=$(git log -1 --format='%s' | grep -oP '#\K\d+' | head -1 || echo "")
+            PR_NUMBER=$(git log -1 --format='%s' | grep -oE '#[0-9]+' | head -1 | tr -d '#' || echo "")
           fi
           echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
 
           if [ -n "$PR_NUMBER" ]; then
             # Extract "Fixes #NNN" from PR body
-            ISSUE=$(gh pr view "$PR_NUMBER" --json body --jq '.body' 2>/dev/null | grep -oiP '(?:fixes|closes|resolves)\s+#\K\d+' | head -1 || echo "")
+            ISSUE=$(gh pr view "$PR_NUMBER" --json body --jq '.body' 2>/dev/null | grep -oiE '(fixes|closes|resolves)\s+#[0-9]+' | head -1 | grep -oE '[0-9]+' || echo "")
             echo "issue_number=$ISSUE" >> $GITHUB_OUTPUT
             echo "PR: #$PR_NUMBER, Issue: #$ISSUE"
           else
@@ -122,27 +122,25 @@ jobs:
             for LABEL in $LABELS; do
               MATCHED=$(jq -r --arg l "$LABEL" '.label_map[$l] // [] | .[]' "$SPEC_MAP" 2>/dev/null)
               if [ -n "$MATCHED" ]; then
-                SPECS="$SPECS
-          $MATCHED"
+                SPECS=$(printf '%s\n%s' "$SPECS" "$MATCHED")
               fi
             done
           fi
 
           # From changed file paths
           PR="${{ steps.find-pr.outputs.pr_number }}"
-          if [ -n "$PR" ]; then
+          if [ -n "$PR" ] && [ "$PR" != "null" ]; then
             CHANGED_FILES=$(gh pr view "$PR" --json files --jq '.files[].path' 2>/dev/null || echo "")
             for PREFIX in $(jq -r '.path_map | keys[]' "$SPEC_MAP"); do
               if echo "$CHANGED_FILES" | grep -q "^$PREFIX"; then
                 MATCHED=$(jq -r --arg p "$PREFIX" '.path_map[$p][]' "$SPEC_MAP")
-                SPECS="$SPECS
-          $MATCHED"
+                SPECS=$(printf '%s\n%s' "$SPECS" "$MATCHED")
               fi
             done
           fi
 
-          # Deduplicate and format
-          SPEC_LIST=$(echo "$SPECS" | sort -u | grep -v '^$' | tr '\n' ' ')
+          # Trim whitespace, deduplicate, format as space-separated list
+          SPEC_LIST=$(printf '%s\n' "$SPECS" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sort -u | grep -v '^$' | tr '\n' ' ')
           echo "Selected specs: $SPEC_LIST"
           echo "spec_files=$SPEC_LIST" >> $GITHUB_OUTPUT
 
@@ -153,6 +151,8 @@ jobs:
     if: needs.extract-context.outputs.spec_files != ''
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      result: ${{ steps.test.outputs.result }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -188,18 +188,22 @@ jobs:
           done
 
           # Run with JSON + HTML reporters, Chromium only
+          # Capture exit code without masking it
+          EXIT_CODE=0
           npx playwright test $SPEC_ARGS \
             --project=chromium \
             --reporter=json,html \
             --output=test-results \
-            2>&1 | tee playwright-output.txt || true
+            2>&1 | tee playwright-output.txt || EXIT_CODE=$?
 
-          # Check exit code from the test run
-          if grep -q '"status":"passed"' test-results/.last-run.json 2>/dev/null; then
+          if [ "$EXIT_CODE" -eq 0 ]; then
             echo "result=passed" >> $GITHUB_OUTPUT
           else
             echo "result=failed" >> $GITHUB_OUTPUT
           fi
+
+          # Propagate the real exit code so the job status reflects test outcome
+          exit $EXIT_CODE
 
       - name: Upload Playwright report
         if: always()
@@ -232,13 +236,14 @@ jobs:
           PR="${{ needs.extract-context.outputs.pr_number }}"
           ISSUE="${{ needs.extract-context.outputs.issue_number }}"
           SPECS="${{ needs.extract-context.outputs.spec_files }}"
-          RESULT="${{ needs.run-tests.outputs.result || needs.run-tests.result }}"
+          RESULT="${{ needs.run-tests.outputs.result }}"
+          JOB_RESULT="${{ needs.run-tests.result }}"
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-          if [ "$RESULT" = "passed" ] || [ "${{ needs.run-tests.result }}" = "success" ]; then
+          if [ "$RESULT" = "passed" ] && [ "$JOB_RESULT" = "success" ]; then
             ICON="✅"
             STATUS="passed"
-          elif [ "${{ needs.run-tests.result }}" = "skipped" ]; then
+          elif [ "$JOB_RESULT" = "skipped" ]; then
             ICON="⏭️"
             STATUS="skipped (no matching specs)"
           else
