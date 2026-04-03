@@ -47,13 +47,18 @@ describe('PreviewPanel', () => {
 })
 
 describe('customizerNav', () => {
-  it('CUSTOMIZER_NAV has 3 flat items', async () => {
+  it('CUSTOMIZER_NAV has expected items', async () => {
     const mod = await import('../customizerNav')
-    expect(mod.CUSTOMIZER_NAV.length).toBe(3)
+    expect(mod.CUSTOMIZER_NAV.length).toBeGreaterThanOrEqual(3)
     for (const item of mod.CUSTOMIZER_NAV) {
       expect(typeof item.label).toBe('string')
       expect(typeof item.id).toBe('string')
     }
+    // Must include the core sections
+    const ids = mod.CUSTOMIZER_NAV.map((i: { id: string }) => i.id)
+    expect(ids).toContain('cards')
+    expect(ids).toContain('collections')
+    expect(ids).toContain('dashboards')
   })
 
   it('DEFAULT_SECTION is cards', async () => {
