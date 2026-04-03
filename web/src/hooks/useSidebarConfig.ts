@@ -437,46 +437,64 @@ export function useSidebarConfig() {
     setConfig(applyDashboardFilter(DEFAULT_CONFIG))
   }, [setConfig])
 
-  const generateFromBehavior = useCallback((frequentlyUsedPaths: string[]) => {
-    // Reorder items based on user's frequently visited paths
-    setConfig((prev) => {
-      const allItems = [...prev.primaryNav, ...prev.secondaryNav]
+  /**
+   * Preview what generateFromBehavior would change — returns proposed
+   * config without applying it, so the UI can show a diff.
+   */
+  const previewGenerateFromBehavior = useCallback((frequentlyUsedPaths: string[]): { proposed: SidebarConfig; changes: string[] } => {
+    const allItems = [...config.primaryNav, ...config.secondaryNav]
+    const reorderedPrimary: SidebarItem[] = []
+    const usedIds = new Set<string>()
 
-      // Find matching items for frequently used paths
-      const reorderedPrimary: SidebarItem[] = []
-      const usedIds = new Set<string>()
-
-      // First, add items that match frequently used paths (in order of frequency)
-      frequentlyUsedPaths.forEach((path) => {
-        const matchingItem = allItems.find(
-          (item) => item.href === path || path.startsWith(item.href + '/') || path.startsWith(item.href + '?')
-        )
-        if (matchingItem && !usedIds.has(matchingItem.id)) {
-          reorderedPrimary.push({ ...matchingItem, order: reorderedPrimary.length })
-          usedIds.add(matchingItem.id)
-        }
-      })
-
-      // Then add remaining primary nav items
-      prev.primaryNav.forEach((item) => {
-        if (!usedIds.has(item.id)) {
-          reorderedPrimary.push({ ...item, order: reorderedPrimary.length })
-        }
-      })
-
-      // Keep secondary nav as-is but update order
-      const reorderedSecondary = prev.secondaryNav.map((item, index) => ({
-        ...item,
-        order: index,
-      }))
-
-      return {
-        ...prev,
-        primaryNav: reorderedPrimary,
-        secondaryNav: reorderedSecondary,
+    frequentlyUsedPaths.forEach((path) => {
+      const matchingItem = allItems.find(
+        (item) => item.href === path || path.startsWith(item.href + '/') || path.startsWith(item.href + '?')
+      )
+      if (matchingItem && !usedIds.has(matchingItem.id)) {
+        reorderedPrimary.push({ ...matchingItem, order: reorderedPrimary.length })
+        usedIds.add(matchingItem.id)
       }
     })
-  }, [setConfig])
+
+    config.primaryNav.forEach((item) => {
+      if (!usedIds.has(item.id)) {
+        reorderedPrimary.push({ ...item, order: reorderedPrimary.length })
+      }
+    })
+
+    const reorderedSecondary = config.secondaryNav.map((item, index) => ({
+      ...item,
+      order: index,
+    }))
+
+    // Build human-readable change list
+    const changes: string[] = []
+    reorderedPrimary.forEach((item, i) => {
+      const oldIdx = config.primaryNav.findIndex(p => p.id === item.id)
+      if (oldIdx === -1) {
+        changes.push(`+ Added "${item.name}"`)
+      } else if (oldIdx !== i) {
+        changes.push(`↕ Moved "${item.name}" from #${oldIdx + 1} to #${i + 1}`)
+      }
+    })
+    if (changes.length === 0) changes.push('No changes needed')
+
+    return {
+      proposed: { ...config, primaryNav: reorderedPrimary, secondaryNav: reorderedSecondary },
+      changes,
+    }
+  }, [config])
+
+  /** Apply a previously previewed config */
+  const applyGeneratedConfig = useCallback((proposed: SidebarConfig) => {
+    setConfig(proposed)
+  }, [])
+
+  /** Legacy: apply immediately (kept for backward compat) */
+  const generateFromBehavior = useCallback((frequentlyUsedPaths: string[]) => {
+    const { proposed } = previewGenerateFromBehavior(frequentlyUsedPaths)
+    setConfig(proposed)
+  }, [previewGenerateFromBehavior])
 
   return {
     config,
@@ -495,6 +513,8 @@ export function useSidebarConfig() {
     toggleMobileSidebar,
     resetToDefault,
     generateFromBehavior,
+    previewGenerateFromBehavior,
+    applyGeneratedConfig,
   }
 }
 

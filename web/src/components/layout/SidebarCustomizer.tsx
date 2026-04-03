@@ -174,7 +174,10 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
     reorderItems,
     toggleClusterStatus,
     resetToDefault,
-    generateFromBehavior,
+    // generateFromBehavior not used — replaced by preview/confirm flow
+    generateFromBehavior: _generateFromBehavior,
+    previewGenerateFromBehavior,
+    applyGeneratedConfig,
   } = useSidebarConfig()
 
   // DnD sensors for both mouse and keyboard
@@ -251,45 +254,61 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
 
   // toggleKnownRoute removed — search-to-add replaces checkbox selection
 
+  // Preview state for generate-from-behavior
+  const [pendingChanges, setPendingChanges] = useState<{ proposed: ReturnType<typeof previewGenerateFromBehavior>['proposed']; changes: string[] } | null>(null)
+
   const handleGenerateFromBehavior = async () => {
     setIsGenerating(true)
     setGenerationResult(null)
+    setPendingChanges(null)
 
-    // Simulate analyzing behavior
     await new Promise(resolve => setTimeout(resolve, NAV_AFTER_ANIMATION_MS))
 
-    // Get navigation history from localStorage
     let navHistory: string[] = []
     try {
       navHistory = JSON.parse(localStorage.getItem(STORAGE_KEY_NAV_HISTORY) || '[]')
-    } catch {
-      // Corrupted data — reset
-    }
+    } catch { /* corrupted */ }
 
-    // Count page visits
     const visitCounts: Record<string, number> = {}
     navHistory.forEach((path: string) => {
       visitCounts[path] = (visitCounts[path] || 0) + 1
     })
 
-    // Sort by frequency
     const sortedPaths = Object.entries(visitCounts)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
       .map(([path]) => path)
 
     if (sortedPaths.length > 0) {
-      generateFromBehavior(sortedPaths)
-      setGenerationResult(t('sidebar.customizer.analyzed', { count: navHistory.length }))
+      const preview = previewGenerateFromBehavior(sortedPaths)
+      if (preview.changes.length === 1 && preview.changes[0] === 'No changes needed') {
+        setGenerationResult('No changes needed — your sidebar already matches your usage.')
+        const AUTO_DISMISS_MS = 5000
+        setTimeout(() => setGenerationResult(null), AUTO_DISMISS_MS)
+      } else {
+        setPendingChanges(preview)
+      }
     } else {
       setGenerationResult(t('sidebar.customizer.notEnoughData'))
+      const AUTO_DISMISS_MS = 5000
+      setTimeout(() => setGenerationResult(null), AUTO_DISMISS_MS)
     }
 
     setIsGenerating(false)
+  }
 
-    // Auto-dismiss after 5 seconds
-    const AUTO_DISMISS_MS = 5000
-    setTimeout(() => setGenerationResult(null), AUTO_DISMISS_MS)
+  const handleApplyPendingChanges = () => {
+    if (pendingChanges) {
+      applyGeneratedConfig(pendingChanges.proposed)
+      setGenerationResult(`Applied ${pendingChanges.changes.length} changes`)
+      setPendingChanges(null)
+      const AUTO_DISMISS_MS = 3000
+      setTimeout(() => setGenerationResult(null), AUTO_DISMISS_MS)
+    }
+  }
+
+  const handleRejectPendingChanges = () => {
+    setPendingChanges(null)
   }
 
   // Handle creating a new custom dashboard
@@ -443,11 +462,31 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
             </button>
           </div>
 
-          {/* Generation Result */}
-          {generationResult && (
+          {/* Pending changes preview — approve/reject before applying */}
+          {pendingChanges && (
+            <div className="mb-4 p-3 rounded-lg border border-purple-500/20 bg-purple-500/5">
+              <p className="text-xs font-medium text-purple-400 uppercase tracking-wider mb-2">Proposed Changes</p>
+              <ul className="space-y-1 mb-3">
+                {pendingChanges.changes.map((change, i) => (
+                  <li key={i} className="text-xs text-foreground">{change}</li>
+                ))}
+              </ul>
+              <div className="flex gap-2">
+                <button onClick={handleApplyPendingChanges} className="px-3 py-1.5 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg text-xs font-medium transition-colors">
+                  Apply Changes
+                </button>
+                <button onClick={handleRejectPendingChanges} className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Generation Result (after applying or for errors) */}
+          {generationResult && !pendingChanges && (
             <div className={cn(
               'mb-4 p-3 rounded-lg text-sm',
-              generationResult.includes('Not enough')
+              generationResult.includes('Not enough') || generationResult.includes('No changes')
                 ? 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-300'
                 : 'bg-green-500/10 border border-green-500/20 text-green-300'
             )}>
