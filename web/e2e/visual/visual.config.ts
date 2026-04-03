@@ -1,4 +1,6 @@
 import { defineConfig } from '@playwright/test'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 /**
  * Playwright configuration for visual regression testing against Storybook.
@@ -13,6 +15,10 @@ import { defineConfig } from '@playwright/test'
 
 const STORYBOOK_PORT = 6006
 const IS_CI = !!process.env.CI
+
+/** Resolve path relative to the web/ directory regardless of CWD */
+const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+const STORYBOOK_STATIC = path.join(WEB_DIR, 'storybook-static')
 
 export default defineConfig({
   testDir: '.',
@@ -38,7 +44,7 @@ export default defineConfig({
     { name: 'chromium', use: { browserName: 'chromium' } },
   ],
   webServer: {
-    command: `npx serve ../../storybook-static -l ${STORYBOOK_PORT} --no-clipboard`,
+    command: `npx serve "${STORYBOOK_STATIC}" -p ${STORYBOOK_PORT}`,
     url: `http://127.0.0.1:${STORYBOOK_PORT}`,
     reuseExistingServer: true,
     timeout: IS_CI ? 60_000 : 30_000,
