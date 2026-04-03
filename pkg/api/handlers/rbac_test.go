@@ -45,14 +45,15 @@ func (s *rbacTestStore) UpdateUserRole(userID uuid.UUID, role string) error {
 
 func TestRBACUpdateUserRole_ForbiddenForNonAdmin(t *testing.T) {
 	env := setupTestEnv(t)
-	adminUser := &models.User{
+	// Fix 4: variable renamed to reflect its actual viewer role
+	nonAdminUser := &models.User{
 		ID:   testAdminUserID,
-		Role: string(models.UserRoleViewer),
+		Role: models.UserRoleViewer, // Fix 1: use enum type directly, not string cast
 	}
 
 	store := &rbacTestStore{
 		users: map[uuid.UUID]*models.User{
-			testAdminUserID: adminUser,
+			testAdminUserID: nonAdminUser,
 		},
 	}
 
@@ -68,7 +69,11 @@ func TestRBACUpdateUserRole_ForbiddenForNonAdmin(t *testing.T) {
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
+	defer resp.Body.Close() // Fix 5: close response body
 	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	// Fix 2: verify no state mutation occurred despite the forbidden response
+	assert.Equal(t, uuid.Nil, store.updatedUserID)
+	assert.Empty(t, store.updatedRole)
 }
 
 func TestRBACUpdateUserRole_Success(t *testing.T) {
@@ -76,7 +81,7 @@ func TestRBACUpdateUserRole_Success(t *testing.T) {
 	targetUserID := uuid.New()
 	adminUser := &models.User{
 		ID:   testAdminUserID,
-		Role: string(models.UserRoleAdmin),
+		Role: models.UserRoleAdmin, // Fix 1: use enum type directly, not string cast
 	}
 
 	store := &rbacTestStore{
@@ -97,6 +102,7 @@ func TestRBACUpdateUserRole_Success(t *testing.T) {
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
+	defer resp.Body.Close() // Fix 5: close response body
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, targetUserID, store.updatedUserID)
 	assert.Equal(t, string(models.UserRoleEditor), store.updatedRole)
@@ -106,7 +112,7 @@ func TestRBACListConsoleUsers_Success(t *testing.T) {
 	env := setupTestEnv(t)
 	adminUser := &models.User{
 		ID:   testAdminUserID,
-		Role: string(models.UserRoleAdmin),
+		Role: models.UserRoleAdmin, // Fix 1: use enum type directly, not string cast
 	}
 
 	store := &rbacTestStore{
@@ -114,8 +120,8 @@ func TestRBACListConsoleUsers_Success(t *testing.T) {
 			testAdminUserID: adminUser,
 		},
 		listUsers: []models.User{
-			{ID: testAdminUserID, GitHubLogin: "admin", Role: string(models.UserRoleAdmin)},
-			{ID: uuid.New(), GitHubLogin: "dev1", Role: string(models.UserRoleEditor)},
+			{ID: testAdminUserID, GitHubLogin: "admin", Role: models.UserRoleAdmin},   // Fix 1: use enum type directly
+			{ID: uuid.New(), GitHubLogin: "dev1", Role: models.UserRoleEditor},        // Fix 1: use enum type directly
 		},
 	}
 
@@ -127,10 +133,17 @@ func TestRBACListConsoleUsers_Success(t *testing.T) {
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
+	defer resp.Body.Close() // Fix 5: close response body
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var users []models.User
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&users))
 	assert.Len(t, users, 2)
-	assert.Equal(t, "admin", users[0].GitHubLogin)
+
+	// Fix 3: use order-agnostic check without depending on slice position
+	logins := make([]string, len(users))
+	for i, u := range users {
+		logins[i] = u.GitHubLogin
+	}
+	assert.ElementsMatch(t, []string{"admin", "dev1"}, logins)
 }
