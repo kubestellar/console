@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { mapSettledWithConcurrency } from '../lib/utils/concurrency'
 import { isAgentUnavailable } from './useLocalAgent'
 import { clusterCacheRef } from './mcp/shared'
@@ -81,6 +81,7 @@ function getDemoWorkloads(cluster?: string, namespace?: string): Workload[] {
 async function fetchWorkloadsViaAgent(opts?: {
   cluster?: string
   namespace?: string
+  signal?: AbortSignal
 }): Promise<Workload[] | null> {
   // Skip agent requests when agent is unavailable (e.g. Netlify with no local agent)
   if (isAgentUnavailable()) return null
@@ -102,11 +103,15 @@ async function fetchWorkloadsViaAgent(opts?: {
 
       const ctrl = new AbortController()
       const tid = setTimeout(() => ctrl.abort(), MCP_HOOK_TIMEOUT_MS)
+      // Abort the per-request controller if the parent signal fires
+      const onParentAbort = () => ctrl.abort()
+      opts?.signal?.addEventListener('abort', onParentAbort)
       const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
         signal: ctrl.signal,
         headers: { Accept: 'application/json' },
       })
       clearTimeout(tid)
+      opts?.signal?.removeEventListener('abort', onParentAbort)
 
       if (!res.ok) throw new Error(`Agent ${res.status}`)
       const data = await res.json()
@@ -150,33 +155,52 @@ export function useWorkloads(options?: {
   const [isLoading, setIsLoading] = useState(enabled)
   const [error, setError] = useState<Error | null>(null)
 
+  // Track the current request so stale responses are discarded
+  const requestIdRef = useRef(0)
+  // Track the active AbortController so in-flight requests can be cancelled
+  const abortControllerRef = useRef<AbortController | null>(null)
+
   // Clear stale data immediately when options change so the dropdown
   // doesn't briefly show workloads from a previous cluster/namespace.
   useEffect(() => {
     setData(undefined)
   }, [options?.cluster, options?.namespace, options?.type])
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
     if (!enabled) return
+
+    // Increment request counter; only the latest request may update state
+    const currentRequestId = ++requestIdRef.current
+
     setIsLoading(true)
     setError(null)
 
     // Demo mode returns synthetic data immediately
     if (isDemoMode()) {
-      setData(getDemoWorkloads(options?.cluster, options?.namespace))
-      setIsLoading(false)
+      if (currentRequestId === requestIdRef.current) {
+        setData(getDemoWorkloads(options?.cluster, options?.namespace))
+        setIsLoading(false)
+      }
       return
     }
 
     // Try agent first (fast, no backend needed)
     try {
-      const agentData = await fetchWorkloadsViaAgent(options)
+      const agentData = await fetchWorkloadsViaAgent({
+        cluster: options?.cluster,
+        namespace: options?.namespace,
+        signal,
+      })
+      // Discard result if a newer request has started or this request was aborted
+      if (signal?.aborted || currentRequestId !== requestIdRef.current) return
       if (agentData) {
         setData(agentData)
         setIsLoading(false)
         return
       }
     } catch {
+      // If aborted, exit early without falling through to REST
+      if (signal?.aborted || currentRequestId !== requestIdRef.current) return
       // Agent failed, try REST below
     }
 
@@ -190,16 +214,23 @@ export function useWorkloads(options?: {
       const queryString = params.toString()
       const url = `/api/workloads${queryString ? `?${queryString}` : ''}`
 
-      const res = await fetch(url, { headers: authHeaders(), signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+      const res = await fetch(url, { headers: authHeaders(), signal: signal || AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!res.ok) {
         throw new Error(`Failed to fetch workloads: ${res.statusText}`)
       }
       const result = await res.json()
-      setData(result.items || result)
-    } catch {
+      // Only update state if this is still the latest request
+      if (!signal?.aborted && currentRequestId === requestIdRef.current) {
+        setData(result.items || result)
+      }
+    } catch (err) {
+      // Silently ignore aborted requests — they are expected during cancellation
+      if (signal?.aborted || currentRequestId !== requestIdRef.current) return
       setError(new Error('No data source available'))
     } finally {
-      setIsLoading(false)
+      if (!signal?.aborted && currentRequestId === requestIdRef.current) {
+        setIsLoading(false)
+      }
     }
   }, [options?.cluster, options?.namespace, options?.type, enabled])
 
@@ -209,9 +240,24 @@ export function useWorkloads(options?: {
       setIsLoading(false)
       return
     }
-    fetchData()
-    const interval = setInterval(fetchData, POLL_INTERVAL_MS)
-    return () => clearInterval(interval)
+
+    // Cancel any in-flight request from the previous render
+    abortControllerRef.current?.abort()
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+
+    fetchData(controller.signal)
+    const interval = setInterval(() => {
+      // Each poll gets a fresh controller so it can be cancelled independently
+      abortControllerRef.current?.abort()
+      const pollController = new AbortController()
+      abortControllerRef.current = pollController
+      fetchData(pollController.signal)
+    }, POLL_INTERVAL_MS)
+    return () => {
+      clearInterval(interval)
+      controller.abort()
+    }
   }, [fetchData, enabled])
 
   return { data, isLoading, error, refetch: fetchData }
