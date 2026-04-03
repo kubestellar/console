@@ -21,8 +21,9 @@ export function DashboardCustomizerSidebar({
           const Icon = item.icon
           const isActive = activeSection === item.id
           return (
+            <div key={item.id}>
+            {item.dividerBefore && <div className="mx-3 my-2 border-t border-border/40" />}
             <button
-              key={item.id}
               onClick={() => onSectionChange(item.id)}
               className={cn(
                 'w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors',
@@ -34,6 +35,7 @@ export function DashboardCustomizerSidebar({
               <Icon className="w-4 h-4 flex-shrink-0" />
               <span className="truncate">{item.label}</span>
             </button>
+            </div>
           )
         })}
       </nav>
