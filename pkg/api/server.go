@@ -811,8 +811,10 @@ func (s *Server) setupRoutes() {
 	api.Post("/self-upgrade/trigger", selfUpgradeHandler.TriggerUpgrade)
 	// ArgoCD routes (Application CRD discovery and sync)
 	api.Get("/gitops/argocd/applications", gitopsHandlers.ListArgoApplications)
+	api.Get("/gitops/argocd/applicationsets", gitopsHandlers.ListArgoApplicationSets)
 	api.Get("/gitops/argocd/health", gitopsHandlers.GetArgoHealthSummary)
 	api.Get("/gitops/argocd/sync", gitopsHandlers.GetArgoSyncSummary)
+	api.Get("/gitops/argocd/status", gitopsHandlers.GetArgoStatus)
 	api.Post("/gitops/argocd/sync", gitopsHandlers.TriggerArgoSync)
 	// Frontend compatibility alias
 	api.Get("/mcp/operator-subscriptions", gitopsHandlers.ListOperatorSubscriptions)

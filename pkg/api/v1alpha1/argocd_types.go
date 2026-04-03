@@ -16,6 +16,13 @@ var (
 		Version:  "v1alpha1",
 		Resource: "applications",
 	}
+
+	// ArgoApplicationSetGVR is the GroupVersionResource for ArgoCD ApplicationSet (v1alpha1)
+	ArgoApplicationSetGVR = schema.GroupVersionResource{
+		Group:    "argoproj.io",
+		Version:  "v1alpha1",
+		Resource: "applicationsets",
+	}
 )
 
 // ArgoApplication represents an ArgoCD Application resource
@@ -42,6 +49,24 @@ type ArgoApplicationList struct {
 	TotalCount int               `json:"totalCount"`
 }
 
+// ArgoApplicationSet represents an ArgoCD ApplicationSet resource
+type ArgoApplicationSet struct {
+	Name       string   `json:"name"`
+	Namespace  string   `json:"namespace"`
+	Cluster    string   `json:"cluster"`
+	Generators []string `json:"generators"` // e.g. ["list", "cluster", "git", "matrix"]
+	Template   string   `json:"template"`   // Template application name
+	SyncPolicy string   `json:"syncPolicy"` // "Automated", "Manual", or ""
+	Status     string   `json:"status"`     // Overall status from conditions
+	AppCount   int      `json:"appCount"`   // Number of applications generated
+}
+
+// ArgoApplicationSetList is a list of ArgoCD ApplicationSets
+type ArgoApplicationSetList struct {
+	Items      []ArgoApplicationSet `json:"items"`
+	TotalCount int                  `json:"totalCount"`
+}
+
 // ArgoHealthSummary aggregates health status counts across applications
 type ArgoHealthSummary struct {
 	Healthy     int `json:"healthy"`
@@ -63,6 +88,19 @@ type ArgoSyncRequest struct {
 	AppName   string `json:"appName"`
 	Namespace string `json:"namespace"`
 	Cluster   string `json:"cluster"`
+}
+
+// ArgoStatusResponse reports ArgoCD detection status per cluster
+type ArgoStatusResponse struct {
+	Detected bool                `json:"detected"`
+	Clusters []ArgoClusterStatus `json:"clusters"`
+}
+
+// ArgoClusterStatus reports ArgoCD presence on a single cluster
+type ArgoClusterStatus struct {
+	Name              string `json:"name"`
+	HasApplications   bool   `json:"hasApplications"`
+	HasApplicationSets bool  `json:"hasApplicationSets"`
 }
 
 // TimeSinceArgo returns a human-readable duration since the given time

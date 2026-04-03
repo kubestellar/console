@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -185,3 +186,173 @@ func parseArgoTimeAgo(timeStr string) string {
 	// If we can't parse the timestamp, return the raw string
 	return timeStr
 }
+
+// ListArgoApplicationSets lists all ArgoCD ApplicationSet resources across all clusters.
+// If ArgoCD CRDs are not installed on a cluster, that cluster is silently skipped.
+func (m *MultiClusterClient) ListArgoApplicationSets(ctx context.Context) (*v1alpha1.ArgoApplicationSetList, error) {
+	m.mu.RLock()
+	clusters := make([]string, 0, len(m.clients))
+	for name := range m.clients {
+		clusters = append(clusters, name)
+	}
+	m.mu.RUnlock()
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	appSets := make([]v1alpha1.ArgoApplicationSet, 0)
+
+	for _, clusterName := range clusters {
+		wg.Add(1)
+		go func(cluster string) {
+			defer wg.Done()
+
+			clusterAppSets, err := m.ListArgoApplicationSetsForCluster(ctx, cluster)
+			if err != nil {
+				log.Printf("[ArgoCD] Skipping cluster %s for ApplicationSets: %v", cluster, err)
+				return // CRD not installed or cluster unreachable — skip silently
+			}
+
+			mu.Lock()
+			appSets = append(appSets, clusterAppSets...)
+			mu.Unlock()
+		}(clusterName)
+	}
+
+	wg.Wait()
+
+	return &v1alpha1.ArgoApplicationSetList{
+		Items:      appSets,
+		TotalCount: len(appSets),
+	}, nil
+}
+
+// ListArgoApplicationSetsForCluster lists ArgoCD ApplicationSet resources in a specific cluster.
+// Returns an empty list (not an error) if ArgoCD CRDs are not installed.
+func (m *MultiClusterClient) ListArgoApplicationSetsForCluster(ctx context.Context, contextName string) ([]v1alpha1.ArgoApplicationSet, error) {
+	dynamicClient, err := m.GetDynamicClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	list, err := dynamicClient.Resource(v1alpha1.ArgoApplicationSetGVR).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) || isNoMatchError(err) {
+			// ArgoCD CRDs not installed — return empty list silently
+			return []v1alpha1.ArgoApplicationSet{}, nil
+		}
+		// Real error (auth, network, RBAC) — log and propagate
+		return nil, fmt.Errorf("failed to list ApplicationSets on cluster %s: %w", contextName, err)
+	}
+
+	return m.parseArgoApplicationSetsFromList(list, contextName), nil
+}
+
+// parseArgoApplicationSetsFromList parses ArgoCD ApplicationSets from an unstructured list
+func (m *MultiClusterClient) parseArgoApplicationSetsFromList(list interface{}, contextName string) []v1alpha1.ArgoApplicationSet {
+	appSets := make([]v1alpha1.ArgoApplicationSet, 0)
+
+	uList, ok := list.(*unstructured.UnstructuredList)
+	if !ok {
+		return appSets
+	}
+
+	for i := range uList.Items {
+		item := &uList.Items[i]
+		content := item.UnstructuredContent()
+
+		appSet := v1alpha1.ArgoApplicationSet{
+			Name:      item.GetName(),
+			Namespace: item.GetNamespace(),
+			Cluster:   contextName,
+			Status:    "Unknown",
+		}
+
+		// Parse spec.generators — extract generator type names
+		if spec, found, _ := unstructuredNestedMap(content, "spec"); found {
+			if generators, ok := spec["generators"].([]interface{}); ok {
+				appSet.Generators = parseGeneratorTypes(generators)
+			}
+
+			// Parse spec.template.metadata.name for the template app name
+			if tmpl, tmplFound, _ := unstructuredNestedMap(spec, "template"); tmplFound {
+				if meta, metaFound, _ := unstructuredNestedMap(tmpl, "metadata"); metaFound {
+					if name, ok := meta["name"].(string); ok {
+						appSet.Template = name
+					}
+				}
+			}
+
+			// Parse spec.syncPolicy logic correctly
+			appSet.SyncPolicy = "Manual"
+			if tmpl, tmplFound, _ := unstructuredNestedMap(spec, "template"); tmplFound {
+				if tmplSpec, tsFound, _ := unstructuredNestedMap(tmpl, "spec"); tsFound {
+					if sp, spFound, _ := unstructuredNestedMap(tmplSpec, "syncPolicy"); spFound {
+						if _, hasAuto := sp["automated"]; hasAuto {
+							appSet.SyncPolicy = "Automated"
+						}
+					}
+				}
+			}
+		}
+
+		// Parse status.conditions for overall status
+		if status, found, _ := unstructuredNestedMap(content, "status"); found {
+			if conditions, ok := status["conditions"].([]interface{}); ok {
+				appSet.Status = parseAppSetConditionStatus(conditions)
+			}
+			// Parse status.applicationStatus for app count
+			if appStatuses, ok := status["applicationStatus"].([]interface{}); ok {
+				appSet.AppCount = len(appStatuses)
+			}
+		}
+
+		appSets = append(appSets, appSet)
+	}
+
+	return appSets
+}
+
+// parseGeneratorTypes extracts generator type names from the generators array
+func parseGeneratorTypes(generators []interface{}) []string {
+	types := make([]string, 0, len(generators))
+	knownTypes := []string{"list", "clusters", "cluster", "git", "matrix", "merge", "scmProvider", "pullRequest", "clusterDecisionResource"}
+
+	for _, gen := range generators {
+		genMap, ok := gen.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		for _, t := range knownTypes {
+			if _, exists := genMap[t]; exists {
+				types = append(types, t)
+				break
+			}
+		}
+	}
+
+	if len(types) == 0 {
+		types = append(types, "unknown")
+	}
+	return types
+}
+
+// parseAppSetConditionStatus returns a human-readable status from ApplicationSet conditions
+func parseAppSetConditionStatus(conditions []interface{}) string {
+	for _, cond := range conditions {
+		condMap, ok := cond.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		condType, _ := condMap["type"].(string)
+		condStatus, _ := condMap["status"].(string)
+
+		if condType == "ErrorOccurred" && condStatus == "True" {
+			return "Error"
+		}
+		if condType == "ResourcesUpToDate" && condStatus == "True" {
+			return "Healthy"
+		}
+	}
+	return "Progressing"
+}
+

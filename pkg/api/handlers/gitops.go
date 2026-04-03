@@ -4,9 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -2161,7 +2164,7 @@ func (h *GitOpsHandlers) GetArgoSyncSummary(c *fiber.Ctx) error {
 }
 
 // TriggerArgoSync triggers a sync operation for an ArgoCD Application.
-// This is a best-effort operation that patches the Application's operation field.
+// Tries ArgoCD REST API first (if ARGOCD_AUTH_TOKEN is set), then CLI, then annotation patching.
 // POST /api/gitops/argocd/sync
 func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
@@ -2189,16 +2192,63 @@ func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
 			"success": false,
 		})
 	}
+	
+	if err := validateK8sName(req.AppName, "appName"); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error(), "success": false})
+	}
+	if err := validateK8sName(req.Cluster, "cluster"); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error(), "success": false})
+	}
 
 	// Default namespace for ArgoCD applications
 	namespace := req.Namespace
 	if namespace == "" {
 		namespace = "argocd"
+	} else if err := validateK8sName(namespace, "namespace"); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error(), "success": false})
 	}
 
 	log.Printf("[ArgoCD] Triggering sync for %s/%s on cluster %s", namespace, req.AppName, req.Cluster)
 
-	// Use argocd CLI if available, otherwise try kubectl annotation refresh
+	// Strategy 1: Try ArgoCD REST API if auth token is configured
+	argoToken := os.Getenv("ARGOCD_AUTH_TOKEN")
+	if argoToken != "" {
+		argoServerURL := h.discoverArgoServerURL(c.Context(), req.Cluster)
+		if argoServerURL != "" {
+			syncURL := fmt.Sprintf("%s/api/v1/applications/%s/sync", argoServerURL, url.PathEscape(req.AppName))
+			syncBody := []byte(`{"prune":true}`)
+
+			httpReq, err := http.NewRequestWithContext(c.Context(), "POST", syncURL, bytes.NewReader(syncBody))
+			if err == nil {
+				httpReq.Header.Set("Authorization", "Bearer "+argoToken)
+				httpReq.Header.Set("Content-Type", "application/json")
+
+				skipVerify := os.Getenv("ARGOCD_TLS_INSECURE") == "true"
+				client := &http.Client{
+					Timeout: argocdQueryTimeout,
+					Transport: &http.Transport{
+						TLSClientConfig: &tls.Config{InsecureSkipVerify: skipVerify},
+					},
+				}
+				resp, err := client.Do(httpReq)
+				if err == nil {
+					defer resp.Body.Close()
+					if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+						return c.JSON(fiber.Map{
+							"success": true,
+							"message": "Sync triggered via ArgoCD REST API",
+							"method":  "api",
+						})
+					}
+					log.Printf("[ArgoCD] API sync returned status %d, falling back", resp.StatusCode)
+				} else {
+					log.Printf("[ArgoCD] API sync failed: %v, falling back", err)
+				}
+			}
+		}
+	}
+
+	// Strategy 2: Use argocd CLI if available
 	if _, err := exec.LookPath("argocd"); err == nil {
 		cmd := exec.CommandContext(c.Context(), "argocd", "app", "sync", req.AppName,
 			"--namespace", namespace,
@@ -2207,19 +2257,17 @@ func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
 		)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
-			log.Printf("[ArgoCD] CLI sync failed: %v, output: %s", err, string(output))
-			return c.Status(500).JSON(fiber.Map{
-				"error":   fmt.Sprintf("ArgoCD sync failed: %v", err),
-				"success": false,
+			log.Printf("[ArgoCD] CLI sync failed: %v, output: %s, falling back to Annotation Patching", err, string(output))
+		} else {
+			return c.JSON(fiber.Map{
+				"success": true,
+				"message": "Sync triggered via ArgoCD CLI",
+				"method":  "cli",
 			})
 		}
-		return c.JSON(fiber.Map{
-			"success": true,
-			"message": "Sync triggered via ArgoCD CLI",
-		})
 	}
 
-	// Fallback: annotate the Application to trigger a refresh
+	// Strategy 3: Fallback — annotate the Application to trigger a refresh
 	dynamicClient, err := h.k8sClient.GetDynamicClient(req.Cluster)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
@@ -2273,5 +2321,126 @@ func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"success": true,
 		"message": "Sync triggered via Application resource annotation",
+		"method":  "annotation",
 	})
 }
+
+// discoverArgoServerURL discovers the ArgoCD API server URL via K8s Service lookup
+func (h *GitOpsHandlers) discoverArgoServerURL(ctx context.Context, cluster string) string {
+	clientset, err := h.k8sClient.GetClient(cluster)
+	if err != nil {
+		log.Printf("[ArgoCD] Server discovery failed: cannot get client for cluster %s: %v", cluster, err)
+		return ""
+	}
+
+	// Look for the argocd-server service in common namespaces
+	namespaces := []string{"argocd", "argo-cd", "gitops"}
+	for _, ns := range namespaces {
+		svc, err := clientset.CoreV1().Services(ns).Get(ctx, "argocd-server", metav1.GetOptions{})
+		if err == nil {
+			if len(svc.Spec.Ports) > 0 {
+				// Use cluster-internal DNS: <service>.<namespace>.svc
+				return fmt.Sprintf("https://%s.%s.svc:%d", svc.Name, svc.Namespace, svc.Spec.Ports[0].Port)
+			} else {
+				log.Printf("[ArgoCD] Server discovery warning: argocd-server service found in %s but has no ports", ns)
+			}
+		}
+	}
+	log.Printf("[ArgoCD] Server discovery empty: argocd-server service not found in cluster %s", cluster)
+	return ""
+}
+
+// ListArgoApplicationSets returns all ArgoCD ApplicationSet resources across all clusters.
+// GET /api/gitops/argocd/applicationsets
+// Query params: ?cluster=<name> (optional, filter by cluster)
+func (h *GitOpsHandlers) ListArgoApplicationSets(c *fiber.Ctx) error {
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{
+			"error":      "Kubernetes client not configured",
+			"isDemoData": true,
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), argocdQueryTimeout)
+	defer cancel()
+
+	appSetList, err := h.k8sClient.ListArgoApplicationSets(ctx)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error":      fmt.Sprintf("Failed to list ArgoCD ApplicationSets: %v", err),
+			"isDemoData": true,
+		})
+	}
+
+	// Optional cluster filter
+	clusterFilter := c.Query("cluster")
+	if clusterFilter != "" {
+		filtered := make([]v1alpha1.ArgoApplicationSet, 0)
+		for _, appSet := range appSetList.Items {
+			if appSet.Cluster == clusterFilter {
+				filtered = append(filtered, appSet)
+			}
+		}
+		return c.JSON(fiber.Map{
+			"items":      filtered,
+			"totalCount": len(filtered),
+			"isDemoData": false,
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"items":      appSetList.Items,
+		"totalCount": appSetList.TotalCount,
+		"isDemoData": false,
+	})
+}
+
+// GetArgoStatus reports whether ArgoCD is detected on any connected cluster.
+// GET /api/gitops/argocd/status
+func (h *GitOpsHandlers) GetArgoStatus(c *fiber.Ctx) error {
+	if h.k8sClient == nil {
+		return c.JSON(fiber.Map{
+			"detected": false,
+			"clusters": []interface{}{},
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), argocdQueryTimeout)
+	defer cancel()
+
+	// Check for Application CRDs
+	appList, _ := h.k8sClient.ListArgoApplications(ctx)
+	appSetList, _ := h.k8sClient.ListArgoApplicationSets(ctx)
+
+	// Build per-cluster detection
+	clusterMap := make(map[string]*v1alpha1.ArgoClusterStatus)
+
+	if appList != nil {
+		for _, app := range appList.Items {
+			if _, ok := clusterMap[app.Cluster]; !ok {
+				clusterMap[app.Cluster] = &v1alpha1.ArgoClusterStatus{Name: app.Cluster}
+			}
+			clusterMap[app.Cluster].HasApplications = true
+		}
+	}
+
+	if appSetList != nil {
+		for _, appSet := range appSetList.Items {
+			if _, ok := clusterMap[appSet.Cluster]; !ok {
+				clusterMap[appSet.Cluster] = &v1alpha1.ArgoClusterStatus{Name: appSet.Cluster}
+			}
+			clusterMap[appSet.Cluster].HasApplicationSets = true
+		}
+	}
+
+	clusters := make([]v1alpha1.ArgoClusterStatus, 0, len(clusterMap))
+	for _, cs := range clusterMap {
+		clusters = append(clusters, *cs)
+	}
+
+	return c.JSON(fiber.Map{
+		"detected": len(clusters) > 0,
+		"clusters": clusters,
+	})
+}
+

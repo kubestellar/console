@@ -59,6 +59,7 @@ The Auto-QA workflow uses this file to verify component consistency.
 | KustomizationStatus | web/src/components/cards/KustomizationStatus.tsx | `kustomization_status` |
 | OverlayComparison | web/src/components/cards/OverlayComparison.tsx | `overlay_comparison` |
 | ArgoCDApplications | web/src/components/cards/ArgoCDApplications.tsx | `argocd_applications` |
+| ArgoCDApplicationSets | web/src/components/cards/ArgoCDApplicationSets.tsx | `argocd_applicationsets` |
 | ArgoCDSyncStatus | web/src/components/cards/ArgoCDSyncStatus.tsx | `argocd_sync_status` |
 | ArgoCDHealth | web/src/components/cards/ArgoCDHealth.tsx | `argocd_health` |
 | UserManagement | web/src/components/cards/UserManagement.tsx | `user_management` |

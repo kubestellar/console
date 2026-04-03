@@ -150,6 +150,7 @@ const CARD_CATALOG = {
   ],
   'ArgoCD': [
     { type: 'argocd_applications', title: 'ArgoCD Applications', description: 'ArgoCD app status', visualization: 'status' },
+    { type: 'argocd_applicationsets', title: 'ArgoCD ApplicationSets', description: 'Fleet-wide deployments using generators', visualization: 'table' },
     { type: 'argocd_sync_status', title: 'ArgoCD Sync Status', description: 'Sync state of applications', visualization: 'donut' },
     { type: 'argocd_health', title: 'ArgoCD Health', description: 'Application health overview', visualization: 'status' },
   ],

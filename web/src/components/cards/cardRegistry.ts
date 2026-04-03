@@ -78,6 +78,7 @@ const ChartVersions = safeLazy(() => _deployBundle, 'ChartVersions')
 const KustomizationStatus = safeLazy(() => _deployBundle, 'KustomizationStatus')
 const OverlayComparison = safeLazy(() => _deployBundle, 'OverlayComparison')
 const ArgoCDApplications = safeLazy(() => _deployBundle, 'ArgoCDApplications')
+const ArgoCDApplicationSets = safeLazy(() => _deployBundle, 'ArgoCDApplicationSets')
 const ArgoCDSyncStatus = safeLazy(() => _deployBundle, 'ArgoCDSyncStatus')
 const ArgoCDHealth = safeLazy(() => _deployBundle, 'ArgoCDHealth')
 const UserManagement = safeLazy(() => import('./UserManagement'), 'UserManagement')
@@ -372,6 +373,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   overlay_comparison: OverlayComparison,
   // ArgoCD cards
   argocd_applications: ArgoCDApplications,
+  argocd_applicationsets: ArgoCDApplicationSets,
   argocd_sync_status: ArgoCDSyncStatus,
   argocd_health: ArgoCDHealth,
   // User management
@@ -824,6 +826,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   kustomization_status: () => import('./deploy-bundle'),
   overlay_comparison: () => import('./deploy-bundle'),
   argocd_applications: () => import('./deploy-bundle'),
+  argocd_applicationsets: () => import('./deploy-bundle'),
   argocd_sync_status: () => import('./deploy-bundle'),
   argocd_health: () => import('./deploy-bundle'),
   // active_alerts — preloader registered via unified descriptor system
@@ -1333,6 +1336,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   namespace_monitor: 8,
   gitops_drift: 6,
   argocd_applications: 6,
+  argocd_applicationsets: 6,
   argocd_sync_status: 6,
   kustomization_status: 6,
   pvc_status: 6,

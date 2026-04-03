@@ -742,3 +742,228 @@ export function useArgoCDSyncStatus(localClusterFilter: string[] = []): UseArgoC
     refetch: () => refetch(false),
   }
 }
+
+// ============================================================================
+// Types: ApplicationSets
+// ============================================================================
+
+export interface ArgoApplicationSet {
+  name: string
+  namespace: string
+  cluster: string
+  generators: string[]  // e.g. ["list", "cluster", "git", "matrix"]
+  template: string      // Template application name
+  syncPolicy: string    // "Automated", "Manual", or ""
+  status: string        // "Healthy", "Progressing", "Error", "Unknown"
+  appCount: number      // Number of applications generated
+}
+
+// ============================================================================
+// API Fetch: ApplicationSets
+// ============================================================================
+
+async function fetchArgoApplicationSets(): Promise<{ items: ArgoApplicationSet[]; isDemoData: boolean }> {
+  const ctrl = new AbortController()
+  const tid = setTimeout(() => ctrl.abort(), FETCH_DEFAULT_TIMEOUT_MS)
+  try {
+    const res = await fetch('/api/gitops/argocd/applicationsets', {
+      signal: ctrl.signal,
+      headers: authHeaders(),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      if (body.isDemoData) {
+        return { items: [], isDemoData: true }
+      }
+      throw new Error(`API ${res.status}: ${body.error || res.statusText}`)
+    }
+    const data = await res.json()
+    return {
+      items: (data.items || []) as ArgoApplicationSet[],
+      isDemoData: data.isDemoData === true,
+    }
+  } finally {
+    clearTimeout(tid)
+  }
+}
+
+// ============================================================================
+// Mock Data: ApplicationSets
+// ============================================================================
+
+function getMockArgoApplicationSets(clusters: string[]): ArgoApplicationSet[] {
+  const appSets: ArgoApplicationSet[] = []
+
+  const templates = [
+    {
+      name: 'platform-services',
+      generators: ['clusters'],
+      template: '{{name}}-platform',
+      syncPolicy: 'Automated',
+      status: 'Healthy',
+      appCount: 5,
+    },
+    {
+      name: 'microservices-fleet',
+      generators: ['git'],
+      template: '{{path.basename}}',
+      syncPolicy: 'Automated',
+      status: 'Healthy',
+      appCount: 12,
+    },
+    {
+      name: 'monitoring-stack',
+      generators: ['list'],
+      template: 'monitoring-{{name}}',
+      syncPolicy: 'Manual',
+      status: 'Progressing',
+      appCount: 3,
+    },
+    {
+      name: 'multi-region-apps',
+      generators: ['matrix'],
+      template: '{{cluster}}-{{app}}',
+      syncPolicy: 'Automated',
+      status: 'Error',
+      appCount: 8,
+    },
+  ]
+
+  ;(clusters || []).forEach((cluster, idx) => {
+    // Distribute templates across clusters
+    const startIdx = idx % 2 === 0 ? 0 : 2
+    const endIdx = startIdx + 2
+    templates.slice(startIdx, endIdx).forEach((tmpl) => {
+      appSets.push({
+        ...tmpl,
+        namespace: 'argocd',
+        cluster,
+      })
+    })
+  })
+
+  return appSets
+}
+
+// ============================================================================
+// Hook: useArgoApplicationSets
+// ============================================================================
+
+const APPSET_CACHE_KEY = 'kc-argocd-appsets-cache'
+
+interface UseArgoApplicationSetsResult {
+  applicationSets: ArgoApplicationSet[]
+  isDemoData: boolean
+  isLoading: boolean
+  isRefreshing: boolean
+  error: string | null
+  isFailed: boolean
+  consecutiveFailures: number
+  lastRefresh: number | null
+  refetch: () => Promise<void>
+}
+
+export function useArgoApplicationSets(): UseArgoApplicationSetsResult {
+  const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
+
+  // Initialize from cache
+  const cachedData = useRef(loadFromCache<ArgoApplicationSet[]>(APPSET_CACHE_KEY))
+  const [applicationSets, setApplicationSets] = useState<ArgoApplicationSet[]>(
+    cachedData.current?.data || []
+  )
+  const [isDemoData, setIsDemoData] = useState(cachedData.current?.isDemoData ?? true)
+  const [isLoading, setIsLoading] = useState(!cachedData.current)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
+  const [lastRefresh, setLastRefresh] = useState<number | null>(
+    cachedData.current?.timestamp || null
+  )
+  const initialLoadDone = useRef(!!cachedData.current)
+
+  const clusterNames = useMemo(
+    () => (clusters || []).map(c => c.name),
+    [clusters]
+  )
+
+  const refetch = useCallback(async (silent = false) => {
+    if (clusterNames.length === 0) {
+      setIsLoading(false)
+      return
+    }
+
+    if (!silent) {
+      setIsRefreshing(true)
+      if (!initialLoadDone.current) {
+        setIsLoading(true)
+      }
+    }
+
+    try {
+      // Try real API first
+      const result = await fetchArgoApplicationSets()
+
+      if (!result.isDemoData) {
+        setApplicationSets(result.items || [])
+        setIsDemoData(false)
+        setError(null)
+        setConsecutiveFailures(0)
+        setLastRefresh(Date.now())
+        initialLoadDone.current = true
+        saveToCache(APPSET_CACHE_KEY, result.items || [], false)
+        return
+      }
+
+      // API explicitly indicated demo data — fall through to mock
+      throw new Error('No ArgoCD ApplicationSet data available')
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to fetch ApplicationSets'
+      console.error('[ArgoCD] ApplicationSets fetch failed:', errorMsg)
+      setError(errorMsg)
+      setConsecutiveFailures(prev => prev + 1)
+      // Only fall back to demo data if this is likely "not installed" (not a transient error)
+      if (consecutiveFailures >= FAILURE_THRESHOLD) {
+        const appSets = getMockArgoApplicationSets(clusterNames)
+        setApplicationSets(appSets)
+        setIsDemoData(true)
+      }
+      setLastRefresh(Date.now())
+      initialLoadDone.current = true
+    } finally {
+      setIsLoading(false)
+      setIsRefreshing(false)
+    }
+  }, [clusterNames, consecutiveFailures])
+
+  // Initial load
+  useEffect(() => {
+    if (!clustersLoading && clusterNames.length > 0) {
+      refetch()
+    } else if (!clustersLoading) {
+      setIsLoading(false)
+    }
+  }, [clustersLoading, clusterNames.length]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-refresh
+  useEffect(() => {
+    if (applicationSets.length === 0) return
+
+    const interval = setInterval(() => {
+      refetch(true)
+    }, REFRESH_INTERVAL_MS)
+
+    return () => clearInterval(interval)
+  }, [applicationSets.length, refetch])
+
+  return {
+    applicationSets,
+    isDemoData,
+    isLoading: isLoading || clustersLoading,
+    isRefreshing,
+    error,
+    isFailed: consecutiveFailures >= FAILURE_THRESHOLD,
+    consecutiveFailures,
+    lastRefresh,
+    refetch: () => refetch(false),
+  }
+}
