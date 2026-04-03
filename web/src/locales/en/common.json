@@ -713,6 +713,24 @@
   "dashboard": {
     "title": "Dashboard",
     "subtitle": "Your personalized multi-cluster overview",
+    "studio": {
+      "title": "Dashboard Studio",
+      "search": "Search cards, dashboards, templates...",
+      "sections": {
+        "cards": "Cards",
+        "browse": "Browse Catalog",
+        "aiSuggestions": "AI Suggestions",
+        "navigation": "Navigation",
+        "sidebar": "Sidebar Items",
+        "addPages": "Add Pages",
+        "templates": "Templates",
+        "gallery": "Template Gallery",
+        "settings": "Dashboard Settings",
+        "export": "Export & Import",
+        "reset": "Reset Options",
+        "health": "Dashboard Health"
+      }
+    },
     "resetWarning": "This action cannot be undone",
     "noTemplates": "No templates in this category",
     "actions": {
