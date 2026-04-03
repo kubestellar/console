@@ -167,6 +167,13 @@ export function useCRDs(): UseCRDsResult {
   )
   const initialLoadDone = useRef(!!cachedData.current)
 
+  // Use a ref for clusters so that refetch doesn't depend on the clusters
+  // array reference. Previously, every background cluster-list refresh
+  // created a new refetch → re-subscribed the auto-refresh interval →
+  // triggered an immediate refetch that could overwrite the cache with demo data.
+  const clustersRef = useRef(clusters)
+  clustersRef.current = clusters
+
   const refetch = useCallback(async (silent = false) => {
     if (!silent && !initialLoadDone.current) {
       setIsLoading(true)
@@ -205,7 +212,8 @@ export function useCRDs(): UseCRDsResult {
       saveToCache(data.crds || [], false)
     } catch {
       // API failed or returned demo indicator — fall back to demo data
-      const clusterNames = (clusters || []).filter(c => c.reachable !== false).map(c => c.name)
+      const currentClusters = clustersRef.current
+      const clusterNames = (currentClusters || []).filter(c => c.reachable !== false).map(c => c.name)
       const demoCRDs = getDemoCRDs(clusterNames.length > 0 ? clusterNames : ['us-east-1', 'us-west-2', 'eu-central-1'])
       setCRDs(demoCRDs)
       setIsDemoData(true)
@@ -216,7 +224,7 @@ export function useCRDs(): UseCRDsResult {
     } finally {
       setIsLoading(false)
     }
-  }, [clusters])
+  }, []) // No dependency on clusters — uses clustersRef instead
 
   // Initial load
   useEffect(() => {

@@ -152,6 +152,13 @@ export function useAdmissionWebhooks(): UseAdmissionWebhooksResult {
   )
   const initialLoadDone = useRef(!!cachedData.current)
 
+  // Use refs so refetch doesn't depend on clusters/isDemoData references,
+  // which would cause the auto-refresh useEffect to re-subscribe on every change.
+  const clustersRef = useRef(clusters)
+  clustersRef.current = clusters
+  const isDemoDataRef = useRef(isDemoData)
+  isDemoDataRef.current = isDemoData
+
   const refetch = useCallback(async (silent = false) => {
     if (!silent && !initialLoadDone.current) {
       setIsLoading(true)
@@ -184,24 +191,33 @@ export function useAdmissionWebhooks(): UseAdmissionWebhooksResult {
 
       setWebhooks(data.webhooks || [])
       setIsDemoData(false)
+      isDemoDataRef.current = false
       setConsecutiveFailures(0)
       setLastRefresh(Date.now())
       initialLoadDone.current = true
       saveToCache(data.webhooks || [], false)
     } catch {
-      const clusterNames = (clusters || []).filter(c => c.reachable !== false).map(c => c.name)
-      const demoWebhooks = getDemoWebhooks(clusterNames)
-      setWebhooks(demoWebhooks)
-      setIsDemoData(true)
+      // Only fall back to demo data if we have no real data yet.
+      // If we already have real (non-demo) data, a transient error should
+      // not overwrite it — otherwise a valid empty-webhook state is silently
+      // replaced with fake demo webhooks.
       setConsecutiveFailures(prev => prev + 1)
-      setLastRefresh(Date.now())
+      if (isDemoDataRef.current || !initialLoadDone.current) {
+        const currentClusters = clustersRef.current
+        const clusterNames = (currentClusters || []).filter(c => c.reachable !== false).map(c => c.name)
+        const demoWebhooks = getDemoWebhooks(clusterNames)
+        setWebhooks(demoWebhooks)
+        setIsDemoData(true)
+        isDemoDataRef.current = true
+        setLastRefresh(Date.now())
+        saveToCache(demoWebhooks, true)
+      }
       initialLoadDone.current = true
-      saveToCache(demoWebhooks, true)
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }, [clusters])
+  }, []) // No dependency on clusters — uses refs instead
 
   // Initial load
   useEffect(() => {

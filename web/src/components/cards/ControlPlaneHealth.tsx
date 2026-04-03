@@ -57,7 +57,13 @@ export function ControlPlaneHealth() {
     })
   }, [filtered])
 
-  const managedCluster = componentStatus.every(c => c.total === 0) && clusters.length > 0
+  // Only declare "managed cluster" when data has fully loaded (not loading, not demo)
+  // and no control-plane pods were found. Without this guard, slow API responses
+  // cause all clusters to show the managed-cluster message during initial load.
+  const managedCluster = componentStatus.every(c => c.total === 0)
+    && clusters.length > 0
+    && !isLoading
+    && !isDemoFallback
 
   if (showSkeleton) {
     return (

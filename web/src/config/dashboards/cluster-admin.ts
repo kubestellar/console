@@ -51,7 +51,7 @@ export const clusterAdminDashboardConfig: UnifiedDashboardConfig = {
     autoRefresh: true,
     autoRefreshInterval: 30000,
   },
-  storageKey: 'cluster-admin-dashboard-cards',
+  storageKey: 'kubestellar-cluster-admin-cards',
 }
 
 export default clusterAdminDashboardConfig

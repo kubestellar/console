@@ -815,10 +815,11 @@ After I approve, help me execute the repairs step by step.`,
           clusterName={clusterName}
           totalCores={health?.cpuCores || 0}
           allocatableCores={health?.cpuCores || 0}
+          requestedCores={health?.cpuRequestsCores || health?.cpuUsageCores || 0}
           nodes={clusterNodes.map(n => ({
             name: n.name,
             cpuCapacity: parseInt(n.cpuCapacity) || 0,
-            cpuAllocatable: parseInt(n.cpuCapacity) || 0, // Use capacity as allocatable estimate
+            cpuAllocatable: parseInt(n.cpuCapacity) || 0,
           }))}
           isLoading={nodesLoading}
           onClose={() => setShowCPUDetail(false)}
@@ -830,6 +831,7 @@ After I approve, help me execute the repairs step by step.`,
           clusterName={clusterName}
           totalMemoryGB={health?.memoryGB || 0}
           allocatableMemoryGB={health?.memoryGB || 0}
+          requestedMemoryGB={health?.memoryRequestsGB || health?.memoryUsageGB || 0}
           nodes={clusterNodes.map(n => {
             // Parse memory string like "16Gi" or "16384Mi"
             const memStr = n.memoryCapacity || '0'
@@ -844,7 +846,7 @@ After I approve, help me execute the repairs step by step.`,
             return {
               name: n.name,
               memoryCapacityGB: memGB,
-              memoryAllocatableGB: memGB, // Use capacity as allocatable estimate
+              memoryAllocatableGB: memGB,
             }
           })}
           isLoading={nodesLoading}
