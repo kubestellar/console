@@ -32,7 +32,7 @@ export const STATUS_CONFIG: Record<StatusLevel, { label: string; color: string; 
   bound: { label: 'Bound', color: 'text-green-400', bgColor: 'bg-green-500/10' },
 }
 
-// Cluster group definition
+// Cluster group definition (used by Clusters page ClusterGroupsSection)
 export interface ClusterGroup {
   id: string
   name: string
@@ -40,6 +40,17 @@ export interface ClusterGroup {
   color?: string
   // For label-based groups
   labelSelector?: Record<string, string>
+}
+
+/** A saved filter set — snapshots ALL active filter state for quick recall */
+export interface SavedFilterSet {
+  id: string
+  name: string
+  color: string
+  clusters: string[]      // empty = all clusters
+  severities: string[]    // empty = all severities
+  statuses: string[]      // empty = all statuses
+  customText: string
 }
 
 interface GlobalFiltersContextType {
@@ -89,6 +100,13 @@ interface GlobalFiltersContextType {
   isFiltered: boolean
   clearAllFilters: () => void
 
+  // Saved filter sets
+  savedFilterSets: SavedFilterSet[]
+  saveCurrentFilters: (name: string, color: string) => void
+  applySavedFilterSet: (id: string) => void
+  deleteSavedFilterSet: (id: string) => void
+  activeFilterSetId: string | null
+
   // Filter functions for cards to use
   filterByCluster: <T extends { cluster?: string }>(items: T[]) => T[]
   filterBySeverity: <T extends { severity?: string }>(items: T[]) => T[]
@@ -104,6 +122,7 @@ const SEVERITY_STORAGE_KEY = 'globalFilter:severities'
 const STATUS_STORAGE_KEY = 'globalFilter:statuses'
 const CUSTOM_FILTER_STORAGE_KEY = 'globalFilter:customText'
 const GROUPS_STORAGE_KEY = 'globalFilter:clusterGroups'
+const SAVED_FILTER_SETS_KEY = 'globalFilter:savedFilterSets'
 
 // Default cluster groups
 const DEFAULT_GROUPS: ClusterGroup[] = []
@@ -213,6 +232,15 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     return ''
   })
 
+  // Initialize saved filter sets from localStorage
+  const [savedFilterSets, setSavedFilterSets] = useState<SavedFilterSet[]>(() => {
+    try {
+      const stored = localStorage.getItem(SAVED_FILTER_SETS_KEY)
+      if (stored) return JSON.parse(stored)
+    } catch { /* ignore */ }
+    return []
+  })
+
   // Persist to localStorage
   useEffect(() => {
     localStorage.setItem(CLUSTER_STORAGE_KEY, JSON.stringify(selectedClusters.length === 0 ? null : selectedClusters))
@@ -233,6 +261,10 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem(CUSTOM_FILTER_STORAGE_KEY, customFilter)
   }, [customFilter])
+
+  useEffect(() => {
+    localStorage.setItem(SAVED_FILTER_SETS_KEY, JSON.stringify(savedFilterSets))
+  }, [savedFilterSets])
 
   // Cluster filtering
   const setSelectedClusters = useCallback((clusters: string[]) => {
@@ -406,6 +438,46 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     setCustomFilterState('')
   }, [])
 
+  // Saved filter sets
+  const saveCurrentFilters = useCallback((name: string, color: string) => {
+    const id = `filterset-${Date.now()}`
+    const newSet: SavedFilterSet = {
+      id,
+      name,
+      color,
+      clusters: [...selectedClusters],
+      severities: [...selectedSeverities],
+      statuses: [...selectedStatuses],
+      customText: customFilter,
+    }
+    setSavedFilterSets(prev => [...prev, newSet])
+  }, [selectedClusters, selectedSeverities, selectedStatuses, customFilter])
+
+  const applySavedFilterSet = useCallback((id: string) => {
+    const filterSet = savedFilterSets.find(fs => fs.id === id)
+    if (!filterSet) return
+    setSelectedClustersState(filterSet.clusters)
+    setSelectedSeveritiesState(filterSet.severities as SeverityLevel[])
+    setSelectedStatusesState(filterSet.statuses as StatusLevel[])
+    setCustomFilterState(filterSet.customText)
+  }, [savedFilterSets])
+
+  const deleteSavedFilterSet = useCallback((id: string) => {
+    setSavedFilterSets(prev => prev.filter(fs => fs.id !== id))
+  }, [])
+
+  // Detect which saved filter set matches the current state
+  const activeFilterSetId = useMemo(() => {
+    for (const fs of savedFilterSets) {
+      const clustersMatch = JSON.stringify([...fs.clusters].sort()) === JSON.stringify([...selectedClusters].sort())
+      const severitiesMatch = JSON.stringify([...fs.severities].sort()) === JSON.stringify([...selectedSeverities].sort())
+      const statusesMatch = JSON.stringify([...fs.statuses].sort()) === JSON.stringify([...selectedStatuses].sort())
+      const textMatch = fs.customText === customFilter
+      if (clustersMatch && severitiesMatch && statusesMatch && textMatch) return fs.id
+    }
+    return null
+  }, [savedFilterSets, selectedClusters, selectedSeverities, selectedStatuses, customFilter])
+
   // Filter functions for cards to use
   const filterByCluster = useCallback(<T extends { cluster?: string }>(items: T[]): T[] => {
     if (isAllClustersSelected) return items
@@ -505,6 +577,13 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     isFiltered,
     clearAllFilters,
 
+    // Saved filter sets
+    savedFilterSets,
+    saveCurrentFilters,
+    applySavedFilterSet,
+    deleteSavedFilterSet,
+    activeFilterSetId,
+
     // Filter functions
     filterByCluster,
     filterBySeverity,
@@ -551,6 +630,11 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     filterByStatus,
     filterByCustomText,
     filterItems,
+    savedFilterSets,
+    saveCurrentFilters,
+    applySavedFilterSet,
+    deleteSavedFilterSet,
+    activeFilterSetId,
   ])
 
   return (

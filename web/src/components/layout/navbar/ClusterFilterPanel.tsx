@@ -1,12 +1,12 @@
-import { useState, useRef, useEffect, useMemo, ReactNode } from 'react'
+import { useState, useRef, useEffect, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Search, Server, Activity, Filter, Check, AlertTriangle, Plus, FolderKanban, X, Trash2, WifiOff } from 'lucide-react'
+import { Search, Server, Activity, Filter, Check, AlertTriangle, Save, X, Trash2, WifiOff } from 'lucide-react'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useGlobalFilters, SEVERITY_LEVELS, SEVERITY_CONFIG, STATUS_LEVELS, STATUS_CONFIG } from '../../../hooks/useGlobalFilters'
 import { cn } from '../../../lib/cn'
 
-/** Color palette for project/cluster groups */
-const GROUP_COLORS = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899']
+/** Color palette for saved filter sets */
+const FILTER_SET_COLORS = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899']
 
 interface FilterSectionConfig {
   label: string
@@ -86,10 +86,6 @@ export function ClusterFilterPanel() {
     isAllClustersSelected,
     availableClusters,
     clusterInfoMap,
-    clusterGroups,
-    addClusterGroup,
-    deleteClusterGroup,
-    selectClusterGroup,
     selectedSeverities,
     toggleSeverity,
     selectAllSeverities,
@@ -105,24 +101,19 @@ export function ClusterFilterPanel() {
     clearCustomFilter,
     hasCustomFilter,
     isFiltered,
+    clearAllFilters,
+    savedFilterSets,
+    saveCurrentFilters,
+    applySavedFilterSet,
+    deleteSavedFilterSet,
+    activeFilterSetId,
   } = useGlobalFilters()
 
-  const [showClusterFilter, setShowClusterFilter] = useState(false)
-  const [showGroupForm, setShowGroupForm] = useState(false)
-  const [newGroupName, setNewGroupName] = useState('')
-  const [newGroupColor, setNewGroupColor] = useState(GROUP_COLORS[0])
-  const [newGroupClusters, setNewGroupClusters] = useState<string[]>([])
-  const clusterRef = useRef<HTMLDivElement>(null)
-
-  // Detect which group (if any) matches the current cluster selection
-  const activeGroup = useMemo(() => {
-    if (isAllClustersSelected || selectedClusters.length === 0) return null
-    const selected = new Set(selectedClusters)
-    return clusterGroups.find(g => {
-      if (g.clusters.length !== selected.size) return false
-      return g.clusters.every(c => selected.has(c))
-    }) || null
-  }, [clusterGroups, selectedClusters, isAllClustersSelected])
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [showSaveForm, setShowSaveForm] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newColor, setNewColor] = useState(FILTER_SET_COLORS[0])
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Helper to get cluster status tooltip
   const getClusterStatusTooltip = (clusterName: string) => {
@@ -143,55 +134,36 @@ export function ClusterFilterPanel() {
     return 'Cluster unavailable'
   }
 
-  const handleCreateGroup = () => {
-    if (!newGroupName.trim() || newGroupClusters.length === 0) return
-    addClusterGroup({ name: newGroupName.trim(), clusters: newGroupClusters, color: newGroupColor })
-    setNewGroupName('')
-    setNewGroupClusters([])
-    setNewGroupColor(GROUP_COLORS[0])
-    setShowGroupForm(false)
-  }
-
-  const handleCancelCreate = () => {
-    setShowGroupForm(false)
-    setNewGroupName('')
-    setNewGroupClusters([])
-    setNewGroupColor(GROUP_COLORS[0])
+  const handleSave = () => {
+    if (!newName.trim()) return
+    saveCurrentFilters(newName.trim(), newColor)
+    setNewName('')
+    setNewColor(FILTER_SET_COLORS[0])
+    setShowSaveForm(false)
   }
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (clusterRef.current && !clusterRef.current.contains(event.target as Node)) {
-        setShowClusterFilter(false)
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // Get active filter set for the indicator
+  const activeSet = activeFilterSetId
+    ? savedFilterSets.find(fs => fs.id === activeFilterSetId)
+    : null
+
   return (
     <>
-      {/* Clear Filters Button - shows when filters active */}
-      {isFiltered && (
+      {/* Filter icon button */}
+      <div className="relative" ref={dropdownRef}>
         <button
-          onClick={() => {
-            selectAllClusters()
-            selectAllSeverities()
-            selectAllStatuses()
-            clearCustomFilter()
-          }}
-          className="flex items-center justify-center w-7 h-7 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
-          title={t('common:filters.clearAll', 'Clear all filters')}
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
-      )}
-
-      {/* Filter icon button — icon only, purple glow when active */}
-      <div className="relative" ref={clusterRef}>
-        <button
-          onClick={() => setShowClusterFilter(!showClusterFilter)}
+          onClick={() => setShowDropdown(!showDropdown)}
           className={cn(
             'relative flex items-center justify-center w-8 h-8 rounded-lg transition-colors',
             isFiltered
@@ -201,15 +173,83 @@ export function ClusterFilterPanel() {
           title={isFiltered ? 'Filters active - click to modify' : 'No filters - click to filter'}
         >
           <Filter className="w-4 h-4" />
-          {/* Active dot indicator */}
+          {/* Color dot from active filter set, or generic purple dot */}
           {isFiltered && (
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-purple-400 rounded-full" />
+            <span
+              className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-card"
+              style={{ backgroundColor: activeSet?.color || '#a78bfa' }}
+            />
           )}
         </button>
 
         {/* Filter dropdown */}
-        {showClusterFilter && (
+        {showDropdown && (
           <div className="absolute top-full right-0 mt-2 w-80 bg-card border border-border rounded-lg shadow-xl z-50 max-h-[80vh] overflow-y-auto">
+
+            {/* Clear All — shown at top when filters are active */}
+            {isFiltered && (
+              <div className="px-3 py-2 border-b border-border flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">
+                  {t('common:filters.filtersActive', 'Filters active')}
+                </span>
+                <button
+                  onClick={clearAllFilters}
+                  className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                >
+                  {t('common:filters.clearAll', 'Clear All')}
+                </button>
+              </div>
+            )}
+
+            {/* Saved Filter Sets */}
+            {savedFilterSets.length > 0 && (
+              <div className="p-3 border-b border-border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Save className="w-4 h-4 text-purple-400" />
+                  <span className="text-sm font-medium text-foreground">
+                    {t('common:filters.savedFilters', 'Saved Filters')}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {savedFilterSets.map(fs => {
+                    const isActive = activeFilterSetId === fs.id
+                    return (
+                      <div key={fs.id} className="flex items-center group/fs">
+                        <button
+                          onClick={() => applySavedFilterSet(fs.id)}
+                          className={cn(
+                            'flex items-center gap-1.5 px-2 py-1 rounded-l text-xs font-medium transition-colors',
+                            isActive
+                              ? 'bg-purple-500/20 text-purple-400'
+                              : 'bg-secondary/50 text-muted-foreground hover:text-foreground',
+                          )}
+                        >
+                          <span
+                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: fs.color }}
+                          />
+                          <span className="max-w-[100px] truncate">{fs.name}</span>
+                          {isActive && <Check className="w-3 h-3" />}
+                        </button>
+                        <button
+                          onClick={() => deleteSavedFilterSet(fs.id)}
+                          className={cn(
+                            'flex items-center justify-center px-1 py-1 rounded-r text-muted-foreground transition-all',
+                            isActive
+                              ? 'bg-purple-500/20 hover:text-red-400'
+                              : 'bg-secondary/50 opacity-0 group-hover/fs:opacity-100 hover:text-red-400',
+                          )}
+                          title={t('common:filters.deleteFilter', 'Delete filter set')}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Custom Text Filter */}
             <div className="p-3 border-b border-border">
               <div className="flex items-center gap-2 mb-2">
@@ -230,171 +270,6 @@ export function ClusterFilterPanel() {
                     className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Projects / Cluster Groups Section */}
-            <div className="p-3 border-b border-border">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <FolderKanban className="w-4 h-4 text-purple-400" />
-                  <span className="text-sm font-medium text-foreground">
-                    {t('common:filters.projects', 'Projects')}
-                  </span>
-                </div>
-                {activeGroup && (
-                  <button
-                    onClick={selectAllClusters}
-                    className="text-xs text-purple-400 hover:text-purple-300"
-                  >
-                    {t('common:filters.showAll', 'Show All')}
-                  </button>
-                )}
-              </div>
-
-              {clusterGroups.length === 0 && !showGroupForm ? (
-                <p className="text-xs text-muted-foreground text-center py-2">
-                  {t('common:filters.noProjects', 'No projects defined yet')}
-                </p>
-              ) : (
-                <div className="space-y-1">
-                  {clusterGroups.map((group) => {
-                    const isActive = activeGroup?.id === group.id
-                    return (
-                      <div key={group.id} className="flex items-center gap-2 group/item">
-                        <button
-                          onClick={() => selectClusterGroup(group.id)}
-                          className={cn(
-                            'flex-1 flex items-center gap-2 px-2 py-1.5 rounded text-left text-sm transition-colors',
-                            isActive
-                              ? 'bg-purple-500/20 text-purple-400'
-                              : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground',
-                          )}
-                        >
-                          {group.color ? (
-                            <span
-                              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                              style={{ backgroundColor: group.color }}
-                            />
-                          ) : (
-                            <FolderKanban className="w-3 h-3 flex-shrink-0" />
-                          )}
-                          <span className="truncate">{group.name}</span>
-                          <span className="text-xs text-muted-foreground flex-shrink-0">
-                            ({group.clusters.length})
-                          </span>
-                          {isActive && <Check className="w-3 h-3 text-purple-400 flex-shrink-0 ml-auto" />}
-                        </button>
-                        <button
-                          onClick={() => deleteClusterGroup(group.id)}
-                          className="p-1 text-muted-foreground hover:text-red-400 opacity-0 group-hover/item:opacity-100 transition-all flex-shrink-0"
-                          title={t('common:filters.deleteGroup', 'Delete group')}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-
-              {/* Create Group Form */}
-              <div className="mt-2">
-                {showGroupForm ? (
-                  <div className="space-y-2 p-2 bg-secondary/20 rounded">
-                    <input
-                      type="text"
-                      value={newGroupName}
-                      onChange={(e) => setNewGroupName(e.target.value)}
-                      placeholder={t('common:filters.groupNamePlaceholder', 'Project name...')}
-                      className="w-full px-2 py-1.5 text-sm bg-secondary/50 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
-                      autoFocus
-                    />
-
-                    {/* Color picker */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        {t('common:filters.color', 'Color:')}
-                      </span>
-                      {GROUP_COLORS.map(c => (
-                        <button
-                          key={c}
-                          onClick={() => setNewGroupColor(c)}
-                          className={cn(
-                            'w-5 h-5 rounded-full border-2 transition-all',
-                            newGroupColor === c ? 'border-foreground scale-110' : 'border-transparent',
-                          )}
-                          style={{ backgroundColor: c }}
-                        />
-                      ))}
-                    </div>
-
-                    {/* Cluster multi-select */}
-                    <div className="text-xs text-muted-foreground">
-                      {t('common:filters.selectClusters', 'Select clusters:')}
-                    </div>
-                    <div className="max-h-32 overflow-y-auto space-y-1">
-                      {(availableClusters || []).map(cluster => {
-                        const checked = newGroupClusters.includes(cluster)
-                        return (
-                          <button
-                            key={cluster}
-                            onClick={() => {
-                              if (checked) {
-                                setNewGroupClusters(prev => prev.filter(c => c !== cluster))
-                              } else {
-                                setNewGroupClusters(prev => [...prev, cluster])
-                              }
-                            }}
-                            className={cn(
-                              'w-full flex items-center gap-2 px-2 py-1 rounded text-left text-xs transition-colors',
-                              checked
-                                ? 'bg-purple-500/20 text-purple-400'
-                                : 'text-muted-foreground hover:bg-secondary/50',
-                            )}
-                          >
-                            <div
-                              className={cn(
-                                'w-3 h-3 rounded border flex items-center justify-center flex-shrink-0',
-                                checked
-                                  ? 'bg-purple-500 border-purple-500'
-                                  : 'border-muted-foreground',
-                              )}
-                            >
-                              {checked && <Check className="w-2 h-2 text-white" />}
-                            </div>
-                            <span className="truncate">{cluster}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-2 pt-1">
-                      <button
-                        onClick={handleCreateGroup}
-                        disabled={!newGroupName.trim() || newGroupClusters.length === 0}
-                        className="flex-1 px-2 py-1 text-xs font-medium bg-purple-500 text-white rounded hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {t('common:filters.create', 'Create')}
-                      </button>
-                      <button
-                        onClick={handleCancelCreate}
-                        className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        {t('common:filters.cancel', 'Cancel')}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setShowGroupForm(true)}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-secondary/30 hover:bg-secondary/50 rounded transition-colors"
-                  >
-                    <Plus className="w-3 h-3" />
-                    {t('common:filters.createProject', 'Create Project')}
                   </button>
                 )}
               </div>
@@ -427,7 +302,7 @@ export function ClusterFilterPanel() {
             />
 
             {/* Cluster Filter Section */}
-            <div className="p-3">
+            <div className="p-3 border-b border-border">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Server className="w-4 h-4 text-green-400" />
@@ -500,6 +375,63 @@ export function ClusterFilterPanel() {
                   })
                 )}
               </div>
+            </div>
+
+            {/* Save Current Filters */}
+            <div className="p-3">
+              {showSaveForm ? (
+                <div className="space-y-2 p-2 bg-secondary/20 rounded">
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder={t('common:filters.filterSetName', 'Filter set name...')}
+                    className="w-full px-2 py-1.5 text-sm bg-secondary/50 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    autoFocus
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSave() }}
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {t('common:filters.color', 'Color:')}
+                    </span>
+                    {FILTER_SET_COLORS.map(c => (
+                      <button
+                        key={c}
+                        onClick={() => setNewColor(c)}
+                        className={cn(
+                          'w-5 h-5 rounded-full border-2 transition-all',
+                          newColor === c ? 'border-foreground scale-110' : 'border-transparent',
+                        )}
+                        style={{ backgroundColor: c }}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={handleSave}
+                      disabled={!newName.trim()}
+                      className="flex-1 px-2 py-1 text-xs font-medium bg-purple-500 text-white rounded hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {t('common:filters.save', 'Save')}
+                    </button>
+                    <button
+                      onClick={() => { setShowSaveForm(false); setNewName('') }}
+                      className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {t('common:filters.cancel', 'Cancel')}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowSaveForm(true)}
+                  disabled={!isFiltered}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-secondary/30 hover:bg-secondary/50 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Save className="w-3 h-3" />
+                  {t('common:filters.saveCurrentFilters', 'Save Current Filters')}
+                </button>
+              )}
             </div>
           </div>
         )}
