@@ -16,14 +16,14 @@ import { test, expect, type Page } from '@playwright/test'
 /** Wait for story to fully render (fonts, animations disabled by config) */
 const RENDER_WAIT_MS = 500
 
-/** Max time to wait for story root to become visible */
+/** Max time to wait for story content to render */
 const STORY_RENDER_TIMEOUT_MS = 15_000
 
 async function navigateToStory(page: Page, storyId: string) {
   await page.goto(`/iframe.html?id=${storyId}&viewMode=story`, { waitUntil: 'networkidle' })
-  // Wait for #storybook-root to become visible (Storybook v10 starts it hidden)
-  await page.locator('#storybook-root:not([hidden])').waitFor({
-    state: 'visible',
+  // Wait for the story to render — look for any child content inside #storybook-root
+  await page.locator('#storybook-root > *').first().waitFor({
+    state: 'attached',
     timeout: STORY_RENDER_TIMEOUT_MS,
   })
   await page.waitForTimeout(RENDER_WAIT_MS)
