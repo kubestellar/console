@@ -630,6 +630,11 @@ export const handlers = [
     return HttpResponse.json({ success: true })
   }),
 
+  // ── Passthrough for Netlify Functions that work in demo mode ─────
+  // These endpoints are backed by Netlify Functions and return real data
+  // even in demo mode — let them through to the actual backend.
+  http.get('/api/youtube/playlist', () => passthrough()),
+
   // ── Catch-all for unmocked API routes ────────────────────────────
   // On Netlify, unhandled /api/* and /health requests fall through to the SPA
   // catch-all which returns index.html (200 OK, text/html). Code calling
