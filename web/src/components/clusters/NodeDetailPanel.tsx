@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Server, ChevronDown, ChevronUp, Wrench } from 'lucide-react'
+import { X, Server, ChevronDown, ChevronUp, Wrench, CheckCircle } from 'lucide-react'
 import { NodeInfo } from '../../hooks/useMCP'
 import { ConditionBadges, hasConditionIssues, getConditionIssuesSummary } from '../shared/ConditionBadges'
 import { useMissions } from '../../hooks/useMissions'
@@ -182,20 +182,21 @@ Please proceed step by step and ask for confirmation before making any changes.`
           </div>
         )}
 
-        {/* Repair button - always visible, disabled when no issues */}
-        <button
-          onClick={handleRepair}
-          disabled={!hasIssues}
-          className={cn(
-            'mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors w-full justify-center',
-            hasIssues
-              ? 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 cursor-pointer'
-              : 'bg-secondary/30 text-muted-foreground cursor-not-allowed'
-          )}
-        >
-          <Wrench className="w-3.5 h-3.5" />
-          Repair
-        </button>
+        {/* Repair button - only shown when node has issues */}
+        {hasIssues ? (
+          <button
+            onClick={handleRepair}
+            className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors w-full justify-center bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 cursor-pointer"
+          >
+            <Wrench className="w-3.5 h-3.5" />
+            Repair
+          </button>
+        ) : (
+          <div className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium w-full justify-center bg-green-500/10 text-green-400">
+            <CheckCircle className="w-3.5 h-3.5" />
+            Healthy
+          </div>
+        )}
       </div>
     </div>
   )

@@ -100,7 +100,7 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
   const { nodes: clusterNodes, isLoading: nodesLoading } = useNodes(clusterName)
   const { stats: namespaceStats, isLoading: nsLoading } = useNamespaceStats(clusterName)
   const { deployments: clusterDeployments } = useDeployments(clusterName)
-  const { drillToPod } = useDrillDownActions()
+  const { drillToPod, drillToDeployment } = useDrillDownActions()
   const { startMission } = useMissions()
 
   // Get cached cluster info for distribution detection (lastUpdated via parent refresh cycle)
@@ -689,6 +689,15 @@ After I approve, help me execute the repairs step by step.`,
               {clusterDeploymentIssues.slice(0, 3).map((issue, i) => (
                 <div
                   key={`dep-${i}`}
+                  onClick={() => {
+                    drillToDeployment(clusterName, issue.namespace, issue.name, {
+                      replicas: issue.replicas,
+                      readyReplicas: issue.readyReplicas,
+                      reason: issue.reason,
+                      message: issue.message,
+                    })
+                    onClose()
+                  }}
                   className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
                 >
                   <div className="flex items-center justify-between">

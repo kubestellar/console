@@ -162,8 +162,8 @@ export function CRDDrillDown({ data }: Props) {
           if (msg.id === requestId && msg.payload?.output) {
             output = msg.payload.output
           }
-        } catch (e) {
-          console.error('Failed to parse WebSocket message:', e)
+        } catch {
+          // Non-critical: malformed WS message; resolve with whatever output we have
         }
         clearTimeout(timeout)
         ws.close()

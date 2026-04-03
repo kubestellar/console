@@ -5,6 +5,7 @@ import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import type { DrillDownViewType } from '../../../hooks/useDrillDown'
 import { useCachedNodes } from '../../../hooks/useCachedData'
 import { useTranslation } from 'react-i18next'
+import { formatRelativeTime } from '../../../lib/formatters'
 
 interface MultiClusterSummaryDrillDownProps {
   data: Record<string, unknown>
@@ -175,8 +176,11 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
   const { nodes: rawCachedNodes, lastRefresh: nodesLastRefresh } = useCachedNodes()
   // Guard against undefined to prevent crashes when APIs return 404/500/empty
   const cachedNodes = rawCachedNodes || []
-  // Freshness tracking: lastUpdated (from nodesLastRefresh) available if needed for display
-  void nodesLastRefresh
+  // Convert epoch ms to ISO string for the freshness indicator
+  const nodesDataAge = useMemo(() => {
+    if (!nodesLastRefresh) return null
+    return new Date(nodesLastRefresh).toISOString()
+  }, [nodesLastRefresh])
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [clusterFilter, setClusterFilter] = useState<string>('all')
@@ -433,6 +437,15 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
 
   return (
     <div className="space-y-6">
+      {/* Freshness indicator for cached data */}
+      {nodesDataAge && (
+        <div className="flex justify-end">
+          <span className="text-2xs text-muted-foreground" title={new Date(nodesLastRefresh!).toLocaleString()}>
+            Updated {formatRelativeTime(nodesDataAge)}
+          </span>
+        </div>
+      )}
+
       {/* Summary Stats */}
       <div className="grid grid-cols-3 gap-4">
         <div className="glass rounded-lg p-4">
