@@ -374,37 +374,46 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
             </div>
           </div>
 
-          {/* Search results — shown when typing */}
-          {routeSearch.trim() && (() => {
+          {/* Available dashboards — always visible, filtered by search */}
+          {(() => {
             const searchLower = routeSearch.toLowerCase()
-            const matchingRoutes = KNOWN_ROUTES.filter(r =>
-              (r.name.toLowerCase().includes(searchLower) ||
-               r.description.toLowerCase().includes(searchLower)) &&
+            const availableRoutes = KNOWN_ROUTES.filter(r =>
               !config.primaryNav.some(item => item.href === r.href) &&
               !config.secondaryNav.some(item => item.href === r.href)
             )
+            const matchingRoutes = searchLower
+              ? availableRoutes.filter(r =>
+                  r.name.toLowerCase().includes(searchLower) ||
+                  r.description.toLowerCase().includes(searchLower)
+                )
+              : availableRoutes
+            if (availableRoutes.length === 0) return null
             if (matchingRoutes.length === 0) {
               return <div className="mb-4 text-sm text-muted-foreground text-center py-2">No matching dashboards found</div>
             }
             return (
-              <div className="mb-4 space-y-1 max-h-48 overflow-y-auto rounded-lg border border-border">
-                {matchingRoutes.map(route => (
-                  <button
-                    key={route.href}
-                    onClick={() => {
-                      addItem({ name: route.name, icon: route.icon, href: route.href, type: 'link' }, 'primary')
-                      setRouteSearch('')
-                    }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
-                  >
-                    {renderIcon(route.icon, 'w-4 h-4 text-muted-foreground')}
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-foreground">{route.name}</span>
-                      <span className="text-xs text-muted-foreground ml-2">{route.description}</span>
-                    </div>
-                    <Plus className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
-                  </button>
-                ))}
+              <div className="mb-4">
+                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                  Available to Add ({matchingRoutes.length})
+                </h3>
+                <div className="space-y-1 max-h-40 overflow-y-auto rounded-lg border border-border">
+                  {matchingRoutes.map(route => (
+                    <button
+                      key={route.href}
+                      onClick={() => {
+                        addItem({ name: route.name, icon: route.icon, href: route.href, type: 'link' }, 'primary')
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
+                    >
+                      {renderIcon(route.icon, 'w-4 h-4 text-muted-foreground')}
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium text-foreground">{route.name}</span>
+                        <span className="text-2xs text-muted-foreground/50 ml-1.5">{route.description}</span>
+                      </div>
+                      <Plus className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+                    </button>
+                  ))}
+                </div>
               </div>
             )
           })()}
