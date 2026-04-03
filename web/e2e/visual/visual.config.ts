@@ -3,7 +3,7 @@ import { defineConfig } from '@playwright/test'
 /**
  * Playwright configuration for visual regression testing against Storybook.
  *
- * Builds Storybook as a static site, serves it via http-server, then captures
+ * Builds Storybook as a static site, serves it, then captures
  * screenshots of each story for pixel-by-pixel comparison against baselines.
  *
  * Baseline screenshots are stored in the -snapshots/ directory and committed
@@ -38,10 +38,10 @@ export default defineConfig({
     { name: 'chromium', use: { browserName: 'chromium' } },
   ],
   webServer: {
-    command: `npx http-server ../storybook-static -p ${STORYBOOK_PORT} -s`,
+    command: `npx serve ../storybook-static -l ${STORYBOOK_PORT} --no-clipboard`,
     url: `http://127.0.0.1:${STORYBOOK_PORT}`,
     reuseExistingServer: true,
-    timeout: 30_000,
+    timeout: IS_CI ? 60_000 : 30_000,
   },
   outputDir: '../test-results/visual',
 })

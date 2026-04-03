@@ -52,6 +52,24 @@ Part of Loop 2. These target patterns AI tools commonly generate. Each has a bas
 | **Hardcoded route strings** | `'/settings'` instead of `ROUTES.SETTINGS` | 2 |
 | **Cards missing unified controls** | Card components without `useCardLoadingState` | 1 |
 | **Non-localized strings** | `title="Some Text"` instead of `title={t('key')}` | 167 |
+| **Raw hex colors** | `#9333ea` instead of Tailwind token (`text-primary`) or CSS var (`var(--ks-purple)`) | 308 |
+| **Raw rgba/rgb** | `rgba(255,0,0,0.5)` outside canvas/SVG contexts | 106 |
+| **Arbitrary Tailwind colors** | `bg-[#0d0d0d]` instead of `bg-background` | 23 |
+| **Inline style colors** | `style={{ color: '#fff' }}` instead of Tailwind classes | 118 |
+| **Raw font sizes** | `fontSize: 14` instead of `text-sm` | 80 |
+
+### Loop 2b: Visual Regression (Before Merge)
+
+Every PR that modifies UI components triggers Playwright-based visual regression testing:
+
+| Check | What It Catches |
+|-------|----------------|
+| **Storybook build** | Component rendering errors in isolation |
+| **Playwright screenshot diff** | Unintended visual changes to UI components (1% pixel tolerance) |
+
+18 UI components are documented as Storybook stories with theme switching (Dark/Classic/Light). Playwright captures screenshots of key component states and fails the PR if visual differences exceed the threshold.
+
+To update baselines after intentional changes: `cd web && npm run build-storybook && npx playwright test --config e2e/visual/visual.config.ts --update-snapshots`
 
 ### Loop 3: Post-Merge (Production Verification)
 
