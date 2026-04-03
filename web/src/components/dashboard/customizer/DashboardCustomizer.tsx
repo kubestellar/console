@@ -1,17 +1,8 @@
 /**
  * DashboardCustomizer — unified customization panel (Dashboard Studio).
  *
- * Combines card catalog, AI suggestions, sidebar navigation, templates,
- * and settings into a single full-screen modal with persistent left
- * navigation. Replaces the separate AddCardModal, SidebarCustomizer,
- * and TemplatesModal.
- *
- * Design patterns:
- * - Grafana: single edit-mode surface with dashboard visible behind
- * - Notion/Linear: left sidebar + content area
- * - VS Code: global search across all sections
- * - Figma: contextual preview panel on hover
- * - Material Design: single-action FAB (Fitts's Law)
+ * Combines card catalog, AI suggestions, dashboard management, and templates
+ * into a single full-screen modal with persistent left sidebar navigation.
  */
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -23,7 +14,6 @@ import { CardCatalogSection } from './sections/CardCatalogSection'
 import { AISuggestionsSection } from './sections/AISuggestionsSection'
 import { NavigationSection } from './sections/NavigationSection'
 import { TemplateGallerySection } from './sections/TemplateGallerySection'
-import { DashboardSettingsSection } from './sections/DashboardSettingsSection'
 import { DEFAULT_SECTION, type CustomizerSection } from './customizerNav'
 import type { CardSuggestion, HoveredCard } from '../shared/cardCatalog'
 import type { DashboardTemplate } from '../templates'
@@ -31,6 +21,8 @@ import type { DashboardTemplate } from '../templates'
 interface DashboardCustomizerProps {
   isOpen: boolean
   onClose: () => void
+  /** Name of the dashboard being customized (shown in header for context) */
+  dashboardName?: string
   /** Add cards to the current dashboard */
   onAddCards: (cards: CardSuggestion[]) => void
   /** Card types already on the dashboard (for duplicate detection) */
@@ -61,12 +53,13 @@ const SECTIONS_WITH_PREVIEW = new Set<CustomizerSection>(['cards-browse', 'cards
 export function DashboardCustomizer({
   isOpen,
   onClose,
+  dashboardName,
   onAddCards,
   existingCardTypes = [],
   initialSection,
   initialSearch = '',
   onApplyTemplate,
-  onExport,
+  onExport: _onExport,
   onReset,
   isCustomized = false,
   onUndo,
@@ -74,7 +67,8 @@ export function DashboardCustomizer({
   canUndo = false,
   canRedo = false,
 }: DashboardCustomizerProps) {
-  const { t } = useTranslation()
+  const { t: _t } = useTranslation()
+  const t = _t as (key: string, defaultValue?: string) => string
   const [activeSection, setActiveSection] = useState<CustomizerSection>(initialSection || DEFAULT_SECTION)
   const [globalSearch, setGlobalSearch] = useState('')
   const [hoveredCard, setHoveredCard] = useState<HoveredCard | null>(null)
@@ -92,14 +86,18 @@ export function DashboardCustomizer({
   }, [onApplyTemplate])
 
   const showPreview = SECTIONS_WITH_PREVIEW.has(activeSection)
-
-  /** Combine global search with section-specific search */
   const effectiveSearch = globalSearch || initialSearch
 
+  /** Subtitle showing which dashboard is being edited */
+  const headerSubtitle = dashboardName
+    ? t('dashboard.studio.editingDashboard', `Editing: ${dashboardName}`)
+    : t('dashboard.studio.editingCurrent', 'Editing your current dashboard')
+
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="full" closeOnBackdrop={false}>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="xl" closeOnBackdrop={false} className="!max-w-[75vw] !min-h-[70vh] !max-h-[75vh]">
       <BaseModal.Header
         title={t('dashboard.studio.title', 'Dashboard Studio')}
+        description={headerSubtitle}
         icon={Palette}
         onClose={onClose}
         showBack={false}
@@ -136,26 +134,18 @@ export function DashboardCustomizer({
             <AISuggestionsSection
               existingCardTypes={existingCardTypes}
               onAddCards={handleAddCards}
+              dashboardName={dashboardName}
             />
           )}
 
-          {activeSection === 'nav-sidebar' && (
-            <NavigationSection onClose={onClose} />
-          )}
-
-          {activeSection === 'nav-add' && (
+          {activeSection === 'dashboards' && (
             <NavigationSection onClose={onClose} />
           )}
 
           {activeSection === 'templates' && onApplyTemplate && (
-            <TemplateGallerySection onApplyTemplate={handleApplyTemplate} />
-          )}
-
-          {activeSection === 'settings' && (
-            <DashboardSettingsSection
-              onExport={onExport}
-              onReset={onReset}
-              isCustomized={isCustomized}
+            <TemplateGallerySection
+              onApplyTemplate={handleApplyTemplate}
+              dashboardName={dashboardName}
             />
           )}
         </div>

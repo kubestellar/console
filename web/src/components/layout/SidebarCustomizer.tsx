@@ -381,24 +381,9 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
     </DndContext>
   )
 
-  // When embedded in DashboardCustomizer, render the SidebarCustomizer as a
-  // full standalone modal that sits on top (it already handles its own BaseModal).
-  // This avoids extracting 400+ lines of content JSX into a shared renderContent().
-  // The user sees the same UI — just opened inline from Dashboard Studio.
-  if (embedded && !isOpen) return null
-
-  return (
+  // Shared content rendered in both modal and embedded modes
+  const sidebarContent = (
     <>
-    <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
-      <BaseModal.Header
-        title={t('sidebar.customizer.title')}
-        description={t('sidebar.customizer.description')}
-        icon={LayoutDashboard}
-        onClose={onClose}
-        showBack={false}
-      />
-
-      <BaseModal.Content className="max-h-[60vh]">
           {/* Quick Actions */}
           <div className="flex flex-wrap gap-2 mb-6">
             <Button
@@ -833,44 +818,87 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
               </button>
             </div>
           </div>
+    </>
+  )
+
+  const sidebarFooter = (
+    <>
+      {showAddForm && selectedKnownRoutes.size > 0 ? (
+        <>
+          <select
+            value={newItemTarget}
+            onChange={(e) => setNewItemTarget(e.target.value as 'primary' | 'secondary')}
+            className="px-2 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm"
+          >
+            <option value="primary">{t('sidebar.customizer.primaryNav')}</option>
+            <option value="secondary">{t('sidebar.customizer.secondaryNav')}</option>
+          </select>
+          <div className="flex-1" />
+          <button
+            onClick={handleAddSelectedRoutes}
+            className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm hover:bg-purple-600 flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            {t('sidebar.customizer.addCount', { count: selectedKnownRoutes.size, plural: selectedKnownRoutes.size !== 1 ? 's' : '' })}
+          </button>
+        </>
+      ) : !embedded ? (
+        <>
+          <div className="flex-1" />
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
+          >
+            {t('common.close')}
+          </button>
+        </>
+      ) : null}
+    </>
+  )
+
+  // Embedded mode: render content inline without BaseModal wrapper
+  if (embedded) {
+    return (
+      <>
+        <div className="overflow-y-auto flex-1 p-4">
+          {sidebarContent}
+        </div>
+        {showAddForm && selectedKnownRoutes.size > 0 && (
+          <div className="border-t border-border px-4 py-3 flex items-center bg-background">
+            {sidebarFooter}
+          </div>
+        )}
+        <CreateDashboardModal
+          isOpen={isCreateDashboardOpen}
+          onClose={() => setIsCreateDashboardOpen(false)}
+          onCreate={handleCreateDashboard}
+          existingNames={dashboards.map(d => d.name)}
+        />
+      </>
+    )
+  }
+
+  // Standard modal mode
+  return (
+    <>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
+      <BaseModal.Header
+        title={t('sidebar.customizer.title')}
+        description={t('sidebar.customizer.description')}
+        icon={LayoutDashboard}
+        onClose={onClose}
+        showBack={false}
+      />
+
+      <BaseModal.Content className="max-h-[60vh]">
+        {sidebarContent}
       </BaseModal.Content>
 
       <BaseModal.Footer>
-        {/* Add controls - only show when form is open and items are selected */}
-        {showAddForm && selectedKnownRoutes.size > 0 ? (
-          <>
-            <select
-              value={newItemTarget}
-              onChange={(e) => setNewItemTarget(e.target.value as 'primary' | 'secondary')}
-              className="px-2 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm"
-            >
-              <option value="primary">{t('sidebar.customizer.primaryNav')}</option>
-              <option value="secondary">{t('sidebar.customizer.secondaryNav')}</option>
-            </select>
-            <div className="flex-1" />
-            <button
-              onClick={handleAddSelectedRoutes}
-              className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm hover:bg-purple-600 flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              {t('sidebar.customizer.addCount', { count: selectedKnownRoutes.size, plural: selectedKnownRoutes.size !== 1 ? 's' : '' })}
-            </button>
-          </>
-        ) : (
-          <>
-            <div className="flex-1" />
-            <button
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
-            >
-              {t('common.close')}
-            </button>
-          </>
-        )}
+        {sidebarFooter}
       </BaseModal.Footer>
     </BaseModal>
 
-    {/* Create Dashboard Modal */}
     <CreateDashboardModal
       isOpen={isCreateDashboardOpen}
       onClose={closeCreateDashboard}

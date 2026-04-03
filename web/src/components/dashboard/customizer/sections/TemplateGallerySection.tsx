@@ -27,9 +27,11 @@ const APPLIED_CONFIRMATION_MS = 2000
 
 interface TemplateGallerySectionProps {
   onApplyTemplate: (template: DashboardTemplate) => void
+  /** Dashboard name for context */
+  dashboardName?: string
 }
 
-export function TemplateGallerySection({ onApplyTemplate }: TemplateGallerySectionProps) {
+export function TemplateGallerySection({ onApplyTemplate, dashboardName }: TemplateGallerySectionProps) {
   const { t } = useTranslation()
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [appliedTemplate, setAppliedTemplate] = useState<string | null>(null)
@@ -46,6 +48,13 @@ export function TemplateGallerySection({ onApplyTemplate }: TemplateGallerySecti
 
   return (
     <div className="h-full overflow-y-auto p-4">
+      {/* Explanation banner */}
+      <div className="mb-4 p-3 rounded-lg bg-purple-500/5 border border-purple-500/20">
+        <p className="text-sm text-muted-foreground">
+          Templates are pre-built card layouts for common use cases. Applying a template will <strong className="text-foreground">replace all cards</strong> on {dashboardName ? `"${dashboardName}"` : 'your current dashboard'} with the template&apos;s card set.
+        </p>
+      </div>
+
       {/* Category filter */}
       <div className="flex flex-wrap gap-2 mb-6">
         <button

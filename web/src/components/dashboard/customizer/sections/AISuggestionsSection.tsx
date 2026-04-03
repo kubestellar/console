@@ -15,11 +15,14 @@ import type { CardSuggestion } from '../../shared/cardCatalog'
 interface AISuggestionsSectionProps {
   existingCardTypes: string[]
   onAddCards: (cards: CardSuggestion[]) => void
+  /** Dashboard name for context */
+  dashboardName?: string
 }
 
 export function AISuggestionsSection({
   existingCardTypes,
   onAddCards,
+  dashboardName,
 }: AISuggestionsSectionProps) {
   const { t } = useTranslation()
   const tCard = t as (key: string, defaultValue?: string) => string
@@ -28,17 +31,20 @@ export function AISuggestionsSection({
   const [selectedCards, setSelectedCards] = useState<Set<number>>(new Set())
   const [isGenerating, setIsGenerating] = useState(false)
 
-  const handleGenerate = async () => {
-    if (!query.trim()) return
+  /** Generate suggestions for a given query string */
+  const handleGenerateWithQuery = async (q: string) => {
+    if (!q.trim()) return
     setIsGenerating(true)
     setSuggestions([])
     setSelectedCards(new Set())
     await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS))
-    const results = generateCardSuggestions(query)
+    const results = generateCardSuggestions(q)
     setSuggestions(results)
     setSelectedCards(new Set(results.map((card, i) => existingCardTypes.includes(card.type) ? -1 : i).filter(i => i !== -1)))
     setIsGenerating(false)
   }
+
+  const handleGenerate = () => handleGenerateWithQuery(query)
 
   const toggleCard = (index: number) => {
     const newSelected = new Set(selectedCards)
@@ -61,11 +67,11 @@ export function AISuggestionsSection({
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto p-4">
-        {/* Query input */}
+        {/* Context + Query input */}
         <div className="mb-4">
-          <label className="block text-sm text-muted-foreground mb-2">
-            {t('dashboard.addCard.describeWhatYouWant')}
-          </label>
+          <p className="text-sm text-muted-foreground mb-3">
+            {t('dashboard.studio.aiContext', `Describe what you want to monitor and AI will suggest cards to add to ${dashboardName ? `"${dashboardName}"` : 'your current dashboard'}. Cards are visual widgets that display real-time data from your clusters.`)}
+          </p>
           <div className="flex gap-2">
             <input
               type="text"
@@ -110,7 +116,7 @@ export function AISuggestionsSection({
               ].map((example) => (
                 <button
                   key={example}
-                  onClick={() => setQuery(example)}
+                  onClick={() => { setQuery(example); handleGenerateWithQuery(example) }}
                   className="px-3 py-1 text-xs bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground rounded-full transition-colors"
                 >
                   {example}

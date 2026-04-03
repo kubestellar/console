@@ -7,10 +7,8 @@
 import {
   LayoutGrid,
   Sparkles,
-  PanelLeft,
-  FolderPlus,
+  LayoutDashboard,
   Layout,
-  Download,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -21,10 +19,8 @@ import {
 export type CustomizerSection =
   | 'cards-browse'
   | 'cards-ai'
-  | 'nav-sidebar'
-  | 'nav-add'
+  | 'dashboards'
   | 'templates'
-  | 'settings'
 
 // ---------------------------------------------------------------------------
 // Navigation groups
@@ -50,10 +46,9 @@ export const CUSTOMIZER_NAV: NavGroup[] = [
     ],
   },
   {
-    labelKey: 'dashboard.studio.sections.navigation',
+    labelKey: 'dashboard.studio.sections.dashboards',
     items: [
-      { id: 'nav-sidebar', labelKey: 'dashboard.studio.sections.sidebar', icon: PanelLeft },
-      { id: 'nav-add', labelKey: 'dashboard.studio.sections.addPages', icon: FolderPlus },
+      { id: 'dashboards', labelKey: 'dashboard.studio.sections.manageDashboards', icon: LayoutDashboard },
     ],
   },
   {
@@ -64,17 +59,5 @@ export const CUSTOMIZER_NAV: NavGroup[] = [
   },
 ]
 
-/** Utility actions shown below the divider in the sidebar */
-export const CUSTOMIZER_ACTIONS: NavItem[] = [
-  { id: 'settings', labelKey: 'dashboard.studio.sections.settings', icon: Download },
-]
-
 /** Default section when opening the customizer */
 export const DEFAULT_SECTION: CustomizerSection = 'cards-browse'
-
-/** Map URL param values to sections for deep-linking */
-export const URL_SECTION_MAP: Record<string, CustomizerSection> = {
-  'addCard': 'cards-browse',
-  'customizeSidebar': 'nav-sidebar',
-  'templates': 'templates',
-}

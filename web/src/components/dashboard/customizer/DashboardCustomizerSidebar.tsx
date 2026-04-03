@@ -6,7 +6,7 @@
  */
 import { useTranslation } from 'react-i18next'
 import { Search, Undo2, Redo2, RotateCcw } from 'lucide-react'
-import { CUSTOMIZER_NAV, CUSTOMIZER_ACTIONS, type CustomizerSection } from './customizerNav'
+import { CUSTOMIZER_NAV, type CustomizerSection } from './customizerNav'
 import { cn } from '../../../lib/cn'
 
 interface DashboardCustomizerSidebarProps {
@@ -37,7 +37,6 @@ export function DashboardCustomizerSidebar({
   isCustomized = false,
 }: DashboardCustomizerSidebarProps) {
   const { t: _t } = useTranslation()
-  // Cast for dynamic keys that aren't in the static i18n type map
   const t = _t as (key: string, defaultValue?: string) => string
 
   return (
@@ -84,30 +83,6 @@ export function DashboardCustomizerSidebar({
             })}
           </div>
         ))}
-
-        {/* Divider */}
-        <div className="mx-3 my-2 border-t border-border" />
-
-        {/* Utility actions */}
-        {CUSTOMIZER_ACTIONS.map((item) => {
-          const Icon = item.icon
-          const isActive = activeSection === item.id
-          return (
-            <button
-              key={item.id}
-              onClick={() => onSectionChange(item.id)}
-              className={cn(
-                'w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors',
-                isActive
-                  ? 'bg-purple-500/15 text-purple-400 font-medium'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50',
-              )}
-            >
-              <Icon className="w-4 h-4 flex-shrink-0" />
-              <span className="truncate">{t(item.labelKey)}</span>
-            </button>
-          )
-        })}
       </nav>
 
       {/* Footer: Undo/Redo/Reset */}
