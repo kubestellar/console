@@ -208,7 +208,7 @@ export function UnifiedCardsSection({
         {/* Single unified search bar */}
         <div className="mb-3">
           <p className="text-xs text-muted-foreground mb-2">
-            Search the card catalog or describe what you need — cards will be added to <strong className="text-foreground">{dashboardLabel}</strong>
+            Search the card catalog or describe what you need — cards will be added to the <strong className="text-foreground">{dashboardLabel}</strong> dashboard
           </p>
           <div className="flex gap-2">
             <div className="relative flex-1">
@@ -351,7 +351,7 @@ export function UnifiedCardsSection({
             className="px-4 py-2 bg-gradient-ks text-primary-foreground rounded-lg font-medium flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            {`Add ${totalSelected} to ${dashboardLabel}`}
+            {`Add ${totalSelected} to ${dashboardLabel} dashboard`}
           </button>
         </div>
       </div>
