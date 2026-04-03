@@ -955,7 +955,7 @@ function TargetClusterSelector({
   const isAllSelected = selected.length === 0 || selected.length === clusters.length
 
   return (
-    <div ref={ref}>
+    <div ref={ref} className="relative">
       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
         Target Clusters
       </label>
@@ -1000,6 +1000,7 @@ function TargetClusterSelector({
             })}
             {selected.length > 0 && (
               <button
+                type="button"
                 className="text-[10px] text-muted-foreground/50 hover:text-foreground ml-1"
                 onClick={(e) => { e.stopPropagation(); onChange([]) }}
               >
@@ -1015,6 +1016,7 @@ function TargetClusterSelector({
         <div className="absolute z-50 mt-1 w-64 max-h-48 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg">
           {/* All clusters toggle */}
           <button
+            type="button"
             className={cn(
               'w-full px-3 py-2 text-left text-sm hover:bg-secondary/50 flex items-center gap-2 border-b border-border/50',
               isAllSelected && 'text-primary font-medium',
@@ -1032,6 +1034,7 @@ function TargetClusterSelector({
             const isSelected = selected.includes(name)
             return (
               <button
+                type="button"
                 key={name}
                 className={cn(
                   'w-full px-3 py-1.5 text-left text-sm hover:bg-secondary/50 flex items-center gap-2',

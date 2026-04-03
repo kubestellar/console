@@ -697,16 +697,20 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           )
         } else if (node.source === 'github') {
           // Fetch repo contents via GitHub Contents API proxy
-          // node.path is "owner/repo" for root or "owner/repo/subpath" for subdirs
-          const repoPath = node.path
-          const { data: ghEntries } = await api.get<Array<{ name: string; path: string; type: string; size?: number }>>(
-            `/api/github/repos/${repoPath}/contents/`
-          )
+          // If repoOwner/repoName are set (external sources like Kubara), use them
+          // Otherwise node.path is "owner/repo" or "owner/repo/subpath"
+          const owner = node.repoOwner || node.path.split('/')[0]
+          const repo = node.repoName || node.path.split('/')[1]
+          const subPath = node.repoOwner ? node.path : node.path.split('/').slice(2).join('/')
+          const apiPath = subPath
+            ? `/api/github/repos/${owner}/${repo}/contents/${subPath}`
+            : `/api/github/repos/${owner}/${repo}/contents/`
+          const { data: ghEntries } = await api.get<Array<{ name: string; path: string; type: string; size?: number }>>(apiPath)
           const entries: BrowseEntry[] = (ghEntries || [])
             .filter(e => e.type === 'dir' || isMissionFile(e.name))
             .map(e => ({
               name: e.name,
-              path: `${repoPath.split('/').slice(0, 2).join('/')}/${e.path}`,
+              path: node.repoOwner ? e.path : `${owner}/${repo}/${e.path}`,
               type: e.type === 'dir' ? 'directory' as const : 'file' as const,
               size: e.size,
             }))
