@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
@@ -54,7 +53,7 @@ func (v *VSCodeProvider) Capabilities() ProviderCapability { return CapabilityCh
 
 func (v *VSCodeProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
 	if !GetConfigManager().HasAPIKey("vscode") {
-		return &ChatResponse{Content: fmt.Sprintf("VS Code is detected but no API key is configured. Set VSCODE_API_KEY to enable chat."), Agent: v.Name(), Done: true}, nil
+		return &ChatResponse{Content: "VS Code is detected but no API key is configured. Set VSCODE_API_KEY to enable chat.", Agent: v.Name(), Done: true}, nil
 	}
 	return chatViaOpenAICompatible(ctx, req, "vscode", "https://api.github.com/copilot/chat/completions", v.Name())
 }

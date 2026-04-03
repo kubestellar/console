@@ -2488,6 +2488,37 @@ func (s *Server) handleClustersMessage(msg protocol.Message) protocol.Message {
 	}
 }
 
+// destructiveKubectlVerbs are kubectl subcommands that modify or destroy resources
+// and require explicit user confirmation before execution.
+var destructiveKubectlVerbs = map[string]bool{
+	"delete":  true,
+	"drain":   true,
+	"cordon":  true,
+	"taint":   true,
+	"replace": true,
+}
+
+// isDestructiveKubectlCommand checks whether the given kubectl args contain a
+// destructive verb that requires user confirmation before execution.
+func isDestructiveKubectlCommand(args []string) bool {
+	if len(args) == 0 {
+		return false
+	}
+	verb := strings.ToLower(args[0])
+	if destructiveKubectlVerbs[verb] {
+		return true
+	}
+	// "replace --force" is destructive even though plain "replace" is blocked
+	if verb == "replace" {
+		for _, a := range args[1:] {
+			if a == "--force" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (s *Server) handleKubectlMessage(msg protocol.Message) protocol.Message {
 	// Parse payload
 	payloadBytes, err := json.Marshal(msg.Payload)
@@ -2498,6 +2529,19 @@ func (s *Server) handleKubectlMessage(msg protocol.Message) protocol.Message {
 	var req protocol.KubectlRequest
 	if err := json.Unmarshal(payloadBytes, &req); err != nil {
 		return s.errorResponse(msg.ID, "invalid_payload", "Invalid kubectl request format")
+	}
+
+	// Check for destructive commands that require confirmation
+	if isDestructiveKubectlCommand(req.Args) && !req.Confirmed {
+		return protocol.Message{
+			ID:   msg.ID,
+			Type: protocol.TypeResult,
+			Payload: protocol.KubectlResponse{
+				RequiresConfirmation: true,
+				Command:              "kubectl " + strings.Join(req.Args, " "),
+				ExitCode:             0,
+			},
+		}
 	}
 
 	// Execute kubectl

@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -56,7 +55,7 @@ func (c *ContinueProvider) Capabilities() ProviderCapability { return Capability
 
 func (c *ContinueProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
 	if !GetConfigManager().HasAPIKey("continue") {
-		return &ChatResponse{Content: fmt.Sprintf("Continue is detected but no API key is configured. Set CONTINUE_API_KEY to enable chat."), Agent: c.Name(), Done: true}, nil
+		return &ChatResponse{Content: "Continue is detected but no API key is configured. Set CONTINUE_API_KEY to enable chat.", Agent: c.Name(), Done: true}, nil
 	}
 	return chatViaOpenAICompatible(ctx, req, "continue", "https://api.continue.dev/v1/chat/completions", c.Name())
 }

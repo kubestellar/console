@@ -4377,6 +4377,9 @@ func (m *MultiClusterClient) EnsureNamespaceExists(ctx context.Context, contextN
 	if err == nil {
 		return nil // already exists
 	}
+	if !errors.IsNotFound(err) {
+		return fmt.Errorf("failed to check namespace %s: %w", namespace, err)
+	}
 
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -4387,7 +4390,7 @@ func (m *MultiClusterClient) EnsureNamespaceExists(ctx context.Context, contextN
 		},
 	}
 	_, err = client.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
-	if err != nil && strings.Contains(err.Error(), "already exists") {
+	if err != nil && errors.IsAlreadyExists(err) {
 		return nil
 	}
 	return err

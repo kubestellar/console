@@ -98,13 +98,16 @@ type KubectlRequest struct {
 	Context   string   `json:"context,omitempty"`
 	Namespace string   `json:"namespace,omitempty"`
 	Args      []string `json:"args"`
+	Confirmed bool     `json:"confirmed,omitempty"` // must be true for destructive commands
 }
 
 // KubectlResponse is the response from kubectl commands
 type KubectlResponse struct {
-	Output   string `json:"output"`
-	ExitCode int    `json:"exitCode"`
-	Error    string `json:"error,omitempty"`
+	Output               string `json:"output"`
+	ExitCode             int    `json:"exitCode"`
+	Error                string `json:"error,omitempty"`
+	RequiresConfirmation bool   `json:"requiresConfirmation,omitempty"` // true when user must confirm
+	Command              string `json:"command,omitempty"`              // the command requiring confirmation
 }
 
 // ClaudeRequest is the payload for Claude Code requests

@@ -2,14 +2,28 @@ package k8s
 
 import (
 	"context"
+	"log"
+	"strings"
 	"sync"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
 )
+
+// isNoMatchError returns true when the error indicates that a CRD/resource type
+// is not registered on the cluster (e.g., "no matches for kind X in version Y").
+// This happens when ArgoCD CRDs are not installed.
+func isNoMatchError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "no matches for") || strings.Contains(msg, "the server could not find the requested resource")
+}
 
 // ISO 8601 layouts used by ArgoCD for timestamp fields
 var argoTimestampLayouts = []string{
@@ -39,7 +53,8 @@ func (m *MultiClusterClient) ListArgoApplications(ctx context.Context) (*v1alpha
 
 			clusterApps, err := m.ListArgoApplicationsForCluster(ctx, cluster, "")
 			if err != nil {
-				return // CRD not installed or cluster unreachable — skip silently
+				log.Printf("[argocd] Error listing applications on cluster %s: %v", cluster, err)
+				return
 			}
 
 			mu.Lock()
@@ -72,8 +87,13 @@ func (m *MultiClusterClient) ListArgoApplicationsForCluster(ctx context.Context,
 	}
 
 	if err != nil {
-		// ArgoCD CRDs might not be installed — return empty list instead of error
-		return []v1alpha1.ArgoApplication{}, nil
+		if apierrors.IsNotFound(err) || isNoMatchError(err) {
+			// ArgoCD CRDs not installed — return empty list silently
+			return []v1alpha1.ArgoApplication{}, nil
+		}
+		// Real error (auth, network, RBAC) — log and propagate
+		log.Printf("[argocd] Error listing applications on cluster %s: %v", contextName, err)
+		return nil, err
 	}
 
 	return m.parseArgoApplicationsFromList(list, contextName)
