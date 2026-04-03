@@ -54,7 +54,6 @@ Starts backend on `:8080` and frontend on `:5174` with a mock `dev-user` account
 ## Commit Conventions
 
 - Sign all commits with DCO: `git commit -s`
-- Emoji prefix: `✨` feature | `🐛` bug fix | `📖` docs | `⚠️` breaking | `🌱` other
 
 ## Getting Help
 
