@@ -30,8 +30,8 @@ TTFI_MODE=""
 
 for arg in "$@"; do
   case "$arg" in
-    --demo-only) GREP_FILTER+=(--grep demo); echo "Running demo mode tests only..." ;;
-    --live-only) GREP_FILTER+=(--grep live); echo "Running live mode tests only..." ;;
+    --demo-only) GREP_FILTER=(--grep demo); echo "Running demo mode tests only..." ;;
+    --live-only) GREP_FILTER=(--grep live); echo "Running live mode tests only..." ;;
     --ttfi)      TTFI_MODE="ttfi"; echo "Running all-card TTFI matrix..." ;;
     --ttfi-gate) TTFI_MODE="ttfi-gate"; echo "Running all-card TTFI matrix with hard gate..." ;;
     --dev)       EXTRA_ENV+=(PERF_DEV=1); echo "Using Vite dev server..." ;;
