@@ -24,37 +24,37 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../web"
 
-GREP_FILTER=""
-EXTRA_ENV=""
+GREP_FILTER=()
+EXTRA_ENV=()
 TTFI_MODE=""
 
 for arg in "$@"; do
   case "$arg" in
-    --demo-only) GREP_FILTER="--grep demo"; echo "Running demo mode tests only..." ;;
-    --live-only) GREP_FILTER="--grep live"; echo "Running live mode tests only..." ;;
+    --demo-only) GREP_FILTER+=(--grep demo); echo "Running demo mode tests only..." ;;
+    --live-only) GREP_FILTER+=(--grep live); echo "Running live mode tests only..." ;;
     --ttfi)      TTFI_MODE="ttfi"; echo "Running all-card TTFI matrix..." ;;
     --ttfi-gate) TTFI_MODE="ttfi-gate"; echo "Running all-card TTFI matrix with hard gate..." ;;
-    --dev)       EXTRA_ENV="PERF_DEV=1"; echo "Using Vite dev server..." ;;
+    --dev)       EXTRA_ENV+=(PERF_DEV=1); echo "Using Vite dev server..." ;;
   esac
 done
 
-if [[ -z "$GREP_FILTER" && -z "$EXTRA_ENV" && -z "$TTFI_MODE" ]]; then
+if [[ ${#GREP_FILTER[@]} -eq 0 && ${#EXTRA_ENV[@]} -eq 0 && -z "$TTFI_MODE" ]]; then
   echo "Running all performance tests against production build..."
 fi
 
 if [[ "$TTFI_MODE" == "ttfi" ]]; then
-  env $EXTRA_ENV npx playwright test \
+  env "${EXTRA_ENV[@]}" npx playwright test \
     --config e2e/perf/perf.config.ts \
     e2e/perf/all-cards-ttfi.spec.ts
 elif [[ "$TTFI_MODE" == "ttfi-gate" ]]; then
-  env $EXTRA_ENV npx playwright test \
+  env "${EXTRA_ENV[@]}" npx playwright test \
     --config e2e/perf/perf.config.ts \
     e2e/perf/all-cards-ttfi.spec.ts
   node e2e/perf/compare-ttfi.mjs
 else
-  env $EXTRA_ENV npx playwright test \
+  env "${EXTRA_ENV[@]}" npx playwright test \
     --config e2e/perf/perf.config.ts \
-    $GREP_FILTER
+    "${GREP_FILTER[@]}"
 fi
 
 echo ""

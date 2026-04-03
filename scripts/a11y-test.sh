@@ -23,19 +23,19 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../web"
 
-EXTRA_ENV=""
+EXTRA_ENV=()
 
 for arg in "$@"; do
   case "$arg" in
-    --dev) EXTRA_ENV="PERF_DEV=1"; echo "Using Vite dev server..." ;;
+    --dev) EXTRA_ENV+=(PERF_DEV=1); echo "Using Vite dev server..." ;;
   esac
 done
 
-if [[ -z "$EXTRA_ENV" ]]; then
+if [[ ${#EXTRA_ENV[@]} -eq 0 ]]; then
   echo "Running accessibility compliance tests against production build..."
 fi
 
-env $EXTRA_ENV npx playwright test \
+env "${EXTRA_ENV[@]}" npx playwright test \
   --config e2e/compliance/compliance.config.ts \
   e2e/compliance/a11y-compliance.spec.ts
 

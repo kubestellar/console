@@ -89,8 +89,7 @@ if [ -f "web/e2e/compliance/error-resilience.spec.ts" ]; then
   # Check if frontend is available
   BASE_URL="${PLAYWRIGHT_BASE_URL:-http://localhost:5174}"
   if curl -sf "${BASE_URL}" --max-time 5 > /dev/null 2>&1; then
-    EXTRA_ENV="BASE_URL=${BASE_URL}"
-    env $EXTRA_ENV npx playwright test --config e2e/compliance/compliance.config.ts error-resilience --reporter=list > "$PW_OUTPUT" 2>&1 || PW_EXIT=$?
+    env "BASE_URL=${BASE_URL}" npx playwright test --config e2e/compliance/compliance.config.ts error-resilience --reporter=list > "$PW_OUTPUT" 2>&1 || PW_EXIT=$?
 
     TOTAL=$((TOTAL + 1))
     if [ "$PW_EXIT" -eq 0 ]; then

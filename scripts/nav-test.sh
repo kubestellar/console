@@ -26,29 +26,29 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../web"
 
-EXTRA_ENV=""
+EXTRA_ENV=()
 
 for arg in "$@"; do
   case "$arg" in
     --real)
-      EXTRA_ENV="REAL_BACKEND=true"
+      EXTRA_ENV+=(REAL_BACKEND=true)
       echo "Running against REAL backend..."
       if [[ -z "${REAL_TOKEN:-}" ]]; then
         echo "WARNING: REAL_TOKEN not set — auth may fail"
       fi
       ;;
     --dev)
-      EXTRA_ENV="${EXTRA_ENV:+$EXTRA_ENV }PERF_DEV=1"
+      EXTRA_ENV+=(PERF_DEV=1)
       echo "Using Vite dev server..."
       ;;
   esac
 done
 
-if [[ -z "$EXTRA_ENV" ]]; then
+if [[ ${#EXTRA_ENV[@]} -eq 0 ]]; then
   echo "Running navigate-away tests with mocked APIs..."
 fi
 
-env $EXTRA_ENV npx playwright test \
+env "${EXTRA_ENV[@]}" npx playwright test \
   --config e2e/perf/perf.config.ts \
   e2e/perf/dashboard-nav.spec.ts
 

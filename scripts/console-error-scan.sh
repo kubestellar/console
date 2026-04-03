@@ -36,28 +36,28 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../web"
 
-EXTRA_ENV=""
+EXTRA_ENV=()
 
 for arg in "$@"; do
   case "$arg" in
     --dev)
-      EXTRA_ENV="${EXTRA_ENV:+$EXTRA_ENV }PERF_DEV=1"
+      EXTRA_ENV+=(PERF_DEV=1)
       echo "Using Vite dev server..."
       ;;
     --live)
-      EXTRA_ENV="${EXTRA_ENV:+$EXTRA_ENV }PLAYWRIGHT_BASE_URL=http://localhost:8080"
+      EXTRA_ENV+=(PLAYWRIGHT_BASE_URL=http://localhost:8080)
       echo "Scanning live server on :8080..."
       ;;
   esac
 done
 
-if [[ -z "$EXTRA_ENV" ]]; then
+if [[ ${#EXTRA_ENV[@]} -eq 0 ]]; then
   echo "Running console error scan against production build..."
 fi
 
 echo ""
 
-env $EXTRA_ENV npx playwright test \
+env "${EXTRA_ENV[@]}" npx playwright test \
   --config e2e/console-errors/console-errors.config.ts \
   e2e/console-errors/console-error-scan.spec.ts \
   --reporter=list
