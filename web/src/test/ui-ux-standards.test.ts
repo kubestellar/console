@@ -49,10 +49,10 @@ const COMPONENTS_DIR = path.resolve(
  *
  * Set to generous initial values; calibrated after first run.
  */
-const EXPECTED_RAW_HEX_COUNT = 308
-const EXPECTED_RAW_RGBA_COUNT = 106
-const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 23
-const EXPECTED_INLINE_STYLE_COLOR_COUNT = 118
+const EXPECTED_RAW_HEX_COUNT = 269
+const EXPECTED_RAW_RGBA_COUNT = 104
+const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 22
+const EXPECTED_INLINE_STYLE_COLOR_COUNT = 98
 const EXPECTED_RAW_FONT_SIZE_COUNT = 80
 
 /** Max snippet length for readable output */
@@ -68,6 +68,16 @@ const DESIGN_SYSTEM_FILES = new Set([
   'cncf-constants.ts',
   'accessibility.ts',
   'branding.ts',
+])
+
+/** Arcade/game cards use raw colors for canvas rendering — exempt from color checks */
+const ARCADE_GAME_FILES = new Set([
+  'KubeMan.tsx', 'KubeKong.tsx', 'NodeInvaders.tsx', 'PodPitfall.tsx',
+  'ContainerTetris.tsx', 'FlappyPod.tsx', 'PodSweeper.tsx', 'Game2048.tsx',
+  'Checkers.tsx', 'KubeChess.tsx', 'Solitaire.tsx', 'MatchGame.tsx',
+  'Kubedle.tsx', 'SudokuGame.tsx', 'PodBrothers.tsx', 'KubeKart.tsx',
+  'KubePong.tsx', 'KubeSnake.tsx', 'KubeGalaga.tsx', 'KubeCraft.tsx',
+  'KubeCraft3D.tsx', 'KubeDoom.tsx', 'PodCrosser.tsx',
 ])
 
 /** Categories of detected violations */
@@ -105,7 +115,8 @@ function findComponentFiles(dir: string): string[] {
       !entry.name.endsWith('.spec.tsx') &&
       !entry.name.endsWith('.stories.tsx') &&
       !entry.name.endsWith('.stories.ts') &&
-      !DESIGN_SYSTEM_FILES.has(entry.name)
+      !DESIGN_SYSTEM_FILES.has(entry.name) &&
+      !ARCADE_GAME_FILES.has(entry.name)
     ) {
       results.push(fullPath)
     }
