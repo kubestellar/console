@@ -405,29 +405,26 @@ export function UnifiedCardsSection({
         </div>
       </div>
 
-      {/* Sticky footer */}
-      <div className="border-t border-border px-4 py-3 flex items-center justify-between bg-background">
+      {/* Sticky footer — only shown when cards are selected */}
+      {totalSelected > 0 && (
+      <div className="border-t border-border px-4 py-3 flex items-center justify-between">
         <span className="text-sm text-muted-foreground">
-          {totalSelected > 0
-            ? `${totalSelected} card${totalSelected !== 1 ? 's' : ''} selected`
-            : t('dashboard.addCard.cardsAvailable', { count: Object.values(filteredCatalog).flat().filter(c => !existingCardTypes.includes(c.type)).length })}
+          {`${totalSelected} card${totalSelected !== 1 ? 's' : ''} selected`}
         </span>
         <div className="flex items-center gap-2">
-          {totalSelected > 0 && (
-            <button onClick={() => { setSelectedBrowseCards(new Set()); setSelectedAiCards(new Set()) }} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-              {t('dashboard.addCard.clear')}
-            </button>
-          )}
+          <button onClick={() => { setSelectedBrowseCards(new Set()); setSelectedAiCards(new Set()) }} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            {t('dashboard.addCard.clear')}
+          </button>
           <button
             onClick={() => { if (selectedAiCards.size > 0) handleAddAiCards(); if (selectedBrowseCards.size > 0) handleAddBrowseCards() }}
-            disabled={totalSelected === 0}
-            className="px-4 py-2 bg-gradient-ks text-primary-foreground rounded-lg font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-gradient-ks text-primary-foreground rounded-lg font-medium flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            {totalSelected > 0 ? `Add ${totalSelected} to ${dashboardLabel}` : t('dashboard.addCard.addCards')}
+            {`Add ${totalSelected} to ${dashboardLabel}`}
           </button>
         </div>
       </div>
+      )}
 
       {/* Sub-modals */}
       <CardFactoryModal isOpen={isCardFactoryOpen} onClose={closeCardFactory} onCardCreated={(cardId) => {
