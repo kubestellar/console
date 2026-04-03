@@ -51,7 +51,7 @@ export function TemplateGallerySection({ onApplyTemplate, dashboardName }: Templ
       {/* Explanation banner */}
       <div className="mb-4 p-3 rounded-lg bg-purple-500/5 border border-purple-500/20">
         <p className="text-sm text-muted-foreground">
-          Card collections are pre-built sets of cards for common use cases. Applying a collection will <strong className="text-foreground">replace all cards</strong> on {dashboardName ? `"${dashboardName}"` : 'your current dashboard'} with the collection&apos;s card set.
+          Card collections are pre-built sets of cards for common use cases. You can <strong className="text-foreground">add</strong> a collection&apos;s cards to {dashboardName ? `"${dashboardName}"` : 'your current dashboard'} or <strong className="text-foreground">replace</strong> all existing cards.
         </p>
       </div>
 
@@ -110,20 +110,28 @@ export function TemplateGallerySection({ onApplyTemplate, dashboardName }: Templ
                 <span className="text-2xs text-muted-foreground">
                   {(template.cards || []).length} {t('dashboard.addCard.cards', 'cards')}
                 </span>
-                <button
-                  onClick={() => handleApply(template)}
-                  className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                    appliedTemplate === template.id
-                      ? 'bg-green-500/20 text-green-400'
-                      : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
-                  }`}
-                >
-                  {appliedTemplate === template.id ? (
-                    <span className="flex items-center gap-1"><Check className="w-3 h-3" /> Applied</span>
-                  ) : (
-                    t('dashboard.templates.apply', 'Apply')
-                  )}
-                </button>
+                {appliedTemplate === template.id ? (
+                  <span className="flex items-center gap-1 px-3 py-1 rounded text-xs font-medium bg-green-500/20 text-green-400">
+                    <Check className="w-3 h-3" /> Applied
+                  </span>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleApply(template)}
+                      className="px-3 py-1 rounded text-xs font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
+                      title="Add these cards to your existing dashboard cards"
+                    >
+                      + Add
+                    </button>
+                    <button
+                      onClick={() => { handleApply(template) }}
+                      className="px-3 py-1 rounded text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                      title="Replace all current cards with this collection"
+                    >
+                      Replace
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

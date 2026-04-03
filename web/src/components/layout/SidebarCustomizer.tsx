@@ -34,7 +34,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useSidebarConfig, SidebarItem, DISCOVERABLE_DASHBOARDS } from '../../hooks/useSidebarConfig'
+import { useSidebarConfig, SidebarItem } from '../../hooks/useSidebarConfig'
 import { useDashboards, Dashboard } from '../../hooks/useDashboards'
 import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from '../dashboard/templates'
 import { CreateDashboardModal } from '../dashboard/CreateDashboardModal'
@@ -181,7 +181,6 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
     toggleClusterStatus,
     resetToDefault,
     generateFromBehavior,
-    restoreDashboard,
   } = useSidebarConfig()
 
   // DnD sensors for both mouse and keyboard
@@ -384,41 +383,39 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
   // Shared content rendered in both modal and embedded modes
   const sidebarContent = (
     <>
-          {/* Quick Actions */}
-          <div className="flex flex-wrap gap-2 mb-6">
-            <Button
-              variant="accent"
+          {/* Actions — uniform purple-themed styling */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            <button
               onClick={() => setShowAddForm(!showAddForm)}
-              icon={<Plus className="w-4 h-4" />}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors text-sm font-medium"
             >
+              <Plus className="w-4 h-4" />
               {t('sidebar.customizer.addItem')}
-            </Button>
+            </button>
             <button
               onClick={openCreateDashboard}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors text-sm font-medium"
             >
               <FolderPlus className="w-4 h-4" />
-              {t('sidebar.customizer.newDashboard')}
+              {t('sidebar.customizer.createDashboard', 'Create Dashboard')}
             </button>
-            <Button
-              variant="ghost"
-              onClick={resetToDefault}
-              icon={<RotateCcw className="w-4 h-4" />}
-            >
-              {t('sidebar.customizer.reset')}
-            </Button>
-            <Button
-              variant="ghost"
+            <button
               onClick={handleGenerateFromBehavior}
               disabled={isGenerating}
-              icon={isGenerating ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4" />
-              )}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors text-sm font-medium disabled:opacity-50"
+              title={t('sidebar.customizer.generateTooltip', 'Analyzes your navigation history to suggest dashboards you actually use')}
             >
+              {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
               {isGenerating ? t('sidebar.customizer.analyzing') : t('sidebar.customizer.generateFromBehavior')}
-            </Button>
+            </button>
+            <button
+              onClick={resetToDefault}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              title={t('sidebar.customizer.resetTooltip', 'Restore the default sidebar navigation items')}
+            >
+              <RotateCcw className="w-4 h-4" />
+              {t('sidebar.customizer.resetSidebar', 'Reset Sidebar')}
+            </button>
           </div>
 
           {/* Generation Result */}
@@ -592,40 +589,7 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
             </div>
           )}
 
-          {/* Recommended Dashboards — discoverable dashboards not yet in the sidebar */}
-          {(() => {
-            const existingHrefs = new Set([
-              ...config.primaryNav.map(item => item.href),
-              ...config.secondaryNav.map(item => item.href),
-            ])
-            const MAX_RECOMMENDED_DASHBOARDS = 6
-            const available = DISCOVERABLE_DASHBOARDS.filter(d => !existingHrefs.has(d.href)).slice(0, MAX_RECOMMENDED_DASHBOARDS)
-            if (available.length === 0) return null
-            return (
-              <div className="mb-4 rounded-xl border border-purple-500/20 bg-purple-500/5 p-3">
-                <h4 className="text-xs font-medium text-purple-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  {t('sidebar.customizer.recommendedDashboards')}
-                </h4>
-                <p className="text-xs text-muted-foreground mb-2">
-                  {t('sidebar.customizer.addTopicDashboards')}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {available.map(dashboard => (
-                    <button
-                      key={dashboard.id}
-                      onClick={() => restoreDashboard(dashboard)}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-secondary/50 border border-border/50 hover:border-purple-500/30 hover:bg-secondary text-foreground transition-all"
-                    >
-                      {renderIcon(dashboard.icon, 'w-3.5 h-3.5 text-muted-foreground')}
-                      <span className="font-medium text-xs">{dashboard.name}</span>
-                      <Plus className="w-3 h-3 text-purple-400" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )
-          })()}
+          {/* Static recommendations removed — "Generate from Behavior" is smarter */}
 
           {/* Primary Navigation */}
           <div className="mb-4">

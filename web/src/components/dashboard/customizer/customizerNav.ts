@@ -26,10 +26,10 @@ export interface NavItem {
 
 export const CUSTOMIZER_NAV: NavItem[] = [
   { id: 'cards', label: 'Cards', icon: LayoutGrid },
+  { id: 'collections', label: 'Card Collections', icon: Layout },
+  { id: 'dashboards', label: 'Dashboards', icon: LayoutDashboard },
   { id: 'card-factory', label: 'Create Custom Card', icon: Wand2 },
   { id: 'stat-factory', label: 'Create Stats Card', icon: Activity },
-  { id: 'dashboards', label: 'Dashboards', icon: LayoutDashboard },
-  { id: 'collections', label: 'Card Collections', icon: Layout },
 ]
 
 export const DEFAULT_SECTION: CustomizerSection = 'cards'

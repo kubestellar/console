@@ -4,22 +4,17 @@
  * Layout: AI query bar at top → suggestion chips when results exist →
  * full browse catalog below. No tabs needed.
  */
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Sparkles, Plus, Loader2, Search, Wand2, Activity } from 'lucide-react'
-import { useModalState } from '../../../../lib/modals'
-import { CardFactoryModal } from '../../CardFactoryModal'
-import { StatBlockFactoryModal } from '../../StatBlockFactoryModal'
+import { Sparkles, Plus, Loader2, Search } from 'lucide-react'
 import { getAllDynamicCards, onRegistryChange } from '../../../../lib/dynamic-cards'
 import { useToast } from '../../../ui/Toast'
 import { FOCUS_DELAY_MS, RETRY_DELAY_MS } from '../../../../lib/constants/network'
-import { emitCardCategoryBrowsed, emitRecommendedCardShown } from '../../../../lib/analytics'
+import { emitCardCategoryBrowsed } from '../../../../lib/analytics'
 import { isCardVisibleForProject } from '../../../../config/cards'
 import { getDescriptorsByCategory } from '../../../cards/cardDescriptor'
 import {
   CARD_CATALOG,
-  RECOMMENDED_CARD_TYPES,
-  MAX_RECOMMENDED_CARDS,
   CATEGORY_LOCALE_KEYS,
   visualizationIcons,
   wrapAbbreviations,
@@ -47,8 +42,7 @@ export function UnifiedCardsSection({
   const { t } = useTranslation()
   const tCard = t as (key: string, defaultValue?: string) => string
   const { showToast } = useToast()
-  const { isOpen: isCardFactoryOpen, open: openCardFactory, close: closeCardFactory } = useModalState()
-  const { isOpen: isStatFactoryOpen, open: openStatFactory, close: closeStatFactory } = useModalState()
+  // Card/Stat factories are now separate nav items in Console Studio
   const [browseSearch, setBrowseSearch] = useState(initialSearch || '')
   const [selectedBrowseCards, setSelectedBrowseCards] = useState<Set<string>>(new Set())
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set([...Object.keys(CARD_CATALOG), 'Custom Cards']))
@@ -67,26 +61,7 @@ export function UnifiedCardsSection({
     return unsub
   }, [])
 
-  // Recommended cards
-  const recommendedCards = useMemo(() => {
-    const existing = new Set(existingCardTypes || [])
-    const catalogCards = Object.values(CARD_CATALOG).flat() as Array<{ type: string; title: string; description: string; visualization: string }>
-    const descriptorCards = Array.from(getDescriptorsByCategory().values()).flat().map(d => ({
-      type: d.id, title: d.title, description: d.description, visualization: d.visualization,
-    }))
-    const allCards = [...catalogCards, ...descriptorCards]
-    return (RECOMMENDED_CARD_TYPES as readonly string[])
-      .filter(type => !existing.has(type))
-      .map(type => allCards.find(c => c.type === type))
-      .filter((c): c is NonNullable<typeof c> => c != null)
-      .slice(0, MAX_RECOMMENDED_CARDS)
-  }, [existingCardTypes])
-
-  useEffect(() => {
-    if (isActive && recommendedCards.length > 0) {
-      emitRecommendedCardShown(recommendedCards.map(c => c.type))
-    }
-  }, [isActive, recommendedCards])
+  // Static recommendations removed — AI suggestions at top is the smarter approach
 
   useEffect(() => {
     if (isActive) {
@@ -298,9 +273,9 @@ export function UnifiedCardsSection({
           </div>
         )}
 
-        {/* Search + Create Custom */}
-        <div className="mb-3 flex items-center gap-2">
-          <div className="relative flex-1">
+        {/* Search */}
+        <div className="mb-3">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               ref={searchInputRef}
@@ -311,47 +286,9 @@ export function UnifiedCardsSection({
               className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
             />
           </div>
-          <button onClick={() => openCardFactory()} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors text-sm font-medium whitespace-nowrap shrink-0">
-            <Wand2 className="w-4 h-4" />
-            {t('dashboard.addCard.createCustom')}
-          </button>
-          <button onClick={() => openStatFactory()} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 transition-colors text-sm font-medium whitespace-nowrap shrink-0">
-            <Activity className="w-4 h-4" />
-            {t('dashboard.addCard.createStats')}
-          </button>
         </div>
 
-        {/* Recommended cards */}
-        {!browseSearch.trim() && recommendedCards.length > 0 && (
-          <div className="mb-3 rounded-xl border border-purple-500/20 bg-purple-500/5 p-3">
-            <h4 className="text-xs font-medium text-purple-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5" />
-              {t('dashboard.addCard.recommended', 'Recommended for you')}
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              {recommendedCards.map(card => {
-                const isSelected = selectedBrowseCards.has(card.type)
-                return (
-                  <button
-                    key={card.type}
-                    onClick={() => toggleBrowseCard(card.type)}
-                    onMouseEnter={() => onHoverCard({ type: card.type, title: card.title, description: card.description, visualization: card.visualization })}
-                    onMouseLeave={() => onHoverCard(null)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
-                      isSelected
-                        ? 'bg-purple-500/20 border border-purple-500 text-foreground ring-1 ring-purple-500/50'
-                        : 'bg-secondary/50 border border-border/50 hover:border-purple-500/30 hover:bg-secondary text-foreground'
-                    }`}
-                  >
-                    <Activity className="w-3.5 h-3.5 text-purple-400" />
-                    <span className="font-medium text-xs">{card.title}</span>
-                    {!isSelected && <Plus className="w-3 h-3 text-purple-400" />}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        )}
+        {/* Static recommendations removed — AI suggestions at top is smarter */}
 
         {/* Card catalog */}
         <div className="space-y-3">
@@ -426,11 +363,7 @@ export function UnifiedCardsSection({
       </div>
       )}
 
-      {/* Sub-modals */}
-      <CardFactoryModal isOpen={isCardFactoryOpen} onClose={closeCardFactory} onCardCreated={(cardId) => {
-        onAddCards([{ type: 'dynamic_card', title: t('dashboard.addCard.customCard'), description: t('dashboard.addCard.dynamicallyCreated'), visualization: 'status', config: { dynamicCardId: cardId } }])
-      }} />
-      <StatBlockFactoryModal isOpen={isStatFactoryOpen} onClose={closeStatFactory} />
+      {/* Card/Stat factories are now separate Console Studio nav items */}
     </div>
   )
 }
