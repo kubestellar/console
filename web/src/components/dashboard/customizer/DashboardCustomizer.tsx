@@ -109,7 +109,18 @@ export function DashboardCustomizer({
 
           {activeSection === 'collections' && onApplyTemplate && (
             <TemplateGallerySection
-              onApplyTemplate={handleApplyTemplate}
+              onReplaceWithTemplate={handleApplyTemplate}
+              onAddTemplate={(template) => {
+                // Convert template cards to CardSuggestion format and add
+                const cards = (template.cards || []).map(c => ({
+                  type: c.card_type,
+                  title: c.card_type,
+                  description: '',
+                  visualization: 'status' as const,
+                  config: c.config || {},
+                }))
+                handleAddCards(cards)
+              }}
               dashboardName={dashboardName}
             />
           )}

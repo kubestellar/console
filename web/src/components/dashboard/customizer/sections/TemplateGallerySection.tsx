@@ -26,12 +26,15 @@ const DEFAULT_CARD_COLOR = 'bg-secondary/60'
 const APPLIED_CONFIRMATION_MS = 2000
 
 interface TemplateGallerySectionProps {
-  onApplyTemplate: (template: DashboardTemplate) => void
+  /** Replace all cards with collection's cards */
+  onReplaceWithTemplate: (template: DashboardTemplate) => void
+  /** Add collection's cards to existing cards */
+  onAddTemplate: (template: DashboardTemplate) => void
   /** Dashboard name for context */
   dashboardName?: string
 }
 
-export function TemplateGallerySection({ onApplyTemplate, dashboardName }: TemplateGallerySectionProps) {
+export function TemplateGallerySection({ onReplaceWithTemplate, onAddTemplate, dashboardName }: TemplateGallerySectionProps) {
   const { t } = useTranslation()
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [searchText, setSearchText] = useState('')
@@ -43,8 +46,14 @@ export function TemplateGallerySection({ onApplyTemplate, dashboardName }: Templ
     return matchesCategory && matchesSearch
   })
 
-  const handleApply = (template: DashboardTemplate) => {
-    onApplyTemplate(template)
+  const handleAdd = (template: DashboardTemplate) => {
+    onAddTemplate(template)
+    setAppliedTemplate(template.id)
+    setTimeout(() => setAppliedTemplate(null), APPLIED_CONFIRMATION_MS)
+  }
+
+  const handleReplace = (template: DashboardTemplate) => {
+    onReplaceWithTemplate(template)
     setAppliedTemplate(template.id)
     setTimeout(() => setAppliedTemplate(null), APPLIED_CONFIRMATION_MS)
   }
@@ -134,14 +143,14 @@ export function TemplateGallerySection({ onApplyTemplate, dashboardName }: Templ
                 ) : (
                   <div className="flex items-center gap-1.5">
                     <button
-                      onClick={() => handleApply(template)}
+                      onClick={() => handleAdd(template)}
                       className="px-3 py-1 rounded text-xs font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
                       title="Add these cards to your existing dashboard cards"
                     >
                       + Add
                     </button>
                     <button
-                      onClick={() => { handleApply(template) }}
+                      onClick={() => handleReplace(template)}
                       className="px-3 py-1 rounded text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
                       title="Replace all current cards with this collection"
                     >
