@@ -474,7 +474,7 @@ const T2_TEMPLATES: T2Template[] = [
             onChange={e => setEditUrl(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSet()}
             placeholder="https://example.com/image.png"
-            className="flex-1 text-xs px-2 py-1.5 rounded bg-secondary/50 border border-border text-foreground"
+            className="flex-1 text-xs px-2 py-1.5 rounded bg-secondary text-foreground"
           />
           <button onClick={handleSet} className="text-xs px-3 py-1.5 rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/30">
             Load
@@ -600,16 +600,16 @@ const T2_TEMPLATES: T2Template[] = [
         <div className="grid grid-cols-2 gap-2 mb-3 p-2 rounded bg-secondary/20 border border-border/50">
           <input placeholder="Namespace" value={form.namespace}
             onChange={e => setForm(p => ({...p, namespace: e.target.value}))}
-            className="text-xs px-2 py-1 rounded bg-secondary/50 border border-border text-foreground" />
+            className="text-xs px-2 py-1 rounded bg-secondary text-foreground" />
           <input placeholder="pod/name or svc/name" value={form.resource}
             onChange={e => setForm(p => ({...p, resource: e.target.value}))}
-            className="text-xs px-2 py-1 rounded bg-secondary/50 border border-border text-foreground" />
+            className="text-xs px-2 py-1 rounded bg-secondary text-foreground" />
           <input placeholder="Local port" value={form.localPort} type="number"
             onChange={e => setForm(p => ({...p, localPort: e.target.value}))}
-            className="text-xs px-2 py-1 rounded bg-secondary/50 border border-border text-foreground" />
+            className="text-xs px-2 py-1 rounded bg-secondary text-foreground" />
           <input placeholder="Remote port" value={form.remotePort} type="number"
             onChange={e => setForm(p => ({...p, remotePort: e.target.value}))}
-            className="text-xs px-2 py-1 rounded bg-secondary/50 border border-border text-foreground" />
+            className="text-xs px-2 py-1 rounded bg-secondary text-foreground" />
           <button onClick={addForward}
             className="col-span-2 text-xs py-1.5 rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/30">
             Add Port Forward
@@ -1068,7 +1068,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                       value={t1Title}
                       onChange={e => setT1Title(e.target.value)}
                       placeholder={t('dashboard.cardFactory.titlePlaceholder')}
-                      className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                      className="w-full text-sm px-3 py-2 rounded-md bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                     />
                   </div>
                   <div>
@@ -1076,7 +1076,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                     <select
                       value={t1Width}
                       onChange={e => setT1Width(Number(e.target.value))}
-                      className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                      className="w-full text-sm px-3 py-2 rounded-md bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                     >
                       <option value={3}>{t('dashboard.cardFactory.widthSmall')}</option>
                       <option value={4}>{t('dashboard.cardFactory.widthMedium')}</option>
@@ -1094,7 +1094,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                     value={t1Description}
                     onChange={e => setT1Description(e.target.value)}
                     placeholder={t('dashboard.cardFactory.descPlaceholder')}
-                    className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                    className="w-full text-sm px-3 py-2 rounded-md bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                   />
                 </div>
 
@@ -1138,19 +1138,19 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                           value={col.field}
                           onChange={e => updateColumn(idx, 'field', e.target.value)}
                           placeholder={t('dashboard.cardFactory.fieldPlaceholder')}
-                          className="flex-1 text-xs px-2 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                          className="flex-1 text-xs px-2 py-1.5 rounded-md bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                         />
                         <input
                           type="text"
                           value={col.label}
                           onChange={e => updateColumn(idx, 'label', e.target.value)}
                           placeholder={t('dashboard.cardFactory.labelPlaceholder')}
-                          className="flex-1 text-xs px-2 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                          className="flex-1 text-xs px-2 py-1.5 rounded-md bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                         />
                         <select
                           value={col.format || 'text'}
                           onChange={e => updateColumn(idx, 'format', e.target.value)}
-                          className="w-20 text-xs px-2 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none"
+                          className="w-20 text-xs px-2 py-1.5 rounded-md bg-secondary text-foreground focus:outline-none"
                         >
                           <option value="text">{t('cardFactory.formatText')}</option>
                           <option value="badge">{t('cardFactory.formatBadge')}</option>
@@ -1182,7 +1182,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                     value={t1DataJson}
                     onChange={e => setT1DataJson(e.target.value)}
                     rows={6}
-                    className="w-full text-xs px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                    className="w-full text-xs px-3 py-2 rounded-md bg-secondary text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                   />
                 </div>
 
@@ -1244,7 +1244,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                       value={t2Title}
                       onChange={e => setT2Title(e.target.value)}
                       placeholder={t('dashboard.cardFactory.titlePlaceholder')}
-                      className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                      className="w-full text-sm px-3 py-2 rounded-md bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                     />
                   </div>
                   <div>
@@ -1252,7 +1252,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                     <select
                       value={t2Width}
                       onChange={e => setT2Width(Number(e.target.value))}
-                      className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                      className="w-full text-sm px-3 py-2 rounded-md bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                     >
                       <option value={3}>{t('dashboard.cardFactory.widthSmall')}</option>
                       <option value={4}>{t('dashboard.cardFactory.widthMedium')}</option>
@@ -1270,7 +1270,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                     value={t2Description}
                     onChange={e => setT2Description(e.target.value)}
                     placeholder={t('dashboard.cardFactory.codeDescPlaceholder')}
-                    className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                    className="w-full text-sm px-3 py-2 rounded-md bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                   />
                 </div>
 
@@ -1290,7 +1290,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                     value={t2Source}
                     onChange={e => { setT2Source(e.target.value); setCompileStatus('idle') }}
                     rows={14}
-                    className="w-full text-xs px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-purple-500/50 leading-relaxed"
+                    className="w-full text-xs px-3 py-2 rounded-md bg-secondary text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-purple-500/50 leading-relaxed"
                     spellCheck={false}
                   />
 
@@ -1471,7 +1471,7 @@ function TemplateDropdown<T extends { name: string }>({
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md bg-secondary/50 border border-border text-muted-foreground hover:text-foreground transition-colors"
+        className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md bg-secondary text-muted-foreground hover:text-foreground transition-colors"
       >
         <LayoutTemplate className="w-3 h-3" />
         {label}
@@ -1595,7 +1595,7 @@ function T2Preview({ result }: { result: AiCardT2Result }) {
       {result.description && (
         <p className="text-xs text-muted-foreground mb-2">{wrapAbbreviations(result.description)}</p>
       )}
-      <pre className="text-2xs px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground font-mono max-h-48 overflow-y-auto whitespace-pre-wrap">
+      <pre className="text-2xs px-3 py-2 rounded-md bg-secondary text-foreground font-mono max-h-48 overflow-y-auto whitespace-pre-wrap">
         {result.sourceCode}
       </pre>
     </div>
