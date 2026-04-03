@@ -52,7 +52,9 @@ function CrossClusterPolicyComparisonInternal({ config: _config }: CardConfig) {
     Object.keys(kyvernoStatuses || {}).length > 0 &&
     Object.values(kyvernoStatuses || {}).every(s => !!s.error)
 
-  useCardLoadingState({ isLoading: isLoading && !isDemoData, isRefreshing, hasAnyData: true, isDemoData })
+  // TODO: useKyverno doesn't track consecutive failures natively.
+  // hasError = all clusters errored, so using 1 as a conservative proxy.
+  useCardLoadingState({ isLoading: isLoading && !isDemoData, isRefreshing, hasAnyData: true, isDemoData, isFailed: hasError, consecutiveFailures: hasError ? 1 : 0 })
 
   // Filter clusters by global filters + custom filter
   const allClusters = useMemo(() => {

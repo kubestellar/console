@@ -391,6 +391,7 @@ function ProactiveGPUNodeHealthMonitorInternal() {
   const {
     nodes,
     isLoading,
+    isRefreshing,
     isDemoFallback,
     isFailed,
     consecutiveFailures,
@@ -413,7 +414,8 @@ function ProactiveGPUNodeHealthMonitorInternal() {
 
   // Report loading state to CardWrapper (lastRefresh enables "Updated Xm ago" freshness display)
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && nodes.length === 0,
+    isRefreshing,
     hasAnyData: nodes.length > 0,
     isFailed,
     consecutiveFailures,

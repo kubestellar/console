@@ -610,6 +610,9 @@ func (m *MultiClusterClient) ensureNamespace(
 	if err == nil {
 		return nil // already exists
 	}
+	if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("failed to check namespace %s: %w", namespace, err)
+	}
 	nsObj := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
@@ -628,7 +631,7 @@ func (m *MultiClusterClient) ensureNamespace(
 		nsObj.SetLabels(labels)
 	}
 	_, err = client.Resource(gvrNamespaces).Create(ctx, nsObj, metav1.CreateOptions{})
-	if err != nil && strings.Contains(err.Error(), "already exists") {
+	if err != nil && apierrors.IsAlreadyExists(err) {
 		return nil
 	}
 	return err
@@ -680,7 +683,7 @@ func applyDependencies(
 				result.Action = "updated"
 				log.Printf("[deploy] Updated %s %s", dep.Kind, dep.Name)
 			}
-		} else {
+		} else if apierrors.IsNotFound(err) {
 			// Resource doesn't exist — create
 			_, err = resource.Create(ctx, objCopy, metav1.CreateOptions{})
 			if err != nil {
@@ -690,6 +693,10 @@ func applyDependencies(
 				result.Action = "created"
 				log.Printf("[deploy] Created %s %s", dep.Kind, dep.Name)
 			}
+		} else {
+			// Real error (network, RBAC, etc.) — do not assume resource is missing
+			result.Action = "failed"
+			log.Printf("[deploy] Failed to check %s %s: %v", dep.Kind, dep.Name, err)
 		}
 
 		results = append(results, result)
@@ -923,10 +930,47 @@ func (m *MultiClusterClient) ScaleWorkload(ctx context.Context, namespace, name 
 	}, nil
 }
 
-// DeleteWorkload deletes a workload from a cluster
+// DeleteWorkload deletes a workload from a cluster by trying Deployment, StatefulSet,
+// and DaemonSet in order. Returns nil if the resource was deleted or not found.
 func (m *MultiClusterClient) DeleteWorkload(ctx context.Context, cluster, namespace, name string) error {
-	// Placeholder for delete implementation
-	return nil
+	dynamicClient, err := m.GetDynamicClient(cluster)
+	if err != nil {
+		return fmt.Errorf("failed to get dynamic client for %s: %w", cluster, err)
+	}
+
+	gvrs := []struct {
+		gvr  schema.GroupVersionResource
+		kind string
+	}{
+		{gvrDeployments, "Deployment"},
+		{gvrStatefulSets, "StatefulSet"},
+		{gvrDaemonSets, "DaemonSet"},
+	}
+
+	deletePolicy := metav1.DeletePropagationForeground
+	deleteOpts := metav1.DeleteOptions{PropagationPolicy: &deletePolicy}
+
+	for _, g := range gvrs {
+		_, getErr := dynamicClient.Resource(g.gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+		if getErr != nil {
+			if apierrors.IsNotFound(getErr) {
+				continue // not this kind, try next
+			}
+			return fmt.Errorf("failed to check %s %s/%s on cluster %s: %w", g.kind, namespace, name, cluster, getErr)
+		}
+
+		// Found the resource — delete it
+		if err := dynamicClient.Resource(g.gvr).Namespace(namespace).Delete(ctx, name, deleteOpts); err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil // deleted between Get and Delete — success
+			}
+			return fmt.Errorf("failed to delete %s %s/%s on cluster %s: %w", g.kind, namespace, name, cluster, err)
+		}
+		log.Printf("[delete] Deleted %s %s/%s from cluster %s", g.kind, namespace, name, cluster)
+		return nil
+	}
+
+	return fmt.Errorf("workload %s/%s not found in cluster %s (tried Deployment, StatefulSet, DaemonSet)", namespace, name, cluster)
 }
 
 // GetClusterCapabilities returns the capabilities of all clusters

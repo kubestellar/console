@@ -23,6 +23,7 @@ import { scrollToCard } from '../../../lib/scrollToCard'
 import { useFeatureHints } from '../../../hooks/useFeatureHints'
 import { FeatureHintTooltip } from '../../ui/FeatureHintTooltip'
 import { emitGlobalSearchOpened, emitGlobalSearchQueried, emitGlobalSearchSelected, emitGlobalSearchAskAI } from '../../../lib/analytics'
+import { useModalState } from '../../../lib/modals'
 
 /** Routes for dashboards that are discoverable but not shown by default in the sidebar */
 const DISCOVERABLE_ROUTES = new Set(DISCOVERABLE_DASHBOARDS.map(d => d.href))
@@ -203,7 +204,7 @@ export function SearchDropdown() {
   const { openSidebar, setActiveMission, startMission } = useMissions()
   const { config: sidebarConfig } = useSidebarConfig()
   const [searchQuery, setSearchQuery] = useState('')
-  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const { isOpen: isSearchOpen, open: openSearch, close: closeSearch } = useModalState()
   const [selectedIndex, setSelectedIndex] = useState(0)
   const searchRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -249,8 +250,8 @@ export function SearchDropdown() {
     })
 
     setSearchQuery('')
-    setIsSearchOpen(false)
-  }, [searchQuery, startMission])
+    closeSearch()
+  }, [searchQuery, startMission, closeSearch])
 
   // Check if a page route is a discoverable dashboard not currently in the sidebar
   const sidebarHrefs = useMemo(() => {
@@ -301,19 +302,19 @@ export function SearchDropdown() {
       }
     }
     setSearchQuery('')
-    setIsSearchOpen(false)
-  }, [navigate, location.pathname, setActiveMission, openSidebar, sidebarHrefs])
+    closeSearch()
+  }, [navigate, location.pathname, setActiveMission, openSidebar, sidebarHrefs, closeSearch])
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setIsSearchOpen(false)
+        closeSearch()
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, [closeSearch])
 
   // Keyboard navigation
   useEffect(() => {
@@ -322,7 +323,7 @@ export function SearchDropdown() {
       if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
         event.preventDefault()
         inputRef.current?.focus()
-        setIsSearchOpen(true)
+        openSearch()
         emitGlobalSearchOpened('keyboard')
       }
 
@@ -347,14 +348,14 @@ export function SearchDropdown() {
           handleSelect(flatResults[selectedIndex], selectedIndex)
         }
       } else if (event.key === 'Escape') {
-        setIsSearchOpen(false)
+        closeSearch()
         inputRef.current?.blur()
       }
     }
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isSearchOpen, isResultsPanelActive, selectedIndex, handleSelect, handleAskAI])
+  }, [isSearchOpen, isResultsPanelActive, selectedIndex, handleSelect, handleAskAI, openSearch, closeSearch])
 
   // Reset selected index when results change
   useEffect(() => {
@@ -383,9 +384,9 @@ export function SearchDropdown() {
           value={searchQuery}
           onChange={e => {
             setSearchQuery(e.target.value)
-            setIsSearchOpen(true)
+            openSearch()
           }}
-          onFocus={() => { setIsSearchOpen(true); cmdKHint.action(); emitGlobalSearchOpened('click') }}
+          onFocus={() => { openSearch(); cmdKHint.action(); emitGlobalSearchOpened('click') }}
           onBlur={() => { if (searchQuery.trim()) emitGlobalSearchQueried(searchQuery.trim().length, totalCountRef.current) }}
           placeholder="Search or ask AI anything..."
           className="w-full pl-10 pr-16 py-2 bg-secondary rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"

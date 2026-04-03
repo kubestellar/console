@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -52,7 +51,7 @@ func (c *ClineProvider) Capabilities() ProviderCapability { return CapabilityCha
 
 func (c *ClineProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
 	if !GetConfigManager().HasAPIKey("cline") {
-		return &ChatResponse{Content: fmt.Sprintf("Cline is detected but no API key is configured. Set CLINE_API_KEY to enable chat."), Agent: c.Name(), Done: true}, nil
+		return &ChatResponse{Content: "Cline is detected but no API key is configured. Set CLINE_API_KEY to enable chat.", Agent: c.Name(), Done: true}, nil
 	}
 	return chatViaOpenAICompatible(ctx, req, "cline", "https://api.cline.bot/v1/chat/completions", c.Name())
 }

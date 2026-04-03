@@ -1,6 +1,7 @@
-import { useState, ReactNode } from 'react'
+import { ReactNode } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { Button } from './Button'
+import { useModalState } from '../../lib/modals'
 
 interface CollapsibleSectionProps {
   title: string
@@ -17,14 +18,14 @@ export function CollapsibleSection({
   badge,
   className = '',
 }: CollapsibleSectionProps) {
-  const [isOpen, setIsOpen] = useState(defaultOpen)
+  const { isOpen, toggle } = useModalState(defaultOpen)
 
   return (
     <div className={className}>
       <Button
         variant="ghost"
         size="md"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggle}
         className="w-full justify-start px-2 py-2 font-medium text-foreground"
         fullWidth
         icon={isOpen ? (

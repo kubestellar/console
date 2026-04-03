@@ -744,32 +744,32 @@ export function MissionSidebar() {
           <p className="text-xs text-muted-foreground/70 mt-1">
             {t('missionSidebar.startMissionPrompt')}
           </p>
-          <div className="flex items-center gap-2 mt-4">
+          <div className="flex items-stretch gap-2 mt-4">
             {!showNewMission && (
               <button
                 onClick={() => {
                   setShowNewMission(true)
                   setTimeout(() => newMissionInputRef.current?.focus(), FOCUS_DELAY_MS)
                 }}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                className="flex flex-col items-center justify-center gap-1.5 px-4 py-3 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors min-w-[100px]"
               >
-                <Sparkles className="w-4 h-4" />
-                {t('missionSidebar.startCustomMission')}
+                <Sparkles className="w-5 h-5" />
+                <span className="text-center leading-tight">{t('missionSidebar.startCustomMission')}</span>
               </button>
             )}
             <button
               onClick={() => setShowBrowser(true)}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors"
+              className="flex flex-col items-center justify-center gap-1.5 px-4 py-3 text-sm font-medium bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors min-w-[100px]"
             >
-              <Globe className="w-4 h-4" />
-              Browse Community Missions
+              <Globe className="w-5 h-5" />
+              <span className="text-center leading-tight">Browse Community Missions</span>
             </button>
             <button
               onClick={() => setShowMissionControl(true)}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-lg hover:from-violet-500 hover:to-indigo-500 transition-colors shadow-lg shadow-violet-500/25"
+              className="flex flex-col items-center justify-center gap-1.5 px-4 py-3 text-sm font-medium bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-lg hover:from-violet-500 hover:to-indigo-500 transition-colors shadow-lg shadow-violet-500/25 min-w-[100px]"
             >
-              <Rocket className="w-4 h-4" />
-              Mission Control
+              <Rocket className="w-5 h-5" />
+              <span className="text-center leading-tight">Mission Control</span>
             </button>
           </div>
         </div>

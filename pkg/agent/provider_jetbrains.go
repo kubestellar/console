@@ -74,7 +74,7 @@ func (j *JetBrainsProvider) Capabilities() ProviderCapability { return Capabilit
 
 func (j *JetBrainsProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
 	if !GetConfigManager().HasAPIKey("jetbrains") {
-		return &ChatResponse{Content: fmt.Sprintf("JetBrains IDE is detected but no API key is configured. Set JETBRAINS_API_KEY to enable chat."), Agent: j.Name(), Done: true}, nil
+		return &ChatResponse{Content: "JetBrains IDE is detected but no API key is configured. Set JETBRAINS_API_KEY to enable chat.", Agent: j.Name(), Done: true}, nil
 	}
 	return chatViaOpenAICompatible(ctx, req, "jetbrains", "https://api.jetbrains.ai/v1/chat/completions", j.Name())
 }

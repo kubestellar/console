@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Save, User, Loader2, AlertCircle, RefreshCw } from 'lucide-react'
 import { STORAGE_KEY_TOKEN, FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
+import { safeGetItem } from '../../../lib/utils/localStorage'
 
 interface ProfileSectionProps {
   initialEmail: string
@@ -34,7 +35,7 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLo
     setIsSaving(true)
     setError(null)
     try {
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+      const token = safeGetItem(STORAGE_KEY_TOKEN)
       const response = await fetch('/api/me', {
         method: 'PUT',
         headers: {

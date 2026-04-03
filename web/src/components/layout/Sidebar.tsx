@@ -568,7 +568,7 @@ export function Sidebar() {
               }
             }}
             aria-expanded={!config.collapsed}
-            className="p-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 shadow-md transition-colors"
+            className="p-1.5 rounded-full border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 shadow-md transition-colors"
             title={config.collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {config.collapsed ? <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" /> : <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />}
@@ -576,7 +576,7 @@ export function Sidebar() {
           <button
             onClick={toggleSidebarPin}
             className={cn(
-              "p-1.5 rounded-full border border-border shadow-md transition-colors",
+              "p-1.5 rounded-full border border-border bg-background shadow-md transition-colors",
               isPinned
                 ? "bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 border-purple-500/30"
                 : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"

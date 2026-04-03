@@ -18,6 +18,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { cn } from '../../lib/cn'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useModalState } from '../../lib/modals'
 
 const PLACEHOLDER_EXAMPLES = [
   'Production-grade security compliance with runtime protection and policy enforcement...',
@@ -929,17 +930,17 @@ function TargetClusterSelector({
   onChange: (clusters: string[]) => void
 }) {
   const { availableClusters, clusterInfoMap } = useGlobalFilters()
-  const [isOpen, setIsOpen] = useState(false)
+  const { isOpen, close: closeDropdown, toggle: toggleDropdown } = useModalState()
   const ref = useRef<HTMLDivElement>(null)
 
   // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setIsOpen(false)
+      if (ref.current && !ref.current.contains(e.target as Node)) closeDropdown()
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [])
+  }, [closeDropdown])
 
   // Use deduplicated short names
   const clusters = availableClusters
@@ -969,7 +970,7 @@ function TargetClusterSelector({
       <div
         className="relative mt-1 flex flex-wrap items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-secondary/30 cursor-pointer hover:border-primary/30 transition-colors"
         style={{ minHeight: CLUSTER_CHIP_MIN_HEIGHT_PX }}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => toggleDropdown()}
       >
         {selected.length === 0 ? (
           <span className="text-sm text-muted-foreground/50 flex items-center gap-1.5">
@@ -1021,7 +1022,7 @@ function TargetClusterSelector({
               'w-full px-3 py-2 text-left text-sm hover:bg-secondary/50 flex items-center gap-2 border-b border-border/50',
               isAllSelected && 'text-primary font-medium',
             )}
-            onClick={() => { onChange([]); setIsOpen(false) }}
+            onClick={() => { onChange([]); closeDropdown() }}
           >
             <Server className="w-3.5 h-3.5" />
             All clusters

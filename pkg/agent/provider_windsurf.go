@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
@@ -54,7 +53,7 @@ func (w *WindsurfProvider) Capabilities() ProviderCapability { return Capability
 
 func (w *WindsurfProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
 	if !GetConfigManager().HasAPIKey("windsurf") {
-		return &ChatResponse{Content: fmt.Sprintf("Windsurf is detected but no API key is configured. Set CODEIUM_API_KEY to enable chat."), Agent: w.Name(), Done: true}, nil
+		return &ChatResponse{Content: "Windsurf is detected but no API key is configured. Set CODEIUM_API_KEY to enable chat.", Agent: w.Name(), Done: true}, nil
 	}
 	return chatViaOpenAICompatible(ctx, req, "windsurf", "https://api.codeium.com/v1/chat/completions", w.Name())
 }

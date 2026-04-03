@@ -31,12 +31,15 @@ interface KubectlRequest {
   context?: string
   namespace?: string
   args: string[]
+  confirmed?: boolean
 }
 
 interface KubectlResponse {
   output: string
   exitCode: number
   error?: string
+  requiresConfirmation?: boolean
+  command?: string
 }
 
 interface PendingRequest {

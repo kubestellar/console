@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"runtime"
 )
@@ -40,7 +39,7 @@ func (r *RaycastProvider) Capabilities() ProviderCapability { return CapabilityC
 
 func (r *RaycastProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
 	if !GetConfigManager().HasAPIKey("raycast") {
-		return &ChatResponse{Content: fmt.Sprintf("Raycast is detected but no API key is configured. Set RAYCAST_API_KEY to enable chat."), Agent: r.Name(), Done: true}, nil
+		return &ChatResponse{Content: "Raycast is detected but no API key is configured. Set RAYCAST_API_KEY to enable chat.", Agent: r.Name(), Done: true}, nil
 	}
 	return chatViaOpenAICompatible(ctx, req, "raycast", "https://api.raycast.com/v1/chat/completions", r.Name())
 }

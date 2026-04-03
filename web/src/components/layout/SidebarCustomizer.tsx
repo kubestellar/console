@@ -45,7 +45,7 @@ import { formatCardTitle } from '../../lib/formatCardTitle'
 import { STORAGE_KEY_NAV_HISTORY } from '../../lib/constants'
 import { NAV_AFTER_ANIMATION_MS } from '../../lib/constants/network'
 import { suggestDashboardIcon, suggestIconSync } from '../../lib/iconSuggester'
-import { BaseModal } from '../../lib/modals'
+import { BaseModal, useModalState } from '../../lib/modals'
 import { iconRegistry } from '../../lib/icons'
 
 // Sortable sidebar item component
@@ -214,7 +214,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
   const { getAllDashboardsWithCards, createDashboard, dashboards } = useDashboards()
 
   const [isGenerating, setIsGenerating] = useState(false)
-  const [isCreateDashboardOpen, setIsCreateDashboardOpen] = useState(false)
+  const { isOpen: isCreateDashboardOpen, open: openCreateDashboard, close: closeCreateDashboard } = useModalState()
   const [generationResult, setGenerationResult] = useState<string | null>(null)
   const [newItemTarget, setNewItemTarget] = useState<'primary' | 'secondary'>('primary')
   const [showAddForm, setShowAddForm] = useState(false)
@@ -332,7 +332,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
       description,
     }, 'primary')
 
-    setIsCreateDashboardOpen(false)
+    closeCreateDashboard()
     onClose()
     navigate(href)
 
@@ -401,7 +401,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
               {t('sidebar.customizer.addItem')}
             </Button>
             <button
-              onClick={() => setIsCreateDashboardOpen(true)}
+              onClick={openCreateDashboard}
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30"
             >
               <FolderPlus className="w-4 h-4" />
@@ -865,7 +865,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
     {/* Create Dashboard Modal */}
     <CreateDashboardModal
       isOpen={isCreateDashboardOpen}
-      onClose={() => setIsCreateDashboardOpen(false)}
+      onClose={closeCreateDashboard}
       onCreate={handleCreateDashboard}
       existingNames={dashboards.map(d => d.name)}
     />

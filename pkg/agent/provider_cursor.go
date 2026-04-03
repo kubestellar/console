@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
@@ -59,7 +58,7 @@ func (c *CursorProvider) Capabilities() ProviderCapability {
 func (c *CursorProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
 	if !GetConfigManager().HasAPIKey("cursor") {
 		return &ChatResponse{
-			Content: fmt.Sprintf("Cursor is detected but no API key is configured. Set CURSOR_API_KEY to enable chat via Cursor's API."),
+			Content: "Cursor is detected but no API key is configured. Set CURSOR_API_KEY to enable chat via Cursor's API.",
 			Agent:   c.Name(),
 			Done:    true,
 		}, nil

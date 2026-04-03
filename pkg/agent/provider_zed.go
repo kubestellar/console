@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
@@ -49,7 +48,7 @@ func (z *ZedProvider) Capabilities() ProviderCapability { return CapabilityChat 
 
 func (z *ZedProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
 	if !GetConfigManager().HasAPIKey("zed") {
-		return &ChatResponse{Content: fmt.Sprintf("Zed is detected but no API key is configured. Set ZED_API_KEY to enable chat."), Agent: z.Name(), Done: true}, nil
+		return &ChatResponse{Content: "Zed is detected but no API key is configured. Set ZED_API_KEY to enable chat.", Agent: z.Name(), Done: true}, nil
 	}
 	return chatViaOpenAICompatible(ctx, req, "zed", "https://api.zed.dev/v1/chat/completions", z.Name())
 }

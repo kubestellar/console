@@ -48,6 +48,8 @@ window.addEventListener('vite:preloadError', (event) => {
 // index.html and compare the app-build-id <meta> tag. If the server has a
 // newer build, reload immediately to pick up correct chunk references.
 const STALE_CHECK_INTERVAL_MS = 120_000 // check every 2 minutes
+/** Timeout for the stale-HTML fetch — keep short to avoid blocking tab restore */
+const STALE_CHECK_FETCH_TIMEOUT_MS = 5_000
 const STALE_CHECK_KEY = 'stale-check-ts'
 
 function getLocalBuildId(): string | null {
@@ -69,6 +71,7 @@ async function checkForStaleHtml(): Promise<void> {
     const resp = await fetch('/?_stale_check=' + now, {
       cache: 'no-store',
       headers: { Accept: 'text/html' },
+      signal: AbortSignal.timeout(STALE_CHECK_FETCH_TIMEOUT_MS),
     })
     if (!resp.ok) return
     const html = await resp.text()

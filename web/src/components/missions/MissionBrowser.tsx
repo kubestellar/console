@@ -13,6 +13,7 @@ import {
 import { cn } from '../../lib/cn'
 import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
+import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../lib/constants/network'
 import { matchMissionsToCluster } from '../../lib/missions/matcher'
 import { useClusterContext } from '../../hooks/useClusterContext'
 import {
@@ -747,7 +748,9 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           if (ghFile.content && ghFile.encoding === 'base64') {
             content = atob(ghFile.content.replace(/\n/g, ''))
           } else if (ghFile.download_url) {
-            const rawResp = await fetch(ghFile.download_url)
+            const rawResp = await fetch(ghFile.download_url, {
+              signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS),
+            })
             content = await rawResp.text()
           } else {
             content = JSON.stringify(ghFile)
