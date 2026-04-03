@@ -412,7 +412,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
     <>
         {/* Save feedback */}
         {saveMessage && (
-          <div className="mb-3 flex items-center gap-2 px-3 py-2 rounded-md bg-green-500/10 border border-green-500/20">
+          <div className="mb-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
             <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
             <span className="text-sm text-green-400">{saveMessage}</span>
           </div>
@@ -440,7 +440,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                     value={title}
                     onChange={e => setTitle(e.target.value)}
                     placeholder={t('dashboard.statFactory.titlePlaceholder')}
-                    className="w-full text-sm px-3 py-2 rounded-md bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                    className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                   />
                 </div>
                 <div>
@@ -450,7 +450,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                     value={statsType}
                     onChange={e => setStatsType(e.target.value)}
                     placeholder={t('dashboard.statFactory.typeIdPlaceholder')}
-                    className="w-full text-sm px-3 py-2 rounded-md bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                    className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                   />
                 </div>
                 <div>
@@ -458,7 +458,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                   <select
                     value={gridCols}
                     onChange={e => setGridCols(Number(e.target.value))}
-                    className="w-full text-sm px-3 py-2 rounded-md bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                    className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                   >
                     <option value={0}>{t('dashboard.statFactory.autoOption')}</option>
                     <option value={2}>2</option>
@@ -480,7 +480,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                   </label>
                   <button
                     onClick={addBlock}
-                    className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                    className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <Plus className="w-3 h-3" />
                     {t('dashboard.statFactory.addBlock')}
@@ -495,7 +495,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                       (block.icon !== smartDefault.icon || block.color !== smartDefault.color)
 
                     return (
-                      <div key={block.id + idx} className="rounded-md bg-card/50 border border-border p-2">
+                      <div key={block.id + idx} className="rounded-lg bg-card/50 border border-border p-2">
                         <div className="flex items-center gap-2">
                           {/* Drag handle / order */}
                           <div className="flex flex-col items-center gap-0.5">
@@ -513,7 +513,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                             <button
                               onClick={() => setEditingBlockIcon(editingBlockIcon === idx ? null : idx)}
                               className={cn(
-                                'p-1.5 min-h-11 min-w-11 rounded-md border transition-colors',
+                                'p-1.5 min-h-11 min-w-11 rounded-lg border transition-colors',
                                 editingBlockIcon === idx
                                   ? 'border-purple-500 bg-purple-500/10'
                                   : 'border-border bg-secondary/50 hover:border-purple-500/50',
@@ -572,7 +572,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                             value={block.label}
                             onChange={e => updateBlock(idx, 'label', e.target.value)}
                             placeholder={t('dashboard.statFactory.labelPlaceholder')}
-                            className="flex-1 text-xs px-2 py-1.5 rounded-md bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                            className="flex-1 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                           />
 
                           {/* Value field */}
@@ -581,14 +581,14 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                             value={block.field}
                             onChange={e => updateBlock(idx, 'field', e.target.value)}
                             placeholder={t('dashboard.statFactory.dataFieldPlaceholder')}
-                            className="w-24 text-xs px-2 py-1.5 rounded-md bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                            className="w-24 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                           />
 
                           {/* Format */}
                           <select
                             value={block.format}
                             onChange={e => updateBlock(idx, 'format', e.target.value)}
-                            className="w-20 text-xs px-1.5 py-1.5 rounded-md bg-secondary text-foreground focus:outline-none"
+                            className="w-20 text-xs px-1.5 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-none"
                           >
                             {VALUE_FORMATS.map(f => (
                               <option key={f.value} value={f.value}>{f.label}</option>
@@ -627,7 +627,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                 onClick={handleSave}
                 disabled={blocks.filter(b => b.label.trim()).length === 0}
                 className={cn(
-                  'w-full flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-colors',
+                  'w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors',
                   blocks.filter(b => b.label.trim()).length > 0
                     ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
                     : 'bg-secondary text-muted-foreground cursor-not-allowed',
@@ -643,7 +643,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
               <div className="flex items-center justify-center border-l border-border/50 bg-secondary/10 w-10 shrink-0">
                 <button
                   onClick={() => setPreviewCollapsed(false)}
-                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
                   title={t('dashboard.preview.showPreview')}
                 >
                   <Eye className="w-4 h-4" />
@@ -762,7 +762,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
               </div>
             ) : (
               existingStats.map(stats => (
-                <div key={stats.type} className="rounded-md bg-card/50 border border-border p-3 flex items-start gap-3">
+                <div key={stats.type} className="rounded-lg bg-card/50 border border-border p-3 flex items-start gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <Activity className="w-4 h-4 text-purple-400 shrink-0" />
@@ -836,7 +836,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
           <div className="flex items-center gap-1 pb-2">
             {tabs.map(t => (
               <button key={t.id} onClick={() => handleTabChange(t.id)}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${tab === t.id ? 'bg-purple-500/20 text-purple-400' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}>
+                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${tab === t.id ? 'bg-purple-500/20 text-purple-400' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}>
                 {t.label}
               </button>
             ))}

@@ -45,7 +45,7 @@ export default function MyCard({ config }) {
       <p className="text-2xl font-bold text-foreground">{count}</p>
       <button
         onClick={() => setCount(c => c + 1)}
-        className="px-4 py-2 rounded-md bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
+        className="px-4 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
       >
         Increment
       </button>
@@ -1018,13 +1018,13 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
               tabIndex={tab === t.id ? 0 : -1}
               onClick={() => handleTabChange(t.id)}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors',
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors',
                 tab === t.id
                   ? 'bg-purple-500/20 text-purple-400'
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary',
               )}
             >
-              <t.icon className="w-3.5 h-3.5" />
+              {/* Icon removed for cleaner look */}
               {t.label}
             </button>
           ))}
@@ -1032,7 +1032,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
 
         {/* Save feedback */}
         {saveMessage && (
-          <div className="mb-3 flex items-center gap-2 px-3 py-2 rounded-md bg-green-500/10 border border-green-500/20">
+          <div className="mb-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
             <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
             <span className="text-sm text-green-400">{saveMessage}</span>
           </div>
@@ -1068,7 +1068,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                       value={t1Title}
                       onChange={e => setT1Title(e.target.value)}
                       placeholder={t('dashboard.cardFactory.titlePlaceholder')}
-                      className="w-full text-sm px-3 py-2 rounded-md bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                      className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                     />
                   </div>
                   <div>
@@ -1076,7 +1076,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                     <select
                       value={t1Width}
                       onChange={e => setT1Width(Number(e.target.value))}
-                      className="w-full text-sm px-3 py-2 rounded-md bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                      className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                     >
                       <option value={3}>{t('dashboard.cardFactory.widthSmall')}</option>
                       <option value={4}>{t('dashboard.cardFactory.widthMedium')}</option>
@@ -1094,7 +1094,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                     value={t1Description}
                     onChange={e => setT1Description(e.target.value)}
                     placeholder={t('dashboard.cardFactory.descPlaceholder')}
-                    className="w-full text-sm px-3 py-2 rounded-md bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                    className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                   />
                 </div>
 
@@ -1106,7 +1106,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                         key={l}
                         onClick={() => setT1Layout(l)}
                         className={cn(
-                          'px-3 py-1.5 rounded-md text-xs transition-colors',
+                          'px-3 py-1.5 rounded-lg text-xs transition-colors',
                           t1Layout === l
                             ? 'bg-purple-500/20 text-purple-400'
                             : 'bg-secondary text-muted-foreground hover:text-foreground',
@@ -1124,7 +1124,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                     <label className="text-xs text-muted-foreground">{t('dashboard.cardFactory.columnsLabel')}</label>
                     <button
                       onClick={addColumn}
-                      className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                      className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"
                     >
                       <Plus className="w-3 h-3" />
                       {t('dashboard.cardFactory.addColumn')}
@@ -1138,19 +1138,19 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                           value={col.field}
                           onChange={e => updateColumn(idx, 'field', e.target.value)}
                           placeholder={t('dashboard.cardFactory.fieldPlaceholder')}
-                          className="flex-1 text-xs px-2 py-1.5 rounded-md bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                          className="flex-1 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                         />
                         <input
                           type="text"
                           value={col.label}
                           onChange={e => updateColumn(idx, 'label', e.target.value)}
                           placeholder={t('dashboard.cardFactory.labelPlaceholder')}
-                          className="flex-1 text-xs px-2 py-1.5 rounded-md bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                          className="flex-1 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                         />
                         <select
                           value={col.format || 'text'}
                           onChange={e => updateColumn(idx, 'format', e.target.value)}
-                          className="w-20 text-xs px-2 py-1.5 rounded-md bg-secondary text-foreground focus:outline-none"
+                          className="w-20 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-none"
                         >
                           <option value="text">{t('cardFactory.formatText')}</option>
                           <option value="badge">{t('cardFactory.formatBadge')}</option>
@@ -1182,7 +1182,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                     value={t1DataJson}
                     onChange={e => setT1DataJson(e.target.value)}
                     rows={6}
-                    className="w-full text-xs px-3 py-2 rounded-md bg-secondary text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                    className="w-full text-xs px-3 py-2 rounded-lg bg-secondary text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                   />
                 </div>
 
@@ -1191,7 +1191,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                   onClick={handleSaveT1}
                   disabled={!t1Title.trim()}
                   className={cn(
-                    'w-full flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-colors',
+                    'w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors',
                     t1Title.trim()
                       ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
                       : 'bg-secondary text-muted-foreground cursor-not-allowed',
@@ -1244,7 +1244,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                       value={t2Title}
                       onChange={e => setT2Title(e.target.value)}
                       placeholder={t('dashboard.cardFactory.titlePlaceholder')}
-                      className="w-full text-sm px-3 py-2 rounded-md bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                      className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                     />
                   </div>
                   <div>
@@ -1252,7 +1252,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                     <select
                       value={t2Width}
                       onChange={e => setT2Width(Number(e.target.value))}
-                      className="w-full text-sm px-3 py-2 rounded-md bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                      className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                     >
                       <option value={3}>{t('dashboard.cardFactory.widthSmall')}</option>
                       <option value={4}>{t('dashboard.cardFactory.widthMedium')}</option>
@@ -1270,7 +1270,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                     value={t2Description}
                     onChange={e => setT2Description(e.target.value)}
                     placeholder={t('dashboard.cardFactory.codeDescPlaceholder')}
-                    className="w-full text-sm px-3 py-2 rounded-md bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                    className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                   />
                 </div>
 
@@ -1280,7 +1280,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                     <label className="text-xs text-muted-foreground">{t('dashboard.cardFactory.tsxSourceCode')}</label>
                     <button
                       onClick={handleCompile}
-                      className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                      className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"
                     >
                       <Eye className="w-3 h-3" />
                       {t('dashboard.cardFactory.validate')}
@@ -1290,7 +1290,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                     value={t2Source}
                     onChange={e => { setT2Source(e.target.value); setCompileStatus('idle') }}
                     rows={14}
-                    className="w-full text-xs px-3 py-2 rounded-md bg-secondary text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-purple-500/50 leading-relaxed"
+                    className="w-full text-xs px-3 py-2 rounded-lg bg-secondary text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-purple-500/50 leading-relaxed"
                     spellCheck={false}
                   />
 
@@ -1316,7 +1316,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                 </div>
 
                 {/* Available APIs info */}
-                <div className="rounded-md bg-secondary/30 border border-border/50 p-3">
+                <div className="rounded-lg bg-secondary/30 border border-border/50 p-3">
                   <p className="text-xs font-medium text-muted-foreground mb-1">{t('dashboard.cardFactory.availableInScope')}</p>
                   <p className="text-2xs text-muted-foreground leading-relaxed">
                     React, useState, useEffect, useMemo, useCallback, useRef, useReducer,
@@ -1330,7 +1330,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                   onClick={handleSaveT2}
                   disabled={!t2Title.trim() || saving}
                   className={cn(
-                    'w-full flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-colors',
+                    'w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors',
                     t2Title.trim() && !saving
                       ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
                       : 'bg-secondary text-muted-foreground cursor-not-allowed',
@@ -1376,7 +1376,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                 </div>
               ) : (
                 existingCards.map(card => (
-                  <div key={card.id} className="rounded-md bg-card/50 border border-border p-3 flex items-start gap-3">
+                  <div key={card.id} className="rounded-lg bg-card/50 border border-border p-3 flex items-start gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-foreground">{wrapAbbreviations(card.title)}</span>
@@ -1471,7 +1471,7 @@ function TemplateDropdown<T extends { name: string }>({
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+        className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"
       >
         <LayoutTemplate className="w-3 h-3" />
         {label}
@@ -1482,7 +1482,7 @@ function TemplateDropdown<T extends { name: string }>({
             <button
               key={tpl.name}
               onClick={() => { onSelect(tpl); setOpen(false) }}
-              className="w-full text-left px-3 py-1.5 rounded-md text-xs text-foreground hover:bg-secondary transition-colors"
+              className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-foreground hover:bg-secondary transition-colors"
             >
               {tpl.name}
             </button>
@@ -1595,7 +1595,7 @@ function T2Preview({ result }: { result: AiCardT2Result }) {
       {result.description && (
         <p className="text-xs text-muted-foreground mb-2">{wrapAbbreviations(result.description)}</p>
       )}
-      <pre className="text-2xs px-3 py-2 rounded-md bg-secondary text-foreground font-mono max-h-48 overflow-y-auto whitespace-pre-wrap">
+      <pre className="text-2xs px-3 py-2 rounded-lg bg-secondary text-foreground font-mono max-h-48 overflow-y-auto whitespace-pre-wrap">
         {result.sourceCode}
       </pre>
     </div>
@@ -1669,7 +1669,7 @@ function AiCardTab({ onCardCreated }: { onCardCreated: (id: string) => void }) {
           <button
             onClick={() => setAiMode('tier1')}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors',
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors',
               aiMode === 'tier1'
                 ? 'bg-blue-500/20 text-blue-400'
                 : 'bg-secondary text-muted-foreground hover:text-foreground',
@@ -1681,7 +1681,7 @@ function AiCardTab({ onCardCreated }: { onCardCreated: (id: string) => void }) {
           <button
             onClick={() => setAiMode('tier2')}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors',
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors',
               aiMode === 'tier2'
                 ? 'bg-purple-500/20 text-purple-400'
                 : 'bg-secondary text-muted-foreground hover:text-foreground',
