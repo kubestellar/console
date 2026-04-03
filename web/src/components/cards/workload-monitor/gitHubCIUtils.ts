@@ -31,5 +31,9 @@ export function loadRepos(): string[] {
 
 /** Persists the repo list to localStorage. */
 export function saveRepos(repos: string[]) {
-  localStorage.setItem(REPOS_STORAGE_KEY, JSON.stringify(repos))
+  try {
+    localStorage.setItem(REPOS_STORAGE_KEY, JSON.stringify(repos))
+  } catch {
+    // Silently ignore storage errors (e.g. private browsing, quota exceeded)
+  }
 }

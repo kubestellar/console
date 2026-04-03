@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Search, Server, Activity, Filter, Check, AlertTriangle, Save, X, Trash2, WifiOff } from 'lucide-react'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useGlobalFilters, SEVERITY_LEVELS, SEVERITY_CONFIG, STATUS_LEVELS, STATUS_CONFIG } from '../../../hooks/useGlobalFilters'
+import { useModalState } from '../../../lib/modals'
 import { cn } from '../../../lib/cn'
 
 /** Color palette for saved filter sets */
@@ -109,8 +110,8 @@ export function ClusterFilterPanel() {
     activeFilterSetId,
   } = useGlobalFilters()
 
-  const [showDropdown, setShowDropdown] = useState(false)
-  const [showSaveForm, setShowSaveForm] = useState(false)
+  const { isOpen: showDropdown, close: closeDropdown, toggle: toggleDropdown } = useModalState()
+  const { isOpen: showSaveForm, open: openSaveForm, close: closeSaveForm } = useModalState()
   const [newName, setNewName] = useState('')
   const [newColor, setNewColor] = useState(FILTER_SET_COLORS[0])
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -139,19 +140,19 @@ export function ClusterFilterPanel() {
     saveCurrentFilters(newName.trim(), newColor)
     setNewName('')
     setNewColor(FILTER_SET_COLORS[0])
-    setShowSaveForm(false)
+    closeSaveForm()
   }
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false)
+        closeDropdown()
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, [closeDropdown])
 
   // Get active filter set for the indicator
   const activeSet = activeFilterSetId
@@ -160,14 +161,15 @@ export function ClusterFilterPanel() {
 
   return (
     <>
-      {/* Filter icon button */}
-      <div className="relative" ref={dropdownRef}>
+      {/* Filter icon button — isolate creates a stacking context to prevent
+           the glow shadow from bleeding into adjacent header controls (#4380) */}
+      <div className="relative isolate" ref={dropdownRef}>
         <button
-          onClick={() => setShowDropdown(!showDropdown)}
+          onClick={() => toggleDropdown()}
           className={cn(
             'relative flex items-center justify-center w-8 h-8 rounded-lg transition-colors',
             isFiltered
-              ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_8px_rgba(139,92,246,0.3)]'
+              ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_6px_rgba(139,92,246,0.2)]'
               : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
           )}
           title={isFiltered ? 'Filters active - click to modify' : 'No filters - click to filter'}
@@ -415,7 +417,7 @@ export function ClusterFilterPanel() {
                       {t('common:filters.save', 'Save')}
                     </button>
                     <button
-                      onClick={() => { setShowSaveForm(false); setNewName('') }}
+                      onClick={() => { closeSaveForm(); setNewName('') }}
                       className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                     >
                       {t('common:filters.cancel', 'Cancel')}
@@ -424,7 +426,7 @@ export function ClusterFilterPanel() {
                 </div>
               ) : (
                 <button
-                  onClick={() => setShowSaveForm(true)}
+                  onClick={() => openSaveForm()}
                   disabled={!isFiltered}
                   className="w-full flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-secondary/30 hover:bg-secondary/50 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
