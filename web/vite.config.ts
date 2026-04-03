@@ -63,13 +63,13 @@ export default defineConfig(({ mode }) => ({
     // so the stale-HTML detection script can compare against the server.
     {
       name: 'inject-build-id',
-      transformIndexHtml(html) {
+      transformIndexHtml(html: string) {
         return html.replace('__COMMIT_HASH__', process.env.VITE_COMMIT_HASH || getGitCommitHash())
       },
     },
     // Pre-compress assets at build time — avoids chunked encoding on slow networks
-    compression({ algorithm: 'gzip', exclude: [/\.(br)$/], threshold: 1024 }),
-    compression({ algorithm: 'brotliCompress', exclude: [/\.(gz)$/], threshold: 1024 }),
+    compression({ algorithms: ['gzip'], exclude: [/\.(br)$/], threshold: 1024 }),
+    compression({ algorithms: ['brotliCompress'], exclude: [/\.(gz)$/], threshold: 1024 }),
     // Enable Istanbul instrumentation for E2E coverage
     isE2ECoverage &&
       istanbul({
