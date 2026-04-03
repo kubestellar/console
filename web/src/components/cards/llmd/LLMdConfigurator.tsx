@@ -64,14 +64,14 @@ function PresetCard({ preset, isSelected, onSelect }: PresetCardProps) {
       </p>
 
       {/* Impact preview */}
-      <div className="flex items-center gap-3 text-xs">
-        <div className="flex items-center gap-1">
-          <span className="text-muted-foreground"><Acronym term="TTFT" />:</span>
-          <span className="text-green-400 font-mono">-{preset.expectedImpact.ttftImprovement}%</span>
+      <div className="flex items-center gap-3 text-xs overflow-hidden">
+        <div className="flex items-center gap-1 min-w-0">
+          <span className="text-muted-foreground whitespace-nowrap"><Acronym term="TTFT" />:</span>
+          <span className="text-green-400 font-mono whitespace-nowrap">-{preset.expectedImpact.ttftImprovement}%</span>
         </div>
-        <div className="flex items-center gap-1">
-          <span className="text-muted-foreground">Throughput:</span>
-          <span className="text-green-400 font-mono">+{preset.expectedImpact.throughputImprovement}%</span>
+        <div className="flex items-center gap-1 min-w-0 truncate">
+          <span className="text-muted-foreground whitespace-nowrap">Throughput:</span>
+          <span className="text-green-400 font-mono whitespace-nowrap">+{preset.expectedImpact.throughputImprovement}%</span>
         </div>
       </div>
     </motion.div>
