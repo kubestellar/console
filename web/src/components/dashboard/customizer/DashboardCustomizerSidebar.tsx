@@ -49,7 +49,7 @@ export function DashboardCustomizerSidebar({
             type="text"
             value={globalSearch}
             onChange={(e) => onGlobalSearchChange(e.target.value)}
-            placeholder={t('dashboard.studio.search', 'Search cards, dashboards, templates...')}
+            placeholder={t('dashboard.studio.search', 'Search cards, collections, dashboards...')}
             className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
           />
         </div>

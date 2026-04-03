@@ -88,15 +88,14 @@ export function DashboardCustomizer({
   const showPreview = SECTIONS_WITH_PREVIEW.has(activeSection)
   const effectiveSearch = globalSearch || initialSearch
 
-  /** Subtitle showing which dashboard is being edited */
-  const headerSubtitle = dashboardName
-    ? t('dashboard.studio.editingDashboard', `Editing: ${dashboardName}`)
-    : t('dashboard.studio.editingCurrent', 'Editing your current dashboard')
+  /** Subtitle — explains what Studio is + which dashboard is active */
+  const dashboardContext = dashboardName ? ` \u00B7 ${dashboardName}` : ''
+  const headerSubtitle = t('dashboard.studio.subtitle', `Add cards, apply card collections, and manage your dashboards${dashboardContext}`)
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="xl" closeOnBackdrop={false} className="!max-w-[75vw] !min-h-[70vh] !max-h-[75vh]">
       <BaseModal.Header
-        title={t('dashboard.studio.title', 'Dashboard Studio')}
+        title={t('dashboard.studio.title', 'Console Studio')}
         description={headerSubtitle}
         icon={Palette}
         onClose={onClose}

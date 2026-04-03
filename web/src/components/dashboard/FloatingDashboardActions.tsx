@@ -178,7 +178,7 @@ export function FloatingDashboardActions({
           } bg-gradient-ks hover:scale-110 hover:shadow-xl ${
             fabHint.isVisible ? 'animate-fab-shimmer' : ''
           }`}
-          title={`${t('dashboard.studio.title', 'Dashboard Studio')} (${navigator.platform.includes('Mac') ? '\u2318' : 'Ctrl'}+K)`}
+          title={`${t('dashboard.studio.title', 'Console Studio')} (${navigator.platform.includes('Mac') ? '\u2318' : 'Ctrl'}+K)`}
         >
           <Palette className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} text-foreground`} />
         </button>

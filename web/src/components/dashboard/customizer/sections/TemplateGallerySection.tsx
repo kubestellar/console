@@ -51,7 +51,7 @@ export function TemplateGallerySection({ onApplyTemplate, dashboardName }: Templ
       {/* Explanation banner */}
       <div className="mb-4 p-3 rounded-lg bg-purple-500/5 border border-purple-500/20">
         <p className="text-sm text-muted-foreground">
-          Templates are pre-built card layouts for common use cases. Applying a template will <strong className="text-foreground">replace all cards</strong> on {dashboardName ? `"${dashboardName}"` : 'your current dashboard'} with the template&apos;s card set.
+          Card collections are pre-built sets of cards for common use cases. Applying a collection will <strong className="text-foreground">replace all cards</strong> on {dashboardName ? `"${dashboardName}"` : 'your current dashboard'} with the collection&apos;s card set.
         </p>
       </div>
 

@@ -52,9 +52,9 @@ export const CUSTOMIZER_NAV: NavGroup[] = [
     ],
   },
   {
-    labelKey: 'dashboard.studio.sections.templates',
+    labelKey: 'dashboard.studio.sections.collections',
     items: [
-      { id: 'templates', labelKey: 'dashboard.studio.sections.gallery', icon: Layout },
+      { id: 'templates', labelKey: 'dashboard.studio.sections.cardCollections', icon: Layout },
     ],
   },
 ]
