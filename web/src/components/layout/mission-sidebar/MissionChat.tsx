@@ -319,9 +319,9 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   }
 
   const handleRetryMission = useCallback(() => {
-    // Find the original user prompt (first user message in the conversation)
-    const initialUserMessage = mission.messages.find(m => m.role === 'user')
-    const prompt = initialUserMessage?.content || ''
+    // Find the last user message in the conversation (the one that failed)
+    const lastUserMessage = [...mission.messages].reverse().find(m => m.role === 'user')
+    const prompt = lastUserMessage?.content || ''
     if (!prompt.trim()) return
     sendMessage(mission.id, prompt)
   }, [mission.id, mission.messages, sendMessage])
