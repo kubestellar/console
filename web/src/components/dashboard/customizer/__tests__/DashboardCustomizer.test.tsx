@@ -47,17 +47,17 @@ describe('PreviewPanel', () => {
 })
 
 describe('customizerNav', () => {
-  it('CUSTOMIZER_NAV has at least 3 groups with items', async () => {
+  it('CUSTOMIZER_NAV has 3 flat items', async () => {
     const mod = await import('../customizerNav')
-    expect(mod.CUSTOMIZER_NAV.length).toBeGreaterThanOrEqual(3)
-    for (const group of mod.CUSTOMIZER_NAV) {
-      expect(typeof group.labelKey).toBe('string')
-      expect(group.items.length).toBeGreaterThan(0)
+    expect(mod.CUSTOMIZER_NAV.length).toBe(3)
+    for (const item of mod.CUSTOMIZER_NAV) {
+      expect(typeof item.label).toBe('string')
+      expect(typeof item.id).toBe('string')
     }
   })
 
-  it('DEFAULT_SECTION is cards-browse', async () => {
+  it('DEFAULT_SECTION is cards', async () => {
     const mod = await import('../customizerNav')
-    expect(mod.DEFAULT_SECTION).toBe('cards-browse')
+    expect(mod.DEFAULT_SECTION).toBe('cards')
   })
 })

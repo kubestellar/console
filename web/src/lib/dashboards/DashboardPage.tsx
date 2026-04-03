@@ -203,12 +203,12 @@ export function DashboardPage({
   // so all of them see the same searchParams. Only process when active.
   const [addCardSearch, setAddCardSearch] = useState('')
   // Determine initial section for DashboardCustomizer based on URL params
-  const [customizerInitialSection, setCustomizerInitialSection] = useState<'cards-browse' | 'dashboards' | undefined>(undefined)
+  const [customizerInitialSection, setCustomizerInitialSection] = useState<'cards' | 'dashboards' | undefined>(undefined)
   useEffect(() => {
     if (location.pathname !== mountedRouteRef.current) return
     if (searchParams.get('addCard') === 'true') {
       setAddCardSearch(searchParams.get('cardSearch') || '')
-      setCustomizerInitialSection('cards-browse')
+      setCustomizerInitialSection('cards')
       setShowAddCard(true)
       setSearchParams({}, { replace: true })
     } else if (searchParams.get('customizeSidebar') === 'true') {

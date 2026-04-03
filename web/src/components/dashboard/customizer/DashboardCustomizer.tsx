@@ -1,8 +1,8 @@
 /**
- * DashboardCustomizer — unified customization panel (Dashboard Studio).
+ * Console Studio — unified customization panel.
  *
- * Combines card catalog, AI suggestions, dashboard management, and templates
- * into a single full-screen modal with persistent left sidebar navigation.
+ * Combines cards (AI + browse), dashboards, and card collections
+ * into a single modal with flat left navigation.
  */
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -10,8 +10,7 @@ import { Palette } from 'lucide-react'
 import { BaseModal } from '../../../lib/modals'
 import { DashboardCustomizerSidebar } from './DashboardCustomizerSidebar'
 import { PreviewPanel } from './PreviewPanel'
-import { CardCatalogSection } from './sections/CardCatalogSection'
-import { AISuggestionsSection } from './sections/AISuggestionsSection'
+import { UnifiedCardsSection } from './sections/UnifiedCardsSection'
 import { NavigationSection } from './sections/NavigationSection'
 import { TemplateGallerySection } from './sections/TemplateGallerySection'
 import { DEFAULT_SECTION, type CustomizerSection } from './customizerNav'
@@ -21,34 +20,24 @@ import type { DashboardTemplate } from '../templates'
 interface DashboardCustomizerProps {
   isOpen: boolean
   onClose: () => void
-  /** Name of the dashboard being customized (shown in header for context) */
+  /** Name of the dashboard being customized */
   dashboardName?: string
-  /** Add cards to the current dashboard */
   onAddCards: (cards: CardSuggestion[]) => void
-  /** Card types already on the dashboard (for duplicate detection) */
   existingCardTypes?: string[]
-  /** Initial section to open (for deep-linking) */
   initialSection?: CustomizerSection
-  /** Initial search text (for deep-linking from ?cardSearch=) */
   initialSearch?: string
-  /** Apply a dashboard template */
   onApplyTemplate?: (template: DashboardTemplate) => void
-  /** Export current dashboard as JSON */
   onExport?: () => void
-  /** Reset dashboard to defaults */
   onReset?: () => void
-  /** Whether the dashboard has been customized from defaults */
   isCustomized?: boolean
-  /** Undo last card mutation */
   onUndo?: () => void
-  /** Redo last undone mutation */
   onRedo?: () => void
   canUndo?: boolean
   canRedo?: boolean
 }
 
 /** Sections where the right preview panel should be visible */
-const SECTIONS_WITH_PREVIEW = new Set<CustomizerSection>(['cards-browse', 'cards-ai', 'templates'])
+const SECTIONS_WITH_PREVIEW = new Set<CustomizerSection>(['cards', 'collections'])
 
 export function DashboardCustomizer({
   isOpen,
@@ -59,7 +48,6 @@ export function DashboardCustomizer({
   initialSection,
   initialSearch = '',
   onApplyTemplate,
-  onExport: _onExport,
   onReset,
   isCustomized = false,
   onUndo,
@@ -73,37 +61,24 @@ export function DashboardCustomizer({
   const [globalSearch, setGlobalSearch] = useState('')
   const [hoveredCard, setHoveredCard] = useState<HoveredCard | null>(null)
 
-  const handleHoverCard = useCallback((card: HoveredCard | null) => {
-    setHoveredCard(card)
-  }, [])
-
-  const handleAddCards = useCallback((cards: CardSuggestion[]) => {
-    onAddCards(cards)
-  }, [onAddCards])
-
-  const handleApplyTemplate = useCallback((template: DashboardTemplate) => {
-    onApplyTemplate?.(template)
-  }, [onApplyTemplate])
+  const handleHoverCard = useCallback((card: HoveredCard | null) => setHoveredCard(card), [])
+  const handleAddCards = useCallback((cards: CardSuggestion[]) => onAddCards(cards), [onAddCards])
+  const handleApplyTemplate = useCallback((tpl: DashboardTemplate) => onApplyTemplate?.(tpl), [onApplyTemplate])
 
   const showPreview = SECTIONS_WITH_PREVIEW.has(activeSection)
   const effectiveSearch = globalSearch || initialSearch
-
-  /** Subtitle — explains what Studio is + which dashboard is active */
-  const dashboardContext = dashboardName ? ` \u00B7 ${dashboardName}` : ''
-  const headerSubtitle = t('dashboard.studio.subtitle', `Add cards, apply card collections, and manage your dashboards${dashboardContext}`)
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="xl" closeOnBackdrop={false} className="!max-w-[75vw] !min-h-[70vh] !max-h-[75vh]">
       <BaseModal.Header
         title={t('dashboard.studio.title', 'Console Studio')}
-        description={headerSubtitle}
+        description={t('dashboard.studio.subtitle', 'Add cards, apply card collections, and manage your dashboards')}
         icon={Palette}
         onClose={onClose}
         showBack={false}
       />
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Left sidebar */}
         <DashboardCustomizerSidebar
           activeSection={activeSection}
           onSectionChange={setActiveSection}
@@ -117,24 +92,16 @@ export function DashboardCustomizer({
           isCustomized={isCustomized}
         />
 
-        {/* Main content area */}
+        {/* Main content — fixed height, sections fill this space */}
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-          {activeSection === 'cards-browse' && (
-            <CardCatalogSection
+          {activeSection === 'cards' && (
+            <UnifiedCardsSection
               existingCardTypes={existingCardTypes}
               onAddCards={handleAddCards}
               onHoverCard={handleHoverCard}
               initialSearch={effectiveSearch}
-              isActive={activeSection === 'cards-browse'}
-            />
-          )}
-
-          {activeSection === 'cards-ai' && (
-            <AISuggestionsSection
-              existingCardTypes={existingCardTypes}
-              onAddCards={handleAddCards}
+              isActive={activeSection === 'cards'}
               dashboardName={dashboardName}
-              onHoverCard={handleHoverCard}
             />
           )}
 
@@ -142,7 +109,7 @@ export function DashboardCustomizer({
             <NavigationSection onClose={onClose} />
           )}
 
-          {activeSection === 'templates' && onApplyTemplate && (
+          {activeSection === 'collections' && onApplyTemplate && (
             <TemplateGallerySection
               onApplyTemplate={handleApplyTemplate}
               dashboardName={dashboardName}
@@ -150,7 +117,6 @@ export function DashboardCustomizer({
           )}
         </div>
 
-        {/* Right preview panel — only for card/template sections */}
         {showPreview && (
           <PreviewPanel hoveredCard={hoveredCard} />
         )}

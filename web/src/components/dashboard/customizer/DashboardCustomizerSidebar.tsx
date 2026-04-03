@@ -1,8 +1,6 @@
 /**
- * DashboardCustomizerSidebar — left navigation for the unified customizer.
- *
- * Pattern: Notion/Linear settings sidebar with grouped sections and
- * a global search input at the top (VS Code Settings pattern).
+ * DashboardCustomizerSidebar — left navigation for Console Studio.
+ * Flat nav with search, 3 items, and undo/redo footer.
  */
 import { useTranslation } from 'react-i18next'
 import { Search, Undo2, Redo2, RotateCcw } from 'lucide-react'
@@ -14,12 +12,10 @@ interface DashboardCustomizerSidebarProps {
   onSectionChange: (section: CustomizerSection) => void
   globalSearch: string
   onGlobalSearchChange: (value: string) => void
-  /** Undo/redo callbacks — hidden when not available */
   onUndo?: () => void
   onRedo?: () => void
   canUndo?: boolean
   canRedo?: boolean
-  /** Reset callback */
   onReset?: () => void
   isCustomized?: boolean
 }
@@ -40,7 +36,7 @@ export function DashboardCustomizerSidebar({
   const t = _t as (key: string, defaultValue?: string) => string
 
   return (
-    <div className="w-56 border-r border-border flex flex-col h-full bg-secondary/20">
+    <div className="w-48 border-r border-border flex flex-col h-full bg-secondary/20">
       {/* Global search */}
       <div className="p-3 border-b border-border">
         <div className="relative">
@@ -49,40 +45,33 @@ export function DashboardCustomizerSidebar({
             type="text"
             value={globalSearch}
             onChange={(e) => onGlobalSearchChange(e.target.value)}
-            placeholder={t('dashboard.studio.search', 'Search cards, collections, dashboards...')}
+            placeholder={t('dashboard.studio.search', 'Search...')}
             className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
           />
         </div>
       </div>
 
-      {/* Navigation groups */}
+      {/* Flat navigation */}
       <nav className="flex-1 overflow-y-auto py-2">
-        {CUSTOMIZER_NAV.map((group) => (
-          <div key={group.labelKey} className="mb-3">
-            <div className="px-3 py-1 text-2xs font-medium text-muted-foreground uppercase tracking-wider">
-              {t(group.labelKey, group.fallback)}
-            </div>
-            {group.items.map((item) => {
-              const Icon = item.icon
-              const isActive = activeSection === item.id
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => onSectionChange(item.id)}
-                  className={cn(
-                    'w-full flex items-center gap-2 px-3 py-1.5 text-sm transition-colors',
-                    isActive
-                      ? 'bg-purple-500/15 text-purple-400 font-medium'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50',
-                  )}
-                >
-                  <Icon className="w-4 h-4 flex-shrink-0" />
-                  <span className="truncate">{t(item.labelKey, item.fallback)}</span>
-                </button>
-              )
-            })}
-          </div>
-        ))}
+        {CUSTOMIZER_NAV.map((item) => {
+          const Icon = item.icon
+          const isActive = activeSection === item.id
+          return (
+            <button
+              key={item.id}
+              onClick={() => onSectionChange(item.id)}
+              className={cn(
+                'w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors',
+                isActive
+                  ? 'bg-purple-500/15 text-purple-400 font-medium'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50',
+              )}
+            >
+              <Icon className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{item.label}</span>
+            </button>
+          )
+        })}
       </nav>
 
       {/* Footer: Undo/Redo/Reset */}
