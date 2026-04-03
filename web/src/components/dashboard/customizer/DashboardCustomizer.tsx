@@ -1,7 +1,7 @@
 /**
  * Console Studio — unified customization panel.
  *
- * Combines cards (AI + browse), dashboards, and card collections
+ * Combines cards (AI + browse), card factories, dashboards, and card collections
  * into a single modal with flat left navigation.
  */
 import { useState, useCallback } from 'react'
@@ -13,6 +13,8 @@ import { PreviewPanel } from './PreviewPanel'
 import { UnifiedCardsSection } from './sections/UnifiedCardsSection'
 import { NavigationSection } from './sections/NavigationSection'
 import { TemplateGallerySection } from './sections/TemplateGallerySection'
+import { CardFactoryModal } from '../CardFactoryModal'
+import { StatBlockFactoryModal } from '../StatBlockFactoryModal'
 import { DEFAULT_SECTION, type CustomizerSection } from './customizerNav'
 import type { CardSuggestion, HoveredCard } from '../shared/cardCatalog'
 import type { DashboardTemplate } from '../templates'
@@ -36,7 +38,6 @@ interface DashboardCustomizerProps {
   canRedo?: boolean
 }
 
-/** Sections where the right preview panel should be visible */
 const SECTIONS_WITH_PREVIEW = new Set<CustomizerSection>(['cards', 'collections'])
 
 export function DashboardCustomizer({
@@ -48,17 +49,18 @@ export function DashboardCustomizer({
   initialSection,
   initialSearch = '',
   onApplyTemplate,
-  onReset,
-  isCustomized = false,
-  onUndo,
-  onRedo,
-  canUndo = false,
-  canRedo = false,
+  onReset: _onReset,
+  isCustomized: _isCustomized = false,
+  onUndo: _onUndo,
+  onRedo: _onRedo,
+  canUndo: _canUndo = false,
+  canRedo: _canRedo = false,
 }: DashboardCustomizerProps) {
   const { t: _t } = useTranslation()
   const t = _t as (key: string, defaultValue?: string) => string
   const [activeSection, setActiveSection] = useState<CustomizerSection>(initialSection || DEFAULT_SECTION)
-  const [globalSearch, setGlobalSearch] = useState('')
+  // Global search reserved for future use
+  const globalSearch = ''
   const [hoveredCard, setHoveredCard] = useState<HoveredCard | null>(null)
 
   const handleHoverCard = useCallback((card: HoveredCard | null) => setHoveredCard(card), [])
@@ -82,14 +84,6 @@ export function DashboardCustomizer({
         <DashboardCustomizerSidebar
           activeSection={activeSection}
           onSectionChange={setActiveSection}
-          globalSearch={globalSearch}
-          onGlobalSearchChange={setGlobalSearch}
-          onUndo={onUndo}
-          onRedo={onRedo}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          onReset={onReset}
-          isCustomized={isCustomized}
         />
 
         {/* Main content — fixed height, sections fill this space */}
@@ -102,6 +96,32 @@ export function DashboardCustomizer({
               initialSearch={effectiveSearch}
               isActive={activeSection === 'cards'}
               dashboardName={dashboardName}
+            />
+          )}
+
+          {activeSection === 'card-factory' && (
+            <CardFactoryModal
+              isOpen={true}
+              onClose={() => setActiveSection('cards')}
+              onCardCreated={(cardId) => {
+                onAddCards([{
+                  type: 'dynamic_card',
+                  title: t('dashboard.addCard.customCard', 'Custom Card'),
+                  description: t('dashboard.addCard.dynamicallyCreated', 'Dynamically created card'),
+                  visualization: 'status',
+                  config: { dynamicCardId: cardId },
+                }])
+                setActiveSection('cards')
+              }}
+              embedded
+            />
+          )}
+
+          {activeSection === 'stat-factory' && (
+            <StatBlockFactoryModal
+              isOpen={true}
+              onClose={() => setActiveSection('cards')}
+              embedded
             />
           )}
 

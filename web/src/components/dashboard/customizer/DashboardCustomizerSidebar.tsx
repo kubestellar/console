@@ -1,58 +1,22 @@
 /**
  * DashboardCustomizerSidebar — left navigation for Console Studio.
- * Flat nav with search, 3 items, and undo/redo footer.
+ * Clean flat nav with no search (only 5 items) and no footer controls.
  */
-import { useTranslation } from 'react-i18next'
-import { Search, Undo2, Redo2, RotateCcw } from 'lucide-react'
 import { CUSTOMIZER_NAV, type CustomizerSection } from './customizerNav'
 import { cn } from '../../../lib/cn'
 
 interface DashboardCustomizerSidebarProps {
   activeSection: CustomizerSection
   onSectionChange: (section: CustomizerSection) => void
-  globalSearch: string
-  onGlobalSearchChange: (value: string) => void
-  onUndo?: () => void
-  onRedo?: () => void
-  canUndo?: boolean
-  canRedo?: boolean
-  onReset?: () => void
-  isCustomized?: boolean
 }
 
 export function DashboardCustomizerSidebar({
   activeSection,
   onSectionChange,
-  globalSearch,
-  onGlobalSearchChange,
-  onUndo,
-  onRedo,
-  canUndo = false,
-  canRedo = false,
-  onReset,
-  isCustomized = false,
 }: DashboardCustomizerSidebarProps) {
-  const { t: _t } = useTranslation()
-  const t = _t as (key: string, defaultValue?: string) => string
-
   return (
     <div className="w-48 border-r border-border flex flex-col h-full bg-secondary/20">
-      {/* Global search */}
-      <div className="p-3 border-b border-border">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-          <input
-            type="text"
-            value={globalSearch}
-            onChange={(e) => onGlobalSearchChange(e.target.value)}
-            placeholder={t('dashboard.studio.search', 'Search...')}
-            className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-          />
-        </div>
-      </div>
-
-      {/* Flat navigation */}
-      <nav className="flex-1 overflow-y-auto py-2">
+      <nav className="flex-1 py-2">
         {CUSTOMIZER_NAV.map((item) => {
           const Icon = item.icon
           const isActive = activeSection === item.id
@@ -73,35 +37,6 @@ export function DashboardCustomizerSidebar({
           )
         })}
       </nav>
-
-      {/* Footer: Undo/Redo/Reset */}
-      <div className="border-t border-border p-2 flex items-center gap-1">
-        <button
-          onClick={onUndo}
-          disabled={!canUndo}
-          className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          title={t('dashboard.undo', 'Undo')}
-        >
-          <Undo2 className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={onRedo}
-          disabled={!canRedo}
-          className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          title={t('dashboard.redo', 'Redo')}
-        >
-          <Redo2 className="w-3.5 h-3.5" />
-        </button>
-        {isCustomized && onReset && (
-          <button
-            onClick={onReset}
-            className="ml-auto p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-            title={t('dashboard.resetToDefaults', 'Reset to defaults')}
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-          </button>
-        )}
-      </div>
     </div>
   )
 }

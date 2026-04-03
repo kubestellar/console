@@ -27,6 +27,8 @@ interface CardFactoryModalProps {
   isOpen: boolean
   onClose: () => void
   onCardCreated?: (cardId: string) => void
+  /** When true, renders content inline without BaseModal wrapper (used by Console Studio) */
+  embedded?: boolean
 }
 
 type Tab = 'declarative' | 'code' | 'ai' | 'manage'
@@ -759,7 +761,7 @@ function validateT2AssistResult(data: unknown): { valid: true; result: T2AssistR
 // Main Component
 // ============================================================================
 
-export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactoryModalProps) {
+export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = false }: CardFactoryModalProps) {
   const { t } = useTranslation()
   const [tab, setTab] = useState<Tab>('declarative')
 
@@ -989,15 +991,8 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
     [t1Columns]
   )
 
-  return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={onClose}
-      size="xl"
-      closeOnBackdrop={false}
-    >
-      <BaseModal.Header title={t('dashboard.cardFactory.title')} icon={Wand2} onClose={onClose} showBack={false} />
-      <BaseModal.Content className="max-h-[70vh]">
+  // Shared content for both modal and embedded modes
+  const factoryContent = (
       <div className="flex flex-col">
         {/* Tabs */}
         <div
@@ -1413,23 +1408,46 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
           )}
         </div>
       </div>
-      </BaseModal.Content>
+  )
 
-      <ConfirmDialog
-        isOpen={deleteConfirmId !== null}
-        onClose={() => setDeleteConfirmId(null)}
-        onConfirm={() => {
-          if (deleteConfirmId) {
-            handleDelete(deleteConfirmId)
-            setDeleteConfirmId(null)
-          }
-        }}
-        title={t('dashboard.cardFactory.deleteCard')}
-        message={t('dashboard.delete.warning')}
-        confirmLabel={t('actions.delete')}
-        cancelLabel={t('actions.cancel')}
-        variant="danger"
-      />
+  const confirmDialog = (
+    <ConfirmDialog
+      isOpen={deleteConfirmId !== null}
+      onClose={() => setDeleteConfirmId(null)}
+      onConfirm={() => {
+        if (deleteConfirmId) {
+          handleDelete(deleteConfirmId)
+          setDeleteConfirmId(null)
+        }
+      }}
+      title={t('dashboard.cardFactory.deleteCard')}
+      message={t('dashboard.delete.warning')}
+      confirmLabel={t('actions.delete')}
+      cancelLabel={t('actions.cancel')}
+      variant="danger"
+    />
+  )
+
+  // Embedded mode: render content inline within Console Studio
+  if (embedded) {
+    return (
+      <div className="h-full flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto p-4">
+          {factoryContent}
+        </div>
+        {confirmDialog}
+      </div>
+    )
+  }
+
+  // Standard modal mode
+  return (
+    <BaseModal isOpen={isOpen} onClose={onClose} size="xl" closeOnBackdrop={false}>
+      <BaseModal.Header title={t('dashboard.cardFactory.title')} icon={Wand2} onClose={onClose} showBack={false} />
+      <BaseModal.Content className="max-h-[70vh]">
+        {factoryContent}
+      </BaseModal.Content>
+      {confirmDialog}
     </BaseModal>
   )
 }
