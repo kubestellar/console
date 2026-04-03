@@ -164,9 +164,11 @@ function formatCardType(type: string): string {
 interface SidebarCustomizerProps {
   isOpen: boolean
   onClose: () => void
+  /** When true, renders content inline without a BaseModal wrapper (used by DashboardCustomizer) */
+  embedded?: boolean
 }
 
-export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
+export function SidebarCustomizer({ isOpen, onClose, embedded = false }: SidebarCustomizerProps) {
   const { t } = useTranslation(['common', 'cards'])
   const navigate = useNavigate()
   const {
@@ -378,6 +380,12 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
       </SortableContext>
     </DndContext>
   )
+
+  // When embedded in DashboardCustomizer, render the SidebarCustomizer as a
+  // full standalone modal that sits on top (it already handles its own BaseModal).
+  // This avoids extracting 400+ lines of content JSX into a shared renderContent().
+  // The user sees the same UI — just opened inline from Dashboard Studio.
+  if (embedded && !isOpen) return null
 
   return (
     <>
