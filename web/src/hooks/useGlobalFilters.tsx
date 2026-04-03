@@ -146,17 +146,47 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     return [] // Empty means all severities
   })
 
-  // Initialize cluster groups from localStorage
+  // Initialize cluster groups from localStorage (+ migrate legacy projects)
   const [clusterGroups, setClusterGroups] = useState<ClusterGroup[]>(() => {
+    let groups: ClusterGroup[] = DEFAULT_GROUPS
     try {
       const stored = localStorage.getItem(GROUPS_STORAGE_KEY)
       if (stored) {
-        return JSON.parse(stored)
+        groups = JSON.parse(stored)
       }
     } catch {
       // Ignore parse errors
     }
-    return DEFAULT_GROUPS
+
+    // One-time migration: convert legacy projects → cluster groups
+    try {
+      const oldProjects = localStorage.getItem('projects:definitions')
+      if (oldProjects) {
+        const projects = JSON.parse(oldProjects) as Array<{
+          id: string; name: string; clusters: string[]; color?: string
+        }>
+        if (Array.isArray(projects) && projects.length > 0) {
+          const existingNames = new Set(groups.map(g => g.name))
+          for (const p of projects) {
+            if (!existingNames.has(p.name)) {
+              groups.push({
+                id: `migrated-${p.id}`,
+                name: p.name,
+                clusters: p.clusters || [],
+                color: p.color,
+              })
+            }
+          }
+          localStorage.setItem(GROUPS_STORAGE_KEY, JSON.stringify(groups))
+        }
+        localStorage.removeItem('projects:definitions')
+        localStorage.removeItem('projects:selected')
+      }
+    } catch {
+      // Migration failed — not critical
+    }
+
+    return groups
   })
 
   // Initialize statuses from localStorage or default to all
