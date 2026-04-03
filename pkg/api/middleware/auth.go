@@ -29,6 +29,26 @@ type UserClaims struct {
 	jwt.RegisteredClaims
 }
 
+// jwtParser is a shared parser configured to accept only HS256.
+// This prevents algorithm confusion attacks where an attacker crafts a token
+// with a different signing method (e.g., "none", RS256 with HMAC key).
+// See: https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/
+var jwtParser = jwt.NewParser(jwt.WithValidMethods([]string{"HS256"}))
+
+// ParseJWT parses and validates a JWT token using the shared HS256-only parser.
+// All JWT validation in the codebase should use this function (or the JWTAuth
+// middleware which calls it) to ensure consistent algorithm enforcement.
+func ParseJWT(tokenString string, secret string) (*jwt.Token, error) {
+	return jwtParser.ParseWithClaims(tokenString, &UserClaims{}, func(token *jwt.Token) (interface{}, error) {
+		// Defense-in-depth: verify signing method is HMAC even though the parser
+		// already restricts to HS256 via WithValidMethods.
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(secret), nil
+	})
+}
+
 // TokenRevoker is the subset of store.Store needed for token revocation.
 // Defined here to avoid a circular import with the store package.
 type TokenRevoker interface {
@@ -184,9 +204,7 @@ func JWTAuth(secret string) fiber.Handler {
 			return fiber.NewError(fiber.StatusUnauthorized, "Missing authorization")
 		}
 
-		token, err := jwt.ParseWithClaims(tokenString, &UserClaims{}, func(token *jwt.Token) (interface{}, error) {
-			return []byte(secret), nil
-		})
+		token, err := ParseJWT(tokenString, secret)
 
 		if err != nil {
 			log.Printf("[Auth] Token parse error for %s: %v", c.Path(), err)
@@ -265,9 +283,7 @@ var ErrTokenRevoked = fmt.Errorf("token has been revoked")
 // This performs the same revocation check as the HTTP JWTAuth middleware
 // so that revoked tokens are rejected on WebSocket/exec paths too (#3894).
 func ValidateJWT(tokenString, secret string) (*UserClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &UserClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(secret), nil
-	})
+	token, err := ParseJWT(tokenString, secret)
 
 	if err != nil {
 		return nil, err

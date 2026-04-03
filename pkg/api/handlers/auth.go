@@ -460,9 +460,7 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	if tokenString == "" {
 		return fiber.NewError(fiber.StatusUnauthorized, "Missing authorization")
 	}
-	token, err := jwt.ParseWithClaims(tokenString, &middleware.UserClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(h.jwtSecret), nil
-	})
+	token, err := middleware.ParseJWT(tokenString, h.jwtSecret)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
 	}
@@ -511,10 +509,7 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 	if tokenString == "" {
 		return fiber.NewError(fiber.StatusUnauthorized, "Missing authorization")
 	}
-	token, err := jwt.ParseWithClaims(tokenString, &middleware.UserClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(h.jwtSecret), nil
-	})
-
+	token, err := middleware.ParseJWT(tokenString, h.jwtSecret)
 	if err != nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
 	}
