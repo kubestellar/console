@@ -430,6 +430,7 @@ export function DashboardPage({
       <DashboardCustomizer
         isOpen={showAddCard}
         onClose={() => { setShowAddCard(false); setAddCardSearch(''); setInsertAtIndex(null); setCustomizerInitialSection(undefined) }}
+        dashboardName={title}
         onAddCards={handleAddCards}
         existingCardTypes={cards.map(c => c.card_type)}
         initialSection={customizerInitialSection}

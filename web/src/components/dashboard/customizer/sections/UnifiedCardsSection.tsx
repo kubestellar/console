@@ -186,7 +186,7 @@ export function UnifiedCardsSection({
   }
 
   const totalSelected = selectedBrowseCards.size + selectedAiCards.size
-  const dashboardLabel = dashboardName || t('dashboard.studio.currentDashboard', 'current dashboard')
+  const dashboardLabel = dashboardName || 'your dashboard'
 
   const aiExamples = [
     t('dashboard.addCard.exampleGpuUtil'),
@@ -233,8 +233,9 @@ export function UnifiedCardsSection({
               {isGenerating ? 'Thinking...' : 'AI Suggest'}
             </button>
           </div>
-          {/* Quick suggestions — always visible */}
-          <div className="flex flex-wrap gap-1.5 mt-2">
+          {/* Quick AI prompts — click to auto-generate card suggestions */}
+          <div className="flex flex-wrap items-center gap-1.5 mt-2">
+            <span className="text-2xs text-muted-foreground mr-1">Try:</span>
             {aiExamples.map((example) => (
               <button
                 key={example}
