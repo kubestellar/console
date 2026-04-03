@@ -48,8 +48,7 @@ export function UnifiedCardsSection({
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set([...Object.keys(CARD_CATALOG), 'Custom Cards']))
   const searchInputRef = useRef<HTMLInputElement>(null)
 
-  // AI state
-  const [aiQuery, setAiQuery] = useState('')
+  // AI state — query is synced with browseSearch via handleUnifiedSearch
   const [aiSuggestions, setAiSuggestions] = useState<CardSuggestion[]>([])
   const [selectedAiCards, setSelectedAiCards] = useState<Set<number>>(new Set())
   const [isGenerating, setIsGenerating] = useState(false)
@@ -148,7 +147,7 @@ export function UnifiedCardsSection({
   const handleAddAiCards = () => {
     const cardsToAdd = aiSuggestions.filter((_, i) => selectedAiCards.has(i))
     onAddCards(cardsToAdd)
-    setAiQuery('')
+    setBrowseSearch('')
     setAiSuggestions([])
     setSelectedAiCards(new Set())
   }
@@ -198,37 +197,48 @@ export function UnifiedCardsSection({
     t('dashboard.addCard.exampleKustomizeGitOps'),
   ]
 
+  // Unified search: filters catalog instantly, and can AI-generate on Enter or button click
+  const handleUnifiedSearch = (value: string) => {
+    setBrowseSearch(value)
+  }
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto p-4">
-        {/* AI query bar */}
-        <div className="mb-4 p-3 rounded-lg bg-purple-500/5 border border-purple-500/20">
+        {/* Single unified search bar */}
+        <div className="mb-3">
           <p className="text-xs text-muted-foreground mb-2">
-            Describe what you want to monitor — AI will suggest cards to add to <strong className="text-foreground">{dashboardLabel}</strong>
+            Search the card catalog or describe what you need — cards will be added to <strong className="text-foreground">{dashboardLabel}</strong>
           </p>
           <div className="flex gap-2">
-            <input
-              type="text"
-              value={aiQuery}
-              onChange={(e) => setAiQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleGenerateWithQuery(aiQuery)}
-              placeholder={t('dashboard.addCard.aiPlaceholder')}
-              className="flex-1 px-3 py-1.5 bg-secondary rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-            />
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={browseSearch}
+                onChange={(e) => handleUnifiedSearch(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && browseSearch.trim() && handleGenerateWithQuery(browseSearch)}
+                placeholder="Search cards or describe what you want to monitor..."
+                className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+              />
+            </div>
             <button
-              onClick={() => handleGenerateWithQuery(aiQuery)}
-              disabled={!aiQuery.trim() || isGenerating}
-              className="px-3 py-1.5 bg-gradient-ks text-primary-foreground rounded-lg text-sm font-medium disabled:opacity-50 flex items-center gap-1.5"
+              onClick={() => handleGenerateWithQuery(browseSearch)}
+              disabled={!browseSearch.trim() || isGenerating}
+              className="px-3 py-2 bg-gradient-ks text-primary-foreground rounded-lg text-sm font-medium disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap"
+              title="Use AI to suggest cards based on your query"
             >
               {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-              {isGenerating ? t('dashboard.addCard.thinking') : t('dashboard.addCard.generate')}
+              {isGenerating ? 'Thinking...' : 'AI Suggest'}
             </button>
           </div>
+          {/* Quick suggestions — always visible */}
           <div className="flex flex-wrap gap-1.5 mt-2">
             {aiExamples.map((example) => (
               <button
                 key={example}
-                onClick={() => { setAiQuery(example); handleGenerateWithQuery(example) }}
+                onClick={() => { handleUnifiedSearch(example); handleGenerateWithQuery(example) }}
                 className="px-2 py-0.5 text-2xs bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground rounded-full transition-colors"
               >
                 {example}
@@ -237,9 +247,9 @@ export function UnifiedCardsSection({
           </div>
         </div>
 
-        {/* AI suggestions (when generated) */}
+        {/* AI suggestions (shown when generated, above catalog results) */}
         {aiSuggestions.length > 0 && (
-          <div className="mb-4">
+          <div className="mb-4 p-3 rounded-lg border border-purple-500/20 bg-purple-500/5">
             <p className="text-xs font-medium text-purple-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5" />
               AI Suggestions ({selectedAiCards.size} selected)
@@ -272,23 +282,6 @@ export function UnifiedCardsSection({
             </div>
           </div>
         )}
-
-        {/* Search */}
-        <div className="mb-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={browseSearch}
-              onChange={(e) => setBrowseSearch(e.target.value)}
-              placeholder={t('dashboard.addCard.searchCards')}
-              className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-            />
-          </div>
-        </div>
-
-        {/* Static recommendations removed — AI suggestions at top is smarter */}
 
         {/* Card catalog */}
         <div className="space-y-3">

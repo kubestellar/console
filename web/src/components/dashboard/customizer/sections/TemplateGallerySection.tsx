@@ -104,8 +104,11 @@ export function TemplateGallerySection({ onApplyTemplate, dashboardName }: Templ
 
             {/* Info */}
             <div className="p-3">
-              <h4 className="text-sm font-medium text-foreground">{template.name}</h4>
-              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{template.description}</p>
+              <h4 className="text-sm font-medium text-foreground">{template.name} Collection</h4>
+              <p className="text-xs text-muted-foreground mt-1">{template.description}</p>
+              <p className="text-2xs text-muted-foreground/70 mt-1">
+                {(template.cards || []).map(c => formatCardTitle(c.card_type)).join(', ')}
+              </p>
               <div className="flex items-center justify-between mt-3">
                 <span className="text-2xs text-muted-foreground">
                   {(template.cards || []).length} {t('dashboard.addCard.cards', 'cards')}
