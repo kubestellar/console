@@ -30,6 +30,7 @@ if [ -z "$MODE" ]; then
 fi
 
 PIDS_TO_KILL=()
+ENV_BACKUP_FILE=""
 
 cleanup() {
   echo -e "\n${DIM}Cleaning up...${NC}"
@@ -42,6 +43,15 @@ cleanup() {
   done
   # Stop docker container if running
   docker rm -f kc-smoke-test 2>/dev/null || true
+  # Restore .env if it was modified by oauth mode (handles early exits and signals)
+  if [ -n "$ENV_BACKUP_FILE" ]; then
+    if [ -f "$ENV_BACKUP_FILE" ]; then
+      mv "$ENV_BACKUP_FILE" .env
+    else
+      rm -f .env
+    fi
+    ENV_BACKUP_FILE=""
+  fi
 }
 trap cleanup EXIT
 
@@ -152,8 +162,9 @@ case "$MODE" in
     echo -e "${BOLD}Starting startup-oauth.sh (mock credentials)...${NC}"
 
     # Create mock .env for OAuth (startup-oauth.sh sources .env directly)
-    # Back up existing .env if present
-    [ -f .env ] && cp .env .env.smoke-backup
+    # Back up existing .env if present; ENV_BACKUP_FILE tells cleanup() what to restore
+    ENV_BACKUP_FILE=".env.smoke-backup"
+    [ -f .env ] && cp .env "$ENV_BACKUP_FILE"
     cat > .env << 'ENVEOF'
 GITHUB_CLIENT_ID=smoke-test-client-id
 GITHUB_CLIENT_SECRET=smoke-test-client-secret
@@ -174,13 +185,7 @@ ENVEOF
       # Check backend on 8081
       assert_port_listening 8081 "backend" || echo -e "${YELLOW}  ⚠ Backend port 8081 not detected${NC}"
     fi
-
-    # Restore original .env if backed up, otherwise remove mock
-    if [ -f .env.smoke-backup ]; then
-      mv .env.smoke-backup .env
-    else
-      rm -f .env
-    fi
+    # .env restoration is handled by the cleanup() EXIT trap via ENV_BACKUP_FILE
     ;;
 
   docker)
