@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { Check, Search } from 'lucide-react'
 import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from '../../templates'
 import { formatCardTitle } from '../../../../lib/formatCardTitle'
+import { getIcon } from '../../../../lib/icons'
 
 /** Card type to color mapping for visual preview */
 const CARD_COLORS: Record<string, string> = {
@@ -99,7 +100,7 @@ export function TemplateGallerySection({ onReplaceWithTemplate, onAddTemplate, d
                   : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
               }`}
             >
-              {cat.icon} {cat.name}
+              {(() => { const CatIcon = getIcon(cat.icon); return <CatIcon className="w-3 h-3 inline mr-1" /> })()} {cat.name}
             </button>
           ))}
         </div>

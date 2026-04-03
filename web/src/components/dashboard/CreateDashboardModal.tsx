@@ -5,6 +5,7 @@ import { BaseModal } from '../../lib/modals'
 import { Button } from '../ui/Button'
 import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from './templates'
 import { FOCUS_DELAY_MS } from '../../lib/constants/network'
+import { getIcon } from '../../lib/icons'
 
 interface CreateDashboardModalProps {
   isOpen: boolean
@@ -210,7 +211,7 @@ function CreateDashboardModalInner({
                       onClick={() => setExpandedCategory(isExpanded ? null : category.id)}
                       className="w-full flex items-center gap-2 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
                     >
-                      <span className="text-sm">{category.icon}</span>
+                      {(() => { const CatIcon = getIcon(category.icon); return <CatIcon className="w-4 h-4" /> })()}
                       <span className="text-xs font-medium text-foreground flex-1 text-left">{category.name}</span>
                       <span className="text-2xs text-muted-foreground">{categoryTemplates.length}</span>
                       <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
