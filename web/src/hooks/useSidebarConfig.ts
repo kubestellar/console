@@ -48,7 +48,7 @@ function subscribe(listener: () => void): () => void {
 }
 
 // Core dashboards shown in sidebar by default (reduced from 28 to 9 to cut clutter)
-const DEFAULT_PRIMARY_NAV: SidebarItem[] = [
+export const DEFAULT_PRIMARY_NAV: SidebarItem[] = [
   { id: 'dashboard', name: 'Dashboard', icon: 'LayoutDashboard', href: '/', type: 'link', order: 0 },
   { id: 'clusters', name: 'My Clusters', icon: 'Server', href: '/clusters', type: 'link', order: 1 },
   { id: 'cluster-admin', name: 'Cluster Admin', icon: 'ShieldAlert', href: '/cluster-admin', type: 'link', order: 2 },

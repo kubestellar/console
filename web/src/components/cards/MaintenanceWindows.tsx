@@ -29,6 +29,7 @@ export function MaintenanceWindows() {
   const { t } = useTranslation()
   const [windows, setWindows] = useState<MaintenanceWindow[]>(loadWindows)
   const [showForm, setShowForm] = useState(false)
+  const [timeError, setTimeError] = useState('')
   const [formData, setFormData] = useState({
     cluster: '',
     description: '',
@@ -54,6 +55,11 @@ export function MaintenanceWindows() {
 
   const handleAdd = useCallback(() => {
     if (!formData.cluster || !formData.startTime || !formData.endTime) return
+    if (new Date(formData.endTime) <= new Date(formData.startTime)) {
+      setTimeError('End time must be after start time')
+      return
+    }
+    setTimeError('')
     const newWindow: MaintenanceWindow = {
       id: `mw-${Date.now()}`,
       ...formData,
@@ -90,7 +96,7 @@ export function MaintenanceWindows() {
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">{displayWindows.filter(w => w.status !== 'completed').length} upcoming</span>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => { setShowForm(!showForm); setTimeError('') }}
           className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
         >
           {showForm ? 'Cancel' : '+ Schedule'}
@@ -127,6 +133,9 @@ export function MaintenanceWindows() {
               className="flex-1 px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
+          {timeError && (
+            <p className="text-xs text-red-400">{timeError}</p>
+          )}
           <div className="flex items-center justify-between">
             <select
               value={formData.type}

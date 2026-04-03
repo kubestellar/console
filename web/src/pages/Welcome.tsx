@@ -13,15 +13,33 @@ import {
   Play,
 } from 'lucide-react'
 import { emitWelcomeViewed, emitWelcomeActioned } from '../lib/analytics'
+import { getRegisteredCardTypes } from '../components/cards/cardRegistry'
+import { DEFAULT_PRIMARY_NAV, DISCOVERABLE_DASHBOARDS } from '../hooks/useSidebarConfig'
+
+/* ------------------------------------------------------------------ */
+/*  SEO / meta constants                                               */
+/* ------------------------------------------------------------------ */
+
+const PAGE_TITLE = 'KubeStellar Console — Open Source Kubernetes Dashboard'
+const META_DESCRIPTION =
+  'AI-powered, multi-cluster Kubernetes dashboard with GPU visibility, cost analytics, security compliance, and GitOps — all open source, no sign-up required.'
 
 /* ------------------------------------------------------------------ */
 /*  Hero stats — social proof for conference audiences                 */
+/*  Card and dashboard counts are derived from the actual registries   */
+/*  so they stay in sync as the codebase evolves.                      */
 /* ------------------------------------------------------------------ */
+
+/** Total unique dashboards = default sidebar + discoverable dashboards */
+const TOTAL_DASHBOARDS = new Set([
+  ...DEFAULT_PRIMARY_NAV.map(d => d.id),
+  ...DISCOVERABLE_DASHBOARDS.map(d => d.id),
+]).size
 
 const HERO_STATS = [
   { value: '250+', label: 'CNCF tools' },
-  { value: '32', label: 'Dashboards' },
-  { value: '241', label: 'Cards' },
+  { value: String(TOTAL_DASHBOARDS), label: 'Dashboards' },
+  { value: String(getRegisteredCardTypes().length), label: 'Cards' },
   { value: '0', label: 'Paywalls' },
 ]
 
@@ -98,6 +116,16 @@ export function Welcome() {
   const ref = searchParams.get('ref') || 'direct'
 
   useEffect(() => {
+    document.title = PAGE_TITLE
+    const metaDesc = document.querySelector('meta[name="description"]')
+    if (metaDesc) {
+      metaDesc.setAttribute('content', META_DESCRIPTION)
+    } else {
+      const meta = document.createElement('meta')
+      meta.name = 'description'
+      meta.content = META_DESCRIPTION
+      document.head.appendChild(meta)
+    }
     emitWelcomeViewed(ref)
   }, [ref])
 
