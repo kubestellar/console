@@ -134,6 +134,7 @@ export function DashboardCustomizer({
               existingCardTypes={existingCardTypes}
               onAddCards={handleAddCards}
               dashboardName={dashboardName}
+              onHoverCard={handleHoverCard}
             />
           )}
 

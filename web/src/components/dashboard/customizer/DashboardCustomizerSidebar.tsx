@@ -60,7 +60,7 @@ export function DashboardCustomizerSidebar({
         {CUSTOMIZER_NAV.map((group) => (
           <div key={group.labelKey} className="mb-3">
             <div className="px-3 py-1 text-2xs font-medium text-muted-foreground uppercase tracking-wider">
-              {t(group.labelKey)}
+              {t(group.labelKey, group.fallback)}
             </div>
             {group.items.map((item) => {
               const Icon = item.icon
@@ -77,7 +77,7 @@ export function DashboardCustomizerSidebar({
                   )}
                 >
                   <Icon className="w-4 h-4 flex-shrink-0" />
-                  <span className="truncate">{t(item.labelKey)}</span>
+                  <span className="truncate">{t(item.labelKey, item.fallback)}</span>
                 </button>
               )
             })}

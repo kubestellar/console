@@ -17,12 +17,15 @@ interface AISuggestionsSectionProps {
   onAddCards: (cards: CardSuggestion[]) => void
   /** Dashboard name for context */
   dashboardName?: string
+  /** Hover callback for preview panel */
+  onHoverCard?: (card: { type: string; title: string; description: string; visualization: string } | null) => void
 }
 
 export function AISuggestionsSection({
   existingCardTypes,
   onAddCards,
   dashboardName,
+  onHoverCard,
 }: AISuggestionsSectionProps) {
   const { t } = useTranslation()
   const tCard = t as (key: string, defaultValue?: string) => string
@@ -101,9 +104,8 @@ export function AISuggestionsSection({
           </div>
         </div>
 
-        {/* Example queries */}
-        {!suggestions.length && !isGenerating && (
-          <div className="mb-4">
+        {/* Example queries — always visible so user can try different ones */}
+        <div className="mb-4">
             <p className="text-xs text-muted-foreground mb-2">{t('dashboard.addCard.tryAsking')}</p>
             <div className="flex flex-wrap gap-2">
               {[
@@ -124,7 +126,6 @@ export function AISuggestionsSection({
               ))}
             </div>
           </div>
-        )}
 
         {/* Suggestions */}
         {suggestions.length > 0 && (
@@ -139,6 +140,8 @@ export function AISuggestionsSection({
                   <button
                     key={index}
                     onClick={() => !isAlreadyAdded && toggleCard(index)}
+                    onMouseEnter={() => onHoverCard?.(card)}
+                    onMouseLeave={() => onHoverCard?.(null)}
                     disabled={isAlreadyAdded}
                     className={`p-3 rounded-lg text-left transition-all ${isAlreadyAdded
                         ? 'bg-secondary/30 border-2 border-transparent opacity-50 cursor-not-allowed'
