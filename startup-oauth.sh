@@ -383,10 +383,11 @@ if [ "$USE_DEV_SERVER" = true ]; then
         sleep 1
     fi
 
-    if [ ! -d "web/node_modules" ]; then
-        write_stage "npm_install"
-        safe_npm_install web
-    fi
+    # Always run npm install to pick up new/changed dependencies (#4405).
+    # safe_npm_install is fast when node_modules is already up-to-date.
+    write_stage "npm_install"
+    safe_npm_install web
+
     write_stage "backend_compiling"
     echo -e "${GREEN}Starting backend on port $BACKEND_LISTEN_PORT (OAuth mode)...${NC}"
     BACKEND_PORT=$BACKEND_LISTEN_PORT GOWORK=off go run ./cmd/console &
@@ -419,10 +420,11 @@ else
         sleep 1
     fi
 
-    if [ ! -d "web/node_modules" ]; then
-        write_stage "npm_install"
-        safe_npm_install web
-    fi
+    # Always run npm install to pick up new/changed dependencies (#4405).
+    # safe_npm_install is fast when node_modules is already up-to-date.
+    write_stage "npm_install"
+    safe_npm_install web
+
     write_stage "frontend_build"
     echo -e "${GREEN}Building frontend...${NC}"
     (cd web && npm run build)

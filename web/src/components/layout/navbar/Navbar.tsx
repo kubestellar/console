@@ -109,14 +109,16 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
         </a>
       </div>
 
-      {/* Search - hidden on small mobile; min-w-0 lets it shrink when navbar is tight */}
-      <div className="hidden sm:block flex-1 min-w-0 max-w-md mx-4">
+      {/* Search - hidden on small mobile; min-w-0 + overflow-hidden prevent
+           overlap when the right-side AI Mission button is visible (#4409) */}
+      <div className="hidden sm:block flex-1 min-w-0 max-w-md mx-4 overflow-hidden">
         <Suspense fallback={null}><SearchDropdown /></Suspense>
       </div>
 
-      {/* Right side — shrink-0 prevents items (especially UserProfileDropdown)
-           from being squeezed invisible at intermediate widths (see #3191) */}
-      <div className="flex items-center gap-1 md:gap-3 shrink-0">
+      {/* Right side — no shrink-0 here so the container participates in flex
+           negotiation with the search bar, preventing overlap when the AI Mission
+           button is visible (#4409). Individual critical items use shrink-0. */}
+      <div className="flex items-center gap-1 md:gap-3">
         {/* Core desktop items: md+ (768px) */}
         <div className="hidden md:flex items-center gap-2">
           {/* Unified Filter */}
@@ -160,28 +162,30 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
           <FeatureRequestButton />
         </div>
 
-        {/* Tour trigger - icon always visible, text shows at xl+ */}
-        <div className="flex items-center gap-2">
+        {/* Always-visible items — shrink-0 so theme toggle, alerts, user menu
+             are never squeezed invisible at intermediate widths (#3191) */}
+        <div className="flex items-center gap-1 md:gap-2 shrink-0">
+          {/* Tour trigger - icon always visible, text shows at xl+ */}
           <LearnDropdown />
+
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            className="p-2 hover:bg-secondary rounded-lg transition-colors"
+            title={t('navbar.themeToggle', { theme })}
+          >
+            {theme === 'dark' ? (
+              <Moon className="w-5 h-5 text-muted-foreground" />
+            ) : theme === 'light' ? (
+              <Sun className="w-5 h-5 text-yellow-400" />
+            ) : (
+              <Monitor className="w-5 h-5 text-muted-foreground" />
+            )}
+          </button>
+
+          {/* Alerts */}
+          <AlertBadge />
         </div>
-
-        {/* Theme toggle - always visible */}
-        <button
-          onClick={toggleTheme}
-          className="p-2 hover:bg-secondary rounded-lg transition-colors"
-          title={t('navbar.themeToggle', { theme })}
-        >
-          {theme === 'dark' ? (
-            <Moon className="w-5 h-5 text-muted-foreground" />
-          ) : theme === 'light' ? (
-            <Sun className="w-5 h-5 text-yellow-400" />
-          ) : (
-            <Monitor className="w-5 h-5 text-muted-foreground" />
-          )}
-        </button>
-
-        {/* Alerts - always visible */}
-        <AlertBadge />
 
         {/* Overflow menu — visible below lg for items hidden at narrow widths */}
         <div className="relative lg:hidden">
@@ -264,12 +268,14 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
           )}
         </div>
 
-        {/* User menu - always visible */}
-        <UserProfileDropdown
-          user={user}
-          onLogout={logout}
-          onPreferences={() => navigate(ROUTES.SETTINGS)}
-        />
+        {/* User menu - always visible; shrink-0 so it is never squeezed (#3191) */}
+        <div className="shrink-0">
+          <UserProfileDropdown
+            user={user}
+            onLogout={logout}
+            onPreferences={() => navigate(ROUTES.SETTINGS)}
+          />
+        </div>
       </div>
 
     </nav>

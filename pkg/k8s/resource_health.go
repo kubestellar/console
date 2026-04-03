@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
@@ -265,16 +266,23 @@ func (m *MultiClusterClient) MonitorWorkload(
 			LastChecked: now,
 		}
 
-		// Try to fetch the actual resource and check its health
-		obj := fetchResource(ctx, dynClient, dep)
-		status, message := CheckResourceHealth(string(dep.Kind), obj)
-		mr.Status = status
-		mr.Message = message
+		// Try to fetch the actual resource and check its health.
+		// fetchResource returns (nil, nil) for 404 and (nil, err) for
+		// real errors (network, auth, RBAC) so we can report accurately (#4388).
+		obj, fetchErr := fetchResource(ctx, dynClient, dep)
+		if fetchErr != nil {
+			mr.Status = HealthStatusUnknown
+			mr.Message = fmt.Sprintf("Fetch error: %v", fetchErr)
+		} else {
+			status, message := CheckResourceHealth(string(dep.Kind), obj)
+			mr.Status = status
+			mr.Message = message
+		}
 
 		result.Resources = append(result.Resources, mr)
 
 		// Generate issues for non-healthy resources
-		if status != HealthStatusHealthy && status != HealthStatusUnknown {
+		if mr.Status != HealthStatusHealthy && mr.Status != HealthStatusUnknown {
 			issue := createIssue(mr, now)
 			result.Issues = append(result.Issues, issue)
 		}
@@ -286,8 +294,11 @@ func (m *MultiClusterClient) MonitorWorkload(
 	return result, nil
 }
 
-// fetchResource tries to get a resource from the cluster
-func fetchResource(ctx context.Context, dynClient dynamic.Interface, dep Dependency) *unstructured.Unstructured {
+// fetchResource tries to get a resource from the cluster.
+// Returns (nil, nil) when the resource genuinely does not exist (404),
+// and (nil, err) for all other failures (network, auth, RBAC) so the
+// caller can distinguish missing resources from fetch errors (#4388).
+func fetchResource(ctx context.Context, dynClient dynamic.Interface, dep Dependency) (*unstructured.Unstructured, error) {
 	var obj *unstructured.Unstructured
 	var err error
 
@@ -298,9 +309,12 @@ func fetchResource(ctx context.Context, dynClient dynamic.Interface, dep Depende
 	}
 
 	if err != nil {
-		return nil // Resource not found or error
+		if apierrors.IsNotFound(err) {
+			return nil, nil // Resource genuinely missing
+		}
+		return nil, err // Real error (network, auth, RBAC, etc.)
 	}
-	return obj
+	return obj, nil
 }
 
 // createIssue generates a MonitorIssue from a non-healthy resource
