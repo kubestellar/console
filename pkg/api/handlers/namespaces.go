@@ -62,7 +62,7 @@ func (h *NamespaceHandler) CreateNamespace(c *fiber.Ctx) error {
 	// Check if current user is console admin
 	currentUserID := middleware.GetUserID(c)
 	currentUser, err := h.store.GetUser(currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != "admin" {
+	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
 	}
 
@@ -105,7 +105,7 @@ func (h *NamespaceHandler) DeleteNamespace(c *fiber.Ctx) error {
 	// Check if current user is console admin
 	currentUserID := middleware.GetUserID(c)
 	currentUser, err := h.store.GetUser(currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != "admin" {
+	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
 	}
 
@@ -184,7 +184,7 @@ func (h *NamespaceHandler) GrantNamespaceAccess(c *fiber.Ctx) error {
 	// Check if current user is console admin
 	currentUserID := middleware.GetUserID(c)
 	currentUser, err := h.store.GetUser(currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != "admin" {
+	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
 	}
 
@@ -237,7 +237,7 @@ func (h *NamespaceHandler) RevokeNamespaceAccess(c *fiber.Ctx) error {
 	// Check if current user is console admin
 	currentUserID := middleware.GetUserID(c)
 	currentUser, err := h.store.GetUser(currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != "admin" {
+	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
 	}
 

@@ -150,12 +150,12 @@ export function NamespaceManager() {
           if (response.ok) {
             const data = await response.json()
             if (data.namespaces && Array.isArray(data.namespaces)) {
-              clusterNamespaces = data.namespaces.map((ns: { name: string; status?: string; labels?: Record<string, string>; createdAt?: string }) => ({
+              clusterNamespaces = data.namespaces.map((ns: { name: string; status?: string; labels?: Record<string, string>; created_at?: string }) => ({
                 name: ns.name,
                 cluster,
                 status: ns.status || 'Active',
                 labels: ns.labels,
-                createdAt: ns.createdAt || new Date().toISOString(),
+                created_at: ns.created_at || new Date().toISOString(),
               }))
             }
           }
@@ -181,7 +181,7 @@ export function NamespaceManager() {
                 name: ns,
                 cluster,
                 status: 'Active',
-                createdAt: new Date().toISOString(),
+                created_at: new Date().toISOString(),
               })
             })
           } catch {

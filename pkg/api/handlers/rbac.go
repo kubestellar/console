@@ -60,7 +60,7 @@ func (h *RBACHandler) UpdateUserRole(c *fiber.Ctx) error {
 	// Check if current user is admin
 	currentUserID := middleware.GetUserID(c)
 	currentUser, err := h.store.GetUser(currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != "admin" {
+	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
 		return fiber.NewError(fiber.StatusForbidden, "Admin access required")
 	}
 
@@ -102,7 +102,7 @@ func (h *RBACHandler) DeleteConsoleUser(c *fiber.Ctx) error {
 	// Check if current user is admin
 	currentUserID := middleware.GetUserID(c)
 	currentUser, err := h.store.GetUser(currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != "admin" {
+	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
 		return fiber.NewError(fiber.StatusForbidden, "Admin access required")
 	}
 

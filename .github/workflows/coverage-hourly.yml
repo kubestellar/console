@@ -16,7 +16,7 @@ on:
 
 concurrency:
   group: coverage-suite
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read

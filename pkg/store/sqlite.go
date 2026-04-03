@@ -296,9 +296,9 @@ func (s *SQLiteStore) scanUser(row *sql.Row) (*models.User, error) {
 		u.AvatarURL = avatar.String
 	}
 	if role.Valid {
-		u.Role = role.String
+		u.Role = models.UserRole(role.String)
 	} else {
-		u.Role = "viewer" // default role
+		u.Role = models.UserRoleViewer // default role
 	}
 	if lastLogin.Valid {
 		u.LastLogin = &lastLogin.Time
@@ -312,7 +312,7 @@ func (s *SQLiteStore) CreateUser(user *models.User) error {
 	}
 	user.CreatedAt = time.Now()
 	if user.Role == "" {
-		user.Role = "viewer" // default role
+		user.Role = models.UserRoleViewer // default role
 	}
 
 	_, err := s.db.Exec(`INSERT INTO users (id, github_id, github_login, email, slack_id, avatar_url, role, onboarded, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -363,9 +363,9 @@ func (s *SQLiteStore) ListUsers() ([]models.User, error) {
 			u.AvatarURL = avatar.String
 		}
 		if role.Valid {
-			u.Role = role.String
+			u.Role = models.UserRole(role.String)
 		} else {
-			u.Role = "viewer"
+			u.Role = models.UserRoleViewer
 		}
 		if lastLogin.Valid {
 			u.LastLogin = &lastLogin.Time

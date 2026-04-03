@@ -134,13 +134,13 @@ type CreateRoleBindingRequest struct {
 
 // AuditLogEntry represents an audit log entry for user management actions
 type AuditLogEntry struct {
-	ID          uuid.UUID `json:"id"`
-	UserID      uuid.UUID `json:"userId"`
-	Action      string    `json:"action"` // create_user, update_role, delete_user, create_sa, create_binding
-	TargetType  string    `json:"targetType"` // console_user, service_account, role_binding
-	TargetID    string    `json:"targetId"`
-	Details     string    `json:"details,omitempty"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ID         uuid.UUID `json:"id"`
+	UserID     uuid.UUID `json:"user_id"`
+	Action     string    `json:"action"` // create_user, update_role, delete_user, create_sa, create_binding
+	TargetType string    `json:"target_type"` // console_user, service_account, role_binding
+	TargetID   string    `json:"target_id"`
+	Details    string    `json:"details,omitempty"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 // CanIRequest represents a request to check if user can perform an action
@@ -182,7 +182,7 @@ type NamespaceDetails struct {
 	Cluster   string            `json:"cluster"`
 	Status    string            `json:"status"`
 	Labels    map[string]string `json:"labels,omitempty"`
-	CreatedAt string            `json:"createdAt"`
+	CreatedAt string            `json:"created_at"`
 }
 
 // CreateNamespaceRequest represents a request to create a namespace

@@ -22,7 +22,7 @@ interface UserProfileDropdownProps {
     email?: string
     avatar_url?: string
     role?: string
-    slackId?: string
+    slack_id?: string
   } | null
   onLogout: () => void
   onPreferences?: () => void
@@ -179,7 +179,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
             <div className="flex items-center gap-3 px-2 py-1.5 text-sm min-w-0">
               <MessageSquare className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               <span className="text-muted-foreground flex-shrink-0">{t('profile.slack')}</span>
-              <span className="text-foreground truncate">{user.slackId || t('profile.notConnected')}</span>
+              <span className="text-foreground truncate">{user.slack_id || t('profile.notConnected')}</span>
             </div>
             <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
               <Shield className="w-4 h-4 text-muted-foreground" />

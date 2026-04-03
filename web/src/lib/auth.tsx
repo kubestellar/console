@@ -10,7 +10,7 @@ interface User {
   github_id: string
   github_login: string
   email?: string
-  slackId?: string
+  slack_id?: string
   avatar_url?: string
   role?: 'admin' | 'editor' | 'viewer'
   onboarded: boolean

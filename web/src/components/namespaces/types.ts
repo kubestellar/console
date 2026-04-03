@@ -3,7 +3,7 @@ export interface NamespaceDetails {
   cluster: string
   status: string
   labels?: Record<string, string>
-  createdAt: string
+  created_at: string
 }
 
 export interface NamespaceAccessEntry {

@@ -402,7 +402,7 @@ export function Settings() {
           <div className="space-y-6">
             <ProfileSection
               initialEmail={user?.email || ''}
-              initialSlackId={user?.slackId || ''}
+              initialSlackId={user?.slack_id || ''}
               refreshUser={refreshUser}
               isLoading={isUserLoading}
             />

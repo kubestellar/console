@@ -32,7 +32,7 @@ export interface AccessibilitySettingsData {
 
 export interface ProfileSettingsData {
   email: string
-  slackId: string
+  slack_id: string
 }
 
 export interface WidgetSettingsData {

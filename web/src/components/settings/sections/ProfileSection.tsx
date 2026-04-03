@@ -42,7 +42,7 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLo
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ email, slackId }),
+        body: JSON.stringify({ email, slack_id: slackId }),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!response.ok) {

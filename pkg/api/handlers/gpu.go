@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -45,6 +46,9 @@ func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
 	}
 	if input.StartDate == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "Start date is required")
+	}
+	if _, err := time.Parse(time.RFC3339, input.StartDate); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Start date must be RFC 3339 format (e.g. 2024-01-15T09:00:00Z)")
 	}
 
 	// Check over-allocation: sum of active/pending reservations + this request must not exceed cluster capacity
@@ -181,6 +185,9 @@ func (h *GPUHandler) UpdateReservation(c *fiber.Ctx) error {
 		existing.GPUType = *input.GPUType
 	}
 	if input.StartDate != nil {
+		if _, err := time.Parse(time.RFC3339, *input.StartDate); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, "Start date must be RFC 3339 format (e.g. 2024-01-15T09:00:00Z)")
+		}
 		existing.StartDate = *input.StartDate
 	}
 	if input.DurationHours != nil {
