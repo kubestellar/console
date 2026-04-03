@@ -16,6 +16,7 @@
 # Exit code:
 #   0 — no secrets found
 #   1 — secrets detected
+#   2+ — scanner execution error (missing binary, crash, bad config, etc.)
 
 set -euo pipefail
 
@@ -54,11 +55,17 @@ echo ""
 if ! command -v gitleaks &>/dev/null; then
   echo -e "${YELLOW}Installing gitleaks...${NC}"
   if command -v brew &>/dev/null; then
-    brew install gitleaks 2>/dev/null
+    brew install gitleaks
   elif command -v go &>/dev/null; then
-    go install github.com/gitleaks/gitleaks/v8@latest 2>/dev/null
+    go install github.com/gitleaks/gitleaks/v8@latest
+    # go install places binaries in GOPATH/bin which may not be on PATH
+    export PATH="$(go env GOPATH)/bin:$PATH"
   else
     echo -e "${RED}ERROR: Cannot install gitleaks — install manually: brew install gitleaks${NC}"
+    exit 1
+  fi
+  if ! command -v gitleaks &>/dev/null; then
+    echo -e "${RED}ERROR: gitleaks installation failed — binary not found after install${NC}"
     exit 1
   fi
 fi
@@ -68,7 +75,8 @@ fi
 # ============================================================================
 
 GITLEAKS_CONFIG=$(mktemp)
-trap 'rm -f "$GITLEAKS_CONFIG"' EXIT
+GITLEAKS_STDERR=$(mktemp)
+trap 'rm -f "$GITLEAKS_CONFIG" "$GITLEAKS_STDERR"' EXIT
 
 cat > "$GITLEAKS_CONFIG" << 'TOML'
 title = "KubeStellar Console gitleaks config"
@@ -123,7 +131,7 @@ if [ -n "$SCAN_GIT_HISTORY" ]; then
     --config="$GITLEAKS_CONFIG" \
     --report-format=json \
     --report-path="$REPORT_JSON" \
-    --verbose 2>/dev/null || GITLEAKS_EXIT=$?
+    --verbose 2>"$GITLEAKS_STDERR" || GITLEAKS_EXIT=$?
 else
   echo -e "${DIM}Scanning working tree...${NC}"
   gitleaks detect \
@@ -131,7 +139,17 @@ else
     --report-format=json \
     --report-path="$REPORT_JSON" \
     --no-git \
-    --verbose 2>/dev/null || GITLEAKS_EXIT=$?
+    --verbose 2>"$GITLEAKS_STDERR" || GITLEAKS_EXIT=$?
+fi
+
+# Exit code 1 means leaks were found (expected); exit code >1 means execution error
+if [ "$GITLEAKS_EXIT" -gt 1 ]; then
+  echo -e "${RED}ERROR: gitleaks failed to execute (exit code ${GITLEAKS_EXIT})${NC}"
+  if [ -s "$GITLEAKS_STDERR" ]; then
+    echo -e "${RED}Scanner output:${NC}"
+    cat "$GITLEAKS_STDERR" >&2
+  fi
+  exit "$GITLEAKS_EXIT"
 fi
 
 echo ""
