@@ -19,6 +19,7 @@ export { ResourceMarshall } from './ResourceMarshall'
 // GitOps & ArgoCD
 export { GitOpsDrift } from './GitOpsDrift'
 export { ArgoCDApplications } from './ArgoCDApplications'
+export { ArgoCDApplicationSets } from './ArgoCDApplicationSets'
 export { ArgoCDSyncStatus } from './ArgoCDSyncStatus'
 export { ArgoCDHealth } from './ArgoCDHealth'
 

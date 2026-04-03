@@ -90,6 +90,7 @@ export const CARD_TITLES: Record<string, string> = {
 
   // ArgoCD cards
   argocd_applications: 'ArgoCD Applications',
+  argocd_applicationsets: 'ArgoCD ApplicationSets',
   argocd_sync_status: 'ArgoCD Sync Status',
   argocd_health: 'ArgoCD Health',
 
@@ -375,6 +376,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   overlay_comparison: 'Compare Kustomize overlays across environments.',
   chart_versions: 'Available Helm chart versions and update status.',
   argocd_applications: 'ArgoCD application inventory and sync status.',
+  argocd_applicationsets: 'ArgoCD ApplicationSets manage fleet-wide deployments using generators to produce Applications across clusters.',
   argocd_sync_status: 'Sync status of ArgoCD-managed applications.',
   argocd_health: 'Health of ArgoCD applications and components.',
   gpu_overview: 'Summary of GPU resources across all clusters. Use this to see how many GPUs are available, allocated, and idle across your fleet — essential for AI/ML workload planning.',
