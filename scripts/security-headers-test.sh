@@ -85,12 +85,59 @@ echo -e "${BOLD}Phase 1: netlify.toml header configuration${NC}"
 echo ""
 
 NETLIFY_TOML="netlify.toml"
+
+# Returns exit code 0 if $1 is configured as a real header key inside a
+# [[headers]] -> [headers.values] block in the given TOML file.
+# Comment lines and unrelated sections are not matched.
+netlify_header_configured() {
+  local header_name="$1"
+  local toml_file="$2"
+  python3 - "$header_name" "$toml_file" <<'PYEOF'
+import sys, re
+
+header_name = sys.argv[1].lower()
+toml_file   = sys.argv[2]
+
+in_headers_block  = False   # inside [[headers]]
+in_values_section = False   # inside [headers.values]
+
+with open(toml_file, encoding="utf-8") as fh:
+    for raw_line in fh:
+        line = raw_line.split("#")[0].strip()   # strip inline comments
+        if not line:
+            continue
+
+        # Detect [[headers]] array-of-tables header
+        if re.fullmatch(r'\[\[headers\]\]', line, re.IGNORECASE):
+            in_headers_block  = True
+            in_values_section = False
+            continue
+
+        # Any other [section] resets context
+        if re.match(r'^\[', line):
+            if re.fullmatch(r'\[headers\.values\]', line, re.IGNORECASE) and in_headers_block:
+                in_values_section = True
+            else:
+                in_headers_block  = False
+                in_values_section = False
+            continue
+
+        # key = value assignment inside [headers.values]
+        if in_values_section:
+            m = re.match(r'^([A-Za-z0-9_-]+)\s*=', line)
+            if m and m.group(1).lower() == header_name:
+                sys.exit(0)
+
+sys.exit(1)
+PYEOF
+}
+
 if [ -f "$NETLIFY_TOML" ]; then
   for entry in "${REQUIRED_HEADERS[@]}"; do
     IFS='|' read -r header_name expected_pattern severity <<< "$entry"
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
 
-    if grep -qi "$header_name" "$NETLIFY_TOML" 2>/dev/null; then
+    if netlify_header_configured "$header_name" "$NETLIFY_TOML"; then
       echo -e "  ${GREEN}✓${NC} ${header_name} — configured in netlify.toml"
       PASS_COUNT=$((PASS_COUNT + 1))
       RESULTS_LINES="${RESULTS_LINES}{\"header\":\"${header_name}\",\"source\":\"config\",\"status\":\"pass\",\"severity\":\"${severity}\"},"
@@ -107,7 +154,7 @@ if [ -f "$NETLIFY_TOML" ]; then
     IFS='|' read -r header_name expected_pattern severity <<< "$entry"
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
 
-    if grep -qi "$header_name" "$NETLIFY_TOML" 2>/dev/null; then
+    if netlify_header_configured "$header_name" "$NETLIFY_TOML"; then
       echo -e "  ${GREEN}✓${NC} ${header_name} — configured"
       PASS_COUNT=$((PASS_COUNT + 1))
       RESULTS_LINES="${RESULTS_LINES}{\"header\":\"${header_name}\",\"source\":\"config\",\"status\":\"pass\",\"severity\":\"${severity}\"},"
@@ -234,7 +281,7 @@ EOF
 
 for entry in "${REQUIRED_HEADERS[@]}"; do
   IFS='|' read -r header_name expected_pattern severity <<< "$entry"
-  if grep -qi "$header_name" "$NETLIFY_TOML" 2>/dev/null; then
+  if netlify_header_configured "$header_name" "$NETLIFY_TOML" 2>/dev/null; then
     echo "| ${header_name} | PASS |" >> "$REPORT_MD"
   else
     echo "| ${header_name} | **FAIL** |" >> "$REPORT_MD"
@@ -249,7 +296,7 @@ echo "|--------|--------|" >> "$REPORT_MD"
 
 for entry in "${RECOMMENDED_HEADERS[@]}"; do
   IFS='|' read -r header_name expected_pattern severity <<< "$entry"
-  if grep -qi "$header_name" "$NETLIFY_TOML" 2>/dev/null; then
+  if netlify_header_configured "$header_name" "$NETLIFY_TOML" 2>/dev/null; then
     echo "| ${header_name} | PASS |" >> "$REPORT_MD"
   else
     echo "| ${header_name} | WARN |" >> "$REPORT_MD"
