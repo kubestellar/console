@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -80,18 +80,26 @@ func purgeExpiredOAuthStates() {
 	}
 }
 
+// inlineCleanupThreshold is the map size above which storeOAuthState performs
+// an inline sweep of expired entries. Below this threshold, the background
+// goroutine handles cleanup, avoiding an O(n) scan on every insert.
+const inlineCleanupThreshold = 100
+
 func storeOAuthState(state string) {
 	oauthStateStore.Lock()
 	defer oauthStateStore.Unlock()
-	// Inline cleanup: remove expired states on every insert so the map
-	// stays bounded even between background sweeps.
-	now := time.Now()
-	for s, t := range oauthStateStore.states {
-		if now.Sub(t) > oauthStateExpiration {
-			delete(oauthStateStore.states, s)
+	// Inline cleanup only when the map has grown large enough to warrant it.
+	// Under normal load (a few concurrent OAuth flows), the background sweep
+	// in purgeExpiredOAuthStates handles cleanup on its own.
+	if len(oauthStateStore.states) >= inlineCleanupThreshold {
+		now := time.Now()
+		for s, t := range oauthStateStore.states {
+			if now.Sub(t) > oauthStateExpiration {
+				delete(oauthStateStore.states, s)
+			}
 		}
 	}
-	oauthStateStore.states[state] = now
+	oauthStateStore.states[state] = time.Now()
 }
 
 func validateAndConsumeOAuthState(state string) bool {
@@ -106,33 +114,33 @@ func validateAndConsumeOAuthState(state string) bool {
 
 // AuthConfig holds authentication configuration
 type AuthConfig struct {
-	GitHubClientID   string
-	GitHubSecret     string
-	GitHubURL        string // Base GitHub URL (e.g., "https://github.ibm.com"), defaults to "https://github.com"
-	JWTSecret        string
-	FrontendURL      string
-	BackendURL       string // Backend URL for OAuth callback (defaults to http://localhost:8080)
-	DevUserLogin     string
-	DevUserEmail     string
-	DevUserAvatar    string
-	GitHubToken      string // Personal access token for dev mode profile lookup
-	DevMode          bool   // Force dev mode bypass even if OAuth credentials present
-	SkipOnboarding   bool   // Skip onboarding questionnaire for new users
+	GitHubClientID string
+	GitHubSecret   string
+	GitHubURL      string // Base GitHub URL (e.g., "https://github.ibm.com"), defaults to "https://github.com"
+	JWTSecret      string
+	FrontendURL    string
+	BackendURL     string // Backend URL for OAuth callback (defaults to http://localhost:8080)
+	DevUserLogin   string
+	DevUserEmail   string
+	DevUserAvatar  string
+	GitHubToken    string // Personal access token for dev mode profile lookup
+	DevMode        bool   // Force dev mode bypass even if OAuth credentials present
+	SkipOnboarding bool   // Skip onboarding questionnaire for new users
 }
 
 // AuthHandler handles authentication
 type AuthHandler struct {
-	store         store.Store
-	oauthConfig   *oauth2.Config
-	githubAPIBase string // API base URL: "https://api.github.com" or "https://github.ibm.com/api/v3"
-	jwtSecret     string
-	frontendURL   string
-	devUserLogin  string
-	devUserEmail  string
-	devUserAvatar string
-	githubToken      string
-	devMode          bool
-	skipOnboarding   bool
+	store          store.Store
+	oauthConfig    *oauth2.Config
+	githubAPIBase  string // API base URL: "https://api.github.com" or "https://github.ibm.com/api/v3"
+	jwtSecret      string
+	frontendURL    string
+	devUserLogin   string
+	devUserEmail   string
+	devUserAvatar  string
+	githubToken    string
+	devMode        bool
+	skipOnboarding bool
 }
 
 // NewAuthHandler creates a new auth handler
@@ -167,7 +175,7 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 	}
 
 	if ghURL != "https://github.com" {
-		log.Printf("GitHub Enterprise: OAuth via %s, API via %s", ghURL, apiBase)
+		slog.Info(fmt.Sprintf("GitHub Enterprise: OAuth via %s, API via %s", ghURL, apiBase))
 	}
 
 	return &AuthHandler{
@@ -179,15 +187,15 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 			Scopes:       []string{"user:email"},
 			Endpoint:     oauthEndpoint,
 		},
-		githubAPIBase: apiBase,
-		jwtSecret:     cfg.JWTSecret,
-		frontendURL:   cfg.FrontendURL,
-		devUserLogin:  cfg.DevUserLogin,
-		devUserEmail:  cfg.DevUserEmail,
-		devUserAvatar: cfg.DevUserAvatar,
-		githubToken:      cfg.GitHubToken,
-		devMode:          cfg.DevMode,
-		skipOnboarding:   cfg.SkipOnboarding,
+		githubAPIBase:  apiBase,
+		jwtSecret:      cfg.JWTSecret,
+		frontendURL:    cfg.FrontendURL,
+		devUserLogin:   cfg.DevUserLogin,
+		devUserEmail:   cfg.DevUserEmail,
+		devUserAvatar:  cfg.DevUserAvatar,
+		githubToken:    cfg.GitHubToken,
+		devMode:        cfg.DevMode,
+		skipOnboarding: cfg.SkipOnboarding,
 	}
 }
 
@@ -358,7 +366,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	// or the OAuth app is misconfigured (e.g., suspended, wrong callback URL).
 	if ghError := c.Query("error"); ghError != "" {
 		ghDescription := c.Query("error_description", ghError)
-		log.Printf("[Auth] GitHub returned error: %s — %s", ghError, ghDescription)
+		slog.Error(fmt.Sprintf("[Auth] GitHub returned error: %s — %s", ghError, ghDescription))
 		if ghError == "access_denied" {
 			return h.oauthErrorRedirect(c, "access_denied", ghDescription)
 		}
@@ -374,7 +382,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	// (Safari blocks cookies in OAuth redirect flows, so we use server-side state)
 	state := c.Query("state")
 	if state == "" || !validateAndConsumeOAuthState(state) {
-		log.Printf("[Auth] CSRF validation failed: invalid or expired state token")
+		slog.Error("[Auth] CSRF validation failed: invalid or expired state token")
 		return h.oauthErrorRedirect(c, "csrf_validation_failed", "")
 	}
 
@@ -384,14 +392,14 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	token, err := h.oauthConfig.Exchange(ctx, code)
 	if err != nil {
 		errCode, detail := classifyExchangeError(err)
-		log.Printf("[Auth] Token exchange failed (%s): %v", errCode, err)
+		slog.Error(fmt.Sprintf("[Auth] Token exchange failed (%s): %v", errCode, err))
 		return h.oauthErrorRedirect(c, errCode, detail)
 	}
 
 	// Get user info from GitHub
 	ghUser, err := h.getGitHubUser(token.AccessToken)
 	if err != nil {
-		log.Printf("[Auth] Failed to get GitHub user: %v", err)
+		slog.Error(fmt.Sprintf("[Auth] Failed to get GitHub user: %v", err))
 		detail := err.Error()
 		return h.oauthErrorRedirect(c, "user_fetch_failed", detail)
 	}
@@ -399,7 +407,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	// Find or create user
 	user, err := h.store.GetUserByGitHubID(fmt.Sprintf("%d", ghUser.ID))
 	if err != nil {
-		log.Printf("[Auth] Database error getting user: %v", err)
+		slog.Error(fmt.Sprintf("[Auth] Database error getting user: %v", err))
 		return h.oauthErrorRedirect(c, "db_error", "")
 	}
 
@@ -413,7 +421,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 			Onboarded:   h.skipOnboarding, // Skip questionnaire if SKIP_ONBOARDING=true
 		}
 		if err := h.store.CreateUser(user); err != nil {
-			log.Printf("[Auth] Failed to create user: %v", err)
+			slog.Error(fmt.Sprintf("[Auth] Failed to create user: %v", err))
 			return h.oauthErrorRedirect(c, "create_user_failed", "")
 		}
 	} else {
@@ -430,7 +438,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	// Generate JWT
 	jwtToken, err := h.generateJWT(user)
 	if err != nil {
-		log.Printf("[Auth] JWT generation failed: %v", err)
+		slog.Error(fmt.Sprintf("[Auth] JWT generation failed: %v", err))
 		return h.oauthErrorRedirect(c, "jwt_failed", "")
 	}
 
@@ -480,7 +488,7 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	// Clear the HttpOnly cookie so the browser stops sending it
 	h.clearJWTCookie(c)
 
-	log.Printf("[Auth] Token revoked for user %s (jti: %s)", claims.GitHubLogin, claims.ID)
+	slog.Info(fmt.Sprintf("[Auth] Token revoked for user %s (jti: %s)", claims.GitHubLogin, claims.ID))
 	return c.JSON(fiber.Map{"success": true, "message": "Token revoked"})
 }
 

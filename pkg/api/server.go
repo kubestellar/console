@@ -5,13 +5,13 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
-	"sort"
 	"runtime/debug"
+	"sort"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -28,9 +28,9 @@ import (
 	"github.com/kubestellar/console/pkg/agent"
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/kagent"
 	"github.com/kubestellar/console/pkg/kagenti_provider"
-	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/mcp"
 	"github.com/kubestellar/console/pkg/notifications"
 	"github.com/kubestellar/console/pkg/settings"
@@ -38,13 +38,13 @@ import (
 )
 
 const (
-	serverShutdownTimeout  = 30 * time.Second
-	serverHealthTimeout    = 2 * time.Second
-	serverStartupDelay     = 50 * time.Millisecond
-	portReleaseTimeout     = 3 * time.Second
+	serverShutdownTimeout   = 30 * time.Second
+	serverHealthTimeout     = 2 * time.Second
+	serverStartupDelay      = 50 * time.Millisecond
+	portReleaseTimeout      = 3 * time.Second
 	portReleasePollInterval = 50 * time.Millisecond
-	defaultDevFrontendURL  = "http://localhost:5174"
-	defaultProdFrontendURL = "http://localhost:8080"
+	defaultDevFrontendURL   = "http://localhost:5174"
+	defaultProdFrontendURL  = "http://localhost:8080"
 )
 
 // Version is the build version, injected via ldflags at build time.
@@ -53,7 +53,7 @@ var Version = "dev"
 
 // buildInfo holds VCS metadata extracted from the Go binary at startup.
 var buildInfo struct {
-	GoVersion  string
+	GoVersion   string
 	VCSRevision string
 	VCSTime     string
 	VCSModified string
@@ -79,19 +79,19 @@ func init() {
 
 // Config holds server configuration
 type Config struct {
-	Port             int
-	DevMode          bool
-	SkipOnboarding   bool
-	DatabasePath     string
-	GitHubClientID   string
-	GitHubSecret     string
-	GitHubURL        string // GitHub base URL (e.g., "https://github.ibm.com"), defaults to "https://github.com"
-	JWTSecret        string
-	FrontendURL      string
-	ClaudeAPIKey     string
+	Port                  int
+	DevMode               bool
+	SkipOnboarding        bool
+	DatabasePath          string
+	GitHubClientID        string
+	GitHubSecret          string
+	GitHubURL             string // GitHub base URL (e.g., "https://github.ibm.com"), defaults to "https://github.com"
+	JWTSecret             string
+	FrontendURL           string
+	ClaudeAPIKey          string
 	KubestellarOpsPath    string
 	KubestellarDeployPath string
-	Kubeconfig       string
+	Kubeconfig            string
 	// Dev mode user settings (used when GitHub OAuth not configured)
 	DevUserLogin  string
 	DevUserEmail  string
@@ -101,9 +101,9 @@ type Config struct {
 	// Resolved from FEEDBACK_GITHUB_TOKEN env var, falling back to GITHUB_TOKEN.
 	GitHubToken string
 	// Feature request/feedback configuration (repo targeting, not token)
-	GitHubWebhookSecret  string // Secret for validating GitHub webhooks
-	FeedbackRepoOwner    string // GitHub org/owner (e.g., "kubestellar")
-	FeedbackRepoName     string // GitHub repo name (e.g., "console")
+	GitHubWebhookSecret string // Secret for validating GitHub webhooks
+	FeedbackRepoOwner   string // GitHub org/owner (e.g., "kubestellar")
+	FeedbackRepoName    string // GitHub repo name (e.g., "console")
 	// GitHub activity rewards
 	RewardsGitHubOrgs string // Org filter for GitHub search (e.g., "org:kubestellar org:llm-d")
 	// Benchmark data configuration (Google Drive)
@@ -161,14 +161,17 @@ func NewServer(cfg Config) (*Server, error) {
 		}
 	}
 
-	// JWT secret handling
+	// JWT secret handling — in dev mode, a random secret is generated on each
+	// startup, which means existing JWTs (browser cookies, WebSocket tokens) are
+	// invalidated on restart. Set JWT_SECRET in .env to persist across restarts.
 	if cfg.JWTSecret == "" {
 		if cfg.DevMode {
 			cfg.JWTSecret = generateDevSecret()
-			log.Println("WARNING: Using dev-mode JWT secret. Set JWT_SECRET env var for production.")
+			slog.Warn("Using auto-generated JWT secret (tokens will not survive restart). Set JWT_SECRET in .env to persist sessions across restarts.")
 		} else {
-			log.Fatal("FATAL: JWT_SECRET environment variable is required in production mode. " +
+			slog.Error("FATAL: JWT_SECRET environment variable is required in production mode. " +
 				"Set JWT_SECRET to a cryptographically secure random string (at least 32 characters).")
+			os.Exit(1)
 		}
 	}
 
@@ -198,7 +201,7 @@ func NewServer(cfg Config) (*Server, error) {
 	// screenshot uploads in the POST /api/feedback/requests endpoint. Non-feedback
 	// POST routes are protected by a tighter per-route body-size middleware
 	// (apiDefaultBodyLimit) to limit memory pressure from oversized requests.
-	const feedbackBodyLimit = 20 * 1024 * 1024  // 20 MB — base64 screenshot uploads
+	const feedbackBodyLimit = 20 * 1024 * 1024 // 20 MB — base64 screenshot uploads
 	app := fiber.New(fiber.Config{
 		ErrorHandler:    customErrorHandler,
 		ReadBufferSize:  16384,
@@ -218,12 +221,12 @@ func NewServer(cfg Config) (*Server, error) {
 	// Initialize Kubernetes multi-cluster client
 	k8sClient, err := k8s.NewMultiClusterClient(cfg.Kubeconfig)
 	if err != nil {
-		log.Println("No kubeconfig found — connect clusters via Settings or place a kubeconfig at ~/.kube/config")
+		slog.Info("No kubeconfig found — connect clusters via Settings or place a kubeconfig at ~/.kube/config")
 	} else {
 		if err := k8sClient.LoadConfig(); err != nil {
-			log.Println("No kubeconfig found — connect clusters via Settings or place a kubeconfig at ~/.kube/config")
+			slog.Info("No kubeconfig found — connect clusters via Settings or place a kubeconfig at ~/.kube/config")
 		} else {
-			log.Println("Kubernetes client initialized successfully")
+			slog.Info("Kubernetes client initialized successfully")
 			// Warmup: probe all clusters to populate health cache before serving.
 			// Without this, first load hits ALL clusters (including offline) = 30s+ load.
 			k8sClient.WarmupHealthCache()
@@ -232,7 +235,7 @@ func NewServer(cfg Config) (*Server, error) {
 					Type: "kubeconfig_changed",
 					Data: map[string]string{"message": "Kubeconfig updated"},
 				})
-				log.Println("Broadcasted kubeconfig change to all clients")
+				slog.Info("Broadcasted kubeconfig change to all clients")
 			})
 			if err := k8sClient.StartWatching(); err != nil {
 				// Watcher fails when kubeconfig doesn't exist — already logged above
@@ -243,7 +246,7 @@ func NewServer(cfg Config) (*Server, error) {
 
 	// Initialize AI providers
 	if err := agent.InitializeProviders(); err != nil {
-		log.Println("AI features disabled — add API keys in Settings to enable")
+		slog.Info("AI features disabled — add API keys in Settings to enable")
 	}
 
 	// Initialize MCP bridge (starts in background)
@@ -259,31 +262,31 @@ func NewServer(cfg Config) (*Server, error) {
 			defer cancel()
 			if err := bridge.Start(ctx); err != nil {
 				// MCP tools not installed — expected for local binary quickstart
-				log.Printf("MCP bridge not available (install kubestellar-ops/deploy plugins to enable)")
+				slog.Info("MCP bridge not available (install kubestellar-ops/deploy plugins to enable)")
 			} else {
-				log.Println("MCP bridge started successfully")
+				slog.Info("MCP bridge started successfully")
 			}
 		}()
 	}
 
 	// Initialize notification service
 	notificationService := notifications.NewService()
-	log.Println("Notification service initialized")
+	slog.Info("Notification service initialized")
 
 	// Initialize persistence store
 	persistenceConfigPath := filepath.Join(filepath.Dir(cfg.DatabasePath), "persistence.json")
 	persistenceStore := store.NewPersistenceStore(persistenceConfigPath)
 	if err := persistenceStore.Load(); err != nil {
-		log.Printf("Warning: Failed to load persistence config: %v", err)
+		slog.Error(fmt.Sprintf("Warning: Failed to load persistence config: %v", err))
 	}
-	log.Println("Persistence store initialized")
+	slog.Info("Persistence store initialized")
 
 	// Initialize persistent settings manager
 	settingsManager := settings.GetSettingsManager()
 	if err := settingsManager.MigrateFromConfigYaml(agent.GetConfigManager()); err != nil {
-		log.Printf("Warning: Failed to migrate settings from config.yaml: %v", err)
+		slog.Error(fmt.Sprintf("Warning: Failed to migrate settings from config.yaml: %v", err))
 	}
-	log.Printf("Settings manager initialized (%s)", settingsManager.GetSettingsPath())
+	slog.Info(fmt.Sprintf("Settings manager initialized (%s)", settingsManager.GetSettingsPath()))
 
 	server := &Server{
 		app:                 app,
@@ -306,7 +309,7 @@ func NewServer(cfg Config) (*Server, error) {
 		server.gpuUtilWorker.Start()
 	}
 
-	log.Println("Server initialization complete")
+	slog.Info("Server initialization complete")
 
 	return server, nil
 }
@@ -326,9 +329,9 @@ func startLoadingServer(addr string) *http.Server {
 
 	srv := &http.Server{Addr: addr, Handler: mux}
 	go func() {
-		log.Printf("Loading page available on %s", addr)
+		slog.Info(fmt.Sprintf("Loading page available on %s", addr))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Printf("Loading server error: %v", err)
+			slog.Error(fmt.Sprintf("Loading server error: %v", err))
 		}
 	}()
 	// Give the listener time to bind
@@ -439,18 +442,18 @@ func (s *Server) setupRoutes() {
 			"install_method":   detectInstallMethod(inCluster),
 			"project":          s.config.ConsoleProject,
 			"branding": fiber.Map{
-				"appName":           s.config.BrandAppName,
-				"appShortName":      s.config.BrandAppShortName,
-				"tagline":           s.config.BrandTagline,
-				"logoUrl":           s.config.BrandLogoURL,
-				"faviconUrl":        s.config.BrandFaviconURL,
-				"themeColor":        s.config.BrandThemeColor,
-				"docsUrl":           s.config.BrandDocsURL,
-				"communityUrl":      s.config.BrandCommunityURL,
-				"websiteUrl":        s.config.BrandWebsiteURL,
-				"issuesUrl":         s.config.BrandIssuesURL,
-				"repoUrl":           s.config.BrandRepoURL,
-				"hostedDomain":      s.config.BrandHostedDomain,
+				"appName":            s.config.BrandAppName,
+				"appShortName":       s.config.BrandAppShortName,
+				"tagline":            s.config.BrandTagline,
+				"logoUrl":            s.config.BrandLogoURL,
+				"faviconUrl":         s.config.BrandFaviconURL,
+				"themeColor":         s.config.BrandThemeColor,
+				"docsUrl":            s.config.BrandDocsURL,
+				"communityUrl":       s.config.BrandCommunityURL,
+				"websiteUrl":         s.config.BrandWebsiteURL,
+				"issuesUrl":          s.config.BrandIssuesURL,
+				"repoUrl":            s.config.BrandRepoURL,
+				"hostedDomain":       s.config.BrandHostedDomain,
 				"showStarDecoration": s.config.ConsoleProject == "kubestellar",
 				"showAdopterNudge":   s.config.ConsoleProject == "kubestellar",
 				"showDemoToLocalCTA": s.config.ConsoleProject == "kubestellar",
@@ -490,22 +493,22 @@ func (s *Server) setupRoutes() {
 
 	// Auth routes (public)
 	auth := handlers.NewAuthHandler(s.store, handlers.AuthConfig{
-		GitHubClientID:   s.config.GitHubClientID,
-		GitHubSecret:     s.config.GitHubSecret,
-		GitHubURL:        s.config.GitHubURL,
-		JWTSecret:        s.config.JWTSecret,
-		FrontendURL:      s.config.FrontendURL,
-		BackendURL:       s.backendURL(),
-		DevUserLogin:     s.config.DevUserLogin,
-		DevUserEmail:     s.config.DevUserEmail,
-		DevUserAvatar:    s.config.DevUserAvatar,
-		GitHubToken:      s.config.GitHubToken,
-		DevMode:          s.config.DevMode,
-		SkipOnboarding:   s.config.SkipOnboarding,
+		GitHubClientID: s.config.GitHubClientID,
+		GitHubSecret:   s.config.GitHubSecret,
+		GitHubURL:      s.config.GitHubURL,
+		JWTSecret:      s.config.JWTSecret,
+		FrontendURL:    s.config.FrontendURL,
+		BackendURL:     s.backendURL(),
+		DevUserLogin:   s.config.DevUserLogin,
+		DevUserEmail:   s.config.DevUserEmail,
+		DevUserAvatar:  s.config.DevUserAvatar,
+		GitHubToken:    s.config.GitHubToken,
+		DevMode:        s.config.DevMode,
+		SkipOnboarding: s.config.SkipOnboarding,
 	})
 	// Rate limit auth endpoints — stricter to prevent brute-force
-	authLimiterMaxRequests := 10            // max requests per window
-	authLimiterWindow := 1 * time.Minute    // sliding window duration
+	authLimiterMaxRequests := 10         // max requests per window
+	authLimiterWindow := 1 * time.Minute // sliding window duration
 	authLimiter := limiter.New(limiter.Config{
 		Max:        authLimiterMaxRequests,
 		Expiration: authLimiterWindow,
@@ -590,8 +593,8 @@ func (s *Server) setupRoutes() {
 	missions.RegisterPublicRoutes(s.app.Group("/api/missions"))
 
 	// API routes (protected) — with rate limiting
-	apiLimiterMaxRequests := 200            // max requests per window per IP
-	apiLimiterWindow := 1 * time.Minute     // sliding window duration
+	apiLimiterMaxRequests := 200        // max requests per window per IP
+	apiLimiterWindow := 1 * time.Minute // sliding window duration
 	apiLimiter := limiter.New(limiter.Config{
 		Max:        apiLimiterMaxRequests,
 		Expiration: apiLimiterWindow,
@@ -1142,11 +1145,11 @@ func (s *Server) Start() error {
 		// Wait for the OS to fully release the port instead of a fixed sleep.
 		// The previous 50ms sleep was insufficient on some systems.
 		if err := waitForPortRelease(listenPort, portReleaseTimeout); err != nil {
-			log.Printf("Warning: port %d may not be fully released: %v", listenPort, err)
+			slog.Warn(fmt.Sprintf("Warning: port %d may not be fully released: %v", listenPort, err))
 		}
 	}
 
-	log.Printf("Starting server on %s (dev=%v)", addr, s.config.DevMode)
+	slog.Info(fmt.Sprintf("Starting server on %s (dev=%v)", addr, s.config.DevMode))
 	return s.app.Listen(addr)
 }
 
@@ -1189,7 +1192,7 @@ func (s *Server) Shutdown() error {
 	}
 	if s.bridge != nil {
 		if err := s.bridge.Stop(); err != nil {
-			log.Printf("Warning: MCP bridge shutdown error: %v", err)
+			slog.Error(fmt.Sprintf("Warning: MCP bridge shutdown error: %v", err))
 		}
 	}
 	if err := s.store.Close(); err != nil {
@@ -1222,7 +1225,7 @@ func LoadConfigFromEnv() Config {
 	var backendPort int
 	if p := os.Getenv("BACKEND_PORT"); p != "" {
 		if v, err := strconv.Atoi(p); err != nil {
-			log.Printf("WARNING: invalid BACKEND_PORT %q, ignoring: %v", p, err)
+			slog.Warn(fmt.Sprintf("WARNING: invalid BACKEND_PORT %q, ignoring: %v", p, err))
 		} else {
 			backendPort = v
 		}
@@ -1248,30 +1251,30 @@ func LoadConfigFromEnv() Config {
 	// deployments should set these to avoid routing user actions to the
 	// upstream kubestellar repositories.  See #2826.
 	warnDefaultEnvVars(map[string]string{
-		"FEEDBACK_REPO_OWNER":  "kubestellar",
-		"FEEDBACK_REPO_NAME":   "console",
-		"REWARDS_GITHUB_ORGS":  "repo:kubestellar/console repo:kubestellar/console-marketplace repo:kubestellar/console-kb repo:kubestellar/docs",
+		"FEEDBACK_REPO_OWNER": "kubestellar",
+		"FEEDBACK_REPO_NAME":  "console",
+		"REWARDS_GITHUB_ORGS": "repo:kubestellar/console repo:kubestellar/console-marketplace repo:kubestellar/console-kb repo:kubestellar/docs",
 	})
 
 	return Config{
-		Port:             port,
-		DevMode:          devMode,
-		DatabasePath:     dbPath,
-		GitHubClientID:   os.Getenv("GITHUB_CLIENT_ID"),
-		GitHubSecret:     os.Getenv("GITHUB_CLIENT_SECRET"),
-		GitHubURL:        getEnvOrDefault("GITHUB_URL", "https://github.com"),
-		JWTSecret:        jwtSecret,
-		FrontendURL:      frontendURL,
-		ClaudeAPIKey:     os.Getenv("CLAUDE_API_KEY"),
+		Port:                  port,
+		DevMode:               devMode,
+		DatabasePath:          dbPath,
+		GitHubClientID:        os.Getenv("GITHUB_CLIENT_ID"),
+		GitHubSecret:          os.Getenv("GITHUB_CLIENT_SECRET"),
+		GitHubURL:             getEnvOrDefault("GITHUB_URL", "https://github.com"),
+		JWTSecret:             jwtSecret,
+		FrontendURL:           frontendURL,
+		ClaudeAPIKey:          os.Getenv("CLAUDE_API_KEY"),
 		KubestellarOpsPath:    getEnvOrDefault("KUBESTELLAR_OPS_PATH", "kubestellar-ops"),
 		KubestellarDeployPath: getEnvOrDefault("KUBESTELLAR_DEPLOY_PATH", "kubestellar-deploy"),
-		Kubeconfig:       os.Getenv("KUBECONFIG"),
+		Kubeconfig:            os.Getenv("KUBECONFIG"),
 		// Dev mode user settings
 		DevUserLogin:  getEnvOrDefault("DEV_USER_LOGIN", "dev-user"),
 		DevUserEmail:  getEnvOrDefault("DEV_USER_EMAIL", "dev@localhost"),
 		DevUserAvatar: getEnvOrDefault("DEV_USER_AVATAR", ""),
 		// Consolidated GitHub token (FEEDBACK_GITHUB_TOKEN preferred, GITHUB_TOKEN as alias)
-		GitHubToken: settings.ResolveGitHubTokenEnv(),
+		GitHubToken:         settings.ResolveGitHubTokenEnv(),
 		GitHubWebhookSecret: os.Getenv("GITHUB_WEBHOOK_SECRET"),
 		FeedbackRepoOwner:   getEnvOrDefault("FEEDBACK_REPO_OWNER", "kubestellar"),
 		FeedbackRepoName:    getEnvOrDefault("FEEDBACK_REPO_NAME", "console"),
@@ -1323,9 +1326,9 @@ func warnDefaultEnvVars(vars map[string]string) {
 	for _, envVar := range keys {
 		defaultVal := vars[envVar]
 		if os.Getenv(envVar) == "" {
-			log.Printf("WARNING: %s is not set, using default %q — "+
+			slog.Warn(fmt.Sprintf("WARNING: %s is not set, using default %q — "+
 				"set this env var for fork/enterprise deployments to avoid "+
-				"routing actions to the upstream repository", envVar, defaultVal)
+				"routing actions to the upstream repository", envVar, defaultVal))
 		}
 	}
 }
@@ -1340,7 +1343,7 @@ func generateDevSecret() string {
 	if _, err := rand.Read(b); err != nil {
 		// crypto/rand.Read should never fail on supported platforms;
 		// if it does, fall back to a logged warning and a best-effort value.
-		log.Printf("WARNING: crypto/rand.Read failed: %v — using fallback", err)
+		slog.Error(fmt.Sprintf("WARNING: crypto/rand.Read failed: %v — using fallback", err))
 		return fmt.Sprintf("dev-fallback-%d", b)
 	}
 	return hex.EncodeToString(b)
