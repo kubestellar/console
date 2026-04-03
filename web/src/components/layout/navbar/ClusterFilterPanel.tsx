@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { Search, Server, Activity, Filter, Check, AlertTriangle, Plus, FolderKanban, X, Trash2, WifiOff } from 'lucide-react'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useGlobalFilters, SEVERITY_LEVELS, SEVERITY_CONFIG, STATUS_LEVELS, STATUS_CONFIG } from '../../../hooks/useGlobalFilters'
-import { Button } from '../../ui/Button'
 import { cn } from '../../../lib/cn'
 
 /** Color palette for project/cluster groups */
@@ -171,57 +170,40 @@ export function ClusterFilterPanel() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Build trigger label
-  const triggerLabel = activeGroup
-    ? activeGroup.name
-    : isFiltered
-      ? t('common:filters.active', 'Filtered')
-      : t('common:filters.all', 'All')
-
   return (
     <>
       {/* Clear Filters Button - shows when filters active */}
       {isFiltered && (
-        <Button
-          variant="accent"
-          size="sm"
+        <button
           onClick={() => {
             selectAllClusters()
             selectAllSeverities()
             selectAllStatuses()
             clearCustomFilter()
           }}
-          icon={<X className="w-3 h-3" />}
+          className="flex items-center justify-center w-7 h-7 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
           title={t('common:filters.clearAll', 'Clear all filters')}
         >
-          <span className="hidden sm:inline">{t('common:filters.clear', 'Clear')}</span>
-        </Button>
+          <X className="w-3.5 h-3.5" />
+        </button>
       )}
 
-      {/* Unified Filter Button */}
+      {/* Filter icon button — icon only, purple glow when active */}
       <div className="relative" ref={clusterRef}>
         <button
           onClick={() => setShowClusterFilter(!showClusterFilter)}
           className={cn(
-            'flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors',
+            'relative flex items-center justify-center w-8 h-8 rounded-lg transition-colors',
             isFiltered
-              ? 'bg-purple-500/20 text-purple-400'
+              ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_8px_rgba(139,92,246,0.3)]'
               : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
           )}
           title={isFiltered ? 'Filters active - click to modify' : 'No filters - click to filter'}
         >
-          {activeGroup?.color && (
-            <span
-              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-              style={{ backgroundColor: activeGroup.color }}
-            />
-          )}
           <Filter className="w-4 h-4" />
-          <span className="text-xs font-medium hidden sm:inline max-w-[120px] truncate">
-            {triggerLabel}
-          </span>
-          {isFiltered && !activeGroup && (
-            <span className="w-2 h-2 bg-purple-400 rounded-full" />
+          {/* Active dot indicator */}
+          {isFiltered && (
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-purple-400 rounded-full" />
           )}
         </button>
 
