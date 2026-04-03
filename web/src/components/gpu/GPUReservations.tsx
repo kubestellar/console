@@ -13,7 +13,7 @@ import {
   User,
   LayoutDashboard,
 } from 'lucide-react'
-import { BaseModal } from '../../lib/modals'
+import { BaseModal, useModalState } from '../../lib/modals'
 import {
   useGPUNodes,
   useResourceQuotas,
@@ -97,7 +97,7 @@ export function GPUReservations() {
   const [showOnlyMine, setShowOnlyMine] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [prefillDate, setPrefillDate] = useState<string | null>(null)
-  const [showAddCardModal, setShowAddCardModal] = useState(false)
+  const { isOpen: showAddCardModal, open: openAddCardModal, close: closeAddCardModal } = useModalState()
 
   // Dashboard tab: customizable GPU cards persisted to localStorage
   const GPU_DASHBOARD_STORAGE_KEY = 'gpu-dashboard-tab-cards'
@@ -118,8 +118,8 @@ export function GPUReservations() {
       safeSetJSON(GPU_DASHBOARD_STORAGE_KEY, updated)
       return updated
     })
-    setShowAddCardModal(false)
-  }, [])
+    closeAddCardModal()
+  }, [closeAddCardModal])
   const handleRemoveDashboardCard = useCallback((index: number) => {
     setDashboardCards(prev => {
       const updated = prev.filter((_, i) => i !== index)
@@ -631,14 +631,14 @@ export function GPUReservations() {
           onRemoveDashboardCard={handleRemoveDashboardCard}
           onDashCardWidthChange={handleDashCardWidthChange}
           onTriggerRefresh={triggerRefresh}
-          onShowAddCardModal={() => setShowAddCardModal(true)}
+          onShowAddCardModal={openAddCardModal}
         />
       )}
 
       {/* Add Card Modal */}
       <AddCardModal
         isOpen={showAddCardModal}
-        onClose={() => setShowAddCardModal(false)}
+        onClose={closeAddCardModal}
         onAddCards={handleAddDashboardCards}
         existingCardTypes={dashboardCards.map(c => c.type)}
       />

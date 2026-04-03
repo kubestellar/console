@@ -136,7 +136,6 @@ const KNOWN_VIOLATIONS: Record<string, Set<string>> = {
   'OverlayComparison.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
   'PodHealthTrend.tsx': new Set(['bare-isLoading']),
   'PredictiveHealth.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
-  'ProactiveGPUNodeHealthMonitor.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
   'RBACExplorer.tsx': new Set(['bare-isLoading']),
   'RecommendedPolicies.tsx': new Set(['missing-isRefreshing']),
   'ResourceMarshall.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
@@ -163,7 +162,6 @@ const KNOWN_FAILURE_VIOLATIONS: Record<string, Set<string>> = {
   'ClusterNetwork.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
   'console-missions/ConsoleKubeconfigAuditCard.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
   'console-missions/ConsoleOfflineDetectionCard.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'CrossClusterPolicyComparison.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
   'FleetComplianceHeatmap.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
   'GPUNamespaceAllocations.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
   'GPUStatus.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
@@ -413,7 +411,7 @@ describe('Card Loading State Gold Standard', () => {
       // This number MUST ONLY DECREASE. If you fix a card, remove it from
       // KNOWN_VIOLATIONS and decrease this count. If this test fails because
       // the count dropped, that's great — update the expected count!
-      const EXPECTED_KNOWN_VIOLATION_COUNT = 77
+      const EXPECTED_KNOWN_VIOLATION_COUNT = 75
       expect(totalKnown).toBeLessThanOrEqual(EXPECTED_KNOWN_VIOLATION_COUNT)
     })
 
@@ -424,7 +422,7 @@ describe('Card Loading State Gold Standard', () => {
       }
 
       // Separate ratchet for isRefreshing violations. MUST ONLY DECREASE.
-      const EXPECTED_REFRESH_VIOLATION_COUNT = 28
+      const EXPECTED_REFRESH_VIOLATION_COUNT = 27
       expect(refreshCount).toBeLessThanOrEqual(EXPECTED_REFRESH_VIOLATION_COUNT)
     })
 
@@ -436,7 +434,7 @@ describe('Card Loading State Gold Standard', () => {
 
       // Separate ratchet for failure-wiring violations. MUST ONLY DECREASE.
       // Each card entry has 2 violations (missing-isFailed + missing-consecutiveFailures).
-      const EXPECTED_FAILURE_VIOLATION_COUNT = 54
+      const EXPECTED_FAILURE_VIOLATION_COUNT = 52
       expect(failureCount).toBeLessThanOrEqual(EXPECTED_FAILURE_VIOLATION_COUNT)
     })
   })
