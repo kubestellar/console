@@ -75,6 +75,12 @@
   to = "/.netlify/functions/analytics-dashboard"
   status = 200
 
+# YouTube playlist API — proxy to Netlify Function
+[[redirects]]
+  from = "/api/youtube/playlist"
+  to = "/.netlify/functions/youtube-playlist"
+  status = 200
+
 # Analytics dashboard page — serve static HTML
 [[redirects]]
   from = "/analytics"
