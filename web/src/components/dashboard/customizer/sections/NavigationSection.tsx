@@ -13,7 +13,9 @@ interface NavigationSectionProps {
 export function NavigationSection({ onClose }: NavigationSectionProps) {
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <SidebarCustomizer isOpen={true} onClose={onClose} embedded />
+      <div className="max-w-3xl mx-auto w-full h-full flex flex-col">
+        <SidebarCustomizer isOpen={true} onClose={onClose} embedded />
+      </div>
     </div>
   )
 }

@@ -692,7 +692,7 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
             )}
           </div>
 
-          {/* Available Dashboard Templates */}
+          {/* Available Card Collections */}
           <div className="mb-4">
             <button
               onClick={() => setExpandedSection(expandedSection === 'templates' ? null : 'templates')}
@@ -704,8 +704,8 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
               )}
               <Sparkles className="w-4 h-4 text-purple-400" />
-              <span className="text-sm font-medium text-foreground">{t('sidebar.customizer.availableTemplates')}</span>
-              <span className="text-xs text-muted-foreground">({t('sidebar.customizer.templates', { count: DASHBOARD_TEMPLATES.length })})</span>
+              <span className="text-sm font-medium text-foreground">Card Collections</span>
+              <span className="text-xs text-muted-foreground">({DASHBOARD_TEMPLATES.length} collections)</span>
             </button>
             {expandedSection === 'templates' && (
               <div className="space-y-2 pl-2">

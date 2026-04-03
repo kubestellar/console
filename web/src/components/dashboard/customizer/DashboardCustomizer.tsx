@@ -6,15 +6,13 @@
  */
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Palette } from 'lucide-react'
+import { Palette, Undo2, Redo2, RotateCcw } from 'lucide-react'
 import { BaseModal } from '../../../lib/modals'
 import { DashboardCustomizerSidebar } from './DashboardCustomizerSidebar'
 import { PreviewPanel } from './PreviewPanel'
 import { UnifiedCardsSection } from './sections/UnifiedCardsSection'
 import { NavigationSection } from './sections/NavigationSection'
 import { TemplateGallerySection } from './sections/TemplateGallerySection'
-import { CardFactoryModal } from '../CardFactoryModal'
-import { StatBlockFactoryModal } from '../StatBlockFactoryModal'
 import { DEFAULT_SECTION, type CustomizerSection } from './customizerNav'
 import type { CardSuggestion, HoveredCard } from '../shared/cardCatalog'
 import type { DashboardTemplate } from '../templates'
@@ -49,12 +47,12 @@ export function DashboardCustomizer({
   initialSection,
   initialSearch = '',
   onApplyTemplate,
-  onReset: _onReset,
-  isCustomized: _isCustomized = false,
-  onUndo: _onUndo,
-  onRedo: _onRedo,
-  canUndo: _canUndo = false,
-  canRedo: _canRedo = false,
+  onReset,
+  isCustomized = false,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
 }: DashboardCustomizerProps) {
   const { t: _t } = useTranslation()
   const t = _t as (key: string, defaultValue?: string) => string
@@ -99,32 +97,6 @@ export function DashboardCustomizer({
             />
           )}
 
-          {activeSection === 'card-factory' && (
-            <CardFactoryModal
-              isOpen={true}
-              onClose={() => setActiveSection('cards')}
-              onCardCreated={(cardId) => {
-                onAddCards([{
-                  type: 'dynamic_card',
-                  title: t('dashboard.addCard.customCard', 'Custom Card'),
-                  description: t('dashboard.addCard.dynamicallyCreated', 'Dynamically created card'),
-                  visualization: 'status',
-                  config: { dynamicCardId: cardId },
-                }])
-                setActiveSection('cards')
-              }}
-              embedded
-            />
-          )}
-
-          {activeSection === 'stat-factory' && (
-            <StatBlockFactoryModal
-              isOpen={true}
-              onClose={() => setActiveSection('cards')}
-              embedded
-            />
-          )}
-
           {activeSection === 'dashboards' && (
             <NavigationSection onClose={onClose} />
           )}
@@ -141,6 +113,40 @@ export function DashboardCustomizer({
           <PreviewPanel hoveredCard={hoveredCard} />
         )}
       </div>
+
+      {/* Footer — dashboard actions (undo/redo/reset) */}
+      {(canUndo || canRedo || (isCustomized && onReset)) && (
+        <div className="border-t border-border px-4 py-2 flex items-center gap-2">
+          <button
+            onClick={onUndo}
+            disabled={!canUndo}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            <Undo2 className="w-3.5 h-3.5" />
+            Undo
+          </button>
+          <button
+            onClick={onRedo}
+            disabled={!canRedo}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            <Redo2 className="w-3.5 h-3.5" />
+            Redo
+          </button>
+          {isCustomized && onReset && (
+            <>
+              <div className="flex-1" />
+              <button
+                onClick={onReset}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-md transition-colors"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Reset Dashboard
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </BaseModal>
   )
 }

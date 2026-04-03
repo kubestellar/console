@@ -1146,7 +1146,7 @@ export function Dashboard() {
       <DashboardCustomizer
         isOpen={isAddCardModalOpen}
         onClose={() => { closeAddCardModal(); setAddCardSearch(''); setInsertAtIndex(null) }}
-        dashboardName={dashboard?.name || 'Dashboard'}
+        dashboardName={dashboard?.name || 'Main Dashboard'}
         onAddCards={handleAddCards}
         existingCardTypes={currentCardTypes}
         initialSearch={addCardSearch}
