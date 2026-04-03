@@ -836,7 +836,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
           <div className="flex items-center gap-1 pb-2">
             {tabs.map(t => (
               <button key={t.id} onClick={() => handleTabChange(t.id)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${tab === t.id ? 'bg-purple-500/20 text-purple-400' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}>
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${tab === t.id ? 'bg-purple-500/20 text-purple-400' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}>
                 {t.label}
               </button>
             ))}

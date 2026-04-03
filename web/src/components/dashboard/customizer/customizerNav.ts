@@ -33,7 +33,7 @@ export const CUSTOMIZER_NAV: NavItem[] = [
   { id: 'dashboards', label: 'Manage Dashboards', icon: LayoutDashboard },
   { id: 'create-dashboard', label: 'Create Custom Dashboard', icon: FolderPlus, dividerBefore: true },
   { id: 'card-factory', label: 'Create Custom Card', icon: Wand2 },
-  { id: 'stat-factory', label: 'Create Stats Card', icon: Activity },
+  { id: 'stat-factory', label: 'Create Stats Row', icon: Activity },
 ]
 
 export const DEFAULT_SECTION: CustomizerSection = 'cards'
