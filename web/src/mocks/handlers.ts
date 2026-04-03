@@ -629,6 +629,18 @@ export const handlers = [
     currentUser.onboarded = true
     return HttpResponse.json({ success: true })
   }),
+
+  // ── Catch-all for unmocked API routes ────────────────────────────
+  // On Netlify, unhandled /api/* and /health requests fall through to the SPA
+  // catch-all which returns index.html (200 OK, text/html). Code calling
+  // .json() then throws "Unexpected token '<'". This catch-all returns a
+  // proper JSON 503 so callers hit their error paths gracefully.
+  http.all('/api/*', () => {
+    return HttpResponse.json(
+      { error: 'not available in demo mode' },
+      { status: 503 },
+    )
+  }),
 ]
 
 // Scenario-based handlers for different test scenarios
