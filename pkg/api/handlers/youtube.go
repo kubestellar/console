@@ -143,3 +143,38 @@ func YouTubePlaylistHandler(c *fiber.Ctx) error {
 		),
 	})
 }
+
+// YouTubeThumbnailProxy proxies a YouTube video thumbnail image through
+// the backend, avoiding MSW/CORS issues in demo mode.
+// Route: GET /api/youtube/thumbnail/:id
+func YouTubeThumbnailProxy(c *fiber.Ctx) error {
+	videoID := c.Params("id")
+	if videoID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing video id"})
+	}
+
+	// Only allow alphanumeric, hyphens, and underscores (YouTube video IDs)
+	for _, ch := range videoID {
+		if !((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '-' || ch == '_') {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid video id"})
+		}
+	}
+
+	url := fmt.Sprintf("https://img.youtube.com/vi/%s/mqdefault.jpg", videoID)
+
+	client := &http.Client{Timeout: playlistFetchTimeout}
+	resp, err := client.Get(url)
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).SendString("failed to fetch thumbnail")
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).SendString("failed to read thumbnail")
+	}
+
+	c.Set("Content-Type", "image/jpeg")
+	c.Set("Cache-Control", "public, max-age=86400")
+	return c.Send(body)
+}

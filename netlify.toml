@@ -81,6 +81,12 @@
   to = "/.netlify/functions/youtube-playlist"
   status = 200
 
+# YouTube thumbnail proxy — serves thumbnails through our origin to avoid MSW blocking
+[[redirects]]
+  from = "/api/youtube/thumbnail/*"
+  to = "/.netlify/functions/youtube-thumbnail"
+  status = 200
+
 # Analytics dashboard page — serve static HTML
 [[redirects]]
   from = "/analytics"

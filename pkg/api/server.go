@@ -587,6 +587,7 @@ func (s *Server) setupRoutes() {
 
 	// YouTube playlist (public — proxies to YouTube RSS feed, cached 1h)
 	s.app.Get("/api/youtube/playlist", handlers.YouTubePlaylistHandler)
+	s.app.Get("/api/youtube/thumbnail/:id", handlers.YouTubeThumbnailProxy)
 
 	// Mission knowledge base browse/file (public — proxies to public GitHub repo)
 	missions := handlers.NewMissionsHandler()
