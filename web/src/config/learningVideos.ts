@@ -7,7 +7,7 @@
  */
 
 export const getYouTubeThumbnailUrl = (videoId: string) =>
-  `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+  `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
 
 export const getYouTubeWatchUrl = (videoId: string) =>
   `https://www.youtube.com/watch?v=${videoId}`
