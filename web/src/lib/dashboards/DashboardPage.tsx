@@ -18,10 +18,9 @@ import {
 import { useDashboard } from './dashboardHooks'
 import type { DashboardCard, DashboardCardPlacement } from './types'
 import { SortableDashboardCard, DragPreviewCard } from './DashboardComponents'
-import { AddCardModal } from '../../components/dashboard/AddCardModal'
-import { TemplatesModal } from '../../components/dashboard/TemplatesModal'
 import { ConfigureCardModal } from '../../components/dashboard/ConfigureCardModal'
 import { FloatingDashboardActions } from '../../components/dashboard/FloatingDashboardActions'
+import { DashboardCustomizer } from '../../components/dashboard/customizer/DashboardCustomizer'
 import { DashboardTemplate } from '../../components/dashboard/templates'
 import { StatsOverview, StatBlockValue } from '../../components/ui/StatsOverview'
 import { DashboardStatsType } from '../../components/ui/StatsBlockDefinitions'
@@ -133,8 +132,10 @@ export function DashboardPage({
     isCustomized,
     showAddCard,
     setShowAddCard,
-    showTemplates,
-    setShowTemplates,
+    // showTemplates and setShowTemplates are no longer used directly —
+    // templates are accessed via the unified DashboardCustomizer
+    showTemplates: _showTemplates,
+    setShowTemplates: _setShowTemplates,
     configuringCard,
     setConfiguringCard,
     openConfigureCard,
@@ -197,14 +198,21 @@ export function DashboardPage({
   const isRefreshing = externalRefreshing || showIndicator
   const isFetching = isLoading || isRefreshing
 
-  // Handle addCard URL param - open modal and clear param.
+  // Handle addCard and customizeSidebar URL params via the DashboardCustomizer.
   // Guard with mounted route: KeepAlive keeps hidden dashboards mounted,
   // so all of them see the same searchParams. Only process when active.
   const [addCardSearch, setAddCardSearch] = useState('')
+  // Determine initial section for DashboardCustomizer based on URL params
+  const [customizerInitialSection, setCustomizerInitialSection] = useState<'cards-browse' | 'nav-sidebar' | undefined>(undefined)
   useEffect(() => {
     if (location.pathname !== mountedRouteRef.current) return
     if (searchParams.get('addCard') === 'true') {
       setAddCardSearch(searchParams.get('cardSearch') || '')
+      setCustomizerInitialSection('cards-browse')
+      setShowAddCard(true)
+      setSearchParams({}, { replace: true })
+    } else if (searchParams.get('customizeSidebar') === 'true') {
+      setCustomizerInitialSection('nav-sidebar')
       setShowAddCard(true)
       setSearchParams({}, { replace: true })
     }
@@ -260,8 +268,9 @@ export function DashboardPage({
     }))
     setCards(newCards)
     expandCards()
-    setShowTemplates(false)
-  }, [setCards, expandCards, setShowTemplates])
+    // Close DashboardCustomizer after applying template
+    setShowAddCard(false)
+  }, [setCards, expandCards, setShowAddCard])
 
   // Merged stat value getter: dashboard-specific first, then universal fallback
   const getStatValue = useCallback(
@@ -408,32 +417,31 @@ export function DashboardPage({
       {/* Dashboard-specific content */}
       {children}
 
-      {/* Floating action buttons */}
+      {/* Floating action button — opens Dashboard Studio */}
       <FloatingDashboardActions
-        onAddCard={() => setShowAddCard(true)}
-        onOpenTemplates={() => setShowTemplates(true)}
-        onResetToDefaults={reset}
-        isCustomized={isCustomized}
+        onOpenCustomizer={() => setShowAddCard(true)}
         onUndo={undo}
         onRedo={redo}
         canUndo={canUndo}
         canRedo={canRedo}
       />
 
-      {/* Add Card Modal */}
-      <AddCardModal
+      {/* Dashboard Studio — unified customization panel */}
+      <DashboardCustomizer
         isOpen={showAddCard}
-        onClose={() => { setShowAddCard(false); setAddCardSearch(''); setInsertAtIndex(null) }}
+        onClose={() => { setShowAddCard(false); setAddCardSearch(''); setInsertAtIndex(null); setCustomizerInitialSection(undefined) }}
         onAddCards={handleAddCards}
         existingCardTypes={cards.map(c => c.card_type)}
+        initialSection={customizerInitialSection}
         initialSearch={addCardSearch}
-      />
-
-      {/* Templates Modal */}
-      <TemplatesModal
-        isOpen={showTemplates}
-        onClose={() => setShowTemplates(false)}
         onApplyTemplate={applyTemplate}
+        onExport={undefined}
+        onReset={reset}
+        isCustomized={isCustomized}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={canUndo}
+        canRedo={canRedo}
       />
 
       {/* Configure Card Modal */}
