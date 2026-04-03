@@ -831,18 +831,16 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
   if (embedded) {
     return (
       <div className="h-full flex flex-col overflow-hidden">
-        {/* Tabs inline */}
-        <div className="px-4 pt-3 border-b border-border">
-          <div className="flex items-center gap-1 pb-2">
-            {tabs.map(t => (
-              <button key={t.id} onClick={() => handleTabChange(t.id)}
-                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${tab === t.id ? 'bg-purple-500/20 text-purple-400' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}>
-                {t.label}
+        <div className="flex-1 overflow-y-auto p-4">
+          {/* Tabs inside scrollable content — matches Card Factory layout */}
+          <div className="flex items-center gap-1 border-b border-border pb-2 mb-4">
+            {tabs.map(tb => (
+              <button key={tb.id} onClick={() => handleTabChange(tb.id)}
+                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${tab === tb.id ? 'bg-purple-500/20 text-purple-400' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}>
+                {tb.label}
               </button>
             ))}
           </div>
-        </div>
-        <div className="flex-1 overflow-y-auto p-4">
           {statContent}
         </div>
         {statConfirmDialog}

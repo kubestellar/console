@@ -225,7 +225,7 @@ function CreateDashboardModalInner({
                             key={template.id}
                             onClick={() => {
                               setSelectedTemplate(template)
-                              setShowTemplates(false)
+                              // Don't collapse — user may want to browse more
                             }}
                             className={`flex items-center gap-2 p-2 rounded-lg text-left transition-all ${
                               selectedTemplate?.id === template.id
@@ -233,10 +233,10 @@ function CreateDashboardModalInner({
                                 : 'bg-secondary/50 border border-transparent hover:border-purple-500/30'
                             }`}
                           >
-                            <span className="text-base">{template.icon}</span>
+                            {(() => { const TplIcon = getIcon(template.icon); return <TplIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" /> })()}
                             <div className="flex-1 min-w-0">
-                              <h4 className="text-[11px] font-medium text-foreground truncate">{template.name}</h4>
-                              <p className="text-[9px] text-muted-foreground">{template.cards.length} {t('dashboard.create.cards')}</p>
+                              <h4 className="text-xs font-medium text-foreground truncate">{template.name}</h4>
+                              <p className="text-xs text-muted-foreground truncate">{template.cards.map(c => c.card_type.replace(/_/g, ' ')).join(', ')}</p>
                             </div>
                           </button>
                         ))}
