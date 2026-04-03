@@ -36,8 +36,30 @@ jobs:
       - name: Build Storybook
         run: npm run build-storybook
 
+      - name: Check for existing baselines
+        id: baselines
+        run: |
+          if ls e2e/visual/visual-regression.spec.ts-snapshots/*.png 1>/dev/null 2>&1; then
+            echo "exist=true" >> $GITHUB_OUTPUT
+          else
+            echo "exist=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate baseline screenshots (first run)
+        if: steps.baselines.outputs.exist == 'false'
+        run: npx playwright test --config e2e/visual/visual.config.ts --update-snapshots
+
       - name: Run visual regression tests
+        if: steps.baselines.outputs.exist == 'true'
         run: npx playwright test --config e2e/visual/visual.config.ts
+
+      - name: Upload baseline screenshots
+        if: steps.baselines.outputs.exist == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-regression-baselines
+          path: web/e2e/visual/visual-regression.spec.ts-snapshots/
+          retention-days: 30
 
       - name: Upload Playwright report
         if: failure()
