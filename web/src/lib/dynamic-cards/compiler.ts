@@ -1,5 +1,5 @@
 import type { CompileResult, DynamicComponentResult } from './types'
-import type { ComponentType } from 'react'
+import { createElement, type ComponentType } from 'react'
 import type { CardComponentProps } from '../../components/cards/cardRegistry'
 import { getDynamicScope } from './scope'
 
@@ -95,7 +95,13 @@ export function createCardComponent(compiledCode: string): DynamicComponentResul
       }
     }
 
-    return { component, error: null, cleanup: timerCleanup }
+    // Wrap the compiled component to guarantee config is always an object.
+    // User-written card code may destructure config (e.g. `const { filter } = config`)
+    // which throws if config is undefined (the prop is optional in CardComponentProps).
+    const SafeComponent: ComponentType<CardComponentProps> = (props) =>
+      createElement(component, { ...props, config: props.config ?? {} })
+
+    return { component: SafeComponent, error: null, cleanup: timerCleanup }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     return { component: null, error: `Runtime error: ${message}` }
