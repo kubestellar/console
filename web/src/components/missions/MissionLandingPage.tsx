@@ -18,6 +18,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { validateMissionExport } from '../../lib/missions/types'
 import type { MissionExport, MissionStep } from '../../lib/missions/types'
 import { getHomeBrowseMissionsRoute } from '../../config/routes'
+import { emitMissionError, emitPageView } from '../../lib/analytics'
 
 // ============================================================================
 // Constants
@@ -278,15 +279,19 @@ export function MissionLandingPage() {
   useEffect(() => {
     if (!missionId) {
       setError('No mission specified')
+      emitMissionError('unknown', 'no_mission_specified')
       setLoading(false)
       return
     }
+
+    emitPageView(`/missions/${missionId}`)
 
     fetchMissionBySlug(missionId).then((result) => {
       if (result) {
         setMission(result.mission)
       } else {
         setError('Mission not found')
+        emitMissionError(missionId, 'mission_not_found')
       }
       setLoading(false)
     })
