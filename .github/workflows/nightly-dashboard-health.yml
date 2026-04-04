@@ -65,6 +65,7 @@ jobs:
           set +e
           npx playwright test \
             e2e/nightly/dashboard-health.spec.ts \
+            e2e/nightly/mission-deeplink.spec.ts \
             -c e2e/nightly/nightly.config.ts \
             --reporter=list,json 2>&1 | tee /tmp/test-output.txt
           TEST_EXIT=$?
