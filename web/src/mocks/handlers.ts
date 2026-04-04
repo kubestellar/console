@@ -636,6 +636,8 @@ export const handlers = [
   // even in demo mode — let them through to the actual backend.
   http.get('/api/youtube/playlist', () => passthrough()),
   http.get('/api/youtube/thumbnail/*', () => passthrough()),
+  http.get('/api/missions/file', () => passthrough()),
+  http.get('/api/missions/browse', () => passthrough()),
 
   // ── Catch-all for unmocked API routes ────────────────────────────
   // On Netlify, unhandled /api/* and /health requests fall through to the SPA
