@@ -40,7 +40,7 @@ function groupDependencies(deps: ResolvedDependency[]) {
 
 export function ResourceMarshall() {
   const { t } = useTranslation()
-  const { deduplicatedClusters: clusters, isLoading } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersFailures } = useClusters()
   const { isDemoMode: demoMode } = useDemoMode()
 
   const [selectedCluster, setSelectedCluster] = useState<string>('')
@@ -54,8 +54,11 @@ export function ResourceMarshall() {
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
     isLoading,
+    isRefreshing: clustersRefreshing,
     hasAnyData: clusters.length > 0,
     isDemoData: demoMode || isDemoFallback,
+    isFailed: clustersFailed,
+    consecutiveFailures: clustersFailures,
   })
 
   // Fetch workloads only when both cluster and namespace are selected.

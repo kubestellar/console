@@ -45,8 +45,8 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
     SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
     [t]
   )
-  const { isLoading: clustersLoading, isRefreshing: clustersRefreshing } = useClusters()
-  const { events: allEvents, isLoading: eventsLoading, isRefreshing: eventsRefreshing, isDemoFallback: eventsDemoFallback } = useCachedWarningEvents()
+  const { isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersFailures } = useClusters()
+  const { events: allEvents, isLoading: eventsLoading, isRefreshing: eventsRefreshing, isDemoFallback: eventsDemoFallback, isFailed: eventsFailed, consecutiveFailures: eventsFailures } = useCachedWarningEvents()
   const { drillToEvents } = useDrillDownActions()
   const { isDemoMode } = useDemoMode()
 
@@ -59,6 +59,8 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
     isRefreshing: clustersRefreshing || eventsRefreshing,
     hasAnyData: hasData,
     isDemoData: eventsDemoFallback || isDemoMode,
+    isFailed: clustersFailed || eventsFailed,
+    consecutiveFailures: Math.max(clustersFailures, eventsFailures),
   })
 
   // Use cascading selection hook for cluster -> namespace

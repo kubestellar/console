@@ -84,6 +84,7 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
   const {
     images: allImages,
     isLoading,
+    isRefreshing,
     isFailed,
     consecutiveFailures,
     error,
@@ -98,6 +99,7 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: clustersLoading || isLoading,
+    isRefreshing,
     hasAnyData: allImages.length > 0,
     isFailed,
     consecutiveFailures,

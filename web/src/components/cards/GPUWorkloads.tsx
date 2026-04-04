@@ -64,9 +64,12 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
   const {
     nodes: gpuNodes,
     isLoading: gpuLoading,
+    isRefreshing: gpuRefreshing,
     isDemoFallback: gpuNodesDemoFallback,
+    isFailed: gpuFailed,
+    consecutiveFailures: gpuFailures,
   } = useCachedGPUNodes()
-  const { pods: allPods, isLoading: podsLoading, isDemoFallback: podsDemoFallback } = useCachedAllPods()
+  const { pods: allPods, isLoading: podsLoading, isRefreshing: podsRefreshing, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedAllPods()
   useClusters() // Keep hook for cache warming
   const { drillToPod } = useDrillDownActions()
 
@@ -80,8 +83,11 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
   const hasData = gpuNodes.length > 0 || allPods.length > 0
   useCardLoadingState({
     isLoading: (gpuLoading || podsLoading) && !hasData,
+    isRefreshing: gpuRefreshing || podsRefreshing,
     hasAnyData: hasData,
     isDemoData,
+    isFailed: gpuFailed || podsFailed,
+    consecutiveFailures: Math.max(gpuFailures, podsFailures),
   })
 
   // Pre-filter pods to only GPU workloads (domain-specific logic before hook)

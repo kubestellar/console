@@ -89,18 +89,17 @@ const KNOWN_VIOLATIONS: Record<string, Set<string>> = {
   // ── bare isLoading violations ──
   'AppStatus.tsx': new Set(['bare-isLoading']),
   'cloudevents_status/useCloudEventsStatus.ts': new Set(['bare-isLoading']),
-  'ClusterChangelog.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
+  'ClusterChangelog.tsx': new Set(['bare-isLoading']),
   'ClusterDropZone.tsx': new Set(['bare-isLoading']),
   'ClusterNetwork.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
   'console-missions/ConsoleHealthCheckCard.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
   'console-missions/ConsoleIssuesCard.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
   'console-missions/ConsoleKubeconfigAuditCard.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
-  'console-missions/ConsoleOfflineDetectionCard.tsx': new Set(['missing-isRefreshing']),
   'coredns_status/CoreDNSStatus.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
   'CRDHealth.tsx': new Set(['bare-isLoading']),
   'crio_status/useCrioStatus.ts': new Set(['bare-isLoading']),
   'crossplane-status/CrossplaneManagedResources.tsx': new Set(['bare-isLoading']),
-  'DeploymentStatus.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
+  'DeploymentStatus.tsx': new Set(['bare-isLoading']),
   'EtcdStatus.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
   'EventsTimeline.tsx': new Set(['bare-isLoading']),
   'EventStream.tsx': new Set(['bare-isLoading']),
@@ -108,12 +107,9 @@ const KNOWN_VIOLATIONS: Record<string, Set<string>> = {
   'fluentd_status/useFluentdStatus.ts': new Set(['bare-isLoading']),
   'GatewayStatus.tsx': new Set(['bare-isLoading']),
   'GPUStatus.tsx': new Set(['bare-isLoading']),
-  'GPUWorkloads.tsx': new Set(['missing-isRefreshing']),
-  'HelmHistory.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
+  'HelmHistory.tsx': new Set(['bare-isLoading']),
   'HelmReleaseStatus.tsx': new Set(['missing-isRefreshing']),
-  'HelmValuesDiff.tsx': new Set(['missing-isRefreshing']),
   'insights/CrossClusterEventCorrelation.tsx': new Set(['missing-isRefreshing']),
-  'ISO27001Audit.tsx': new Set(['missing-isRefreshing']),
   'kagenti/KagentiAgentDiscovery.tsx': new Set(['bare-isLoading']),
   'kagenti/KagentiAgentFleet.tsx': new Set(['bare-isLoading']),
   'kagenti/KagentiBuildPipeline.tsx': new Set(['bare-isLoading']),
@@ -127,7 +123,6 @@ const KNOWN_VIOLATIONS: Record<string, Set<string>> = {
   'lima_status/useLimaStatus.ts': new Set(['bare-isLoading']),
   'llmd/NightlyE2EStatus.tsx': new Set(['bare-isLoading']),
   'NamespaceMonitor.tsx': new Set(['bare-isLoading']),
-  'NamespaceQuotas.tsx': new Set(['missing-isRefreshing']),
   'NamespaceRBAC.tsx': new Set(['missing-isRefreshing']),
   'NetworkOverview.tsx': new Set(['bare-isLoading']),
   'NetworkPolicyCoverage.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
@@ -138,7 +133,7 @@ const KNOWN_VIOLATIONS: Record<string, Set<string>> = {
   'PredictiveHealth.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
   'RBACExplorer.tsx': new Set(['bare-isLoading']),
   'RecommendedPolicies.tsx': new Set(['missing-isRefreshing']),
-  'ResourceMarshall.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
+  'ResourceMarshall.tsx': new Set(['bare-isLoading']),
   'ServiceExports.tsx': new Set(['bare-isLoading']),
   'ServiceImports.tsx': new Set(['bare-isLoading']),
   'strimzi_status/useStrimziStatus.ts': new Set(['bare-isLoading']),
@@ -146,7 +141,6 @@ const KNOWN_VIOLATIONS: Record<string, Set<string>> = {
   'UserManagement.tsx': new Set(['missing-isRefreshing']),
   'weather/Weather.tsx': new Set(['bare-isLoading']),
   'WorkloadDeployment.tsx': new Set(['missing-isRefreshing']),
-  'buildpacks-status/BuildpacksStatus.tsx': new Set(['missing-isRefreshing']),
 }
 
 /**
@@ -161,27 +155,18 @@ const KNOWN_FAILURE_VIOLATIONS: Record<string, Set<string>> = {
   'ClusterLocations.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
   'ClusterNetwork.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
   'console-missions/ConsoleKubeconfigAuditCard.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'console-missions/ConsoleOfflineDetectionCard.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
   'FleetComplianceHeatmap.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'GPUNamespaceAllocations.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'GPUStatus.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'GPUWorkloads.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'HelmValuesDiff.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
   'insights/CrossClusterEventCorrelation.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
   'Kubectl.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
   'KustomizationStatus.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
   'Missions.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'NamespaceEvents.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
   'NamespaceMonitor.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'NamespaceQuotas.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
   'NamespaceRBAC.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
   'OPAPolicies.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
   'OverlayComparison.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
   'RecommendedPolicies.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'ResourceMarshall.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
   'ResourceTrend.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
   'ResourceUsage.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'workload-detection/LLMModels.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
 }
 
 /** Check if a violation is known (grandfathered in) */
@@ -411,7 +396,7 @@ describe('Card Loading State Gold Standard', () => {
       // This number MUST ONLY DECREASE. If you fix a card, remove it from
       // KNOWN_VIOLATIONS and decrease this count. If this test fails because
       // the count dropped, that's great — update the expected count!
-      const EXPECTED_KNOWN_VIOLATION_COUNT = 75
+      const EXPECTED_KNOWN_VIOLATION_COUNT = 65
       expect(totalKnown).toBeLessThanOrEqual(EXPECTED_KNOWN_VIOLATION_COUNT)
     })
 
@@ -422,7 +407,7 @@ describe('Card Loading State Gold Standard', () => {
       }
 
       // Separate ratchet for isRefreshing violations. MUST ONLY DECREASE.
-      const EXPECTED_REFRESH_VIOLATION_COUNT = 27
+      const EXPECTED_REFRESH_VIOLATION_COUNT = 17
       expect(refreshCount).toBeLessThanOrEqual(EXPECTED_REFRESH_VIOLATION_COUNT)
     })
 
@@ -434,7 +419,7 @@ describe('Card Loading State Gold Standard', () => {
 
       // Separate ratchet for failure-wiring violations. MUST ONLY DECREASE.
       // Each card entry has 2 violations (missing-isFailed + missing-consecutiveFailures).
-      const EXPECTED_FAILURE_VIOLATION_COUNT = 52
+      const EXPECTED_FAILURE_VIOLATION_COUNT = 34
       expect(failureCount).toBeLessThanOrEqual(EXPECTED_FAILURE_VIOLATION_COUNT)
     })
   })

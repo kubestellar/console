@@ -52,8 +52,8 @@ const NAMESPACE_SORT_COMPARATORS: Record<SortByOption, (a: NamespaceGPUAllocatio
 
 export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocationsProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const { nodes: gpuNodes, isLoading: gpuLoading, isRefreshing: gpuRefreshing, isDemoFallback: gpuNodesDemoFallback } = useCachedGPUNodes()
-  const { pods: allPods, isLoading: podsLoading, isDemoFallback: podsDemoFallback } = useCachedAllPods()
+  const { nodes: gpuNodes, isLoading: gpuLoading, isRefreshing: gpuRefreshing, isDemoFallback: gpuNodesDemoFallback, isFailed: gpuFailed, consecutiveFailures: gpuFailures } = useCachedGPUNodes()
+  const { pods: allPods, isLoading: podsLoading, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedAllPods()
   const { drillToGPUNamespace } = useDrillDownActions()
 
   // Combine all isDemoFallback values from cached hooks
@@ -67,6 +67,8 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
     isRefreshing: gpuRefreshing,
     hasAnyData: hasData,
     isDemoData,
+    isFailed: gpuFailed || podsFailed,
+    consecutiveFailures: Math.max(gpuFailures, podsFailures),
   })
 
   // Compute per-namespace GPU allocations

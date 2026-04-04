@@ -224,8 +224,8 @@ function generatePredictionId(type: string, name: string, cluster?: string): str
 export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { startMission, missions } = useMissions()
-  const { nodes: gpuNodes, isLoading, isDemoFallback: gpuDemoFallback } = useCachedGPUNodes()
-  const { issues: podIssues, isDemoFallback: podsDemoFallback } = useCachedPodIssues()
+  const { nodes: gpuNodes, isLoading, isRefreshing: gpuRefreshing, isDemoFallback: gpuDemoFallback, isFailed: gpuFailed, consecutiveFailures: gpuFailures } = useCachedGPUNodes()
+  const { issues: podIssues, isRefreshing: podsRefreshing, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPodIssues()
   const { deduplicatedClusters: clusters } = useClusters()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { drillToCluster, drillToNode } = useDrillDownActions()
@@ -250,8 +250,11 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   // Consider both GPU nodes AND local nodes cache for hasAnyData
   useCardLoadingState({
     isLoading: isLoading && nodesLoading,
+    isRefreshing: gpuRefreshing || podsRefreshing,
     hasAnyData: gpuNodes.length > 0 || nodesCache.length > 0 || allNodes.length > 0,
     isDemoData: isDemoMode || gpuDemoFallback || podsDemoFallback,
+    isFailed: gpuFailed || podsFailed,
+    consecutiveFailures: Math.max(gpuFailures, podsFailures),
   })
 
   // Subscribe to cache updates and fetch nodes

@@ -41,6 +41,8 @@ export function GPUStatus({ config }: GPUStatusProps) {
     isLoading: hookLoading,
     isDemoFallback,
     isRefreshing,
+    isFailed,
+    consecutiveFailures,
     lastRefresh,
   } = useCachedGPUNodes(cluster)
   const { drillToCluster } = useDrillDownActions()
@@ -51,6 +53,8 @@ export function GPUStatus({ config }: GPUStatusProps) {
     isRefreshing,
     hasAnyData: rawNodes.length > 0,
     isDemoData: isDemoMode || isDemoFallback,
+    isFailed,
+    consecutiveFailures,
     lastRefresh,
   })
 

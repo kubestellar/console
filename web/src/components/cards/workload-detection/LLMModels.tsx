@@ -33,7 +33,7 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
   const gpuClusterNames = useMemo(() => new Set(gpuNodes.map(n => n.cluster)), [gpuNodes])
   const llmdClusters = useLLMdClusters(deduplicatedClusters, gpuClusterNames)
 
-  const { models, isLoading, isRefreshing, lastRefresh, isDemoFallback } = useCachedLLMdModels(llmdClusters)
+  const { models, isLoading, isRefreshing, isFailed, consecutiveFailures, lastRefresh, isDemoFallback } = useCachedLLMdModels(llmdClusters)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const hasData = models.length > 0
@@ -42,6 +42,8 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
     isRefreshing,
     hasAnyData: hasData,
     isDemoData: isDemoFallback,
+    isFailed,
+    consecutiveFailures,
   })
 
   const {

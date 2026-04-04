@@ -54,7 +54,7 @@ const SORT_OPTIONS = [
 
 export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   const { t } = useTranslation()
-  const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersFailures } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
   const { drillToHelm } = useDrillDownActions()
@@ -131,14 +131,6 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   // Fetch ALL Helm releases from all clusters once (not per-cluster)
   const { releases: allHelmReleases, isLoading: releasesLoading, isDemoFallback: isDemoData } = useCachedHelmReleases()
 
-  // Report state to CardWrapper for refresh animation
-  const hasClusterData = allClusters.length > 0
-  useCardLoadingState({
-    isLoading: clustersLoading && !hasClusterData,
-    hasAnyData: hasClusterData,
-    isDemoData,
-  })
-
   // Auto-select first cluster and release in demo mode
   useEffect(() => {
     if (isDemoData && allHelmReleases.length > 0 && allClusters.length > 0) {
@@ -174,6 +166,17 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
     selectedRelease || undefined,
     selectedReleaseNamespace
   )
+
+  // Report state to CardWrapper for refresh animation
+  const hasClusterData = allClusters.length > 0
+  useCardLoadingState({
+    isLoading: clustersLoading && !hasClusterData,
+    isRefreshing: clustersRefreshing || valuesRefreshing,
+    hasAnyData: hasClusterData,
+    isDemoData,
+    isFailed: clustersFailed,
+    consecutiveFailures: clustersFailures,
+  })
   // Cached hook doesn't return format; values are always JSON objects
   const format = 'json' as string
 

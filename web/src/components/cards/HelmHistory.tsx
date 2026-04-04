@@ -134,6 +134,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
   // Note: Consider "hasAnyData" true when no release selected - we want to show selectors, not empty state
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: historyLoading,
+    isRefreshing: historyRefreshing,
     hasAnyData: rawHistory.length > 0 || !selectedRelease,
     isFailed,
     consecutiveFailures,

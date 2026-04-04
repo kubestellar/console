@@ -101,6 +101,7 @@ export function ISO27001Audit({ config }: ISO27001AuditProps) {
   const {
     findings: cachedFindings,
     isLoading: cachedLoading,
+    isRefreshing: cachedRefreshing,
     isDemoFallback,
     isFailed: cachedFailed,
     consecutiveFailures: cachedFailures,
@@ -113,6 +114,7 @@ export function ISO27001Audit({ config }: ISO27001AuditProps) {
     [useDemoData, cachedFindings]
   )
   const isLoading = useDemoData ? false : cachedLoading
+  const isRefreshing = useDemoData ? false : cachedRefreshing
   const isFailed = useDemoData ? false : cachedFailed
   const consecutiveFailures = useDemoData ? 0 : cachedFailures
 
@@ -120,6 +122,7 @@ export function ISO27001Audit({ config }: ISO27001AuditProps) {
   const hasData = rawFindings.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasData,
+    isRefreshing,
     isDemoData: isDemoMode || isDemoFallback,
     hasAnyData: hasData,
     isFailed,

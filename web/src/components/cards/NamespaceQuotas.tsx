@@ -338,7 +338,7 @@ function QuotaModal({
 export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { isDemoMode } = useDemoMode()
-  const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersFailures } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || 'all')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || 'all')
   const [activeTab, setActiveTab] = useState<TabKey>('quotas')
@@ -372,8 +372,11 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
     isLoading: isInitialLoading || isFetchingData,
+    isRefreshing: clustersRefreshing,
     hasAnyData: allClusters.length > 0 || resourceQuotas.length > 0 || limitRanges.length > 0,
     isDemoData: isDemoMode || isDemoFallback,
+    isFailed: clustersFailed,
+    consecutiveFailures: clustersFailures,
   })
 
   // Handle save quota
