@@ -12,6 +12,53 @@ import userEvent from '@testing-library/user-event'
 import { TrestleScan } from './TrestleScan'
 import type { TrestleClusterStatus, OscalProfile } from '../../hooks/useTrestle'
 
+// ── Mock react-i18next to return interpolated translation values ─────────
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, opts?: Record<string, unknown>) => {
+      // Map known keys to English text for test assertions
+      const translations: Record<string, string> = {
+        'cards:trestleScan.checkingClusters': 'Checking clusters... {{checked}}/{{total}}',
+        'cards:trestleScan.cncfSandbox': 'Compliance Trestle (CNCF Sandbox)',
+        'cards:trestleScan.complianceAsCode': 'Compliance-as-code using NIST OSCAL. Automates compliance assessment and bridges OSCAL to Kubernetes policy engines.',
+        'cards:trestleScan.installWithMission': 'Install with AI Mission',
+        'cards:trestleScan.docs': 'Docs',
+        'cards:trestleScan.installedNoAssessments': 'Trestle Installed — No Assessments',
+        'cards:trestleScan.noAssessmentsDescription': 'Compliance Trestle is deployed but no OSCAL assessment results have been generated yet.',
+        'cards:trestleScan.troubleshootWithAI': 'Troubleshoot with AI',
+        'cards:trestleScan.viewAllControls': 'View all compliance controls',
+        'cards:trestleScan.viewPassingControls': 'View passing controls',
+        'cards:trestleScan.viewFailingControls': 'View failing controls',
+        'cards:trestleScan.viewOtherControls': 'View other controls',
+        'cards:trestleScan.passed': 'passed',
+        'cards:trestleScan.failed': 'failed',
+        'cards:trestleScan.other': 'other',
+        'cards:trestleScan.controls': '{{count}} controls',
+        'cards:trestleScan.oscalCompliance': 'OSCAL Compliance',
+        'cards:trestleScan.oscalDescription': 'Automated assessment using NIST OSCAL framework via Compliance Trestle (CNCF Sandbox).',
+        'cards:trestleScan.noProfilesAssessed': 'No profiles assessed',
+        'cards:trestleScan.toggleProfileDetails': 'Toggle {{name}} details',
+        'cards:trestleScan.viewProfileControls': 'View {{name}} controls',
+        'cards:trestleScan.viewPassingProfileControls': 'View passing controls for {{name}}',
+        'cards:trestleScan.viewFailingProfileControls': 'View failing controls for {{name}}',
+        'cards:trestleScan.viewOtherProfileControls': 'View other controls for {{name}}',
+        'cards:trestleScan.pass': 'pass',
+        'cards:trestleScan.fail': 'fail',
+        'cards:trestleScan.perClusterCompliance': 'Per-cluster compliance',
+      }
+      let result = translations[key] ?? key
+      // Interpolate {{variable}} patterns from opts
+      if (opts) {
+        for (const [k, v] of Object.entries(opts)) {
+          result = result.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v))
+        }
+      }
+      return result
+    },
+    i18n: { language: 'en' },
+  }),
+}))
+
 // ── Mock dependencies ────────────────────────────────────────────────────
 
 const mockStartMission = vi.fn()

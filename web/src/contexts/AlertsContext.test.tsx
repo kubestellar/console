@@ -451,7 +451,7 @@ describe('rule management', () => {
 
     let _newRule: AlertRule | undefined
     act(() => {
-      newRule = result.current.createRule(makeRule({ name: 'Persisted Rule' }))
+      _newRule = result.current.createRule(makeRule({ name: 'Persisted Rule' }))
     })
 
     const stored = JSON.parse(localStorage.getItem('kc_alert_rules') ?? '[]')

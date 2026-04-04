@@ -1065,8 +1065,10 @@ describe('useServices — silent refresh behavior', () => {
     const { result } = renderHook(() => useServices())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    // After initial load completes, isRefreshing should be false
-    expect(result.current.isRefreshing).toBe(false)
+    // After initial load + MIN_REFRESH_INDICATOR_MS timer, isRefreshing should be false
+    await waitFor(() => {
+      expect(result.current.isRefreshing).toBe(false)
+    })
   })
 })
 

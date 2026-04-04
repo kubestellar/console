@@ -348,6 +348,8 @@ describe('useAIPredictions', () => {
     }
     globalThis.fetch = vi.fn().mockResolvedValue(mockResponse)
 
+    // Must render the hook to trigger the fetch
+    renderHook(() => useAIPredictions())
 
     await waitFor(() => {
       expect(globalThis.fetch).toHaveBeenCalled()

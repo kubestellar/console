@@ -496,6 +496,8 @@ describe('Custom theme application via setTheme', () => {
   })
 
   it('applies brand colors as CSS variables', () => {
+    // Must render the hook to trigger theme application
+    renderHook(() => useTheme(), { wrapper })
 
     const defaultTheme = getDefaultTheme()
     const root = document.documentElement
@@ -508,6 +510,7 @@ describe('Custom theme application via setTheme', () => {
   })
 
   it('applies status colors as CSS variables', () => {
+    renderHook(() => useTheme(), { wrapper })
 
     const defaultTheme = getDefaultTheme()
     const root = document.documentElement
@@ -519,6 +522,7 @@ describe('Custom theme application via setTheme', () => {
   })
 
   it('applies chart colors as CSS variables', () => {
+    renderHook(() => useTheme(), { wrapper })
 
     const defaultTheme = getDefaultTheme()
     const root = document.documentElement
@@ -537,6 +541,8 @@ describe('Custom theme application via setTheme', () => {
 // ===========================================================================
 describe('Font loading behavior', () => {
   it('applies font family CSS variables from the theme', () => {
+    renderHook(() => useTheme(), { wrapper })
+
     const root = document.documentElement
     const defaultTheme = getDefaultTheme()
 
@@ -545,6 +551,8 @@ describe('Font loading behavior', () => {
   })
 
   it('applies font weight CSS variables from the theme', () => {
+    renderHook(() => useTheme(), { wrapper })
+
     const root = document.documentElement
     const defaultTheme = getDefaultTheme()
 

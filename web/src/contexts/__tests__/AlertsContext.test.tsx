@@ -810,6 +810,8 @@ describe('AlertsContext', () => {
     }
     localStorage.setItem('kc_alerts', JSON.stringify(alerts))
 
+    // Render the provider to trigger the useEffect that trims on mount
+    renderHook(() => useAlertsContext(), { wrapper })
 
     // saveAlerts is called on mount via the useEffect; it should trim to 500
     const stored: Alert[] = JSON.parse(localStorage.getItem('kc_alerts')!)

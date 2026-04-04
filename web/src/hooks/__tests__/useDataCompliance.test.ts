@@ -150,7 +150,7 @@ function setupSingleClusterExec(opts: {
 
   let _callIdx = 0
   mockExec.mockImplementation((args: string[]) => {
-    callIdx++
+    _callIdx++
     const cmd = args.join(' ')
 
     // secrets

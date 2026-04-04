@@ -88,7 +88,7 @@ async function buildWrapper(value: Record<string, unknown>) {
 // ---------------------------------------------------------------------------
 beforeEach(() => {
   localStorage.clear()
-  mockContextValue = null
+  _mockContextValue = null
   vi.restoreAllMocks()
 })
 
@@ -381,7 +381,7 @@ describe('useSlackWebhooks', () => {
     const { result } = renderHook(() => useSlackWebhooks())
     let _webhook: ReturnType<typeof result.current.addWebhook>
     act(() => {
-      webhook = result.current.addWebhook('Alerts', 'https://hooks.slack.com/services/T/B/xxx', '#alerts')
+      _webhook = result.current.addWebhook('Alerts', 'https://hooks.slack.com/services/T/B/xxx', '#alerts')
     })
     expect(result.current.webhooks).toHaveLength(1)
     const created = result.current.webhooks[0]

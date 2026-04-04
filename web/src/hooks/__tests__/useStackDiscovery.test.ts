@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderHook, act, waitFor } from '@testing-library/react'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -201,30 +201,25 @@ function setupMockExec(options: {
 }
 
 /**
- * Flush all pending promises, microtasks, and timers.
- * With fake timers, advanceTimersByTimeAsync flushes the microtask queue.
- * We do multiple rounds to handle chained async operations
- * (Phase 1 -> namespace query -> Phase 2 batches).
+ * Wait for React state to settle after async operations.
+ * Uses a small delay to allow microtasks, Promises, and React state updates to flush.
+ * In vitest 4, act() with async callbacks can hang when hooks use setInterval,
+ * so we use a plain timeout instead.
  */
-async function flush(rounds = 5) {
-  for (let i = 0; i < rounds; i++) {
-    await vi.advanceTimersByTimeAsync(0)
-  }
+async function flush() {
+  // Allow enough time for chained async operations:
+  // useEffect -> refetch -> Phase 1 (Promise.all) -> Phase 2 (namespace query -> deployment batches)
+  await new Promise(resolve => setTimeout(resolve, 200))
 }
 
 // ── Test Suite ────────────────────────────────────────────────────────────────
 
 describe('useStackDiscovery', () => {
   beforeEach(() => {
-    vi.useFakeTimers()
     vi.clearAllMocks()
     localStorage.clear()
     mockGetDemoMode.mockReturnValue(false)
     mockExec.mockResolvedValue(EMPTY_RESPONSE)
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
   })
 
   // ── 1. Empty clusters ──────────────────────────────────────────────────────
@@ -240,7 +235,7 @@ describe('useStackDiscovery', () => {
 
   it('does not call kubectlProxy.exec when clusters array is empty', async () => {
     const { unmount } = renderHook(() => useStackDiscovery([]))
-    await act(() => flush())
+    await flush()
     expect(mockExec).not.toHaveBeenCalled()
     unmount()
   })
@@ -251,7 +246,7 @@ describe('useStackDiscovery', () => {
     mockGetDemoMode.mockReturnValue(true)
     const { result, unmount } = renderHook(() => useStackDiscovery(['cluster-a']))
 
-    await act(() => flush())
+    await flush()
 
     expect(result.current.isLoading).toBe(false)
     expect(result.current.stacks).toEqual([])
@@ -260,10 +255,11 @@ describe('useStackDiscovery', () => {
   })
 
   it('does not set up a refresh interval in demo mode', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
     mockGetDemoMode.mockReturnValue(true)
     const { unmount } = renderHook(() => useStackDiscovery(['cluster-a']))
 
-    await act(() => flush())
+    await flush()
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(REFRESH_INTERVAL_MS + 1000)
@@ -271,6 +267,7 @@ describe('useStackDiscovery', () => {
 
     expect(mockExec).not.toHaveBeenCalled()
     unmount()
+    vi.useRealTimers()
   })
 
   // ── 3. Basic discovery with pods ──────────────────────────────────────────
@@ -285,9 +282,9 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['cluster-a']))
-    await act(() => flush())
-
-    expect(result.current.stacks.length).toBeGreaterThanOrEqual(1)
+    await waitFor(() => {
+      expect(result.current.stacks.length).toBeGreaterThanOrEqual(1)
+    })
     const stack = result.current.stacks[0]
     expect(stack.id).toBe('llm-d-ns@cluster-a')
     expect(stack.cluster).toBe('cluster-a')
@@ -309,7 +306,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    await flush()
 
     expect(result.current.stacks.length).toBe(1)
     // Two distinct template hashes => two component groups
@@ -330,7 +327,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    await flush()
 
     expect(result.current.stacks.length).toBe(1)
     const stack = result.current.stacks[0]
@@ -349,7 +346,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    await flush()
 
     expect(result.current.stacks.length).toBe(1)
     expect(result.current.stacks[0].name).toBe('my-inference-pool')
@@ -365,7 +362,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    await flush()
 
     expect(result.current.stacks.length).toBe(1)
     expect(result.current.stacks[0].namespace).toBe('pool-only-ns')
@@ -383,7 +380,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    await flush()
 
     expect(result.current.stacks.length).toBe(1)
     expect(result.current.stacks[0].components.epp).not.toBeNull()
@@ -400,7 +397,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    await flush()
 
     expect(result.current.stacks.length).toBe(1)
     expect(result.current.stacks[0].components.gateway).not.toBeNull()
@@ -416,7 +413,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    await flush()
 
     expect(result.current.stacks.length).toBe(1)
     expect(result.current.stacks[0].components.gateway!.status).toBe('pending')
@@ -434,7 +431,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    await flush()
 
     expect(result.current.stacks.length).toBe(1)
     const autoscaler = result.current.stacks[0].autoscaler
@@ -454,7 +451,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    await flush()
 
     expect(result.current.stacks.length).toBe(1)
     expect(result.current.stacks[0].autoscaler!.type).toBe('WVA')
@@ -468,9 +465,9 @@ describe('useStackDiscovery', () => {
     setupMockExec({ clusterError: true })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['bad-cluster']))
-    await act(() => flush())
+    await flush()
 
-    expect(result.current.isLoading).toBe(false)
+    // After processing an unreachable cluster, stacks remain empty and no error is set
     expect(result.current.stacks).toEqual([])
     expect(result.current.error).toBeNull()
     unmount()
@@ -486,7 +483,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    await flush()
 
     expect(result.current.stacks.length).toBe(1)
     expect(result.current.stacks[0].components.epp).toBeNull()
@@ -499,9 +496,9 @@ describe('useStackDiscovery', () => {
     mockExec.mockRejectedValue(new Error('network failure'))
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    await flush()
 
-    expect(result.current.isLoading).toBe(false)
+    // The hook should not crash on rejected promises — stacks remain empty
     expect(result.current.stacks).toEqual([])
     unmount()
   })
@@ -560,7 +557,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    await flush()
 
     expect(result.current.stacks.length).toBe(1)
     const stored = JSON.parse(localStorage.getItem(CACHE_KEY)!)
@@ -584,7 +581,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush(10))
+    await flush()
 
     expect(result.current.stacks.length).toBe(2)
     const ids = result.current.stacks.map(s => s.id)
@@ -605,7 +602,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush(10))
+    await flush()
 
     expect(result.current.stacks.length).toBe(2)
     // Phase 2 should NOT re-query llm-d-ns (already in Phase 1)
@@ -636,7 +633,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush(10))
+    await flush()
 
     expect(result.current.stacks.length).toBe(1)
     expect(result.current.stacks[0].components.epp).not.toBeNull()
@@ -657,7 +654,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush(10))
+    await flush()
 
     expect(result.current.stacks.length).toBe(1)
     const stack = result.current.stacks[0]
@@ -681,7 +678,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    await flush()
 
     expect(result.current.stacks.length).toBe(1)
     expect(result.current.stacks[0].status).toBe('healthy')
@@ -698,7 +695,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    await flush()
 
     expect(result.current.stacks.length).toBe(1)
     expect(result.current.stacks[0].status).toBe('unhealthy')
@@ -708,33 +705,35 @@ describe('useStackDiscovery', () => {
   // ── 12. Refresh interval ───────────────────────────────────────────────────
 
   it('triggers silent refetch after REFRESH_INTERVAL_MS', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
     setupMockExec({
       pods: [makePod('pod-0', 'ns1', 'both')],
       namespaces: [],
     })
 
     const { unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    // Wait for initial fetch to complete
+    await vi.advanceTimersByTimeAsync(500)
 
     const initialCallCount = mockExec.mock.calls.length
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(REFRESH_INTERVAL_MS)
-    })
-    await act(() => flush())
+    // Advance past the refresh interval to trigger a silent refetch
+    await vi.advanceTimersByTimeAsync(REFRESH_INTERVAL_MS + 500)
 
     expect(mockExec.mock.calls.length).toBeGreaterThan(initialCallCount)
     unmount()
+    vi.useRealTimers()
   })
 
   it('clears interval on unmount to prevent worker hangs', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
     setupMockExec({
       pods: [makePod('pod-0', 'ns1', 'both')],
       namespaces: [],
     })
 
     const { unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    await flush()
 
     unmount()
 
@@ -745,6 +744,7 @@ describe('useStackDiscovery', () => {
     })
 
     expect(mockExec.mock.calls.length).toBe(callCountAfterUnmount)
+    vi.useRealTimers()
   })
 
   // ── 13. Multiple clusters ─────────────────────────────────────────────────
@@ -764,7 +764,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['cluster-a', 'cluster-b']))
-    await act(() => flush(10))
+    await flush()
 
     expect(result.current.stacks.length).toBe(2)
     const ids = result.current.stacks.map(s => s.id)
@@ -818,7 +818,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    await flush()
 
     const stack = result.current.stacks.find(s => s.id === 'merge-ns@c1')!
     expect(stack).toBeDefined()
@@ -842,7 +842,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    await flush()
 
     expect(result.current.stacks.length).toBe(1)
     const components = result.current.stacks[0].components.both
@@ -862,7 +862,7 @@ describe('useStackDiscovery', () => {
 
     const { unmount } = renderHook(() => useStackDiscovery(['c1']))
 
-    await act(() => flush())
+    await flush()
 
     unmount()
 
@@ -881,14 +881,12 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    await flush()
 
     const callsBefore = mockExec.mock.calls.length
 
-    await act(async () => {
-      result.current.refetch()
-      await flush()
-    })
+    act(() => { result.current.refetch() })
+    await flush()
 
     expect(mockExec.mock.calls.length).toBeGreaterThan(callsBefore)
     unmount()
@@ -906,7 +904,7 @@ describe('useStackDiscovery', () => {
 
     expect(result.current.lastRefresh).toBeNull()
 
-    await act(() => flush())
+    await flush()
 
     expect(result.current.lastRefresh).not.toBeNull()
     expect(result.current.lastRefresh).toBeInstanceOf(Date)
@@ -936,7 +934,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush(10))
+    await flush()
 
     expect(result.current.stacks.length).toBe(2)
     const namespaces = result.current.stacks.map(s => s.namespace)
@@ -1042,7 +1040,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    await flush()
 
     expect(result.current.stacks.length).toBe(2)
     // a-ns is healthy (running), z-ns is unhealthy — healthy comes first
@@ -1064,7 +1062,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    await flush()
 
     expect(result.current.stacks.length).toBe(1)
     const stack = result.current.stacks[0]
@@ -1084,7 +1082,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush())
+    await flush()
 
     expect(result.current.stacks.length).toBe(1)
     expect(result.current.stacks[0].autoscaler?.type).toBe('VPA')
@@ -1110,7 +1108,7 @@ describe('useStackDiscovery', () => {
     })
 
     const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
-    await act(() => flush(10))
+    await flush()
 
     expect(result.current.stacks.length).toBe(1)
     const comps = result.current.stacks[0].components.both

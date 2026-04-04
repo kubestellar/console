@@ -11,6 +11,32 @@ import userEvent from '@testing-library/user-event'
 import { ComplianceScore } from './ComplianceCards'
 import { ComplianceScoreBreakdownModal } from './compliance/ComplianceScoreBreakdownModal'
 
+// ── Mock react-i18next to return interpolated translation values ─────────
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, opts?: Record<string, unknown>) => {
+      const translations: Record<string, string> = {
+        'cards:complianceScore.checkingClusters': 'Checking clusters... {{checked}}/{{total}}',
+        'cards:complianceScore.noToolsDetected': 'No Compliance Tools Detected',
+        'cards:complianceScore.installDescription': 'Install Kubescape or Kyverno to see live compliance scores.',
+        'cards:complianceScore.installWithMission': 'Install with an AI Mission',
+        'cards:complianceScore.partialCoverage': 'Partial coverage — {{reporting}} of {{total}} clusters reporting. Score may not reflect full cluster state.',
+        'cards:complianceScore.viewBreakdownAria': 'View detailed compliance score breakdown',
+        'cards:complianceScore.clickForBreakdown': 'Click for detailed breakdown',
+      }
+      let result = translations[key] ?? key
+      // Interpolate {{variable}} patterns from opts
+      if (opts) {
+        for (const [k, v] of Object.entries(opts)) {
+          result = result.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v))
+        }
+      }
+      return result
+    },
+    i18n: { language: 'en' },
+  }),
+}))
+
 // ── Mock hooks ───────────────────────────────────────────────────────────
 
 const mockStartMission = vi.fn()

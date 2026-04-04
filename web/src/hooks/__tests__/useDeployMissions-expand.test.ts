@@ -255,6 +255,8 @@ describe('useDeployMissions — expanded edge cases', () => {
     global.fetch = mockFetch as unknown as typeof fetch
     mockKubectlExec.mockResolvedValue({ exitCode: 0, output: JSON.stringify({ items: [] }) })
 
+    // Must render the hook to register the deploy:started subscriber
+    renderHook(() => useDeployMissions())
 
     act(() => {
       fireDeployStarted({
@@ -293,6 +295,9 @@ describe('useDeployMissions — expanded edge cases', () => {
     })
     global.fetch = mockFetch as unknown as typeof fetch
 
+    // Must render the hook to register the deploy:started subscriber
+    renderHook(() => useDeployMissions())
+
     act(() => {
       fireDeployStarted({
         id: 'fallback-test',
@@ -307,6 +312,9 @@ describe('useDeployMissions — expanded edge cases', () => {
 
   // 9. saveMissions strips logs from active missions
   it('persists missions to localStorage on state change', () => {
+    // Must render the hook to register the deploy:started subscriber
+    renderHook(() => useDeployMissions())
+
     act(() => {
       fireDeployStarted({
         id: 'persist-test',

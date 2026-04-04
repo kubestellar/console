@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act, render, screen } from '@testing-library/react'
+import { renderHook, act, render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
 import { MissionProvider, useMissions } from './useMissions'
 import { getDemoMode } from './useDemoMode'
@@ -1626,19 +1626,19 @@ describe('setActiveMission', () => {
 // ── Cancelling mission with terminal messages ────────────────────────────────
 
 describe('cancelling mission receives terminal messages', () => {
-  it('finalizes cancellation on stream done while cancelling', async () => {
+  it('finalizes cancellation on cancel_ack while cancelling', async () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
-    const { missionId, requestId } = await startMissionWithConnection(result)
+    const { missionId } = await startMissionWithConnection(result)
 
     act(() => { result.current.cancelMission(missionId) })
     expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('cancelling')
 
-    // Receive stream done (terminal message)
+    // Backend sends cancel_ack confirming the cancellation
     act(() => {
       MockWebSocket.lastInstance?.simulateMessage({
-        id: requestId,
-        type: 'stream',
-        payload: { content: '', done: true },
+        id: `cancel-ack-${Date.now()}`,
+        type: 'cancel_ack',
+        payload: { sessionId: missionId, success: true },
       })
     })
 
@@ -1647,34 +1647,36 @@ describe('cancelling mission receives terminal messages', () => {
     expect(mission?.messages.some(m => m.content.includes('cancelled by user'))).toBe(true)
   })
 
-  it('finalizes cancellation on error while cancelling', async () => {
+  it('finalizes cancellation on cancel_ack with failure while cancelling', async () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
-    const { missionId, requestId } = await startMissionWithConnection(result)
+    const { missionId } = await startMissionWithConnection(result)
 
     act(() => { result.current.cancelMission(missionId) })
 
+    // Backend sends cancel_ack with failure
     act(() => {
       MockWebSocket.lastInstance?.simulateMessage({
-        id: requestId,
-        type: 'error',
-        payload: { code: 'cancelled', message: 'Cancelled' },
+        id: `cancel-ack-${Date.now()}`,
+        type: 'cancel_ack',
+        payload: { sessionId: missionId, success: false, message: 'Cancelled with error' },
       })
     })
 
     expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('failed')
   })
 
-  it('finalizes cancellation on result while cancelling', async () => {
+  it('finalizes cancellation on cancel_confirmed while cancelling', async () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
-    const { missionId, requestId } = await startMissionWithConnection(result)
+    const { missionId } = await startMissionWithConnection(result)
 
     act(() => { result.current.cancelMission(missionId) })
 
+    // Backend sends cancel_confirmed (alternative ack type)
     act(() => {
       MockWebSocket.lastInstance?.simulateMessage({
-        id: requestId,
-        type: 'result',
-        payload: { content: 'Partial result' },
+        id: `cancel-confirmed-${Date.now()}`,
+        type: 'cancel_confirmed',
+        payload: { sessionId: missionId, success: true },
       })
     })
 
