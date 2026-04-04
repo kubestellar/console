@@ -6,7 +6,7 @@ import '../../test/utils/setupMocks'
 
 vi.mock('../../hooks/useMCP', () => ({
   useClusters: () => ({
-    clusters: [{ name: 'test-cluster', context: 'test-ctx' }],
+    deduplicatedClusters: [{ name: 'test-cluster', context: 'test-ctx', reachable: true }],
   }),
 }))
 

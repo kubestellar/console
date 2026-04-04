@@ -11,7 +11,7 @@ import {
 describe('YouTube URL helpers', () => {
   it('getYouTubeThumbnailUrl returns valid URL', () => {
     const url = getYouTubeThumbnailUrl('abc123')
-    expect(url).toBe('https://img.youtube.com/vi/abc123/mqdefault.jpg')
+    expect(url).toBe('/api/youtube/thumbnail/abc123')
   })
 
   it('getYouTubeWatchUrl returns valid URL', () => {

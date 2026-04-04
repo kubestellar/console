@@ -181,6 +181,7 @@ describe('BaseModal.Content', () => {
   })
 
   it('removes padding when noPadding is true', () => {
+    render(
       <BaseModal isOpen={true} onClose={vi.fn()}>
         <BaseModal.Content noPadding={true}>
           <p>No padding</p>
