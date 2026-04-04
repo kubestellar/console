@@ -241,7 +241,11 @@ class KubectlProxy {
   ): Promise<KubectlResponse> {
     await this.ensureConnected()
 
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+    // Capture a local reference — the instance field can be nulled by onclose
+    // between the readyState check and the send() call (race condition that
+    // surfaces as "send was called before connect" in Safari).
+    const ws = this.ws
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
       throw new Error('Not connected to local agent')
     }
 
@@ -266,7 +270,13 @@ class KubectlProxy {
         } as KubectlRequest,
       }
 
-      this.ws!.send(JSON.stringify(message))
+      try {
+        ws.send(JSON.stringify(message))
+      } catch (err) {
+        clearTimeout(timeoutHandle)
+        this.pendingRequests.delete(id)
+        reject(err instanceof Error ? err : new Error(String(err)))
+      }
     })
   }
 

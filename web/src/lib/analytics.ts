@@ -1133,6 +1133,11 @@ export function startGlobalErrorTracking() {
       // becomes inactive (browser idle, SW update). The calling code catches these
       // and falls back to the standard Notification API.
       if (msg.includes('showNotification') || msg.includes('No active registration')) return
+      // Skip WebSocket send-before-connect errors — transient race condition in
+      // Safari where the WS transitions out of OPEN between readyState check and
+      // send(). The kubectlProxy try/catch handles these; they surface here only
+      // due to browser microtask ordering.
+      if (msg.includes('send was called before connect') || msg.includes('InvalidStateError')) return
       emitError('unhandled_rejection', msg)
     } finally {
       isEmitting = false
