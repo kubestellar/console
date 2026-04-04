@@ -44,7 +44,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
     { value: 'warning', label: t('alerts.severityOptions.warning'), color: 'bg-orange-500' },
     { value: 'info', label: t('alerts.severityOptions.info'), color: 'bg-blue-500' },
   ]
-  const { clusters } = useClusters()
+  const { deduplicatedClusters: clusters } = useClusters()
 
   // Form state
   const [name, setName] = useState(rule?.name || '')

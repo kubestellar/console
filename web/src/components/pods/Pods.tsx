@@ -23,7 +23,7 @@ const DEFAULT_POD_CARDS = getDefaultCards('pods')
 export function Pods() {
   // Use cached hooks for stale-while-revalidate pattern
   const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, lastRefresh: podIssuesLastRefresh, refetch: refetchPodIssues } = useCachedPodIssues()
-  const { clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
 
   // Derive lastUpdated from cache timestamp
   const lastUpdated = podIssuesLastRefresh ? new Date(podIssuesLastRefresh) : null

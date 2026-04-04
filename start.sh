@@ -332,7 +332,11 @@ if [ -n "$MCP_MISSING" ]; then
     echo ""
     echo "  Note: $MCP_MISSING not found on PATH."
     echo "  MCP tools (Kubernetes ops and deploy) will be unavailable."
-    echo "  To install, follow Step 1 of the Quick Start guide:"
+    echo ""
+    echo "  Quick install via Homebrew:"
+    echo "    brew install kubestellar/tap/kubestellar-ops kubestellar/tap/kubestellar-deploy"
+    echo ""
+    echo "  Or follow the full Quick Start guide:"
     echo "    https://kubestellar.io/docs/console/overview/quick-start#step-1-install-kubestellar-mcp-tools"
     echo ""
 fi

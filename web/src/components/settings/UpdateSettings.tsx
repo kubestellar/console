@@ -676,7 +676,15 @@ export function UpdateSettings() {
             <span className="text-sm text-muted-foreground">{formatLastChecked()}</span>
           </div>
         </div>
-        {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
+        {error && (
+          <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+            <p className="text-sm text-red-400 font-medium">{t('settings.updates.errorChecking')}</p>
+            <p className="text-xs text-red-400/80 mt-1">{error}</p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Try clicking &quot;Check Now&quot; to retry, or verify that kc-agent is running and network is available.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Recent Commits (developer channel) — hidden during update */}

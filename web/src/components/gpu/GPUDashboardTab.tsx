@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Plus,
@@ -15,6 +16,8 @@ import {
   SortableContext,
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
+import { useClusters } from '../../hooks/useMCP'
+import { StatusIndicator } from '../charts/StatusIndicator'
 
 export interface GPUDashboardTabProps {
   dashboardCards: GpuDashCard[]
@@ -42,9 +45,34 @@ export function GPUDashboardTab({
   onShowAddCardModal,
 }: GPUDashboardTabProps) {
   const { t } = useTranslation(['cards', 'common'])
+  const { deduplicatedClusters: clusters } = useClusters()
+
+  const clusterHealth = useMemo(() => {
+    const all = clusters || []
+    const connected = all.filter(c => c.reachable !== false)
+    const disconnected = all.filter(c => c.reachable === false)
+    return { total: all.length, connected: connected.length, disconnected: disconnected.length }
+  }, [clusters])
 
   return (
     <div className="space-y-4">
+      {/* Cluster health summary */}
+      {clusterHealth.total > 0 && (
+        <div className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30 border border-border">
+          <span className="text-sm font-medium text-foreground">Cluster Health</span>
+          <div className="flex items-center gap-1.5">
+            <StatusIndicator status="healthy" size="sm" />
+            <span className="text-sm text-foreground">{clusterHealth.connected} connected</span>
+          </div>
+          {clusterHealth.disconnected > 0 && (
+            <div className="flex items-center gap-1.5">
+              <StatusIndicator status="error" size="sm" />
+              <span className="text-sm text-red-400">{clusterHealth.disconnected} disconnected</span>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {t('gpuReservations.dashboard.customizable')}

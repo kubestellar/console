@@ -518,9 +518,20 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   // Filtered installer & fixer lists
   // ============================================================================
 
-  // Effective search: local tab search overrides global search
+  // Effective search: local tab search takes priority; clear global fallback when user types locally
   const effectiveInstallerSearch = installerSearch || searchQuery
   const effectiveFixerSearch = fixerSearch || searchQuery
+
+  /** When user types in a tab-specific search, clear the global search so it does not interfere */
+  const handleInstallerSearchChange = useCallback((value: string) => {
+    setInstallerSearch(value)
+    if (value && searchQuery) setSearchQuery('')
+  }, [searchQuery])
+
+  const handleFixerSearchChange = useCallback((value: string) => {
+    setFixerSearch(value)
+    if (value && searchQuery) setSearchQuery('')
+  }, [searchQuery])
 
   // AND search: each space-separated term must match somewhere in the mission
   const andMatch = (text: string, query: string) => {
@@ -1362,10 +1373,11 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             </div>
           )}
 
-          {/* Active filter summary */}
-          {activeFilterCount > 0 && (
+          {/* Active filter summary — always show count when recommendations are loaded */}
+          {recommendations.length > 0 && (
             <div className="text-[11px] text-muted-foreground">
-              Showing {filteredRecommendations.length} of {recommendations.length} recommendations
+              Showing {filteredRecommendations.length} of {recommendations.length} missions
+              {activeFilterCount > 0 && ' (filtered)'}
             </div>
           )}
         </div>
@@ -1835,11 +1847,17 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                     <input
                       type="text"
                       value={installerSearch}
-                      onChange={(e) => setInstallerSearch(e.target.value)}
+                      onChange={(e) => handleInstallerSearchChange(e.target.value)}
                       placeholder="Search installers…"
                       className="w-full pl-10 pr-4 py-1.5 bg-secondary border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/40"
                     />
                   </div>
+                  {!installerSearch && searchQuery && (
+                    <span className="text-xs text-purple-400 flex items-center gap-1">
+                      <Filter className="w-3 h-3" />
+                      Filtered by global search: &quot;{searchQuery}&quot;
+                    </span>
+                  )}
                   <select
                     value={installerCategoryFilter}
                     onChange={(e) => setInstallerCategoryFilter(e.target.value)}
@@ -1920,11 +1938,17 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                     <input
                       type="text"
                       value={fixerSearch}
-                      onChange={(e) => setFixerSearch(e.target.value)}
+                      onChange={(e) => handleFixerSearchChange(e.target.value)}
                       placeholder="Search fixes…"
                       className="w-full pl-10 pr-4 py-1.5 bg-secondary border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/40"
                     />
                   </div>
+                  {!fixerSearch && searchQuery && (
+                    <span className="text-xs text-purple-400 flex items-center gap-1">
+                      <Filter className="w-3 h-3" />
+                      Filtered by global search: &quot;{searchQuery}&quot;
+                    </span>
+                  )}
                   <select
                     value={fixerTypeFilter}
                     onChange={(e) => setFixerTypeFilter(e.target.value)}
