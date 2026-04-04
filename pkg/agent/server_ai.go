@@ -118,6 +118,17 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				defer func() {
 					if r := recover(); r != nil {
 						slog.Info("[Chat] recovered from panic in streaming handler", "panic", r)
+						// Send error frame to the client so the frontend
+						// can display an error state instead of spinning forever.
+						if !closed.Load() {
+							writeMu.Lock()
+							_ = conn.WriteJSON(protocol.Message{
+								ID:      m.ID,
+								Type:    protocol.TypeError,
+								Payload: protocol.ErrorPayload{Code: "panic", Message: "Internal server error during chat streaming"},
+							})
+							writeMu.Unlock()
+						}
 					}
 				}()
 				s.handleChatMessageStreaming(conn, m, fa, writeMu, &closed)
@@ -132,6 +143,16 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				defer func() {
 					if r := recover(); r != nil {
 						slog.Info("[Kubectl] recovered from panic in message handler", "panic", r)
+						// Notify the client about the panic so the UI can show an error
+						if !closed.Load() {
+							writeMu.Lock()
+							_ = conn.WriteJSON(protocol.Message{
+								ID:      m.ID,
+								Type:    protocol.TypeError,
+								Payload: protocol.ErrorPayload{Code: "panic", Message: "Internal server error during kubectl execution"},
+							})
+							writeMu.Unlock()
+						}
 					}
 				}()
 				response := s.handleMessage(m)

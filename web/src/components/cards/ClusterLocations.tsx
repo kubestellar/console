@@ -5,6 +5,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { detectCloudProvider, CloudProviderIcon, type CloudProvider } from '../ui/CloudProviderIcon'
+import DOMPurify from 'dompurify'
 import WorldMapSvgUrl from '../../assets/world-map.svg'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
@@ -251,7 +252,8 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
         return res.text()
       })
       .then(svg => {
-        setMapSvg(svg)
+        // Sanitize SVG to prevent XSS from embedded scripts or event handlers
+        setMapSvg(DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } }))
         setMapLoading(false)
       })
       .catch(err => {
