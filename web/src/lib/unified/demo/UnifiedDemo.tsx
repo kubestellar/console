@@ -221,11 +221,10 @@ export function useUnifiedData<T = unknown>(
   // Get demo data if in demo mode
   const demoState = useDemoData ? getDemoData<T>(id) : null
 
-  // Detect mode version change - discard stale live data
-  const modeJustChanged = lastModeVersionRef.current !== modeVersion
-  if (modeJustChanged) {
+  // Sync ref with current mode version (tracked for future staleness detection)
+  useEffect(() => {
     lastModeVersionRef.current = modeVersion
-  }
+  }, [modeVersion])
 
   // Determine final data and loading state
   // Simple logic: during switch show skeleton, otherwise use appropriate data source

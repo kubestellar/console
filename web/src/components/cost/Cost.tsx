@@ -8,7 +8,6 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
-import { useTranslation } from 'react-i18next'
 import { TICK_INTERVAL_MS } from '../../lib/constants/network'
 import { safeGetJSON } from '../../lib/utils/localStorage'
 import { formatMemoryStat } from '../../lib/formatStats'
@@ -21,7 +20,6 @@ const COST_CARDS_KEY = 'kubestellar-cost-cards'
 const DEFAULT_COST_CARDS = getDefaultCards('cost')
 
 export function Cost() {
-  const { t: _t } = useTranslation()
   const { clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { drillToCost } = useDrillDownActions()
@@ -135,6 +133,7 @@ export function Cost() {
       gpuMonthly,
       storageMonthly,
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- CLOUD_PRICING and detectClusterProvider are stable module-level constants
   }, [reachableClusters, gpuByCluster, providerOverrides])
 
   // Stats value getter for the configurable StatsOverview component

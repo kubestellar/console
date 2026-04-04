@@ -82,7 +82,7 @@ export function Compute() {
     if (hasActualData && (currentStats.totalNodes > 0 || currentStats.totalCPUs > 0)) {
       cachedStats.current = currentStats
     }
-  }, [hasActualData, currentStats.totalNodes, currentStats.totalCPUs, currentStats.totalMemoryGB, currentStats.totalPods, currentStats.totalGPUs])
+  }, [hasActualData, currentStats])
 
   // Use cached stats during refresh, current stats when data is available
   // Show dash only when we've never had data (initial state with no clusters)

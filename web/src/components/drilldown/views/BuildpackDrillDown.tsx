@@ -217,7 +217,7 @@ export function BuildpackDrillDown({ data }: Props) {
         'yaml',
       ])
       setImageYAML(output || 'No YAML available')
-    } catch (error) {
+    } catch {
       setImageYAML('Error fetching YAML')
     }
     setYamlLoading(false)

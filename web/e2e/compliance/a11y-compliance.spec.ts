@@ -6,7 +6,7 @@
  *
  * Run: PLAYWRIGHT_BASE_URL=http://localhost:5174 npx playwright test e2e/compliance/a11y-compliance.spec.ts --project=chromium
  */
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect} from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import * as fs from 'fs'
 import * as path from 'path'

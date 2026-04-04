@@ -280,14 +280,16 @@ export function useRBACFindings() {
   const { isDemoMode } = useDemoMode()
   const { clusters: allClusters, isLoading: clustersLoading } = useClusters()
 
+  // Snapshot ref value to avoid reading ref during render
   const cachedData = useRef(loadFromCache())
+  const cachedSnapshot = cachedData.current
   const [findings, setFindings] = useState<RBACFinding[]>(
-    cachedData.current?.findings || []
+    cachedSnapshot?.findings || []
   )
-  const [isLoading, setIsLoading] = useState(!cachedData.current)
+  const [isLoading, setIsLoading] = useState(!cachedSnapshot)
   const [error, setError] = useState<string | null>(null)
   const fetchInProgress = useRef(false)
-  const initialLoadDone = useRef(!!cachedData.current)
+  const initialLoadDone = useRef(!!cachedSnapshot)
 
   const clusters = useMemo(() =>
     allClusters.filter(c => c.reachable === true).map(c => c.name),

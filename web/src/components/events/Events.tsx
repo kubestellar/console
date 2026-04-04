@@ -124,7 +124,7 @@ export function Events() {
       result = result.filter(e => e.cluster && globalSelectedClusters.includes(e.cluster))
     }
     result = filterBySeverity(result.map(e => ({ ...e, severity: e.type === 'Warning' ? 'high' : 'info' }))).map(e => {
-      const { severity, ...rest } = e as typeof e & { severity: string }
+      const { severity: _severity, ...rest } = e as typeof e & { severity: string }
       return rest
     })
     if (globalCustomFilter.trim()) {

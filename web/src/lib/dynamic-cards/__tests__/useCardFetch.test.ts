@@ -189,7 +189,7 @@ describe('useCardFetch', () => {
     const MAX_CONCURRENT_FETCHES = 5
     // Create a scope and exhaust its concurrency with never-resolving fetches
     const limitScope = createCardFetchScope()
-    let resolvers: Array<(v: Response) => void> = []
+    const resolvers: Array<(v: Response) => void> = []
 
     vi.spyOn(globalThis, 'fetch').mockImplementation(() => {
       return new Promise<Response>((resolve) => {

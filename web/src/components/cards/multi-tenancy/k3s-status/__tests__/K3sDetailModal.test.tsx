@@ -36,7 +36,7 @@ import { K3sDetailModal } from '../K3sDetailModal'
 
 describe('K3sDetailModal', () => {
   it('renders without crashing', () => {
-    const { container } = render(<K3sDetailModal isOpen={false} onClose={() => {}} data={{} as any} isDemoData={false} />)
+    const { container } = render(<K3sDetailModal isOpen={false} onClose={() => {}} data={{} as Record<string, unknown>} isDemoData={false} />)
     expect(container).toBeTruthy()
   })
 })

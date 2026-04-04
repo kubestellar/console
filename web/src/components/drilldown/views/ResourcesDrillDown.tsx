@@ -224,13 +224,13 @@ export function ResourcesDrillDown({ data: _data }: Props) {
     return map
   }, [clusters])
 
-  // Accelerator type config
-  const ACCEL_TYPES = [
+  // Accelerator type config (memoized to avoid recreating on every render)
+  const ACCEL_TYPES = useMemo(() => [
     { key: 'GPU', label: 'GPU', color: 'text-purple-400' },
     { key: 'TPU', label: 'TPU', color: 'text-green-400' },
     { key: 'AIU', label: 'AIU', color: 'text-cyan-400' },
     { key: 'XPU', label: 'XPU', color: 'text-orange-400' },
-  ] as const
+  ] as const, [])
 
   // Calculate per-cluster per-accelerator data (mapping aliases to primary cluster names)
   // Also deduplicate GPU nodes by name to avoid counting same physical node twice
@@ -269,7 +269,7 @@ export function ResourcesDrillDown({ data: _data }: Props) {
       ...at,
       globalData: globalTotals[at.key],
     }))
-  }, [clusterAccelerators])
+  }, [clusterAccelerators, ACCEL_TYPES])
 
   // Calculate totals
   const totals = useMemo(() => {

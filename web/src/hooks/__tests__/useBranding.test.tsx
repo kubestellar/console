@@ -233,7 +233,7 @@ describe('useBranding', () => {
     // Use a slow fetch that never resolves
     vi.mocked(fetch).mockReturnValue(new Promise(() => {}))
 
-    const testId = 'child-rendered'
+    const _testId = 'child-rendered'
     const { result } = renderHook(() => useBranding(), { wrapper: createWrapper() })
 
     // Even though fetch hasn't resolved, we should have default branding

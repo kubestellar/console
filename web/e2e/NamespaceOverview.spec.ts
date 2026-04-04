@@ -15,7 +15,7 @@ import { test, expect, Page } from '@playwright/test'
 // ---------------------------------------------------------------------------
 
 const DEMO_CLUSTERS = ['prod-us-east', 'prod-eu-west', 'staging']
-const DEMO_NAMESPACES = ['default', 'kube-system', 'monitoring']
+const _DEMO_NAMESPACES = ['default', 'kube-system', 'monitoring']
 
 async function setupDemoMode(page: Page) {
   await page.route('**/api/me', route =>

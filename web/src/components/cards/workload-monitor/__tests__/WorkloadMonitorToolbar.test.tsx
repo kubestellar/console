@@ -36,7 +36,7 @@ import { WorkloadMonitorToolbar } from '../WorkloadMonitorToolbar'
 
 describe('WorkloadMonitorToolbar', () => {
   it('renders without crashing', () => {
-    const { container } = render(<WorkloadMonitorToolbar {...({} as any)} />)
+    const { container } = render(<WorkloadMonitorToolbar {...({} as Record<string, unknown>)} />)
     expect(container).toBeTruthy()
   })
 })

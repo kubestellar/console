@@ -102,8 +102,8 @@ vi.mock('../../hooks/useCachedData', () => ({
   useCachedDeploymentIssues: vi.fn().mockReturnValue({ issues: [], isLoading: false, error: null, refetch: vi.fn() }),
 }))
 
-const stubHook = () => ({ data: [], isLoading: false, error: null, refetch: vi.fn() })
-const namedResult = (name: string) => ({ [name]: [], isLoading: false, error: null, refetch: vi.fn() })
+const _stubHook = () => ({ data: [], isLoading: false, error: null, refetch: vi.fn() })
+const _namedResult = (name: string) => ({ [name]: [], isLoading: false, error: null, refetch: vi.fn() })
 
 vi.mock('../../../hooks/mcp', () => ({
   useClusters: vi.fn().mockReturnValue({ clusters: [], isLoading: false, error: null, refetch: vi.fn() }),

@@ -36,7 +36,7 @@ import { KubeFlexDetailModal } from '../KubeFlexDetailModal'
 
 describe('KubeFlexDetailModal', () => {
   it('renders without crashing', () => {
-    const { container } = render(<KubeFlexDetailModal isOpen={false} onClose={() => {}} data={{} as any} isDemoData={false} />)
+    const { container } = render(<KubeFlexDetailModal isOpen={false} onClose={() => {}} data={{} as Record<string, unknown>} isDemoData={false} />)
     expect(container).toBeTruthy()
   })
 })

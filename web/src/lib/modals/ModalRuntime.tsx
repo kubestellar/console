@@ -243,7 +243,6 @@ export function ModalRuntime({
   children,
 }: ModalRuntimeProps) {
   const {
-    kind: _kind,
     title,
     icon,
     size = 'lg',

@@ -24,7 +24,7 @@ const PAGE_LOAD_TIMEOUT_MS = 60_000
 /** Timeout for card content to appear after navigation */
 const CARD_CONTENT_TIMEOUT_MS = 15_000
 /** How long to wait for polling updates */
-const POLL_WAIT_MS = 8_000
+const _POLL_WAIT_MS = 8_000
 /** Short stabilization delay after page.evaluate */
 const SETTLE_MS = 500
 

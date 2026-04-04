@@ -6,7 +6,6 @@ import {
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
-import { useTranslation } from 'react-i18next'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
 // Kubernetes-themed suits (replacing hearts, diamonds, clubs, spades)
@@ -239,7 +238,6 @@ function StockPile({
 }
 
 export function Solitaire(_props: CardComponentProps) {
-  const { t: _t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const { isExpanded } = useCardExpanded()
   const [game, setGame] = useState<GameState>(dealGame)

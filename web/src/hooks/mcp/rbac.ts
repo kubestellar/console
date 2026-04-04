@@ -126,7 +126,7 @@ export function useK8sRoles(cluster?: string, namespace?: string, includeSystem 
       const { data } = await api.get<K8sRole[]>(`/api/rbac/roles?${params}`, { timeout: 60000 })
       setRoles(data || [])
       setError(null)
-    } catch (err) {
+    } catch {
       // Don't show error - roles are optional
       setError(null)
       // Fall back to demo data on error
@@ -189,7 +189,7 @@ export function useK8sRoleBindings(cluster?: string, namespace?: string, include
       const { data } = await api.get<K8sRoleBinding[]>(`/api/rbac/bindings?${params}`, { timeout: 60000 })
       setBindings(data || [])
       setError(null)
-    } catch (err) {
+    } catch {
       // Don't show error - role bindings are optional
       setError(null)
       // Fall back to demo data on error
@@ -245,7 +245,7 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
       const { data } = await api.get<K8sServiceAccountInfo[]>(`/api/rbac/service-accounts?${params}`, { timeout: 60000 })
       setServiceAccounts(data || [])
       setError(null)
-    } catch (err) {
+    } catch {
       // Don't show error - service accounts are optional
       setError(null)
       // Fall back to demo data on error

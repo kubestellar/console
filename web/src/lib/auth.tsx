@@ -302,7 +302,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     emitLogin('github-oauth')
     emitConversionStep(2, 'login', { method: 'github-oauth' })
     window.location.href = '/auth/github'
-  }, [])
+  }, [setDemoMode])
 
   const setToken = useCallback((newToken: string, onboarded: boolean) => {
     localStorage.setItem(STORAGE_KEY_TOKEN, newToken)
@@ -386,7 +386,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // instead of flashing through the login page.
   useEffect(() => {
     refreshUser().finally(() => setIsLoading(false))
-  }, []) // Empty deps - only run on mount
+  }, [refreshUser])
 
   return (
     <AuthContext.Provider

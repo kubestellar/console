@@ -633,7 +633,6 @@ describe('useServiceExport', () => {
   // ── Skips fetch when cluster is empty ───────────────────────────────
 
   it('does not fetch when cluster is empty string', async () => {
-    const { result } = renderHook(() => useServiceExport('', 'production', 'api-gateway'))
 
     // Should remain in loading state since fetch was skipped
     // Wait a tick to ensure the effect ran
@@ -645,7 +644,6 @@ describe('useServiceExport', () => {
   // ── Skips fetch when namespace is empty ──────────────────────────────
 
   it('does not fetch when namespace is empty string', async () => {
-    const { result } = renderHook(() => useServiceExport('us-east-1', '', 'api-gateway'))
 
     await act(async () => { await Promise.resolve() })
 
@@ -655,7 +653,6 @@ describe('useServiceExport', () => {
   // ── Skips fetch when name is empty ──────────────────────────────────
 
   it('does not fetch when name is empty string', async () => {
-    const { result } = renderHook(() => useServiceExport('us-east-1', 'production', ''))
 
     await act(async () => { await Promise.resolve() })
 

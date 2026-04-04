@@ -125,7 +125,7 @@ export function ServiceAccountDrillDown({ data }: Props) {
     }
 
     loadData()
-  }, [agentConnected])
+  }, [agentConnected, fetchData, fetchDescribe, fetchYaml])
 
   const handleCopy = (field: string, value: string) => {
     copyToClipboard(value)

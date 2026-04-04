@@ -155,7 +155,7 @@ export function useNamespaces(cluster?: string, forceLive = false) {
 }
 
 // @ts-expect-error - kept for demo mode reference
-function __getDemoNamespaces(): string[] {
+function ___getDemoNamespaces(): string[] {
   return ['default', 'kube-system', 'kube-public', 'monitoring', 'production', 'staging', 'batch', 'data', 'web', 'ingress']
 }
 
@@ -197,7 +197,7 @@ export function useNamespaceStats(cluster?: string) {
       const sortedStats = Object.values(nsMap).sort((a, b) => b.podCount - a.podCount)
       setStats(sortedStats)
       setError(null)
-    } catch (err) {
+    } catch {
       // Don't show error at dashboard level
       setError(null)
       // Fallback to demo data

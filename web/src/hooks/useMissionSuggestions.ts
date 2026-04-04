@@ -272,9 +272,11 @@ export function useMissionSuggestions() {
   }, [analyzeAndSuggest])
 
   // Filter out snoozed and dismissed suggestions
-  // Include snoozedMissions and dismissedMissions in deps to trigger re-filter on snooze changes
+  // snoozedMissions/dismissedMissions are needed to trigger re-filter when snooze state changes
+  // because isSnoozed/isDismissed read from mutable state and have stable references
   const visibleSuggestions = useMemo(() => {
     return suggestions.filter(s => !isSnoozed(s.id) && !isDismissed(s.id))
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- snoozedMissions/dismissedMissions needed as change triggers
   }, [suggestions, isSnoozed, isDismissed, snoozedMissions, dismissedMissions])
 
   // Stats

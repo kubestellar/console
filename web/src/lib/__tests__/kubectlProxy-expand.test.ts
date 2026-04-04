@@ -169,7 +169,7 @@ describe('KubectlProxy — expanded edge cases', () => {
       // Need to respond to the message
       setTimeout(() => {
         if (activeWs) {
-          const sentData = vi.spyOn(activeWs, 'send')
+          const _sentData = vi.spyOn(activeWs, 'send')
           // The request is already sent, respond to it
         }
       }, 0)

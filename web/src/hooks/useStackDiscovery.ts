@@ -358,6 +358,9 @@ export function useStackDiscovery(clusters: string[]) {
   const hasStacksRef = useRef(hasCachedStacks) // Track if we have any data to show
   const isRefetching = useRef(false) // Guard against concurrent refetches
 
+  // Stable key for cluster list — avoids complex expressions in dependency arrays
+  const clustersKey = useMemo(() => (clusters || []).join(','), [clusters])
+
   const refetch = useCallback(async (silent = false) => {
     // Skip fetching in demo mode — no agent available
     if (getDemoMode()) {
@@ -705,7 +708,7 @@ export function useStackDiscovery(clusters: string[]) {
       setIsLoading(false)
       isRefetching.current = false
     }
-  }, [(clusters || []).join(',')])
+  }, [clusters, clustersKey])
 
   useEffect(() => {
     // Wait for clusters to be available

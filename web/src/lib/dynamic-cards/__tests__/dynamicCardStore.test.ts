@@ -32,7 +32,6 @@ import {
 } from '../dynamicCardStore'
 import {
   registerDynamicCard,
-  getAllDynamicCards,
   unregisterDynamicCard,
 } from '../dynamicCardRegistry'
 

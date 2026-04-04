@@ -116,7 +116,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   const status = data.status as string
   const restarts = (data.restarts as number) || 0
   const reason = data.reason as string
-  const passedIssues = (data.issues as string[]) || []
+  const passedIssues = useMemo(() => (data.issues as string[]) || [], [data.issues])
   const passedLabels = data.labels as Record<string, string> | undefined
   const passedAnnotations = data.annotations as Record<string, string> | undefined
 
@@ -624,6 +624,7 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
     }
 
     loadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hasLoadedRef guards against re-execution; only agentConnected triggers the initial load
   }, [agentConnected])
 
   // Save data to persistent cache whenever it changes

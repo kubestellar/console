@@ -616,12 +616,12 @@ test('security compliance — frontend security audit', async ({ page }, testInf
   console.log('[Security] Phase 10: PostMessage security checks')
 
   // Check 8.1: PostMessage handlers validate origin
-  const postMessageHandlers = await page.evaluate(() => {
+  const _postMessageHandlers = await page.evaluate(() => {
     // Count registered message event listeners
     // This is best-effort — we instrument addEventListener
     let messageListeners = 0
-    const original = window.addEventListener
-    const origRemove = window.removeEventListener
+    const _original = window.addEventListener
+    const _origRemove = window.removeEventListener
     // Can't fully audit but we can check if any exist
     // by dispatching a test message and seeing if handlers fire
     try {

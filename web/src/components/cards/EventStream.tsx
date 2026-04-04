@@ -248,7 +248,6 @@ function EventStreamInternal() {
 }
 
 export function EventStream() {
-  const { t: _t } = useTranslation()
   return (
     <DynamicCardErrorBoundary cardId="EventStream">
       <EventStreamInternal />

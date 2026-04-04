@@ -9,7 +9,6 @@ import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards, deploymentsDashboardConfig } from '../../config/dashboards'
 import { migrateStorageKey } from '../../lib/dashboards/migrateStorageKey'
-import { useTranslation } from 'react-i18next'
 
 /** Storage key sourced from central dashboard config to prevent mismatches */
 const DEPLOYMENTS_CARDS_KEY = deploymentsDashboardConfig.storageKey ?? 'deployments-dashboard-cards'
@@ -22,7 +21,6 @@ migrateStorageKey(LEGACY_DEPLOYMENTS_CARDS_KEY, DEPLOYMENTS_CARDS_KEY)
 const DEFAULT_DEPLOYMENTS_CARDS = getDefaultCards('deployments')
 
 export function Deployments() {
-  const { t: _t } = useTranslation()
   // Use cached hooks for stale-while-revalidate pattern
   const { deployments, isLoading, isRefreshing: dataRefreshing, lastRefresh, refetch, error: deploymentsError } = useCachedDeployments()
   const { issues: deploymentIssues, refetch: refetchIssues, error: deploymentIssuesError } = useCachedDeploymentIssues()

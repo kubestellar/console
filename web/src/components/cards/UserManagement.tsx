@@ -82,9 +82,9 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
   const { isDemoMode } = useDemoMode()
   // Fetch ALL SAs from ALL clusters upfront, filter locally
-  const { serviceAccounts: allServiceAccounts, isLoading: sasInitialLoading, failedClusters: _saFailedClusters } = useAllK8sServiceAccounts(allClusters)
+  const { serviceAccounts: allServiceAccounts, isLoading: sasInitialLoading } = useAllK8sServiceAccounts(allClusters)
   // Fetch ALL OpenShift users from ALL clusters upfront, filter locally
-  const { users: allOpenshiftUsers, isLoading: openshiftInitialLoading, failedClusters: _userFailedClusters } = useAllOpenShiftUsers(allClusters)
+  const { users: allOpenshiftUsers, isLoading: openshiftInitialLoading } = useAllOpenShiftUsers(allClusters)
 
   // Only show loading state on initial load when there's no data
   const sasLoading = sasInitialLoading && allServiceAccounts.length === 0

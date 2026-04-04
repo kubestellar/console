@@ -1027,7 +1027,7 @@ describe('useCertManager', () => {
         isLoading: false,
       })
 
-      mockKubectlProxy.exec.mockImplementation(async (args: string[], opts: { context: string }) => {
+      mockKubectlProxy.exec.mockImplementation(async (args: string[], _opts: { context: string }) => {
         if (args[1] === 'crd') return { exitCode: 0, output: 'found' }
         if (args[1] === 'certificates') return mockExecJson([
           makeCertResource('cert', 'default', {

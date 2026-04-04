@@ -6,25 +6,25 @@ import { renderHook } from '@testing-library/react'
 // return values via mockReturnValue / mockReturnValueOnce.
 
 const mockUseClusters = vi.fn(() => ({
-  deduplicatedClusters: [] as any[],
-  clusters: [] as any[],
+  deduplicatedClusters: [] as unknown[],
+  clusters: [] as unknown[],
   isLoading: false,
 }))
-const mockUsePodIssues = vi.fn(() => ({ issues: [] as any[], isLoading: false }))
-const mockUseDeployments = vi.fn(() => ({ deployments: [] as any[], isLoading: false }))
-const mockUseDeploymentIssues = vi.fn(() => ({ issues: [] as any[], isLoading: false }))
-const mockUsePVCs = vi.fn(() => ({ pvcs: [] as any[], isLoading: false }))
-const mockUseServices = vi.fn(() => ({ services: [] as any[], isLoading: false }))
-const mockUseEvents = vi.fn(() => ({ events: [] as any[], isLoading: false }))
-const mockUseWarningEvents = vi.fn(() => ({ events: [] as any[], isLoading: false }))
-const mockUseSecurityIssues = vi.fn(() => ({ issues: [] as any[], isLoading: false }))
-const mockUseHelmReleases = vi.fn(() => ({ releases: [] as any[], isLoading: false }))
-const mockUseOperatorSubscriptions = vi.fn(() => ({ subscriptions: [] as any[], isLoading: false }))
-const mockUseOperators = vi.fn(() => ({ operators: [] as any[], isLoading: false }))
-const mockUseGPUNodes = vi.fn(() => ({ nodes: [] as any[], isLoading: false }))
+const mockUsePodIssues = vi.fn(() => ({ issues: [] as unknown[], isLoading: false }))
+const mockUseDeployments = vi.fn(() => ({ deployments: [] as unknown[], isLoading: false }))
+const mockUseDeploymentIssues = vi.fn(() => ({ issues: [] as unknown[], isLoading: false }))
+const mockUsePVCs = vi.fn(() => ({ pvcs: [] as unknown[], isLoading: false }))
+const mockUseServices = vi.fn(() => ({ services: [] as unknown[], isLoading: false }))
+const mockUseEvents = vi.fn(() => ({ events: [] as unknown[], isLoading: false }))
+const mockUseWarningEvents = vi.fn(() => ({ events: [] as unknown[], isLoading: false }))
+const mockUseSecurityIssues = vi.fn(() => ({ issues: [] as unknown[], isLoading: false }))
+const mockUseHelmReleases = vi.fn(() => ({ releases: [] as unknown[], isLoading: false }))
+const mockUseOperatorSubscriptions = vi.fn(() => ({ subscriptions: [] as unknown[], isLoading: false }))
+const mockUseOperators = vi.fn(() => ({ operators: [] as unknown[], isLoading: false }))
+const mockUseGPUNodes = vi.fn(() => ({ nodes: [] as unknown[], isLoading: false }))
 
-const mockUseAlerts = vi.fn(() => ({ alerts: [], stats: undefined as any, isLoading: false }))
-const mockUseAlertRules = vi.fn(() => ({ rules: [] as any[], isLoading: false }))
+const mockUseAlerts = vi.fn(() => ({ alerts: [], stats: undefined as never, isLoading: false }))
+const mockUseAlertRules = vi.fn(() => ({ rules: [] as unknown[], isLoading: false }))
 
 const mockDrillToAllClusters = vi.fn()
 const mockDrillToAllNodes = vi.fn()
@@ -40,24 +40,24 @@ const mockDrillToAllGPU = vi.fn()
 const mockDrillToAllStorage = vi.fn()
 
 vi.mock('../useMCP', () => ({
-  useClusters: (...args: any[]) => mockUseClusters(...args),
-  usePodIssues: (...args: any[]) => mockUsePodIssues(...args),
-  useDeployments: (...args: any[]) => mockUseDeployments(...args),
-  useDeploymentIssues: (...args: any[]) => mockUseDeploymentIssues(...args),
-  usePVCs: (...args: any[]) => mockUsePVCs(...args),
-  useServices: (...args: any[]) => mockUseServices(...args),
-  useEvents: (...args: any[]) => mockUseEvents(...args),
-  useWarningEvents: (...args: any[]) => mockUseWarningEvents(...args),
-  useSecurityIssues: (...args: any[]) => mockUseSecurityIssues(...args),
-  useHelmReleases: (...args: any[]) => mockUseHelmReleases(...args),
-  useOperatorSubscriptions: (...args: any[]) => mockUseOperatorSubscriptions(...args),
-  useOperators: (...args: any[]) => mockUseOperators(...args),
-  useGPUNodes: (...args: any[]) => mockUseGPUNodes(...args),
+  useClusters: (...args: unknown[]) => mockUseClusters(...args),
+  usePodIssues: (...args: unknown[]) => mockUsePodIssues(...args),
+  useDeployments: (...args: unknown[]) => mockUseDeployments(...args),
+  useDeploymentIssues: (...args: unknown[]) => mockUseDeploymentIssues(...args),
+  usePVCs: (...args: unknown[]) => mockUsePVCs(...args),
+  useServices: (...args: unknown[]) => mockUseServices(...args),
+  useEvents: (...args: unknown[]) => mockUseEvents(...args),
+  useWarningEvents: (...args: unknown[]) => mockUseWarningEvents(...args),
+  useSecurityIssues: (...args: unknown[]) => mockUseSecurityIssues(...args),
+  useHelmReleases: (...args: unknown[]) => mockUseHelmReleases(...args),
+  useOperatorSubscriptions: (...args: unknown[]) => mockUseOperatorSubscriptions(...args),
+  useOperators: (...args: unknown[]) => mockUseOperators(...args),
+  useGPUNodes: (...args: unknown[]) => mockUseGPUNodes(...args),
 }))
 
 vi.mock('../useAlerts', () => ({
-  useAlerts: (...args: any[]) => mockUseAlerts(...args),
-  useAlertRules: (...args: any[]) => mockUseAlertRules(...args),
+  useAlerts: (...args: unknown[]) => mockUseAlerts(...args),
+  useAlertRules: (...args: unknown[]) => mockUseAlertRules(...args),
 }))
 
 vi.mock('../useDrillDown', () => ({
@@ -87,7 +87,7 @@ function getStatValue(blockId: string) {
 }
 
 /** Build a minimal cluster object with sensible defaults */
-function makeCluster(overrides: Record<string, any> = {}) {
+function makeCluster(overrides: Record<string, unknown> = {}) {
   return {
     name: 'cluster-1',
     healthy: true,
@@ -121,7 +121,7 @@ describe('useUniversalStats', () => {
     mockUseOperatorSubscriptions.mockReturnValue({ subscriptions: [], isLoading: false })
     mockUseOperators.mockReturnValue({ operators: [], isLoading: false })
     mockUseGPUNodes.mockReturnValue({ nodes: [], isLoading: false })
-    mockUseAlerts.mockReturnValue({ alerts: [], stats: undefined as any, isLoading: false })
+    mockUseAlerts.mockReturnValue({ alerts: [], stats: undefined as never, isLoading: false })
     mockUseAlertRules.mockReturnValue({ rules: [], isLoading: false })
   })
 
@@ -171,68 +171,68 @@ describe('useUniversalStats', () => {
     })
 
     it('handles undefined issues from usePodIssues', () => {
-      mockUsePodIssues.mockReturnValue({ issues: undefined as any, isLoading: false })
+      mockUsePodIssues.mockReturnValue({ issues: undefined as never, isLoading: false })
       expect(getStatValue('pod_issues')?.value).toBe(0)
     })
 
     it('handles undefined deployments', () => {
-      mockUseDeployments.mockReturnValue({ deployments: undefined as any, isLoading: false })
+      mockUseDeployments.mockReturnValue({ deployments: undefined as never, isLoading: false })
       expect(getStatValue('deployments')?.value).toBe(0)
     })
 
     it('handles undefined pvcs', () => {
-      mockUsePVCs.mockReturnValue({ pvcs: undefined as any, isLoading: false })
+      mockUsePVCs.mockReturnValue({ pvcs: undefined as never, isLoading: false })
       expect(getStatValue('pvcs')?.value).toBe(0)
     })
 
     it('handles undefined services', () => {
-      mockUseServices.mockReturnValue({ services: undefined as any, isLoading: false })
+      mockUseServices.mockReturnValue({ services: undefined as never, isLoading: false })
       expect(getStatValue('services')?.value).toBe(0)
     })
 
     it('handles undefined events', () => {
-      mockUseEvents.mockReturnValue({ events: undefined as any, isLoading: false })
+      mockUseEvents.mockReturnValue({ events: undefined as never, isLoading: false })
       expect(getStatValue('normal')?.value).toBe(0)
     })
 
     it('handles undefined warning events', () => {
-      mockUseWarningEvents.mockReturnValue({ events: undefined as any, isLoading: false })
+      mockUseWarningEvents.mockReturnValue({ events: undefined as never, isLoading: false })
       expect(getStatValue('warning')?.value).toBe(0)
     })
 
     it('handles undefined security issues', () => {
-      mockUseSecurityIssues.mockReturnValue({ issues: undefined as any, isLoading: false })
+      mockUseSecurityIssues.mockReturnValue({ issues: undefined as never, isLoading: false })
       expect(getStatValue('high')?.value).toBe(0)
     })
 
     it('handles undefined helm releases', () => {
-      mockUseHelmReleases.mockReturnValue({ releases: undefined as any, isLoading: false })
+      mockUseHelmReleases.mockReturnValue({ releases: undefined as never, isLoading: false })
       expect(getStatValue('helm')?.value).toBe(0)
     })
 
     it('handles undefined operators', () => {
-      mockUseOperators.mockReturnValue({ operators: undefined as any, isLoading: false })
+      mockUseOperators.mockReturnValue({ operators: undefined as never, isLoading: false })
       expect(getStatValue('operators')?.value).toBe(0)
     })
 
     it('handles undefined operator subscriptions', () => {
-      mockUseOperatorSubscriptions.mockReturnValue({ subscriptions: undefined as any, isLoading: false })
+      mockUseOperatorSubscriptions.mockReturnValue({ subscriptions: undefined as never, isLoading: false })
       expect(getStatValue('subscriptions')?.value).toBe(0)
     })
 
     it('handles undefined GPU nodes', () => {
-      mockUseGPUNodes.mockReturnValue({ nodes: undefined as any, isLoading: false })
+      mockUseGPUNodes.mockReturnValue({ nodes: undefined as never, isLoading: false })
       expect(getStatValue('gpus')?.value).toBe(0)
     })
 
     it('handles undefined alert stats', () => {
-      mockUseAlerts.mockReturnValue({ alerts: [], stats: undefined as any, isLoading: false })
+      mockUseAlerts.mockReturnValue({ alerts: [], stats: undefined as never, isLoading: false })
       expect(getStatValue('firing')?.value).toBe(0)
       expect(getStatValue('resolved')?.value).toBe(0)
     })
 
     it('handles undefined alert rules', () => {
-      mockUseAlertRules.mockReturnValue({ rules: undefined as any, isLoading: false })
+      mockUseAlertRules.mockReturnValue({ rules: undefined as never, isLoading: false })
       expect(getStatValue('rules_enabled')?.value).toBe(0)
       expect(getStatValue('rules_disabled')?.value).toBe(0)
     })

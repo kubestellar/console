@@ -166,24 +166,25 @@ export interface UseTopologyResult {
 }
 
 export function useTopology(): UseTopologyResult {
-  // Initialize from cache
+  // Initialize from cache — snapshot ref value to avoid reading ref during render
   const cachedData = useRef(loadFromCache<TopologyResponse>(TOPOLOGY_CACHE_KEY))
+  const cachedSnapshot = cachedData.current
   const [graph, setGraph] = useState<TopologyGraph | null>(
-    cachedData.current?.data?.graph || null
+    cachedSnapshot?.data?.graph || null
   )
   const [clusters, setClusters] = useState<TopologyClusterSummary[]>(
-    cachedData.current?.data?.clusters || []
+    cachedSnapshot?.data?.clusters || []
   )
   const [stats, setStats] = useState<TopologyResponse['stats'] | null>(
-    cachedData.current?.data?.stats || null
+    cachedSnapshot?.data?.stats || null
   )
-  const [isLoading, setIsLoading] = useState(!cachedData.current)
+  const [isLoading, setIsLoading] = useState(!cachedSnapshot)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  const [isDemoData, setIsDemoData] = useState(!cachedData.current)
+  const [isDemoData, setIsDemoData] = useState(!cachedSnapshot)
   const [lastRefresh, setLastRefresh] = useState<number | null>(
-    cachedData.current?.timestamp || null
+    cachedSnapshot?.timestamp || null
   )
-  const initialLoadDone = useRef(!!cachedData.current)
+  const initialLoadDone = useRef(!!cachedSnapshot)
 
   const refetch = useCallback(async (silent = false) => {
     if (!silent) {

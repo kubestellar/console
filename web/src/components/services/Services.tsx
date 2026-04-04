@@ -7,7 +7,6 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
-import { useTranslation } from 'react-i18next'
 
 const SERVICES_CARDS_KEY = 'kubestellar-services-cards'
 
@@ -15,7 +14,6 @@ const SERVICES_CARDS_KEY = 'kubestellar-services-cards'
 const DEFAULT_SERVICES_CARDS = getDefaultCards('services')
 
 export function Services() {
-  const { t: _t } = useTranslation()
   const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
   const { services, error: servicesError } = useServices()
   const error = clustersError || servicesError

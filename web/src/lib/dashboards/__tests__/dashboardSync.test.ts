@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach} from 'vitest'
 
 // Mock the api module
 const mockApiGet = vi.fn()

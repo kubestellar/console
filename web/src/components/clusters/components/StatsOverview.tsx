@@ -5,7 +5,6 @@ import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { isInClusterMode } from '../../../hooks/useBackendHealth'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { Skeleton } from '../../ui/Skeleton'
-import { useTranslation } from 'react-i18next'
 import { useModalState } from '../../../lib/modals'
 import { wrapAbbreviations } from '../../shared/TechnicalAcronym'
 
@@ -215,7 +214,6 @@ export function StatsOverview({
   configKey,
   showConfigButton = true,
 }: StatsOverviewProps) {
-  const { t: _t } = useTranslation()
   const { blocks, saveBlocks, visibleBlocks, defaultBlocks } = useStatsConfig(dashboardType, configKey)
   const { isOpen: isConfigOpen, open: openConfig, close: closeConfig } = useModalState()
   const { status: agentStatus } = useLocalAgent()

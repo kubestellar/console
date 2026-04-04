@@ -6,7 +6,7 @@
  *
  * Now supports live data from selected llm-d stack via StackContext.
  */
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CircleDot } from 'lucide-react'
 import { generateServerMetrics, type ServerMetrics } from '../../../lib/llmd/mockData'
@@ -575,7 +575,7 @@ export function LLMdFlow() {
   const [metricsHistory, setMetricsHistory] = useState<Record<string, MetricsHistoryData>>({})
   const [selectedMetricTypes, setSelectedMetricTypes] = useState<MetricType[]>(['rps'])
   const [viewMode, setViewMode] = useState<ViewMode>('default')
-  const uniqueId = useRef(`flow-${Math.random().toString(36).substr(2, 9)}`).current
+  const uniqueId = useMemo(() => `flow-${Math.random().toString(36).substr(2, 9)}`, [])
 
   // Detect if card is in expanded/fullscreen mode
   const { isExpanded } = useCardExpanded()

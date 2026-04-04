@@ -4,7 +4,6 @@ import { useCardLoadingState } from '../CardDataContext'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../../lib/cards/CardComponents'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { Skeleton } from '../../ui/Skeleton'
-import { useTranslation } from 'react-i18next'
 
 interface KagentiToolRegistryProps {
   config?: { cluster?: string }
@@ -18,7 +17,6 @@ const SORT_OPTIONS: { value: SortField; label: string }[] = [
 ]
 
 export function KagentiToolRegistry({ config }: KagentiToolRegistryProps) {
-  const { t: _t } = useTranslation()
   const {
     data: tools,
     isLoading,

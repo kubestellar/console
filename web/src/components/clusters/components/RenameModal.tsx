@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Check, Loader2, Edit3 } from 'lucide-react'
 import { BaseModal } from '../../../lib/modals'
-import { useTranslation } from 'react-i18next'
 
 interface RenameModalProps {
   isOpen?: boolean
@@ -12,7 +11,6 @@ interface RenameModalProps {
 }
 
 export function RenameModal({ isOpen = true, clusterName, currentDisplayName, onClose, onRename }: RenameModalProps) {
-  const { t: _t } = useTranslation()
   const [newName, setNewName] = useState(currentDisplayName)
   const [status, setStatus] = useState<{ renaming: boolean; error: string | null }>({ renaming: false, error: null })
 

@@ -39,7 +39,7 @@ import { ClusterSelectionDialog } from '../ClusterSelectionDialog'
 
 describe('ClusterSelectionDialog', () => {
   it('renders without crashing', () => {
-    const { container } = render(<ClusterSelectionDialog {...({} as any)} />)
+    const { container } = render(<ClusterSelectionDialog {...({} as Record<string, unknown>)} />)
     expect(container).toBeTruthy()
   })
 })

@@ -223,7 +223,7 @@ function InfoTooltip({ text }: { text: string }) {
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
-  const tooltipId = useRef(`info-tooltip-${Math.random().toString(36).slice(2, 9)}`).current
+  const tooltipId = useMemo(() => `info-tooltip-${Math.random().toString(36).slice(2, 9)}`, [])
 
   // Update position based on trigger element's current bounding rect
   const updatePosition = useCallback(() => {
@@ -538,7 +538,7 @@ export function CardWrapper({
   const [showWidgetExport, setShowWidgetExport] = useState(false)
   const [showResizeMenu, setShowResizeMenu] = useState(false)
   const [resizeMenuOnLeft, setResizeMenuOnLeft] = useState(false)
-  const [_timeRemaining, setTimeRemaining] = useState<number | null>(null)
+  const [__timeRemaining, setTimeRemaining] = useState<number | null>(null)
   // Chat state reserved for future use
   // const [isChatOpen, setIsChatOpen] = useState(false)
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([])

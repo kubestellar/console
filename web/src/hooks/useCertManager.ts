@@ -207,19 +207,20 @@ export function useCertManager() {
   const { isDemoMode: demoMode } = useDemoMode()
   const { clusters: allClusters } = useClusters()
 
-  // Initialize state from cache
+  // Initialize state from cache — snapshot ref value to avoid reading ref during render
   const cachedData = useRef(loadFromCache())
-  const [certificates, setCertificates] = useState<Certificate[]>(cachedData.current?.certificates || [])
-  const [issuers, setIssuers] = useState<Issuer[]>(cachedData.current?.issuers || [])
-  const [installed, setInstalled] = useState(cachedData.current?.installed || false)
-  const [isLoading, setIsLoading] = useState(!cachedData.current) // Only show loading if no cache
+  const cachedSnapshot = cachedData.current
+  const [certificates, setCertificates] = useState<Certificate[]>(cachedSnapshot?.certificates || [])
+  const [issuers, setIssuers] = useState<Issuer[]>(cachedSnapshot?.issuers || [])
+  const [installed, setInstalled] = useState(cachedSnapshot?.installed || false)
+  const [isLoading, setIsLoading] = useState(!cachedSnapshot) // Only show loading if no cache
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(
-    cachedData.current?.timestamp ? new Date(cachedData.current.timestamp) : null
+    cachedSnapshot?.timestamp ? new Date(cachedSnapshot.timestamp) : null
   )
-  const initialLoadDone = useRef(!!cachedData.current)
+  const initialLoadDone = useRef(!!cachedSnapshot)
   /** Guard to prevent concurrent refetch calls from flooding the request queue */
   const fetchInProgress = useRef(false)
 

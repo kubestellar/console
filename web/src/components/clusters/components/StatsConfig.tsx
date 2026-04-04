@@ -18,7 +18,6 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useTranslation } from 'react-i18next'
 import { safeGetItem, safeSetItem } from '../../../lib/utils/localStorage'
 import { useToast } from '../../ui/Toast'
 
@@ -249,7 +248,6 @@ export function StatsConfigModal({ isOpen, onClose, blocks, onSave }: StatsConfi
 
 // Hook to manage stats configuration
 export function useStatsConfig(storageKey: string = 'cluster-stats-config') {
-  const { t: _t } = useTranslation()
   const { showToast } = useToast()
   const [blocks, setBlocks] = useState<StatBlockConfig[]>(() => {
     try {

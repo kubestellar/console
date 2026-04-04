@@ -649,7 +649,7 @@ describe('fetcher callback — agentFetchAllClusters', () => {
 
     mockMapSettled.mockImplementation(async (
       items: Array<{ name: string; context?: string }>,
-      fn: (item: { name: string; context?: string }, index: number) => Promise<unknown>,
+      _fn: (item: { name: string; context?: string }, index: number) => Promise<unknown>,
     ) => {
       // Verify only target cluster was passed
       expect(items).toHaveLength(1)

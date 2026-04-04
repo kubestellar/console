@@ -10,7 +10,6 @@
  */
 import { motion } from 'framer-motion'
 import { useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
 
 interface GaugeConfig {
   value: number
@@ -74,7 +73,6 @@ export function PremiumGauge({
   endAngle = 135,
   showInnerGlow = true,
 }: PremiumGaugeProps) {
-  const { t: _t } = useTranslation()
   const viewSize = 100
   const cx = viewSize / 2
   const cy = viewSize / 2

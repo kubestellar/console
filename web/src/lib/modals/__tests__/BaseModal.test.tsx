@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi} from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { BaseModal } from '../BaseModal'
 
@@ -181,7 +181,6 @@ describe('BaseModal.Content', () => {
   })
 
   it('removes padding when noPadding is true', () => {
-    const { container } = render(
       <BaseModal isOpen={true} onClose={vi.fn()}>
         <BaseModal.Content noPadding={true}>
           <p>No padding</p>

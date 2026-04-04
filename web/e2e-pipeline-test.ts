@@ -210,7 +210,7 @@ Actual: Status badge stays red/unhealthy indefinitely until a full page refresh.
         await screenshot(page, `08-pipeline-active-check${i}`)
         if (copilotAssigned) break
       }
-    } catch (e) {
+    } catch {
       // continue
     }
   }

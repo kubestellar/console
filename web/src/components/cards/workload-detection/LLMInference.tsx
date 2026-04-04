@@ -16,7 +16,6 @@ import type { LLMdServer, LLMdComponentType } from '../../../hooks/useLLMd'
 import { useLLMdClusters } from './shared'
 import { useClusters } from '../../../hooks/useMCP'
 import { useCardLoadingState } from '../CardDataContext'
-import { useTranslation } from 'react-i18next'
 
 interface LLMInferenceProps {
   config?: Record<string, unknown>
@@ -42,7 +41,6 @@ const COMPONENT_FILTERS: { value: LLMdComponentType | 'all' | 'autoscale', label
 ]
 
 export function LLMInference({ config: _config }: LLMInferenceProps) {
-  const { t: _t } = useTranslation()
   // Dynamically discover LLM-d clusters instead of using static list
   const { deduplicatedClusters } = useClusters()
   const { nodes: gpuNodes } = useCachedGPUNodes()

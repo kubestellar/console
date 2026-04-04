@@ -229,7 +229,7 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
       setLastRefresh(new Date(now))
       // Save to localStorage
       saveGitOpsDriftsToStorage(newDrifts, now)
-    } catch (err) {
+    } catch {
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent) {

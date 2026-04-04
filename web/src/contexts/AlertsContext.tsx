@@ -655,7 +655,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
 
       // If a runbook matches, execute it in the background to gather evidence
       // and build an enriched prompt. Fall back to the default prompt otherwise.
-      let initialPrompt = `Please analyze this alert and provide diagnosis with suggestions:
+      const initialPrompt = `Please analyze this alert and provide diagnosis with suggestions:
 
 Alert: ${alert.ruleName}
 Severity: ${alert.severity}
@@ -1503,7 +1503,7 @@ Please provide:
     updateRule,
     deleteRule,
     toggleRule,
-  }), [alerts, activeAlerts, acknowledgedAlerts, stats, rules, isEvaluating, acknowledgeAlert, acknowledgeAlerts, resolveAlert, deleteAlert, runAIDiagnosis, evaluateConditions, createRule, updateRule, deleteRule, toggleRule])
+  }), [alerts, activeAlerts, acknowledgedAlerts, stats, rules, isEvaluating, isLoadingData, dataError, acknowledgeAlert, acknowledgeAlerts, resolveAlert, deleteAlert, runAIDiagnosis, evaluateConditions, createRule, updateRule, deleteRule, toggleRule])
 
   return (
     <AlertsContext.Provider value={value}>

@@ -201,7 +201,7 @@ export function NamespaceManager() {
           return next
         })
         updateNamespacesFromCache()
-      } catch (err) {
+      } catch {
         // Don't fail completely, just note which clusters failed
         failedClusters.push(cluster)
         // DON'T cache empty arrays on failure - allow retry next time
@@ -238,7 +238,7 @@ export function NamespaceManager() {
     setLoading(false)
     setLoadingClusters(new Set())
     setLastUpdated(new Date())
-  }, [allClusterNames, allNamespaces.length])
+  }, [allClusterNames])
 
   const handleRefreshNamespaces = useCallback(() => fetchNamespaces(true), [fetchNamespaces])
   const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefreshNamespaces)
@@ -256,7 +256,7 @@ export function NamespaceManager() {
     } finally {
       setAccessLoading(false)
     }
-  }, [])
+  }, [showToast])
 
   // Initial fetch when clusters are loaded - fetches ALL clusters to populate cache
   // Subsequent filter changes will just filter cached data, no refetch needed

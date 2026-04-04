@@ -1,7 +1,6 @@
 import { useEffect, useState, lazy, Suspense } from 'react'
 import { Bug } from 'lucide-react'
 import { useNotifications } from '../../hooks/useFeatureRequests'
-import { useTranslation } from 'react-i18next'
 import type { RequestType } from '../../hooks/useFeatureRequests'
 import { useModalState } from '../../lib/modals'
 
@@ -11,7 +10,6 @@ const FeatureRequestModal = lazy(() =>
 )
 
 export function FeatureRequestButton() {
-  const { t: _t } = useTranslation()
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useModalState()
   const [initialRequestType, setInitialRequestType] = useState<RequestType | undefined>()
   const { unreadCount } = useNotifications()

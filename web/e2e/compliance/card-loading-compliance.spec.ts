@@ -9,8 +9,6 @@ import {
   navigateToBatch,
   waitForCardsToLoad,
   type MockControl,
-  type ManifestData,
-  type ManifestItem,
 } from '../mocks/liveMocks'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))

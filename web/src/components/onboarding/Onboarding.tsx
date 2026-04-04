@@ -6,7 +6,6 @@ import { useAuth } from '../../lib/auth'
 import { ROUTES } from '../../config/routes'
 import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_ONBOARDING_RESPONSES, STORAGE_KEY_ONBOARDED } from '../../lib/constants'
 import { safeGetItem, safeSetItem, safeSetJSON } from '../../lib/utils/localStorage'
-import { useTranslation } from 'react-i18next'
 import { Button } from '../ui/Button'
 
 interface Question {
@@ -62,7 +61,6 @@ const questions: Question[] = [
 ]
 
 export function Onboarding() {
-  const { t: _t } = useTranslation()
   const navigate = useNavigate()
   const { refreshUser } = useAuth()
   const [currentStep, setCurrentStep] = useState(0)

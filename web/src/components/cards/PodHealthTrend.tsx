@@ -100,8 +100,9 @@ export function PodHealthTrend() {
     return []
   }
 
-  const historyRef = useRef<HealthPoint[]>(loadSavedHistory())
-  const [history, setHistory] = useState<HealthPoint[]>(historyRef.current)
+  const initialHistory = loadSavedHistory()
+  const historyRef = useRef<HealthPoint[]>(initialHistory)
+  const [history, setHistory] = useState<HealthPoint[]>(initialHistory)
 
   // Save to localStorage when history changes
   useEffect(() => {

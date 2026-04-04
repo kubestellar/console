@@ -53,7 +53,7 @@ let mockMCPData: {
 vi.mock('../AlertsDataFetcher', () => ({
   __esModule: true,
   default: ({ onData }: { onData: (d: typeof mockMCPData) => void }) => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
+     
     const { useEffect } = require('react')
     useEffect(() => { onData(mockMCPData) }, [onData])
     return null
@@ -810,7 +810,6 @@ describe('AlertsContext', () => {
     }
     localStorage.setItem('kc_alerts', JSON.stringify(alerts))
 
-    const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
     // saveAlerts is called on mount via the useEffect; it should trim to 500
     const stored: Alert[] = JSON.parse(localStorage.getItem('kc_alerts')!)

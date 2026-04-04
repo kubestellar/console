@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from 'react'
 import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTour, TourStep } from '../../hooks/useTour'
 import { cn } from '../../lib/cn'
-import { useTranslation } from 'react-i18next'
 import { TOOLTIP_POSITION_DELAY_MS } from '../../lib/constants/network'
 import { LogoWithStar } from '../ui/LogoWithStar'
 import { Button } from '../ui/Button'
@@ -221,7 +220,6 @@ function getTooltipPosition(
 }
 
 export function TourOverlay() {
-  const { t: _t } = useTranslation()
   const {
     isActive,
     currentStep,

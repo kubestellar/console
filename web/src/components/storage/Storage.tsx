@@ -120,7 +120,6 @@ const STORAGE_CARDS_KEY = 'kubestellar-storage-cards'
 const DEFAULT_STORAGE_CARDS = getDefaultCards('storage')
 
 export function Storage() {
-  const { t: _t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
   const {
     selectedClusters: globalSelectedClusters,
@@ -172,7 +171,7 @@ export function Storage() {
     if (hasActualData && (currentStats.totalStorageGB > 0 || currentStats.totalPVCs > 0)) {
       cachedStats.current = currentStats
     }
-  }, [hasActualData, currentStats.totalStorageGB, currentStats.totalPVCs, currentStats.boundPVCs, currentStats.pendingPVCs])
+  }, [hasActualData, currentStats])
 
   // Use cached stats during refresh, current stats when data is available
   const stats = (hasActualData || cachedStats.current.totalStorageGB > 0 || cachedStats.current.totalPVCs > 0)

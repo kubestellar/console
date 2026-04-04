@@ -310,7 +310,6 @@ export function StatsConfigModal({
   defaultBlocks,
   title = 'Configure Stats',
 }: StatsConfigModalProps) {
-  const { t: _t } = useTranslation()
   const [localBlocks, setLocalBlocks] = useState<StatBlockConfig[]>(blocks)
   const [panelState, setPanelState] = useState<PanelState>({ showAddPanel: false, searchQuery: '', expandedCategories: new Set<string>() })
   const { showAddPanel, searchQuery, expandedCategories } = panelState

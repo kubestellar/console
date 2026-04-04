@@ -72,7 +72,7 @@ import {
   useCardSort,
   commonComparators,
   type SingleSelectConfig,
-  type ChartFilterConfig,
+  type _ChartFilterConfig,
   type CascadingSelectionConfig,
   type FilterConfig,
   type CardDataConfig,

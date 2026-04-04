@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useTranslation } from 'react-i18next'
@@ -115,9 +115,8 @@ export function RBACExplorer() {
   const needsPagination = totalItems > itemsPerPage
 
   // Reset page when filters change
-  useMemo(() => {
+  useEffect(() => {
     setCurrentPage(1)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [riskFilter, search])
 
   const safeCurrentPage = Math.min(currentPage, totalPages)

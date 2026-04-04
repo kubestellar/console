@@ -89,7 +89,7 @@ describe('useHoverState', () => {
 
   it('returns a stable hoverProps shape across re-renders', () => {
     const { result, rerender } = renderHook(() => useHoverState())
-    const firstProps = result.current.hoverProps
+    const _firstProps = result.current.hoverProps
     rerender()
     // Functions should still exist after rerender
     expect(typeof result.current.hoverProps.onMouseEnter).toBe('function')

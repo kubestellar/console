@@ -36,7 +36,7 @@ import { OvnDetailModal } from '../OvnDetailModal'
 
 describe('OvnDetailModal', () => {
   it('renders without crashing', () => {
-    const { container } = render(<OvnDetailModal isOpen={false} onClose={() => {}} data={{} as any} isDemoData={false} />)
+    const { container } = render(<OvnDetailModal isOpen={false} onClose={() => {}} data={{} as Record<string, unknown>} isDemoData={false} />)
     expect(container).toBeTruthy()
   })
 })

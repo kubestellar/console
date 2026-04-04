@@ -2,10 +2,8 @@ import { useMemo } from 'react'
 import { Shield, ShieldCheck, ShieldAlert, AlertTriangle } from 'lucide-react'
 import { useKagentiCards, type KagentiCard } from '../../../hooks/mcp/kagenti'
 import { useCardLoadingState } from '../CardDataContext'
-import { useTranslation } from 'react-i18next'
 
 export function KagentiSecurity({ config }: { config?: Record<string, unknown> }) {
-  const { t: _t } = useTranslation()
   const cluster = config?.cluster as string | undefined
   const { data: cards, isLoading, isDemoFallback } = useKagentiCards({ cluster })
 

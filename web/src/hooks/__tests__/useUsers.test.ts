@@ -1,6 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach} from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
-import { useRef } from 'react'
 
 // ---------------------------------------------------------------------------
 // Mocks — only external dependencies, never the hook itself

@@ -39,7 +39,7 @@ const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
 
 // Import after mocks
-import { useCRDs, type CRDData, type UseCRDsResult } from '../useCRDs'
+import { useCRDs, type CRDData} from '../useCRDs'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -56,7 +56,7 @@ function okResponse(crds: CRDData[], isDemoData = false) {
 }
 
 /** Helper to create an error response */
-function errorResponse(status: number, statusText = 'Error') {
+function _errorResponse(status: number, statusText = 'Error') {
   return {
     ok: false,
     status,

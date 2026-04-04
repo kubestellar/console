@@ -15,14 +15,14 @@
  * - WorkerStorage operations
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { renderHook,waitFor } from '@testing-library/react'
 
 // ── Mocks ──────────────────────────────────────────────────────────
 
 let demoModeValue = false
 const demoModeListeners = new Set<() => void>()
 
-function setDemoMode(val: boolean) {
+function _setDemoMode(val: boolean) {
   demoModeValue = val
   demoModeListeners.forEach(fn => fn())
 }
@@ -404,14 +404,14 @@ describe('useCache deep branches', () => {
     const fetcher1 = vi.fn().mockResolvedValue([{ id: 'a' }])
     const fetcher2 = vi.fn().mockResolvedValue([{ id: 'b' }])
 
-    const { result: r1 } = renderHook(() => useCache({
+    const { result: _r1 } = renderHook(() => useCache({
       key: 'non-shared-deep-key',
       fetcher: fetcher1,
       initialData: [],
       shared: false,
     }))
 
-    const { result: r2 } = renderHook(() => useCache({
+    const { result: _r2 } = renderHook(() => useCache({
       key: 'non-shared-deep-key', // same key but shared=false
       fetcher: fetcher2,
       initialData: [],

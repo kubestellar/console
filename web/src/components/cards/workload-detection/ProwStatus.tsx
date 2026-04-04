@@ -3,14 +3,12 @@ import { Skeleton } from '../../ui/Skeleton'
 import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { useCachedProwJobs } from '../../../hooks/useCachedData'
 import { useCardLoadingState, useCardDemoState } from '../CardDataContext'
-import { useTranslation } from 'react-i18next'
 
 interface ProwStatusProps {
   config?: Record<string, unknown>
 }
 
 export function ProwStatus({ config: _config }: ProwStatusProps) {
-  const { t: _t } = useTranslation()
   // Check if we should use demo data
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
 

@@ -6,7 +6,6 @@ import { useState, useCallback, useRef } from 'react'
 import { Github, Send, Coins, CheckCircle2, X, ExternalLink } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useRewards } from '../../hooks/useRewards'
-import { useTranslation } from 'react-i18next'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 import { useModalNavigation, useModalFocusTrap } from '../../lib/modals/useModalNavigation'
 
@@ -45,7 +44,6 @@ function saveInvite(username: string): void {
 const GITHUB_INVITE_MODAL_TITLE_ID = 'github-invite-modal-title'
 
 export function GitHubInviteModal({ isOpen, onClose }: GitHubInviteProps) {
-  const { t: _t } = useTranslation()
   const [username, setUsername] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)

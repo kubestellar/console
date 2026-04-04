@@ -12,7 +12,6 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { CardComponentProps } from './cardRegistry'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
-import { useTranslation } from 'react-i18next'
 
 // Resource types to monitor
 type ResourceType = 'pods' | 'deployments' | 'services' | 'configmaps' | 'secrets' | 'pvcs' | 'jobs'
@@ -92,7 +91,6 @@ const ChangeAnimations: Record<Exclude<ChangeType, null>, string> = {
 }
 
 export function NamespaceMonitor({ config: _config }: CardComponentProps) {
-  const { t: _t } = useTranslation()
   const { isDemoMode } = useDemoMode()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()

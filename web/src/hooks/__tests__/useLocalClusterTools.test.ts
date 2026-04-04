@@ -1203,7 +1203,7 @@ describe('useLocalClusterTools', () => {
       mockIsConnected.mockReturnValue(false)
       const { result } = renderHook(() => useLocalClusterTools())
 
-      const fetchCountBefore = vi.mocked(fetch).mock.calls.length
+      const _fetchCountBefore = vi.mocked(fetch).mock.calls.length
       await act(async () => {
         await result.current.checkVClusterOnCluster('ctx')
       })

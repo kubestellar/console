@@ -46,16 +46,14 @@ vi.mock('../useStablePageHeight', () => ({
 import {
   useCardFilters,
   useCardSort,
-  useCardData,
   useCardCollapse,
   useCardCollapseAll,
   useCardFlash,
-  useSingleSelectCluster,
   useStatusFilter,
   commonComparators,
   type FilterConfig,
   type SortConfig,
-  type CardDataConfig,
+  type _CardDataConfig,
 } from '../cardHooks'
 
 // ---------------------------------------------------------------------------

@@ -33,7 +33,6 @@ import {
 } from 'lucide-react'
 import type { ResourceKind, ResourceContext } from '../types/modal.types'
 import { ClusterBadge } from '../../ui/ClusterBadge'
-import { useTranslation } from 'react-i18next'
 
 // Icon mapping for resource kinds
 const RESOURCE_ICONS: Record<ResourceKind, typeof Box> = {
@@ -143,7 +142,6 @@ export function ResourceBadges({
   onNamespaceClick,
   onKindClick,
 }: ResourceBadgesProps) {
-  const { t: _t } = useTranslation()
   return (
     <div className={`flex items-center gap-1.5 flex-wrap ${className}`}>
       {/* Cluster badge */}

@@ -272,14 +272,14 @@ export function ArgoAppDrillDown({ data }: Props) {
       await Promise.all([fetchResources(), fetchHistory()])
     }
     loadData()
-  }, [agentConnected])
+  }, [agentConnected, fetchResources, fetchHistory])
 
   // Load diff when tab is selected
   useEffect(() => {
     if (activeTab === 'diff' && !diffOutput && !diffLoading) {
       fetchDiff()
     }
-  }, [activeTab])
+  }, [activeTab, diffOutput, diffLoading, fetchDiff])
 
   const handleCopy = (field: string, value: string) => {
     copyToClipboard(value)

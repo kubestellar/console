@@ -3,7 +3,6 @@ import { RotateCcw, Trophy } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
-import { useTranslation } from 'react-i18next'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeys } from '../../hooks/useGameKeys'
 
@@ -13,8 +12,7 @@ const MAZE_WIDTH = 19
 const MAZE_HEIGHT = 21
 
 // Ghost names and behaviors
-const GHOST_NAMES = ['Blinky', 'Pinky', 'Inky', 'Clyde'] as const
-type GhostName = typeof GHOST_NAMES[number]
+type GhostName = 'Blinky' | 'Pinky' | 'Inky' | 'Clyde'
 
 // Maze layout: 0=wall, 1=dot, 2=power pellet, 3=empty, 4=ghost house
 const MAZE_TEMPLATE = [
@@ -119,7 +117,6 @@ function moveInDir(pos: Position, dir: Direction): Position {
 }
 
 export function KubeMan(_props: CardComponentProps) {
-  const { t: _t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const { isExpanded } = useCardExpanded()
 

@@ -91,14 +91,14 @@ export function ReservationFormModal({
   const { namespaces: rawNamespaces } = useNamespaces(cluster || undefined, forceLive)
 
   // Filter out system namespaces from the dropdown
-  const FILTERED_NS_PREFIXES = ['openshift-', 'kube-']
-  const FILTERED_NS_EXACT = ['default', 'kube-system', 'kube-public', 'kube-node-lease']
+  const FILTERED_NS_PREFIXES = useMemo(() => ['openshift-', 'kube-'], [])
+  const FILTERED_NS_EXACT = useMemo(() => ['default', 'kube-system', 'kube-public', 'kube-node-lease'], [])
   const clusterNamespaces = useMemo(() =>
     rawNamespaces.filter(ns =>
       !FILTERED_NS_PREFIXES.some(prefix => ns.startsWith(prefix)) &&
       !FILTERED_NS_EXACT.includes(ns)
     ),
-  [rawNamespaces])
+  [rawNamespaces, FILTERED_NS_PREFIXES, FILTERED_NS_EXACT])
 
   // Get the selected cluster's GPU info
   const selectedClusterInfo = gpuClusters.find(c => c.name === cluster)

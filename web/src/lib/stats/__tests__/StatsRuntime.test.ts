@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect} from 'vitest'
 import {
   registerStats,
   getStatsDefinition,
@@ -122,7 +122,7 @@ describe('unregisterStats', () => {
 describe('registerStatValueGetter', () => {
   it('registers a value getter without error', () => {
     expect(() => {
-      registerStatValueGetter('getter-test', (blockId, data) => ({
+      registerStatValueGetter('getter-test', (blockId, _data) => ({
         value: blockId === 'count' ? 42 : 0,
       }))
     }).not.toThrow()

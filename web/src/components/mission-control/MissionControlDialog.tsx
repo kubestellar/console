@@ -10,7 +10,7 @@
  * Phase 3: Flight Plan (SVG blueprint + deploy)
  */
 
-import { useEffect, useCallback, useRef } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   X,
@@ -80,11 +80,10 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
 
   // Track the highest phase the user has reached so they can click back to any visited phase
   const currentStepIndex = PHASE_STEPS.findIndex((s) => s.key === state.phase)
-  const highestReachedRef = useRef(currentStepIndex)
-  if (currentStepIndex > highestReachedRef.current) {
-    highestReachedRef.current = currentStepIndex
-  }
-  const highestReached = highestReachedRef.current
+  const [highestReached, setHighestReached] = useState(currentStepIndex)
+  useEffect(() => {
+    setHighestReached(prev => Math.max(prev, currentStepIndex))
+  }, [currentStepIndex])
 
   useEffect(() => {
     if (!open) return

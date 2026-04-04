@@ -1357,7 +1357,7 @@ describe('saveGPUCacheToStorage — edge cases', () => {
 
   it('handles localStorage.setItem throwing (quota exceeded)', () => {
     mockIsDemoMode.mockReturnValue(false)
-    const originalSetItem = localStorage.setItem.bind(localStorage)
+    const _originalSetItem = localStorage.setItem.bind(localStorage)
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('QuotaExceededError')
     })

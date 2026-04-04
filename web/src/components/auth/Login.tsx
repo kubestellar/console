@@ -161,6 +161,19 @@ export function Login() {
   }, [oauthError])
   const branding = useBranding()
 
+  // Pre-compute random star positions so render stays pure (no Math.random() in JSX)
+  const STAR_COUNT = 30
+  const starStyles = useMemo(() =>
+    Array.from({ length: STAR_COUNT }, () => ({
+      width: Math.random() * 3 + 1 + 'px',
+      height: Math.random() * 3 + 1 + 'px',
+      left: Math.random() * 100 + '%',
+      top: Math.random() * 100 + '%',
+      animationDelay: Math.random() * 3 + 's',
+    })),
+    [] // computed once on mount
+  )
+
   // Auto-login for Netlify deploy previews or when backend has no OAuth configured
   // Skip auto-login when there's an OAuth error so the user can see the troubleshooting info
   useEffect(() => {
@@ -204,18 +217,8 @@ export function Login() {
       <div className="flex-1 h-full flex items-center justify-center relative z-10">
         {/* Star field background (left side only) */}
         <div className="star-field absolute inset-0">
-          {Array.from({ length: 30 }).map((_, i) => (
-            <div
-              key={i}
-              className="star"
-              style={{
-                width: Math.random() * 3 + 1 + 'px',
-                height: Math.random() * 3 + 1 + 'px',
-                left: Math.random() * 100 + '%',
-                top: Math.random() * 100 + '%',
-                animationDelay: Math.random() * 3 + 's',
-              }}
-            />
+          {starStyles.map((style, i) => (
+            <div key={i} className="star" style={style} />
           ))}
         </div>
 

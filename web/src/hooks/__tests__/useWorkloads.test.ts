@@ -44,7 +44,7 @@ vi.mock('../../lib/utils/concurrency', () => ({
 // ---------------------------------------------------------------------------
 
 /** Flush the microtask queue so pending promises resolve */
-function flushPromises() {
+function _flushPromises() {
   return new Promise(resolve => setTimeout(resolve, 0))
 }
 

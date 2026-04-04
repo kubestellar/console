@@ -39,7 +39,7 @@ export function useMCPStatus() {
         const { data } = await api.get<MCPStatus>('/api/mcp/status')
         setStatus(data)
         setError(null)
-      } catch (err) {
+      } catch {
         setError('MCP bridge not available')
         setStatus(null)
       } finally {
@@ -68,13 +68,12 @@ export function useClusters() {
 
   // Subscribe to shared cache updates
   useEffect(() => {
-    // Set initial state from cache
-    setLocalState(clusterCache)
-
     // Subscribe to updates
     const handleUpdate = (cache: ClusterCache) => {
       setLocalState(cache)
     }
+    // Sync with any updates that happened between initial render and effect
+    handleUpdate(clusterCache)
     clusterSubscribers.add(handleUpdate)
 
     return () => {
@@ -288,7 +287,7 @@ export function useClusterHealth(cluster?: string) {
         }
         setError(null)
       }
-    } catch (err) {
+    } catch {
       // Exception - track failure start time
       recordClusterFailure(cluster)
 

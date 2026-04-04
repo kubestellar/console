@@ -339,7 +339,7 @@ class KubectlProxy {
     // Sum resource requests from all containers in all pods
     let cpuRequestsMillicores = 0
     let memoryRequestsBytes = 0
-    let podsWithRequests = 0
+    // podsWithRequests tracking removed — value was never consumed
 
     for (const pod of pods) {
       const containers = pod.spec?.containers || []
@@ -349,7 +349,7 @@ class KubectlProxy {
         if (requests.cpu) {
           const parsed = parseResourceQuantityMillicores(requests.cpu)
           cpuRequestsMillicores += parsed
-          if (parsed > 0) podsWithRequests++
+          // podsWithRequests tracking removed — value was never consumed
         }
         // Parse memory requests (can be "128Mi", "1Gi", etc.)
         if (requests.memory) {

@@ -173,7 +173,7 @@ export function usePrometheusMetrics(
       clearInterval(interval)
       abortRef.current?.abort()
     }
-  }, [fetchMetrics, pollIntervalMs])
+  }, [fetchMetrics, pollIntervalMs, cluster, namespace])
 
   return { metrics, loading, error }
 }

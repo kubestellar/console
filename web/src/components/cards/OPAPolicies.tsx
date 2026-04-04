@@ -506,7 +506,7 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
       }
     }
     setStatuses(demoStatuses)
-  }, [shouldUseDemoData, effectiveClusters])
+  }, [shouldUseDemoData, effectiveClusters, statuses])
 
   // Clear demo statuses when transitioning from demo → live mode.
   // Without this, fake violations from demo mode persist for clusters

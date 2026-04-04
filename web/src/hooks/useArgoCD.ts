@@ -331,20 +331,21 @@ interface UseArgoCDApplicationsResult {
 export function useArgoCDApplications(): UseArgoCDApplicationsResult {
   const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
 
-  // Initialize from cache
+  // Initialize from cache — snapshot ref value to avoid reading ref during render
   const cachedData = useRef(loadFromCache<ArgoApplication[]>(APPS_CACHE_KEY))
+  const cachedSnapshot = cachedData.current
   const [applications, setApplications] = useState<ArgoApplication[]>(
-    cachedData.current?.data || []
+    cachedSnapshot?.data || []
   )
-  const [isDemoData, setIsDemoData] = useState(cachedData.current?.isDemoData ?? true)
-  const [isLoading, setIsLoading] = useState(!cachedData.current)
+  const [isDemoData, setIsDemoData] = useState(cachedSnapshot?.isDemoData ?? true)
+  const [isLoading, setIsLoading] = useState(!cachedSnapshot)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<number | null>(
-    cachedData.current?.timestamp || null
+    cachedSnapshot?.timestamp || null
   )
-  const initialLoadDone = useRef(!!cachedData.current)
+  const initialLoadDone = useRef(!!cachedSnapshot)
 
   const clusterNames = useMemo(
     () => (clusters || []).map(c => c.name),
@@ -457,20 +458,21 @@ export function useArgoCDHealth(): UseArgoCDHealthResult {
   const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
 
-  // Initialize from cache
+  // Initialize from cache — snapshot ref value to avoid reading ref during render
   const cachedData = useRef(loadFromCache<ArgoHealthData>(HEALTH_CACHE_KEY))
+  const cachedHealthSnapshot = cachedData.current
   const [stats, setStats] = useState<ArgoHealthData>(
-    cachedData.current?.data || { healthy: 0, degraded: 0, progressing: 0, missing: 0, unknown: 0 }
+    cachedHealthSnapshot?.data || { healthy: 0, degraded: 0, progressing: 0, missing: 0, unknown: 0 }
   )
-  const [isDemoData, setIsDemoData] = useState(cachedData.current?.isDemoData ?? true)
-  const [isLoading, setIsLoading] = useState(!cachedData.current)
+  const [isDemoData, setIsDemoData] = useState(cachedHealthSnapshot?.isDemoData ?? true)
+  const [isLoading, setIsLoading] = useState(!cachedHealthSnapshot)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<number | null>(
-    cachedData.current?.timestamp || null
+    cachedHealthSnapshot?.timestamp || null
   )
-  const initialLoadDone = useRef(!!cachedData.current)
+  const initialLoadDone = useRef(!!cachedHealthSnapshot)
 
   const filteredClusterCount = useMemo(() => {
     if (isAllClustersSelected) return (clusters || []).length
@@ -631,20 +633,21 @@ export function useArgoCDSyncStatus(localClusterFilter: string[] = []): UseArgoC
   const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
 
-  // Initialize from cache
+  // Initialize from cache — snapshot ref value to avoid reading ref during render
   const cachedData = useRef(loadFromCache<ArgoSyncData>(SYNC_CACHE_KEY))
+  const cachedSyncSnapshot = cachedData.current
   const [stats, setStats] = useState<ArgoSyncData>(
-    cachedData.current?.data || { synced: 0, outOfSync: 0, unknown: 0 }
+    cachedSyncSnapshot?.data || { synced: 0, outOfSync: 0, unknown: 0 }
   )
-  const [isDemoData, setIsDemoData] = useState(cachedData.current?.isDemoData ?? true)
-  const [isLoading, setIsLoading] = useState(!cachedData.current)
+  const [isDemoData, setIsDemoData] = useState(cachedSyncSnapshot?.isDemoData ?? true)
+  const [isLoading, setIsLoading] = useState(!cachedSyncSnapshot)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<number | null>(
-    cachedData.current?.timestamp || null
+    cachedSyncSnapshot?.timestamp || null
   )
-  const initialLoadDone = useRef(!!cachedData.current)
+  const initialLoadDone = useRef(!!cachedSyncSnapshot)
 
   const filteredClusterCount = useMemo(() => {
     let count = isAllClustersSelected ? (clusters || []).length : (selectedClusters || []).length
@@ -866,20 +869,21 @@ interface UseArgoApplicationSetsResult {
 export function useArgoApplicationSets(): UseArgoApplicationSetsResult {
   const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
 
-  // Initialize from cache
+  // Initialize from cache — snapshot ref value to avoid reading ref during render
   const cachedData = useRef(loadFromCache<ArgoApplicationSet[]>(APPSET_CACHE_KEY))
+  const cachedAppSetSnapshot = cachedData.current
   const [applicationSets, setApplicationSets] = useState<ArgoApplicationSet[]>(
-    cachedData.current?.data || []
+    cachedAppSetSnapshot?.data || []
   )
-  const [isDemoData, setIsDemoData] = useState(cachedData.current?.isDemoData ?? true)
-  const [isLoading, setIsLoading] = useState(!cachedData.current)
+  const [isDemoData, setIsDemoData] = useState(cachedAppSetSnapshot?.isDemoData ?? true)
+  const [isLoading, setIsLoading] = useState(!cachedAppSetSnapshot)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<number | null>(
-    cachedData.current?.timestamp || null
+    cachedAppSetSnapshot?.timestamp || null
   )
-  const initialLoadDone = useRef(!!cachedData.current)
+  const initialLoadDone = useRef(!!cachedAppSetSnapshot)
 
   const clusterNames = useMemo(
     () => (clusters || []).map(c => c.name),

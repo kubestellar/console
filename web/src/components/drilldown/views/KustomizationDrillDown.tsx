@@ -215,7 +215,7 @@ export function KustomizationDrillDown({ data }: Props) {
     if (!agentConnected || hasLoadedRef.current) return
     hasLoadedRef.current = true
     fetchDetails()
-  }, [agentConnected])
+  }, [agentConnected, fetchDetails])
 
   // Navigate to resource
   const handleResourceClick = (resource: AppliedResource) => {

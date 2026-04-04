@@ -727,7 +727,7 @@ describe('KubectlProxy', () => {
       await vi.advanceTimersByTimeAsync(0)
 
       // Remaining requests should now be sent
-      const remaining = TOTAL_REQUESTS - MAX_CONCURRENT
+      const _remaining = TOTAL_REQUESTS - MAX_CONCURRENT
       expect(sentMessages.length).toBe(TOTAL_REQUESTS)
 
       // Respond to the rest
@@ -1372,7 +1372,7 @@ describe('KubectlProxy', () => {
 
   describe('getClusterHealth', () => {
     /** Helper to respond to exec calls in order */
-    function respondToExec(msgIndex: number, payload: { output: string; exitCode: number }) {
+    function _respondToExec(msgIndex: number, payload: { output: string; exitCode: number }) {
       const msg = JSON.parse(sentMessages[msgIndex])
       activeWs!.simulateMessage({
         id: msg.id,

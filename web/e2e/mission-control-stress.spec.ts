@@ -1,4 +1,4 @@
-import { test, expect, Page, Route } from '@playwright/test'
+import { test, expect, Page} from '@playwright/test'
 
 /**
  * Mission Control STRESS Tests
@@ -30,9 +30,9 @@ import { test, expect, Page, Route } from '@playwright/test'
 // ---------------------------------------------------------------------------
 
 const MOCK_MODE = process.env.MOCK_AI === 'true'
-const AI_TIMEOUT_MS = MOCK_MODE ? 10_000 : 120_000
+const _AI_TIMEOUT_MS = MOCK_MODE ? 10_000 : 120_000
 const DIALOG_TIMEOUT_MS = 15_000
-const GITHUB_TIMEOUT_MS = MOCK_MODE ? 10_000 : 30_000
+const _GITHUB_TIMEOUT_MS = MOCK_MODE ? 10_000 : 30_000
 
 /** Number of projects in the maximum-payload test */
 const MAX_PAYLOAD_PROJECT_COUNT = 15
@@ -43,7 +43,7 @@ const DEEP_PHASE_COUNT = 6
 /** localStorage key for Mission Control state */
 const MC_STORAGE_KEY = 'kc_mission_control_state'
 /** localStorage key for missions */
-const MISSIONS_STORAGE_KEY = 'kc_missions'
+const _MISSIONS_STORAGE_KEY = 'kc_missions'
 
 // ---------------------------------------------------------------------------
 // Stress test data: 15-project payload (maximum)
@@ -921,7 +921,7 @@ and Prometheus monitoring to track memory usage over time.
       }
 
       // All 7 tools should respond 200 (mocked)
-      for (const [tool, ok] of Object.entries(results)) {
+      for (const [_tool, ok] of Object.entries(results)) {
         expect(ok).toBe(true)
       }
     })

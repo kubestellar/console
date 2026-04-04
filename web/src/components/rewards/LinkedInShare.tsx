@@ -7,7 +7,6 @@ import { Linkedin, Share2, Coins, CheckCircle2 } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Button } from '../ui/Button'
 import { useRewards } from '../../hooks/useRewards'
-import { useTranslation } from 'react-i18next'
 import { emitLinkedInShare } from '../../lib/analytics'
 import { useModalNavigation, useModalFocusTrap } from '../../lib/modals/useModalNavigation'
 
@@ -16,7 +15,6 @@ const KUBESTELLAR_URL = 'https://kubestellar.io'
 const LINKEDIN_CONFIRM_MODAL_TITLE_ID = 'linkedin-confirm-modal-title'
 
 export function LinkedInShareButton() {
-  const { t: _t } = useTranslation()
   const [showConfirm, setShowConfirm] = useState(false)
   const { awardCoins, getActionCount } = useRewards()
   const modalRef = useRef<HTMLDivElement>(null)

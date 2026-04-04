@@ -35,6 +35,7 @@ export function YAMLDrillDown({ data }: Props) {
 
   useEffect(() => {
     fetchYAML()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchYAML is defined below and uses the same deps
   }, [cluster, namespace, resourceType, resourceName])
 
   const fetchYAML = async () => {

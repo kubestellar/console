@@ -386,7 +386,6 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
 }
 
 export function ArgoCDApplications(props: ArgoCDApplicationsProps) {
-  const { t: _t } = useTranslation('cards')
   return (
     <DynamicCardErrorBoundary cardId="ArgoCDApplications">
       <ArgoCDApplicationsInternal {...props} />

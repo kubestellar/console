@@ -23,7 +23,6 @@ import { useTranslation } from 'react-i18next'
  * config.dynamicCardId determines which definition to render.
  */
 export function DynamicCard({ config = {} }: CardComponentProps) {
-  const { t: _t } = useTranslation()
   const dynamicCardId = (config?.dynamicCardId as string) || ''
   const definition = getDynamicCard(dynamicCardId)
 

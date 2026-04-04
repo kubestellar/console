@@ -8,7 +8,6 @@ import { useCardLoadingState } from './CardDataContext'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardSkeleton, CardAIActions } from '../../lib/cards/CardComponents'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
-import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'status' | 'name' | 'clusters'
 
@@ -46,7 +45,6 @@ interface AppData {
 }
 
 export function AppStatus(_props: AppStatusProps) {
-  const { t } = useTranslation(['common', 'cards'])
   const { drillToDeployment } = useDrillDownActions()
   const { deployments, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, lastRefresh } = useCachedDeployments()
 
@@ -225,7 +223,7 @@ export function AppStatus(_props: AppStatusProps) {
       <CardSearchInput
         value={search}
         onChange={setSearch}
-        placeholder={t('cards:appStatus.searchPlaceholder')}
+        placeholder="Search workloads..."
         className="mb-3"
       />
 

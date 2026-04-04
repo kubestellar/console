@@ -1,7 +1,6 @@
 import { ChevronRight, ChevronLeft } from 'lucide-react'
 import type { Breadcrumb, NavigationTarget } from '../types/modal.types'
 import { getStatusColors } from '../types/modal.types'
-import { useTranslation } from 'react-i18next'
 
 interface BreadcrumbNavProps {
   /** Breadcrumb items to display */
@@ -48,7 +47,6 @@ export function BreadcrumbNav({
   status,
   className = '',
 }: BreadcrumbNavProps) {
-  const { t: _t } = useTranslation()
   if (breadcrumbs.length === 0) {
     return null
   }

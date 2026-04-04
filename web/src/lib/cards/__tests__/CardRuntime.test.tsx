@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi} from 'vitest'
 import {
   registerDataHook,
   registerDrillAction,
@@ -76,7 +76,7 @@ describe('registerDrillAction', () => {
   })
 
   it('accepts actions with multiple parameters', () => {
-    const action = (cluster: unknown, namespace: unknown, name: unknown) => {
+    const action = (_cluster: unknown, _namespace: unknown, _name: unknown) => {
       // Process drill-down
     }
     expect(() => registerDrillAction('drillToResource', action)).not.toThrow()

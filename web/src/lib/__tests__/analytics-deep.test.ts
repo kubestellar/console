@@ -47,14 +47,9 @@ vi.mock('../demoMode', () => ({
 }))
 
 import {
-  initAnalytics,
   setAnalyticsOptOut,
-  isAnalyticsOptedOut,
   setAnalyticsUserId,
   setAnalyticsUserProperties,
-  emitPageView,
-  emitCardAdded,
-  emitError,
   markErrorReported,
   updateAnalyticsIds,
   captureUtmParams,
@@ -62,18 +57,18 @@ import {
   emitDemoModeToggled,
   emitChunkReloadRecoveryFailed,
   startGlobalErrorTracking,
-  emitGlobalSearchOpened,
-  emitGlobalSearchQueried,
-  emitGlobalSearchSelected,
-  emitGlobalSearchAskAI,
-  emitLogin,
-  emitLogout,
+  _emitGlobalSearchOpened,
+  _emitGlobalSearchQueried,
+  _emitGlobalSearchSelected,
+  _emitGlobalSearchAskAI,
+  _emitLogin,
+  _emitLogout,
   emitSessionExpired,
-  emitCardSortChanged,
-  emitCardSearchUsed,
-  emitCardClusterFilterChanged,
-  emitCardPaginationUsed,
-  emitCardListItemClicked,
+  _emitCardSortChanged,
+  _emitCardSearchUsed,
+  _emitCardClusterFilterChanged,
+  _emitCardPaginationUsed,
+  _emitCardListItemClicked,
   emitScreenshotAttached,
   emitScreenshotUploadFailed,
   emitScreenshotUploadSuccess,
@@ -88,8 +83,8 @@ import {
   emitGitHubTokenConfigured,
   emitGitHubTokenRemoved,
   emitApiProviderConnected,
-  emitAgentConnected,
-  emitClusterInventory,
+  _emitAgentConnected,
+  _emitClusterInventory,
 } from '../analytics'
 
 // ── Setup / Teardown ──────────────────────────────────────────────
@@ -211,7 +206,7 @@ describe('session management', () => {
   const SESSION_TIMEOUT_MS = 30 * 60 * 1000
 
   it('creates new session when none exists', () => {
-    const now = Date.now()
+    const _now = Date.now()
     const sid = localStorage.getItem(SID_KEY) || ''
     const expired = !sid
     expect(expired).toBe(true)
@@ -548,8 +543,8 @@ describe('engagement tracking logic', () => {
   it('checkEngagement detects idle user', () => {
     const ENGAGEMENT_IDLE_MS = 60000
     let isUserActive = true
-    let lastInteractionMs = Date.now() - ENGAGEMENT_IDLE_MS - 1000
-    let engagementStartMs = lastInteractionMs - 5000
+    const lastInteractionMs = Date.now() - ENGAGEMENT_IDLE_MS - 1000
+    const engagementStartMs = lastInteractionMs - 5000
     let accumulatedEngagementMs = 0
 
     function checkEngagement() {
@@ -567,8 +562,8 @@ describe('engagement tracking logic', () => {
   })
 
   it('peekEngagementMs returns accumulated + active time', () => {
-    let accumulatedEngagementMs = 5000
-    let isUserActive = true
+    const accumulatedEngagementMs = 5000
+    const isUserActive = true
     const engagementStartMs = Date.now() - 2000
 
     function peekEngagementMs(): number {
@@ -585,7 +580,7 @@ describe('engagement tracking logic', () => {
 
   it('getAndResetEngagementMs resets accumulator', () => {
     let accumulatedEngagementMs = 10000
-    let isUserActive = false
+    const isUserActive = false
 
     function getAndResetEngagementMs(): number {
       let total = accumulatedEngagementMs

@@ -87,7 +87,7 @@ export function AiGenerationPanel<T>({
       setParseError('AI generation failed. Please check your agent connection and try again.')
       setPhase('error')
     }
-  }, [trackedMission?.status, trackedMission?.messages.length, phase, validateResult])
+  }, [trackedMission, phase, validateResult])
 
   const handleGenerate = useCallback(() => {
     if (!userPrompt.trim()) return

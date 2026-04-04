@@ -8,7 +8,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { buildDeepLinkURL } from '../useDeepLink'
-import type { DeepLinkParams } from '../useDeepLink'
 
 // ── Mocks ──────────────────────────────────────────────────────────────
 

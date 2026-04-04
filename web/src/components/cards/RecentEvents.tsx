@@ -9,7 +9,6 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardControlsRow, CardPaginationFooter, CardSearchInput, CardSkeleton } from '../../lib/cards/CardComponents'
 import type { ClusterEvent } from '../../hooks/useMCP'
-import { useTranslation } from 'react-i18next'
 
 const ONE_HOUR_MS = 60 * 60 * 1000
 
@@ -25,7 +24,6 @@ function getMinutesAgo(timestamp: string | undefined): string {
 }
 
 export function RecentEvents() {
-  const { t } = useTranslation(['common', 'cards'])
   const { isDemoMode } = useDemoMode()
   const {
     events,
@@ -154,7 +152,7 @@ export function RecentEvents() {
       </div>
 
       {/* Search */}
-      <CardSearchInput value={filters.search} onChange={filters.setSearch} placeholder={t('cards:recentEvents.searchPlaceholder')} />
+      <CardSearchInput value={filters.search} onChange={filters.setSearch} placeholder="Search events..." />
 
       {/* Error Display */}
       {isFailed && (

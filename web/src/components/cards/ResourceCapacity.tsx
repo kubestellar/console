@@ -130,9 +130,6 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
     return { ...clusterTotals, ...gpuTotals }
   }, [clusters, filteredGPUNodes])
 
-  // Estimate pod capacity (110 pods per node is the default Kubernetes limit)
-  const podCapacity = totals.nodes * 110
-
   // Build resource items list
   const resourceItems = useMemo(() => {
     const formatGB = (v: number) => v >= 1024 ? `${(v / 1024).toFixed(1)} TB` : `${Math.round(v)} GB`
@@ -201,7 +198,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
     })
 
     return sorted
-  }, [totals, podCapacity, sortBy, sortDirection])
+  }, [totals, sortBy, sortDirection])
 
   // Pagination
   const effectivePerPage = limit === 'unlimited' ? 100 : limit

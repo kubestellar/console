@@ -246,7 +246,7 @@ export function OperatorDrillDown({ data }: Props) {
       await Promise.all([fetchCSVInfo(), fetchCRDs(), fetchSubscription()])
     }
     loadData()
-  }, [agentConnected])
+  }, [agentConnected, fetchCSVInfo, fetchCRDs, fetchSubscription])
 
   // Start AI diagnosis
   const handleDiagnose = () => {

@@ -209,16 +209,18 @@ export function useDataCompliance() {
   const { clusters: allClusters, isLoading: clustersLoading } = useClusters()
   const { status: certStatus, isLoading: certLoading } = useCertManager()
 
+  // Snapshot ref value to avoid reading ref during render
   const cachedData = useRef(loadFromCache())
+  const cachedSnapshot = cachedData.current
   const [posture, setPosture] = useState<CompliancePosture>(
-    cachedData.current?.posture || DEMO_POSTURE
+    cachedSnapshot?.posture || DEMO_POSTURE
   )
-  const [isLoading, setIsLoading] = useState(!cachedData.current)
+  const [isLoading, setIsLoading] = useState(!cachedSnapshot)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isUsingDemoData, setIsUsingDemoData] = useState(!cachedData.current)
+  const [isUsingDemoData, setIsUsingDemoData] = useState(!cachedSnapshot)
   const fetchInProgress = useRef(false)
-  const initialLoadDone = useRef(!!cachedData.current)
+  const initialLoadDone = useRef(!!cachedSnapshot)
 
   const clusters = useMemo(() =>
     allClusters.filter(c => c.reachable === true),

@@ -1127,7 +1127,7 @@ describe('useMetricsHistory', () => {
       const { useMetricsHistory } = await importFresh()
       const { result, unmount } = renderHook(() => useMetricsHistory())
 
-      const countBeforeUnmount = result.current.snapshotCount
+      const _countBeforeUnmount = result.current.snapshotCount
 
       unmount()
 

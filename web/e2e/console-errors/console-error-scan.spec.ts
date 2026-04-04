@@ -29,7 +29,7 @@ const SETTLE_MS = 4_000
 const NAV_TIMEOUT_MS = 30_000
 
 /** Routes that require special params or are not visitable directly */
-const SKIP_ROUTES = new Set([
+const _SKIP_ROUTES = new Set([
   '/login',
   '/auth/callback',
   '/widget',

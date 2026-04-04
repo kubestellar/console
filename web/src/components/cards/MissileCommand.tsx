@@ -3,7 +3,6 @@ import { RotateCcw, Trophy, Crosshair } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
-import { useTranslation } from 'react-i18next'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
 // Game constants
@@ -80,7 +79,6 @@ const CITY_POSITIONS = [40, 80, 120, 200, 240, 280]
 const BATTERY_POSITIONS = [10, CANVAS_WIDTH / 2 - MISSILE_BATTERY_WIDTH / 2, CANVAS_WIDTH - 10 - MISSILE_BATTERY_WIDTH]
 
 export function MissileCommand(_props: CardComponentProps) {
-  const { t: _t } = useTranslation()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const { isExpanded } = useCardExpanded()
   const canvasRef = useRef<HTMLCanvasElement>(null)

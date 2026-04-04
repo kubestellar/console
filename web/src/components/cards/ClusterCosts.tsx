@@ -259,7 +259,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       setSelectedProvider(detectedProvider)
       setIsAutoDetected(true)
     }
-  }, [detectedProvider, config?.provider])
+  }, [detectedProvider, config?.provider, selectedProvider])
 
   // Get pricing from selected provider or custom config
   const pricing = CLOUD_PRICING[selectedProvider]

@@ -246,7 +246,7 @@ export function DriftDrillDown({ data }: Props) {
     if (!agentConnected || hasLoadedRef.current) return
     hasLoadedRef.current = true
     fetchDriftDetails()
-  }, [agentConnected])
+  }, [agentConnected, fetchDriftDetails])
 
   // Navigate to resource
   const handleResourceClick = (change: DriftChange) => {

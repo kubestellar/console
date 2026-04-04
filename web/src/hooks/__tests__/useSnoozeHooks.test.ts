@@ -363,7 +363,7 @@ describe('useSnoozedAlerts', () => {
 
     const durations = ['5m', '15m', '1h', '4h', '24h'] as const
     for (const dur of durations) {
-      const before = Date.now()
+      const _before = Date.now()
       let created: { snoozedAt: number; expiresAt: number } | undefined
       act(() => {
         created = result.current.snoozeAlert(`alert-dur-${dur}`, dur) as typeof created

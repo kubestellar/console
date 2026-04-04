@@ -3,7 +3,6 @@ import { Bot, Wrench, Cpu, Server } from 'lucide-react'
 import { useKagentCRDAgents, useKagentCRDTools, useKagentCRDModels } from '../../hooks/mcp/kagent_crds'
 import { useCardLoadingState } from './CardDataContext'
 import { Skeleton } from '../ui/Skeleton'
-import { useTranslation } from 'react-i18next'
 
 interface KagentStatusCardProps {
   config?: {
@@ -34,7 +33,6 @@ function MetricTile({ icon: Icon, label, value, sub, accent }: {
 }
 
 export function KagentStatusCard({ config }: KagentStatusCardProps) {
-  const { t: _t } = useTranslation()
   const {
     data: agents,
     isLoading: agentsLoading,

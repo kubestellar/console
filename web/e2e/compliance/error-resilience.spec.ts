@@ -119,7 +119,7 @@ test.describe('Error Resilience', () => {
 
       for (let i = 0; i < cardCount; i++) {
         const card = cards.nth(i)
-        const cardType = await card.getAttribute('data-card-type') || 'unknown'
+        const _cardType = await card.getAttribute('data-card-type') || 'unknown'
         const isLoading = await card.getAttribute('data-loading')
 
         // Check for error indicators
@@ -322,7 +322,7 @@ test.describe('Error Resilience', () => {
     try {
       // Start with normal mocks
       await setupAuth(page)
-      const control = await setupLiveMocks(page)
+      const _control = await setupLiveMocks(page)
       await setLiveColdMode(page)
 
       await navigateAndSettle(page, '/')

@@ -242,7 +242,7 @@ describe('MissionLandingPage', () => {
   })
 
   it('shows empty tab message when switching to a tab with no content', async () => {
-    const user = userEvent.setup()
+    const _user = userEvent.setup()
 
     // Mission with only install steps, no upgrade/troubleshooting
     mockFetch.mockResolvedValue({

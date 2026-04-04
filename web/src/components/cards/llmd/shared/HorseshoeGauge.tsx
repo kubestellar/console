@@ -6,7 +6,6 @@
  */
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { useTranslation } from 'react-i18next'
 
 interface HorseshoeGaugeProps {
   value: number
@@ -35,7 +34,6 @@ export function HorseshoeGauge({
   secondaryRight,
   size = 180,
 }: HorseshoeGaugeProps) {
-  const { t: _t } = useTranslation()
   const percentage = maxValue > 0 ? Math.min((value / maxValue) * 100, 100) : 0
   const color = getColor(percentage)
   const uniqueId = useMemo(() => `horseshoe-${Math.random().toString(36).substr(2, 9)}`, [])

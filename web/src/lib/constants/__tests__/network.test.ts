@@ -48,7 +48,7 @@ describe('network constants', () => {
     const numericKeys = Object.entries(network).filter(
       ([, v]) => typeof v === 'number'
     )
-    for (const [key, value] of numericKeys) {
+    for (const [_key, value] of numericKeys) {
       expect(value).toBeGreaterThan(0)
     }
   })

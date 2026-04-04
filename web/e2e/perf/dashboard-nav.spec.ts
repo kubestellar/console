@@ -601,7 +601,7 @@ test('from-clusters — navigate away from My Clusters to various dashboards', a
      'helm', 'compliance', 'cost', 'ai-ml', 'deploy', 'ai-agents', 'arcade'].includes(d.id)
   )
 
-  const clustersDb = DASHBOARDS.find((d) => d.id === 'clusters')!
+  const _clustersDb = DASHBOARDS.find((d) => d.id === 'clusters')!
 
   for (const target of targets) {
     try {

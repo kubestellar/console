@@ -153,7 +153,7 @@ Return ONLY valid JSON, no markdown code blocks or explanation.`
             } else {
               reject(new Error('Could not parse AI response as JSON'))
             }
-          } catch (parseError) {
+          } catch {
             reject(new Error('Failed to parse AI summary response'))
           }
         } else if (message.type === 'error') {

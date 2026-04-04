@@ -8,11 +8,9 @@ import { cn } from '../../../lib/cn'
 import { useApiKeyCheck, ApiKeyPromptModal } from './shared'
 import type { ConsoleMissionCardProps } from './shared'
 import { useCardLoadingState } from '../CardDataContext'
-import { useTranslation } from 'react-i18next'
 
 // Card 1: AI Issues Overview - Shows issues AI can help fix
 export function ConsoleIssuesCard(_props: ConsoleMissionCardProps) {
-  const { t: _t } = useTranslation()
   const { startMission, missions } = useMissions()
   const { issues: allPodIssues, isLoading: podIssuesLoading, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPodIssues()
   const { issues: allDeploymentIssues, isLoading: deployIssuesLoading, isDemoFallback: deploysDemoFallback, isFailed: deploysFailed, consecutiveFailures: deploysFailures } = useCachedDeploymentIssues()

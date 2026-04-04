@@ -5,7 +5,6 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { useClusterCapabilities, ClusterCapability } from '../../hooks/useWorkloads'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
-import { useTranslation } from 'react-i18next'
 
 // Demo cluster data (fallback when no real clusters)
 const DEMO_CLUSTERS: ClusterCapability[] = [
@@ -60,7 +59,6 @@ export function ClusterDropZone({
   draggedWorkload,
   onDeploy,
 }: ClusterDropZoneProps) {
-  const { t: _t } = useTranslation()
   const { isDemoMode: demoMode } = useDemoMode()
   const { data: realClusters, isLoading } = useClusterCapabilities(!demoMode)
 

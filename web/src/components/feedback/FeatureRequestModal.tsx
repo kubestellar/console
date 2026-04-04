@@ -95,7 +95,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
   const { user, isAuthenticated, token } = useAuth()
   const { showToast } = useToast()
   const currentGitHubLogin = user?.github_login || ''
-  const { createRequest, isSubmitting, requests, isLoading: requestsLoading, isRefreshing: requestsRefreshing, refresh: refreshRequests, requestUpdate, closeRequest, isDemoMode: _isDemoMode } = useFeatureRequests(currentGitHubLogin)
+  const { createRequest, isSubmitting, requests, isLoading: requestsLoading, isRefreshing: requestsRefreshing, refresh: refreshRequests, requestUpdate, closeRequest } = useFeatureRequests(currentGitHubLogin)
   const { notifications, isRefreshing: notificationsRefreshing, refresh: refreshNotifications, getUnreadCountForRequest, markRequestNotificationsAsRead } = useNotifications()
   const { githubRewards, githubPoints, refreshGitHubRewards } = useRewards()
   const { drafts, draftCount, saveDraft, deleteDraft, clearAllDrafts } = useFeedbackDrafts()
@@ -224,7 +224,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
       setRequestType('bug')
     }
     prevOpenRef.current = isOpen
-  }, [isOpen])
+  }, [isOpen, initialContext])
 
   // Check whether FEEDBACK_GITHUB_TOKEN is configured on the backend.
   // Runs once when the modal first opens so we can warn the user *before*

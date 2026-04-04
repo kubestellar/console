@@ -15,7 +15,7 @@ const ZERO_STAT = 0
 // Mock AlertsContext so we can test both null-context and provided-context paths
 // ---------------------------------------------------------------------------
 // We keep a mutable variable that vi.mock reads from via closure.
-let mockContextValue: Record<string, unknown> | null = null
+let _mockContextValue: Record<string, unknown> | null = null
 
 vi.mock('../../contexts/AlertsContext', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>
@@ -379,7 +379,7 @@ describe('useSlackWebhooks', () => {
 
   it('addWebhook creates a webhook with generated id prefixed with webhook_', () => {
     const { result } = renderHook(() => useSlackWebhooks())
-    let webhook: ReturnType<typeof result.current.addWebhook>
+    let _webhook: ReturnType<typeof result.current.addWebhook>
     act(() => {
       webhook = result.current.addWebhook('Alerts', 'https://hooks.slack.com/services/T/B/xxx', '#alerts')
     })
@@ -597,7 +597,7 @@ describe('useSlackNotification', () => {
 describe('stable references (regression)', () => {
   it('useAlertRules returns same function references across re-renders', () => {
     const { result, rerender } = renderHook(() => useAlertRules())
-    const firstRender = { ...result.current }
+    const _firstRender = { ...result.current }
     rerender()
     // Outside context, the entire return object is re-created each render
     // but the shape should be consistent

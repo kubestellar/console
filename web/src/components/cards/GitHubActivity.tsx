@@ -246,7 +246,7 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
   const { isDemoMode } = useDemoMode()
 
   // Use configured repos or default to kubestellar/console
-  const repos = config?.repos?.length ? config.repos : [DEFAULT_REPO]
+  const repos = useMemo(() => config?.repos?.length ? config.repos : [DEFAULT_REPO], [config?.repos])
   const org = config?.org
   // Note: Token stored in localStorage base64 encoded - decode before use
   // Token is injected server-side by the GitHub proxy — no client-side token needed
@@ -527,8 +527,6 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
     repoInfo,
     isLoading,
     error,
-    openPRCount,
-    openIssueCount,
     refetch,
   } = useGitHubActivity(effectiveConfig)
   const { isDemoMode } = useDemoMode()
@@ -679,7 +677,7 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
       stars: repoInfo?.stargazers_count || 0,
       totalContributors: contributors.length,
     }
-  }, [prs, issues, contributors, repoInfo, openPRCount, openIssueCount])
+  }, [prs, issues, contributors, repoInfo])
 
   if (isLoading && !repoInfo) {
     return (

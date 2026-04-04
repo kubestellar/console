@@ -35,7 +35,7 @@ import { ScanProgressOverlay } from '../ScanProgressOverlay'
 
 describe('ScanProgressOverlay', () => {
   it('renders without crashing', () => {
-    const { container } = render(<ScanProgressOverlay {...({} as any)} />)
+    const { container } = render(<ScanProgressOverlay {...({} as Record<string, unknown>)} />)
     expect(container).toBeTruthy()
   })
 })

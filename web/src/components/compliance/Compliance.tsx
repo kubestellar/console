@@ -10,7 +10,6 @@ import { useTrivy } from '../../hooks/useTrivy'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
-import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { emitComplianceDrillDown } from '../../lib/analytics'
 import { RotatingTip } from '../ui/RotatingTip'
@@ -30,7 +29,6 @@ const MOCK_GATEKEEPER_PER_CLUSTER = 3.2
 const MOCK_FALCO_PER_CLUSTER = 1.5
 
 export function Compliance() {
-  const { t: _t } = useTranslation()
   const { clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
   const { drillToAllSecurity } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()

@@ -22,7 +22,7 @@ function makeSSEStream(events: Array<{ event: string; data: unknown }>): Readabl
   })
 }
 
-function makeSplitSSEStream(chunks: string[]): ReadableStream<Uint8Array> {
+function _makeSplitSSEStream(chunks: string[]): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder()
   let index = 0
   return new ReadableStream({

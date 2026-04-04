@@ -58,7 +58,7 @@ let triggerAggressiveDetection: typeof import('../useLocalAgent').triggerAggress
 const POLL_INTERVAL = 10000
 const DISCONNECTED_POLL_INTERVAL = 60000
 const FAILURE_THRESHOLD = 9
-const SUCCESS_THRESHOLD = 2
+const _SUCCESS_THRESHOLD = 2
 
 /** Standard health response from a running agent. */
 const healthData = {

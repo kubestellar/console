@@ -33,7 +33,6 @@ interface ResolutionHistoryPanelProps {
 }
 
 export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryPanelProps) {
-  const { t: _t } = useTranslation()
   const { resolutions, sharedResolutions, deleteResolution, shareResolution } = useResolutions()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showPersonal, setShowPersonal] = useState(true)

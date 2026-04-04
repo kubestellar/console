@@ -3,7 +3,6 @@ import { Shield, ShieldAlert, ShieldCheck, Lock, Unlock, Bot } from 'lucide-reac
 import { useKagentiCards, useKagentiAgents, useKagentiTools } from '../../../hooks/useMCP'
 import { useCardLoadingState } from '../CardDataContext'
 import { Skeleton } from '../../ui/Skeleton'
-import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 
 interface KagentiSecurityPostureProps {
@@ -11,7 +10,6 @@ interface KagentiSecurityPostureProps {
 }
 
 export function KagentiSecurityPosture({ config }: KagentiSecurityPostureProps) {
-  const { t: _t } = useTranslation()
   const { isDemoMode } = useDemoMode()
   const {
     data: cards,

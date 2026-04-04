@@ -34,7 +34,6 @@ vi.stubGlobal('fetch', mockFetch)
 // ---------------------------------------------------------------------------
 
 import { useServiceExports } from '../useServiceExports'
-import type { UseServiceExportsResult } from '../useServiceExports'
 
 // ---------------------------------------------------------------------------
 // Constants (mirrored from source for clarity)

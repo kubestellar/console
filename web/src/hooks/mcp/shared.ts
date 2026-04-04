@@ -443,7 +443,7 @@ export function deduplicateClustersByServer(clusters: ClusterInfo[]): ClusterInf
   // For each server group, select a primary cluster and track aliases
   const deduplicatedClusters: ClusterInfo[] = []
 
-  for (const [_server, group] of serverGroups) {
+  for (const [__server, group] of serverGroups) {
     if (group.length === 1) {
       // No duplicates, just add the cluster
       deduplicatedClusters.push({ ...group[0], aliases: [] })
@@ -876,7 +876,7 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
         reportAgentDataSuccess()
         return health
       }
-    } catch (err) {
+    } catch {
       // Agent HTTP failed, will try backend below
     }
   }
@@ -1446,7 +1446,7 @@ export async function fullFetchClusters() {
     fetchInProgress = false
     // Check health progressively (non-blocking) - will update each cluster's data including cpuCores
     checkHealthProgressively(data.clusters || [])
-  } catch (err) {
+  } catch {
     // Always fall back gracefully to demo clusters - never show blocking errors
     // This ensures the UI always has data to display
     const newFailures = clusterCache.consecutiveFailures + 1

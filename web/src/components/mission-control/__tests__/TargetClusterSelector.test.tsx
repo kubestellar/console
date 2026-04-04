@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi} from 'vitest'
+// render and screen imports removed — not currently used in tests
 
 // Mock useGlobalFilters before importing the component
 vi.mock('../../../hooks/useGlobalFilters', () => ({

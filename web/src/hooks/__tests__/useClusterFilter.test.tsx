@@ -309,7 +309,6 @@ describe('localStorage persistence', () => {
   })
 
   it('persists empty array (all-selected) to localStorage', () => {
-    const { result } = renderHook(() => useClusterFilter(), { wrapper })
 
     // Default is all-selected (empty internal array)
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '["fallback"]')

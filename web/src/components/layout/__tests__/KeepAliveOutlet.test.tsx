@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
-import { MemoryRouter, Routes, Route, Outlet } from 'react-router-dom'
+import { MemoryRouter, Routes, Route} from 'react-router-dom'
 
 vi.mock('../Layout', () => ({
   ContentLoadingSkeleton: () => <div data-testid="loading-skeleton">Loading...</div>,

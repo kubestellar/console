@@ -10,7 +10,6 @@ import {
   waitForCardsToLoad,
   type MockControl,
   type ManifestData,
-  type ManifestItem,
 } from '../mocks/liveMocks'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -110,7 +109,7 @@ interface CacheComplianceReport {
 const BATCH_SIZE = 24
 const BATCH_LOAD_TIMEOUT_MS = 30_000
 const WARM_RETURN_WAIT_MS = 3_000
-const WARM_POLL_INTERVAL_MS = 50
+const _WARM_POLL_INTERVAL_MS = 50
 
 
 // Mock data, setupAuth, setupLiveMocks, setLiveColdMode, navigateToBatch,
@@ -147,7 +146,7 @@ async function captureColdSnapshots(page: Page, cardIds: string[]): Promise<Cold
   }, cardIds)
 }
 
-async function captureWarmSnapshots(
+async function _captureWarmSnapshots(
   page: Page,
   cardIds: string[],
   pollMs: number,

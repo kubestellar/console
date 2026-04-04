@@ -1082,7 +1082,7 @@ describe('filterByStatus', () => {
     const { result } = renderHook(() => useGlobalFilters(), { wrapper })
 
     act(() => {
-      result.current.setSelectedStatuses(['run' as any])
+      result.current.setSelectedStatuses(['run' as unknown])
     })
 
     const items = [

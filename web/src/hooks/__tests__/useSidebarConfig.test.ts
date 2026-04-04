@@ -250,7 +250,7 @@ describe('useSidebarConfig', () => {
   // --- Generate from behavior ---
   it('generateFromBehavior reorders based on frequently used paths', () => {
     const { result } = renderHook(() => useSidebarConfig())
-    const origFirst = result.current.config.primaryNav[0]?.id
+    const _origFirst = result.current.config.primaryNav[0]?.id
     act(() => {
       // /clusters should move to position 0 since it appears first in the frequency list
       result.current.generateFromBehavior(['/clusters', '/deploy', '/'])

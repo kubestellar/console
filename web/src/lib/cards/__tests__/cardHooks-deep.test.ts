@@ -62,14 +62,13 @@ vi.mock('../useStablePageHeight', () => ({
 
 import {
   commonComparators,
-  useCardSort,
   useCardFilters,
   useCardData,
   useCardCollapse,
   useCardCollapseAll,
   useStatusFilter,
   useCardFlash,
-  type SortConfig,
+  type _SortConfig,
   type FilterConfig,
   type CardDataConfig,
   type StatusFilterConfig,
@@ -77,7 +76,7 @@ import {
 
 // ── Constants ──────────────────────────────────────────────────────
 
-const COLLAPSED_STORAGE_KEY = 'kubestellar-collapsed-cards'
+const _COLLAPSED_STORAGE_KEY = 'kubestellar-collapsed-cards'
 const LOCAL_FILTER_STORAGE_PREFIX = 'kubestellar-card-filter:'
 
 // ── Setup / Teardown ──────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach} from 'vitest'
 
 /**
  * Tests for prefetchDashboard - sidebar hover prefetching.

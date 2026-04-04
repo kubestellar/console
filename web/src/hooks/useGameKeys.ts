@@ -118,11 +118,11 @@ export function useGameKeyTracking(
     window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('keyup', handleKeyUp)
 
+    const keys = keysRef.current
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
-      keysRef.current.clear()
+      keys.clear()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [containerRef, keysRef])
 }

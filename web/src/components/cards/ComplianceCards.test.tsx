@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ComplianceScore } from './ComplianceCards'
 import { ComplianceScoreBreakdownModal } from './compliance/ComplianceScoreBreakdownModal'
@@ -438,7 +438,7 @@ describe('ComplianceScoreBreakdownModal', () => {
   })
 
   it('shows fallback message when tool data is not provided', async () => {
-    const user = userEvent.setup()
+    const _user = userEvent.setup()
 
     render(
       <ComplianceScoreBreakdownModal

@@ -106,7 +106,7 @@ class DashboardSyncService {
       // Cache it
       this.dashboardCache.set(name, dashboard)
       return dashboard
-    } catch (err) {
+    } catch {
       // Silently fail - backend unavailability is expected in demo mode
       // The UI will work with localStorage-only persistence
       return null
@@ -125,7 +125,7 @@ class DashboardSyncService {
 
       const { data } = await api.get<DashboardWithCards>(`/api/dashboards/${dashboard.id}`)
       return data.cards.map(toFrontendCard)
-    } catch (err) {
+    } catch {
       // Silently fail - backend unavailability is expected in demo mode
       return null
     }

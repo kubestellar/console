@@ -141,16 +141,18 @@ export interface UseAdmissionWebhooksResult {
 export function useAdmissionWebhooks(): UseAdmissionWebhooksResult {
   const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
 
+  // Snapshot ref value to avoid reading ref during render
   const cachedData = useRef(loadFromCache())
-  const [webhooks, setWebhooks] = useState<WebhookData[]>(cachedData.current?.data || [])
-  const [isDemoData, setIsDemoData] = useState(cachedData.current?.isDemoData ?? true)
-  const [isLoading, setIsLoading] = useState(!cachedData.current)
+  const cachedSnapshot = cachedData.current
+  const [webhooks, setWebhooks] = useState<WebhookData[]>(cachedSnapshot?.data || [])
+  const [isDemoData, setIsDemoData] = useState(cachedSnapshot?.isDemoData ?? true)
+  const [isLoading, setIsLoading] = useState(!cachedSnapshot)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<number | null>(
-    cachedData.current?.timestamp || null
+    cachedSnapshot?.timestamp || null
   )
-  const initialLoadDone = useRef(!!cachedData.current)
+  const initialLoadDone = useRef(!!cachedSnapshot)
 
   // Use refs so refetch doesn't depend on clusters/isDemoData references,
   // which would cause the auto-refresh useEffect to re-subscribe on every change.

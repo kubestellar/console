@@ -32,7 +32,7 @@ const NAVIGATION_ROUTE_SEQUENCE: ReadonlyArray<{ path: string; name: string }> =
 ] as const
 
 /** Maximum time (ms) to wait for each page to settle after navigation */
-const PAGE_SETTLE_TIMEOUT_MS = 8_000
+const _PAGE_SETTLE_TIMEOUT_MS = 8_000
 
 /** Maximum time (ms) to wait for network idle after navigation */
 const NETWORK_IDLE_TIMEOUT_MS = 15_000

@@ -314,7 +314,7 @@ export function GPUReservations() {
   const { daysInMonth, startingDay } = getDaysInMonth(currentMonth)
 
   // Get the start/end day index (0-based from month start) for a reservation within the visible month
-  const getReservationDayRange = (r: GPUReservation) => {
+  const getReservationDayRange = useCallback((r: GPUReservation) => {
     if (!r.start_date) return null
     const start = new Date(r.start_date)
     start.setHours(0, 0, 0, 0)
@@ -332,7 +332,7 @@ export function GPUReservations() {
     const clampedStart = start < monthStart ? 1 : start.getDate()
     const clampedEnd = end > monthEnd ? daysInMonth : end.getDate()
     return { startDay: clampedStart, endDay: clampedEnd }
-  }
+  }, [currentMonth, daysInMonth])
 
   // Compute spanning reservation rows per calendar week
   const calendarWeeks = useMemo(() => {
@@ -410,7 +410,7 @@ export function GPUReservations() {
     }
 
     return weeks
-  }, [filteredReservations, startingDay, daysInMonth, currentMonth])
+  }, [filteredReservations, startingDay, daysInMonth, currentMonth, getReservationDayRange])
 
   // Get GPU count reserved on a specific day
   const getGPUCountForDay = useCallback((day: number) => {

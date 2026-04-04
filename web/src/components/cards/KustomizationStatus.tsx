@@ -160,7 +160,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
   }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   // Filter kustomizations based on selected cluster
-  const allKustomizations: Kustomization[] = selectedCluster ? kustomizationData : []
+  const allKustomizations: Kustomization[] = useMemo(() => selectedCluster ? kustomizationData : [], [selectedCluster, kustomizationData])
 
   // Get unique namespaces
   const namespaces = useMemo(() => {

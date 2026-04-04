@@ -314,7 +314,6 @@ describe('useAIPredictions', () => {
     const mockFetch = vi.fn()
     globalThis.fetch = mockFetch
 
-    const { result } = renderHook(() => useAIPredictions())
 
     // fetch should NOT have been called because agent is unavailable
     expect(mockFetch).not.toHaveBeenCalled()
@@ -349,7 +348,6 @@ describe('useAIPredictions', () => {
     }
     globalThis.fetch = vi.fn().mockResolvedValue(mockResponse)
 
-    const { result } = renderHook(() => useAIPredictions())
 
     await waitFor(() => {
       expect(globalThis.fetch).toHaveBeenCalled()
@@ -438,7 +436,7 @@ describe('useAIPredictions', () => {
     const { result } = renderHook(() => useAIPredictions())
 
     // Start analyze — don't await, let timers drive it
-    let done = false
+    let _done = false
     act(() => {
       result.current.analyze().then(() => { done = true })
     })

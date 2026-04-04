@@ -84,7 +84,7 @@ export function AuthCallback() {
           navigate(destination)
         }, NAVIGATE_AFTER_ERROR_DELAY_MS)
       })
-  }, [searchParams, setToken, refreshUser, navigate, showToast])
+  }, [searchParams, setToken, refreshUser, navigate, showToast, t])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">

@@ -1,5 +1,4 @@
 import type { AgentProvider } from '../../types/agent'
-import { useTranslation } from 'react-i18next'
 
 interface AgentIconProps {
   provider: AgentProvider | string
@@ -7,7 +6,6 @@ interface AgentIconProps {
 }
 
 export function AgentIcon({ provider, className = 'w-5 h-5' }: AgentIconProps) {
-  const { t: _t } = useTranslation()
   // Normalize agent name aliases to their canonical provider key so icons
   // are consistent whether callers pass the agent name or the provider key.
   const normalizedProvider: AgentProvider | string =

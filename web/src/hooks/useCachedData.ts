@@ -1448,7 +1448,7 @@ export function useGPUHealthCronJob(cluster?: string) {
     } finally {
       setActionInProgress(null)
     }
-  }, [cluster, result.refetch])
+  }, [cluster, result])
 
   const uninstall = useCallback(async (opts?: { namespace?: string }) => {
     if (!cluster) return
@@ -1479,7 +1479,7 @@ export function useGPUHealthCronJob(cluster?: string) {
     } finally {
       setActionInProgress(null)
     }
-  }, [cluster, result.refetch])
+  }, [cluster, result])
 
   return {
     status: result.data,

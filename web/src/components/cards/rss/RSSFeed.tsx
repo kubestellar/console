@@ -458,7 +458,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }, [activeFeed?.url, activeFeed?.name, activeFeed?.isAggregate, activeFeed?.sourceUrls, isDemoMode])
+  }, [activeFeed?.url, activeFeed?.name, activeFeed?.isAggregate, activeFeed?.sourceUrls, isDemoMode, feeds, fetchSingleFeed])
 
   // Fetch on mount and when feed changes
   useEffect(() => {

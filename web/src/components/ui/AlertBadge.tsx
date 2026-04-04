@@ -30,7 +30,6 @@ interface AnimationState {
 }
 
 export function AnimatedCounter({ value, className }: { value: number; className?: string }) {
-  const { t: _t } = useTranslation()
   const [displayValue, setDisplayValue] = useState(value)
   const [animState, setAnimState] = useState<AnimationState>({ isAnimating: false, direction: 'up' })
   const prevValueRef = useRef(value)

@@ -265,7 +265,7 @@ export function useServices(cluster?: string, namespace?: string) {
       setLastUpdated(now)
       setConsecutiveFailures(0)
       setLastRefresh(now)
-    } catch (err) {
+    } catch {
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent) {
@@ -284,7 +284,7 @@ export function useServices(cluster?: string, namespace?: string) {
         setIsRefreshing(false)
       }
     }
-  }, [cluster, namespace, cacheKey, services.length])
+  }, [cluster, namespace, cacheKey])
 
   useEffect(() => {
     // If we have cached data, still refresh in background but don't show loading

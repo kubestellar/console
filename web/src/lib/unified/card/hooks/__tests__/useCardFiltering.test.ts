@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect} from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useCardFiltering } from '../useCardFiltering'
 import type { CardFilterConfig } from '../../../types'

@@ -81,17 +81,6 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
     }
   }, [instanceId, config?.url, savedEmbeds])
 
-  // Auto-refresh
-  useEffect(() => {
-    if (refreshInterval <= 0 || !url) return
-
-    const interval = setInterval(() => {
-      handleRefresh()
-    }, refreshInterval * 1000)
-
-    return () => clearInterval(interval)
-  }, [refreshInterval, url])
-
   const handleRefresh = useCallback(() => {
     if (!iframeRef.current || !url) return
     setIsLoading(true)
@@ -106,6 +95,17 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
     }, 50)
     setLastRefresh(new Date())
   }, [url])
+
+  // Auto-refresh
+  useEffect(() => {
+    if (refreshInterval <= 0 || !url) return
+
+    const interval = setInterval(() => {
+      handleRefresh()
+    }, refreshInterval * 1000)
+
+    return () => clearInterval(interval)
+  }, [refreshInterval, url, handleRefresh])
 
   const handleLoad = useCallback(() => {
     setIsLoading(false)

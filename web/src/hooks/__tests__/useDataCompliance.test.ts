@@ -148,7 +148,7 @@ function setupSingleClusterExec(opts: {
     namespaceCount = 0,
   } = opts
 
-  let callIdx = 0
+  let _callIdx = 0
   mockExec.mockImplementation((args: string[]) => {
     callIdx++
     const cmd = args.join(' ')
@@ -878,7 +878,7 @@ describe('useDataCompliance', () => {
     mockAllClusters = [{ name: 'wait-cert', reachable: true }]
     mockCertLoading = true
 
-    const { result, unmount } = renderHook(() => useDataCompliance())
+    const {unmount } = renderHook(() => useDataCompliance())
 
     // cert still loading → the effect's condition `clusters.length > 0 && !certLoading`
     // is false, so mockExec should NOT have been called

@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+// renderHook import removed — not currently used
 
 // ---------------------------------------------------------------------------
 // Mocks - all variables used inside vi.mock factories must be hoisted

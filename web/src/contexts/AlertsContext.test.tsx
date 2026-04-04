@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import React from 'react'
 import { AlertsProvider, useAlertsContext } from './AlertsContext'
-import type { Alert, AlertRule, AlertChannel } from '../types/alerts'
+import type { Alert, AlertRule} from '../types/alerts'
 
 // ── External module mocks ─────────────────────────────────────────────────────
 
@@ -398,7 +398,7 @@ describe('rule management', () => {
   it('updateRule modifies a rule and sets updatedAt', () => {
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
     const ruleId = result.current.rules[0].id
-    const originalUpdatedAt = result.current.rules[0].updatedAt
+    const _originalUpdatedAt = result.current.rules[0].updatedAt
 
     // small delay so timestamp differs
     act(() => {
@@ -449,7 +449,7 @@ describe('rule management', () => {
   it('persists rules to localStorage on change', () => {
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
 
-    let newRule: AlertRule | undefined
+    let _newRule: AlertRule | undefined
     act(() => {
       newRule = result.current.createRule(makeRule({ name: 'Persisted Rule' }))
     })

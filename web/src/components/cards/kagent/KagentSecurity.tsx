@@ -2,10 +2,8 @@ import { useMemo } from 'react'
 import { Shield, ShieldCheck, ShieldAlert, AlertTriangle, Lock } from 'lucide-react'
 import { useKagentCRDAgents, useKagentCRDTools } from '../../../hooks/mcp/kagent_crds'
 import { useCardLoadingState } from '../CardDataContext'
-import { useTranslation } from 'react-i18next'
 
 export function KagentSecurity({ config }: { config?: Record<string, unknown> }) {
-  const { t: _t } = useTranslation()
   const cluster = config?.cluster as string | undefined
   const {
     data: agents,

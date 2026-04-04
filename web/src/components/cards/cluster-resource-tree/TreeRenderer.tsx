@@ -1,7 +1,6 @@
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import type { TreeNodeProps } from './types'
-import { useTranslation } from 'react-i18next'
 
 /** Pixels of horizontal indent per tree nesting level */
 const INDENT_PER_LEVEL_PX = 16
@@ -29,7 +28,6 @@ export function TreeNode({
   expandedNodes,
   toggleNode,
 }: TreeNodeInternalProps) {
-  const { t: _t } = useTranslation()
   const isExpanded = expandedNodes.has(id)
   const hasChildren = !!children
 

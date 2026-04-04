@@ -5,7 +5,6 @@ import { useCardLoadingState } from '../CardDataContext'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../../lib/cards/CardComponents'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { Skeleton } from '../../ui/Skeleton'
-import { useTranslation } from 'react-i18next'
 
 interface KagentiBuildPipelineProps {
   config?: { cluster?: string }
@@ -44,7 +43,6 @@ const SORT_OPTIONS: { value: SortField; label: string }[] = [
 ]
 
 export function KagentiBuildPipeline({ config }: KagentiBuildPipelineProps) {
-  const { t: _t } = useTranslation()
   const {
     data: builds,
     isLoading,

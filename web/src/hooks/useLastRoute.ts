@@ -231,8 +231,9 @@ export function useLastRoute() {
     // On cleanup (path change), save scroll position of the page being left.
     // Use the ref value — KeepAlive sets display:none on old content before
     // cleanup runs, which clamps container.scrollTop. The ref has the real value.
+    const scrollRef = scrollTopByPathRef.current
     return () => {
-      const refScroll = scrollTopByPathRef.current[location.pathname]
+      const refScroll = scrollRef[location.pathname]
       if (refScroll !== undefined && refScroll > 0) {
         try {
           const positions = getScrollPositions()
@@ -245,7 +246,7 @@ export function useLastRoute() {
         saveScrollPositionNow(location.pathname)
       }
     }
-  }, [location.pathname, saveScrollPositionNow, getScrollPositions])
+  }, [location.pathname, location.search, saveScrollPositionNow, getScrollPositions])
 
   // Restore last route on initial mount
   useEffect(() => {

@@ -387,7 +387,7 @@ describe('sseClient expanded', () => {
         { event: 'done', data: {} },
       ]))
 
-      const result2 = await fetchSSE({
+      const _result2 = await fetchSSE({
         url: uniqueUrl,
         itemsKey: 'items',
         onClusterData: vi.fn(),

@@ -79,14 +79,12 @@ describe('ConfirmDialog', () => {
   })
 
   it('renders with danger variant by default', () => {
-    const { container } = render(<ConfirmDialog {...defaultProps} />)
     // Danger variant uses red color classes
     const confirmBtn = screen.getByText('Confirm').closest('button')
     expect(confirmBtn?.className).toContain('red')
   })
 
   it('renders with warning variant', () => {
-    const { container } = render(
       <ConfirmDialog {...defaultProps} variant="warning" />
     )
     const confirmBtn = screen.getByText('Confirm').closest('button')
@@ -94,7 +92,6 @@ describe('ConfirmDialog', () => {
   })
 
   it('renders with info variant', () => {
-    const { container } = render(
       <ConfirmDialog {...defaultProps} variant="info" />
     )
     const confirmBtn = screen.getByText('Confirm').closest('button')

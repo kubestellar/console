@@ -5,7 +5,6 @@ import {
   Wifi, Battery, Signal
 } from 'lucide-react'
 import { useCardExpanded } from './CardWrapper'
-import { useTranslation } from 'react-i18next'
 import { POLL_INTERVAL_SLOW_MS } from '../../lib/constants/network'
 
 interface Tab {
@@ -42,7 +41,6 @@ const QUICK_LINKS = [
 ]
 
 export function MobileBrowser() {
-  const { t: _t } = useTranslation()
   const { isExpanded } = useCardExpanded()
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)

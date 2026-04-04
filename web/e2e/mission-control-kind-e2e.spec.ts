@@ -56,8 +56,8 @@ function kindContext(name: KindClusterName): string {
 }
 
 /** Minimum number of projects that must succeed in multi-project stress test */
-const MULTI_PROJECT_MIN_SUCCESS = 4
-const MULTI_PROJECT_TOTAL = 6
+const _MULTI_PROJECT_MIN_SUCCESS = 4
+const _MULTI_PROJECT_TOTAL = 6
 
 // ---------------------------------------------------------------------------
 // Test data: project definitions per scenario
@@ -83,7 +83,7 @@ const GITOPS_PROJECTS = [
 // Helpers: kc-agent API
 // ---------------------------------------------------------------------------
 
-async function createKindCluster(name: string): Promise<{ ok: boolean; error?: string }> {
+async function _createKindCluster(name: string): Promise<{ ok: boolean; error?: string }> {
   try {
     const resp = await fetch(`${AGENT_BASE_URL}/local-clusters`, {
       method: 'POST',
@@ -100,7 +100,7 @@ async function createKindCluster(name: string): Promise<{ ok: boolean; error?: s
   }
 }
 
-async function deleteKindCluster(name: string): Promise<{ ok: boolean; error?: string }> {
+async function _deleteKindCluster(name: string): Promise<{ ok: boolean; error?: string }> {
   try {
     const resp = await fetch(`${AGENT_BASE_URL}/local-clusters?tool=kind&name=${name}`, {
       method: 'DELETE',

@@ -175,7 +175,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
   const { clusters, deduplicatedClusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues } = useClusterData()
   const { nodes: rawCachedNodes, lastRefresh: nodesLastRefresh } = useCachedNodes()
   // Guard against undefined to prevent crashes when APIs return 404/500/empty
-  const cachedNodes = rawCachedNodes || []
+  const cachedNodes = useMemo(() => rawCachedNodes || [], [rawCachedNodes])
   // Convert epoch ms to ISO string for the freshness indicator
   const nodesDataAge = useMemo(() => {
     if (!nodesLastRefresh) return null

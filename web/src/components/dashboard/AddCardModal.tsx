@@ -1096,7 +1096,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
         emitAddCardModalAbandoned()
       }
     }
-  }, [isOpen])
+  }, [isOpen, recommendedCards])
 
   // Auto-focus search input when browse tab is active
   useEffect(() => {

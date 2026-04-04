@@ -144,7 +144,7 @@ export function Missions(_props: MissionsProps) {
   const { deduplicatedClusters, isLoading, isRefreshing } = useClusters()
   const { isDemoMode: demoMode } = useDemoMode()
   const missions = demoMode ? DEMO_MISSIONS : liveMissions
-  const activeMissions = demoMode ? [] : liveActive
+  const activeMissions = useMemo(() => demoMode ? [] : liveActive, [demoMode, liveActive])
   const completedMissions = demoMode ? DEMO_MISSIONS : liveCompleted
   const [expandedMissions, setExpandedMissions] = useState<Set<string>>(new Set())
   const [hideCompleted, setHideCompleted] = useState(false)

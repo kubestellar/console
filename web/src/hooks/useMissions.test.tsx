@@ -2544,7 +2544,6 @@ describe('resolution auto-matching', () => {
   })
 
   it('does not match resolutions for deploy type missions', async () => {
-    const { detectIssueSignature } = await import('./useResolutions')
 
     const { result } = renderHook(() => useMissions(), { wrapper })
     act(() => {

@@ -7,7 +7,6 @@ import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../../cards/cardRegistry'
 import { DashboardCard } from '../../../lib/dashboards'
 import { formatCardTitle } from '../../../lib/formatCardTitle'
 import { useMobile } from '../../../hooks/useMobile'
-import { useTranslation } from 'react-i18next'
 
 export interface SortableClusterCardProps {
   card: DashboardCard
@@ -30,7 +29,6 @@ export const SortableClusterCard = memo(function SortableClusterCard({
   onRefresh,
   lastUpdated,
 }: SortableClusterCardProps) {
-  const { t: _t } = useTranslation()
   const {
     attributes,
     listeners,

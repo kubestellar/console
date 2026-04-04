@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedPodIssues, useCachedWarningEvents, useCachedNodes } from '../../hooks/useCachedData'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
@@ -18,9 +18,9 @@ export function ClusterAdmin() {
 
   // Guard all arrays against undefined to prevent crashes when APIs return 404/500/empty
   const clusters = rawClusters || []
-  const podIssues = rawPodIssues || []
-  const warningEvents = rawWarningEvents || []
-  const nodes = rawNodes || []
+  const podIssues = useMemo(() => rawPodIssues || [], [rawPodIssues])
+  const warningEvents = useMemo(() => rawWarningEvents || [], [rawWarningEvents])
+  const nodes = useMemo(() => rawNodes || [], [rawNodes])
 
   const reachable = clusters.filter(c => c.reachable !== false)
   const healthy = reachable.filter(c => c.healthy === true)

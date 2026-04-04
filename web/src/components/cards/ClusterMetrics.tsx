@@ -114,8 +114,9 @@ export function ClusterMetrics() {
     return []
   }, [])
 
-  const historyRef = useRef<MetricPoint[]>(loadSavedHistory())
-  const [history, setHistory] = useState<MetricPoint[]>(historyRef.current)
+  const initialHistory = loadSavedHistory()
+  const historyRef = useRef<MetricPoint[]>(initialHistory)
+  const [history, setHistory] = useState<MetricPoint[]>(initialHistory)
 
   // Save history to localStorage when it changes
   useEffect(() => {

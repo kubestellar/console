@@ -59,7 +59,6 @@ vi.stubGlobal('matchMedia', mockMatchMedia)
 // ---------------------------------------------------------------------------
 
 import { useContextualNudges } from '../useContextualNudges'
-import type { NudgeType } from '../useContextualNudges'
 
 // ---------------------------------------------------------------------------
 // Tests

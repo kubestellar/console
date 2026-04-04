@@ -43,12 +43,8 @@ Tail lines: ${tailLines}
 Note: Live log streaming coming soon.
 Connect to kubestellar-ops MCP server to fetch real logs.`
 
-  // Simulate loading state when API is integrated
-  useEffect(() => {
-    // When real API is added, replace this with actual fetch logic
-    setIsLoading(false)
-    setError(null)
-  }, [pod, container, tailLines])
+  // TODO: When real API is added, replace this with actual fetch logic.
+  // Currently logs are static placeholder text — no loading/error state needed.
 
   const handleRefresh = () => {
     // Placeholder for future API refresh

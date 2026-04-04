@@ -35,7 +35,7 @@ import { ImproveMissionDialog } from '../ImproveMissionDialog'
 
 describe('ImproveMissionDialog', () => {
   it('renders without crashing', () => {
-    const { container } = render(<ImproveMissionDialog isOpen={false} onClose={() => {}} mission={{} as any} />)
+    const { container } = render(<ImproveMissionDialog isOpen={false} onClose={() => {}} mission={{} as Record<string, unknown>} />)
     expect(container).toBeTruthy()
   })
 })

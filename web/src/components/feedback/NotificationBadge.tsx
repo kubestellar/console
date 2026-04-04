@@ -3,7 +3,6 @@ import { useModalState } from '../../lib/modals'
 import { Bell, X, Check, Clock, Bug, Sparkles, GitPullRequest, Eye } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useNotifications, type Notification, type NotificationType } from '../../hooks/useFeatureRequests'
-import { useTranslation } from 'react-i18next'
 
 // Format relative time
 function formatRelativeTime(dateString: string): string {
@@ -42,7 +41,6 @@ function getNotificationIcon(type: NotificationType) {
 }
 
 export function NotificationBadge() {
-  const { t: _t } = useTranslation()
   const {
     notifications,
     unreadCount,

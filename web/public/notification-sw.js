@@ -7,7 +7,7 @@
  * permission to raise the browser window.
  */
 
-/* eslint-disable no-restricted-globals */
+ 
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()

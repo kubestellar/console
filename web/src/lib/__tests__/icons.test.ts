@@ -15,7 +15,7 @@ describe('icons', () => {
     })
 
     it('every registry entry is a function (React component)', () => {
-      for (const [name, icon] of Object.entries(iconRegistry)) {
+      for (const [_name, icon] of Object.entries(iconRegistry)) {
         // Lucide icons in React 18 are forwardRef objects (typeof 'object'),
         // while custom icons like KubernetesWheel are plain functions.
         const isFunction = typeof icon === 'function'

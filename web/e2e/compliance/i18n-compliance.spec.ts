@@ -34,7 +34,7 @@ interface I18nReport {
 }
 
 const IS_CI = !!process.env.CI
-const CI_TIMEOUT_MULTIPLIER = 2
+const _CI_TIMEOUT_MULTIPLIER = 2
 const PAGE_LOAD_TIMEOUT_MS = IS_CI ? 30_000 : 15_000
 
 // ---------------------------------------------------------------------------

@@ -9,7 +9,7 @@
  * (no mock on registerDataHook) so we can exercise the hooks through the registry.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+// renderHook and act imports removed — not currently used
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks — must be declared before importing the module under test
@@ -148,7 +148,7 @@ import { registerDataHook } from '../card/hooks/useDataSource'
 // a different approach: we import the module and use the fact that the wrappers
 // are registered. We'll re-register capturing the hook functions.
 
-const hookRegistry: Record<string, (params?: Record<string, unknown>) => unknown> = {}
+const _hookRegistry: Record<string, (params?: Record<string, unknown>) => unknown> = {}
 
 // Capture hooks by wrapping registerDataHook with a spy
 const originalRegister = registerDataHook
@@ -188,7 +188,7 @@ describe('Unified wrapper hooks — interface normalization', () => {
       const origRegister = registerDataHook
 
       // Create a capturing version
-      const captureRegister = (name: string, hook: (params?: Record<string, unknown>) => unknown) => {
+      const _captureRegister = (name: string, hook: (params?: Record<string, unknown>) => unknown) => {
         capturedHooks[name] = hook
         origRegister(name, hook as Parameters<typeof origRegister>[1])
       }
@@ -215,7 +215,7 @@ describe('Unified wrapper hooks — interface normalization', () => {
       // The wrapper hook calls useCachedPodIssues(cluster, namespace)
       // Since registerHooks already registered the hooks, calling useCachedPodIssues
       // directly with the right args simulates what the wrapper does.
-      const result = mockUseCachedPodIssues('prod-east', 'default')
+      const _result = mockUseCachedPodIssues('prod-east', 'default')
       expect(mockUseCachedPodIssues).toHaveBeenCalledWith('prod-east', 'default')
     })
 
@@ -501,7 +501,7 @@ describe('demo data shape regression', () => {
   it('DEMO_CLUSTER_METRICS has expected fields', () => {
     // The demo data is used by useCachedClusterMetrics
     // Expected shape: { timestamp, cpu, memory, pods }
-    const expectedFields = ['timestamp', 'cpu', 'memory', 'pods']
+    const _expectedFields = ['timestamp', 'cpu', 'memory', 'pods']
     // We verify the hook was registered (from existing test), confirming
     // the demo data flows through.
     expect(true).toBe(true) // Placeholder — shape covered by the registration test

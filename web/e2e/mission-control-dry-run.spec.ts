@@ -31,8 +31,8 @@ const CLUSTER_VLLM_D = 'vllm-d'
 const CLUSTER_PLATFORM_EVAL = 'platform-eval'
 
 /** Markers the AI should include in dry-run output */
-const DRY_RUN_PROMPT_MARKER = '--dry-run=server'
-const DRY_RUN_COMPLETION_MARKER = 'DRY RUN COMPLETE'
+const _DRY_RUN_PROMPT_MARKER = '--dry-run=server'
+const _DRY_RUN_COMPLETION_MARKER = 'DRY RUN COMPLETE'
 
 // ---------------------------------------------------------------------------
 // Test data

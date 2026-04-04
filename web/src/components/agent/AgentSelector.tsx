@@ -90,11 +90,11 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   // Check if any CLI agent is available (can run install missions)
   const hasCliAgent = useMemo(() => agents.some(a => a.available), [agents])
 
-  // Known KB paths for install missions
-  const INSTALL_MISSION_PATHS: Record<string, string[]> = {
+  // Known KB paths for install missions (stable reference to avoid recreating callbacks)
+  const INSTALL_MISSION_PATHS = useMemo<Record<string, string[]>>(() => ({
     'install-kagent': ['fixes/cncf-install/install-kagent.json'],
     'install-kagenti': ['fixes/platform-install/install-kagenti.json'],
-  }
+  }), [])
 
   const openInstallGuide = useCallback(async (missionId: string) => {
     closeDropdown()
@@ -127,7 +127,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
     }
     setInstallGuideError(true)
     setInstallGuideLoading(false)
-  }, [closeDropdown])
+  }, [closeDropdown, INSTALL_MISSION_PATHS])
 
   const handleInstallMission = useCallback(async (missionId: string, displayName: string) => {
     closeDropdown()
@@ -159,7 +159,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
     }
     // Show cluster selection dialog before running
     setPendingInstall({ missionId, displayName, mission: missionData })
-  }, [closeDropdown, startMission])
+  }, [closeDropdown, startMission, INSTALL_MISSION_PATHS])
 
   // Split agents into sections: selected at top, then CLI, then Cluster
   const { selectedAgentInfo, cliAgents, clusterAgents } = useMemo(() =>

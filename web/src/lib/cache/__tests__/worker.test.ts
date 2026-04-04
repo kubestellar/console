@@ -1098,10 +1098,10 @@ describe('Cache Worker handlers', () => {
       const pendingMessages: WorkerRequest[] = [
         { id: 1, type: 'get', key: 'early' },
       ]
-      let initComplete = false
+      let _initComplete = false
 
       // Simulate initDatabase().then()
-      initComplete = true
+      _initComplete = true
       for (const queued of pendingMessages) {
         processMessage(db, queued, postMessage)
       }

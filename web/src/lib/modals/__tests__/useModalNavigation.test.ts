@@ -3,7 +3,6 @@ import { renderHook, act } from '@testing-library/react'
 import {
   useModalNavigation,
   useModalBackdropClose,
-  useModalFocusTrap,
   useModalState,
 } from '../useModalNavigation'
 
@@ -38,7 +37,7 @@ function createTextarea(): HTMLTextAreaElement {
 }
 
 /** Create a contentEditable div and attach it to the DOM */
-function createContentEditable(): HTMLDivElement {
+function _createContentEditable(): HTMLDivElement {
   const div = document.createElement('div')
   div.contentEditable = 'true'
   document.body.appendChild(div)

@@ -443,7 +443,7 @@ describe('AuthProvider', () => {
   it('auto-enables demo mode when no token and backend is down', async () => {
     mockCheckOAuth.mockResolvedValue({ backendUp: false, oauthConfigured: false })
 
-    const { result, rerender } = await renderWithAuthProvider()
+    const { result} = await renderWithAuthProvider()
 
     // Wait for refreshUser() to resolve
     await waitFor(() => {

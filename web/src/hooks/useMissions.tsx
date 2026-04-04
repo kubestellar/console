@@ -651,7 +651,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         reject(err)
       }
     })
-  }, [fetchAgents])
+  }, [fetchAgents, wsSend])
 
   // Mark a mission as having unread content (not currently being viewed)
   const markMissionAsUnread = useCallback((missionId: string) => {
@@ -1207,6 +1207,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     })
 
     return missionId
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- executeMission is defined after startMission; called async so always resolved
   }, [ensureConnection])
 
   /**
@@ -1285,7 +1286,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         } : m
       ))
     })
-  }, [ensureConnection])
+  }, [ensureConnection, wsSend])
 
   /**
    * Retry preflight check for a blocked mission.
@@ -1504,7 +1505,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         } : m
       ))
     })
-  }, [missions, ensureConnection])
+  }, [missions, ensureConnection, wsSend])
 
   // Cancel a running mission — sends cancel signal to backend to kill agent process.
   // Uses WebSocket if connected, otherwise falls back to HTTP POST endpoint.
@@ -1666,7 +1667,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         } : m
       ))
     })
-  }, [cancelMission, ensureConnection])
+  }, [cancelMission, ensureConnection, wsSend])
 
   // Dismiss/remove a mission from the list
   const dismissMission = useCallback((missionId: string) => {
@@ -1770,7 +1771,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     }).catch(err => {
       console.error('[Missions] Failed to select agent:', err)
     })
-  }, [ensureConnection])
+  }, [ensureConnection, wsSend])
 
   // Connect to agent (for AgentSelector in navbar)
   const connectToAgent = useCallback(() => {

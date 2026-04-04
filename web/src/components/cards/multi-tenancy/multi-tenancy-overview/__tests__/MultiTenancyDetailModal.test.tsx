@@ -36,7 +36,7 @@ import { MultiTenancyDetailModal } from '../MultiTenancyDetailModal'
 
 describe('MultiTenancyDetailModal', () => {
   it('renders without crashing', () => {
-    const { container } = render(<MultiTenancyDetailModal isOpen={false} onClose={() => {}} data={{} as any} isDemoData={false} />)
+    const { container } = render(<MultiTenancyDetailModal isOpen={false} onClose={() => {}} data={{} as Record<string, unknown>} isDemoData={false} />)
     expect(container).toBeTruthy()
   })
 })

@@ -288,7 +288,7 @@ describe('useCachedLLMd', () => {
     it('fetches servers from multiple clusters', async () => {
       // Deployments response
       mockKubectlProxy.exec.mockImplementation(
-        async (args: string[], opts: { context: string }) => {
+        async (args: string[], _opts: { context: string }) => {
           if (args[0] === 'get' && args[1] === 'deployments') {
             return mockExecJson([
               makeDeployment('vllm-llama', 'llm-d', {

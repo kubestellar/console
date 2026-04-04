@@ -164,7 +164,7 @@ export function ReplicaSetDrillDown({ data }: Props) {
     }
 
     loadData()
-  }, [agentConnected])
+  }, [agentConnected, fetchData, fetchDescribe, fetchEvents, fetchYaml])
 
   const handleCopy = (field: string, value: string) => {
     copyToClipboard(value)

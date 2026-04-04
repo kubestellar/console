@@ -341,18 +341,20 @@ export function useKyverno() {
   const { isDemoMode } = useDemoMode()
   const { clusters: allClusters, isLoading: clustersLoading } = useClusters()
 
+  // Snapshot ref value to avoid reading ref during render
   const cachedData = useRef(loadFromCache())
+  const cachedSnapshot = cachedData.current
   const [statuses, setStatuses] = useState<Record<string, KyvernoClusterStatus>>(
-    cachedData.current?.statuses || {}
+    cachedSnapshot?.statuses || {}
   )
-  const [isLoading, setIsLoading] = useState(!cachedData.current)
+  const [isLoading, setIsLoading] = useState(!cachedSnapshot)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(
-    cachedData.current?.timestamp ? new Date(cachedData.current.timestamp) : null
+    cachedSnapshot?.timestamp ? new Date(cachedSnapshot.timestamp) : null
   )
   /** Number of clusters that have completed checking (for progressive UI) */
   const [clustersChecked, setClustersChecked] = useState(0)
-  const initialLoadDone = useRef(!!cachedData.current)
+  const initialLoadDone = useRef(!!cachedSnapshot)
   /** Guard to prevent concurrent refetch calls from flooding the request queue */
   const fetchInProgress = useRef(false)
 

@@ -3,8 +3,8 @@ import { renderHook, act } from '@testing-library/react'
 
 // Keys must match the values from lib/constants/storage.ts
 const DEMO_MODE_KEY = 'kc-demo-mode'
-const TOKEN_KEY = 'token'
-const DEMO_TOKEN = 'demo-token'
+const _TOKEN_KEY = 'token'
+const _DEMO_TOKEN = 'demo-token'
 
 // ---------------------------------------------------------------------------
 // We need to mock the lib/demoMode module that useDemoMode wraps.

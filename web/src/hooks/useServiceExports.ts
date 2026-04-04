@@ -155,16 +155,17 @@ export interface UseServiceExportsResult {
 export function useServiceExports(): UseServiceExportsResult {
   const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
 
-  // Initialize from cache
+  // Initialize from cache — snapshot ref value to avoid reading ref during render
   const cachedData = useRef(loadFromCache())
-  const [exports, setExports] = useState<ServiceExport[]>(cachedData.current?.data || [])
-  const [isDemoData, setIsDemoData] = useState(cachedData.current?.isDemoData ?? true)
-  const [isLoading, setIsLoading] = useState(!cachedData.current)
+  const cachedSnapshot = cachedData.current
+  const [exports, setExports] = useState<ServiceExport[]>(cachedSnapshot?.data || [])
+  const [isDemoData, setIsDemoData] = useState(cachedSnapshot?.isDemoData ?? true)
+  const [isLoading, setIsLoading] = useState(!cachedSnapshot)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<number | null>(
-    cachedData.current?.timestamp || null
+    cachedSnapshot?.timestamp || null
   )
-  const initialLoadDone = useRef(!!cachedData.current)
+  const initialLoadDone = useRef(!!cachedSnapshot)
 
   const refetch = useCallback(async (silent = false) => {
     if (!silent && !initialLoadDone.current) {

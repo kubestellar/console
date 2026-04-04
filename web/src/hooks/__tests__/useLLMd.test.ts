@@ -1345,7 +1345,7 @@ describe('useLLMdServers', () => {
         },
       })
 
-      const { result, unmount } = renderHook(() => useLLMdServers(['c1']))
+      const {unmount } = renderHook(() => useLLMdServers(['c1']))
 
       // Let initial fetch complete
       await act(async () => { await vi.advanceTimersByTimeAsync(500) })
@@ -1623,7 +1623,7 @@ describe('useLLMdModels', () => {
         }))
       })
 
-      const { result, unmount } = renderHook(() => useLLMdModels(['c1']))
+      const {unmount } = renderHook(() => useLLMdModels(['c1']))
 
       // Let initial fetch complete
       await act(async () => { await vi.advanceTimersByTimeAsync(500) })
@@ -2188,7 +2188,7 @@ describe('useLLMdServers — deep coverage', () => {
       expect(result.current.servers.length).toBeGreaterThan(0)
 
       // Silent refetch should not clear servers
-      const serverCountBefore = result.current.servers.length
+      const _serverCountBefore = result.current.servers.length
 
       await act(async () => { await vi.advanceTimersByTimeAsync(120000) })
 

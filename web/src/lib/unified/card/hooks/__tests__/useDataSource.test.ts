@@ -9,7 +9,6 @@ import {
   useDataHookRegistryVersion,
 } from '../useDataSource'
 import useDataSource from '../useDataSource'
-import type { UseDataSourceResult } from '../useDataSource'
 
 /**
  * Tests for useDataSource pure functions and registry logic.

@@ -284,14 +284,14 @@ export function HelmReleaseDrillDown({ data }: Props) {
       await Promise.all([fetchHistory(), fetchValues()])
     }
     loadData()
-  }, [agentConnected])
+  }, [agentConnected, fetchReleaseInfo, fetchHistory, fetchValues])
 
   // Load resources when tab is selected
   useEffect(() => {
     if (activeTab === 'resources' && !releaseResources && !resourcesLoading) {
       fetchResources()
     }
-  }, [activeTab])
+  }, [activeTab, releaseResources, resourcesLoading, fetchResources])
 
   const handleCopy = (field: string, value: string) => {
     copyToClipboard(value)

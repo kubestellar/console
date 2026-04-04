@@ -183,6 +183,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Reactive custom themes — re-reads from localStorage when marketplace installs/removes
   const [customThemeVersion, setCustomThemeVersion] = useState(0)
+  // customThemeVersion is intentionally used to invalidate the memo when themes change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const allThemes = useMemo(() => getAllThemes(), [customThemeVersion])
 
   useEffect(() => {

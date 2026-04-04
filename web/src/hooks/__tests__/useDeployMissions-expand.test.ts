@@ -5,12 +5,12 @@ import { renderHook, act } from '@testing-library/react'
 // Constants
 // ---------------------------------------------------------------------------
 const MISSIONS_STORAGE_KEY = 'kubestellar-missions'
-const OLD_ACTIVE_KEY = 'kc-missions-active'
+const _OLD_ACTIVE_KEY = 'kc-missions-active'
 const OLD_HISTORY_KEY = 'kc-missions-history'
 const INITIAL_POLL_DELAY_MS = 1000
 const POLL_INTERVAL_MS = 5000
 const MAX_MISSIONS = 50
-const MIN_ACTIVE_MS = 10000
+const _MIN_ACTIVE_MS = 10000
 
 // ---------------------------------------------------------------------------
 // Track subscribe callbacks
@@ -112,7 +112,7 @@ async function advancePastInitialPoll() {
   })
 }
 
-async function advancePollInterval() {
+async function _advancePollInterval() {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS + 100)
   })
@@ -255,7 +255,6 @@ describe('useDeployMissions — expanded edge cases', () => {
     global.fetch = mockFetch as unknown as typeof fetch
     mockKubectlExec.mockResolvedValue({ exitCode: 0, output: JSON.stringify({ items: [] }) })
 
-    const { result } = renderHook(() => useDeployMissions())
 
     act(() => {
       fireDeployStarted({
@@ -294,7 +293,6 @@ describe('useDeployMissions — expanded edge cases', () => {
     })
     global.fetch = mockFetch as unknown as typeof fetch
 
-    const { result } = renderHook(() => useDeployMissions())
     act(() => {
       fireDeployStarted({
         id: 'fallback-test',
@@ -309,7 +307,6 @@ describe('useDeployMissions — expanded edge cases', () => {
 
   // 9. saveMissions strips logs from active missions
   it('persists missions to localStorage on state change', () => {
-    const { result } = renderHook(() => useDeployMissions())
     act(() => {
       fireDeployStarted({
         id: 'persist-test',

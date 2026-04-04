@@ -229,7 +229,7 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
         error: null,
       })
     }
-  } catch (err) {
+  } catch {
     const newFailures = gpuNodeCache.consecutiveFailures + 1
 
     // On error, preserve existing cached data

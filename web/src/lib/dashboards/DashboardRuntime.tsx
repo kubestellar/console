@@ -129,7 +129,6 @@ export function DashboardRuntime({
   getStatValue: customGetStatValue,
 }: DashboardRuntimeProps) {
   const {
-    id: _id,
     title,
     description,
     icon,
@@ -173,7 +172,7 @@ export function DashboardRuntime({
     showTemplates,
     setShowTemplates,
     configuringCard,
-    setConfiguringCard: _setConfiguringCard,
+    setConfiguringCard: __setConfiguringCard,
     openConfigureCard,
     closeConfigureCard,
     autoRefresh,

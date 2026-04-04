@@ -5,7 +5,7 @@
  * Since registerHooks auto-registers on import (module-level side-effect),
  * we intercept registrations by mocking registerDataHook before import.
  */
-import { describe, it, expect, vi, beforeAll } from 'vitest'
+import { describe, it, expect, vi} from 'vitest'
 
 // ── Capture registrations ────────────────────────────────────────────
 // vi.mock factories are hoisted before all other code, so we must

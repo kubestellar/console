@@ -223,7 +223,7 @@ export function useWorkloads(options?: {
       if (!signal?.aborted && currentRequestId === requestIdRef.current) {
         setData(result.items || result)
       }
-    } catch (err) {
+    } catch {
       // Silently ignore aborted requests — they are expected during cancellation
       if (signal?.aborted || currentRequestId !== requestIdRef.current) return
       setError(new Error('No data source available'))
@@ -286,7 +286,7 @@ export function useClusterCapabilities(enabled = true) {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [enabled])
 
   useEffect(() => {
     if (!enabled) {

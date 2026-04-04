@@ -707,7 +707,6 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
   // useCardData handles search, sort, and pagination
   const {
     items: filteredWorkloads,
-    totalItems: _totalFiltered,
     currentPage,
     totalPages,
     itemsPerPage,

@@ -211,7 +211,7 @@ function getDemoNotifications(): Notification[] {
 }
 
 // @ts-expect-error Reserved for future use
-function _updateDemoNotifications(updater: (prev: Notification[]) => Notification[]): Notification[] {
+function __updateDemoNotifications(updater: (prev: Notification[]) => Notification[]): Notification[] {
   demoNotificationsState = updater(getDemoNotifications())
   return demoNotificationsState
 }

@@ -116,7 +116,7 @@ export function Dashboard() {
   const [activeDragData, setActiveDragData] = useState<Record<string, unknown> | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null)
-  const [_dragOverDashboard, setDragOverDashboard] = useState<string | null>(null)
+  const [__dragOverDashboard, setDragOverDashboard] = useState<string | null>(null)
   const { isOpen: isCreateDashboardOpen, open: openCreateDashboard, close: closeCreateDashboard } = useModalState()
   const { isOpen: isWidgetExportOpen, open: openWidgetExport, close: closeWidgetExport } = useModalState()
   const { isOpen: isSidebarCustomizerOpen, open: openSidebarCustomizer, close: closeSidebarCustomizer } = useModalState()
@@ -150,7 +150,7 @@ export function Dashboard() {
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const isRefreshing = dataRefreshing || showIndicator
   const isFetching = isClustersLoading || isRefreshing || showIndicator
-  const { drillToCluster: _drillToCluster, drillToAllClusters, drillToAllNodes, drillToAllPods } = useDrillDownActions()
+  const { drillToAllClusters, drillToAllPods } = useDrillDownActions()
 
   // Reset hook for dashboard
   const { reset, isCustomized } = useDashboardReset({
@@ -197,7 +197,6 @@ export function Dashboard() {
   const healthyClusters = (clusters || []).filter(c => c.healthy).length
   const unhealthyClusters = (clusters || []).filter(c => !c.healthy).length
   const totalPods = (clusters || []).reduce((sum, c) => sum + (c.podCount || 0), 0)
-  const totalNodes = (clusters || []).reduce((sum, c) => sum + (c.nodeCount || 0), 0)
   const totalNamespaces = (clusters || []).reduce((sum, c) => sum + (c.namespaces?.length || 0), 0)
 
   // Dashboard-specific stats value getter
@@ -218,7 +217,7 @@ export function Dashboard() {
       default:
         return { value: '-' }
     }
-  }, [clusters, healthyClusters, unhealthyClusters, totalNodes, totalNamespaces, totalPods, drillToAllClusters, drillToAllNodes, drillToAllPods, navigate])
+  }, [clusters, healthyClusters, unhealthyClusters, totalNamespaces, totalPods, drillToAllClusters, drillToAllPods, navigate])
 
   // Merged getter: dashboard-specific values first, then universal fallback
   const getStatValue = useCallback(
@@ -583,7 +582,7 @@ export function Dashboard() {
       // Show success toast
       showToast(`Restored "${pendingRestoreCard.cardTitle || pendingRestoreCard.cardType}" card`, 'success')
     }
-  }, [pendingRestoreCard, isLoading, dashboard, recordCardAdded, clearPendingRestoreCard, showToast])
+  }, [pendingRestoreCard, isLoading, dashboard, recordCardAdded, clearPendingRestoreCard, showToast, localCards, snapshot])
 
   // Handle pending open add card modal from sidebar navigation
   useEffect(() => {
@@ -757,7 +756,7 @@ export function Dashboard() {
         showToast('Failed to delete card from backend', 'error')
       }
     }
-  }, [localCards, dashboard, recordCardRemoved, snapshot])
+  }, [localCards, dashboard, recordCardRemoved, snapshot, showToast])
 
   const handleConfigureCard = useCallback((card: Card) => {
     setSelectedCard(card)
@@ -788,7 +787,7 @@ export function Dashboard() {
         showToast('Failed to update card width', 'error')
       }
     }
-  }, [dashboard, localCards, snapshot])
+  }, [dashboard, localCards, snapshot, showToast])
 
   const handleCardConfigured = useCallback(async (cardId: string, newConfig: Record<string, unknown>, newTitle?: string) => {
     const card = localCards.find((c) => c.id === cardId)
@@ -823,7 +822,7 @@ export function Dashboard() {
         showToast('Failed to update card configuration', 'error')
       }
     }
-  }, [localCards, dashboard, recordCardConfigured, closeConfigureCard, snapshot])
+  }, [localCards, dashboard, recordCardConfigured, closeConfigureCard, snapshot, showToast])
 
   const handleAddRecommendedCard = useCallback((cardType: string, config?: Record<string, unknown>, title?: string) => {
     snapshot(localCards)
@@ -912,7 +911,7 @@ export function Dashboard() {
       openWidgetExport()
     }
     actionNudge()
-  }, [activeNudge, actionNudge, openAddCardModal])
+  }, [activeNudge, actionNudge, openAddCardModal, openWidgetExport])
 
   const currentCardTypes = localCards.map(c => {
     if (c.card_type === 'dynamic_card' && c.config?.dynamicCardId) {

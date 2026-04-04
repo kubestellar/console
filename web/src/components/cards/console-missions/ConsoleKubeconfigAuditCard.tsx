@@ -8,12 +8,10 @@ import { cn } from '../../../lib/cn'
 import { useApiKeyCheck, ApiKeyPromptModal } from './shared'
 import type { ConsoleMissionCardProps } from './shared'
 import { useCardLoadingState } from '../CardDataContext'
-import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 
 // Card 2: Kubeconfig Audit - Detect stale/unreachable clusters
 export function ConsoleKubeconfigAuditCard(_props: ConsoleMissionCardProps) {
-  const { t: _t } = useTranslation()
   const { startMission, missions } = useMissions()
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()

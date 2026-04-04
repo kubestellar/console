@@ -154,7 +154,7 @@ export function RBACDrillDown({ data }: Props) {
     if (!agentConnected || hasLoadedRef.current) return
     hasLoadedRef.current = true
     fetchBindings()
-  }, [agentConnected])
+  }, [agentConnected, fetchBindings])
 
   const handleCopy = (field: string, value: string) => {
     copyToClipboard(value)

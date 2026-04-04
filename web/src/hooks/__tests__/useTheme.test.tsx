@@ -16,7 +16,6 @@ vi.mock('../../lib/analytics', () => ({
 // ---------------------------------------------------------------------------
 import { ThemeProvider, useTheme } from '../useTheme'
 import { getThemeById, getDefaultTheme, getAllThemes } from '../../lib/themes'
-import type { Theme } from '../../lib/themes'
 
 // ---------------------------------------------------------------------------
 // Constants matching the source module
@@ -497,7 +496,6 @@ describe('Custom theme application via setTheme', () => {
   })
 
   it('applies brand colors as CSS variables', () => {
-    const { result } = renderHook(() => useTheme(), { wrapper })
 
     const defaultTheme = getDefaultTheme()
     const root = document.documentElement
@@ -510,7 +508,6 @@ describe('Custom theme application via setTheme', () => {
   })
 
   it('applies status colors as CSS variables', () => {
-    const { result } = renderHook(() => useTheme(), { wrapper })
 
     const defaultTheme = getDefaultTheme()
     const root = document.documentElement
@@ -522,7 +519,6 @@ describe('Custom theme application via setTheme', () => {
   })
 
   it('applies chart colors as CSS variables', () => {
-    const { result } = renderHook(() => useTheme(), { wrapper })
 
     const defaultTheme = getDefaultTheme()
     const root = document.documentElement
@@ -541,7 +537,6 @@ describe('Custom theme application via setTheme', () => {
 // ===========================================================================
 describe('Font loading behavior', () => {
   it('applies font family CSS variables from the theme', () => {
-    const { result } = renderHook(() => useTheme(), { wrapper })
     const root = document.documentElement
     const defaultTheme = getDefaultTheme()
 
@@ -550,7 +545,6 @@ describe('Font loading behavior', () => {
   })
 
   it('applies font weight CSS variables from the theme', () => {
-    const { result } = renderHook(() => useTheme(), { wrapper })
     const root = document.documentElement
     const defaultTheme = getDefaultTheme()
 

@@ -249,7 +249,7 @@ export function PolicyDrillDown({ data }: Props) {
       await Promise.all([fetchViolations(), fetchSpec()])
     }
     loadData()
-  }, [agentConnected])
+  }, [agentConnected, fetchViolations, fetchSpec])
 
   // Start AI diagnosis
   const handleDiagnose = () => {

@@ -7,7 +7,7 @@
  * Uses live stack data when available, demo data when in demo mode.
  * Note: kvCacheUsage refers to GPU KV-cache (AI inference), not UI data timestamp tracking.
  */
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Zap, ArrowRight, CircleDot } from 'lucide-react'
 import { Acronym } from './shared/PortalTooltip'
@@ -512,7 +512,7 @@ function EPPRoutingInternal() {
   const [metricsHistory, setMetricsHistory] = useState<Record<string, { load: number[]; rps: number[] }>>({})
   const [selectedMetricTypes, setSelectedMetricTypes] = useState<MetricType[]>(['load'])
   const [viewMode, setViewMode] = useState<ViewMode>('default')
-  const uniqueId = useRef(`epp-${Math.random().toString(36).substr(2, 9)}`).current
+  const uniqueId = useMemo(() => `epp-${Math.random().toString(36).substr(2, 9)}`, [])
 
   // Detect if card is in expanded/fullscreen mode
   const { isExpanded } = useCardExpanded()

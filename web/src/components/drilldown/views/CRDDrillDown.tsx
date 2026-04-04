@@ -278,7 +278,7 @@ export function CRDDrillDown({ data }: Props) {
       await Promise.all([fetchCRDDetails(), fetchInstances()])
     }
     loadData()
-  }, [agentConnected])
+  }, [agentConnected, fetchCRDDetails, fetchInstances])
 
   // Start AI diagnosis
   const handleDiagnose = () => {

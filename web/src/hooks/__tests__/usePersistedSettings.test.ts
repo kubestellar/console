@@ -573,7 +573,7 @@ describe('usePersistedSettings', () => {
 
   it('does not update syncStatus after unmount during retry', async () => {
     mockFetch.mockReturnValue(jsonResponse({}))
-    const { result, unmount } = renderHook(() => usePersistedSettings())
+    const {unmount } = renderHook(() => usePersistedSettings())
     await flushMicrotasks()
 
     // Start a save that will fail

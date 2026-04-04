@@ -14,7 +14,6 @@ const {
   mockUseTrivy,
   mockUseUniversalStats,
   mockUseDrillDownActions,
-  mockDashboardPageProps,
 } = vi.hoisted(() => ({
   mockUseClusters: vi.fn(),
   mockUseGlobalFilters: vi.fn(),

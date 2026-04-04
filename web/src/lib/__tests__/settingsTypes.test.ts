@@ -3,8 +3,6 @@ import type {
   PredictionSettingsData,
   TokenUsageSettingsData,
   AccessibilitySettingsData,
-  ProfileSettingsData,
-  WidgetSettingsData,
   APIKeyEntry,
   NotificationSecrets,
   AllSettings,

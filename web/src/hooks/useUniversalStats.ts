@@ -62,7 +62,7 @@ export function useUniversalStats() {
   const { rules: alertRules } = useAlertRules()
 
   // ─── Cluster-derived values ───
-  const safeClusters = deduplicatedClusters || []
+  const safeClusters = useMemo(() => deduplicatedClusters || [], [deduplicatedClusters])
   const totalClusters = safeClusters.length
   const healthyClusters = safeClusters.filter(c => c.healthy).length
   const unhealthyClusters = safeClusters.filter(c => !c.healthy).length
@@ -87,7 +87,7 @@ export function useUniversalStats() {
   const allDeploymentIssues = deploymentIssues || []
 
   // ─── PVC-derived values ───
-  const allPVCs = pvcs || []
+  const allPVCs = useMemo(() => pvcs || [], [pvcs])
   const boundPVCs = allPVCs.filter(p => p.status === 'Bound').length
   const storageClassCount = useMemo(
     () => new Set(allPVCs.map(p => p.storageClass).filter(Boolean)).size,
@@ -101,7 +101,7 @@ export function useUniversalStats() {
   const cipCount = allServices.filter(s => s.type === 'ClusterIP').length
 
   // ─── Event-derived values ───
-  const allEvents = events || []
+  const allEvents = useMemo(() => events || [], [events])
   const allWarningEvents = warningEvents || []
   const normalEvents = allEvents.filter(e => e.type === 'Normal').length
   const recentEvents = useMemo(() => {
@@ -448,7 +448,7 @@ export function useUniversalStats() {
     // Events
     allEvents, allWarningEvents, normalEvents, recentEvents,
     // Security
-    secIssues, highSeverity, mediumSeverity, lowSeverity, privilegedContainers, rootContainers,
+    highSeverity, mediumSeverity, lowSeverity, privilegedContainers, rootContainers,
     // Helm/GitOps
     allHelm, deployedHelm, failedHelm,
     // Operators

@@ -8,12 +8,10 @@ import { StatusBadge } from '../ui/StatusBadge'
 import { useRewards, REWARD_ACTIONS, ACHIEVEMENTS } from '../../hooks/useRewards'
 import { GitHubInviteModal, GitHubInviteButton } from './GitHubInvite'
 import { LinkedInShareCard } from './LinkedInShare'
-import { useTranslation } from 'react-i18next'
 import { GITHUB_REWARD_LABELS } from '../../types/rewards'
 import type { GitHubContribution } from '../../types/rewards'
 
 export function RewardsPanel() {
-  const { t: _t } = useTranslation()
   const [showGitHubInvite, setShowGitHubInvite] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const { totalCoins, earnedAchievements, recentEvents, hasEarnedAction, getActionCount, githubRewards, githubPoints, refreshGitHubRewards } = useRewards()

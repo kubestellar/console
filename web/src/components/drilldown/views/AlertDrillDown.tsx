@@ -183,7 +183,7 @@ export function AlertDrillDown({ data }: Props) {
     if (!agentConnected || hasLoadedRef.current) return
     hasLoadedRef.current = true
     fetchSourceRule()
-  }, [agentConnected])
+  }, [agentConnected, fetchSourceRule])
 
   const handleCopy = (field: string, value: string) => {
     copyToClipboard(value)

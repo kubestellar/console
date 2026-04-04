@@ -14,7 +14,6 @@ import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { TechnicalAcronym, STATUS_TOOLTIPS } from '../shared/TechnicalAcronym'
 import { PortalTooltip } from '../cards/llmd/shared/PortalTooltip'
-import { useTranslation } from 'react-i18next'
 
 const PODS_CARDS_KEY = 'kubestellar-pods-cards'
 
@@ -22,7 +21,6 @@ const PODS_CARDS_KEY = 'kubestellar-pods-cards'
 const DEFAULT_POD_CARDS = getDefaultCards('pods')
 
 export function Pods() {
-  const { t: _t } = useTranslation()
   // Use cached hooks for stale-while-revalidate pattern
   const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, lastRefresh: podIssuesLastRefresh, refetch: refetchPodIssues } = useCachedPodIssues()
   const { clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
