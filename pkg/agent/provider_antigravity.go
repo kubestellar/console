@@ -80,8 +80,26 @@ func (a *AntigravityProvider) Refresh() {
 // Handshake verifies that the Antigravity CLI is installed and can respond.
 // It returns a structured result with prerequisites and actionable errors.
 func (a *AntigravityProvider) Handshake(ctx context.Context) *HandshakeResult {
-	// Re-detect CLI in case the user installed it after the server started.
-	a.detectCLI()
+	// If a cliPath is already configured, validate it exists on disk.
+	// Otherwise, re-detect CLI in case the user installed it after the server started.
+	if a.cliPath != "" {
+		if _, err := os.Stat(a.cliPath); err != nil {
+			return &HandshakeResult{
+				Ready:   false,
+				State:   "failed",
+				Message: fmt.Sprintf("Configured CLI path does not exist: %s", a.cliPath),
+				CliPath: a.cliPath,
+				Prerequisites: []string{
+					fmt.Sprintf("Verify the CLI exists at %s", a.cliPath),
+					"Install the Antigravity CLI (npm install -g @anthropic-ai/antigravity or download from the project page)",
+					"Ensure the 'antigravity' binary is in your PATH",
+					"Restart kc-agent after installing",
+				},
+			}
+		}
+	} else {
+		a.detectCLI()
+	}
 
 	if a.cliPath == "" {
 		return &HandshakeResult{

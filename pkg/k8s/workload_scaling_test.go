@@ -67,12 +67,26 @@ func TestScaleWorkload(t *testing.T) {
 }
 
 func TestDeleteWorkload(t *testing.T) {
+	deployObj := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "apps/v1",
+			"kind":       "Deployment",
+			"metadata": map[string]interface{}{
+				"name":      "dep1",
+				"namespace": "default",
+			},
+			"spec": map[string]interface{}{
+				"replicas": int64(1),
+			},
+		},
+	}
+
 	scheme := runtime.NewScheme()
 	gvrMap := map[schema.GroupVersionResource]string{
 		{Group: "apps", Version: "v1", Resource: "deployments"}: "DeploymentList",
 	}
 
-	fakeDyn := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrMap)
+	fakeDyn := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrMap, deployObj)
 
 	m, _ := NewMultiClusterClient("")
 	m.dynamicClients["c1"] = fakeDyn
