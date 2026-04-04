@@ -150,7 +150,7 @@ export function Dashboard() {
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const isRefreshing = dataRefreshing || showIndicator
   const isFetching = isClustersLoading || isRefreshing || showIndicator
-  const { drillToAllClusters, drillToAllPods } = useDrillDownActions()
+  const { drillToAllClusters, drillToAllPods, drillToAllNodes } = useDrillDownActions()
 
   // Reset hook for dashboard
   const { reset, isCustomized } = useDashboardReset({
@@ -198,6 +198,7 @@ export function Dashboard() {
   const unhealthyClusters = (clusters || []).filter(c => !c.healthy).length
   const totalPods = (clusters || []).reduce((sum, c) => sum + (c.podCount || 0), 0)
   const totalNamespaces = (clusters || []).reduce((sum, c) => sum + (c.namespaces?.length || 0), 0)
+  const totalNodes = (clusters || []).reduce((sum, c) => sum + (c.nodeCount || 0), 0)
 
   // Dashboard-specific stats value getter
   const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
@@ -212,12 +213,14 @@ export function Dashboard() {
         return { value: unhealthyClusters, sublabel: 'unhealthy', onClick: () => drillToAllClusters('unhealthy'), isClickable: unhealthyClusters > 0 }
       case 'namespaces':
         return { value: totalNamespaces, sublabel: 'namespaces', onClick: () => navigate(ROUTES.NAMESPACES), isClickable: totalNamespaces > 0 }
+      case 'nodes':
+        return { value: totalNodes, sublabel: 'total nodes', onClick: () => drillToAllNodes(), isClickable: totalNodes > 0 }
       case 'pods':
         return { value: totalPods, sublabel: 'pods', onClick: () => drillToAllPods(), isClickable: totalPods > 0 }
       default:
         return { value: '-' }
     }
-  }, [clusters, healthyClusters, unhealthyClusters, totalNamespaces, totalPods, drillToAllClusters, drillToAllPods, navigate])
+  }, [clusters, healthyClusters, unhealthyClusters, totalNamespaces, totalNodes, totalPods, drillToAllClusters, drillToAllNodes, drillToAllPods, navigate])
 
   // Merged getter: dashboard-specific values first, then universal fallback
   const getStatValue = useCallback(

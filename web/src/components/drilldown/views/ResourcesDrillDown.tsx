@@ -280,13 +280,20 @@ export function ResourcesDrillDown({ data: _data }: Props) {
     const totalMemoryGB = clusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0)
     const totalMemoryRequestsGB = clusters.reduce((sum, c) => sum + (c.memoryRequestsGB || 0), 0)
 
+    /** CPU utilization percentage across all clusters */
+    const cpuPercent = totalCPUs > 0 ? Math.round((totalCPURequests / totalCPUs) * 100) : 0
+    /** Memory utilization percentage across all clusters */
+    const memoryPercent = totalMemoryGB > 0 ? Math.round((totalMemoryRequestsGB / totalMemoryGB) * 100) : 0
+
     return {
       cpus: totalCPUs,
       cpuRequests: totalCPURequests,
+      cpuPercent,
       nodes: totalNodes,
       pods: totalPods,
       memoryGB: totalMemoryGB,
       memoryRequestsGB: totalMemoryRequestsGB,
+      memoryPercent,
     }
   }, [clusters])
 
@@ -348,6 +355,9 @@ export function ResourcesDrillDown({ data: _data }: Props) {
             <span className="text-xs text-muted-foreground">CPU Capacity</span>
           </div>
           <div className="text-xl font-bold text-foreground">{totals.cpus.toLocaleString()} cores</div>
+          <div className="text-2xs text-muted-foreground mt-0.5">
+            {totals.cpuPercent}% utilized ({totals.cpuRequests.toLocaleString()} requested)
+          </div>
         </div>
 
         <div className="p-3 rounded-lg bg-card/50 border border-border min-w-[120px]">
@@ -359,6 +369,9 @@ export function ResourcesDrillDown({ data: _data }: Props) {
             {totals.memoryGB >= 1000
               ? `${(totals.memoryGB / 1024).toFixed(1)} TB`
               : `${Math.round(totals.memoryGB)} GB`}
+          </div>
+          <div className="text-2xs text-muted-foreground mt-0.5">
+            {totals.memoryPercent}% utilized ({formatMemory(totals.memoryRequestsGB)} requested)
           </div>
         </div>
 
@@ -455,6 +468,14 @@ export function ResourcesDrillDown({ data: _data }: Props) {
                       nodeCount: cluster.nodeCount,
                       podCount: cluster.podCount,
                       cpuCores: cluster.cpuCores,
+                      memoryGB: cluster.memoryGB,
+                      cpuRequestsCores: cluster.cpuRequestsCores,
+                      cpuUsageCores: cluster.cpuUsageCores,
+                      memoryRequestsGB: cluster.memoryRequestsGB,
+                      memoryUsageGB: cluster.memoryUsageGB,
+                      storageGB: cluster.storageGB,
+                      metricsAvailable: cluster.metricsAvailable,
+                      origin: 'resources',
                     })}
                   />
                 )

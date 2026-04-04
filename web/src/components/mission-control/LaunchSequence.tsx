@@ -27,6 +27,8 @@ interface LaunchSequenceProps {
   state: MissionControlState
   onUpdateProgress: (progress: PhaseProgress[]) => void
   onComplete: (dashboardId?: string) => void
+  /** Close the Mission Control dialog entirely */
+  onClose?: () => void
 }
 
 const STATUS_ICONS: Record<string, React.ReactNode> = {
@@ -41,6 +43,7 @@ export function LaunchSequence({
   state,
   onUpdateProgress,
   onComplete,
+  onClose,
 }: LaunchSequenceProps) {
   const { startMission, missions } = useMissions()
   const [isStarted, setIsStarted] = useState(false)
@@ -379,7 +382,7 @@ export function LaunchSequence({
           animate={{ opacity: 1, y: 0 }}
           className="flex justify-center gap-3 pt-4"
         >
-          <Button variant="secondary" size="sm" onClick={() => onComplete()}>
+          <Button variant="secondary" size="sm" onClick={() => onClose ? onClose() : onComplete()}>
             Close
           </Button>
         </motion.div>

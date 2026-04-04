@@ -50,8 +50,13 @@ export function ClusterAssignmentPanel({
   const [excludedClusters, setExcludedClusters] = useState<Set<string>>(new Set())
   const [showClusterPicker, setShowClusterPicker] = useState(false)
 
-  // Healthy clusters only
-  const allHealthyClusters = clusters.filter((c) => c.healthy !== false && c.reachable !== false)
+  // Healthy clusters only — sort by name for stable ordering when toggling projects (#4548)
+  const allHealthyClusters = useMemo(
+    () => clusters
+      .filter((c) => c.healthy !== false && c.reachable !== false)
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    [clusters]
+  )
   // Active clusters = healthy minus excluded
   const healthyClusters = useMemo(
     () => allHealthyClusters.filter((c) => !excludedClusters.has(c.name)),

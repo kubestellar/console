@@ -55,8 +55,9 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
           if (countdownRef.current) clearInterval(countdownRef.current)
           countdownRef.current = null
           setMinimized(true)
-          // Persist collapse so the expanded panel never comes back
-          safeSetItem(STORAGE_KEY_RECS_COLLAPSED, 'true')
+          // Timer-initiated collapse: do NOT persist to localStorage.
+          // Only user-initiated minimize (explicit click) persists state.
+          // This allows the panel to re-expand on next session/page load.
           return AUTO_COLLAPSE_SECONDS
         }
         return prev - 1

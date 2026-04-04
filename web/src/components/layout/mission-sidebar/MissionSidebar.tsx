@@ -1023,20 +1023,20 @@ export function MissionSidebar() {
                   mission={mission}
                   isActive={false}
                   onClick={() => {
+                    // Always show the mission's chat first (#4549)
+                    setActiveMission(mission.id)
+                    // Also open Mission Control dialog for planning missions
                     if (mission.title === 'Mission Control Planning') {
                       setShowMissionControl(true)
-                    } else {
-                      setActiveMission(mission.id)
                     }
                   }}
                   onDismiss={() => dismissMission(mission.id)}
                   onTerminate={() => cancelMission(mission.id)}
                   onExpand={() => {
+                    setActiveMission(mission.id)
+                    setFullScreen(true)
                     if (mission.title === 'Mission Control Planning') {
                       setShowMissionControl(true)
-                    } else {
-                      setActiveMission(mission.id)
-                      setFullScreen(true)
                     }
                   }}
                   isCollapsed={collapsedMissions.has(mission.id)}

@@ -8,6 +8,7 @@
 
 import { useTranslation } from 'react-i18next'
 import { useVisitStreak } from '../../../hooks/useVisitStreak'
+import { useAuth } from '../../../lib/auth'
 
 /** Minimum streak to display the badge — showing "1" is meaningless */
 const MIN_DISPLAY_STREAK = 2
@@ -15,8 +16,11 @@ const MIN_DISPLAY_STREAK = 2
 export function StreakBadge() {
   const { t } = useTranslation()
   const { streak } = useVisitStreak()
+  const { isAuthenticated } = useAuth()
 
-  if (streak < MIN_DISPLAY_STREAK) return null
+  // Hide badge until authentication is confirmed to prevent flash
+  // before OAuth redirect when session has expired (#4541)
+  if (!isAuthenticated || streak < MIN_DISPLAY_STREAK) return null
 
   return (
     <span

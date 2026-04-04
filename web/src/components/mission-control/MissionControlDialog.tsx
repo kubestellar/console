@@ -319,6 +319,7 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                         if (dashboardId) mc.setGroundControlDashboardId(dashboardId)
                         mc.setPhase('complete')
                       }}
+                      onClose={onClose}
                     />
                   </PhaseWrapper>
                 )}

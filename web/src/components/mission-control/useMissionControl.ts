@@ -274,9 +274,19 @@ export function useMissionControl() {
     setState((prev) => ({ ...prev, targetClusters }))
   }, [])
 
+  // Use refs for the latest state to avoid stale closures in askAIForSuggestions.
+  // Without this, the first click on "Suggest" can be a no-op because the callback
+  // captures a stale planningMissionId or targetClusters from a previous render (#4547).
+  const stateRef = useRef(state)
+  const helmReleasesRef = useRef(helmReleases)
+  useEffect(() => { stateRef.current = state }, [state])
+  useEffect(() => { helmReleasesRef.current = helmReleases }, [helmReleases])
+
   const askAIForSuggestions = useCallback(
     (description: string, existingProjects: PayloadProject[] = []) => {
-      let missionId = state.planningMissionId
+      const currentState = stateRef.current
+      const currentHelmReleases = helmReleasesRef.current
+      let missionId = currentState.planningMissionId
 
       const existingContext =
         existingProjects.length > 0
@@ -284,15 +294,15 @@ export function useMissionControl() {
           : ''
 
       // Scope AI analysis to selected target clusters (if any)
-      const clusterScope = state.targetClusters.length > 0
-        ? `\n\nIMPORTANT — The user has scoped this mission to these specific clusters ONLY: ${JSON.stringify(state.targetClusters)}. Do NOT analyze or suggest deployments for clusters outside this list.`
+      const clusterScope = currentState.targetClusters.length > 0
+        ? `\n\nIMPORTANT — The user has scoped this mission to these specific clusters ONLY: ${JSON.stringify(currentState.targetClusters)}. Do NOT analyze or suggest deployments for clusters outside this list.`
         : ''
 
       // Include helm release info so AI knows what's already installed
       // Filter to target clusters if scoped
-      const scopedReleases = state.targetClusters.length > 0
-        ? (helmReleases || []).filter(r => r.cluster && state.targetClusters.includes(r.cluster))
-        : helmReleases
+      const scopedReleases = currentState.targetClusters.length > 0
+        ? (currentHelmReleases || []).filter(r => r.cluster && currentState.targetClusters.includes(r.cluster))
+        : currentHelmReleases
       const helmContext = scopedReleases?.length
         ? `\n\nIMPORTANT — Cluster inspection results (helm releases already installed across clusters):\n${JSON.stringify(scopedReleases.map(r => ({ name: r.name, chart: r.chart, namespace: r.namespace, status: r.status, cluster: r.cluster })), null, 2)}\n\nFor each suggested project, check if it is already installed on the clusters. Include a "Cluster Inspection Summary" table in your analysis showing which components are Running vs Not installed on each cluster.`
         : ''
@@ -352,7 +362,7 @@ Include real CNCF projects only. Consider dependencies between projects.`
         setState((prev) => ({ ...prev, aiStreaming: true }))
       }
     },
-    [state.planningMissionId, startMission, sendMessage, helmReleases]
+    [startMission, sendMessage]
   )
 
   const addProject = useCallback((project: PayloadProject) => {

@@ -20,6 +20,7 @@ import {
 import { emitGettingStartedShown, emitGettingStartedActioned, emitTipShown } from '../../lib/analytics'
 import { DASHBOARD_CONFIGS } from '../../config/dashboards/index'
 import { getRandomTip } from '../../lib/tips'
+import { useLocalAgent } from '../../hooks/useLocalAgent'
 
 const DASHBOARD_COUNT = Object.keys(DASHBOARD_CONFIGS).length
 
@@ -55,7 +56,12 @@ export function GettingStartedBanner({
     () => safeGetItem(STORAGE_KEY_HINTS_SUPPRESSED) === 'true'
   )
 
-  if (hintsSuppressed || dismissed) return null
+  // Suppress Getting Started banner when agent is connected —
+  // PostConnectBanner takes priority to avoid showing two banners at once (#4558)
+  const { status: agentStatus } = useLocalAgent()
+  const isAgentConnected = agentStatus === 'connected'
+
+  if (hintsSuppressed || dismissed || isAgentConnected) return null
 
   const handleDismiss = () => {
     setDismissed(true)

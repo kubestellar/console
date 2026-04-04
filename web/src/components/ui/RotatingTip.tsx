@@ -62,7 +62,7 @@ export function RotatingTip({ page }: RotatingTipProps) {
   if (!tip) return null
 
   return (
-    <div role="status" aria-label="Page tip" className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs text-purple-300">
+    <div role="status" aria-label="Page tip" className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs text-purple-300">
       <Lightbulb className="w-3.5 h-3.5 flex-shrink-0 text-purple-400" aria-hidden="true" />
       <span><span className="font-medium">Tip:</span> {tip}</span>
     </div>
