@@ -1,4 +1,4 @@
-import { Loader2, Copy, Check } from 'lucide-react'
+import { Loader2, Copy, Check, AlertTriangle, RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { LucideIcon } from 'lucide-react'
 
@@ -9,6 +9,8 @@ export interface PodOutputTabProps {
   loading: boolean
   /** Whether the local agent is connected */
   agentConnected: boolean
+  /** Error message if the fetch failed */
+  error?: string | null
   /** The field key used for copy feedback (e.g. 'describe', 'logs', 'events', 'yaml') */
   copyField: string
   /** Currently copied field for feedback */
@@ -35,6 +37,7 @@ export function PodOutputTab({
   output,
   loading,
   agentConnected,
+  error,
   copyField,
   copiedField,
   kubectlComment,
@@ -47,6 +50,24 @@ export function PodOutputTab({
   refreshLabel,
 }: PodOutputTabProps) {
   const { t } = useTranslation()
+
+  if (error && !loading) {
+    return (
+      <div>
+        <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-center">
+          <AlertTriangle className="w-6 h-6 text-red-400 mx-auto mb-2" />
+          <p className="text-sm text-red-400">{error}</p>
+          <button
+            onClick={onRefresh}
+            className="mt-2 inline-flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
+          >
+            <RefreshCw className="w-3 h-3" />
+            <span>{t('common.retry')}</span>
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (

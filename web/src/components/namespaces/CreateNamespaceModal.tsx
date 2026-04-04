@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Folder, UserPlus, Shield, X } from 'lucide-react'
+import { Folder, UserPlus, Shield, X, Loader2 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { api } from '../../lib/api'
@@ -338,6 +338,7 @@ export function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNam
             size="lg"
             onClick={handleCreate}
             disabled={!name || !cluster || creating}
+            icon={creating ? <Loader2 className="w-4 h-4 animate-spin" /> : undefined}
           >
             {creating ? 'Creating...' : 'Create'}
           </Button>

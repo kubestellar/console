@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Server, Box, Wifi, WifiOff } from 'lucide-react'
+import { Server, Box, Wifi, WifiOff, Loader2 } from 'lucide-react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useMissions } from '../../../hooks/useMissions'
 import { useBackendHealth } from '../../../hooks/useBackendHealth'
@@ -23,11 +23,13 @@ export function AgentStatusIndicator() {
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const [showApprovalDialog, setShowApprovalDialog] = useState(false)
   const [discoveredAgents, setDiscoveredAgents] = useState<AgentInfo[]>([])
+  const [isDiscoveringAgents, setIsDiscoveringAgents] = useState(false)
   const agentRef = useRef<HTMLDivElement>(null)
 
   // Fetch agents from kc-agent health endpoint (works even in demo mode
   // when the WebSocket is not connected)
   const fetchAgentsFromHealth = useCallback(async () => {
+    setIsDiscoveringAgents(true)
     try {
       const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
         signal: AbortSignal.timeout(BACKEND_HEALTH_CHECK_TIMEOUT_MS),
@@ -57,6 +59,8 @@ export function AgentStatusIndicator() {
       }
     } catch {
       // kc-agent not reachable
+    } finally {
+      setIsDiscoveringAgents(false)
     }
   }, [])
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -206,6 +210,7 @@ export function AgentStatusIndicator() {
                 <span className="text-sm font-medium text-foreground">{t('agent.demoMode')}</span>
               </div>
               <button
+                disabled={isDiscoveringAgents}
                 onClick={() => {
                   if (isDemoModeForced && isDemoMode) {
                     setShowSetupDialog(true)
@@ -223,15 +228,20 @@ export function AgentStatusIndicator() {
                 }}
                 className={cn(
                   'relative w-11 h-6 rounded-full transition-colors',
-                  isDemoMode ? 'bg-purple-500' : 'bg-secondary'
+                  isDemoMode ? 'bg-purple-500' : 'bg-secondary',
+                  isDiscoveringAgents && 'opacity-50 cursor-wait'
                 )}
               >
-                <span
-                  className={cn(
-                    'absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform shadow-sm',
-                    isDemoMode ? 'translate-x-5' : 'translate-x-0'
-                  )}
-                />
+                {isDiscoveringAgents ? (
+                  <Loader2 className="absolute top-1 left-3.5 w-4 h-4 animate-spin text-purple-200" />
+                ) : (
+                  <span
+                    className={cn(
+                      'absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform shadow-sm',
+                      isDemoMode ? 'translate-x-5' : 'translate-x-0'
+                    )}
+                  />
+                )}
               </button>
             </div>
             <p className="text-xs text-muted-foreground mt-1.5">

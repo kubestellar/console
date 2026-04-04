@@ -23,6 +23,20 @@ import {
 import { useTranslation } from 'react-i18next'
 import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 
+// ── Tooltip spacing constants (ECharts renders its own DOM, so Tailwind/CSS vars are unavailable) ──
+/** Spacing between tooltip header and grid body */
+const TOOLTIP_HEADER_MARGIN_PX = '8px'
+/** Horizontal padding for config badge */
+const TOOLTIP_BADGE_PAD_H_PX = '8px'
+/** Vertical padding for config badge */
+const TOOLTIP_BADGE_PAD_V_PX = '2px'
+/** Gap between grid rows */
+const TOOLTIP_GRID_GAP_ROW_PX = '4px'
+/** Gap between grid columns */
+const TOOLTIP_GRID_GAP_COL_PX = '16px'
+/** Badge border-radius */
+const TOOLTIP_BADGE_RADIUS_PX = '4px'
+
 // Minimal parameter type for ECharts label/tooltip formatter callbacks
 interface EChartsFormatterParam {
   data?: { point?: ParetoPoint }
@@ -451,10 +465,10 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
           const model = getModelShort(pt.model)
           const c = HARDWARE_COLORS[hw] ?? '#6b7280'
           return (
-            `<div style="font-weight:600;margin-bottom:8px;color:#f1f5f9">${model} ` +
+            `<div style="font-weight:600;margin-bottom:${TOOLTIP_HEADER_MARGIN_PX};color:#f1f5f9">${model} ` +
             `<span style="color:#94a3b8">${hw}</span> ` +
-            `<span style="background:${c}30;color:${c};padding:2px 8px;border-radius:4px;font-size:10px">${pt.config}</span></div>` +
-            `<div style="display:grid;grid-template-columns:auto auto;gap:4px 16px;font-size:11px">` +
+            `<span style="background:${c}30;color:${c};padding:${TOOLTIP_BADGE_PAD_V_PX} ${TOOLTIP_BADGE_PAD_H_PX};border-radius:${TOOLTIP_BADGE_RADIUS_PX};font-size:10px">${pt.config}</span></div>` +
+            `<div style="display:grid;grid-template-columns:auto auto;gap:${TOOLTIP_GRID_GAP_ROW_PX} ${TOOLTIP_GRID_GAP_COL_PX};font-size:11px">` +
             `<span style="color:#94a3b8">Throughput/GPU:</span><span style="font-family:monospace;color:#e2e8f0">${pt.throughputPerGpu.toFixed(0)} tok/s</span>` +
             `<span style="color:#94a3b8">TTFT p50:</span><span style="font-family:monospace;color:#e2e8f0">${pt.ttftP50Ms.toFixed(1)} ms</span>` +
             `<span style="color:#94a3b8">TPOT p50:</span><span style="font-family:monospace;color:#e2e8f0">${pt.tpotP50Ms.toFixed(2)} ms/tok</span>` +

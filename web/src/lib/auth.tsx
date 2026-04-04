@@ -62,15 +62,25 @@ function getJwtExpiryMs(token: string): number | null {
 function showExpiryWarningBanner(onRefresh: () => void): void {
   if (document.getElementById('session-expiry-warning')) return
 
+  /* Spacing constants for DOM-based banner (Tailwind unavailable in imperative DOM) */
+  const BANNER_BOTTOM_PX = '24px'
+  const BANNER_GAP_PX = '12px'
+  const BANNER_PAD_V_PX = '12px'
+  const BANNER_PAD_H_PX = '20px'
+  const BANNER_RADIUS_PX = '8px'
+  const BTN_MARGIN_LEFT_PX = '8px'
+  const BTN_PAD_V_PX = '4px'
+  const BTN_PAD_H_PX = '12px'
+
   const banner = document.createElement('div')
   banner.id = 'session-expiry-warning'
   banner.style.cssText = `
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 99999;
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px 20px;
+    position: fixed; bottom: ${BANNER_BOTTOM_PX}; left: 50%; transform: translateX(-50%); z-index: 99999;
+    display: flex; align-items: center; gap: ${BANNER_GAP_PX};
+    padding: ${BANNER_PAD_V_PX} ${BANNER_PAD_H_PX};
     background: rgba(234,179,8,0.15);
     border: 1px solid rgba(234,179,8,0.4);
-    border-radius: 8px; backdrop-filter: blur(8px);
+    border-radius: ${BANNER_RADIUS_PX}; backdrop-filter: blur(8px);
     color: #fbbf24; font-family: system-ui, sans-serif; font-size: 14px;
     animation: slideUp 0.3s ease-out;
   `
@@ -85,7 +95,7 @@ function showExpiryWarningBanner(onRefresh: () => void): void {
   const btn = document.createElement('button')
   btn.textContent = 'Refresh Now'
   btn.style.cssText = `
-    margin-left: 8px; padding: 4px 12px; border-radius: 8px;
+    margin-left: ${BTN_MARGIN_LEFT_PX}; padding: ${BTN_PAD_V_PX} ${BTN_PAD_H_PX}; border-radius: ${BANNER_RADIUS_PX};
     background: rgba(234,179,8,0.3); border: 1px solid rgba(234,179,8,0.5);
     color: #fbbf24; cursor: pointer; font-size: 13px; font-family: inherit;
   `

@@ -1,5 +1,5 @@
 import React from 'react'
-import { FileText, Loader2, Box, Layers, Server } from 'lucide-react'
+import { FileText, Loader2, Box, Layers, Server, AlertTriangle, RefreshCw } from 'lucide-react'
 import { cn } from '../../../../lib/cn'
 import { Button } from '../../../ui/Button'
 import { StatusBadge } from '../../../ui/StatusBadge'
@@ -11,6 +11,7 @@ export interface PodRelatedTabProps {
   namespace: string
   agentConnected: boolean
   relatedLoading: boolean
+  relatedError?: string | null
   ownerChain: RelatedResource[]
   configMaps: string[]
   secrets: string[]
@@ -31,6 +32,7 @@ export function PodRelatedTab({
   namespace,
   agentConnected,
   relatedLoading,
+  relatedError,
   ownerChain,
   configMaps,
   secrets,
@@ -53,6 +55,18 @@ export function PodRelatedTab({
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
           <span className="ml-2 text-muted-foreground">{t('drilldown.status.discoveringRelated')}</span>
+        </div>
+      ) : relatedError ? (
+        <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-center">
+          <AlertTriangle className="w-6 h-6 text-red-400 mx-auto mb-2" />
+          <p className="text-sm text-red-400">{relatedError}</p>
+          <button
+            onClick={() => fetchRelatedResources(true)}
+            className="mt-2 inline-flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
+          >
+            <RefreshCw className="w-3 h-3" />
+            <span>{t('common.retry')}</span>
+          </button>
         </div>
       ) : (
         <>

@@ -1,4 +1,4 @@
-import { Loader2, Stethoscope, Wrench, Sparkles } from 'lucide-react'
+import { Loader2, Stethoscope, Wrench, Sparkles, AlertTriangle, RefreshCw } from 'lucide-react'
 import { cn } from '../../../../lib/cn'
 import { ConsoleAIIcon } from '../../../ui/ConsoleAIIcon'
 import { useTranslation } from 'react-i18next'
@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 export interface PodAiAnalysisProps {
   aiAnalysis: string | null
   aiAnalysisLoading: boolean
+  aiAnalysisError?: string | null
   fetchAiAnalysis: () => void
   handleRepairPod: () => void
 }
@@ -13,6 +14,7 @@ export interface PodAiAnalysisProps {
 export function PodAiAnalysis({
   aiAnalysis,
   aiAnalysisLoading,
+  aiAnalysisError,
   fetchAiAnalysis,
   handleRepairPod,
 }: PodAiAnalysisProps) {
@@ -20,8 +22,27 @@ export function PodAiAnalysis({
 
   return (
     <>
+      {/* Error state */}
+      {aiAnalysisError && !aiAnalysisLoading && (
+        <div className="p-4 pb-0">
+          <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-4">
+            <div className="flex items-center gap-2 text-sm text-red-400">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <span>{aiAnalysisError}</span>
+            </div>
+            <button
+              onClick={fetchAiAnalysis}
+              className="mt-2 flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
+            >
+              <RefreshCw className="w-3 h-3" />
+              <span>{t('common.retry')}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* AI Analysis Results - visible on all tabs */}
-      {(aiAnalysis || aiAnalysisLoading) && (
+      {(aiAnalysis || aiAnalysisLoading) && !aiAnalysisError && (
         <div className="p-4 pb-0">
           <div className="rounded-lg bg-gradient-to-br from-purple-500/10 via-blue-500/10 to-cyan-500/10 border border-purple-500/30 overflow-hidden">
             {aiAnalysisLoading ? (

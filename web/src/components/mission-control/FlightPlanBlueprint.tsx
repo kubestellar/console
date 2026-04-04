@@ -374,24 +374,37 @@ function exportFullReport(
   const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Flight Plan: ${state.title || 'Mission Control'}</title>
 <style>
-  body { font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 0 auto; padding: 32px; color: #1e293b; line-height: 1.5; }
-  h1 { font-size: 24px; border-bottom: 2px solid #6366f1; padding-bottom: 8px; }
-  h2 { font-size: 18px; margin-top: 28px; color: #4338ca; }
-  h3 { font-size: 14px; margin-top: 20px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
-  table { width: 100%; border-collapse: collapse; margin: 8px 0 16px; font-size: 13px; }
-  th, td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; }
+  /* Spacing tokens — 4px grid for consistency */
+  :root {
+    --space-xs: 2px;   /* extra-small: badge margin, tiny padding */
+    --space-sm: 4px;   /* small: inline code padding, gap */
+    --space-md: 8px;   /* medium: cell padding, heading bottom, table margin */
+    --space-lg: 12px;  /* large: description padding, meta padding */
+    --space-xl: 16px;  /* extra-large: section margin, body print padding */
+    --space-2xl: 20px; /* 2x-large: h3 top margin */
+    --space-3xl: 28px; /* 3x-large: h2 top margin */
+    --space-4xl: 32px; /* 4x-large: body padding, footer top margin */
+    --radius-sm: 4px;  /* border-radius for badges and code */
+    --radius-md: 8px;  /* border-radius for containers */
+  }
+  body { font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 0 auto; padding: var(--space-4xl); color: #1e293b; line-height: 1.5; }
+  h1 { font-size: 24px; border-bottom: 2px solid #6366f1; padding-bottom: var(--space-md); }
+  h2 { font-size: 18px; margin-top: var(--space-3xl); color: #4338ca; }
+  h3 { font-size: 14px; margin-top: var(--space-2xl); color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+  table { width: 100%; border-collapse: collapse; margin: var(--space-md) 0 var(--space-xl); font-size: 13px; }
+  th, td { border: 1px solid #e2e8f0; padding: var(--space-md) var(--space-lg); text-align: left; }
   th { background: #f1f5f9; font-weight: 600; font-size: 11px; text-transform: uppercase; }
-  .installed { display: inline-block; background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin: 2px; }
-  .deploy { display: inline-block; background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin: 2px; }
-  .protected { display: inline-block; background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin: 2px; }
-  .remove { display: inline-block; background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin: 2px; }
-  code { background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+  .installed { display: inline-block; background: #d1fae5; color: #065f46; padding: var(--space-xs) var(--space-md); border-radius: var(--radius-sm); font-size: 11px; margin: var(--space-xs); }
+  .deploy { display: inline-block; background: #fef3c7; color: #92400e; padding: var(--space-xs) var(--space-md); border-radius: var(--radius-sm); font-size: 11px; margin: var(--space-xs); }
+  .protected { display: inline-block; background: #d1fae5; color: #065f46; padding: var(--space-xs) var(--space-md); border-radius: var(--radius-sm); font-size: 11px; margin: var(--space-xs); }
+  .remove { display: inline-block; background: #fef3c7; color: #92400e; padding: var(--space-xs) var(--space-md); border-radius: var(--radius-sm); font-size: 11px; margin: var(--space-xs); }
+  code { background: #f1f5f9; padding: var(--space-sm) var(--space-md); border-radius: var(--radius-sm); font-size: 12px; }
   .meta { color: #64748b; font-size: 13px; }
-  .svg-container { margin: 16px 0; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+  .svg-container { margin: var(--space-xl) 0; border: 1px solid #e2e8f0; border-radius: var(--radius-md); overflow: hidden; }
   .svg-container svg { width: 100%; height: auto; }
   .section { page-break-inside: avoid; }
-  .description { background: #f8fafc; border-left: 4px solid #6366f1; padding: 12px 16px; margin: 12px 0; font-size: 13px; }
-  @media print { body { padding: 16px; } .no-print { display: none; } }
+  .description { background: #f8fafc; border-left: var(--space-sm) solid #6366f1; padding: var(--space-lg) var(--space-xl); margin: var(--space-lg) 0; font-size: 13px; }
+  @media print { body { padding: var(--space-xl); } .no-print { display: none; } }
 </style></head><body>
 
 <h1>Flight Plan: ${state.title || 'Untitled Mission'}</h1>
@@ -456,7 +469,7 @@ ${toRemove.length > 0 ? `
 ` : '<p>All projects are already installed — nothing to roll back.</p>'}
 </div>
 
-<p class="meta" style="margin-top:32px; border-top:1px solid #e2e8f0; padding-top:12px;">
+<p class="meta" style="margin-top:var(--space-4xl); border-top:1px solid #e2e8f0; padding-top:var(--space-lg);">
   KubeStellar Console · Mission Control Report · Use browser Print (Cmd+P / Ctrl+P) to save as PDF
 </p>
 

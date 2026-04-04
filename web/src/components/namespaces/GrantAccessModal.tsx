@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Shield } from 'lucide-react'
+import { Shield, Loader2 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { api } from '../../lib/api'
@@ -240,6 +240,7 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
             size="lg"
             onClick={handleGrant}
             disabled={!subjectName || granting}
+            icon={granting ? <Loader2 className="w-4 h-4 animate-spin" /> : undefined}
           >
             {granting ? 'Granting...' : 'Grant Access'}
           </Button>
