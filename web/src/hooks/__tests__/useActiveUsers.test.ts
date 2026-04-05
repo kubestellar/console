@@ -14,7 +14,7 @@ vi.mock('../../lib/constants', () => ({
   STORAGE_KEY_TOKEN: 'kc-auth-token',
 }))
 
-import { useActiveUsers } from '../useActiveUsers'
+import { useActiveUsers, __resetForTest } from '../useActiveUsers'
 
 describe('useActiveUsers', () => {
   beforeEach(() => {
@@ -22,6 +22,8 @@ describe('useActiveUsers', () => {
     localStorage.clear()
     sessionStorage.clear()
     vi.clearAllMocks()
+    // Reset singleton state to prevent leaking between tests (#4775)
+    __resetForTest()
     mockGetDemoMode.mockReturnValue(true)
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ activeUsers: 5, totalConnections: 8 }), {
@@ -142,16 +144,20 @@ describe('useActiveUsers', () => {
 
     const { result } = renderHook(() => useActiveUsers())
 
-    // Advance enough time for multiple poll intervals to trigger failures
-    // MAX_FAILURES = 3, POLL_INTERVAL = 10s
-    for (let i = 0; i < 5; i++) {
+    // Let initial fetches (from startPolling + heartbeat callback) settle
+    await act(async () => { await vi.advanceTimersByTimeAsync(100) })
+
+    // Advance through poll intervals to accumulate failures.
+    // The initial render already causes 2 failures (startPolling immediate +
+    // heartbeat callback). Two more interval ticks push past MAX_FAILURES = 3,
+    // and the subsequent tick enters the circuit breaker guard.
+    // Advance just enough to trip the breaker but NOT past the RECOVERY_DELAY
+    // (30s) which would reset hasError.
+    for (let i = 0; i < 3; i++) {
       await act(async () => { await vi.advanceTimersByTimeAsync(10_500) })
     }
 
-    // After circuit breaker trips, hasError should be true
-    await waitFor(() => {
-      expect(result.current.hasError).toBe(true)
-    })
+    expect(result.current.hasError).toBe(true)
   })
 
   // --- refetch works after circuit breaker ---
@@ -316,13 +322,16 @@ describe('useActiveUsers', () => {
 
   // ── Smoothing takes max of recent counts ──────────────────────────────
   it('smoothing uses max of recent counts to prevent flicker', async () => {
-    // First response: high count
-    vi.mocked(fetch).mockResolvedValueOnce(
-      new Response(JSON.stringify({ activeUsers: 10, totalConnections: 10 }), {
+    // All GET requests return high count initially (handles heartbeat + poll GETs)
+    vi.mocked(fetch).mockImplementation(async (_url, options) => {
+      if (typeof options === 'object' && options?.method === 'POST') {
+        return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } })
+      }
+      return new Response(JSON.stringify({ activeUsers: 10, totalConnections: 10 }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       })
-    )
+    })
 
     const { result } = renderHook(() => useActiveUsers())
     await act(async () => { await vi.advanceTimersByTimeAsync(100) })
@@ -331,13 +340,16 @@ describe('useActiveUsers', () => {
       expect(result.current.activeUsers).toBe(10)
     })
 
-    // Second response: lower count (should smooth to max = 10)
-    vi.mocked(fetch).mockResolvedValueOnce(
-      new Response(JSON.stringify({ activeUsers: 5, totalConnections: 5 }), {
+    // Now switch to lower count for subsequent GETs (should smooth to max = 10)
+    vi.mocked(fetch).mockImplementation(async (_url, options) => {
+      if (typeof options === 'object' && options?.method === 'POST') {
+        return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } })
+      }
+      return new Response(JSON.stringify({ activeUsers: 5, totalConnections: 5 }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       })
-    )
+    })
 
     await act(async () => { await vi.advanceTimersByTimeAsync(10_500) })
 
@@ -350,29 +362,32 @@ describe('useActiveUsers', () => {
   // ── Recovery after circuit breaker trips automatically ────────────────
   it('automatically recovers after circuit breaker recovery delay', async () => {
     vi.mocked(fetch).mockRejectedValue(new Error('fail'))
-    const RECOVERY_DELAY = 30_000
+    const RECOVERY_DELAY_MS = 30_000
 
     const { result } = renderHook(() => useActiveUsers())
 
-    // Trip circuit breaker (3 consecutive failures)
-    for (let i = 0; i < 5; i++) {
+    // Let initial fetches settle, then advance through poll intervals
+    // to trip the circuit breaker (MAX_FAILURES = 3).
+    await act(async () => { await vi.advanceTimersByTimeAsync(100) })
+    for (let i = 0; i < 3; i++) {
       await act(async () => { await vi.advanceTimersByTimeAsync(10_500) })
     }
 
-    await waitFor(() => {
-      expect(result.current.hasError).toBe(true)
-    })
+    expect(result.current.hasError).toBe(true)
 
-    // Fix fetch before recovery
-    vi.mocked(fetch).mockResolvedValue(
-      new Response(JSON.stringify({ activeUsers: 2, totalConnections: 2 }), {
+    // Fix fetch before the recovery timer fires
+    vi.mocked(fetch).mockImplementation(async (_url, options) => {
+      if (typeof options === 'object' && options?.method === 'POST') {
+        return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } })
+      }
+      return new Response(JSON.stringify({ activeUsers: 2, totalConnections: 2 }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       })
-    )
+    })
 
-    // Advance past the recovery delay
-    await act(async () => { await vi.advanceTimersByTimeAsync(RECOVERY_DELAY + 1_000) })
+    // Advance past the recovery delay so the recovery timer fires
+    await act(async () => { await vi.advanceTimersByTimeAsync(RECOVERY_DELAY_MS + 1_000) })
 
     await waitFor(() => {
       expect(result.current.hasError).toBe(false)

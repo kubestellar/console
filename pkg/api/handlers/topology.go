@@ -79,11 +79,25 @@ func (h *TopologyHandlers) GetTopology(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), topologyTimeout)
 	defer cancel()
 
-	// Collect data from all sources
-	exports, _ := h.k8sClient.ListServiceExports(ctx)
-	imports, _ := h.k8sClient.ListServiceImports(ctx)
-	gateways, _ := h.k8sClient.ListGateways(ctx)
-	httpRoutes, _ := h.k8sClient.ListHTTPRoutes(ctx)
+	// Collect data from all sources, tracking partial failures (#4774)
+	var partialErrors []string
+
+	exports, err := h.k8sClient.ListServiceExports(ctx)
+	if err != nil {
+		partialErrors = append(partialErrors, fmt.Sprintf("service_exports: %v", err))
+	}
+	imports, err := h.k8sClient.ListServiceImports(ctx)
+	if err != nil {
+		partialErrors = append(partialErrors, fmt.Sprintf("service_imports: %v", err))
+	}
+	gateways, err := h.k8sClient.ListGateways(ctx)
+	if err != nil {
+		partialErrors = append(partialErrors, fmt.Sprintf("gateways: %v", err))
+	}
+	httpRoutes, err := h.k8sClient.ListHTTPRoutes(ctx)
+	if err != nil {
+		partialErrors = append(partialErrors, fmt.Sprintf("http_routes: %v", err))
+	}
 
 	// Build the topology graph
 	graph := h.buildTopologyGraph(exports, imports, gateways, httpRoutes)
@@ -102,7 +116,7 @@ func (h *TopologyHandlers) GetTopology(c *fiber.Ctx) error {
 		}
 	}
 
-	return c.JSON(fiber.Map{
+	response := fiber.Map{
 		"graph":    graph,
 		"clusters": clusterSummaries,
 		"stats": fiber.Map{
@@ -111,7 +125,14 @@ func (h *TopologyHandlers) GetTopology(c *fiber.Ctx) error {
 			"healthyConnections":  healthyEdges,
 			"degradedConnections": degradedEdges,
 		},
-	})
+	}
+
+	// Surface partial failures so the UI can indicate incomplete data (#4774)
+	if len(partialErrors) > 0 {
+		response["partialErrors"] = partialErrors
+	}
+
+	return c.JSON(response)
 }
 
 // buildTopologyGraph builds the topology graph from collected resources

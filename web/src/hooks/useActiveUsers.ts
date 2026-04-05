@@ -53,6 +53,27 @@ let heartbeatTimeoutId: ReturnType<typeof setTimeout> | null = null
 const recentCounts: number[] = []
 const SMOOTHING_WINDOW = 5 // Keep last 5 counts
 
+/**
+ * Reset all singleton state. Exported for tests only — avoids state leaking
+ * between test cases when the module is shared across a test file.
+ * @internal
+ */
+export function __resetForTest(): void {
+  sharedInfo = { activeUsers: 0, totalConnections: 0 }
+  if (pollInterval) { clearInterval(pollInterval); pollInterval = null }
+  pollStarted = false
+  consecutiveFailures = 0
+  hasFetchedOnce = false
+  subscribers.clear()
+  stateSubscribers.clear()
+  if (presencePingInterval) { clearInterval(presencePingInterval); presencePingInterval = null }
+  if (presenceWs) { presenceWs.onclose = null; presenceWs.close(); presenceWs = null }
+  presenceStarted = false
+  if (heartbeatTimeoutId) { clearTimeout(heartbeatTimeoutId); heartbeatTimeoutId = null }
+  heartbeatStarted = false
+  recentCounts.length = 0
+}
+
 // Generate a unique session ID per browser tab (survives page navigation, not tab close)
 function getSessionId(): string {
   let id = sessionStorage.getItem('kc-session-id')

@@ -1628,15 +1628,16 @@ export async function fetchWithRetry(
   const totalAttempts = maxRetries + 1
 
   for (let attempt = 0; attempt < totalAttempts; attempt++) {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+    // Named handler so we can remove it after fetch completes (#4772)
+    const onCallerAbort = () => controller.abort()
+    if (fetchOptions.signal) {
+      fetchOptions.signal.addEventListener('abort', onCallerAbort)
+    }
+
     try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-
-      // Chain with caller's signal if provided
-      if (fetchOptions.signal) {
-        fetchOptions.signal.addEventListener('abort', () => controller.abort())
-      }
-
       const response = await fetch(url, {
         ...fetchOptions,
         signal: controller.signal,
@@ -1658,6 +1659,7 @@ export async function fetchWithRetry(
 
       return response
     } catch (err) {
+      clearTimeout(timeoutId)
       lastError = err
       // Only retry on transient errors
       if (!isTransientError(err) || attempt >= totalAttempts - 1) {
@@ -1665,6 +1667,11 @@ export async function fetchWithRetry(
       }
       const backoff = initialBackoffMs * Math.pow(2, attempt)
       await new Promise(resolve => setTimeout(resolve, backoff))
+    } finally {
+      // Remove abort listener to prevent accumulation (#4772)
+      if (fetchOptions.signal) {
+        fetchOptions.signal.removeEventListener('abort', onCallerAbort)
+      }
     }
   }
 

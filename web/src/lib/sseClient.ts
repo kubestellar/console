@@ -157,6 +157,10 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
         clearTimeout(reconnectTimerId)
         reconnectTimerId = null
       }
+      // Remove abort listener to prevent accumulation (#4772)
+      if (signal) {
+        signal.removeEventListener('abort', onSignalAbort)
+      }
       // Don't cache partial results from aborted streams (#2380)
       if (!wasAborted) {
         resultCache.set(cacheKey, { data: accumulated, at: Date.now() })
@@ -171,14 +175,16 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
       resolve(accumulated)
     }, SSE_TIMEOUT_MS)
 
+    // Named handler so we can remove the listener after completion (#4772)
+    const onSignalAbort = () => {
+      aborted = true
+      timeoutController.abort()
+      clearTimeout(timeoutId)
+      cleanup(/* wasAborted */ true)
+      reject(new DOMException('Aborted', 'AbortError'))
+    }
     if (signal) {
-      signal.addEventListener('abort', () => {
-        aborted = true
-        timeoutController.abort()
-        clearTimeout(timeoutId)
-        cleanup(/* wasAborted */ true)
-        reject(new DOMException('Aborted', 'AbortError'))
-      })
+      signal.addEventListener('abort', onSignalAbort)
     }
 
     /**

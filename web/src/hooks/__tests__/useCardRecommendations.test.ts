@@ -641,16 +641,15 @@ describe('useCardRecommendations', () => {
     expect(gpuRec!.reason).toContain('2 nodes')
   })
 
-  // ---- Security issues not suppressed when already in dashboard ----
-  // NOTE: The source code does NOT check currentCardTypes for security_issues.
-  // This test documents the current behavior — security recs always appear.
+  // ---- Security issues suppressed when already in dashboard ----
+  // The source code checks `!currentCardTypes.includes('security_issues')`,
+  // so the card is correctly filtered out when already on the dashboard.
 
-  it('still recommends security_issues even when already in currentCardTypes (current behavior)', () => {
+  it('does not recommend security_issues when already in currentCardTypes', () => {
     setDefaults({ securityIssues: [{ id: 's1', severity: 'high' }] })
     const { result } = renderHook(() => useCardRecommendations(WITH_SECURITY_ISSUES))
 
     const secRec = result.current.recommendations.find(r => r.cardType === 'security_issues')
-    // Current code doesn't filter security issues by currentCardTypes
-    expect(secRec).toBeDefined()
+    expect(secRec).toBeUndefined()
   })
 })
