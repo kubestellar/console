@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCachedNodes, useCachedPods } from '../../hooks/useCachedData'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 
@@ -50,14 +51,18 @@ function confidenceFromUsage(usagePct: number): number {
 
 export function PredictiveHealth() {
   const { t } = useTranslation('cards')
-  const { nodes, isLoading: nodesLoading, isDemoFallback: nodesDemoFallback, isFailed: nodesFailed, consecutiveFailures: nodesFailures } = useCachedNodes()
-  const { pods, isLoading: podsLoading, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPods()
+  const { nodes: allNodes, isLoading: nodesLoading, isDemoFallback: nodesDemoFallback, isFailed: nodesFailed, consecutiveFailures: nodesFailures } = useCachedNodes()
+  const { pods: allPods, isLoading: podsLoading, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPods()
+  const { filterByCluster } = useGlobalFilters()
   const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  const nodes = useMemo(() => filterByCluster(allNodes), [allNodes, filterByCluster])
+  const pods = useMemo(() => filterByCluster(allPods), [allPods, filterByCluster])
 
   const isLoading = nodesLoading || podsLoading
   const { showSkeleton } = useCardLoadingState({
     isLoading,
-    hasAnyData: nodes.length > 0 || pods.length > 0,
+    hasAnyData: allNodes.length > 0 || allPods.length > 0,
     isDemoData: nodesDemoFallback || podsDemoFallback,
     isFailed: nodesFailed || podsFailed,
     consecutiveFailures: Math.max(nodesFailures, podsFailures),

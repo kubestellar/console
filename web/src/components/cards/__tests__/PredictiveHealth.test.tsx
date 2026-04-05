@@ -40,6 +40,15 @@ vi.mock('../CardDataContext', () => ({
   useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
 }))
 
+const mockFilterByCluster = vi.fn(<T extends { cluster?: string }>(items: T[]): T[] => items)
+vi.mock('../../../hooks/useGlobalFilters', () => ({
+  useGlobalFilters: () => ({
+    filterByCluster: mockFilterByCluster,
+    selectedClusters: [] as string[],
+    isAllClustersSelected: true,
+  }),
+}))
+
 const mockNodes = vi.fn()
 const mockPods = vi.fn()
 vi.mock('../../../hooks/useCachedData', () => ({
@@ -85,6 +94,69 @@ describe('PredictiveHealth', () => {
     mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     const { container } = render(<PredictiveHealth />)
     expect(container).toBeTruthy()
+  })
+
+  it('passes nodes and pods through filterByCluster', () => {
+    const testNodes = [
+      { name: 'node-1', cluster: 'cluster-a', conditions: [], unschedulable: false },
+      { name: 'node-2', cluster: 'cluster-b', conditions: [], unschedulable: false },
+    ]
+    const testPods = [
+      { name: 'pod-1', cluster: 'cluster-a', restarts: 0 },
+      { name: 'pod-2', cluster: 'cluster-b', restarts: 0 },
+    ]
+    mockNodes.mockReturnValue({ nodes: testNodes, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockPods.mockReturnValue({ pods: testPods, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+
+    render(<PredictiveHealth />)
+
+    // filterByCluster should be called with both nodes and pods arrays
+    expect(mockFilterByCluster).toHaveBeenCalledWith(testNodes)
+    expect(mockFilterByCluster).toHaveBeenCalledWith(testPods)
+  })
+
+  it('shows only filtered cluster predictions when filter is active', () => {
+    // filterByCluster returns only cluster-a items
+    mockFilterByCluster.mockImplementation(<T extends { cluster?: string }>(items: T[]): T[] =>
+      items.filter(item => item.cluster === 'cluster-a')
+    )
+
+    const testNodes = [
+      { name: 'node-a', cluster: 'cluster-a', conditions: [{ type: 'MemoryPressure', status: 'True' }], unschedulable: false },
+      { name: 'node-b', cluster: 'cluster-b', conditions: [{ type: 'MemoryPressure', status: 'True' }], unschedulable: false },
+    ]
+    const testPods = [
+      { name: 'pod-a', cluster: 'cluster-a', restarts: 0 },
+      { name: 'pod-b', cluster: 'cluster-b', restarts: 0 },
+    ]
+    mockNodes.mockReturnValue({ nodes: testNodes, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockPods.mockReturnValue({ pods: testPods, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+
+    const { container } = render(<PredictiveHealth />)
+
+    // Should only show cluster-a predictions, not cluster-b
+    const text = container.textContent || ''
+    expect(text).not.toContain('cluster-b')
+  })
+
+  it('shows empty state when filter excludes all clusters', () => {
+    // filterByCluster returns nothing
+    mockFilterByCluster.mockImplementation(() => [])
+
+    const testNodes = [
+      { name: 'node-a', cluster: 'cluster-a', conditions: [{ type: 'MemoryPressure', status: 'True' }], unschedulable: false },
+    ]
+    const testPods = [
+      { name: 'pod-a', cluster: 'cluster-a', restarts: 10 },
+    ]
+    mockNodes.mockReturnValue({ nodes: testNodes, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockPods.mockReturnValue({ pods: testPods, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+
+    const { container } = render(<PredictiveHealth />)
+
+    // With no data after filtering, should show the all-clear / empty state
+    const text = container.textContent || ''
+    expect(text).toContain('predictiveHealth.allClear')
   })
 
 })
