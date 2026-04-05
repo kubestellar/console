@@ -759,7 +759,7 @@ export function Checkers(_props: CardComponentProps) {
       </div>
 
       {/* Board */}
-      <div className="flex-1 flex items-center justify-center relative min-h-0">
+      <div className="flex-1 flex items-center justify-center min-h-0">
         <div className="inline-block border border-border rounded overflow-hidden">
           {board.map((row, rowIdx) => (
             <div key={rowIdx} className="flex">
@@ -806,21 +806,21 @@ export function Checkers(_props: CardComponentProps) {
             </div>
           ))}
         </div>
+      </div>
 
-        {/* Pirate Taunt — absolute overlay, no layout shift */}
-        {pirateTaunt && (
-          <div className="absolute bottom-0 left-0 right-0 z-10 p-1 animate-fade-in pointer-events-none">
-            <div className="flex items-start gap-2 px-2">
-              <div className="text-lg flex-shrink-0">🏴‍☠️</div>
-              <div className="bg-background/80 backdrop-blur-sm border border-orange-400/50 rounded-lg px-2 py-1.5 flex-1">
-                <span className="text-orange-300 italic text-xs font-medium leading-tight block">
-                  &quot;{pirateTaunt}&quot;
-                </span>
-              </div>
+      {/* Pirate Taunt — below board, no overlap */}
+      {pirateTaunt && (
+        <div className="flex-shrink-0 p-1 animate-fade-in">
+          <div className="flex items-start gap-2 px-2">
+            <div className="text-lg flex-shrink-0">🏴‍☠️</div>
+            <div className="bg-background/80 backdrop-blur-sm border border-orange-400/50 rounded-lg px-2 py-1.5 flex-1">
+              <span className="text-orange-300 italic text-xs font-medium leading-tight block">
+                &quot;{pirateTaunt}&quot;
+              </span>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Game over overlay */}
       {gameOver && (

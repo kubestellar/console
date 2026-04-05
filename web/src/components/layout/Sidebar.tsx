@@ -19,6 +19,7 @@ import { ROUTES } from '../../config/routes'
 import { DASHBOARD_CONFIGS } from '../../config/dashboards/index'
 import { emitSidebarNavigated, emitDashboardRenamed } from '../../lib/analytics'
 import { prefetchDashboard } from '../../lib/prefetchDashboard'
+import { useVersionCheck } from '../../hooks/useVersionCheck'
 
 // Lazy-load SidebarCustomizer — it pulls in dnd-kit and heavy UI (~50 KB)
 const SidebarCustomizer = lazy(() =>
@@ -51,6 +52,7 @@ export function Sidebar() {
   const dashboardContext = useDashboardContextOptional()
   const { isFullScreen: isMissionFullScreen } = useMissions()
   const { viewerCount, hasError: viewersError, isLoading: viewersLoading } = useActiveUsers()
+  const { hasUpdate, channel, latestMainSHA } = useVersionCheck()
   const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
@@ -529,19 +531,31 @@ export function Sidebar() {
 
         {/* Viewer count + commit hash */}
         {!isCollapsed && (
-          <div className="mt-auto pt-4 flex items-center justify-center gap-2">
-            <div
-              className="flex items-center gap-1 px-2 text-muted-foreground/60"
-              title={t('sidebar.activeViewers', { count: viewerCount })}
-            >
-              <User className={cn('w-3 h-3', viewersError && 'text-red-400')} />
-              <span className="text-2xs tabular-nums">
-                {viewersError ? '!' : viewersLoading ? '…' : viewerCount}
+          <div className="mt-auto pt-4 flex flex-col items-center gap-1">
+            <div className="flex items-center justify-center gap-2">
+              <div
+                className="flex items-center gap-1 px-2 text-muted-foreground/60"
+                title={t('sidebar.activeViewers', { count: viewerCount })}
+              >
+                <User className={cn('w-3 h-3', viewersError && 'text-red-400')} />
+                <span className="text-2xs tabular-nums">
+                  {viewersError ? '!' : viewersLoading ? '…' : viewerCount}
+                </span>
+              </div>
+              <span className="text-2xs text-muted-foreground/40 font-mono" title={`Commit: ${__COMMIT_HASH__}`}>
+                {__COMMIT_HASH__.substring(0, 7)}
               </span>
             </div>
-            <span className="text-2xs text-muted-foreground/40 font-mono" title={`Commit: ${__COMMIT_HASH__}`}>
-              {__COMMIT_HASH__.substring(0, 7)}
-            </span>
+            {/* Developer mode: warn when running an older commit */}
+            {channel === 'developer' && hasUpdate && (
+              <div
+                className="flex items-center gap-1 text-2xs text-yellow-400/80"
+                title={`Behind main — latest: ${latestMainSHA?.substring(0, 7) ?? 'unknown'}`}
+              >
+                <AlertTriangle className="w-3 h-3" />
+                <span>{t('sidebar.behindMain', 'Behind main')}</span>
+              </div>
+            )}
           </div>
         )}
       </aside>
