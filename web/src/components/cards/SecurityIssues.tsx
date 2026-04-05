@@ -104,7 +104,7 @@ function SecurityIssuesInternal({ config }: SecurityIssuesProps) {
 
   // Fetch data with caching (stale-while-revalidate pattern)
   // Cache persists to IndexedDB so data shows immediately on navigation/reload
-  const { issues: cachedIssues, isLoading: cachedLoading, isDemoFallback, error: cachedError, isFailed: cachedFailed, consecutiveFailures: cachedFailures, lastRefresh } = useCachedSecurityIssues(clusterConfig, namespaceConfig)
+  const { issues: cachedIssues, isLoading: cachedLoading, isRefreshing: cachedRefreshing, isDemoFallback, error: cachedError, isFailed: cachedFailed, consecutiveFailures: cachedFailures, lastRefresh } = useCachedSecurityIssues(clusterConfig, namespaceConfig)
 
   // Use demo data when in demo mode, otherwise use cached/agent data
   const rawIssues = useMemo(() => isDemoMode ? getDemoSecurityIssues() : cachedIssues, [isDemoMode, cachedIssues])
@@ -120,7 +120,7 @@ function SecurityIssuesInternal({ config }: SecurityIssuesProps) {
   const hasData = rawIssues.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasData,
-    isRefreshing: isDemoMode ? false : cachedLoading && hasData,
+    isRefreshing: isDemoMode ? false : cachedRefreshing,
     isDemoData: isDemoMode || isDemoFallback,
     hasAnyData: hasData,
     isFailed,
