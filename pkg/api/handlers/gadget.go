@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -72,7 +73,8 @@ func (h *GadgetHandler) RunTrace(c *fiber.Ctx) error {
 
 	result, err := h.bridge.CallGadgetTool(ctx, req.Tool, req.Args)
 	if err != nil {
-		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": err.Error()})
+		slog.Error("[Gadget] tool call failed", "tool", req.Tool, "error", err)
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "gadget tool call failed"})
 	}
 
 	return c.JSON(fiber.Map{

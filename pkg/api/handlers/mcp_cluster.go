@@ -145,6 +145,7 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 			var mu sync.Mutex
 			allNodes := make([]k8s.NodeInfo, 0)
 			clusterTimeout := mcpDefaultTimeout
+			var errTracker clusterErrorTracker
 
 			clusterCtx, clusterCancel := context.WithCancel(c.Context())
 			defer clusterCancel()
@@ -157,7 +158,9 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 					defer cancel()
 
 					nodes, err := h.k8sClient.GetNodes(ctx, clusterName)
-					if err == nil && len(nodes) > 0 {
+					if err != nil {
+						errTracker.add(clusterName, err)
+					} else if len(nodes) > 0 {
 						mu.Lock()
 						allNodes = append(allNodes, nodes...)
 						mu.Unlock()
@@ -166,7 +169,7 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 			}
 
 			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
-			return c.JSON(fiber.Map{"nodes": allNodes, "source": "k8s"})
+			return c.JSON(errTracker.annotate(fiber.Map{"nodes": allNodes, "source": "k8s"}))
 		}
 
 		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
@@ -233,6 +236,7 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 			var mu sync.Mutex
 			allEvents := make([]k8s.Event, 0)
 			clusterTimeout := mcpDefaultTimeout
+			var errTracker clusterErrorTracker
 
 			clusterCtx, clusterCancel := context.WithCancel(c.Context())
 			defer clusterCancel()
@@ -245,7 +249,9 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 					defer cancel()
 
 					events, err := h.k8sClient.GetEvents(ctx, clusterName, namespace, perClusterLimit)
-					if err == nil && len(events) > 0 {
+					if err != nil {
+						errTracker.add(clusterName, err)
+					} else if len(events) > 0 {
 						mu.Lock()
 						allEvents = append(allEvents, events...)
 						mu.Unlock()
@@ -262,7 +268,7 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 			if len(allEvents) > limit {
 				allEvents = allEvents[:limit]
 			}
-			return c.JSON(fiber.Map{"events": allEvents, "source": "k8s"})
+			return c.JSON(errTracker.annotate(fiber.Map{"events": allEvents, "source": "k8s"}))
 		}
 
 		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
@@ -326,6 +332,7 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 			var mu sync.Mutex
 			allEvents := make([]k8s.Event, 0)
 			clusterTimeout := mcpDefaultTimeout
+			var errTracker clusterErrorTracker
 
 			clusterCtx, clusterCancel := context.WithCancel(c.Context())
 			defer clusterCancel()
@@ -338,7 +345,9 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 					defer cancel()
 
 					events, err := h.k8sClient.GetWarningEvents(ctx, clusterName, namespace, perClusterLimit)
-					if err == nil && len(events) > 0 {
+					if err != nil {
+						errTracker.add(clusterName, err)
+					} else if len(events) > 0 {
 						mu.Lock()
 						allEvents = append(allEvents, events...)
 						mu.Unlock()
@@ -355,7 +364,7 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 			if len(allEvents) > limit {
 				allEvents = allEvents[:limit]
 			}
-			return c.JSON(fiber.Map{"events": allEvents, "source": "k8s"})
+			return c.JSON(errTracker.annotate(fiber.Map{"events": allEvents, "source": "k8s"}))
 		}
 
 		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
@@ -397,6 +406,7 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 			var mu sync.Mutex
 			allIssues := make([]k8s.SecurityIssue, 0)
 			clusterTimeout := mcpDefaultTimeout
+			var errTracker clusterErrorTracker
 
 			clusterCtx, clusterCancel := context.WithCancel(c.Context())
 			defer clusterCancel()
@@ -409,7 +419,9 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 					defer cancel()
 
 					issues, err := h.k8sClient.CheckSecurityIssues(ctx, clusterName, namespace)
-					if err == nil && len(issues) > 0 {
+					if err != nil {
+						errTracker.add(clusterName, err)
+					} else if len(issues) > 0 {
 						mu.Lock()
 						allIssues = append(allIssues, issues...)
 						mu.Unlock()
@@ -418,7 +430,7 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 			}
 
 			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
-			return c.JSON(fiber.Map{"issues": allIssues, "source": "k8s"})
+			return c.JSON(errTracker.annotate(fiber.Map{"issues": allIssues, "source": "k8s"}))
 		}
 
 		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)

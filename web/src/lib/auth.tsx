@@ -155,6 +155,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     emitLogout()
+
+    // Invalidate the server-side session before clearing client state (#4751).
+    // Fire-and-forget: even if the backend call fails, we still clear local state
+    // so the user is logged out on the client side.
+    const currentToken = localStorage.getItem(STORAGE_KEY_TOKEN)
+    if (currentToken && currentToken !== DEMO_TOKEN_VALUE) {
+      fetch('/auth/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${currentToken}` },
+      }).catch(() => {
+        // Backend unreachable — token will expire naturally
+      })
+    }
+
     localStorage.removeItem(STORAGE_KEY_TOKEN)
     cacheUser(null)
     setTokenState(null)

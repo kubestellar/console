@@ -51,11 +51,21 @@ func waitWithDeadline(wg *sync.WaitGroup, cancel context.CancelFunc, deadline ti
 	}
 }
 
+// sanitizedErrorMessages maps error types to user-friendly messages that do
+// not expose internal infrastructure details (#4753).
+var sanitizedErrorMessages = map[string]string{
+	"network":     "Cluster is unreachable — check network connectivity",
+	"auth":        "Authentication to cluster failed — check credentials",
+	"timeout":     "Cluster request timed out — the cluster may be overloaded or unreachable",
+	"certificate": "TLS certificate error — check cluster certificate configuration",
+}
+
 // handleK8sError inspects a Kubernetes API error and returns the appropriate
 // HTTP response. Cluster-connectivity errors (network, auth, timeout,
 // certificate) are returned as 200 with a "clusterStatus":"unavailable"
 // payload so the frontend can show a degraded state instead of a broken page.
 // All other errors are returned as 500 Internal Server Error.
+// Raw error details are only logged server-side and never sent to the client (#4753).
 func handleK8sError(c *fiber.Ctx, err error) error {
 	errType := k8s.ClassifyError(err.Error())
 	switch errType {
@@ -64,12 +74,57 @@ func handleK8sError(c *fiber.Ctx, err error) error {
 		return c.JSON(fiber.Map{
 			"clusterStatus": "unavailable",
 			"errorType":     errType,
-			"errorMessage":  err.Error(),
+			"errorMessage":  sanitizedErrorMessages[errType],
 		})
 	default:
 		slog.Error("[MCP] internal error", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
+}
+
+// ClusterError represents a per-cluster failure in a multi-cluster request (#4758).
+// Included in the response so the frontend can distinguish "no resources" from
+// "cluster failed" and display an appropriate degraded-state indicator.
+type ClusterError struct {
+	Cluster   string `json:"cluster"`
+	ErrorType string `json:"errorType"`
+	Message   string `json:"message"`
+}
+
+// clusterErrorTracker collects per-cluster failures during multi-cluster
+// fan-out operations. Thread-safe via its own mutex.
+type clusterErrorTracker struct {
+	mu     sync.Mutex
+	errors []ClusterError
+}
+
+func (t *clusterErrorTracker) add(cluster string, err error) {
+	errType := k8s.ClassifyError(err.Error())
+	msg, ok := sanitizedErrorMessages[errType]
+	if !ok {
+		msg = "An internal error occurred"
+	}
+	slog.Info("[MCP] per-cluster error", "cluster", cluster, "errorType", errType, "error", err)
+	t.mu.Lock()
+	t.errors = append(t.errors, ClusterError{
+		Cluster:   cluster,
+		ErrorType: errType,
+		Message:   msg,
+	})
+	t.mu.Unlock()
+}
+
+// annotate adds partial-failure metadata to a response map when there were
+// cluster errors. If all clusters succeeded, the response is unchanged.
+func (t *clusterErrorTracker) annotate(resp fiber.Map) fiber.Map {
+	t.mu.Lock()
+	errs := t.errors
+	t.mu.Unlock()
+	if len(errs) > 0 {
+		resp["partial"] = true
+		resp["clusterErrors"] = errs
+	}
+	return resp
 }
 
 // MCPHandlers handles MCP-related API endpoints

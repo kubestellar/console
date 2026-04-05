@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 	"time"
@@ -616,7 +617,9 @@ func (s *SQLiteStore) scanCard(row *sql.Row) (*models.Card, error) {
 	if config.Valid {
 		c.Config = json.RawMessage(config.String)
 	}
-	json.Unmarshal([]byte(positionStr), &c.Position)
+	if err := json.Unmarshal([]byte(positionStr), &c.Position); err != nil {
+		slog.Error("[Store] failed to unmarshal card position — card will use zero position", "cardID", idStr, "error", err)
+	}
 	if lastSummary.Valid {
 		c.LastSummary = lastSummary.String
 	}
@@ -644,7 +647,9 @@ func (s *SQLiteStore) scanCardRow(rows *sql.Rows) (*models.Card, error) {
 	if config.Valid {
 		c.Config = json.RawMessage(config.String)
 	}
-	json.Unmarshal([]byte(positionStr), &c.Position)
+	if err := json.Unmarshal([]byte(positionStr), &c.Position); err != nil {
+		slog.Error("[Store] failed to unmarshal card position — card will use zero position", "cardID", idStr, "error", err)
+	}
 	if lastSummary.Valid {
 		c.LastSummary = lastSummary.String
 	}

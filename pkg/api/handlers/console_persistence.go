@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/store"
@@ -21,6 +22,7 @@ type ConsolePersistenceHandlers struct {
 	k8sClient        *k8s.MultiClusterClient
 	watcher          *k8s.ConsoleWatcher
 	hub              *Hub
+	userStore        store.Store
 }
 
 // NewConsolePersistenceHandlers creates a new console persistence handlers instance
@@ -28,11 +30,13 @@ func NewConsolePersistenceHandlers(
 	persistenceStore *store.PersistenceStore,
 	k8sClient *k8s.MultiClusterClient,
 	hub *Hub,
+	userStore store.Store,
 ) *ConsolePersistenceHandlers {
 	h := &ConsolePersistenceHandlers{
 		persistenceStore: persistenceStore,
 		k8sClient:        k8sClient,
 		hub:              hub,
+		userStore:        userStore,
 	}
 
 	// Set up cluster health checker
@@ -42,6 +46,20 @@ func NewConsolePersistenceHandlers(
 	persistenceStore.SetClientFactory(h.getClusterClient)
 
 	return h
+}
+
+// requireAdmin checks that the requesting user has the admin role.
+// Returns a Fiber error if not authorized, nil if authorized (#4750).
+func (h *ConsolePersistenceHandlers) requireAdmin(c *fiber.Ctx) error {
+	if h.userStore == nil {
+		return nil // no user store — skip check (dev/demo mode)
+	}
+	currentUserID := middleware.GetUserID(c)
+	currentUser, err := h.userStore.GetUser(currentUserID)
+	if err != nil || currentUser == nil || currentUser.Role != "admin" {
+		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	}
+	return nil
 }
 
 // checkClusterHealth checks if a cluster is healthy
@@ -140,6 +158,11 @@ func (h *ConsolePersistenceHandlers) GetConfig(c *fiber.Ctx) error {
 // UpdateConfig updates the persistence configuration
 // PUT /api/persistence/config
 func (h *ConsolePersistenceHandlers) UpdateConfig(c *fiber.Ctx) error {
+	// Persistence config changes require admin role (#4750)
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
+
 	var config store.PersistenceConfig
 	if err := c.BodyParser(&config); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
@@ -154,10 +177,13 @@ func (h *ConsolePersistenceHandlers) UpdateConfig(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to save config"})
 	}
 
-	// Restart watcher if needed
+	// Restart watcher if needed. Use a background context instead of the
+	// request-scoped context so the watcher survives after the HTTP response
+	// is sent. The request context is cancelled when the handler returns,
+	// which would immediately stop the watcher (#4749).
 	h.StopWatcher()
 	if config.Enabled {
-		if err := h.StartWatcher(c.Context()); err != nil {
+		if err := h.StartWatcher(context.Background()); err != nil {
 			slog.Error("[ConsolePersistence] failed to start watcher", "error", err)
 		}
 	}
@@ -223,6 +249,10 @@ func (h *ConsolePersistenceHandlers) GetManagedWorkload(c *fiber.Ctx) error {
 // CreateManagedWorkload creates a new managed workload
 // POST /api/persistence/workloads
 func (h *ConsolePersistenceHandlers) CreateManagedWorkload(c *fiber.Ctx) error {
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
+
 	var workload v1alpha1.ManagedWorkload
 	if err := c.BodyParser(&workload); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
@@ -259,6 +289,10 @@ func (h *ConsolePersistenceHandlers) CreateManagedWorkload(c *fiber.Ctx) error {
 // UpdateManagedWorkload updates an existing managed workload
 // PUT /api/persistence/workloads/:name
 func (h *ConsolePersistenceHandlers) UpdateManagedWorkload(c *fiber.Ctx) error {
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
+
 	name := c.Params("name")
 
 	var workload v1alpha1.ManagedWorkload
@@ -291,6 +325,10 @@ func (h *ConsolePersistenceHandlers) UpdateManagedWorkload(c *fiber.Ctx) error {
 // DeleteManagedWorkload deletes a managed workload
 // DELETE /api/persistence/workloads/:name
 func (h *ConsolePersistenceHandlers) DeleteManagedWorkload(c *fiber.Ctx) error {
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
+
 	name := c.Params("name")
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
@@ -361,6 +399,10 @@ func (h *ConsolePersistenceHandlers) GetClusterGroup(c *fiber.Ctx) error {
 // CreateClusterGroup creates a new cluster group
 // POST /api/persistence/groups
 func (h *ConsolePersistenceHandlers) CreateClusterGroup(c *fiber.Ctx) error {
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
+
 	var group v1alpha1.ClusterGroup
 	if err := c.BodyParser(&group); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
@@ -403,6 +445,10 @@ func (h *ConsolePersistenceHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 // UpdateClusterGroup updates an existing cluster group
 // PUT /api/persistence/groups/:name
 func (h *ConsolePersistenceHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
+
 	name := c.Params("name")
 
 	var group v1alpha1.ClusterGroup
@@ -441,6 +487,10 @@ func (h *ConsolePersistenceHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 // DeleteClusterGroup deletes a cluster group
 // DELETE /api/persistence/groups/:name
 func (h *ConsolePersistenceHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
+
 	name := c.Params("name")
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
@@ -646,6 +696,10 @@ func (h *ConsolePersistenceHandlers) GetWorkloadDeployment(c *fiber.Ctx) error {
 // CreateWorkloadDeployment creates a new workload deployment
 // POST /api/persistence/deployments
 func (h *ConsolePersistenceHandlers) CreateWorkloadDeployment(c *fiber.Ctx) error {
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
+
 	var deployment v1alpha1.WorkloadDeployment
 	if err := c.BodyParser(&deployment); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
@@ -690,6 +744,10 @@ func (h *ConsolePersistenceHandlers) CreateWorkloadDeployment(c *fiber.Ctx) erro
 // UpdateWorkloadDeploymentStatus updates the status of a workload deployment
 // PUT /api/persistence/deployments/:name/status
 func (h *ConsolePersistenceHandlers) UpdateWorkloadDeploymentStatus(c *fiber.Ctx) error {
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
+
 	name := c.Params("name")
 
 	var status v1alpha1.WorkloadDeploymentStatus
@@ -728,6 +786,10 @@ func (h *ConsolePersistenceHandlers) UpdateWorkloadDeploymentStatus(c *fiber.Ctx
 // DeleteWorkloadDeployment deletes a workload deployment
 // DELETE /api/persistence/deployments/:name
 func (h *ConsolePersistenceHandlers) DeleteWorkloadDeployment(c *fiber.Ctx) error {
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
+
 	name := c.Params("name")
 
 	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
@@ -781,6 +843,10 @@ func (h *ConsolePersistenceHandlers) reconcileDeployment(ctx context.Context, wd
 // SyncNow triggers an immediate sync of all console resources
 // POST /api/persistence/sync
 func (h *ConsolePersistenceHandlers) SyncNow(c *fiber.Ctx) error {
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
+
 	if !h.persistenceStore.IsEnabled() {
 		return c.Status(400).JSON(fiber.Map{"error": "Persistence not enabled"})
 	}

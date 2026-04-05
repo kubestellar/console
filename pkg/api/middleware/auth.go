@@ -20,6 +20,12 @@ const (
 	// revokedTokenCleanupInterval is how often expired entries are pruned from the
 	// in-memory cache and the persistent store.
 	revokedTokenCleanupInterval = 1 * time.Hour
+
+	// revokedTokenCacheMaxSize is the hard upper bound on the in-memory revoked
+	// token cache. When this limit is reached, the oldest entries are evicted to
+	// prevent unbounded memory growth (#4759). Set high enough that normal usage
+	// never hits it, but low enough to cap memory consumption.
+	revokedTokenCacheMaxSize = 10_000
 )
 
 // UserClaims represents JWT claims for a user
@@ -88,6 +94,30 @@ func InitTokenRevocation(store TokenRevoker) {
 func (c *revokedTokenCache) Revoke(jti string, expiresAt time.Time) {
 	c.Lock()
 	c.tokens[jti] = expiresAt
+	// Evict oldest entries when the cache exceeds its maximum size (#4759).
+	// This is a simple O(n) sweep — acceptable because it only triggers when
+	// the cache is already very large, which signals abnormal token churn.
+	if len(c.tokens) > revokedTokenCacheMaxSize {
+		now := time.Now()
+		// First pass: remove expired entries
+		for id, exp := range c.tokens {
+			if !exp.IsZero() && now.After(exp) {
+				delete(c.tokens, id)
+			}
+		}
+		// Second pass: if still over limit, remove zero-time (backfilled) entries
+		// since those are only a performance optimization for the DB slow path
+		if len(c.tokens) > revokedTokenCacheMaxSize {
+			for id, exp := range c.tokens {
+				if exp.IsZero() {
+					delete(c.tokens, id)
+					if len(c.tokens) <= revokedTokenCacheMaxSize {
+						break
+					}
+				}
+			}
+		}
+	}
 	store := c.store
 	c.Unlock()
 
@@ -144,10 +174,20 @@ func (c *revokedTokenCache) cleanup() {
 	c.Lock()
 	now := time.Now()
 	for jti, exp := range c.tokens {
-		// Remove entries whose JWT has expired. Zero-time entries (backfilled
-		// from DB) are left in place; the DB cleanup will handle them.
+		// Remove entries whose JWT has expired.
 		if !exp.IsZero() && now.After(exp) {
 			delete(c.tokens, jti)
+		}
+	}
+	// Also evict zero-time (backfilled) entries when the cache is above
+	// half its max size, since they're only a DB-query optimization and
+	// can be re-fetched on the slow path if needed (#4759).
+	halfMax := revokedTokenCacheMaxSize / 2
+	if len(c.tokens) > halfMax {
+		for jti, exp := range c.tokens {
+			if exp.IsZero() {
+				delete(c.tokens, jti)
+			}
 		}
 	}
 	store := c.store

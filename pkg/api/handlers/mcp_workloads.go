@@ -47,6 +47,7 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 			var mu sync.Mutex
 			allPods := make([]k8s.PodInfo, 0)
 			clusterTimeout := mcpExtendedTimeout
+			var errTracker clusterErrorTracker
 
 			clusterCtx, clusterCancel := context.WithCancel(c.Context())
 			defer clusterCancel()
@@ -59,7 +60,9 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 					defer cancel()
 
 					pods, err := h.k8sClient.GetPods(ctx, clusterName, namespace)
-					if err == nil && len(pods) > 0 {
+					if err != nil {
+						errTracker.add(clusterName, err)
+					} else if len(pods) > 0 {
 						mu.Lock()
 						allPods = append(allPods, pods...)
 						mu.Unlock()
@@ -68,7 +71,7 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 			}
 
 			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
-			return c.JSON(fiber.Map{"pods": allPods, "source": "k8s"})
+			return c.JSON(errTracker.annotate(fiber.Map{"pods": allPods, "source": "k8s"}))
 		}
 
 		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)

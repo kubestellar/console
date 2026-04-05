@@ -957,7 +957,7 @@ func (s *Server) setupRoutes() {
 	api.Post("/kagenti-provider/tools/call", kagentiProviderHandler.CallTool)
 
 	// Console persistence routes (CRD-based state management)
-	persistenceHandler := handlers.NewConsolePersistenceHandlers(s.persistenceStore, s.k8sClient, s.hub)
+	persistenceHandler := handlers.NewConsolePersistenceHandlers(s.persistenceStore, s.k8sClient, s.hub, s.store)
 	api.Get("/persistence/config", persistenceHandler.GetConfig)
 	api.Put("/persistence/config", persistenceHandler.UpdateConfig)
 	api.Get("/persistence/status", persistenceHandler.GetStatus)
