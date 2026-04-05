@@ -247,14 +247,18 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 
 	if err := conn.ReadJSON(&authMsg); err != nil {
 		slog.Error("[WebSocket] SECURITY: failed to read auth message", "error", err)
-		conn.WriteJSON(Message{Type: "error", Data: map[string]string{"message": "authentication required"}})
+		if wErr := conn.WriteJSON(Message{Type: "error", Data: map[string]string{"message": "authentication required"}}); wErr != nil {
+			slog.Error("[WebSocket] failed to send auth error", "error", wErr)
+		}
 		conn.Close()
 		return
 	}
 
 	if authMsg.Type != "auth" || authMsg.Token == "" {
 		slog.Warn("SECURITY: Invalid or missing auth message")
-		conn.WriteJSON(Message{Type: "error", Data: map[string]string{"message": "authentication required"}})
+		if wErr := conn.WriteJSON(Message{Type: "error", Data: map[string]string{"message": "authentication required"}}); wErr != nil {
+			slog.Error("[WebSocket] failed to send auth error", "error", wErr)
+		}
 		conn.Close()
 		return
 	}
@@ -268,14 +272,18 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 		slog.Info("Demo-mode WebSocket connection for presence tracking (dev mode)")
 	} else if authMsg.Token == "demo-token" && !h.devMode {
 		slog.Warn("SECURITY: Rejected demo-token WebSocket connection (dev mode not enabled)")
-		conn.WriteJSON(Message{Type: "error", Data: map[string]string{"message": "demo-token not allowed in production"}})
+		if wErr := conn.WriteJSON(Message{Type: "error", Data: map[string]string{"message": "demo-token not allowed in production"}}); wErr != nil {
+			slog.Error("[WebSocket] failed to send rejection error", "error", wErr)
+		}
 		conn.Close()
 		return
 	} else if h.jwtSecret != "" {
 		claims, err := middleware.ValidateJWT(authMsg.Token, h.jwtSecret)
 		if err != nil {
 			slog.Warn("[WebSocket] SECURITY: rejected invalid token", "error", err)
-			conn.WriteJSON(Message{Type: "error", Data: map[string]string{"message": "invalid token"}})
+			if wErr := conn.WriteJSON(Message{Type: "error", Data: map[string]string{"message": "invalid token"}}); wErr != nil {
+				slog.Error("[WebSocket] failed to send token error", "error", wErr)
+			}
 			conn.Close()
 			return
 		}
@@ -291,13 +299,19 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 
 	if !authenticated {
 		slog.Error("SECURITY: WebSocket authentication failed")
-		conn.WriteJSON(Message{Type: "error", Data: map[string]string{"message": "authentication failed"}})
+		if wErr := conn.WriteJSON(Message{Type: "error", Data: map[string]string{"message": "authentication failed"}}); wErr != nil {
+			slog.Error("[WebSocket] failed to send auth failure", "error", wErr)
+		}
 		conn.Close()
 		return
 	}
 
 	// Send authentication success message
-	conn.WriteJSON(Message{Type: "authenticated", Data: map[string]string{"status": "connected"}})
+	if err := conn.WriteJSON(Message{Type: "authenticated", Data: map[string]string{"status": "connected"}}); err != nil {
+		slog.Error("[WebSocket] failed to send auth success", "error", err)
+		conn.Close()
+		return
+	}
 
 	// Set idle read deadline — reset on every received message or pong.
 	// This prevents idle connections from holding OS file descriptors forever

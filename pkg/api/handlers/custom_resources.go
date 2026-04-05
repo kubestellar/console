@@ -141,7 +141,10 @@ func (h *MCPHandlers) listCR(
 	}
 
 	content := ul.UnstructuredContent()
-	rawItems, _ := content["items"].([]interface{})
+	rawItems, ok := content["items"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("unexpected type for items field in %s response", gvr.Resource)
+	}
 	items := make([]CustomResourceItem, 0, len(rawItems))
 
 	for _, raw := range rawItems {

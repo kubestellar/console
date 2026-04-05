@@ -297,7 +297,10 @@ func (h *AuthHandler) devModeLogin(c *fiber.Ctx) error {
 		user.GitHubLogin = devLogin
 		user.Email = devEmail
 		user.AvatarURL = avatarURL
-		h.store.UpdateUser(user)
+		if err := h.store.UpdateUser(user); err != nil {
+			slog.Warn("[Auth] failed to update dev user", "user", devLogin, "error", err)
+			return c.Redirect(h.frontendURL+"/login?error=db_error", fiber.StatusTemporaryRedirect)
+		}
 	}
 
 	// Update last login
@@ -429,7 +432,10 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 		user.GitHubLogin = ghUser.Login
 		user.Email = ghUser.Email
 		user.AvatarURL = ghUser.AvatarURL
-		h.store.UpdateUser(user)
+		if err := h.store.UpdateUser(user); err != nil {
+			slog.Warn("[Auth] failed to update user", "user", ghUser.Login, "error", err)
+			return h.oauthErrorRedirect(c, "db_error", "")
+		}
 	}
 
 	// Update last login

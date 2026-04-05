@@ -23,8 +23,9 @@ const (
 	releaseCheckInterval   = 60 * time.Minute
 	healthCheckRetries     = 15
 	healthCheckDelay       = 2 * time.Second
-	githubMainRefURL       = "https://api.github.com/repos/kubestellar/console/git/ref/heads/main"
-	githubReleasesURL      = "https://api.github.com/repos/kubestellar/console/releases"
+	// defaultGitHubRepo is the fallback GitHub owner/repo used when
+	// GITHUB_REPO is not set. Override via env var for forks or GHE.
+	defaultGitHubRepo = "kubestellar/console"
 
 	// Timeouts for each build step — prevents updates from hanging indefinitely
 	gitPullTimeout       = 2 * time.Minute
@@ -39,6 +40,25 @@ const (
 	// Max lines of build output to include in error messages sent to the frontend
 	buildOutputTailLines = 20
 )
+
+// githubRepo returns the GitHub owner/repo slug, preferring the GITHUB_REPO
+// environment variable so forks and GHE instances work out-of-the-box.
+func githubRepo() string {
+	if v := os.Getenv("GITHUB_REPO"); v != "" {
+		return v
+	}
+	return defaultGitHubRepo
+}
+
+// githubMainRefURL builds the GitHub API URL for the main branch ref.
+func githubMainRefURL() string {
+	return fmt.Sprintf("https://api.github.com/repos/%s/git/ref/heads/main", githubRepo())
+}
+
+// githubReleasesURL builds the GitHub API URL for releases.
+func githubReleasesURL() string {
+	return fmt.Sprintf("https://api.github.com/repos/%s/releases", githubRepo())
+}
 
 // UpdateChecker periodically checks for updates and applies them.
 type UpdateChecker struct {
@@ -1086,7 +1106,7 @@ func gitFetchLatestSHA(repoPath string) (string, error) {
 func fetchLatestMainSHAFromGitHub() (string, error) {
 	const githubAPITimeout = 10 * time.Second
 	client := &http.Client{Timeout: githubAPITimeout}
-	resp, err := client.Get(githubMainRefURL)
+	resp, err := client.Get(githubMainRefURL())
 	if err != nil {
 		return "", err
 	}
@@ -1105,7 +1125,7 @@ func fetchLatestMainSHAFromGitHub() (string, error) {
 
 func fetchGitHubReleases() ([]githubReleaseInfo, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Get(githubReleasesURL)
+	resp, err := client.Get(githubReleasesURL())
 	if err != nil {
 		return nil, err
 	}

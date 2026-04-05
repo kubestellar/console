@@ -495,6 +495,9 @@ func (b *Bridge) CallDeployTool(ctx context.Context, name string, args map[strin
 
 func (b *Bridge) parseClustersResult(result *CallToolResult) ([]ClusterInfo, error) {
 	if result.IsError {
+		if len(result.Content) == 0 {
+			return nil, fmt.Errorf("tool returned error with empty content")
+		}
 		return nil, fmt.Errorf("tool error: %s", result.Content[0].Text)
 	}
 
@@ -519,6 +522,9 @@ func (b *Bridge) parseClustersFromText(text string) []ClusterInfo {
 
 func (b *Bridge) parseHealthResult(result *CallToolResult) (*ClusterHealth, error) {
 	if result.IsError {
+		if len(result.Content) == 0 {
+			return nil, fmt.Errorf("tool returned error with empty content")
+		}
 		return nil, fmt.Errorf("tool error: %s", result.Content[0].Text)
 	}
 
@@ -537,6 +543,9 @@ func (b *Bridge) parseHealthResult(result *CallToolResult) (*ClusterHealth, erro
 
 func (b *Bridge) parsePodsResult(result *CallToolResult) ([]PodInfo, error) {
 	if result.IsError {
+		if len(result.Content) == 0 {
+			return nil, fmt.Errorf("tool returned error with empty content")
+		}
 		return nil, fmt.Errorf("tool error: %s", result.Content[0].Text)
 	}
 
@@ -553,6 +562,9 @@ func (b *Bridge) parsePodsResult(result *CallToolResult) ([]PodInfo, error) {
 
 func (b *Bridge) parsePodIssuesResult(result *CallToolResult) ([]PodIssue, error) {
 	if result.IsError {
+		if len(result.Content) == 0 {
+			return nil, fmt.Errorf("tool returned error with empty content")
+		}
 		return nil, fmt.Errorf("tool error: %s", result.Content[0].Text)
 	}
 
@@ -569,6 +581,9 @@ func (b *Bridge) parsePodIssuesResult(result *CallToolResult) ([]PodIssue, error
 
 func (b *Bridge) parseEventsResult(result *CallToolResult) ([]Event, error) {
 	if result.IsError {
+		if len(result.Content) == 0 {
+			return nil, fmt.Errorf("tool returned error with empty content")
+		}
 		return nil, fmt.Errorf("tool error: %s", result.Content[0].Text)
 	}
 
