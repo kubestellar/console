@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   DndContext,
@@ -73,6 +73,7 @@ import { DashboardHealthIndicator } from './DashboardHealthIndicator'
 import { useCardGridNavigation } from '../../hooks/useCardGridNavigation'
 import { useModalState } from '../../lib/modals'
 import { setAutoRefreshPaused } from '../../lib/cache'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 
 // Lazy-load modal components — only shown on explicit user action,
 // so deferring their chunk until first use reduces the initial dashboard bundle.
@@ -181,6 +182,9 @@ export function Dashboard() {
   // Universal stats for cross-dashboard stat blocks
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
+  // Global cluster filter — stats should reflect only selected clusters
+  const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
+
   // Inter-card event bus for cross-card deploy
   const publishCardEvent = useCardPublish()
   const { mutate: deployWorkload } = useDeployWorkload()
@@ -194,18 +198,26 @@ export function Dashboard() {
     groupName: string
   } | null>(null)
 
-  // Stats calculations for StatsOverview
-  const healthyClusters = (clusters || []).filter(c => c.healthy).length
-  const unhealthyClusters = (clusters || []).filter(c => !c.healthy).length
-  const totalPods = (clusters || []).reduce((sum, c) => sum + (c.podCount || 0), 0)
-  const totalNamespaces = (clusters || []).reduce((sum, c) => sum + (c.namespaces?.length || 0), 0)
-  const totalNodes = (clusters || []).reduce((sum, c) => sum + (c.nodeCount || 0), 0)
+  // Apply global cluster filter before computing stats so the overview
+  // reflects only the user's current cluster selection.
+  const filteredClusters = useMemo(() => {
+    const all = clusters || []
+    if (isAllClustersSelected) return all
+    return all.filter(c => globalSelectedClusters.includes(c.name))
+  }, [clusters, globalSelectedClusters, isAllClustersSelected])
+
+  // Stats calculations for StatsOverview (scoped to filtered clusters)
+  const healthyClusters = filteredClusters.filter(c => c.healthy).length
+  const unhealthyClusters = filteredClusters.filter(c => !c.healthy).length
+  const totalPods = filteredClusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
+  const totalNamespaces = filteredClusters.reduce((sum, c) => sum + (c.namespaces?.length || 0), 0)
+  const totalNodes = filteredClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
 
   // Dashboard-specific stats value getter
   const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'clusters':
-        return { value: clusters.length, sublabel: 'total clusters', onClick: () => drillToAllClusters(), isClickable: clusters.length > 0 }
+        return { value: filteredClusters.length, sublabel: 'total clusters', onClick: () => drillToAllClusters(), isClickable: filteredClusters.length > 0 }
       case 'healthy':
         return { value: healthyClusters, sublabel: 'healthy', onClick: () => drillToAllClusters('healthy'), isClickable: healthyClusters > 0 }
       case 'warnings':
@@ -221,7 +233,7 @@ export function Dashboard() {
       default:
         return { value: '-' }
     }
-  }, [clusters, healthyClusters, unhealthyClusters, totalNamespaces, totalNodes, totalPods, drillToAllClusters, drillToAllNodes, drillToAllPods, navigate])
+  }, [filteredClusters, healthyClusters, unhealthyClusters, totalNamespaces, totalNodes, totalPods, drillToAllClusters, drillToAllNodes, drillToAllPods, navigate])
 
   // Merged getter: dashboard-specific values first, then universal fallback
   const getStatValue = useCallback(

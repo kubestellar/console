@@ -174,6 +174,16 @@ vi.mock('../../../hooks/useRefreshIndicator', () => ({
 }))
 vi.mock('../../../hooks/useDemoMode', () => ({ getDemoMode: () => false }))
 
+const mockGlobalFilters = {
+  selectedClusters: [] as string[],
+  isAllClustersSelected: true,
+  customFilter: '',
+  filterByCluster: <T,>(items: T[]) => items,
+}
+vi.mock('../../../hooks/useGlobalFilters', () => ({
+  useGlobalFilters: () => mockGlobalFilters,
+}))
+
 // Mock child components as minimal stubs
 vi.mock('../DashboardDropZone', () => ({ DashboardDropZone: () => <div data-testid="drop-zone" /> }))
 vi.mock('../CardRecommendations', () => ({ CardRecommendations: () => <div data-testid="card-recs" /> }))
@@ -203,8 +213,12 @@ vi.mock('../WelcomeCard', () => ({ WelcomeCard: () => <div data-testid="welcome-
 vi.mock('../../shared/DashboardHeader', () => ({
   DashboardHeader: ({ title }: { title: string }) => <div data-testid="dashboard-header">{title}</div>,
 }))
+let capturedGetStatValue: ((blockId: string) => { value: unknown }) | null = null
 vi.mock('../../ui/StatsOverview', () => ({
-  StatsOverview: () => <div data-testid="stats-overview" />,
+  StatsOverview: ({ getStatValue }: { getStatValue: (id: string) => { value: unknown } }) => {
+    capturedGetStatValue = getStatValue
+    return <div data-testid="stats-overview" />
+  },
   StatBlockValue: {},
 }))
 vi.mock('../dashboardUtils', () => ({
@@ -247,6 +261,10 @@ describe('Dashboard', () => {
     mockSafeGetJSON.mockReturnValue(null)
     mockLocation.pathname = '/'
     mockLocation.key = 'test-key'
+    capturedGetStatValue = null
+    // Reset global filter to default (all clusters)
+    mockGlobalFilters.selectedClusters = []
+    mockGlobalFilters.isAllClustersSelected = true
 
     // Return empty dashboards to avoid recursive API calls
     mockApiGet.mockResolvedValue({ data: [] })
@@ -337,5 +355,45 @@ describe('Dashboard', () => {
   it('shows drop zone component', () => {
     render(<Dashboard />)
     expect(screen.getByTestId('drop-zone')).toBeInTheDocument()
+  })
+
+  describe('global cluster filter', () => {
+    it('shows all-cluster totals when no filter is applied', () => {
+      // Default: isAllClustersSelected = true
+      mockGlobalFilters.selectedClusters = []
+      mockGlobalFilters.isAllClustersSelected = true
+      render(<Dashboard />)
+      expect(capturedGetStatValue).toBeTruthy()
+      // Both clusters counted (prod + staging)
+      expect(capturedGetStatValue!('clusters').value).toBe(2)
+      // 50 + 20 = 70 total pods
+      expect(capturedGetStatValue!('pods').value).toBe(70)
+      // 3 + 1 = 4 nodes
+      expect(capturedGetStatValue!('nodes').value).toBe(4)
+    })
+
+    it('scopes stats to selected clusters when global filter is active', () => {
+      // Filter to only 'prod' cluster
+      mockGlobalFilters.selectedClusters = ['prod']
+      mockGlobalFilters.isAllClustersSelected = false
+      render(<Dashboard />)
+      expect(capturedGetStatValue).toBeTruthy()
+      // Only prod counted
+      expect(capturedGetStatValue!('clusters').value).toBe(1)
+      expect(capturedGetStatValue!('healthy').value).toBe(1)
+      expect(capturedGetStatValue!('errors').value).toBe(0)
+      expect(capturedGetStatValue!('pods').value).toBe(50)
+      expect(capturedGetStatValue!('nodes').value).toBe(3)
+    })
+
+    it('shows zero stats when filter selects no matching clusters', () => {
+      mockGlobalFilters.selectedClusters = ['nonexistent']
+      mockGlobalFilters.isAllClustersSelected = false
+      render(<Dashboard />)
+      expect(capturedGetStatValue).toBeTruthy()
+      expect(capturedGetStatValue!('clusters').value).toBe(0)
+      expect(capturedGetStatValue!('pods').value).toBe(0)
+      expect(capturedGetStatValue!('nodes').value).toBe(0)
+    })
   })
 })
