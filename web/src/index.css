@@ -131,29 +131,29 @@
 
   /* Light theme fallback (overridden by JS when theme provider loads) */
   .light {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 4%;
+    --background: 220 20% 97%;
+    --foreground: 224 71% 4%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 4%;
-    --primary: 252 73% 56%;
+    --card-foreground: 224 71% 4%;
+    --primary: 252 73% 50%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
+    --secondary: 220 14% 92%;
+    --secondary-foreground: 224 71% 4%;
+    --muted: 220 14% 92%;
+    --muted-foreground: 220 9% 43%;
+    --accent: 220 14% 92%;
+    --accent-foreground: 224 71% 4%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 252 73% 56%;
+    --border: 220 13% 83%;
+    --input: 220 13% 87%;
+    --ring: 252 73% 50%;
 
-    --glass-background: rgb(255, 255, 255);
-    --glass-border: rgba(0, 0, 0, 0.1);
-    --glass-shadow: rgba(147, 51, 234, 0.1);
-    --scrollbar-thumb: rgba(147, 51, 234, 0.2);
-    --scrollbar-thumb-hover: rgba(147, 51, 234, 0.4);
+    --glass-background: rgba(255, 255, 255, 0.95);
+    --glass-border: rgba(0, 0, 0, 0.12);
+    --glass-shadow: rgba(0, 0, 0, 0.08);
+    --scrollbar-thumb: rgba(147, 51, 234, 0.25);
+    --scrollbar-thumb-hover: rgba(147, 51, 234, 0.45);
   }
 }
 
@@ -242,11 +242,12 @@
     0 3px 6px 0 rgba(0, 0, 0, 0.7);
 }
 
-/* Light mode: softer card shadows (#4254) */
+/* Light mode: visible but not heavy card shadows (#4254, #4880) */
 .light .glass {
+  border: 1px solid var(--glass-border);
   box-shadow:
-    0 1px 3px 0 rgba(0, 0, 0, 0.08),
-    0 1px 2px -1px rgba(0, 0, 0, 0.06);
+    0 1px 3px 0 rgba(0, 0, 0, 0.1),
+    0 2px 8px -2px rgba(0, 0, 0, 0.08);
 }
 
 /* Card hover effects - uses theme shadow */

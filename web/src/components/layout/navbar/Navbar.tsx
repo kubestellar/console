@@ -177,7 +177,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
             {theme === 'dark' ? (
               <Moon className="w-5 h-5 text-muted-foreground" />
             ) : theme === 'light' ? (
-              <Sun className="w-5 h-5 text-yellow-400" />
+              <Sun className="w-5 h-5 text-amber-600 dark:text-yellow-400" />
             ) : (
               <Monitor className="w-5 h-5 text-muted-foreground" />
             )}
