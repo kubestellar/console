@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Terminal, Globe, Rocket, X, ExternalLink, Copy, Check } from 'lucide-react'
 import { cn } from '../../lib/cn'
@@ -20,6 +20,13 @@ export function WelcomeCard() {
   const [dismissed, setDismissed] = useState(() => safeGetItem(DISMISSED_KEY) === 'true')
   const [copied, setCopied] = useState(false)
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Clean up pending copy-feedback timer on unmount (#4662)
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    }
+  }, [])
 
   if (dismissed) return null
 

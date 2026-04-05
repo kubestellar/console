@@ -132,13 +132,16 @@ export function MissionSuggestions() {
       }
     }
 
-    // Use setTimeout to avoid closing immediately when clicking to open
-    setTimeout(() => {
+    // Use setTimeout to avoid closing immediately when clicking to open.
+    // Store the timer ID so we can cancel it if the effect re-runs or unmounts
+    // before the callback fires — otherwise listeners attach after cleanup (#4660).
+    const timerId = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside)
       document.addEventListener('keydown', handleEscape)
     }, 0)
 
     return () => {
+      clearTimeout(timerId)
       document.removeEventListener('mousedown', handleClickOutside)
       document.removeEventListener('keydown', handleEscape)
     }

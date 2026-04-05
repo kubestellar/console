@@ -277,6 +277,9 @@ export function CustomDashboard() {
   // Storage key for this dashboard's cards
   const storageKey = `kubestellar-custom-dashboard-${id}-cards`
 
+  // Request ID tracking — prevents stale async responses from overwriting newer state (#4664)
+  const requestIdRef = useRef(0)
+
   // Undo/redo support
   const cardsRef = useRef(cards)
   cardsRef.current = cards
@@ -290,6 +293,9 @@ export function CustomDashboard() {
   // Load dashboard
   const loadDashboard = useCallback(async (isRefresh = false) => {
     if (!id) return
+
+    // Increment request ID so stale responses are discarded (#4664)
+    const thisRequestId = ++requestIdRef.current
 
     if (isRefresh) {
       setIsRefreshing(true)
@@ -308,6 +314,10 @@ export function CustomDashboard() {
 
       // Then fetch from API
       const data = await getDashboardWithCards(id)
+
+      // Discard if a newer request has been issued while we were waiting
+      if (thisRequestId !== requestIdRef.current) return
+
       if (data) {
         setDashboard(data)
         if (data.cards && data.cards.length > 0) {
@@ -321,6 +331,9 @@ export function CustomDashboard() {
       }
       setLastUpdated(new Date())
     } catch (error) {
+      // Discard errors from stale requests
+      if (thisRequestId !== requestIdRef.current) return
+
       const isExpectedFailure = error instanceof BackendUnavailableError ||
         error instanceof UnauthenticatedError ||
         (error instanceof Error && (
@@ -339,8 +352,11 @@ export function CustomDashboard() {
         showToast('Failed to load dashboard', 'error')
       }
     } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
+      // Only clear loading state if this is still the latest request
+      if (thisRequestId === requestIdRef.current) {
+        setIsLoading(false)
+        setIsRefreshing(false)
+      }
     }
   }, [id, getDashboardWithCards, showToast, storageKey])
 

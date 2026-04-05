@@ -150,7 +150,7 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
           <motion.div
             role="dialog"
             aria-modal="true"
-            aria-label="Mission Control"
+            aria-label={state.title || 'Mission Control'}
             className="fixed z-[200] flex flex-col bg-background rounded-xl border border-border shadow-2xl shadow-black/30 overflow-hidden"
             style={{
               inset: `${MODAL_INSET_PX}px`,
@@ -178,7 +178,7 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h1 className="text-lg font-semibold">Mission Control</h1>
+                    <h1 className="text-lg font-semibold">{state.title || 'Mission Control'}</h1>
                     {state.isDryRun && (
                       <span className="px-2 py-0.5 text-2xs font-bold uppercase tracking-wider rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
                         DRY RUN

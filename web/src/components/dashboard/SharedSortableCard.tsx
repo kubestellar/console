@@ -25,6 +25,26 @@ interface SortableCardProps {
   isWorkloadDragActive?: boolean
 }
 
+/**
+ * Shallow-equal comparison for card config objects.
+ * Replaces JSON.stringify which is O(n) allocation-heavy and unstable
+ * for semantically equivalent objects with different key order (#4665).
+ */
+function shallowEqualConfig(
+  a: Record<string, unknown> | undefined,
+  b: Record<string, unknown> | undefined,
+): boolean {
+  if (a === b) return true
+  if (!a || !b) return false
+  const keysA = Object.keys(a)
+  const keysB = Object.keys(b)
+  if (keysA.length !== keysB.length) return false
+  for (const key of keysA) {
+    if (a[key] !== b[key]) return false
+  }
+  return true
+}
+
 /** Below this width, clamp small cards to half-width (6 cols) for readability */
 const NARROW_BREAKPOINT = 1024
 
@@ -133,7 +153,7 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
     (prevProps.card.position?.h || 2) === (nextProps.card.position?.h || 2) &&
     prevProps.card.title === nextProps.card.title &&
     prevProps.card.last_summary === nextProps.card.last_summary &&
-    JSON.stringify(prevProps.card.config) === JSON.stringify(nextProps.card.config) &&
+    shallowEqualConfig(prevProps.card.config, nextProps.card.config) &&
     prevProps.isDragging === nextProps.isDragging &&
     prevProps.isRefreshing === nextProps.isRefreshing &&
     prevProps.lastUpdated === nextProps.lastUpdated &&

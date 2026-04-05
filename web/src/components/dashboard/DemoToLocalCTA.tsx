@@ -55,6 +55,13 @@ export function DemoToLocalCTA() {
     }
   }, [shouldShow])
 
+  // Clean up pending copy-feedback timer on unmount (#4663)
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    }
+  }, [])
+
   if (!shouldShow) return null
 
   const handleDismiss = () => {
