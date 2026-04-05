@@ -108,7 +108,6 @@ const KNOWN_VIOLATIONS: Record<string, Set<string>> = {
   'GatewayStatus.tsx': new Set(['bare-isLoading']),
   'GPUStatus.tsx': new Set(['bare-isLoading']),
   'HelmHistory.tsx': new Set(['bare-isLoading']),
-  'HelmReleaseStatus.tsx': new Set(['missing-isRefreshing']),
   'insights/CrossClusterEventCorrelation.tsx': new Set(['missing-isRefreshing']),
   'kagenti/KagentiAgentDiscovery.tsx': new Set(['bare-isLoading']),
   'kagenti/KagentiAgentFleet.tsx': new Set(['bare-isLoading']),

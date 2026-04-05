@@ -55,6 +55,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
   const {
     releases: allHelmReleases,
     isLoading: releasesLoading,
+    isRefreshing,
     isFailed,
     consecutiveFailures,
     isDemoFallback: isDemoData,
@@ -63,6 +64,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: clustersLoading || releasesLoading,
+    isRefreshing,
     hasAnyData: allHelmReleases.length > 0,
     isFailed,
     consecutiveFailures,
