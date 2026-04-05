@@ -320,10 +320,9 @@ describe('useDashboardCards', () => {
       })
 
       expect(result.current.cards).toEqual(DEFAULT_CARDS)
-      // Note: resetToDefaults calls localStorage.removeItem, but the useEffect
-      // that watches `cards` re-persists the defaultCards immediately after.
-      // The net effect is that localStorage contains the default cards again.
-      expect(readStoredCards()).toEqual(DEFAULT_CARDS)
+      // resetToDefaults removes the localStorage key and skips the persistence
+      // effect so the key stays removed (fixes #4686 — reset no longer undone)
+      expect(localStorage.getItem(TEST_STORAGE_KEY)).toBeNull()
     })
 
     it('restores to empty array when no defaultCards were provided', () => {
@@ -341,16 +340,34 @@ describe('useDashboardCards', () => {
 
       expect(result.current.cards).toEqual([])
     })
+
+    it('does not re-persist defaults after reset (fixes #4686)', () => {
+      const { result } = renderHook(() =>
+        useDashboardCards({ storageKey: TEST_STORAGE_KEY, defaultCards: DEFAULT_CARDS }),
+      )
+
+      // Customize, then reset
+      act(() => {
+        result.current.addCard('extra')
+      })
+      act(() => {
+        result.current.resetToDefaults()
+      })
+
+      // The persistence effect should have been skipped — key stays removed
+      expect(localStorage.getItem(TEST_STORAGE_KEY)).toBeNull()
+
+      // isCustomized should return false since the key is gone
+      expect(result.current.isCustomized()).toBe(false)
+    })
   })
 
   // ── isCustomized ────────────────────────────────────────────────────────
 
   describe('isCustomized', () => {
-    it('returns false before any mutation persists', () => {
-      // localStorage is empty at this point — but the useEffect that persists
-      // defaultCards fires asynchronously. The useState initializer sets cards
-      // to defaultCards, and the useEffect writes them. After render, isCustomized
-      // will reflect whether localStorage has been written.
+    it('returns false when stored cards match defaults (fixes #4687)', () => {
+      // The useEffect persists defaultCards to localStorage on first render.
+      // isCustomized now compares content, not just key existence.
       localStorage.removeItem(TEST_STORAGE_KEY)
 
       const { result } = renderHook(() =>
@@ -358,8 +375,8 @@ describe('useDashboardCards', () => {
       )
 
       // After the first render, the useEffect persists cards to localStorage,
-      // so isCustomized should return true (localStorage key now exists).
-      expect(result.current.isCustomized()).toBe(true)
+      // but since the stored content matches defaultCards, isCustomized returns false.
+      expect(result.current.isCustomized()).toBe(false)
     })
 
     it('returns true when cards have been modified', () => {
@@ -367,12 +384,11 @@ describe('useDashboardCards', () => {
         useDashboardCards({ storageKey: TEST_STORAGE_KEY, defaultCards: DEFAULT_CARDS }),
       )
 
-      // After initial render + useEffect, localStorage has the default cards
-      // so isCustomized returns true (key exists).
       act(() => {
         result.current.addCard('extra')
       })
 
+      // After adding a card, stored content differs from defaults
       expect(result.current.isCustomized()).toBe(true)
     })
 
@@ -380,16 +396,31 @@ describe('useDashboardCards', () => {
       // Manually ensure the key is absent
       localStorage.removeItem(TEST_STORAGE_KEY)
 
+      // Use a fresh render to avoid persistence effect writing the key
       const { result } = renderHook(() =>
         useDashboardCards({ storageKey: TEST_STORAGE_KEY, defaultCards: DEFAULT_CARDS }),
       )
 
-      // Before useEffect fires, call isCustomized synchronously
-      // This checks only whether the localStorage key exists —
-      // the hook's useEffect will set it, but isCustomized is just a
-      // wrapper around localStorage.getItem !== null.
-      // After renderHook, the effect has already fired, so the key exists.
+      // After renderHook, the effect persists defaults. Since content matches
+      // defaults, isCustomized returns false.
+      expect(result.current.isCustomized()).toBe(false)
+    })
+
+    it('returns false after resetToDefaults even if key gets re-written', () => {
+      const { result } = renderHook(() =>
+        useDashboardCards({ storageKey: TEST_STORAGE_KEY, defaultCards: DEFAULT_CARDS }),
+      )
+
+      // Customize, then reset
+      act(() => {
+        result.current.addCard('extra')
+      })
       expect(result.current.isCustomized()).toBe(true)
+
+      act(() => {
+        result.current.resetToDefaults()
+      })
+      expect(result.current.isCustomized()).toBe(false)
     })
   })
 

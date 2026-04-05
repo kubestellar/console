@@ -269,8 +269,12 @@ export function useClusterCapabilities(enabled = true) {
   const [isLoading, setIsLoading] = useState(enabled)
   const [error, setError] = useState<Error | null>(null)
 
+  // Use a ref to always have the latest enabled value, avoiding stale closures
+  const enabledRef = useRef(enabled)
+  enabledRef.current = enabled
+
   const fetchData = useCallback(async () => {
-    if (!enabled) return
+    if (!enabledRef.current) return
     setIsLoading(true)
     setError(null)
 
@@ -286,7 +290,7 @@ export function useClusterCapabilities(enabled = true) {
     } finally {
       setIsLoading(false)
     }
-  }, [enabled])
+  }, [])
 
   useEffect(() => {
     if (!enabled) {

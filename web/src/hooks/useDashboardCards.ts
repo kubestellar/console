@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 export interface DashboardCard {
   id: string
@@ -17,6 +17,9 @@ interface UseDashboardCardsOptions {
 
 export function useDashboardCards({ storageKey, defaultCards = [], defaultCollapsed = false }: UseDashboardCardsOptions) {
   const collapsedKey = `${storageKey}:collapsed`
+
+  // Track whether a reset just happened so the persistence effect can skip one cycle
+  const skipPersistRef = useRef(false)
 
   const [cards, setCards] = useState<DashboardCard[]>(() => {
     try {
@@ -47,8 +50,12 @@ export function useDashboardCards({ storageKey, defaultCards = [], defaultCollap
     setIsCollapsed(prev => !prev)
   }, [])
 
-  // Save to localStorage when cards change
+  // Save to localStorage when cards change — skip if resetToDefaults just fired
   useEffect(() => {
+    if (skipPersistRef.current) {
+      skipPersistRef.current = false
+      return
+    }
     localStorage.setItem(storageKey, JSON.stringify(cards))
   }, [cards, storageKey])
 
@@ -82,13 +89,23 @@ export function useDashboardCards({ storageKey, defaultCards = [], defaultCollap
   }, [])
 
   const resetToDefaults = useCallback(() => {
+    skipPersistRef.current = true
     setCards(defaultCards)
     localStorage.removeItem(storageKey)
   }, [defaultCards, storageKey])
 
   const isCustomized = useCallback(() => {
-    return localStorage.getItem(storageKey) !== null
-  }, [storageKey])
+    const stored = localStorage.getItem(storageKey)
+    if (stored === null) return false
+    // Compare actual content to defaults — key existence alone is not sufficient
+    // because the persistence effect may have re-written the default state
+    try {
+      const parsed = JSON.parse(stored)
+      return JSON.stringify(parsed) !== JSON.stringify(defaultCards)
+    } catch {
+      return false
+    }
+  }, [storageKey, defaultCards])
 
   return {
     cards,

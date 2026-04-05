@@ -47,6 +47,7 @@ let presencePingInterval: ReturnType<typeof setInterval> | null = null
 
 // Netlify heartbeat state (serverless mode)
 let heartbeatStarted = false
+let heartbeatTimeoutId: ReturnType<typeof setTimeout> | null = null
 
 // Smoothing for unstable Netlify Blobs counts (eventual consistency causes fluctuations)
 const recentCounts: number[] = []
@@ -91,12 +92,35 @@ function startHeartbeat() {
   // Subsequent heartbeats with jitter to spread them out
   function scheduleNextHeartbeat() {
     const jitter = Math.random() * HEARTBEAT_JITTER
-    setTimeout(() => {
+    heartbeatTimeoutId = setTimeout(() => {
       sendHeartbeat()
       scheduleNextHeartbeat()
     }, HEARTBEAT_INTERVAL + jitter)
   }
   scheduleNextHeartbeat()
+}
+
+// Stop heartbeat timer chain
+function stopHeartbeat() {
+  if (heartbeatTimeoutId) {
+    clearTimeout(heartbeatTimeoutId)
+    heartbeatTimeoutId = null
+  }
+  heartbeatStarted = false
+}
+
+// Tear down presence WebSocket connection
+function stopPresenceConnection() {
+  if (presencePingInterval) {
+    clearInterval(presencePingInterval)
+    presencePingInterval = null
+  }
+  if (presenceWs) {
+    presenceWs.onclose = null // Prevent reconnect from onclose handler
+    presenceWs.close()
+    presenceWs = null
+  }
+  presenceStarted = false
 }
 
 // Start WebSocket presence connection (backend mode)
@@ -306,11 +330,15 @@ export function useActiveUsers() {
       window.removeEventListener('kc-demo-mode-change', handleDemoChange)
       document.removeEventListener('visibilitychange', handleVisibility)
 
-      // Stop polling when no subscribers remain to prevent leaked intervals
-      if (subscribers.size === 0 && pollInterval) {
-        clearInterval(pollInterval)
-        pollInterval = null
-        pollStarted = false
+      // Stop all singleton resources when no subscribers remain
+      if (subscribers.size === 0) {
+        if (pollInterval) {
+          clearInterval(pollInterval)
+          pollInterval = null
+          pollStarted = false
+        }
+        stopHeartbeat()
+        stopPresenceConnection()
       }
     }
   }, [])

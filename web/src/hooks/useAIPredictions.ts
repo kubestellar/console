@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type {
   AIPrediction,
   AIPredictionsResponse,
@@ -14,7 +14,7 @@ import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS, WS_RECONNECT_DELAY_MS, UI_FEEDBACK_TIMEOUT_MS, RETRY_DELAY_MS } from '../lib/constants/network'
 
 const AGENT_HTTP_URL = LOCAL_AGENT_HTTP_URL
-const POLL_INTERVAL = 30000 // Poll every 30 seconds as fallback
+const POLL_INTERVAL_MS = 30_000 // Poll every 30 seconds as fallback
 
 // Demo mode predictions
 const DEMO_AI_PREDICTIONS: AIPrediction[] = [
@@ -52,6 +52,8 @@ let providers: string[] = []
 let isStale = false
 let wsConnected = false
 let ws: WebSocket | null = null
+let singletonPollInterval: ReturnType<typeof setInterval> | null = null
+let wsReconnectTimeout: ReturnType<typeof setTimeout> | null = null
 const subscribers = new Set<() => void>()
 
 // Notify all subscribers
@@ -123,6 +125,7 @@ async function fetchAIPredictions(): Promise<void> {
       // Endpoint not implemented yet, use empty predictions
       aiPredictions = []
       isStale = true
+      notifySubscribers()
     } else {
       reportAgentDataError('/predictions/ai', `HTTP ${response.status}`)
     }
@@ -181,8 +184,10 @@ function connectWebSocket(): void {
     ws.onclose = () => {
       wsConnected = false
       ws = null
-      // Reconnect after delay
-      setTimeout(connectWebSocket, WS_RECONNECT_DELAY_MS)
+      // Only reconnect if there are still active subscribers
+      if (subscribers.size > 0) {
+        wsReconnectTimeout = setTimeout(connectWebSocket, WS_RECONNECT_DELAY_MS)
+      }
     }
 
     ws.onerror = () => {
@@ -230,6 +235,31 @@ async function triggerAnalysis(specificProviders?: string[]): Promise<boolean> {
   }
 }
 
+/** Start singleton polling — only starts once regardless of how many hook instances exist */
+function startSingletonPolling() {
+  if (singletonPollInterval) return
+  fetchAIPredictions()
+  singletonPollInterval = setInterval(fetchAIPredictions, POLL_INTERVAL_MS)
+}
+
+/** Stop all singleton resources when the last subscriber unmounts */
+function stopSingleton() {
+  if (singletonPollInterval) {
+    clearInterval(singletonPollInterval)
+    singletonPollInterval = null
+  }
+  if (wsReconnectTimeout) {
+    clearTimeout(wsReconnectTimeout)
+    wsReconnectTimeout = null
+  }
+  if (ws) {
+    ws.onclose = null // Prevent reconnect from onclose handler
+    ws.close()
+    ws = null
+    wsConnected = false
+  }
+}
+
 /**
  * Hook to access AI predictions
  */
@@ -241,7 +271,6 @@ export function useAIPredictions() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [stale, setStale] = useState(isStale)
   const [activeProviders, setActiveProviders] = useState<string[]>(providers)
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Subscribe to state updates
   useEffect(() => {
@@ -255,19 +284,15 @@ export function useAIPredictions() {
     subscribers.add(handleUpdate)
     handleUpdate() // Get initial state
 
-    // Start WebSocket connection
+    // Start WebSocket and polling only when first subscriber mounts
     connectWebSocket()
-
-    // Initial fetch
-    fetchAIPredictions()
-
-    // Set up polling as fallback
-    pollRef.current = setInterval(fetchAIPredictions, POLL_INTERVAL)
+    startSingletonPolling()
 
     return () => {
       subscribers.delete(handleUpdate)
-      if (pollRef.current) {
-        clearInterval(pollRef.current)
+      // Tear down singleton resources when last subscriber unmounts
+      if (subscribers.size === 0) {
+        stopSingleton()
       }
     }
   }, [])
