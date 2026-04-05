@@ -86,7 +86,7 @@ const RESOURCE_COLORS: Partial<Record<ResourceKind, { bg: string; text: string; 
   Policy: { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30' },
 }
 
-const DEFAULT_COLORS = { bg: 'bg-gray-500/20', text: 'text-muted-foreground', border: 'border-gray-500/30' }
+const DEFAULT_COLORS = { bg: 'bg-gray-500/20 dark:bg-gray-400/20', text: 'text-muted-foreground', border: 'border-gray-500/30 dark:border-gray-400/30' }
 
 interface ResourceBadgesProps {
   /** Resource context to display badges for */

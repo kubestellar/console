@@ -39,9 +39,9 @@ const ACTION_STYLES = {
     badge: 'bg-purple-500/30',
   },
   custom: {
-    base: 'bg-gray-500/20 text-muted-foreground',
-    hover: 'hover:bg-gray-500/30',
-    badge: 'bg-gray-500/30',
+    base: 'bg-gray-500/20 text-muted-foreground dark:bg-gray-400/20',
+    hover: 'hover:bg-gray-500/30 dark:hover:bg-gray-400/30',
+    badge: 'bg-gray-500/30 dark:bg-gray-400/30',
   },
 }
 

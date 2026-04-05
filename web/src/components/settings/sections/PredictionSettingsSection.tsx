@@ -111,7 +111,7 @@ export function PredictionSettingsSection({
             aria-label={settings.aiEnabled ? 'Disable AI predictions' : 'Enable AI predictions'}
           >
             <span
-              className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+              className={`absolute top-1 w-4 h-4 rounded-full bg-white dark:bg-gray-100 transition-transform ${
                 settings.aiEnabled ? 'left-7' : 'left-1'
               }`}
             />
@@ -209,7 +209,7 @@ export function PredictionSettingsSection({
                 aria-label={settings.consensusMode ? 'Disable consensus mode' : 'Enable consensus mode'}
               >
                 <span
-                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white dark:bg-gray-100 transition-transform ${
                     settings.consensusMode ? 'left-5' : 'left-0.5'
                   }`}
                 />

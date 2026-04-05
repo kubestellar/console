@@ -166,7 +166,7 @@ export function RewardsPanel() {
                 </StatusBadge>
               )}
               {githubRewards.breakdown.other_issues > 0 && (
-                <StatusBadge color="purple" rounded="full" className="!bg-gray-500/20 !text-muted-foreground" icon={<AlertCircle className="w-3 h-3" />}>
+                <StatusBadge color="purple" rounded="full" className="!bg-gray-500/20 !text-muted-foreground dark:!bg-gray-400/20" icon={<AlertCircle className="w-3 h-3" />}>
                   {githubRewards.breakdown.other_issues} Issues
                 </StatusBadge>
               )}

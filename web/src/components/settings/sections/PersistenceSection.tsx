@@ -138,7 +138,7 @@ export function PersistenceSection() {
           }`}
         >
           <span
-            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+            className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-gray-100 transition-transform ${
               localConfig.enabled ? 'translate-x-6' : 'translate-x-1'
             }`}
           />

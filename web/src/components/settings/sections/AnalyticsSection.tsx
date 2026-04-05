@@ -60,7 +60,7 @@ export function AnalyticsSection() {
             aria-label={t('settings.analytics.collectData')}
           >
             <span
-              className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
+              className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white dark:bg-gray-100 transition-transform ${
                 !optedOut ? 'translate-x-5' : ''
               }`}
             />
@@ -86,7 +86,7 @@ export function AnalyticsSection() {
             aria-label={t('settings.analytics.onboardingHints', 'Onboarding hints & banners')}
           >
             <span
-              className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
+              className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white dark:bg-gray-100 transition-transform ${
                 !hintsSuppressed ? 'translate-x-5' : ''
               }`}
             />

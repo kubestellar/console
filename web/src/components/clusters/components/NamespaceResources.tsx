@@ -217,7 +217,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
       case 'cyan': return 'bg-cyan-500/20 text-cyan-400'
       case 'purple': return 'bg-purple-500/20 text-purple-400'
       case 'orange': return 'bg-orange-500/20 text-orange-400'
-      default: return 'bg-gray-500/20 text-muted-foreground'
+      default: return 'bg-gray-500/20 text-muted-foreground dark:bg-gray-400/20'
     }
   }
 

@@ -342,7 +342,7 @@ function DroppableGroup({ group, isExpanded, clusterHealthMap, onToggle, onEdit,
         <div className="flex items-center gap-1">
           <button
             onClick={onEdit}
-            className="p-1 rounded hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1 rounded hover:bg-gray-900/10 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
             title={t('cards:clusterGroups.editGroup')}
           >
             <Edit2 className="w-3 h-3" />
@@ -541,7 +541,7 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
     <div className="rounded-lg border border-blue-500/40 bg-blue-500/5 p-3 space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-blue-400">{t('cards:clusterGroups.newClusterGroup')}</span>
-        <button onClick={onCancel} className="p-2 hover:bg-white/10 rounded min-h-11 min-w-11 flex items-center justify-center">
+        <button onClick={onCancel} className="p-2 hover:bg-gray-900/10 dark:hover:bg-white/10 rounded min-h-11 min-w-11 flex items-center justify-center">
           <X className="w-3.5 h-3.5 text-muted-foreground" />
         </button>
       </div>
@@ -1049,7 +1049,7 @@ function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onC
     <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/5 p-3 space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-yellow-400">{t('common:common.edit')}: {group.name}</span>
-        <button onClick={onCancel} className="p-2 hover:bg-white/10 rounded min-h-11 min-w-11 flex items-center justify-center">
+        <button onClick={onCancel} className="p-2 hover:bg-gray-900/10 dark:hover:bg-white/10 rounded min-h-11 min-w-11 flex items-center justify-center">
           <X className="w-3.5 h-3.5 text-muted-foreground" />
         </button>
       </div>
@@ -1154,7 +1154,7 @@ function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onC
         </button>
         <button
           onClick={handleSave}
-          className="flex-1 py-1.5 text-xs font-medium rounded-md bg-yellow-500 text-black hover:bg-yellow-400 transition-colors"
+          className="flex-1 py-1.5 text-xs font-medium rounded-md bg-yellow-500 text-black dark:text-gray-900 hover:bg-yellow-400 transition-colors"
         >
           {t('common:common.save')}
         </button>

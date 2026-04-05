@@ -436,7 +436,7 @@ After installation, the user can create virtual clusters on this host cluster fr
                             <div className="flex items-center gap-1.5">
                               <div className={`w-1.5 h-1.5 rounded-full ${
                                 isRunning ? 'bg-green-500' : 
-                                isStopped ? 'bg-gray-500' : 
+                                isStopped ? 'bg-gray-500 dark:bg-gray-400' :
                                 'bg-orange-500'
                               }`} />
                               <span className={

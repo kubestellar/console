@@ -339,7 +339,7 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
                       mfg === 'NVIDIA' ? 'bg-green-500/20 text-green-400' :
                       mfg === 'AMD' ? 'bg-red-500/20 text-red-400' :
                       mfg === 'Intel' ? 'bg-blue-500/20 text-blue-400' :
-                      'bg-gray-500/20 text-muted-foreground'
+                      'bg-gray-500/20 text-muted-foreground dark:bg-gray-400/20'
                     }`}
                   >
                     {mfg}: {count} GPUs
