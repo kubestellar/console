@@ -90,7 +90,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
   }, [globalSelectedClusters, isAllClustersSelected])
 
   // Fetch ALL Helm releases from all clusters once (not per-cluster)
-  const { releases: allHelmReleases, isLoading: releasesLoading, isDemoFallback: isDemoData } = useCachedHelmReleases()
+  const { releases: allHelmReleases, isLoading: releasesLoading, isRefreshing: releasesRefreshing, isDemoFallback: isDemoData } = useCachedHelmReleases()
 
   // Auto-select cluster and release in demo mode so card shows data immediately
   useEffect(() => {
@@ -134,7 +134,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
   // Note: Consider "hasAnyData" true when no release selected - we want to show selectors, not empty state
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: historyLoading,
-    isRefreshing: historyRefreshing,
+    isRefreshing: historyRefreshing || releasesRefreshing,
     hasAnyData: rawHistory.length > 0 || !selectedRelease,
     isFailed,
     consecutiveFailures,

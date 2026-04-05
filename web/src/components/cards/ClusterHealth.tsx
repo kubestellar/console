@@ -88,7 +88,7 @@ export function ClusterHealth() {
     error,
     lastRefresh,
   } = useClusters()
-  const { nodes: gpuNodes, isDemoFallback } = useCachedGPUNodes()
+  const { nodes: gpuNodes, isDemoFallback, isRefreshing: gpuRefreshing } = useCachedGPUNodes()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { isMobile } = useMobile()
   const { isDemoMode } = useDemoMode()
@@ -143,7 +143,7 @@ export function ClusterHealth() {
   const hasData = rawClusters.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoadingHook && !hasData,
-    isRefreshing,
+    isRefreshing: isRefreshing || gpuRefreshing,
     hasAnyData: hasData,
     isFailed: !!error && !hasData,
     consecutiveFailures: error ? 1 : 0,

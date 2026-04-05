@@ -129,7 +129,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   }, [globalSelectedClusters, isAllClustersSelected])
 
   // Fetch ALL Helm releases from all clusters once (not per-cluster)
-  const { releases: allHelmReleases, isLoading: releasesLoading, isDemoFallback: isDemoData } = useCachedHelmReleases()
+  const { releases: allHelmReleases, isLoading: releasesLoading, isRefreshing: releasesRefreshing, isDemoFallback: isDemoData } = useCachedHelmReleases()
 
   // Auto-select first cluster and release in demo mode
   useEffect(() => {
@@ -171,7 +171,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   const hasClusterData = allClusters.length > 0
   useCardLoadingState({
     isLoading: clustersLoading && !hasClusterData,
-    isRefreshing: clustersRefreshing || valuesRefreshing,
+    isRefreshing: clustersRefreshing || releasesRefreshing || valuesRefreshing,
     hasAnyData: hasClusterData,
     isDemoData,
     isFailed: clustersFailed,

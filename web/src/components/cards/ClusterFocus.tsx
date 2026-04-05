@@ -19,9 +19,9 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
   const { t } = useTranslation(['cards', 'common'])
   const selectedCluster = config?.cluster
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed, consecutiveFailures } = useClusters()
-  const { nodes: gpuNodes, isDemoFallback: gpuDemoFallback } = useCachedGPUNodes()
-  const { issues: podIssues, isDemoFallback: podsDemoFallback } = useCachedPodIssues(selectedCluster)
-  const { issues: deploymentIssues, isDemoFallback: deployDemoFallback } = useCachedDeploymentIssues(selectedCluster)
+  const { nodes: gpuNodes, isDemoFallback: gpuDemoFallback, isRefreshing: gpuRefreshing } = useCachedGPUNodes()
+  const { issues: podIssues, isDemoFallback: podsDemoFallback, isRefreshing: podsRefreshing } = useCachedPodIssues(selectedCluster)
+  const { issues: deploymentIssues, isDemoFallback: deployDemoFallback, isRefreshing: deploymentsRefreshing } = useCachedDeploymentIssues(selectedCluster)
   const { drillToCluster, drillToPod, drillToDeployment } = useDrillDownActions()
   const [internalCluster, setInternalCluster] = useState<string>('')
   const { isDemoMode } = useDemoMode()
@@ -30,7 +30,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
   const hasData = allClusters.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: clustersLoading && !hasData,
-    isRefreshing: clustersRefreshing,
+    isRefreshing: clustersRefreshing || gpuRefreshing || podsRefreshing || deploymentsRefreshing,
     hasAnyData: hasData,
     isDemoData: isDemoMode || gpuDemoFallback || podsDemoFallback || deployDemoFallback,
     isFailed,

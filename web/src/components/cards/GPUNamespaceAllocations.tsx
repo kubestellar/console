@@ -53,7 +53,7 @@ const NAMESPACE_SORT_COMPARATORS: Record<SortByOption, (a: NamespaceGPUAllocatio
 export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocationsProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { nodes: gpuNodes, isLoading: gpuLoading, isRefreshing: gpuRefreshing, isDemoFallback: gpuNodesDemoFallback, isFailed: gpuFailed, consecutiveFailures: gpuFailures } = useCachedGPUNodes()
-  const { pods: allPods, isLoading: podsLoading, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedAllPods()
+  const { pods: allPods, isLoading: podsLoading, isRefreshing: podsRefreshing, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedAllPods()
   const { drillToGPUNamespace } = useDrillDownActions()
 
   // Combine all isDemoFallback values from cached hooks
@@ -64,7 +64,7 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
   const hasData = gpuNodes.length > 0 || allPods.length > 0
   useCardLoadingState({
     isLoading: (gpuLoading || podsLoading) && !hasData,
-    isRefreshing: gpuRefreshing,
+    isRefreshing: gpuRefreshing || podsRefreshing,
     hasAnyData: hasData,
     isDemoData,
     isFailed: gpuFailed || podsFailed,

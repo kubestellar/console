@@ -133,13 +133,13 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
 
   // Fetch data for selected cluster
   const { namespaces, isDemoFallback: namespacesDemoFallback, isRefreshing: namespacesRefreshing } = useCachedNamespaces(selectedCluster || undefined)
-  const { deployments, isDemoFallback: deploymentsDemoFallback } = useCachedDeployments(selectedCluster || undefined)
-  const { services, isDemoFallback: servicesDemoFallback } = useCachedServices(selectedCluster || undefined)
-  const { pvcs, isDemoFallback: pvcsDemoFallback } = useCachedPVCs(selectedCluster || undefined)
-  const { pods, isDemoFallback: podsDemoFallback } = useCachedPods(selectedCluster || undefined, undefined, { limit: 500 })
-  const { configmaps, isDemoFallback: configmapsDemoFallback } = useCachedConfigMaps(selectedCluster || undefined)
-  const { secrets, isDemoFallback: secretsDemoFallback } = useCachedSecrets(selectedCluster || undefined)
-  const { jobs, isDemoFallback: jobsDemoFallback } = useCachedJobs(selectedCluster || undefined)
+  const { deployments, isDemoFallback: deploymentsDemoFallback, isRefreshing: deploymentsRefreshing } = useCachedDeployments(selectedCluster || undefined)
+  const { services, isDemoFallback: servicesDemoFallback, isRefreshing: servicesRefreshing } = useCachedServices(selectedCluster || undefined)
+  const { pvcs, isDemoFallback: pvcsDemoFallback, isRefreshing: pvcsRefreshing } = useCachedPVCs(selectedCluster || undefined)
+  const { pods, isDemoFallback: podsDemoFallback, isRefreshing: podsRefreshing } = useCachedPods(selectedCluster || undefined, undefined, { limit: 500 })
+  const { configmaps, isDemoFallback: configmapsDemoFallback, isRefreshing: configmapsRefreshing } = useCachedConfigMaps(selectedCluster || undefined)
+  const { secrets, isDemoFallback: secretsDemoFallback, isRefreshing: secretsRefreshing } = useCachedSecrets(selectedCluster || undefined)
+  const { jobs, isDemoFallback: jobsDemoFallback, isRefreshing: jobsRefreshing } = useCachedJobs(selectedCluster || undefined)
 
   // Combine all isDemoFallback values from cached hooks
   const isDemoData = namespacesDemoFallback || deploymentsDemoFallback || servicesDemoFallback ||
@@ -148,7 +148,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
     isLoading,
-    isRefreshing: namespacesRefreshing,
+    isRefreshing: namespacesRefreshing || deploymentsRefreshing || servicesRefreshing || pvcsRefreshing || podsRefreshing || configmapsRefreshing || secretsRefreshing || jobsRefreshing,
     hasAnyData: clusters.length > 0,
     isDemoData: isDemoMode || isDemoData,
   })
