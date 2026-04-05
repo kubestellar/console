@@ -134,21 +134,27 @@ async function fetchSingleCluster(cluster: string): Promise<RBACFinding[]> {
   const findings: RBACFinding[] = []
 
   try {
-    // Fetch ClusterRoleBindings
-    const crbResult = await kubectlProxy.exec(
-      ['get', 'clusterrolebindings', '-o', 'json'],
-      { context: cluster, timeout: FETCH_TIMEOUT_MS }
-    )
+    // Fetch all three RBAC resources concurrently — they are independent reads (#4852)
+    const [crbResult, crResult, rbResult] = await Promise.all([
+      kubectlProxy.exec(
+        ['get', 'clusterrolebindings', '-o', 'json'],
+        { context: cluster, timeout: FETCH_TIMEOUT_MS }
+      ),
+      kubectlProxy.exec(
+        ['get', 'clusterroles', '-o', 'json'],
+        { context: cluster, timeout: FETCH_TIMEOUT_MS }
+      ),
+      kubectlProxy.exec(
+        ['get', 'rolebindings', '-A', '-o', 'json'],
+        { context: cluster, timeout: FETCH_TIMEOUT_MS }
+      ),
+    ])
+
     if (crbResult.exitCode !== 0 || !crbResult.output) return findings
 
     const crbData = JSON.parse(crbResult.output)
     const clusterRoleBindings: ClusterRoleBinding[] = crbData.items || []
 
-    // Fetch ClusterRoles for rule analysis
-    const crResult = await kubectlProxy.exec(
-      ['get', 'clusterroles', '-o', 'json'],
-      { context: cluster, timeout: FETCH_TIMEOUT_MS }
-    )
     const clusterRoleMap = new Map<string, ClusterRole>()
     if (crResult.exitCode === 0 && crResult.output) {
       const crData = JSON.parse(crResult.output)
@@ -157,11 +163,6 @@ async function fetchSingleCluster(cluster: string): Promise<RBACFinding[]> {
       }
     }
 
-    // Fetch RoleBindings across all namespaces
-    const rbResult = await kubectlProxy.exec(
-      ['get', 'rolebindings', '-A', '-o', 'json'],
-      { context: cluster, timeout: FETCH_TIMEOUT_MS }
-    )
     const roleBindings: RoleBinding[] = []
     if (rbResult.exitCode === 0 && rbResult.output) {
       const rbData = JSON.parse(rbResult.output)

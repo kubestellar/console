@@ -2198,6 +2198,7 @@
     "terminated": "Terminated",
     "selectAll": "Select All",
     "clear": "Clear",
+    "selectCluster": "Select a cluster...",
     "overview": "Overview",
     "configuration": "Configuration",
     "resources": "Resources",

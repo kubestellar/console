@@ -31,6 +31,46 @@ function isEtcdPod(pod: PodInfo): boolean {
   return false
 }
 
+/**
+ * Extract version from a container image reference.
+ *
+ * Handles common formats:
+ *   - registry.k8s.io/etcd:3.5.6-0        → "3.5.6-0"
+ *   - registry.k8s.io/etcd:3.5.6           → "3.5.6"
+ *   - registry.k8s.io/etcd@sha256:abc123   → "" (digest-only, no version)
+ *   - ""                                    → ""
+ */
+function parseImageVersion(image: string | undefined): string {
+  if (!image) return ''
+  // Digest-only reference (no tag)
+  if (image.includes('@') && !image.includes(':')) return ''
+  // Strip digest suffix if both tag and digest are present: image:tag@sha256:...
+  const withoutDigest = image.split('@')[0]
+  const colonIdx = withoutDigest.lastIndexOf(':')
+  if (colonIdx < 0) return ''
+  const tag = withoutDigest.substring(colonIdx + 1)
+  // Ignore tags that look like port numbers (all digits, <6 chars)
+  const MAX_PORT_DIGITS = 5
+  if (/^\d+$/.test(tag) && tag.length <= MAX_PORT_DIGITS) return ''
+  return tag
+}
+
+/**
+ * Find the etcd container inside a pod and return its image version.
+ * Prefers a container named "etcd" or "etcd-container"; falls back to
+ * containers[0] only if no named match exists.
+ */
+function getEtcdVersion(pod: PodInfo): string {
+  const containers = pod.containers || []
+  const etcdContainer = containers.find(
+    c => c.name === 'etcd' || c.name === 'etcd-container'
+  )
+  if (etcdContainer) return parseImageVersion(etcdContainer.image)
+  // Fallback: first container (original behavior, but with safe parsing)
+  if (containers.length > 0) return parseImageVersion(containers[0].image)
+  return ''
+}
+
 /** Check if a cluster appears to be managed (no kube-system pods visible at all) */
 function isManagedCluster(allPods: PodInfo[], cluster: string): boolean {
   return !allPods.some(p => (p.cluster || 'unknown') === cluster && p.namespace === 'kube-system')
@@ -121,7 +161,7 @@ export function EtcdStatus() {
             </div>
             <div className="flex gap-1 mt-1 flex-wrap">
               {clusterPods.map(pod => {
-                const version = pod.containers?.[0]?.image?.split(':')[1]?.split('-')[0] || ''
+                const version = getEtcdVersion(pod)
                 return (
                   <span
                     key={pod.name}

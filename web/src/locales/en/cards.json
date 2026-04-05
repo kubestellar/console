@@ -1961,7 +1961,11 @@
     "cordon": "Cordon",
     "moreNodes": "+{{count}} more nodes",
     "moreNodes_one": "+{{count}} more node",
-    "moreNodes_other": "+{{count}} more nodes"
+    "moreNodes_other": "+{{count}} more nodes",
+    "confirmTitle": "Confirm {{action}} on {{node}}?",
+    "confirmCordonDescription": "Cordoning this node will prevent new pods from being scheduled on it.",
+    "confirmUncordonDescription": "Uncordoning this node will allow new pods to be scheduled on it again.",
+    "cancel": "Cancel"
   },
   "clusterChangelog": {
     "noChanges": "No changes in selected time range",

@@ -7,7 +7,8 @@ interface NamespaceUsage {
   namespace: string
   cluster: string
   podCount: number
-  // CPU and memory are estimated from pod count
+  /** Hard pod quota from ResourceQuota (undefined = no quota configured) */
+  podQuota?: number
 }
 
 export function QuotaHeatmap() {
@@ -63,11 +64,16 @@ export function QuotaHeatmap() {
     )
   }
 
+  /** Density thresholds for heat coloring (relative to highest namespace) */
+  const HIGH_DENSITY_THRESHOLD = 0.8
+  const MEDIUM_DENSITY_THRESHOLD = 0.5
+  const LOW_DENSITY_THRESHOLD = 0.2
+
   const getHeatColor = (ratio: number) => {
-    if (ratio > 0.8) return 'bg-red-500/60 text-red-100'
-    if (ratio > 0.5) return 'bg-yellow-500/40 text-yellow-100'
-    if (ratio > 0.2) return 'bg-green-500/30 text-green-100'
-    return 'bg-green-500/10 text-green-300'
+    if (ratio > HIGH_DENSITY_THRESHOLD) return 'bg-blue-500/60 text-blue-100'
+    if (ratio > MEDIUM_DENSITY_THRESHOLD) return 'bg-blue-500/40 text-blue-200'
+    if (ratio > LOW_DENSITY_THRESHOLD) return 'bg-blue-500/20 text-blue-300'
+    return 'bg-blue-500/10 text-blue-300'
   }
 
   return (
@@ -86,7 +92,7 @@ export function QuotaHeatmap() {
               className={`p-1.5 rounded text-xs transition-all ${getHeatColor(ratio)} ${
                 isSelected ? 'ring-2 ring-primary scale-105' : 'hover:scale-105'
               }`}
-              title={`${ns.namespace} (${ns.cluster}): ${ns.podCount} pods`}
+              title={`${ns.namespace} (${ns.cluster}): ${ns.podCount} pods — relative density ${Math.round((ns.podCount / maxPods) * 100)}%`}
             >
               <div className="truncate font-medium">{ns.namespace}</div>
               <div className="text-2xs opacity-75">{t('quotaHeatmap.podsCount', { count: ns.podCount })}</div>

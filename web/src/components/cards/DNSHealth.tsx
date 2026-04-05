@@ -3,9 +3,16 @@ import { useTranslation } from 'react-i18next'
 import { useCachedPods } from '../../hooks/useCachedData'
 import { useCardLoadingState } from './CardDataContext'
 
+/** Namespaces that host DNS pods across distributions */
+const DNS_NAMESPACES = ['kube-system', 'openshift-dns']
+
+/** Pod name substrings that identify DNS pods */
+const DNS_POD_PATTERNS = ['coredns', 'kube-dns', 'dns-default']
+
 export function DNSHealth() {
   const { t } = useTranslation('cards')
-  const { pods, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods(undefined, 'kube-system')
+  // Fetch from all namespaces so we catch DNS pods in both kube-system and openshift-dns
+  const { pods, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods()
   const hasData = pods.length > 0
   const { showSkeleton } = useCardLoadingState({
     isLoading: isLoading && !hasData,
@@ -17,9 +24,12 @@ export function DNSHealth() {
   })
 
   const dnsPods = useMemo(() => {
-    return pods.filter(p =>
-      p.name?.includes('coredns') || p.name?.includes('kube-dns')
-    )
+    return pods.filter(p => {
+      // Only consider pods in known DNS namespaces
+      if (!DNS_NAMESPACES.includes(p.namespace || '')) return false
+      const name = p.name?.toLowerCase() || ''
+      return DNS_POD_PATTERNS.some(pattern => name.includes(pattern))
+    })
   }, [pods])
 
   const byCluster = useMemo(() => {

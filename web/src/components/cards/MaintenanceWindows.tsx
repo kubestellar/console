@@ -1,5 +1,6 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useClusters } from '../../hooks/useMCP'
 
 interface MaintenanceWindow {
   id: string
@@ -12,6 +13,9 @@ interface MaintenanceWindow {
 }
 
 const STORAGE_KEY = 'kubestellar-maintenance-windows'
+
+/** Interval for auto-refreshing status badges (30 seconds) */
+const STATUS_REFRESH_INTERVAL_MS = 30_000
 
 function loadWindows(): MaintenanceWindow[] {
   try {
@@ -27,9 +31,12 @@ function saveWindows(windows: MaintenanceWindow[]) {
 
 export function MaintenanceWindows() {
   const { t } = useTranslation()
+  const { clusters } = useClusters()
   const [windows, setWindows] = useState<MaintenanceWindow[]>(loadWindows)
   const [showForm, setShowForm] = useState(false)
   const [timeError, setTimeError] = useState('')
+  /** Tick counter incremented by setInterval to force status recalculation */
+  const [, setTick] = useState(0)
   const [formData, setFormData] = useState({
     cluster: '',
     description: '',
@@ -37,6 +44,20 @@ export function MaintenanceWindows() {
     endTime: '',
     type: 'maintenance' as MaintenanceWindow['type'],
   })
+
+  // Auto-refresh status badges so scheduled→active→completed transitions
+  // are reflected even when the user is idle (#4848)
+  useEffect(() => {
+    if (windows.length === 0) return
+    const interval = setInterval(() => setTick(prev => prev + 1), STATUS_REFRESH_INTERVAL_MS)
+    return () => clearInterval(interval)
+  }, [windows.length])
+
+  /** Available cluster names from connected clusters */
+  const clusterNames = useMemo(() =>
+    (clusters || []).map(c => c.name).filter(Boolean).sort(),
+    [clusters]
+  )
 
   const updateStatus = useCallback(() => {
     const now = new Date()
@@ -105,13 +126,26 @@ export function MaintenanceWindows() {
 
       {showForm && (
         <div className="space-y-2 p-2 rounded-lg bg-muted/30 border border-border/50">
-          <input
-            type="text"
-            placeholder="Cluster name"
-            value={formData.cluster}
-            onChange={e => setFormData(f => ({ ...f, cluster: e.target.value }))}
-            className="w-full px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary"
-          />
+          {clusterNames.length > 0 ? (
+            <select
+              value={formData.cluster}
+              onChange={e => setFormData(f => ({ ...f, cluster: e.target.value }))}
+              className="w-full px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="">{t('common.selectCluster')}</option>
+              {clusterNames.map(name => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              placeholder="Cluster name"
+              value={formData.cluster}
+              onChange={e => setFormData(f => ({ ...f, cluster: e.target.value }))}
+              className="w-full px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          )}
           <input
             type="text"
             placeholder="Description"

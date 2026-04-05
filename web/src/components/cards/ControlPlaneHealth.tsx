@@ -5,19 +5,36 @@ import { useClusters } from '../../hooks/useMCP'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 
+/** Namespaces that host control-plane pods across distributions */
+const CP_NAMESPACES = [
+  'kube-system',
+  'openshift-kube-apiserver',
+  'openshift-kube-controller-manager',
+  'openshift-kube-scheduler',
+  'openshift-etcd',
+]
+
 const CP_LABELS: Record<string, string[]> = {
   'API Server': ['component=kube-apiserver', 'app=openshift-kube-apiserver'],
-  'Scheduler': ['component=kube-scheduler'],
-  'Controller Mgr': ['component=kube-controller-manager'],
-  'etcd': ['component=etcd'],
+  'Scheduler': ['component=kube-scheduler', 'app=openshift-kube-scheduler'],
+  'Controller Mgr': ['component=kube-controller-manager', 'app=openshift-kube-controller-manager'],
+  'etcd': ['component=etcd', 'app=etcd'],
   'CoreDNS': ['k8s-app=kube-dns'],
 }
 
 export function ControlPlaneHealth() {
   const { t } = useTranslation('cards')
-  const { pods, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods(undefined, 'kube-system')
+  // Fetch from all namespaces so we catch control-plane pods in both
+  // kube-system (vanilla K8s) and openshift-* namespaces (OpenShift)
+  const { pods: allPods, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods()
   const { clusters } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
+
+  // Pre-filter to control-plane namespaces for efficiency
+  const pods = useMemo(() =>
+    allPods.filter(p => CP_NAMESPACES.includes(p.namespace || '')),
+    [allPods]
+  )
 
   const hasData = pods.length > 0
   const { showSkeleton } = useCardLoadingState({
