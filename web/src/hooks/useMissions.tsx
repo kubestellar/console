@@ -1038,9 +1038,16 @@ Install the console locally with the KubeStellar Console agent to use AI mission
   handleAgentMessageRef.current = handleAgentMessage
 
   // Start a new mission
-  const startMission = useCallback((params: StartMissionParams): string => {
-    const missionId = `mission-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-
+  /**
+   * Shared prompt-enhancement pipeline: cluster targeting, dry-run injection,
+   * non-interactive terminal handling, and resolution matching.
+   * Used by both startMission and runSavedMission to avoid duplication (#4768).
+   */
+  const buildEnhancedPrompt = useCallback((params: StartMissionParams): {
+    enhancedPrompt: string
+    matchedResolutions: MatchedResolution[]
+    isInstallMission: boolean
+  } => {
     // Inject cluster targeting into the prompt sent to the agent
     let enhancedPrompt = params.initialPrompt
     if (params.cluster) {
@@ -1107,19 +1114,22 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       }
     }
 
-    // Build initial messages
-    const initialMessages: MissionMessage[] = [
-      {
-        id: `msg-${Date.now()}`,
-        role: 'user',
-        content: params.initialPrompt, // Show original prompt in UI
-        timestamp: new Date(),
-      }
-    ]
+    return { enhancedPrompt, matchedResolutions, isInstallMission }
+  }, [])
+
+  /**
+   * Build system messages for non-interactive mode and auto-matched resolutions.
+   * Shared between startMission and runSavedMission (#4768).
+   */
+  const buildSystemMessages = useCallback((
+    isInstallMission: boolean,
+    matchedResolutions: MatchedResolution[],
+  ): MissionMessage[] => {
+    const messages: MissionMessage[] = []
 
     // Warn the user that interactive terminal input is not supported (#3767)
     if (isInstallMission) {
-      initialMessages.push({
+      messages.push({
         id: `msg-${Date.now()}-nointeractive`,
         role: 'system',
         content: '**Non-interactive mode:** This terminal does not support interactive input. ' +
@@ -1134,7 +1144,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         `• **${r.title}** (${Math.round(r.similarity * 100)}% match, ${r.source === 'personal' ? 'your history' : 'team knowledge'})`
       ).join('\n')
 
-      initialMessages.push({
+      messages.push({
         id: `msg-${Date.now()}-resolutions`,
         role: 'system',
         content: `🔍 **Found ${matchedResolutions.length} similar resolution${matchedResolutions.length > 1 ? 's' : ''} from your knowledge base:**\n\n${resolutionNames}\n\n_This context has been automatically provided to the AI to help solve the problem faster._`,
@@ -1142,31 +1152,20 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       })
     }
 
-    const mission: Mission = {
-      id: missionId,
-      title: params.title,
-      description: params.description,
-      type: params.type,
-      status: 'pending',
-      cluster: params.cluster,
-      messages: initialMessages,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      context: params.context,
-      agent: selectedAgentRef.current || defaultAgentRef.current || undefined,
-      matchedResolutions: matchedResolutions.length > 0 ? matchedResolutions : undefined,
-    }
+    return messages
+  }, [])
 
-    setMissions(prev => [mission, ...prev])
-    setActiveMissionId(missionId)
-    setIsSidebarOpen(true)
-    setIsSidebarMinimized(false)
-    emitMissionStarted(params.type, selectedAgentRef.current || defaultAgentRef.current || 'unknown')
-
-    // Run preflight permission check for missions that target a cluster.
-    // This catches missing credentials, expired tokens, RBAC denials, etc.
-    // before the agent starts executing mutating steps (#3742).
-    const missionNeedsCluster = !!params.cluster || ['deploy', 'repair', 'upgrade'].includes(params.type)
+  /**
+   * Shared preflight + execute pipeline.
+   * Runs preflight permission check and, on success, delegates to executeMission.
+   * Used by startMission and runSavedMission to avoid duplicating preflight logic (#4768).
+   */
+  const preflightAndExecute = useCallback((
+    missionId: string,
+    enhancedPrompt: string,
+    params: { cluster?: string; context?: Record<string, unknown>; type?: string },
+  ) => {
+    const missionNeedsCluster = !!params.cluster || ['deploy', 'repair', 'upgrade'].includes(params.type || '')
     const preflightPromise = missionNeedsCluster
       ? runPreflightCheck(
           (args, opts) => kubectlProxy.exec(args, opts),
@@ -1194,7 +1193,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
             ]
           } : m
         ))
-        emitMissionError(params.type, preflight.error?.code || 'preflight_unknown')
+        emitMissionError(params.type || 'custom', preflight.error?.code || 'preflight_unknown')
         return
       }
 
@@ -1205,10 +1204,54 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       // (don't block on preflight infrastructure failures)
       executeMission(missionId, enhancedPrompt, params)
     })
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- executeMission is defined after; called async so always resolved
+  }, [])
+
+  const startMission = useCallback((params: StartMissionParams): string => {
+    const missionId = `mission-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
+    const { enhancedPrompt, matchedResolutions, isInstallMission } = buildEnhancedPrompt(params)
+
+    // Build initial messages
+    const initialMessages: MissionMessage[] = [
+      {
+        id: `msg-${Date.now()}`,
+        role: 'user',
+        content: params.initialPrompt, // Show original prompt in UI
+        timestamp: new Date(),
+      },
+      ...buildSystemMessages(isInstallMission, matchedResolutions),
+    ]
+
+    const mission: Mission = {
+      id: missionId,
+      title: params.title,
+      description: params.description,
+      type: params.type,
+      status: 'pending',
+      cluster: params.cluster,
+      messages: initialMessages,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      context: params.context,
+      agent: selectedAgentRef.current || defaultAgentRef.current || undefined,
+      matchedResolutions: matchedResolutions.length > 0 ? matchedResolutions : undefined,
+    }
+
+    setMissions(prev => [mission, ...prev])
+    setActiveMissionId(missionId)
+    setIsSidebarOpen(true)
+    setIsSidebarMinimized(false)
+    emitMissionStarted(params.type, selectedAgentRef.current || defaultAgentRef.current || 'unknown')
+
+    // Run preflight permission check for missions that target a cluster.
+    // This catches missing credentials, expired tokens, RBAC denials, etc.
+    // before the agent starts executing mutating steps (#3742).
+    preflightAndExecute(missionId, enhancedPrompt, params)
 
     return missionId
     // eslint-disable-next-line react-hooks/exhaustive-deps -- executeMission is defined after startMission; called async so always resolved
-  }, [ensureConnection])
+  }, [ensureConnection, buildEnhancedPrompt, buildSystemMessages, preflightAndExecute])
 
   /**
    * Internal: send mission to agent after preflight passes.
@@ -1398,7 +1441,9 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     return missionId
   }, [])
 
-  // Run a previously saved mission, optionally targeting a specific cluster
+  // Run a previously saved mission, optionally targeting a specific cluster.
+  // Delegates to the shared prompt-enhancement + preflight + execute pipeline
+  // so saved missions get the same checks as freshly-started ones (#4768).
   const runSavedMission = useCallback((missionId: string, cluster?: string) => {
     const mission = missions.find(m => m.id === missionId)
     if (!mission || mission.status !== 'saved') return
@@ -1433,79 +1478,54 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       }
     }
 
+    // Build the base prompt from saved mission data
     const basePrompt = mission.importedFrom?.steps
       ? `${mission.description}\n\nSteps:\n${mission.importedFrom.steps.map((s, i) => `${i + 1}. ${s.title}: ${s.description}`).join('\n')}`
       : mission.description
 
-    // Inject cluster targeting context if cluster(s) were selected
-    let initialPrompt = basePrompt
-    if (cluster) {
-      const clusterList = cluster.split(',').map(c => c.trim()).filter(Boolean)
-      if (clusterList.length === 1) {
-        initialPrompt = `Target cluster: ${clusterList[0]}\n\nIMPORTANT: All kubectl commands MUST use --context=${clusterList[0]}\n\n${basePrompt}`
-      } else {
-        const contextFlags = clusterList.map(c => `--context=${c}`).join(', ')
-        initialPrompt = `Target clusters: ${clusterList.join(', ')}\n\nIMPORTANT: Perform the following on each cluster. Use these kubectl contexts: ${contextFlags}\n\n${basePrompt}`
-      }
+    // Build StartMissionParams so we can reuse the shared prompt pipeline
+    const params: StartMissionParams = {
+      title: mission.title,
+      description: mission.description,
+      type: mission.type,
+      cluster: cluster || undefined,
+      initialPrompt: basePrompt,
+      context: mission.context,
     }
 
+    // Run the shared prompt-enhancement pipeline (cluster targeting,
+    // dry-run, non-interactive handling, resolution matching)
+    const { enhancedPrompt, matchedResolutions, isInstallMission } = buildEnhancedPrompt(params)
+    const systemMessages = buildSystemMessages(isInstallMission, matchedResolutions)
+
+    // Transition saved mission to pending with proper messages
     setMissions(prev => prev.map(m =>
       m.id === missionId ? {
         ...m,
-        status: 'pending',
+        status: 'pending' as MissionStatus,
         cluster: cluster || undefined,
-        messages: [{
-          id: `msg-${Date.now()}`,
-          role: 'user' as const,
-          content: basePrompt, // Show original prompt in UI (not cluster prefix)
-          timestamp: new Date(),
-        }],
+        agent: selectedAgentRef.current || defaultAgentRef.current || undefined,
+        matchedResolutions: matchedResolutions.length > 0 ? matchedResolutions : undefined,
+        messages: [
+          {
+            id: `msg-${Date.now()}`,
+            role: 'user' as const,
+            content: basePrompt, // Show original prompt in UI (not cluster prefix)
+            timestamp: new Date(),
+          },
+          ...systemMessages,
+        ],
         updatedAt: new Date(),
       } : m
     ))
     setActiveMissionId(missionId)
     setIsSidebarOpen(true)
     setIsSidebarMinimized(false)
+    emitMissionStarted(params.type, selectedAgentRef.current || defaultAgentRef.current || 'unknown')
 
-    ensureConnection().then(() => {
-      const requestId = `claude-${Date.now()}`
-      pendingRequests.current.set(requestId, missionId)
-
-      setMissions(prev => prev.map(m =>
-        m.id === missionId ? { ...m, status: 'running', currentStep: 'Connecting to agent...' } : m
-      ))
-
-      setActiveTokenCategory('missions')
-
-      wsSend(JSON.stringify({
-        id: requestId,
-        type: 'chat',
-        payload: {
-          prompt: initialPrompt,
-          sessionId: missionId,
-          agent: selectedAgentRef.current || undefined,
-        }
-      }), () => {
-        setMissions(prev => prev.map(m =>
-          m.id === missionId ? { ...m, status: 'failed', currentStep: 'WebSocket connection lost' } : m
-        ))
-      })
-    }).catch(() => {
-      setMissions(prev => prev.map(m =>
-        m.id === missionId ? {
-          ...m,
-          status: 'failed',
-          currentStep: undefined,
-          messages: [{
-            id: `msg-${Date.now()}`,
-            role: 'system' as const,
-            content: '**Local Agent Not Connected**\n\nInstall the console locally with the KubeStellar Console agent to use AI missions.',
-            timestamp: new Date(),
-          }]
-        } : m
-      ))
-    })
-  }, [missions, ensureConnection, wsSend])
+    // Run preflight permission check, then execute via the shared pipeline
+    preflightAndExecute(missionId, enhancedPrompt, params)
+  }, [missions, buildEnhancedPrompt, buildSystemMessages, preflightAndExecute])
 
   // Cancel a running mission — sends cancel signal to backend to kill agent process.
   // Uses WebSocket if connected, otherwise falls back to HTTP POST endpoint.
