@@ -445,8 +445,19 @@ describe('NodeConditions', () => {
 
       render(<NodeConditions />)
 
+      // Click the cordon button to open the confirmation dialog
       const cordonBtn = screen.getByText('nodeConditions.cordon')
       await user.click(cordonBtn)
+
+      // The confirmation dialog should show the confirm title
+      expect(screen.getByText(/nodeConditions\.confirmTitle/)).toBeInTheDocument()
+
+      // Click the confirm button in the dialog (find by role within the dialog)
+      const allButtons = screen.getAllByRole('button')
+      const confirmBtn = allButtons.find(b =>
+        b.textContent === 'nodeConditions.cordon' && b !== cordonBtn
+      )!
+      await user.click(confirmBtn)
 
       expect(mockExecute).toHaveBeenCalledWith('prod', ['cordon', 'worker-1'])
     })
@@ -458,8 +469,19 @@ describe('NodeConditions', () => {
 
       render(<NodeConditions />)
 
+      // Click the uncordon button to open the confirmation dialog
       const uncordonBtn = screen.getByText('nodeConditions.uncordon')
       await user.click(uncordonBtn)
+
+      // The confirmation dialog should show the confirm title
+      expect(screen.getByText(/nodeConditions\.confirmTitle/)).toBeInTheDocument()
+
+      // Click the confirm button in the dialog (find by role within the dialog)
+      const allButtons = screen.getAllByRole('button')
+      const confirmBtn = allButtons.find(b =>
+        b.textContent === 'nodeConditions.uncordon' && b !== uncordonBtn
+      )!
+      await user.click(confirmBtn)
 
       expect(mockExecute).toHaveBeenCalledWith('prod', ['uncordon', 'worker-1'])
     })

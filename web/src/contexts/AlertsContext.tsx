@@ -1645,82 +1645,76 @@ Please provide:
     isEvaluatingRef.current = true
     setIsEvaluating(true)
 
-    // Defer heavy synchronous work to next frame so React can paint the
-    // loading indicator before we block the main thread.
-    /** Minimal delay (ms) to yield to the renderer before evaluation */
-    const YIELD_TO_RENDERER_MS = 0
-    setTimeout(() => {
-      // Initialize the batched mutation accumulator
-      const acc: MutationAccumulator = { mutations: [], notifications: [] }
-      mutationAccRef.current = acc
+    // Initialize the batched mutation accumulator
+    const acc: MutationAccumulator = { mutations: [], notifications: [] }
+    mutationAccRef.current = acc
 
-      try {
-        const enabledRules = rulesRef.current.filter(r => r.enabled)
+    try {
+      const enabledRules = rulesRef.current.filter(r => r.enabled)
 
-        for (const rule of enabledRules) {
-          switch (rule.condition.type) {
-            case 'gpu_usage':
-              evaluateGPUUsage(rule)
-              break
-            case 'gpu_health_cronjob':
-              evaluateGPUHealthCronJob(rule)
-              break
-            case 'node_not_ready':
-              evaluateNodeReady(rule)
-              break
-            case 'pod_crash':
-              evaluatePodCrash(rule)
-              break
-            case 'disk_pressure':
-              evaluateDiskPressure(rule)
-              break
-            case 'memory_pressure':
-              evaluateMemoryPressure(rule)
-              break
-            case 'weather_alerts':
-              evaluateWeatherAlerts(rule)
-              break
-            case 'nightly_e2e_failure':
-              evaluateNightlyE2EFailure(rule)
-              break
-            case 'dns_failure':
-              evaluateDNSFailure(rule)
-              break
-            case 'certificate_error':
-              evaluateCertificateError(rule)
-              break
-            case 'cluster_unreachable':
-              evaluateClusterUnreachable(rule)
-              break
-            default:
-              break
-          }
+      for (const rule of enabledRules) {
+        switch (rule.condition.type) {
+          case 'gpu_usage':
+            evaluateGPUUsage(rule)
+            break
+          case 'gpu_health_cronjob':
+            evaluateGPUHealthCronJob(rule)
+            break
+          case 'node_not_ready':
+            evaluateNodeReady(rule)
+            break
+          case 'pod_crash':
+            evaluatePodCrash(rule)
+            break
+          case 'disk_pressure':
+            evaluateDiskPressure(rule)
+            break
+          case 'memory_pressure':
+            evaluateMemoryPressure(rule)
+            break
+          case 'weather_alerts':
+            evaluateWeatherAlerts(rule)
+            break
+          case 'nightly_e2e_failure':
+            evaluateNightlyE2EFailure(rule)
+            break
+          case 'dns_failure':
+            evaluateDNSFailure(rule)
+            break
+          case 'certificate_error':
+            evaluateCertificateError(rule)
+            break
+          case 'cluster_unreachable':
+            evaluateClusterUnreachable(rule)
+            break
+          default:
+            break
         }
-      } finally {
-        // Clear accumulator before flushing so any createAlert calls from
-        // outside this cycle fall back to unbatched path
-        mutationAccRef.current = null
-
-        // Flush all mutations in a single setAlerts call
-        if (acc.mutations.length > 0) {
-          const currentRules = rulesRef.current
-          setAlerts(prev => applyMutations(prev, acc.mutations, currentRules))
-        }
-
-        // Send batched notifications after state flush (fire-and-forget)
-        if (acc.notifications.length > 0) {
-          queueMicrotask(() => {
-            sendBatchedNotifications(acc.notifications).catch(() => {
-              // Silent failure - notifications are best-effort
-            })
-          })
-        }
-
-        saveNotifiedAlertKeys(notifiedAlertKeysRef.current)
-        isEvaluatingRef.current = false
-        setIsEvaluating(false)
       }
-    }, YIELD_TO_RENDERER_MS)
+    } finally {
+      // Clear accumulator before flushing so any createAlert calls from
+      // outside this cycle fall back to unbatched path
+      mutationAccRef.current = null
+
+      // Flush all mutations in a single setAlerts call
+      if (acc.mutations.length > 0) {
+        const currentRules = rulesRef.current
+        setAlerts(prev => applyMutations(prev, acc.mutations, currentRules))
+      }
+
+      // Send batched notifications after state flush (fire-and-forget)
+      if (acc.notifications.length > 0) {
+        queueMicrotask(() => {
+          sendBatchedNotifications(acc.notifications).catch(() => {
+            // Silent failure - notifications are best-effort
+          })
+        })
+      }
+
+      saveNotifiedAlertKeys(notifiedAlertKeysRef.current)
+      isEvaluatingRef.current = false
+      setIsEvaluating(false)
+    }
   }, [evaluateGPUUsage, evaluateGPUHealthCronJob, evaluateNodeReady, evaluatePodCrash, evaluateDiskPressure, evaluateMemoryPressure, evaluateWeatherAlerts, evaluateNightlyE2EFailure, evaluateDNSFailure, evaluateCertificateError, evaluateClusterUnreachable])
 
   // Stable ref for evaluateConditions so the interval never resets

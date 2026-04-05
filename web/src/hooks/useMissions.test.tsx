@@ -1244,6 +1244,8 @@ describe('runSavedMission', () => {
     // Should have a user message now
     const mission = result.current.missions.find(m => m.id === missionId)
     expect(mission?.messages.some(m => m.role === 'user')).toBe(true)
+    // Flush microtask queue so the preflight .then() chain resolves
+    await act(async () => { await Promise.resolve() })
     // Should transition to running when WS opens
     await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
     const updated = result.current.missions.find(m => m.id === missionId)
@@ -1274,6 +1276,8 @@ describe('runSavedMission', () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
 
     act(() => { result.current.runSavedMission(missionId) })
+    // Flush microtask queue so the preflight .then() chain resolves
+    await act(async () => { await Promise.resolve() })
     await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
 
     const chatCall = MockWebSocket.lastInstance?.send.mock.calls.find(
@@ -1290,6 +1294,8 @@ describe('runSavedMission', () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
 
     act(() => { result.current.runSavedMission(missionId, 'cluster-a') })
+    // Flush microtask queue so the preflight .then() chain resolves
+    await act(async () => { await Promise.resolve() })
     await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
 
     const chatCall = MockWebSocket.lastInstance?.send.mock.calls.find(
@@ -1305,6 +1311,8 @@ describe('runSavedMission', () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
 
     act(() => { result.current.runSavedMission(missionId, 'cluster-a, cluster-b') })
+    // Flush microtask queue so the preflight .then() chain resolves
+    await act(async () => { await Promise.resolve() })
     await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
 
     const chatCall = MockWebSocket.lastInstance?.send.mock.calls.find(
@@ -4885,6 +4893,8 @@ describe('runSavedMission edge cases', () => {
 
     const { result } = renderHook(() => useMissions(), { wrapper })
     act(() => { result.current.runSavedMission('desc-only-1') })
+    // Flush microtask queue so the preflight .then() chain resolves
+    await act(async () => { await Promise.resolve() })
     await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
 
     const chatCall = MockWebSocket.lastInstance?.send.mock.calls.find(
@@ -4914,14 +4924,17 @@ describe('runSavedMission edge cases', () => {
 
     const { result } = renderHook(() => useMissions(), { wrapper })
     act(() => { result.current.runSavedMission('multi-cluster-1', 'cluster-a, cluster-b') })
+    // Flush microtask queue so the preflight .then() chain resolves
+    await act(async () => { await Promise.resolve() })
     await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
 
     const chatCall = MockWebSocket.lastInstance?.send.mock.calls.find(
       (call: string[]) => JSON.parse(call[0]).type === 'chat',
     )
     const prompt = JSON.parse(chatCall![0]).payload.prompt
-    expect(prompt).toContain('--context=cluster-a')
-    expect(prompt).toContain('--context=cluster-b')
+    // Multi-cluster targeting uses "respective kubectl contexts" instead of --context= flags
+    expect(prompt).toContain('Target clusters: cluster-a, cluster-b')
+    expect(prompt).toContain('respective kubectl contexts')
   })
 
   it('opens sidebar and sets active mission when running saved mission', () => {
@@ -5586,6 +5599,8 @@ describe('runSavedMission wsSend failure', () => {
 
       const { result } = renderHook(() => useMissions(), { wrapper })
       act(() => { result.current.runSavedMission('wsfail-1') })
+      // Flush microtask queue so the preflight .then() chain resolves
+      await act(async () => { await Promise.resolve() })
 
       // Do NOT simulate WS open — let ensureConnection's 5s timeout fire
       await act(async () => { vi.advanceTimersByTime(6_000) })

@@ -1652,15 +1652,16 @@ describe('analytics emissions', () => {
     expect(mockEmitStatus).toHaveBeenCalledWith(1)
   })
 
-  it('does not emit analytics for toggle operations (only setState)', () => {
+  it('emits analytics for toggle operations', () => {
     const { result } = renderHook(() => useGlobalFilters(), { wrapper })
 
     act(() => {
       result.current.toggleCluster('cluster-a')
     })
 
-    // toggleCluster uses setSelectedClustersState directly, not setSelectedClusters
-    expect(mockEmitCluster).not.toHaveBeenCalled()
+    // toggleCluster now emits analytics for every cluster filter change
+    expect(mockEmitCluster).toHaveBeenCalledTimes(1)
+    expect(mockEmitCluster).toHaveBeenCalledWith(1, 2)
   })
 
   it('does not emit analytics for selectAll/deselectAll operations', () => {

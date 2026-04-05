@@ -193,9 +193,11 @@ export function useCardLoadingState(options: CardLoadingStateOptions) {
   }, [isLoading, hasAnyData])
 
   // Once the timeout fires, treat the card as no longer loading.
-  // BUT: if the cache is actively retrying (consecutiveFailures > 0),
-  // keep the skeleton visible so users don't see "No X found" mid-retry.
-  const effectiveIsLoading = isLoading && (!loadingTimedOut || consecutiveFailures > 0)
+  // This prevents cards from being permanently stuck in skeleton state
+  // when the API never resolves (issue #4885). After CARD_LOADING_TIMEOUT_MS,
+  // the card exits loading unconditionally — even during retries — so the
+  // error/empty state is shown instead of an infinite spinner.
+  const effectiveIsLoading = isLoading && !loadingTimedOut
 
   // Data is considered "real" (displayable) if there is any data at all.
   // Demo data should be shown immediately with the Demo badge — not hidden behind a skeleton.
