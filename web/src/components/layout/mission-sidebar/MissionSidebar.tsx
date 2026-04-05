@@ -77,6 +77,10 @@ export function MissionSidebar() {
   const [collapsedMissions, setCollapsedMissions] = useState<Set<string>>(new Set())
   const [fontSize, setFontSize] = useState<FontSize>('base')
 
+  /** Number of missions rendered per page in the history list (#4778) */
+  const MISSIONS_PAGE_SIZE = 20
+  const [visibleMissionCount, setVisibleMissionCount] = useState(MISSIONS_PAGE_SIZE)
+
   // Resizable sidebar width (desktop non-fullscreen only)
   const [sidebarWidth, setSidebarWidth] = useState(loadSavedWidth)
   const [isResizing, setIsResizing] = useState(false)
@@ -299,6 +303,11 @@ export function MissionSidebar() {
   // Mission list search filter (#3944)
   const [missionSearchQuery, setMissionSearchQuery] = useState('')
 
+  // Reset pagination when search query changes (#4778)
+  useEffect(() => {
+    setVisibleMissionCount(MISSIONS_PAGE_SIZE)
+  }, [missionSearchQuery])
+
   // Split missions into saved (library) and active, applying search filter
   const matchesSearch = useCallback((m: Mission) => {
     if (!missionSearchQuery.trim()) return true
@@ -309,6 +318,10 @@ export function MissionSidebar() {
   const activeMissions = missions
     .filter(m => m.status !== 'saved' && matchesSearch(m))
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+
+  /** Paginated slice of active missions for rendering (#4778) */
+  const visibleActiveMissions = activeMissions.slice(0, visibleMissionCount)
+  const hasMoreMissions = activeMissions.length > visibleMissionCount
 
   const handleImportMission = useCallback((mission: MissionExport) => {
     const missionType = mission.missionClass === 'install' ? 'deploy' as const
@@ -1010,7 +1023,7 @@ export function MissionSidebar() {
             </div>
           )}
 
-          {/* Active missions section */}
+          {/* Active missions section — paginated for performance (#4778) */}
           {activeMissions.length > 0 && (
             <>
               {savedMissions.length > 0 && (
@@ -1019,7 +1032,7 @@ export function MissionSidebar() {
                   <span className="text-2xs bg-secondary px-1.5 py-0.5 rounded-full">{activeMissions.length}</span>
                 </div>
               )}
-              {[...activeMissions].map((mission) => (
+              {visibleActiveMissions.map((mission) => (
                 <MissionListItem
                   key={mission.id}
                   mission={mission}
@@ -1045,6 +1058,18 @@ export function MissionSidebar() {
                   onToggleCollapse={() => toggleMissionCollapse(mission.id)}
                 />
               ))}
+              {/* Load More button — renders remaining missions incrementally */}
+              {hasMoreMissions && (
+                <button
+                  onClick={() => setVisibleMissionCount(prev => prev + MISSIONS_PAGE_SIZE)}
+                  className="w-full py-2 text-xs font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                >
+                  {t('missionSidebar.loadMore', {
+                    defaultValue: 'Load more ({{remaining}} remaining)',
+                    remaining: activeMissions.length - visibleMissionCount,
+                  })}
+                </button>
+              )}
             </>
           )}
 

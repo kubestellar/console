@@ -74,6 +74,7 @@ import { useCardGridNavigation } from '../../hooks/useCardGridNavigation'
 import { useModalState } from '../../lib/modals'
 import { setAutoRefreshPaused } from '../../lib/cache'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { STORAGE_KEY_MAIN_DASHBOARD_CARDS } from '../../lib/constants/storage'
 
 // Lazy-load modal components — only shown on explicit user action,
 // so deferring their chunk until first use reduces the initial dashboard bundle.
@@ -89,8 +90,8 @@ interface CachedDashboard {
 let dashboardCache: CachedDashboard | null = null
 // CACHE_TTL removed — dashboard always does background refresh
 
-// Storage key and default cards for the main dashboard
-const DASHBOARD_STORAGE_KEY = 'kubestellar-main-dashboard-cards'
+// Use the shared storage key for the main dashboard
+const DASHBOARD_STORAGE_KEY = STORAGE_KEY_MAIN_DASHBOARD_CARDS
 
 // Default cards loaded from centralized config
 const DEFAULT_DASHBOARD_CARDS: Card[] = getDefaultCardsForDashboard('main')

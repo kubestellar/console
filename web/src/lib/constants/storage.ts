@@ -39,6 +39,9 @@ export const STORAGE_KEY_TOUR_COMPLETED = 'kubestellar-console-tour-completed'
 export const STORAGE_KEY_ANALYTICS_OPT_OUT = 'kc-analytics-opt-out'
 export const STORAGE_KEY_ANONYMOUS_USER_ID = 'kc-anonymous-user-id'
 
+// ── Dashboard persistence ─────────────────────────────────────────────
+export const STORAGE_KEY_MAIN_DASHBOARD_CARDS = 'kubestellar-main-dashboard-cards'
+
 // ── UI state persistence ───────────────────────────────────────────────
 export const STORAGE_KEY_CLUSTER_LAYOUT = 'kubestellar-cluster-layout-mode'
 export const STORAGE_KEY_NAV_HISTORY = 'kubestellar-nav-history'

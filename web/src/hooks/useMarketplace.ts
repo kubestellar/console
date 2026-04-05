@@ -4,6 +4,8 @@ import { addCustomTheme, removeCustomTheme } from '../lib/themes'
 import { emitMarketplaceInstall, emitMarketplaceRemove, emitMarketplaceInstallFailed } from '../lib/analytics'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
 import { isCardTypeRegistered } from '../components/cards/cardRegistry'
+import { STORAGE_KEY_MAIN_DASHBOARD_CARDS } from '../lib/constants/storage'
+import { getDefaultCardSize } from '../components/dashboard/dashboardUtils'
 
 const REGISTRY_URL = 'https://raw.githubusercontent.com/kubestellar/console-marketplace/main/registry.json'
 const CACHE_KEY = 'kc-marketplace-registry'
@@ -246,7 +248,28 @@ export function useMarketplace() {
     const json = await response.json()
 
     if (item.type === 'card-preset') {
-      // Dispatch event for the active dashboard to pick up
+      // Persist card directly to the main dashboard localStorage so it
+      // survives navigation. Previously this only dispatched a CustomEvent
+      // that was lost if the Dashboard component wasn't mounted (#4780).
+      const { card_type, config, title } = json as { card_type?: string; config?: Record<string, unknown>; title?: string }
+      if (card_type) {
+        const size = getDefaultCardSize(card_type)
+        const newCard = {
+          id: `mp-${Date.now()}`,
+          card_type,
+          config: config || {},
+          title,
+          position: { x: 0, y: 0, ...size },
+        }
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY_MAIN_DASHBOARD_CARDS)
+          const existing = raw ? JSON.parse(raw) : []
+          const cards = Array.isArray(existing) ? existing : []
+          cards.unshift(newCard)
+          localStorage.setItem(STORAGE_KEY_MAIN_DASHBOARD_CARDS, JSON.stringify(cards))
+        } catch { /* localStorage unavailable — card will appear on next dashboard load */ }
+      }
+      // Also dispatch event so a mounted Dashboard picks up changes immediately
       window.dispatchEvent(new CustomEvent('kc-add-card-from-marketplace', { detail: json }))
       markInstalled(item.id, { installedAt: new Date().toISOString(), type: 'card-preset' })
       emitMarketplaceInstall(item.type, item.name)
