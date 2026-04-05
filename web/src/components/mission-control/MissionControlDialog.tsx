@@ -10,7 +10,7 @@
  * Phase 3: Flight Plan (SVG blueprint + deploy)
  */
 
-import { useEffect, useCallback, useState } from 'react'
+import { useEffect, useCallback, useState, lazy, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   X,
@@ -30,7 +30,9 @@ import { useToast } from '../ui/Toast'
 import { useMissionControl } from './useMissionControl'
 import { FixerDefinitionPanel } from './FixerDefinitionPanel'
 import { ClusterAssignmentPanel } from './ClusterAssignmentPanel'
-import { FlightPlanBlueprint } from './FlightPlanBlueprint'
+const FlightPlanBlueprint = lazy(() =>
+  import('./FlightPlanBlueprint').then(m => ({ default: m.FlightPlanBlueprint }))
+)
 import { LaunchSequence } from './LaunchSequence'
 import type { WizardPhase } from './types'
 
@@ -301,13 +303,15 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                 )}
                 {state.phase === 'blueprint' && (
                   <PhaseWrapper key="blueprint">
-                    <FlightPlanBlueprint
-                      state={state}
-                      onOverlayChange={mc.setOverlay}
-                      onDeployModeChange={mc.setDeployMode}
-                      onMoveProject={mc.moveProjectToCluster}
-                      installedProjects={mc.installedProjects}
-                    />
+                    <Suspense fallback={null}>
+                      <FlightPlanBlueprint
+                        state={state}
+                        onOverlayChange={mc.setOverlay}
+                        onDeployModeChange={mc.setDeployMode}
+                        onMoveProject={mc.moveProjectToCluster}
+                        installedProjects={mc.installedProjects}
+                      />
+                    </Suspense>
                   </PhaseWrapper>
                 )}
                 {(isLaunching || isComplete) && (

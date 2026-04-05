@@ -127,7 +127,7 @@ export function useCardRecommendations(currentCardTypes: string[]) {
 
     // Check for security issues
     const highSeveritySecurityIssues = (securityIssues || []).filter(i => i.severity === 'high')
-    if ((securityIssues || []).length > 0) {
+    if ((securityIssues || []).length > 0 && !currentCardTypes.includes('security_issues')) {
       newRecommendations.push({
         id: 'rec-security',
         cardType: 'security_issues',

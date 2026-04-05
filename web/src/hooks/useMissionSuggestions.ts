@@ -173,8 +173,12 @@ export function useMissionSuggestions() {
 
     // 5. Check for pods without resource limits (best practice)
     const podsWithoutLimits = pods.filter(p => {
-      // This is a simplified check - in practice we'd need container-level info
-      return p.status === 'Running' && !p.node  // Placeholder logic
+      if (p.status !== 'Running') return false
+      // Check actual resource limit fields — a pod is missing limits when
+      // neither CPU nor memory limits are set (both undefined or zero).
+      const hasCpuLimit = (p.cpuLimitMillis ?? 0) > 0
+      const hasMemoryLimit = (p.memoryLimitBytes ?? 0) > 0
+      return !hasCpuLimit && !hasMemoryLimit
     })
     // Only suggest if we have many pods without limits
     if (podsWithoutLimits.length > PODS_WITHOUT_LIMITS_THRESHOLD) {

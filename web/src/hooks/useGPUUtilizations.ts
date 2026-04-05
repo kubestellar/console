@@ -48,7 +48,7 @@ export function useGPUUtilizations(reservationIds: string[]) {
   }, [])
 
   useEffect(() => {
-    const idsKey = (reservationIds || []).sort().join(',')
+    const idsKey = [...(reservationIds || [])].sort().join(',')
     // Only refetch if IDs actually changed
     if (idsKey === idsRef.current && Object.keys(data).length > 0) {
       return

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
 import {
   X,
   ChevronRight,
@@ -31,7 +31,9 @@ import { StatusBadge } from '../../ui/StatusBadge'
 import { cn } from '../../../lib/cn'
 import { AgentSelector } from '../../agent/AgentSelector'
 import { AgentIcon } from '../../agent/AgentIcon'
-import { MissionBrowser } from '../../missions/MissionBrowser'
+const MissionBrowser = lazy(() =>
+  import('../../missions/MissionBrowser').then(m => ({ default: m.MissionBrowser }))
+)
 import { MissionControlDialog } from '../../mission-control/MissionControlDialog'
 import { MissionDetailView } from '../../missions/MissionDetailView'
 import type { MissionExport } from '../../../lib/missions/types'
@@ -1105,13 +1107,15 @@ export function MissionSidebar() {
         </div>
       )}
 
-      {/* Mission Browser Dialog */}
-      <MissionBrowser
-        isOpen={showBrowser}
-        onClose={() => setShowBrowser(false)}
-        onImport={handleImportMission}
-        initialMission={deepLinkMission || undefined}
-      />
+      {/* Mission Browser Dialog (lazy-loaded — 2 000+ line component) */}
+      <Suspense fallback={null}>
+        <MissionBrowser
+          isOpen={showBrowser}
+          onClose={() => setShowBrowser(false)}
+          onImport={handleImportMission}
+          initialMission={deepLinkMission || undefined}
+        />
+      </Suspense>
 
       {/* Mission Control Dialog */}
       <MissionControlDialog
