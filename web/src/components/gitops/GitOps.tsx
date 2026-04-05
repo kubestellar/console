@@ -13,6 +13,7 @@ import { getDemoMode } from '../../hooks/useDemoMode'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { RotatingTip } from '../ui/RotatingTip'
 import { PortalTooltip } from '../cards/llmd/shared/PortalTooltip'
 import { STATUS_TOOLTIPS } from '../shared/TechnicalAcronym'
 import { StatusBadge } from '../ui/StatusBadge'
@@ -410,6 +411,7 @@ export function GitOps() {
         title={t('gitops.title')}
         subtitle={t('gitops.subtitle')}
         icon="GitBranch"
+        rightExtra={<RotatingTip page="gitops" />}
         storageKey={GITOPS_STORAGE_KEY}
         defaultCards={DEFAULT_GITOPS_CARDS}
         statsType="gitops"

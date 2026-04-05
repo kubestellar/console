@@ -12,6 +12,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { RotatingTip } from '../ui/RotatingTip'
 import { TechnicalAcronym, STATUS_TOOLTIPS } from '../shared/TechnicalAcronym'
 import { PortalTooltip } from '../cards/llmd/shared/PortalTooltip'
 
@@ -123,6 +124,7 @@ export function Pods() {
       title="Pods"
       subtitle="Monitor pod health and issues across clusters"
       icon="Box"
+      rightExtra={<RotatingTip page="pods" />}
       storageKey={PODS_CARDS_KEY}
       defaultCards={DEFAULT_POD_CARDS}
       statsType="pods"

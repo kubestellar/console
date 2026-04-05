@@ -12,6 +12,7 @@ import { useMarketplace, useAuthorProfile, MarketplaceItem, MarketplaceItemType,
 import { useSidebarConfig } from '../../hooks/useSidebarConfig'
 import { useToast } from '../ui/Toast'
 import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 import { MarketplaceThumbnail } from './MarketplaceThumbnail'
 import { NAV_AFTER_ANIMATION_MS } from '../../lib/constants/network'
 import { suggestIconSync } from '../../lib/iconSuggester'
@@ -680,6 +681,7 @@ export function Marketplace() {
         icon={<Store className="w-5 h-5" />}
         isFetching={isLoading}
         onRefresh={refresh}
+        rightExtra={<RotatingTip page="marketplace" />}
       />
 
       {/* CNCF Progress Banner */}

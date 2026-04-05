@@ -7,6 +7,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { RotatingTip } from '../ui/RotatingTip'
 import { useTranslation } from 'react-i18next'
 
 const ALERTS_STORAGE_KEY = 'kubestellar-alerts-dashboard-cards'
@@ -74,6 +75,7 @@ export function Alerts() {
       title={t('alerts.title')}
       subtitle={t('alerts.subtitle')}
       icon="Bell"
+      rightExtra={<RotatingTip page="alerts" />}
       storageKey={ALERTS_STORAGE_KEY}
       defaultCards={DEFAULT_ALERT_CARDS}
       statsType="alerts"

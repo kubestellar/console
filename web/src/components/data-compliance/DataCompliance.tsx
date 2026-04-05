@@ -6,6 +6,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { useDataCompliance } from '../../hooks/useDataCompliance'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
+import { RotatingTip } from '../ui/RotatingTip'
 
 const DATA_COMPLIANCE_CARDS_KEY = 'data-compliance-dashboard-cards'
 
@@ -85,6 +86,7 @@ export function DataCompliance() {
       title="Data Compliance"
       subtitle="GDPR, HIPAA, PCI-DSS, and SOC 2 data protection compliance"
       icon="Database"
+      rightExtra={<RotatingTip page="data-compliance" />}
       storageKey={DATA_COMPLIANCE_CARDS_KEY}
       defaultCards={DEFAULT_DATA_COMPLIANCE_CARDS}
       statsType="data-compliance"

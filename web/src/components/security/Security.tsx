@@ -11,6 +11,7 @@ import { cn } from '../../lib/cn'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { RotatingTip } from '../ui/RotatingTip'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { SHORT_DELAY_MS } from '../../lib/constants/network'
@@ -395,6 +396,7 @@ export function Security() {
       title={t('common:navigation.security')}
       subtitle={t('cards:security.subtitle')}
       icon="Shield"
+      rightExtra={<RotatingTip page="security" />}
       storageKey={SECURITY_CARDS_KEY}
       defaultCards={DEFAULT_SECURITY_CARDS}
       statsType="security"

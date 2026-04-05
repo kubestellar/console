@@ -5,6 +5,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { RotatingTip } from '../ui/RotatingTip'
 
 const INSIGHTS_CARDS_KEY = 'kubestellar-insights-cards'
 
@@ -44,6 +45,7 @@ export function Insights() {
       title="Insights"
       subtitle="Cross-cluster correlation and pattern detection"
       icon="Lightbulb"
+      rightExtra={<RotatingTip page="insights" />}
       storageKey={INSIGHTS_CARDS_KEY}
       defaultCards={DEFAULT_INSIGHTS_CARDS}
       statsType="insights"

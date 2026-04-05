@@ -5,6 +5,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { RotatingTip } from '../ui/RotatingTip'
 import { useLLMdClusters } from '../cards/workload-detection/shared'
 import { StackProvider } from '../../contexts/StackContext'
 import { StackSelector } from '../cards/llmd/StackSelector'
@@ -87,6 +88,7 @@ export function AIML() {
         title={t('aiml.title')}
         subtitle={t('aiml.subtitle')}
         icon="Brain"
+        rightExtra={<RotatingTip page="ai-ml" />}
         storageKey={AIML_CARDS_KEY}
         defaultCards={DEFAULT_AIML_CARDS}
         statsType="compute"

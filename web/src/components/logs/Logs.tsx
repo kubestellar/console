@@ -6,6 +6,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
+import { RotatingTip } from '../ui/RotatingTip'
 
 const LOGS_CARDS_KEY = 'kubestellar-logs-cards'
 
@@ -113,6 +114,7 @@ export function Logs() {
       title="Logs & Events"
       subtitle="Monitor cluster events and application logs"
       icon="ScrollText"
+      rightExtra={<RotatingTip page="logs" />}
       storageKey={LOGS_CARDS_KEY}
       defaultCards={DEFAULT_LOGS_CARDS}
       statsType="events"

@@ -7,6 +7,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { RotatingTip } from '../ui/RotatingTip'
 
 const HELM_CARDS_KEY = 'kubestellar-helm-cards'
 
@@ -47,6 +48,7 @@ export function HelmReleases() {
       title="Helm Releases"
       subtitle="Monitor Helm chart releases and versions"
       icon="Ship"
+      rightExtra={<RotatingTip page="helm" />}
       storageKey={HELM_CARDS_KEY}
       defaultCards={DEFAULT_HELM_CARDS}
       statsType="gitops"

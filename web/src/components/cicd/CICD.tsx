@@ -5,6 +5,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { RotatingTip } from '../ui/RotatingTip'
 
 const CICD_CARDS_KEY = 'kubestellar-cicd-cards'
 
@@ -88,6 +89,7 @@ export function CICD() {
       title="CI/CD"
       subtitle="Monitor continuous integration and deployment pipelines"
       icon="GitPullRequest"
+      rightExtra={<RotatingTip page="ci-cd" />}
       storageKey={CICD_CARDS_KEY}
       defaultCards={DEFAULT_CICD_CARDS}
       statsType="ci-cd"

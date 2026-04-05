@@ -4,6 +4,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { RotatingTip } from '../ui/RotatingTip'
 
 const MULTI_TENANCY_CARDS_KEY = 'kubestellar-multi-tenancy-cards'
 
@@ -35,6 +36,7 @@ export function MultiTenancy() {
       title="Multi-Tenancy"
       subtitle="Tenant isolation with OVN, KubeFlex, K3s, KubeVirt"
       icon="Shield"
+      rightExtra={<RotatingTip page="multi-tenancy" />}
       storageKey={MULTI_TENANCY_CARDS_KEY}
       defaultCards={DEFAULT_MULTI_TENANCY_CARDS}
       statsType="multi-tenancy"

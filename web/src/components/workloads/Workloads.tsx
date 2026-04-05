@@ -13,6 +13,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { RotatingTip } from '../ui/RotatingTip'
 import { useTranslation } from 'react-i18next'
 
 const WORKLOADS_CARDS_KEY = 'kubestellar-workloads-cards'
@@ -201,6 +202,7 @@ export function Workloads() {
       title="Workloads"
       subtitle="View and manage deployed applications across clusters"
       icon="Layers"
+      rightExtra={<RotatingTip page="workloads" />}
       storageKey={WORKLOADS_CARDS_KEY}
       defaultCards={DEFAULT_WORKLOAD_CARDS}
       statsType="workloads"

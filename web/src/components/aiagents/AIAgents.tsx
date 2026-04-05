@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { AgentIcon } from '../agent/AgentIcon'
 import { ExternalLink } from 'lucide-react'
 import { aiAgentsDashboardConfig } from '../../config/dashboards/ai-agents'
+import { RotatingTip } from '../ui/RotatingTip'
 
 const STORAGE_KEYS: Record<string, string> = {
   kagenti: 'kubestellar-aiagents-kagenti-cards',
@@ -98,6 +99,7 @@ export function AIAgents() {
       title={t('aiAgents.title')}
       subtitle={t('aiAgents.subtitle')}
       icon="Bot"
+      rightExtra={<RotatingTip page="ai-agents" />}
       storageKey={STORAGE_KEYS[activeTab] || 'kubestellar-aiagents-cards'}
       defaultCards={getTabDefaultCards(activeTab)}
       statsType="ai-agents"

@@ -8,6 +8,7 @@ import { useIsModeSwitching } from '../../lib/unified/demo'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { RotatingTip } from '../ui/RotatingTip'
 
 const NETWORK_CARDS_KEY = 'kubestellar-network-cards'
 
@@ -95,6 +96,7 @@ export function Network() {
       title="Network"
       subtitle="Monitor network resources across clusters"
       icon="Globe"
+      rightExtra={<RotatingTip page="network" />}
       storageKey={NETWORK_CARDS_KEY}
       defaultCards={DEFAULT_NETWORK_CARDS}
       statsType="network"

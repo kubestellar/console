@@ -63,6 +63,7 @@ import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useContextualNudges } from '../../hooks/useContextualNudges'
 import { useDashboardScrollTracking } from '../../hooks/useDashboardScrollTracking'
 import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useCardPublish, type DeployResultPayload } from '../../lib/cardEvents'
@@ -979,6 +980,7 @@ export function Dashboard() {
         lastUpdated={lastUpdated}
         error={clustersError}
         afterTitle={<DashboardHealthIndicator />}
+        rightExtra={<RotatingTip page="home" />}
       />
 
       {/* Configurable Stats Overview */}

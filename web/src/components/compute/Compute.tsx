@@ -9,6 +9,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { RotatingTip } from '../ui/RotatingTip'
 import { ROUTES } from '../../config/routes'
 import { useTranslation } from 'react-i18next'
 
@@ -283,6 +284,7 @@ export function Compute() {
       title="Compute"
       subtitle="Monitor compute resources across clusters"
       icon="Cpu"
+      rightExtra={<RotatingTip page="compute" />}
       storageKey={COMPUTE_CARDS_KEY}
       defaultCards={DEFAULT_COMPUTE_CARDS}
       statsType="compute"

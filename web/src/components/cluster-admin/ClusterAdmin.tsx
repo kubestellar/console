@@ -5,6 +5,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
 import { getDefaultCards } from '../../config/dashboards'
+import { RotatingTip } from '../ui/RotatingTip'
 
 const STORAGE_KEY = 'kubestellar-cluster-admin-cards'
 const DEFAULT_CARDS = getDefaultCards('cluster-admin')
@@ -52,6 +53,7 @@ export function ClusterAdmin() {
       title="Cluster Admin"
       subtitle="Multi-cluster operations, health, and infrastructure management"
       icon="ShieldAlert"
+      rightExtra={<RotatingTip page="cluster-admin" />}
       storageKey={STORAGE_KEY}
       defaultCards={DEFAULT_CARDS}
       statsType="cluster-admin"

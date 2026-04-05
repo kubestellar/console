@@ -8,6 +8,7 @@ import { StatBlockValue } from '../ui/StatsOverview'
 import { formatMemoryStat } from '../../lib/formatStats'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { RotatingTip } from '../ui/RotatingTip'
 import { useTranslation } from 'react-i18next'
 
 const NODES_CARDS_KEY = 'kubestellar-nodes-cards'
@@ -98,6 +99,7 @@ export function Nodes() {
       title={t('common:nodes.title')}
       subtitle={t('common:nodes.subtitle')}
       icon="Server"
+      rightExtra={<RotatingTip page="nodes" />}
       storageKey={NODES_CARDS_KEY}
       defaultCards={DEFAULT_NODES_CARDS}
       statsType="compute"

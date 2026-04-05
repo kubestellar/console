@@ -13,6 +13,7 @@ import { formatStat } from '../../lib/formatStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { RotatingTip } from '../ui/RotatingTip'
 import { getChartColor, getChartColorByName } from '../../lib/chartColors'
 import { StatusBadge } from '../ui/StatusBadge'
 
@@ -260,6 +261,7 @@ export function Events() {
       title={t('common.events')}
       subtitle="Cluster events and activity across your infrastructure"
       icon="Activity"
+      rightExtra={<RotatingTip page="events" />}
       storageKey={EVENTS_CARDS_KEY}
       defaultCards={DEFAULT_EVENTS_CARDS}
       statsType="events"

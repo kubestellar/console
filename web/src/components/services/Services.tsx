@@ -7,6 +7,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { RotatingTip } from '../ui/RotatingTip'
 
 const SERVICES_CARDS_KEY = 'kubestellar-services-cards'
 
@@ -73,6 +74,7 @@ export function Services() {
       title="Services"
       subtitle="Monitor Kubernetes services and network connectivity"
       icon="Network"
+      rightExtra={<RotatingTip page="services" />}
       storageKey={SERVICES_CARDS_KEY}
       defaultCards={DEFAULT_SERVICES_CARDS}
       statsType="network"

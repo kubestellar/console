@@ -7,6 +7,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { RotatingTip } from '../ui/RotatingTip'
 import { useTranslation } from 'react-i18next'
 
 const OPERATORS_CARDS_KEY = 'kubestellar-operators-cards'
@@ -115,6 +116,7 @@ export function Operators() {
       title={t('common:operators.title')}
       subtitle={t('common:operators.subtitle')}
       icon="Cog"
+      rightExtra={<RotatingTip page="operators" />}
       storageKey={OPERATORS_CARDS_KEY}
       defaultCards={DEFAULT_OPERATORS_CARDS}
       statsType="operators"

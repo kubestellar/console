@@ -8,6 +8,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards, deploymentsDashboardConfig } from '../../config/dashboards'
+import { RotatingTip } from '../ui/RotatingTip'
 import { migrateStorageKey } from '../../lib/dashboards/migrateStorageKey'
 
 /** Storage key sourced from central dashboard config to prevent mismatches */
@@ -98,6 +99,7 @@ export function Deployments() {
       title="Deployments"
       subtitle="Monitor deployment health and rollout status"
       icon="Rocket"
+      rightExtra={<RotatingTip page="deployments" />}
       storageKey={DEPLOYMENTS_CARDS_KEY}
       defaultCards={DEFAULT_DEPLOYMENTS_CARDS}
       statsType="workloads"

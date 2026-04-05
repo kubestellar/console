@@ -23,6 +23,7 @@ import { useModalState } from '../../lib/modals'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
 import { api } from '../../lib/api'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
@@ -376,13 +377,16 @@ export function NamespaceManager() {
         onRefresh={triggerRefresh}
         lastUpdated={lastUpdated}
         rightExtra={
-          <Button
-            variant="primary"
-            onClick={() => openCreateModal()}
-            icon={<Plus className="w-3.5 h-3.5" />}
-          >
-            Create
-          </Button>
+          <>
+            <RotatingTip page="namespaces" />
+            <Button
+              variant="primary"
+              onClick={() => openCreateModal()}
+              icon={<Plus className="w-3.5 h-3.5" />}
+            >
+              Create
+            </Button>
+          </>
         }
       />
 

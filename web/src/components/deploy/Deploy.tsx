@@ -7,6 +7,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { RotatingTip } from '../ui/RotatingTip'
 import { emitDeployWorkload } from '../../lib/analytics'
 import { useCardPublish, type DeployResultPayload } from '../../lib/cardEvents'
 import { DeployConfirmDialog } from './DeployConfirmDialog'
@@ -250,6 +251,7 @@ export function Deploy() {
       title={t('common:deploy.title')}
       subtitle={t('common:deploy.subtitle')}
       icon="Rocket"
+      rightExtra={<RotatingTip page="deploy" />}
       storageKey={DEPLOY_CARDS_KEY}
       defaultCards={DEFAULT_DEPLOY_CARDS}
       statsType="deploy"

@@ -9,6 +9,7 @@ import { StatBlockValue } from '../ui/StatsOverview'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { RotatingTip } from '../ui/RotatingTip'
 import { useTranslation } from 'react-i18next'
 
 // PVC List Modal
@@ -249,6 +250,7 @@ export function Storage() {
         title="Storage"
         subtitle="Monitor storage resources across clusters"
         icon="HardDrive"
+        rightExtra={<RotatingTip page="storage" />}
         storageKey={STORAGE_CARDS_KEY}
         defaultCards={DEFAULT_STORAGE_CARDS}
         statsType="storage"

@@ -8,6 +8,7 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
+import { RotatingTip } from '../ui/RotatingTip'
 import { TICK_INTERVAL_MS } from '../../lib/constants/network'
 import { safeGetJSON } from '../../lib/utils/localStorage'
 import { formatMemoryStat } from '../../lib/formatStats'
@@ -170,6 +171,7 @@ export function Cost() {
       title="Cost Management"
       subtitle="Monitor and optimize resource costs across clusters"
       icon="DollarSign"
+      rightExtra={<RotatingTip page="cost" />}
       storageKey={COST_CARDS_KEY}
       defaultCards={DEFAULT_COST_CARDS}
       statsType="cost"
