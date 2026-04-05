@@ -22,6 +22,13 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	labelSelector := c.Query("labelSelector")
 
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+	if err := mcpValidateLabelSelector(labelSelector); err != nil {
+		return err
+	}
+
 	// Try MCP bridge first for its richer functionality
 	if h.bridge != nil {
 		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
@@ -100,6 +107,10 @@ func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+
 	// Try MCP bridge first
 	if h.bridge != nil {
 		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
@@ -175,6 +186,10 @@ func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+
 	// Fall back to direct k8s client
 	if h.k8sClient != nil {
 		// If no cluster specified, query all clusters in parallel
@@ -237,6 +252,10 @@ func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+
 	if h.k8sClient != nil {
 		// If no cluster specified, query all clusters in parallel
 		if cluster == "" {
@@ -297,6 +316,10 @@ func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
 
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
+
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
 
 	if h.k8sClient != nil {
 		if cluster == "" {
@@ -359,6 +382,10 @@ func (h *MCPHandlers) GetJobs(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+
 	if h.k8sClient != nil {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
@@ -419,6 +446,10 @@ func (h *MCPHandlers) GetHPAs(c *fiber.Ctx) error {
 
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
+
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
 
 	if h.k8sClient != nil {
 		if cluster == "" {
@@ -481,6 +512,10 @@ func (h *MCPHandlers) GetReplicaSets(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+
 	if h.k8sClient != nil {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
@@ -541,6 +576,10 @@ func (h *MCPHandlers) GetStatefulSets(c *fiber.Ctx) error {
 
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
+
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
 
 	if h.k8sClient != nil {
 		if cluster == "" {
@@ -603,6 +642,10 @@ func (h *MCPHandlers) GetDaemonSets(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+
 	if h.k8sClient != nil {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
@@ -663,6 +706,10 @@ func (h *MCPHandlers) GetCronJobs(c *fiber.Ctx) error {
 
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
+
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
 
 	if h.k8sClient != nil {
 		if cluster == "" {
@@ -730,6 +777,13 @@ func (h *MCPHandlers) GetWorkloads(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 	workloadType := c.Query("type")
+
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+	if err := mcpValidateWorkloadType(workloadType); err != nil {
+		return err
+	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), maxResponseDeadline)
 	defer cancel()

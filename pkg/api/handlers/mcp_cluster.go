@@ -72,6 +72,9 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 // GetClusterHealth returns health for a specific cluster
 func (h *MCPHandlers) GetClusterHealth(c *fiber.Ctx) error {
 	cluster := c.Params("cluster")
+	if err := mcpValidateName("cluster", cluster); err != nil {
+		return err
+	}
 
 	// Demo mode: return demo data immediately
 	if isDemoMode(c) {
@@ -132,6 +135,9 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 	}
 
 	cluster := c.Query("cluster")
+	if err := mcpValidateName("cluster", cluster); err != nil {
+		return err
+	}
 
 	if h.k8sClient != nil {
 		// If no cluster specified, query all clusters in parallel
@@ -198,6 +204,13 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 	limit := c.QueryInt("limit", 50)
+
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+	if err := mcpValidatePositiveInt("limit", limit, mcpMaxEventLimit); err != nil {
+		return err
+	}
 
 	// Try MCP bridge first
 	if h.bridge != nil {
@@ -298,6 +311,13 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 	namespace := c.Query("namespace")
 	limit := c.QueryInt("limit", 50)
 
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+	if err := mcpValidatePositiveInt("limit", limit, mcpMaxEventLimit); err != nil {
+		return err
+	}
+
 	// Try MCP bridge first
 	if h.bridge != nil {
 		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
@@ -392,6 +412,10 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
+
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
 
 	// Fall back to direct k8s client
 	if h.k8sClient != nil {

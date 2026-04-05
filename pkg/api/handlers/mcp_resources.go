@@ -24,6 +24,9 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 	}
 
 	cluster := c.Query("cluster")
+	if err := mcpValidateName("cluster", cluster); err != nil {
+		return err
+	}
 
 	if h.k8sClient != nil {
 		// If no cluster specified, query all clusters in parallel
@@ -84,6 +87,9 @@ func (h *MCPHandlers) GetGPUNodeHealth(c *fiber.Ctx) error {
 	}
 
 	cluster := c.Query("cluster")
+	if err := mcpValidateName("cluster", cluster); err != nil {
+		return err
+	}
 
 	if h.k8sClient != nil {
 		if cluster == "" {
@@ -145,6 +151,9 @@ func (h *MCPHandlers) GetGPUHealthCronJobStatus(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	if cluster == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "cluster parameter is required"})
+	}
+	if err := mcpValidateName("cluster", cluster); err != nil {
+		return err
 	}
 
 	if h.k8sClient == nil {
@@ -236,6 +245,9 @@ func (h *MCPHandlers) GetGPUHealthCronJobResults(c *fiber.Ctx) error {
 	if cluster == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "cluster parameter is required"})
 	}
+	if err := mcpValidateName("cluster", cluster); err != nil {
+		return err
+	}
 
 	if h.k8sClient == nil {
 		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
@@ -259,6 +271,9 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 	}
 
 	cluster := c.Query("cluster")
+	if err := mcpValidateName("cluster", cluster); err != nil {
+		return err
+	}
 
 	if h.k8sClient != nil {
 		// If no cluster specified, query all clusters in parallel
@@ -318,6 +333,10 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
+
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
 
 	if h.k8sClient != nil {
 		if cluster == "" {
@@ -380,6 +399,10 @@ func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+
 	if h.k8sClient != nil {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
@@ -440,6 +463,10 @@ func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
 
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
+
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
 
 	if h.k8sClient != nil {
 		if cluster == "" {
@@ -502,6 +529,10 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+
 	if h.k8sClient != nil {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
@@ -561,6 +592,9 @@ func (h *MCPHandlers) GetPVs(c *fiber.Ctx) error {
 	}
 
 	cluster := c.Query("cluster")
+	if err := mcpValidateName("cluster", cluster); err != nil {
+		return err
+	}
 
 	if h.k8sClient != nil {
 		if cluster == "" {
@@ -623,6 +657,10 @@ func (h *MCPHandlers) GetResourceQuotas(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+
 	if h.k8sClient != nil {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
@@ -683,6 +721,10 @@ func (h *MCPHandlers) GetLimitRanges(c *fiber.Ctx) error {
 
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
+
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
 
 	if h.k8sClient != nil {
 		if cluster == "" {
@@ -754,6 +796,12 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 	if req.Cluster == "" || req.Name == "" || req.Namespace == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "cluster, name, and namespace are required"})
 	}
+	if err := mcpValidateClusterAndNamespace(req.Cluster, req.Namespace); err != nil {
+		return err
+	}
+	if err := mcpValidateName("name", req.Name); err != nil {
+		return err
+	}
 
 	if len(req.Hard) == 0 {
 		return c.Status(400).JSON(fiber.Map{"error": "At least one resource limit is required in 'hard'"})
@@ -799,6 +847,12 @@ func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
 	if cluster == "" || namespace == "" || name == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "cluster, namespace, and name are required"})
 	}
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+	if err := mcpValidateName("name", name); err != nil {
+		return err
+	}
 
 	if h.k8sClient != nil {
 		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
@@ -830,6 +884,18 @@ func (h *MCPHandlers) GetPodLogs(c *fiber.Ctx) error {
 
 	if cluster == "" || namespace == "" || pod == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "cluster, namespace, and pod are required"})
+	}
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
+	if err := mcpValidateName("pod", pod); err != nil {
+		return err
+	}
+	if err := mcpValidateName("container", container); err != nil {
+		return err
+	}
+	if err := mcpValidatePositiveInt("tail", tailLines, mcpMaxTailLines); err != nil {
+		return err
 	}
 
 	if h.k8sClient != nil {
@@ -1025,6 +1091,9 @@ func (h *MCPHandlers) GetFlatcarNodes(c *fiber.Ctx) error {
 	}
 
 	cluster := c.Query("cluster")
+	if err := mcpValidateName("cluster", cluster); err != nil {
+		return err
+	}
 
 	if h.k8sClient != nil {
 		// No cluster specified → query all healthy clusters in parallel
@@ -1084,6 +1153,10 @@ func (h *MCPHandlers) GetIngresses(c *fiber.Ctx) error {
 
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
+
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
 
 	if h.k8sClient != nil {
 		if cluster == "" {
@@ -1145,6 +1218,10 @@ func (h *MCPHandlers) GetNetworkPolicies(c *fiber.Ctx) error {
 
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
+
+	if err := mcpValidateClusterAndNamespace(cluster, namespace); err != nil {
+		return err
+	}
 
 	if h.k8sClient != nil {
 		if cluster == "" {
