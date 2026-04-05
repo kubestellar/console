@@ -16,6 +16,10 @@ const (
 	prometheusQueryTimeout = 10 * time.Second
 	prometheusServicePort  = "9090"
 	prometheusServiceName  = "prometheus"
+	// maxPromQLQueryLength is the maximum allowed length for a PromQL query string.
+	// This prevents users from crafting arbitrarily large queries that could cause
+	// excessive resource consumption on the Prometheus server (#4721).
+	maxPromQLQueryLength = 2048
 )
 
 // handlePrometheusQuery proxies a Prometheus query through the K8s API server.
@@ -46,6 +50,13 @@ func (s *Server) handlePrometheusQuery(w http.ResponseWriter, r *http.Request) {
 
 	if cluster == "" || namespace == "" || query == "" {
 		http.Error(w, `{"error":"cluster, namespace, and query parameters are required"}`, http.StatusBadRequest)
+		return
+	}
+
+	// SECURITY: Length-limit the PromQL query to prevent arbitrarily expensive
+	// queries from consuming excessive Prometheus resources (#4721).
+	if len(query) > maxPromQLQueryLength {
+		http.Error(w, `{"error":"query exceeds maximum allowed length"}`, http.StatusBadRequest)
 		return
 	}
 

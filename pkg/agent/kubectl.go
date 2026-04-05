@@ -53,7 +53,10 @@ func (k *KubectlProxy) ListContexts() ([]protocol.ClusterInfo, string) {
 		if cluster != nil {
 			server = cluster.Server
 		}
-		authMethod := detectAuthMethod(k.config.AuthInfos[ctx.AuthInfo])
+		// Guard against nil AuthInfo — the referenced user entry may not exist
+		// in the kubeconfig AuthInfos map. detectAuthMethod handles nil safely.
+		authInfo := k.config.AuthInfos[ctx.AuthInfo]
+		authMethod := detectAuthMethod(authInfo)
 		clusters = append(clusters, protocol.ClusterInfo{
 			Name: name, Context: name, Server: server,
 			User: ctx.AuthInfo, Namespace: ctx.Namespace,

@@ -79,8 +79,13 @@ type DeviceTracker struct {
 	loggedClusterError bool // suppress repeated "no kubeconfig" errors
 }
 
-// NewDeviceTracker creates a new device tracker
+// NewDeviceTracker creates a new device tracker.
+// Returns nil if k8sClient is nil so the caller can skip starting it (#4723).
 func NewDeviceTracker(k8sClient *k8s.MultiClusterClient, broadcast func(string, interface{})) *DeviceTracker {
+	if k8sClient == nil {
+		slog.Warn("[DeviceTracker] created with nil k8s client — device tracking disabled")
+		return nil
+	}
 	return &DeviceTracker{
 		k8sClient: k8sClient,
 		history:   make(map[string][]DeviceSnapshot),

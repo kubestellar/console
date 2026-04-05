@@ -2,8 +2,11 @@ package notifications
 
 import (
 	"bytes"
+	"crypto/tls"
 	"fmt"
 	"html/template"
+	"log/slog"
+	"net"
 	"net/smtp"
 	"time"
 )
@@ -48,22 +51,91 @@ func (e *EmailNotifier) Send(alert Alert) error {
 	}
 
 	// Build email message
-	msg := e.buildMessage(subject, body)
+	emailMsg := e.buildMessage(subject, body)
 
 	// Send email
 	addr := fmt.Sprintf("%s:%d", e.SMTPHost, e.SMTPPort)
+	isLocalhost := e.SMTPHost == "localhost" || e.SMTPHost == "127.0.0.1" || e.SMTPHost == "::1"
 
 	var auth smtp.Auth
 	if e.Username != "" && e.Password != "" {
 		auth = smtp.PlainAuth("", e.Username, e.Password, e.SMTPHost)
 	}
 
-	err = smtp.SendMail(addr, auth, e.From, e.To, []byte(msg))
+	// SECURITY: Enforce TLS for non-localhost SMTP connections to prevent
+	// credentials from being transmitted in plaintext (#4730).
+	if !isLocalhost && e.UseTLS {
+		return e.sendWithTLS(addr, auth, emailMsg)
+	}
+
+	if !isLocalhost && auth != nil {
+		slog.Warn("[Email] SMTP credentials sent without TLS to remote host — enable UseTLS for security", "host", e.SMTPHost)
+	}
+
+	err = smtp.SendMail(addr, auth, e.From, e.To, []byte(emailMsg))
 	if err != nil {
 		return fmt.Errorf("failed to send email: %w", err)
 	}
 
 	return nil
+}
+
+// sendWithTLS sends an email using STARTTLS to encrypt the connection before
+// transmitting SMTP credentials. This prevents plaintext credential exposure
+// on non-localhost connections (#4730).
+func (e *EmailNotifier) sendWithTLS(addr string, auth smtp.Auth, msg string) error {
+	// Connect to SMTP server
+	conn, err := net.DialTimeout("tcp", addr, 10*time.Second)
+	if err != nil {
+		return fmt.Errorf("failed to connect to SMTP server: %w", err)
+	}
+
+	client, err := smtp.NewClient(conn, e.SMTPHost)
+	if err != nil {
+		conn.Close()
+		return fmt.Errorf("failed to create SMTP client: %w", err)
+	}
+	defer client.Close()
+
+	// Upgrade to TLS
+	tlsConfig := &tls.Config{
+		ServerName: e.SMTPHost,
+		MinVersion: tls.VersionTLS12,
+	}
+	if err := client.StartTLS(tlsConfig); err != nil {
+		return fmt.Errorf("STARTTLS failed (SMTP server may not support TLS): %w", err)
+	}
+
+	// Authenticate after TLS is established
+	if auth != nil {
+		if err := client.Auth(auth); err != nil {
+			return fmt.Errorf("SMTP auth failed: %w", err)
+		}
+	}
+
+	// Set sender and recipients
+	if err := client.Mail(e.From); err != nil {
+		return fmt.Errorf("SMTP MAIL FROM failed: %w", err)
+	}
+	for _, recipient := range e.To {
+		if err := client.Rcpt(recipient); err != nil {
+			return fmt.Errorf("SMTP RCPT TO failed for %s: %w", recipient, err)
+		}
+	}
+
+	// Write message body
+	w, err := client.Data()
+	if err != nil {
+		return fmt.Errorf("SMTP DATA failed: %w", err)
+	}
+	if _, err := w.Write([]byte(msg)); err != nil {
+		return fmt.Errorf("failed to write email body: %w", err)
+	}
+	if err := w.Close(); err != nil {
+		return fmt.Errorf("failed to close email body: %w", err)
+	}
+
+	return client.Quit()
 }
 
 // Test sends a test email to verify configuration

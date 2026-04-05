@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { checkOAuthConfigured } from './api'
 import { dashboardSync } from './dashboards/dashboardSync'
 import { clearPermissionsCache } from '../hooks/usePermissions'
+import { clearSSECache } from './sseClient'
 import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE, FETCH_DEFAULT_TIMEOUT_MS } from './constants'
 import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession } from './analytics'
 import { setDemoMode as setGlobalDemoMode } from './demoMode'
@@ -162,6 +163,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     dashboardSync.clearCache()
     // Clear permissions cache so the next login doesn't serve stale data
     clearPermissionsCache()
+    // Clear SSE result cache to prevent stale data from previous session (#4712)
+    clearSSECache()
   }, [])
 
   const setDemoMode = useCallback(() => {

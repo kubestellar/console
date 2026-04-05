@@ -149,13 +149,13 @@ func (s *Server) handleSettingsAll(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(all)
 
 	case "PUT":
+		defer r.Body.Close()
 		body, err := io.ReadAll(io.LimitReader(r.Body, maxRequestBodyBytes))
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "read_error", Message: "Failed to read request body"})
 			return
 		}
-		defer r.Body.Close()
 
 		var all settings.AllSettings
 		if err := json.Unmarshal(body, &all); err != nil {
@@ -251,13 +251,13 @@ func (s *Server) handleSettingsImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	defer r.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(r.Body, maxRequestBodyBytes))
 	if err != nil || len(body) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "empty_body", Message: "Empty request body"})
 		return
 	}
-	defer r.Body.Close()
 
 	sm := settings.GetSettingsManager()
 	if err := sm.ImportEncrypted(body); err != nil {

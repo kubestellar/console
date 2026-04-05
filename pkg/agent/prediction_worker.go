@@ -79,6 +79,11 @@ type PredictionWorker struct {
 	running     bool
 	mu          sync.RWMutex
 	stopCh      chan struct{}
+	// ctx is the worker's lifecycle context; cancelled when Stop() is called.
+	// All in-flight analysis goroutines derive their context from this so
+	// they are cancelled promptly during graceful shutdown (#4720).
+	ctx       context.Context
+	ctxCancel context.CancelFunc
 
 	// WebSocket broadcast function
 	broadcast func(msgType string, payload interface{})
@@ -90,6 +95,7 @@ type PredictionWorker struct {
 
 // NewPredictionWorker creates a new prediction worker
 func NewPredictionWorker(k8sClient *k8s.MultiClusterClient, registry *Registry, broadcast func(string, interface{}), trackTokens func(*ProviderTokenUsage)) *PredictionWorker {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &PredictionWorker{
 		k8sClient:   k8sClient,
 		registry:    registry,
@@ -97,6 +103,8 @@ func NewPredictionWorker(k8sClient *k8s.MultiClusterClient, registry *Registry, 
 		predictions: []AIPrediction{},
 		providers:   []string{},
 		stopCh:      make(chan struct{}),
+		ctx:         ctx,
+		ctxCancel:   cancel,
 		broadcast:   broadcast,
 		trackTokens: trackTokens,
 	}
@@ -107,8 +115,9 @@ func (w *PredictionWorker) Start() {
 	go w.runLoop()
 }
 
-// Stop gracefully shuts down the worker
+// Stop gracefully shuts down the worker and cancels all in-flight analyses.
 func (w *PredictionWorker) Stop() {
+	w.ctxCancel()
 	close(w.stopCh)
 }
 
@@ -221,8 +230,9 @@ func (w *PredictionWorker) runLoop() {
 func (w *PredictionWorker) runAnalysis(specificProviders []string) {
 	slog.Info("[PredictionWorker] Starting AI prediction analysis")
 
-	// Gather cluster data
-	ctx, cancel := context.WithTimeout(context.Background(), predictionTimeout)
+	// Gather cluster data — derive from the worker's lifecycle context so that
+	// in-flight analysis is cancelled promptly during graceful shutdown (#4720).
+	ctx, cancel := context.WithTimeout(w.ctx, predictionTimeout)
 	defer cancel()
 
 	clusterData, err := w.gatherClusterData(ctx)

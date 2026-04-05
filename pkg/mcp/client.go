@@ -147,7 +147,9 @@ func NewClient(name, binaryPath string, args ...string) (*Client, error) {
 	return client, nil
 }
 
-// Start starts the MCP server process and initializes the connection
+// Start starts the MCP server process and initializes the connection.
+// On failure, Stop() is called to reap the child process and terminate
+// the readResponses goroutine, preventing goroutine and zombie leaks (#4729).
 func (c *Client) Start(ctx context.Context) error {
 	if err := c.cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start %s: %w", c.name, err)
@@ -158,11 +160,13 @@ func (c *Client) Start(ctx context.Context) error {
 
 	// Initialize the connection
 	if err := c.initialize(ctx); err != nil {
+		c.Stop() // clean up readResponses goroutine and child process
 		return fmt.Errorf("failed to initialize %s: %w", c.name, err)
 	}
 
 	// Get available tools
 	if err := c.listTools(ctx); err != nil {
+		c.Stop() // clean up readResponses goroutine and child process
 		return fmt.Errorf("failed to list tools from %s: %w", c.name, err)
 	}
 
@@ -170,7 +174,9 @@ func (c *Client) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop stops the MCP server process
+// Stop stops the MCP server process and reaps the child to avoid zombie
+// processes. Also closes the stderr pipe to release associated file
+// descriptors (#4727).
 func (c *Client) Stop() error {
 	// Signal readResponses goroutine to exit
 	close(c.done)
@@ -179,8 +185,19 @@ func (c *Client) Stop() error {
 	c.stdin.Close()
 
 	if c.cmd.Process != nil {
-		return c.cmd.Process.Kill()
+		// Kill the process, then Wait() to reap it and release OS resources
+		// (process table entry, pipes, file descriptors).
+		_ = c.cmd.Process.Kill()
+		// Wait releases all resources associated with the Cmd.
+		// The error from Wait is expected (killed process returns non-zero).
+		_ = c.cmd.Wait()
 	}
+
+	// Close stderr pipe to release the file descriptor
+	if c.stderr != nil {
+		c.stderr.Close()
+	}
+
 	return nil
 }
 

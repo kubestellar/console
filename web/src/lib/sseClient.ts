@@ -51,6 +51,15 @@ const resultCache = new Map<string, { data: unknown[]; at: number }>()
 const RESULT_CACHE_TTL_MS = 10_000
 
 /**
+ * Clear the SSE result cache. Call on logout or auth context change to
+ * prevent stale data from a previous user session being served (#4712).
+ */
+export function clearSSECache(): void {
+  resultCache.clear()
+  inflightRequests.clear()
+}
+
+/**
  * Parse an SSE text stream and dispatch events.
  * SSE format: `event: <type>\ndata: <json>\n\n`
  */
@@ -105,8 +114,11 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
   const queryString = searchParams.toString()
   const fullUrl = queryString ? `${url}?${queryString}` : url
 
-  // Build cache key including token hash (different users get different caches)
-  const cacheKey = fullUrl
+  // SECURITY: Include the current auth token in the cache key so that data
+  // fetched under one user session is never served to a different user within
+  // the cache TTL window (#4712).
+  const currentTokenForKey = localStorage.getItem(STORAGE_KEY_TOKEN) || ''
+  const cacheKey = `${fullUrl}::${currentTokenForKey}`
 
   // Check result cache — if fresh, replay cached data via callbacks and resolve
   const cached = resultCache.get(cacheKey)
