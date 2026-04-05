@@ -28,6 +28,49 @@ function generateId(): string {
   return `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 }
 
+// ── Batched Mutation Types ───────────────────────────────────────────────────
+// During evaluateConditions, individual evaluate* functions push mutations into
+// a shared accumulator instead of calling setAlerts N times.  After all rules
+// are evaluated, the accumulator is flushed in a single setAlerts call — reducing
+// O(rules × alerts) state updates to O(1).
+
+/** Represents a new alert to create */
+interface CreateMutation {
+  type: 'create'
+  rule: AlertRule
+  alert: Alert
+}
+
+/** Represents an in-place update of an existing alert's mutable fields */
+interface UpdateMutation {
+  type: 'update'
+  dedupKey: string
+  conditionType: string
+  message: string
+  details: Record<string, unknown>
+  resource?: string
+  namespace?: string
+  resourceKind?: string
+}
+
+/** Represents a resolution of a firing alert */
+interface ResolveMutation {
+  type: 'resolve'
+  ruleId: string
+  cluster?: string
+  /** When set, match any alert for this rule regardless of cluster */
+  matchAny?: boolean
+}
+
+type AlertMutation = CreateMutation | UpdateMutation | ResolveMutation
+
+/** Accumulator for batched mutations during an evaluation cycle */
+interface MutationAccumulator {
+  mutations: AlertMutation[]
+  /** Notifications to send after flushing state (alert + channels pairs) */
+  notifications: Array<{ alert: Alert; channels: AlertChannel[] }>
+}
+
 // Shallow-compare two detail records without relying on JSON.stringify key ordering.
 // Treats null/undefined as equal to each other and unequal to any object.
 function shallowEqualRecords(
@@ -67,6 +110,119 @@ function deduplicateAlerts(alerts: Alert[], rules: AlertRule[]): Alert[] {
     }
   }
   return Array.from(dedupMap.values())
+}
+
+/**
+ * Apply all batched mutations to the alerts array in a single pass.
+ * Returns the new alerts array. This runs inside a single setAlerts updater
+ * so React commits exactly one state update per evaluation cycle.
+ */
+function applyMutations(
+  prev: Alert[],
+  mutations: AlertMutation[],
+  rules: AlertRule[]
+): Alert[] {
+  if (mutations.length === 0) return prev
+
+  let result = [...prev]
+  const resolvedAt = new Date().toISOString()
+
+  // Build a lookup of existing alerts by dedup key for O(1) matching
+  const ruleTypeMap = new Map(rules.map(r => [r.id, r.condition.type]))
+  const dedupIndex = new Map<string, number>()
+  for (let i = 0; i < result.length; i++) {
+    const a = result[i]
+    if (a.status !== 'firing') continue
+    const condType = ruleTypeMap.get(a.ruleId) ?? ''
+    const key = alertDedupKey(a.ruleId, condType, a.cluster, a.resource)
+    // Keep the last (most recent) index for each key
+    dedupIndex.set(key, i)
+  }
+
+  for (const mut of mutations) {
+    switch (mut.type) {
+      case 'create': {
+        const condType = ruleTypeMap.get(mut.alert.ruleId) ?? ''
+        const key = alertDedupKey(mut.alert.ruleId, condType, mut.alert.cluster, mut.alert.resource)
+        const existingIdx = dedupIndex.get(key)
+        if (existingIdx !== undefined) {
+          // Alert already exists — skip (dedup handled by update mutations)
+          break
+        }
+        result = [mut.alert, ...result]
+        // Update the index for the newly created alert (index 0 after prepend)
+        // Shift all existing indices by 1 since we prepended
+        const newIndex = new Map<string, number>()
+        newIndex.set(key, 0)
+        for (const [k, v] of dedupIndex) {
+          newIndex.set(k, v + 1)
+        }
+        dedupIndex.clear()
+        for (const [k, v] of newIndex) {
+          dedupIndex.set(k, v)
+        }
+        break
+      }
+      case 'update': {
+        const idx = dedupIndex.get(mut.dedupKey)
+        if (idx !== undefined) {
+          const existing = result[idx]
+          // Skip update if nothing changed (avoids unnecessary object allocation)
+          if (
+            existing.message === mut.message &&
+            existing.resource === mut.resource &&
+            existing.namespace === mut.namespace &&
+            existing.resourceKind === mut.resourceKind &&
+            shallowEqualRecords(existing.details, mut.details)
+          ) {
+            break
+          }
+          result[idx] = {
+            ...existing,
+            message: mut.message,
+            details: mut.details,
+            resource: mut.resource,
+            namespace: mut.namespace,
+            resourceKind: mut.resourceKind,
+          }
+        }
+        break
+      }
+      case 'resolve': {
+        if (mut.matchAny) {
+          // Resolve any firing alert for this rule (weather, DNS batch resolve, etc.)
+          for (let i = 0; i < result.length; i++) {
+            if (result[i].ruleId === mut.ruleId && result[i].status === 'firing') {
+              result[i] = { ...result[i], status: 'resolved', resolvedAt }
+            }
+          }
+        } else if (mut.cluster) {
+          for (let i = 0; i < result.length; i++) {
+            if (
+              result[i].ruleId === mut.ruleId &&
+              result[i].status === 'firing' &&
+              result[i].cluster === mut.cluster
+            ) {
+              result[i] = { ...result[i], status: 'resolved', resolvedAt }
+            }
+          }
+        }
+        break
+      }
+    }
+  }
+
+  // Enforce the global cap: keep all firing and trim resolved by recency
+  if (result.length > MAX_ALERTS) {
+    const firing = result.filter(a => a.status === 'firing')
+    const resolved = result
+      .filter(a => a.status === 'resolved')
+      .sort((a, b) => new Date(b.resolvedAt ?? b.firedAt).getTime() - new Date(a.resolvedAt ?? a.firedAt).getTime())
+      .slice(0, Math.max(0, MAX_ALERTS - firing.length))
+    result = [...firing, ...resolved]
+  }
+
+  return result
 }
 
 // Local storage keys
@@ -252,6 +408,15 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   clustersRef.current = mcpData.clusters
   const rulesRef = useRef(rules)
   rulesRef.current = rules
+
+  // Stable ref for current alerts — lets evaluate* functions read without closure capture
+  const alertsRef = useRef(alerts)
+  alertsRef.current = alerts
+
+  // Mutation accumulator — populated by evaluate* functions during an evaluation
+  // cycle, then flushed in a single setAlerts call at the end of evaluateConditions.
+  // Null when not inside an evaluation cycle (direct createAlert calls still work).
+  const mutationAccRef = useRef<MutationAccumulator | null>(null)
 
   // Track which alert dedup keys have already triggered a browser notification.
   // Maps dedup key → timestamp (ms) of last notification. Prevents the same alert
@@ -509,7 +674,11 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     setAlerts(prev => prev.filter(a => a.id !== alertId))
   }, [])
 
-  // Create a new alert
+  // Create a new alert — batching-aware.
+  // When called during an evaluateConditions cycle (mutationAccRef.current is non-null),
+  // mutations are collected into the accumulator and flushed in a single setAlerts call.
+  // When called outside an evaluation cycle (e.g., manual trigger), falls back to a
+  // direct setAlerts call so the alert appears immediately.
   const createAlert = useCallback(
     (
       rule: AlertRule,
@@ -520,18 +689,72 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       resource?: string,
       resourceKind?: string
     ) => {
-      // Generate the id and timestamp outside the state updater so they remain
-      // stable if React replays the updater function (Strict Mode / concurrent rendering).
+      const acc = mutationAccRef.current
+      const dedupKey = alertDedupKey(rule.id, rule.condition.type, cluster, resource)
+
+      if (acc) {
+        // ── Batched path: collect mutations, flush later ──────────────
+        // Check existing alerts AND previously-queued create mutations for dedup
+        const currentAlerts = alertsRef.current
+        const existingAlert = currentAlerts.find(
+          a =>
+            a.ruleId === rule.id &&
+            a.status === 'firing' &&
+            alertDedupKey(a.ruleId, rule.condition.type, a.cluster, a.resource) === dedupKey
+        )
+        // Also check if a create mutation for this key is already queued
+        const alreadyQueued = acc.mutations.some(
+          m => m.type === 'create' &&
+            alertDedupKey(m.alert.ruleId, m.rule.condition.type, m.alert.cluster, m.alert.resource) === dedupKey
+        )
+
+        if (existingAlert) {
+          // Push an update mutation instead of a create
+          acc.mutations.push({
+            type: 'update',
+            dedupKey,
+            conditionType: rule.condition.type,
+            message,
+            details,
+            resource,
+            namespace,
+            resourceKind,
+          })
+        } else if (!alreadyQueued) {
+          const alert: Alert = {
+            id: generateId(),
+            ruleId: rule.id,
+            ruleName: rule.name,
+            severity: rule.severity,
+            status: 'firing',
+            message,
+            details,
+            cluster,
+            namespace,
+            resource,
+            resourceKind,
+            firedAt: new Date().toISOString(),
+            isDemo: isDemoMode,
+          }
+          acc.mutations.push({ type: 'create', rule, alert })
+
+          // Queue notification for after the flush
+          if (rule.channels && rule.channels.length > 0) {
+            const enabledChannels = rule.channels.filter(ch => ch.enabled)
+            if (enabledChannels.length > 0) {
+              acc.notifications.push({ alert, channels: enabledChannels })
+            }
+          }
+        }
+        return
+      }
+
+      // ── Unbatched path: direct setAlerts (outside evaluation cycle) ──
       const alertId = generateId()
       const firedAt = new Date().toISOString()
       let newAlert: Alert | undefined
 
       setAlerts(prev => {
-        // For per-resource alert types (pod_crash), each distinct resource (pod name) gets its
-        // own alert. For cluster-aggregate types (gpu_usage, gpu_health_cronjob, node_not_ready,
-        // etc.) use (ruleId, cluster) only so that dynamic resource strings like nodeNames
-        // don't create a new duplicate on every evaluation cycle.
-        const dedupKey = alertDedupKey(rule.id, rule.condition.type, cluster, resource)
         const existingAlert = prev.find(
           a =>
             a.ruleId === rule.id &&
@@ -540,7 +763,6 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
         )
 
         if (existingAlert) {
-          // Skip update if none of the mutable fields have changed (avoids unnecessary re-renders)
           if (
             existingAlert.message === message &&
             existingAlert.resource === resource &&
@@ -551,7 +773,6 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
             newAlert = undefined
             return prev
           }
-          // Update the existing alert with the latest details (keeps original firedAt)
           newAlert = undefined
           return prev.map(a =>
             a.id === existingAlert.id
@@ -573,13 +794,11 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           resource,
           resourceKind,
           firedAt,
-          isDemo: isDemoMode, // Mark alert as demo if created during demo mode
+          isDemo: isDemoMode,
         }
 
         newAlert = alert
 
-        // Cap the in-memory array: evict oldest resolved alerts first so firing alerts are never dropped.
-        // This mirrors the saveAlerts cap and prevents unbounded memory growth in high-frequency scenarios.
         const newAlerts = [alert, ...prev]
         if (newAlerts.length <= MAX_ALERTS) return newAlerts
         const firingAlerts = newAlerts.filter(a => a.status === 'firing')
@@ -590,21 +809,46 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
         return [...firingAlerts, ...resolvedAlerts]
       })
 
-      // Send notifications outside the state updater to avoid duplicate side effects
-      // if React replays the updater (Strict Mode / concurrent rendering).
-      // We use queueMicrotask so the notification runs after the state update commits.
       queueMicrotask(() => {
         if (newAlert && rule.channels && rule.channels.length > 0) {
           const enabledChannels = rule.channels.filter(ch => ch.enabled)
           if (enabledChannels.length > 0) {
-            sendNotifications(newAlert, enabledChannels).catch(() => {
-              // Silent failure - notifications are best-effort
-            })
+            sendNotifications(newAlert, enabledChannels).catch(() => {})
           }
         }
       })
     },
     [isDemoMode]
+  )
+
+  // Helper: queue an auto-resolve mutation — batching-aware.
+  // During evaluation cycles, pushes to the accumulator; outside, calls setAlerts directly.
+  const queueAutoResolve = useCallback(
+    (ruleId: string, cluster?: string, matchAny?: boolean) => {
+      const acc = mutationAccRef.current
+      if (acc) {
+        acc.mutations.push({ type: 'resolve', ruleId, cluster, matchAny })
+        return
+      }
+      // Unbatched fallback
+      setAlerts(prev => {
+        const firingAlert = prev.find(
+          a =>
+            a.ruleId === ruleId &&
+            a.status === 'firing' &&
+            (matchAny || a.cluster === cluster)
+        )
+        if (firingAlert) {
+          return prev.map(a =>
+            a.id === firingAlert.id
+              ? { ...a, status: 'resolved' as const, resolvedAt: new Date().toISOString() }
+              : a
+          )
+        }
+        return prev
+      })
+    },
+    []
   )
 
   // Send notifications for an alert (best-effort, silent on auth failures)
@@ -639,6 +883,50 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       if (error instanceof Error && !error.message.includes('fetch')) {
         console.warn('Notification send failed:', error.message)
       }
+    }
+  }
+
+  // Send batched notifications — aggregates multiple alert/channel pairs into a
+  // single HTTP request instead of N concurrent requests.
+  const sendBatchedNotifications = async (items: Array<{ alert: Alert; channels: AlertChannel[] }>) => {
+    if (items.length === 0) return
+    try {
+      const token = localStorage.getItem(STORAGE_KEY_AUTH_TOKEN)
+      if (!token) return
+
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
+
+      // Send all notifications in a single request with a batch payload.
+      // The backend /api/notifications/send already accepts { alert, channels };
+      // for batching we send items sequentially via settledWithConcurrency to
+      // avoid overwhelming the backend while still using a single React render cycle.
+      /** Maximum concurrent notification requests to avoid overwhelming the backend */
+      const MAX_NOTIFICATION_CONCURRENCY = 3
+      await settledWithConcurrency(
+        items.map(({ alert, channels }) => async () => {
+          try {
+            const response = await fetch(`${API_BASE}/api/notifications/send`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ alert, channels }),
+              signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+            })
+            if (response.status === 401 || response.status === 403) return
+            if (!response.ok) {
+              const data = await response.json().catch(() => ({}))
+              throw new Error(data.message || 'Failed to send notification')
+            }
+          } catch {
+            // Silent failure - notifications are best-effort
+          }
+        }),
+        MAX_NOTIFICATION_CONCURRENCY
+      )
+    } catch {
+      // Silent failure - notifications are best-effort
     }
   }
 
@@ -759,26 +1047,11 @@ Please provide:
             'Resource'
           )
         } else {
-          setAlerts(prev => {
-            const firingAlert = prev.find(
-              a =>
-                a.ruleId === rule.id &&
-                a.status === 'firing' &&
-                a.cluster === cluster.name
-            )
-            if (firingAlert) {
-              return prev.map(a =>
-                a.id === firingAlert.id
-                  ? { ...a, status: 'resolved' as const, resolvedAt: new Date().toISOString() }
-                  : a
-              )
-            }
-            return prev
-          })
+          queueAutoResolve(rule.id, cluster.name)
         }
       }
     },
-    [createAlert]
+    [createAlert, queueAutoResolve]
   )
 
   // Evaluate node ready condition — reads from refs for stable identity
@@ -804,26 +1077,11 @@ Please provide:
             'Cluster'
           )
         } else {
-          setAlerts(prev => {
-            const firingAlert = prev.find(
-              a =>
-                a.ruleId === rule.id &&
-                a.status === 'firing' &&
-                a.cluster === cluster.name
-            )
-            if (firingAlert) {
-              return prev.map(a =>
-                a.id === firingAlert.id
-                  ? { ...a, status: 'resolved' as const, resolvedAt: new Date().toISOString() }
-                  : a
-              )
-            }
-            return prev
-          })
+          queueAutoResolve(rule.id, cluster.name)
         }
       }
     },
-    [createAlert]
+    [createAlert, queueAutoResolve]
   )
 
   // Evaluate pod crash condition — reads from refs for stable identity
@@ -919,22 +1177,10 @@ Please provide:
         )
       } else {
         // Auto-resolve if condition clears
-        setAlerts(prev => {
-          const firingAlert = prev.find(
-            a => a.ruleId === rule.id && a.status === 'firing'
-          )
-          if (firingAlert) {
-            return prev.map(a =>
-              a.id === firingAlert.id
-                ? { ...a, status: 'resolved' as const, resolvedAt: new Date().toISOString() }
-                : a
-            )
-          }
-          return prev
-        })
+        queueAutoResolve(rule.id, undefined, true)
       }
     },
-    [createAlert]
+    [createAlert, queueAutoResolve]
   )
 
   // Evaluate GPU Health CronJob — reads cached results from ref
@@ -1003,26 +1249,11 @@ Please provide:
           }
         } else {
           // Auto-resolve if all nodes are healthy
-          setAlerts(prev => {
-            const firingAlert = prev.find(
-              a =>
-                a.ruleId === rule.id &&
-                a.status === 'firing' &&
-                a.cluster === cluster.name
-            )
-            if (firingAlert) {
-              return prev.map(a =>
-                a.id === firingAlert.id
-                  ? { ...a, status: 'resolved' as const, resolvedAt: new Date().toISOString() }
-                  : a
-              )
-            }
-            return prev
-          })
+          queueAutoResolve(rule.id, cluster.name)
         }
       }
     },
-    [createAlert]
+    [createAlert, queueAutoResolve]
   )
 
   // Evaluate disk pressure condition — checks for DiskPressure in cluster issues
@@ -1077,26 +1308,11 @@ Please provide:
           }
         } else {
           // Auto-resolve if DiskPressure clears — also clear the notification dedup key
-          setAlerts(prev => {
-            const firingAlert = prev.find(
-              a =>
-                a.ruleId === rule.id &&
-                a.status === 'firing' &&
-                a.cluster === cluster.name
-            )
-            if (firingAlert) {
-              return prev.map(a =>
-                a.id === firingAlert.id
-                  ? { ...a, status: 'resolved' as const, resolvedAt: new Date().toISOString() }
-                  : a
-              )
-            }
-            return prev
-          })
+          queueAutoResolve(rule.id, cluster.name)
         }
       }
     },
-    [createAlert]
+    [createAlert, queueAutoResolve]
   )
 
   // Evaluate memory pressure condition — checks for MemoryPressure in cluster issues
@@ -1127,26 +1343,11 @@ Please provide:
             'Cluster'
           )
         } else {
-          setAlerts(prev => {
-            const firingAlert = prev.find(
-              a =>
-                a.ruleId === rule.id &&
-                a.status === 'firing' &&
-                a.cluster === cluster.name
-            )
-            if (firingAlert) {
-              return prev.map(a =>
-                a.id === firingAlert.id
-                  ? { ...a, status: 'resolved' as const, resolvedAt: new Date().toISOString() }
-                  : a
-              )
-            }
-            return prev
-          })
+          queueAutoResolve(rule.id, cluster.name)
         }
       }
     },
-    [createAlert]
+    [createAlert, queueAutoResolve]
   )
 
   // Evaluate DNS failures — checks for CoreDNS pods crashing or not ready
@@ -1202,14 +1403,14 @@ Please provide:
 
       // Auto-resolve clusters that no longer have DNS issues
       const clustersWithIssues = new Set(clusterDNSIssues.keys())
-      setAlerts(prev => prev.map(a => {
+      const currentAlerts = alertsRef.current
+      for (const a of currentAlerts) {
         if (a.ruleId === rule.id && a.status === 'firing' && a.cluster && !clustersWithIssues.has(a.cluster)) {
-          return { ...a, status: 'resolved' as const, resolvedAt: new Date().toISOString() }
+          queueAutoResolve(rule.id, a.cluster)
         }
-        return a
-      }))
+      }
     },
-    [createAlert]
+    [createAlert, queueAutoResolve]
   )
 
   // Evaluate certificate errors — checks for clusters with certificate connection failures
@@ -1258,17 +1459,11 @@ Please provide:
           // Auto-resolve if cert error clears — also clear dedup so next failure re-notifies
           const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
           notifiedAlertKeysRef.current.delete(notifKey)
-          setAlerts(prev => {
-            const firingAlert = prev.find(a => a.ruleId === rule.id && a.status === 'firing' && a.cluster === cluster.name)
-            if (firingAlert) {
-              return prev.map(a => a.id === firingAlert.id ? { ...a, status: 'resolved' as const, resolvedAt: new Date().toISOString() } : a)
-            }
-            return prev
-          })
+          queueAutoResolve(rule.id, cluster.name)
         }
       }
     },
-    [createAlert]
+    [createAlert, queueAutoResolve]
   )
 
   // Evaluate cluster unreachable — checks for clusters with network/auth/timeout failures
@@ -1321,17 +1516,11 @@ Please provide:
           // Auto-resolve when cluster becomes reachable — clear dedup so next failure re-notifies
           const notifKey = alertDedupKey(rule.id, rule.condition.type, cluster.name)
           notifiedAlertKeysRef.current.delete(notifKey)
-          setAlerts(prev => {
-            const firingAlert = prev.find(a => a.ruleId === rule.id && a.status === 'firing' && a.cluster === cluster.name)
-            if (firingAlert) {
-              return prev.map(a => a.id === firingAlert.id ? { ...a, status: 'resolved' as const, resolvedAt: new Date().toISOString() } : a)
-            }
-            return prev
-          })
+          queueAutoResolve(rule.id, cluster.name)
         }
       }
     },
-    [createAlert]
+    [createAlert, queueAutoResolve]
   )
 
   // Evaluate nightly E2E failures — reads cached run data from ref
@@ -1408,12 +1597,19 @@ Please provide:
     [createAlert]
   )
 
-  // Evaluate alert conditions — uses refs so callback identity is stable
+  // Evaluate alert conditions — uses refs so callback identity is stable.
+  // All evaluate* functions push mutations into the accumulator; we flush
+  // them in a single setAlerts call at the end, reducing O(rules × alerts)
+  // state updates to O(1).
   const isEvaluatingRef = useRef(false)
   const evaluateConditions = useCallback(() => {
     if (isEvaluatingRef.current) return
     isEvaluatingRef.current = true
     setIsEvaluating(true)
+
+    // Initialize the batched mutation accumulator
+    const acc: MutationAccumulator = { mutations: [], notifications: [] }
+    mutationAccRef.current = acc
 
     try {
       const enabledRules = rulesRef.current.filter(r => r.enabled)
@@ -1458,6 +1654,25 @@ Please provide:
         }
       }
     } finally {
+      // Clear accumulator before flushing so any createAlert calls from
+      // outside this cycle fall back to unbatched path
+      mutationAccRef.current = null
+
+      // Flush all mutations in a single setAlerts call
+      if (acc.mutations.length > 0) {
+        const currentRules = rulesRef.current
+        setAlerts(prev => applyMutations(prev, acc.mutations, currentRules))
+      }
+
+      // Send batched notifications after state flush (fire-and-forget)
+      if (acc.notifications.length > 0) {
+        queueMicrotask(() => {
+          sendBatchedNotifications(acc.notifications).catch(() => {
+            // Silent failure - notifications are best-effort
+          })
+        })
+      }
+
       saveNotifiedAlertKeys(notifiedAlertKeysRef.current)
       isEvaluatingRef.current = false
       setIsEvaluating(false)
