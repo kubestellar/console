@@ -276,20 +276,26 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     setSelectedClustersState(prev => {
       // If currently "all" (empty), switch to all except this one
       if (prev.length === 0) {
-        return availableClusters.filter(c => c !== cluster)
+        const next = availableClusters.filter(c => c !== cluster)
+        emitGlobalClusterFilterChanged(next.length, availableClusters.length)
+        return next
       }
 
       if (prev.includes(cluster)) {
         // Remove cluster - if last one, revert to all
         const newSelection = prev.filter(c => c !== cluster)
-        return newSelection.length === 0 ? [] : newSelection
+        const result = newSelection.length === 0 ? [] : newSelection
+        emitGlobalClusterFilterChanged(result.length, availableClusters.length)
+        return result
       } else {
         // Add cluster
         const newSelection = [...prev, cluster]
         // If all clusters are now selected, switch to "all" mode
         if (newSelection.length === availableClusters.length) {
+          emitGlobalClusterFilterChanged(0, availableClusters.length)
           return []
         }
+        emitGlobalClusterFilterChanged(newSelection.length, availableClusters.length)
         return newSelection
       }
     })
@@ -341,20 +347,26 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     setSelectedSeveritiesState(prev => {
       // If currently "all" (empty), switch to all except this one
       if (prev.length === 0) {
-        return SEVERITY_LEVELS.filter(s => s !== severity)
+        const next = SEVERITY_LEVELS.filter(s => s !== severity)
+        emitGlobalSeverityFilterChanged(next.length)
+        return next
       }
 
       if (prev.includes(severity)) {
         // Remove severity - if last one, revert to all
         const newSelection = prev.filter(s => s !== severity)
-        return newSelection.length === 0 ? [] : newSelection
+        const result = newSelection.length === 0 ? [] : newSelection
+        emitGlobalSeverityFilterChanged(result.length)
+        return result
       } else {
         // Add severity
         const newSelection = [...prev, severity]
         // If all severities are now selected, switch to "all" mode
         if (newSelection.length === SEVERITY_LEVELS.length) {
+          emitGlobalSeverityFilterChanged(0)
           return []
         }
+        emitGlobalSeverityFilterChanged(newSelection.length)
         return newSelection
       }
     })
@@ -384,20 +396,26 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     setSelectedStatusesState(prev => {
       // If currently "all" (empty), switch to all except this one
       if (prev.length === 0) {
-        return STATUS_LEVELS.filter(s => s !== status)
+        const next = STATUS_LEVELS.filter(s => s !== status)
+        emitGlobalStatusFilterChanged(next.length)
+        return next
       }
 
       if (prev.includes(status)) {
         // Remove status - if last one, revert to all
         const newSelection = prev.filter(s => s !== status)
-        return newSelection.length === 0 ? [] : newSelection
+        const result = newSelection.length === 0 ? [] : newSelection
+        emitGlobalStatusFilterChanged(result.length)
+        return result
       } else {
         // Add status
         const newSelection = [...prev, status]
         // If all statuses are now selected, switch to "all" mode
         if (newSelection.length === STATUS_LEVELS.length) {
+          emitGlobalStatusFilterChanged(0)
           return []
         }
+        emitGlobalStatusFilterChanged(newSelection.length)
         return newSelection
       }
     })

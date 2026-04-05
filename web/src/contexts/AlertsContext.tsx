@@ -530,9 +530,31 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
-  // Aggregate loading and error states from the lazy MCP data bridge
-  const isLoadingData = mcpData.isLoading
-  const dataError = mcpData.error
+  // Aggregate loading and error states from the lazy MCP data bridge.
+  // Safety net: if the lazy-loaded AlertsDataFetcher never resolves (e.g.,
+  // chunk load failure), force isLoadingData to false after a timeout so the
+  // UI doesn't get stuck in a permanent loading state (#4864).
+  /** Maximum time (ms) to wait for MCP data before force-clearing loading state */
+  const LOADING_TIMEOUT_MS = 30_000
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false)
+  useEffect(() => {
+    if (!mcpData.isLoading) return
+    const timer = setTimeout(() => {
+      setLoadingTimedOut(true)
+    }, LOADING_TIMEOUT_MS)
+    return () => clearTimeout(timer)
+  }, [mcpData.isLoading])
+  // Reset timeout flag when fresh data arrives
+  useEffect(() => {
+    if (!mcpData.isLoading) {
+      setLoadingTimedOut(false)
+    }
+  }, [mcpData.isLoading])
+
+  const isLoadingData = mcpData.isLoading && !loadingTimedOut
+  const dataError = loadingTimedOut && mcpData.isLoading
+    ? (mcpData.error || 'MCP data fetch timed out')
+    : mcpData.error
 
   // Save rules whenever they change
   useEffect(() => {
@@ -642,31 +664,31 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   // Resolve an alert
   const resolveAlert = useCallback((alertId: string) => {
     const resolvedAt = new Date().toISOString()
-    let resolvedAlert: Alert | undefined
-    setAlerts(prev => {
-      const updated = prev.map(alert =>
+    // Find the alert BEFORE the state updater to avoid capturing mutable
+    // variables inside the updater (which React may replay in Strict Mode /
+    // concurrent rendering). This prevents duplicate notification side effects.
+    const alertToResolve = alertsRef.current.find(a => a.id === alertId)
+    setAlerts(prev =>
+      prev.map(alert =>
         alert.id === alertId
           ? { ...alert, status: 'resolved' as const, resolvedAt }
           : alert
       )
-      resolvedAlert = updated.find(a => a.id === alertId)
-      return updated
-    })
-    // Send resolution notifications outside the state updater to avoid duplicate
-    // side effects if React replays the updater (Strict Mode / concurrent rendering).
-    // We use queueMicrotask so the notification runs after the state update commits
-    // but still within the same task, keeping it predictable and non-blocking.
-    queueMicrotask(() => {
-      if (resolvedAlert) {
-        const rule = rules.find(r => r.id === resolvedAlert!.ruleId)
+    )
+    // Send resolution notifications outside the state updater.
+    // Because we read alertToResolve from the ref before the updater,
+    // this is safe even if React replays the updater function.
+    if (alertToResolve) {
+      queueMicrotask(() => {
+        const rule = rules.find(r => r.id === alertToResolve.ruleId)
         if (rule) {
           const enabledChannels = rule.channels.filter(ch => ch.enabled)
           if (enabledChannels.length > 0) {
-            sendNotifications(resolvedAlert!, enabledChannels).catch(() => {})
+            sendNotifications(alertToResolve, enabledChannels).catch(() => {})
           }
         }
-      }
-    })
+      })
+    }
   }, [rules])
 
   // Delete an alert
@@ -750,9 +772,35 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       }
 
       // ── Unbatched path: direct setAlerts (outside evaluation cycle) ──
+      // Check for existing alert BEFORE the state updater to avoid capturing
+      // mutable variables inside the updater (React may replay it in Strict
+      // Mode / concurrent rendering, causing duplicate notifications).
       const alertId = generateId()
       const firedAt = new Date().toISOString()
-      let newAlert: Alert | undefined
+      const currentAlerts = alertsRef.current
+      const existingAlertForDedup = currentAlerts.find(
+        a =>
+          a.ruleId === rule.id &&
+          a.status === 'firing' &&
+          alertDedupKey(a.ruleId, rule.condition.type, a.cluster, a.resource) === dedupKey
+      )
+      // Determine upfront whether this will be a new alert (for notification purposes)
+      const isNewAlert = !existingAlertForDedup
+      const newAlertObj: Alert = {
+        id: alertId,
+        ruleId: rule.id,
+        ruleName: rule.name,
+        severity: rule.severity,
+        status: 'firing',
+        message,
+        details,
+        cluster,
+        namespace,
+        resource,
+        resourceKind,
+        firedAt,
+        isDemo: isDemoMode,
+      }
 
       setAlerts(prev => {
         const existingAlert = prev.find(
@@ -770,10 +818,8 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
             existingAlert.resourceKind === resourceKind &&
             shallowEqualRecords(existingAlert.details, details)
           ) {
-            newAlert = undefined
             return prev
           }
-          newAlert = undefined
           return prev.map(a =>
             a.id === existingAlert.id
               ? { ...a, message, details, resource, namespace, resourceKind }
@@ -781,23 +827,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           )
         }
 
-        const alert: Alert = {
-          id: alertId,
-          ruleId: rule.id,
-          ruleName: rule.name,
-          severity: rule.severity,
-          status: 'firing',
-          message,
-          details,
-          cluster,
-          namespace,
-          resource,
-          resourceKind,
-          firedAt,
-          isDemo: isDemoMode,
-        }
-
-        newAlert = alert
+        const alert = newAlertObj
 
         const newAlerts = [alert, ...prev]
         if (newAlerts.length <= MAX_ALERTS) return newAlerts
@@ -809,14 +839,18 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
         return [...firingAlerts, ...resolvedAlerts]
       })
 
-      queueMicrotask(() => {
-        if (newAlert && rule.channels && rule.channels.length > 0) {
-          const enabledChannels = rule.channels.filter(ch => ch.enabled)
-          if (enabledChannels.length > 0) {
-            sendNotifications(newAlert, enabledChannels).catch(() => {})
+      // Send notifications outside the state updater using pre-computed values
+      // to avoid duplicate side effects if React replays the updater.
+      if (isNewAlert) {
+        queueMicrotask(() => {
+          if (rule.channels && rule.channels.length > 0) {
+            const enabledChannels = rule.channels.filter(ch => ch.enabled)
+            if (enabledChannels.length > 0) {
+              sendNotifications(newAlertObj, enabledChannels).catch(() => {})
+            }
           }
-        }
-      })
+        })
+      }
     },
     [isDemoMode]
   )
@@ -1601,82 +1635,92 @@ Please provide:
   // All evaluate* functions push mutations into the accumulator; we flush
   // them in a single setAlerts call at the end, reducing O(rules × alerts)
   // state updates to O(1).
+  //
+  // The heavy evaluation work is deferred to the next frame via setTimeout(0)
+  // so React can render the isEvaluating=true state before the synchronous
+  // evaluation blocks the main thread (#4868).
   const isEvaluatingRef = useRef(false)
   const evaluateConditions = useCallback(() => {
     if (isEvaluatingRef.current) return
     isEvaluatingRef.current = true
     setIsEvaluating(true)
 
-    // Initialize the batched mutation accumulator
-    const acc: MutationAccumulator = { mutations: [], notifications: [] }
-    mutationAccRef.current = acc
+    // Defer heavy synchronous work to next frame so React can paint the
+    // loading indicator before we block the main thread.
+    /** Minimal delay (ms) to yield to the renderer before evaluation */
+    const YIELD_TO_RENDERER_MS = 0
+    setTimeout(() => {
+      // Initialize the batched mutation accumulator
+      const acc: MutationAccumulator = { mutations: [], notifications: [] }
+      mutationAccRef.current = acc
 
-    try {
-      const enabledRules = rulesRef.current.filter(r => r.enabled)
+      try {
+        const enabledRules = rulesRef.current.filter(r => r.enabled)
 
-      for (const rule of enabledRules) {
-        switch (rule.condition.type) {
-          case 'gpu_usage':
-            evaluateGPUUsage(rule)
-            break
-          case 'gpu_health_cronjob':
-            evaluateGPUHealthCronJob(rule)
-            break
-          case 'node_not_ready':
-            evaluateNodeReady(rule)
-            break
-          case 'pod_crash':
-            evaluatePodCrash(rule)
-            break
-          case 'disk_pressure':
-            evaluateDiskPressure(rule)
-            break
-          case 'memory_pressure':
-            evaluateMemoryPressure(rule)
-            break
-          case 'weather_alerts':
-            evaluateWeatherAlerts(rule)
-            break
-          case 'nightly_e2e_failure':
-            evaluateNightlyE2EFailure(rule)
-            break
-          case 'dns_failure':
-            evaluateDNSFailure(rule)
-            break
-          case 'certificate_error':
-            evaluateCertificateError(rule)
-            break
-          case 'cluster_unreachable':
-            evaluateClusterUnreachable(rule)
-            break
-          default:
-            break
+        for (const rule of enabledRules) {
+          switch (rule.condition.type) {
+            case 'gpu_usage':
+              evaluateGPUUsage(rule)
+              break
+            case 'gpu_health_cronjob':
+              evaluateGPUHealthCronJob(rule)
+              break
+            case 'node_not_ready':
+              evaluateNodeReady(rule)
+              break
+            case 'pod_crash':
+              evaluatePodCrash(rule)
+              break
+            case 'disk_pressure':
+              evaluateDiskPressure(rule)
+              break
+            case 'memory_pressure':
+              evaluateMemoryPressure(rule)
+              break
+            case 'weather_alerts':
+              evaluateWeatherAlerts(rule)
+              break
+            case 'nightly_e2e_failure':
+              evaluateNightlyE2EFailure(rule)
+              break
+            case 'dns_failure':
+              evaluateDNSFailure(rule)
+              break
+            case 'certificate_error':
+              evaluateCertificateError(rule)
+              break
+            case 'cluster_unreachable':
+              evaluateClusterUnreachable(rule)
+              break
+            default:
+              break
+          }
         }
-      }
-    } finally {
-      // Clear accumulator before flushing so any createAlert calls from
-      // outside this cycle fall back to unbatched path
-      mutationAccRef.current = null
+      } finally {
+        // Clear accumulator before flushing so any createAlert calls from
+        // outside this cycle fall back to unbatched path
+        mutationAccRef.current = null
 
-      // Flush all mutations in a single setAlerts call
-      if (acc.mutations.length > 0) {
-        const currentRules = rulesRef.current
-        setAlerts(prev => applyMutations(prev, acc.mutations, currentRules))
-      }
+        // Flush all mutations in a single setAlerts call
+        if (acc.mutations.length > 0) {
+          const currentRules = rulesRef.current
+          setAlerts(prev => applyMutations(prev, acc.mutations, currentRules))
+        }
 
-      // Send batched notifications after state flush (fire-and-forget)
-      if (acc.notifications.length > 0) {
-        queueMicrotask(() => {
-          sendBatchedNotifications(acc.notifications).catch(() => {
-            // Silent failure - notifications are best-effort
+        // Send batched notifications after state flush (fire-and-forget)
+        if (acc.notifications.length > 0) {
+          queueMicrotask(() => {
+            sendBatchedNotifications(acc.notifications).catch(() => {
+              // Silent failure - notifications are best-effort
+            })
           })
-        })
-      }
+        }
 
-      saveNotifiedAlertKeys(notifiedAlertKeysRef.current)
-      isEvaluatingRef.current = false
-      setIsEvaluating(false)
-    }
+        saveNotifiedAlertKeys(notifiedAlertKeysRef.current)
+        isEvaluatingRef.current = false
+        setIsEvaluating(false)
+      }
+    }, YIELD_TO_RENDERER_MS)
   }, [evaluateGPUUsage, evaluateGPUHealthCronJob, evaluateNodeReady, evaluatePodCrash, evaluateDiskPressure, evaluateMemoryPressure, evaluateWeatherAlerts, evaluateNightlyE2EFailure, evaluateDNSFailure, evaluateCertificateError, evaluateClusterUnreachable])
 
   // Stable ref for evaluateConditions so the interval never resets
