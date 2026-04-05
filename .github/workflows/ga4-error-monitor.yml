@@ -114,9 +114,22 @@ jobs:
                 ],
                 metrics: [{ name: 'eventCount' }],
                 dimensionFilter: {
-                  filter: {
-                    fieldName: 'eventName',
-                    stringFilter: { value: 'ksc_error' },
+                  andGroup: {
+                    expressions: [
+                      {
+                        filter: {
+                          fieldName: 'eventName',
+                          stringFilter: { value: 'ksc_error' },
+                        },
+                      },
+                      {
+                        // Exclude localhost / dev traffic — only monitor production
+                        filter: {
+                          fieldName: 'hostname',
+                          stringFilter: { value: 'console.kubestellar.io' },
+                        },
+                      },
+                    ],
                   },
                 },
                 orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
@@ -159,9 +172,21 @@ jobs:
                   ],
                   metrics: [{ name: 'eventCount' }],
                   dimensionFilter: {
-                    filter: {
-                      fieldName: 'eventName',
-                      stringFilter: { value: 'ksc_error' },
+                    andGroup: {
+                      expressions: [
+                        {
+                          filter: {
+                            fieldName: 'eventName',
+                            stringFilter: { value: 'ksc_error' },
+                          },
+                        },
+                        {
+                          filter: {
+                            fieldName: 'hostname',
+                            stringFilter: { value: 'console.kubestellar.io' },
+                          },
+                        },
+                      ],
                     },
                   },
                   orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
