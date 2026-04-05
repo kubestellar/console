@@ -37,6 +37,10 @@ func buildPromptWithHistoryGeneric(req *ChatRequest) string {
 			sb.WriteString("Assistant: ")
 		case "system":
 			sb.WriteString("System: ")
+		default:
+			// Use a generic label for unknown roles (e.g., "tool", "function")
+			// so the prompt formatting remains correct.
+			sb.WriteString("Unknown: ")
 		}
 		sb.WriteString(msg.Content)
 		sb.WriteString("\n\n")

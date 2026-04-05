@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	configDirMode  = 0755
-	configFileMode = 0644
+	configDirMode  = 0700 // Owner read/write/execute only
+	configFileMode = 0600 // Owner read/write only — prevents other users from reading cluster config
 )
 
 // PersistenceConfig holds the configuration for CRD-based persistence

@@ -55,15 +55,16 @@ var gtagCache struct {
 func GA4ScriptProxy(c *fiber.Ctx) error {
 	qs := string(c.Context().QueryArgs().QueryString())
 
-	// Check cache
+	// Check cache — copy the body slice under lock to prevent TOCTOU races
 	gtagCache.RLock()
 	if gtagCache.body != nil && gtagCache.queryString == qs && time.Since(gtagCache.fetchedAt) < gtagCacheTTL {
-		body := gtagCache.body
+		bodyCopy := make([]byte, len(gtagCache.body))
+		copy(bodyCopy, gtagCache.body)
 		ct := gtagCache.contentType
 		gtagCache.RUnlock()
 		c.Set("Content-Type", ct)
 		c.Set("Cache-Control", "public, max-age=3600")
-		return c.Send(body)
+		return c.Send(bodyCopy)
 	}
 	gtagCache.RUnlock()
 
@@ -259,15 +260,16 @@ var umamiScriptCache struct {
 // console's own domain. The script is cached server-side to avoid
 // re-fetching on every page load.
 func UmamiScriptProxy(c *fiber.Ctx) error {
-	// Check cache
+	// Check cache — copy the body slice under lock to prevent TOCTOU races
 	umamiScriptCache.RLock()
 	if umamiScriptCache.body != nil && time.Since(umamiScriptCache.fetchedAt) < umamiScriptCacheTTL {
-		body := umamiScriptCache.body
+		bodyCopy := make([]byte, len(umamiScriptCache.body))
+		copy(bodyCopy, umamiScriptCache.body)
 		ct := umamiScriptCache.contentType
 		umamiScriptCache.RUnlock()
 		c.Set("Content-Type", ct)
 		c.Set("Cache-Control", "public, max-age=3600")
-		return c.Send(body)
+		return c.Send(bodyCopy)
 	}
 	umamiScriptCache.RUnlock()
 

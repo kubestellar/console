@@ -26,14 +26,20 @@ type sseClusterStreamConfig struct {
 }
 
 // writeSSEEvent writes one SSE event to the buffered writer and flushes.
-func writeSSEEvent(w *bufio.Writer, eventName string, data interface{}) {
+// Returns an error if the write or flush fails (e.g., client disconnected).
+func writeSSEEvent(w *bufio.Writer, eventName string, data interface{}) error {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		slog.Error("[SSE] marshal error", "error", err)
-		return
+		return fmt.Errorf("marshal: %w", err)
 	}
-	fmt.Fprintf(w, "event: %s\ndata: %s\n\n", eventName, jsonData)
-	w.Flush()
+	if _, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", eventName, jsonData); err != nil {
+		return fmt.Errorf("write: %w", err)
+	}
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("flush: %w", err)
+	}
+	return nil
 }
 
 // sseOverallDeadline is the maximum wall-clock time an SSE stream stays open.

@@ -15,6 +15,9 @@ import (
 func chatViaOpenAICompatible(ctx context.Context, req *ChatRequest, providerKey, endpoint, agentName string) (*ChatResponse, error) {
 	cm := GetConfigManager()
 	apiKey := cm.GetAPIKey(providerKey)
+	if apiKey == "" {
+		return nil, fmt.Errorf("API key not configured for provider %s", providerKey)
+	}
 	model := cm.GetModel(providerKey, "")
 
 	messages := buildOpenAIMessages(req)
@@ -87,6 +90,9 @@ func chatViaOpenAICompatible(ctx context.Context, req *ChatRequest, providerKey,
 func streamViaOpenAICompatible(ctx context.Context, req *ChatRequest, providerKey, endpoint, agentName string, onChunk func(chunk string)) (*ChatResponse, error) {
 	cm := GetConfigManager()
 	apiKey := cm.GetAPIKey(providerKey)
+	if apiKey == "" {
+		return nil, fmt.Errorf("API key not configured for provider %s", providerKey)
+	}
 	model := cm.GetModel(providerKey, "")
 
 	messages := buildOpenAIMessages(req)
@@ -168,6 +174,10 @@ func streamViaOpenAICompatible(ctx context.Context, req *ChatRequest, providerKe
 				TotalTokens:  chunk.Usage.TotalTokens,
 			}
 		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("stream read error: %w", err)
 	}
 
 	return &ChatResponse{

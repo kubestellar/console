@@ -143,8 +143,9 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 		targetURL += "?" + string(qs)
 	}
 
-	// Create proxied request
-	req, err := http.NewRequest(http.MethodGet, targetURL, nil)
+	// Create proxied request with context propagation so cancellation
+	// from client disconnect stops the upstream call.
+	req, err := http.NewRequestWithContext(c.Context(), http.MethodGet, targetURL, nil)
 	if err != nil {
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
 			"error": "Failed to create proxy request",

@@ -91,6 +91,13 @@ func (h *KagentProxyHandler) Chat(c *fiber.Ctx) error {
 			w.Flush()
 		}
 
+		if err := scanner.Err(); err != nil {
+			// Stream was interrupted — send error event instead of [DONE]
+			fmt.Fprintf(w, "data: {\"error\": \"stream interrupted\"}\n\n")
+			w.Flush()
+			return
+		}
+
 		fmt.Fprintf(w, "data: [DONE]\n\n")
 		w.Flush()
 	})

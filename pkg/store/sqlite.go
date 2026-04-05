@@ -382,8 +382,19 @@ func (s *SQLiteStore) DeleteUser(id uuid.UUID) error {
 	return err
 }
 
-// UpdateUserRole updates only the user's role
+// validUserRoles is the set of allowed role values for user accounts.
+var validUserRoles = map[string]bool{
+	"admin":  true,
+	"editor": true,
+	"viewer": true,
+}
+
+// UpdateUserRole updates only the user's role after validating it against
+// the allowed set (admin, editor, viewer).
 func (s *SQLiteStore) UpdateUserRole(userID uuid.UUID, role string) error {
+	if !validUserRoles[role] {
+		return fmt.Errorf("invalid role %q: must be one of admin, editor, viewer", role)
+	}
 	_, err := s.db.Exec(`UPDATE users SET role = ? WHERE id = ?`, role, userID.String())
 	return err
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 )
@@ -106,7 +107,11 @@ func (o *OpsGenieNotifier) createAlert(alert Alert, alias string) error {
 	if err != nil {
 		return fmt.Errorf("failed to send opsgenie notification: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// Drain the body so the underlying TCP connection can be reused.
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusCreated {
 		return fmt.Errorf("opsgenie API returned status %d", resp.StatusCode)
@@ -139,7 +144,11 @@ func (o *OpsGenieNotifier) closeAlert(alias string) error {
 	if err != nil {
 		return fmt.Errorf("failed to send opsgenie close: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// Drain the body so the underlying TCP connection can be reused.
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("opsgenie close API returned status %d", resp.StatusCode)

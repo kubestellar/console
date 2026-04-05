@@ -229,8 +229,12 @@ func buildInsightEnrichmentPrompt(insights []InsightSummary) string {
 		b.WriteString(fmt.Sprintf("Severity: %s\n", insight.Severity))
 		b.WriteString(fmt.Sprintf("Affected Clusters: %s\n", strings.Join(insight.AffectedClusters, ", ")))
 		if len(insight.Metrics) > 0 {
-			metricsJSON, _ := json.Marshal(insight.Metrics)
-			b.WriteString(fmt.Sprintf("Metrics: %s\n", string(metricsJSON)))
+			metricsJSON, err := json.Marshal(insight.Metrics)
+			if err != nil {
+				slog.Warn("[InsightWorker] failed to marshal metrics, omitting from prompt", "insightID", insight.ID, "error", err)
+			} else {
+				b.WriteString(fmt.Sprintf("Metrics: %s\n", string(metricsJSON)))
+			}
 		}
 		b.WriteString("\n")
 	}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 )
@@ -125,7 +126,11 @@ func (p *PagerDutyNotifier) sendEvent(event pagerdutyEvent) error {
 	if err != nil {
 		return fmt.Errorf("failed to send pagerduty notification: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// Drain the body so the underlying TCP connection can be reused.
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusAccepted {
 		return fmt.Errorf("pagerduty API returned status %d", resp.StatusCode)

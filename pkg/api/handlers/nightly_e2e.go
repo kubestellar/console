@@ -169,6 +169,9 @@ func isAllowedRepo(repo string) bool {
 
 // NewNightlyE2EHandler creates a handler using the given GitHub token for API access.
 // It pre-warms the cache in the background so the first request returns instantly.
+// prewarmTimeout is the maximum time allowed for the background cache prewarm.
+const prewarmTimeout = 30 * time.Second
+
 func NewNightlyE2EHandler(githubToken string) *NightlyE2EHandler {
 	h := &NightlyE2EHandler{
 		githubToken: githubToken,
@@ -182,10 +185,31 @@ func NewNightlyE2EHandler(githubToken string) *NightlyE2EHandler {
 }
 
 func (h *NightlyE2EHandler) prewarm() {
-	resp, err := h.fetchAll()
-	if err != nil {
+	// Use a timeout to prevent this goroutine from blocking indefinitely
+	// if the GitHub API is slow or unreachable.
+	timer := time.NewTimer(prewarmTimeout)
+	defer timer.Stop()
+
+	done := make(chan struct{})
+	var resp *NightlyE2EResponse
+	var fetchErr error
+
+	go func() {
+		resp, fetchErr = h.fetchAll()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		if fetchErr != nil {
+			slog.Error("[NightlyE2E] prewarm failed", "error", fetchErr)
+			return
+		}
+	case <-timer.C:
+		slog.Error("[NightlyE2E] prewarm timed out", "timeout", prewarmTimeout)
 		return
 	}
+
 	ttl := nightlyCacheIdleTTL
 	if hasInProgressRuns(resp.Guides) {
 		ttl = nightlyCacheActiveTTL

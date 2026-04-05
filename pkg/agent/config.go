@@ -162,31 +162,37 @@ func (cm *ConfigManager) GetModel(provider, defaultModel string) string {
 
 // SetAPIKey stores an API key for a provider
 func (cm *ConfigManager) SetAPIKey(provider, apiKey string) error {
-	cm.mu.Lock()
-	agentConfig := cm.config.Agents[provider]
-	agentConfig.APIKey = apiKey
-	cm.config.Agents[provider] = agentConfig
-	cm.mu.Unlock()
+	func() {
+		cm.mu.Lock()
+		defer cm.mu.Unlock()
+		agentConfig := cm.config.Agents[provider]
+		agentConfig.APIKey = apiKey
+		cm.config.Agents[provider] = agentConfig
+	}()
 
 	return cm.Save()
 }
 
 // SetModel stores a model preference for a provider
 func (cm *ConfigManager) SetModel(provider, model string) error {
-	cm.mu.Lock()
-	agentConfig := cm.config.Agents[provider]
-	agentConfig.Model = model
-	cm.config.Agents[provider] = agentConfig
-	cm.mu.Unlock()
+	func() {
+		cm.mu.Lock()
+		defer cm.mu.Unlock()
+		agentConfig := cm.config.Agents[provider]
+		agentConfig.Model = model
+		cm.config.Agents[provider] = agentConfig
+	}()
 
 	return cm.Save()
 }
 
 // RemoveAPIKey removes the API key for a provider
 func (cm *ConfigManager) RemoveAPIKey(provider string) error {
-	cm.mu.Lock()
-	delete(cm.config.Agents, provider)
-	cm.mu.Unlock()
+	func() {
+		cm.mu.Lock()
+		defer cm.mu.Unlock()
+		delete(cm.config.Agents, provider)
+	}()
 
 	return cm.Save()
 }
@@ -248,9 +254,11 @@ func (cm *ConfigManager) GetDefaultAgent() string {
 
 // SetDefaultAgent sets the default agent
 func (cm *ConfigManager) SetDefaultAgent(agent string) error {
-	cm.mu.Lock()
-	cm.config.DefaultAgent = agent
-	cm.mu.Unlock()
+	func() {
+		cm.mu.Lock()
+		defer cm.mu.Unlock()
+		cm.config.DefaultAgent = agent
+	}()
 
 	return cm.Save()
 }

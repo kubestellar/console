@@ -123,6 +123,7 @@ func (s *Server) handleKagentCRDAgents(w http.ResponseWriter, r *http.Request) {
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]any{"agents": []any{}, "error": "cluster parameter required"})
 		return
 	}
@@ -133,6 +134,7 @@ func (s *Server) handleKagentCRDAgents(w http.ResponseWriter, r *http.Request) {
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
 		slog.Info("error fetching kagent agents for cluster request")
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]any{"agents": []any{}, "error": "internal server error"})
 		return
 	}
@@ -151,8 +153,14 @@ func (s *Server) handleKagentCRDAgents(w http.ResponseWriter, r *http.Request) {
 
 	agents := make([]kagentCRDAgent, 0, len(list.Items))
 	for _, item := range list.Items {
-		specMap, _ := item.Object["spec"].(map[string]any)
-		statusMap, _ := item.Object["status"].(map[string]any)
+		specMap, ok := item.Object["spec"].(map[string]any)
+		if !ok {
+			specMap = nil
+		}
+		statusMap, ok := item.Object["status"].(map[string]any)
+		if !ok {
+			statusMap = nil
+		}
 
 		a := kagentCRDAgent{
 			Name:      item.GetName(),
@@ -213,6 +221,7 @@ func (s *Server) handleKagentCRDTools(w http.ResponseWriter, r *http.Request) {
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]any{"tools": []any{}, "error": "cluster parameter required"})
 		return
 	}
@@ -223,6 +232,7 @@ func (s *Server) handleKagentCRDTools(w http.ResponseWriter, r *http.Request) {
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
 		slog.Info("error fetching kagent tools for cluster request")
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]any{"tools": []any{}, "error": "internal server error"})
 		return
 	}
@@ -238,8 +248,14 @@ func (s *Server) handleKagentCRDTools(w http.ResponseWriter, r *http.Request) {
 	}
 	if err == nil {
 		for _, item := range tsList.Items {
-			specMap, _ := item.Object["spec"].(map[string]any)
-			statusMap, _ := item.Object["status"].(map[string]any)
+			specMap, ok := item.Object["spec"].(map[string]any)
+			if !ok {
+				specMap = nil
+			}
+			statusMap, ok := item.Object["status"].(map[string]any)
+			if !ok {
+				statusMap = nil
+			}
 
 			t := kagentCRDTool{
 				Name:      item.GetName(),
@@ -267,8 +283,14 @@ func (s *Server) handleKagentCRDTools(w http.ResponseWriter, r *http.Request) {
 	}
 	if err == nil {
 		for _, item := range rmsList.Items {
-			specMap, _ := item.Object["spec"].(map[string]any)
-			statusMap, _ := item.Object["status"].(map[string]any)
+			specMap, ok := item.Object["spec"].(map[string]any)
+			if !ok {
+				specMap = nil
+			}
+			statusMap, ok := item.Object["status"].(map[string]any)
+			if !ok {
+				statusMap = nil
+			}
 
 			t := kagentCRDTool{
 				Name:      item.GetName(),
@@ -327,6 +349,7 @@ func (s *Server) handleKagentCRDModels(w http.ResponseWriter, r *http.Request) {
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]any{"models": []any{}, "error": "cluster parameter required"})
 		return
 	}
@@ -337,6 +360,7 @@ func (s *Server) handleKagentCRDModels(w http.ResponseWriter, r *http.Request) {
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
 		slog.Info("error fetching kagent models for cluster request")
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]any{"models": []any{}, "error": "internal server error"})
 		return
 	}
@@ -352,7 +376,10 @@ func (s *Server) handleKagentCRDModels(w http.ResponseWriter, r *http.Request) {
 	}
 	if err == nil {
 		for _, item := range mcList.Items {
-			specMap, _ := item.Object["spec"].(map[string]any)
+			specMap, ok := item.Object["spec"].(map[string]any)
+			if !ok {
+				specMap = nil
+			}
 
 			m := kagentCRDModel{
 				Name:      item.GetName(),
@@ -377,8 +404,14 @@ func (s *Server) handleKagentCRDModels(w http.ResponseWriter, r *http.Request) {
 	}
 	if err == nil {
 		for _, item := range mpcList.Items {
-			specMap, _ := item.Object["spec"].(map[string]any)
-			statusMap, _ := item.Object["status"].(map[string]any)
+			specMap, ok := item.Object["spec"].(map[string]any)
+			if !ok {
+				specMap = nil
+			}
+			statusMap, ok := item.Object["status"].(map[string]any)
+			if !ok {
+				statusMap = nil
+			}
 
 			m := kagentCRDModel{
 				Name:      item.GetName(),
@@ -437,6 +470,7 @@ func (s *Server) handleKagentCRDMemories(w http.ResponseWriter, r *http.Request)
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]any{"memories": []any{}, "error": "cluster parameter required"})
 		return
 	}
@@ -447,6 +481,7 @@ func (s *Server) handleKagentCRDMemories(w http.ResponseWriter, r *http.Request)
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
 		slog.Info("error fetching kagent memories for cluster request")
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]any{"memories": []any{}, "error": "internal server error"})
 		return
 	}
@@ -464,7 +499,10 @@ func (s *Server) handleKagentCRDMemories(w http.ResponseWriter, r *http.Request)
 
 	memories := make([]kagentCRDMemory, 0, len(list.Items))
 	for _, item := range list.Items {
-		specMap, _ := item.Object["spec"].(map[string]any)
+		specMap, ok := item.Object["spec"].(map[string]any)
+		if !ok {
+			specMap = nil
+		}
 
 		m := kagentCRDMemory{
 			Name:      item.GetName(),
@@ -500,6 +538,7 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 
 	cluster := r.URL.Query().Get("cluster")
 	if cluster == "" {
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]any{"error": "cluster parameter required"})
 		return
 	}
@@ -510,6 +549,7 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 	dynClient, err := s.k8sClient.GetDynamicClient(cluster)
 	if err != nil {
 		slog.Info("error fetching kagent CRD summary for cluster request")
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]any{
 			"agentCount": 0, "toolServerCount": 0, "remoteMCPServerCount": 0,
 			"modelConfigCount": 0, "modelProviderConfigCount": 0, "memoryCount": 0,
@@ -542,8 +582,8 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 	if mcList, err := dynClient.Resource(modelConfigGVR).List(ctx, metav1.ListOptions{}); err == nil {
 		modelConfigCount = len(mcList.Items)
 		for _, item := range mcList.Items {
-			specMap, _ := item.Object["spec"].(map[string]any)
-			if specMap != nil {
+			specMap, ok := item.Object["spec"].(map[string]any)
+			if ok && specMap != nil {
 				provider := nestedString(specMap, "provider")
 				if provider != "" {
 					byProvider[provider]++
@@ -556,8 +596,8 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 	if mpcList, err := dynClient.Resource(modelProviderConfigGVR).List(ctx, metav1.ListOptions{}); err == nil {
 		modelProviderConfigCount = len(mpcList.Items)
 		for _, item := range mpcList.Items {
-			specMap, _ := item.Object["spec"].(map[string]any)
-			if specMap != nil {
+			specMap, ok := item.Object["spec"].(map[string]any)
+			if ok && specMap != nil {
 				provider := nestedString(specMap, "provider")
 				if provider != "" {
 					byProvider[provider]++
