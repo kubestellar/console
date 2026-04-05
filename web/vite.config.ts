@@ -99,12 +99,22 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router') || id.includes('/scheduler/') || id.includes('/react-reconciler/')) {
             return 'react-vendor'
           }
-          // 3D engine — no longer in a separate chunk because shared deps
-          // (zustand, react-reconciler) create circular deps with vendor.
-          // Falls through to the vendor chunk instead.
-          // Charting libraries
-          if (id.includes('/echarts/') || id.includes('/echarts-for-react/') || id.includes('/recharts/') || id.includes('/d3-') || id.includes('/victory-')) {
-            return 'charts-vendor'
+          // 3D engine — three.js + @react-three (~400KB) only used by
+          // globe animation and KubeCraft3D card; isolate so they never
+          // load on normal page views. zustand is a transitive dep of
+          // @react-three (not used directly), so keep it with three.
+          // react-reconciler is already in react-vendor above.
+          if (id.includes('/three/') || id.includes('/three-stdlib/') || id.includes('/@react-three/') || id.includes('/zustand/') || id.includes('/stats-gl/')) {
+            return 'three-vendor'
+          }
+          // ECharts — only used by ParetoFrontier card; isolate the large
+          // (~500KB minified) echarts + zrender bundle from recharts.
+          if (id.includes('/echarts/') || id.includes('/echarts-for-react/') || id.includes('/zrender/')) {
+            return 'echarts-vendor'
+          }
+          // Recharts + d3 — used widely across chart cards.
+          if (id.includes('/recharts/') || id.includes('/d3-') || id.includes('/victory-')) {
+            return 'recharts-vendor'
           }
           // Animation — framer-motion is large (~350KB) and only needed on pages
           // that use <motion.*> or AnimatePresence, so isolate it from core UI deps.
