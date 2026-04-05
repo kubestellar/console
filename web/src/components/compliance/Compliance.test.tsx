@@ -116,39 +116,30 @@ function defaultGlobalFilters() {
 
 function emptyKyverno() {
   return {
-    statuses: {},
+    statuses: {} as Record<string, unknown>,
     isDemoData: false,
   }
 }
 
 function emptyKubescape() {
   return {
-    installed: false,
+    statuses: {} as Record<string, unknown>,
     isDemoData: false,
-    aggregated: {
-      overallScore: 0,
-      frameworks: [],
-      totalControls: 0,
-      passedControls: 0,
-      failedControls: 0,
-    },
   }
 }
 
 function emptyTrivy() {
   return {
-    installed: false,
+    statuses: {} as Record<string, unknown>,
     isDemoData: false,
-    statuses: {},
-    aggregated: { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 },
   }
 }
 
 function installedKyverno() {
   return {
     statuses: {
-      'cluster-a': { installed: true, totalViolations: 5, totalPolicies: 20 },
-      'cluster-b': { installed: true, totalViolations: 3, totalPolicies: 15 },
+      'cluster-a': { cluster: 'cluster-a', installed: true, loading: false, totalViolations: 5, totalPolicies: 20, policies: [], reports: [], enforcingCount: 0, auditCount: 0 },
+      'cluster-b': { cluster: 'cluster-b', installed: true, loading: false, totalViolations: 3, totalPolicies: 15, policies: [], reports: [], enforcingCount: 0, auditCount: 0 },
     },
     isDemoData: false,
   }
@@ -156,30 +147,40 @@ function installedKyverno() {
 
 function installedKubescape() {
   return {
-    installed: true,
-    isDemoData: false,
-    aggregated: {
-      overallScore: 72,
-      frameworks: [
-        { name: 'CIS Kubernetes Benchmark', score: 85 },
-        { name: 'NSA Hardening Guide', score: 79 },
-      ],
-      totalControls: 100,
-      passedControls: 72,
-      failedControls: 20,
+    statuses: {
+      'cluster-a': {
+        cluster: 'cluster-a',
+        installed: true,
+        loading: false,
+        overallScore: 72,
+        frameworks: [
+          { name: 'CIS Kubernetes Benchmark', score: 85, passCount: 0, failCount: 0 },
+          { name: 'NSA Hardening Guide', score: 79, passCount: 0, failCount: 0 },
+        ],
+        totalControls: 100,
+        passedControls: 72,
+        failedControls: 20,
+        controls: [],
+      },
     },
+    isDemoData: false,
   }
 }
 
 function installedTrivy() {
   return {
-    installed: true,
-    isDemoData: false,
     statuses: {
-      'cluster-a': { installed: true, totalReports: 50 },
-      'cluster-b': { installed: true, totalReports: 30 },
+      'cluster-a': {
+        cluster: 'cluster-a',
+        installed: true,
+        loading: false,
+        vulnerabilities: { critical: 4, high: 10, medium: 15, low: 8, unknown: 2 },
+        totalReports: 80,
+        scannedImages: 0,
+        images: [],
+      },
     },
-    aggregated: { critical: 4, high: 10, medium: 15, low: 8, unknown: 2 },
+    isDemoData: false,
   }
 }
 
@@ -198,7 +199,7 @@ function setupDefaults(overrides: {
   mockUseKubescape.mockReturnValue(overrides.kubescape ?? emptyKubescape())
   mockUseTrivy.mockReturnValue(overrides.trivy ?? emptyTrivy())
   mockUseUniversalStats.mockReturnValue({ getStatValue: () => ({ value: '-' }) })
-  mockUseDrillDownActions.mockReturnValue({ drillToAllSecurity: vi.fn() })
+  mockUseDrillDownActions.mockReturnValue({ drillToAllSecurity: vi.fn(), drillToCompliance: vi.fn() })
 }
 
 function getLastDashboardProps(): Record<string, unknown> {
@@ -322,7 +323,8 @@ describe('Compliance dashboard component', () => {
 
   it('falls back to overall Kubescape score when framework is absent', () => {
     const ks = installedKubescape()
-    ks.aggregated.frameworks = [] // No framework-specific scores
+    // Remove framework-specific scores so the component falls back to overall score
+    ks.statuses['cluster-a'].frameworks = []
     setupDefaults({ kubescape: ks })
     render(<Compliance />)
 
