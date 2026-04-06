@@ -363,7 +363,7 @@ export function CardWrapper({
   children,
 }: CardWrapperProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const { startMission, openSidebar } = useMissions()
+  const { startMission, openSidebar, setFullScreen } = useMissions()
   const { status: agentStatus } = useLocalAgent()
   const isAgentConnected = agentStatus === 'connected'
   const [isExpanded, setIsExpanded] = useState(false)
@@ -938,7 +938,7 @@ export function CardWrapper({
                   <Maximize2 className="w-4 h-4" aria-hidden="true" />
                 </button>
                 <button
-                  onClick={() => setShowBugReport(true)}
+                  onClick={() => { setFullScreen(false); setShowBugReport(true) }}
                   className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
                   aria-label={t('cardWrapper.reportIssue')}
                   title={t('cardWrapper.reportIssue')}
