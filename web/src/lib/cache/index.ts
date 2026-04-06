@@ -97,6 +97,25 @@ function ssRead<T>(key: string): { data: T; timestamp: number } | null {
   }
 }
 
+/**
+ * Remove ALL sessionStorage snapshots with the kcc: prefix.
+ * Called during cache clearing to prevent stale data rehydration (#4967, #4970).
+ */
+function clearSessionSnapshots(): void {
+  try {
+    const keysToRemove: string[] = []
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i)
+      if (key?.startsWith(SS_PREFIX)) {
+        keysToRemove.push(key)
+      }
+    }
+    keysToRemove.forEach(k => sessionStorage.removeItem(k))
+  } catch {
+    // sessionStorage may be unavailable in some contexts
+  }
+}
+
 /** Base backoff multiplier for consecutive failures */
 const FAILURE_BACKOFF_MULTIPLIER = 2
 
@@ -519,7 +538,8 @@ export function isSQLiteWorkerActive(): boolean {
  * 1. Wipe the persistent backend (SQLite / IndexedDB) so no old entries
  *    can be reloaded on future page loads or storage-load cycles.
  * 2. Clear the preloaded metadata map (failure counters, etc.).
- * 3. Reset every in-memory CacheStore to its initial (empty) state WITHOUT
+ * 3. Clear sessionStorage snapshots (kcc:*) so stale data cannot rehydrate.
+ * 4. Reset every in-memory CacheStore to its initial (empty) state WITHOUT
  *    reloading from storage (the storage was just cleared).
  */
 function clearAllInMemoryCaches(): void {
@@ -531,7 +551,10 @@ function clearAllInMemoryCaches(): void {
   // 2. Clear metadata
   preloadedMetaMap.clear()
 
-  // 3. Reset every in-memory store WITHOUT reloading from (now-empty) storage
+  // 3. Clear sessionStorage snapshots so next mount cannot rehydrate stale data (#4967)
+  clearSessionSnapshots()
+
+  // 4. Reset every in-memory store WITHOUT reloading from (now-empty) storage
   for (const store of cacheRegistry.values()) {
     (store as CacheStore<unknown>).resetForModeTransition()
   }
@@ -934,7 +957,7 @@ class CacheStore<T> {
         // After MAX_FAILURES, isFailed triggers failure state instead of skeleton.
         isLoading: !hasData && !reachedMaxFailures,
         isRefreshing: false,
-        error: null,
+        error: errorMessage,
         isFailed: hasData ? false : reachedMaxFailures,
         consecutiveFailures: hasData ? 0 : newFailures,
       })
@@ -946,6 +969,8 @@ class CacheStore<T> {
   // Clear cache
   async clear(): Promise<void> {
     await cacheStorage.delete(this.key)
+    // Remove sessionStorage snapshot so re-creating the store cannot rehydrate stale data (#4969)
+    try { sessionStorage.removeItem(SS_PREFIX + this.key) } catch { /* ignore */ }
     preloadedMetaMap.delete(this.key)
     if (workerRpc) {
       workerRpc.setMeta(this.key, { consecutiveFailures: 0 })
@@ -1273,6 +1298,9 @@ export async function clearAllCaches(): Promise<void> {
 
   // Clear preloaded metadata
   preloadedMetaMap.clear()
+
+  // Clear sessionStorage snapshots so stale data cannot rehydrate (#4970)
+  clearSessionSnapshots()
 
   // Clear any remaining localStorage metadata (fallback/legacy)
   const keysToRemove: string[] = []

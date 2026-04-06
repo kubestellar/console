@@ -40,6 +40,23 @@ export function useLocalPreference<T>(
     return defaultValue
   })
 
+  // Re-read from localStorage when the key changes at runtime to avoid writing
+  // stale data from a previous key into the new one (#4971).
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(storageKey)
+      if (stored !== null) {
+        setValue(JSON.parse(stored) as T)
+      } else {
+        setValue(defaultValue)
+      }
+    } catch {
+      setValue(defaultValue)
+    }
+    // Only re-run when the storage key actually changes (key prop swap)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey])
+
   // Persist to localStorage when value changes
   useEffect(() => {
     try {
@@ -332,14 +349,19 @@ export async function getStorageStats(): Promise<{
  * Clear all cached data (both IndexedDB and localStorage)
  */
 export async function clearAllStorage(): Promise<void> {
-  // Clear IndexedDB
+  // Clear IndexedDB — await transaction completion so callers can rely on
+  // the store being empty when the promise resolves (#4972)
   try {
     const db = await openDatabase()
-    const transaction = db.transaction(STORE_NAME, 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
-    store.clear()
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite')
+      const store = transaction.objectStore(STORE_NAME)
+      store.clear()
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(transaction.error)
+    })
   } catch {
-    // Ignore
+    // Ignore — best-effort clear
   }
 
   // Clear kubestellar localStorage
