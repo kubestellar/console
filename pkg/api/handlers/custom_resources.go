@@ -56,6 +56,17 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 		return c.JSON(CustomResourceResponse{Items: []CustomResourceItem{}, IsDemoData: false})
 	}
 
+	// Validate GVR parameters against Kubernetes naming conventions
+	if !isValidK8sName(group) {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid group parameter — must match DNS subdomain format"})
+	}
+	if !isValidK8sVersion(version) {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid version parameter — must be alphanumeric (e.g. v1, v1beta1)"})
+	}
+	if !isValidK8sName(resource) {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid resource parameter — must match DNS label format"})
+	}
+
 	if h.k8sClient == nil {
 		return c.Status(503).JSON(CustomResourceResponse{Items: []CustomResourceItem{}, IsDemoData: true})
 	}

@@ -313,7 +313,9 @@ func (b *BobProvider) StreamChat(ctx context.Context, req *ChatRequest, onChunk 
 	}
 
 	// Send the complete response as a single chunk
-	onChunk(resp.Content)
+	if onChunk != nil {
+		onChunk(resp.Content)
+	}
 
 	return resp, nil
 }

@@ -506,7 +506,7 @@ func (b *Bridge) parseClustersResult(result *CallToolResult) ([]ClusterInfo, err
 	for _, content := range result.Content {
 		if content.Type == "text" {
 			if err := json.Unmarshal([]byte(content.Text), &clusters); err != nil {
-				// Try to extract from formatted text
+				slog.Warn("[MCP] failed to parse clusters JSON — returning empty result", "error", err)
 				return b.parseClustersFromText(content.Text), nil
 			}
 		}
@@ -553,6 +553,7 @@ func (b *Bridge) parsePodsResult(result *CallToolResult) ([]PodInfo, error) {
 	for _, content := range result.Content {
 		if content.Type == "text" {
 			if err := json.Unmarshal([]byte(content.Text), &pods); err != nil {
+				slog.Warn("[MCP] failed to parse pods JSON — returning empty result", "error", err)
 				return []PodInfo{}, nil
 			}
 		}
@@ -572,6 +573,7 @@ func (b *Bridge) parsePodIssuesResult(result *CallToolResult) ([]PodIssue, error
 	for _, content := range result.Content {
 		if content.Type == "text" {
 			if err := json.Unmarshal([]byte(content.Text), &issues); err != nil {
+				slog.Warn("[MCP] failed to parse pod issues JSON — returning empty result", "error", err)
 				return []PodIssue{}, nil
 			}
 		}
@@ -591,6 +593,7 @@ func (b *Bridge) parseEventsResult(result *CallToolResult) ([]Event, error) {
 	for _, content := range result.Content {
 		if content.Type == "text" {
 			if err := json.Unmarshal([]byte(content.Text), &events); err != nil {
+				slog.Warn("[MCP] failed to parse events JSON — returning empty result", "error", err)
 				return []Event{}, nil
 			}
 		}
