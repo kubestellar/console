@@ -75,8 +75,8 @@ export function DashboardCustomizer({
   const { dashboards, createDashboard: _createDashboard } = useDashboards()
 
   const handleHoverCard = useCallback((card: HoveredCard | null) => setHoveredCard(card), [])
-  const handleAddCards = useCallback((cards: CardSuggestion[]) => onAddCards(cards), [onAddCards])
-  const handleApplyTemplate = useCallback((tpl: DashboardTemplate) => onApplyTemplate?.(tpl), [onApplyTemplate])
+  const handleAddCards = useCallback((cards: CardSuggestion[]) => { onAddCards(cards); onClose() }, [onAddCards, onClose])
+  const handleApplyTemplate = useCallback((tpl: DashboardTemplate) => { onApplyTemplate?.(tpl); onClose() }, [onApplyTemplate, onClose])
 
   const showPreview = SECTIONS_WITH_PREVIEW.has(activeSection)
   const effectiveSearch = globalSearch || initialSearch
@@ -137,9 +137,11 @@ export function DashboardCustomizer({
             <CreateDashboardModal
               isOpen={true}
               onClose={() => setUserSelectedSection('dashboards')}
-              onCreate={async (name) => {
+              onCreate={async (name, _template, _description) => {
                 await _createDashboard(name)
-                setUserSelectedSection('dashboards')
+                // Close Studio — the SidebarCustomizer's handleCreateDashboard
+                // handles sidebar item creation and navigation
+                onClose()
               }}
               existingNames={dashboards.map(d => d.name)}
               embedded
