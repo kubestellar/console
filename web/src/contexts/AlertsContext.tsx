@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense, type ReactNode } from 'react'
+import { createContext, use, useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense, type ReactNode } from 'react'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { useMissions } from '../hooks/useMissions'
 import { useDemoMode } from '../hooks/useDemoMode'
@@ -1769,7 +1769,7 @@ Please provide:
 }
 
 export function useAlertsContext() {
-  const context = useContext(AlertsContext)
+  const context = use(AlertsContext)
   if (!context) {
     throw new Error('useAlertsContext must be used within an AlertsProvider')
   }

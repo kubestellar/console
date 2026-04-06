@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, createContext, useContext } from 'react'
+import { useState, useEffect, useCallback, useMemo, createContext, use } from 'react'
 import { Theme, themes, getAllThemes, getThemeById, getDefaultTheme } from '../lib/themes'
 import { emitThemeChanged } from '../lib/analytics'
 import { GOOGLE_FONTS_API_URL } from '../config/externalApis'
@@ -287,7 +287,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useTheme(): ThemeContextValue {
-  const context = useContext(ThemeContext)
+  const context = use(ThemeContext)
   if (!context) {
     // Fallback for when used outside provider (backwards compatibility)
     const defaultTheme = getDefaultTheme()

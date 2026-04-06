@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react'
+import { createContext, use, useState, useCallback, useEffect, useRef, ReactNode } from 'react'
 import { X, Check, AlertTriangle, Info } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Button } from './Button'
@@ -18,7 +18,7 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null)
 
 export function useToast() {
-  const context = useContext(ToastContext)
+  const context = use(ToastContext)
   if (!context) {
     throw new Error('useToast must be used within a ToastProvider')
   }

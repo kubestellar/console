@@ -6,7 +6,7 @@
  *
  * When demo mode is enabled, provides fake demo stacks instead of live data.
  */
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react'
+import React, { createContext, use, useState, useEffect, useMemo, useCallback } from 'react'
 import { useStackDiscovery, type LLMdStack, type LLMdStackComponent } from '../hooks/useStackDiscovery'
 import { useDemoMode } from '../hooks/useDemoMode'
 import { useClusters } from '../hooks/mcp/clusters'
@@ -289,7 +289,7 @@ export function StackProvider({ children }: StackProviderProps) {
 }
 
 export function useStack() {
-  const context = useContext(StackContext)
+  const context = use(StackContext)
   if (!context) {
     throw new Error('useStack must be used within a StackProvider')
   }
@@ -298,5 +298,5 @@ export function useStack() {
 
 // Hook to check if we're inside a StackProvider
 export function useOptionalStack(): StackContextType | null {
-  return useContext(StackContext)
+  return use(StackContext)
 }

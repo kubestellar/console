@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import { createContext, use, useState, useEffect, useCallback, ReactNode } from 'react'
 import { checkOAuthConfigured } from './api'
 import { dashboardSync } from './dashboards/dashboardSync'
 import { clearPermissionsCache } from '../hooks/usePermissions'
@@ -456,7 +456,7 @@ const AUTH_FALLBACK: AuthContextType = {
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
+  const context = use(AuthContext)
   if (!context) {
     if (import.meta.env.DEV) {
       console.warn('useAuth was called outside AuthProvider — returning safe fallback')

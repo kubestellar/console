@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import { createContext, use, useState, useCallback, ReactNode } from 'react'
 import { useDashboardHealth, type DashboardHealthInfo } from './useDashboardHealth'
 
 // Card to be restored from history
@@ -94,7 +94,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 }
 
 export function useDashboardContext() {
-  const context = useContext(DashboardContext)
+  const context = use(DashboardContext)
   if (!context) {
     throw new Error('useDashboardContext must be used within a DashboardProvider')
   }
@@ -104,5 +104,5 @@ export function useDashboardContext() {
 // Optional hook that doesn't throw if used outside provider
 // Useful for components that might be rendered outside the dashboard
 export function useDashboardContextOptional() {
-  return useContext(DashboardContext)
+  return use(DashboardContext)
 }

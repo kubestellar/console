@@ -1,4 +1,4 @@
-import { createContext, useContext, useRef, useCallback, type ReactNode } from 'react'
+import { createContext, use, useRef, useCallback, type ReactNode } from 'react'
 
 // ============================================================================
 // Card Event Types
@@ -115,7 +115,7 @@ export function CardEventProvider({ children }: { children: ReactNode }) {
 // ============================================================================
 
 export function useCardEvents(): CardEventBus {
-  const ctx = useContext(CardEventContext)
+  const ctx = use(CardEventContext)
   if (!ctx) {
     // Return no-op bus when used outside provider (graceful degradation)
     return {

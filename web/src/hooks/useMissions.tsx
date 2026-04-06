@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useRef, useEffect, ReactNode } from 'react'
+import { createContext, use, useState, useCallback, useRef, useEffect, ReactNode } from 'react'
 import type { AgentInfo, AgentsListPayload, AgentSelectedPayload, ChatStreamPayload } from '../types/agent'
 import { AgentCapabilityToolExec } from '../types/agent'
 import { getDemoMode } from './useDemoMode'
@@ -1942,7 +1942,7 @@ const MISSIONS_FALLBACK: MissionContextValue = {
 }
 
 export function useMissions() {
-  const context = useContext(MissionContext)
+  const context = use(MissionContext)
   if (!context) {
     if (import.meta.env.DEV) {
       console.warn('useMissions was called outside MissionProvider — returning safe fallback')

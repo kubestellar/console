@@ -3,7 +3,7 @@
  * Tracks user coins, achievements, and reward events
  */
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react'
+import { createContext, use, useState, useEffect, useCallback, ReactNode, useMemo } from 'react'
 import { useAuth } from '../lib/auth'
 import {
   RewardActionType,
@@ -274,7 +274,7 @@ const REWARDS_FALLBACK: RewardsContextType = {
 }
 
 export function useRewards() {
-  const context = useContext(RewardsContext)
+  const context = use(RewardsContext)
   if (!context) {
     if (import.meta.env.DEV) {
       console.warn('useRewards was called outside RewardsProvider — returning safe fallback')

@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, useContext, ComponentType, Suspense, lazy } from 'react'
+import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, use, ComponentType, Suspense, lazy } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Maximize2, MoreVertical, Clock, Settings, Trash2, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download, Link2, Bug, AlertTriangle, Sparkles, X,
@@ -115,7 +115,7 @@ const CardExpandedContext = createContext<CardExpandedContextType>({
 
 /** Hook for child components to know if their parent card is expanded and get container size */
 export function useCardExpanded() {
-  return useContext(CardExpandedContext)
+  return use(CardExpandedContext)
 }
 
 // Context to expose cardType to descendant shared components (CardControls,
@@ -125,7 +125,7 @@ const CardTypeContext = createContext<string>('')
 
 /** Hook for shared UI components to read the cardType of their parent CardWrapper */
 export function useCardType() {
-  return useContext(CardTypeContext)
+  return use(CardTypeContext)
 }
 
 // Note: Lazy mounting and eager mount scheduling have been removed.

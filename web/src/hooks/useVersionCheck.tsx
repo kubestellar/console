@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, createContext, useContext, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, useMemo, createContext, use, type ReactNode } from 'react'
 import type {
   UpdateChannel,
   ReleaseType,
@@ -866,7 +866,7 @@ export function VersionCheckProvider({ children }: { children: ReactNode }) {
  * Public hook — reads from the shared VersionCheckProvider context.
  */
 export function useVersionCheck(): VersionCheckValue {
-  const ctx = useContext(VersionCheckContext)
+  const ctx = use(VersionCheckContext)
   if (!ctx) {
     throw new Error('useVersionCheck must be used within a <VersionCheckProvider>')
   }

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import { createContext, use, useState, useEffect, useCallback, ReactNode } from 'react'
 import { useMobile } from './useMobile'
 import { SETTINGS_CHANGED_EVENT, SETTINGS_RESTORED_EVENT } from '../lib/settingsSync'
 import { emitTourStarted, emitTourCompleted, emitTourSkipped } from '../lib/analytics'
@@ -210,7 +210,7 @@ const TOUR_FALLBACK: TourContextValue = {
 }
 
 export function useTour() {
-  const context = useContext(TourContext)
+  const context = use(TourContext)
   if (!context) {
     if (import.meta.env.DEV) {
       console.warn('useTour was called outside TourProvider — returning safe fallback')

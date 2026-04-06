@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import { createContext, use, useState, useCallback, ReactNode } from 'react'
 import { emitDrillDownOpened, emitDrillDownClosed } from '../lib/analytics'
 
 // Types for drill-down navigation
@@ -168,7 +168,7 @@ export function DrillDownProvider({ children }: { children: ReactNode }) {
 }
 
 export function useDrillDown() {
-  const context = useContext(DrillDownContext)
+  const context = use(DrillDownContext)
   if (!context) {
     throw new Error('useDrillDown must be used within a DrillDownProvider')
   }
@@ -285,7 +285,7 @@ const _noopState: DrillDownState = { isOpen: false, stack: [], currentView: null
 
 // Helper hook to create drill-down actions
 export function useDrillDownActions() {
-  const context = useContext(DrillDownContext)
+  const context = use(DrillDownContext)
   const state = context?.state ?? _noopState
   const open = context?.open ?? _noopOpen
   const push = context?.push ?? _noopPush

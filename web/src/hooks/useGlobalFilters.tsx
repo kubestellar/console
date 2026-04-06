@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react'
+import { createContext, use, useState, useEffect, useCallback, useMemo, ReactNode } from 'react'
 // Import directly from mcp/clusters to avoid pulling in the full MCP barrel
 // (~254 KB). Only clusters.ts + shared.ts are needed here.
 import { useClusters } from './mcp/clusters'
@@ -663,7 +663,7 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
 }
 
 export function useGlobalFilters() {
-  const context = useContext(GlobalFiltersContext)
+  const context = use(GlobalFiltersContext)
   if (!context) {
     throw new Error('useGlobalFilters must be used within a GlobalFiltersProvider')
   }

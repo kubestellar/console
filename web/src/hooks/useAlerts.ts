@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useContext } from 'react'
+import { useState, useEffect, useCallback, use } from 'react'
 import { AlertsContext } from '../contexts/AlertsContext'
 import type {
   Alert,
@@ -59,7 +59,7 @@ const _emptyAlertRule: AlertRule = {
 
 // Hook for managing alert rules - uses shared context
 export function useAlertRules() {
-  const context = useContext(AlertsContext)
+  const context = use(AlertsContext)
   if (!context) {
     return {
       rules: [] as AlertRule[],
@@ -115,7 +115,7 @@ export function useSlackWebhooks() {
 
 // Hook for managing alerts - uses shared context
 export function useAlerts() {
-  const context = useContext(AlertsContext)
+  const context = use(AlertsContext)
   if (!context) {
     return {
       alerts: [] as Alert[],

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import { createContext, use, useState, useEffect, useCallback, ReactNode } from 'react'
 import { useClusters } from './useMCP'
 
 interface ClusterFilterContextType {
@@ -100,7 +100,7 @@ export function ClusterFilterProvider({ children }: { children: ReactNode }) {
 }
 
 export function useClusterFilter() {
-  const context = useContext(ClusterFilterContext)
+  const context = use(ClusterFilterContext)
   if (!context) {
     throw new Error('useClusterFilter must be used within a ClusterFilterProvider')
   }
