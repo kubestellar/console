@@ -333,7 +333,7 @@ export function Dashboard() {
       if (cardTarget) return [cardTarget]
       // Fall back to dashboard-drop zones
       const dashboardCollision = unique.find(
-        (c) => String(c.id).startsWith('dashboard-drop-')
+        (c) => String(c.id).startsWith('dashboard-drop-') || String(c.id) === 'create-new-dashboard'
       )
       if (dashboardCollision) return [dashboardCollision]
       // Return empty — don't let sortable card droppables capture workload drags
@@ -353,7 +353,7 @@ export function Dashboard() {
 
   const handleDragOver = (event: DragOverEvent) => {
     const { over } = event
-    if (over && String(over.id).startsWith('dashboard-drop-')) {
+    if (over && (String(over.id).startsWith('dashboard-drop-') || String(over.id) === 'create-new-dashboard')) {
       const dashboardId = over.data?.current?.dashboardId
       setDragOverDashboard(dashboardId || null)
     } else {
@@ -414,6 +414,23 @@ export function Dashboard() {
           console.error('Failed to move card:', error)
           showToast('Failed to move card', 'error')
         }
+      }
+      return
+    }
+
+    // Check if dropped on "Create New Dashboard" target
+    if (String(over.id) === 'create-new-dashboard') {
+      try {
+        const newDash = await createDashboard('New Dashboard')
+        if (newDash?.id && active.id) {
+          await moveCardToDashboard(active.id as string, newDash.id)
+          snapshot(localCards)
+          setLocalCards((items) => items.filter((item) => item.id !== active.id))
+          showToast(`Card moved to "${newDash.name || 'New Dashboard'}"`, 'success')
+        }
+      } catch (error) {
+        console.error('Failed to create dashboard and move card:', error)
+        showToast('Failed to create dashboard', 'error')
       }
       return
     }

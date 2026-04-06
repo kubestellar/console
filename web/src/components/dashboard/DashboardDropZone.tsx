@@ -38,15 +38,7 @@ export function DashboardDropZone({
             <p className="text-sm text-muted-foreground mb-3">
               {t('dashboard.dropZone.noOtherDashboards')}
             </p>
-            {onCreateDashboard && (
-              <button
-                onClick={onCreateDashboard}
-                className="flex items-center gap-2 mx-auto px-3 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                {t('dashboard.dropZone.createNewDashboard')}
-              </button>
-            )}
+            <DroppableCreateDashboard onClick={onCreateDashboard} />
           </div>
         ) : (
           <div className="space-y-2">
@@ -56,16 +48,7 @@ export function DashboardDropZone({
                 dashboard={dashboard}
               />
             ))}
-
-            {onCreateDashboard && (
-              <button
-                onClick={onCreateDashboard}
-                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg border border-dashed border-border/50 text-muted-foreground hover:text-foreground hover:border-purple-500/50 text-sm transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                {t('dashboard.dropZone.createNewDashboard')}
-              </button>
-            )}
+            <DroppableCreateDashboard onClick={onCreateDashboard} />
           </div>
         )}
 
@@ -79,6 +62,34 @@ export function DashboardDropZone({
 
 interface DroppableDashboardProps {
   dashboard: Dashboard
+}
+
+/** Droppable "Create New Dashboard" target — cards can be dropped here to create + move */
+function DroppableCreateDashboard({ onClick }: { onClick?: () => void }) {
+  const { t } = useTranslation()
+  const { isOver, setNodeRef } = useDroppable({
+    id: 'create-new-dashboard',
+    data: { type: 'create-new-dashboard' },
+  })
+
+  if (!onClick && !isOver) return null
+
+  return (
+    <div
+      ref={setNodeRef}
+      onClick={onClick}
+      className={cn(
+        'flex items-center gap-2 w-full px-3 py-2 rounded-lg border border-dashed text-sm transition-all cursor-pointer',
+        isOver
+          ? 'bg-green-500/20 border-green-500 text-green-400 scale-105'
+          : 'border-border/50 text-muted-foreground hover:text-foreground hover:border-purple-500/50'
+      )}
+    >
+      <Plus className={cn('w-4 h-4', isOver && 'text-green-400')} />
+      {t('dashboard.dropZone.createNewDashboard')}
+      {isOver && <Check className="w-4 h-4 text-green-400 ml-auto" />}
+    </div>
+  )
 }
 
 function DroppableDashboard({ dashboard }: DroppableDashboardProps) {
