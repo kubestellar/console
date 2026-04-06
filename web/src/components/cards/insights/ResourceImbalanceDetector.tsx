@@ -9,6 +9,7 @@ import { StatusBadge } from '../../ui/StatusBadge'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
 import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_FONT_SIZE_COMPACT, CHART_TICK_COLOR } from '../../../lib/constants/ui'
+import { OVERLOADED_COLOR, UNDERLOADED_COLOR, BALANCED_COLOR, AVERAGE_LINE_COLOR } from '../../../lib/theme/chartColors'
 import { InsightDetailModal } from './InsightDetailModal'
 import type { MultiClusterInsight } from '../../../types/insights'
 
@@ -49,7 +50,7 @@ export function ResourceImbalanceDetector() {
         name: name.length > CHART_LABEL_MAX_LEN ? name.slice(0, CHART_LABEL_TRUNCATE_LEN) + '...' : name,
         fullName: name,
         value,
-        fill: value > OVERLOADED_THRESHOLD_PCT ? '#ef4444' : value < UNDERLOADED_THRESHOLD_PCT ? '#3b82f6' : '#22c55e',
+        fill: value > OVERLOADED_THRESHOLD_PCT ? OVERLOADED_COLOR : value < UNDERLOADED_THRESHOLD_PCT ? UNDERLOADED_COLOR : BALANCED_COLOR,
       }))
       .sort((a, b) => b.value - a.value)
   }, [imbalanceInsights, selectedClusters])
@@ -118,7 +119,7 @@ export function ResourceImbalanceDetector() {
                 contentStyle={{ ...CHART_TOOLTIP_CONTENT_STYLE, fontSize: CHART_TOOLTIP_FONT_SIZE_COMPACT }}
                 formatter={((value: number) => [`${value}%`, 'Usage']) as never}
               />
-              <ReferenceLine x={avgValue} stroke="#f59e0b" strokeDasharray="5 5" label={{ value: `Avg ${avgValue}%`, position: 'top', fontSize: 10, fill: '#f59e0b' }} />
+              <ReferenceLine x={avgValue} stroke={AVERAGE_LINE_COLOR} strokeDasharray="5 5" label={{ value: `Avg ${avgValue}%`, position: 'top', fontSize: 10, fill: AVERAGE_LINE_COLOR }} />
               <Bar dataKey="value" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>

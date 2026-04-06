@@ -30,6 +30,7 @@ import {
   CHART_TICK_COLOR,
   CHART_LEGEND_WRAPPER_STYLE,
 } from '../../lib/constants'
+import { GPU_TYPE_CHART_PALETTE, GPU_FREE_AREA_COLOR } from '../../lib/theme/chartColors'
 
 // ---------------------------------------------------------------------------
 // Constants — no magic numbers
@@ -79,19 +80,10 @@ const TABLE_PAGE_SIZE = 8
 const MAX_CHART_SERIES = 8
 
 /** Distinct colors for per-GPU-type area series in the chart */
-const GPU_TYPE_COLORS: string[] = [
-  '#9333ea', // purple-600
-  '#3b82f6', // blue-500
-  '#ef4444', // red-500
-  '#f59e0b', // amber-500
-  '#06b6d4', // cyan-500
-  '#ec4899', // pink-500
-  '#84cc16', // lime-500
-  '#8b5cf6', // violet-500
-]
+const GPU_TYPE_COLORS: readonly string[] = GPU_TYPE_CHART_PALETTE
 
 /** Color used for the "free" series area */
-const FREE_AREA_COLOR = '#22c55e'
+const FREE_AREA_COLOR = GPU_FREE_AREA_COLOR
 
 // ---------------------------------------------------------------------------
 // Types

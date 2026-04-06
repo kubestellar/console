@@ -10,6 +10,7 @@ import { StatusBadge } from '../../ui/StatusBadge'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
 import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_FONT_SIZE_COMPACT, CHART_TICK_COLOR } from '../../../lib/constants/ui'
+import { CROSS_CLUSTER_EVENT_PALETTE } from '../../../lib/theme/chartColors'
 import { InsightDetailModal } from './InsightDetailModal'
 import type { MultiClusterInsight } from '../../../types/insights'
 
@@ -19,10 +20,7 @@ const TIMELINE_BUCKET_MS = 2 * 60 * 1000
 const MAX_TIMELINE_BUCKETS = 30
 
 /** Color palette for cluster series in the stacked area chart */
-const CLUSTER_COLORS = [
-  '#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6',
-  '#06b6d4', '#ec4899', '#14b8a6', '#f97316', '#6366f1',
-]
+const CLUSTER_COLORS = CROSS_CLUSTER_EVENT_PALETTE
 
 export function CrossClusterEventCorrelation() {
   const { insightsByCategory, isLoading, isDemoData } = useMultiClusterInsights()

@@ -4,6 +4,10 @@ import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeys } from '../../hooks/useGameKeys'
+import {
+  KUBEBERT_TILE_UNVISITED, KUBEBERT_TILE_VISITED, KUBEBERT_TILE_TARGET,
+  KUBEBERT_PLAYER, KUBEBERT_ENEMY_COILY, KUBEBERT_ENEMY_BALL, KUBEBERT_BG,
+} from '../../lib/theme/chartColors'
 
 // ─── Game Constants ───────────────────────────────────────────────────────────
 const PYRAMID_ROWS = 7
@@ -21,15 +25,15 @@ const MIN_ENEMY_SPAWN_INTERVAL_MS = 1000
 
 // Tile colors by state
 const TILE_COLORS = {
-  unvisited: '#1e3a5f',     // dark blue
-  visited: '#326ce5',       // Kubernetes blue
-  target: '#00d4aa',        // bright green (level target color)
+  unvisited: KUBEBERT_TILE_UNVISITED,     // dark blue
+  visited: KUBEBERT_TILE_VISITED,         // Kubernetes blue
+  target: KUBEBERT_TILE_TARGET,           // bright green (level target color)
 }
 
-const PLAYER_COLOR = '#ffd700'    // gold — the Kube Bert character
-const ENEMY_COILY_COLOR = '#ff4444'  // red snake enemy
-const ENEMY_BALL_COLOR = '#ff8800'   // orange bouncing ball
-const BG_COLOR = '#0a1628'
+const PLAYER_COLOR = KUBEBERT_PLAYER          // gold — the Kube Bert character
+const ENEMY_COILY_COLOR = KUBEBERT_ENEMY_COILY  // red snake enemy
+const ENEMY_BALL_COLOR = KUBEBERT_ENEMY_BALL    // orange bouncing ball
+const BG_COLOR = KUBEBERT_BG
 
 // Kubernetes-themed labels for tiles
 const KUBE_LABELS = ['Pod', 'Svc', 'Node', 'NS', 'Dep', 'RS', 'DS', 'Job', 'CRD', 'PV', 'CM', 'Sec', 'Ing', 'HPA', 'SA']
