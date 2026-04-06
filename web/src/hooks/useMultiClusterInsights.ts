@@ -56,6 +56,81 @@ export const INFRA_CRITICAL_WORKLOADS = 5
 /** Number of clusters in a correlated event or cascade at which severity escalates to critical */
 export const CRITICAL_CLUSTER_THRESHOLD = 3
 
+/**
+ * Reason families for cascade causal-relationship scoring.
+ * Events with reasons in the same family are considered causally related.
+ */
+const REASON_FAMILIES: ReadonlyArray<ReadonlyArray<string>> = [
+  /* Container lifecycle */  ['BackOff', 'CrashLoopBackOff', 'OOMKilled', 'ContainerStatusUnknown', 'DeadlineExceeded'],
+  /* Image issues */         ['ImagePullBackOff', 'ErrImagePull', 'ErrImageNeverPull', 'InvalidImageName'],
+  /* Scheduling */           ['FailedScheduling', 'Unschedulable', 'TaintManagerEviction'],
+  /* Node health */          ['NodeNotReady', 'NodeUnreachable', 'Rebooted', 'CordonStarting'],
+  /* Mount / volume */       ['FailedMount', 'FailedAttachVolume', 'FailedMapVolume', 'VolumeResizeFailed'],
+  /* Probe failures */       ['Unhealthy', 'ProbeWarning', 'LivenessProbe', 'ReadinessProbe', 'StartupProbe'],
+  /* Network / endpoint */   ['NetworkNotReady', 'FailedToUpdateEndpoint', 'FailedToUpdateEndpointSlices'],
+]
+
+/**
+ * Build a Map<reason, familyIndex> for O(1) lookup.
+ * Reasons not in any family get familyIndex === -1.
+ */
+const REASON_TO_FAMILY = new Map<string, number>()
+for (let i = 0; i < REASON_FAMILIES.length; i++) {
+  for (const r of REASON_FAMILIES[i]) {
+    REASON_TO_FAMILY.set(r, i)
+  }
+}
+
+/**
+ * Extract the workload prefix from a Kubernetes object reference.
+ * Strips the resource-type prefix and typical k8s hash suffixes
+ * (ReplicaSet hash + pod hash) to recover the Deployment/StatefulSet name.
+ *
+ * Examples:
+ *   "pod/api-server-7d9f8b6c4f-x2k4q" -> "api-server"
+ *   "pod/api-server-abc12-xyz"         -> "api-server"
+ *   "deployment/api-server"            -> "api-server"
+ *   "node/worker-3"                    -> "node/worker-3" (non-workload refs kept as-is)
+ */
+function workloadPrefix(objectRef: string): string {
+  // Non-pod/non-workload references (e.g. "node/worker-3") keep their full form
+  const WORKLOAD_PREFIXES = ['pod/', 'deployment/', 'replicaset/', 'statefulset/', 'daemonset/', 'job/']
+  if (!WORKLOAD_PREFIXES.some(p => objectRef.startsWith(p))) {
+    return objectRef
+  }
+  // Remove the resource-type prefix (e.g. "pod/")
+  const name = objectRef.includes('/') ? objectRef.split('/')[1] : objectRef
+  // Standard k8s pod naming: <deployment>-<rs-hash>-<pod-hash>
+  // Hash segments contain at least one digit (distinguishes from name parts like "server").
+  // Try stripping both RS hash + pod hash first, then just one suffix.
+  const twoSuffix = name.replace(/-(?=[a-z0-9]*\d)[a-z0-9]{5,10}-(?=[a-z0-9]*\d)[a-z0-9]{3,5}$/, '')
+  if (twoSuffix !== name) return twoSuffix
+  // Single hash suffix (e.g. ReplicaSet hash or Job completion index)
+  const oneSuffix = name.replace(/-(?=[a-z0-9]*\d)[a-z0-9]{5,10}$/, '')
+  if (oneSuffix !== name) return oneSuffix
+  return name
+}
+
+/**
+ * Determine whether two warning events are causally related.
+ * Returns true if they share either:
+ *   1. The same reason family (e.g. both are container-lifecycle issues), OR
+ *   2. The same workload prefix (e.g. both reference "api-server-*" pods).
+ */
+function isCausallyRelated(a: ClusterEvent, b: ClusterEvent): boolean {
+  // Same reason family?
+  const familyA = REASON_TO_FAMILY.get(a.reason)
+  const familyB = REASON_TO_FAMILY.get(b.reason)
+  if (familyA !== undefined && familyB !== undefined && familyA === familyB) {
+    return true
+  }
+  // Same workload prefix?
+  if (workloadPrefix(a.object) === workloadPrefix(b.object)) {
+    return true
+  }
+  return false
+}
+
 /** Rollout per-cluster status indices (stored in metrics as ${cluster}_status): 0=pending, 1=in-progress, 2=complete, 3=failed */
 const ROLLOUT_STATUS_IN_PROGRESS = 1
 const ROLLOUT_STATUS_COMPLETE = 2
@@ -264,6 +339,8 @@ export function detectCascadeImpact(events: ClusterEvent[]): MultiClusterInsight
       const ts = parseTimestamp(warnings[j].lastSeen)
       if (ts - baseTs > CASCADE_DETECTION_WINDOW_MS) break
       if (seenClusters.has(warnings[j].cluster)) continue
+      // Only chain events that are causally related (same reason family or workload prefix)
+      if (!isCausallyRelated(warnings[i], warnings[j])) continue
 
       chain.push({
         cluster: warnings[j].cluster || 'unknown',

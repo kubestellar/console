@@ -42,9 +42,13 @@ vi.mock('../../CardDataContext', () => ({
   useReportCardDataState: () => {},
 }))
 
-vi.mock('../../../../hooks/usePrometheusMetrics', () => ({
-  usePrometheusMetrics: () => ({ metrics: [] }),
-}))
+vi.mock('../../../../hooks/usePrometheusMetrics', () => {
+  /** Stable reference to prevent infinite re-render in useCallback/useEffect dependency chains */
+  const stableMetrics: never[] = []
+  return {
+    usePrometheusMetrics: () => ({ metrics: stableMetrics }),
+  }
+})
 
 import KVCacheMonitor from '../KVCacheMonitor'
 

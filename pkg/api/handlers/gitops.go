@@ -2236,7 +2236,7 @@ func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
 				client := &http.Client{
 					Timeout: argocdQueryTimeout,
 					Transport: &http.Transport{
-						TLSClientConfig: &tls.Config{InsecureSkipVerify: skipVerify},
+						TLSClientConfig: &tls.Config{InsecureSkipVerify: skipVerify}, // #nosec G402 -- intentionally env-var-gated (ARGOCD_TLS_INSECURE) for self-signed certs in dev/test
 					},
 				}
 				resp, err := client.Do(httpReq)

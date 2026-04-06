@@ -998,6 +998,77 @@ describe('detectCascadeImpact — regression', () => {
     expect(result[0].chain![1].cluster).toBe('cluster-2')
     expect(result[0].chain![2].cluster).toBe('cluster-3')
   })
+
+  it('does NOT falsely correlate unrelated events from different reason families and workloads (#4925)', () => {
+    const base = new Date('2026-01-15T10:00:00Z')
+    const fiveMinutesMs = 300000
+    const events = [
+      makeEvent({
+        cluster: 'cluster-A',
+        reason: 'ImagePullBackOff',
+        object: 'pod/frontend-7d9f8b6c4f-x2k4q',
+        lastSeen: base.toISOString(),
+      }),
+      makeEvent({
+        cluster: 'cluster-B',
+        reason: 'NodeNotReady',
+        object: 'node/worker-3',
+        lastSeen: new Date(base.getTime() + fiveMinutesMs).toISOString(),
+      }),
+    ]
+    // Different reason families AND different workload prefixes => no cascade
+    expect(detectCascadeImpact(events)).toEqual([])
+  })
+
+  it('correlates events from the same reason family even with different objects', () => {
+    const base = new Date('2026-01-15T10:00:00Z')
+    const oneMinuteMs = 60000
+    const events = [
+      makeEvent({
+        cluster: 'cluster-1',
+        reason: 'ImagePullBackOff',
+        object: 'pod/api-abc12-xyz',
+        lastSeen: base.toISOString(),
+      }),
+      makeEvent({
+        cluster: 'cluster-2',
+        reason: 'ErrImagePull',
+        object: 'pod/worker-def34-uvw',
+        lastSeen: new Date(base.getTime() + oneMinuteMs).toISOString(),
+      }),
+    ]
+    // Same reason family (image issues) => cascade detected
+    const result = detectCascadeImpact(events)
+    expect(result).toHaveLength(1)
+    expect(result[0].affectedClusters).toEqual(
+      expect.arrayContaining(['cluster-1', 'cluster-2']),
+    )
+  })
+
+  it('correlates events from the same workload even with different reasons', () => {
+    const base = new Date('2026-01-15T10:00:00Z')
+    const oneMinuteMs = 60000
+    const events = [
+      makeEvent({
+        cluster: 'cluster-1',
+        reason: 'FailedMount',
+        object: 'pod/api-server-7d9f8b6c4f-x2k4q',
+        lastSeen: base.toISOString(),
+      }),
+      makeEvent({
+        cluster: 'cluster-2',
+        reason: 'CrashLoopBackOff',
+        object: 'pod/api-server-8a3e2c1d5b-m7n2p',
+        lastSeen: new Date(base.getTime() + oneMinuteMs).toISOString(),
+      }),
+    ]
+    // Same workload prefix "api-server" => cascade detected
+    const result = detectCascadeImpact(events)
+    expect(result).toHaveLength(1)
+    expect(result[0].affectedClusters).toEqual(
+      expect.arrayContaining(['cluster-1', 'cluster-2']),
+    )
+  })
 })
 
 // ── Config Drift: deeper coverage ────────────────────────────────────

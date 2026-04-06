@@ -15,6 +15,8 @@ interface PlaylistResponse {
 
 const CACHE_KEY = 'ks-playlist-cache'
 const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
+/** Fetch timeout for playlist API call (10 seconds) */
+const PLAYLIST_FETCH_TIMEOUT_MS = 10_000
 
 interface CacheEntry {
   videos: PlaylistVideo[]
@@ -68,7 +70,9 @@ export function usePlaylistVideos() {
 
     async function fetchPlaylist() {
       try {
-        const resp = await fetch('/api/youtube/playlist')
+        const resp = await fetch('/api/youtube/playlist', {
+          signal: AbortSignal.timeout(PLAYLIST_FETCH_TIMEOUT_MS),
+        })
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
         const data: PlaylistResponse = await resp.json()
         if (cancelled) return
