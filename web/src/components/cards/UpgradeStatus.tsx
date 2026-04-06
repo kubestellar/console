@@ -421,6 +421,7 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
       return
     }
 
+    let cancelled = false
     setFetchCompleted(false)
 
     const fetchVersions = async () => {
@@ -433,7 +434,7 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
       )
 
       if (clustersToFetch.length === 0) {
-        setFetchCompleted(true)
+        if (!cancelled) setFetchCompleted(true)
         return
       }
 
@@ -446,6 +447,7 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
       })
 
       const results = await Promise.all(fetchPromises)
+      if (cancelled) return
 
       // Process results
       const newVersions: Record<string, string> = {}
@@ -473,13 +475,17 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
     fetchVersions()
 
     // Retry failed clusters every 15 seconds
+    const RETRY_INTERVAL_MS = 15000
     const retryInterval = setInterval(() => {
       if (failedClustersRef.current.size > 0 && agentConnected) {
         fetchVersions()
       }
-    }, 15000)
+    }, RETRY_INTERVAL_MS)
 
-    return () => clearInterval(retryInterval)
+    return () => {
+      cancelled = true
+      clearInterval(retryInterval)
+    }
   }, [isDemoMode, agentConnected, allClusters])
 
   const handleStartUpgrade = (clusterName: string, currentVersion: string, targetVersion: string) => {

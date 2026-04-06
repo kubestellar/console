@@ -186,6 +186,8 @@ export function PodHealthTrend() {
     if (clustersLoading || issuesLoading) return
     if (currentStats.total === 0) return
 
+    let cancelled = false
+
     const now = new Date()
     const newPoint: HealthPoint = {
       time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -201,23 +203,30 @@ export function PodHealthTrend() {
       lastPoint.issues !== newPoint.issues ||
       lastPoint.pending !== newPoint.pending
 
-    if (shouldAdd) {
-      const newHistory = [...historyRef.current, newPoint].slice(-20) // Keep last 20 points
+    if (shouldAdd && !cancelled) {
+      const MAX_HISTORY_POINTS = 20
+      const newHistory = [...historyRef.current, newPoint].slice(-MAX_HISTORY_POINTS)
       historyRef.current = newHistory
       setHistory(newHistory)
     }
+
+    return () => { cancelled = true }
   }, [currentStats, clustersLoading, issuesLoading])
 
   // Initialize history — seed multiple points in demo mode for visible chart
   useEffect(() => {
     if (history.length === 0 && currentStats.total > 0) {
+      let cancelled = false
       const now = new Date()
       if (isDemoMode()) {
         // Seed 8 historical points so the time-series chart renders immediately
+        const DEMO_SEED_POINTS = 8
+        const DEMO_INTERVAL_MS = 5 * 60000 // 5-min intervals
+        const MAX_JITTER = 3
         const points: HealthPoint[] = []
-        for (let i = 7; i >= 0; i--) {
-          const t = new Date(now.getTime() - i * 5 * 60000) // 5-min intervals
-          const jitter = Math.floor(Math.random() * 3)
+        for (let i = DEMO_SEED_POINTS - 1; i >= 0; i--) {
+          const t = new Date(now.getTime() - i * DEMO_INTERVAL_MS)
+          const jitter = Math.floor(Math.random() * MAX_JITTER)
           points.push({
             time: t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             healthy: currentStats.healthy + jitter,
@@ -225,8 +234,10 @@ export function PodHealthTrend() {
             pending: Math.max(0, currentStats.pending + (i % 3 === 0 ? 1 : 0)),
           })
         }
-        historyRef.current = points
-        setHistory(points)
+        if (!cancelled) {
+          historyRef.current = points
+          setHistory(points)
+        }
       } else {
         const initialPoint: HealthPoint = {
           time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -234,9 +245,12 @@ export function PodHealthTrend() {
           issues: currentStats.issues,
           pending: currentStats.pending,
         }
-        historyRef.current = [initialPoint]
-        setHistory([initialPoint])
+        if (!cancelled) {
+          historyRef.current = [initialPoint]
+          setHistory([initialPoint])
+        }
       }
+      return () => { cancelled = true }
     }
   }, [currentStats, history.length])
 
