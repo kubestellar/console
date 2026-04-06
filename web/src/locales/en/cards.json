@@ -591,7 +591,9 @@
     "snoozeTooltip": "Delay this swap for 1 hour",
     "swapNowTooltip": "Swap to the new card immediately",
     "keepThisTooltip": "Cancel the swap and keep this card",
-    "cardInfo": "Card information"
+    "cardInfo": "Card information",
+    "noDataTitle": "No data available",
+    "noDataMessage": "This card has no data to display. Data may become available when the data source is connected."
   },
   "github": {
     "pullRequests": "Pull Requests",

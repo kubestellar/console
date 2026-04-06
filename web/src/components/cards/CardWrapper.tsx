@@ -515,14 +515,31 @@ export function CardWrapper({
   const collapseKey = cardId || `${cardType}-default`
   const { isCollapsed: hookCollapsed, setCollapsed: hookSetCollapsed } = useCardCollapse(collapseKey)
 
+  // Check if this card has a previously-saved collapse state in localStorage.
+  // When the user explicitly collapsed a card, we should respect that immediately
+  // on page navigation (no delay) to prevent a flash of expanded state (#4895).
+  const hasSavedCollapseState = useMemo(() => {
+    try {
+      const stored = localStorage.getItem('kubestellar-collapsed-cards')
+      if (!stored) return false
+      const ids: string[] = JSON.parse(stored)
+      return ids.includes(collapseKey)
+    } catch {
+      return false
+    }
+  }, [collapseKey])
+
   // Track whether initial data load has completed AND content has been visible
-  const [hasCompletedInitialLoad, setHasCompletedInitialLoad] = useState(checkIsDemoMode)
-  const [collapseDelayPassed, setCollapseDelayPassed] = useState(checkIsDemoMode)
+  // Skip the delay entirely if the card has a saved collapsed state — the user
+  // explicitly collapsed it, so we should respect that immediately across navigations.
+  const [hasCompletedInitialLoad, setHasCompletedInitialLoad] = useState(checkIsDemoMode || hasSavedCollapseState)
+  const [collapseDelayPassed, setCollapseDelayPassed] = useState(checkIsDemoMode || hasSavedCollapseState)
 
   // Allow external control to override hook state
   // IMPORTANT: Don't collapse until initial data load is complete AND a brief delay has passed
   // This prevents the jarring sequence of: skeleton → collapse → show data
   // Cards stay expanded showing content briefly, then respect collapsed state
+  // Exception: if the card has a saved collapse state, apply it immediately (#4895)
   const savedCollapsedState = externalCollapsed ?? hookCollapsed
   const isCollapsed = (hasCompletedInitialLoad && collapseDelayPassed) ? savedCollapsedState : false
   const setCollapsed = useCallback((collapsed: boolean) => {
@@ -1116,11 +1133,38 @@ export function CardWrapper({
                         )}
                       </div>
                     )}
+                    {/* Fallback empty state: when a card finishes loading but has no data,
+                    show a helpful empty state instead of a blank card (#4894).
+                    This catches cards that don't implement their own showEmptyState check.
+                    Conditions: child reported state, not loading, no data, and timeout hasn't fired. */}
+                    {childDataState && !childDataState.isLoading && !childDataState.hasData && !cardLoadingTimedOut && (
+                      <div className="h-full flex flex-col items-center justify-center p-4 text-center" data-card-empty-state="true">
+                        <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3">
+                          <Info className="w-6 h-6 text-muted-foreground" />
+                        </div>
+                        <p className="text-sm font-medium text-foreground mb-1">
+                          {t('cardWrapper.noDataTitle')}
+                        </p>
+                        <p className="text-xs text-muted-foreground mb-3 max-w-xs">
+                          {t('cardWrapper.noDataMessage')}
+                        </p>
+                        {onRefresh && (
+                          <button
+                            onClick={onRefresh}
+                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-secondary hover:bg-secondary/80 text-foreground transition-colors"
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            {t('cardWrapper.loadingTimedOutRetry')}
+                          </button>
+                        )}
+                      </div>
+                    )}
                     {/* ALWAYS render children so they can report their data state via useCardLoadingState.
-                    Hide visually when skeleton is showing or loading timed out, but keep mounted so useLayoutEffect runs.
+                    Hide visually when skeleton is showing, loading timed out, or empty state is shown,
+                    but keep mounted so useLayoutEffect runs.
                     This prevents the deadlock where CardWrapper waits for hasData but children never mount.
                     Suspense catches lazy() chunk loading so it doesn't bubble up to Layout and blank the whole page. */}
-                    <div className={(shouldShowSkeleton || (cardLoadingTimedOut && !childDataState?.hasData)) ? 'hidden' : 'contents'}>
+                    <div className={(shouldShowSkeleton || (cardLoadingTimedOut && !childDataState?.hasData) || (childDataState && !childDataState.isLoading && !childDataState.hasData && !cardLoadingTimedOut)) ? 'hidden' : 'contents'}>
                       <DynamicCardErrorBoundary cardId={cardId || cardType}>
                         <Suspense fallback={<CardSkeleton type={effectiveSkeletonType} rows={skeletonRows || 3} showHeader={false} />}>
                           {children}
