@@ -1002,6 +1002,7 @@ function wasAlreadyReported(msg: string): boolean {
 
 export function emitError(category: string, detail: string, cardId?: string) {
   send('ksc_error', {
+    error_code: category,
     error_category: category,
     error_detail: detail.slice(0, ERROR_DETAIL_MAX_LEN),
     error_page: window.location.pathname,
