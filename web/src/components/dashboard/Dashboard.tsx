@@ -130,6 +130,7 @@ export function Dashboard() {
     closeAddCardModal,
     openAddCardModal,
     studioInitialSection,
+    studioWidgetCardType,
     pendingOpenAddCardModal,
     setPendingOpenAddCardModal,
     // Templates modal state no longer needed — accessed via DashboardCustomizer
@@ -1151,6 +1152,7 @@ export function Dashboard() {
         onAddCards={handleAddCards}
         existingCardTypes={currentCardTypes}
         initialSection={studioInitialSection}
+        initialWidgetCardType={studioWidgetCardType}
         initialSearch={addCardSearch}
         onApplyTemplate={handleApplyTemplate}
         onExport={dashboard?.id ? async () => {

@@ -30,6 +30,8 @@ interface DashboardCustomizerProps {
   onAddCards: (cards: CardSuggestion[]) => void
   existingCardTypes?: string[]
   initialSection?: CustomizerSection
+  /** Pre-selected card type for widget export (from card menu "Export as Widget") */
+  initialWidgetCardType?: string
   initialSearch?: string
   onApplyTemplate?: (template: DashboardTemplate) => void
   onExport?: () => void
@@ -50,6 +52,7 @@ export function DashboardCustomizer({
   onAddCards,
   existingCardTypes = [],
   initialSection,
+  initialWidgetCardType,
   initialSearch = '',
   onApplyTemplate,
   onReset,
@@ -138,6 +141,7 @@ export function DashboardCustomizer({
             <WidgetExportModal
               isOpen={true}
               onClose={() => setUserSelectedSection('cards')}
+              cardType={initialWidgetCardType}
               embedded
             />
           )}

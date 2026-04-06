@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, ReactNode } from 'rea
 import { useDashboardHealth, type DashboardHealthInfo } from './useDashboardHealth'
 
 /** Valid initial sections for Console Studio */
-export type StudioInitialSection = 'cards' | 'dashboards' | 'collections'
+export type StudioInitialSection = 'cards' | 'dashboards' | 'collections' | 'widgets'
 
 // Card to be restored from history
 export interface PendingRestoreCard {
@@ -15,11 +15,13 @@ export interface PendingRestoreCard {
 interface DashboardContextType {
   // Add Card Modal state
   isAddCardModalOpen: boolean
-  openAddCardModal: (section?: StudioInitialSection) => void
+  openAddCardModal: (section?: StudioInitialSection, widgetCardType?: string) => void
   closeAddCardModal: () => void
 
   /** Which section Console Studio should open to */
   studioInitialSection: StudioInitialSection | undefined
+  /** Pre-selected widget card type (when opening Studio from card menu "Export as Widget") */
+  studioWidgetCardType: string | undefined
 
   // Pending open flag - for triggering modal after navigation
   pendingOpenAddCardModal: boolean
@@ -44,20 +46,23 @@ const DashboardContext = createContext<DashboardContextType | null>(null)
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false)
   const [studioInitialSection, setStudioInitialSection] = useState<StudioInitialSection | undefined>(undefined)
+  const [studioWidgetCardType, setStudioWidgetCardType] = useState<string | undefined>(undefined)
   const [pendingOpenAddCardModal, setPendingOpenAddCardModalState] = useState(false)
   const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false)
   const [pendingRestoreCard, setPendingRestoreCardState] = useState<PendingRestoreCard | null>(null)
 
   const health = useDashboardHealth()
 
-  const openAddCardModal = useCallback((section?: StudioInitialSection) => {
+  const openAddCardModal = useCallback((section?: StudioInitialSection, widgetCardType?: string) => {
     setStudioInitialSection(section)
+    setStudioWidgetCardType(widgetCardType)
     setIsAddCardModalOpen(true)
   }, [])
 
   const closeAddCardModal = useCallback(() => {
     setIsAddCardModalOpen(false)
     setStudioInitialSection(undefined)
+    setStudioWidgetCardType(undefined)
   }, [])
 
   const setPendingOpenAddCardModal = useCallback((pending: boolean) => {
@@ -87,6 +92,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         openAddCardModal,
         closeAddCardModal,
         studioInitialSection,
+        studioWidgetCardType,
         pendingOpenAddCardModal,
         setPendingOpenAddCardModal,
         isTemplatesModalOpen,
