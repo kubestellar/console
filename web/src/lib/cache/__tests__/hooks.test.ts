@@ -71,11 +71,19 @@ function makeObjectStore(): IDBObjectStore {
 }
 
 function makeTransaction(): IDBTransaction {
-  return {
+  const tx = {
     objectStore() {
       return makeObjectStore()
     },
-  } as unknown as IDBTransaction
+    oncomplete: null as ((ev: Event) => void) | null,
+    onerror: null as ((ev: Event) => void) | null,
+    error: null as DOMException | null,
+  }
+  // Fire oncomplete on next microtask so clearAllStorage's promise resolves
+  queueMicrotask(() => {
+    tx.oncomplete?.({} as Event)
+  })
+  return tx as unknown as IDBTransaction
 }
 
 function makeFakeDB(): IDBDatabase {
