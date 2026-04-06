@@ -183,13 +183,13 @@ func TestMCPGetPods_NetworkErrorReturnsUnavailable(t *testing.T) {
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode, "network errors should return 200, not 500")
+	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode, "network errors should return 503")
 
 	var payload map[string]interface{}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
 	assert.Equal(t, "unavailable", payload["clusterStatus"])
 	assert.Equal(t, "network", payload["errorType"])
-	assert.Contains(t, payload["errorMessage"], "connection refused")
+	assert.Contains(t, payload["errorMessage"], "Cluster is unreachable")
 }
 
 func TestMCPGetDaemonSets_SingleClusterEmptyIsArray(t *testing.T) {

@@ -948,11 +948,8 @@ func (s *Server) handleDeviceAlertsClear(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if s.deviceTracker == nil {
-		http.Error(w, "Device tracker not available", http.StatusServiceUnavailable)
-		return
-	}
-
+	// Validate request body before checking device tracker availability so
+	// callers always get a 400 for malformed requests regardless of server state.
 	var req struct {
 		AlertID string `json:"alertId"`
 	}
@@ -963,6 +960,11 @@ func (s *Server) handleDeviceAlertsClear(w http.ResponseWriter, r *http.Request)
 
 	if req.AlertID == "" {
 		http.Error(w, "alertId is required", http.StatusBadRequest)
+		return
+	}
+
+	if s.deviceTracker == nil {
+		http.Error(w, "Device tracker not available", http.StatusServiceUnavailable)
 		return
 	}
 
