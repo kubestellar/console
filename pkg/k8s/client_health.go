@@ -61,6 +61,14 @@ func classifyError(errMsg string) string {
 		return "certificate"
 	}
 
+	// Not-found errors — cluster context does not exist in kubeconfig (#4907)
+	if strings.Contains(lowerMsg, "not found") ||
+		strings.Contains(lowerMsg, "does not exist") ||
+		strings.Contains(lowerMsg, "no configuration") ||
+		strings.Contains(lowerMsg, "not exist") {
+		return "not_found"
+	}
+
 	return "unknown"
 }
 

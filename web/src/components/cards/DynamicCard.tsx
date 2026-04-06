@@ -22,20 +22,36 @@ import { useTranslation } from 'react-i18next'
  * Registered as `dynamic_card` in CARD_COMPONENTS.
  * config.dynamicCardId determines which definition to render.
  */
-export function DynamicCard({ config = {} }: CardComponentProps) {
-  const dynamicCardId = (config?.dynamicCardId as string) || ''
+export function DynamicCard({ config }: CardComponentProps) {
+  // Guard against undefined/null config to prevent crashes (#4910)
+  const safeConfig = config ?? {}
+  const dynamicCardId = (typeof safeConfig.dynamicCardId === 'string' ? safeConfig.dynamicCardId : '') || ''
   const definition = getDynamicCard(dynamicCardId)
 
   // Report demo state: dynamic cards depend on the agent for live API data
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
   useReportCardDataState({ isDemoData: shouldUseDemoData, isFailed: false, consecutiveFailures: 0 })
 
+  if (!dynamicCardId) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-4 text-center">
+        <AlertTriangle className="w-8 h-8 text-yellow-400 mb-2" />
+        <p className="text-sm text-muted-foreground">
+          Missing card configuration.
+        </p>
+        <p className="text-xs text-muted-foreground/70 mt-1">
+          No dynamicCardId was provided in the card config.
+        </p>
+      </div>
+    )
+  }
+
   if (!definition) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-4 text-center">
         <AlertTriangle className="w-8 h-8 text-yellow-400 mb-2" />
         <p className="text-sm text-muted-foreground">
-          Dynamic card "{dynamicCardId}" not found.
+          Dynamic card &quot;{dynamicCardId}&quot; not found.
         </p>
         <p className="text-xs text-muted-foreground/70 mt-1">
           The card definition may have been deleted or not loaded yet.
@@ -49,7 +65,7 @@ export function DynamicCard({ config = {} }: CardComponentProps) {
       {definition.tier === 'tier1' && definition.cardDefinition ? (
         <Tier1CardRuntime definition={definition} cardDefinition={definition.cardDefinition} />
       ) : definition.tier === 'tier2' && definition.sourceCode ? (
-        <Tier2CardRuntime definition={definition} config={config} />
+        <Tier2CardRuntime definition={definition} config={safeConfig} />
       ) : (
         <div className="h-full flex flex-col items-center justify-center p-4 text-center">
           <AlertTriangle className="w-8 h-8 text-yellow-400 mb-2" />
@@ -77,13 +93,20 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
   const [apiLoading, setApiLoading] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
 
-  const data = cardDefinition.dataSource === 'static'
-    ? (cardDefinition.staticData || [])
-    : apiData
+  // Compute validation flags up front (before hooks) to keep hook call order stable (#4910)
+  const isInvalidConfig = !cardDefinition || typeof cardDefinition !== 'object'
+  const isMissingEndpoint = !isInvalidConfig && cardDefinition?.dataSource === 'api' && !cardDefinition?.apiEndpoint
+
+  const data = isInvalidConfig
+    ? []
+    : (cardDefinition?.dataSource === 'static'
+        ? (cardDefinition?.staticData || [])
+        : apiData)
 
   // Fetch API data if needed
   useEffect(() => {
-    if (cardDefinition.dataSource !== 'api' || !cardDefinition.apiEndpoint) return
+    if (isInvalidConfig || isMissingEndpoint) return
+    if (cardDefinition?.dataSource !== 'api' || !cardDefinition?.apiEndpoint) return
 
     let cancelled = false
     setApiLoading(true)
@@ -109,10 +132,10 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
       })
 
     return () => { cancelled = true }
-  }, [cardDefinition.dataSource, cardDefinition.apiEndpoint])
+  }, [isInvalidConfig, isMissingEndpoint, cardDefinition?.dataSource, cardDefinition?.apiEndpoint])
 
   // useCardData for search/pagination
-  const searchFields = (cardDefinition.searchFields || []) as (keyof Record<string, unknown>)[]
+  const searchFields = ((cardDefinition?.searchFields || []) as (keyof Record<string, unknown>)[])
   const {
     items,
     totalItems,
@@ -133,8 +156,31 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
       defaultDirection: 'asc',
       comparators: {},
     },
-    defaultLimit: cardDefinition.defaultLimit || 5,
+    defaultLimit: cardDefinition?.defaultLimit || 5,
   })
+
+  // Validation-based early returns — placed after all hooks to respect Rules of Hooks (#4910)
+  if (isInvalidConfig) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-4 text-center">
+        <AlertTriangle className="w-6 h-6 text-yellow-400 mb-2" />
+        <p className="text-sm text-yellow-400">Invalid card configuration</p>
+        <p className="text-xs text-muted-foreground mt-1">The card definition is missing or malformed.</p>
+      </div>
+    )
+  }
+
+  if (isMissingEndpoint) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-4 text-center">
+        <AlertTriangle className="w-6 h-6 text-yellow-400 mb-2" />
+        <p className="text-sm text-yellow-400">Missing API endpoint</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          This card is configured to use API data but no apiEndpoint is specified.
+        </p>
+      </div>
+    )
+  }
 
   if (apiLoading) {
     return (
@@ -287,7 +333,9 @@ export interface Tier2Props {
   config?: Record<string, unknown>
 }
 
-export function Tier2CardRuntime({ definition, config = {} }: Tier2Props) {
+export function Tier2CardRuntime({ definition, config }: Tier2Props) {
+  // Guard against undefined config (#4910)
+  const safeConfig = config ?? {}
   const [CardComponent, setCardComponent] = useState<CardComponent | null>(null)
   const [compiling, setCompiling] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -372,5 +420,5 @@ export function Tier2CardRuntime({ definition, config = {} }: Tier2Props) {
     )
   }
 
-  return <CardComponent config={config} />
+  return <CardComponent config={safeConfig} />
 }

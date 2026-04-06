@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
+import { triggerAllRefetches } from '../lib/modeTransition'
 
 // Minimum time to show the refresh indicator on user-triggered refreshes.
 // Kept short for snappy feedback without causing visible flicker.
@@ -22,7 +23,12 @@ export function useRefreshIndicator(refetchFn: () => void, _resetKey?: string) {
       clearTimeout(timerRef.current)
     }
 
+    // Call the primary refetch function (e.g., cluster data)
     refetchFn()
+
+    // Also trigger all registered cache refetches so individual card data
+    // hooks (useCachedPods, useCachedDeployments, etc.) reload their data (#4909).
+    triggerAllRefetches()
 
     timerRef.current = setTimeout(() => {
       setShowIndicator(false)

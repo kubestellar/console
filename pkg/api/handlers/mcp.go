@@ -69,16 +69,29 @@ var sanitizedErrorMessages = map[string]string{
 func handleK8sError(c *fiber.Ctx, err error) error {
 	errType := k8s.ClassifyError(err.Error())
 	switch errType {
+	case "not_found":
+		// Invalid or non-existent cluster — return 404 with consistent error format (#4907, #4908)
+		slog.Info("[MCP] cluster not found", "errorType", errType, "error", err)
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"clusterStatus": "not_found",
+			"errorType":     errType,
+			"errorMessage":  "Cluster not found — verify the cluster name exists in your kubeconfig",
+		})
 	case "network", "auth", "timeout", "certificate":
+		// Cluster exists but is unreachable — return 503 with consistent error format (#4908)
 		slog.Info("[MCP] cluster unavailable", "errorType", errType, "error", err)
-		return c.JSON(fiber.Map{
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 			"clusterStatus": "unavailable",
 			"errorType":     errType,
 			"errorMessage":  sanitizedErrorMessages[errType],
 		})
 	default:
 		slog.Error("[MCP] internal error", "error", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"clusterStatus": "error",
+			"errorType":     "internal",
+			"errorMessage":  "An internal error occurred",
+		})
 	}
 }
 

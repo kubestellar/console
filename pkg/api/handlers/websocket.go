@@ -174,6 +174,23 @@ func (h *Hub) GetTotalConnectionsCount() int {
 	return len(h.clients)
 }
 
+// DisconnectUser closes all WebSocket connections belonging to the given user.
+// Called by the logout handler to enforce session invalidation (#4906).
+func (h *Hub) DisconnectUser(userID uuid.UUID) {
+	h.mu.RLock()
+	clients := make([]*Client, len(h.userIndex[userID]))
+	copy(clients, h.userIndex[userID])
+	h.mu.RUnlock()
+
+	for _, client := range clients {
+		// Send a close message so the client knows the session was terminated.
+		_ = client.conn.WriteMessage(websocket.CloseMessage,
+			websocket.FormatCloseMessage(websocket.CloseNormalClosure, "session invalidated"))
+		client.conn.Close()
+	}
+	slog.Info("[WebSocket] disconnected all connections for user", "user", userID, "count", len(clients))
+}
+
 // RecordDemoSession records a heartbeat from a demo mode session
 func (h *Hub) RecordDemoSession(sessionID string) {
 	h.mu.Lock()

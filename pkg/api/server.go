@@ -519,6 +519,8 @@ func (s *Server) setupRoutes() {
 			return c.Status(429).JSON(fiber.Map{"error": "too many requests, try again later"})
 		},
 	})
+	// Wire WebSocket hub into auth handler so logout disconnects WS sessions (#4906)
+	auth.SetHub(s.hub)
 	s.app.Get("/auth/github", authLimiter, auth.GitHubLogin)
 	s.app.Get("/auth/github/callback", authLimiter, auth.GitHubCallback)
 	s.app.Post("/auth/refresh", authLimiter, auth.RefreshToken)

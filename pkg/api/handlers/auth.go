@@ -128,6 +128,12 @@ type AuthConfig struct {
 	SkipOnboarding bool   // Skip onboarding questionnaire for new users
 }
 
+// SessionDisconnecter is the subset of Hub needed to close WebSocket sessions
+// on logout. Defined as an interface to avoid a circular dependency.
+type SessionDisconnecter interface {
+	DisconnectUser(userID uuid.UUID)
+}
+
 // AuthHandler handles authentication
 type AuthHandler struct {
 	store          store.Store
@@ -141,6 +147,7 @@ type AuthHandler struct {
 	githubToken    string
 	devMode        bool
 	skipOnboarding bool
+	wsHub          SessionDisconnecter // optional — set via SetHub to disconnect WS sessions on logout
 }
 
 // NewAuthHandler creates a new auth handler
@@ -197,6 +204,12 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 		devMode:        cfg.DevMode,
 		skipOnboarding: cfg.SkipOnboarding,
 	}
+}
+
+// SetHub wires the WebSocket hub into the auth handler so that logout
+// can disconnect all active WebSocket sessions for the user (#4906).
+func (h *AuthHandler) SetHub(hub SessionDisconnecter) {
+	h.wsHub = hub
 }
 
 const (
@@ -494,7 +507,14 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	// Clear the HttpOnly cookie so the browser stops sending it
 	h.clearJWTCookie(c)
 
-	slog.Info("[Auth] token revoked", "user", claims.GitHubLogin, "jti", claims.ID)
+	// Disconnect all active WebSocket connections for this user (#4906).
+	// This ensures that already-established WebSocket sessions cannot continue
+	// to receive data after the token is revoked.
+	if h.wsHub != nil && claims.UserID != uuid.Nil {
+		h.wsHub.DisconnectUser(claims.UserID)
+	}
+
+	slog.Info("[Auth] token revoked, WS sessions closed", "user", claims.GitHubLogin, "jti", claims.ID)
 	return c.JSON(fiber.Map{"success": true, "message": "Token revoked"})
 }
 
