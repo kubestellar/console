@@ -201,14 +201,46 @@ if ! download_binary "kc-agent" "$VERSION" "$PLATFORM"; then
     echo "  (kc-agent is optional — local cluster features will be limited)"
 fi
 
-# Kill any existing console instance on the console port
-EXISTING_PID=$(lsof -ti :"$PORT" 2>/dev/null || true)
-if [ -n "$EXISTING_PID" ]; then
-    echo "Killing existing process on port $PORT (PID: $EXISTING_PID)..."
-    kill -TERM "$EXISTING_PID" 2>/dev/null || true
+# Kill any existing console instance on the console port.
+# Only kill processes that look like they belong to this project to avoid
+# disrupting unrelated services (e.g., a database on the same port).
+EXISTING_PIDS=$(lsof -ti :"$PORT" 2>/dev/null || true)
+if [ -n "$EXISTING_PIDS" ]; then
+    for epid in $EXISTING_PIDS; do
+        ECMD=$(ps -p "$epid" -o args= 2>/dev/null || true)
+        if echo "$ECMD" | grep -q "console" \
+           || echo "$ECMD" | grep -q "kubestellar"; then
+            echo "Stopping stale console process on port $PORT (PID: $epid)..."
+            kill -TERM "$epid" 2>/dev/null || true
+        else
+            echo "Warning: Port $PORT is in use by an unrelated process (PID $epid: ${ECMD:-unknown}). Skipping."
+        fi
+    done
+    # Wait for graceful shutdown then force-kill any remaining project processes
     sleep 2
-    # Fall back to SIGKILL if process did not exit gracefully
-    kill -9 "$EXISTING_PID" 2>/dev/null || true
+    for epid in $EXISTING_PIDS; do
+        if kill -0 "$epid" 2>/dev/null; then
+            ECMD=$(ps -p "$epid" -o args= 2>/dev/null || true)
+            if echo "$ECMD" | grep -q "console" \
+               || echo "$ECMD" | grep -q "kubestellar"; then
+                echo "Force-killing stale process on port $PORT (PID: $epid)..."
+                kill -9 "$epid" 2>/dev/null || true
+            fi
+        fi
+    done
+fi
+
+# Verify the port is free before starting
+REMAINING_PID=$(lsof -ti :"$PORT" 2>/dev/null || true)
+if [ -n "$REMAINING_PID" ]; then
+    echo "Error: Port $PORT is still in use after cleanup."
+    for rpid in $REMAINING_PID; do
+        RCMD=$(ps -p "$rpid" -o args= 2>/dev/null || true)
+        echo "  PID $rpid: ${RCMD:-unknown}"
+    done
+    echo "Manually stop the process(es) above, then try again:"
+    echo "  kill $REMAINING_PID"
+    exit 1
 fi
 # Note: kc-agent on port 8585 is managed via PID file — not force-killed here
 

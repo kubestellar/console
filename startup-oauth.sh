@@ -115,43 +115,8 @@ fi
 
 cd "$SCRIPT_DIR"
 
-# Safely kill a project process on a port. Unrelated processes are warned and
-# left running. An optional second argument restricts lsof to a TCP state
-# (e.g. "TCP:LISTEN") so watchdog outgoing connections are not matched.
-kill_project_port() {
-    local port="$1"
-    local tcp_state="${2:-}"
-    local pids
-    if [ -n "$tcp_state" ]; then
-        pids=$(lsof -ti ":${port}" -s "${tcp_state}" 2>/dev/null || true)
-    else
-        pids=$(lsof -ti ":${port}" 2>/dev/null || true)
-    fi
-    [ -z "$pids" ] && return 0
-
-    local to_kill=()
-    for pid in $pids; do
-        local cmd
-        cmd=$(ps -p "$pid" -o args= 2>/dev/null || true)
-        if echo "$cmd" | grep -qF "$SCRIPT_DIR" \
-           || echo "$cmd" | grep -q "cmd/console" \
-           || echo "$cmd" | grep -q "kc-agent"; then
-            to_kill+=("$pid")
-            echo -e "${YELLOW}Stopping project process on port ${port} (PID ${pid})...${NC}"
-            kill -TERM "$pid" 2>/dev/null || true
-        else
-            echo -e "${YELLOW}Warning: Port ${port} is in use by an unrelated process (PID ${pid}: ${cmd:-unknown}). Skipping.${NC}"
-        fi
-    done
-
-    [ ${#to_kill[@]} -eq 0 ] && return 0
-    sleep 2
-
-    # Fall back to SIGKILL for project processes that did not exit gracefully
-    for pid in "${to_kill[@]}"; do
-        kill -9 "$pid" 2>/dev/null || true
-    done
-}
+# Load shared port cleanup utilities (kill_project_port, verify_port_free)
+source "$SCRIPT_DIR/scripts/port-cleanup.sh"
 
 # Colors
 RED='\033[0;31m'
@@ -295,6 +260,13 @@ fi
 if [ "$USE_DEV_SERVER" = true ]; then PORTS_TO_CLEAN="$PORTS_TO_CLEAN 5174"; fi
 for p in $PORTS_TO_CLEAN; do
     kill_project_port "$p" "TCP:LISTEN"
+done
+
+# Verify all required ports are free before proceeding
+for p in $PORTS_TO_CLEAN; do
+    if ! verify_port_free "$p" "TCP:LISTEN"; then
+        exit 1
+    fi
 done
 
 # Cleanup on exit
