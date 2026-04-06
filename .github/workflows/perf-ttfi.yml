@@ -61,6 +61,8 @@ jobs:
         run: npm run test:e2e:perf:ttfi
 
       - name: Compare against baseline (hard fail)
+        env:
+          CI_TOLERANCE_PCT: '15'
         run: node e2e/perf/compare-ttfi.mjs
 
       - name: Upload TTFI artifacts

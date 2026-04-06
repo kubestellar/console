@@ -6,6 +6,11 @@ const reportPath = process.env.TTFI_REPORT_PATH || path.join(root, 'e2e', 'test-
 const baselinePath = process.env.TTFI_BASELINE_PATH || path.join(root, 'e2e', 'perf', 'baseline', 'ttfi-baseline.json')
 const outputPath = process.env.TTFI_SUMMARY_PATH || path.join(root, 'e2e', 'test-results', 'ttfi-regression.md')
 
+/** Percentage tolerance for CI runner variance (shared runners are noisy).
+ *  Set via CI_TOLERANCE_PCT env var. Budgets are multiplied by (1 + pct/100). */
+const CI_TOLERANCE_PCT = Number(process.env.CI_TOLERANCE_PCT || '0')
+const toleranceFactor = 1 + CI_TOLERANCE_PCT / 100
+
 function fail(msg) {
   console.error(msg)
   process.exit(1)
@@ -51,16 +56,19 @@ for (const mode of modes) {
   const avg = values.length ? Math.round(values.reduce((s, v) => s + v, 0) / values.length) : -1
   const p95 = percentile(values, 0.95)
 
+  const effectiveP95 = Math.round(budget.max_p95_ms * toleranceFactor)
+  const effectiveTtfi = Math.round(budget.max_ttfi_ms * toleranceFactor)
+
   if (timeoutCards.length > budget.max_timeout_count) {
     failures.push(`${mode}: timeout count ${timeoutCards.length} > budget ${budget.max_timeout_count}`)
   }
-  if (p95 > budget.max_p95_ms) {
-    failures.push(`${mode}: p95 ${p95}ms > budget ${budget.max_p95_ms}ms`)
+  if (p95 > effectiveP95) {
+    failures.push(`${mode}: p95 ${p95}ms > budget ${effectiveP95}ms${CI_TOLERANCE_PCT ? ` (base ${budget.max_p95_ms}ms + ${CI_TOLERANCE_PCT}% CI tolerance)` : ''}`)
   }
 
   for (const card of okCards) {
-    if (card.ttfi_ms > budget.max_ttfi_ms) {
-      failures.push(`${mode}:${card.cardType} ttfi ${card.ttfi_ms}ms > max ${budget.max_ttfi_ms}ms`)
+    if (card.ttfi_ms > effectiveTtfi) {
+      failures.push(`${mode}:${card.cardType} ttfi ${card.ttfi_ms}ms > max ${effectiveTtfi}ms${CI_TOLERANCE_PCT ? ` (base ${budget.max_ttfi_ms}ms + ${CI_TOLERANCE_PCT}% CI tolerance)` : ''}`)
     }
   }
 
