@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { api } from '../../lib/api'
 import { isDemoMode } from '../../lib/demoMode'
 import { fetchSSE } from '../../lib/sseClient'
@@ -148,22 +148,19 @@ export function useOperators(cluster?: string) {
               // Map phase → status for each operator
               const mapped = items.map(op => ({
                 ...op,
-                status: (op.status || (op as Operator & { phase?: string }).phase || 'Unknown') as Operator['status'],
-              }))
+                status: (op.status || (op as Operator & { phase?: string }).phase || 'Unknown') as Operator['status'] }))
               accumulated.push(...mapped)
               if (!controller.signal.aborted) {
                 setOperators([...accumulated])
                 setIsLoading(false)
               }
-            },
-          })
+            } })
 
           if (!controller.signal.aborted) {
             hasCompletedFetchRef.current = true
             const finalOperators = result.map(op => ({
               ...op,
-              status: (op.status || (op as Operator & { phase?: string }).phase || 'Unknown') as Operator['status'],
-            }))
+              status: (op.status || (op as Operator & { phase?: string }).phase || 'Unknown') as Operator['status'] }))
             setOperators(finalOperators)
             saveOperatorsCacheToStorage(finalOperators, cacheKey)
             setError(null)
@@ -195,8 +192,7 @@ export function useOperators(cluster?: string) {
           const newOperators = (data.operators || []).map(op => ({
             ...op,
             status: (op.status || op.phase || 'Unknown') as Operator['status'],
-            cluster: op.cluster || cluster || '',
-          }))
+            cluster: op.cluster || cluster || '' }))
           setOperators(newOperators)
           saveOperatorsCacheToStorage(newOperators, cacheKey)
           setError(null)
@@ -227,11 +223,11 @@ export function useOperators(cluster?: string) {
     }
   }, [cluster, fetchVersion, cacheKey])
 
-  const refetch = useCallback(() => {
+  const refetch = () => {
     abortRef.current?.abort()
     fetchInProgressRef.current = false
     setFetchVersion(v => v + 1)
-  }, [])
+  }
 
   useEffect(() => {
     if (initialMountRef.current) {
@@ -323,8 +319,7 @@ export function useOperatorSubscriptions(cluster?: string) {
                 setSubscriptions([...accumulated])
                 setIsLoading(false)
               }
-            },
-          })
+            } })
 
           if (!controller.signal.aborted) {
             hasCompletedFetchRef.current = true
@@ -386,11 +381,11 @@ export function useOperatorSubscriptions(cluster?: string) {
     }
   }, [cluster, fetchVersion, cacheKey])
 
-  const refetch = useCallback(() => {
+  const refetch = () => {
     abortRef.current?.abort()
     fetchInProgressRef.current = false
     setFetchVersion(v => v + 1)
-  }, [])
+  }
 
   useEffect(() => {
     if (initialMountRef.current) {
@@ -432,8 +427,7 @@ function getDemoOperatorSubscriptions(cluster: string): OperatorSubscription[] {
       source: 'operatorhubio-catalog',
       installPlanApproval: 'Automatic',
       currentCSV: 'prometheusoperator.v0.65.1',
-      cluster,
-    },
+      cluster },
     {
       name: 'cert-manager',
       namespace: 'cert-manager',
@@ -442,8 +436,7 @@ function getDemoOperatorSubscriptions(cluster: string): OperatorSubscription[] {
       installPlanApproval: 'Manual',
       currentCSV: 'cert-manager.v1.12.0',
       pendingUpgrade: hash % 2 === 0 ? 'cert-manager.v1.13.0' : undefined,
-      cluster,
-    },
+      cluster },
     {
       name: 'strimzi-kafka-operator',
       namespace: 'kafka',
@@ -452,8 +445,7 @@ function getDemoOperatorSubscriptions(cluster: string): OperatorSubscription[] {
       installPlanApproval: hash % 3 === 0 ? 'Manual' : 'Automatic',
       currentCSV: 'strimzi-cluster-operator.v0.35.0',
       pendingUpgrade: hash % 4 === 0 ? 'strimzi-cluster-operator.v0.36.0' : undefined,
-      cluster,
-    },
+      cluster },
     {
       name: 'argocd-operator',
       namespace: 'argocd',
@@ -462,8 +454,7 @@ function getDemoOperatorSubscriptions(cluster: string): OperatorSubscription[] {
       installPlanApproval: 'Manual',
       currentCSV: 'argocd-operator.v0.6.0',
       pendingUpgrade: hash % 5 === 0 ? 'argocd-operator.v0.7.0' : undefined,
-      cluster,
-    },
+      cluster },
     {
       name: 'jaeger-operator',
       namespace: 'observability',
@@ -471,8 +462,7 @@ function getDemoOperatorSubscriptions(cluster: string): OperatorSubscription[] {
       source: 'operatorhubio-catalog',
       installPlanApproval: 'Automatic',
       currentCSV: 'jaeger-operator.v1.47.0',
-      cluster,
-    },
+      cluster },
   ]
 
   return baseSubscriptions.slice(0, subCount)

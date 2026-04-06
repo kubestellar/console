@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 
 export type AIMode = 'low' | 'medium' | 'high'
 
@@ -24,9 +24,7 @@ const AI_MODE_CONFIGS: Record<AIMode, AIModeConfig> = {
       summarizeData: false,
       naturalLanguage: false,
       contextualHelp: true,  // Basic help is cheap
-      autoAnalyze: false,
-    },
-  },
+      autoAnalyze: false } },
   medium: {
     mode: 'medium',
     features: {
@@ -34,9 +32,7 @@ const AI_MODE_CONFIGS: Record<AIMode, AIModeConfig> = {
       summarizeData: true,
       naturalLanguage: true,
       contextualHelp: true,
-      autoAnalyze: false,
-    },
-  },
+      autoAnalyze: false } },
   high: {
     mode: 'high',
     features: {
@@ -44,16 +40,12 @@ const AI_MODE_CONFIGS: Record<AIMode, AIModeConfig> = {
       summarizeData: true,
       naturalLanguage: true,
       contextualHelp: true,
-      autoAnalyze: true,
-    },
-  },
-}
+      autoAnalyze: true } } }
 
 const DESCRIPTIONS: Record<AIMode, string> = {
   low: 'Minimal token usage. Direct kubectl/API calls for all data. AI only for explicit requests. Best for cost control.',
   medium: 'Balanced approach. AI analyzes and summarizes data, suggests improvements on request. Moderate token usage.',
-  high: 'Full AI assistance. Proactive suggestions, automatic issue analysis, card swaps based on cluster activity. Higher token usage.',
-}
+  high: 'Full AI assistance. Proactive suggestions, automatic issue analysis, card swaps based on cluster activity. Higher token usage.' }
 
 const STORAGE_KEY = 'kubestellar-ai-mode'
 
@@ -72,20 +64,17 @@ export function useAIMode() {
     window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
   }, [mode])
 
-  const setMode = useCallback((newMode: AIMode) => {
+  const setMode = (newMode: AIMode) => {
     setModeState(newMode)
-  }, [])
+  }
 
   const config = AI_MODE_CONFIGS[mode]
   const description = DESCRIPTIONS[mode]
 
   // Helper to check if a feature is enabled
-  const isFeatureEnabled = useCallback(
-    (feature: keyof AIModeConfig['features']) => {
+  const isFeatureEnabled = (feature: keyof AIModeConfig['features']) => {
       return config.features[feature]
-    },
-    [config]
-  )
+    }
 
   // Estimate token cost multiplier
   const tokenMultiplier = mode === 'low' ? 0.1 : mode === 'medium' ? 0.5 : 1.0
@@ -100,6 +89,5 @@ export function useAIMode() {
     // Convenience booleans
     shouldProactivelySuggest: config.features.proactiveSuggestions,
     shouldSummarize: config.features.summarizeData,
-    shouldAutoAnalyze: config.features.autoAnalyze,
-  }
+    shouldAutoAnalyze: config.features.autoAnalyze }
 }

@@ -1,4 +1,4 @@
-import { useCallback, useSyncExternalStore } from 'react'
+import { useSyncExternalStore } from 'react'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { setActiveProject } from '../lib/project/context'
 
@@ -106,8 +106,7 @@ const DEFAULT_CONFIG: SidebarConfig = {
   sections: [],
   showClusterStatus: true,
   collapsed: false,
-  isMobileOpen: false,
-}
+  isMobileOpen: false }
 
 const STORAGE_KEY = 'kubestellar-sidebar-config-v11'
 const OLD_STORAGE_KEY = 'kubestellar-sidebar-config-v10'
@@ -154,8 +153,7 @@ function applyDashboardFilter(config: SidebarConfig): SidebarConfig {
   const reordered = filtered.map((item, idx) => ({ ...item, order: idx }))
   return {
     ...config,
-    primaryNav: reordered,
-  }
+    primaryNav: reordered }
 }
 
 export async function fetchEnabledDashboards(): Promise<void> {
@@ -213,17 +211,14 @@ function migrateConfig(stored: SidebarConfig): SidebarConfig {
         ...primaryNav,
         ...missingPrimaryItems.map((item, idx) => ({
           ...item,
-          order: primaryNav.length + idx,
-        })),
+          order: primaryNav.length + idx })),
       ],
       secondaryNav: [
         ...secondaryNav,
         ...missingSecondaryItems.map((item, idx) => ({
           ...item,
-          order: secondaryNav.length + idx,
-        })),
-      ],
-    }
+          order: secondaryNav.length + idx })),
+      ] }
   }
 
   return stored
@@ -288,12 +283,12 @@ export function useSidebarConfig() {
   const config = useSyncExternalStore(subscribe, getSnapshot) || DEFAULT_CONFIG
 
   // Wrapper to update shared state
-  const setConfig = useCallback((updater: SidebarConfig | ((prev: SidebarConfig) => SidebarConfig)) => {
+  const setConfig = (updater: SidebarConfig | ((prev: SidebarConfig) => SidebarConfig)) => {
     const newConfig = typeof updater === 'function' ? updater(sharedConfig || DEFAULT_CONFIG) : updater
     updateSharedConfig(newConfig)
-  }, [])
+  }
 
-  const addItem = useCallback((item: Omit<SidebarItem, 'id' | 'order'>, target: 'primary' | 'secondary' | 'sections') => {
+  const addItem = (item: Omit<SidebarItem, 'id' | 'order'>, target: 'primary' | 'secondary' | 'sections') => {
     setConfig((prev) => {
       // Generate unique ID using timestamp + random string to avoid collisions when adding multiple items
       const uniqueId = `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
@@ -305,8 +300,7 @@ export function useSidebarConfig() {
           ? prev.primaryNav.length
           : target === 'secondary'
             ? prev.secondaryNav.length
-            : prev.sections.length,
-      }
+            : prev.sections.length }
 
       if (target === 'primary') {
         return { ...prev, primaryNav: [...prev.primaryNav, newItem] }
@@ -316,10 +310,10 @@ export function useSidebarConfig() {
         return { ...prev, sections: [...prev.sections, newItem] }
       }
     })
-  }, [setConfig])
+  }
 
   // Add multiple items at once to avoid React batching issues
-  const addItems = useCallback((items: Array<{ item: Omit<SidebarItem, 'id' | 'order'>, target: 'primary' | 'secondary' | 'sections' }>) => {
+  const addItems = (items: Array<{ item: Omit<SidebarItem, 'id' | 'order'>, target: 'primary' | 'secondary' | 'sections' }>) => {
     setConfig((prev) => {
       let newPrimaryNav = [...prev.primaryNav]
       let newSecondaryNav = [...prev.secondaryNav]
@@ -335,8 +329,7 @@ export function useSidebarConfig() {
             ? newPrimaryNav.length
             : target === 'secondary'
               ? newSecondaryNav.length
-              : newSections.length,
-        }
+              : newSections.length }
 
         if (target === 'primary') {
           newPrimaryNav = [...newPrimaryNav, newItem]
@@ -351,21 +344,19 @@ export function useSidebarConfig() {
         ...prev,
         primaryNav: newPrimaryNav,
         secondaryNav: newSecondaryNav,
-        sections: newSections,
-      }
+        sections: newSections }
     })
-  }, [setConfig])
+  }
 
-  const removeItem = useCallback((id: string) => {
+  const removeItem = (id: string) => {
     setConfig((prev) => ({
       ...prev,
       primaryNav: prev.primaryNav.filter((item) => item.id !== id),
       secondaryNav: prev.secondaryNav.filter((item) => item.id !== id),
-      sections: prev.sections.filter((item) => item.id !== id),
-    }))
-  }, [setConfig])
+      sections: prev.sections.filter((item) => item.id !== id) }))
+  }
 
-  const updateItem = useCallback((id: string, updates: Partial<SidebarItem>) => {
+  const updateItem = (id: string, updates: Partial<SidebarItem>) => {
     setConfig((prev) => ({
       ...prev,
       primaryNav: prev.primaryNav.map((item) =>
@@ -376,11 +367,10 @@ export function useSidebarConfig() {
       ),
       sections: prev.sections.map((item) =>
         item.id === id ? { ...item, ...updates } : item
-      ),
-    }))
-  }, [setConfig])
+      ) }))
+  }
 
-  const reorderItems = useCallback((items: SidebarItem[], target: 'primary' | 'secondary' | 'sections') => {
+  const reorderItems = (items: SidebarItem[], target: 'primary' | 'secondary' | 'sections') => {
     setConfig((prev) => {
       if (target === 'primary') {
         return { ...prev, primaryNav: items }
@@ -390,54 +380,53 @@ export function useSidebarConfig() {
         return { ...prev, sections: items }
       }
     })
-  }, [setConfig])
+  }
 
-  const toggleClusterStatus = useCallback(() => {
+  const toggleClusterStatus = () => {
     setConfig((prev) => ({ ...prev, showClusterStatus: !prev.showClusterStatus }))
-  }, [setConfig])
+  }
 
-  const setWidth = useCallback((width: number) => {
+  const setWidth = (width: number) => {
     setConfig((prev) => ({ ...prev, width }))
-  }, [setConfig])
+  }
 
-  const toggleCollapsed = useCallback(() => {
+  const toggleCollapsed = () => {
     setConfig((prev) => ({ ...prev, collapsed: !prev.collapsed }))
-  }, [setConfig])
+  }
 
-  const setCollapsed = useCallback((collapsed: boolean) => {
+  const setCollapsed = (collapsed: boolean) => {
     setConfig((prev) => ({ ...prev, collapsed }))
-  }, [setConfig])
+  }
 
-  const openMobileSidebar = useCallback(() => {
+  const openMobileSidebar = () => {
     setConfig((prev) => ({ ...prev, isMobileOpen: true }))
-  }, [setConfig])
+  }
 
-  const closeMobileSidebar = useCallback(() => {
+  const closeMobileSidebar = () => {
     setConfig((prev) => ({ ...prev, isMobileOpen: false }))
-  }, [setConfig])
+  }
 
-  const toggleMobileSidebar = useCallback(() => {
+  const toggleMobileSidebar = () => {
     setConfig((prev) => ({ ...prev, isMobileOpen: !prev.isMobileOpen }))
-  }, [setConfig])
+  }
 
   // Add a discoverable dashboard to the sidebar with its original ID (not a generated custom ID)
-  const restoreDashboard = useCallback((dashboard: SidebarItem) => {
+  const restoreDashboard = (dashboard: SidebarItem) => {
     setConfig((prev) => {
       // Skip if already present
       if (prev.primaryNav.some((item) => item.id === dashboard.id)) return prev
       const newItem: SidebarItem = {
         ...dashboard,
-        order: prev.primaryNav.length,
-      }
+        order: prev.primaryNav.length }
       return { ...prev, primaryNav: [...prev.primaryNav, newItem] }
     })
-  }, [setConfig])
+  }
 
-  const resetToDefault = useCallback(() => {
+  const resetToDefault = () => {
     setConfig(applyDashboardFilter(DEFAULT_CONFIG))
-  }, [setConfig])
+  }
 
-  const generateFromBehavior = useCallback((frequentlyUsedPaths: string[]) => {
+  const generateFromBehavior = (frequentlyUsedPaths: string[]) => {
     // Reorder items based on user's frequently visited paths
     setConfig((prev) => {
       const allItems = [...prev.primaryNav, ...prev.secondaryNav]
@@ -467,16 +456,14 @@ export function useSidebarConfig() {
       // Keep secondary nav as-is but update order
       const reorderedSecondary = prev.secondaryNav.map((item, index) => ({
         ...item,
-        order: index,
-      }))
+        order: index }))
 
       return {
         ...prev,
         primaryNav: reorderedPrimary,
-        secondaryNav: reorderedSecondary,
-      }
+        secondaryNav: reorderedSecondary }
     })
-  }, [setConfig])
+  }
 
   return {
     config,
@@ -494,8 +481,7 @@ export function useSidebarConfig() {
     closeMobileSidebar,
     toggleMobileSidebar,
     resetToDefault,
-    generateFromBehavior,
-  }
+    generateFromBehavior }
 }
 
 // Available icons for user to choose from

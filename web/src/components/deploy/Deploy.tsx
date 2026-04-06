@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useRef } from 'react'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { useClusterGroups } from '../../hooks/useClusterGroups'
 import { useClusters, useDeployments } from '../../hooks/useMCP'
@@ -42,7 +42,7 @@ export function Deploy() {
   const progressingCount = cachedDeployments.filter(d => d.status === 'deploying').length
   const failedCount = cachedDeployments.filter(d => d.status === 'failed').length
 
-  const getDeployStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDeployStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'deployments':
         return { value: cachedDeployments.length, sublabel: t('common:deploy.totalDeployments') }
@@ -57,12 +57,9 @@ export function Deploy() {
       default:
         return { value: '-' }
     }
-  }, [cachedDeployments.length, runningCount, progressingCount, failedCount, t])
+  }
 
-  const getStatValue = useCallback(
-    (blockId: string) => createMergedStatValueGetter(getDeployStatValue, getUniversalStatValue)(blockId),
-    [getDeployStatValue, getUniversalStatValue]
-  )
+  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDeployStatValue, getUniversalStatValue)(blockId)
 
   // Pending deploy state for confirmation dialog
   const [pendingDeploy, setPendingDeploy] = useState<{
@@ -74,7 +71,7 @@ export function Deploy() {
   } | null>(null)
 
   // Handle confirmed deploy
-  const handleConfirmDeploy = useCallback(async () => {
+  const handleConfirmDeploy = async () => {
     if (!pendingDeploy) return
     const { workloadName, namespace, sourceCluster, targetClusters, groupName } = pendingDeploy
     setPendingDeploy(null)
@@ -91,9 +88,7 @@ export function Deploy() {
         sourceCluster,
         targetClusters,
         groupName,
-        timestamp: Date.now(),
-      },
-    })
+        timestamp: Date.now() } })
 
     // Create CRs when persistence is enabled
     if (shouldPersist) {
@@ -107,12 +102,9 @@ export function Deploy() {
             sourceNamespace: namespace,
             workloadRef: {
               kind: 'Deployment',
-              name: workloadName,
-            },
+              name: workloadName },
             targetClusters,
-            targetGroups: groupName ? [groupName] : undefined,
-          },
-        })
+            targetGroups: groupName ? [groupName] : undefined } })
 
         // Create WorkloadDeployment CR to track the deployment action
         const deploymentCRName = `${workloadName}-to-${groupName || 'clusters'}-${Date.now()}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 63)
@@ -122,9 +114,7 @@ export function Deploy() {
             workloadRef: { name: workloadCRName },
             targetGroupRef: groupName ? { name: groupName } : undefined,
             targetClusters: groupName ? undefined : targetClusters,
-            strategy: 'RollingUpdate',
-          },
-        })
+            strategy: 'RollingUpdate' } })
       } catch (err) {
         console.error('Failed to create persistence CRs:', err)
         showToast('Failed to create deployment tracking records', 'warning')
@@ -138,8 +128,7 @@ export function Deploy() {
         namespace,
         sourceCluster,
         targetClusters,
-        groupName,
-      }, {
+        groupName }, {
         onSuccess: (result) => {
           const resp = result as unknown as {
             success?: boolean
@@ -159,12 +148,9 @@ export function Deploy() {
                 deployedTo: resp.deployedTo,
                 failedClusters: resp.failedClusters,
                 dependencies: resp.dependencies as DeployResultPayload['dependencies'],
-                warnings: resp.warnings,
-              },
-            })
+                warnings: resp.warnings } })
           }
-        },
-      })
+        } })
     } catch (err) {
       console.error('Deploy failed:', err)
       const errorMessage = (err instanceof Error && err.message.trim()) ? err.message.trim() : 'Deploy failed'
@@ -176,23 +162,20 @@ export function Deploy() {
           success: false,
           message: errorMessage,
           deployedTo: [],
-          failedClusters: targetClusters,
-        },
-      })
+          failedClusters: targetClusters } })
     }
-  }, [pendingDeploy, publishCardEvent, deployWorkload, shouldPersist, createManagedWorkload, createWorkloadDeployment, showToast])
+  }
 
   // Cluster groups for the picker fallback
   const { groups: clusterGroups } = useClusterGroups()
   const { deduplicatedClusters: allClusters } = useClusters()
-  const builtInGroup = useMemo(() => ({
+  const builtInGroup = {
     name: 'all-healthy-clusters',
-    clusters: allClusters.filter(c => c.healthy).map(c => c.name),
-  }), [allClusters])
-  const allGroups = useMemo(() => [
+    clusters: allClusters.filter(c => c.healthy).map(c => c.name) }
+  const allGroups = [
     builtInGroup,
     ...clusterGroups.map(g => ({ name: g.name, clusters: g.clusters })),
-  ], [builtInGroup, clusterGroups])
+  ]
 
   // Workload dropped on card but not a specific group → show group picker
   const [groupPickerWorkload, setGroupPickerWorkload] = useState<{
@@ -200,7 +183,7 @@ export function Deploy() {
   } | null>(null)
 
   // Handle workload dropped on a cluster group → open deploy dialog
-  const handleWorkloadDrop = useCallback((event: DragEndEvent) => {
+  const handleWorkloadDrop = (event: DragEndEvent) => {
     const { active, over } = event
     const activeData = active.data.current as Record<string, unknown> | undefined
     if (activeData?.type !== 'workload') return
@@ -223,14 +206,13 @@ export function Deploy() {
         namespace: workload.namespace,
         sourceCluster: workload.sourceCluster,
         targetClusters: clusters,
-        groupName,
-      })
+        groupName })
       return
     }
 
     // Dropped anywhere else (or nowhere) → show group picker
     setGroupPickerWorkload(workload)
-  }, [])
+  }
 
   // Group picker modal ref for focus trap
   const groupPickerRef = useRef<HTMLDivElement>(null)
@@ -240,8 +222,7 @@ export function Deploy() {
     isOpen: groupPickerWorkload !== null,
     onClose: () => setGroupPickerWorkload(null),
     enableEscape: true,
-    enableBackspace: false,
-  })
+    enableBackspace: false })
 
   // Trap focus within group picker modal
   useModalFocusTrap(groupPickerRef as React.RefObject<HTMLElement | null>, groupPickerWorkload !== null)
@@ -264,8 +245,7 @@ export function Deploy() {
       onDragEnd={handleWorkloadDrop}
       emptyState={{
         title: t('common:deploy.dashboardTitle'),
-        description: t('common:deploy.emptyDescription'),
-      }}
+        description: t('common:deploy.emptyDescription') }}
     >
       {/* Pre-deploy Confirmation Dialog */}
       <DeployConfirmDialog
@@ -299,8 +279,7 @@ export function Deploy() {
                       namespace: groupPickerWorkload.namespace,
                       sourceCluster: groupPickerWorkload.sourceCluster,
                       targetClusters: g.clusters,
-                      groupName: g.name,
-                    })
+                      groupName: g.name })
                     setGroupPickerWorkload(null)
                   }}
                   className="w-full text-left px-4 py-3 rounded-lg bg-secondary/50 hover:bg-secondary border border-border/50 hover:border-blue-400/50 transition-colors"

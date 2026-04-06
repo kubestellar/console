@@ -970,7 +970,7 @@ describe('Cache Worker handlers', () => {
     it('converts non-Error throws to string in error response', () => {
       const postMessage = vi.fn()
       const errorDb = createMockDb()
-      errorDb.exec = vi.fn(() => { throw 'string error' })  // eslint-disable-line no-throw-literal
+      errorDb.exec = vi.fn(() => { throw 'string error' })   
       processMessage(
         errorDb,
         { id: 51, type: 'clear' },

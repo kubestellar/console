@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { RefreshCcw, Bug, Server, ChevronRight } from 'lucide-react'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
 import { useCardLoadingState } from '../CardDataContext'
@@ -15,34 +15,26 @@ export function RestartCorrelationMatrix() {
   const { selectedClusters } = useGlobalFilters()
   const [modalInsight, setModalInsight] = useState<MultiClusterInsight | null>(null)
 
-  const restartInsightsRaw = useMemo(() => {
+  const restartInsightsRaw = (() => {
     const all = insightsByCategory['restart-correlation'] || []
     if (selectedClusters.length === 0) return all
     return all.filter(i =>
       (i.affectedClusters || []).some(c => selectedClusters.includes(c)),
     )
-  }, [insightsByCategory, selectedClusters])
+  })()
   const {
     sorted: restartInsights,
-    sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
-  } = useInsightSort(restartInsightsRaw)
+    sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit } = useInsightSort(restartInsightsRaw)
 
   const hasData = restartInsightsRaw.length > 0
   useCardLoadingState({
     isLoading: isLoading && !hasData,
     hasAnyData: hasData,
-    isDemoData,
-  })
+    isDemoData })
 
-  const appBugInsights = useMemo(
-    () => (restartInsights || []).filter(i => i.id.includes('app-bug')),
-    [restartInsights],
-  )
+  const appBugInsights = (restartInsights || []).filter(i => i.id.includes('app-bug'))
 
-  const infraInsights = useMemo(
-    () => (restartInsights || []).filter(i => i.id.includes('infra-issue')),
-    [restartInsights],
-  )
+  const infraInsights = (restartInsights || []).filter(i => i.id.includes('infra-issue'))
 
   if (!isLoading && restartInsightsRaw.length === 0) {
     return (
@@ -64,8 +56,7 @@ export function RestartCorrelationMatrix() {
           sortOptions: INSIGHT_SORT_OPTIONS,
           onSortChange: (v) => setSortBy(v as InsightSortField),
           sortDirection,
-          onSortDirectionChange: setSortDirection,
-        }}
+          onSortDirectionChange: setSortDirection }}
       />
 
       {/* App Bug Pattern (horizontal) */}

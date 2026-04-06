@@ -10,7 +10,7 @@
  * - Demo fallback when no clusters are connected
  */
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useClusters } from './useMCP'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
@@ -125,8 +125,7 @@ function getDemoStatus(cluster: string): TrivyClusterStatus {
       high: 8 + (seed % 7),
       medium: 20 + (seed % 12),
       low: 35 + (seed % 15),
-      unknown: seed % 4,
-    },
+      unknown: seed % 4 },
     totalReports: 15 + (seed % 10),
     scannedImages: 12 + (seed % 8),
     images: [
@@ -136,8 +135,7 @@ function getDemoStatus(cluster: string): TrivyClusterStatus {
       { image: 'node', tag: '20-alpine', namespace: 'app', critical: 0, high: 1 + (seed % 3), medium: 4, low: 7 },
       { image: 'python', tag: '3.12-slim', namespace: 'ml', critical: 0, high: 1, medium: 2 + (seed % 4), low: 4 },
       { image: 'grafana/grafana', tag: '10.2', namespace: 'monitoring', critical: 0, high: 0, medium: 2, low: 5 },
-    ],
-  }
+    ] }
 }
 
 // ── Kubernetes resource types ────────────────────────────────────────────
@@ -165,8 +163,7 @@ async function fetchSingleCluster(cluster: string): Promise<TrivyClusterStatus> 
       return {
         cluster, installed: false, loading: false,
         vulnerabilities: { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 },
-        totalReports: 0, scannedImages: 0, images: [],
-      }
+        totalReports: 0, scannedImages: 0, images: [] }
     }
 
     // Phase 2: Fetch VulnerabilityReports
@@ -180,8 +177,7 @@ async function fetchSingleCluster(cluster: string): Promise<TrivyClusterStatus> 
         cluster, installed: true, loading: false,
         error: result.output?.trim() || 'Failed to fetch vulnerability reports',
         vulnerabilities: { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 },
-        totalReports: 0, scannedImages: 0, images: [],
-      }
+        totalReports: 0, scannedImages: 0, images: [] }
     }
 
     const summary: TrivyVulnSummary = { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 }
@@ -231,8 +227,7 @@ async function fetchSingleCluster(cluster: string): Promise<TrivyClusterStatus> 
       vulnerabilities: summary,
       totalReports,
       scannedImages: imageSet.size,
-      images: topImages,
-    }
+      images: topImages }
   } catch (err) {
     const isDemoError = err instanceof Error && err.message.includes('demo mode')
     if (!isDemoError) {
@@ -242,8 +237,7 @@ async function fetchSingleCluster(cluster: string): Promise<TrivyClusterStatus> 
       cluster, installed: false, loading: false,
       error: err instanceof Error ? err.message : 'Connection failed',
       vulnerabilities: { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 },
-      totalReports: 0, scannedImages: 0, images: [],
-    }
+      totalReports: 0, scannedImages: 0, images: [] }
   }
 }
 
@@ -270,10 +264,7 @@ export function useTrivy() {
   /** Guard to prevent concurrent refetch calls from flooding the request queue */
   const fetchInProgress = useRef(false)
 
-  const clusters = useMemo(() =>
-    allClusters.filter(c => c.reachable === true).map(c => c.name),
-    [allClusters]
-  )
+  const clusters = allClusters.filter(c => c.reachable === true).map(c => c.name)
 
   const refetch = useCallback(async (silent = false) => {
     if (clusters.length === 0) {
@@ -383,13 +374,10 @@ export function useTrivy() {
   const installed = Object.values(statuses).some(s => s.installed)
 
   /** True when at least one cluster had a fetch error (distinct from "not installed") */
-  const hasErrors = useMemo(() =>
-    Object.values(statuses).some(s => !!s.error),
-    [statuses]
-  )
+  const hasErrors = Object.values(statuses).some(s => !!s.error)
 
   // Aggregate across all clusters
-  const aggregated = useMemo((): TrivyVulnSummary => {
+  const aggregated = (() => {
     const agg: TrivyVulnSummary = { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 }
     for (const s of Object.values(statuses)) {
       if (!s.installed) continue
@@ -400,7 +388,7 @@ export function useTrivy() {
       agg.unknown += s.vulnerabilities.unknown
     }
     return agg
-  }, [statuses])
+  })()
 
   return {
     statuses,
@@ -416,6 +404,5 @@ export function useTrivy() {
     clustersChecked,
     /** Total number of clusters being checked */
     totalClusters: clusters.length,
-    refetch,
-  }
+    refetch }
 }

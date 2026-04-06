@@ -1,4 +1,4 @@
-import { createContext, use, useState, useEffect, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { useMobile } from './useMobile'
 import { SETTINGS_CHANGED_EVENT, SETTINGS_RESTORED_EVENT } from '../lib/settingsSync'
 import { emitTourStarted, emitTourCompleted, emitTourSkipped } from '../lib/analytics'
@@ -35,48 +35,42 @@ const TOUR_STEPS: TourStep[] = [
     title: 'Welcome to KubeStellar Console',
     content: 'Your multi-cluster Kubernetes dashboard. Monitor, troubleshoot, and manage clusters across any infrastructure \u2014 let\u2019s take a quick look around.',
     placement: 'bottom',
-    highlight: true,
-  },
+    highlight: true },
   {
     id: 'sidebar',
     target: '[data-tour="sidebar"]',
     title: 'Navigation',
     content: 'Browse 30+ dashboards organized by topic \u2014 Clusters, Deploy, AI/ML, Security, GitOps, Cost, and more. Drag items to reorder or hide ones you don\u2019t need. Settings and Marketplace are at the bottom.',
     placement: 'right',
-    highlight: true,
-  },
+    highlight: true },
   {
     id: 'dashboard-cards',
     target: '[data-tour="card-header"]',
     title: 'Dashboard Cards',
     content: 'Cards show cluster data at a glance. Drag to reorder, click the \u22ee menu to configure or resize, and expand any card for detailed drill-downs.',
     placement: 'bottom',
-    highlight: true,
-  },
+    highlight: true },
   {
     id: 'search',
     target: '[data-tour="search"]',
     title: 'Search & Commands',
     content: 'Press \u2318K (or Ctrl+K) to open the command palette. Search across dashboards, cards, clusters, and missions \u2014 or type a question to get AI-powered answers.',
     placement: 'bottom',
-    highlight: true,
-  },
+    highlight: true },
   {
     id: 'add-cards',
     target: '[data-tour="fab-button"]',
     title: 'Add & Manage Cards',
     content: 'Click this button to add cards from the catalog, apply dashboard templates, export or import layouts, and customize the sidebar.',
     placement: 'top',
-    highlight: true,
-  },
+    highlight: true },
   {
     id: 'ai-missions',
     target: '[data-tour="ai-missions-toggle"]',
     title: 'AI Missions',
     content: 'Open the Missions panel for guided multi-step operations \u2014 install platforms, troubleshoot issues, and more. Choose your AI provider in the navbar.',
     placement: 'top',
-    highlight: true,
-  },
+    highlight: true },
 ]
 
 interface TourContextValue {
@@ -121,15 +115,15 @@ export function TourProvider({ children }: { children: ReactNode }) {
 
   const currentStep = isActive ? TOUR_STEPS[currentStepIndex] : null
 
-  const startTour = useCallback(() => {
+  const startTour = () => {
     // Don't start tour on mobile devices
     if (isMobile) return
     setCurrentStepIndex(0)
     setIsActive(true)
     emitTourStarted()
-  }, [isMobile])
+  }
 
-  const nextStep = useCallback(() => {
+  const nextStep = () => {
     if (currentStepIndex < TOUR_STEPS.length - 1) {
       setCurrentStepIndex(prev => prev + 1)
     } else {
@@ -140,34 +134,34 @@ export function TourProvider({ children }: { children: ReactNode }) {
       window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
       emitTourCompleted(TOUR_STEPS.length)
     }
-  }, [currentStepIndex])
+  }
 
-  const prevStep = useCallback(() => {
+  const prevStep = () => {
     if (currentStepIndex > 0) {
       setCurrentStepIndex(prev => prev - 1)
     }
-  }, [currentStepIndex])
+  }
 
-  const skipTour = useCallback(() => {
+  const skipTour = () => {
     emitTourSkipped(currentStepIndex)
     setIsActive(false)
     setHasCompletedTour(true)
     localStorage.setItem(STORAGE_KEY_TOUR_COMPLETED, 'true')
     window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
-  }, [currentStepIndex])
+  }
 
-  const resetTour = useCallback(() => {
+  const resetTour = () => {
     localStorage.removeItem(STORAGE_KEY_TOUR_COMPLETED)
     setHasCompletedTour(false)
     window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
-  }, [])
+  }
 
-  const goToStep = useCallback((stepId: string) => {
+  const goToStep = (stepId: string) => {
     const index = TOUR_STEPS.findIndex(s => s.id === stepId)
     if (index >= 0) {
       setCurrentStepIndex(index)
     }
-  }, [])
+  }
 
   return (
     <TourContext.Provider
@@ -182,8 +176,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
         prevStep,
         skipTour,
         resetTour,
-        goToStep,
-      }}
+        goToStep }}
     >
       {children}
     </TourContext.Provider>
@@ -206,11 +199,10 @@ const TOUR_FALLBACK: TourContextValue = {
   prevStep: () => {},
   skipTour: () => {},
   resetTour: () => {},
-  goToStep: () => {},
-}
+  goToStep: () => {} }
 
 export function useTour() {
-  const context = use(TourContext)
+  const context = useContext(TourContext)
   if (!context) {
     if (import.meta.env.DEV) {
       console.warn('useTour was called outside TourProvider — returning safe fallback')

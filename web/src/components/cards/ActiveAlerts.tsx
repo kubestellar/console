@@ -1,11 +1,10 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState } from 'react'
 import {
   AlertTriangle,
   CheckCircle,
   Eye,
   EyeOff,
-  Server,
-} from 'lucide-react'
+  Server } from 'lucide-react'
 import { useAlerts } from '../../hooks/useAlerts'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useGlobalFilters, type SeverityLevel } from '../../hooks/useGlobalFilters'
@@ -67,20 +66,19 @@ export function ActiveAlerts() {
   useCardLoadingState({
     isLoading: false,
     hasAnyData: true,
-    isDemoData: isDemoMode,
-  })
+    isDemoData: isDemoMode })
   const { drillToAlert } = useDrillDownActions()
   const { missions, setActiveMission, openSidebar } = useMissions()
 
   const [showAcknowledged, setShowAcknowledged] = useState(false)
 
   // Combine active and acknowledged alerts when toggle is on
-  const allAlertsToShow = useMemo(() => {
+  const allAlertsToShow = (() => {
     if (showAcknowledged) {
       return [...activeAlerts, ...acknowledgedAlerts]
     }
     return activeAlerts
-  }, [activeAlerts, acknowledgedAlerts, showAcknowledged])
+  })()
 
   // Map AlertSeverity to global SeverityLevel for filtering
   const mapAlertSeverityToGlobal = (alertSeverity: AlertSeverity): SeverityLevel[] => {
@@ -93,7 +91,7 @@ export function ActiveAlerts() {
   }
 
   // Pre-filter by severity and global custom filter (these are outside useCardData)
-  const severityFilteredAlerts = useMemo(() => {
+  const severityFilteredAlerts = (() => {
     let result = allAlertsToShow
 
     // Apply global severity filter
@@ -115,7 +113,7 @@ export function ActiveAlerts() {
     }
 
     return result
-  }, [allAlertsToShow, selectedSeverities, isAllSeveritiesSelected, customFilter])
+  })()
 
   const severityOrder: Record<AlertSeverity, number> = { critical: 0, warning: 1, info: 2 }
 
@@ -138,20 +136,16 @@ export function ActiveAlerts() {
       availableClusters: availableClustersForFilter,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-    },
+      clusterFilterRef },
     sorting: {
       sortBy,
-      setSortBy,
-    },
+      setSortBy },
     containerRef,
-    containerStyle,
-  } = useCardData<Alert, SortField>(severityFilteredAlerts, {
+    containerStyle } = useCardData<Alert, SortField>(severityFilteredAlerts, {
     filter: {
       searchFields: ['ruleName', 'message', 'cluster'],
       clusterField: 'cluster',
-      storageKey: 'active-alerts',
-    },
+      storageKey: 'active-alerts' },
     sort: {
       defaultField: 'severity',
       defaultDirection: 'asc',
@@ -161,11 +155,8 @@ export function ActiveAlerts() {
           if (severityDiff !== 0) return severityDiff
           return new Date(b.firedAt).getTime() - new Date(a.firedAt).getTime()
         },
-        time: (a, b) => new Date(b.firedAt).getTime() - new Date(a.firedAt).getTime(),
-      },
-    },
-    defaultLimit: DEFAULT_PAGE_SIZE,
-  })
+        time: (a, b) => new Date(b.firedAt).getTime() - new Date(a.firedAt).getTime() } },
+    defaultLimit: DEFAULT_PAGE_SIZE })
 
   const handleAlertClick = (alert: Alert) => {
     if (alert.cluster) {
@@ -176,8 +167,7 @@ export function ActiveAlerts() {
         startsAt: alert.firedAt,
         labels: alert.details?.labels as Record<string, string> || {},
         annotations: alert.details?.annotations as Record<string, string> || {},
-        source: alert.details?.source as string,
-      })
+        source: alert.details?.source as string })
     }
   }
 
@@ -192,10 +182,10 @@ export function ActiveAlerts() {
   }
 
   // Check if a mission exists for an alert
-  const getMissionForAlert = useCallback((alert: Alert) => {
+  const getMissionForAlert = (alert: Alert) => {
     if (!alert.aiDiagnosis?.missionId) return null
     return missions.find(m => m.id === alert.aiDiagnosis?.missionId) || null
-  }, [missions])
+  }
 
   // Open mission sidebar for an alert
   const handleOpenMission = (e: React.MouseEvent, alert: Alert) => {

@@ -22,8 +22,7 @@ function getViewConfig(viewType: DrillDownViewType) {
         bgColor: 'bg-blue-500/20',
         dataKey: 'clusters',
         nameKey: 'name',
-        getStatus: (item: { healthy?: boolean; status?: string }) => item.healthy ? 'healthy' : (item.status || 'unknown'),
-      }
+        getStatus: (item: { healthy?: boolean; status?: string }) => item.healthy ? 'healthy' : (item.status || 'unknown') }
     case 'all-namespaces':
       return {
         icon: Layers,
@@ -31,8 +30,7 @@ function getViewConfig(viewType: DrillDownViewType) {
         bgColor: 'bg-purple-500/20',
         dataKey: 'namespaces',
         nameKey: 'namespace',
-        getStatus: () => 'active',
-      }
+        getStatus: () => 'active' }
     case 'all-deployments':
       return {
         icon: Rocket,
@@ -41,8 +39,7 @@ function getViewConfig(viewType: DrillDownViewType) {
         dataKey: 'deployments',
         nameKey: 'name',
         getStatus: (item: { readyReplicas?: number; replicas?: number }) =>
-          item.readyReplicas === item.replicas ? 'healthy' : 'unhealthy',
-      }
+          item.readyReplicas === item.replicas ? 'healthy' : 'unhealthy' }
     case 'all-pods':
       return {
         icon: Box,
@@ -50,8 +47,7 @@ function getViewConfig(viewType: DrillDownViewType) {
         bgColor: 'bg-cyan-500/20',
         dataKey: 'pods',
         nameKey: 'name',
-        getStatus: (item: { status?: string; phase?: string }) => item.status || item.phase || 'unknown',
-      }
+        getStatus: (item: { status?: string; phase?: string }) => item.status || item.phase || 'unknown' }
     case 'all-services':
       return {
         icon: Activity,
@@ -59,8 +55,7 @@ function getViewConfig(viewType: DrillDownViewType) {
         bgColor: 'bg-blue-500/20',
         dataKey: 'services',
         nameKey: 'name',
-        getStatus: () => 'active',
-      }
+        getStatus: () => 'active' }
     case 'all-nodes':
       return {
         icon: Server,
@@ -69,8 +64,7 @@ function getViewConfig(viewType: DrillDownViewType) {
         dataKey: 'nodes',
         nameKey: 'name',
         getStatus: (item: { status?: string; ready?: boolean }) =>
-          item.ready !== false && item.status !== 'NotReady' ? 'Ready' : 'NotReady',
-      }
+          item.ready !== false && item.status !== 'NotReady' ? 'Ready' : 'NotReady' }
     case 'all-events':
       return {
         icon: Zap,
@@ -78,8 +72,7 @@ function getViewConfig(viewType: DrillDownViewType) {
         bgColor: 'bg-yellow-500/20',
         dataKey: 'events',
         nameKey: 'reason',
-        getStatus: (item: { type?: string }) => item.type || 'Normal',
-      }
+        getStatus: (item: { type?: string }) => item.type || 'Normal' }
     case 'all-alerts':
       return {
         icon: AlertCircle,
@@ -87,8 +80,7 @@ function getViewConfig(viewType: DrillDownViewType) {
         bgColor: 'bg-red-500/20',
         dataKey: 'alerts',
         nameKey: 'name',
-        getStatus: (item: { severity?: string; state?: string }) => item.severity || item.state || 'unknown',
-      }
+        getStatus: (item: { severity?: string; state?: string }) => item.severity || item.state || 'unknown' }
     case 'all-helm':
       return {
         icon: Ship,
@@ -96,8 +88,7 @@ function getViewConfig(viewType: DrillDownViewType) {
         bgColor: 'bg-blue-500/20',
         dataKey: 'helmReleases',
         nameKey: 'name',
-        getStatus: (item: { status?: string }) => item.status || 'unknown',
-      }
+        getStatus: (item: { status?: string }) => item.status || 'unknown' }
     case 'all-operators':
       return {
         icon: SettingsIcon,
@@ -105,8 +96,7 @@ function getViewConfig(viewType: DrillDownViewType) {
         bgColor: 'bg-purple-500/20',
         dataKey: 'operators',
         nameKey: 'name',
-        getStatus: (item: { state?: string; phase?: string }) => item.state || item.phase || 'unknown',
-      }
+        getStatus: (item: { state?: string; phase?: string }) => item.state || item.phase || 'unknown' }
     case 'all-security':
       return {
         icon: AlertTriangle,
@@ -114,8 +104,7 @@ function getViewConfig(viewType: DrillDownViewType) {
         bgColor: 'bg-red-500/20',
         dataKey: 'securityIssues',
         nameKey: 'pod',
-        getStatus: (item: { severity?: string; type?: string }) => item.severity || item.type || 'warning',
-      }
+        getStatus: (item: { severity?: string; type?: string }) => item.severity || item.type || 'warning' }
     case 'all-gpu':
       return {
         icon: Cpu,
@@ -123,8 +112,7 @@ function getViewConfig(viewType: DrillDownViewType) {
         bgColor: 'bg-purple-500/20',
         dataKey: 'gpuNodes',
         nameKey: 'name',
-        getStatus: (item: { available?: number }) => item.available && item.available > 0 ? 'available' : 'busy',
-      }
+        getStatus: (item: { available?: number }) => item.available && item.available > 0 ? 'available' : 'busy' }
     case 'all-storage':
       return {
         icon: HardDrive,
@@ -132,8 +120,7 @@ function getViewConfig(viewType: DrillDownViewType) {
         bgColor: 'bg-green-500/20',
         dataKey: 'pvcs',
         nameKey: 'name',
-        getStatus: (item: { status?: string; phase?: string }) => item.status || item.phase || 'unknown',
-      }
+        getStatus: (item: { status?: string; phase?: string }) => item.status || item.phase || 'unknown' }
     case 'all-jobs':
       return {
         icon: Activity,
@@ -141,8 +128,7 @@ function getViewConfig(viewType: DrillDownViewType) {
         bgColor: 'bg-yellow-500/20',
         dataKey: 'jobs',
         nameKey: 'name',
-        getStatus: (item: { status?: string }) => item.status || 'unknown',
-      }
+        getStatus: (item: { status?: string }) => item.status || 'unknown' }
     default:
       return {
         icon: Layers,
@@ -150,8 +136,7 @@ function getViewConfig(viewType: DrillDownViewType) {
         bgColor: 'bg-secondary',
         dataKey: 'items',
         nameKey: 'name',
-        getStatus: () => 'unknown',
-      }
+        getStatus: () => 'unknown' }
   }
 }
 
@@ -175,12 +160,12 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
   const { clusters, deduplicatedClusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues } = useClusterData()
   const { nodes: rawCachedNodes, lastRefresh: nodesLastRefresh } = useCachedNodes()
   // Guard against undefined to prevent crashes when APIs return 404/500/empty
-  const cachedNodes = useMemo(() => rawCachedNodes || [], [rawCachedNodes])
+  const cachedNodes = rawCachedNodes || []
   // Convert epoch ms to ISO string for the freshness indicator
-  const nodesDataAge = useMemo(() => {
+  const nodesDataAge = (() => {
     if (!nodesLastRefresh) return null
     return new Date(nodesLastRefresh).toISOString()
-  }, [nodesLastRefresh])
+  })()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [clusterFilter, setClusterFilter] = useState<string>('all')
@@ -203,27 +188,23 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
           ...c,
           name: c.name,
           cluster: c.name,
-          status: c.healthy ? 'healthy' : 'unhealthy',
-        }))
+          status: c.healthy ? 'healthy' : 'unhealthy' }))
       case 'all-namespaces':
         // Flatten namespaces across all clusters
         return clusters.flatMap(c =>
           (c.namespaces || []).map((ns: string) => ({
             namespace: ns,
             cluster: c.name,
-            status: 'active',
-          }))
+            status: 'active' }))
         )
       case 'all-deployments':
         return deployments.map(d => ({
           ...d,
-          status: d.readyReplicas === d.replicas ? 'healthy' : 'unhealthy',
-        }))
+          status: d.readyReplicas === d.replicas ? 'healthy' : 'unhealthy' }))
       case 'all-pods':
         return pods.map(p => ({
           ...p,
-          status: p.status || 'Unknown',
-        }))
+          status: p.status || 'Unknown' }))
       case 'all-services':
         // Build services from deployments (rough approximation)
         return deployments.map(d => ({
@@ -231,8 +212,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
           namespace: d.namespace,
           cluster: d.cluster || '',
           type: 'ClusterIP',
-          status: 'active',
-        }))
+          status: 'active' }))
       case 'all-nodes':
         // Use real node data from the cached nodes hook
         if (cachedNodes.length > 0) {
@@ -244,8 +224,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
             cpuCapacity: n.cpuCapacity,
             memoryCapacity: n.memoryCapacity,
             kubeletVersion: n.kubeletVersion,
-            internalIP: n.internalIP,
-          }))
+            internalIP: n.internalIP }))
         }
         // Fallback: approximate from cluster metadata when node data hasn't loaded
         return clusters.flatMap(c => {
@@ -253,14 +232,12 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
           return Array.from({ length: count }, (_, i) => ({
             name: `${c.name}-node-${i + 1}`,
             cluster: c.name,
-            status: c.healthy ? 'Ready' : 'NotReady',
-          }))
+            status: c.healthy ? 'Ready' : 'NotReady' }))
         })
       case 'all-events':
         return events.map(e => ({
           ...e,
-          status: e.type || 'Normal',
-        }))
+          status: e.type || 'Normal' }))
       case 'all-alerts':
         // Mock alerts from security issues and pod issues
         return pods
@@ -270,24 +247,20 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
             namespace: p.namespace,
             cluster: p.cluster || '',
             severity: p.status === 'Failed' ? 'critical' : 'warning',
-            status: p.status,
-          }))
+            status: p.status }))
       case 'all-helm':
         return helmReleases.map(h => ({
           ...h,
-          status: h.status || 'deployed',
-        }))
+          status: h.status || 'deployed' }))
       case 'all-operators':
         return operatorSubscriptions.map(o => ({
           ...o,
-          status: o.pendingUpgrade ? 'PendingUpgrade' : 'Running',
-        }))
+          status: o.pendingUpgrade ? 'PendingUpgrade' : 'Running' }))
       case 'all-security':
         return securityIssues.map(s => ({
           ...s,
           name: s.name,
-          status: s.severity || 'warning',
-        }))
+          status: s.severity || 'warning' }))
       case 'all-gpu':
         // GPU nodes - from clusters with GPU info
         return clusters
@@ -296,8 +269,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
             name: `${c.name}-gpu-node`,
             cluster: c.name,
             gpuCount: 0, // Placeholder - actual GPU data would come from GPU nodes hook
-            status: 'available',
-          }))
+            status: 'available' }))
       case 'all-storage':
         // Storage from clusters with storage info
         return clusters
@@ -306,8 +278,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
             name: `pvc-${c.name}`,
             cluster: c.name,
             status: 'Bound',
-            storageGB: c.storageGB,
-          }))
+            storageGB: c.storageGB }))
       case 'all-jobs':
         // Jobs approximation from pods
         return pods
@@ -317,33 +288,32 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
             name: p.name,
             namespace: p.namespace,
             cluster: p.cluster || '',
-            status: p.status || 'Running',
-          }))
+            status: p.status || 'Running' }))
       default:
         return []
     }
   }, [viewType, clusters, deduplicatedClusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues, cachedNodes])
 
   // Apply initial filter from data prop
-  const preFilteredItems = useMemo(() => {
+  const preFilteredItems = (() => {
     if (!filter) return allItems
     return allItems.filter(item => {
       const status = config.getStatus(item as Record<string, unknown>)?.toLowerCase() || ''
       return status === filter.toLowerCase() ||
              (filter === 'issues' && !['running', 'healthy', 'ready', 'active', 'deployed', 'succeeded', 'available', 'normal'].includes(status))
     })
-  }, [allItems, filter, config])
+  })()
 
   // Get unique statuses and clusters for filtering
-  const uniqueStatuses = useMemo(() => {
+  const uniqueStatuses = (() => {
     const statuses = new Set(preFilteredItems.map(item => config.getStatus(item as Record<string, unknown>)))
     return ['all', ...Array.from(statuses).filter(Boolean)]
-  }, [preFilteredItems, config])
+  })()
 
-  const uniqueClusters = useMemo(() => {
+  const uniqueClusters = (() => {
     const clusterNames = new Set(preFilteredItems.map(item => (item as Record<string, string>).cluster).filter(Boolean))
     return ['all', ...Array.from(clusterNames)]
-  }, [preFilteredItems])
+  })()
 
   // Filter items
   const filteredItems = useMemo(() => {
@@ -424,7 +394,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
   }
 
   // Summary stats
-  const stats = useMemo(() => {
+  const stats = (() => {
     const total = filteredItems.length
     const healthy = filteredItems.filter(item => {
       const status = config.getStatus(item as Record<string, unknown>)?.toLowerCase() || ''
@@ -433,7 +403,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
     const issues = total - healthy
 
     return { total, healthy, issues }
-  }, [filteredItems, config])
+  })()
 
   return (
     <div className="space-y-6">

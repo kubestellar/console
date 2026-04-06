@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import {
   CheckCircle2,
@@ -17,8 +17,7 @@ import {
   KeyRound,
   Wifi,
   Copy,
-  Check,
-} from 'lucide-react'
+  Check } from 'lucide-react'
 import { emitFromLensViewed, emitFromLensActioned, emitFromLensTabSwitch, emitFromLensCommandCopy, emitInstallCommandCopied } from '../lib/analytics'
 import { copyToClipboard } from '../lib/clipboard'
 
@@ -85,8 +84,7 @@ const LOCALHOST_STEPS: InstallStep[] = [
       '  https://raw.githubusercontent.com/kubestellar/console/main/start.sh \\',
       '  | bash',
     ],
-    description: 'Downloads pre-built binaries, starts the console and kc-agent, and opens your browser at http://localhost:8080. No Go, Node.js, or build tools required.',
-  },
+    description: 'Downloads pre-built binaries, starts the console and kc-agent, and opens your browser at http://localhost:8080. No Go, Node.js, or build tools required.' },
 ]
 
 /* -- Cluster: shared Helm repo step ---------------------------------- */
@@ -98,8 +96,7 @@ const HELM_REPO_STEP: InstallStep = {
     'helm repo add kubestellar-console https://kubestellar.github.io/console',
     'helm repo update',
   ],
-  description: 'One-time setup. The chart is published to GitHub Pages — no OCI registry login needed.',
-}
+  description: 'One-time setup. The chart is published to GitHub Pages — no OCI registry login needed.' }
 
 /* -- Cluster option A: port-forward ---------------------------------- */
 
@@ -109,8 +106,7 @@ const CLUSTER_PORTFORWARD_STEPS: InstallStep[] = [
     step: 2,
     title: 'Install',
     commands: ['helm install kc kubestellar-console/kubestellar-console'],
-    description: 'No accounts, no license keys, no telemetry opt-in dialogs.',
-  },
+    description: 'No accounts, no license keys, no telemetry opt-in dialogs.' },
   {
     step: 3,
     title: 'Port-forward and open',
@@ -118,8 +114,7 @@ const CLUSTER_PORTFORWARD_STEPS: InstallStep[] = [
       'kubectl port-forward svc/kc-kubestellar-console 8080:8080',
       'open http://localhost:8080',
     ],
-    description: 'Access the console locally. Great for evaluation or single-user access.',
-  },
+    description: 'Access the console locally. Great for evaluation or single-user access.' },
 ]
 
 /* -- Cluster option B: ingress / route ------------------------------- */
@@ -138,8 +133,7 @@ const CLUSTER_INGRESS_STEPS: InstallStep[] = [
       '  --set ingress.hosts[0].paths[0].pathType=Prefix',
     ],
     note: 'Replace console.example.com with your domain. For OpenShift, use --set route.enabled=true --set route.host=console.example.com instead.',
-    description: 'Exposes the console to your network via an Ingress or OpenShift Route.',
-  },
+    description: 'Exposes the console to your network via an Ingress or OpenShift Route.' },
   {
     step: 3,
     title: 'Connect the kc-agent',
@@ -148,8 +142,7 @@ const CLUSTER_INGRESS_STEPS: InstallStep[] = [
       'KC_ALLOWED_ORIGINS=https://console.example.com kc-agent',
     ],
     note: 'The kc-agent bridges your browser to your Kubernetes clusters via the in-cluster console. Set KC_ALLOWED_ORIGINS to your console\'s URL so the agent accepts cross-origin requests.',
-    description: 'Run the agent on any machine with access to your kubeconfig. It streams live cluster data to the console.',
-  },
+    description: 'Run the agent on any machine with access to your kubeconfig. It streams live cluster data to the console.' },
 ]
 
 /* ------------------------------------------------------------------ */
@@ -166,33 +159,27 @@ const HIGHLIGHTS: HighlightFeature[] = [
   {
     icon: <Sparkles className="w-6 h-6 text-purple-400" />,
     title: 'AI Missions',
-    description: 'Natural-language troubleshooting and cluster analysis. Ask questions, get answers with kubectl commands you can run.',
-  },
+    description: 'Natural-language troubleshooting and cluster analysis. Ask questions, get answers with kubectl commands you can run.' },
   {
     icon: <Cpu className="w-6 h-6 text-purple-400" />,
     title: 'GPU & AI/ML Dashboards',
-    description: 'First-class GPU reservation visibility, AI/ML workload monitoring, and llm-d benchmark tracking.',
-  },
+    description: 'First-class GPU reservation visibility, AI/ML workload monitoring, and llm-d benchmark tracking.' },
   {
     icon: <Shield className="w-6 h-6 text-purple-400" />,
     title: 'Security Posture',
-    description: 'Built-in security scanning, compliance checks, and data sovereignty tracking across all clusters.',
-  },
+    description: 'Built-in security scanning, compliance checks, and data sovereignty tracking across all clusters.' },
   {
     icon: <DollarSign className="w-6 h-6 text-purple-400" />,
     title: 'Cost Analytics',
-    description: 'OpenCost integration shows per-namespace, per-workload cost breakdowns. No separate billing tool needed.',
-  },
+    description: 'OpenCost integration shows per-namespace, per-workload cost breakdowns. No separate billing tool needed.' },
   {
     icon: <GitBranch className="w-6 h-6 text-purple-400" />,
     title: 'GitOps Native',
-    description: 'ArgoCD and Flux status baked into the dashboard. See sync state, drift, and health at a glance.',
-  },
+    description: 'ArgoCD and Flux status baked into the dashboard. See sync state, drift, and health at a glance.' },
   {
     icon: <Terminal className="w-6 h-6 text-purple-400" />,
     title: 'Demo Mode',
-    description: 'Try every feature without connecting a cluster. Perfect for evaluation, demos, and learning the interface.',
-  },
+    description: 'Try every feature without connecting a cluster. Perfect for evaluation, demos, and learning the interface.' },
 ]
 
 /* ------------------------------------------------------------------ */
@@ -237,13 +224,13 @@ function DeploymentSection() {
     return () => clearTimeout(copiedTimerRef.current)
   }, [])
 
-  const switchTab = useCallback((tab: DeployTab) => {
+  const switchTab = (tab: DeployTab) => {
     if (tab === activeTab) return
     setActiveTab(tab)
     emitFromLensTabSwitch(tab)
-  }, [activeTab])
+  }
 
-  const copyCommands = useCallback(async (commands: string[], step: number) => {
+  const copyCommands = async (commands: string[], step: number) => {
     const text = commands.join('\n')
     await copyToClipboard(text)
     const key = `${activeTab}-${step}`
@@ -252,7 +239,7 @@ function DeploymentSection() {
     copiedTimerRef.current = setTimeout(() => setCopiedStep(null), COPY_FEEDBACK_MS)
     emitFromLensCommandCopy(activeTab, step, commands[0])
     emitInstallCommandCopied('from_lens', commands[0])
-  }, [activeTab])
+  }
 
   const steps = activeTab === 'localhost'
     ? LOCALHOST_STEPS

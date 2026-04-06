@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, createContext, use } from 'react'
+import { useState, useEffect, useMemo, createContext, useContext } from 'react'
 import { Theme, themes, getAllThemes, getThemeById, getDefaultTheme } from '../lib/themes'
 import { emitThemeChanged } from '../lib/analytics'
 import { GOOGLE_FONTS_API_URL } from '../config/externalApis'
@@ -202,7 +202,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   })
 
   // Wrapper to track last dark theme when setting theme
-  const setThemeId = useCallback((id: string) => {
+  const setThemeId = (id: string) => {
     setThemeIdState(id)
     // Remember dark themes for toggle functionality
     const theme = getThemeById(id)
@@ -210,7 +210,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setLastDarkTheme(id)
       localStorage.setItem(LAST_DARK_THEME_KEY, id)
     }
-  }, [])
+  }
 
   // Track system preference for 'system' theme
   const [systemPrefersDark, setSystemPrefersDark] = useState(getSystemPrefersDark)
@@ -239,15 +239,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return () => mediaQuery.removeEventListener('change', handleChange)
   }, [])
 
-  const setTheme = useCallback((id: string) => {
+  const setTheme = (id: string) => {
     const newTheme = getThemeById(id)
     if (newTheme || id === 'system') {
       setThemeId(id)
       emitThemeChanged(id, 'settings')
     }
-  }, [setThemeId])
+  }
 
-  const toggleTheme = useCallback(() => {
+  const toggleTheme = () => {
     // Cycle through: current dark theme -> light -> system -> back to dark theme
     const currentTheme = getThemeById(themeId === 'system' ? (systemPrefersDark ? 'kubestellar' : 'kubestellar-light') : themeId)
 
@@ -264,7 +264,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
     setThemeId(nextId)
     emitThemeChanged(nextId, 'toggle')
-  }, [themeId, lastDarkTheme, systemPrefersDark, setThemeId])
+  }
 
   const value: ThemeContextValue = {
     currentTheme,
@@ -276,8 +276,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     resolvedTheme: currentTheme.dark ? 'dark' : 'light',
     isDark: currentTheme.dark,
     toggleTheme,
-    chartColors: currentTheme.colors.chartColors,
-  }
+    chartColors: currentTheme.colors.chartColors }
 
   return (
     <ThemeContext.Provider value={value}>
@@ -287,7 +286,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useTheme(): ThemeContextValue {
-  const context = use(ThemeContext)
+  const context = useContext(ThemeContext)
   if (!context) {
     // Fallback for when used outside provider (backwards compatibility)
     const defaultTheme = getDefaultTheme()
@@ -300,8 +299,7 @@ export function useTheme(): ThemeContextValue {
       resolvedTheme: 'dark',
       isDark: true,
       toggleTheme: () => {},
-      chartColors: defaultTheme.colors.chartColors,
-    }
+      chartColors: defaultTheme.colors.chartColors }
   }
   return context
 }

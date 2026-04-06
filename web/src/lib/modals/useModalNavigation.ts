@@ -30,8 +30,7 @@ export function useModalNavigation({
   onBack,
   enableEscape = true,
   enableBackspace = true,
-  disableBodyScroll = true,
-}: UseModalNavigationOptions): UseModalNavigationResult {
+  disableBodyScroll = true }: UseModalNavigationOptions): UseModalNavigationResult {
   // Handle keyboard events
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -92,8 +91,7 @@ export function useModalNavigation({
   }, [isOpen, disableBodyScroll])
 
   return {
-    handleKeyDown,
-  }
+    handleKeyDown }
 }
 
 /**
@@ -195,8 +193,7 @@ export function useModal({
   modalRef,
   backdropRef,
   enableFocusTrap = false,
-  enableBackdropClose = true,
-}: UseModalOptions) {
+  enableBackdropClose = true }: UseModalOptions) {
   // Keyboard navigation
   useModalNavigation({
     isOpen,
@@ -204,8 +201,7 @@ export function useModal({
     onBack,
     enableEscape,
     enableBackspace,
-    disableBodyScroll,
-  })
+    disableBodyScroll })
 
   // Backdrop close
   if (backdropRef && enableBackdropClose) {
@@ -244,8 +240,8 @@ export interface UseModalStateResult {
 
 export function useModalState(initialOpen = false): UseModalStateResult {
   const [isOpen, setIsOpen] = useState(initialOpen)
-  const open = useCallback(() => setIsOpen(true), [])
-  const close = useCallback(() => setIsOpen(false), [])
-  const toggle = useCallback(() => setIsOpen(prev => !prev), [])
+  const open = () => setIsOpen(true)
+  const close = () => setIsOpen(false)
+  const toggle = () => setIsOpen(prev => !prev)
   return { isOpen, open, close, toggle }
 }

@@ -61,8 +61,7 @@ const PROVIDER_ICONS: Record<CloudProvider, { color: string; bg: string; short: 
   gcp: { color: 'text-blue-400', bg: 'bg-blue-500/20', short: 'GCP' },
   azure: { color: 'text-blue-400', bg: 'bg-blue-500/20', short: 'AZR' },
   oci: { color: 'text-red-400', bg: 'bg-red-500/20', short: 'OCI' },
-  openshift: { color: 'text-red-500', bg: 'bg-red-600/20', short: 'OCP' },
-}
+  openshift: { color: 'text-red-500', bg: 'bg-red-600/20', short: 'OCP' } }
 
 interface CloudPricing {
   name: string
@@ -82,49 +81,42 @@ const CLOUD_PRICING: Record<CloudProvider, CloudPricing> = {
     memory: 0.01,
     gpu: 2.50,
     pricingUrl: '',
-    notes: 'Generic estimates for rough cost calculation',
-  },
+    notes: 'Generic estimates for rough cost calculation' },
   aws: {
     name: 'AWS',
     cpu: 0.048,      // Based on m5.large ($0.096/hr for 2 vCPU)
     memory: 0.012,   // Based on m5.large pricing
     gpu: 3.06,       // Based on p3.2xlarge (V100)
     pricingUrl: 'https://aws.amazon.com/ec2/pricing/on-demand/',
-    notes: 'Based on US East on-demand pricing',
-  },
+    notes: 'Based on US East on-demand pricing' },
   gcp: {
     name: 'GCP',
     cpu: 0.0475,     // n2-standard pricing
     memory: 0.0064,  // n2-standard pricing
     gpu: 2.48,       // NVIDIA V100
     pricingUrl: 'https://cloud.google.com/compute/pricing',
-    notes: 'Based on us-central1 on-demand pricing',
-  },
+    notes: 'Based on us-central1 on-demand pricing' },
   azure: {
     name: 'Azure',
     cpu: 0.05,       // D-series pricing
     memory: 0.011,   // D-series pricing
     gpu: 2.07,       // NC6 (K80) pricing
     pricingUrl: 'https://azure.microsoft.com/en-us/pricing/details/virtual-machines/',
-    notes: 'Based on East US on-demand pricing',
-  },
+    notes: 'Based on East US on-demand pricing' },
   oci: {
     name: 'OCI',
     cpu: 0.025,      // VM.Standard.E4.Flex
     memory: 0.0015,  // VM.Standard.E4.Flex
     gpu: 2.95,       // GPU.A10
     pricingUrl: 'https://www.oracle.com/cloud/price-list/',
-    notes: 'Based on Flex shapes pricing',
-  },
+    notes: 'Based on Flex shapes pricing' },
   openshift: {
     name: 'OpenShift',
     cpu: 0.048,      // Based on ROSA (Red Hat OpenShift on AWS) pricing
     memory: 0.012,   // Based on ROSA pricing
     gpu: 3.00,       // GPU node pricing estimate
     pricingUrl: 'https://www.redhat.com/en/technologies/cloud-computing/openshift/aws/pricing',
-    notes: 'Based on Red Hat OpenShift on AWS (ROSA) pricing',
-  },
-}
+    notes: 'Based on Red Hat OpenShift on AWS (ROSA) pricing' } }
 
 interface ClusterCostsProps {
   config?: {
@@ -183,17 +175,13 @@ interface ClusterCostItem {
 const SORT_COMPARATORS = {
   cost: commonComparators.number<ClusterCostItem>('monthly'),
   name: commonComparators.string<ClusterCostItem>('name'),
-  cpus: commonComparators.number<ClusterCostItem>('cpus'),
-}
+  cpus: commonComparators.number<ClusterCostItem>('cpus') }
 
 export function ClusterCosts({ config }: ClusterCostsProps) {
   const { t } = useTranslation(['cards', 'common'])
 
   // Build sort options with translated labels
-  const SORT_OPTIONS = useMemo(() =>
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
-    [t]
-  )
+  const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
   const { deduplicatedClusters: allClusters, isLoading, isRefreshing: clustersRefreshing, isFailed, consecutiveFailures } = useClusters()
   const { nodes: gpuNodes, isRefreshing: gpuRefreshing, isDemoFallback } = useCachedGPUNodes()
   const { drillToCost } = useDrillDownActions()
@@ -207,8 +195,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
     hasAnyData: hasData,
     isDemoData: isDemoMode || isDemoFallback,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
   // Cloud provider selection
   const [selectedProvider, setSelectedProvider] = useState<CloudProvider>(config?.provider || 'estimate')
@@ -267,14 +254,14 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
   const memoryCost = config?.memoryCostPerGBHour ?? pricing.memory
   const gpuCost = config?.gpuCostPerHour ?? pricing.gpu
 
-  const gpuByCluster = useMemo(() => {
+  const gpuByCluster = (() => {
     const map: Record<string, number> = {}
     gpuNodes.forEach(node => {
       const clusterKey = node.cluster.split('/')[0]
       map[clusterKey] = (map[clusterKey] || 0) + node.gpuCount
     })
     return map
-  }, [gpuNodes])
+  })()
 
   // Get the provider for a specific cluster (memoized to prevent re-renders)
   const getClusterProvider = useCallback((clusterName: string, context?: string): CloudProvider => {
@@ -319,8 +306,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
         daily,
         monthly,
         provider,
-        context: cluster.context,
-      } as ClusterCostItem
+        context: cluster.context } as ClusterCostItem
     })
   }, [allClusters, gpuByCluster, getClusterProvider, config])
 
@@ -343,24 +329,19 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       availableClusters: availableClustersForFilter,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-    },
+      clusterFilterRef },
     sorting,
     containerRef,
-    containerStyle,
-  } = useCardData<ClusterCostItem, SortByOption>(allClusterCosts, {
+    containerStyle } = useCardData<ClusterCostItem, SortByOption>(allClusterCosts, {
     filter: {
       searchFields: ['name', 'context'] as (keyof ClusterCostItem)[],
       clusterField: 'cluster' as keyof ClusterCostItem,
-      storageKey: 'cluster-costs',
-    },
+      storageKey: 'cluster-costs' },
     sort: {
       defaultField: 'cost',
       defaultDirection: 'desc',
-      comparators: SORT_COMPARATORS,
-    },
-    defaultLimit: 5,
-  })
+      comparators: SORT_COMPARATORS },
+    defaultLimit: 5 })
 
   const totalMonthly = clusterCosts.reduce((sum, c) => sum + c.monthly, 0)
   const totalDaily = clusterCosts.reduce((sum, c) => sum + c.daily, 0)
@@ -407,8 +388,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
               isOpen: showClusterFilter,
               setIsOpen: setShowClusterFilter,
               containerRef: clusterFilterRef,
-              minClusters: 1,
-            }}
+              minClusters: 1 }}
             cardControls={{
               limit: itemsPerPage,
               onLimitChange: setItemsPerPage,
@@ -416,8 +396,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
               sortOptions: SORT_OPTIONS,
               onSortChange: (v) => sorting.setSortBy(v as SortByOption),
               sortDirection: sorting.sortDirection,
-              onSortDirectionChange: sorting.setSortDirection,
-            }}
+              onSortDirectionChange: sorting.setSortDirection }}
           />
           {/* Info button */}
           <button
@@ -680,8 +659,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                 hourly: cluster.hourly,
                 daily: cluster.daily,
                 monthly: cluster.monthly,
-                provider: cluster.provider,
-              })}
+                provider: cluster.provider })}
               className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors group cursor-pointer"
             >
               <div className="flex items-center justify-between mb-2 gap-2">

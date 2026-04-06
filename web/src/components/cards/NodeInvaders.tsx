@@ -66,7 +66,7 @@ export function NodeInvaders(_props: CardComponentProps) {
   }, [player, bullets, invaders, shields, invaderDir])
 
   // Initialize invaders
-  const initInvaders = useCallback((lvl: number) => {
+  const initInvaders = (lvl: number) => {
     const newInvaders: Invader[] = []
     for (let row = 0; row < INVADER_ROWS; row++) {
       for (let col = 0; col < INVADER_COLS; col++) {
@@ -74,27 +74,25 @@ export function NodeInvaders(_props: CardComponentProps) {
           x: 30 + col * (INVADER_WIDTH + 8),
           y: 40 + row * (INVADER_HEIGHT + 10),
           alive: true,
-          type: row < 1 ? 2 : row < 2 ? 1 : 0,
-        })
+          type: row < 1 ? 2 : row < 2 ? 1 : 0 })
       }
     }
     setInvaders(newInvaders)
     setInvaderDir(1)
     setInvaderSpeed(1 + (lvl - 1) * 0.3)
-  }, [])
+  }
 
   // Initialize shields
-  const initShields = useCallback(() => {
+  const initShields = () => {
     const newShields: Shield[] = []
     for (let i = 0; i < 4; i++) {
       newShields.push({
         x: 35 + i * 70,
         y: 210,
-        health: 4,
-      })
+        health: 4 })
     }
     setShields(newShields)
-  }, [])
+  }
 
   // Draw
   const draw = useCallback(() => {
@@ -211,8 +209,7 @@ export function NodeInvaders(_props: CardComponentProps) {
         setBullets(bs => [...bs, {
           x: state.player.x + PLAYER_WIDTH / 2,
           y: CANVAS_HEIGHT - 45,
-          isPlayer: true,
-        }])
+          isPlayer: true }])
         setCanShoot(false)
         setTimeout(() => setCanShoot(true), 300)
       }
@@ -252,8 +249,7 @@ export function NodeInvaders(_props: CardComponentProps) {
           return {
             ...inv,
             x: shouldDrop ? inv.x : inv.x + newDir * invaderSpeed * 3,
-            y: shouldDrop ? inv.y + 10 : inv.y,
-          }
+            y: shouldDrop ? inv.y + 10 : inv.y }
         }))
 
         if (shouldDrop) {
@@ -269,8 +265,7 @@ export function NodeInvaders(_props: CardComponentProps) {
           setBullets(bs => [...bs, {
             x: shooter.x + INVADER_WIDTH / 2,
             y: shooter.y + INVADER_HEIGHT,
-            isPlayer: false,
-          }])
+            isPlayer: false }])
         }
       }
 
@@ -372,11 +367,10 @@ export function NodeInvaders(_props: CardComponentProps) {
 
   // Keyboard — scoped to visible game container (KeepAlive-safe)
   useGameKeyTracking(gameContainerRef, keysRef, {
-    preventDefaultKeys: ['ArrowLeft', 'ArrowRight', 'ArrowUp', ' ', 'a', 'd', 'A', 'D'],
-  })
+    preventDefaultKeys: ['ArrowLeft', 'ArrowRight', 'ArrowUp', ' ', 'a', 'd', 'A', 'D'] })
 
   // Start game
-  const startGame = useCallback(() => {
+  const startGame = () => {
     setPlayer({ x: CANVAS_WIDTH / 2 - PLAYER_WIDTH / 2, lives: 3 })
     setBullets([])
     setScore(0)
@@ -389,7 +383,7 @@ export function NodeInvaders(_props: CardComponentProps) {
     setIsPlaying(true)
     setCanShoot(true)
     emitGameStarted('node_invaders')
-  }, [initInvaders, initShields])
+  }
 
   const scale = isExpanded ? 1.4 : 1
 

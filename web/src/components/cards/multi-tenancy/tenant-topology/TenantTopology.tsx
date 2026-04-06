@@ -22,7 +22,7 @@
  * Follows the LLMdFlow.tsx SVG pattern: viewBox coordinates, framer-motion
  * animations, and named constants for all positions/sizes/colors.
  */
-import { useId, useMemo } from 'react'
+import { useId } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { useCardLoadingState } from '../../CardDataContext'
@@ -380,8 +380,7 @@ function buildConnections(
       rxLabelX: a1TopCx + RX_TX_LABEL_OFFSET_X,
       rxLabelY: (a1TopY + l2BottomY) / 2 - 4,
       txLabelX: a1TopCx + RX_TX_LABEL_OFFSET_X,
-      txLabelY: (a1TopY + l2BottomY) / 2 + 1,
-    },
+      txLabelY: (a1TopY + l2BottomY) / 2 + 1 },
     {
       // Agent Pod 2 eth1 -> L2 UDN (green, bidirectional)
       id: 'a2-eth1-l2',
@@ -395,8 +394,7 @@ function buildConnections(
       rxLabelX: a2TopCx + RX_TX_LABEL_OFFSET_X,
       rxLabelY: (a2TopY + l2BottomY) / 2 - 4,
       txLabelX: a2TopCx + RX_TX_LABEL_OFFSET_X,
-      txLabelY: (a2TopY + l2BottomY) / 2 + 1,
-    },
+      txLabelY: (a2TopY + l2BottomY) / 2 + 1 },
     {
       // Agent Pod 1 eth0 -> L3 UDN (blue, bidirectional)
       id: 'a1-eth0-l3',
@@ -410,8 +408,7 @@ function buildConnections(
       rxLabelX: a1BotCx + RX_TX_LABEL_OFFSET_X,
       rxLabelY: (a1BotY + l3TopY) / 2 - 4,
       txLabelX: a1BotCx + RX_TX_LABEL_OFFSET_X,
-      txLabelY: (a1BotY + l3TopY) / 2 + 1,
-    },
+      txLabelY: (a1BotY + l3TopY) / 2 + 1 },
     {
       // Agent Pod 2 eth0 -> L3 UDN (blue, bidirectional)
       id: 'a2-eth0-l3',
@@ -425,8 +422,7 @@ function buildConnections(
       rxLabelX: a2BotCx + RX_TX_LABEL_OFFSET_X,
       rxLabelY: (a2BotY + l3TopY) / 2 - 4,
       txLabelX: a2BotCx + RX_TX_LABEL_OFFSET_X,
-      txLabelY: (a2BotY + l3TopY) / 2 + 1,
-    },
+      txLabelY: (a2BotY + l3TopY) / 2 + 1 },
     {
       // K3s Server eth1 -> L2 UDN (green, bidirectional)
       // Route LEFT from the pod to the gap between namespaces, then UP to the UDN
@@ -442,8 +438,7 @@ function buildConnections(
       rxLabelX: k3sLeftX - THROUGHPUT_PILL_FULL_W - 1,
       rxLabelY: k3sLeftY - 5,
       txLabelX: k3sLeftX - THROUGHPUT_PILL_FULL_W - 1,
-      txLabelY: k3sLeftY + 1,
-    },
+      txLabelY: k3sLeftY + 1 },
     {
       // K3s Server eth0 -> Default k8s Network -> KubeFlex (dark blue, bidirectional)
       id: 'k3s-eth0-kf',
@@ -457,8 +452,7 @@ function buildConnections(
       rxLabelX: kfBotCx + 3,
       rxLabelY: KF_MID_Y - 3,
       txLabelX: kfBotCx + 3,
-      txLabelY: KF_MID_Y + 2,
-    },
+      txLabelY: KF_MID_Y + 2 },
   ]
 }
 
@@ -472,8 +466,7 @@ function FlowParticle({
   color,
   active,
   throughputBytesPerSec,
-  idPrefix,
-}: {
+  idPrefix }: {
   pathId: string
   color: string
   active: boolean
@@ -497,11 +490,9 @@ function FlowParticle({
         transition={{
           duration,
           repeat: Infinity,
-          ease: 'linear',
-        }}
+          ease: 'linear' }}
         style={{
-          offsetPath: `url(#${pathId})`,
-        }}
+          offsetPath: `url(#${pathId})` }}
       >
         <animate
           attributeName="opacity"
@@ -521,11 +512,9 @@ function FlowParticle({
           duration: duration * 1.15,
           repeat: Infinity,
           ease: 'linear',
-          delay: duration * 0.4,
-        }}
+          delay: duration * 0.4 }}
         style={{
-          offsetPath: `url(#${pathId})`,
-        }}
+          offsetPath: `url(#${pathId})` }}
       >
         <animate
           attributeName="opacity"
@@ -545,8 +534,7 @@ function ThroughputLabel({
   bytesPerSec,
   color,
   active,
-  prefix,
-}: {
+  prefix }: {
   x: number
   y: number
   bytesPerSec: number
@@ -685,20 +673,14 @@ export function TenantTopology() {
   const liveData = useTenantTopology()
 
   // Use demo data when all hooks return no detection
-  const data = useMemo(
-    () => (liveData.isDemoData ? DEMO_TENANT_TOPOLOGY : liveData),
-    [liveData],
-  )
+  const data = liveData.isDemoData ? DEMO_TENANT_TOPOLOGY : liveData
 
   useCardLoadingState({
     isLoading: data.isLoading && !data.isDemoData,
     hasAnyData: true,
-    isDemoData: data.isDemoData,
-  })
+    isDemoData: data.isDemoData })
 
-  const connections = useMemo(
-    () =>
-      buildConnections(
+  const connections = buildConnections(
         data.ovnDetected,
         data.kubeflexDetected,
         data.k3sDetected,
@@ -715,16 +697,8 @@ export function TenantTopology() {
           k3sEth0Rx: data.k3sEth0Rx,
           k3sEth0Tx: data.k3sEth0Tx,
           k3sEth1Rx: data.k3sEth1Rx,
-          k3sEth1Tx: data.k3sEth1Tx,
-        },
-      ),
-    [
-      data.ovnDetected, data.kubeflexDetected, data.k3sDetected, data.kubevirtDetected,
-      data.kvEth0Rate, data.kvEth1Rate, data.k3sEth0Rate, data.k3sEth1Rate,
-      data.kvEth0Rx, data.kvEth0Tx, data.kvEth1Rx, data.kvEth1Tx,
-      data.k3sEth0Rx, data.k3sEth0Tx, data.k3sEth1Rx, data.k3sEth1Tx,
-    ],
-  )
+          k3sEth1Tx: data.k3sEth1Tx },
+      )
 
   return (
     <div className="w-full h-full min-h-[280px]">

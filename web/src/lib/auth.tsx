@@ -154,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return !hasToken || (hasToken && !hasCachedUser)
   })
 
-  const logout = useCallback(() => {
+  const logout = () => {
     emitLogout()
 
     // Invalidate the server-side session before clearing client state (#4751).
@@ -164,8 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (currentToken && currentToken !== DEMO_TOKEN_VALUE) {
       fetch('/auth/logout', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${currentToken}` },
-      }).catch(() => {
+        headers: { Authorization: `Bearer ${currentToken}` } }).catch(() => {
         // Backend unreachable — token will expire naturally
       })
     }
@@ -182,9 +181,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearSSECache()
     // Disconnect presence WebSocket to stop transmitting stale auth tokens (#4936)
     disconnectPresence()
-  }, [])
+  }
 
-  const setDemoMode = useCallback(() => {
+  const setDemoMode = () => {
     // If user explicitly disabled demo mode, respect their choice.
     // They want AI mode (agent) or live mode (backend) — not demo fallback.
     const userExplicitlyDisabledDemo = localStorage.getItem(STORAGE_KEY_DEMO_MODE) === 'false'
@@ -203,8 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: 'demo@example.com',
       avatar_url: 'https://api.dicebear.com/9.x/bottts/svg?seed=stellar-commander&backgroundColor=0d1117',
       role: 'viewer',
-      onboarded: demoOnboarded,
-    }
+      onboarded: demoOnboarded }
     setUser(demoUser)
     cacheUser(demoUser)
     setAnalyticsUserId(demoUser.id)
@@ -213,7 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // reflect demo state immediately — without this, the in-cluster banner won't
     // render because Layout's auto-demo-enable effect skips when isInClusterMode.
     setGlobalDemoMode(true)
-  }, [])
+  }
 
   const refreshUser = useCallback(async (overrideToken?: string) => {
     const effectiveToken = overrideToken || localStorage.getItem(STORAGE_KEY_TOKEN)
@@ -269,8 +267,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // attempt the request, even if a stale cache says the backend is down.
       const meResponse = await fetch('/api/me', {
         headers: { Authorization: `Bearer ${effectiveToken}` },
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!meResponse.ok) throw new Error(`/api/me returned ${meResponse.status}`)
       const userData = await meResponse.json().catch(() => null) as User | null
       if (!userData) throw new Error('Invalid JSON from /api/me')
@@ -299,7 +296,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [setDemoMode])
 
-  const login = useCallback(async () => {
+  const login = async () => {
     // Demo mode enabled via:
     // 1. Explicit environment variable VITE_DEMO_MODE=true
     // 2. Netlify deploy previews (deploy-preview-* hostnames) - safe because these are ephemeral test environments
@@ -332,9 +329,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     emitLogin('github-oauth')
     emitConversionStep(2, 'login', { method: 'github-oauth' })
     window.location.href = '/auth/github'
-  }, [setDemoMode])
+  }
 
-  const setToken = useCallback((newToken: string, onboarded: boolean) => {
+  const setToken = (newToken: string, onboarded: boolean) => {
     localStorage.setItem(STORAGE_KEY_TOKEN, newToken)
     setTokenState(newToken)
     // Clear stale cached user — refreshUser() will fetch and cache real data.
@@ -342,7 +339,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // user persists in localStorage and the profile shows "No email set".
     cacheUser(null)
     setUser({ id: '', github_id: '', github_login: '', onboarded } as User)
-  }, [])
+  }
 
   // Periodically check if the JWT is nearing expiry and show a warning banner.
   // When the user clicks "Refresh Now", silently call /auth/refresh for a new token.
@@ -373,10 +370,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${freshToken}`,
-            },
-            signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-          })
+              Authorization: `Bearer ${freshToken}` },
+            signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
           if (response.ok) {
             const data = await response.json().catch(() => null)
             if (data?.token) {
@@ -428,8 +423,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         setToken,
-        refreshUser,
-      }}
+        refreshUser }}
     >
       {children}
     </AuthContext.Provider>
@@ -452,8 +446,7 @@ const AUTH_FALLBACK: AuthContextType = {
   login: () => {},
   logout: () => {},
   setToken: () => {},
-  refreshUser: () => Promise.resolve(),
-}
+  refreshUser: () => Promise.resolve() }
 
 export function useAuth() {
   const context = use(AuthContext)

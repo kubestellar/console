@@ -5,7 +5,7 @@
  * TPOT, request latency), delta indicators vs previous run, and a bottom
  * strip with total requests, failure rate, GPU util, and power draw.
  */
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Zap, Clock, Activity, Cpu, TrendingUp, TrendingDown, ArrowRight, CalendarDays } from 'lucide-react'
 import { useReportCardDataState } from '../CardDataContext'
@@ -14,8 +14,7 @@ import {
   generateBenchmarkReports,
   getHardwareShort,
   getModelShort,
-  CONFIG_COLORS,
-} from '../../../lib/llmd/benchmarkMockData'
+  CONFIG_COLORS } from '../../../lib/llmd/benchmarkMockData'
 import { useTranslation } from 'react-i18next'
 
 const TIME_RANGE_OPTIONS = [
@@ -51,8 +50,7 @@ function HeroMetric({
   color,
   icon: Icon,
   invertDelta = false,
-  delay = 0,
-}: {
+  delay = 0 }: {
   label: string
   value: string
   unit: string
@@ -93,28 +91,28 @@ function HeroMetric({
 export function BenchmarkHero() {
   const { t } = useTranslation()
   const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, currentSince } = useCachedBenchmarkReports()
-  const effectiveReports = useMemo(() => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []), [isDemoFallback, liveReports])
+  const effectiveReports = isDemoFallback ? generateBenchmarkReports() : (liveReports ?? [])
   useReportCardDataState({ isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, hasData: effectiveReports.length > 0 })
 
   const [customDays, setCustomDays] = useState('')
   const [showCustom, setShowCustom] = useState(false)
 
-  const handleTimeRangeChange = useCallback((value: string) => {
+  const handleTimeRangeChange = (value: string) => {
     if (value === 'custom') {
       setShowCustom(true)
       return
     }
     setShowCustom(false)
     resetBenchmarkStream(value)
-  }, [])
+  }
 
-  const handleCustomSubmit = useCallback(() => {
+  const handleCustomSubmit = () => {
     const days = parseInt(customDays, 10)
     if (days > 0) {
       setShowCustom(false)
       resetBenchmarkStream(`${days}d`)
     }
-  }, [customDays])
+  }
 
   const { latest, prev, engine, gpuMetrics } = useMemo(() => {
     const reports = effectiveReports

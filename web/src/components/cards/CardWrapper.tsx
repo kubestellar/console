@@ -1,8 +1,7 @@
 import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, use, ComponentType, Suspense, lazy } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  Maximize2, MoreVertical, Clock, Settings, Trash2, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download, Link2, Bug, AlertTriangle, Sparkles, X,
-} from 'lucide-react'
+  Maximize2, MoreVertical, Clock, Settings, Trash2, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download, Link2, Bug, AlertTriangle, Sparkles, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CARD_TITLES, CARD_DESCRIPTIONS, DEMO_EXEMPT_CARDS } from './cardMetadata'
 import { CARD_ICONS } from './cardIcons'
@@ -110,8 +109,7 @@ interface CardExpandedContextType {
 }
 const CardExpandedContext = createContext<CardExpandedContextType>({
   isExpanded: false,
-  containerSize: { width: 0, height: 0 },
-})
+  containerSize: { width: 0, height: 0 } })
 
 /** Hook for child components to know if their parent card is expanded and get container size */
 export function useCardExpanded() {
@@ -223,7 +221,7 @@ function InfoTooltip({ text }: { text: string }) {
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
-  const tooltipId = useMemo(() => `info-tooltip-${Math.random().toString(36).slice(2, 9)}`, [])
+  const tooltipId = `info-tooltip-${Math.random().toString(36).slice(2, 9)}`
 
   // Update position based on trigger element's current bounding rect
   const updatePosition = useCallback(() => {
@@ -360,8 +358,7 @@ export function CardWrapper({
   skeletonType,
   skeletonRows,
   registerExpandTrigger,
-  children,
-}: CardWrapperProps) {
+  children }: CardWrapperProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { startMission, openSidebar, setFullScreen } = useMissions()
   const { status: agentStatus } = useLocalAgent()
@@ -542,13 +539,13 @@ export function CardWrapper({
   // Exception: if the card has a saved collapse state, apply it immediately (#4895)
   const savedCollapsedState = externalCollapsed ?? hookCollapsed
   const isCollapsed = (hasCompletedInitialLoad && collapseDelayPassed) ? savedCollapsedState : false
-  const setCollapsed = useCallback((collapsed: boolean) => {
+  const setCollapsed = (collapsed: boolean) => {
     if (onCollapsedChange) {
       onCollapsedChange(collapsed)
     }
     // Always update the hook state for persistence
     hookSetCollapsed(collapsed)
-  }, [onCollapsedChange, hookSetCollapsed])
+  }
 
   const [showSummary, setShowSummary] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
@@ -571,10 +568,10 @@ export function CardWrapper({
   const menuButtonRef = useRef<HTMLButtonElement>(null)
 
   // Report callback for CardDataContext (childDataState is declared earlier for refresh animation)
-  const reportCallback = useCallback((state: CardDataState) => {
+  const reportCallback = (state: CardDataState) => {
     setChildDataState(state)
-  }, [])
-  const reportCtx = useMemo(() => ({ report: reportCallback }), [reportCallback])
+  }
+  const reportCtx = { report: reportCallback }
 
   // Merge child-reported state with props — child reports take priority when present
   const effectiveIsFailed = isFailed || childDataState?.isFailed || cardLoadingTimedOut
@@ -691,7 +688,7 @@ export function CardWrapper({
     return () => clearInterval(interval)
   }, [pendingSwap, onSwap])
 
-  const handleSnooze = useCallback((durationMs: number = 3600000) => {
+  const handleSnooze = (durationMs: number = 3600000) => {
     if (!pendingSwap || !cardId) return
 
     snoozeSwap({
@@ -700,17 +697,16 @@ export function CardWrapper({
       originalCardTitle: title,
       newCardType: pendingSwap.newType,
       newCardTitle: newTitle || pendingSwap.newType,
-      reason: pendingSwap.reason,
-    }, durationMs)
+      reason: pendingSwap.reason }, durationMs)
 
     onSwapCancel?.()
-  }, [pendingSwap, cardId, cardType, title, newTitle, snoozeSwap, onSwapCancel])
+  }
 
-  const handleSwapNow = useCallback(() => {
+  const handleSwapNow = () => {
     if (pendingSwap && onSwap) {
       onSwap(pendingSwap.newType)
     }
-  }, [pendingSwap, onSwap])
+  }
 
   // Close resize submenu when main menu closes
   useEffect(() => {
@@ -729,8 +725,7 @@ export function CardWrapper({
         const rect = menuButtonRef.current.getBoundingClientRect()
         setMenuPosition({
           top: rect.bottom + 4,
-          right: window.innerWidth - rect.right,
-        })
+          right: window.innerWidth - rect.right })
       }
     }
 
@@ -953,8 +948,7 @@ export function CardWrapper({
                         const rect = menuButtonRef.current.getBoundingClientRect()
                         setMenuPosition({
                           top: rect.bottom + 4,
-                          right: window.innerWidth - rect.right,
-                        })
+                          right: window.innerWidth - rect.right })
                       }
                       setShowMenu(!showMenu)
                     }}
@@ -1195,8 +1189,7 @@ export function CardWrapper({
                                 title: `Set up ${title} for live data`,
                                 description: `Install and configure the components needed for live data`,
                                 type: 'deploy',
-                                initialPrompt: `The user is viewing the "${title}" dashboard card which is currently showing demo data. Help them install and configure whatever is needed to get live data for this card.`,
-                              })
+                                initialPrompt: `The user is viewing the "${title}" dashboard card which is currently showing demo data. Help them install and configure whatever is needed to get live data for this card.` })
                               openSidebar()
                             }
                           }}
@@ -1328,8 +1321,7 @@ export function CardWrapper({
                   description: `Install and configure ${installInfo.project}`,
                   type: 'deploy',
                   cluster: clusters.length > 0 ? clusters.join(',') : undefined,
-                  initialPrompt: prompt + clusterContext,
-                })
+                  initialPrompt: prompt + clusterContext })
                 openSidebar()
               }}
               missionTitle={`Install ${installInfo.project}`}
@@ -1371,8 +1363,7 @@ export function CardWrapper({
                 initialTab="submit"
                 initialContext={{
                   cardType,
-                  cardTitle: title || CARD_TITLES[cardType] || cardType,
-                }}
+                  cardTitle: title || CARD_TITLES[cardType] || cardType }}
               />
             </Suspense>
           )}

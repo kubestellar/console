@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { CheckCircle, XCircle, RefreshCw, AlertTriangle, ExternalLink, AlertCircle, Layers, GitBranch } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
@@ -9,8 +8,7 @@ import { useCardData, commonComparators, type SortDirection } from '../../lib/ca
 import {
   CardSearchInput,
   CardControlsRow,
-  CardPaginationFooter,
-} from '../../lib/cards/CardComponents'
+  CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useTranslation } from 'react-i18next'
 
@@ -33,8 +31,7 @@ const statusConfig: Record<string, { icon: typeof CheckCircle; color: string; bg
   Healthy: { icon: CheckCircle, color: 'text-green-400', bg: 'bg-green-500/20' },
   Progressing: { icon: RefreshCw, color: 'text-blue-400', bg: 'bg-blue-500/20' },
   Error: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/20' },
-  Unknown: { icon: AlertTriangle, color: 'text-muted-foreground', bg: 'bg-gray-500/20 dark:bg-gray-400/20' },
-}
+  Unknown: { icon: AlertTriangle, color: 'text-muted-foreground', bg: 'bg-gray-500/20 dark:bg-gray-400/20' } }
 
 const statusOrder: Record<string, number> = { Error: 0, Unknown: 1, Progressing: 2, Healthy: 3 }
 
@@ -42,8 +39,7 @@ const APPSET_SORT_COMPARATORS = {
   status: (a: ArgoApplicationSet, b: ArgoApplicationSet) => (statusOrder[a.status] ?? 5) - (statusOrder[b.status] ?? 5),
   name: commonComparators.string<ArgoApplicationSet>('name'),
   namespace: commonComparators.string<ArgoApplicationSet>('namespace'),
-  appCount: (a: ArgoApplicationSet, b: ArgoApplicationSet) => b.appCount - a.appCount,
-}
+  appCount: (a: ArgoApplicationSet, b: ArgoApplicationSet) => b.appCount - a.appCount }
 
 function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
   const { t } = useTranslation('cards')
@@ -53,8 +49,7 @@ function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
     isRefreshing,
     isFailed,
     consecutiveFailures,
-    isDemoData,
-  } = useArgoApplicationSets()
+    isDemoData } = useArgoApplicationSets()
 
   // Report loading state to CardWrapper
   const hasData = allAppSets.length > 0
@@ -64,15 +59,14 @@ function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
     hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
-    isDemoData,
-  })
+    isDemoData })
 
   // Pre-filter by config
-  const preFiltered = useMemo(() => {
+  const preFiltered = (() => {
     let filtered = allAppSets
     if (config?.cluster) filtered = filtered.filter(a => a.cluster === config.cluster)
     return filtered
-  }, [allAppSets, config])
+  })()
 
   // useCardData for search/cluster filter/sort/pagination
   const {
@@ -93,37 +87,30 @@ function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
       availableClusters,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-    },
+      clusterFilterRef },
     sorting: {
       sortBy,
       setSortBy,
       sortDirection,
-      setSortDirection,
-    },
+      setSortDirection },
     containerRef,
-    containerStyle,
-  } = useCardData<ArgoApplicationSet, SortByOption>(preFiltered, {
+    containerStyle } = useCardData<ArgoApplicationSet, SortByOption>(preFiltered, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'template'],
       clusterField: 'cluster',
-      storageKey: 'argocd-applicationsets',
-    },
+      storageKey: 'argocd-applicationsets' },
     sort: {
       defaultField: 'status',
       defaultDirection: 'asc' as SortDirection,
-      comparators: APPSET_SORT_COMPARATORS,
-    },
-    defaultLimit: 5,
-  })
+      comparators: APPSET_SORT_COMPARATORS },
+    defaultLimit: 5 })
 
   // Stats
-  const stats = useMemo(() => ({
+  const stats = {
     healthy: preFiltered.filter(a => a.status === 'Healthy').length,
     progressing: preFiltered.filter(a => a.status === 'Progressing').length,
     error: preFiltered.filter(a => a.status === 'Error').length,
-    totalApps: preFiltered.reduce((sum, a) => sum + a.appCount, 0),
-  }), [preFiltered])
+    totalApps: preFiltered.reduce((sum, a) => sum + a.appCount, 0) }
 
   if (showSkeleton) {
     return (
@@ -167,8 +154,7 @@ function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
           <CardControlsRow
             clusterIndicator={localClusterFilter.length > 0 ? {
               selectedCount: localClusterFilter.length,
-              totalCount: availableClusters.length,
-            } : undefined}
+              totalCount: availableClusters.length } : undefined}
             clusterFilter={{
               availableClusters,
               selectedClusters: localClusterFilter,
@@ -177,8 +163,7 @@ function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
               isOpen: showClusterFilter,
               setIsOpen: setShowClusterFilter,
               containerRef: clusterFilterRef,
-              minClusters: 1,
-            }}
+              minClusters: 1 }}
             cardControls={{
               limit: itemsPerPage,
               onLimitChange: setItemsPerPage,
@@ -186,8 +171,7 @@ function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
               sortOptions: SORT_OPTIONS_KEYS.map(o => ({ ...o })),
               onSortChange: (v) => setSortBy(v as SortByOption),
               sortDirection,
-              onSortDirectionChange: setSortDirection,
-            }}
+              onSortDirectionChange: setSortDirection }}
             extra={
               <a
                 href="https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/"

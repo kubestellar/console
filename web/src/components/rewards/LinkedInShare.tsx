@@ -2,7 +2,7 @@
  * LinkedIn Share component for sharing KubeStellar and earning coins
  */
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef } from 'react'
 import { Linkedin, Share2, Coins, CheckCircle2 } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Button } from '../ui/Button'
@@ -21,7 +21,7 @@ export function LinkedInShareButton() {
 
   const shareCount = getActionCount('linkedin_share')
 
-  const handleCloseConfirm = useCallback(() => setShowConfirm(false), [])
+  const handleCloseConfirm = () => setShowConfirm(false)
 
   // Keyboard navigation (ESC to close) and scroll lock for confirm modal
   useModalNavigation({ isOpen: showConfirm, onClose: handleCloseConfirm, enableBackspace: false })

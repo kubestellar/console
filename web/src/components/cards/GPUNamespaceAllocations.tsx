@@ -47,8 +47,7 @@ function normalizeClusterName(cluster: string): string {
 const NAMESPACE_SORT_COMPARATORS: Record<SortByOption, (a: NamespaceGPUAllocation, b: NamespaceGPUAllocation) => number> = {
   gpuCount: (a, b) => a.gpuRequested - b.gpuRequested,
   namespace: commonComparators.string<NamespaceGPUAllocation>('namespace'),
-  podCount: (a, b) => a.podCount - b.podCount,
-}
+  podCount: (a, b) => a.podCount - b.podCount }
 
 export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocationsProps) {
   const { t } = useTranslation(['cards', 'common'])
@@ -68,8 +67,7 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
     hasAnyData: hasData,
     isDemoData,
     isFailed: gpuFailed || podsFailed,
-    consecutiveFailures: Math.max(gpuFailures, podsFailures),
-  })
+    consecutiveFailures: Math.max(gpuFailures, podsFailures) })
 
   // Compute per-namespace GPU allocations
   const namespaceAllocations = useMemo(() => {
@@ -106,8 +104,7 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
       namespace,
       gpuRequested: data.gpuRequested,
       podCount: data.podCount,
-      clusters: Array.from(data.clusters),
-    }))
+      clusters: Array.from(data.clusters) }))
   }, [allPods, gpuNodes])
 
   const {
@@ -122,24 +119,17 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
     filters,
     sorting,
     containerRef,
-    containerStyle,
-  } = useCardData<NamespaceGPUAllocation, SortByOption>(namespaceAllocations, {
+    containerStyle } = useCardData<NamespaceGPUAllocation, SortByOption>(namespaceAllocations, {
     filter: {
       searchFields: ['namespace'] as (keyof NamespaceGPUAllocation)[],
-      storageKey: 'gpu-namespace-allocations',
-    },
+      storageKey: 'gpu-namespace-allocations' },
     sort: {
       defaultField: 'gpuCount',
       defaultDirection: 'desc',
-      comparators: NAMESPACE_SORT_COMPARATORS,
-    },
-    defaultLimit: 5,
-  })
+      comparators: NAMESPACE_SORT_COMPARATORS },
+    defaultLimit: 5 })
 
-  const totalGPUs = useMemo(() =>
-    namespaceAllocations.reduce((sum, ns) => sum + ns.gpuRequested, 0),
-    [namespaceAllocations]
-  )
+  const totalGPUs = namespaceAllocations.reduce((sum, ns) => sum + ns.gpuRequested, 0)
 
   if (isLoading) {
     return (
@@ -229,8 +219,7 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
             onClick={() => drillToGPUNamespace(ns.namespace, {
               gpuRequested: ns.gpuRequested,
               podCount: ns.podCount,
-              clusters: ns.clusters,
-            })}
+              clusters: ns.clusters })}
             className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
           >
             <div className="flex items-center gap-2 mb-2 min-w-0">

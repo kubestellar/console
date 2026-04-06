@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useMemo } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -50,10 +50,7 @@ export function Compliance() {
 
   // Build the set of cluster names that pass the global filter, so we can
   // scope tool aggregates to exactly those clusters (#4714, #4722).
-  const filteredClusterNames = useMemo(
-    () => new Set(filteredClusters.map(c => c.name)),
-    [filteredClusters]
-  )
+  const filteredClusterNames = new Set(filteredClusters.map(c => c.name))
 
   // Aggregate real data across *filtered* clusters only
   const realData = useMemo(() => {
@@ -142,8 +139,7 @@ export function Compliance() {
       totalChecks,
       passing,
       failing,
-      warning: Math.max(0, totalChecks - passing - failing),
-    }
+      warning: Math.max(0, totalChecks - passing - failing) }
   }, [kyverno.statuses, kubescape.statuses, trivy.statuses, filteredClusterNames])
 
   // Only show demo/mock data when the user is explicitly in demo mode.
@@ -155,7 +151,7 @@ export function Compliance() {
   const trivyIsDemo = explicitDemoMode && (trivy.isDemoData || !realData.trivyInstalled)
 
   // Stats value getter for the configurable StatsOverview component
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       // Overall compliance — real when any tool is installed, demo otherwise
       case 'score':
@@ -237,12 +233,9 @@ export function Compliance() {
       default:
         return { value: '-' }
     }
-  }, [allDemo, realData, kyvernoIsDemo, kubescapeIsDemo, trivyIsDemo, reachableClusters, drillToAllSecurity, drillToCompliance, explicitDemoMode])
+  }
 
-  const getStatValue = useCallback(
-    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
-    [getDashboardStatValue, getUniversalStatValue]
-  )
+  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
   const hasData = realData.hasAnyRealData || reachableClusters.length > 0
 
@@ -264,8 +257,7 @@ export function Compliance() {
       rightExtra={<RotatingTip page="compliance" />}
       emptyState={{
         title: 'Compliance Dashboard',
-        description: 'Add cards to monitor security compliance, policy enforcement, and vulnerability scanning.',
-      }}
+        description: 'Add cards to monitor security compliance, policy enforcement, and vulnerability scanning.' }}
     >
       {/* Error Display */}
       {error && (

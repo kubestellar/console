@@ -1,12 +1,11 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { useMissions } from './useMissions'
 import type {
   DiagnoseRepairState,
   DiagnoseRepairPhase,
   MonitorIssue,
   MonitoredResource,
-  ProposedRepair,
-} from '../types/workloadMonitor'
+  ProposedRepair } from '../types/workloadMonitor'
 import { DEFAULT_MAX_LOOPS } from '../types/workloadMonitor'
 
 interface UseDiagnoseRepairLoopOptions {
@@ -41,8 +40,7 @@ const INITIAL_STATE: DiagnoseRepairState = {
   proposedRepairs: [],
   completedRepairs: [],
   loopCount: 0,
-  maxLoops: DEFAULT_MAX_LOOPS,
-}
+  maxLoops: DEFAULT_MAX_LOOPS }
 
 /**
  * Hook to orchestrate the AI diagnose/repair loop.
@@ -56,11 +54,11 @@ export function useDiagnoseRepairLoop(options: UseDiagnoseRepairLoopOptions): Us
   const [state, setState] = useState<DiagnoseRepairState>({ ...INITIAL_STATE, maxLoops })
   const missionIdRef = useRef<string | null>(null)
 
-  const setPhase = useCallback((phase: DiagnoseRepairPhase) => {
+  const setPhase = (phase: DiagnoseRepairPhase) => {
     setState(prev => ({ ...prev, phase }))
-  }, [])
+  }
 
-  const startDiagnose = useCallback((
+  const startDiagnose = (
     resources: MonitoredResource[],
     issues: MonitorIssue[],
     context: Record<string, unknown>,
@@ -72,8 +70,7 @@ export function useDiagnoseRepairLoop(options: UseDiagnoseRepairLoopOptions): Us
       proposedRepairs: [],
       completedRepairs: [],
       loopCount: prev.phase === 'verifying' ? prev.loopCount + 1 : 0,
-      error: undefined,
-    }))
+      error: undefined }))
 
     // Build diagnosis prompt
     const resourceSummary = resources.map(r =>
@@ -108,8 +105,7 @@ Respond with your analysis in a clear, structured format. ${repairable ? 'For ea
       description: `Diagnosing workload health issues for ${monitorType}`,
       type: 'troubleshoot',
       initialPrompt: diagnosePrompt,
-      context,
-    })
+      context })
 
     missionIdRef.current = missionId
     setState(prev => ({ ...prev, phase: 'diagnosing', missionId }))
@@ -129,38 +125,34 @@ Respond with your analysis in a clear, structured format. ${repairable ? 'For ea
               action: getDefaultRepairAction(issue),
               description: getDefaultRepairDescription(issue),
               risk: getDefaultRepairRisk(issue),
-              approved: false,
-            }))
+              approved: false }))
           : []
 
         return {
           ...prev,
           phase: repairable ? 'proposing-repair' : 'complete',
-          proposedRepairs,
-        }
+          proposedRepairs }
       })
     }, 3000)
-  }, [monitorType, repairable, startMission])
+  }
 
-  const approveRepair = useCallback((repairId: string) => {
+  const approveRepair = (repairId: string) => {
     setState(prev => ({
       ...prev,
       proposedRepairs: prev.proposedRepairs.map(r =>
         r.id === repairId ? { ...r, approved: true } : r
       ),
-      phase: 'awaiting-approval',
-    }))
-  }, [])
+      phase: 'awaiting-approval' }))
+  }
 
-  const approveAllRepairs = useCallback(() => {
+  const approveAllRepairs = () => {
     setState(prev => ({
       ...prev,
       proposedRepairs: prev.proposedRepairs.map(r => ({ ...r, approved: true })),
-      phase: 'awaiting-approval',
-    }))
-  }, [])
+      phase: 'awaiting-approval' }))
+  }
 
-  const executeRepairs = useCallback(() => {
+  const executeRepairs = () => {
     const approvedRepairs = state.proposedRepairs.filter(r => r.approved)
     if (approvedRepairs.length === 0) return
 
@@ -181,8 +173,7 @@ Respond with your analysis in a clear, structured format. ${repairable ? 'For ea
         const newState = {
           ...prev,
           completedRepairs: [...prev.completedRepairs, ...completed],
-          phase: 'verifying' as DiagnoseRepairPhase,
-        }
+          phase: 'verifying' as DiagnoseRepairPhase }
 
         // Check if we should loop or complete
         if (prev.loopCount >= prev.maxLoops - 1) {
@@ -192,20 +183,20 @@ Respond with your analysis in a clear, structured format. ${repairable ? 'For ea
         return newState
       })
     }, 5000)
-  }, [state.proposedRepairs, setPhase, sendMessage])
+  }
 
-  const reset = useCallback(() => {
+  const reset = () => {
     setState({ ...INITIAL_STATE, maxLoops })
     missionIdRef.current = null
-  }, [maxLoops])
+  }
 
-  const cancel = useCallback(() => {
+  const cancel = () => {
     if (missionIdRef.current) {
       // The mission will continue but we disconnect from it
       missionIdRef.current = null
     }
     setState(prev => ({ ...prev, phase: 'idle', error: 'Cancelled by user' }))
-  }, [])
+  }
 
   return {
     state,
@@ -214,8 +205,7 @@ Respond with your analysis in a clear, structured format. ${repairable ? 'For ea
     approveAllRepairs,
     executeRepairs,
     reset,
-    cancel,
-  }
+    cancel }
 }
 
 // Helper functions to generate default repair proposals from issues

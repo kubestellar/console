@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { useDemoMode } from './useDemoMode'
 import { KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/constants/network'
@@ -111,7 +111,7 @@ export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
   const initialLoadDone = useRef(false)
 
-  const refetch = useCallback(async (silent = false) => {
+  const refetch = async (silent = false) => {
     if (!silent) {
       setIsRefreshing(true)
       if (!initialLoadDone.current) {
@@ -150,8 +150,7 @@ export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
             duration: state === 'pending' || state === 'triggered' ? '-' : formatDuration(startTime, completionTime),
             pr: pj.spec.refs?.pulls?.[0]?.number,
             url: pj.status.url,
-            buildId: pj.status.build_id || pj.metadata.labels?.['prow.k8s.io/build-id'],
-          }
+            buildId: pj.status.build_id || pj.metadata.labels?.['prow.k8s.io/build-id'] }
         })
 
       setJobs(prowJobs)
@@ -172,7 +171,7 @@ export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
       setIsRefreshing(false)
     }
    
-  }, [prowCluster, namespace])
+  }
 
   // Return demo data when in demo mode
   useEffect(() => {
@@ -212,8 +211,7 @@ export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
       successJobs,
       failedJobs,
       prowJobsLastHour: recentJobs.length,
-      successRate: Math.round(successRate * 10) / 10,
-    }
+      successRate: Math.round(successRate * 10) / 10 }
   }, [jobs, consecutiveFailures])
 
   return {
@@ -226,8 +224,7 @@ export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
     isFailed: consecutiveFailures >= 3,
     consecutiveFailures,
     lastRefresh,
-    formatTimeAgo,
-  }
+    formatTimeAgo }
 }
 
 // Demo data for when prow cluster is not available

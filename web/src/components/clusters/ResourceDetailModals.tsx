@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { Cpu, MemoryStick, Database, HardDrive, Server, ChevronDown, ChevronRight } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { Gauge } from '../charts/Gauge'
@@ -39,8 +39,7 @@ export function CPUDetailModal({
   limitCores = 0,
   nodes = [],
   isLoading,
-  onClose,
-}: CPUDetailModalProps) {
+  onClose }: CPUDetailModalProps) {
   const { t } = useTranslation()
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
 
@@ -200,8 +199,7 @@ export function MemoryDetailModal({
   limitMemoryGB = 0,
   nodes = [],
   isLoading,
-  onClose,
-}: MemoryDetailModalProps) {
+  onClose }: MemoryDetailModalProps) {
   const { t } = useTranslation()
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
 
@@ -359,8 +357,7 @@ export function StorageDetailModal({
   pvcs = [],
   nodes = [],
   isLoading,
-  onClose,
-}: StorageDetailModalProps) {
+  onClose }: StorageDetailModalProps) {
   const { t } = useTranslation()
   const [showPVCs, setShowPVCs] = useState(true)
   const [showNodes, setShowNodes] = useState(false)
@@ -512,13 +509,12 @@ export function GPUDetailModal({
   clusterName,
   gpuNodes,
   isLoading,
-  onClose,
-}: GPUDetailModalProps) {
+  onClose }: GPUDetailModalProps) {
   const { t } = useTranslation()
   const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set())
 
   // Group by GPU type
-  const gpuByType = useMemo(() => {
+  const gpuByType = (() => {
     const map: Record<string, { total: number; allocated: number; nodes: typeof gpuNodes }> = {}
     gpuNodes.forEach(node => {
       const type = node.gpuType || 'Unknown'
@@ -530,7 +526,7 @@ export function GPUDetailModal({
       map[type].nodes.push(node)
     })
     return map
-  }, [gpuNodes])
+  })()
 
   const totalGPUs = gpuNodes.reduce((sum, n) => sum + n.gpuCount, 0)
   const allocatedGPUs = gpuNodes.reduce((sum, n) => sum + n.gpuAllocated, 0)

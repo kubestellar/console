@@ -46,22 +46,19 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
     data: agents,
     isLoading: agentsLoading,
     isDemoFallback: agentDemo,
-    consecutiveFailures: agentFailures,
-  } = useKagentiAgents({ cluster: config?.cluster })
+    consecutiveFailures: agentFailures } = useKagentiAgents({ cluster: config?.cluster })
 
   const {
     data: builds,
     isLoading: buildsLoading,
     isDemoFallback: buildDemo,
-    consecutiveFailures: buildFailures,
-  } = useKagentiBuilds({ cluster: config?.cluster })
+    consecutiveFailures: buildFailures } = useKagentiBuilds({ cluster: config?.cluster })
 
   const {
     data: tools,
     isLoading: toolsLoading,
     isDemoFallback: toolDemo,
-    consecutiveFailures: toolFailures,
-  } = useKagentiTools({ cluster: config?.cluster })
+    consecutiveFailures: toolFailures } = useKagentiTools({ cluster: config?.cluster })
 
   const isLoading = agentsLoading || buildsLoading || toolsLoading
   const hasAnyData = agents.length > 0 || builds.length > 0 || tools.length > 0
@@ -72,8 +69,7 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
     hasAnyData,
     isFailed: maxFailures >= 3,
     consecutiveFailures: maxFailures,
-    isDemoData: agentDemo || buildDemo || toolDemo,
-  })
+    isDemoData: agentDemo || buildDemo || toolDemo })
 
   // Compute stats
   const stats = useMemo(() => {
@@ -103,11 +99,9 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
   }, [agents, builds, tools])
 
   // Recent builds for list view
-  const recentBuilds = useMemo(() => {
-    return [...builds]
+  const recentBuilds = [...builds]
       .sort((a, b) => (b.startTime || '').localeCompare(a.startTime || ''))
       .slice(0, 5)
-  }, [builds])
 
   if (showSkeleton) {
     return (

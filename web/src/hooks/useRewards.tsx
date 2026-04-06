@@ -3,7 +3,7 @@
  * Tracks user coins, achievements, and reward events
  */
 
-import { createContext, use, useState, useEffect, useCallback, ReactNode, useMemo } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { useAuth } from '../lib/auth'
 import {
   RewardActionType,
@@ -11,8 +11,7 @@ import {
   UserRewards,
   REWARD_ACTIONS,
   ACHIEVEMENTS,
-  Achievement,
-} from '../types/rewards'
+  Achievement } from '../types/rewards'
 import type { GitHubRewardsResponse } from '../types/rewards'
 import { useGitHubRewards } from './useGitHubRewards'
 
@@ -73,8 +72,7 @@ function createInitialRewards(userId: string): UserRewards {
     lifetimeCoins: 0,
     events: [],
     achievements: [],
-    lastUpdated: new Date().toISOString(),
-  }
+    lastUpdated: new Date().toISOString() }
 }
 
 export function RewardsProvider({ children }: { children: ReactNode }) {
@@ -103,10 +101,10 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
   }, [user?.id])
 
   // Check if action has been earned (for one-time rewards)
-  const hasEarnedAction = useCallback((action: RewardActionType): boolean => {
+  const hasEarnedAction = (action: RewardActionType): boolean => {
     if (!rewards) return false
     return rewards.events.some(e => e.action === action)
-  }, [rewards])
+  }
 
   // Get count of times an action has been performed
   const getActionCount = useCallback((action: RewardActionType): number => {
@@ -115,7 +113,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
   }, [rewards])
 
   // Award coins for an action
-  const awardCoins = useCallback((action: RewardActionType, metadata?: Record<string, unknown>): boolean => {
+  const awardCoins = (action: RewardActionType, metadata?: Record<string, unknown>): boolean => {
     if (!rewards || !user?.id) return false
 
     const rewardConfig = REWARD_ACTIONS[action]
@@ -136,8 +134,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
       action,
       coins: rewardConfig.coins,
       timestamp: new Date().toISOString(),
-      metadata,
-    }
+      metadata }
 
     // Update rewards
     const updated: UserRewards = {
@@ -145,8 +142,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
       totalCoins: rewards.totalCoins + rewardConfig.coins,
       lifetimeCoins: rewards.lifetimeCoins + rewardConfig.coins,
       events: [event, ...rewards.events].slice(0, MAX_REWARD_EVENTS),
-      lastUpdated: new Date().toISOString(),
-    }
+      lastUpdated: new Date().toISOString() }
 
     // Check for new achievements
     const newAchievements = checkAchievements(updated)
@@ -158,7 +154,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     saveRewards(user.id, updated)
 
     return true
-  }, [rewards, user?.id, hasEarnedAction])
+  }
 
   // Check which achievements have been earned
   const checkAchievements = (userRewards: UserRewards): string[] => {
@@ -193,22 +189,22 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
   }
 
   // Get earned achievements as full objects
-  const earnedAchievements = useMemo(() => {
+  const earnedAchievements = (() => {
     if (!rewards) return []
     return ACHIEVEMENTS.filter(a => rewards.achievements.includes(a.id))
-  }, [rewards])
+  })()
 
   // Get recent events (last 10)
-  const recentEvents = useMemo(() => {
+  const recentEvents = (() => {
     if (!rewards) return []
     return rewards.events.slice(0, RECENT_EVENTS_LIMIT)
-  }, [rewards])
+  })()
 
   // Dedup: subtract console-submitted bug/feature coins that overlap with GitHub data.
   // Only dedup the *actual* overlap — the minimum of localStorage event count and
   // GitHub contribution count for each category. This prevents under-counting when
   // GitHub hasn't indexed an issue yet or classifies it differently due to label timing.
-  const consoleSubmittedOffset = useMemo(() => {
+  const consoleSubmittedOffset = (() => {
     if (!rewards || !githubRewards) return 0
 
     const localBugCount = (rewards.events || []).filter(e => e.action === 'bug_report').length
@@ -222,16 +218,16 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     const featureOverlap = Math.min(localFeatureCount, githubFeatureCount)
 
     return (bugOverlap * REWARD_ACTIONS.bug_report.coins) + (featureOverlap * REWARD_ACTIONS.feature_suggestion.coins)
-  }, [rewards, githubRewards])
+  })()
 
   // Merged total: localStorage coins - dedup offset + GitHub coins.
   // The dedup offset removes only the overlapping bug/feature coins from
   // localStorage to avoid double-counting with the GitHub-sourced total.
-  const mergedTotalCoins = useMemo(() => {
+  const mergedTotalCoins = (() => {
     const localCoins = rewards?.totalCoins ?? 0
     if (!githubRewards) return localCoins
     return Math.max(0, localCoins - consoleSubmittedOffset) + githubPoints
-  }, [rewards?.totalCoins, consoleSubmittedOffset, githubPoints, githubRewards])
+  })()
 
   const value: RewardsContextType = {
     rewards,
@@ -244,8 +240,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     recentEvents,
     githubRewards,
     githubPoints,
-    refreshGitHubRewards,
-  }
+    refreshGitHubRewards }
 
   return (
     <RewardsContext.Provider value={value}>
@@ -270,11 +265,10 @@ const REWARDS_FALLBACK: RewardsContextType = {
   recentEvents: [],
   githubRewards: null,
   githubPoints: 0,
-  refreshGitHubRewards: async () => {},
-}
+  refreshGitHubRewards: async () => {} }
 
 export function useRewards() {
-  const context = use(RewardsContext)
+  const context = useContext(RewardsContext)
   if (!context) {
     if (import.meta.env.DEV) {
       console.warn('useRewards was called outside RewardsProvider — returning safe fallback')

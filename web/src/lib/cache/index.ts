@@ -510,8 +510,7 @@ export function initPreloadedMeta(meta: Record<string, WorkerCacheMeta>): void {
     preloadedMetaMap.set(key, {
       consecutiveFailures: value.consecutiveFailures,
       lastError: value.lastError,
-      lastSuccessfulRefresh: value.lastSuccessfulRefresh,
-    })
+      lastSuccessfulRefresh: value.lastSuccessfulRefresh })
   }
   // Update any stores that were constructed before meta was available
   // (i.e. before the async worker init completed after first render).
@@ -628,8 +627,7 @@ class CacheStore<T> {
         error: null,
         isFailed: false,
         consecutiveFailures: 0,
-        lastRefresh: snapshot.timestamp,
-      }
+        lastRefresh: snapshot.timestamp }
       this.storageLoadPromise = Promise.resolve()
     } else {
       this.state = {
@@ -639,8 +637,7 @@ class CacheStore<T> {
         error: null,
         isFailed: meta.consecutiveFailures >= MAX_FAILURES,
         consecutiveFailures: meta.consecutiveFailures,
-        lastRefresh: meta.lastSuccessfulRefresh ?? null,
-      }
+        lastRefresh: meta.lastSuccessfulRefresh ?? null }
       // Async fallback — load from storage if snapshot wasn't ready
       if (this.persist) {
         this.storageLoadPromise = this.loadFromStorage()
@@ -668,8 +665,7 @@ class CacheStore<T> {
           isRefreshing: true,
           lastRefresh: entry.timestamp,
           isFailed: false,
-          consecutiveFailures: 0,
-        })
+          consecutiveFailures: 0 })
         this.saveMeta({ consecutiveFailures: 0, lastSuccessfulRefresh: entry.timestamp })
       }
     } catch {
@@ -748,8 +744,7 @@ class CacheStore<T> {
       isRefreshing: false,
       error: null,
       isFailed: false,
-      consecutiveFailures: 0,
-    })
+      consecutiveFailures: 0 })
     // Re-trigger storage load to recover cached live data
     if (this.persist) {
       this.storageLoadPromise = this.loadFromStorage()
@@ -776,8 +771,7 @@ class CacheStore<T> {
       isRefreshing: false,
       error: null,
       isFailed: false,
-      consecutiveFailures: 0,
-    })
+      consecutiveFailures: 0 })
   }
 
   /**
@@ -791,8 +785,7 @@ class CacheStore<T> {
       this.setState({
         isFailed: meta.consecutiveFailures >= MAX_FAILURES,
         consecutiveFailures: meta.consecutiveFailures,
-        lastRefresh: meta.lastSuccessfulRefresh ?? null,
-      })
+        lastRefresh: meta.lastSuccessfulRefresh ?? null })
     }
   }
 
@@ -829,8 +822,7 @@ class CacheStore<T> {
 
     this.setState({
       isLoading: !hasCachedData,
-      isRefreshing: hasCachedData,
-    })
+      isRefreshing: hasCachedData })
 
     try {
       // Progressive fetcher: push partial updates to UI as each chunk arrives.
@@ -923,8 +915,7 @@ class CacheStore<T> {
         error: null,
         isFailed: false,
         consecutiveFailures: 0,
-        lastRefresh: Date.now(),
-      })
+        lastRefresh: Date.now() })
     } catch (e) {
       // If a reset happened during fetch, discard stale error
       if (this.resetVersion !== fetchVersion) {
@@ -948,8 +939,7 @@ class CacheStore<T> {
       this.saveMeta({
         consecutiveFailures: newFailures,
         lastError: errorMessage,
-        lastSuccessfulRefresh: hasData ? Date.now() : (this.state.lastRefresh ?? undefined),
-      })
+        lastSuccessfulRefresh: hasData ? Date.now() : (this.state.lastRefresh ?? undefined) })
 
       this.setState({
         // Keep isLoading: true when we have no cached data and haven't
@@ -959,8 +949,7 @@ class CacheStore<T> {
         isRefreshing: false,
         error: errorMessage,
         isFailed: hasData ? false : reachedMaxFailures,
-        consecutiveFailures: hasData ? 0 : newFailures,
-      })
+        consecutiveFailures: hasData ? 0 : newFailures })
     } finally {
       this.fetchingRef = false
     }
@@ -985,8 +974,7 @@ class CacheStore<T> {
       error: null,
       isFailed: false,
       consecutiveFailures: 0,
-      lastRefresh: null,
-    })
+      lastRefresh: null })
   }
 
   // Cleanup
@@ -1003,13 +991,11 @@ class CacheStore<T> {
 
     this.saveMeta({
       consecutiveFailures: 0,
-      lastSuccessfulRefresh: this.state.lastRefresh ?? undefined,
-    })
+      lastSuccessfulRefresh: this.state.lastRefresh ?? undefined })
 
     this.setState({
       consecutiveFailures: 0,
-      isFailed: false,
-    })
+      isFailed: false })
   }
 }
 
@@ -1101,8 +1087,7 @@ export function useCache<T>({
   liveInDemoMode = false,
   merge,
   shared = true,
-  progressiveFetcher,
-}: UseCacheOptions<T>): UseCacheResult<T> {
+  progressiveFetcher }: UseCacheOptions<T>): UseCacheResult<T> {
   // Subscribe to demo mode - this ensures we re-render when demo mode changes
   const demoMode = useSyncExternalStore(subscribeDemoMode, isDemoMode, isDemoMode)
 
@@ -1148,10 +1133,10 @@ export function useCache<T>({
     await store.fetch(() => fetcherRef.current(), mergeRef.current, progressiveFetcherRef.current)
   }, [effectiveEnabled, store])
 
-  const clearAndRefetch = useCallback(async () => {
+  const clearAndRefetch = async () => {
     await store.clear()
     await refetch()
-  }, [store, refetch])
+  }
 
   // Initial fetch and auto-refresh
   // Calculate effective interval with failure backoff
@@ -1259,8 +1244,7 @@ export function useCache<T>({
     lastRefresh: state.lastRefresh,
     isDemoFallback: shouldFallbackToDemo || !effectiveEnabled || showOptimisticDemo,
     refetch,
-    clearAndRefetch,
-  }
+    clearAndRefetch }
 }
 
 // ============================================================================
@@ -1273,8 +1257,7 @@ export function useArrayCache<T>(
 ): UseCacheResult<T[]> {
   return useCache({
     ...options,
-    initialData: options.initialData ?? [],
-  })
+    initialData: options.initialData ?? [] })
 }
 
 /** Hook for object data with automatic empty object initial value */
@@ -1283,8 +1266,7 @@ export function useObjectCache<T extends Record<string, unknown>>(
 ): UseCacheResult<T> {
   return useCache({
     ...options,
-    initialData: options.initialData ?? ({} as T),
-  })
+    initialData: options.initialData ?? ({} as T) })
 }
 
 // ============================================================================
@@ -1401,8 +1383,7 @@ export async function preloadCacheFromStorage(): Promise<void> {
           data: entry.data,
           isLoading: false,
           isRefreshing: true, // Will fetch fresh data in background
-          lastRefresh: entry.timestamp,
-        }
+          lastRefresh: entry.timestamp }
       }
     } catch {
       // Ignore individual load failures
@@ -1487,8 +1468,7 @@ export async function migrateIDBToSQLite(): Promise<void> {
       if (entry) {
         cacheEntries.push({
           key,
-          entry: { data: entry.data, timestamp: entry.timestamp, version: entry.version },
-        })
+          entry: { data: entry.data, timestamp: entry.timestamp, version: entry.version } })
       }
     }
 
@@ -1560,5 +1540,4 @@ export {
   useCollapsedPreference,
   useIndexedData,
   getStorageStats,
-  clearAllStorage,
-} from './hooks'
+  clearAllStorage } from './hooks'

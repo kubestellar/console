@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Radar, Tag, Server, Wrench } from 'lucide-react'
 import { useKagentCRDAgents } from '../../../hooks/mcp/kagent_crds'
 import { useCardLoadingState } from '../CardDataContext'
@@ -22,8 +21,7 @@ export function KagentAgentDiscovery({ config }: KagentAgentDiscoveryProps) {
     data: agents,
     isLoading,
     isDemoFallback,
-    consecutiveFailures,
-  } = useKagentCRDAgents({ cluster: config?.cluster })
+    consecutiveFailures } = useKagentCRDAgents({ cluster: config?.cluster })
 
   const hasAnyData = agents.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
@@ -31,20 +29,19 @@ export function KagentAgentDiscovery({ config }: KagentAgentDiscoveryProps) {
     hasAnyData,
     isFailed: consecutiveFailures >= 3,
     consecutiveFailures,
-    isDemoData: isDemoFallback,
-  })
+    isDemoData: isDemoFallback })
 
   // Agent type distribution
-  const typeDistribution = useMemo(() => {
+  const typeDistribution = (() => {
     const counts: Record<string, number> = {}
     for (const a of agents) {
       counts[a.agentType] = (counts[a.agentType] || 0) + 1
     }
     return Object.entries(counts).sort((a, b) => b[1] - a[1])
-  }, [agents])
+  })()
 
   // A2A enabled agents
-  const a2aAgents = useMemo(() => agents.filter(a => a.a2aEnabled), [agents])
+  const a2aAgents = agents.filter(a => a.a2aEnabled)
 
   const {
     items: paginatedItems,
@@ -58,22 +55,17 @@ export function KagentAgentDiscovery({ config }: KagentAgentDiscoveryProps) {
     itemsPerPage,
     setItemsPerPage,
     containerRef,
-    containerStyle,
-  } = useCardData(agents, {
+    containerStyle } = useCardData(agents, {
     filter: {
       searchFields: ['name', 'namespace', 'agentType', 'cluster', 'modelConfigRef'],
-      clusterField: 'cluster',
-    },
+      clusterField: 'cluster' },
     sort: {
       defaultField: 'name' as SortField,
       defaultDirection: 'asc',
       comparators: {
         name: commonComparators.string('name'),
-        cluster: commonComparators.string('cluster'),
-      } as Record<SortField, (a: typeof agents[number], b: typeof agents[number]) => number>,
-    },
-    defaultLimit: 8,
-  })
+        cluster: commonComparators.string('cluster') } as Record<SortField, (a: typeof agents[number], b: typeof agents[number]) => number> },
+    defaultLimit: 8 })
 
   if (showSkeleton) {
     return (
@@ -123,8 +115,7 @@ export function KagentAgentDiscovery({ config }: KagentAgentDiscoveryProps) {
       <CardControlsRow
         clusterIndicator={{
           selectedCount: filters.localClusterFilter.length,
-          totalCount: filters.availableClusters.length,
-        }}
+          totalCount: filters.availableClusters.length }}
         clusterFilter={{
           availableClusters: filters.availableClusters,
           selectedClusters: filters.localClusterFilter,
@@ -133,8 +124,7 @@ export function KagentAgentDiscovery({ config }: KagentAgentDiscoveryProps) {
           isOpen: filters.showClusterFilter,
           setIsOpen: filters.setShowClusterFilter,
           containerRef: filters.clusterFilterRef,
-          minClusters: 1,
-        }}
+          minClusters: 1 }}
         cardControls={{
           limit: itemsPerPage,
           onLimitChange: setItemsPerPage,
@@ -142,8 +132,7 @@ export function KagentAgentDiscovery({ config }: KagentAgentDiscoveryProps) {
           sortOptions: SORT_OPTIONS,
           onSortChange: (v) => sorting.setSortBy(v as SortField),
           sortDirection: sorting.sortDirection,
-          onSortDirectionChange: sorting.setSortDirection,
-        }}
+          onSortDirectionChange: sorting.setSortDirection }}
         extra={
           <CardSearchInput value={filters.search} onChange={filters.setSearch} placeholder="Search agents..." />
         }

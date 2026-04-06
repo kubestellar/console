@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { PodInfo } from '../../hooks/mcp/types'
 import { useCachedPods } from '../../hooks/useCachedData'
@@ -86,14 +85,11 @@ export function EtcdStatus() {
     hasAnyData: pods.length > 0,
     isDemoData: isDemoFallback,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
-  const etcdPods = useMemo(() => {
-    return pods.filter(isEtcdPod)
-  }, [pods])
+  const etcdPods = pods.filter(isEtcdPod)
 
-  const byCluster = useMemo(() => {
+  const byCluster = (() => {
     const map = new Map<string, typeof etcdPods>()
     for (const pod of etcdPods) {
       const cluster = pod.cluster || 'unknown'
@@ -101,14 +97,14 @@ export function EtcdStatus() {
       map.get(cluster)!.push(pod)
     }
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b))
-  }, [etcdPods])
+  })()
 
   // Determine distinct clusters that have pods but no etcd detected
-  const clustersWithoutEtcd = useMemo(() => {
+  const clustersWithoutEtcd = (() => {
     const allClusters = new Set(pods.map(p => p.cluster || 'unknown'))
     const etcdClusters = new Set(etcdPods.map(p => p.cluster || 'unknown'))
     return Array.from(allClusters).filter(c => !etcdClusters.has(c))
-  }, [pods, etcdPods])
+  })()
 
   if (showSkeleton) {
     return (

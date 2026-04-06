@@ -58,8 +58,7 @@ const COLORS = {
   ai3: '#f59e0b',
   boost: '#00ffff',
   shield: '#ff00ff',
-  slow: '#ff6600',
-}
+  slow: '#ff6600' }
 
 // Kubernetes-themed kart names
 const KART_NAMES = ['Pod Racer', 'Node Runner', 'Cluster Cruiser', 'Service Sprinter']
@@ -90,8 +89,7 @@ export function KubeKart() {
     checkpoint: 0,
     isPlayer: true,
     color: COLORS.player,
-    name: KART_NAMES[0],
-  })
+    name: KART_NAMES[0] })
 
   const aiKartsRef = useRef<Kart[]>([])
   const aiDistancesRef = useRef<number[]>([])
@@ -119,8 +117,7 @@ export function KubeKart() {
       checkpoint: 0,
       isPlayer: true,
       color: COLORS.player,
-      name: KART_NAMES[0],
-    }
+      name: KART_NAMES[0] }
 
     // Create AI karts
     const aiColors = [COLORS.ai1, COLORS.ai2, COLORS.ai3]
@@ -133,8 +130,7 @@ export function KubeKart() {
       checkpoint: 0,
       isPlayer: false,
       color: aiColors[i],
-      name: KART_NAMES[i + 1],
-    }))
+      name: KART_NAMES[i + 1] }))
     // AI karts start behind the player (negative distance = behind on grid)
     aiDistancesRef.current = Array.from({ length: AI_COUNT }, (_, i) => -(i + 1) * 30)
 
@@ -146,8 +142,7 @@ export function KubeKart() {
         x: 80 + Math.random() * (TRACK_WIDTH - 40),
         y: -(i * 300 + 200),
         type: types[Math.floor(Math.random() * types.length)],
-        collected: false,
-      })
+        collected: false })
     }
 
     trackScrollRef.current = 0
@@ -156,21 +151,21 @@ export function KubeKart() {
   }, [])
 
   // Get track curve at position
-  const getTrackCurve = useCallback((y: number): number => {
+  const getTrackCurve = (y: number): number => {
     const period = 400
     const phase = (y + trackScrollRef.current) / period
     return Math.sin(phase) * 0.3
-  }, [])
+  }
 
   // Check if position is on track
-  const isOnTrack = useCallback((x: number): boolean => {
+  const isOnTrack = (x: number): boolean => {
     const trackLeft = (CANVAS_WIDTH - TRACK_WIDTH) / 2
     const trackRight = trackLeft + TRACK_WIDTH
     return x >= trackLeft + 20 && x <= trackRight - 20
-  }, [])
+  }
 
   // Update AI karts - drive straight at moderate speed in fixed lanes
-  const updateAI = useCallback((kart: Kart, index: number) => {
+  const updateAI = (kart: Kart, index: number) => {
     const maxAiSpeed = MAX_SPEED * (0.65 + index * 0.05)
     if (kart.speed < maxAiSpeed) {
       kart.speed += ACCELERATION * 0.6
@@ -191,7 +186,7 @@ export function KubeKart() {
 
     // Face forward
     kart.angle = FORWARD_ANGLE
-  }, [])
+  }
 
   // Game update
   const update = useCallback(() => {
@@ -300,8 +295,7 @@ export function KubeKart() {
       ...aiKartsRef.current.map((kart, i) => ({
         isPlayer: false,
         lap: kart.lap,
-        distance: aiDistancesRef.current[i],
-      })),
+        distance: aiDistancesRef.current[i] })),
     ]
     positions.sort((a, b) => {
       if (a.lap !== b.lap) return b.lap - a.lap

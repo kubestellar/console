@@ -1,9 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import type {
   AIPrediction,
   AIPredictionsResponse,
-  PredictedRisk,
-} from '../types/predictions'
+  PredictedRisk } from '../types/predictions'
 import { getPredictionSettings, getSettingsForBackend } from './usePredictionSettings'
 import { getDemoMode } from './useDemoMode'
 import { isAgentUnavailable, reportAgentDataSuccess, reportAgentDataError } from './useLocalAgent'
@@ -29,8 +28,7 @@ const DEMO_AI_PREDICTIONS: AIPrediction[] = [
     confidence: 78,
     generatedAt: new Date().toISOString(),
     provider: 'claude',
-    trend: 'worsening',
-  },
+    trend: 'worsening' },
   {
     id: 'demo-ai-2',
     category: 'anomaly',
@@ -41,8 +39,7 @@ const DEMO_AI_PREDICTIONS: AIPrediction[] = [
     reasonDetailed: 'Pod has restarted 4 times in the past 3 hours, with each restart occurring during traffic peaks. This suggests memory or CPU limits may be too low for peak load. Recommend increasing resource limits or implementing HPA.',
     confidence: 85,
     generatedAt: new Date().toISOString(),
-    provider: 'claude',
-  },
+    provider: 'claude' },
 ]
 
 // Singleton state - shared across all hook instances
@@ -78,8 +75,7 @@ function aiPredictionToRisk(prediction: AIPrediction): PredictedRisk {
     confidence: prediction.confidence,
     generatedAt: new Date(prediction.generatedAt),
     provider: prediction.provider,
-    trend: prediction.trend,
-  }
+    trend: prediction.trend }
 }
 
 /**
@@ -106,8 +102,7 @@ async function fetchAIPredictions(): Promise<void> {
     const response = await fetch(`${AGENT_HTTP_URL}/predictions/ai`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' },
-      signal: controller.signal,
-    })
+      signal: controller.signal })
     clearTimeout(timeoutId)
 
     if (response.ok) {
@@ -153,8 +148,7 @@ function connectWebSocket(): void {
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
           type: 'prediction_settings',
-          payload: getSettingsForBackend(),
-        }))
+          payload: getSettingsForBackend() }))
       }
     }
 
@@ -210,8 +204,7 @@ async function triggerAnalysis(specificProviders?: string[]): Promise<boolean> {
     aiPredictions = DEMO_AI_PREDICTIONS.map(p => ({
       ...p,
       id: `demo-ai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      generatedAt: new Date().toISOString(),
-    }))
+      generatedAt: new Date().toISOString() }))
     lastAnalyzed = new Date()
     notifySubscribers()
     return true
@@ -222,8 +215,7 @@ async function triggerAnalysis(specificProviders?: string[]): Promise<boolean> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ providers: specificProviders }),
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-    })
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
     if (response.ok) {
       // Analysis started, results will come via WebSocket or next poll
@@ -315,7 +307,7 @@ export function useAIPredictions() {
   }, [])
 
   // Trigger analysis
-  const analyze = useCallback(async (specificProviders?: string[]) => {
+  const analyze = async (specificProviders?: string[]) => {
     setIsAnalyzing(true)
     setActiveTokenCategory('predictions')
     try {
@@ -327,7 +319,7 @@ export function useAIPredictions() {
       setIsAnalyzing(false)
       setActiveTokenCategory(null)
     }
-  }, [])
+  }
 
   // Check if AI predictions are enabled
   const isEnabled = getPredictionSettings().aiEnabled
@@ -340,8 +332,7 @@ export function useAIPredictions() {
     isEnabled,
     providers: activeProviders,
     analyze,
-    refresh: fetchAIPredictions,
-  }
+    refresh: fetchAIPredictions }
 }
 
 /**
@@ -365,7 +356,6 @@ export function syncSettingsToBackend(): void {
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({
       type: 'prediction_settings',
-      payload: getSettingsForBackend(),
-    }))
+      payload: getSettingsForBackend() }))
   }
 }

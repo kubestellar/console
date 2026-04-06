@@ -1,21 +1,17 @@
-import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Plus,
-  LayoutDashboard,
-} from 'lucide-react'
+  LayoutDashboard } from 'lucide-react'
 import { SortableGpuCard } from './SortableGpuCard'
 import type { GpuDashCard } from './SortableGpuCard'
 import {
   DndContext,
   closestCenter,
-  type DragEndEvent,
-} from '@dnd-kit/core'
+  type DragEndEvent } from '@dnd-kit/core'
 import type { SensorDescriptor, SensorOptions } from '@dnd-kit/core'
 import {
   SortableContext,
-  rectSortingStrategy,
-} from '@dnd-kit/sortable'
+  rectSortingStrategy } from '@dnd-kit/sortable'
 import { useClusters } from '../../hooks/useMCP'
 import { StatusIndicator } from '../charts/StatusIndicator'
 
@@ -42,17 +38,16 @@ export function GPUDashboardTab({
   onRemoveDashboardCard,
   onDashCardWidthChange,
   onTriggerRefresh,
-  onShowAddCardModal,
-}: GPUDashboardTabProps) {
+  onShowAddCardModal }: GPUDashboardTabProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: clusters } = useClusters()
 
-  const clusterHealth = useMemo(() => {
+  const clusterHealth = (() => {
     const all = clusters || []
     const connected = all.filter(c => c.reachable !== false)
     const disconnected = all.filter(c => c.reachable === false)
     return { total: all.length, connected: connected.length, disconnected: disconnected.length }
-  }, [clusters])
+  })()
 
   return (
     <div className="space-y-4">

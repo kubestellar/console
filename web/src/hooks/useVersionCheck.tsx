@@ -7,8 +7,7 @@ import type {
   ReleasesCache,
   InstallMethod,
   AutoUpdateStatus,
-  UpdateProgress,
-} from '../types/updates'
+  UpdateProgress } from '../types/updates'
 import { emitSessionContext } from '../lib/analytics'
 import { UPDATE_STORAGE_KEYS } from '../types/updates'
 import { LOCAL_AGENT_HTTP_URL, FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
@@ -73,8 +72,7 @@ export function parseRelease(release: GitHubRelease): ParsedRelease {
     date,
     publishedAt: new Date(release.published_at),
     releaseNotes: release.body || '',
-    url: release.html_url,
-  }
+    url: release.html_url }
 }
 
 /**
@@ -206,8 +204,7 @@ function saveCache(data: GitHubRelease[], etag: string | null): void {
   const cache: ReleasesCache = {
     data,
     timestamp: Date.now(),
-    etag,
-  }
+    etag }
   localStorage.setItem(UPDATE_STORAGE_KEYS.RELEASES_CACHE, JSON.stringify(cache))
 }
 
@@ -323,8 +320,7 @@ function useVersionCheckCore() {
     try {
       console.debug('[version-check] Fetching auto-update status from kc-agent...')
       const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/status`, {
-        signal: AbortSignal.timeout(10000),
-      })
+        signal: AbortSignal.timeout(10000) })
       if (resp.ok) {
         const data = (await resp.json()) as AutoUpdateStatus
         console.debug('[version-check] Auto-update status:', data)
@@ -365,13 +361,11 @@ function useVersionCheckCore() {
 
     try {
       const headers: HeadersInit = {
-        Accept: 'application/vnd.github.v3+json',
-      }
+        Accept: 'application/vnd.github.v3+json' }
       console.debug('[version-check] Fetching latest main SHA from GitHub...')
       const resp = await fetch(GITHUB_MAIN_SHA_URL, {
         headers,
-        signal: AbortSignal.timeout(5000),
-      })
+        signal: AbortSignal.timeout(5000) })
       if (resp.ok) {
         const data = await resp.json()
         const sha = data?.object?.sha as string | undefined
@@ -438,8 +432,7 @@ function useVersionCheckCore() {
           sha: c.sha,
           message: c.commit.message.split('\n')[0], // First line only
           author: c.commit.author.name,
-          date: c.commit.author.date,
-        }))
+          date: c.commit.author.date }))
         console.debug('[version-check] Fetched', commits.length, 'commits')
         setRecentCommits(commits)
       } else if (resp.status === 403 || resp.status === 429) {
@@ -467,8 +460,7 @@ function useVersionCheckCore() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: autoUpdateEnabled, channel: newChannel }),
-        signal: AbortSignal.timeout(3000),
-      })
+        signal: AbortSignal.timeout(3000) })
     } catch {
       // Agent not available, local state is still saved
     }
@@ -477,7 +469,7 @@ function useVersionCheckCore() {
   /**
    * Toggle auto-update and persist to localStorage + kc-agent.
    */
-  const setAutoUpdateEnabled = useCallback(async (enabled: boolean) => {
+  const setAutoUpdateEnabled = async (enabled: boolean) => {
     setAutoUpdateEnabledState(enabled)
     localStorage.setItem(UPDATE_STORAGE_KEYS.AUTO_UPDATE_ENABLED, String(enabled))
 
@@ -487,26 +479,24 @@ function useVersionCheckCore() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled, channel }),
-        signal: AbortSignal.timeout(3000),
-      })
+        signal: AbortSignal.timeout(3000) })
     } catch {
       // Agent not available
     }
-  }, [channel])
+  }
 
   /**
    * Trigger an immediate update via kc-agent.
    * Returns { success, error } so the UI can show feedback.
    */
-  const triggerUpdate = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+  const triggerUpdate = async (): Promise<{ success: boolean; error?: string }> => {
     console.debug('[version-check] Triggering update via kc-agent, channel:', channel)
     try {
       const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/trigger`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ channel }),
-        signal: AbortSignal.timeout(30000),
-      })
+        signal: AbortSignal.timeout(30000) })
       if (resp.ok) {
         console.debug('[version-check] Update triggered successfully')
         return { success: true }
@@ -521,12 +511,12 @@ function useVersionCheckCore() {
       console.debug('[version-check] Update trigger error:', msg)
       return { success: false, error: msg }
     }
-  }, [channel])
+  }
 
   /**
    * Fetch releases from GitHub API with caching.
    */
-  const fetchReleases = useCallback(async (force = false): Promise<void> => {
+  const fetchReleases = async (force = false): Promise<void> => {
     setIsChecking(true)
     setError(null)
 
@@ -541,8 +531,7 @@ function useVersionCheckCore() {
 
       // Prepare headers for conditional request
       const headers: HeadersInit = {
-        Accept: 'application/vnd.github.v3+json',
-      }
+        Accept: 'application/vnd.github.v3+json' }
       if (cache?.etag) {
         headers['If-None-Match'] = cache.etag
       }
@@ -599,14 +588,14 @@ function useVersionCheckCore() {
     } finally {
       setIsChecking(false)
     }
-  }, [])
+  }
 
   /**
    * Check for updates (respects minimum check interval).
    * Only fetches if cache is stale (older than 30 minutes).
    * User must manually refresh for more frequent updates.
    */
-  const checkForUpdates = useCallback(async (): Promise<void> => {
+  const checkForUpdates = async (): Promise<void> => {
     // For developer channel, try kc-agent first, fall back to direct GitHub API
     if (channel === 'developer') {
       if (agentSupportsAutoUpdate) {
@@ -634,12 +623,12 @@ function useVersionCheckCore() {
     }
 
     await fetchReleases()
-  }, [lastChecked, fetchReleases, channel, fetchAutoUpdateStatus, agentSupportsAutoUpdate, fetchLatestMainSHA])
+  }
 
   /**
    * Force a fresh check, bypassing cache.
    */
-  const forceCheck = useCallback(async (): Promise<void> => {
+  const forceCheck = async (): Promise<void> => {
     console.debug('[version-check] Force check — channel:', channel, 'agentSupportsAutoUpdate:', agentSupportsAutoUpdate)
     setIsChecking(true)
     setError(null)
@@ -662,31 +651,29 @@ function useVersionCheckCore() {
     } finally {
       setIsChecking(false)
     }
-  }, [fetchReleases, channel, fetchAutoUpdateStatus, agentSupportsAutoUpdate, fetchLatestMainSHA, refreshAgent])
+  }
 
   /**
    * Skip a specific version (won't show update notification for it).
    */
-  const skipVersion = useCallback((version: string) => {
+  const skipVersion = (version: string) => {
     setSkippedVersions((prev) => {
       const updated = [...prev, version]
       localStorage.setItem(UPDATE_STORAGE_KEYS.SKIPPED_VERSIONS, JSON.stringify(updated))
       return updated
     })
-  }, [])
+  }
 
   /**
    * Clear all skipped versions.
    */
-  const clearSkippedVersions = useCallback(() => {
+  const clearSkippedVersions = () => {
     setSkippedVersions([])
     localStorage.removeItem(UPDATE_STORAGE_KEYS.SKIPPED_VERSIONS)
-  }, [])
+  }
 
   // Compute latest release and update availability
-  const latestRelease = useMemo(() => {
-    return getLatestForChannel(releases, channel)
-  }, [releases, channel])
+  const latestRelease = getLatestForChannel(releases, channel)
 
   const hasUpdate = useMemo(() => {
     // Developer channel: check SHA from agent status or client-side comparison
@@ -841,8 +828,7 @@ function useVersionCheckCore() {
     clearSkippedVersions,
     setAutoUpdateEnabled,
     triggerUpdate,
-    setUpdateProgress,
-  }
+    setUpdateProgress }
 }
 
 // ---------------------------------------------------------------------------

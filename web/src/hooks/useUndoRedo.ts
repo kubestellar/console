@@ -37,7 +37,7 @@ export function useUndoRedo<T>(
   const [undoCount, setUndoCount] = useState(0)
   const [redoCount, setRedoCount] = useState(0)
 
-  const pushState = useCallback((state: T) => {
+  const pushState = (state: T) => {
     undoStackRef.current.push(state)
     // Trim to max size
     if (undoStackRef.current.length > MAX_UNDO_STACK_SIZE) {
@@ -47,7 +47,7 @@ export function useUndoRedo<T>(
     redoStackRef.current = []
     setUndoCount(undoStackRef.current.length)
     setRedoCount(0)
-  }, [])
+  }
 
   const undo = useCallback(() => {
     const prev = undoStackRef.current.pop()
@@ -82,8 +82,7 @@ export function useUndoRedo<T>(
     canUndo: undoCount > 0,
     canRedo: redoCount > 0,
     undoCount,
-    redoCount,
-  }
+    redoCount }
 }
 
 /**
@@ -115,7 +114,7 @@ export function useDashboardUndoRedo<T>(
   // Prevent undo/redo from being recorded as new snapshots
   const isRestoringRef = useRef(false)
 
-  const snapshot = useCallback((current: T[]) => {
+  const snapshot = (current: T[]) => {
     if (isRestoringRef.current) return
     undoStackRef.current.push([...current])
     if (undoStackRef.current.length > MAX_UNDO_STACK_SIZE) {
@@ -124,7 +123,7 @@ export function useDashboardUndoRedo<T>(
     redoStackRef.current = []
     setUndoCount(undoStackRef.current.length)
     setRedoCount(0)
-  }, [])
+  }
 
   const undo = useCallback(() => {
     const prev = undoStackRef.current.pop()
@@ -178,6 +177,5 @@ export function useDashboardUndoRedo<T>(
     undo,
     redo,
     canUndo: undoCount > 0,
-    canRedo: redoCount > 0,
-  }
+    canRedo: redoCount > 0 }
 }

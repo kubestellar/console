@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { CardRecommendation } from './useCardRecommendations'
 import { emitSnoozed, emitUnsnoozed } from '../lib/analytics'
 
@@ -28,7 +28,7 @@ export function useSnoozedRecommendations() {
     }
   }, [])
 
-  const snoozeRecommendation = useCallback((recommendation: CardRecommendation) => {
+  const snoozeRecommendation = (recommendation: CardRecommendation) => {
     // Check if already snoozed
     if (snoozedRecs.some(r => r.recommendation.id === recommendation.id)) {
       return null
@@ -37,39 +37,38 @@ export function useSnoozedRecommendations() {
     const newSnoozed: SnoozedRecommendation = {
       id: `snoozed-rec-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       recommendation,
-      snoozedAt: new Date(),
-    }
+      snoozedAt: new Date() }
     snoozedRecs = [...snoozedRecs, newSnoozed]
     notifyListeners()
     emitSnoozed('recommendation')
     return newSnoozed
-  }, [])
+  }
 
-  const unsnooozeRecommendation = useCallback((id: string) => {
+  const unsnooozeRecommendation = (id: string) => {
     const rec = snoozedRecs.find((r) => r.id === id)
     snoozedRecs = snoozedRecs.filter((r) => r.id !== id)
     notifyListeners()
     emitUnsnoozed('recommendation')
     return rec
-  }, [])
+  }
 
-  const dismissSnoozedRecommendation = useCallback((id: string) => {
+  const dismissSnoozedRecommendation = (id: string) => {
     snoozedRecs = snoozedRecs.filter((r) => r.id !== id)
     notifyListeners()
-  }, [])
+  }
 
-  const isSnoozed = useCallback((recId: string) => {
+  const isSnoozed = (recId: string) => {
     return snoozedRecs.some(r => r.recommendation.id === recId)
-  }, [])
+  }
 
-  const dismissRecommendation = useCallback((recId: string) => {
+  const dismissRecommendation = (recId: string) => {
     dismissedRecIds.add(recId)
     notifyListeners()
-  }, [])
+  }
 
-  const isDismissed = useCallback((recId: string) => {
+  const isDismissed = (recId: string) => {
     return dismissedRecIds.has(recId)
-  }, [])
+  }
 
   return {
     snoozedRecommendations: recs,
@@ -78,8 +77,7 @@ export function useSnoozedRecommendations() {
     dismissSnoozedRecommendation,
     dismissRecommendation,
     isSnoozed,
-    isDismissed,
-  }
+    isDismissed }
 }
 
 // Time boundary constants for elapsed time formatting

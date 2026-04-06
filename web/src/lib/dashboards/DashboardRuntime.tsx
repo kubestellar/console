@@ -32,14 +32,13 @@
  * ```
  */
 
-import { ReactNode, useCallback, useMemo, useRef, useState } from 'react'
+import { ReactNode, useRef, useState } from 'react'
 import {
   DndContext,
   closestCenter,
   DragOverlay,
   DragStartEvent,
-  DragEndEvent,
-} from '@dnd-kit/core'
+  DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
 import { DashboardDefinition, NewCardInput } from './types'
 import { DashboardTemplate } from '../../components/dashboard/templates'
@@ -50,8 +49,7 @@ import {
   DashboardEmptyCards,
   DashboardCardsGrid,
   SortableDashboardCard,
-  DragPreviewCard,
-} from './DashboardComponents'
+  DragPreviewCard } from './DashboardComponents'
 import { StatsOverview, StatBlockValue } from '../../components/ui/StatsOverview'
 import { DashboardStatsType } from '../../components/ui/StatsBlockDefinitions'
 import { AddCardModal } from '../../components/dashboard/AddCardModal'
@@ -126,8 +124,7 @@ export function DashboardRuntime({
   lastUpdated,
   onRefresh,
   children,
-  getStatValue: customGetStatValue,
-}: DashboardRuntimeProps) {
+  getStatValue: customGetStatValue }: DashboardRuntimeProps) {
   const {
     title,
     description,
@@ -135,8 +132,7 @@ export function DashboardRuntime({
     storageKey,
     stats: statsConfig,
     defaultCards,
-    features = {},
-  } = definition
+    features = {} } = definition
 
   const {
     autoRefresh: enableAutoRefresh = true,
@@ -144,16 +140,14 @@ export function DashboardRuntime({
     templates: enableTemplates = true,
     addCard: enableAddCard = true,
     cardSections: enableCardSections = true,
-    floatingActions: enableFloatingActions = true,
-  } = features
+    floatingActions: enableFloatingActions = true } = features
 
   // Use the combined dashboard hook
   const dashboard = useDashboard({
     storageKey,
     defaultCards,
     onRefresh,
-    autoRefreshInterval,
-  })
+    autoRefreshInterval })
 
   const {
     cards,
@@ -180,8 +174,7 @@ export function DashboardRuntime({
     undo,
     redo,
     canUndo,
-    canRedo,
-  } = dashboard
+    canRedo } = dashboard
 
   // Inline card insertion
   const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null)
@@ -194,7 +187,7 @@ export function DashboardRuntime({
   const { showToast } = useToast()
 
   // Extended drag handlers to support workload-to-cluster deployment
-  const handleDragStart = useCallback((event: DragStartEvent) => {
+  const handleDragStart = (event: DragStartEvent) => {
     // First call the original handler for card ordering
     dnd.handleDragStart(event)
 
@@ -203,9 +196,9 @@ export function DashboardRuntime({
     if (data?.type === 'workload' && data?.workload) {
       setDraggedWorkload(data.workload)
     }
-  }, [dnd])
+  }
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     // First call the original handler for card ordering
     dnd.handleDragEnd(event)
 
@@ -223,10 +216,10 @@ export function DashboardRuntime({
 
     // Clear dragged workload state
     setDraggedWorkload(null)
-  }, [dnd])
+  }
 
   // Handle deploying workload to cluster
-  const handleDeployWorkload = useCallback((
+  const handleDeployWorkload = (
     workload: { name: string; namespace: string; sourceCluster: string },
     targetCluster: string
   ) => {
@@ -234,19 +227,17 @@ export function DashboardRuntime({
       workloadName: workload.name,
       namespace: workload.namespace,
       sourceCluster: workload.sourceCluster,
-      targetClusters: [targetCluster],
-    }, {
+      targetClusters: [targetCluster] }, {
       onSuccess: () => {
         showToast(`Deployed ${workload.name} to ${targetCluster}`, 'success')
       },
       onError: (error: Error) => {
         showToast(`Failed to deploy: ${error.message}`, 'error')
-      },
-    })
-  }, [deployWorkload, showToast])
+      } })
+  }
 
   // Get stats value getter from registry or props
-  const getStatValue = useMemo(() => {
+  const getStatValue = (() => {
     if (customGetStatValue) return customGetStatValue
 
     if (statsConfig?.type) {
@@ -258,10 +249,10 @@ export function DashboardRuntime({
 
     // Default fallback
     return () => ({ value: '-', sublabel: '' })
-  }, [customGetStatValue, statsConfig?.type, data])
+  })()
 
   // Handle add cards (supports inline insertion at a specific index)
-  const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
+  const handleAddCards = (newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     const idx = insertAtIndexRef.current
     if (idx !== null) {
       // Insert at specific position
@@ -269,30 +260,27 @@ export function DashboardRuntime({
         id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         card_type: c.type,
         config: c.config || {},
-        title: c.title,
-      }))
+        title: c.title }))
       setCards(prev => [...prev.slice(0, idx), ...cardsToAdd, ...prev.slice(idx)])
       setInsertAtIndex(null)
     } else {
       addCards(newCards.map(c => ({
         type: c.type,
         title: c.title,
-        config: c.config,
-      })))
+        config: c.config })))
     }
     if (enableCardSections) {
       setShowCards(true)
     }
     setShowAddCard(false)
-  }, [addCards, setCards, setShowCards, setShowAddCard, enableCardSections])
+  }
 
   // Handle template apply
-  const handleApplyTemplate = useCallback((template: DashboardTemplate) => {
+  const handleApplyTemplate = (template: DashboardTemplate) => {
     const newCards: NewCardInput[] = template.cards.map(card => ({
       type: card.card_type,
       title: card.title,
-      config: card.config,
-    }))
+      config: card.config }))
 
     // Reset and add new cards
     reset()
@@ -302,21 +290,20 @@ export function DashboardRuntime({
       setShowCards(true)
     }
     setShowTemplates(false)
-  }, [reset, addCards, setShowCards, setShowTemplates, enableCardSections])
+  }
 
   // Handle card configuration save
-  const handleSaveCardConfig = useCallback((cardId: string, config: Record<string, unknown>) => {
+  const handleSaveCardConfig = (cardId: string, config: Record<string, unknown>) => {
     configureCard(cardId, config)
     closeConfigureCard()
-  }, [configureCard, closeConfigureCard])
+  }
 
   // Transform configuringCard for modal
   const configureCardForModal = configuringCard ? {
     id: configuringCard.id,
     card_type: configuringCard.card_type,
     config: configuringCard.config,
-    title: configuringCard.title,
-  } : null
+    title: configuringCard.title } : null
 
   const hasData = !isLoading || (data !== undefined && data !== null)
   const showSkeletons = isLoading && !hasData

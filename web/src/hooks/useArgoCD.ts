@@ -99,8 +99,7 @@ function saveToCache<T>(key: string, data: T, isDemoData: boolean): void {
     localStorage.setItem(key, JSON.stringify({
       data,
       timestamp: Date.now(),
-      isDemoData,
-    }))
+      isDemoData }))
   } catch {
     // Ignore storage errors (quota, etc.)
   }
@@ -129,10 +128,8 @@ function getMockArgoApplications(clusters: string[]): ArgoApplication[] {
         source: {
           repoURL: 'https://github.com/example-org/frontend-app', // EXAMPLE URL - not a real repository
           path: 'k8s/overlays/production',
-          targetRevision: 'main',
-        },
-        lastSynced: '2 minutes ago',
-      },
+          targetRevision: 'main' },
+        lastSynced: '2 minutes ago' },
       {
         name: 'api-gateway',
         namespace: 'production',
@@ -141,10 +138,8 @@ function getMockArgoApplications(clusters: string[]): ArgoApplication[] {
         source: {
           repoURL: 'https://github.com/example-org/api-gateway', // EXAMPLE URL - not a real repository
           path: 'deploy',
-          targetRevision: 'v2.3.0',
-        },
-        lastSynced: '15 minutes ago',
-      },
+          targetRevision: 'v2.3.0' },
+        lastSynced: '15 minutes ago' },
       {
         name: 'backend-service',
         namespace: 'staging',
@@ -153,10 +148,8 @@ function getMockArgoApplications(clusters: string[]): ArgoApplication[] {
         source: {
           repoURL: 'https://github.com/example-org/backend-service', // EXAMPLE URL - not a real repository
           path: 'manifests',
-          targetRevision: 'develop',
-        },
-        lastSynced: '1 minute ago',
-      },
+          targetRevision: 'develop' },
+        lastSynced: '1 minute ago' },
       {
         name: 'monitoring-stack',
         namespace: 'monitoring',
@@ -165,10 +158,8 @@ function getMockArgoApplications(clusters: string[]): ArgoApplication[] {
         source: {
           repoURL: 'https://github.com/example-org/monitoring-stack', // EXAMPLE URL - not a real repository
           path: 'helm/prometheus',
-          targetRevision: 'HEAD',
-        },
-        lastSynced: '30 minutes ago',
-      },
+          targetRevision: 'HEAD' },
+        lastSynced: '30 minutes ago' },
     ]
 
     baseApps.forEach((app, idx) => {
@@ -195,8 +186,7 @@ function getMockHealthData(clusterCount: number): ArgoHealthData {
     degraded: Math.floor(clusterCount * DEGRADED_MULTIPLIER),
     progressing: Math.floor(clusterCount * PROGRESSING_MULTIPLIER),
     missing: Math.floor(clusterCount * MISSING_MULTIPLIER),
-    unknown: Math.floor(clusterCount * UNKNOWN_MULTIPLIER),
-  }
+    unknown: Math.floor(clusterCount * UNKNOWN_MULTIPLIER) }
 }
 
 function getMockSyncStatusData(clusterCount: number): ArgoSyncData {
@@ -206,8 +196,7 @@ function getMockSyncStatusData(clusterCount: number): ArgoSyncData {
   return {
     synced: Math.floor(clusterCount * SYNCED_MULTIPLIER),
     outOfSync: Math.floor(clusterCount * OUT_OF_SYNC_MULTIPLIER),
-    unknown: Math.floor(clusterCount * UNKNOWN_MULTIPLIER),
-  }
+    unknown: Math.floor(clusterCount * UNKNOWN_MULTIPLIER) }
 }
 
 // ============================================================================
@@ -221,8 +210,7 @@ async function fetchArgoApplications(): Promise<{ items: ArgoApplication[]; isDe
   try {
     const res = await fetch('/api/gitops/argocd/applications', {
       signal: ctrl.signal,
-      headers: authHeaders(),
-    })
+      headers: authHeaders() })
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
       if (body.isDemoData) {
@@ -233,8 +221,7 @@ async function fetchArgoApplications(): Promise<{ items: ArgoApplication[]; isDe
     const data = await res.json()
     return {
       items: (data.items || []) as ArgoApplication[],
-      isDemoData: data.isDemoData === true,
-    }
+      isDemoData: data.isDemoData === true }
   } finally {
     clearTimeout(tid)
   }
@@ -247,8 +234,7 @@ async function fetchArgoHealth(): Promise<{ stats: ArgoHealthData; isDemoData: b
   try {
     const res = await fetch('/api/gitops/argocd/health', {
       signal: ctrl.signal,
-      headers: authHeaders(),
-    })
+      headers: authHeaders() })
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
       if (body.isDemoData) {
@@ -259,8 +245,7 @@ async function fetchArgoHealth(): Promise<{ stats: ArgoHealthData; isDemoData: b
     const data = await res.json()
     return {
       stats: (data.stats || { healthy: 0, degraded: 0, progressing: 0, missing: 0, unknown: 0 }) as ArgoHealthData,
-      isDemoData: data.isDemoData === true,
-    }
+      isDemoData: data.isDemoData === true }
   } finally {
     clearTimeout(tid)
   }
@@ -273,8 +258,7 @@ async function fetchArgoSync(): Promise<{ stats: ArgoSyncData; isDemoData: boole
   try {
     const res = await fetch('/api/gitops/argocd/sync', {
       signal: ctrl.signal,
-      headers: authHeaders(),
-    })
+      headers: authHeaders() })
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
       if (body.isDemoData) {
@@ -285,8 +269,7 @@ async function fetchArgoSync(): Promise<{ stats: ArgoSyncData; isDemoData: boole
     const data = await res.json()
     return {
       stats: (data.stats || { synced: 0, outOfSync: 0, unknown: 0 }) as ArgoSyncData,
-      isDemoData: data.isDemoData === true,
-    }
+      isDemoData: data.isDemoData === true }
   } finally {
     clearTimeout(tid)
   }
@@ -301,8 +284,7 @@ async function triggerArgoSyncAPI(appName: string, namespace: string, cluster: s
       method: 'POST',
       signal: ctrl.signal,
       headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ appName, namespace, cluster }),
-    })
+      body: JSON.stringify({ appName, namespace, cluster }) })
     const data = await res.json()
     return { success: data.success === true, error: data.error }
   } finally {
@@ -347,10 +329,7 @@ export function useArgoCDApplications(): UseArgoCDApplicationsResult {
   )
   const initialLoadDone = useRef(!!cachedSnapshot)
 
-  const clusterNames = useMemo(
-    () => (clusters || []).map(c => c.name),
-    [clusters]
-  )
+  const clusterNames = (clusters || []).map(c => c.name)
 
   const refetch = useCallback(async (silent = false) => {
     if (clusterNames.length === 0) {
@@ -430,8 +409,7 @@ export function useArgoCDApplications(): UseArgoCDApplicationsResult {
     isFailed: consecutiveFailures >= FAILURE_THRESHOLD,
     consecutiveFailures,
     lastRefresh,
-    refetch: () => refetch(false),
-  }
+    refetch: () => refetch(false) }
 }
 
 // ============================================================================
@@ -564,8 +542,7 @@ export function useArgoCDHealth(): UseArgoCDHealthResult {
     isFailed: consecutiveFailures >= FAILURE_THRESHOLD,
     consecutiveFailures,
     lastRefresh,
-    refetch: () => refetch(false),
-  }
+    refetch: () => refetch(false) }
 }
 
 // ============================================================================
@@ -586,7 +563,7 @@ export function useArgoCDTriggerSync() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [lastResult, setLastResult] = useState<TriggerSyncResult | null>(null)
 
-  const triggerSync = useCallback(async (appName: string, namespace: string, cluster?: string): Promise<TriggerSyncResult> => {
+  const triggerSync = async (appName: string, namespace: string, cluster?: string): Promise<TriggerSyncResult> => {
     setIsSyncing(true)
     setLastResult(null)
     try {
@@ -603,7 +580,7 @@ export function useArgoCDTriggerSync() {
     } finally {
       setIsSyncing(false)
     }
-  }, [])
+  }
 
   return { triggerSync, isSyncing, lastResult }
 }
@@ -742,8 +719,7 @@ export function useArgoCDSyncStatus(localClusterFilter: string[] = []): UseArgoC
     isFailed: consecutiveFailures >= FAILURE_THRESHOLD,
     consecutiveFailures,
     lastRefresh,
-    refetch: () => refetch(false),
-  }
+    refetch: () => refetch(false) }
 }
 
 // ============================================================================
@@ -771,8 +747,7 @@ async function fetchArgoApplicationSets(): Promise<{ items: ArgoApplicationSet[]
   try {
     const res = await fetch('/api/gitops/argocd/applicationsets', {
       signal: ctrl.signal,
-      headers: authHeaders(),
-    })
+      headers: authHeaders() })
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
       if (body.isDemoData) {
@@ -783,8 +758,7 @@ async function fetchArgoApplicationSets(): Promise<{ items: ArgoApplicationSet[]
     const data = await res.json()
     return {
       items: (data.items || []) as ArgoApplicationSet[],
-      isDemoData: data.isDemoData === true,
-    }
+      isDemoData: data.isDemoData === true }
   } finally {
     clearTimeout(tid)
   }
@@ -804,32 +778,28 @@ function getMockArgoApplicationSets(clusters: string[]): ArgoApplicationSet[] {
       template: '{{name}}-platform',
       syncPolicy: 'Automated',
       status: 'Healthy',
-      appCount: 5,
-    },
+      appCount: 5 },
     {
       name: 'microservices-fleet',
       generators: ['git'],
       template: '{{path.basename}}',
       syncPolicy: 'Automated',
       status: 'Healthy',
-      appCount: 12,
-    },
+      appCount: 12 },
     {
       name: 'monitoring-stack',
       generators: ['list'],
       template: 'monitoring-{{name}}',
       syncPolicy: 'Manual',
       status: 'Progressing',
-      appCount: 3,
-    },
+      appCount: 3 },
     {
       name: 'multi-region-apps',
       generators: ['matrix'],
       template: '{{cluster}}-{{app}}',
       syncPolicy: 'Automated',
       status: 'Error',
-      appCount: 8,
-    },
+      appCount: 8 },
   ]
 
   ;(clusters || []).forEach((cluster, idx) => {
@@ -840,8 +810,7 @@ function getMockArgoApplicationSets(clusters: string[]): ArgoApplicationSet[] {
       appSets.push({
         ...tmpl,
         namespace: 'argocd',
-        cluster,
-      })
+        cluster })
     })
   })
 
@@ -885,10 +854,7 @@ export function useArgoApplicationSets(): UseArgoApplicationSetsResult {
   )
   const initialLoadDone = useRef(!!cachedAppSetSnapshot)
 
-  const clusterNames = useMemo(
-    () => (clusters || []).map(c => c.name),
-    [clusters]
-  )
+  const clusterNames = (clusters || []).map(c => c.name)
 
   const refetch = useCallback(async (silent = false) => {
     if (clusterNames.length === 0) {
@@ -968,6 +934,5 @@ export function useArgoApplicationSets(): UseArgoApplicationSetsResult {
     isFailed: consecutiveFailures >= FAILURE_THRESHOLD,
     consecutiveFailures,
     lastRefresh,
-    refetch: () => refetch(false),
-  }
+    refetch: () => refetch(false) }
 }

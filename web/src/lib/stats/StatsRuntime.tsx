@@ -32,7 +32,7 @@
  * ```
  */
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { getIcon } from '../icons'
 import { ChevronDown, ChevronRight, Activity, Settings } from 'lucide-react'
 import {
@@ -43,8 +43,7 @@ import {
   StatValueGetter,
   COLOR_CLASSES,
   VALUE_COLORS,
-  formatValue,
-} from './types'
+  formatValue } from './types'
 
 // ============================================================================
 // Stats Registry
@@ -158,21 +157,16 @@ export function StatsRuntime({
   defaultExpanded = true,
   collapsedStorageKey,
   showConfigButton = true,
-  className = '',
-}: StatsRuntimeProps) {
+  className = '' }: StatsRuntimeProps) {
   const {
     type,
     title = 'Stats Overview',
     blocks,
     defaultCollapsed = false,
-    grid,
-  } = definition
+    grid } = definition
 
   // Get visible blocks (respect visible flag)
-  const visibleBlocks = useMemo(
-    () => blocks.filter((b) => b.visible !== false),
-    [blocks]
-  )
+  const visibleBlocks = blocks.filter((b) => b.visible !== false)
 
   // Manage collapsed state with localStorage persistence
   const storageKey = collapsedStorageKey || `kubestellar-${type}-stats-collapsed`
@@ -185,7 +179,7 @@ export function StatsRuntime({
     }
   })
 
-  const toggleExpanded = useCallback(() => {
+  const toggleExpanded = () => {
     const newValue = !isExpanded
     setIsExpanded(newValue)
     try {
@@ -193,7 +187,7 @@ export function StatsRuntime({
     } catch {
       // Ignore storage errors
     }
-  }, [isExpanded, storageKey])
+  }
 
   // Get stat value getter
   const getStatValue = useMemo(() => {
@@ -228,14 +222,13 @@ export function StatsRuntime({
 
       return {
         value: `${prefix}${formattedValue}${suffix}`,
-        sublabel,
-      }
+        sublabel }
     }
   }, [customGetStatValue, type, data, blocks])
 
   // Dynamic grid columns based on visible blocks
   // Mobile: max 2 columns, tablet+: responsive based on count
-  const gridCols = useMemo(() => {
+  const gridCols = (() => {
     if (grid?.columns) {
       return `grid-cols-2 md:grid-cols-${grid.columns}`
     }
@@ -246,7 +239,7 @@ export function StatsRuntime({
     if (count <= 6) return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6'
     if (count <= 8) return 'grid-cols-2 md:grid-cols-4 lg:grid-cols-8'
     return 'grid-cols-2 md:grid-cols-5 lg:grid-cols-10'
-  }, [visibleBlocks.length, grid?.columns])
+  })()
 
   return (
     <div className={`mb-6 ${className}`}>
@@ -343,8 +336,7 @@ export function createStatBlock(
     icon,
     color,
     visible: true,
-    ...options,
-  }
+    ...options }
 }
 
 /**
@@ -358,6 +350,5 @@ export function createStatsDefinition(
   return {
     type,
     blocks,
-    ...options,
-  }
+    ...options }
 }

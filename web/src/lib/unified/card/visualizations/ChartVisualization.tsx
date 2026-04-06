@@ -5,7 +5,6 @@
  * Uses Recharts library for rendering.
  */
 
-import { useMemo } from 'react'
 import {
   LineChart,
   Line,
@@ -21,8 +20,7 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer,
-} from 'recharts'
+  ResponsiveContainer } from 'recharts'
 import type { CardContentChart, CardChartSeries, CardAxisConfig } from '../../types'
 import { CHART_TOOLTIP_CONTENT_STYLE_GRAY } from '../../../constants'
 
@@ -55,8 +53,7 @@ export function ChartVisualization({ content, data }: ChartVisualizationProps) {
     xAxis,
     yAxis,
     showLegend = true,
-    height = 200,
-  } = content
+    height = 200 } = content
 
   // Derive series from yAxis if not explicitly provided
   const series: CardChartSeries[] = rawSeries ?? (
@@ -174,8 +171,7 @@ function LineChartRenderer({
   xAxis: xAxisProp,
   yAxis: yAxisProp,
   showLegend,
-  height,
-}: ChartRendererProps) {
+  height }: ChartRendererProps) {
   const xAxis = normalizeAxisConfig(xAxisProp)
   const yAxis = normalizeAxisConfig(yAxisProp)
   const xField = xAxis?.field ?? 'time'
@@ -240,8 +236,7 @@ function AreaChartRenderer({
   xAxis: xAxisProp,
   yAxis: yAxisProp,
   showLegend,
-  height,
-}: ChartRendererProps) {
+  height }: ChartRendererProps) {
   const xAxis = normalizeAxisConfig(xAxisProp)
   const yAxis = normalizeAxisConfig(yAxisProp)
   const xField = xAxis?.field ?? 'time'
@@ -308,8 +303,7 @@ function BarChartRenderer({
   xAxis: xAxisProp,
   yAxis: yAxisProp,
   showLegend,
-  height,
-}: ChartRendererProps) {
+  height }: ChartRendererProps) {
   const xAxis = normalizeAxisConfig(xAxisProp)
   const yAxis = normalizeAxisConfig(yAxisProp)
   const xField = xAxis?.field ?? 'name'
@@ -368,11 +362,10 @@ function DonutChartRenderer({
   data,
   series,
   showLegend,
-  height,
-}: Omit<ChartRendererProps, 'xAxis' | 'yAxis'>) {
+  height }: Omit<ChartRendererProps, 'xAxis' | 'yAxis'>) {
   // For donut charts, we expect data to be an array of { name, value } objects
   // or we extract from the first series field
-  const chartData = useMemo(() => {
+  const chartData = (() => {
     if (series.length === 0) return data
 
     // If data has the series fields, transform to pie format
@@ -382,9 +375,8 @@ function DonutChartRenderer({
     return (data as Record<string, unknown>[]).map((item, i) => ({
       name: String(item.name ?? item.label ?? `Item ${i + 1}`),
       value: Number(item[primarySeries.field] ?? 0),
-      color: series[i]?.color ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length],
-    }))
-  }, [data, series])
+      color: series[i]?.color ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length] }))
+  })()
 
   return (
     <div style={{ width: '100%', height }}>
@@ -429,14 +421,13 @@ function DonutChartRenderer({
 function GaugeChartRenderer({
   data,
   series,
-  height,
-}: Omit<ChartRendererProps, 'xAxis' | 'yAxis' | 'showLegend'>) {
+  height }: Omit<ChartRendererProps, 'xAxis' | 'yAxis' | 'showLegend'>) {
   // Extract value from first data item and first series
-  const value = useMemo(() => {
+  const value = (() => {
     if (data.length === 0 || series.length === 0) return 0
     const firstItem = data[0] as Record<string, unknown>
     return Number(firstItem[series[0].field] ?? 0)
-  }, [data, series])
+  })()
 
   // Create gauge data (value vs remaining to 100)
   const gaugeData = [
@@ -481,8 +472,7 @@ function GaugeChartRenderer({
 function SparklineRenderer({
   data,
   series,
-  height,
-}: Omit<ChartRendererProps, 'xAxis' | 'yAxis' | 'showLegend'>) {
+  height }: Omit<ChartRendererProps, 'xAxis' | 'yAxis' | 'showLegend'>) {
   if (series.length === 0) {
     return <div className="text-muted-foreground text-sm">No series configured</div>
   }

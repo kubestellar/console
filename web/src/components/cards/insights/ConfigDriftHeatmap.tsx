@@ -32,18 +32,16 @@ export function ConfigDriftHeatmap() {
   const { selectedClusters } = useGlobalFilters()
   const [selectedInsight, setSelectedInsight] = useState<MultiClusterInsight | null>(null)
 
-  const driftInsightsRaw = useMemo(() => insightsByCategory['config-drift'] || [], [insightsByCategory])
+  const driftInsightsRaw = insightsByCategory['config-drift'] || []
   const {
     sorted: driftInsights,
-    sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
-  } = useInsightSort(driftInsightsRaw)
+    sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit } = useInsightSort(driftInsightsRaw)
 
   const hasData = driftInsightsRaw.length > 0
   useCardLoadingState({
     isLoading: isLoading && !hasData,
     hasAnyData: hasData,
-    isDemoData,
-  })
+    isDemoData })
 
   // Build cluster-pair drift counts
   const { clusters, driftMatrix } = useMemo(() => {
@@ -106,8 +104,7 @@ export function ConfigDriftHeatmap() {
           sortOptions: INSIGHT_SORT_OPTIONS,
           onSortChange: (v) => setSortBy(v as InsightSortField),
           sortDirection,
-          onSortDirectionChange: setSortDirection,
-        }}
+          onSortDirectionChange: setSortDirection }}
       />
 
       {/* Heatmap */}

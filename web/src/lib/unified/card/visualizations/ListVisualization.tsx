@@ -5,7 +5,7 @@
  * with configurable columns and cell renderers.
  */
 
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import type { CardContentList, CardColumnConfig, CardDrillDownConfig, CardAIActionsConfig } from '../../types'
 import { renderCell } from '../renderers'
@@ -32,8 +32,7 @@ export function ListVisualization({
   content,
   data,
   drillDown,
-  onDrillDown,
-}: ListVisualizationProps) {
+  onDrillDown }: ListVisualizationProps) {
   const {
     columns,
     pageSize = 10,
@@ -43,8 +42,7 @@ export function ListVisualization({
     sortable = false,
     defaultSort,
     defaultDirection = 'asc',
-    sortOptions,
-  } = content
+    sortOptions } = content
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(0)
@@ -54,16 +52,15 @@ export function ListVisualization({
   const [sortDirection, setSortDirection] = useState<SortDirection>(defaultDirection)
 
   // Build sort options from config or columns
-  const availableSortOptions = useMemo(() => {
+  const availableSortOptions = (() => {
     if (sortOptions) return sortOptions
     // Default: use all columns with headers as sortable options
     return columns
       .filter((col) => !col.hidden && col.header)
       .map((col) => ({
         field: col.field,
-        label: col.header || col.field,
-      }))
-  }, [sortOptions, columns])
+        label: col.header || col.field }))
+  })()
 
   // Sort data
   const sortedData = useMemo(() => {
@@ -95,35 +92,26 @@ export function ListVisualization({
 
   // Calculate pagination (on sorted data)
   const totalPages = Math.ceil(sortedData.length / pageSize)
-  const paginatedData = useMemo(() => {
+  const paginatedData = (() => {
     if (!pageSize || pageSize <= 0) return sortedData
     const start = currentPage * pageSize
     return sortedData.slice(start, start + pageSize)
-  }, [sortedData, currentPage, pageSize])
+  })()
 
   // Handle item click
-  const handleItemClick = useCallback(
-    (item: Record<string, unknown>) => {
+  const handleItemClick = (item: Record<string, unknown>) => {
       if (itemClick === 'none') return
       if (itemClick === 'drill' && onDrillDown) {
         onDrillDown(item)
       }
       // 'expand' and 'select' can be implemented later
-    },
-    [itemClick, onDrillDown]
-  )
+    }
 
   // Get visible columns (filter out hidden)
-  const visibleColumns = useMemo(
-    () => columns.filter((col) => !col.hidden),
-    [columns]
-  )
+  const visibleColumns = columns.filter((col) => !col.hidden)
 
   // Find primary column for styling
-  const primaryColumn = useMemo(
-    () => columns.find((col) => col.primary),
-    [columns]
-  )
+  const primaryColumn = columns.find((col) => col.primary)
 
   const isClickable = itemClick !== 'none' && !!(drillDown || onDrillDown)
 
@@ -131,9 +119,9 @@ export function ListVisualization({
   const { containerRef, containerStyle } = useStablePageHeight(pageSize, data.length)
 
   // Toggle sort direction
-  const toggleSortDirection = useCallback(() => {
+  const toggleSortDirection = () => {
     setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
-  }, [])
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -243,8 +231,7 @@ function ListItem({
   rowNumber,
   isClickable,
   onClick,
-  aiActions,
-}: {
+  aiActions }: {
   item: Record<string, unknown>
   columns: CardColumnConfig[]
   primaryColumn?: CardColumnConfig
@@ -270,8 +257,7 @@ function ListItem({
       name: String(item[nameField] ?? ''),
       namespace: namespaceField ? String(item[namespaceField] ?? '') : undefined,
       cluster: clusterField ? String(item[clusterField] ?? '') : undefined,
-      status: statusField ? String(item[statusField] ?? '') : undefined,
-    }
+      status: statusField ? String(item[statusField] ?? '') : undefined }
 
     // Extract issues if configured
     let issues: Array<{ name: string; message: string }> = []
@@ -285,8 +271,7 @@ function ListItem({
           if (typeof issue === 'object' && issue !== null) {
             return {
               name: String((issue as Record<string, unknown>).name ?? 'Issue'),
-              message: String((issue as Record<string, unknown>).message ?? ''),
-            }
+              message: String((issue as Record<string, unknown>).message ?? '') }
           }
           return { name: 'Issue', message: String(issue) }
         })
@@ -340,8 +325,7 @@ function ListItem({
               column.width
                 ? {
                     width: typeof column.width === 'number' ? `${column.width}px` : column.width,
-                    flexShrink: 0,
-                  }
+                    flexShrink: 0 }
                 : undefined
             }
           >

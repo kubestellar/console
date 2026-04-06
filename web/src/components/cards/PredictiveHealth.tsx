@@ -56,8 +56,8 @@ export function PredictiveHealth() {
   const { filterByCluster } = useGlobalFilters()
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  const nodes = useMemo(() => filterByCluster(allNodes), [allNodes, filterByCluster])
-  const pods = useMemo(() => filterByCluster(allPods), [allPods, filterByCluster])
+  const nodes = filterByCluster(allNodes)
+  const pods = filterByCluster(allPods)
 
   const isLoading = nodesLoading || podsLoading
   const { showSkeleton } = useCardLoadingState({
@@ -65,8 +65,7 @@ export function PredictiveHealth() {
     hasAnyData: allNodes.length > 0 || allPods.length > 0,
     isDemoData: nodesDemoFallback || podsDemoFallback,
     isFailed: nodesFailed || podsFailed,
-    consecutiveFailures: Math.max(nodesFailures, podsFailures),
-  })
+    consecutiveFailures: Math.max(nodesFailures, podsFailures) })
 
   const predictions = useMemo((): Prediction[] => {
     if (nodes.length === 0 && pods.length === 0) return []
@@ -95,8 +94,7 @@ export function PredictiveHealth() {
           severity: severityFromUsage(densityPct),
           message: `Pod density is ${Math.round(podDensity)} pods/node — consider adding nodes`,
           confidence: confidenceFromUsage(densityPct),
-          timeToExhaustion: estimateTimeToExhaustion(densityPct),
-        })
+          timeToExhaustion: estimateTimeToExhaustion(densityPct) })
       }
 
       // Node pressure detection
@@ -114,8 +112,7 @@ export function PredictiveHealth() {
           severity: severityFromUsage(Math.max(pressurePct, 85)),
           message: `${pressuredNodes.length} node(s) under pressure — risk of pod eviction`,
           confidence: confidenceFromUsage(Math.max(pressurePct, 85)),
-          timeToExhaustion: estimateTimeToExhaustion(Math.max(pressurePct, 85)),
-        })
+          timeToExhaustion: estimateTimeToExhaustion(Math.max(pressurePct, 85)) })
       }
 
       // Unschedulable nodes
@@ -127,8 +124,7 @@ export function PredictiveHealth() {
           resource: 'Capacity',
           severity: 'warning',
           message: `${cordoned.length}/${cNodes.length} nodes cordoned — reduced scheduling capacity`,
-          confidence: 0.95,
-        })
+          confidence: 0.95 })
       }
 
       // Restart storm detection
@@ -140,8 +136,7 @@ export function PredictiveHealth() {
           resource: 'Stability',
           severity: highRestarts.length > 10 ? 'critical' : 'warning',
           message: `${highRestarts.length} pods with high restart counts — potential instability`,
-          confidence: 0.78,
-        })
+          confidence: 0.78 })
       }
     }
 
@@ -164,8 +159,7 @@ export function PredictiveHealth() {
   const severityStyles = {
     critical: { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', dot: 'bg-red-500' },
     warning: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', dot: 'bg-yellow-500' },
-    info: { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400', dot: 'bg-blue-500' },
-  }
+    info: { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400', dot: 'bg-blue-500' } }
 
   return (
     <div className="space-y-2 p-1">

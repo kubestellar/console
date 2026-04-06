@@ -45,8 +45,7 @@ function getDemoHelmValues(): Record<string, unknown> {
     persistence: { enabled: true, size: '50Gi', storageClass: 'gp3' },
     alertmanager: { enabled: true },
     nodeExporter: { enabled: true },
-    serverFiles: { 'alerting_rules.yml': {}, 'recording_rules.yml': {} },
-  }
+    serverFiles: { 'alerting_rules.yml': {}, 'recording_rules.yml': {} } }
 }
 
 // Helm releases cache with localStorage persistence
@@ -132,7 +131,7 @@ export function useHelmReleases(cluster?: string) {
     return () => { helmReleasesCache.listeners.delete(updateHandler) }
   }, [])
 
-  const notifyListeners = useCallback((isRefreshing: boolean, isLoading = false) => {
+  const notifyListeners = (isRefreshing: boolean, isLoading = false) => {
     const state: HelmReleasesCacheState = {
       releases: helmReleasesCache.data,
       isLoading,
@@ -142,7 +141,7 @@ export function useHelmReleases(cluster?: string) {
       lastRefresh: helmReleasesCache.timestamp > 0 ? helmReleasesCache.timestamp : null
     }
     helmReleasesCache.listeners.forEach(listener => listener(state))
-  }, [])
+  }
 
   const refetch = useCallback(async (silent = false) => {
     // Skip fetching entirely in forced demo mode (Netlify) — no backend
@@ -209,8 +208,7 @@ export function useHelmReleases(cluster?: string) {
               accumulated.push(...items)
               setReleases([...accumulated])
               setIsLoading(false)
-            },
-          })
+            } })
 
           sseSucceeded = true
           const newReleases = result
@@ -565,8 +563,7 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
       const response = await fetch(url, {
         method: 'GET',
         headers,
-        signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS) })
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
       }
@@ -679,8 +676,7 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
           const response = await fetch(url, {
             method: 'GET',
             headers,
-            signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
-          })
+            signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS) })
           if (!response.ok) {
             throw new Error(`API error: ${response.status}`)
           }

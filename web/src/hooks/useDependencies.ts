@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { isAgentUnavailable } from './useLocalAgent'
 import { clusterCacheRef } from './mcp/shared'
 import { isDemoMode } from '../lib/demoMode'
@@ -34,8 +34,7 @@ async function agentFetch(path: string, timeout = MCP_HOOK_TIMEOUT_MS): Promise<
   try {
     const res = await fetch(`${LOCAL_AGENT_HTTP_URL}${path}`, {
       signal: ctrl.signal,
-      headers: { Accept: 'application/json' },
-    })
+      headers: { Accept: 'application/json' } })
     if (!res.ok) throw new Error(`Agent ${res.status}`)
     return await res.json()
   } finally {
@@ -76,8 +75,7 @@ async function resolveViaAgent(
     namespace: result.namespace as string || namespace,
     cluster: result.cluster as string || cluster,
     dependencies: (result.dependencies as ResolvedDependency[]) || [],
-    warnings: (result.warnings as string[]) || [],
-  }
+    warnings: (result.warnings as string[]) || [] }
 }
 
 /**
@@ -90,7 +88,7 @@ export function useResolveDependencies() {
   const [error, setError] = useState<Error | null>(null)
   const [progressMessage, setProgressMessage] = useState<string>('')
 
-  const resolve = useCallback(async (
+  const resolve = async (
     cluster: string,
     namespace: string,
     name: string,
@@ -118,8 +116,7 @@ export function useResolveDependencies() {
           { kind: 'ResourceQuota', name: `${namespace}-quota`, namespace, optional: true, order: 8 },
           { kind: 'PriorityClass', name: 'high-priority', namespace, optional: true, order: 9 },
         ],
-        warnings: [],
-      }
+        warnings: [] }
       setData(demoResult)
       setIsLoading(false)
       return demoResult
@@ -176,14 +173,14 @@ export function useResolveDependencies() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }
 
-  const reset = useCallback(() => {
+  const reset = () => {
     setData(null)
     setError(null)
     setIsLoading(false)
     setProgressMessage('')
-  }, [])
+  }
 
   return { data, isLoading, error, progressMessage, resolve, reset }
 }

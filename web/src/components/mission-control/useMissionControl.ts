@@ -5,7 +5,7 @@
  * console-kb project index lookup, and localStorage persistence.
  */
 
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useMissions } from '../../hooks/useMissions'
 import { useHelmReleases } from '../../hooks/mcp/helm'
 import { useClusters } from '../../hooks/mcp/clusters'
@@ -16,8 +16,7 @@ import type {
   DeployPhase,
   WizardPhase,
   OverlayMode,
-  PhaseProgress,
-} from './types'
+  PhaseProgress } from './types'
 
 const STORAGE_KEY = 'kc_mission_control_state'
 // Wizard state expires after 7 days to avoid persisting abandoned mission drafts
@@ -81,8 +80,7 @@ function makeInitialState(persisted?: Partial<MissionControlState> | null): Miss
     planningMissionId: persisted?.planningMissionId,
     aiStreaming: false,
     launchProgress: persisted?.launchProgress ?? [],
-    groundControlDashboardId: persisted?.groundControlDashboardId,
-  }
+    groundControlDashboardId: persisted?.groundControlDashboardId }
 }
 
 // ---------------------------------------------------------------------------
@@ -172,14 +170,12 @@ export function useMissionControl() {
         // Ensure dependencies defaults to []
         const normalized = parsed.projects.map((p) => ({
           ...p,
-          dependencies: p.dependencies ?? [],
-        }))
+          dependencies: p.dependencies ?? [] }))
         lastParsedContentRef.current = latest.content
         setState((prev) => ({
           ...prev,
           projects: mergeProjects(prev.projects, normalized),
-          aiStreaming: false,
-        }))
+          aiStreaming: false }))
       }
     } else if (state.phase === 'assign') {
       const parsed = extractJSON<{
@@ -199,8 +195,7 @@ export function useMissionControl() {
             ...prev,
             assignments: [...aiAssignments, ...preserved],
             phases: parsed.phases ?? prev.phases,
-            aiStreaming: false,
-          }
+            aiStreaming: false }
         })
       }
     }
@@ -233,8 +228,7 @@ export function useMissionControl() {
       // Remove stale project references from assignments
       const reconciled = prev.assignments.map((a) => ({
         ...a,
-        projectNames: a.projectNames.filter((n) => projectNames.has(n)),
-      }))
+        projectNames: a.projectNames.filter((n) => projectNames.has(n)) }))
 
       // Add newly-added projects to the first cluster that has assignments
       // (so the user can see and re-assign them on Chart Course)
@@ -243,8 +237,7 @@ export function useMissionControl() {
       if (newProjects.length > 0 && reconciled.length > 0) {
         reconciled[0] = {
           ...reconciled[0],
-          projectNames: [...reconciled[0].projectNames, ...newProjects],
-        }
+          projectNames: [...reconciled[0].projectNames, ...newProjects] }
       }
 
       // Keep all cluster assignments (even empty) so clusters persist in Flight Plan
@@ -253,8 +246,7 @@ export function useMissionControl() {
       return {
         ...prev,
         assignments: reconciled,
-        phases: [],
-      }
+        phases: [] }
     })
   }, [state.projects])
 
@@ -262,17 +254,17 @@ export function useMissionControl() {
   // Phase 1: Define Solution
   // ---------------------------------------------------------------------------
 
-  const setDescription = useCallback((description: string) => {
+  const setDescription = (description: string) => {
     setState((prev) => ({ ...prev, description }))
-  }, [])
+  }
 
-  const setTitle = useCallback((title: string) => {
+  const setTitle = (title: string) => {
     setState((prev) => ({ ...prev, title }))
-  }, [])
+  }
 
-  const setTargetClusters = useCallback((targetClusters: string[]) => {
+  const setTargetClusters = (targetClusters: string[]) => {
     setState((prev) => ({ ...prev, targetClusters }))
-  }, [])
+  }
 
   // Use refs for the latest state to avoid stale closures in askAIForSuggestions.
   // Without this, the first click on "Suggest" can be a no-op because the callback
@@ -282,8 +274,7 @@ export function useMissionControl() {
   useEffect(() => { stateRef.current = state }, [state])
   useEffect(() => { helmReleasesRef.current = helmReleases }, [helmReleases])
 
-  const askAIForSuggestions = useCallback(
-    (description: string, existingProjects: PayloadProject[] = []) => {
+  const askAIForSuggestions = (description: string, existingProjects: PayloadProject[] = []) => {
       const currentState = stateRef.current
       const currentHelmReleases = helmReleasesRef.current
       let missionId = currentState.planningMissionId
@@ -350,49 +341,38 @@ Include real CNCF projects only. Consider dependencies between projects.`
           title: 'Mission Control Planning',
           description: 'AI-assisted fix planning',
           type: 'custom',
-          initialPrompt: prompt,
-        })
+          initialPrompt: prompt })
         setState((prev) => ({
           ...prev,
           planningMissionId: missionId,
-          aiStreaming: true,
-        }))
+          aiStreaming: true }))
       } else {
         sendMessage(missionId, prompt)
         setState((prev) => ({ ...prev, aiStreaming: true }))
       }
-    },
-    [startMission, sendMessage]
-  )
+    }
 
-  const addProject = useCallback((project: PayloadProject) => {
+  const addProject = (project: PayloadProject) => {
     setState((prev) => ({
       ...prev,
       projects: prev.projects.some((p) => p.name === project.name)
         ? prev.projects
-        : [...prev.projects, project],
-    }))
-  }, [])
+        : [...prev.projects, project] }))
+  }
 
-  const removeProject = useCallback((name: string) => {
+  const removeProject = (name: string) => {
     setState((prev) => ({
       ...prev,
-      projects: prev.projects.filter((p) => p.name !== name),
-    }))
-  }, [])
+      projects: prev.projects.filter((p) => p.name !== name) }))
+  }
 
-  const updateProjectPriority = useCallback(
-    (name: string, priority: PayloadProject['priority']) => {
+  const updateProjectPriority = (name: string, priority: PayloadProject['priority']) => {
       setState((prev) => ({
         ...prev,
-        projects: prev.projects.map((p) => (p.name === name ? { ...p, priority } : p)),
-      }))
-    },
-    []
-  )
+        projects: prev.projects.map((p) => (p.name === name ? { ...p, priority } : p)) }))
+    }
 
-  const replaceProject = useCallback(
-    (oldName: string, newProject: PayloadProject) => {
+  const replaceProject = (oldName: string, newProject: PayloadProject) => {
       setState((prev) => {
         // Preserve the original AI-suggested name for swap tracking
         const existing = prev.projects.find((p) => p.name === oldName)
@@ -407,20 +387,15 @@ Include real CNCF projects only. Consider dependencies between projects.`
           // Also update assignments to swap the project name
           assignments: prev.assignments.map((a) => ({
             ...a,
-            projectNames: a.projectNames.map((n) => (n === oldName ? newProject.name : n)),
-          })),
-        }
+            projectNames: a.projectNames.map((n) => (n === oldName ? newProject.name : n)) })) }
       })
-    },
-    []
-  )
+    }
 
   // ---------------------------------------------------------------------------
   // Phase 2: Assign Clusters
   // ---------------------------------------------------------------------------
 
-  const askAIForAssignments = useCallback(
-    (projects: PayloadProject[], clustersJson: string) => {
+  const askAIForAssignments = (projects: PayloadProject[], clustersJson: string) => {
       if (!state.planningMissionId) return
 
       const prompt = `The user selected these projects for deployment:
@@ -474,13 +449,10 @@ Order phases by dependency — prerequisites first. Each phase completes before 
 
       sendMessage(state.planningMissionId, prompt)
       setState((prev) => ({ ...prev, aiStreaming: true }))
-    },
-    [state.planningMissionId, sendMessage]
-  )
+    }
 
   /** Move a project from one cluster to another (for drag-and-drop in blueprint) */
-  const moveProjectToCluster = useCallback(
-    (projectName: string, fromCluster: string, toCluster: string) => {
+  const moveProjectToCluster = (projectName: string, fromCluster: string, toCluster: string) => {
       if (fromCluster === toCluster) return
       setState((prev) => ({
         ...prev,
@@ -494,14 +466,10 @@ Order phases by dependency — prerequisites first. Each phase completes before 
               : [...a.projectNames, projectName] }
           }
           return a
-        }),
-      }))
-    },
-    []
-  )
+        }) }))
+    }
 
-  const setAssignment = useCallback(
-    (clusterName: string, projectName: string, assigned: boolean) => {
+  const setAssignment = (clusterName: string, projectName: string, assigned: boolean) => {
       setState((prev) => {
         const assignments = [...prev.assignments]
         const idx = assignments.findIndex((a) => a.clusterName === clusterName)
@@ -511,8 +479,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
             ...existing,
             projectNames: assigned
               ? [...existing.projectNames, projectName]
-              : existing.projectNames.filter((n) => n !== projectName),
-          }
+              : existing.projectNames.filter((n) => n !== projectName) }
         } else if (assigned) {
           assignments.push({
             clusterName,
@@ -524,57 +491,53 @@ Order phases by dependency — prerequisites first. Each phase completes before 
               cpuHeadroomPercent: 50,
               memHeadroomPercent: 50,
               storageHeadroomPercent: 50,
-              overallScore: 50,
-            },
-          })
+              overallScore: 50 } })
         }
         return { ...prev, assignments }
       })
-    },
-    []
-  )
+    }
 
   // ---------------------------------------------------------------------------
   // Phase navigation
   // ---------------------------------------------------------------------------
 
-  const setPhase = useCallback((phase: WizardPhase) => {
+  const setPhase = (phase: WizardPhase) => {
     setState((prev) => ({ ...prev, phase }))
-  }, [])
+  }
 
-  const setOverlay = useCallback((overlay: OverlayMode) => {
+  const setOverlay = (overlay: OverlayMode) => {
     setState((prev) => ({ ...prev, overlay }))
-  }, [])
+  }
 
-  const setDeployMode = useCallback((deployMode: 'phased' | 'yolo') => {
+  const setDeployMode = (deployMode: 'phased' | 'yolo') => {
     setState((prev) => ({ ...prev, deployMode }))
-  }, [])
+  }
 
-  const setDryRun = useCallback((isDryRun: boolean) => {
+  const setDryRun = (isDryRun: boolean) => {
     setState((prev) => ({ ...prev, isDryRun }))
-  }, [])
+  }
 
   // ---------------------------------------------------------------------------
   // Launch
   // ---------------------------------------------------------------------------
 
-  const updateLaunchProgress = useCallback((progress: PhaseProgress[]) => {
+  const updateLaunchProgress = (progress: PhaseProgress[]) => {
     setState((prev) => ({ ...prev, launchProgress: progress }))
-  }, [])
+  }
 
-  const setGroundControlDashboardId = useCallback((id: string) => {
+  const setGroundControlDashboardId = (id: string) => {
     setState((prev) => ({ ...prev, groundControlDashboardId: id }))
-  }, [])
+  }
 
   // ---------------------------------------------------------------------------
   // Reset
   // ---------------------------------------------------------------------------
 
-  const reset = useCallback(() => {
+  const reset = () => {
     localStorage.removeItem(STORAGE_KEY)
     lastParsedContentRef.current = ''
     setState(makeInitialState())
-  }, [])
+  }
 
   // Detect installed projects via helm releases + cluster namespaces
   const { installedProjects, installedOnCluster } = useMemo(() => {
@@ -589,8 +552,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
       logging: ['fluent-bit', 'fluentd', 'loki', 'fluentbit'],
       security: ['falco', 'kyverno', 'opa', 'trivy'],
       ingress: ['nginx', 'traefik', 'haproxy', 'ingress-nginx'],
-      'gatekeeper-system': ['opa', 'open-policy-agent', 'opa-gatekeeper'],
-    }
+      'gatekeeper-system': ['opa', 'open-policy-agent', 'opa-gatekeeper'] }
 
     // Build per-cluster name sets from helm releases
     const clusterNames = new Map<string, Set<string>>()
@@ -636,8 +598,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
   // Auto-assign: deterministic local algorithm (no AI)
   // ---------------------------------------------------------------------------
 
-  const autoAssignProjects = useCallback(
-    (availableClusters: Array<{ name: string; context?: string; distribution?: string; cpuCores?: number; memoryGB?: number; storageGB?: number; cpuUsageCores?: number; cpuRequestsCores?: number; memoryUsageGB?: number; memoryRequestsGB?: number }>) => {
+  const autoAssignProjects = (availableClusters: Array<{ name: string; context?: string; distribution?: string; cpuCores?: number; memoryGB?: number; storageGB?: number; cpuUsageCores?: number; cpuRequestsCores?: number; memoryUsageGB?: number; memoryRequestsGB?: number }>) => {
       if (availableClusters.length === 0 || state.projects.length === 0) return
 
       // Category groups — projects in the same group have affinity
@@ -654,8 +615,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
         'Service Mesh': 'networking',
         Ingress: 'networking',
         Storage: 'storage',
-        'Backup & Recovery': 'storage',
-      }
+        'Backup & Recovery': 'storage' }
 
       // Score each cluster for resource headroom (0-100)
       const clusterScores = new Map<string, number>()
@@ -751,15 +711,11 @@ Order phases by dependency — prerequisites first. Each phase completes before 
               cpuHeadroomPercent: Math.round(clusterScores.get(c.name) ?? 50),
               memHeadroomPercent: Math.round(clusterScores.get(c.name) ?? 50),
               storageHeadroomPercent: 50,
-              overallScore: Math.round(clusterScores.get(c.name) ?? 50),
-            },
-          }
+              overallScore: Math.round(clusterScores.get(c.name) ?? 50) } }
         })
         return { ...prev, assignments }
       })
-    },
-    [state.projects, installedOnCluster]
-  )
+    }
 
   return {
     state,
@@ -790,8 +746,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
     // Planning mission
     planningMission,
     // Reset
-    reset,
-  }
+    reset }
 }
 
 // ---------------------------------------------------------------------------

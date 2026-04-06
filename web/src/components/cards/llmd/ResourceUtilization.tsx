@@ -8,8 +8,7 @@
 import { useState, useMemo } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid, Cell,
-} from 'recharts'
+  CartesianGrid, Cell } from 'recharts'
 import { BarChart3, Trophy } from 'lucide-react'
 import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { useReportCardDataState } from '../CardDataContext'
@@ -18,8 +17,7 @@ import { generateBenchmarkReports } from '../../../lib/llmd/benchmarkMockData'
 import {
   groupByExperiment,
   getFilterOptions,
-  CONFIG_TYPE_COLORS,
-} from '../../../lib/llmd/benchmarkDataUtils'
+  CONFIG_TYPE_COLORS } from '../../../lib/llmd/benchmarkDataUtils'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
 
@@ -65,28 +63,23 @@ function CustomTooltip({ active, payload }: {
 export function ResourceUtilization() {
   const { t } = useTranslation()
   const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, lastRefresh } = useCachedBenchmarkReports()
-  const effectiveReports = useMemo(
-    () => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []),
-    [isDemoFallback, liveReports]
-  )
+  const effectiveReports = isDemoFallback ? generateBenchmarkReports() : (liveReports ?? [])
   useReportCardDataState({
     isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing,
-    hasData: effectiveReports.length > 0,
-  })
+    hasData: effectiveReports.length > 0 })
 
-  const filterOpts = useMemo(() => getFilterOptions(effectiveReports), [effectiveReports])
+  const filterOpts = getFilterOptions(effectiveReports)
   const [mode, setMode] = useState<MetricMode>('throughput')
   const [category, setCategory] = useState<string>('all')
-  const groups = useMemo(() => groupByExperiment(effectiveReports, {
-    category: category !== 'all' ? category : undefined,
-  }), [effectiveReports, category])
+  const groups = groupByExperiment(effectiveReports, {
+    category: category !== 'all' ? category : undefined })
 
   // Get available QPS values and default to highest
-  const qpsValues = useMemo(() => {
+  const qpsValues = (() => {
     const vals = new Set<number>()
     groups.forEach(g => g.points.forEach(p => vals.add(p.qps)))
     return [...vals].sort((a, b) => a - b)
-  }, [groups])
+  })()
 
   const [qpsFilter, setQpsFilter] = useState<number>(0)
   const effectiveQps = qpsFilter || (qpsValues.length > 0 ? qpsValues[qpsValues.length - 1] : 0)
@@ -106,8 +99,7 @@ export function ResourceUtilization() {
         config: g.config,
         color: g.color,
         isBest: false,
-        fullVariant: `${g.category} / ${g.shortVariant}`,
-      })
+        fullVariant: `${g.category} / ${g.shortVariant}` })
     }
 
     // Mark best
@@ -125,8 +117,7 @@ export function ResourceUtilization() {
         modeInfo.higherBetter ? b.value - a.value : a.value - b.value
       ),
       bestVariant: best?.name ?? '',
-      bestValue: best?.value ?? 0,
-    }
+      bestValue: best?.value ?? 0 }
   }, [groups, effectiveQps, mode, modeInfo.higherBetter])
 
   return (

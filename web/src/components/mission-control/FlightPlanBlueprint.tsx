@@ -5,7 +5,7 @@
  * populates the right panel with details. Overlays toggle resource views.
  */
 
-import { useId, useMemo, useState, useCallback, useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react'
+import { useId, useMemo, useState, useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Zap,
@@ -23,8 +23,7 @@ import {
   Play,
   Download,
   Tags,
-  Loader2,
-} from 'lucide-react'
+  Loader2 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 
 import { BlueprintDefs } from './svg/BlueprintDefs'
@@ -40,8 +39,7 @@ import type {
   BlueprintLayout,
   LayoutRect,
   ProjectPosition,
-  DependencyEdge,
-} from './types'
+  DependencyEdge } from './types'
 import { useClusters } from '../../hooks/mcp/clusters'
 import { detectCloudProvider } from '../ui/CloudProviderIcon'
 import { fetchMissionContent } from '../missions/browser/missionCache'
@@ -123,8 +121,7 @@ function computeLayout(state: MissionControlState): BlueprintLayout {
       x: PADDING + col * (cellW + 12),
       y: PADDING + row * (cellH + 12),
       width: cellW,
-      height: cellH,
-    }
+      height: cellH }
     clusterRects.set(name, rect)
 
     const projects = clusterProjects.get(name) ?? []
@@ -146,8 +143,7 @@ function computeLayout(state: MissionControlState): BlueprintLayout {
         projectName: pName,
         cx: rect.x + innerPadX + projSpaceX * (pCol + 0.5),
         cy: rect.y + innerPadTop + projSpaceY * (pRow + 0.5),
-        clusterName: name,
-      })
+        clusterName: name })
     })
   })
 
@@ -177,8 +173,7 @@ function computeLayout(state: MissionControlState): BlueprintLayout {
     keycloak: { 'open-policy-agent': 'auth policy', 'cert-manager': 'HTTPS certs' },
     metallb: { contour: 'ingress LB' },
     'external-secrets': { 'external-secrets-operator': 'operator' },
-    crossplane: { helm: 'provider-helm' },
-  }
+    crossplane: { helm: 'provider-helm' } }
 
   // Reverse lookup: projectName → positions (supports multi-cluster)
   const projectPosByName = new Map<string, ProjectPosition[]>()
@@ -222,8 +217,7 @@ function computeLayout(state: MissionControlState): BlueprintLayout {
             crossCluster: pair.cross,
             label,
             fromPos: pair.from,
-            toPos: pair.to,
-          })
+            toPos: pair.to })
         }
       }
     }
@@ -246,8 +240,7 @@ function computeLayout(state: MissionControlState): BlueprintLayout {
             crossCluster: pair.cross,
             label,
             fromPos: pair.from,
-            toPos: pair.to,
-          })
+            toPos: pair.to })
         }
       }
     }
@@ -257,8 +250,7 @@ function computeLayout(state: MissionControlState): BlueprintLayout {
     clusterRects,
     projectPositions,
     dependencyEdges,
-    viewBox: { width: VB_W, height: VB_H },
-  }
+    viewBox: { width: VB_W, height: VB_H } }
 }
 
 // ---------------------------------------------------------------------------
@@ -491,15 +483,13 @@ const STATUS_COLORS: Record<string, string> = {
   pending: 'text-slate-400',
   running: 'text-amber-400',
   completed: 'text-green-400',
-  failed: 'text-red-400',
-}
+  failed: 'text-red-400' }
 
 const STATUS_LABELS: Record<string, string> = {
   pending: 'READY TO DEPLOY',
   running: 'DEPLOYING',
   completed: 'INSTALLED',
-  failed: 'FAILED',
-}
+  failed: 'FAILED' }
 
 // ---------------------------------------------------------------------------
 // Component
@@ -510,8 +500,7 @@ export function FlightPlanBlueprint({
   onOverlayChange,
   onDeployModeChange,
   onMoveProject,
-  installedProjects = new Set(),
-}: FlightPlanBlueprintProps) {
+  installedProjects = new Set() }: FlightPlanBlueprintProps) {
   const svgId = useId().replace(/:/g, '')
   const { clusters } = useClusters()
 
@@ -549,7 +538,7 @@ export function FlightPlanBlueprint({
     return { ...state, assignments }
   }, [state, clusters])
 
-  const layout = useMemo(() => computeLayout(healthyState), [healthyState])
+  const layout = computeLayout(healthyState)
   const [infoPanel, setInfoPanel] = useState<InfoPanelData | null>(null)
   const [stickyPanel, setStickyPanel] = useState<InfoPanelData | null>(
     () => ({ kind: 'deployMode' as const, mode: state.deployMode, phases: state.phases })
@@ -665,7 +654,7 @@ export function FlightPlanBlueprint({
   const isPanningRef = useRef(false)
   const panStartRef = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 })
 
-  const handlePanStart = useCallback((e: ReactMouseEvent) => {
+  const handlePanStart = (e: ReactMouseEvent) => {
     if (zoom <= 1) return
     const container = svgContainerRef.current
     if (!container) return
@@ -674,11 +663,10 @@ export function FlightPlanBlueprint({
       x: e.clientX,
       y: e.clientY,
       scrollLeft: container.scrollLeft,
-      scrollTop: container.scrollTop,
-    }
+      scrollTop: container.scrollTop }
     document.body.style.cursor = 'grabbing'
     document.body.style.userSelect = 'none'
-  }, [zoom])
+  }
 
   useEffect(() => {
     const handlePanMove = (e: MouseEvent) => {
@@ -708,14 +696,14 @@ export function FlightPlanBlueprint({
   const startXRef = useRef(0)
   const startWidthRef = useRef(INFO_PANEL_DEFAULT)
 
-  const handleResizeStart = useCallback((e: ReactMouseEvent) => {
+  const handleResizeStart = (e: ReactMouseEvent) => {
     e.preventDefault()
     isResizingRef.current = true
     startXRef.current = e.clientX
     startWidthRef.current = infoPanelWidth
     document.body.style.cursor = 'col-resize'
     document.body.style.userSelect = 'none'
-  }, [infoPanelWidth])
+  }
 
   useEffect(() => {
     const handleMouseMove = (e: globalThis.MouseEvent) => {
@@ -744,11 +732,9 @@ export function FlightPlanBlueprint({
     }
   }, [])
 
-  const projectMap = useMemo(() => {
-    return new Map(state.projects.map((p) => [p.name, p]))
-  }, [state.projects])
+  const projectMap = new Map(state.projects.map((p) => [p.name, p]))
 
-  const handleProjectHover = useCallback((info: ProjectHoverInfo | null) => {
+  const handleProjectHover = (info: ProjectHoverInfo | null) => {
     if (info) {
       const data: InfoPanelData = { kind: 'project', info }
       setInfoPanel(data)
@@ -756,9 +742,9 @@ export function FlightPlanBlueprint({
     } else {
       setInfoPanel(null)
     }
-  }, [])
+  }
 
-  const handleClusterHover = useCallback((info: ClusterHoverInfo | null) => {
+  const handleClusterHover = (info: ClusterHoverInfo | null) => {
     if (dragProject) return
     if (info) {
       const data: InfoPanelData = { kind: 'cluster', info }
@@ -767,10 +753,10 @@ export function FlightPlanBlueprint({
     } else {
       setInfoPanel(null)
     }
-  }, [dragProject])
+  }
 
   /** Open mission preview modal for a project (fetches from KB) */
-  const handleShowMissionPreview = useCallback((proj: PayloadProject) => {
+  const handleShowMissionPreview = (proj: PayloadProject) => {
     const kbPath = resolveKbPath(proj)
     const baseMission: MissionExport = {
       version: 'kc-mission-v1',
@@ -779,8 +765,7 @@ export function FlightPlanBlueprint({
       type: 'deploy',
       tags: [proj.category],
       steps: [],
-      metadata: { source: kbPath ?? 'mission-control' },
-    }
+      metadata: { source: kbPath ?? 'mission-control' } }
     if (!kbPath) {
       setPreviewMission(baseMission)
       return
@@ -790,7 +775,7 @@ export function FlightPlanBlueprint({
       .then(({ mission: m }) => setPreviewMission(m))
       .catch(() => setPreviewMission(baseMission))
       .finally(() => setPreviewLoading(false))
-  }, [])
+  }
 
   // The visible panel: active hover wins, otherwise fall back to sticky (last hovered)
   const visiblePanel = infoPanel ?? stickyPanel
@@ -1301,8 +1286,7 @@ function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edges?: Dep
         type: 'custom',
         tags: [],
         steps: [],
-        metadata: { source: candidates[idx] },
-      }
+        metadata: { source: candidates[idx] } }
       fetchMissionContent(indexMission)
         .then(({ mission: m }) => {
           if (m.steps && m.steps.length > 0) { setMission(m); setLoadingSteps(false) }
@@ -1514,27 +1498,21 @@ const DEPENDENCY_NOTES: Record<string, Record<string, string>> = {
   'cert-manager': {
     istio: 'cert-manager provides TLS certificates that Istio uses for mTLS between services',
     'external-secrets': 'cert-manager can issue certs stored/synced via External Secrets Operator',
-    keycloak: 'cert-manager provides TLS certificates for Keycloak HTTPS endpoints',
-  },
+    keycloak: 'cert-manager provides TLS certificates for Keycloak HTTPS endpoints' },
   helm: {
-    '*': 'Helm must be available on the cluster before any Helm-based installations',
-  },
+    '*': 'Helm must be available on the cluster before any Helm-based installations' },
   prometheus: {
     falco: 'Falco exports metrics to Prometheus for runtime security alerting',
     cilium: 'Cilium Hubble metrics are scraped by Prometheus for network observability',
     'trivy-operator': 'Trivy vulnerability scan results are exported as Prometheus metrics',
     kyverno: 'Kyverno policy violation metrics feed into Prometheus dashboards',
-    keycloak: 'Keycloak exposes JMX/metrics endpoints for Prometheus scraping',
-  },
+    keycloak: 'Keycloak exposes JMX/metrics endpoints for Prometheus scraping' },
   falco: {
     kyverno: 'Falco detects runtime threats; Kyverno enforces admission policies — complementary defense layers',
-    'open-policy-agent': 'Falco handles runtime detection while OPA handles admission-time policy enforcement',
-  },
+    'open-policy-agent': 'Falco handles runtime detection while OPA handles admission-time policy enforcement' },
   cilium: {
     'open-policy-agent': 'Cilium network policies can complement OPA admission policies for defense in depth',
-    kyverno: 'Cilium handles L3/L4/L7 network policy; Kyverno handles Kubernetes admission policy',
-  },
-}
+    kyverno: 'Cilium handles L3/L4/L7 network policy; Kyverno handles Kubernetes admission policy' } }
 
 function getDependencyNotes(projects: PayloadProject[]): string[] {
   const notes: string[] = []
@@ -1622,9 +1600,9 @@ function DeployModeInfoPanel({ mode, phases, projects, onShowProject, installedP
   onShowProject?: (project: PayloadProject) => void
   installedProjects?: Set<string>
 }) {
-  const depNotes = useMemo(() => getDependencyNotes(projects), [projects])
+  const depNotes = getDependencyNotes(projects)
   // Use AI-provided phases, or auto-generate from dependencies
-  const effectivePhases = useMemo(() => phases.length > 0 ? phases : generateDefaultPhases(projects), [phases, projects])
+  const effectivePhases = phases.length > 0 ? phases : generateDefaultPhases(projects)
   const totalEstSec = effectivePhases.reduce((sum, p) => sum + (p.estimatedSeconds ?? 180), 0)
   const aiMinLow = Math.ceil(totalEstSec / 60)
   const aiMinHigh = Math.ceil(totalEstSec * 1.5 / 60)

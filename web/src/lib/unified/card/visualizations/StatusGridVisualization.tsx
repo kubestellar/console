@@ -13,8 +13,7 @@ import {
   ShieldAlert, ShieldOff, User, Info, Percent, ClipboardList, Sparkles, Activity,
   List, DollarSign, FlaskConical, FolderTree, Bell, RefreshCw, ArrowUpCircle,
   Newspaper, FileCode, Lock, Unlock, UserCheck, FileText, Calendar, CreditCard,
-  Heart, Shield, ShieldCheck, GitBranch, Cloud, Link, Unlink,
-} from 'lucide-react'
+  Heart, Shield, ShieldCheck, GitBranch, Cloud, Link, Unlink } from 'lucide-react'
 import type { CardContentStatusGrid, CardStatusItem } from '../../types'
 import { resolveFieldPath, formatValue } from '../../stats/valueResolvers'
 
@@ -26,8 +25,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   ShieldAlert, ShieldOff, User, Info, Percent, ClipboardList, Sparkles, Activity,
   List, DollarSign, FlaskConical, FolderTree, Bell, RefreshCw, ArrowUpCircle,
   Newspaper, FileCode, Lock, Unlock, UserCheck, FileText, Calendar, CreditCard,
-  Heart, Shield, ShieldCheck, GitBranch, Cloud, Link, Unlink,
-}
+  Heart, Shield, ShieldCheck, GitBranch, Cloud, Link, Unlink }
 
 // Color mapping for icons and backgrounds
 const ICON_COLORS: Record<string, string> = {
@@ -42,8 +40,7 @@ const ICON_COLORS: Record<string, string> = {
   indigo: 'text-blue-400',
   pink: 'text-purple-400',
   teal: 'text-cyan-400',
-  emerald: 'text-green-400',
-}
+  emerald: 'text-green-400' }
 
 const BG_COLORS: Record<string, string> = {
   purple: 'bg-purple-500/10',
@@ -57,8 +54,7 @@ const BG_COLORS: Record<string, string> = {
   indigo: 'bg-blue-500/10',
   pink: 'bg-purple-500/10',
   teal: 'bg-cyan-500/10',
-  emerald: 'bg-green-500/10',
-}
+  emerald: 'bg-green-500/10' }
 
 export interface StatusGridVisualizationProps {
   /** Content configuration */
@@ -72,17 +68,13 @@ export interface StatusGridVisualizationProps {
  */
 export function StatusGridVisualization({
   content,
-  data,
-}: StatusGridVisualizationProps) {
+  data }: StatusGridVisualizationProps) {
   const { items, columns = 2, showCounts = true } = content
 
   // Resolve values for all items
-  const resolvedItems = useMemo(() => {
-    return items.map((item) => ({
+  const resolvedItems = items.map((item) => ({
       ...item,
-      resolvedValue: resolveItemValue(item, data),
-    }))
-  }, [items, data])
+      resolvedValue: resolveItemValue(item, data) }))
 
   // Determine grid class based on column count
   const gridClass = useMemo(() => {
@@ -161,8 +153,7 @@ function resolveItemValue(item: CardStatusItem, data: unknown): string | number 
 function StatusGridItem({
   item,
   value,
-  showValue,
-}: {
+  showValue }: {
   item: CardStatusItem & { resolvedValue: string | number }
   value: string | number
   showValue: boolean

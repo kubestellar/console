@@ -105,8 +105,7 @@ export function NetworkUtils() {
         online: navigator.onLine,
         effectiveType: connection?.effectiveType,
         downlink: connection?.downlink,
-        rtt: connection?.rtt,
-      })
+        rtt: connection?.rtt })
       setIsInitialized(true)
     }
 
@@ -147,8 +146,7 @@ export function NetworkUtils() {
         `/api/ping?url=${encodeURIComponent(targetUrl)}`,
         {
           method: 'GET',
-          signal: abortControllerRef.current.signal,
-        }
+          signal: abortControllerRef.current.signal }
       )
 
       clearTimeout(timeoutId)
@@ -160,8 +158,7 @@ export function NetworkUtils() {
           latency: null,
           status: 'error',
           timestamp: new Date(),
-          error: errorBody.error,
-        }
+          error: errorBody.error }
       }
 
       const data = await response.json() as {
@@ -177,16 +174,14 @@ export function NetworkUtils() {
         status: data.status,
         timestamp: new Date(),
         statusCode: data.statusCode,
-        error: data.error || undefined,
-      }
+        error: data.error || undefined }
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         return {
           host,
           latency: null,
           status: 'timeout',
-          timestamp: new Date(),
-        }
+          timestamp: new Date() }
       }
 
       return {
@@ -194,8 +189,7 @@ export function NetworkUtils() {
         latency: null,
         status: 'error',
         timestamp: new Date(),
-        error: error instanceof Error ? error.message : 'unknown error',
-      }
+        error: error instanceof Error ? error.message : 'unknown error' }
     }
   }, [])
 
@@ -252,14 +246,13 @@ export function NetworkUtils() {
   }, [continuousPing, pingAllHosts, pingInterval])
 
   // Add host
-  const addHost = useCallback((type: 'ping' | 'port') => {
+  const addHost = (type: 'ping' | 'port') => {
     if (!hostInput.trim()) return
 
     const newHost: SavedHost = {
       host: hostInput.trim(),
       type,
-      port: type === 'port' ? parseInt(portInput) || 443 : undefined,
-    }
+      port: type === 'port' ? parseInt(portInput) || 443 : undefined }
 
     const exists = savedHosts.some(h =>
       h.host === newHost.host && h.type === newHost.type && h.port === newHost.port
@@ -272,10 +265,10 @@ export function NetworkUtils() {
     }
 
     setHostInput('')
-  }, [hostInput, portInput, savedHosts])
+  }
 
   // Remove host
-  const removeHost = useCallback((host: string, type: 'ping' | 'port', port?: number) => {
+  const removeHost = (host: string, type: 'ping' | 'port', port?: number) => {
     const updated = savedHosts.filter(h =>
       !(h.host === host && h.type === type && h.port === port)
     )
@@ -288,7 +281,7 @@ export function NetworkUtils() {
       newMap.delete(host)
       return newMap
     })
-  }, [savedHosts])
+  }
 
   // Calculate average latency
   const getAverageLatency = (host: string): number | null => {
@@ -495,8 +488,7 @@ export function NetworkUtils() {
                               r.status === 'timeout' ? 'bg-yellow-500' : 'bg-red-500'
                             }`}
                             style={{
-                              height: r.latency ? `${Math.min(100, (r.latency / 500) * 100)}%` : '10%',
-                            }}
+                              height: r.latency ? `${Math.min(100, (r.latency / 500) * 100)}%` : '10%' }}
                             title={`${r.latency || 'N/A'}ms`}
                           />
                         ))}

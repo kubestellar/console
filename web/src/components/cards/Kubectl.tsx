@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Send, Copy, Download, FileCode, History, Sparkles, Trash2, Search, ChevronDown, FileText, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
 import { STORAGE_KEY_KUBECTL_HISTORY } from '../../lib/constants'
 import { TRANSITION_DELAY_MS } from '../../lib/constants/network'
@@ -10,7 +10,6 @@ import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { copyToClipboard } from '../../lib/clipboard'
-import { safeRevokeObjectURL } from '../../lib/download'
 
 interface CommandHistoryItem {
   id: string
@@ -39,8 +38,7 @@ export function Kubectl() {
   useCardLoadingState({
     isLoading,
     hasAnyData: clusters.length > 0,
-    isDemoData: isDemoMode,
-  })
+    isDemoData: isDemoMode })
   const [command, setCommand] = useState('')
   const [aiPrompt, setAiPrompt] = useState('')
   const [output, setOutput] = useState<string[]>([])
@@ -109,7 +107,7 @@ export function Kubectl() {
   // Validate YAML
   // Note: This is basic validation. For production use, consider using a library like js-yaml
   // for comprehensive YAML parsing and validation
-  const validateYAML = useCallback((content: string) => {
+  const validateYAML = (content: string) => {
     if (!content.trim()) {
       setYamlError(null)
       return true
@@ -142,10 +140,10 @@ export function Kubectl() {
       setYamlError(err instanceof Error ? err.message : 'Invalid YAML')
       return false
     }
-  }, [])
+  }
 
   // Execute kubectl command
-  const executeCommand = useCallback(async (cmd: string, dryRun = false) => {
+  const executeCommand = async (cmd: string, dryRun = false) => {
     if (!cmd.trim() || !selectedContext) return
 
     setIsExecuting(true)
@@ -212,10 +210,10 @@ export function Kubectl() {
     } finally {
       setIsExecuting(false)
     }
-  }, [selectedContext, execute, outputFormat])
+  }
 
   // AI-assisted command generation
-  const generateCommand = useCallback(async () => {
+  const generateCommand = async () => {
     if (!aiPrompt.trim()) return
 
     setIsExecuting(true)
@@ -272,10 +270,10 @@ export function Kubectl() {
     } finally {
       setIsExecuting(false)
     }
-  }, [aiPrompt])
+  }
 
   // Generate YAML from AI prompt
-  const generateYAML = useCallback(async () => {
+  const generateYAML = async () => {
     if (!aiPrompt.trim()) return
 
     setIsExecuting(true)
@@ -360,10 +358,10 @@ data:
     } finally {
       setIsExecuting(false)
     }
-  }, [aiPrompt, validateYAML])
+  }
 
   // Apply YAML manifest
-  const applyYAML = useCallback(async () => {
+  const applyYAML = async () => {
     if (!yamlContent.trim() || !selectedContext) return
 
     if (!validateYAML(yamlContent)) {
@@ -415,16 +413,16 @@ data:
     } finally {
       setIsExecuting(false)
     }
-  }, [yamlContent, selectedContext, validateYAML, isDryRun, execute])
+  }
 
   // Copy output to clipboard
-  const copyOutput = useCallback(() => {
+  const copyOutput = () => {
     copyToClipboard(output.join('\n'))
     setOutput(prev => [...prev, 'Copied to clipboard!', ''])
-  }, [output])
+  }
 
   // Export YAML
-  const exportYAML = useCallback(() => {
+  const exportYAML = () => {
     if (!yamlContent.trim()) return
 
     const blob = new Blob([yamlContent], { type: 'text/yaml' })
@@ -433,11 +431,11 @@ data:
     a.href = url
     a.download = 'manifest.yaml'
     a.click()
-    safeRevokeObjectURL(url)
-  }, [yamlContent])
+    URL.revokeObjectURL(url)
+  }
 
   // Handle keyboard shortcuts
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       executeCommand(command, isDryRun)
@@ -459,12 +457,12 @@ data:
         setCommand('')
       }
     }
-  }, [command, commandHistory, historyIndex, executeCommand, isDryRun])
+  }
 
   // Clear output
-  const clearOutput = useCallback(() => {
+  const clearOutput = () => {
     setOutput([])
-  }, [])
+  }
 
   // Filtered history based on search
   const filteredHistory = commandHistory.filter(item =>

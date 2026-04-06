@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { api } from '../lib/api'
 
 /** How often to refresh utilization data (5 minutes) */
@@ -26,7 +26,7 @@ export function useGPUUtilizations(reservationIds: string[]) {
   const [isLoading, setIsLoading] = useState(false)
   const idsRef = useRef<string>('')
 
-  const fetchData = useCallback(async (ids: string[]) => {
+  const fetchData = async (ids: string[]) => {
     if (ids.length === 0) {
       setData({})
       return
@@ -45,7 +45,7 @@ export function useGPUUtilizations(reservationIds: string[]) {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }
 
   useEffect(() => {
     const idsKey = [...(reservationIds || [])].sort().join(',')

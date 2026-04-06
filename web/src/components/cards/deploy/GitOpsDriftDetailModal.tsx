@@ -5,7 +5,7 @@
  * Shows drift metadata, severity, and "Sync with AI Mission" action.
  */
 
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect } from 'react'
 import { GitBranch, Rocket } from 'lucide-react'
 import { BaseModal } from '../../../lib/modals/BaseModal'
 import { StatusBadge } from '../../ui/StatusBadge'
@@ -25,14 +25,12 @@ const MODAL_TYPE = 'drift_detail'
 const SEVERITY_COLORS: Record<GitOpsDrift['severity'], 'red' | 'orange' | 'yellow'> = {
   high: 'red',
   medium: 'orange',
-  low: 'yellow',
-}
+  low: 'yellow' }
 
 const DRIFT_TYPE_LABELS: Record<GitOpsDrift['driftType'], string> = {
   modified: 'Modified',
   deleted: 'Missing in Cluster',
-  added: 'Not in Git',
-}
+  added: 'Not in Git' }
 
 export function GitOpsDriftDetailModal({ isOpen, onClose, drift }: GitOpsDriftDetailModalProps) {
   const openTimeRef = useRef<number>(0)
@@ -45,15 +43,15 @@ export function GitOpsDriftDetailModal({ isOpen, onClose, drift }: GitOpsDriftDe
     }
   }, [isOpen, drift])
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     if (openTimeRef.current > 0) {
       emitModalClosed(MODAL_TYPE, Date.now() - openTimeRef.current)
       openTimeRef.current = 0
     }
     onClose()
-  }, [onClose])
+  }
 
-  const handleSyncWithAI = useCallback(() => {
+  const handleSyncWithAI = () => {
     if (!drift) return
     emitActionClicked('sync', 'gitops_drift', 'deploy')
     startMission({
@@ -81,12 +79,10 @@ Please proceed step by step.`,
         namespace: drift.namespace,
         cluster: drift.cluster,
         driftType: drift.driftType,
-        severity: drift.severity,
-      },
-    })
+        severity: drift.severity } })
     openSidebar()
     handleClose()
-  }, [drift, startMission, openSidebar, handleClose])
+  }
 
   if (!drift) return null
 

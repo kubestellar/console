@@ -1,8 +1,7 @@
-import { useState, useMemo, useCallback, useImperativeHandle, type Ref } from 'react'
+import { useState, useMemo, useImperativeHandle, type Ref } from 'react'
 import {
   GitBranch, AlertTriangle, CheckCircle, XCircle,
-  Clock, Loader2, ExternalLink, Key, Settings, Plus, X, Check,
-} from 'lucide-react'
+  Clock, Loader2, ExternalLink, Key, Settings, Plus, X, Check } from 'lucide-react'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
 import { Button } from '../../ui/Button'
 import { Skeleton } from '../../ui/Skeleton'
@@ -53,15 +52,13 @@ const CONCLUSION_BADGE: Record<string, string> = {
   cancelled: 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground',
   skipped: 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground',
   timed_out: 'bg-orange-500/20 text-orange-400',
-  action_required: 'bg-yellow-500/20 text-yellow-400',
-}
+  action_required: 'bg-yellow-500/20 text-yellow-400' }
 
 const STATUS_BADGE: Record<string, string> = {
   completed: 'bg-green-500/20 text-green-400',
   in_progress: 'bg-blue-500/20 text-blue-400',
   queued: 'bg-yellow-500/20 text-yellow-400',
-  waiting: 'bg-purple-500/20 text-purple-400',
-}
+  waiting: 'bg-purple-500/20 text-purple-400' }
 
 const CONCLUSION_ORDER: Record<string, number> = {
   failure: 0,
@@ -69,8 +66,7 @@ const CONCLUSION_ORDER: Record<string, number> = {
   action_required: 2,
   cancelled: 3,
   skipped: 4,
-  success: 5,
-}
+  success: 5 }
 
 const SORT_OPTIONS = [
   { value: 'status', label: 'Status' },
@@ -102,7 +98,7 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
   const [newRepoInput, setNewRepoInput] = useState('')
 
   // CI data via useCache (persists across navigation)
-  const reposKey = useMemo(() => [...repos].sort().join(','), [repos])
+  const reposKey = [...repos].sort().join(',')
 
   const { data: ciData, isLoading, isRefreshing, isFailed, refetch } = useCache<{ workflows: WorkflowRun[], isDemo: boolean }>({
     key: `github-ci:${reposKey}`,
@@ -116,8 +112,7 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
         try {
           const response = await fetch(`/api/github/repos/${repo}/actions/runs?per_page=10`, {
             headers: { Accept: 'application/vnd.github.v3+json' },
-            signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS),
-          })
+            signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
           if (response.status === 401 || response.status === 403) {
             // Token invalid or missing — fall back to demo data
             return { workflows: DEMO_WORKFLOWS, isDemo: true }
@@ -138,8 +133,7 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
             runNumber: run.run_number as number,
             createdAt: run.created_at as string,
             updatedAt: run.updated_at as string,
-            url: (run.html_url || '#') as string,
-          }))
+            url: (run.html_url || '#') as string }))
           allRuns.push(...runs)
         } catch {
           // Network error for this repo — skip it
@@ -151,8 +145,7 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
         return { workflows: allRuns, isDemo: false }
       }
       return { workflows: DEMO_WORKFLOWS, isDemo: true }
-    },
-  })
+    } })
 
   const workflows = ciData.workflows
   // Don't report demo during cache hydration — initialData has isDemo: true as a
@@ -169,7 +162,7 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
   }), [refetch])
 
   // Repo management handlers
-  const handleAddRepo = useCallback(() => {
+  const handleAddRepo = () => {
     const repo = newRepoInput.trim()
     if (!repo) return
     if (!repo.match(/^[\w-]+\/[\w.-]+$/)) return
@@ -181,17 +174,17 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
     setRepos(updatedRepos)
     saveRepos(updatedRepos)
     setNewRepoInput('')
-  }, [newRepoInput, repos])
+  }
 
-  const handleRemoveRepo = useCallback((repo: string) => {
+  const handleRemoveRepo = (repo: string) => {
     const updatedRepos = repos.filter(r => r !== repo)
     if (updatedRepos.length === 0) return
     setRepos(updatedRepos)
     saveRepos(updatedRepos)
-  }, [repos])
+  }
 
   // Stats
-  const stats = useMemo(() => {
+  const stats = (() => {
     const total = workflows.length
     const failed = workflows.filter(w => w.conclusion === 'failure' || w.conclusion === 'timed_out').length
     const inProgress = workflows.filter(w => w.status === 'in_progress').length
@@ -199,7 +192,7 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
     const passed = workflows.filter(w => w.conclusion === 'success').length
     const successRate = total > 0 ? Math.round((passed / total) * 100) : 0
     return { total, failed, inProgress, queued, passed, successRate }
-  }, [workflows])
+  })()
 
   const effectiveStatus = (w: WorkflowRun): string => {
     if (w.status !== 'completed') return w.status
@@ -218,11 +211,9 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
     filters,
     sorting,
     containerRef,
-    containerStyle,
-  } = useCardData(workflows, {
+    containerStyle } = useCardData(workflows, {
     filter: {
-      searchFields: ['name', 'repo', 'branch', 'event'] as (keyof WorkflowRun)[],
-    },
+      searchFields: ['name', 'repo', 'branch', 'event'] as (keyof WorkflowRun)[] },
     sort: {
       defaultField: 'status' as SortField,
       defaultDirection: 'asc' as SortDirection,
@@ -234,11 +225,8 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
           return aOrder - bOrder
         },
         repo: commonComparators.string('repo'),
-        branch: commonComparators.string('branch'),
-      },
-    },
-    defaultLimit: 8,
-  })
+        branch: commonComparators.string('branch') } },
+    defaultLimit: 8 })
 
   // Synthesize issues
   const issues = useMemo<MonitorIssue[]>(() => {
@@ -256,20 +244,18 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
           category: 'workload' as const,
           lastChecked: w.updatedAt,
           optional: false,
-          order: 0,
-        },
+          order: 0 },
         severity: w.conclusion === 'failure' ? 'critical' as const : 'warning' as const,
         title: `${w.name} ${w.conclusion} on ${w.branch}`,
         description: `Workflow run #${w.runNumber} in ${w.repo} ${w.conclusion}. Event: ${w.event}. Updated ${formatTimeAgo(w.updatedAt)}.`,
-        detectedAt: w.updatedAt,
-      }))
+        detectedAt: w.updatedAt }))
   }, [workflows])
 
-  const overallHealth = useMemo(() => {
+  const overallHealth = (() => {
     if (stats.failed > 0) return 'degraded'
     if (stats.total === 0) return 'unknown'
     return 'healthy'
-  }, [stats])
+  })()
 
   if (isLoading && workflows.length === 0) {
     return (

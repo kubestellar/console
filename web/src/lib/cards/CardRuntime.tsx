@@ -36,7 +36,7 @@
  * ```
  */
 
-import { ReactNode, useMemo } from 'react'
+import { ReactNode } from 'react'
 import { getIcon } from '../icons'
 import { CardDefinition, CardColumnDefinition } from './types'
 import { useCardData, SortDirection } from './cardHooks'
@@ -49,8 +49,7 @@ import {
   CardClusterIndicator,
   CardHeader,
   CardListItem,
-  CardStatusBadge,
-} from './CardComponents'
+  CardStatusBadge } from './CardComponents'
 import { CardControls } from '../../components/ui/CardControls'
 import { Pagination } from '../../components/ui/Pagination'
 import { RefreshButton } from '../../components/ui/RefreshIndicator'
@@ -150,8 +149,7 @@ const NOOP_HOOK_RESULT: DataHookResult<unknown> = {
   isLoading: false,
   isRefreshing: false,
   error: undefined,
-  refetch: () => {},
-}
+  refetch: () => {} }
 const noopDataHook = () => NOOP_HOOK_RESULT
 
 export function CardRuntime({ definition, config: _config, title }: CardRuntimeProps) {
@@ -164,8 +162,7 @@ export function CardRuntime({ definition, config: _config, title }: CardRuntimeP
     columns,
     drillDown,
     emptyState,
-    loadingState,
-  } = definition
+    loadingState } = definition
 
   // Get the data hook (fall back to noop so hooks are always called unconditionally)
   const useDataHook = dataHookRegistry.get(dataSource.hook) || noopDataHook
@@ -180,11 +177,10 @@ export function CardRuntime({ definition, config: _config, title }: CardRuntimeP
     refetch,
     isFailed,
     consecutiveFailures,
-    lastRefresh,
-  } = useDataHook()
+    lastRefresh } = useDataHook()
 
   // Build filter config from definition
-  const filterConfig = useMemo(() => {
+  const filterConfig = (() => {
     const searchFields: string[] = []
     let clusterField: string | undefined
     let statusField: string | undefined
@@ -200,12 +196,11 @@ export function CardRuntime({ definition, config: _config, title }: CardRuntimeP
     return {
       searchFields: searchFields.length > 0 ? searchFields : ['name', 'namespace'],
       clusterField,
-      statusField,
-    }
-  }, [filterDefs])
+      statusField }
+  })()
 
   // Build sort config from columns
-  const sortConfig = useMemo(() => {
+  const sortConfig = (() => {
     const sortableColumns = columns?.filter(c => c.sortable !== false) || []
     const comparators: Record<string, (a: unknown, b: unknown) => number> = {}
 
@@ -223,16 +218,14 @@ export function CardRuntime({ definition, config: _config, title }: CardRuntimeP
     return {
       defaultField: sortableColumns[0]?.field || 'name',
       defaultDirection: 'asc' as SortDirection,
-      comparators,
-    }
-  }, [columns])
+      comparators }
+  })()
 
   // Use the card data hook
   const cardData = useCardData(rawData as Record<string, unknown>[], {
     filter: filterConfig as Parameters<typeof useCardData>[1]['filter'],
     sort: sortConfig,
-    defaultLimit: 5,
-  })
+    defaultLimit: 5 })
 
   const {
     items,
@@ -244,16 +237,12 @@ export function CardRuntime({ definition, config: _config, title }: CardRuntimeP
     needsPagination,
     setItemsPerPage,
     filters,
-    sorting,
-  } = cardData
+    sorting } = cardData
 
   // Build sort options from columns (must be before any early returns to satisfy Rules of Hooks)
-  const sortOptions = useMemo(() => {
-    return (columns?.filter(c => c.sortable !== false) || []).map(c => ({
+  const sortOptions = (columns?.filter(c => c.sortable !== false) || []).map(c => ({
       value: c.field,
-      label: c.header,
-    }))
-  }, [columns])
+      label: c.header }))
 
   // If the data hook was not registered, render an error after all hooks have been called
   if (hookMissing) {

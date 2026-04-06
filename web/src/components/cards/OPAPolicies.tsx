@@ -51,8 +51,7 @@ function generateDemoStatuses(): Record<string, GatekeeperStatus> {
         { name: 'allowed-repos', kind: 'K8sAllowedRepos', violations: 0, mode: 'enforce' },
         { name: 'require-limits', kind: 'K8sRequireResourceLimits', violations: 2, mode: 'warn' },
       ],
-      violations: [],
-    }
+      violations: [] }
   }
   return result
 }
@@ -181,8 +180,7 @@ function createSortComparators(statuses: Record<string, GatekeeperStatus>) {
     violations: (a: OPAClusterItem, b: OPAClusterItem) =>
       (statuses[a.name]?.violationCount || 0) - (statuses[b.name]?.violationCount || 0),
     policies: (a: OPAClusterItem, b: OPAClusterItem) =>
-      (statuses[a.name]?.policyCount || 0) - (statuses[b.name]?.policyCount || 0),
-  }
+      (statuses[a.name]?.policyCount || 0) - (statuses[b.name]?.policyCount || 0) }
 }
 
 function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
@@ -254,20 +252,14 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
 
   // Enrich cluster data with 'cluster' field for useCardData compatibility
   // Include reachable status so we can skip OPA checks for offline clusters
-  const clusterItems = useMemo<OPAClusterItem[]>(() => {
-    return effectiveClusters.map(c => ({
+  const clusterItems = effectiveClusters.map(c => ({
       name: c.name,
       cluster: c.name, // useCardData needs this for global + local cluster filtering
       healthy: c.healthy,
-      reachable: (c as { reachable?: boolean }).reachable,
-    }))
-  }, [effectiveClusters])
+      reachable: (c as { reachable?: boolean }).reachable }))
 
   // Build sort comparators using current statuses
-  const sortComparators = useMemo(
-    () => createSortComparators(statuses),
-    [statuses]
-  )
+  const sortComparators = createSortComparators(statuses)
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {
@@ -288,24 +280,19 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
       availableClusters,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-    },
+      clusterFilterRef },
     sorting,
     containerRef,
-    containerStyle,
-  } = useCardData<OPAClusterItem, SortByOption>(clusterItems, {
+    containerStyle } = useCardData<OPAClusterItem, SortByOption>(clusterItems, {
     filter: {
       searchFields: ['name'] as (keyof OPAClusterItem)[],
       clusterField: 'cluster' as keyof OPAClusterItem,
-      storageKey: 'opa-policies',
-    },
+      storageKey: 'opa-policies' },
     sort: {
       defaultField: 'name',
       defaultDirection: 'asc',
-      comparators: sortComparators,
-    },
-    defaultLimit: 5,
-  })
+      comparators: sortComparators },
+    defaultLimit: 5 })
 
   // Use ref to avoid recreating checkAllClusters on every status change
   const statusesRef = useRef(statuses)
@@ -461,9 +448,9 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
   reachableClustersRef.current = reachableClusters
 
   // Wrapper for manual refresh - uses current reachable clusters, force check to override guards
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = () => {
     checkClusters(reachableClustersRef.current, true)
-  }, [checkClusters])
+  }
 
   // Track whether OPA checks have returned at least Phase 1 data (installed/not-installed).
   // With two-phase loading, installed clusters have loading=true during Phase 2 (details pending),
@@ -481,8 +468,7 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
     isLoading: shouldUseDemoData ? false : (isLoading || (isOPAChecking && !hasOPAData)),
     isRefreshing,
     hasAnyData: shouldUseDemoData ? true : (clusters.length > 0 && hasOPAData),
-    isDemoData: isDemoMode,
-  })
+    isDemoData: isDemoMode })
 
   // In demo mode, update statuses with real cluster names when they become available.
   // Initial demo statuses are already provided by useState initializer (via checkIsDemoMode).
@@ -505,8 +491,7 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
           { name: 'allowed-repos', kind: 'K8sAllowedRepos', violations: 0, mode: 'enforce' },
           { name: 'require-limits', kind: 'K8sRequireResourceLimits', violations: 2, mode: 'warn' },
         ],
-        violations: [],
-      }
+        violations: [] }
     }
     setStatuses(demoStatuses)
   }, [shouldUseDemoData, effectiveClusters, statuses])
@@ -583,8 +568,7 @@ Please help me:
 4. Set up a basic policy (like requiring labels)
 
 Please proceed step by step.`,
-      context: { clusterName },
-    })
+      context: { clusterName } })
   }
 
   const installedCount = Object.values(statuses).filter(s => s.installed).length
@@ -628,8 +612,7 @@ Please help me:
 4. Test that the policy is working
 
 Let's start by discussing what kind of policy I need.`,
-      context: { basedOnPolicy },
-    })
+      context: { basedOnPolicy } })
   }
 
   // Show progress ring until OPA checks have populated (skip in demo mode — demo statuses are provided)
@@ -671,8 +654,7 @@ Let's start by discussing what kind of policy I need.`,
             onClear: clearClusterFilter,
             isOpen: showClusterFilter,
             setIsOpen: setShowClusterFilter,
-            containerRef: clusterFilterRef,
-          }}
+            containerRef: clusterFilterRef }}
           cardControls={{
             limit: itemsPerPage,
             onLimitChange: setItemsPerPage,
@@ -680,8 +662,7 @@ Let's start by discussing what kind of policy I need.`,
             sortOptions: SORT_OPTIONS,
             onSortChange: (v) => sorting.setSortBy(v as SortByOption),
             sortDirection: sorting.sortDirection,
-            onSortDirectionChange: sorting.setSortDirection,
-          }}
+            onSortDirectionChange: sorting.setSortDirection }}
           extra={
             <>
               <button

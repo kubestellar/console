@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { triggerAllRefetches } from '../lib/modeTransition'
 
 // Minimum time to show the refresh indicator on user-triggered refreshes.
@@ -16,7 +16,7 @@ export function useRefreshIndicator(refetchFn: () => void, _resetKey?: string) {
   const [showIndicator, setShowIndicator] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const triggerRefresh = useCallback(() => {
+  const triggerRefresh = () => {
     setShowIndicator(true)
 
     if (timerRef.current) {
@@ -34,7 +34,7 @@ export function useRefreshIndicator(refetchFn: () => void, _resetKey?: string) {
       setShowIndicator(false)
       timerRef.current = null
     }, MIN_REFRESH_INDICATOR_MS)
-  }, [refetchFn])
+  }
 
   return { showIndicator, triggerRefresh }
 }

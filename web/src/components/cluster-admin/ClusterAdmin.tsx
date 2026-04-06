@@ -1,4 +1,3 @@
-import { useCallback, useMemo } from 'react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedPodIssues, useCachedWarningEvents, useCachedNodes } from '../../hooks/useCachedData'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
@@ -19,9 +18,9 @@ export function ClusterAdmin() {
 
   // Guard all arrays against undefined to prevent crashes when APIs return 404/500/empty
   const clusters = rawClusters || []
-  const podIssues = useMemo(() => rawPodIssues || [], [rawPodIssues])
-  const warningEvents = useMemo(() => rawWarningEvents || [], [rawWarningEvents])
-  const nodes = useMemo(() => rawNodes || [], [rawNodes])
+  const podIssues = rawPodIssues || []
+  const warningEvents = rawWarningEvents || []
+  const nodes = rawNodes || []
 
   const reachable = clusters.filter(c => c.reachable !== false)
   const healthy = reachable.filter(c => c.healthy === true)
@@ -30,7 +29,7 @@ export function ClusterAdmin() {
   const hasData = clusters.length > 0
   const isDemoData = !hasData && !isLoading
 
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'clusters': return { value: reachable.length, sublabel: 'reachable', isDemo: isDemoData }
       case 'healthy': return { value: healthy.length, sublabel: 'healthy', isDemo: isDemoData }
@@ -41,12 +40,9 @@ export function ClusterAdmin() {
       case 'pod_issues': return { value: podIssues.length, sublabel: 'pod issues', isDemo: isDemoData }
       default: return { value: '-' }
     }
-  }, [reachable, healthy, degraded, offline, nodes, warningEvents, podIssues, isDemoData])
+  }
 
-  const getStatValue = useCallback(
-    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
-    [getDashboardStatValue, getUniversalStatValue]
-  )
+  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
   return (
     <DashboardPage
@@ -66,8 +62,7 @@ export function ClusterAdmin() {
       isDemoData={isDemoData}
       emptyState={{
         title: 'Cluster Admin Dashboard',
-        description: 'Add cards to manage cluster health, node operations, upgrades, and security across your infrastructure.',
-      }}
+        description: 'Add cards to manage cluster health, node operations, upgrades, and security across your infrastructure.' }}
     >
       {error && (
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">

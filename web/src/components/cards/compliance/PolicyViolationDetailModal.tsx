@@ -5,7 +5,7 @@
  * Shows violation details with "Fix with AI Mission" action.
  */
 
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect } from 'react'
 import { Shield, Rocket } from 'lucide-react'
 import { BaseModal } from '../../../lib/modals/BaseModal'
 import { StatusBadge } from '../../ui/StatusBadge'
@@ -36,15 +36,15 @@ export function PolicyViolationDetailModal({ isOpen, onClose, violation }: Polic
     }
   }, [isOpen, violation])
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     if (openTimeRef.current > 0) {
       emitModalClosed(MODAL_TYPE, Date.now() - openTimeRef.current)
       openTimeRef.current = 0
     }
     onClose()
-  }, [onClose])
+  }
 
-  const handleFixWithAI = useCallback(() => {
+  const handleFixWithAI = () => {
     if (!violation) return
     emitActionClicked('fix_with_ai', 'policy_violations', 'compliance')
     startMission({
@@ -65,12 +65,10 @@ Please proceed step by step.`,
         policy: violation.policy,
         tool: violation.tool,
         clusters: violation.clusters,
-        violationCount: violation.count,
-      },
-    })
+        violationCount: violation.count } })
     openSidebar()
     handleClose()
-  }, [violation, startMission, openSidebar, handleClose])
+  }
 
   if (!violation) return null
 

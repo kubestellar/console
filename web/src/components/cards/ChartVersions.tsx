@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Package } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedHelmReleases } from '../../hooks/useCachedData'
@@ -43,8 +42,7 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
     consecutiveFailures,
     isDemoFallback: isDemoData,
     isRefreshing,
-    lastRefresh,
-  } = useCachedHelmReleases()
+    lastRefresh } = useCachedHelmReleases()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
@@ -54,12 +52,10 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
     isFailed,
     consecutiveFailures,
     isDemoData,
-    lastRefresh,
-  })
+    lastRefresh })
 
   // Transform Helm releases to chart info
-  const allCharts: ChartInfo[] = useMemo(() => {
-    return allHelmReleases.map(r => {
+  const allCharts: ChartInfo[] = allHelmReleases.map(r => {
       // Parse chart name and version (e.g., "prometheus-25.8.0" -> chart: "prometheus", version: "25.8.0")
       const chartParts = r.chart.match(/^(.+)-(\d+\.\d+\.\d+.*)$/)
       const chartName = chartParts ? chartParts[1] : r.chart
@@ -70,10 +66,8 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
         chart: chartName,
         version: chartVersion,
         namespace: r.namespace,
-        cluster: r.cluster,
-      }
+        cluster: r.cluster }
     })
-  }, [allHelmReleases])
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {
@@ -94,33 +88,26 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
       availableClusters: availableClustersForFilter,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-    },
+      clusterFilterRef },
     sorting: {
       sortBy,
       setSortBy,
       sortDirection,
-      setSortDirection,
-    },
+      setSortDirection },
     containerRef,
-    containerStyle,
-  } = useCardData<ChartInfo, SortByOption>(allCharts, {
+    containerStyle } = useCardData<ChartInfo, SortByOption>(allCharts, {
     filter: {
       searchFields: ['name', 'chart', 'namespace', 'version'],
       clusterField: 'cluster',
-      storageKey: 'chart-versions',
-    },
+      storageKey: 'chart-versions' },
     sort: {
       defaultField: 'name',
       defaultDirection: 'asc',
       comparators: {
         name: commonComparators.string('name'),
         chart: commonComparators.string('chart'),
-        namespace: commonComparators.string('namespace'),
-      },
-    },
-    defaultLimit: 5,
-  })
+        namespace: commonComparators.string('namespace') } },
+    defaultLimit: 5 })
 
   // Count unique charts
   const uniqueCharts = new Set(allCharts.map(c => c.chart)).size
@@ -151,8 +138,7 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
         <CardControlsRow
           clusterIndicator={{
             selectedCount: localClusterFilter.length,
-            totalCount: availableClustersForFilter.length,
-          }}
+            totalCount: availableClustersForFilter.length }}
           clusterFilter={{
             availableClusters: availableClustersForFilter,
             selectedClusters: localClusterFilter,
@@ -161,8 +147,7 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
             isOpen: showClusterFilter,
             setIsOpen: setShowClusterFilter,
             containerRef: clusterFilterRef,
-            minClusters: 1,
-          }}
+            minClusters: 1 }}
           cardControls={{
             limit: itemsPerPage,
             onLimitChange: setItemsPerPage,
@@ -170,8 +155,7 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
             sortOptions: SORT_OPTIONS,
             onSortChange: (v) => setSortBy(v as SortByOption),
             sortDirection,
-            onSortDirectionChange: setSortDirection,
-          }}
+            onSortDirectionChange: setSortDirection }}
         />
       </div>
 

@@ -5,7 +5,7 @@
  * and opens GitHub's file creation UI to submit it as a PR to kubestellar/console-kb.
  */
 
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   X,
   BookUp,
@@ -15,8 +15,7 @@ import {
   AlertTriangle,
   CheckCircle,
   FileJson,
-  Tag,
-} from 'lucide-react'
+  Tag } from 'lucide-react'
 import type { Resolution } from '../../hooks/useResolutions'
 import type { MissionExport, MissionClass, FileScanResult } from '../../lib/missions/types'
 import { fullScan } from '../../lib/missions/scanner/index'
@@ -90,8 +89,7 @@ const CNCF_PROJECT_KEYWORDS: Record<string, string> = {
   'virtual machine': 'KubeVirt',
   volcano: 'Volcano',
   keptn: 'Keptn',
-  'kubestellar': 'KubeStellar',
-}
+  'kubestellar': 'KubeStellar' }
 
 /** Try to detect the CNCF project from a resolution's context */
 function detectCNCFProject(resolution: Resolution): string {
@@ -150,20 +148,17 @@ function resolutionToKBFormat(
 ): Record<string, unknown> {
   const steps = resolution.resolution.steps.map((step, i) => ({
     title: `Step ${i + 1}`,
-    description: step,
-  }))
+    description: step }))
 
   const mission: Record<string, unknown> = {
-    steps,
-  }
+    steps }
 
   // Add troubleshooting section for fixer-class missions
   if (missionClass === 'fixer' && resolution.resolution.summary) {
     mission.troubleshooting = [
       {
         title: resolution.issueSignature.type,
-        description: resolution.resolution.summary,
-      },
+        description: resolution.resolution.summary },
     ]
   }
 
@@ -172,8 +167,7 @@ function resolutionToKBFormat(
     mission.resolution = {
       summary: resolution.resolution.summary,
       steps: resolution.resolution.steps,
-      ...(resolution.resolution.yaml ? { yaml: resolution.resolution.yaml } : {}),
-    }
+      ...(resolution.resolution.yaml ? { yaml: resolution.resolution.yaml } : {}) }
   }
 
   return {
@@ -195,9 +189,7 @@ function resolutionToKBFormat(
       author: resolution.sharedBy || resolution.userId,
       source: 'kubestellar-console',
       createdAt: resolution.createdAt,
-      updatedAt: resolution.updatedAt,
-    },
-  }
+      updatedAt: resolution.updatedAt } }
 }
 
 /** Generate a filesystem-safe filename from the resolution title */
@@ -225,8 +217,7 @@ function buildGitHubNewFileUrl(
     filename,
     value: content,
     message: `Add ${filename}: ${description}`,
-    description: `Submitted from KubeStellar Console resolution history.\n\n${description}`,
-  })
+    description: `Submitted from KubeStellar Console resolution history.\n\n${description}` })
 
   return `https://github.com/${CONSOLE_KB_REPO}/new/${CONSOLE_KB_BRANCH}/${directory}?${params.toString()}`
 }
@@ -250,15 +241,9 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
   }, [isOpen, resolution.title, missionClass, resolution])
 
   // Build the console-kb formatted JSON
-  const kbContent = useMemo(
-    () => resolutionToKBFormat(resolution, missionClass, cncfProject),
-    [resolution, missionClass, cncfProject],
-  )
+  const kbContent = resolutionToKBFormat(resolution, missionClass, cncfProject)
 
-  const jsonString = useMemo(
-    () => JSON.stringify(kbContent, null, 2),
-    [kbContent],
-  )
+  const jsonString = JSON.stringify(kbContent, null, 2)
 
   // Determine the target directory based on mission class
   const targetDir = missionClass === 'install' ? 'fixes/cncf-install' : 'fixes/troubleshoot'
@@ -312,8 +297,7 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
           '---',
           '_Submitted from KubeStellar Console resolution history._',
         ].filter(Boolean).join('\n'),
-        labels: ['new-mission', missionClass].join(','),
-      })
+        labels: ['new-mission', missionClass].join(',') })
 
       window.open(
         `https://github.com/${CONSOLE_KB_REPO}/issues/new?${issueParams.toString()}`,

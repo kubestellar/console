@@ -5,7 +5,7 @@
  * calls startMission() per cluster. Animated checklist with progress.
  */
 
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Rocket,
@@ -15,8 +15,7 @@ import {
   SkipForward,
   RotateCcw,
   PartyPopper,
-  Loader2,
-} from 'lucide-react'
+  Loader2 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'
 import { useMissions } from '../../hooks/useMissions'
@@ -36,15 +35,13 @@ const STATUS_ICONS: Record<string, React.ReactNode> = {
   running: <Loader2 className="w-4 h-4 animate-spin text-amber-400" />,
   completed: <Check className="w-4 h-4 text-green-400" />,
   failed: <X className="w-4 h-4 text-red-400" />,
-  skipped: <SkipForward className="w-4 h-4 text-muted-foreground" />,
-}
+  skipped: <SkipForward className="w-4 h-4 text-muted-foreground" /> }
 
 export function LaunchSequence({
   state,
   onUpdateProgress,
   onComplete,
-  onClose,
-}: LaunchSequenceProps) {
+  onClose }: LaunchSequenceProps) {
   const { startMission, missions } = useMissions()
   const [isStarted, setIsStarted] = useState(false)
   const progressRef = useRef<PhaseProgress[]>(state.launchProgress)
@@ -63,25 +60,19 @@ export function LaunchSequence({
       status: 'pending' as PhaseStatus,
       projects: phase.projectNames.map((name) => ({
         name,
-        status: 'pending' as const,
-      })),
-    }))
+        status: 'pending' as const })) }))
     progressRef.current = initial
     onUpdateProgress(initial)
   }, [state.phases.length])
 
-  const updateProgress = useCallback(
-    (updater: (prev: PhaseProgress[]) => PhaseProgress[]) => {
+  const updateProgress = (updater: (prev: PhaseProgress[]) => PhaseProgress[]) => {
       const next = updater(progressRef.current)
       progressRef.current = next
       onUpdateProgress(next)
-    },
-    [onUpdateProgress]
-  )
+    }
 
   // Launch a single project's mission
-  const launchProject = useCallback(
-    async (projectName: string, phaseNum: number) => {
+  const launchProject = async (projectName: string, phaseNum: number) => {
       const project = state.projects.find((p) => p.name === projectName)
       if (!project) return
 
@@ -99,8 +90,7 @@ export function LaunchSequence({
                 status: 'running',
                 projects: p.projects.map((proj) =>
                   proj.name === projectName ? { ...proj, status: 'running' as const } : proj
-                ),
-              }
+                ) }
             : p
         )
       )
@@ -122,8 +112,7 @@ export function LaunchSequence({
           type: 'deploy',
           cluster: clusterName,
           initialPrompt: prompt + clusterContext,
-          dryRun: state.isDryRun,
-        })
+          dryRun: state.isDryRun })
 
         // Update with missionId
         updateProgress((prev) =>
@@ -133,8 +122,7 @@ export function LaunchSequence({
                   ...p,
                   projects: p.projects.map((proj) =>
                     proj.name === projectName ? { ...proj, missionId } : proj
-                  ),
-                }
+                  ) }
               : p
           )
         )
@@ -148,15 +136,12 @@ export function LaunchSequence({
                     proj.name === projectName
                       ? { ...proj, status: 'failed' as const, error: String(err) }
                       : proj
-                  ),
-                }
+                  ) }
               : p
           )
         )
       }
-    },
-    [state.projects, state.assignments, startMission, updateProgress]
-  )
+    }
 
   // Monitor mission statuses and update progress
   useEffect(() => {
@@ -179,8 +164,7 @@ export function LaunchSequence({
           return { ...proj, status: 'failed' as const, error: 'Mission failed' }
         }
         return proj
-      }),
-    }))
+      }) }))
 
     if (changed) {
       // Update phase-level status
@@ -195,8 +179,7 @@ export function LaunchSequence({
             ? anyFailed
               ? ('failed' as PhaseStatus)
               : ('completed' as PhaseStatus)
-            : phase.status,
-        }
+            : phase.status }
       })
       progressRef.current = updated
       onUpdateProgress(updated)
@@ -209,7 +192,7 @@ export function LaunchSequence({
   }, [missions, onUpdateProgress, onComplete])
 
   // Execute the launch sequence
-  const startLaunch = useCallback(async () => {
+  const startLaunch = async () => {
     if (isStarted) return
     setIsStarted(true)
 
@@ -246,7 +229,7 @@ export function LaunchSequence({
         // and advances automatically
       }
     }
-  }, [isStarted, state.phases, state.deployMode, launchProject, updateProgress])
+  }
 
   // Auto-start on mount
   useEffect(() => {

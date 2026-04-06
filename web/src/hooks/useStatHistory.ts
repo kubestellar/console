@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect } from 'react'
 import type { DashboardStatsType } from '../components/ui/StatsBlockDefinitions'
 
 /**
@@ -80,9 +80,9 @@ export function useStatHistory(
     return () => clearInterval(timer)
   }, [dashboardType, visibleBlockIds, isLoading, getStatValue])
 
-  const getHistory = useCallback((blockId: string): number[] => {
+  const getHistory = (blockId: string): number[] => {
     return historyRef.current.get(blockId)?.values ?? []
-  }, [])
+  }
 
   return { getHistory }
 }

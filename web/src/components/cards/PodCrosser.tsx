@@ -75,8 +75,7 @@ export function PodCrosser(_props: CardComponentProps) {
     targetY: 9 * CELL_SIZE + 4,
     onLog: null,
     dead: false,
-    deathFrame: 0,
-  })
+    deathFrame: 0 })
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [logs, setLogs] = useState<Log[]>([])
   const [homeSlots, setHomeSlots] = useState<HomeSlot[]>([])
@@ -95,7 +94,7 @@ export function PodCrosser(_props: CardComponentProps) {
   }, [player, vehicles, logs, homeSlots])
 
   // Initialize game objects
-  const initGame = useCallback(() => {
+  const initGame = () => {
     // Create vehicles
     const newVehicles: Vehicle[] = []
     LANES.forEach(lane => {
@@ -108,8 +107,7 @@ export function PodCrosser(_props: CardComponentProps) {
             width,
             speed: lane.speed || 1,
             type: type as Vehicle['type'],
-            color: type === 'truck' ? '#8b4513' : type === 'bus' ? '#ffd700' : ['#ff4444', '#4444ff', '#44ff44'][i % 3],
-          })
+            color: type === 'truck' ? '#8b4513' : type === 'bus' ? '#ffd700' : ['#ff4444', '#4444ff', '#44ff44'][i % 3] })
         })
       }
     })
@@ -127,8 +125,7 @@ export function PodCrosser(_props: CardComponentProps) {
             width,
             speed: lane.speed || 1,
             type: type as Log['type'],
-            turtleDiving: false,
-          })
+            turtleDiving: false })
         })
       }
     })
@@ -139,11 +136,10 @@ export function PodCrosser(_props: CardComponentProps) {
     for (let i = 0; i < 5; i++) {
       slots.push({
         x: 10 + i * 56,
-        filled: false,
-      })
+        filled: false })
     }
     setHomeSlots(slots)
-  }, [])
+  }
 
   // Draw game
   const draw = useCallback(() => {
@@ -333,8 +329,7 @@ export function PodCrosser(_props: CardComponentProps) {
               targetY: 9 * CELL_SIZE + 4,
               onLog: null,
               dead: false,
-              deathFrame: 0,
-            }
+              deathFrame: 0 }
           }
           return { ...p, deathFrame: p.deathFrame + 1 }
         })
@@ -461,8 +456,7 @@ export function PodCrosser(_props: CardComponentProps) {
                 targetY: 9 * CELL_SIZE + 4,
                 onLog: null,
                 dead: false,
-                deathFrame: 0,
-              })
+                deathFrame: 0 })
               break
             }
           }
@@ -491,7 +485,7 @@ export function PodCrosser(_props: CardComponentProps) {
   }, [isPlaying, gameOver, draw, level])
 
   // Keyboard controls — scoped to visible game container (KeepAlive-safe)
-  const handleCrosserKeyDown = useCallback((e: KeyboardEvent) => {
+  const handleCrosserKeyDown = (e: KeyboardEvent) => {
     if (!isPlaying || player.dead) return
 
     const { targetX, targetY } = player
@@ -534,11 +528,11 @@ export function PodCrosser(_props: CardComponentProps) {
     // Only add the 4px lane offset when vertical position changed
     const yOffset = newTargetY !== targetY ? 4 : 0
     setPlayer(p => ({ ...p, targetX: newTargetX, targetY: newTargetY + yOffset, onLog: null }))
-  }, [isPlaying, player, highestRow])
+  }
   useGameKeys(gameContainerRef, { onKeyDown: handleCrosserKeyDown })
 
   // Start game
-  const startGame = useCallback(() => {
+  const startGame = () => {
     initGame()
     setPlayer({
       x: CANVAS_WIDTH / 2 - PLAYER_SIZE / 2,
@@ -547,8 +541,7 @@ export function PodCrosser(_props: CardComponentProps) {
       targetY: 9 * CELL_SIZE + 4,
       onLog: null,
       dead: false,
-      deathFrame: 0,
-    })
+      deathFrame: 0 })
     setScore(0)
     setLives(3)
     setLevel(1)
@@ -558,7 +551,7 @@ export function PodCrosser(_props: CardComponentProps) {
     setWon(false)
     setIsPlaying(true)
     emitGameStarted('pod_crosser')
-  }, [initGame])
+  }
 
   const scale = isExpanded ? 1.4 : 1
 

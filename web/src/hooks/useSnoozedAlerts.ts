@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { POLL_INTERVAL_SLOW_MS } from '../lib/constants/network'
 import { emitSnoozed, emitUnsnoozed } from '../lib/analytics'
 
@@ -10,8 +10,7 @@ export const SNOOZE_DURATIONS = {
   '15m': 15 * 60 * 1000,
   '1h': 60 * 60 * 1000,
   '4h': 4 * 60 * 60 * 1000,
-  '24h': 24 * 60 * 60 * 1000,
-} as const
+  '24h': 24 * 60 * 60 * 1000 } as const
 
 export type SnoozeDuration = keyof typeof SNOOZE_DURATIONS
 
@@ -86,7 +85,7 @@ export function useSnoozedAlerts() {
     }
   }, [])
 
-  const snoozeAlert = useCallback((alertId: string, duration: SnoozeDuration = '1h') => {
+  const snoozeAlert = (alertId: string, duration: SnoozeDuration = '1h') => {
     // Remove existing snooze if present
     state.snoozed = state.snoozed.filter(s => s.alertId !== alertId)
 
@@ -95,16 +94,15 @@ export function useSnoozedAlerts() {
       alertId,
       snoozedAt: now,
       expiresAt: now + SNOOZE_DURATIONS[duration],
-      duration,
-    }
+      duration }
     state.snoozed = [...state.snoozed, newSnoozed]
     saveState()
     notifyListeners()
     emitSnoozed('alert', duration)
     return newSnoozed
-  }, [])
+  }
 
-  const snoozeMultiple = useCallback((alertIds: string[], duration: SnoozeDuration = '1h') => {
+  const snoozeMultiple = (alertIds: string[], duration: SnoozeDuration = '1h') => {
     const now = Date.now()
     const expiresAt = now + SNOOZE_DURATIONS[duration]
 
@@ -116,43 +114,42 @@ export function useSnoozedAlerts() {
       alertId,
       snoozedAt: now,
       expiresAt,
-      duration,
-    }))
+      duration }))
 
     state.snoozed = [...state.snoozed, ...newSnoozed]
     saveState()
     notifyListeners()
-  }, [])
+  }
 
-  const unsnoozeAlert = useCallback((alertId: string) => {
+  const unsnoozeAlert = (alertId: string) => {
     state.snoozed = state.snoozed.filter(s => s.alertId !== alertId)
     saveState()
     notifyListeners()
     emitUnsnoozed('alert')
-  }, [])
+  }
 
-  const isSnoozed = useCallback((alertId: string): boolean => {
+  const isSnoozed = (alertId: string): boolean => {
     const now = Date.now()
     return state.snoozed.some(s => s.alertId === alertId && s.expiresAt > now)
-  }, [])
+  }
 
-  const getSnoozedAlert = useCallback((alertId: string): SnoozedAlert | null => {
+  const getSnoozedAlert = (alertId: string): SnoozedAlert | null => {
     const now = Date.now()
     return state.snoozed.find(s => s.alertId === alertId && s.expiresAt > now) || null
-  }, [])
+  }
 
-  const clearAllSnoozed = useCallback(() => {
+  const clearAllSnoozed = () => {
     state.snoozed = []
     saveState()
     notifyListeners()
-  }, [])
+  }
 
   // Get time remaining on snooze
-  const getSnoozeRemaining = useCallback((alertId: string): number | null => {
+  const getSnoozeRemaining = (alertId: string): number | null => {
     const snoozed = state.snoozed.find(s => s.alertId === alertId)
     if (!snoozed) return null
     return Math.max(0, snoozed.expiresAt - Date.now())
-  }, [])
+  }
 
   return {
     snoozedAlerts: localState.snoozed,
@@ -163,8 +160,7 @@ export function useSnoozedAlerts() {
     isSnoozed,
     getSnoozedAlert,
     clearAllSnoozed,
-    getSnoozeRemaining,
-  }
+    getSnoozeRemaining }
 }
 
 // Helper to format time remaining

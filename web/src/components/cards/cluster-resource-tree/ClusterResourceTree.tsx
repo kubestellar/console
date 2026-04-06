@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Server, Box, Layers, Database, Network, HardDrive, AlertTriangle, RefreshCw, Folder } from 'lucide-react'
 import { useClusters } from '../../../hooks/useMCP'
 import { useCachedPodIssues, useCachedNodes, useCachedNamespaces, useCachedDeployments, useCachedServices, useCachedPVCs, useCachedPods, useCachedConfigMaps, useCachedSecrets, useCachedServiceAccounts, useCachedJobs, useCachedHPAs, useCachedReplicaSets, useCachedStatefulSets, useCachedDaemonSets, useCachedCronJobs, useCachedIngresses, useCachedNetworkPolicies } from '../../../hooks/useCachedData'
@@ -60,18 +60,15 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
     availableClusters,
     showClusterFilter,
     setShowClusterFilter,
-    clusterFilterRef,
-
-  } = useChartFilters({
-    storageKey: 'cluster-resource-tree',
-  })
+    clusterFilterRef } = useChartFilters({
+    storageKey: 'cluster-resource-tree' })
 
   // Per-cluster data cache - persists data for all expanded clusters
   const [clusterDataCache, setClusterDataCache] = useState<Map<string, ClusterDataCache>>(new Map())
 
   // Get filtered clusters based on global filter + local cluster filter
   // Include all clusters (don't filter by reachability - show clusters with unknown status)
-  const filteredClusters = useMemo(() => {
+  const filteredClusters = (() => {
     let result = clusters
     if (!isAllClustersSelected) {
       result = result.filter(c => selectedClusters.includes(c.name))
@@ -85,7 +82,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
       result = result.filter(c => c.name.toLowerCase().includes(query))
     }
     return result
-  }, [clusters, selectedClusters, isAllClustersSelected, localClusterFilter, searchFilter])
+  })()
 
   // Fetch data for the selected cluster (only when a cluster is expanded)
   const { issues: podIssues } = useCachedPodIssues(selectedCluster || undefined)
@@ -122,8 +119,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
     hasAnyData: hasData,
     isDemoData,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
   // Cache data for the selected cluster when it changes
   useEffect(() => {
@@ -147,103 +143,86 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
             replicas: d.replicas,
             readyReplicas: d.readyReplicas,
             status: d.status,
-            image: d.image,
-          })),
+            image: d.image })),
           services: (allServices || []).slice(0, MAX_CACHED_PER_TYPE).map(s => ({
             name: s.name,
             namespace: s.namespace,
-            type: s.type,
-          })),
+            type: s.type })),
           pvcs: (allPVCs || []).slice(0, MAX_CACHED_PER_TYPE).map(p => ({
             name: p.name,
             namespace: p.namespace,
             status: p.status,
-            capacity: p.capacity,
-          })),
+            capacity: p.capacity })),
           pods: (allPods || []).slice(0, MAX_CACHED_PER_TYPE).map(p => ({
             name: p.name,
             namespace: p.namespace,
             status: p.status,
-            restarts: p.restarts,
-          })),
+            restarts: p.restarts })),
           configmaps: (allConfigMaps || []).slice(0, MAX_CACHED_PER_TYPE).map(cm => ({
             name: cm.name,
             namespace: cm.namespace,
-            dataCount: cm.dataCount || 0,
-          })),
+            dataCount: cm.dataCount || 0 })),
           secrets: (allSecrets || []).slice(0, MAX_CACHED_PER_TYPE).map(s => ({
             name: s.name,
             namespace: s.namespace,
-            type: s.type || 'Opaque',
-          })),
+            type: s.type || 'Opaque' })),
           serviceaccounts: (allServiceAccounts || []).slice(0, MAX_CACHED_PER_TYPE).map(sa => ({
             name: sa.name,
-            namespace: sa.namespace,
-          })),
+            namespace: sa.namespace })),
           jobs: (allJobs || []).slice(0, MAX_CACHED_PER_TYPE).map(j => ({
             name: j.name,
             namespace: j.namespace,
             status: j.status,
             completions: j.completions,
-            duration: j.duration,
-          })),
+            duration: j.duration })),
           hpas: (allHPAs || []).slice(0, MAX_CACHED_PER_TYPE).map(h => ({
             name: h.name,
             namespace: h.namespace,
             reference: h.reference,
             minReplicas: h.minReplicas,
             maxReplicas: h.maxReplicas,
-            currentReplicas: h.currentReplicas,
-          })),
+            currentReplicas: h.currentReplicas })),
           replicasets: (allReplicaSets || []).slice(0, MAX_CACHED_PER_TYPE).map(rs => ({
             name: rs.name,
             namespace: rs.namespace,
             replicas: rs.replicas,
             readyReplicas: rs.readyReplicas,
-            ownerName: rs.ownerName,
-          })),
+            ownerName: rs.ownerName })),
           statefulsets: (allStatefulSets || []).slice(0, MAX_CACHED_PER_TYPE).map(ss => ({
             name: ss.name,
             namespace: ss.namespace,
             replicas: ss.replicas,
             readyReplicas: ss.readyReplicas,
-            status: ss.status,
-          })),
+            status: ss.status })),
           daemonsets: (allDaemonSets || []).slice(0, MAX_CACHED_PER_TYPE).map(ds => ({
             name: ds.name,
             namespace: ds.namespace,
             desiredScheduled: ds.desiredScheduled,
             ready: ds.ready,
-            status: ds.status,
-          })),
+            status: ds.status })),
           cronjobs: (allCronJobs || []).slice(0, MAX_CACHED_PER_TYPE).map(cj => ({
             name: cj.name,
             namespace: cj.namespace,
             schedule: cj.schedule,
             suspend: cj.suspend,
             active: cj.active,
-            lastSchedule: cj.lastSchedule,
-          })),
+            lastSchedule: cj.lastSchedule })),
           ingresses: (allIngresses || []).slice(0, MAX_CACHED_PER_TYPE).map(ing => ({
             name: ing.name,
             namespace: ing.namespace,
             class: ing.class,
             hosts: ing.hosts || [],
-            address: ing.address,
-          })),
+            address: ing.address })),
           networkpolicies: (allNetworkPolicies || []).slice(0, MAX_CACHED_PER_TYPE).map(np => ({
             name: np.name,
             namespace: np.namespace,
             policyTypes: np.policyTypes || [],
-            podSelector: np.podSelector,
-          })),
+            podSelector: np.podSelector })),
           podIssues: (podIssues || []).slice(0, MAX_CACHED_PER_TYPE).map(p => ({
             name: p.name,
             namespace: p.namespace,
             status: p.status,
-            reason: p.reason,
-          })),
-        })
+            reason: p.reason })) })
         return next
       })
       // Mark this cluster as no longer loading
@@ -256,12 +235,12 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
   }, [selectedCluster, nodesLoading, namespacesLoading, allNodes, allNamespaces, allDeployments, allServices, allPVCs, allPods, allConfigMaps, allSecrets, allServiceAccounts, allJobs, allHPAs, allReplicaSets, allStatefulSets, allDaemonSets, allCronJobs, allIngresses, allNetworkPolicies, podIssues])
 
   // Helper to get cached data for a cluster
-  const getClusterData = useCallback((clusterName: string): ClusterDataCache | null => {
+  const getClusterData = (clusterName: string): ClusterDataCache | null => {
     return clusterDataCache.get(clusterName) || null
-  }, [clusterDataCache])
+  }
 
   // Toggle node expansion
-  const toggleNode = useCallback((nodeId: string) => {
+  const toggleNode = (nodeId: string) => {
     setExpandedNodes(prev => {
       const next = new Set(prev)
       if (next.has(nodeId)) {
@@ -280,10 +259,10 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
       }
       return next
     })
-  }, [])
+  }
 
   // Aggregate issue counts across all cached clusters for the top-level badge
-  const totalIssueCounts = useMemo(() => {
+  const totalIssueCounts = (() => {
     const counts = { nodes: 0, deployments: 0, pods: 0, pvcs: 0, total: 0 }
     for (const clusterData of clusterDataCache.values()) {
       counts.nodes += clusterData.nodes.filter(n => n.status !== 'Ready').length
@@ -293,7 +272,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
     }
     counts.total = counts.nodes + counts.deployments + counts.pods + counts.pvcs
     return counts
-  }, [clusterDataCache])
+  })()
 
   return (
     <div className="h-full flex flex-col min-h-0">

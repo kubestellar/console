@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { useAlerts, useAlertRules } from '../../hooks/useAlerts'
 import { useClusters } from '../../hooks/useMCP'
@@ -31,16 +31,16 @@ export function Alerts() {
     setLastUpdated(new Date())
   }, [])
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = () => {
     refetch()
     evaluateConditions()
     setLastUpdated(new Date())
-  }, [refetch, evaluateConditions])
+  }
 
   const enabledRulesCount = rules.filter(r => r.enabled).length
 
   // Stats value getter
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string): StatBlockValue => {
     const disabledRulesCount = rules.filter(r => !r.enabled).length
     const drillToFiringAlert = () => {
       drillToAlert('all', undefined, 'Active Alerts', { status: 'firing', count: stats.firing })
@@ -63,12 +63,9 @@ export function Alerts() {
       default:
         return { value: 0 }
     }
-  }, [stats, enabledRulesCount, rules, drillToAlert])
+  }
 
-  const getStatValue = useCallback(
-    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
-    [getDashboardStatValue, getUniversalStatValue]
-  )
+  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
   return (
     <DashboardPage
@@ -87,8 +84,7 @@ export function Alerts() {
       hasData={stats.firing > 0 || enabledRulesCount > 0}
       emptyState={{
         title: t('alerts.dashboardTitle'),
-        description: 'Add cards to monitor alerts, rules, and issues across your clusters.',
-      }}
+        description: 'Add cards to monitor alerts, rules, and issues across your clusters.' }}
     >
       {/* Error Display */}
       {error && (

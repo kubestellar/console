@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { TimeSeriesChart, MultiSeriesChart } from '../charts'
 import { useClusters } from '../../hooks/useMCP'
 import { Server, Clock, Layers, TrendingUp } from 'lucide-react'
@@ -7,10 +7,6 @@ import { useChartFilters } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
-import {
-  CLUSTER_CHART_PALETTE,
-  METRIC_CPU_COLOR, METRIC_MEMORY_COLOR, METRIC_PODS_COLOR, METRIC_NODES_COLOR,
-} from '../../lib/theme/chartColors'
 
 type TimeRange = '15m' | '1h' | '6h' | '24h'
 
@@ -26,11 +22,10 @@ type MetricType = 'cpu' | 'memory' | 'pods' | 'nodes'
 type ChartMode = 'total' | 'per-cluster'
 
 const metricConfigBase = {
-  cpu: { labelKey: 'clusterMetrics.cpuCores' as const, color: METRIC_CPU_COLOR, unit: '', baseValue: 65, variance: 30 },
-  memory: { labelKey: 'clusterMetrics.memory' as const, color: METRIC_MEMORY_COLOR, unit: ' GB', baseValue: 72, variance: 20 },
-  pods: { labelKey: 'clusterMetrics.pods' as const, color: METRIC_PODS_COLOR, unit: '', baseValue: 150, variance: 100 },
-  nodes: { labelKey: 'clusterMetrics.nodes' as const, color: METRIC_NODES_COLOR, unit: '', baseValue: 10, variance: 5 },
-}
+  cpu: { labelKey: 'clusterMetrics.cpuCores' as const, color: '#9333ea', unit: '', baseValue: 65, variance: 30 },
+  memory: { labelKey: 'clusterMetrics.memory' as const, color: '#3b82f6', unit: ' GB', baseValue: 72, variance: 20 },
+  pods: { labelKey: 'clusterMetrics.pods' as const, color: '#10b981', unit: '', baseValue: 150, variance: 100 },
+  nodes: { labelKey: 'clusterMetrics.nodes' as const, color: '#f59e0b', unit: '', baseValue: 10, variance: 5 } }
 
 interface ClusterMetricValues {
   cpu: number
@@ -62,18 +57,15 @@ export function ClusterMetrics() {
   const [chartMode, setChartMode] = useState<ChartMode>('total')
 
   // Build translated metric config and time range options
-  const metricConfig = useMemo(() => {
+  const metricConfig = (() => {
     const result: Record<MetricType, { label: string; color: string; unit: string; baseValue: number; variance: number }> = {} as typeof result
     for (const [key, val] of Object.entries(metricConfigBase)) {
       result[key as MetricType] = { ...val, label: String(t(val.labelKey)) }
     }
     return result
-  }, [t])
+  })()
 
-  const TIME_RANGE_OPTIONS = useMemo(() =>
-    TIME_RANGE_KEYS.map(opt => ({ ...opt, label: String(t(opt.labelKey)) })),
-    [t]
-  )
+  const TIME_RANGE_OPTIONS = TIME_RANGE_KEYS.map(opt => ({ ...opt, label: String(t(opt.labelKey)) }))
 
   // Report state to CardWrapper for refresh animation
   const hasData = deduplicatedClusters.length > 0
@@ -83,8 +75,7 @@ export function ClusterMetrics() {
     hasAnyData: hasData,
     isDemoData: isDemoMode,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
   // Use shared chart filters hook for cluster filtering
   const {
@@ -95,11 +86,10 @@ export function ClusterMetrics() {
     filteredClusters: clusters,
     showClusterFilter,
     setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({ storageKey: 'cluster-metrics' })
+    clusterFilterRef } = useChartFilters({ storageKey: 'cluster-metrics' })
 
   // Load history from localStorage
-  const loadSavedHistory = useCallback((): MetricPoint[] => {
+  const loadSavedHistory = (): MetricPoint[] => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
       if (saved) {
@@ -116,7 +106,7 @@ export function ClusterMetrics() {
       // Ignore parse errors
     }
     return []
-  }, [])
+  }
 
   const initialHistory = loadSavedHistory()
   const historyRef = useRef<MetricPoint[]>(initialHistory)
@@ -128,8 +118,7 @@ export function ClusterMetrics() {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({
           data: history,
-          timestamp: Date.now(),
-        }))
+          timestamp: Date.now() }))
       } catch {
         // Ignore storage errors
       }
@@ -161,8 +150,7 @@ export function ClusterMetrics() {
         cpu: c.cpuCores || 0,
         memory: c.memoryGB || 0,
         pods: c.podCount || 0,
-        nodes: c.nodeCount || 0,
-      }
+        nodes: c.nodeCount || 0 }
     })
     const newPoint: MetricPoint = {
       time: new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -171,8 +159,7 @@ export function ClusterMetrics() {
       memory: realValues.memory,
       pods: realValues.pods,
       nodes: realValues.nodes,
-      clusters: clusterValues,
-    }
+      clusters: clusterValues }
 
     // Only add if data changed or at least 30 seconds since last point
     const lastPoint = historyRef.current[historyRef.current.length - 1]
@@ -192,23 +179,21 @@ export function ClusterMetrics() {
   }, [realValues, isLoading, hasRealData, clusters])
 
   // Transform history to chart data for selected metric
-  const data = useMemo(() => {
+  const data = (() => {
     // Filter history based on time range
     const now = Date.now()
     const rangeMs = {
       '15m': 15 * 60 * 1000,
       '1h': 60 * 60 * 1000,
       '6h': 6 * 60 * 60 * 1000,
-      '24h': 24 * 60 * 60 * 1000,
-    }[timeRange]
+      '24h': 24 * 60 * 60 * 1000 }[timeRange]
 
     const filteredHistory = history.filter(p => now - p.timestamp <= rangeMs)
 
     return filteredHistory.map(point => ({
       time: point.time,
-      value: point[selectedMetric],
-    }))
-  }, [history, selectedMetric, timeRange])
+      value: point[selectedMetric] }))
+  })()
 
   // Generate per-cluster data for comparison mode
   const perClusterData = useMemo(() => {
@@ -219,8 +204,7 @@ export function ClusterMetrics() {
       '15m': 15 * 60 * 1000,
       '1h': 60 * 60 * 1000,
       '6h': 6 * 60 * 60 * 1000,
-      '24h': 24 * 60 * 60 * 1000,
-    }[timeRange]
+      '24h': 24 * 60 * 60 * 1000 }[timeRange]
 
     const filteredHistory = history.filter(p => now - p.timestamp <= rangeMs && p.clusters)
 
@@ -233,14 +217,16 @@ export function ClusterMetrics() {
     })
 
     // Colors for different clusters
-    const clusterColors = CLUSTER_CHART_PALETTE
+    const clusterColors = [
+      '#9333ea', '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
+      '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899',
+    ]
 
     // Build series config
     const series = Array.from(clusterNames).map((name, i) => ({
       dataKey: name,
       color: clusterColors[i % clusterColors.length],
-      name: name.length > 15 ? name.slice(0, 12) + '...' : name,
-    }))
+      name: name.length > 15 ? name.slice(0, 12) + '...' : name }))
 
     // Build data with all clusters as keys
     const chartData = filteredHistory.map(point => {

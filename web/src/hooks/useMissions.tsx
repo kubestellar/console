@@ -1,4 +1,4 @@
-import { createContext, use, useState, useCallback, useRef, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useRef, useEffect, ReactNode } from 'react'
 import type { AgentInfo, AgentsListPayload, AgentSelectedPayload, ChatStreamPayload } from '../types/agent'
 import { AgentCapabilityToolExec } from '../types/agent'
 import { getDemoMode } from './useDemoMode'
@@ -225,8 +225,7 @@ function loadMissions(): Mission[] {
                 id: `msg-${Date.now()}`,
                 role: 'system' as const,
                 content: 'Mission cancelled by user (page was reloaded during cancellation).',
-                timestamp: new Date(),
-              }
+                timestamp: new Date() }
             ]
           }
         }
@@ -355,7 +354,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
    * additional times with WS_SEND_RETRY_DELAY_MS between attempts.
    * Calls onFailure (if provided) when all retries are exhausted.
    */
-  const wsSend = useCallback((data: string, onFailure?: () => void): void => {
+  const wsSend = (data: string, onFailure?: () => void): void => {
     let retries = 0
     const trySend = () => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -371,7 +370,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       }
     }
     trySend()
-  }, [])
+  }
 
   // Save missions whenever they change
   useEffect(() => {
@@ -440,8 +439,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                 id: `msg-timeout-${Date.now()}-${m.id}`,
                 role: 'system' as const,
                 content: errorContent,
-                timestamp: new Date(),
-              }
+                timestamp: new Date() }
             ]
           }
         })
@@ -452,17 +450,16 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // Fetch available agents
-  const fetchAgents = useCallback(() => {
+  const fetchAgents = () => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({
         id: `list-agents-${Date.now()}`,
-        type: 'list_agents',
-      }))
+        type: 'list_agents' }))
     }
-  }, [])
+  }
 
   // Connect to local agent WebSocket
-  const ensureConnection = useCallback(() => {
+  const ensureConnection = () => {
     // In demo mode, skip WebSocket connection to avoid console errors
     if (getDemoMode()) {
       return Promise.reject(new Error('Agent unavailable in demo mode'))
@@ -552,8 +549,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                     .filter(msg => msg.role === 'user' || msg.role === 'assistant')
                     .map(msg => ({
                       role: msg.role,
-                      content: msg.content,
-                    }))
+                      content: msg.content }))
 
                   const mId = mission.id
                   wsSend(JSON.stringify({
@@ -563,8 +559,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                       prompt: lastUserMessage.content,
                       sessionId: mId,
                       agent: agentToUse,
-                      history: history,
-                    }
+                      history: history }
                   }), () => {
                     setMissions(prev => prev.map(m =>
                       m.id === mId ? { ...m, status: 'failed', currentStep: 'WebSocket reconnect failed' } : m
@@ -639,8 +634,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
                       id: `msg-${Date.now()}-${m.id}`,
                       role: 'system',
                       content: errorContent,
-                      timestamp: new Date(),
-                    }
+                      timestamp: new Date() }
                   ]
                 }
               }
@@ -669,10 +663,10 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         reject(err)
       }
     })
-  }, [fetchAgents, wsSend])
+  }
 
   // Mark a mission as having unread content (not currently being viewed)
-  const markMissionAsUnread = useCallback((missionId: string) => {
+  const markMissionAsUnread = (missionId: string) => {
     // Only mark as unread if it's not the active mission
     // Read from refs so this callback is always current without needing to be recreated
     if (missionId !== activeMissionIdRef.current || !isSidebarOpenRef.current) {
@@ -682,11 +676,11 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         return next
       })
     }
-  }, [])
+  }
 
   // Finalize a cancelling mission — transitions from 'cancelling' to 'failed'
   // and clears any pending cancel timeout.
-  const finalizeCancellation = useCallback((missionId: string, message: string) => {
+  const finalizeCancellation = (missionId: string, message: string) => {
     // Clear the timeout if one is pending
     const timeout = cancelTimeouts.current.get(missionId)
     if (timeout) {
@@ -714,15 +708,14 @@ Install the console locally with the KubeStellar Console agent to use AI mission
             id: `msg-${Date.now()}`,
             role: 'system',
             content: message,
-            timestamp: new Date(),
-          }
+            timestamp: new Date() }
         ]
       } : m
     ))
-  }, [])
+  }
 
   // Handle messages from the agent
-  const handleAgentMessage = useCallback((message: { id: string; type: string; payload?: unknown }) => {
+  const handleAgentMessage = (message: { id: string; type: string; payload?: unknown }) => {
     // Handle agent-related messages (no mission ID needed)
     if (message.type === 'agents_list') {
       const payload = message.payload as AgentsListPayload
@@ -835,10 +828,8 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           tokenUsage: payload.tokens ? {
             input: payload.tokens.input ?? m.tokenUsage?.input ?? 0,
             output: payload.tokens.output ?? m.tokenUsage?.output ?? 0,
-            total: payload.tokens.total ?? m.tokenUsage?.total ?? 0,
-          } : m.tokenUsage,
-          updatedAt: new Date(),
-        }
+            total: payload.tokens.total ?? m.tokenUsage?.total ?? 0 } : m.tokenUsage,
+          updatedAt: new Date() }
       } else if (message.type === 'stream') {
         // Streaming response from agent
         const payload = message.payload as ChatStreamPayload
@@ -886,8 +877,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
                 role: 'assistant' as const,
                 content: payload.content,
                 timestamp: new Date(),
-                agent: payload.agent || m.agent,
-              }
+                agent: payload.agent || m.agent }
             ]
           }
         } else if (payload.done) {
@@ -917,8 +907,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
             ...m,
             status: 'waiting_input' as MissionStatus,
             currentStep: undefined,
-            updatedAt: new Date(),
-          }
+            updatedAt: new Date() }
         }
       } else if (message.type === 'result') {
         // Complete response - mark as unread
@@ -931,8 +920,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         const tokenUsage = chatPayload.usage ? {
           input: chatPayload.usage.inputTokens,
           output: chatPayload.usage.outputTokens,
-          total: chatPayload.usage.totalTokens,
-        } : m.tokenUsage
+          total: chatPayload.usage.totalTokens } : m.tokenUsage
 
         // Track token delta for category usage
         if (chatPayload.usage?.totalTokens) {
@@ -977,8 +965,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
               role: 'assistant' as const,
               content: resultContent,
               timestamp: new Date(),
-              agent: chatPayload.agent || m.agent,
-            }
+              agent: chatPayload.agent || m.agent }
           ]
         }
       } else if (message.type === 'error') {
@@ -1042,15 +1029,14 @@ Install the console locally with the KubeStellar Console agent to use AI mission
               id: `msg-${Date.now()}`,
               role: 'system' as const,
               content: errorContent,
-              timestamp: new Date(),
-            }
+              timestamp: new Date() }
           ]
         }
       }
 
       return m
     }))
-  }, [markMissionAsUnread, finalizeCancellation])
+  }
 
   // Keep the ref in sync so ensureConnection always calls the latest handler
   handleAgentMessageRef.current = handleAgentMessage
@@ -1061,7 +1047,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
    * non-interactive terminal handling, and resolution matching.
    * Used by both startMission and runSavedMission to avoid duplication (#4768).
    */
-  const buildEnhancedPrompt = useCallback((params: StartMissionParams): {
+  const buildEnhancedPrompt = (params: StartMissionParams): {
     enhancedPrompt: string
     matchedResolutions: MatchedResolution[]
     isInstallMission: boolean
@@ -1122,8 +1108,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
             id: sr.resolution.id,
             title: sr.resolution.title,
             similarity: sr.similarity,
-            source: sr.source,
-          }))
+            source: sr.source }))
 
           // Inject resolution context into the prompt
           const resolutionContext = generateResolutionPromptContext(similarResolutions)
@@ -1133,13 +1118,13 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     }
 
     return { enhancedPrompt, matchedResolutions, isInstallMission }
-  }, [])
+  }
 
   /**
    * Build system messages for non-interactive mode and auto-matched resolutions.
    * Shared between startMission and runSavedMission (#4768).
    */
-  const buildSystemMessages = useCallback((
+  const buildSystemMessages = (
     isInstallMission: boolean,
     matchedResolutions: MatchedResolution[],
   ): MissionMessage[] => {
@@ -1152,8 +1137,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         role: 'system',
         content: '**Non-interactive mode:** This terminal does not support interactive input. ' +
           'If a tool requires browser-based login or manual confirmation, the agent will ask you to run that step in your own terminal first.',
-        timestamp: new Date(),
-      })
+        timestamp: new Date() })
     }
 
     // Add system message if resolutions were auto-matched
@@ -1166,19 +1150,18 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         id: `msg-${Date.now()}-resolutions`,
         role: 'system',
         content: `🔍 **Found ${matchedResolutions.length} similar resolution${matchedResolutions.length > 1 ? 's' : ''} from your knowledge base:**\n\n${resolutionNames}\n\n_This context has been automatically provided to the AI to help solve the problem faster._`,
-        timestamp: new Date(),
-      })
+        timestamp: new Date() })
     }
 
     return messages
-  }, [])
+  }
 
   /**
    * Shared preflight + execute pipeline.
    * Runs preflight permission check and, on success, delegates to executeMission.
    * Used by startMission and runSavedMission to avoid duplicating preflight logic (#4768).
    */
-  const preflightAndExecute = useCallback((
+  const preflightAndExecute = (
     missionId: string,
     enhancedPrompt: string,
     params: { cluster?: string; context?: Record<string, unknown>; type?: string },
@@ -1206,8 +1189,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
                 id: `msg-${Date.now()}-preflight`,
                 role: 'system' as const,
                 content: `**Preflight Check Failed**\n\nThe mission cannot proceed because cluster access verification failed. See the details below for how to fix this.\n\nError: ${preflight.error?.message || 'Unknown error'}`,
-                timestamp: new Date(),
-              }
+                timestamp: new Date() }
             ]
           } : m
         ))
@@ -1222,10 +1204,10 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       // (don't block on preflight infrastructure failures)
       executeMission(missionId, enhancedPrompt, params)
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- executeMission is defined after; called async so always resolved
-  }, [])
+   
+  }
 
-  const startMission = useCallback((params: StartMissionParams): string => {
+  const startMission = (params: StartMissionParams): string => {
     const missionId = `mission-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
     const { enhancedPrompt, matchedResolutions, isInstallMission } = buildEnhancedPrompt(params)
@@ -1236,8 +1218,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         id: `msg-${Date.now()}`,
         role: 'user',
         content: params.initialPrompt, // Show original prompt in UI
-        timestamp: new Date(),
-      },
+        timestamp: new Date() },
       ...buildSystemMessages(isInstallMission, matchedResolutions),
     ]
 
@@ -1253,8 +1234,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       updatedAt: new Date(),
       context: params.context,
       agent: selectedAgentRef.current || defaultAgentRef.current || undefined,
-      matchedResolutions: matchedResolutions.length > 0 ? matchedResolutions : undefined,
-    }
+      matchedResolutions: matchedResolutions.length > 0 ? matchedResolutions : undefined }
 
     setMissions(prev => [mission, ...prev])
     setActiveMissionId(missionId)
@@ -1268,14 +1248,14 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     preflightAndExecute(missionId, enhancedPrompt, params)
 
     return missionId
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- executeMission is defined after startMission; called async so always resolved
-  }, [ensureConnection, buildEnhancedPrompt, buildSystemMessages, preflightAndExecute])
+     
+  }
 
   /**
    * Internal: send mission to agent after preflight passes.
    * Extracted from startMission to allow reuse from retryPreflight.
    */
-  const executeMission = useCallback((
+  const executeMission = (
     missionId: string,
     enhancedPrompt: string,
     params: { context?: Record<string, unknown>; type?: string },
@@ -1300,8 +1280,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           sessionId: missionId,
           agent: selectedAgentRef.current || undefined,
           // Include mission context for the agent to use
-          context: params.context,
-        }
+          context: params.context }
       }), () => {
         setMissions(prev => prev.map(m =>
           m.id === missionId ? { ...m, status: 'failed', currentStep: 'WebSocket connection lost' } : m
@@ -1341,19 +1320,18 @@ Install the console locally with the KubeStellar Console agent to use AI mission
               id: `msg-${Date.now()}`,
               role: 'system',
               content: errorContent,
-              timestamp: new Date(),
-            }
+              timestamp: new Date() }
           ]
         } : m
       ))
     })
-  }, [ensureConnection, wsSend])
+  }
 
   /**
    * Retry preflight check for a blocked mission.
    * If preflight passes, transitions the mission to running and sends to agent.
    */
-  const retryPreflight = useCallback((missionId: string) => {
+  const retryPreflight = (missionId: string) => {
     const mission = missionsRef.current.find(m => m.id === missionId)
     if (!mission || mission.status !== 'blocked') return
 
@@ -1363,8 +1341,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         ...m,
         status: 'pending' as MissionStatus,
         currentStep: 'Re-running preflight check...',
-        preflightError: undefined,
-      } : m
+        preflightError: undefined } : m
     ))
 
     const clusterContext = mission.cluster?.split(',')[0]?.trim()
@@ -1387,8 +1364,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
                 id: `msg-${Date.now()}-preflight-retry`,
                 role: 'system' as const,
                 content: `**Preflight Check Still Failing**\n\nError: ${preflight.error?.message || 'Unknown error'}`,
-                timestamp: new Date(),
-              }
+                timestamp: new Date() }
             ]
           } : m
         ))
@@ -1417,8 +1393,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
               id: `msg-${Date.now()}-preflight-ok`,
               role: 'system' as const,
               content: '**Preflight check passed** — proceeding with mission execution.',
-              timestamp: new Date(),
-            }
+              timestamp: new Date() }
           ]
         } : m
       ))
@@ -1430,10 +1405,10 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       const prompt = lastUserMsg?.content || mission.description
       executeMission(missionId, prompt, { context: mission.context, type: mission.type })
     })
-  }, [executeMission])
+  }
 
   // Save a mission to library without running it
-  const saveMission = useCallback((params: SaveMissionParams): string => {
+  const saveMission = (params: SaveMissionParams): string => {
     const missionId = `mission-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
     const mission: Mission = {
@@ -1451,18 +1426,16 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         missionClass: params.missionClass,
         cncfProject: params.cncfProject,
         steps: params.steps,
-        tags: params.tags,
-      },
-    }
+        tags: params.tags } }
 
     setMissions(prev => [mission, ...prev])
     return missionId
-  }, [])
+  }
 
   // Run a previously saved mission, optionally targeting a specific cluster.
   // Delegates to the shared prompt-enhancement + preflight + execute pipeline
   // so saved missions get the same checks as freshly-started ones (#4768).
-  const runSavedMission = useCallback((missionId: string, cluster?: string) => {
+  const runSavedMission = (missionId: string, cluster?: string) => {
     const mission = missions.find(m => m.id === missionId)
     if (!mission || mission.status !== 'saved') return
 
@@ -1477,9 +1450,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         tags: mission.importedFrom.tags || [],
         steps: mission.importedFrom.steps.map(s => ({
           title: s.title,
-          description: s.description,
-        })),
-      }
+          description: s.description })) }
       const findings = scanForMaliciousContent(syntheticExport)
       if (findings.length > 0) {
         setMissions(prev => prev.map(m => m.id === missionId ? {
@@ -1489,8 +1460,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
             id: `msg-${Date.now()}`,
             role: 'system' as const,
             content: `**Mission blocked:** Imported mission contains potentially unsafe content:\n\n${findings.map(f => `- ${f.message}: \`${f.match}\` (in ${f.location})`).join('\n')}\n\nPlease review and edit the mission before running.`,
-            timestamp: new Date(),
-          }]
+            timestamp: new Date() }]
         } : m))
         return
       }
@@ -1508,8 +1478,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       type: mission.type,
       cluster: cluster || undefined,
       initialPrompt: basePrompt,
-      context: mission.context,
-    }
+      context: mission.context }
 
     // Run the shared prompt-enhancement pipeline (cluster targeting,
     // dry-run, non-interactive handling, resolution matching)
@@ -1529,12 +1498,10 @@ Install the console locally with the KubeStellar Console agent to use AI mission
             id: `msg-${Date.now()}`,
             role: 'user' as const,
             content: basePrompt, // Show original prompt in UI (not cluster prefix)
-            timestamp: new Date(),
-          },
+            timestamp: new Date() },
           ...systemMessages,
         ],
-        updatedAt: new Date(),
-      } : m
+        updatedAt: new Date() } : m
     ))
     setActiveMissionId(missionId)
     setIsSidebarOpen(true)
@@ -1543,13 +1510,13 @@ Install the console locally with the KubeStellar Console agent to use AI mission
 
     // Run preflight permission check, then execute via the shared pipeline
     preflightAndExecute(missionId, enhancedPrompt, params)
-  }, [missions, buildEnhancedPrompt, buildSystemMessages, preflightAndExecute])
+  }
 
   // Cancel a running mission — sends cancel signal to backend to kill agent process.
   // Uses WebSocket if connected, otherwise falls back to HTTP POST endpoint.
   // Sets status to 'cancelling' immediately, then waits for backend acknowledgment
   // before transitioning to final 'failed' state. Falls back to a timeout if no ack.
-  const cancelMission = useCallback((missionId: string) => {
+  const cancelMission = (missionId: string) => {
     // Guard against double-cancel: if already cancelling, don't schedule another timeout
     if (cancelTimeouts.current.has(missionId)) return
 
@@ -1566,16 +1533,14 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       wsRef.current.send(JSON.stringify({
         id: `cancel-${Date.now()}`,
         type: 'cancel_chat',
-        payload: { sessionId: missionId },
-      }))
+        payload: { sessionId: missionId } }))
     } else {
       // HTTP fallback — WS may be disconnected during long agent runs.
       // Use the response to determine if cancellation succeeded.
       fetch(`${LOCAL_AGENT_HTTP_URL}/cancel-chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: missionId }),
-      }).then(response => {
+        body: JSON.stringify({ sessionId: missionId }) }).then(response => {
         if (response.ok) {
           finalizeCancellation(missionId, 'Mission cancelled by user.')
         } else {
@@ -1600,8 +1565,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
             id: `msg-${Date.now()}`,
             role: 'system',
             content: 'Cancellation requested — waiting for backend confirmation...',
-            timestamp: new Date(),
-          }
+            timestamp: new Date() }
         ]
       } : m
     ))
@@ -1617,10 +1581,10 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       finalizeCancellation(missionId, 'Mission cancelled by user (backend did not confirm cancellation in time).')
     }, CANCEL_ACK_TIMEOUT_MS)
     cancelTimeouts.current.set(missionId, timeoutHandle)
-  }, [finalizeCancellation])
+  }
 
   // Send a follow-up message
-  const sendMessage = useCallback((missionId: string, content: string) => {
+  const sendMessage = (missionId: string, content: string) => {
     // Detect stop/cancel keywords — treat as a cancel action
     const STOP_KEYWORDS = ['stop', 'cancel', 'abort', 'halt', 'quit']
     const isStopCommand = STOP_KEYWORDS.some(kw => content.trim().toLowerCase() === kw)
@@ -1645,8 +1609,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
             id: `msg-${Date.now()}`,
             role: 'user',
             content,
-            timestamp: new Date(),
-          }
+            timestamp: new Date() }
         ]
       }
     }))
@@ -1663,8 +1626,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         .filter(msg => msg.role === 'user' || msg.role === 'assistant')
         .map(msg => ({
           role: msg.role,
-          content: msg.content,
-        })) || []
+          content: msg.content })) || []
 
       // If the ref hasn't yet reflected the setMissions update, ensure the
       // current user message is still included in the history payload.
@@ -1699,24 +1661,23 @@ Install the console locally with the KubeStellar Console agent to use AI mission
               id: `msg-${Date.now()}`,
               role: 'system',
               content: 'Lost connection to local agent. Please ensure the agent is running and try again.',
-              timestamp: new Date(),
-            }
+              timestamp: new Date() }
           ]
         } : m
       ))
     })
-  }, [cancelMission, ensureConnection, wsSend])
+  }
 
   // Dismiss/remove a mission from the list
-  const dismissMission = useCallback((missionId: string) => {
+  const dismissMission = (missionId: string) => {
     setMissions(prev => prev.filter(m => m.id !== missionId))
     if (activeMissionId === missionId) {
       setActiveMissionId(null)
     }
-  }, [activeMissionId])
+  }
 
   // Rename a mission's display title
-  const renameMission = useCallback((missionId: string, newTitle: string) => {
+  const renameMission = (missionId: string, newTitle: string) => {
     const trimmed = newTitle.trim()
     if (!trimmed) return
     setMissions(prev => prev.map(m => {
@@ -1725,10 +1686,10 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       }
       return m
     }))
-  }, [])
+  }
 
   // Update a saved mission's description and/or steps before running
-  const updateSavedMission = useCallback((missionId: string, updates: SavedMissionUpdates) => {
+  const updateSavedMission = (missionId: string, updates: SavedMissionUpdates) => {
     setMissions(prev => prev.map(m => {
       if (m.id !== missionId || m.status !== 'saved') return m
       const next = { ...m, updatedAt: new Date() }
@@ -1746,10 +1707,10 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       }
       return next
     }))
-  }, [])
+  }
 
   // Rate a mission (thumbs up/down feedback)
-  const rateMission = useCallback((missionId: string, feedback: MissionFeedback) => {
+  const rateMission = (missionId: string, feedback: MissionFeedback) => {
     setMissions(prev => prev.map(m => {
       if (m.id === missionId) {
         emitMissionRated(m.type, feedback || 'neutral')
@@ -1757,10 +1718,10 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       }
       return m
     }))
-  }, [])
+  }
 
   // Set active mission
-  const setActiveMission = useCallback((missionId: string | null) => {
+  const setActiveMission = (missionId: string | null) => {
     setActiveMissionId(missionId)
     if (missionId) {
       setIsSidebarOpen(true)
@@ -1774,10 +1735,10 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         return prev
       })
     }
-  }, [])
+  }
 
   // Mark a specific mission as read
-  const markMissionAsRead = useCallback((missionId: string) => {
+  const markMissionAsRead = (missionId: string) => {
     setUnreadMissionIds(prev => {
       if (prev.has(missionId)) {
         const next = new Set(prev)
@@ -1786,13 +1747,13 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       }
       return prev
     })
-  }, [])
+  }
 
   // Special value for "no AI agent" — agent data only, no AI processing
   const NONE_AGENT = 'none'
 
   // Select an AI agent
-  const selectAgent = useCallback((agentName: string) => {
+  const selectAgent = (agentName: string) => {
     // Persist immediately so the choice survives page refresh
     localStorage.setItem(SELECTED_AGENT_KEY, agentName)
     setSelectedAgent(agentName)
@@ -1809,32 +1770,32 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     }).catch(err => {
       console.error('[Missions] Failed to select agent:', err)
     })
-  }, [ensureConnection, wsSend])
+  }
 
   // Connect to agent (for AgentSelector in navbar)
-  const connectToAgent = useCallback(() => {
+  const connectToAgent = () => {
     ensureConnection().catch(err => {
       console.error('[Missions] Failed to connect to agent:', err)
     })
-  }, [ensureConnection])
+  }
 
   // Sidebar controls
-  const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), [])
-  const openSidebar = useCallback(() => {
+  const toggleSidebar = () => setIsSidebarOpen(prev => !prev)
+  const openSidebar = () => {
     setIsSidebarOpen(true)
     setIsSidebarMinimized(false) // Expand when opening
-  }, [])
-  const closeSidebar = useCallback(() => {
+  }
+  const closeSidebar = () => {
     setIsSidebarOpen(false)
     setIsFullScreen(false) // Exit fullscreen when closing
-  }, [])
-  const minimizeSidebar = useCallback(() => setIsSidebarMinimized(true), [])
-  const expandSidebar = useCallback(() => setIsSidebarMinimized(false), [])
+  }
+  const minimizeSidebar = () => setIsSidebarMinimized(true)
+  const expandSidebar = () => setIsSidebarMinimized(false)
 
   // Fullscreen controls
-  const handleSetFullScreen = useCallback((fullScreen: boolean) => {
+  const handleSetFullScreen = (fullScreen: boolean) => {
     setIsFullScreen(fullScreen)
-  }, [])
+  }
 
   // Get active mission object
   const activeMission = missions.find(m => m.id === activeMissionId) || null
@@ -1890,8 +1851,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       closeSidebar,
       minimizeSidebar,
       expandSidebar,
-      setFullScreen: handleSetFullScreen,
-    }}>
+      setFullScreen: handleSetFullScreen }}>
       {children}
     </MissionContext.Provider>
   )
@@ -1938,11 +1898,10 @@ const MISSIONS_FALLBACK: MissionContextValue = {
   closeSidebar: () => {},
   minimizeSidebar: () => {},
   expandSidebar: () => {},
-  setFullScreen: () => {},
-}
+  setFullScreen: () => {} }
 
 export function useMissions() {
-  const context = use(MissionContext)
+  const context = useContext(MissionContext)
   if (!context) {
     if (import.meta.env.DEV) {
       console.warn('useMissions was called outside MissionProvider — returning safe fallback')

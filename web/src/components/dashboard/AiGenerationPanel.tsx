@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, startTransition, useRef, type ReactNode } from 'react'
+import { useState, useEffect, startTransition, useRef, type ReactNode } from 'react'
 import { Sparkles, Loader2, CheckCircle, AlertTriangle, RotateCw, Save } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../cards/console-missions/shared'
@@ -25,8 +25,7 @@ export function AiGenerationPanel<T>({
   validateResult,
   renderPreview,
   onSave,
-  saveLabel = 'Save',
-}: AiGenerationPanelProps<T>) {
+  saveLabel = 'Save' }: AiGenerationPanelProps<T>) {
   const [userPrompt, setUserPrompt] = useState('')
   const [phase, setPhase] = useState<Phase>('idle')
   const [missionId, setMissionId] = useState<string | null>(null)
@@ -89,7 +88,7 @@ export function AiGenerationPanel<T>({
     }
   }, [trackedMission, phase, validateResult])
 
-  const handleGenerate = useCallback(() => {
+  const handleGenerate = () => {
     if (!userPrompt.trim()) return
 
     checkKeyAndRun(() => {
@@ -98,8 +97,7 @@ export function AiGenerationPanel<T>({
         title: missionTitle,
         description: userPrompt.substring(0, 200),
         type: 'custom',
-        initialPrompt: fullPrompt,
-      })
+        initialPrompt: fullPrompt })
       setMissionId(id)
       setPhase('generating')
       setStreamingText('')
@@ -109,23 +107,23 @@ export function AiGenerationPanel<T>({
       if (closeSidebarTimeoutRef.current !== null) clearTimeout(closeSidebarTimeoutRef.current)
       closeSidebarTimeoutRef.current = setTimeout(() => closeSidebar(), CLOSE_ANIMATION_MS)
     })
-  }, [userPrompt, systemPrompt, missionTitle, startMission, closeSidebar, checkKeyAndRun])
+  }
 
-  const handleRetry = useCallback(() => {
+  const handleRetry = () => {
     setPhase('idle')
     setStreamingText('')
     setParsedResult(null)
     setParseError(null)
     setMissionId(null)
-  }, [])
+  }
 
-  const handleSave = useCallback(() => {
+  const handleSave = () => {
     if (parsedResult) {
       onSave(parsedResult)
       handleRetry()
       setUserPrompt('')
     }
-  }, [parsedResult, onSave, handleRetry])
+  }
 
   return (
     <div className="space-y-4 relative">

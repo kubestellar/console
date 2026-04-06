@@ -106,8 +106,7 @@ export function KubeKong(_props: CardComponentProps) {
     onGround: true,
     climbing: false,
     facingRight: true,
-    jumpedBarrels: new Set(),
-  })
+    jumpedBarrels: new Set() })
   const [barrels, setBarrels] = useState<Barrel[]>([])
   const [score, setScore] = useState(0)
   const [lives, setLives] = useState(3)
@@ -124,7 +123,7 @@ export function KubeKong(_props: CardComponentProps) {
   }, [player, barrels])
 
   // Check if player is on a ladder
-  const getOnLadder = useCallback((x: number, y: number): Ladder | null => {
+  const getOnLadder = (x: number, y: number): Ladder | null => {
     const playerCenterX = x + PLAYER_WIDTH / 2
     for (const ladder of LADDERS) {
       if (Math.abs(playerCenterX - ladder.x - 10) < 12 &&
@@ -134,10 +133,10 @@ export function KubeKong(_props: CardComponentProps) {
       }
     }
     return null
-  }, [])
+  }
 
   // Check platform collision for player
-  const checkPlatformCollision = useCallback((x: number, y: number, vy: number): { onGround: boolean; groundY: number } => {
+  const checkPlatformCollision = (x: number, y: number, vy: number): { onGround: boolean; groundY: number } => {
     const playerBottom = y + PLAYER_HEIGHT
     const playerCenterX = x + PLAYER_WIDTH / 2
 
@@ -150,7 +149,7 @@ export function KubeKong(_props: CardComponentProps) {
       }
     }
     return { onGround: false, groundY: y }
-  }, [])
+  }
 
   // Draw game
   const draw = useCallback(() => {
@@ -512,8 +511,7 @@ export function KubeKong(_props: CardComponentProps) {
           y: 80,
           vx: BARREL_SPEED,
           vy: 0,
-          rolling: true,
-        }])
+          rolling: true }])
       }
 
       // Update barrels
@@ -635,11 +633,10 @@ export function KubeKong(_props: CardComponentProps) {
 
   // Keyboard controls — scoped to visible game container (KeepAlive-safe)
   useGameKeyTracking(gameContainerRef, keysRef, {
-    preventDefaultKeys: ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'],
-  })
+    preventDefaultKeys: ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'] })
 
   // Start game
-  const startGame = useCallback(() => {
+  const startGame = () => {
     setPlayer({
       x: 20,
       y: 276,
@@ -648,8 +645,7 @@ export function KubeKong(_props: CardComponentProps) {
       onGround: true,
       climbing: false,
       facingRight: true,
-      jumpedBarrels: new Set(),
-    })
+      jumpedBarrels: new Set() })
     setBarrels([])
     setScore(0)
     setLives(3)
@@ -659,7 +655,7 @@ export function KubeKong(_props: CardComponentProps) {
     setBossFrame(0)
     setIsPlaying(true)
     emitGameStarted('kube_kong')
-  }, [])
+  }
 
   const scale = isExpanded ? 1.5 : 1
 

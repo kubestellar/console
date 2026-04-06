@@ -18,8 +18,7 @@ export function EventSummary() {
     refetch,
     isFailed,
     consecutiveFailures,
-    lastRefresh,
-  } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
+    lastRefresh } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
   const { filterByCluster } = useGlobalFilters()
 
   // Report state to CardWrapper for refresh animation
@@ -30,8 +29,7 @@ export function EventSummary() {
     isDemoData: isDemoFallback,
     hasAnyData: hasData,
     isFailed: isFailed && !hasData,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
   const {
     localClusterFilter,
@@ -40,18 +38,16 @@ export function EventSummary() {
     availableClusters,
     showClusterFilter,
     setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({
-    storageKey: 'event-summary',
-  })
+    clusterFilterRef } = useChartFilters({
+    storageKey: 'event-summary' })
 
-  const filteredEvents = useMemo(() => {
+  const filteredEvents = (() => {
     let result = filterByCluster(events)
     if (localClusterFilter.length > 0) {
       result = result.filter(e => e.cluster && localClusterFilter.includes(e.cluster))
     }
     return result
-  }, [events, filterByCluster, localClusterFilter])
+  })()
 
   const summary = useMemo(() => {
     const warnings = filteredEvents.filter(e => e.type === 'Warning').length

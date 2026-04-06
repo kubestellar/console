@@ -108,8 +108,7 @@ export function MissileCommand(_props: CardComponentProps) {
     score,
     wave,
     gameOver,
-    cursorPos,
-  })
+    cursorPos })
 
   useEffect(() => {
     gameStateRef.current = {
@@ -121,8 +120,7 @@ export function MissileCommand(_props: CardComponentProps) {
       score,
       wave,
       gameOver,
-      cursorPos,
-    }
+      cursorPos }
   }, [cities, batteries, enemyMissiles, playerMissiles, explosions, score, wave, gameOver, cursorPos])
 
   /** Spawn a new wave of enemy missiles without touching city/battery state. */
@@ -138,8 +136,7 @@ export function MissileCommand(_props: CardComponentProps) {
         targetX: tx,
         targetY: GROUND_Y - 4,
         speed: ENEMY_BASE_SPEED + waveNum * ENEMY_SPEED_INCREMENT + Math.random() * ENEMY_SPEED_VARIANCE,
-        trail: [],
-      })
+        trail: [] })
     }
     setEnemyMissiles(newMissiles)
     setPlayerMissiles([])
@@ -147,13 +144,13 @@ export function MissileCommand(_props: CardComponentProps) {
   }, [])
 
   /** Full reset — new game only. Cities and batteries are always restored here. */
-  const initGame = useCallback(() => {
+  const initGame = () => {
     const newCities: City[] = CITY_POSITIONS.slice(0, CITY_COUNT).map(x => ({ x, alive: true }))
     const newBatteries: MissileBattery[] = BATTERY_POSITIONS.map(x => ({ x, ammo: INITIAL_AMMO }))
     setCities(newCities)
     setBatteries(newBatteries)
     spawnWave(1)
-  }, [spawnWave])
+  }
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current
@@ -301,8 +298,7 @@ export function MissileCommand(_props: CardComponentProps) {
               y: m.targetY,
               radius: EXPLOSION_INITIAL_RADIUS,
               maxRadius: PLAYER_EXPLOSION_RADIUS,
-              growing: true,
-            })
+              growing: true })
             return null
           }
           return { ...m, x: m.x + (dx / dist) * PLAYER_MISSILE_SPEED, y: m.y + (dy / dist) * PLAYER_MISSILE_SPEED }
@@ -368,8 +364,7 @@ export function MissileCommand(_props: CardComponentProps) {
           y: m.targetY,
           radius: EXPLOSION_INITIAL_RADIUS,
           maxRadius: ENEMY_IMPACT_RADIUS,
-          growing: true,
-        })
+          growing: true })
         updatedCities = updatedCities.map(c => {
           if (!c.alive) return c
           if (Math.abs(c.x - m.targetX) < CITY_WIDTH) return { ...c, alive: false }
@@ -437,8 +432,7 @@ export function MissileCommand(_props: CardComponentProps) {
   }, [isPlaying, draw])
 
   // Mouse / touch interaction for firing
-  const handleCanvasClick = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
       if (!isPlaying || gameOver) return
       const canvas = canvasRef.current
       if (!canvas) return
@@ -475,28 +469,21 @@ export function MissileCommand(_props: CardComponentProps) {
           y: LAUNCH_Y,
           targetX: clickX,
           targetY: clickY,
-          speed: PLAYER_MISSILE_SPEED,
-        },
+          speed: PLAYER_MISSILE_SPEED },
       ])
-    },
-    [isPlaying, gameOver, isExpanded]
-  )
+    }
 
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
       const canvas = canvasRef.current
       if (!canvas) return
       const rect = canvas.getBoundingClientRect()
       const scale = isExpanded ? 1.3 : 1
       setCursorPos({
         x: (e.clientX - rect.left) / scale,
-        y: (e.clientY - rect.top) / scale,
-      })
-    },
-    [isExpanded]
-  )
+        y: (e.clientY - rect.top) / scale })
+    }
 
-  const startGame = useCallback(() => {
+  const startGame = () => {
     setScore(0)
     setWave(1)
     setGameOver(false)
@@ -504,7 +491,7 @@ export function MissileCommand(_props: CardComponentProps) {
     initGame()
     setIsPlaying(true)
     emitGameStarted('missile_command')
-  }, [initGame])
+  }
 
   const scale = isExpanded ? 1.3 : 1
 

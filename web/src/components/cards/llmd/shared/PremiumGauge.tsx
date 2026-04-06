@@ -9,8 +9,6 @@
  * - Animated value transitions
  */
 import { motion } from 'framer-motion'
-import { useMemo } from 'react'
-
 interface GaugeConfig {
   value: number
   max: number
@@ -36,8 +34,7 @@ function polarToCartesian(cx: number, cy: number, r: number, angle: number) {
   const rad = ((angle - 90) * Math.PI) / 180
   return {
     x: cx + r * Math.cos(rad),
-    y: cy + r * Math.sin(rad),
-  }
+    y: cy + r * Math.sin(rad) }
 }
 
 // Create arc path
@@ -57,8 +54,7 @@ function getGradientColors(color: string) {
     amber: { start: '#f59e0b', end: '#fbbf24' },
     blue: { start: '#3b82f6', end: '#60a5fa' },
     purple: { start: '#9333ea', end: '#a855f7' },
-    cyan: { start: '#06b6d4', end: '#22d3ee' },
-  }
+    cyan: { start: '#06b6d4', end: '#22d3ee' } }
   return colorMap[color] || { start: color, end: color }
 }
 
@@ -71,8 +67,7 @@ export function PremiumGauge({
   size = 200,
   startAngle = -135,
   endAngle = 135,
-  showInnerGlow = true,
-}: PremiumGaugeProps) {
+  showInnerGlow = true }: PremiumGaugeProps) {
   const viewSize = 100
   const cx = viewSize / 2
   const cy = viewSize / 2
@@ -84,21 +79,21 @@ export function PremiumGauge({
   const totalAngle = endAngle - startAngle
 
   // Calculate arc angles based on values
-  const primaryAngle = useMemo(() => {
+  const primaryAngle = (() => {
     const percentage = primary.max > 0 ? Math.min(primary.value / primary.max, 1) : 0
     return startAngle + percentage * totalAngle
-  }, [primary.value, primary.max, startAngle, totalAngle])
+  })()
 
-  const secondaryAngle = useMemo(() => {
+  const secondaryAngle = (() => {
     if (!secondary) return startAngle
     const percentage = secondary.max > 0 ? Math.min(secondary.value / secondary.max, 1) : 0
     return startAngle + percentage * totalAngle
-  }, [secondary, startAngle, totalAngle])
+  })()
 
   const primaryColors = getGradientColors(primary.color)
   const secondaryColors = secondary ? getGradientColors(secondary.color) : null
 
-  const uniqueId = useMemo(() => Math.random().toString(36).substr(2, 9), [])
+  const uniqueId = Math.random().toString(36).substr(2, 9)
 
   return (
     <div className="relative" style={{ width: size, height: size }}>

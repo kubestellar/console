@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { RotateCcw, ChevronLeft, ChevronRight, Crown, Settings } from 'lucide-react'
@@ -565,7 +565,7 @@ function KubeChessInternal() {
   })
 
   const gameResult = useMemo(() => getGameResult(gameState), [gameState])
-  const inCheck = useMemo(() => isInCheck(gameState.board, gameState.turn, gameState), [gameState])
+  const inCheck = isInCheck(gameState.board, gameState.turn, gameState)
 
   // Save game state
   useEffect(() => {
@@ -630,7 +630,7 @@ function KubeChessInternal() {
   }, [gameResult, gameState.turn, playerColor])
 
   // Handle square click
-  const handleSquareClick = useCallback((row: number, col: number) => {
+  const handleSquareClick = (row: number, col: number) => {
     if (gameState.turn !== playerColor || gameResult !== 'ongoing' || isThinking) return
 
     const piece = gameState.board[row][col]
@@ -678,29 +678,29 @@ function KubeChessInternal() {
       setSelectedSquare(null)
       setValidMoves([])
     }
-  }, [gameState, selectedSquare, validMoves, playerColor, gameResult, isThinking])
+  }
 
   // Handle promotion
-  const handlePromotion = useCallback((pieceType: PieceType) => {
+  const handlePromotion = (pieceType: PieceType) => {
     if (promotionPending) {
       setGameState(prev => makeMove(prev, promotionPending.from, promotionPending.to, pieceType))
       setPromotionPending(null)
     }
-  }, [promotionPending])
+  }
 
   // Reset game
-  const resetGame = useCallback(() => {
+  const resetGame = () => {
     setGameState(createInitialState())
     setSelectedSquare(null)
     setValidMoves([])
     setPromotionPending(null)
     emitGameStarted('chess')
-  }, [])
+  }
 
   // Flip board
-  const flipBoard = useCallback(() => {
+  const flipBoard = () => {
     setPlayerColor(prev => prev === 'white' ? 'black' : 'white')
-  }, [])
+  }
 
   const cellSize = isExpanded ? 56 : 40
 

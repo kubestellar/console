@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { usePersistence } from './usePersistence'
 import { useClusterGroups as useCRClusterGroups, ClusterGroup as CRClusterGroup } from './useConsoleCRs'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
@@ -54,8 +54,7 @@ function loadGroups(): ClusterGroup[] {
         // Migrate old groups without kind field
         return parsed.map(g => ({
           ...g,
-          kind: g.kind || 'static',
-        }))
+          kind: g.kind || 'static' }))
       }
     }
   } catch {
@@ -88,10 +87,8 @@ function crToLocalGroup(cr: CRClusterGroup): ClusterGroup {
     color: cr.spec.color,
     icon: cr.spec.icon,
     query: isDynamic ? {
-      filters: cr.spec.dynamicFilters,
-    } : undefined,
-    lastEvaluated: cr.status?.lastEvaluated,
-  }
+      filters: cr.spec.dynamicFilters } : undefined,
+    lastEvaluated: cr.status?.lastEvaluated }
 }
 
 function localGroupToCR(group: ClusterGroup): Omit<CRClusterGroup, 'apiVersion' | 'kind'> {
@@ -101,13 +98,10 @@ function localGroupToCR(group: ClusterGroup): Omit<CRClusterGroup, 'apiVersion' 
       color: group.color,
       icon: group.icon,
       staticMembers: group.kind === 'static' ? group.clusters : undefined,
-      dynamicFilters: group.kind === 'dynamic' && group.query?.filters ? group.query.filters : undefined,
-    },
+      dynamicFilters: group.kind === 'dynamic' && group.query?.filters ? group.query.filters : undefined },
     status: {
       matchedClusters: group.clusters,
-      lastEvaluated: group.lastEvaluated,
-    },
-  }
+      lastEvaluated: group.lastEvaluated } }
 }
 
 // ============================================================================
@@ -131,8 +125,7 @@ export function useClusterGroups() {
     updateItem: updateCRGroup,
     deleteItem: deleteCRGroup,
     refresh: refreshCRGroups,
-    loading: crLoading,
-  } = useCRClusterGroups()
+    loading: crLoading } = useCRClusterGroups()
 
   // localStorage-backed state (fallback)
   const [localGroups, setLocalGroups] = useState<ClusterGroup[]>(loadGroups)
@@ -145,14 +138,14 @@ export function useClusterGroups() {
   }, [localGroups, shouldUseCRs])
 
   // Convert CR groups to local format
-  const groups: ClusterGroup[] = useMemo(() => {
+  const groups: ClusterGroup[] = (() => {
     if (shouldUseCRs) {
       return crGroups.map(crToLocalGroup)
     }
     return localGroups
-  }, [shouldUseCRs, crGroups, localGroups])
+  })()
 
-  const createGroup = useCallback(async (group: ClusterGroup) => {
+  const createGroup = async (group: ClusterGroup) => {
     if (shouldUseCRs) {
       // Create via CR
       await createCRGroup(localGroupToCR(group) as CRClusterGroup)
@@ -171,15 +164,14 @@ export function useClusterGroups() {
           method: 'POST',
           headers: authHeaders(),
           body: JSON.stringify(group),
-          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-        })
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       } catch {
         // Backend sync is best-effort; localStorage is primary
       }
     }
-  }, [shouldUseCRs, createCRGroup])
+  }
 
-  const updateGroup = useCallback(async (name: string, updates: Partial<ClusterGroup>) => {
+  const updateGroup = async (name: string, updates: Partial<ClusterGroup>) => {
     if (shouldUseCRs) {
       // Find current CR and update
       const current = crGroups.find(g => g.metadata.name === name)
@@ -201,16 +193,15 @@ export function useClusterGroups() {
             method: 'PUT',
             headers: authHeaders(),
             body: JSON.stringify({ ...group, ...updates }),
-            signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-          })
+            signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
         } catch {
           // best-effort
         }
       }
     }
-  }, [shouldUseCRs, crGroups, updateCRGroup, localGroups])
+  }
 
-  const deleteGroup = useCallback(async (name: string) => {
+  const deleteGroup = async (name: string) => {
     if (shouldUseCRs) {
       await deleteCRGroup(name)
     } else {
@@ -220,20 +211,19 @@ export function useClusterGroups() {
         await fetch(`/api/cluster-groups/${encodeURIComponent(name)}`, {
           method: 'DELETE',
           headers: authHeaders(),
-          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-        })
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       } catch {
         // best-effort
       }
     }
-  }, [shouldUseCRs, deleteCRGroup])
+  }
 
-  const getGroupClusters = useCallback((name: string): string[] => {
+  const getGroupClusters = (name: string): string[] => {
     return groups.find(g => g.name === name)?.clusters ?? []
-  }, [groups])
+  }
 
   /** Evaluate a dynamic group's query against current cluster state */
-  const evaluateGroup = useCallback(async (name: string): Promise<string[]> => {
+  const evaluateGroup = async (name: string): Promise<string[]> => {
     const group = groups.find(g => g.name === name)
     if (!group || group.kind !== 'dynamic' || !group.query) {
       return group?.clusters ?? []
@@ -244,8 +234,7 @@ export function useClusterGroups() {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify(group.query),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!resp.ok) return group.clusters
 
       const data = await resp.json()
@@ -259,17 +248,16 @@ export function useClusterGroups() {
     } catch {
       return group.clusters
     }
-  }, [groups, updateGroup])
+  }
 
   /** Preview which clusters match a query without saving */
-  const previewQuery = useCallback(async (query: ClusterGroupQuery): Promise<{ clusters: string[]; count: number }> => {
+  const previewQuery = async (query: ClusterGroupQuery): Promise<{ clusters: string[]; count: number }> => {
     try {
       const resp = await fetch('/api/cluster-groups/evaluate', {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify(query),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!resp.ok) return { clusters: [], count: 0 }
 
       const data = await resp.json()
@@ -277,17 +265,16 @@ export function useClusterGroups() {
     } catch {
       return { clusters: [], count: 0 }
     }
-  }, [])
+  }
 
   /** Use AI to generate a cluster query from natural language */
-  const generateAIQuery = useCallback(async (prompt: string): Promise<AIQueryResult> => {
+  const generateAIQuery = async (prompt: string): Promise<AIQueryResult> => {
     try {
       const resp = await fetch('/api/cluster-groups/ai-query', {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({ prompt }),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!resp.ok) {
         return { error: `Request failed: ${resp.status}` }
       }
@@ -299,12 +286,11 @@ export function useClusterGroups() {
 
       return {
         suggestedName: data.suggestedName,
-        query: data.query,
-      }
+        query: data.query }
     } catch {
       return { error: 'Failed to connect to AI service' }
     }
-  }, [])
+  }
 
   return {
     groups,
@@ -318,6 +304,5 @@ export function useClusterGroups() {
     // Persistence info
     isPersisted: shouldUseCRs,
     isLoading: shouldUseCRs ? crLoading : false,
-    refresh: shouldUseCRs ? refreshCRGroups : undefined,
-  }
+    refresh: shouldUseCRs ? refreshCRGroups : undefined }
 }

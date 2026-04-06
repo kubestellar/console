@@ -5,8 +5,7 @@ import {
   collectFromLocalStorage,
   restoreToLocalStorage,
   isLocalStorageEmpty,
-  SETTINGS_CHANGED_EVENT,
-} from '../lib/settingsSync'
+  SETTINGS_CHANGED_EVENT } from '../lib/settingsSync'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { isNetlifyDeployment } from '../lib/demoMode'
@@ -25,10 +24,8 @@ async function settingsFetch<T>(path: string, options?: RequestInit): Promise<T>
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-    signal: options?.signal ?? AbortSignal.timeout(15000),
-  })
+      ...options?.headers },
+    signal: options?.signal ?? AbortSignal.timeout(15000) })
   if (!response.ok) throw new Error(`HTTP ${response.status}`)
   // Use .catch() on .json() to prevent Firefox from firing unhandledrejection
   // before the caller's try/catch processes the rejection (microtask timing issue).
@@ -75,8 +72,7 @@ export function usePersistedSettings() {
           try {
             await settingsFetch('/settings', {
               method: 'PUT',
-              body: JSON.stringify(current),
-            })
+              body: JSON.stringify(current) })
             if (mountedRef.current) {
               setSyncStatus('saved')
               setLastSaved(new Date())
@@ -102,13 +98,12 @@ export function usePersistedSettings() {
   }, [])
 
   // Export settings as encrypted backup file
-  const exportSettings = useCallback(async () => {
+  const exportSettings = async () => {
     try {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/settings/export`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!response.ok) throw new Error('Export failed')
       const blob = await response.blob()
       const url = URL.createObjectURL(blob)
@@ -123,17 +118,16 @@ export function usePersistedSettings() {
       console.error('[settings] export failed:', err)
       throw err
     }
-  }, [])
+  }
 
   // Import settings from a backup file
-  const importSettings = useCallback(async (file: File) => {
+  const importSettings = async (file: File) => {
     try {
       const text = await file.text()
       await settingsFetch('/settings/import', {
         method: 'PUT',
         body: text,
-        signal: AbortSignal.timeout(10000),
-      })
+        signal: AbortSignal.timeout(10000) })
       // Reload settings from backend after import
       const data = await settingsFetch<AllSettings>('/settings')
       if (data) {
@@ -147,7 +141,7 @@ export function usePersistedSettings() {
       console.error('[settings] import failed:', err)
       throw err
     }
-  }, [])
+  }
 
   // Initial load from backend — re-runs when auth state changes
   useEffect(() => {
@@ -218,6 +212,5 @@ export function usePersistedSettings() {
     lastSaved,
     filePath,
     exportSettings,
-    importSettings,
-  }
+    importSettings }
 }

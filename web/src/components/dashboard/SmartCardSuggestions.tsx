@@ -14,8 +14,7 @@ import { useClusters } from '../../hooks/useMCP'
 import {
   emitSmartSuggestionsShown,
   emitSmartSuggestionAccepted,
-  emitSmartSuggestionsAddAll,
-} from '../../lib/analytics'
+  emitSmartSuggestionsAddAll } from '../../lib/analytics'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 import { STORAGE_KEY_SMART_SUGGESTIONS_DISMISSED, STORAGE_KEY_HINTS_SUPPRESSED } from '../../lib/constants/storage'
 import { formatCardTitle } from '../../lib/formatCardTitle'
@@ -76,8 +75,7 @@ const MAX_SUGGESTIONS = 2
 export function SmartCardSuggestions({
   existingCardTypes,
   onAddCard,
-  onAddMultipleCards,
-}: SmartCardSuggestionsProps) {
+  onAddMultipleCards }: SmartCardSuggestionsProps) {
   const { t } = useTranslation()
   const { status: agentStatus, health } = useLocalAgent()
   const { deduplicatedClusters: clusters } = useClusters()
@@ -110,18 +108,17 @@ export function SmartCardSuggestions({
       hasPrometheus: clusterList.some(c => (c.namespaces || []).some(ns => ns.includes('monitoring') || ns.includes('prometheus'))),
       hasArgo: clusterList.some(c => (c.namespaces || []).some(ns => ns.includes('argocd') || ns.includes('argo'))),
       totalPods: clusterList.reduce((sum, c) => sum + (c.podCount || 0), 0),
-      totalNodes: clusterList.reduce((sum, c) => sum + (c.nodeCount || 0), 0),
-    }
+      totalNodes: clusterList.reduce((sum, c) => sum + (c.nodeCount || 0), 0) }
   }, [clusters])
 
   // Generate suggestions based on cluster context, excluding existing cards
-  const suggestions: Suggestion[] = useMemo(() => {
+  const suggestions: Suggestion[] = (() => {
     const existing = new Set(existingCardTypes)
     return SUGGESTION_RULES
       .filter(([cardType, , condition]) => !existing.has(cardType) && condition(clusterContext))
       .map(([cardType, reason]) => ({ cardType, reason }))
       .slice(0, MAX_SUGGESTIONS)
-  }, [existingCardTypes, clusterContext])
+  })()
 
   // Emit analytics when suggestions are first shown
   useEffect(() => {

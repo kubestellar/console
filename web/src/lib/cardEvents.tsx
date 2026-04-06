@@ -1,4 +1,4 @@
-import { createContext, use, useRef, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useRef, type ReactNode } from 'react'
 
 // ============================================================================
 // Card Event Types
@@ -73,7 +73,7 @@ const CardEventContext = createContext<CardEventBus | null>(null)
 export function CardEventProvider({ children }: { children: ReactNode }) {
   const subscribersRef = useRef<Map<string, Set<EventCallback<CardEventType>>>>(new Map())
 
-  const publish = useCallback((event: CardEvent) => {
+  const publish = (event: CardEvent) => {
     const callbacks = subscribersRef.current.get(event.type)
     if (!callbacks) return
     for (const cb of callbacks) {
@@ -83,9 +83,9 @@ export function CardEventProvider({ children }: { children: ReactNode }) {
         console.error(`[CardEvents] Error in ${event.type} handler:`, err)
       }
     }
-  }, [])
+  }
 
-  const subscribe = useCallback(<T extends CardEventType>(
+  const subscribe = <T extends CardEventType>(
     type: T,
     callback: EventCallback<T>,
   ): (() => void) => {
@@ -101,7 +101,7 @@ export function CardEventProvider({ children }: { children: ReactNode }) {
         subscribersRef.current.delete(type)
       }
     }
-  }, [])
+  }
 
   return (
     <CardEventContext.Provider value={{ publish, subscribe }}>
@@ -115,13 +115,12 @@ export function CardEventProvider({ children }: { children: ReactNode }) {
 // ============================================================================
 
 export function useCardEvents(): CardEventBus {
-  const ctx = use(CardEventContext)
+  const ctx = useContext(CardEventContext)
   if (!ctx) {
     // Return no-op bus when used outside provider (graceful degradation)
     return {
       publish: () => {},
-      subscribe: () => () => {},
-    }
+      subscribe: () => () => {} }
   }
   return ctx
 }

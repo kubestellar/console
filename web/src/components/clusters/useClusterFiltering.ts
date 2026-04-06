@@ -42,8 +42,7 @@ export function useClusterFiltering({
   customFilter,
   sortBy,
   sortAsc,
-  customOrder,
-}: ClusterFilteringParams): ClusterFilteringResult {
+  customOrder }: ClusterFilteringParams): ClusterFilteringResult {
   const filteredClusters = useMemo(() => {
     let result = clusters || []
 
@@ -119,7 +118,7 @@ export function useClusterFiltering({
   }, [clusters, filter, globalSelectedClusters, isAllClustersSelected, customFilter, sortBy, sortAsc, customOrder])
 
   // Base clusters after global filter (before local health filter)
-  const globalFilteredClusters = useMemo(() => {
+  const globalFilteredClusters = (() => {
     let result = clusters || []
 
     // Apply global cluster filter
@@ -139,7 +138,7 @@ export function useClusterFiltering({
     }
 
     return result
-  }, [clusters, globalSelectedClusters, isAllClustersSelected, customFilter])
+  })()
 
   return { filteredClusters, globalFilteredClusters }
 }

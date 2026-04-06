@@ -1,4 +1,4 @@
-import { ReactNode, Suspense, lazy, useState, useEffect, useRef, useCallback } from 'react'
+import { ReactNode, Suspense, lazy, useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
 import { Box, Wifi, WifiOff, X, Settings, Rocket, RotateCcw, Check, Loader2, RefreshCw, Plug } from 'lucide-react'
@@ -51,8 +51,7 @@ const STAR_POSITIONS = Array.from({ length: 30 }, () => ({
   height: Math.random() * 2 + 1 + 'px',
   left: Math.random() * 100 + '%',
   top: Math.random() * 100 + '%',
-  animationDelay: Math.random() * 3 + 's',
-}))
+  animationDelay: Math.random() * 3 + 's' }))
 
 // Thin progress bar shown during route transitions so the user
 // gets immediate visual feedback that navigation is happening.
@@ -119,7 +118,7 @@ export function Layout({ children }: LayoutProps) {
   const [restartState, setRestartState] = useState<'idle' | 'restarting' | 'waiting' | 'copied'>('idle')
   const [restartError, setRestartError] = useState<string | null>(null)
 
-  const handleCopyFallback = useCallback(async () => {
+  const handleCopyFallback = async () => {
     try {
       await copyToClipboard('./startup-oauth.sh')
       setRestartState('copied')
@@ -127,16 +126,15 @@ export function Layout({ children }: LayoutProps) {
     } catch {
       setRestartState('idle')
     }
-  }, [])
+  }
 
-  const handleRestartBackend = useCallback(async () => {
+  const handleRestartBackend = async () => {
     setRestartState('restarting')
     try {
       const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/restart-backend`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (resp.ok) {
         const data = await resp.json()
         if (data.success) {
@@ -151,7 +149,7 @@ export function Layout({ children }: LayoutProps) {
       setRestartError('Could not reach agent — please restart manually')
       handleCopyFallback()
     }
-  }, [handleCopyFallback])
+  }
 
   // Clear stale cache failure metadata on fresh page load so previous-session
   // "Refresh failed" badges don't persist across restarts.
@@ -498,8 +496,7 @@ export function Layout({ children }: LayoutProps) {
           id="main-content"
           style={{
             marginLeft: isMobile ? 0 : sidebarWidthPx + SIDEBAR_CONTROLS_OFFSET_PX,
-            marginRight: 'var(--mission-sidebar-width, 0px)',
-          }}
+            marginRight: 'var(--mission-sidebar-width, 0px)' }}
           className="relative flex-1 p-4 pb-24 md:p-6 md:pb-28 transition-[margin] duration-300 overflow-y-auto scroll-enhanced min-w-0"
         >
           <NavigationProgress />

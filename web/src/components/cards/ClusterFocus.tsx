@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { Activity, Box, Cpu, HardDrive, Network, AlertTriangle } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedPodIssues, useCachedDeploymentIssues, useCachedGPUNodes } from '../../hooks/useCachedData'
@@ -34,17 +34,15 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
     hasAnyData: hasData,
     isDemoData: isDemoMode || gpuDemoFallback || podsDemoFallback || deployDemoFallback,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
-    customFilter,
-  } = useGlobalFilters()
+    customFilter } = useGlobalFilters()
 
   // Apply global filters
-  const clusters = useMemo(() => {
+  const clusters = (() => {
     let result = allClusters
 
     if (!isAllClustersSelected) {
@@ -60,19 +58,15 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
     }
 
     return result
-  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
+  })()
 
   const clusterName = selectedCluster || internalCluster
 
-  const cluster = useMemo(() => {
-    return clusters.find(c => c.name === clusterName)
-  }, [clusters, clusterName])
+  const cluster = clusters.find(c => c.name === clusterName)
 
-  const clusterGPUs = useMemo(() => {
-    return gpuNodes
+  const clusterGPUs = gpuNodes
       .filter(n => n.cluster === clusterName || n.cluster.includes(clusterName))
       .reduce((sum, n) => sum + n.gpuCount, 0)
-  }, [gpuNodes, clusterName])
 
   const clusterPodIssues = podIssues.length
   const clusterDeploymentIssues = deploymentIssues.length
@@ -157,8 +151,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
             nodeCount: cluster.nodeCount,
             podCount: cluster.podCount,
             cpuCores: cluster.cpuCores,
-            server: cluster.server,
-          })}
+            server: cluster.server })}
         >
           <div className="flex items-center gap-2 mb-1">
             <Activity className="w-4 h-4 text-blue-400" />
@@ -203,8 +196,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
                 status: issue.status,
                 reason: issue.reason,
                 issues: issue.issues,
-                restarts: issue.restarts,
-              })
+                restarts: issue.restarts })
             }
           }}
           title={podIssues.length > 0 ? t('cards:clusterFocus.clickToView', { name: podIssues[0].name }) : t('cards:clusterFocus.noPodIssues')}
@@ -225,8 +217,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
                 replicas: issue.replicas,
                 readyReplicas: issue.readyReplicas,
                 reason: issue.reason,
-                message: issue.message,
-              })
+                message: issue.message })
             }
           }}
           title={deploymentIssues.length > 0 ? t('cards:clusterFocus.clickToView', { name: deploymentIssues[0].name }) : t('cards:clusterFocus.noDeploymentIssues')}

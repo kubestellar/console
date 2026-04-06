@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Package,
   ChevronDown,
@@ -6,8 +6,7 @@ import {
   Loader2,
   AlertTriangle,
   FileText,
-  Search,
-} from 'lucide-react'
+  Search } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedNamespaces } from '../../hooks/useCachedData'
 import { useWorkloads } from '../../hooks/useWorkloads'
@@ -58,16 +57,15 @@ export function ResourceMarshall() {
     hasAnyData: clusters.length > 0,
     isDemoData: demoMode || isDemoFallback,
     isFailed: clustersFailed,
-    consecutiveFailures: clustersFailures,
-  })
+    consecutiveFailures: clustersFailures })
 
   // Fetch workloads only when both cluster and namespace are selected.
   // Passing enabled=false prevents fetching all workloads across clusters.
   const hasSelection = !!selectedCluster && !!selectedNamespace
-  const workloadOpts = useMemo(() => {
+  const workloadOpts = (() => {
     if (!selectedCluster || !selectedNamespace) return undefined
     return { cluster: selectedCluster, namespace: selectedNamespace }
-  }, [selectedCluster, selectedNamespace])
+  })()
   const { data: workloads, isLoading: wlLoading } = useWorkloads(workloadOpts, hasSelection)
 
   // Dependency resolution
@@ -100,24 +98,24 @@ export function ResourceMarshall() {
   }, [demoMode, selectedNamespace, workloads, selectedWorkload])
 
   // Handle cluster change
-  const handleClusterChange = useCallback((cluster: string) => {
+  const handleClusterChange = (cluster: string) => {
     setSelectedCluster(cluster)
     setSelectedNamespace('')
     setSelectedWorkload('')
     setExpandedGroups(new Set())
     reset()
-  }, [reset])
+  }
 
   // Handle namespace change
-  const handleNamespaceChange = useCallback((ns: string) => {
+  const handleNamespaceChange = (ns: string) => {
     setSelectedNamespace(ns)
     setSelectedWorkload('')
     setExpandedGroups(new Set())
     reset()
-  }, [reset])
+  }
 
   // Handle workload selection
-  const handleWorkloadChange = useCallback((name: string) => {
+  const handleWorkloadChange = (name: string) => {
     setSelectedWorkload(name)
     setExpandedGroups(new Set())
     if (name && selectedCluster && selectedNamespace) {
@@ -125,7 +123,7 @@ export function ResourceMarshall() {
     } else {
       reset()
     }
-  }, [selectedCluster, selectedNamespace, resolve, reset])
+  }
 
   const toggleGroup = (label: string) => {
     setExpandedGroups(prev => {

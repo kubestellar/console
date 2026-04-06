@@ -16,33 +16,25 @@ const COLS = 10
 const TETROMINOES = {
   I: {
     shape: [[1, 1, 1, 1]],
-    color: 'bg-cyan-500',
-  },
+    color: 'bg-cyan-500' },
   O: {
     shape: [[1, 1], [1, 1]],
-    color: 'bg-yellow-500',
-  },
+    color: 'bg-yellow-500' },
   T: {
     shape: [[0, 1, 0], [1, 1, 1]],
-    color: 'bg-purple-500',
-  },
+    color: 'bg-purple-500' },
   S: {
     shape: [[0, 1, 1], [1, 1, 0]],
-    color: 'bg-green-500',
-  },
+    color: 'bg-green-500' },
   Z: {
     shape: [[1, 1, 0], [0, 1, 1]],
-    color: 'bg-red-500',
-  },
+    color: 'bg-red-500' },
   J: {
     shape: [[1, 0, 0], [1, 1, 1]],
-    color: 'bg-blue-500',
-  },
+    color: 'bg-blue-500' },
   L: {
     shape: [[0, 0, 1], [1, 1, 1]],
-    color: 'bg-orange-500',
-  },
-}
+    color: 'bg-orange-500' } }
 
 type TetrominoType = keyof typeof TETROMINOES
 type Board = (string | null)[][]
@@ -136,8 +128,7 @@ function getRandomPiece(): Piece {
     type,
     shape: TETROMINOES[type].shape.map(row => [...row]),
     x: Math.floor((COLS - TETROMINOES[type].shape[0].length) / 2),
-    y: -1,
-  }
+    y: -1 }
 }
 
 // Calculate score based on lines cleared
@@ -209,17 +200,17 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
   }, [piece, board, gameOver, isPaused, nextPiece, level])
 
   // Move piece left/right
-  const moveHorizontal = useCallback((dir: -1 | 1) => {
+  const moveHorizontal = (dir: -1 | 1) => {
     if (!piece || gameOver || isPaused) return
 
     const newPiece = { ...piece, x: piece.x + dir }
     if (isValidPosition(board, newPiece)) {
       setPiece(newPiece)
     }
-  }, [piece, board, gameOver, isPaused])
+  }
 
   // Rotate piece
-  const rotate = useCallback(() => {
+  const rotate = () => {
     if (!piece || gameOver || isPaused) return
 
     const newShape = rotateShape(piece.shape)
@@ -233,10 +224,10 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
         return
       }
     }
-  }, [piece, board, gameOver, isPaused])
+  }
 
   // Hard drop
-  const hardDrop = useCallback(() => {
+  const hardDrop = () => {
     if (!piece || gameOver || isPaused) return
 
     const newPiece = { ...piece }
@@ -246,10 +237,10 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
     setPiece(newPiece)
     // Force immediate landing on next tick
     setTimeout(moveDown, 10)
-  }, [piece, board, gameOver, isPaused, moveDown])
+  }
 
   // Keyboard controls — scoped to visible game container (KeepAlive-safe)
-  const handleTetrisKeyDown = useCallback((e: KeyboardEvent) => {
+  const handleTetrisKeyDown = (e: KeyboardEvent) => {
     if (!isPlaying || gameOver) return
 
     switch (e.key) {
@@ -287,7 +278,7 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
         setIsPaused(p => !p)
         break
     }
-  }, [isPlaying, gameOver, moveHorizontal, moveDown, rotate, hardDrop])
+  }
   useGameKeys(gameContainerRef, { onKeyDown: handleTetrisKeyDown })
 
   // Game loop
@@ -310,7 +301,7 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
   }, [isPlaying, gameOver, isPaused, getDropSpeed, moveDown])
 
   // Start new game
-  const startGame = useCallback(() => {
+  const startGame = () => {
     setBoard(createBoard())
     setPiece(getRandomPiece())
     setNextPiece(getRandomPiece())
@@ -321,16 +312,16 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
     setIsPaused(false)
     setIsPlaying(true)
     emitGameStarted('tetris')
-  }, [])
+  }
 
   // Toggle pause
-  const togglePause = useCallback(() => {
+  const togglePause = () => {
     if (!isPlaying || gameOver) return
     setIsPaused(p => !p)
-  }, [isPlaying, gameOver])
+  }
 
   // Render board with current piece
-  const renderBoard = useCallback(() => {
+  const renderBoard = () => {
     const display = board.map(row => [...row])
 
     // Add current piece to display
@@ -349,7 +340,7 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
     }
 
     return display
-  }, [board, piece])
+  }
 
   const cellSize = isExpanded ? 'w-5 h-5' : 'w-3 h-3'
   const previewCellSize = isExpanded ? 'w-4 h-4' : 'w-2.5 h-2.5'

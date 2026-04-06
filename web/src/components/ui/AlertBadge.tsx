@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Bell, AlertTriangle, CheckCircle, Clock, ChevronRight, X, Server, Search, ExternalLink, CheckSquare, Square, MinusSquare } from 'lucide-react'
@@ -129,10 +129,10 @@ export function AlertBadge() {
   }, [isOpen, close])
 
   // Check if a mission exists for an alert
-  const getMissionForAlert = useCallback((alert: Alert) => {
+  const getMissionForAlert = (alert: Alert) => {
     if (!alert.aiDiagnosis?.missionId) return null
     return missions.find(m => m.id === alert.aiDiagnosis?.missionId) || null
-  }, [missions])
+  }
 
   // Open mission sidebar for an alert
   const handleOpenMission = (e: React.MouseEvent, alert: Alert) => {
@@ -182,8 +182,7 @@ export function AlertBadge() {
       openDrillDown({
         type: 'cluster',
         title: alert.cluster,
-        data: { cluster: alert.cluster, alert },
-      })
+        data: { cluster: alert.cluster, alert } })
     }
   }
 
@@ -219,9 +218,7 @@ export function AlertBadge() {
   }
 
   // Get IDs of unacknowledged alerts in the current view
-  const unacknowledgedDisplayedIds = useMemo(() => {
-    return displayedAlerts.filter(a => !a.acknowledgedAt).map(a => a.id)
-  }, [displayedAlerts])
+  const unacknowledgedDisplayedIds = displayedAlerts.filter(a => !a.acknowledgedAt).map(a => a.id)
 
   // Select all unacknowledged alerts in current view
   const handleSelectAll = () => {

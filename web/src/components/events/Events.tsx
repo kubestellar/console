@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Activity, AlertTriangle, Clock, Bell, ChevronRight, CheckCircle2, Calendar, Zap } from 'lucide-react'
 import { useCachedEvents } from '../../hooks/useCachedData'
@@ -78,7 +78,7 @@ export function Events() {
 
   // Get events
   const { events: allEvents, isLoading, isRefreshing: refreshingAll, lastRefresh: allUpdated, refetch: refetchAll } = useCachedEvents(undefined, undefined, { limit: EVENT_LIMIT })
-  const warningEvents = useMemo(() => allEvents.filter(e => e.type === 'Warning'), [allEvents])
+  const warningEvents = allEvents.filter(e => e.type === 'Warning')
   const lastUpdated = allUpdated ? new Date(allUpdated) : null
 
   // Local state
@@ -89,7 +89,7 @@ export function Events() {
   const [activeTab, setActiveTab] = useState<ViewTab>('overview')
 
   // Events after global filter
-  const globalFilteredAllEvents = useMemo(() => {
+  const globalFilteredAllEvents = (() => {
     let result = allEvents
     if (!isAllClustersSelected) {
       result = result.filter(e => e.cluster && globalSelectedClusters.includes(e.cluster))
@@ -103,12 +103,12 @@ export function Events() {
       )
     }
     return result
-  }, [allEvents, globalSelectedClusters, isAllClustersSelected, globalCustomFilter])
+  })()
 
-  const globalFilteredWarningEvents = useMemo(() => globalFilteredAllEvents.filter(e => e.type === 'Warning'), [globalFilteredAllEvents])
+  const globalFilteredWarningEvents = globalFilteredAllEvents.filter(e => e.type === 'Warning')
 
   // Extract unique namespaces and reasons
-  const { namespaces, reasons } = useMemo(() => {
+  const { namespaces, reasons } = (() => {
     const nsSet = new Set<string>()
     const reasonSet = new Set<string>()
     globalFilteredAllEvents.forEach(e => {
@@ -116,7 +116,7 @@ export function Events() {
       if (e.reason) reasonSet.add(e.reason)
     })
     return { namespaces: Array.from(nsSet).sort(), reasons: Array.from(reasonSet).sort() }
-  }, [globalFilteredAllEvents])
+  })()
 
   // Filtered events for list/timeline views
   const filteredEvents = useMemo(() => {
@@ -189,13 +189,13 @@ export function Events() {
 
   const displayStats = (stats.total === 0 && eventsStatsCache && eventsStatsCache.total > 0) ? { ...stats, ...eventsStatsCache } : stats
 
-  const formatEventStat = useCallback((count: number) => {
+  const formatEventStat = (count: number) => {
     const formatted = formatStat(count)
     return count >= EVENT_LIMIT ? `${formatted}+` : formatted
-  }, [])
+  }
 
   // Stats value getter
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'total': return { value: formatEventStat(displayStats.total), sublabel: 'events', onClick: () => drillToAllEvents(), isClickable: displayStats.total > 0 }
       case 'warnings': return { value: formatEventStat(displayStats.warnings), sublabel: 'warning events', onClick: () => drillToAllEvents('warning'), isClickable: displayStats.warnings > 0 }
@@ -204,15 +204,12 @@ export function Events() {
       case 'errors': return { value: formatEventStat(displayStats.warnings), sublabel: 'error events', onClick: () => drillToAllEvents('warning'), isClickable: displayStats.warnings > 0 }
       default: return { value: '-', sublabel: '' }
     }
-  }, [displayStats, drillToAllEvents, formatEventStat])
+  }
 
-  const getStatValue = useCallback(
-    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
-    [getDashboardStatValue, getUniversalStatValue]
-  )
+  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
   // Group events by time
-  const groupedEvents = useMemo(() => {
+  const groupedEvents = (() => {
     const groups: Record<string, typeof filteredEvents> = { 'Last Hour': [], 'Today': [], 'Older': [] }
     const now = new Date()
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
@@ -224,7 +221,7 @@ export function Events() {
       else groups['Older'].push(event)
     })
     return groups
-  }, [filteredEvents])
+  })()
 
   const clearFilters = () => { setSelectedNamespace(''); setSelectedReason(''); setFilter('all'); setSearchQuery('') }
   const hasActiveFilters = selectedNamespace || selectedReason || filter !== 'all' || searchQuery

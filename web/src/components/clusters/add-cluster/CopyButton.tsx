@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Copy, Check } from 'lucide-react'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { copyToClipboard } from '../../../lib/clipboard'
@@ -11,12 +11,12 @@ export function CopyButton({ text }: { text: string }) {
     return () => clearTimeout(copiedTimerRef.current)
   }, [])
 
-  const handleCopy = useCallback(() => {
+  const handleCopy = () => {
     copyToClipboard(text)
     setCopied(true)
     clearTimeout(copiedTimerRef.current)
     copiedTimerRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
-  }, [text])
+  }
 
   return (
     <button

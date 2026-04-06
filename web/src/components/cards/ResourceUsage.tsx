@@ -27,14 +27,13 @@ export function ResourceUsage() {
     filteredClusters: clusters,
     showClusterFilter,
     setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({ storageKey: 'resource-usage' })
+    clusterFilterRef } = useChartFilters({ storageKey: 'resource-usage' })
 
   // Filter GPU nodes to match the currently displayed clusters
-  const gpuNodes = useMemo(() => {
+  const gpuNodes = (() => {
     const clusterNames = new Set(clusters.map(c => c.name))
     return allGPUNodes.filter(n => clusterNames.has(n.cluster.split('/')[0]))
-  }, [allGPUNodes, clusters])
+  })()
 
   // Calculate totals from real cluster data
   const totals = useMemo(() => {
@@ -54,8 +53,7 @@ export function ResourceUsage() {
 
     const sumAccel = (nodes: typeof gpuNodes) => ({
       total: nodes.reduce((s, n) => s + (n.gpuCount || 0), 0),
-      used: nodes.reduce((s, n) => s + (n.gpuAllocated || 0), 0),
-    })
+      used: nodes.reduce((s, n) => s + (n.gpuAllocated || 0), 0) })
 
     return {
       cpu: { total: totalCPUs, used: Math.round(usedCPUs) },
@@ -63,8 +61,7 @@ export function ResourceUsage() {
       gpu: sumAccel(gpuOnly),
       tpu: sumAccel(tpuOnly),
       aiu: sumAccel(aiuOnly),
-      xpu: sumAccel(xpuOnly),
-    }
+      xpu: sumAccel(xpuOnly) }
   }, [clusters, gpuNodes])
 
   // Open resources drill down showing all clusters
@@ -78,8 +75,7 @@ export function ResourceUsage() {
     isLoading: clustersLoading && !hasData,
     isRefreshing: clustersRefreshing || gpuRefreshing,
     hasAnyData: hasData,
-    isDemoData: isDemoMode || isDemoFallback,
-  })
+    isDemoData: isDemoMode || isDemoFallback })
 
   if (showSkeleton) {
     return (
@@ -213,8 +209,7 @@ export function ResourceUsage() {
               <span className="text-2xs text-red-400 mt-0.5">
                 {t('resourceUsage.overcommitted', {
                   used: accel.data.used,
-                  total: accel.data.total,
-                })}
+                  total: accel.data.total })}
               </span>
             )}
           </div>

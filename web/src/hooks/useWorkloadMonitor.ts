@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type {
   WorkloadMonitorResponse,
   MonitoredResource,
   MonitorIssue,
-  ResourceHealthStatus,
-} from '../types/workloadMonitor'
+  ResourceHealthStatus } from '../types/workloadMonitor'
 import { DEFAULT_REFRESH_MS } from '../types/workloadMonitor'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
@@ -75,7 +74,7 @@ export function useWorkloadMonitor(
   const hasLoadedOnce = useRef(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const fetchData = useCallback(async () => {
+  const fetchData = async () => {
     if (!cluster || !namespace || !workload) return
 
     const isInitialLoad = !hasLoadedOnce.current
@@ -114,7 +113,7 @@ export function useWorkloadMonitor(
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }, [cluster, namespace, workload])
+  }
 
   // Initial fetch and auto-refresh
   useEffect(() => {
@@ -159,6 +158,5 @@ export function useWorkloadMonitor(
     isFailed,
     consecutiveFailures,
     lastRefresh,
-    refetch: fetchData,
-  }
+    refetch: fetchData }
 }

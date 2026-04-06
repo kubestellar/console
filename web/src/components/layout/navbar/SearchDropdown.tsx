@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Search,
@@ -14,8 +14,7 @@ import {
   Globe,
   Bot,
   Package,
-  HardDrive,
-} from 'lucide-react'
+  HardDrive } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useSearchIndex, CATEGORY_ORDER, type SearchCategory, type SearchItem } from '../../../hooks/useSearchIndex'
 import { useMissions } from '../../../hooks/useMissions'
@@ -42,8 +41,7 @@ const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: typeof Serv
   mission: { label: 'AI Missions', icon: Bot },
   dashboard: { label: 'Custom Dashboards', icon: LayoutDashboard },
   helm: { label: 'Helm Releases', icon: Package },
-  node: { label: 'Nodes', icon: HardDrive },
-}
+  node: { label: 'Nodes', icon: HardDrive } }
 
 /**
  * SearchResultsPanel is rendered only when the search bar is open AND has a
@@ -57,8 +55,7 @@ function SearchResultsPanel({
   onSelect,
   onAskAI,
   resultsRef,
-  onResultsChange,
-}: {
+  onResultsChange }: {
   searchQuery: string
   selectedIndex: number
   onSelect: (item: SearchItem, index: number) => void
@@ -234,13 +231,13 @@ export function SearchDropdown() {
   }, [isResultsPanelActive])
 
   // Callback for SearchResultsPanel to sync flat results to parent
-  const handleResultsChange = useCallback((flatResults: SearchItem[], totalCount: number) => {
+  const handleResultsChange = (flatResults: SearchItem[], totalCount: number) => {
     flatResultsRef.current = flatResults
     totalCountRef.current = totalCount
-  }, [])
+  }
 
   // Create a custom mission from the search query
-  const handleAskAI = useCallback(() => {
+  const handleAskAI = () => {
     if (!searchQuery.trim()) return
 
     const query = searchQuery.trim()
@@ -249,20 +246,19 @@ export function SearchDropdown() {
       title: query.length > 50 ? query.substring(0, 47) + '...' : query,
       description: 'Custom AI mission from search',
       type: 'custom',
-      initialPrompt: query,
-    })
+      initialPrompt: query })
 
     setSearchQuery('')
     closeSearch()
-  }, [searchQuery, startMission, closeSearch])
+  }
 
   // Check if a page route is a discoverable dashboard not currently in the sidebar
-  const sidebarHrefs = useMemo(() => {
+  const sidebarHrefs = (() => {
     if (!sidebarConfig) return new Set<string>()
     return new Set(sidebarConfig.primaryNav.map(item => item.href))
-  }, [sidebarConfig])
+  })()
 
-  const handleSelect = useCallback((item: SearchItem, index?: number) => {
+  const handleSelect = (item: SearchItem, index?: number) => {
     emitGlobalSearchSelected(item.category, index ?? 0)
     // Mission items open the sidebar instead of navigating
     if (item.category === 'mission' && item.href?.startsWith('#mission:')) {
@@ -306,7 +302,7 @@ export function SearchDropdown() {
     }
     setSearchQuery('')
     closeSearch()
-  }, [navigate, location.pathname, setActiveMission, openSidebar, sidebarHrefs, closeSearch])
+  }
 
   // Close dropdown when clicking outside
   useEffect(() => {

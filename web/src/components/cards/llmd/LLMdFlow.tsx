@@ -6,7 +6,7 @@
  *
  * Now supports live data from selected llm-d stack via StackContext.
  */
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CircleDot } from 'lucide-react'
 import { generateServerMetrics, type ServerMetrics } from '../../../lib/llmd/mockData'
@@ -30,8 +30,7 @@ const NODE_POSITIONS = {
   prefill1: { x: 70, y: 50 },
   prefill2: { x: 70, y: 82 },
   decode0: { x: 92, y: 34 },
-  decode1: { x: 92, y: 66 },
-}
+  decode1: { x: 92, y: 66 } }
 
 // Node styling constants
 const NODE_RADIUS = 6
@@ -68,8 +67,7 @@ const COLORS = {
   decode: '#22c55e',
   'kv-transfer': '#06b6d4',
   gateway: '#3b82f6',
-  epp: '#f59e0b',
-}
+  epp: '#f59e0b' }
 
 // Get color based on load percentage
 const getLoadColors = (load: number) => {
@@ -299,8 +297,7 @@ function PremiumNode({ id, label, metrics, nodeColor, isSelected, onClick, uniqu
 function FlowConnection({
   connection,
   isAnimating,
-  nodePositions,
-}: {
+  nodePositions }: {
   connection: Connection
   isAnimating: boolean
   nodePositions: Record<string, { x: number; y: number }>
@@ -575,7 +572,7 @@ export function LLMdFlow() {
   const [metricsHistory, setMetricsHistory] = useState<Record<string, MetricsHistoryData>>({})
   const [selectedMetricTypes, setSelectedMetricTypes] = useState<MetricType[]>(['rps'])
   const [viewMode, setViewMode] = useState<ViewMode>('default')
-  const uniqueId = useMemo(() => `flow-${Math.random().toString(36).substr(2, 9)}`, [])
+  const uniqueId = `flow-${Math.random().toString(36).substr(2, 9)}`
 
   // Detect if card is in expanded/fullscreen mode
   const { isExpanded } = useCardExpanded()
@@ -609,9 +606,7 @@ export function LLMdFlow() {
           prefill1: 'Prefill-1',
           prefill2: 'Prefill-2',
           decode0: 'Decode-0',
-          decode1: 'Decode-1',
-        } as Record<string, string>,
-      }
+          decode1: 'Decode-1' } as Record<string, string> }
     }
 
     // In live mode with no stack selected, return empty state
@@ -619,8 +614,7 @@ export function LLMdFlow() {
       return {
         nodePositions: {} as Record<string, { x: number; y: number }>,
         connections: [] as Connection[],
-        nodeLabels: {} as Record<string, string>,
-      }
+        nodeLabels: {} as Record<string, string> }
     }
 
     // Live topology from stack
@@ -632,14 +626,12 @@ export function LLMdFlow() {
     const positions: Record<string, { x: number; y: number }> = {
       client: { x: 10, y: 50 },
       gateway: { x: 28, y: 50 },
-      epp: { x: 48, y: 50 },
-    }
+      epp: { x: 48, y: 50 } }
 
     const labels: Record<string, string> = {
       client: 'Clients',
       gateway: 'Gateway',
-      epp: 'EPP',
-    }
+      epp: 'EPP' }
 
     const conns: Connection[] = [
       { from: 'client', to: 'gateway', type: 'prefill', trafficPercent: 100 },
@@ -661,8 +653,7 @@ export function LLMdFlow() {
           from: 'epp',
           to: key as keyof typeof NODE_POSITIONS,
           type: 'prefill',
-          trafficPercent: Math.round(100 / maxPrefill),
-        })
+          trafficPercent: Math.round(100 / maxPrefill) })
       }
 
       // Position decode nodes - spread from y=5 to y=95 (full vertical range)
@@ -676,16 +667,14 @@ export function LLMdFlow() {
           from: 'epp',
           to: key as keyof typeof NODE_POSITIONS,
           type: 'decode',
-          trafficPercent: Math.round(20 / maxDecode),
-        })
+          trafficPercent: Math.round(20 / maxDecode) })
         // Prefill to decode connections
         for (let j = 0; j < maxPrefill; j++) {
           conns.push({
             from: `prefill${j}` as keyof typeof NODE_POSITIONS,
             to: key as keyof typeof NODE_POSITIONS,
             type: 'decode',
-            trafficPercent: Math.round(100 / maxDecode),
-          })
+            trafficPercent: Math.round(100 / maxDecode) })
         }
       }
     } else if (decodeCount > 0) {
@@ -700,8 +689,7 @@ export function LLMdFlow() {
           from: 'epp',
           to: key as keyof typeof NODE_POSITIONS,
           type: 'decode',
-          trafficPercent: Math.round(100 / maxDecode),
-        })
+          trafficPercent: Math.round(100 / maxDecode) })
       }
     } else if (prefillCount > 0) {
       // Prefill-only topology - spread from y=18 to y=82
@@ -715,8 +703,7 @@ export function LLMdFlow() {
           from: 'epp',
           to: key as keyof typeof NODE_POSITIONS,
           type: 'prefill',
-          trafficPercent: Math.round(100 / maxPrefill),
-        })
+          trafficPercent: Math.round(100 / maxPrefill) })
       }
     } else if (unifiedCount > 0) {
       // Unified serving topology - spread from y=18 to y=82
@@ -730,8 +717,7 @@ export function LLMdFlow() {
           from: 'epp',
           to: key as keyof typeof NODE_POSITIONS,
           type: 'prefill',
-          trafficPercent: Math.round(100 / maxServers),
-        })
+          trafficPercent: Math.round(100 / maxServers) })
       }
     } else if (selectedStack.autoscaler) {
       // Scaled to 0 but has autoscaler - show ghost nodes
@@ -756,7 +742,7 @@ export function LLMdFlow() {
   }, [selectedStack, isDemoMode])
 
   // Scale node positions wider when in fullscreen to fill the wider SVG viewBox (240w vs 120w)
-  const nodePositions = useMemo(() => {
+  const nodePositions = (() => {
     if (!isExpanded || Object.keys(rawPositions).length === 0) return rawPositions
     const scaled: Record<string, { x: number; y: number }> = {}
     for (const [key, pos] of Object.entries(rawPositions)) {
@@ -764,7 +750,7 @@ export function LLMdFlow() {
       scaled[key] = { x: 10 + (pos.x - 10) * (200 / 82), y: pos.y }
     }
     return scaled
-  }, [rawPositions, isExpanded])
+  })()
 
   // Toggle metric selection
   const toggleMetric = (metric: MetricType) => {
@@ -779,7 +765,7 @@ export function LLMdFlow() {
   }
 
   // Helper: get average Prometheus metric across pods matching a component
-  const getPromMetrics = useCallback((podNames?: string[]) => {
+  const getPromMetrics = (podNames?: string[]) => {
     if (!prometheusMetrics || !podNames?.length) return null
     const matched = podNames.filter(p => prometheusMetrics[p])
     if (matched.length === 0) return null
@@ -789,12 +775,11 @@ export function LLMdFlow() {
       load: Math.round(avg(p => prometheusMetrics[p].kvCacheUsage * 100)),
       queueDepth: Math.round(avg(p => prometheusMetrics[p].requestsWaiting)),
       activeConnections: Math.round(avg(p => prometheusMetrics[p].requestsRunning)),
-      throughputTps: Math.round(avg(p => prometheusMetrics[p].throughputTps)),
-    }
-  }, [prometheusMetrics])
+      throughputTps: Math.round(avg(p => prometheusMetrics[p].throughputTps)) }
+  }
 
   // Generate metrics based on stack data, using Prometheus when available
-  const generateLiveMetrics = useCallback((): ServerMetrics[] => {
+  const generateLiveMetrics = (): ServerMetrics[] => {
     // Only show demo metrics if demo mode is ON
     if (!selectedStack && isDemoMode) {
       return generateServerMetrics()
@@ -817,8 +802,7 @@ export function LLMdFlow() {
         load: Math.round(35 + wave * 10),
         queueDepth: Math.round(5 + Math.random() * 10),
         activeConnections: Math.round(120 + Math.random() * 30),
-        throughputRps: Math.round(450 + wave * 50),
-      })
+        throughputRps: Math.round(450 + wave * 50) })
     }
 
     // EPP metrics (no vLLM metrics — always simulated)
@@ -830,8 +814,7 @@ export function LLMdFlow() {
         load: Math.round(45 + wave * 15),
         queueDepth: Math.round(8 + Math.random() * 12),
         activeConnections: Math.round(450 + Math.random() * 50),
-        throughputRps: Math.round(448 + wave * 48),
-      })
+        throughputRps: Math.round(448 + wave * 48) })
     }
 
     // Prefill metrics
@@ -845,8 +828,7 @@ export function LLMdFlow() {
         load: prom?.load ?? Math.round((isHealthy ? 60 : 10) + wave * 20 + Math.random() * 10),
         queueDepth: prom?.queueDepth ?? Math.round(2 + Math.random() * 6),
         activeConnections: prom?.activeConnections ?? Math.round(100 + Math.random() * 20),
-        throughputRps: prom?.throughputTps ?? Math.round((isHealthy ? 100 : 10) + wave * 15),
-      })
+        throughputRps: prom?.throughputTps ?? Math.round((isHealthy ? 100 : 10) + wave * 15) })
     })
 
     // Decode metrics
@@ -860,8 +842,7 @@ export function LLMdFlow() {
         load: prom?.load ?? Math.round((isHealthy ? 50 : 5) + wave * 15),
         queueDepth: prom?.queueDepth ?? Math.round(1 + Math.random() * 3),
         activeConnections: prom?.activeConnections ?? Math.round(180 + Math.random() * 30),
-        throughputRps: prom?.throughputTps ?? Math.round((isHealthy ? 180 : 10) + wave * 20),
-      })
+        throughputRps: prom?.throughputTps ?? Math.round((isHealthy ? 180 : 10) + wave * 20) })
     })
 
     // Unified server metrics
@@ -875,12 +856,11 @@ export function LLMdFlow() {
         load: prom?.load ?? Math.round((isHealthy ? 55 : 5) + wave * 18),
         queueDepth: prom?.queueDepth ?? Math.round(2 + Math.random() * 5),
         activeConnections: prom?.activeConnections ?? Math.round(150 + Math.random() * 25),
-        throughputRps: prom?.throughputTps ?? Math.round((isHealthy ? 150 : 10) + wave * 18),
-      })
+        throughputRps: prom?.throughputTps ?? Math.round((isHealthy ? 150 : 10) + wave * 18) })
     })
 
     return metrics
-  }, [selectedStack, isDemoMode, getPromMetrics])
+  }
 
   // Update metrics periodically and track history for all metric types
   useEffect(() => {
@@ -899,8 +879,7 @@ export function LLMdFlow() {
           updated[key] = {
             rps: [...updated[key].rps.slice(-19), m.throughputRps],
             load: [...updated[key].load.slice(-19), m.load],
-            queue: [...updated[key].queue.slice(-19), m.queueDepth],
-          }
+            queue: [...updated[key].queue.slice(-19), m.queueDepth] }
         })
         return updated
       })
@@ -911,7 +890,7 @@ export function LLMdFlow() {
     return () => clearInterval(interval)
   }, [generateLiveMetrics])
 
-  const getMetricsForNode = useCallback((nodeId: string): ServerMetrics | undefined => {
+  const getMetricsForNode = (nodeId: string): ServerMetrics | undefined => {
     // Dynamic name mapping based on node labels
     const name = nodeLabels[nodeId]
     if (!name) return undefined
@@ -920,9 +899,9 @@ export function LLMdFlow() {
     if (name === 'Gateway') return serverMetrics.find(m => m.name === 'Istio Gateway')
     if (name === 'EPP') return serverMetrics.find(m => m.name === 'EPP Scheduler')
     return serverMetrics.find(m => m.name === name)
-  }, [serverMetrics, nodeLabels])
+  }
 
-  const getHistoryForNode = useCallback((nodeId: string, metricType: MetricType): number[] => {
+  const getHistoryForNode = (nodeId: string, metricType: MetricType): number[] => {
     const name = nodeLabels[nodeId]
     if (!name) return []
 
@@ -934,21 +913,18 @@ export function LLMdFlow() {
     const history = metricsHistory[historyKey]
     if (!history) return []
     return history[metricType] || []
-  }, [metricsHistory, nodeLabels])
+  }
 
-  const totalThroughput = useMemo(() =>
-    serverMetrics
+  const totalThroughput = serverMetrics
       .filter(m => m.type === 'prefill' || m.type === 'decode')
-      .reduce((sum, m) => sum + m.throughputRps, 0),
-    [serverMetrics]
-  )
+      .reduce((sum, m) => sum + m.throughputRps, 0)
 
-  const avgLoad = useMemo(() => {
+  const avgLoad = (() => {
     const relevant = serverMetrics.filter(m => m.type === 'prefill' || m.type === 'decode')
     return relevant.length > 0
       ? Math.round(relevant.reduce((sum, m) => sum + m.load, 0) / relevant.length)
       : 0
-  }, [serverMetrics])
+  })()
 
   const selectedMetrics = selectedNode ? getMetricsForNode(selectedNode) : undefined
 
@@ -966,8 +942,7 @@ export function LLMdFlow() {
   const metricConfig: Record<MetricType, { label: string; color: string; unit: string }> = {
     load: { label: 'Load', color: '#f59e0b', unit: '%' },
     queue: { label: 'Queue', color: '#06b6d4', unit: '' },
-    rps: { label: 'RPS', color: getNodeColor(selectedNode), unit: '' },
-  }
+    rps: { label: 'RPS', color: getNodeColor(selectedNode), unit: '' } }
 
   // Show empty state when no stack selected in live mode
   const showEmptyState = !selectedStack && !isDemoMode

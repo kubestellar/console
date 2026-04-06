@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Layers, ChevronRight, ChevronDown, Server, Box, Network, HardDrive,
   FileText, FileKey, Clock, Container, RefreshCw, Plus, Minus,
@@ -68,8 +68,7 @@ const ResourceIcons: Record<ResourceType, typeof Container> = {
   configmaps: FileText,
   secrets: FileKey,
   pvcs: HardDrive,
-  jobs: Clock,
-}
+  jobs: Clock }
 
 // Colors for resource types
 const ResourceColors: Record<ResourceType, string> = {
@@ -79,16 +78,14 @@ const ResourceColors: Record<ResourceType, string> = {
   configmaps: 'text-orange-400',
   secrets: 'text-red-400',
   pvcs: 'text-green-400',
-  jobs: 'text-yellow-400',
-}
+  jobs: 'text-yellow-400' }
 
 // Animation classes for changes
 const ChangeAnimations: Record<Exclude<ChangeType, null>, string> = {
   added: 'animate-pulse bg-green-500/20 border-green-500/50',
   modified: 'animate-pulse bg-yellow-500/20 border-yellow-500/50',
   deleted: 'animate-pulse bg-red-500/20 border-red-500/50 opacity-50',
-  error: 'animate-pulse bg-red-500/30 border-red-500/60',
-}
+  error: 'animate-pulse bg-red-500/30 border-red-500/60' }
 
 export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   const { isDemoMode } = useDemoMode()
@@ -119,7 +116,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   } | null>(null)
 
   // Get filtered clusters
-  const filteredClusters = useMemo(() => {
+  const filteredClusters = (() => {
     let result = clusters.filter(c => c.reachable !== false)
     if (!isAllClustersSelected) {
       result = result.filter(c => selectedClusters.includes(c.name))
@@ -129,7 +126,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
       result = result.filter(c => c.name.toLowerCase().includes(query))
     }
     return result
-  }, [clusters, selectedClusters, isAllClustersSelected, searchFilter])
+  })()
 
   // Fetch data for selected cluster
   const { namespaces, isDemoFallback: namespacesDemoFallback, isRefreshing: namespacesRefreshing } = useCachedNamespaces(selectedCluster || undefined)
@@ -150,8 +147,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
     isLoading,
     isRefreshing: namespacesRefreshing || deploymentsRefreshing || servicesRefreshing || pvcsRefreshing || podsRefreshing || configmapsRefreshing || secretsRefreshing || jobsRefreshing,
     hasAnyData: clusters.length > 0,
-    isDemoData: isDemoMode || isDemoData,
-  })
+    isDemoData: isDemoMode || isDemoData })
 
   // Build snapshots and detect changes
   useEffect(() => {
@@ -168,8 +164,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
         name: pod.name,
         namespace: pod.namespace,
         cluster: selectedCluster,
-        status: pod.status,
-      })
+        status: pod.status })
     })
 
     // Process deployments
@@ -182,8 +177,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
         cluster: selectedCluster,
         status: dep.status,
         replicas: dep.replicas,
-        readyReplicas: dep.readyReplicas,
-      })
+        readyReplicas: dep.readyReplicas })
     })
 
     // Process services
@@ -193,8 +187,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
         key,
         name: svc.name,
         namespace: svc.namespace,
-        cluster: selectedCluster,
-      })
+        cluster: selectedCluster })
     })
 
     // Process pvcs
@@ -205,8 +198,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
         name: pvc.name,
         namespace: pvc.namespace,
         cluster: selectedCluster,
-        status: pvc.status,
-      })
+        status: pvc.status })
     })
 
     // Process configmaps
@@ -216,8 +208,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
         key,
         name: cm.name,
         namespace: cm.namespace,
-        cluster: selectedCluster,
-      })
+        cluster: selectedCluster })
     })
 
     // Process secrets
@@ -227,8 +218,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
         key,
         name: secret.name,
         namespace: secret.namespace,
-        cluster: selectedCluster,
-      })
+        cluster: selectedCluster })
     })
 
     // Process jobs
@@ -239,8 +229,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
         name: job.name,
         namespace: job.namespace,
         cluster: selectedCluster,
-        status: job.status,
-      })
+        status: job.status })
     })
 
     // Detect changes (only if we have previous snapshots)
@@ -259,8 +248,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
             name: current.name,
             namespace: current.namespace,
             cluster: current.cluster,
-            details: 'New resource created',
-          })
+            details: 'New resource created' })
         } else if (current.status !== previous.status ||
                    current.replicas !== previous.replicas ||
                    current.readyReplicas !== previous.readyReplicas) {
@@ -277,8 +265,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
             name: current.name,
             namespace: current.namespace,
             cluster: current.cluster,
-            details: `Status: ${previous.status} → ${current.status}`,
-          })
+            details: `Status: ${previous.status} → ${current.status}` })
         }
       })
 
@@ -293,8 +280,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
             name: previous.name,
             namespace: previous.namespace,
             cluster: previous.cluster,
-            details: 'Resource deleted',
-          })
+            details: 'Resource deleted' })
         }
       })
     }
@@ -309,7 +295,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   }, [selectedCluster, pods, deployments, services, pvcs, configmaps, secrets, jobs])
 
   // Get change for a specific resource (for animation)
-  const getResourceChange = useCallback((cluster: string, namespace: string, type: ResourceType, name: string): ChangeType => {
+  const getResourceChange = (cluster: string, namespace: string, type: ResourceType, name: string): ChangeType => {
     const change = recentChanges.find(
       c => c.cluster === cluster && c.namespace === namespace && c.resourceType === type && c.name === name
     )
@@ -318,10 +304,10 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
       return change.type
     }
     return null
-  }, [recentChanges])
+  }
 
   // Clear change animation after timeout
-  const clearChangeAfterTimeout = useCallback((key: string) => {
+  const clearChangeAfterTimeout = (key: string) => {
     if (changeTimeoutRef.current.has(key)) {
       clearTimeout(changeTimeoutRef.current.get(key))
     }
@@ -329,10 +315,10 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
       changeTimeoutRef.current.delete(key)
     }, 5000)
     changeTimeoutRef.current.set(key, timeout)
-  }, [])
+  }
 
   // Toggle cluster expansion
-  const toggleCluster = useCallback((clusterName: string) => {
+  const toggleCluster = (clusterName: string) => {
     const isCurrentlyExpanded = expandedClusters.has(clusterName)
 
     setExpandedClusters(prev => {
@@ -349,10 +335,10 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
     if (!isCurrentlyExpanded) {
       setSelectedCluster(clusterName)
     }
-  }, [expandedClusters])
+  }
 
   // Toggle namespace expansion
-  const toggleNamespace = useCallback((nsKey: string) => {
+  const toggleNamespace = (nsKey: string) => {
     setExpandedNamespaces(prev => {
       const next = new Set(prev)
       if (next.has(nsKey)) {
@@ -362,10 +348,10 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
       }
       return next
     })
-  }, [])
+  }
 
   // Toggle resource type filter
-  const toggleResourceType = useCallback((type: ResourceType) => {
+  const toggleResourceType = (type: ResourceType) => {
     setActiveResourceTypes(prev => {
       const next = new Set(prev)
       if (next.has(type)) {
@@ -375,10 +361,10 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
       }
       return next
     })
-  }, [])
+  }
 
   // Build namespace data for a cluster
-  const getNamespaceData = useCallback((clusterName: string): Map<string, NamespaceData> => {
+  const getNamespaceData = (clusterName: string): Map<string, NamespaceData> => {
     if (clusterName !== selectedCluster) return new Map()
 
     const nsData = new Map<string, NamespaceData>()
@@ -396,40 +382,33 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
         name: p.name,
         namespace: p.namespace,
         status: p.status,
-        restarts: p.restarts,
-      }))
+        restarts: p.restarts }))
       const nsDeps: DeploymentItem[] = (deployments || []).filter(d => d.namespace === ns).map(d => ({
         name: d.name,
         namespace: d.namespace,
         replicas: d.replicas,
         readyReplicas: d.readyReplicas,
-        status: d.status,
-      }))
+        status: d.status }))
       const nsSvcs: ServiceItem[] = (services || []).filter(s => s.namespace === ns).map(s => ({
         name: s.name,
         namespace: s.namespace,
-        type: s.type,
-      }))
+        type: s.type }))
       const nsCms: ConfigMapItem[] = (configmaps || []).filter(c => c.namespace === ns).map(c => ({
         name: c.name,
         namespace: c.namespace,
-        dataCount: c.dataCount,
-      }))
+        dataCount: c.dataCount }))
       const nsSecrets: SecretItem[] = (secrets || []).filter(s => s.namespace === ns).map(s => ({
         name: s.name,
         namespace: s.namespace,
-        type: s.type,
-      }))
+        type: s.type }))
       const nsPvcs: PVCItem[] = (pvcs || []).filter(p => p.namespace === ns).map(p => ({
         name: p.name,
         namespace: p.namespace,
-        status: p.status,
-      }))
+        status: p.status }))
       const nsJobs: JobItem[] = (jobs || []).filter(j => j.namespace === ns).map(j => ({
         name: j.name,
         namespace: j.namespace,
-        status: j.status,
-      }))
+        status: j.status }))
 
       const hasIssues = nsPods.some(p => p.status !== 'Running' && p.status !== 'Succeeded') ||
                        nsDeps.some(d => d.readyReplicas < d.replicas)
@@ -442,15 +421,14 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
         secrets: nsSecrets,
         pvcs: nsPvcs,
         jobs: nsJobs,
-        hasIssues,
-      })
+        hasIssues })
     })
 
     return nsData
-  }, [selectedCluster, namespaces, pods, deployments, services, configmaps, secrets, pvcs, jobs, searchFilter])
+  }
 
   // Count recent changes by type
-  const changeCountsByType = useMemo(() => {
+  const changeCountsByType = (() => {
     const counts = { added: 0, modified: 0, deleted: 0, error: 0 }
     const recentTime = Date.now() - 60000 // Last minute
     recentChanges.forEach(c => {
@@ -459,7 +437,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
       }
     })
     return counts
-  }, [recentChanges])
+  })()
 
   // Resource modal content
   const ResourceModal = () => {
@@ -559,8 +537,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
                 type: change.resourceType,
                 name: change.name,
                 namespace: change.namespace,
-                cluster: change.cluster,
-              })}
+                cluster: change.cluster })}
             >
               <div className={`mt-0.5 ${
                 change.type === 'added' ? 'text-green-400' :
@@ -731,8 +708,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
                                     items={data.pods.map(p => ({
                                       name: p.name,
                                       status: p.status,
-                                      healthy: p.status === 'Running' || p.status === 'Succeeded',
-                                    }))}
+                                      healthy: p.status === 'Running' || p.status === 'Succeeded' }))}
                                     cluster={cluster.name}
                                     namespace={ns}
                                     getResourceChange={getResourceChange}
@@ -749,8 +725,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
                                     items={data.deployments.map(d => ({
                                       name: d.name,
                                       status: `${d.readyReplicas}/${d.replicas}`,
-                                      healthy: d.readyReplicas === d.replicas,
-                                    }))}
+                                      healthy: d.readyReplicas === d.replicas }))}
                                     cluster={cluster.name}
                                     namespace={ns}
                                     getResourceChange={getResourceChange}
@@ -767,8 +742,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
                                     items={data.services.map(s => ({
                                       name: s.name,
                                       status: s.type,
-                                      healthy: true,
-                                    }))}
+                                      healthy: true }))}
                                     cluster={cluster.name}
                                     namespace={ns}
                                     getResourceChange={getResourceChange}
@@ -785,8 +759,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
                                     items={data.configmaps.map(c => ({
                                       name: c.name,
                                       status: `${c.dataCount || 0} keys`,
-                                      healthy: true,
-                                    }))}
+                                      healthy: true }))}
                                     cluster={cluster.name}
                                     namespace={ns}
                                     getResourceChange={getResourceChange}
@@ -803,8 +776,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
                                     items={data.secrets.map(s => ({
                                       name: s.name,
                                       status: s.type || 'Opaque',
-                                      healthy: true,
-                                    }))}
+                                      healthy: true }))}
                                     cluster={cluster.name}
                                     namespace={ns}
                                     getResourceChange={getResourceChange}
@@ -821,8 +793,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
                                     items={data.pvcs.map(p => ({
                                       name: p.name,
                                       status: p.status,
-                                      healthy: p.status === 'Bound',
-                                    }))}
+                                      healthy: p.status === 'Bound' }))}
                                     cluster={cluster.name}
                                     namespace={ns}
                                     getResourceChange={getResourceChange}
@@ -839,8 +810,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
                                     items={data.jobs.map(j => ({
                                       name: j.name,
                                       status: j.status,
-                                      healthy: j.status === 'Complete',
-                                    }))}
+                                      healthy: j.status === 'Complete' }))}
                                     cluster={cluster.name}
                                     namespace={ns}
                                     getResourceChange={getResourceChange}
@@ -895,8 +865,7 @@ function ResourceSection({
   getResourceChange,
   clearChangeAfterTimeout,
   onItemClick,
-  onItemAction,
-}: ResourceSectionProps) {
+  onItemAction }: ResourceSectionProps) {
   const Icon = ResourceIcons[type]
   const color = ResourceColors[type]
 

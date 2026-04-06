@@ -7,7 +7,7 @@
  * - localStorage: Small preferences (filters, sort, collapsed state)
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 // ============================================================================
 // localStorage Hook for Preferences
@@ -74,14 +74,14 @@ export function useLocalPreference<T>(
     }
   }, [storageKey, value])
 
-  const updateValue = useCallback((newValue: T | ((prev: T) => T)) => {
+  const updateValue = (newValue: T | ((prev: T) => T)) => {
     setValue(prev => {
       const next = typeof newValue === 'function'
         ? (newValue as (prev: T) => T)(prev)
         : newValue
       return next
     })
-  }, [])
+  }
 
   return [value, updateValue]
 }
@@ -152,8 +152,7 @@ interface UseIndexedDataResult<T> {
 export function useIndexedData<T>({
   key,
   defaultValue,
-  maxAge = 5 * 60 * 1000,
-}: UseIndexedDataOptions<T>): UseIndexedDataResult<T> {
+  maxAge = 5 * 60 * 1000 }: UseIndexedDataOptions<T>): UseIndexedDataResult<T> {
   const [data, setData] = useState<T>(defaultValue)
   const [isLoading, setIsLoading] = useState(true)
   const [lastSaved, setLastSaved] = useState<number | null>(null)
@@ -183,7 +182,7 @@ export function useIndexedData<T>({
     return () => { mounted = false }
   }, [key])
 
-  const save = useCallback(async (newData: T) => {
+  const save = async (newData: T) => {
     setData(newData)
     const timestamp = Date.now()
     setLastSaved(timestamp)
@@ -194,9 +193,9 @@ export function useIndexedData<T>({
     } catch (e) {
       console.error(`[IndexedData] Failed to save ${key}:`, e)
     }
-  }, [key])
+  }
 
-  const clear = useCallback(async () => {
+  const clear = async () => {
     setData(defaultValue)
     setLastSaved(null)
 
@@ -206,7 +205,7 @@ export function useIndexedData<T>({
     } catch (e) {
       console.error(`[IndexedData] Failed to clear ${key}:`, e)
     }
-  }, [key, defaultValue])
+  }
 
   const isStale = lastSaved !== null && Date.now() - lastSaved > maxAge
 
@@ -321,8 +320,7 @@ export async function getStorageStats(): Promise<{
     const estimate = await navigator.storage.estimate()
     indexedDBStats = {
       used: estimate.usage || 0,
-      quota: estimate.quota || 0,
-    }
+      quota: estimate.quota || 0 }
   }
 
   // localStorage stats
@@ -410,20 +408,17 @@ interface UseTrendHistoryOptions {
 export function useTrendHistory<T extends TrendPoint>({
   key,
   maxPoints = 50,
-  maxAge = 30 * 60 * 1000,
-}: UseTrendHistoryOptions) {
+  maxAge = 30 * 60 * 1000 }: UseTrendHistoryOptions) {
   const {
     data: history,
     isLoading,
     lastSaved,
     isStale,
     save,
-    clear,
-  } = useIndexedData<T[]>({
+    clear } = useIndexedData<T[]>({
     key: `trend:${key}`,
     defaultValue: [],
-    maxAge,
-  })
+    maxAge })
 
   // historyRef is the source of truth for rapid addPoint calls.
   // We update it immediately inside addPoint so that successive calls
@@ -432,7 +427,7 @@ export function useTrendHistory<T extends TrendPoint>({
   const historyRef = useRef(history)
   historyRef.current = history
 
-  const addPoint = useCallback(async (point: T) => {
+  const addPoint = async (point: T) => {
     const currentHistory = historyRef.current
     // Check if this point is different from the last one (avoid duplicates)
     const lastPoint = currentHistory[currentHistory.length - 1]
@@ -453,7 +448,7 @@ export function useTrendHistory<T extends TrendPoint>({
     historyRef.current = newHistory
 
     await save(newHistory)
-  }, [maxPoints, save])
+  }
 
   return {
     history,
@@ -461,6 +456,5 @@ export function useTrendHistory<T extends TrendPoint>({
     lastSaved,
     isStale,
     addPoint,
-    clear,
-  }
+    clear }
 }

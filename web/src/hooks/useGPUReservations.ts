@@ -76,8 +76,7 @@ const DEMO_RESERVATIONS: GPUReservation[] = [
     status: 'active',
     quota_name: 'llm-finetune-quota',
     quota_enforced: true,
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-  },
+    created_at: new Date(Date.now() - 86400000).toISOString() },
   {
     id: 'demo-res-2',
     user_id: 'demo-user-2',
@@ -94,8 +93,7 @@ const DEMO_RESERVATIONS: GPUReservation[] = [
     status: 'pending',
     quota_name: '',
     quota_enforced: false,
-    created_at: new Date(Date.now() - 3600000).toISOString(),
-  },
+    created_at: new Date(Date.now() - 3600000).toISOString() },
   {
     id: 'demo-res-3',
     user_id: 'demo-user',
@@ -112,8 +110,7 @@ const DEMO_RESERVATIONS: GPUReservation[] = [
     status: 'completed',
     quota_name: 'dist-train-quota',
     quota_enforced: true,
-    created_at: new Date(Date.now() - 259200000).toISOString(),
-  },
+    created_at: new Date(Date.now() - 259200000).toISOString() },
 ]
 
 export function useGPUReservations(onlyMine = false) {
@@ -163,23 +160,23 @@ export function useGPUReservations(onlyMine = false) {
     }
   }, [fetchReservations])
 
-  const createReservation = useCallback(async (input: CreateGPUReservationInput): Promise<GPUReservation> => {
+  const createReservation = async (input: CreateGPUReservationInput): Promise<GPUReservation> => {
     const { data } = await api.post<GPUReservation>('/api/gpu/reservations', input)
     // Refresh list after create
     fetchReservations(true)
     return data
-  }, [fetchReservations])
+  }
 
-  const updateReservation = useCallback(async (id: string, input: UpdateGPUReservationInput): Promise<GPUReservation> => {
+  const updateReservation = async (id: string, input: UpdateGPUReservationInput): Promise<GPUReservation> => {
     const { data } = await api.put<GPUReservation>(`/api/gpu/reservations/${id}`, input)
     fetchReservations(true)
     return data
-  }, [fetchReservations])
+  }
 
-  const deleteReservation = useCallback(async (id: string): Promise<void> => {
+  const deleteReservation = async (id: string): Promise<void> => {
     await api.delete(`/api/gpu/reservations/${id}`)
     fetchReservations(true)
-  }, [fetchReservations])
+  }
 
   return {
     reservations,
@@ -188,6 +185,5 @@ export function useGPUReservations(onlyMine = false) {
     refetch: () => fetchReservations(false),
     createReservation,
     updateReservation,
-    deleteReservation,
-  }
+    deleteReservation }
 }

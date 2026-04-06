@@ -107,17 +107,17 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
     return () => clearInterval(interval)
   }, [refreshInterval, url, handleRefresh])
 
-  const handleLoad = useCallback(() => {
+  const handleLoad = () => {
     setIsLoading(false)
     setLoadError(null)
-  }, [])
+  }
 
-  const handleError = useCallback(() => {
+  const handleError = () => {
     setIsLoading(false)
     setLoadError('Failed to load content. The site may block embedding (X-Frame-Options) or be unavailable.')
-  }, [])
+  }
 
-  const handleSaveConfig = useCallback(() => {
+  const handleSaveConfig = () => {
     if (!urlInput.trim()) return
 
     const newUrl = urlInput.trim()
@@ -135,8 +135,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
       id: instanceId,
       url: newUrl,
       title: newTitle,
-      refreshInterval,
-    }
+      refreshInterval }
 
     setSavedEmbeds(prev => {
       const filtered = prev.filter(e => e.id !== instanceId)
@@ -144,9 +143,9 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
       return updated
     })
-  }, [urlInput, titleInput, refreshInterval, instanceId])
+  }
 
-  const handleClear = useCallback(() => {
+  const handleClear = () => {
     setUrl('')
     setTitle('Embed')
     setUrlInput('')
@@ -159,18 +158,18 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered))
       return filtered
     })
-  }, [instanceId])
+  }
 
-  const handlePresetSelect = useCallback((preset: typeof PRESET_EMBEDS[0]) => {
+  const handlePresetSelect = (preset: typeof PRESET_EMBEDS[0]) => {
     setUrlInput(preset.url)
     setTitleInput(preset.title)
-  }, [])
+  }
 
-  const openInNewTab = useCallback(() => {
+  const openInNewTab = () => {
     if (url) {
       window.open(url, '_blank', 'noopener,noreferrer')
     }
-  }, [url])
+  }
 
   const displayHeight = isExpanded ? 600 : height
 

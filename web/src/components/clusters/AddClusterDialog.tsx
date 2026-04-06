@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { X, Terminal, Upload, FormInput } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
@@ -60,23 +60,23 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
   const isLoading = importState === 'previewing' || importState === 'importing' ||
     connectState === 'testing' || connectState === 'adding'
 
-  const resetConnectState = useCallback(() => {
+  const resetConnectState = () => {
     setConnectStep(1)
     setConnectState('idle')
     setServerUrl(''); setAuthType('token'); setToken(''); setCertData(''); setKeyData('')
     setCaData(''); setSkipTls(false); setContextName(''); setClusterName('')
     setNamespace(''); setTestResult(null); setConnectError(''); setShowAdvanced(false)
-  }, [])
+  }
 
-  const resetImportState = useCallback((initialYaml = '') => {
+  const resetImportState = (initialYaml = '') => {
     setKubeconfigYaml(initialYaml)
     setImportState('idle')
     setPreviewContexts([])
     setErrorMessage('')
     setImportedCount(0)
-  }, [])
+  }
 
-  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
@@ -85,9 +85,9 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
     }
     reader.readAsText(file)
     if (fileInputRef.current) fileInputRef.current.value = ''
-  }, [resetImportState])
+  }
 
-  const handlePreview = useCallback(async () => {
+  const handlePreview = async () => {
     setImportState('previewing')
     setErrorMessage('')
     try {
@@ -95,8 +95,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kubeconfig: kubeconfigYaml }),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: res.statusText }))
         throw new Error(body.error || res.statusText)
@@ -108,9 +107,9 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
       setErrorMessage(err instanceof Error ? err.message : String(err))
       setImportState('error')
     }
-  }, [kubeconfigYaml])
+  }
 
-  const handleImport = useCallback(async () => {
+  const handleImport = async () => {
     setImportState('importing')
     setErrorMessage('')
     try {
@@ -118,8 +117,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kubeconfig: kubeconfigYaml }),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: res.statusText }))
         throw new Error(body.error || res.statusText)
@@ -137,9 +135,9 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
       setErrorMessage(err instanceof Error ? err.message : String(err))
       setImportState('error')
     }
-  }, [kubeconfigYaml, previewContexts, resetImportState, onClose])
+  }
 
-  const handleTestConnection = useCallback(async () => {
+  const handleTestConnection = async () => {
     setConnectState('testing')
     setTestResult(null)
     setConnectError('')
@@ -154,10 +152,8 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
           certData: authType === 'certificate' ? btoa(certData) : undefined,
           keyData: authType === 'certificate' ? btoa(keyData) : undefined,
           caData: caData ? btoa(caData) : undefined,
-          skipTlsVerify: skipTls,
-        }),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+          skipTlsVerify: skipTls }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       const data = await res.json()
       setTestResult(data)
       setConnectState('tested')
@@ -165,9 +161,9 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
       setConnectError(err instanceof Error ? err.message : String(err))
       setConnectState('error')
     }
-  }, [serverUrl, authType, token, certData, keyData, caData, skipTls])
+  }
 
-  const handleAddCluster = useCallback(async () => {
+  const handleAddCluster = async () => {
     setConnectState('adding')
     setConnectError('')
     try {
@@ -184,10 +180,8 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
           keyData: authType === 'certificate' ? btoa(keyData) : undefined,
           caData: caData ? btoa(caData) : undefined,
           skipTlsVerify: skipTls,
-          namespace: namespace || undefined,
-        }),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+          namespace: namespace || undefined }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: res.statusText }))
         throw new Error(body.error || res.statusText)
@@ -203,9 +197,9 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
       setConnectError(err instanceof Error ? err.message : String(err))
       setConnectState('error')
     }
-  }, [contextName, clusterName, serverUrl, authType, token, certData, keyData, caData, skipTls, namespace, resetConnectState, onClose])
+  }
 
-  const goToConnectStep = useCallback((step: ConnectStep) => {
+  const goToConnectStep = (step: ConnectStep) => {
     if (step === 3) {
       try {
         const url = new URL(serverUrl)
@@ -215,7 +209,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
       } catch { /* ignore parse errors */ }
     }
     setConnectStep(step)
-  }, [serverUrl, contextName, clusterName])
+  }
 
   if (!open) return null
 

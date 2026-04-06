@@ -134,8 +134,7 @@ function getDemoStatus(cluster: string): KubescapeClusterStatus {
       { id: 'C-0009', name: 'Resource limits', passed: 6, failed: 10 },
       { id: 'C-0030', name: 'Ingress and Egress blocked', passed: 9, failed: 7 },
       { id: 'C-0055', name: 'Linux hardening', passed: 11, failed: 6 },
-    ],
-  }
+    ] }
 }
 
 // ── Kubernetes resource types ────────────────────────────────────────────
@@ -160,8 +159,7 @@ function emptyStatus(cluster: string, installed: boolean, error?: string): Kubes
   return {
     cluster, installed, loading: false, error,
     overallScore: 0, frameworks: [], controls: [],
-    totalControls: 0, passedControls: 0, failedControls: 0,
-  }
+    totalControls: 0, passedControls: 0, failedControls: 0 }
 }
 
 async function fetchSingleCluster(cluster: string): Promise<KubescapeClusterStatus> {
@@ -299,8 +297,7 @@ async function fetchSingleCluster(cluster: string): Promise<KubescapeClusterStat
       totalControls,
       passedControls,
       failedControls,
-      controls,
-    }
+      controls }
   } catch (err) {
     const isDemoError = err instanceof Error && err.message.includes('demo mode')
     if (!isDemoError) {
@@ -336,10 +333,7 @@ export function useKubescape() {
   /** Guard to prevent concurrent refetch calls from flooding the request queue */
   const fetchInProgress = useRef(false)
 
-  const clusters = useMemo(() =>
-    allClusters.filter(c => c.reachable === true).map(c => c.name),
-    [allClusters]
-  )
+  const clusters = allClusters.filter(c => c.reachable === true).map(c => c.name)
 
   const refetch = useCallback(async (silent = false) => {
     if (clusters.length === 0) {
@@ -449,10 +443,7 @@ export function useKubescape() {
   const installed = Object.values(statuses).some(s => s.installed)
 
   /** True when at least one cluster had a fetch error (distinct from "not installed") */
-  const hasErrors = useMemo(() =>
-    Object.values(statuses).some(s => !!s.error),
-    [statuses]
-  )
+  const hasErrors = Object.values(statuses).some(s => !!s.error)
 
   // Aggregate across all clusters
   const aggregated = useMemo(() => {
@@ -466,8 +457,7 @@ export function useKubescape() {
       frameworks: clusterStatuses[0]?.frameworks || [],
       totalControls: clusterStatuses.reduce((sum, s) => sum + s.totalControls, 0),
       passedControls: clusterStatuses.reduce((sum, s) => sum + s.passedControls, 0),
-      failedControls: clusterStatuses.reduce((sum, s) => sum + s.failedControls, 0),
-    }
+      failedControls: clusterStatuses.reduce((sum, s) => sum + s.failedControls, 0) }
   }, [statuses])
 
   return {
@@ -484,6 +474,5 @@ export function useKubescape() {
     clustersChecked,
     /** Total number of clusters being checked */
     totalClusters: clusters.length,
-    refetch,
-  }
+    refetch }
 }

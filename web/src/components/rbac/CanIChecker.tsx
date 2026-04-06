@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState } from 'react'
 import { Shield, Check, X, Loader2, AlertCircle, ChevronDown } from 'lucide-react'
 import { useCanI } from '../../hooks/usePermissions'
 import { useClusters, useNamespaces } from '../../hooks/useMCP'
@@ -64,8 +64,7 @@ const RESOURCE_API_GROUPS: Record<string, string> = {
   // autoscaling
   horizontalpodautoscalers: 'autoscaling',
   // storage.k8s.io
-  storageclasses: 'storage.k8s.io',
-}
+  storageclasses: 'storage.k8s.io' }
 
 const COMMON_RESOURCES = [
   'pods',
@@ -111,28 +110,26 @@ export function CanIChecker() {
   const { namespaces } = useNamespaces(selectedCluster)
 
   // Available namespaces for dropdown
-  const availableNamespaces = useMemo(() => {
-    return namespaces || []
-  }, [namespaces])
+  const availableNamespaces = namespaces || []
 
   // Toggle user group selection
-  const toggleUserGroup = useCallback((group: string) => {
+  const toggleUserGroup = (group: string) => {
     setSelectedUserGroups(prev =>
       prev.includes(group)
         ? prev.filter(g => g !== group)
         : [...prev, group]
     )
-  }, [])
+  }
 
   // Add custom user group
-  const addCustomUserGroup = useCallback(() => {
+  const addCustomUserGroup = () => {
     if (customUserGroup.trim() && !selectedUserGroups.includes(customUserGroup.trim())) {
       setSelectedUserGroups(prev => [...prev, customUserGroup.trim()])
       setCustomUserGroup('')
     }
-  }, [customUserGroup, selectedUserGroups])
+  }
 
-  const handleCheck = useCallback(async () => {
+  const handleCheck = async () => {
     const targetCluster = cluster || clusters[0]
     if (!targetCluster) return
 
@@ -155,11 +152,10 @@ export function CanIChecker() {
       resource: selectedResource,
       namespace: namespace || undefined,
       group: effectiveApiGroup !== undefined ? effectiveApiGroup : undefined,
-      groups,
-    })
-  }, [cluster, clusters, verb, customVerb, resource, customResource, namespace, apiGroup, customApiGroup, selectedUserGroups, checkPermission])
+      groups })
+  }
 
-  const handleReset = useCallback(() => {
+  const handleReset = () => {
     reset()
     setVerb('get')
     setResource('pods')
@@ -170,7 +166,7 @@ export function CanIChecker() {
     setCustomApiGroup('')
     setSelectedUserGroups([])
     setCustomUserGroup('')
-  }, [reset])
+  }
 
   return (
     <div className="glass rounded-xl p-6">

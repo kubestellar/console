@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Stethoscope, CheckCircle, Clock, ChevronRight } from 'lucide-react'
 import { useMissions } from '../../../hooks/useMissions'
 import { useClusters } from '../../../hooks/useMCP'
@@ -23,11 +22,10 @@ export function ConsoleKubeconfigAuditCard(_props: ConsoleMissionCardProps) {
   useCardLoadingState({
     isLoading,
     hasAnyData: allClusters.length > 0,
-    isDemoData: isDemoMode,
-  })
+    isDemoData: isDemoMode })
 
   // Filter clusters by global filter
-  const clusters = useMemo(() => {
+  const clusters = (() => {
     let result = allClusters
 
     // Apply global cluster filter
@@ -45,7 +43,7 @@ export function ConsoleKubeconfigAuditCard(_props: ConsoleMissionCardProps) {
     }
 
     return result
-  }, [allClusters, selectedClusters, isAllClustersSelected, customFilter])
+  })()
 
   const unreachableClusters = clusters.filter(c => c.reachable === false || c.nodeCount === 0)
 
@@ -76,10 +74,7 @@ Please:
           reachable: c.reachable,
           healthy: c.healthy,
           nodeCount: c.nodeCount,
-          errorMessage: c.errorMessage,
-        })),
-      },
-    })
+          errorMessage: c.errorMessage })) } })
   }
 
   const handleStartAudit = () => checkKeyAndRun(doStartAudit)

@@ -438,7 +438,7 @@ describe('useAIPredictions', () => {
     const { result } = renderHook(() => useAIPredictions())
 
     // Start analyze — don't await, let timers drive it
-    let _done = false
+    const _done = false
     act(() => {
       result.current.analyze().then(() => { done = true })
     })

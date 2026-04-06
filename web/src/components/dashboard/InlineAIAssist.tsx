@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sparkles, Loader2, ChevronDown, ChevronUp, CheckCircle, AlertTriangle } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
@@ -21,8 +21,7 @@ export function InlineAIAssist<T>({
   systemPrompt,
   placeholder,
   onResult,
-  validateResult,
-}: InlineAIAssistProps<T>) {
+  validateResult }: InlineAIAssistProps<T>) {
   const { t } = useTranslation()
   const { mode, isFeatureEnabled } = useAIMode()
   const { startMission, missions, closeSidebar } = useMissions()
@@ -89,7 +88,7 @@ export function InlineAIAssist<T>({
     return () => clearTimeout(phaseTimerRef.current)
   }, [trackedMission, phase, validateResult, onResult])
 
-  const handleGenerate = useCallback(() => {
+  const handleGenerate = () => {
     if (!input.trim()) return
 
     checkKeyAndRun(() => {
@@ -98,14 +97,13 @@ export function InlineAIAssist<T>({
         title: 'Inline AI Assist',
         description: input.substring(0, 200),
         type: 'custom',
-        initialPrompt: fullPrompt,
-      })
+        initialPrompt: fullPrompt })
       setMissionId(id)
       setPhase('generating')
       setError(null)
       setTimeout(() => closeSidebar(), CLOSE_ANIMATION_MS)
     })
-  }, [input, systemPrompt, startMission, closeSidebar, checkKeyAndRun])
+  }
 
   // Don't show at all in low mode
   if (!enabled) return null

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { AlertTriangle, Terminal, Stethoscope, Wrench, CheckCircle, Copy, ExternalLink, Server, Loader2 } from 'lucide-react'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
@@ -36,18 +36,18 @@ export function NodeDrillDown({ data }: Props) {
   // lastRefresh tracks when node data was last updated (freshness: lastUpdated shown in parent via CardWrapper)
   const { nodes, isLoading: isLoadingNodes, isFailed: isNodesFailed, lastRefresh: nodeLastRefresh } = useCachedNodes(cluster || undefined)
   // Format lastRefresh as a relative time string for the freshness indicator
-  const nodeDataAge = useMemo(() => {
+  const nodeDataAge = (() => {
     if (!nodeLastRefresh) return null
     return new Date(nodeLastRefresh).toISOString()
-  }, [nodeLastRefresh])
+  })()
 
   // Look up this specific node from the cached data
-  const cachedNode = useMemo(() => {
+  const cachedNode = (() => {
     if (!nodeName || !nodes) return null
     return (nodes || []).find(
       (n) => n.name === nodeName && (!cluster || n.cluster === cluster),
     ) ?? null
-  }, [nodes, nodeName, cluster])
+  })()
 
   // Merge passed data with fetched data: prefer passed if available, fall back to cached
   const status = passedStatus || cachedNode?.status || undefined

@@ -58,13 +58,12 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
         name: config.title,
         description: config.description ?? '',
         category: config.category ?? 'general',
-        iconColor: config.iconColor,
-      }))
+        iconColor: config.iconColor }))
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [card?.card_type])
 
   // Filter by search query
-  const filteredCards = useMemo(() => {
+  const filteredCards = (() => {
     if (!searchQuery.trim()) return cardTypes
     const q = searchQuery.toLowerCase()
     return cardTypes.filter(
@@ -73,7 +72,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
            c.category.toLowerCase().includes(q) ||
            c.type.toLowerCase().includes(q)
     )
-  }, [cardTypes, searchQuery])
+  })()
 
   if (!card) return null
 
@@ -109,60 +108,49 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
         title: prompt.includes('cpu') ? 'CPU Usage Monitor' : 'Resource Usage',
         config: {
           cluster: prompt.match(/(\w+-\w+)\s+cluster/)?.[1] || '',
-          metric: prompt.includes('cpu') ? 'cpu' : prompt.includes('memory') ? 'memory' : '',
-        },
-        explanation: 'This card will show resource utilization metrics for your clusters.',
-      }
+          metric: prompt.includes('cpu') ? 'cpu' : prompt.includes('memory') ? 'memory' : '' },
+        explanation: 'This card will show resource utilization metrics for your clusters.' }
     } else if (prompt.includes('event') || prompt.includes('warning') || prompt.includes('error')) {
       suggestion = {
         type: 'event_stream',
         title: prompt.includes('warning') ? 'Warning Events' : 'Event Stream',
         config: {
           namespace: prompt.match(/(\w+)\s+namespace/)?.[1] || '',
-          warningsOnly: prompt.includes('warning') || prompt.includes('error'),
-        },
-        explanation: 'This card displays a live stream of Kubernetes events.',
-      }
+          warningsOnly: prompt.includes('warning') || prompt.includes('error') },
+        explanation: 'This card displays a live stream of Kubernetes events.' }
     } else if (prompt.includes('pod') || prompt.includes('restart') || prompt.includes('crash')) {
       suggestion = {
         type: 'pod_issues',
         title: prompt.includes('restart') ? 'Pod Restarts' : 'Pod Issues',
         config: {
-          minRestarts: prompt.match(/(\d+)\s+times/)?.[1] ? parseInt(prompt.match(/(\d+)\s+times/)?.[1] || '0') : undefined,
-        },
-        explanation: 'This card tracks pods with issues like crashes, restarts, or failures.',
-      }
+          minRestarts: prompt.match(/(\d+)\s+times/)?.[1] ? parseInt(prompt.match(/(\d+)\s+times/)?.[1] || '0') : undefined },
+        explanation: 'This card tracks pods with issues like crashes, restarts, or failures.' }
     } else if (prompt.includes('deploy') || prompt.includes('rollout')) {
       suggestion = {
         type: 'deployment_status',
         title: 'Deployment Status',
         config: {
-          cluster: prompt.match(/(\w+-\w+)\s+cluster/)?.[1] || '',
-        },
-        explanation: 'This card monitors deployment rollout progress.',
-      }
+          cluster: prompt.match(/(\w+-\w+)\s+cluster/)?.[1] || '' },
+        explanation: 'This card monitors deployment rollout progress.' }
     } else if (prompt.includes('security') || prompt.includes('privileged') || prompt.includes('root')) {
       suggestion = {
         type: 'security_issues',
         title: 'Security Issues',
         config: {},
-        explanation: 'This card highlights security misconfigurations like privileged containers.',
-      }
+        explanation: 'This card highlights security misconfigurations like privileged containers.' }
     } else if (prompt.includes('health') || prompt.includes('cluster') || prompt.includes('status')) {
       suggestion = {
         type: 'cluster_health',
         title: 'Cluster Health',
         config: {},
-        explanation: 'This card shows the overall health status of your clusters.',
-      }
+        explanation: 'This card shows the overall health status of your clusters.' }
     } else {
       // Default suggestion
       suggestion = {
         type: 'cluster_metrics',
         title: 'Cluster Metrics',
         config: {},
-        explanation: 'Based on your request, this card will show relevant cluster metrics.',
-      }
+        explanation: 'Based on your request, this card will show relevant cluster metrics.' }
     }
 
     setAiSuggestion(suggestion)

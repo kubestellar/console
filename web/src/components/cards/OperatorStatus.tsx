@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { CheckCircle, AlertTriangle, AlertCircle, XCircle, RefreshCw, ArrowUpCircle, ChevronRight } from 'lucide-react'
 import { useClusters, Operator } from '../../hooks/useMCP'
 import { useCachedOperators } from '../../hooks/useCachedData'
@@ -13,8 +12,7 @@ import {
   CardSearchInput,
   CardControlsRow,
   CardPaginationFooter,
-  CardAIActions,
-} from '../../lib/cards/CardComponents'
+  CardAIActions } from '../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
 
 interface OperatorStatusProps {
@@ -39,23 +37,18 @@ const OPERATOR_SORT_COMPARATORS = {
   status: (a: Operator, b: Operator) => (STATUS_ORDER[a.status] ?? 5) - (STATUS_ORDER[b.status] ?? 5),
   name: commonComparators.string<Operator>('name'),
   namespace: commonComparators.string<Operator>('namespace'),
-  version: commonComparators.string<Operator>('version'),
-}
+  version: commonComparators.string<Operator>('version') }
 
 // Shared filter config for counting and display
 const FILTER_CONFIG = {
   searchFields: ['name', 'namespace', 'version'] as (keyof Operator)[],
   clusterField: 'cluster' as keyof Operator,
   statusField: 'status' as keyof Operator,
-  storageKey: 'operator-status',
-}
+  storageKey: 'operator-status' }
 
 function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const SORT_OPTIONS = useMemo(() =>
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
-    [t]
-  )
+  const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
   const { isLoading: clustersLoading } = useClusters()
   const { drillToOperator } = useDrillDownActions()
 
@@ -70,8 +63,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
     hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
-    isDemoData,
-  })
+    isDemoData })
 
   // Use useCardFilters for status counts (globally filtered, before local search/pagination)
   const { filtered: globalFilteredOperators } = useCardFilters(rawOperators, FILTER_CONFIG)
@@ -95,30 +87,24 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
       availableClusters,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-    },
+      clusterFilterRef },
     sorting: {
       sortBy,
       setSortBy,
       sortDirection,
-      setSortDirection,
-    },
+      setSortDirection },
     containerRef,
-    containerStyle,
-  } = useCardData<Operator, SortByOption>(rawOperators, {
+    containerStyle } = useCardData<Operator, SortByOption>(rawOperators, {
     filter: {
       searchFields: ['name', 'namespace', 'version'] as (keyof Operator)[],
       clusterField: 'cluster',
       statusField: 'status',
-      storageKey: 'operator-status',
-    },
+      storageKey: 'operator-status' },
     sort: {
       defaultField: 'status',
       defaultDirection: 'asc' as SortDirection,
-      comparators: OPERATOR_SORT_COMPARATORS,
-    },
-    defaultLimit: 5,
-  })
+      comparators: OPERATOR_SORT_COMPARATORS },
+    defaultLimit: 5 })
 
   const getStatusIcon = (status: Operator['status']) => {
     switch (status) {
@@ -135,16 +121,14 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
     red: 'text-red-400',
     blue: 'text-blue-400',
     purple: 'text-purple-400',
-    orange: 'text-orange-400',
-  }
+    orange: 'text-orange-400' }
 
   const STATUS_BADGE_CLASS: Record<string, string> = {
     green: 'bg-green-500/20 text-green-400',
     red: 'bg-red-500/20 text-red-400',
     blue: 'bg-blue-500/20 text-blue-400',
     purple: 'bg-purple-500/20 text-purple-400',
-    orange: 'bg-orange-500/20 text-orange-400',
-  }
+    orange: 'bg-orange-500/20 text-orange-400' }
 
   const getStatusColor = (status: Operator['status']) => {
     switch (status) {
@@ -157,11 +141,10 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
   }
 
   // Status counts from globally filtered data (before local search/pagination)
-  const statusCounts = useMemo(() => ({
+  const statusCounts = {
     succeeded: globalFilteredOperators.filter(o => o.status === 'Succeeded').length,
     failed: globalFilteredOperators.filter(o => o.status === 'Failed').length,
-    other: globalFilteredOperators.filter(o => !['Succeeded', 'Failed'].includes(o.status)).length,
-  }), [globalFilteredOperators])
+    other: globalFilteredOperators.filter(o => !['Succeeded', 'Failed'].includes(o.status)).length }
 
   if (showSkeleton) {
     return (
@@ -220,8 +203,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
         <CardControlsRow
           clusterIndicator={localClusterFilter.length > 0 ? {
             selectedCount: localClusterFilter.length,
-            totalCount: availableClusters.length,
-          } : undefined}
+            totalCount: availableClusters.length } : undefined}
           clusterFilter={{
             availableClusters,
             selectedClusters: localClusterFilter,
@@ -230,8 +212,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
             isOpen: showClusterFilter,
             setIsOpen: setShowClusterFilter,
             containerRef: clusterFilterRef,
-            minClusters: 1,
-          }}
+            minClusters: 1 }}
           cardControls={{
             limit: itemsPerPage,
             onLimitChange: setItemsPerPage,
@@ -239,8 +220,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
             sortOptions: SORT_OPTIONS,
             onSortChange: (v) => setSortBy(v as SortByOption),
             sortDirection,
-            onSortDirectionChange: setSortDirection,
-          }}
+            onSortDirectionChange: setSortDirection }}
         />
       </div>
 
@@ -297,8 +277,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
                   onClick={() => op.cluster && drillToOperator(op.cluster, op.namespace, op.name, {
                     status: op.status,
                     version: op.version,
-                    upgradeAvailable: op.upgradeAvailable,
-                  })}
+                    upgradeAvailable: op.upgradeAvailable })}
                   className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
                 >
                   <div className="flex items-center justify-between">

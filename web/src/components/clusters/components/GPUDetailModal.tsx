@@ -80,8 +80,7 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
           allocatedGPUs: node.gpuAllocated,
           availableGPUs: node.gpuCount - node.gpuAllocated,
           nodeCount: 1,
-          clusters: [node.cluster],
-        })
+          clusters: [node.cluster] })
       }
     })
 
@@ -109,8 +108,7 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
           allocatedGPUs: node.gpuAllocated,
           availableGPUs: node.gpuCount - node.gpuAllocated,
           nodeCount: 1,
-          gpuTypes: [node.gpuType],
-        })
+          gpuTypes: [node.gpuType] })
       }
     })
 
@@ -118,7 +116,7 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
   }, [gpuNodes])
 
   // Calculate totals
-  const totals = useMemo(() => {
+  const totals = (() => {
     let total = 0
     let allocated = 0
     gpuNodes.forEach(node => {
@@ -129,19 +127,18 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
       total,
       allocated,
       available: total - allocated,
-      utilizationPercent: total > 0 ? Math.round((allocated / total) * 100) : 0,
-    }
-  }, [gpuNodes])
+      utilizationPercent: total > 0 ? Math.round((allocated / total) * 100) : 0 }
+  })()
 
   // Get manufacturer breakdown
-  const manufacturerBreakdown = useMemo(() => {
+  const manufacturerBreakdown = (() => {
     const mfgMap = new Map<string, number>()
     gpuTypeInfo.forEach(info => {
       const existing = mfgMap.get(info.manufacturer) || 0
       mfgMap.set(info.manufacturer, existing + info.totalGPUs)
     })
     return Array.from(mfgMap.entries()).sort((a, b) => b[1] - a[1])
-  }, [gpuTypeInfo])
+  })()
 
   // Get GPU specifications from nodes (memory, family, CUDA version)
   const gpuSpecs = useMemo(() => {
@@ -150,8 +147,7 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
       families: new Set<string>(),
       cudaDriverVersions: new Set<string>(),
       cudaRuntimeVersions: new Set<string>(),
-      migCapableCount: 0,
-    }
+      migCapableCount: 0 }
 
     gpuNodes.forEach(node => {
       if (node.gpuMemoryMB) {
@@ -176,8 +172,7 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
       families: Array.from(specs.families),
       cudaDriverVersions: Array.from(specs.cudaDriverVersions),
       cudaRuntimeVersions: Array.from(specs.cudaRuntimeVersions),
-      migCapableCount: specs.migCapableCount,
-    }
+      migCapableCount: specs.migCapableCount }
   }, [gpuNodes])
 
   return (

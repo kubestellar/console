@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { GripVertical, Trash2, AlertTriangle } from 'lucide-react'
 import {
@@ -10,15 +10,13 @@ import {
   useSensors,
   DragEndEvent,
   DragOverlay,
-  DragStartEvent,
-} from '@dnd-kit/core'
+  DragStartEvent } from '@dnd-kit/core'
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
-  rectSortingStrategy,
-} from '@dnd-kit/sortable'
+  rectSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useTranslation } from 'react-i18next'
 import { api, BackendUnavailableError, UnauthenticatedError } from '../../lib/api'
@@ -106,8 +104,7 @@ function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, 
     transform: CSS.Transform.toString(transform),
     transition,
     gridColumn: `span ${effectiveW}`,
-    opacity: isDragging ? 0.5 : 1,
-  }
+    opacity: isDragging ? 0.5 : 1 }
 
   const CardComponent = CARD_COMPONENTS[card.card_type]
 
@@ -214,10 +211,8 @@ export function CustomDashboard() {
   const { t } = useTranslation()
 
   // Find the sidebar item matching this dashboard to get name/description
-  const sidebarItem = useMemo(() => {
-    return [...config.primaryNav, ...config.secondaryNav]
+  const sidebarItem = [...config.primaryNav, ...config.secondaryNav]
       .find(item => item.href === `/custom-dashboard/${id}`)
-  }, [config.primaryNav, config.secondaryNav, id])
 
   // Stats data from clusters
   const healthyClusters = deduplicatedClusters.filter((c) => c.healthy === true && c.reachable !== false).length
@@ -225,7 +220,7 @@ export function CustomDashboard() {
   const totalNodes = deduplicatedClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
   const totalPods = deduplicatedClusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
 
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'clusters':
         return { value: deduplicatedClusters.length, sublabel: 'total clusters', onClick: () => drillToAllClusters(), isClickable: deduplicatedClusters.length > 0 }
@@ -242,10 +237,10 @@ export function CustomDashboard() {
       default:
         return { value: '-' }
     }
-  }, [deduplicatedClusters, healthyClusters, unhealthyClusters, totalNodes, totalPods, drillToAllClusters, drillToAllNodes, drillToAllPods])
+  }
 
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
-  const getStatValue = useMemo(() => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue), [getDashboardStatValue, getUniversalStatValue])
+  const getStatValue = createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)
 
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
   const [cards, setCards] = useState<Card[]>([])
@@ -285,8 +280,7 @@ export function CustomDashboard() {
   const cardsRef = useRef(cards)
   cardsRef.current = cards
   const {
-    snapshot, undo, redo, canUndo, canRedo,
-  } = useDashboardUndoRedo<Card>(
+    snapshot, undo, redo, canUndo, canRedo } = useDashboardUndoRedo<Card>(
     (restored) => setCards(restored),
     () => cardsRef.current,
   )
@@ -361,7 +355,7 @@ export function CustomDashboard() {
     }
   }, [id, getDashboardWithCards, showToast, storageKey])
 
-  const handleRefreshDashboard = useCallback(() => loadDashboard(true), [loadDashboard])
+  const handleRefreshDashboard = () => loadDashboard(true)
   const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefreshDashboard, id)
   const isRefreshing = dataRefreshing || showIndicator
   const isFetching = isLoading || isRefreshing || showIndicator
@@ -392,7 +386,7 @@ export function CustomDashboard() {
   }, [cards, storageKey])
 
   // Card operations
-  const handleAddCards = useCallback(async (newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
+  const handleAddCards = async (newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     const cardsToAdd = newCards.map((c, index) => ({
       id: `card-${Date.now()}-${index}`,
       card_type: c.type,
@@ -425,9 +419,9 @@ export function CustomDashboard() {
 
     closeAddCard()
     showToast(`Added ${newCards.length} card${newCards.length > 1 ? 's' : ''}`, 'success')
-  }, [id, showToast, closeAddCard, snapshot])
+  }
 
-  const handleRemoveCard = useCallback(async (cardId: string) => {
+  const handleRemoveCard = async (cardId: string) => {
     snapshot(cardsRef.current)
     setCards(prev => prev.filter(c => c.id !== cardId))
 
@@ -439,30 +433,30 @@ export function CustomDashboard() {
         showToast('Failed to delete card from backend', 'error')
       }
     }
-  }, [id, snapshot, showToast])
+  }
 
-  const handleConfigureCard = useCallback((card: Card) => {
+  const handleConfigureCard = (card: Card) => {
     setSelectedCard(card)
     openConfigureCard()
-  }, [openConfigureCard])
+  }
 
-  const handleCardConfigured = useCallback(async (cardId: string, config: Record<string, unknown>) => {
+  const handleCardConfigured = async (cardId: string, config: Record<string, unknown>) => {
     snapshot(cardsRef.current)
     setCards(prev => prev.map(c =>
       c.id === cardId ? { ...c, config } : c
     ))
     closeConfigureCard()
     setSelectedCard(null)
-  }, [closeConfigureCard, snapshot])
+  }
 
-  const handleWidthChange = useCallback((cardId: string, newWidth: number) => {
+  const handleWidthChange = (cardId: string, newWidth: number) => {
     snapshot(cardsRef.current)
     setCards(prev => prev.map(c =>
       c.id === cardId ? { ...c, position: { ...c.position, w: newWidth } } : c
     ))
-  }, [snapshot])
+  }
 
-  const handleApplyTemplate = useCallback(async (template: DashboardTemplate) => {
+  const handleApplyTemplate = async (template: DashboardTemplate) => {
     const templateCards = template.cards.map((tc, index) => ({
       id: `template-${Date.now()}-${index}`,
       card_type: tc.card_type,
@@ -488,20 +482,20 @@ export function CustomDashboard() {
     }
 
     showToast(`Applied template "${template.name}" with ${templateCards.length} cards`, 'success')
-  }, [id, showToast, closeTemplates, snapshot])
+  }
 
-  const handleAddRecommendedCard = useCallback((cardType: string, config?: Record<string, unknown>) => {
+  const handleAddRecommendedCard = (cardType: string, config?: Record<string, unknown>) => {
     handleAddCards([{ type: cardType, title: formatCardTitle(cardType), config: config || {} }])
-  }, [handleAddCards])
+  }
 
-  const handleReset = useCallback(() => {
+  const handleReset = () => {
     snapshot(cardsRef.current)
     setCards([])
     safeRemoveItem(storageKey)
     showToast('Dashboard reset to empty', 'info')
-  }, [storageKey, showToast, snapshot])
+  }
 
-  const handleDeleteDashboard = useCallback(() => {
+  const handleDeleteDashboard = () => {
     if (!id) return
 
     // Remove sidebar item
@@ -520,14 +514,14 @@ export function CustomDashboard() {
     deleteDashboard(id).catch(() => {
       // Backend deletion is optional — sidebar + localStorage are the source of truth
     })
-  }, [id, sidebarItem, dashboard, deleteDashboard, removeItem, storageKey, showToast, navigate])
+  }
 
   // Drag handlers
-  const handleDragStart = useCallback((event: DragStartEvent) => {
+  const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string)
-  }, [])
+  }
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     setActiveId(null)
 
@@ -540,15 +534,15 @@ export function CustomDashboard() {
         return arrayMove(prev, oldIndex, newIndex)
       })
     }
-  }, [snapshot])
+  }
 
   // Current card types for recommendations
-  const currentCardTypes = useMemo(() => cards.map(c => {
+  const currentCardTypes = cards.map(c => {
     if (c.card_type === 'dynamic_card' && c.config?.dynamicCardId) {
       return `dynamic_card::${c.config.dynamicCardId as string}`
     }
     return c.card_type
-  }), [cards])
+  })
 
   // Loading skeleton
   if (isLoading && cards.length === 0) {

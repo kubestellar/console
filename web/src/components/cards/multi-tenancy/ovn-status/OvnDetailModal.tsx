@@ -7,7 +7,7 @@
  * Follows the TrivyDetailModal pattern using BaseModal compound components.
  */
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Network, Search, ExternalLink, CheckCircle, XCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { BaseModal } from '../../../../lib/modals'
@@ -47,15 +47,13 @@ type TabId = typeof TAB_UDNS | typeof TAB_PODS
 const NETWORK_TYPE_COLORS: Record<string, string> = {
   layer2: 'text-teal-400 bg-teal-500/15',
   layer3: 'text-cyan-400 bg-cyan-500/15',
-  unknown: 'text-zinc-400 bg-zinc-500/15',
-}
+  unknown: 'text-zinc-400 bg-zinc-500/15' }
 
 /** Color classes for UDN roles */
 const ROLE_COLORS: Record<string, string> = {
   primary: 'text-purple-400 bg-purple-500/15',
   secondary: 'text-blue-400 bg-blue-500/15',
-  unknown: 'text-zinc-400 bg-zinc-500/15',
-}
+  unknown: 'text-zinc-400 bg-zinc-500/15' }
 
 function UdnRow({ udn }: { udn: UdnInfo }) {
   const networkTypeColor = NETWORK_TYPE_COLORS[udn.networkType] || NETWORK_TYPE_COLORS.unknown
@@ -99,7 +97,7 @@ export function OvnDetailModal({ isOpen, onClose, data, isDemoData }: OvnDetailM
   const isHealthy = data.health === 'healthy'
 
   // Filter UDNs by search
-  const filteredUdns = useMemo(() => {
+  const filteredUdns = (() => {
     if (!search.trim()) return udns
     const q = search.toLowerCase()
     return udns.filter(
@@ -108,7 +106,7 @@ export function OvnDetailModal({ isOpen, onClose, data, isDemoData }: OvnDetailM
         udn.networkType.toLowerCase().includes(q) ||
         udn.role.toLowerCase().includes(q),
     )
-  }, [udns, search])
+  })()
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false} className={isDemoData ? 'ring-2 ring-yellow-500/60 shadow-[0_0_20px_rgba(234,179,8,0.25)]' : ''}>

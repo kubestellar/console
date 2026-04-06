@@ -10,8 +10,7 @@ import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import {
   TestTube2, ExternalLink, TrendingUp, TrendingDown, Minus,
-  CheckCircle, XCircle, Loader2, AlertTriangle, Sparkles, Stethoscope,
-} from 'lucide-react'
+  CheckCircle, XCircle, Loader2, AlertTriangle, Sparkles, Stethoscope } from 'lucide-react'
 import { useCardLoadingState } from '../CardDataContext'
 import { Skeleton } from '../../ui/Skeleton'
 import { useNightlyE2EData } from '../../../hooks/useNightlyE2EData'
@@ -36,8 +35,7 @@ function getGuideMeta(guide: NightlyGuideStatus) {
   return {
     model: guide.model || 'Unknown',
     gpuType: guide.gpuType || 'Unknown',
-    gpuCount: guide.gpuCount || 0,
-  }
+    gpuCount: guide.gpuCount || 0 }
 }
 
 function computeAvgDurationMin(runs: NightlyRun[]): number | null {
@@ -112,14 +110,14 @@ function RunDot({ run, guide, isHighlighted, onMouseEnter, onMouseLeave }: {
     }
   }, [])
 
-  const scheduleHide = useCallback(() => {
+  const scheduleHide = () => {
     cancelHide()
     hideTimerRef.current = setTimeout(() => setShowPopup(false), POPUP_HIDE_DELAY_MS)
-  }, [cancelHide])
+  }
 
   useEffect(() => () => cancelHide(), [cancelHide])
 
-  const handleDotEnter = useCallback(() => {
+  const handleDotEnter = () => {
     cancelHide()
     if (dotRef.current) {
       const rect = dotRef.current.getBoundingClientRect()
@@ -127,14 +125,14 @@ function RunDot({ run, guide, isHighlighted, onMouseEnter, onMouseLeave }: {
     }
     setShowPopup(true)
     onMouseEnter?.()
-  }, [cancelHide, onMouseEnter])
+  }
 
-  const handleDotLeave = useCallback(() => {
+  const handleDotLeave = () => {
     scheduleHide()
     onMouseLeave?.()
-  }, [scheduleHide, onMouseLeave])
+  }
 
-  const handleDiagnose = useCallback((e: React.MouseEvent) => {
+  const handleDiagnose = (e: React.MouseEvent) => {
     e.stopPropagation()
     e.preventDefault()
     if (!guide) return
@@ -186,14 +184,12 @@ Please provide:
             guide: guide.guide,
             platform: guide.platform,
             repo: guide.repo,
-            runNumber: run.runNumber,
-          },
-        })
+            runNumber: run.runNumber } })
       } finally {
         setIsDiagnosing(false)
       }
     })
-  }, [guide, run, checkKeyAndRun, startMission])
+  }
 
   // Prefer per-run images (from workflow artifact) over guide-level fallback
   const llmdImages = run.llmdImages ?? guide?.llmdImages
@@ -400,8 +396,7 @@ function TrendSparkline({ runs }: { runs: NightlyRun[] }) {
   const xStep = chartW / (points.length - 1)
   const pathPoints = points.map((val, i) => ({
     x: padX + i * xStep,
-    y: padY + (1 - val) * chartH,
-  }))
+    y: padY + (1 - val) * chartH }))
 
   // Smooth curve using cardinal spline approximation
   let linePath = `M ${pathPoints[0].x} ${pathPoints[0].y}`
@@ -615,7 +610,7 @@ function generateNightlySummary(guides: NightlyGuideStatus[]): [string, string] 
 
 function NightlySummaryPanel({ guides }: { guides: NightlyGuideStatus[] }) {
   const { t } = useTranslation(['cards'])
-  const [para1, para2] = useMemo(() => generateNightlySummary(guides), [guides])
+  const [para1, para2] = generateNightlySummary(guides)
 
   return (
     <div className="h-full flex flex-col">
@@ -842,7 +837,7 @@ export function NightlyE2EStatus() {
   const [hoveredRun, setHoveredRun] = useState<NightlyRun | null>(null)
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const handleRunHover = useCallback((run: NightlyRun | null) => {
+  const handleRunHover = (run: NightlyRun | null) => {
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current)
       hoverTimeoutRef.current = null
@@ -853,7 +848,7 @@ export function NightlyE2EStatus() {
       // Delay clearing so moving between adjacent dots doesn't flash to null
       hoverTimeoutRef.current = setTimeout(() => setHoveredRun(null), TOOLTIP_HIDE_DELAY_MS)
     }
-  }, [])
+  }
 
   const { showSkeleton } = useCardLoadingState({
     isLoading,
@@ -861,13 +856,12 @@ export function NightlyE2EStatus() {
     isFailed,
     consecutiveFailures,
     isDemoData: isDemoFallback,
-    errorMessage: isFailed ? 'Failed to load nightly E2E status' : undefined,
-  })
+    errorMessage: isFailed ? 'Failed to load nightly E2E status' : undefined })
 
-  const selectedGuide = useMemo(() => {
+  const selectedGuide = (() => {
     if (!selectedKey) return null
     return guides.find(g => `${g.guide}-${g.platform}` === selectedKey) ?? null
-  }, [guides, selectedKey])
+  })()
 
   const { stats, grouped, lastRunTime } = useMemo(() => {
     const total = guides.length
@@ -895,8 +889,7 @@ export function NightlyE2EStatus() {
     return {
       stats: { total, overallPassRate, failing },
       grouped: byPlatform,
-      lastRunTime: mostRecent ? new Date(mostRecent).toISOString() : null,
-    }
+      lastRunTime: mostRecent ? new Date(mostRecent).toISOString() : null }
   }, [guides])
 
   if (showSkeleton) {

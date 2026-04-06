@@ -168,7 +168,7 @@ class KubectlService {
 export const kubectlService = new KubectlService()
 
 // React hook for kubectl commands
-import { useEffect, useCallback } from 'react'
+import { useEffect } from 'react'
 
 export function useKubectl() {
   useEffect(() => {
@@ -176,9 +176,9 @@ export function useKubectl() {
     return unsubscribe
   }, [])
 
-  const execute = useCallback(async (context: string, args: string[]): Promise<string> => {
+  const execute = async (context: string, args: string[]): Promise<string> => {
     return kubectlService.execute(context, args)
-  }, [])
+  }
 
   return { execute }
 }

@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react'
+import { useMemo } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { useDeploymentIssues, usePodIssues, useClusters, useDeployments } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -52,18 +52,17 @@ export function Workloads() {
   const showSkeletons = ((allDeployments.length === 0 && podIssues.length === 0 && deploymentIssues.length === 0) && isLoading) || forceSkeletonForOffline || isModeSwitching
 
   // Combined refresh
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = () => {
     refetchPodIssues()
     refetchDeploymentIssues()
     refetchDeployments()
     refetchClusters()
-  }, [refetchPodIssues, refetchDeploymentIssues, refetchDeployments, refetchClusters])
+  }
 
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
-    customFilter,
-  } = useGlobalFilters()
+    customFilter } = useGlobalFilters()
 
   // Group applications by namespace with global filter applied
   const apps = useMemo(() => {
@@ -113,8 +112,7 @@ export function Workloads() {
           deploymentCount: 0,
           podIssues: 0,
           deploymentIssues: 0,
-          status: 'healthy',
-        })
+          status: 'healthy' })
       }
       const app = appMap.get(key)!
       app.deploymentCount++
@@ -129,8 +127,7 @@ export function Workloads() {
           deploymentCount: 0,
           podIssues: 0,
           deploymentIssues: 0,
-          status: 'healthy',
-        })
+          status: 'healthy' })
       }
       const app = appMap.get(key)!
       app.podIssues++
@@ -146,8 +143,7 @@ export function Workloads() {
           deploymentCount: 0,
           podIssues: 0,
           deploymentIssues: 0,
-          status: 'healthy',
-        })
+          status: 'healthy' })
       }
       const app = appMap.get(key)!
       app.deploymentIssues++
@@ -172,11 +168,10 @@ export function Workloads() {
     critical: apps.filter(a => a.status === 'error').length,
     totalDeployments: apps.reduce((sum, a) => sum + a.deploymentCount, 0),
     totalPodIssues: podIssues.length,
-    totalDeploymentIssues: deploymentIssues.length,
-  }), [apps, podIssues, deploymentIssues])
+    totalDeploymentIssues: deploymentIssues.length }), [apps, podIssues, deploymentIssues])
 
   // Dashboard-specific stats value getter
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'namespaces':
         return { value: stats.total, sublabel: 'active namespaces', onClick: () => drillToAllNamespaces(), isClickable: apps.length > 0 }
@@ -195,7 +190,7 @@ export function Workloads() {
       default:
         return { value: '-', sublabel: '' }
     }
-  }, [stats, apps, drillToAllNamespaces, drillToAllDeployments, drillToAllPods])
+  }
 
   return (
     <DashboardPage
@@ -214,8 +209,7 @@ export function Workloads() {
       hasData={apps.length > 0 || !showSkeletons}
       emptyState={{
         title: 'Workloads Dashboard',
-        description: 'Add cards to monitor deployments, pods, and application health across your clusters.',
-      }}
+        description: 'Add cards to monitor deployments, pods, and application health across your clusters.' }}
     >
       {/* Workloads List */}
       {showSkeletons ? (

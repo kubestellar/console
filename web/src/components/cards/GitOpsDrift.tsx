@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { GitBranch, AlertTriangle, Plus, Minus, RefreshCw, Loader2, ChevronRight, Server } from 'lucide-react'
 import { GitOpsDrift as GitOpsDriftType } from '../../hooks/useMCP'
 import { useCachedGitOpsDrifts } from '../../hooks/useCachedData'
@@ -38,34 +38,26 @@ const driftTypeConfig: Record<string, { icon: typeof RefreshCw; color: string; b
     icon: RefreshCw,
     color: 'text-yellow-400',
     bg: 'bg-yellow-500/20',
-    labelKey: 'cards:gitOpsDrift.modified',
-  },
+    labelKey: 'cards:gitOpsDrift.modified' },
   deleted: {
     icon: Minus,
     color: 'text-red-400',
     bg: 'bg-red-500/20',
-    labelKey: 'cards:gitOpsDrift.missingInCluster',
-  },
+    labelKey: 'cards:gitOpsDrift.missingInCluster' },
   added: {
     icon: Plus,
     color: 'text-blue-400',
     bg: 'bg-blue-500/20',
-    labelKey: 'cards:gitOpsDrift.notInGit',
-  },
-}
+    labelKey: 'cards:gitOpsDrift.notInGit' } }
 
 const severityColors = {
   high: 'border-l-red-500',
   medium: 'border-l-orange-500',
-  low: 'border-l-yellow-500',
-}
+  low: 'border-l-yellow-500' }
 
 export function GitOpsDrift({ config }: GitOpsDriftProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const SORT_OPTIONS = useMemo(() =>
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
-    [t]
-  )
+  const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
   const [modalDrift, setModalDrift] = useState<GitOpsDriftType | null>(null)
   const cluster = config?.cluster
   const namespace = config?.namespace
@@ -77,8 +69,7 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
     error,
     isFailed,
     consecutiveFailures,
-    isDemoFallback: isDemoData,
-  } = useCachedGitOpsDrifts(cluster, namespace)
+    isDemoFallback: isDemoData } = useCachedGitOpsDrifts(cluster, namespace)
   const { selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
@@ -89,8 +80,7 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
     hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
-    isDemoData,
-  })
+    isDemoData })
 
   // Map drift severity to global SeverityLevel
   const mapDriftSeverityToGlobal = (severity: 'high' | 'medium' | 'low'): SeverityLevel[] => {
@@ -103,7 +93,7 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
   }
 
   // Pre-filter by severity and global custom filter (outside useCardData)
-  const severityFilteredDrifts = useMemo(() => {
+  const severityFilteredDrifts = (() => {
     let result = drifts
 
     // Apply global severity filter
@@ -126,7 +116,7 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
     }
 
     return result
-  }, [drifts, selectedSeverities, isAllSeveritiesSelected, customFilter])
+  })()
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {
@@ -147,23 +137,18 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
       availableClusters: availableClustersForFilter,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-
-    },
+      clusterFilterRef },
     sorting: {
       sortBy,
       setSortBy,
       sortDirection,
-      setSortDirection,
-    },
+      setSortDirection },
     containerRef,
-    containerStyle,
-  } = useCardData<GitOpsDriftType, SortByOption>(severityFilteredDrifts, {
+    containerStyle } = useCardData<GitOpsDriftType, SortByOption>(severityFilteredDrifts, {
     filter: {
       searchFields: ['resource', 'kind', 'cluster', 'namespace'],
       clusterField: 'cluster',
-      storageKey: 'gitops-drift',
-    },
+      storageKey: 'gitops-drift' },
     sort: {
       defaultField: 'severity',
       defaultDirection: 'asc',
@@ -171,11 +156,8 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
         severity: (a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity],
         type: (a, b) => a.driftType.localeCompare(b.driftType),
         resource: (a, b) => a.resource.localeCompare(b.resource),
-        cluster: (a, b) => a.cluster.localeCompare(b.cluster),
-      },
-    },
-    defaultLimit: 5,
-  })
+        cluster: (a, b) => a.cluster.localeCompare(b.cluster) } },
+    defaultLimit: 5 })
 
   // Compute stats from the hook's sorted+filtered data (before pagination)
   const filteredDrifts = severityFilteredDrifts

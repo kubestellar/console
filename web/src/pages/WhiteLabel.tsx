@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
@@ -16,8 +16,7 @@ import {
   EyeOff,
   Settings,
   Package,
-  Puzzle,
-} from 'lucide-react'
+  Puzzle } from 'lucide-react'
 import { emitWhiteLabelViewed, emitWhiteLabelActioned, emitWhiteLabelTabSwitch, emitWhiteLabelCommandCopy, emitInstallCommandCopied } from '../lib/analytics'
 import { copyToClipboard } from '../lib/clipboard'
 
@@ -45,33 +44,27 @@ const HIGHLIGHTS: HighlightFeature[] = [
   {
     icon: <Palette className="w-6 h-6 text-purple-400" />,
     title: 'Full Branding Control',
-    description: 'App name, logo, favicon, theme color, tagline — all configurable via env vars at runtime. No rebuilding required.',
-  },
+    description: 'App name, logo, favicon, theme color, tagline — all configurable via env vars at runtime. No rebuilding required.' },
   {
     icon: <Layers className="w-6 h-6 text-purple-400" />,
     title: 'Project-Scoped Features',
-    description: 'Set CONSOLE_PROJECT to your project ID and only generic K8s dashboards + your project-specific cards appear. KubeStellar features disappear.',
-  },
+    description: 'Set CONSOLE_PROJECT to your project ID and only generic K8s dashboards + your project-specific cards appear. KubeStellar features disappear.' },
   {
     icon: <Puzzle className="w-6 h-6 text-purple-400" />,
     title: '150+ Cards, 30 Dashboards',
-    description: 'Pods, Deployments, Services, Nodes, GPU, Storage, Network, Security, Cost, GitOps, Helm, Operators — all out of the box.',
-  },
+    description: 'Pods, Deployments, Services, Nodes, GPU, Storage, Network, Security, Cost, GitOps, Helm, Operators — all out of the box.' },
   {
     icon: <Sparkles className="w-6 h-6 text-purple-400" />,
     title: 'AI Missions',
-    description: 'Natural-language cluster troubleshooting powered by Claude. Your users ask questions, get kubectl commands they can run.',
-  },
+    description: 'Natural-language cluster troubleshooting powered by Claude. Your users ask questions, get kubectl commands they can run.' },
   {
     icon: <BarChart3 className="w-6 h-6 text-purple-400" />,
     title: 'Your Own Analytics',
-    description: 'Provide your own GA4 and Umami IDs, or leave them empty to disable telemetry entirely. Zero tracking by default.',
-  },
+    description: 'Provide your own GA4 and Umami IDs, or leave them empty to disable telemetry entirely. Zero tracking by default.' },
   {
     icon: <Shield className="w-6 h-6 text-purple-400" />,
     title: 'Production-Ready',
-    description: 'Helm chart with PVC persistence, RBAC, network policies, pod disruption budgets, and OpenShift Route support.',
-  },
+    description: 'Helm chart with PVC persistence, RBAC, network policies, pod disruption budgets, and OpenShift Route support.' },
 ]
 
 /* ------------------------------------------------------------------ */
@@ -151,8 +144,7 @@ const BINARY_STEPS: InstallStep[] = [
       '    LOGO_URL="/custom-logos/my-logo.svg" \\',
       '    bash',
     ],
-    description: 'Downloads pre-built binaries and starts the console with your branding. All env vars are optional — defaults to KubeStellar branding.',
-  },
+    description: 'Downloads pre-built binaries and starts the console with your branding. All env vars are optional — defaults to KubeStellar branding.' },
 ]
 
 const HELM_STEPS: InstallStep[] = [
@@ -163,8 +155,7 @@ const HELM_STEPS: InstallStep[] = [
       'helm repo add kubestellar-console https://kubestellar.github.io/console',
       'helm repo update',
     ],
-    description: 'One-time setup. The chart is published to GitHub Pages.',
-  },
+    description: 'One-time setup. The chart is published to GitHub Pages.' },
   {
     step: 2,
     title: 'Install with your branding',
@@ -177,8 +168,7 @@ const HELM_STEPS: InstallStep[] = [
       '  --set branding.docsUrl="https://docs.myproject.io" \\',
       '  --set branding.themeColor="#2563eb"',
     ],
-    description: 'All branding values are optional. Omitted values use KubeStellar defaults. Set consoleProject to hide KubeStellar-specific features.',
-  },
+    description: 'All branding values are optional. Omitted values use KubeStellar defaults. Set consoleProject to hide KubeStellar-specific features.' },
   {
     step: 3,
     title: 'Mount custom logos (optional)',
@@ -192,8 +182,7 @@ const HELM_STEPS: InstallStep[] = [
       '  --set branding.logoUrl="/custom-logos/my-logo.svg"',
     ],
     note: 'Logo files from the ConfigMap are mounted at /app/web/dist/custom-logos/ and served as static assets.',
-    description: 'Use a ConfigMap to provide custom logo SVG/PNG files without rebuilding the image.',
-  },
+    description: 'Use a ConfigMap to provide custom logo SVG/PNG files without rebuilding the image.' },
 ]
 
 const DOCKER_STEPS: InstallStep[] = [
@@ -209,8 +198,7 @@ const DOCKER_STEPS: InstallStep[] = [
       '  -e DOCS_URL="https://docs.myproject.io" \\',
       '  ghcr.io/kubestellar/console:latest',
     ],
-    description: 'All configuration is via env vars. Mount a volume at /app/web/dist/custom-logos for custom logo files.',
-  },
+    description: 'All configuration is via env vars. Mount a volume at /app/web/dist/custom-logos for custom logo files.' },
 ]
 
 /* ------------------------------------------------------------------ */
@@ -244,13 +232,13 @@ function DeploymentSection() {
     return () => clearTimeout(copiedTimerRef.current)
   }, [])
 
-  const switchTab = useCallback((tab: DeployTab) => {
+  const switchTab = (tab: DeployTab) => {
     if (tab === activeTab) return
     setActiveTab(tab)
     emitWhiteLabelTabSwitch(tab)
-  }, [activeTab])
+  }
 
-  const copyCommands = useCallback(async (commands: string[], step: number) => {
+  const copyCommands = async (commands: string[], step: number) => {
     const text = commands.filter(c => !c.startsWith('#') && c !== '').join('\n')
     await copyToClipboard(text)
     const key = `${activeTab}-${step}`
@@ -259,7 +247,7 @@ function DeploymentSection() {
     copiedTimerRef.current = setTimeout(() => setCopiedStep(null), COPY_FEEDBACK_MS)
     emitWhiteLabelCommandCopy(activeTab, step, commands[0])
     emitInstallCommandCopied('white_label', commands[0])
-  }, [activeTab])
+  }
 
   const steps = activeTab === 'binary'
     ? BINARY_STEPS

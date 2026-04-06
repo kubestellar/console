@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect, useCallback } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Cpu, Network, Activity, Layers, Server,
@@ -58,26 +58,18 @@ const SEVERITY_FILTER_OPTIONS = [
 const SEVERITY_ORDER: Record<string, number> = {
   critical: 0,
   warning: 1,
-  info: 2,
-}
+  info: 2 }
 
 const STATUS_ORDER: Record<string, number> = {
   unhealthy: 0,
   degraded: 1,
   healthy: 2,
-  unknown: 3,
-}
+  unknown: 3 }
 
 interface LLMdStackMonitorProps {
   config?: Record<string, unknown>
 }
 
-interface ComponentSection {
-  label: string
-  icon: typeof Cpu
-  color: string
-  items: ComponentItem[]
-}
 
 interface ComponentItem {
   name: string
@@ -96,15 +88,13 @@ const STATUS_DOT: Record<string, string> = {
   running: 'bg-green-400',
   scaling: 'bg-yellow-400',
   stopped: 'bg-red-400',
-  error: 'bg-red-400',
-}
+  error: 'bg-red-400' }
 
 const STATUS_BADGE: Record<string, string> = {
   healthy: 'bg-green-500/20 text-green-400',
   degraded: 'bg-yellow-500/20 text-yellow-400',
   unhealthy: 'bg-red-500/20 text-red-400',
-  unknown: 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground',
-}
+  unknown: 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground' }
 
 export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   const { t } = useTranslation()
@@ -112,7 +102,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   const { nodes: gpuNodes } = useCachedGPUNodes()
 
   // Dynamically discover clusters that likely have llm-d stacks
-  const gpuClusterNames = useMemo(() => new Set(gpuNodes.map(n => n.cluster)), [gpuNodes])
+  const gpuClusterNames = new Set(gpuNodes.map(n => n.cluster))
   const discoveredClusters = useLLMdClusters(deduplicatedClusters, gpuClusterNames)
 
   const { servers, isLoading: serversLoading, isRefreshing: serversRefreshing, isDemoFallback: serversDemoFallback, isFailed: serversFailed, consecutiveFailures: serversFailures, refetch: refetchServers } = useCachedLLMdServers(discoveredClusters)
@@ -146,8 +136,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
       const rect = clusterFilterBtnRef.current.getBoundingClientRect()
       setDropdownStyle({
         top: rect.bottom + 4,
-        left: Math.max(8, rect.right - 192),
-      })
+        left: Math.max(8, rect.right - 192) })
     } else {
       setDropdownStyle(null)
     }
@@ -165,7 +154,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   }, [])
 
   // Filter servers by search and cluster
-  const filteredServers = useMemo(() => {
+  const filteredServers = (() => {
     let result = servers
     if (localClusterFilter.length > 0) {
       result = result.filter(s => localClusterFilter.includes(s.cluster))
@@ -180,11 +169,9 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
       )
     }
     return result
-  }, [servers, localClusterFilter, search])
+  })()
 
-  const availableClusters = useMemo(() => {
-    return deduplicatedClusters.filter(c => c.reachable !== false)
-  }, [deduplicatedClusters])
+  const availableClusters = deduplicatedClusters.filter(c => c.reachable !== false)
 
   const toggleClusterFilter = (cluster: string) => {
     if (localClusterFilter.includes(cluster)) {
@@ -201,10 +188,8 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
     overallStatus,
     isLoading: monitorLoading,
     isRefreshing: monitorRefreshing,
-    refetch: refetchMonitor,
-  } = useWorkloadMonitor(llmdCluster, 'llm-d', '', {
-    autoRefreshMs: 30_000,
-  })
+    refetch: refetchMonitor } = useWorkloadMonitor(llmdCluster, 'llm-d', '', {
+    autoRefreshMs: 30_000 })
 
   const isLoading = serversLoading || monitorLoading
   const isRefreshing = serversRefreshing || monitorRefreshing
@@ -216,8 +201,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
     hasAnyData: hasData,
     isDemoData: serversDemoFallback,
     isFailed: serversFailed,
-    consecutiveFailures: serversFailures,
-  })
+    consecutiveFailures: serversFailures })
 
   // Map server status to component status
   const mapStatus = (s: string): ComponentItem['status'] => {
@@ -239,8 +223,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   }
 
   // Build flat list of all items for sorting/filtering/pagination
-  const allItems = useMemo(() => {
-    return filteredServers.map(s => ({
+  const allItems = filteredServers.map(s => ({
       name: s.name,
       status: mapStatus(s.status),
       type: s.componentType,
@@ -252,18 +235,16 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
         : s.componentType === 'autoscaler'
         ? `${getAutoscalerLabel(s.autoscalerType)} ${s.model || ''}`
         : undefined,
-      cluster: s.cluster,
-    }))
-  }, [filteredServers])
+      cluster: s.cluster }))
 
   // Apply status filter
-  const statusFilteredItems = useMemo(() => {
+  const statusFilteredItems = (() => {
     if (statusFilter === 'all') return allItems
     return allItems.filter(item => item.status === statusFilter)
-  }, [allItems, statusFilter])
+  })()
 
   // Apply sorting
-  const sortedItems = useMemo(() => {
+  const sortedItems = (() => {
     const sorted = [...statusFilteredItems]
     sorted.sort((a, b) => {
       let compare = 0
@@ -284,23 +265,23 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
       return sortDirection === 'asc' ? compare : -compare
     })
     return sorted
-  }, [statusFilteredItems, sortBy, sortDirection])
+  })()
 
   // Apply pagination
   const totalItems = sortedItems.length
   const limit = itemsPerPage === 'unlimited' ? totalItems : itemsPerPage
   const totalPages = Math.max(1, Math.ceil(totalItems / limit))
   const safeCurrentPage = Math.min(currentPage, totalPages)
-  const paginatedItems = useMemo(() => {
+  const paginatedItems = (() => {
     if (itemsPerPage === 'unlimited') return sortedItems
     const start = (safeCurrentPage - 1) * limit
     return sortedItems.slice(start, start + limit)
-  }, [sortedItems, safeCurrentPage, limit, itemsPerPage])
+  })()
 
   const needsPagination = itemsPerPage !== 'unlimited' && totalItems > limit
 
   // Build component sections from paginated items (for hierarchical view)
-  const sections = useMemo<ComponentSection[]>(() => {
+  const sections = (() => {
     const SECTION_CONFIG: Array<{ type: string; label: string; icon: typeof Cpu; color: string }> = [
       { type: 'model', label: 'Model Serving', icon: Cpu, color: 'text-purple-400' },
       { type: 'epp', label: 'EPP', icon: Layers, color: 'text-blue-400' },
@@ -313,9 +294,8 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
       label: cfg.label,
       icon: cfg.icon,
       color: cfg.color,
-      items: paginatedItems.filter(item => item.type === cfg.type),
-    })).filter(s => s.items.length > 0)
-  }, [paginatedItems])
+      items: paginatedItems.filter(item => item.type === cfg.type) })).filter(s => s.items.length > 0)
+  })()
 
   // Combine issues from monitor and synthesized from llm-d (respects cluster filter)
   const allIssues = useMemo<MonitorIssue[]>(() => {
@@ -345,20 +325,18 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
             category: 'workload',
             lastChecked: new Date().toISOString(),
             optional: false,
-            order: 0,
-          },
+            order: 0 },
           severity: s.status === 'error' ? 'critical' : 'warning',
           title: `${s.componentType} ${s.name} is ${s.status}`,
           description: `Server ${s.name} in namespace ${s.namespace} is ${s.status}`,
-          detectedAt: new Date().toISOString(),
-        })
+          detectedAt: new Date().toISOString() })
       }
     })
     return monitorIssues
   }, [issues, servers, localClusterFilter])
 
   // Filter issues by search and severity
-  const filteredIssues = useMemo(() => {
+  const filteredIssues = (() => {
     let result = allIssues
 
     // Apply severity filter
@@ -379,10 +357,10 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
     }
 
     return result
-  }, [allIssues, severityFilter, issueSearch])
+  })()
 
   // Sort issues
-  const sortedIssues = useMemo(() => {
+  const sortedIssues = (() => {
     const sorted = [...filteredIssues]
     sorted.sort((a, b) => {
       let compare = 0
@@ -400,30 +378,30 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
       return issueSortDirection === 'asc' ? compare : -compare
     })
     return sorted
-  }, [filteredIssues, issueSortBy, issueSortDirection])
+  })()
 
   // Paginate issues
   const totalIssues = sortedIssues.length
   const issueLimit = issueItemsPerPage === 'unlimited' ? totalIssues : issueItemsPerPage
   const totalIssuePages = Math.max(1, Math.ceil(totalIssues / issueLimit))
   const safeIssueCurrentPage = Math.min(issueCurrentPage, totalIssuePages)
-  const paginatedIssues = useMemo(() => {
+  const paginatedIssues = (() => {
     if (issueItemsPerPage === 'unlimited') return sortedIssues
     const start = (safeIssueCurrentPage - 1) * issueLimit
     return sortedIssues.slice(start, start + issueLimit)
-  }, [sortedIssues, safeIssueCurrentPage, issueLimit, issueItemsPerPage])
+  })()
 
   const needsIssuePagination = issueItemsPerPage !== 'unlimited' && totalIssues > issueLimit
 
   // Calculate overall health
-  const stackHealth = useMemo(() => {
+  const stackHealth = (() => {
     if (overallStatus !== 'unknown') return overallStatus
     const statuses = sections.flatMap(s => s.items.map(i => i.status))
     if (statuses.some(s => s === 'unhealthy')) return 'unhealthy'
     if (statuses.some(s => s === 'degraded')) return 'degraded'
     if (statuses.every(s => s === 'healthy')) return 'healthy'
     return 'unknown'
-  }, [overallStatus, sections])
+  })()
 
   const toggleSection = (label: string) => {
     setExpandedSections(prev => {
@@ -442,14 +420,12 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   // Individual item diagnosis
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
   const {
-    startDiagnose,
-  } = useDiagnoseRepairLoop({
+    startDiagnose } = useDiagnoseRepairLoop({
     monitorType: 'llmd',
-    repairable: false,
-  })
+    repairable: false })
 
   // Handle diagnose for a specific item
-  const handleItemDiagnose = useCallback((item: ComponentItem) => {
+  const handleItemDiagnose = (item: ComponentItem) => {
     checkKeyAndRun(() => {
       // Create filtered resource for this specific item
       const itemResource: MonitoredResource = {
@@ -462,8 +438,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
         category: 'workload',
         lastChecked: new Date().toISOString(),
         optional: false,
-        order: 0,
-      }
+        order: 0 }
       // Create filtered issues for this item
       const itemIssues = allIssues.filter(issue =>
         issue.resource.name === item.name &&
@@ -473,11 +448,10 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
         clusters: [item.cluster || discoveredClusters[0]],
         componentType: item.type,
         componentName: item.name,
-        namespace: item.namespace,
-      }
+        namespace: item.namespace }
       startDiagnose([itemResource], itemIssues, workloadContext)
     })
-  }, [checkKeyAndRun, startDiagnose, allIssues, discoveredClusters])
+  }
 
   if (isLoading && servers.length === 0) {
     return (
@@ -811,8 +785,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
                 const severityConfig = {
                   critical: { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', badge: 'bg-red-500/20 text-red-400', icon: 'text-red-400' },
                   warning: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', badge: 'bg-yellow-500/20 text-yellow-400', icon: 'text-yellow-400' },
-                  info: { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400', badge: 'bg-blue-500/20 text-blue-400', icon: 'text-blue-400' },
-                }
+                  info: { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400', badge: 'bg-blue-500/20 text-blue-400', icon: 'text-blue-400' } }
                 const config = severityConfig[issue.severity as keyof typeof severityConfig] || severityConfig.info
 
                 return (
@@ -851,8 +824,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
                           name: issue.resource?.name || issue.title,
                           status: issue.severity === 'critical' ? 'unhealthy' : 'degraded',
                           namespace: issue.resource?.namespace,
-                          cluster: issue.resource?.cluster,
-                        })}
+                          cluster: issue.resource?.cluster })}
                       />
                     </div>
                   </div>

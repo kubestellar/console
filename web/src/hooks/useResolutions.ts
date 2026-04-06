@@ -5,7 +5,7 @@
  * them in future missions, showing users that their past knowledge is being leveraged.
  */
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 
 export interface IssueSignature {
   /** Issue type: CrashLoopBackOff, OOMKilled, ImagePullBackOff, etc. */
@@ -103,15 +103,13 @@ export function detectIssueSignature(content: string): Partial<IssueSignature> {
         type,
         resourceKind,
         namespace: nsMatch?.[1],
-        errorPattern: extractErrorPattern(content),
-      }
+        errorPattern: extractErrorPattern(content) }
     }
   }
 
   return {
     type: 'Unknown',
-    errorPattern: extractErrorPattern(content),
-  }
+    errorPattern: extractErrorPattern(content) }
 }
 
 /**
@@ -332,7 +330,7 @@ export function useResolutions() {
   /**
    * Find similar resolutions based on issue signature
    */
-  const findSimilarResolutions = useCallback((
+  const findSimilarResolutions = (
     signature: IssueSignature,
     options?: { minSimilarity?: number; limit?: number }
   ): SimilarResolution[] => {
@@ -375,12 +373,12 @@ export function useResolutions() {
         return b.similarity - a.similarity
       })
       .slice(0, limit)
-  }, [resolutions, sharedResolutions])
+  }
 
   /**
    * Save a new resolution
    */
-  const saveResolution = useCallback((
+  const saveResolution = (
     params: {
       missionId: string
       title: string
@@ -402,11 +400,9 @@ export function useResolutions() {
       context: params.context ?? {},
       effectiveness: {
         timesUsed: 0,
-        timesSuccessful: 0,
-      },
+        timesSuccessful: 0 },
       createdAt: now,
-      updatedAt: now,
-    }
+      updatedAt: now }
 
     if (params.visibility === 'shared') {
       newResolution.sharedBy = 'You' // MVP: hardcoded
@@ -416,12 +412,12 @@ export function useResolutions() {
     }
 
     return newResolution
-  }, [])
+  }
 
   /**
    * Update an existing resolution
    */
-  const updateResolution = useCallback((
+  const updateResolution = (
     id: string,
     updates: Partial<Omit<Resolution, 'id' | 'createdAt'>>
   ): void => {
@@ -431,20 +427,20 @@ export function useResolutions() {
     // Try both lists
     setResolutions(updateFn)
     setSharedResolutions(updateFn)
-  }, [])
+  }
 
   /**
    * Delete a resolution
    */
-  const deleteResolution = useCallback((id: string): void => {
+  const deleteResolution = (id: string): void => {
     setResolutions(prev => prev.filter(r => r.id !== id))
     setSharedResolutions(prev => prev.filter(r => r.id !== id))
-  }, [])
+  }
 
   /**
    * Record usage of a resolution (after user applies it)
    */
-  const recordUsage = useCallback((id: string, successful: boolean): void => {
+  const recordUsage = (id: string, successful: boolean): void => {
     const updateFn = (prev: Resolution[]) =>
       prev.map(r => {
         if (r.id !== id) return r
@@ -453,20 +449,18 @@ export function useResolutions() {
           effectiveness: {
             timesUsed: r.effectiveness.timesUsed + 1,
             timesSuccessful: r.effectiveness.timesSuccessful + (successful ? 1 : 0),
-            lastUsed: new Date().toISOString(),
-          },
-          updatedAt: new Date().toISOString(),
-        }
+            lastUsed: new Date().toISOString() },
+          updatedAt: new Date().toISOString() }
       })
 
     setResolutions(updateFn)
     setSharedResolutions(updateFn)
-  }, [])
+  }
 
   /**
    * Share a personal resolution to org
    */
-  const shareResolution = useCallback((id: string): void => {
+  const shareResolution = (id: string): void => {
     const resolution = resolutions.find(r => r.id === id)
     if (!resolution) return
 
@@ -476,21 +470,20 @@ export function useResolutions() {
       ...resolution,
       visibility: 'shared',
       sharedBy: 'You',
-      updatedAt: new Date().toISOString(),
-    }, ...prev])
-  }, [resolutions])
+      updatedAt: new Date().toISOString() }, ...prev])
+  }
 
   /**
    * Get resolution by ID
    */
-  const getResolution = useCallback((id: string): Resolution | undefined => {
+  const getResolution = (id: string): Resolution | undefined => {
     return resolutions.find(r => r.id === id) ?? sharedResolutions.find(r => r.id === id)
-  }, [resolutions, sharedResolutions])
+  }
 
   /**
    * Generate AI prompt context from related resolutions
    */
-  const generatePromptContext = useCallback((similarResolutions: SimilarResolution[]): string => {
+  const generatePromptContext = (similarResolutions: SimilarResolution[]): string => {
     if (similarResolutions.length === 0) return ''
 
     const lines = ['Previous successful resolutions for similar issues:']
@@ -510,7 +503,7 @@ export function useResolutions() {
     }
 
     return lines.join('\n')
-  }, [])
+  }
 
   return {
     resolutions,
@@ -524,6 +517,5 @@ export function useResolutions() {
     shareResolution,
     getResolution,
     generatePromptContext,
-    detectIssueSignature,
-  }
+    detectIssueSignature }
 }

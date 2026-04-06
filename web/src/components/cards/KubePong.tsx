@@ -24,8 +24,7 @@ const COLORS = {
   ball: '#00d4aa',   // Teal accent
   net: '#1e3a5f',
   text: '#fff',
-  score: '#326ce5',
-}
+  score: '#326ce5' }
 
 interface Ball {
   x: number
@@ -60,18 +59,15 @@ export function KubePong() {
     y: CANVAS_HEIGHT / 2,
     vx: INITIAL_BALL_SPEED,
     vy: 0,
-    speed: INITIAL_BALL_SPEED,
-  })
+    speed: INITIAL_BALL_SPEED })
 
   const playerPaddleRef = useRef<Paddle>({
     y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2,
-    score: 0,
-  })
+    score: 0 })
 
   const aiPaddleRef = useRef<Paddle>({
     y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2,
-    score: 0,
-  })
+    score: 0 })
 
   const keysRef = useRef<Set<string>>(new Set())
   const animationRef = useRef<number>(0)
@@ -80,30 +76,26 @@ export function KubePong() {
   const aiSettings = {
     easy: { speed: 3, reactionDelay: 0.4, errorMargin: 30 },
     medium: { speed: 4.5, reactionDelay: 0.2, errorMargin: 15 },
-    hard: { speed: 5.5, reactionDelay: 0.1, errorMargin: 5 },
-  }
+    hard: { speed: 5.5, reactionDelay: 0.1, errorMargin: 5 } }
 
   // Reset ball to center
-  const resetBall = useCallback((direction: number = 1) => {
+  const resetBall = (direction: number = 1) => {
     ballRef.current = {
       x: CANVAS_WIDTH / 2,
       y: CANVAS_HEIGHT / 2,
       vx: INITIAL_BALL_SPEED * direction,
       vy: (Math.random() - 0.5) * 4,
-      speed: INITIAL_BALL_SPEED,
-    }
-  }, [])
+      speed: INITIAL_BALL_SPEED }
+  }
 
   // Initialize game
   const initGame = useCallback(() => {
     playerPaddleRef.current = {
       y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2,
-      score: 0,
-    }
+      score: 0 }
     aiPaddleRef.current = {
       y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2,
-      score: 0,
-    }
+      score: 0 }
     resetBall(Math.random() > 0.5 ? 1 : -1)
     setPlayerScore(0)
     setAiScore(0)
@@ -279,8 +271,7 @@ export function KubePong() {
   // Keyboard handlers — scoped to visible game container (KeepAlive-safe)
   useGameKeyTracking(gameContainerRef, keysRef, {
     lowercase: true,
-    preventDefaultKeys: ['ArrowUp', 'ArrowDown', ' '],
-  })
+    preventDefaultKeys: ['ArrowUp', 'ArrowDown', ' '] })
 
   // Render initial frame
   useEffect(() => {

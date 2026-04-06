@@ -5,7 +5,7 @@
  * Right: Info panel showing hovered project details, mission steps, and alternatives.
  */
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, Loader2, Plus, Search, Info, Shield, Eye, Network, Box, Lock, Layers, Server, X as XIcon } from 'lucide-react'
 import { Button } from '../ui/Button'
@@ -55,8 +55,7 @@ export function FixerDefinitionPanel({
   onReplaceProject,
   aiStreaming,
   planningMission,
-  installedProjects,
-}: FixerDefinitionPanelProps) {
+  installedProjects }: FixerDefinitionPanelProps) {
   const [placeholderIdx, setPlaceholderIdx] = useState(0)
   const [showManualAdd, setShowManualAdd] = useState(false)
   const [manualName, setManualName] = useState('')
@@ -87,36 +86,34 @@ export function FixerDefinitionPanel({
       reason: 'Manually added',
       category: 'Custom',
       priority: 'recommended',
-      dependencies: [],
-    })
+      dependencies: [] })
     setManualName('')
     setShowManualAdd(false)
   }
 
-  const handleCardClick = useCallback((project: PayloadProject) => {
+  const handleCardClick = (project: PayloadProject) => {
     setStickyProject(project)
-  }, [])
+  }
 
   const latestAIMessage = planningMission?.messages
     .filter((m) => m.role === 'assistant')
     .slice(-1)[0]
 
   // Summary stats for left sidebar
-  const categoryCounts = useMemo(() => {
+  const categoryCounts = (() => {
     const counts: Record<string, number> = {}
     for (const p of state.projects) {
       counts[p.category] = (counts[p.category] || 0) + 1
     }
     return Object.entries(counts).sort((a, b) => b[1] - a[1])
-  }, [state.projects])
+  })()
 
-  const priorityCounts = useMemo(() => ({
+  const priorityCounts = {
     required: state.projects.filter((p) => p.priority === 'required').length,
     recommended: state.projects.filter((p) => p.priority === 'recommended').length,
-    optional: state.projects.filter((p) => p.priority === 'optional').length,
-  }), [state.projects])
+    optional: state.projects.filter((p) => p.priority === 'optional').length }
 
-  const totalDeps = useMemo(() => new Set(state.projects.flatMap((p) => p.dependencies)).size, [state.projects])
+  const totalDeps = new Set(state.projects.flatMap((p) => p.dependencies)).size
 
   return (
     <div className="h-full flex">
@@ -384,8 +381,7 @@ function ExecutiveAnalysis({
   aiContent,
   projects,
   missionTitle,
-  missionDescription,
-}: {
+  missionDescription }: {
   aiContent: string
   projects: PayloadProject[]
   missionTitle: string
@@ -458,8 +454,7 @@ function ExecutiveAnalysis({
                         indicator = <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-1.5 align-middle" />
                       }
                       return <td {...props}>{indicator}{displayChildren}</td>
-                    },
-                  }}
+                    } }}
                 >
                   {analysisText}
                 </ReactMarkdown>
@@ -601,8 +596,7 @@ const ALTERNATIVES: Record<string, { name: string; displayName: string; reason: 
   calico: [
     { name: 'cilium', displayName: 'Cilium', reason: 'eBPF-based networking and security' },
     { name: 'antrea', displayName: 'Antrea', reason: 'Kubernetes-native CNI using Open vSwitch' },
-  ],
-}
+  ] }
 
 /** Display info for original projects when swapping back */
 const ALTERNATIVES_DISPLAY: Record<string, { displayName: string; reason: string }> = {
@@ -614,14 +608,12 @@ const ALTERNATIVES_DISPLAY: Record<string, { displayName: string; reason: string
   prometheus: { displayName: 'Prometheus', reason: 'CNCF monitoring and alerting toolkit' },
   cilium: { displayName: 'Cilium', reason: 'eBPF-based networking and security' },
   'cert-manager': { displayName: 'cert-manager', reason: 'Automated TLS certificate management' },
-  'trivy-operator': { displayName: 'Trivy Operator', reason: 'Aqua vulnerability scanning for Kubernetes' },
-}
+  'trivy-operator': { displayName: 'Trivy Operator', reason: 'Aqua vulnerability scanning for Kubernetes' } }
 
 function ProjectDetailPanel({
   project,
   allProjects,
-  onReplace,
-}: {
+  onReplace }: {
   project: PayloadProject
   allProjects: PayloadProject[]
   onReplace?: (oldName: string, newProject: PayloadProject) => void
@@ -641,8 +633,7 @@ function ProjectDetailPanel({
       type: 'custom',
       tags: [],
       steps: [],
-      metadata: { source: project.kbPath },
-    }
+      metadata: { source: project.kbPath } }
     fetchMissionContent(indexMission)
       .then(({ mission: m }) => setMission(m))
       .catch(() => {/* ignore */})
@@ -664,8 +655,7 @@ function ProjectDetailPanel({
       displayName: ALTERNATIVES_DISPLAY[lookupKey]?.displayName ?? lookupKey,
       reason: ALTERNATIVES_DISPLAY[lookupKey]?.reason ?? 'Original AI recommendation',
       isCurrent: false,
-      isOriginal: true,
-    })
+      isOriginal: true })
   }
 
   // Add all known alternatives
@@ -673,8 +663,7 @@ function ProjectDetailPanel({
     allAlts.push({
       ...alt,
       isCurrent: alt.name === project.name,
-      isOriginal: false,
-    })
+      isOriginal: false })
   }
 
   // Add the current project to the list if not already present (so user sees "Selected" marker)
@@ -684,8 +673,7 @@ function ProjectDetailPanel({
       displayName: project.displayName,
       reason: project.reason ?? '',
       isCurrent: true,
-      isOriginal: false,
-    })
+      isOriginal: false })
   }
 
   // Filter out projects that are already in the payload under a different slot
@@ -816,8 +804,7 @@ function ProjectDetailPanel({
                         reason: alt.reason,
                         category: project.category,
                         priority: project.priority,
-                        dependencies: project.dependencies,
-                      })}
+                        dependencies: project.dependencies })}
                       className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
                     >
                       Swap
@@ -851,8 +838,7 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   'Authentication & IAM': <Lock className="w-3 h-3 text-violet-400" />,
   'Secrets Management': <Lock className="w-3 h-3 text-emerald-400" />,
   'Storage': <Box className="w-3 h-3 text-green-400" />,
-  'Custom': <Layers className="w-3 h-3 text-slate-400" />,
-}
+  'Custom': <Layers className="w-3 h-3 text-slate-400" /> }
 
 function CategoryIcon({ category }: { category: string }) {
   return CATEGORY_ICONS[category] ?? <Layers className="w-3 h-3 text-slate-400" />
@@ -924,8 +910,7 @@ const CLUSTER_CHIP_MIN_HEIGHT_PX = 40
 
 function TargetClusterSelector({
   selected,
-  onChange,
-}: {
+  onChange }: {
   selected: string[]
   onChange: (clusters: string[]) => void
 }) {

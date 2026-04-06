@@ -185,8 +185,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
         description: description.trim(),
         request_type: type,
         target_repo: 'console',
-        ...(hasScreenshots && { screenshots: screenshotDataURIs }),
-      }, hasScreenshots ? { timeout: FEEDBACK_UPLOAD_TIMEOUT_MS } : undefined)
+        ...(hasScreenshots && { screenshots: screenshotDataURIs }) }, hasScreenshots ? { timeout: FEEDBACK_UPLOAD_TIMEOUT_MS } : undefined)
       if (hasScreenshots) emitScreenshotUploadSuccess(screenshotDataURIs.length)
 
       emitFeedbackSubmitted(type)
@@ -200,8 +199,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
       setSuccess({
         issueUrl: result.github_issue_url,
         screenshotsUploaded: result.screenshots_uploaded,
-        screenshotsFailed: result.screenshots_failed,
-      })
+        screenshotsFailed: result.screenshots_failed })
     } catch (err) {
       console.error('[Screenshot] Failed to submit feedback:', err)
       const message = err instanceof Error ? err.message : 'Failed to submit feedback'
@@ -213,7 +211,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
     }
   }
 
-  const forceClose = useCallback(() => {
+  const forceClose = () => {
     setShowDiscardConfirm(false)
     localStorage.removeItem(DRAFT_KEY)
     setSuccess(null)
@@ -222,7 +220,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
     setDescription('')
     setScreenshots([])
     onClose()
-  }, [onClose])
+  }
 
   // Use refs for dirty check so handleClose doesn't change on every keystroke
   const titleRef = useRef(title)

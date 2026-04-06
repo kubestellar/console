@@ -8,15 +8,14 @@
  *   - 'pwa-install' — after 3+ sessions, suggest installing the PWA widget
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import {
   STORAGE_KEY_NUDGE_DISMISSED,
   STORAGE_KEY_DRAG_HINT_SHOWN,
   STORAGE_KEY_PWA_PROMPT_DISMISSED,
   STORAGE_KEY_SESSION_COUNT,
   STORAGE_KEY_VISIT_COUNT,
-  STORAGE_KEY_HINTS_SUPPRESSED,
-} from '../lib/constants/storage'
+  STORAGE_KEY_HINTS_SUPPRESSED } from '../lib/constants/storage'
 import { emitNudgeShown, emitNudgeDismissed, emitNudgeActioned } from '../lib/analytics'
 import { safeGetItem, safeSetItem, safeGetJSON, safeSetJSON } from '../lib/utils/localStorage'
 
@@ -61,10 +60,10 @@ export function useContextualNudges(hasCustomizedDashboard: boolean): NudgeState
     safeSetItem(STORAGE_KEY_SESSION_COUNT, String(current + 1))
   }, [])
 
-  const recordVisit = useCallback(() => {
+  const recordVisit = () => {
     const current = Number(safeGetItem(STORAGE_KEY_VISIT_COUNT) || '0')
     safeSetItem(STORAGE_KEY_VISIT_COUNT, String(current + 1))
-  }, [])
+  }
 
   // Determine which nudge to show
   useEffect(() => {
@@ -114,7 +113,7 @@ export function useContextualNudges(hasCustomizedDashboard: boolean): NudgeState
     setActiveNudge(null)
   }, [hasCustomizedDashboard])
 
-  const dismissNudge = useCallback(() => {
+  const dismissNudge = () => {
     if (activeNudge) {
       emitNudgeDismissed(activeNudge)
       dismissNudgeInStorage(activeNudge)
@@ -123,15 +122,15 @@ export function useContextualNudges(hasCustomizedDashboard: boolean): NudgeState
       }
       setActiveNudge(null)
     }
-  }, [activeNudge])
+  }
 
-  const actionNudge = useCallback(() => {
+  const actionNudge = () => {
     if (activeNudge) {
       emitNudgeActioned(activeNudge)
       dismissNudgeInStorage(activeNudge)
       setActiveNudge(null)
     }
-  }, [activeNudge])
+  }
 
   return { activeNudge, showDragHint, dismissNudge, actionNudge, recordVisit }
 }

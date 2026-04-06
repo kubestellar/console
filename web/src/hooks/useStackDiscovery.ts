@@ -7,7 +7,7 @@
  * - Deployments matching LLM-d name/label/namespace patterns (broad discovery)
  * - EPP and Gateway services
  */
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { getDemoMode } from './useDemoMode'
 import type { LLMdServer } from './useLLMd'
@@ -250,8 +250,7 @@ function buildComponentsFromDeployments(
 function mergeStackWithCached(fresh: LLMdStack, cached: LLMdStack): LLMdStack {
   const merged = {
     ...fresh,
-    components: { ...fresh.components },
-  }
+    components: { ...fresh.components } }
 
   // Preserve pod component details if fresh lost them (likely API failure)
   if (fresh.components.prefill.length === 0 && cached.components.prefill.length > 0) {
@@ -331,8 +330,7 @@ function saveCachedStacks(stacks: LLMdStack[]) {
   try {
     localStorage.setItem(CACHE_KEY, JSON.stringify({
       stacks,
-      timestamp: Date.now(),
-    }))
+      timestamp: Date.now() }))
   } catch {
     // Ignore storage errors
   }
@@ -345,7 +343,7 @@ function saveCachedStacks(stacks: LLMdStack[]) {
  */
 export function useStackDiscovery(clusters: string[]) {
   // Initialize from cache for instant display (stale-while-revalidate)
-  const cached = useMemo(() => loadCachedStacks(), [])
+  const cached = loadCachedStacks()
   const hasCachedStacks = cached !== null && cached.stacks.length > 0
   const isCacheValid = cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)
 
@@ -359,7 +357,7 @@ export function useStackDiscovery(clusters: string[]) {
   const isRefetching = useRef(false) // Guard against concurrent refetches
 
   // Stable key for cluster list — avoids complex expressions in dependency arrays
-  const clustersKey = useMemo(() => (clusters || []).join(','), [clusters])
+  const clustersKey = (clusters || []).join(',')
 
   const refetch = useCallback(async (silent = false) => {
     // Skip fetching in demo mode — no agent available
@@ -522,15 +520,13 @@ export function useStackDiscovery(clusters: string[]) {
                 type: 'WVA', name: wva.metadata.name,
                 minReplicas: wva.spec?.minReplicas, maxReplicas: wva.spec?.maxReplicas,
                 currentReplicas: wva.status?.currentReplicas,
-                desiredReplicas: wva.status?.desiredOptimizedAlloc?.numReplicas ?? wva.status?.desiredReplicas,
-              }
+                desiredReplicas: wva.status?.desiredOptimizedAlloc?.numReplicas ?? wva.status?.desiredReplicas }
             }
             if (hpa) {
               return {
                 type: 'HPA', name: hpa.metadata.name,
                 minReplicas: hpa.spec?.minReplicas, maxReplicas: hpa.spec?.maxReplicas,
-                currentReplicas: hpa.status?.currentReplicas, desiredReplicas: hpa.status?.desiredReplicas,
-              }
+                currentReplicas: hpa.status?.currentReplicas, desiredReplicas: hpa.status?.desiredReplicas }
             }
             if (vpa) return { type: 'VPA', name: vpa.metadata.name }
             return undefined
@@ -541,14 +537,12 @@ export function useStackDiscovery(clusters: string[]) {
             const eppService = eppByNamespace.get(namespace)
             const eppComponent: LLMdStackComponent | null = eppOverride || (eppService ? {
               name: eppService.metadata.name, namespace, cluster, type: 'epp',
-              status: 'running', replicas: 1, readyReplicas: 1,
-            } : null)
+              status: 'running', replicas: 1, readyReplicas: 1 } : null)
             const gw = gatewayByNamespace.get(namespace)
             const gatewayComponent: LLMdStackComponent | null = gw ? {
               name: gw.metadata.name, namespace, cluster, type: 'gateway',
               status: gw.status?.addresses?.length ? 'running' : 'pending',
-              replicas: 1, readyReplicas: gw.status?.addresses?.length ? 1 : 0,
-            } : null
+              replicas: 1, readyReplicas: gw.status?.addresses?.length ? 1 : 0 } : null
             return { epp: eppComponent, gateway: gatewayComponent }
           }
 
@@ -597,8 +591,7 @@ export function useStackDiscovery(clusters: string[]) {
                   namespace, cluster, type,
                   status: ready === group.length ? 'running' : ready > 0 ? 'running' : 'error',
                   replicas: group.length, readyReplicas: ready, model,
-                  podNames: group.map(p => p.metadata.name),
-                }
+                  podNames: group.map(p => p.metadata.name) }
               })
             }
 
@@ -617,8 +610,7 @@ export function useStackDiscovery(clusters: string[]) {
               namespace, cluster, inferencePool: pool?.metadata.name,
               components, status: getStackStatus(components),
               hasDisaggregation: prefillComponents.length > 0 && decodeComponents.length > 0,
-              model, totalReplicas, readyReplicas, autoscaler: detectAutoscaler(namespace),
-            })
+              model, totalReplicas, readyReplicas, autoscaler: detectAutoscaler(namespace) })
           }
 
           // ── Phase 1 UI update: show pod/pool stacks immediately ──
@@ -678,8 +670,7 @@ export function useStackDiscovery(clusters: string[]) {
                 namespace: ns, cluster, inferencePool: pool?.metadata.name,
                 components, status: getStackStatus(components),
                 hasDisaggregation: prefill.length > 0 && decode.length > 0,
-                model, totalReplicas, readyReplicas, autoscaler: detectAutoscaler(ns),
-              })
+                model, totalReplicas, readyReplicas, autoscaler: detectAutoscaler(ns) })
             }
 
             // Progressive UI update after each batch
@@ -728,8 +719,7 @@ export function useStackDiscovery(clusters: string[]) {
     isLoading,
     error,
     refetch: () => refetch(false),
-    lastRefresh,
-  }
+    lastRefresh }
 }
 
 /**
@@ -750,8 +740,7 @@ export function stackToServerMetrics(stack: LLMdStack): LLMdServer[] {
       componentType: 'model',
       status: comp.status === 'running' ? 'running' : 'error',
       replicas: comp.replicas,
-      readyReplicas: comp.readyReplicas,
-    })
+      readyReplicas: comp.readyReplicas })
   })
 
   // Add decode servers
@@ -766,8 +755,7 @@ export function stackToServerMetrics(stack: LLMdStack): LLMdServer[] {
       componentType: 'model',
       status: comp.status === 'running' ? 'running' : 'error',
       replicas: comp.replicas,
-      readyReplicas: comp.readyReplicas,
-    })
+      readyReplicas: comp.readyReplicas })
   })
 
   // Add unified servers
@@ -782,8 +770,7 @@ export function stackToServerMetrics(stack: LLMdStack): LLMdServer[] {
       componentType: 'model',
       status: comp.status === 'running' ? 'running' : 'error',
       replicas: comp.replicas,
-      readyReplicas: comp.readyReplicas,
-    })
+      readyReplicas: comp.readyReplicas })
   })
 
   // Add EPP
@@ -798,8 +785,7 @@ export function stackToServerMetrics(stack: LLMdStack): LLMdServer[] {
       componentType: 'epp',
       status: stack.components.epp.status === 'running' ? 'running' : 'error',
       replicas: 1,
-      readyReplicas: stack.components.epp.status === 'running' ? 1 : 0,
-    })
+      readyReplicas: stack.components.epp.status === 'running' ? 1 : 0 })
   }
 
   // Add Gateway
@@ -816,8 +802,7 @@ export function stackToServerMetrics(stack: LLMdStack): LLMdServer[] {
       replicas: 1,
       readyReplicas: stack.components.gateway.status === 'running' ? 1 : 0,
       gatewayStatus: stack.components.gateway.status === 'running' ? 'running' : 'stopped',
-      gatewayType: 'istio',
-    })
+      gatewayType: 'istio' })
   }
 
   return servers

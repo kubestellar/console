@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import {
   Server,
@@ -16,8 +16,7 @@ import {
   Search,
   Tag,
   Filter,
-  Database,
-} from 'lucide-react'
+  Database } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import {
@@ -25,8 +24,7 @@ import {
   type ClusterGroup,
   type ClusterGroupKind,
   type ClusterFilter,
-  type ClusterGroupQuery,
-} from '../../hooks/useClusterGroups'
+  type ClusterGroupQuery } from '../../hooks/useClusterGroups'
 import { useClusters } from '../../hooks/useMCP'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -119,14 +117,13 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
   const { isDemoMode: demoMode } = useDemoMode()
 
   // Build the built-in "all-healthy-clusters" group from current cluster state for live mode
-  const builtInGroup = useMemo<ClusterGroup>(() => ({
+  const builtInGroup: ClusterGroup = {
     name: 'all-healthy-clusters',
     kind: 'dynamic',
     clusters: clusters.filter(c => c.healthy).map(c => c.name),
     color: 'green',
     builtIn: true,
-    query: { filters: [{ field: 'healthy', operator: 'eq', value: 'true' }] },
-  }), [clusters])
+    query: { filters: [{ field: 'healthy', operator: 'eq', value: 'true' }] } }
 
   const groups = demoMode ? DEMO_GROUPS : [builtInGroup, ...liveGroups]
   const [isCreating, setIsCreating] = useState(false)
@@ -137,19 +134,18 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
-    isDemoData: demoMode,
-  })
+    isDemoData: demoMode })
   const [editingGroup, setEditingGroup] = useState<string | null>(null)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
-  const toggleExpanded = useCallback((name: string) => {
+  const toggleExpanded = (name: string) => {
     setExpandedGroups(prev => {
       const next = new Set(prev)
       if (next.has(name)) next.delete(name)
       else next.add(name)
       return next
     })
-  }, [])
+  }
 
   const availableClusterNames = clusters.map(c => c.name)
 
@@ -265,9 +261,7 @@ function DroppableGroup({ group, isExpanded, clusterHealthMap, onToggle, onEdit,
     data: {
       type: 'cluster-group',
       groupName: group.name,
-      clusters: group.clusters,
-    },
-  })
+      clusters: group.clusters } })
 
   const color = getGroupColor(group.color)
   const healthyCount = group.clusters.filter(c => clusterHealthMap.get(c) !== false).length
@@ -450,8 +444,7 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
 
   const buildQuery = (): ClusterGroupQuery => ({
     labelSelector: labelSelector.trim() || undefined,
-    filters: filters.length > 0 ? filters : undefined,
-  })
+    filters: filters.length > 0 ? filters : undefined })
 
   const handlePreview = async () => {
     setIsPreviewing(true)
@@ -523,8 +516,7 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
         name: name.trim(),
         kind: 'static',
         clusters: Array.from(selectedClusters),
-        color: selectedColor,
-      })
+        color: selectedColor })
     } else {
       onSave({
         name: name.trim(),
@@ -532,8 +524,7 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
         clusters: previewClusters ?? [],
         color: selectedColor,
         query: buildQuery(),
-        lastEvaluated: previewClusters ? new Date().toISOString() : undefined,
-      })
+        lastEvaluated: previewClusters ? new Date().toISOString() : undefined })
     }
   }
 
@@ -716,8 +707,7 @@ function StaticClusterPicker({
   clusterHealthMap,
   selectedClusters,
   onToggle,
-  accentColor,
-}: {
+  accentColor }: {
   availableClusters: string[]
   clusterHealthMap: Map<string, boolean | undefined>
   selectedClusters: Set<string>
@@ -784,8 +774,7 @@ function QueryBuilder({
   filters,
   onAddFilter,
   onRemoveFilter,
-  onUpdateFilter,
-}: {
+  onUpdateFilter }: {
   labelSelector: string
   onLabelSelectorChange: (v: string) => void
   filters: ClusterFilter[]
@@ -933,8 +922,7 @@ function AIAssistant({
   onPromptChange,
   onGenerate,
   loading,
-  error,
-}: {
+  error }: {
   prompt: string
   onPromptChange: (v: string) => void
   onGenerate: () => void
@@ -1009,8 +997,7 @@ function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onC
 
   const buildQuery = (): ClusterGroupQuery => ({
     labelSelector: labelSelector.trim() || undefined,
-    filters: filters.length > 0 ? filters : undefined,
-  })
+    filters: filters.length > 0 ? filters : undefined })
 
   const handlePreview = async () => {
     setIsPreviewing(true)
@@ -1032,16 +1019,14 @@ function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onC
         kind: 'static',
         clusters: Array.from(selectedClusters),
         color: selectedColor,
-        query: undefined,
-      })
+        query: undefined })
     } else {
       onSave({
         kind: 'dynamic',
         clusters: previewClusters ?? group.clusters,
         color: selectedColor,
         query: buildQuery(),
-        lastEvaluated: previewClusters ? new Date().toISOString() : group.lastEvaluated,
-      })
+        lastEvaluated: previewClusters ? new Date().toISOString() : group.lastEvaluated })
     }
   }
 

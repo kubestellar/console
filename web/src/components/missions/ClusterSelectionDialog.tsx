@@ -4,7 +4,7 @@
  * Supports multi-select, select all, invert, and deselect.
  */
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { X, Server, Check, CheckCheck, RefreshCw, Search } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useClusters } from '../../hooks/mcp/clusters'
@@ -30,17 +30,17 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
   const offlineClusters = (clusters || []).filter(c => c.reachable === false || c.healthy === false)
 
   // Search filtering
-  const filteredOnline = useMemo(() => {
+  const filteredOnline = (() => {
     if (!search.trim()) return onlineClusters
     const q = search.toLowerCase()
     return onlineClusters.filter(c => c.name.toLowerCase().includes(q) || (c.context && c.context.toLowerCase().includes(q)))
-  }, [onlineClusters, search])
+  })()
 
-  const filteredOffline = useMemo(() => {
+  const filteredOffline = (() => {
     if (!search.trim()) return offlineClusters
     const q = search.toLowerCase()
     return offlineClusters.filter(c => c.name.toLowerCase().includes(q) || (c.context && c.context.toLowerCase().includes(q)))
-  }, [offlineClusters, search])
+  })()
 
   // Auto-select if only one online cluster
   useEffect(() => {

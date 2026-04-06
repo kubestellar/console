@@ -10,7 +10,7 @@
  * - Demo fallback when no clusters are connected
  */
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useClusters } from './useMCP'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
@@ -190,8 +190,7 @@ async function fetchSingleCluster(cluster: string): Promise<RBACFinding[]> {
             subjectKind,
             risk: 'critical',
             description: 'cluster-admin binding — full cluster access',
-            binding: bindingName,
-          })
+            binding: bindingName })
           continue
         }
 
@@ -204,8 +203,7 @@ async function fetchSingleCluster(cluster: string): Promise<RBACFinding[]> {
             subjectKind,
             risk: 'high',
             description: `Wildcard verb on secrets via ${roleName}`,
-            binding: bindingName,
-          })
+            binding: bindingName })
           continue
         }
 
@@ -218,8 +216,7 @@ async function fetchSingleCluster(cluster: string): Promise<RBACFinding[]> {
             subjectKind,
             risk: 'high',
             description: `Default ServiceAccount has elevated privileges via ${roleName}`,
-            binding: bindingName,
-          })
+            binding: bindingName })
           continue
         }
 
@@ -232,8 +229,7 @@ async function fetchSingleCluster(cluster: string): Promise<RBACFinding[]> {
             subjectKind,
             risk: 'medium',
             description: `Wide list/watch access on all resources via ${roleName}`,
-            binding: bindingName,
-          })
+            binding: bindingName })
         }
       }
     }
@@ -250,8 +246,7 @@ async function fetchSingleCluster(cluster: string): Promise<RBACFinding[]> {
           subjectKind: toSubjectKind(subject.kind),
           risk: 'low',
           description: `${rb.roleRef.name} role in namespace ${rb.metadata.namespace}`,
-          binding: `RoleBinding/${rb.metadata.name}`,
-        })
+          binding: `RoleBinding/${rb.metadata.name}` })
       }
     }
   } catch (err) {
@@ -292,10 +287,7 @@ export function useRBACFindings() {
   const fetchInProgress = useRef(false)
   const initialLoadDone = useRef(!!cachedSnapshot)
 
-  const clusters = useMemo(() =>
-    allClusters.filter(c => c.reachable === true).map(c => c.name),
-    [allClusters]
-  )
+  const clusters = allClusters.filter(c => c.reachable === true).map(c => c.name)
 
   const refetch = useCallback(async () => {
     if (clusters.length === 0) {
@@ -388,6 +380,5 @@ export function useRBACFindings() {
     isLoading,
     error,
     isDemoData: isDemoMode,
-    refetch,
-  }
+    refetch }
 }

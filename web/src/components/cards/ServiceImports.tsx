@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { CheckCircle2, XCircle, AlertCircle, ExternalLink, Globe } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
@@ -21,8 +20,7 @@ const DEMO_IMPORTS: ServiceImport[] = [
     dnsName: 'api-gateway.production.svc.clusterset.local',
     ports: [{ name: 'http', protocol: 'TCP', port: 8080 }],
     endpoints: 3,
-    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-  },
+    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString() },
   {
     name: 'auth-service',
     namespace: 'production',
@@ -32,8 +30,7 @@ const DEMO_IMPORTS: ServiceImport[] = [
     dnsName: 'auth-service.production.svc.clusterset.local',
     ports: [{ name: 'grpc', protocol: 'TCP', port: 9090 }],
     endpoints: 2,
-    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-  },
+    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString() },
   {
     name: 'cache-redis',
     namespace: 'infrastructure',
@@ -43,8 +40,7 @@ const DEMO_IMPORTS: ServiceImport[] = [
     dnsName: 'cache-redis.infrastructure.svc.clusterset.local',
     ports: [{ name: 'redis', protocol: 'TCP', port: 6379 }],
     endpoints: 1,
-    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-  },
+    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() },
   {
     name: 'metrics-collector',
     namespace: 'monitoring',
@@ -54,8 +50,7 @@ const DEMO_IMPORTS: ServiceImport[] = [
     dnsName: 'metrics-collector.monitoring.svc.clusterset.local',
     ports: [{ name: 'metrics', protocol: 'TCP', port: 9100 }],
     endpoints: 4,
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-  },
+    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() },
   {
     name: 'database-proxy',
     namespace: 'data',
@@ -65,8 +60,7 @@ const DEMO_IMPORTS: ServiceImport[] = [
     dnsName: 'database-proxy.data.svc.clusterset.local',
     ports: [{ name: 'postgres', protocol: 'TCP', port: 5432 }],
     endpoints: 0,
-    createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-  },
+    createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString() },
 ]
 
 const DEMO_STATS = {
@@ -74,8 +68,7 @@ const DEMO_STATS = {
   withEndpoints: 12,
   noEndpoints: 3,
   clusterSetIP: 13,
-  headless: 2,
-}
+  headless: 2 }
 
 const getEndpointStatus = (endpoints: number) => {
   if (endpoints > 0) {
@@ -107,8 +100,7 @@ const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTran
 const IMPORT_SORT_COMPARATORS: Record<SortByOption, (a: ServiceImport, b: ServiceImport) => number> = {
   name: commonComparators.string<ServiceImport>('name'),
   type: commonComparators.string<ServiceImport>('type'),
-  cluster: commonComparators.string<ServiceImport>('cluster'),
-}
+  cluster: commonComparators.string<ServiceImport>('cluster') }
 
 interface ServiceImportsProps {
   config?: Record<string, unknown>
@@ -116,10 +108,7 @@ interface ServiceImportsProps {
 
 function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const SORT_OPTIONS = useMemo(() =>
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
-    [t]
-  )
+  const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
   // Demo data - always available, never loading/erroring
   const isLoading = false
   const hasError = false
@@ -128,8 +117,7 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
   useCardLoadingState({
     isLoading,
     hasAnyData: DEMO_IMPORTS.length > 0,
-    isDemoData: true,
-  })
+    isDemoData: true })
 
   const {
     items: filteredImports,
@@ -143,20 +131,16 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
     filters,
     sorting,
     containerRef,
-    containerStyle,
-  } = useCardData<ServiceImport, SortByOption>(DEMO_IMPORTS, {
+    containerStyle } = useCardData<ServiceImport, SortByOption>(DEMO_IMPORTS, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'sourceCluster', 'dnsName', 'type'],
       clusterField: 'cluster',
-      storageKey: 'service-imports',
-    },
+      storageKey: 'service-imports' },
     sort: {
       defaultField: 'name',
       defaultDirection: 'asc',
-      comparators: IMPORT_SORT_COMPARATORS,
-    },
-    defaultLimit: 5,
-  })
+      comparators: IMPORT_SORT_COMPARATORS },
+    defaultLimit: 5 })
 
   // Show skeleton while loading
   if (isLoading) {
@@ -212,8 +196,7 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
         <CardControlsRow
           clusterIndicator={{
             selectedCount: filters.localClusterFilter.length,
-            totalCount: filters.availableClusters.length,
-          }}
+            totalCount: filters.availableClusters.length }}
           clusterFilter={{
             availableClusters: filters.availableClusters,
             selectedClusters: filters.localClusterFilter,
@@ -222,8 +205,7 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
             isOpen: filters.showClusterFilter,
             setIsOpen: filters.setShowClusterFilter,
             containerRef: filters.clusterFilterRef,
-            minClusters: 1,
-          }}
+            minClusters: 1 }}
           cardControls={{
             limit: itemsPerPage,
             onLimitChange: setItemsPerPage,
@@ -231,8 +213,7 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
             sortOptions: SORT_OPTIONS,
             onSortChange: (v) => sorting.setSortBy(v as SortByOption),
             sortDirection: sorting.sortDirection,
-            onSortDirectionChange: sorting.setSortDirection,
-          }}
+            onSortDirectionChange: sorting.setSortDirection }}
         />
       </div>
 

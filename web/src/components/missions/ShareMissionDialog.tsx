@@ -5,7 +5,7 @@
  * Runs security scanning before export to detect sensitive data.
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   X,
   Download,
@@ -14,8 +14,7 @@ import {
   CheckCircle,
   AlertTriangle,
   Shield,
-  Loader2,
-} from 'lucide-react'
+  Loader2 } from 'lucide-react'
 import yaml from 'js-yaml'
 import type { Resolution } from '../../hooks/useResolutions'
 import type { MissionExport, FileScanResult } from '../../lib/missions/types'
@@ -46,20 +45,16 @@ function resolutionToMissionExport(resolution: Resolution): MissionExport {
     category: 'troubleshooting',
     steps: resolution.resolution.steps.map((step, i) => ({
       title: `Step ${i + 1}`,
-      description: step,
-    })),
+      description: step })),
     resolution: {
       summary: resolution.resolution.summary || '',
       steps: resolution.resolution.steps,
-      yaml: resolution.resolution.yaml,
-    },
+      yaml: resolution.resolution.yaml },
     metadata: {
       author: resolution.sharedBy || resolution.userId,
       source: 'kubestellar-console',
       createdAt: resolution.createdAt,
-      updatedAt: resolution.updatedAt,
-    },
-  }
+      updatedAt: resolution.updatedAt } }
 }
 
 /** YAML indent width used by js-yaml dump */
@@ -70,8 +65,7 @@ function missionToYaml(mission: MissionExport): string {
     indent: YAML_INDENT,
     lineWidth: -1,
     noRefs: true,
-    sortKeys: false,
-  })
+    sortKeys: false })
 }
 
 function missionToMarkdown(mission: MissionExport): string {
@@ -119,7 +113,7 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
 
   const mission = resolutionToMissionExport(resolution)
 
-  const runScan = useCallback(() => {
+  const runScan = () => {
     setScanning(true)
     try {
       const result = fullScan(mission)
@@ -129,9 +123,9 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
     } finally {
       setScanning(false)
     }
-  }, [mission])
+  }
 
-  const handleExport = useCallback(async (channel: ExportChannel) => {
+  const handleExport = async (channel: ExportChannel) => {
     // Run scan first if not done yet
     if (!scanResult && !scanning) {
       runScan()
@@ -172,7 +166,7 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
     setExported(channel)
     if (exportedTimeoutRef.current !== null) clearTimeout(exportedTimeoutRef.current)
     exportedTimeoutRef.current = setTimeout(() => setExported(null), UI_FEEDBACK_TIMEOUT_MS)
-  }, [mission, scanResult, scanning, runScan])
+  }
 
   if (!isOpen) return null
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { isAgentUnavailable, reportAgentDataSuccess, reportAgentDataError } from './useLocalAgent'
 import { getDemoMode } from './useDemoMode'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
@@ -49,8 +49,7 @@ const DEFAULT_BY_CATEGORY: TokenUsageByCategory = {
   diagnose: 0,
   insights: 0,
   predictions: 0,
-  other: 0,
-}
+  other: 0 }
 
 // Demo mode token usage - simulate realistic usage
 const DEMO_TOKEN_USAGE = 1247832 // ~25% of 5M limit
@@ -59,16 +58,14 @@ const DEMO_BY_CATEGORY: TokenUsageByCategory = {
   diagnose: 312000,
   insights: 245832,
   predictions: 167000,
-  other: 0,
-}
+  other: 0 }
 
 // Singleton state - shared across all hook instances
 let sharedUsage: TokenUsage = {
   used: 0,
   ...DEFAULT_SETTINGS,
   resetDate: getNextResetDate(),
-  byCategory: { ...DEFAULT_BY_CATEGORY },
-}
+  byCategory: { ...DEFAULT_BY_CATEGORY } }
 let pollStarted = false
 let pollIntervalId: ReturnType<typeof setInterval> | null = null
 const subscribers = new Set<(usage: TokenUsage) => void>()
@@ -185,8 +182,7 @@ async function fetchTokenUsage() {
     const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' },
-      signal: controller.signal,
-    })
+      signal: controller.signal })
     clearTimeout(timeoutId)
 
     if (response.ok) {
@@ -292,7 +288,7 @@ export function useTokenUsage() {
   }, [])
 
   // Calculate alert level
-  const getAlertLevel = useCallback((): TokenAlertLevel => {
+  const getAlertLevel = (): TokenAlertLevel => {
     if (usage.limit <= 0) return 'normal'
     const percentage = usage.used / usage.limit
     // Guard: stopThreshold must be positive — 0 would falsely disable AI at 0% usage
@@ -301,53 +297,47 @@ export function useTokenUsage() {
     if (percentage >= usage.criticalThreshold) return 'critical'
     if (percentage >= usage.warningThreshold) return 'warning'
     return 'normal'
-  }, [usage])
+  }
 
   // Add tokens used (optionally with category)
-  const addTokens = useCallback((tokens: number, category: TokenCategory = 'other') => {
+  const addTokens = (tokens: number, category: TokenCategory = 'other') => {
     const newByCategory = { ...sharedUsage.byCategory }
     newByCategory[category] += tokens
     updateSharedUsage({
       used: sharedUsage.used + tokens,
-      byCategory: newByCategory,
-    })
-  }, [])
+      byCategory: newByCategory })
+  }
 
   // Update settings
-  const updateSettings = useCallback(
-    (settings: Partial<Omit<TokenUsage, 'used' | 'resetDate'>>) => {
+  const updateSettings = (settings: Partial<Omit<TokenUsage, 'used' | 'resetDate'>>) => {
       const newSettings = {
         // Use || (not ??) so that 0 falls back to defaults — 0 is never a valid threshold
         limit: settings.limit || sharedUsage.limit || DEFAULT_SETTINGS.limit,
         warningThreshold: settings.warningThreshold || sharedUsage.warningThreshold || DEFAULT_SETTINGS.warningThreshold,
         criticalThreshold: settings.criticalThreshold || sharedUsage.criticalThreshold || DEFAULT_SETTINGS.criticalThreshold,
-        stopThreshold: DEFAULT_SETTINGS.stopThreshold,
-      }
+        stopThreshold: DEFAULT_SETTINGS.stopThreshold }
       updateSharedUsage(newSettings)
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings))
       window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
       window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
-    },
-    []
-  )
+    }
 
   // Reset usage
-  const resetUsage = useCallback(() => {
+  const resetUsage = () => {
     updateSharedUsage({
       used: 0,
       resetDate: getNextResetDate(),
-      byCategory: { ...DEFAULT_BY_CATEGORY },
-    }, true) // Force notify
+      byCategory: { ...DEFAULT_BY_CATEGORY } }, true) // Force notify
     // Clear persisted category data
     if (typeof window !== 'undefined') {
       localStorage.removeItem(CATEGORY_KEY)
     }
-  }, [])
+  }
 
   // Check if AI features should be disabled
-  const isAIDisabled = useCallback(() => {
+  const isAIDisabled = () => {
     return getAlertLevel() === 'stopped'
-  }, [getAlertLevel])
+  }
 
   const alertLevel = getAlertLevel()
   const percentage = usage.limit > 0 ? Math.min((usage.used / usage.limit) * 100, 100) : 0
@@ -363,8 +353,7 @@ export function useTokenUsage() {
     updateSettings,
     resetUsage,
     isAIDisabled,
-    isDemoData,
-  }
+    isDemoData }
 }
 
 function getNextResetDate(): string {
@@ -386,6 +375,5 @@ export function addCategoryTokens(tokens: number, category: TokenCategory = 'oth
   newByCategory[category] += tokens
   updateSharedUsage({
     used: sharedUsage.used + tokens,
-    byCategory: newByCategory,
-  })
+    byCategory: newByCategory })
 }

@@ -13,8 +13,7 @@ import type {
   UserManagementSummary,
   UserRole,
   CreateServiceAccountRequest,
-  CreateRoleBindingRequest,
-} from '../types/users'
+  CreateRoleBindingRequest } from '../types/users'
 
 // Demo data for console users
 function getDemoConsoleUsers(): ConsoleUser[] {
@@ -28,8 +27,7 @@ function getDemoConsoleUsers(): ConsoleUser[] {
       role: 'admin',
       onboarded: true,
       created_at: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-      last_login: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    },
+      last_login: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() },
     {
       id: '2',
       github_id: '23456',
@@ -39,8 +37,7 @@ function getDemoConsoleUsers(): ConsoleUser[] {
       role: 'editor',
       onboarded: true,
       created_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-      last_login: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    },
+      last_login: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString() },
     {
       id: '3',
       github_id: '34567',
@@ -49,8 +46,7 @@ function getDemoConsoleUsers(): ConsoleUser[] {
       role: 'viewer',
       onboarded: true,
       created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      last_login: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    },
+      last_login: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() },
     {
       id: '4',
       github_id: '45678',
@@ -60,8 +56,7 @@ function getDemoConsoleUsers(): ConsoleUser[] {
       role: 'editor',
       onboarded: true,
       created_at: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-      last_login: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-    },
+      last_login: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString() },
   ]
 }
 
@@ -72,36 +67,30 @@ function getDemoUserManagementSummary(): UserManagementSummary {
       total: 4,
       admins: 1,
       editors: 2,
-      viewers: 1,
-    },
+      viewers: 1 },
     k8sServiceAccounts: {
       total: 11,
-      clusters: ['prod-east', 'staging', 'dev-cluster'],
-    },
+      clusters: ['prod-east', 'staging', 'dev-cluster'] },
     currentUserPermissions: [
       {
         cluster: 'prod-east',
         isClusterAdmin: true,
         canCreateServiceAccounts: true,
         canManageRBAC: true,
-        canViewSecrets: true,
-      },
+        canViewSecrets: true },
       {
         cluster: 'staging',
         isClusterAdmin: false,
         canCreateServiceAccounts: true,
         canManageRBAC: false,
-        canViewSecrets: false,
-      },
+        canViewSecrets: false },
       {
         cluster: 'dev-cluster',
         isClusterAdmin: true,
         canCreateServiceAccounts: true,
         canManageRBAC: true,
-        canViewSecrets: true,
-      },
-    ],
-  }
+        canViewSecrets: true },
+    ] }
 }
 
 /**
@@ -150,19 +139,19 @@ export function useConsoleUsers() {
     fetchUsers()
   }, [fetchUsers])
 
-  const updateUserRole = useCallback(async (userId: string, role: UserRole) => {
+  const updateUserRole = async (userId: string, role: UserRole) => {
     await api.put(`/api/users/${userId}/role`, { role })
     setUsers((prev) =>
       prev.map((u) => (u.id === userId ? { ...u, role } : u))
     )
     return true
-  }, [])
+  }
 
-  const deleteUser = useCallback(async (userId: string) => {
+  const deleteUser = async (userId: string) => {
     await api.delete(`/api/users/${userId}`)
     setUsers((prev) => prev.filter((u) => u.id !== userId))
     return true
-  }, [])
+  }
 
   return {
     users,
@@ -171,8 +160,7 @@ export function useConsoleUsers() {
     error,
     refetch: fetchUsers,
     updateUserRole,
-    deleteUser,
-  }
+    deleteUser }
 }
 
 /**
@@ -234,31 +222,27 @@ function getDemoOpenShiftUsers(cluster?: string): OpenShiftUser[] {
       identities: ['htpasswd:admin'],
       groups: ['system:cluster-admins', 'system:authenticated'],
       cluster,
-      createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-    },
+      createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString() },
     {
       name: 'developer',
       fullName: 'Dev User',
       identities: ['htpasswd:developer'],
       groups: ['developers', 'system:authenticated'],
       cluster,
-      createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-    },
+      createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString() },
     {
       name: 'ops-user',
       fullName: 'Operations Engineer',
       identities: ['ldap:ops-user'],
       groups: ['operations', 'system:authenticated'],
       cluster,
-      createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-    },
+      createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString() },
     {
       name: 'viewer',
       identities: ['htpasswd:viewer'],
       groups: ['viewers', 'system:authenticated'],
       cluster,
-      createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    },
+      createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() },
   ]
 }
 
@@ -492,19 +476,18 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
     fetchServiceAccounts()
   }, [fetchServiceAccounts])
 
-  const createServiceAccount = useCallback(async (req: CreateServiceAccountRequest) => {
+  const createServiceAccount = async (req: CreateServiceAccountRequest) => {
     const { data } = await api.post<K8sServiceAccount>('/api/rbac/service-accounts', req)
     setServiceAccounts((prev) => [...prev, data])
     return data
-  }, [])
+  }
 
   return {
     serviceAccounts,
     isLoading,
     error,
     refetch: fetchServiceAccounts,
-    createServiceAccount,
-  }
+    createServiceAccount }
 }
 
 /**
@@ -643,19 +626,18 @@ export function useK8sRoleBindings(cluster: string, namespace?: string, includeS
     fetchBindings()
   }, [fetchBindings])
 
-  const createRoleBinding = useCallback(async (req: CreateRoleBindingRequest) => {
+  const createRoleBinding = async (req: CreateRoleBindingRequest) => {
     await api.post('/api/rbac/bindings', req)
     await fetchBindings()
     return true
-  }, [fetchBindings])
+  }
 
   return {
     bindings,
     isLoading,
     error,
     refetch: fetchBindings,
-    createRoleBinding,
-  }
+    createRoleBinding }
 }
 
 /**

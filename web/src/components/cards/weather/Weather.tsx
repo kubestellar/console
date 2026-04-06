@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Cloud, Wind, Droplets, Gauge, Eye,
   MapPin, Calendar, Search as SearchIcon, Star, X,
@@ -18,8 +18,7 @@ import type {
   HourlyForecast,
   CurrentWeather,
   WeatherConfig,
-  SavedLocation,
-} from './types'
+  SavedLocation } from './types'
 
 // Demo weather data for demo mode (avoids external API calls)
 function getDemoWeatherData(units: 'F' | 'C'): {
@@ -39,8 +38,7 @@ function getDemoWeatherData(units: 'F' | 'C'): {
       weatherCode: codes[i % codes.length],
       tempHigh: isF ? 72 + Math.round(Math.sin(i) * 8) : 22 + Math.round(Math.sin(i) * 4),
       tempLow: isF ? 55 + Math.round(Math.sin(i) * 5) : 13 + Math.round(Math.sin(i) * 3),
-      precipitation: [10, 0, 20, 60, 40, 5, 15][i],
-    }
+      precipitation: [10, 0, 20, 60, 40, 5, 15][i] }
   })
 
   const hourly: HourlyForecast[] = Array.from({ length: 24 }, (_, i) => {
@@ -50,8 +48,7 @@ function getDemoWeatherData(units: 'F' | 'C'): {
       time: hour,
       temperature: isF ? 62 + Math.round(Math.sin(i / 4) * 10) : 17 + Math.round(Math.sin(i / 4) * 5),
       weatherCode: i < 6 ? 0 : i < 12 ? 2 : i < 18 ? 3 : 1,
-      precipitation: i > 10 && i < 16 ? 30 + i * 2 : 5,
-    }
+      precipitation: i > 10 && i < 16 ? 30 + i * 2 : 5 }
   })
 
   return {
@@ -61,11 +58,9 @@ function getDemoWeatherData(units: 'F' | 'C'): {
       humidity: 55,
       feelsLike: isF ? 66 : 19,
       windSpeed: isF ? 12 : 19,
-      isDaytime: today.getHours() >= 6 && today.getHours() < 20,
-    },
+      isDaytime: today.getHours() >= 6 && today.getHours() < 20 },
     forecast,
-    hourly,
-  }
+    hourly }
 }
 
 interface WeatherData {
@@ -99,8 +94,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
       id: 'default',
       cityName: 'New York, NY',
       latitude: 40.7128,
-      longitude: -74.006,
-    }
+      longitude: -74.006 }
   })
 
   // City search state
@@ -120,10 +114,10 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   })
 
   // Weather data via useCache (persists across navigation)
-  const demoWeather = useMemo((): WeatherData => {
+  const demoWeather = (() => {
     const demo = getDemoWeatherData(units)
     return { current: demo.current, forecast: demo.forecast.slice(0, forecastLength), hourly: demo.hourly }
-  }, [units, forecastLength])
+  })()
 
   const weatherCacheKey = `weather:${currentLocation.latitude}:${currentLocation.longitude}:${units}:${forecastLength}`
   const { data: weatherData, isLoading, isRefreshing, isFailed, isDemoFallback, lastRefresh, refetch } = useCache<WeatherData>({
@@ -154,8 +148,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
         humidity: data.current.relative_humidity_2m,
         feelsLike: Math.round(data.current.apparent_temperature),
         windSpeed: Math.round(data.current.wind_speed_10m),
-        isDaytime: data.current.is_day === 1,
-      }
+        isDaytime: data.current.is_day === 1 }
 
       const forecast: ForecastDay[] = data.daily.time.map((date: string, i: number) => {
         const dayDate = new Date(date)
@@ -168,8 +161,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
           weatherCode: data.daily.weather_code[i],
           tempHigh: Math.round(data.daily.temperature_2m_max[i]),
           tempLow: Math.round(data.daily.temperature_2m_min[i]),
-          precipitation: data.daily.precipitation_probability_max[i] || 0,
-        }
+          precipitation: data.daily.precipitation_probability_max[i] || 0 }
       })
 
       const now = new Date()
@@ -184,13 +176,11 @@ export function Weather({ config }: { config?: WeatherConfig }) {
             time: hour,
             temperature: Math.round(data.hourly.temperature_2m[idx]),
             weatherCode: data.hourly.weather_code[idx],
-            precipitation: data.hourly.precipitation_probability[idx] || 0,
-          }
+            precipitation: data.hourly.precipitation_probability[idx] || 0 }
         })
 
       return { current, forecast, hourly }
-    },
-  })
+    } })
 
   const currentWeather = weatherData.current
   const forecast = weatherData.forecast
@@ -264,7 +254,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   }, [citySearchInput, searchCities])
 
   // Select city from search results
-  const selectCity = useCallback((city: GeocodingResult) => {
+  const selectCity = (city: GeocodingResult) => {
     const statePart = city.admin1 || city.country
     const formattedName = `${city.name}, ${statePart}`
 
@@ -272,30 +262,29 @@ export function Weather({ config }: { config?: WeatherConfig }) {
       id: `${city.latitude}-${city.longitude}`,
       cityName: formattedName,
       latitude: city.latitude,
-      longitude: city.longitude,
-    })
+      longitude: city.longitude })
     setCitySearchInput('')
     setShowCityDropdown(false)
     setCitySearchResults([])
-  }, [])
+  }
 
   // Save current location
-  const saveCurrentLocation = useCallback(() => {
+  const saveCurrentLocation = () => {
     const exists = savedLocations.some(loc => loc.id === currentLocation.id)
     if (!exists) {
       setSavedLocations(prev => [...prev, currentLocation])
     }
-  }, [currentLocation, savedLocations])
+  }
 
   // Remove a saved location
-  const removeSavedLocation = useCallback((id: string) => {
+  const removeSavedLocation = (id: string) => {
     setSavedLocations(prev => prev.filter(loc => loc.id !== id))
-  }, [])
+  }
 
   // Load a saved location
-  const loadSavedLocation = useCallback((location: SavedLocation) => {
+  const loadSavedLocation = (location: SavedLocation) => {
     setCurrentLocation(location)
-  }, [])
+  }
 
   // Get current weather condition
   const currentCondition = currentWeather ? getWeatherCondition(currentWeather.weatherCode) : null
@@ -623,8 +612,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
                             className="absolute h-full bg-gradient-to-r from-blue-400 to-orange-400 rounded-full"
                             style={{
                               left: `${leftPercent}%`,
-                              width: `${Math.max(widthPercent, 5)}%`,
-                            }}
+                              width: `${Math.max(widthPercent, 5)}%` }}
                           />
                         </div>
                         <span className="text-sm font-medium w-8">

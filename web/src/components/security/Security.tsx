@@ -22,8 +22,7 @@ import {
   getMockSecurityData,
   getMockRBACData,
   getMockComplianceData,
-  type ComplianceCheck,
-} from '../../mocks/securityData'
+  type ComplianceCheck } from '../../mocks/securityData'
 import { getDefaultCards } from '../../config/dashboards'
 import { useTranslation } from 'react-i18next'
 import { ensureCardInDashboard } from '../../lib/dashboards/migrateStorageKey'
@@ -34,8 +33,7 @@ const SECURITY_CARDS_KEY = 'kubestellar-security-cards'
 ensureCardInDashboard(SECURITY_CARDS_KEY, 'iso27001_audit', {
   id: 'security-0',
   cardType: 'iso27001_audit',
-  position: { w: 6, h: 3, x: 0, y: 0 },
-})
+  position: { w: 6, h: 3, x: 0, y: 0 } })
 
 // Default cards for the security dashboard
 const DEFAULT_SECURITY_CARDS = getDefaultCards('security')
@@ -50,8 +48,7 @@ export function Security() {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
     filterBySeverity,
-    customFilter,
-  } = useGlobalFilters()
+    customFilter } = useGlobalFilters()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   const [severityFilter, setSeverityFilter] = useState<string>('all')
@@ -126,19 +123,18 @@ export function Security() {
         resource: issue.name,
         namespace: issue.namespace,
         cluster: issue.cluster || 'unknown',
-        message: issue.details || issue.issue,
-      }
+        message: issue.details || issue.issue }
     })
   }, [isDemoMode, cachedSecurityIssues])
 
   // RBAC and compliance data fetching requires backend API endpoints to be implemented first.
   // Once /api/mcp/rbac and /api/mcp/compliance endpoints are available, create useCachedRBAC()
   // and useCachedCompliance() hooks following the pattern in useCachedData.ts
-  const rbacBindings = useMemo(() => isDemoMode ? getMockRBACData() : [], [isDemoMode])
-  const complianceChecks = useMemo(() => isDemoMode ? getMockComplianceData() : [], [isDemoMode])
+  const rbacBindings = isDemoMode ? getMockRBACData() : []
+  const complianceChecks = isDemoMode ? getMockComplianceData() : []
 
   // Issues after global filter (before local severity filter)
-  const globalFilteredIssues = useMemo(() => {
+  const globalFilteredIssues = (() => {
     let result = securityIssues
 
     // Apply global cluster filter
@@ -161,27 +157,27 @@ export function Security() {
     }
 
     return result
-  }, [securityIssues, globalSelectedClusters, isAllClustersSelected, filterBySeverity, customFilter])
+  })()
 
-  const filteredIssues = useMemo(() => {
+  const filteredIssues = (() => {
     let result = globalFilteredIssues
     // Apply local severity filter
     if (severityFilter !== 'all') {
       result = result.filter(issue => issue.severity === severityFilter)
     }
     return result
-  }, [globalFilteredIssues, severityFilter])
+  })()
 
   // Filter RBAC and compliance based on clusters
-  const filteredRBAC = useMemo(() => {
+  const filteredRBAC = (() => {
     if (isAllClustersSelected) return rbacBindings
     return rbacBindings.filter(b => globalSelectedClusters.includes(b.cluster))
-  }, [rbacBindings, globalSelectedClusters, isAllClustersSelected])
+  })()
 
-  const filteredCompliance = useMemo(() => {
+  const filteredCompliance = (() => {
     if (isAllClustersSelected) return complianceChecks
     return complianceChecks.filter(c => globalSelectedClusters.includes(c.cluster))
-  }, [complianceChecks, globalSelectedClusters, isAllClustersSelected])
+  })()
 
   const stats = useMemo(() => {
     const high = globalFilteredIssues.filter(i => i.severity === 'high').length
@@ -238,8 +234,7 @@ export function Security() {
       typeChartData: Object.entries(typeCounts).map(([name, value], i) => ({
         name: name.replace(/([A-Z])/g, ' $1').trim(),
         value,
-        color: ['#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#8b5cf6'][i % 5],
-      })),
+        color: ['#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#8b5cf6'][i % 5] })),
       rbacChartData: [
         { name: 'High Risk', value: rbacHighRisk, color: '#ef4444' },
         { name: 'Medium Risk', value: rbacMedRisk, color: '#f59e0b' },
@@ -249,8 +244,7 @@ export function Security() {
         { name: 'Pass', value: compliancePass, color: '#10b981' },
         { name: 'Warn', value: complianceWarn, color: '#f59e0b' },
         { name: 'Fail', value: complianceFail, color: '#ef4444' },
-      ].filter(d => d.value > 0),
-    }
+      ].filter(d => d.value > 0) }
   }, [globalFilteredIssues, filteredRBAC, filteredCompliance])
 
   const severityColor = (severity: string) => {
@@ -292,22 +286,19 @@ export function Security() {
       root: t('cards:security.runAsRoot'),
       hostNetwork: t('cards:security.hostNetwork'),
       hostPID: t('cards:security.hostPID'),
-      noSecurityContext: t('cards:security.noSecurityContext'),
-    }
+      noSecurityContext: t('cards:security.noSecurityContext') }
     return labels[type] || type
   }
 
   // Group compliance by category
-  const complianceByCategory = useMemo(() => {
-    return filteredCompliance.reduce((acc, check) => {
+  const complianceByCategory = filteredCompliance.reduce((acc, check) => {
       if (!acc[check.category]) acc[check.category] = []
       acc[check.category].push(check)
       return acc
     }, {} as Record<string, ComplianceCheck[]>)
-  }, [filteredCompliance])
 
   // Stats value getter for the configurable StatsOverview component
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string): StatBlockValue => {
     const hasDataToShow = stats.total > 0
     switch (blockId) {
       case 'issues':
@@ -327,12 +318,9 @@ export function Security() {
       default:
         return { value: 0 }
     }
-  }, [stats, setActiveTab, setSeverityFilter])
+  }
 
-  const getStatValue = useCallback(
-    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
-    [getDashboardStatValue, getUniversalStatValue]
-  )
+  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
   // Tabs section (rendered between stats and cards)
   const tabsSection = (
@@ -409,8 +397,7 @@ export function Security() {
       beforeCards={tabsSection}
       emptyState={{
         title: t('cards:security.securityDashboard'),
-        description: t('cards:security.emptyDescription'),
-      }}
+        description: t('cards:security.emptyDescription') }}
     >
       {/* Show skeleton when agent is offline and demo mode is OFF */}
       {forceSkeletonForOffline ? (

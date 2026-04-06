@@ -18,15 +18,13 @@ const CATEGORY_ICONS = {
   scheduling: Zap,
   disaggregation: Split,
   parallelism: Layers,
-  autoscaling: Scale,
-}
+  autoscaling: Scale }
 
 const CATEGORY_COLORS = {
   scheduling: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400' },
   disaggregation: { bg: 'bg-cyan-500/10', border: 'border-cyan-500/30', text: 'text-cyan-400' },
   parallelism: { bg: 'bg-purple-500/10', border: 'border-purple-500/30', text: 'text-purple-400' },
-  autoscaling: { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400' },
-}
+  autoscaling: { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400' } }
 
 interface PresetCardProps {
   preset: ConfiguratorPreset
@@ -151,7 +149,7 @@ function ParameterSlider({ param, onChange }: ParameterSliderProps) {
 
 export function LLMdConfigurator() {
   const { t } = useTranslation()
-  const presets = useMemo(() => getConfiguratorPresets(), [])
+  const presets = getConfiguratorPresets()
   const [selectedPresetId, setSelectedPresetId] = useState<string>(presets[0]?.id || '')
 
   // Report to CardWrapper that this static card is ready (never demo — uses local mock data)
@@ -159,18 +157,14 @@ export function LLMdConfigurator() {
   const [customParams, setCustomParams] = useState<Record<string, unknown>>({})
   const [copied, setCopied] = useState(false)
 
-  const selectedPreset = useMemo(
-    () => presets.find(p => p.id === selectedPresetId),
-    [presets, selectedPresetId]
-  )
+  const selectedPreset = presets.find(p => p.id === selectedPresetId)
 
-  const currentParams = useMemo(() => {
+  const currentParams = (() => {
     if (!selectedPreset) return []
     return selectedPreset.parameters.map(p => ({
       ...p,
-      value: (customParams[p.name] !== undefined ? customParams[p.name] : p.value) as number | string | boolean,
-    }))
-  }, [selectedPreset, customParams])
+      value: (customParams[p.name] !== undefined ? customParams[p.name] : p.value) as number | string | boolean }))
+  })()
 
   const handleParamChange = (name: string, value: unknown) => {
     setCustomParams(prev => ({ ...prev, [name]: value }))

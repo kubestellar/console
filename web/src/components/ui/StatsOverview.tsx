@@ -1,4 +1,4 @@
-import { useState, useCallback, memo } from 'react'
+import { useState, memo } from 'react'
 import { useModalState } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import {
@@ -6,8 +6,7 @@ import {
   FolderOpen, AlertCircle, AlertTriangle, AlertOctagon, Package, Ship, Settings, Clock,
   MoreHorizontal, Database, Workflow, Globe, Network, ArrowRightLeft, CircleDot,
   ShieldAlert, ShieldOff, User, Info, Percent, ClipboardList, Sparkles, Activity,
-  List, DollarSign, ChevronDown, ChevronRight, FlaskConical,
-} from 'lucide-react'
+  List, DollarSign, ChevronDown, ChevronRight, FlaskConical } from 'lucide-react'
 import { Button } from './Button'
 import { StatusBadge } from './StatusBadge'
 import { StatBlockConfig, DashboardStatsType, StatDisplayMode } from './StatsBlockDefinitions'
@@ -30,8 +29,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   FolderOpen, AlertCircle, AlertTriangle, AlertOctagon, Package, Ship, Settings, Clock,
   MoreHorizontal, Database, Workflow, Globe, Network, ArrowRightLeft, CircleDot,
   ShieldAlert, ShieldOff, User, Info, Percent, ClipboardList, Sparkles, Activity,
-  List, DollarSign,
-}
+  List, DollarSign }
 
 // Color mapping for dynamic rendering
 const COLOR_CLASSES: Record<string, string> = {
@@ -42,8 +40,7 @@ const COLOR_CLASSES: Record<string, string> = {
   cyan: 'text-cyan-400',
   blue: 'text-blue-400',
   red: 'text-red-400',
-  gray: 'text-muted-foreground',
-}
+  gray: 'text-muted-foreground' }
 
 // Value color mapping for specific stat types
 const VALUE_COLORS: Record<string, string> = {
@@ -65,8 +62,7 @@ const VALUE_COLORS: Record<string, string> = {
   medium: 'text-yellow-400',
   low: 'text-blue-400',
   privileged: 'text-red-400',
-  root: 'text-orange-400',
-}
+  root: 'text-orange-400' }
 
 /** Hex color values for chart components, keyed by stat block color name */
 const COLOR_HEX: Record<string, string> = {
@@ -77,8 +73,7 @@ const COLOR_HEX: Record<string, string> = {
   cyan: '#06b6d4',
   blue: '#3b82f6',
   red: '#ef4444',
-  gray: '#6b7280',
-}
+  gray: '#6b7280' }
 
 /** Stat block IDs that represent percentage-type values (0-100) */
 const PERCENTAGE_STAT_IDS = new Set([
@@ -312,8 +307,7 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
               className="h-full rounded-full transition-all duration-500"
               style={{
                 width: `${Math.min((numericValue / maxValue) * 100, 100)}%`,
-                backgroundColor: hexColor,
-              }}
+                backgroundColor: hexColor }}
             />
           </div>
           {data.sublabel && <div className="text-xs text-muted-foreground mt-1">{wrapAbbreviations(data.sublabel)}</div>}
@@ -368,8 +362,7 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
               className="h-full transition-all duration-500"
               style={{
                 width: `${Math.min((numericValue / maxValue) * 100, 100)}%`,
-                backgroundColor: hexColor,
-              }}
+                backgroundColor: hexColor }}
             />
           </div>
           {data.sublabel && <div className="text-xs text-muted-foreground mt-1">{wrapAbbreviations(data.sublabel)}</div>}
@@ -442,8 +435,7 @@ export function StatsOverview({
   className = '',
   title,
   showConfigButton = true,
-  isDemoData = false,
-}: StatsOverviewProps) {
+  isDemoData = false }: StatsOverviewProps) {
   const { t } = useTranslation()
   const resolvedTitle = title ?? t('statsOverview.title')
   const { blocks, saveBlocks, visibleBlocks, defaultBlocks } = useStatsConfig(dashboardType)
@@ -469,11 +461,11 @@ export function StatsOverview({
   )
 
   // Handle per-block display mode changes — persists to localStorage (synced to agent)
-  const handleDisplayModeChange = useCallback((blockId: string, mode: StatDisplayMode) => {
+  const handleDisplayModeChange = (blockId: string, mode: StatDisplayMode) => {
     const updated = blocks.map(b => b.id === blockId ? { ...b, displayMode: mode } : b)
     saveBlocks(updated)
     window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
-  }, [blocks, saveBlocks])
+  }
 
   // Manage collapsed state with localStorage persistence
   const storageKey = collapsedStorageKey || `kubestellar-${dashboardType}-stats-collapsed`

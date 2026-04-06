@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { AlertCircle, Play, Clock } from 'lucide-react'
 import { useMissions } from '../../../hooks/useMissions'
 import { useClusters } from '../../../hooks/useMCP'
@@ -29,11 +28,10 @@ export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
     hasAnyData: allClusters.length > 0,
     isDemoData: podsDemoFallback || deploysDemoFallback,
     isFailed: podsFailed || deploysFailed,
-    consecutiveFailures: Math.max(podsFailures, deploysFailures),
-  })
+    consecutiveFailures: Math.max(podsFailures, deploysFailures) })
 
   // Filter clusters by global filter
-  const clusters = useMemo(() => {
+  const clusters = (() => {
     let result = allClusters
 
     // Apply global cluster filter
@@ -48,10 +46,10 @@ export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
     }
 
     return result
-  }, [allClusters, selectedClusters, isAllClustersSelected, customFilter])
+  })()
 
   // Filter issues by global filter
-  const podIssues = useMemo(() => {
+  const podIssues = (() => {
     let result = allPodIssues
 
     if (!isAllClustersSelected) {
@@ -59,9 +57,9 @@ export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
     }
 
     return result
-  }, [allPodIssues, selectedClusters, isAllClustersSelected])
+  })()
 
-  const deploymentIssues = useMemo(() => {
+  const deploymentIssues = (() => {
     let result = allDeploymentIssues
 
     if (!isAllClustersSelected) {
@@ -69,7 +67,7 @@ export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
     }
 
     return result
-  }, [allDeploymentIssues, selectedClusters, isAllClustersSelected])
+  })()
 
   const healthyClusters = clusters.filter(c => c.healthy && c.reachable !== false).length
   const unhealthyClusters = clusters.filter(c => !c.healthy && c.reachable !== false).length
@@ -117,11 +115,8 @@ Please provide:
           nodeCount: c.nodeCount,
           podCount: c.podCount,
           cpuCores: c.cpuCores,
-          memoryGB: c.memoryGB,
-        })),
-        totalIssues,
-      },
-    })
+          memoryGB: c.memoryGB })),
+        totalIssues } })
   }
 
   const handleStartHealthCheck = () => checkKeyAndRun(doStartHealthCheck)

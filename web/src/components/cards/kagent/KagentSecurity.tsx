@@ -8,20 +8,17 @@ export function KagentSecurity({ config }: { config?: Record<string, unknown> })
   const {
     data: agents,
     isLoading: agentsLoading,
-    isDemoFallback: agentsDemo,
-  } = useKagentCRDAgents({ cluster })
+    isDemoFallback: agentsDemo } = useKagentCRDAgents({ cluster })
   const {
     data: tools,
     isLoading: toolsLoading,
-    isDemoFallback: toolsDemo,
-  } = useKagentCRDTools({ cluster })
+    isDemoFallback: toolsDemo } = useKagentCRDTools({ cluster })
 
   const hasData = agents.length > 0 || tools.length > 0
   useCardLoadingState({
     isLoading: (agentsLoading || toolsLoading) && !hasData,
     hasAnyData: hasData,
-    isDemoData: agentsDemo || toolsDemo,
-  })
+    isDemoData: agentsDemo || toolsDemo })
 
   const stats = useMemo(() => {
     const totalAgents = agents.length
@@ -50,13 +47,10 @@ export function KagentSecurity({ config }: { config?: Record<string, unknown> })
       modelAuthPct,
       remoteTools,
       readyTools,
-      totalTools: tools.length,
-    }
+      totalTools: tools.length }
   }, [agents, tools])
 
-  const byoAgents = useMemo(() =>
-    agents.filter(a => a.agentType === 'BYO'),
-  [agents])
+  const byoAgents = agents.filter(a => a.agentType === 'BYO')
 
   if ((agentsLoading || toolsLoading) && !hasData) {
     return (

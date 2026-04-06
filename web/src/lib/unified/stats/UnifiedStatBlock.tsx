@@ -5,7 +5,6 @@
  * from the provided data source.
  */
 
-import { useMemo } from 'react'
 import {
   Server, CheckCircle2, XCircle, WifiOff, Box, Cpu, MemoryStick, HardDrive, Zap, Layers,
   FolderOpen, AlertCircle, AlertTriangle, AlertOctagon, Package, Ship, Settings, Clock,
@@ -13,9 +12,8 @@ import {
   ShieldAlert, ShieldOff, User, Info, Percent, ClipboardList, Sparkles, Activity,
   List, DollarSign, FlaskConical, FolderTree, Bell, RefreshCw, ArrowUpCircle,
   Newspaper, FileCode, Lock, Unlock, UserCheck, FileText, Calendar, CreditCard,
-  Heart, Shield, ShieldCheck,
-} from 'lucide-react'
-import type { UnifiedStatBlockProps, StatBlockValue } from '../types'
+  Heart, Shield, ShieldCheck } from 'lucide-react'
+import type { UnifiedStatBlockProps } from '../types'
 import { resolveStatValue } from './valueResolvers'
 import { useIsModeSwitching } from '../demo'
 
@@ -27,8 +25,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   ShieldAlert, ShieldOff, User, Info, Percent, ClipboardList, Sparkles, Activity,
   List, DollarSign, FlaskConical, FolderTree, Bell, RefreshCw, ArrowUpCircle,
   Newspaper, FileCode, Lock, Unlock, UserCheck, FileText, Calendar, CreditCard,
-  Heart, Shield, ShieldCheck,
-}
+  Heart, Shield, ShieldCheck }
 
 // Color mapping for icons
 const ICON_COLORS: Record<string, string> = {
@@ -40,8 +37,7 @@ const ICON_COLORS: Record<string, string> = {
   blue: 'text-blue-400',
   red: 'text-red-400',
   gray: 'text-muted-foreground',
-  indigo: 'text-blue-400',
-}
+  indigo: 'text-blue-400' }
 
 // Value color mapping based on stat ID
 const VALUE_COLORS: Record<string, string> = {
@@ -64,8 +60,7 @@ const VALUE_COLORS: Record<string, string> = {
   medium: 'text-yellow-400',
   low: 'text-blue-400',
   privileged: 'text-red-400',
-  root: 'text-orange-400',
-}
+  root: 'text-orange-400' }
 
 /**
  * UnifiedStatBlock - Renders a single stat from config
@@ -74,14 +69,13 @@ export function UnifiedStatBlock({
   config,
   data,
   getValue,
-  isLoading = false,
-}: UnifiedStatBlockProps) {
+  isLoading = false }: UnifiedStatBlockProps) {
   // Check if mode is switching (show pulse during transition)
   const isModeSwitching = useIsModeSwitching()
   const showPulse = isLoading || isModeSwitching
 
   // Resolve the value (placeholder when loading)
-  const resolvedValue = useMemo((): StatBlockValue => {
+  const resolvedValue = (() => {
     if (showPulse) {
       return { value: '-' }
     }
@@ -93,9 +87,8 @@ export function UnifiedStatBlock({
       value: resolved.value,
       sublabel: config.sublabelField ? resolved.sublabel : undefined,
       isDemo: resolved.isDemo,
-      isClickable: !!config.onClick,
-    }
-  }, [config, data, getValue, showPulse])
+      isClickable: !!config.onClick }
+  })()
 
   // Get components
   const IconComponent = ICONS[config.icon] || Server
@@ -165,8 +158,7 @@ function handleStatClick(action: NonNullable<UnifiedStatBlockProps['config']['on
       // Dispatch drill-down event
       window.dispatchEvent(
         new CustomEvent('stat-drill', {
-          detail: { target: action.target, params: action.params },
-        })
+          detail: { target: action.target, params: action.params } })
       )
       break
 
@@ -174,8 +166,7 @@ function handleStatClick(action: NonNullable<UnifiedStatBlockProps['config']['on
       // Dispatch filter event
       window.dispatchEvent(
         new CustomEvent('stat-filter', {
-          detail: { field: action.target, params: action.params },
-        })
+          detail: { field: action.target, params: action.params } })
       )
       break
 
@@ -188,8 +179,7 @@ function handleStatClick(action: NonNullable<UnifiedStatBlockProps['config']['on
       // Dispatch callback event
       window.dispatchEvent(
         new CustomEvent('stat-callback', {
-          detail: { name: action.target, params: action.params },
-        })
+          detail: { name: action.target, params: action.params } })
       )
       break
   }

@@ -24,8 +24,7 @@ export function NetworkOverview() {
     isDemoData: isDemoFallback,
     hasAnyData: services.length > 0,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
   // Local cluster filter
   const {
@@ -35,25 +34,23 @@ export function NetworkOverview() {
     availableClusters,
     showClusterFilter,
     setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({
-    storageKey: 'network-overview',
-  })
+    clusterFilterRef } = useChartFilters({
+    storageKey: 'network-overview' })
 
   // Filter clusters by global selection first
-  const globalFilteredClusters = useMemo(() => {
+  const globalFilteredClusters = (() => {
     if (isAllClustersSelected) return clusters
     return clusters.filter(c => selectedClusters.includes(c.name))
-  }, [clusters, selectedClusters, isAllClustersSelected])
+  })()
 
   // Apply local cluster filter
-  const filteredClusters = useMemo(() => {
+  const filteredClusters = (() => {
     if (localClusterFilter.length === 0) return globalFilteredClusters
     return globalFilteredClusters.filter(c => localClusterFilter.includes(c.name))
-  }, [globalFilteredClusters, localClusterFilter])
+  })()
 
   // Filter services by selection
-  const filteredServices = useMemo(() => {
+  const filteredServices = (() => {
     let result = services
     if (!isAllClustersSelected) {
       result = result.filter(s => s.cluster && selectedClusters.includes(s.cluster))
@@ -62,7 +59,7 @@ export function NetworkOverview() {
       result = result.filter(s => s.cluster && localClusterFilter.includes(s.cluster))
     }
     return result
-  }, [services, selectedClusters, isAllClustersSelected, localClusterFilter])
+  })()
 
   // Calculate network stats
   const stats = useMemo(() => {
@@ -94,8 +91,7 @@ export function NetworkOverview() {
       clustersWithServices: new Set(filteredServices.map(s => s.cluster)).size,
       healthyClusters,
       degradedClusters,
-      offlineClusters,
-    }
+      offlineClusters }
   }, [filteredServices, filteredClusters])
 
   if (showSkeleton) {

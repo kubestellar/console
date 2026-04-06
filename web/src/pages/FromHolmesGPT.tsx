@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import {
   CheckCircle2,
@@ -13,8 +13,7 @@ import {
   Sparkles,
   ExternalLink,
   Copy,
-  Check,
-} from 'lucide-react'
+  Check } from 'lucide-react'
 import { copyToClipboard } from '../lib/clipboard'
 import { emitInstallCommandCopied } from '../lib/analytics'
 
@@ -66,33 +65,27 @@ const HIGHLIGHTS: HighlightFeature[] = [
   {
     icon: <Brain className="w-6 h-6 text-purple-400" />,
     title: 'AI Diagnosis Per Alert',
-    description: 'Every alert can be analyzed by Claude, OpenAI, or Gemini. Get root cause analysis, remediation steps, and confidence scoring — not just a log dump.',
-  },
+    description: 'Every alert can be analyzed by Claude, OpenAI, or Gemini. Get root cause analysis, remediation steps, and confidence scoring — not just a log dump.' },
   {
     icon: <Layers className="w-6 h-6 text-purple-400" />,
     title: 'Investigation Runbooks',
-    description: 'Structured evidence-gathering before AI reasoning. Runbooks systematically collect kubectl data, IG traces, and metrics — then feed it all to the LLM.',
-  },
+    description: 'Structured evidence-gathering before AI reasoning. Runbooks systematically collect kubectl data, IG traces, and metrics — then feed it all to the LLM.' },
   {
     icon: <Eye className="w-6 h-6 text-purple-400" />,
     title: 'Multi-cluster Visibility',
-    description: 'See all your clusters in one place. Cross-cluster event correlation, cascade impact maps, and config drift detection across your entire fleet.',
-  },
+    description: 'See all your clusters in one place. Cross-cluster event correlation, cascade impact maps, and config drift detection across your entire fleet.' },
   {
     icon: <Network className="w-6 h-6 text-purple-400" />,
     title: 'Inspektor Gadget eBPF',
-    description: 'Kernel-level observability baked into the dashboard. Network traces, DNS monitoring, process execution, and seccomp audit — zero instrumentation.',
-  },
+    description: 'Kernel-level observability baked into the dashboard. Network traces, DNS monitoring, process execution, and seccomp audit — zero instrumentation.' },
   {
     icon: <Bell className="w-6 h-6 text-purple-400" />,
     title: 'Enterprise Alerting',
-    description: 'PagerDuty and OpsGenie native integration with auto-resolution. Plus Slack, email, webhooks, and browser notifications.',
-  },
+    description: 'PagerDuty and OpsGenie native integration with auto-resolution. Plus Slack, email, webhooks, and browser notifications.' },
   {
     icon: <Activity className="w-6 h-6 text-purple-400" />,
     title: '140+ Dashboard Cards',
-    description: 'Monitoring, security, compliance, GitOps, GPU, cost analytics — all in customizable dashboards. HolmesGPT shows you root causes; we show you everything.',
-  },
+    description: 'Monitoring, security, compliance, GitOps, GPU, cost analytics — all in customizable dashboards. HolmesGPT shows you root causes; we show you everything.' },
 ]
 
 /* ------------------------------------------------------------------ */
@@ -109,23 +102,19 @@ const MIGRATION_ITEMS: MigrationItem[] = [
   {
     from: 'HolmesGPT runbooks',
     to: 'Investigation Runbooks',
-    description: 'Your YAML/markdown runbooks translate directly to our runbook format. Same concept: trigger conditions, evidence steps, analysis prompts.',
-  },
+    description: 'Your YAML/markdown runbooks translate directly to our runbook format. Same concept: trigger conditions, evidence steps, analysis prompts.' },
   {
     from: 'HolmesGPT toolsets',
     to: 'MCP Bridge + IG integration',
-    description: 'kubectl and IG tools are available natively. Custom toolsets can be wrapped as MCP servers.',
-  },
+    description: 'kubectl and IG tools are available natively. Custom toolsets can be wrapped as MCP servers.' },
   {
     from: 'PagerDuty/OpsGenie alerts',
     to: 'Native PD/OG channels',
-    description: 'Configure routing keys and API keys in Settings. Alerts auto-trigger and auto-resolve incidents.',
-  },
+    description: 'Configure routing keys and API keys in Settings. Alerts auto-trigger and auto-resolve incidents.' },
   {
     from: 'OpenAI API key',
     to: 'Multi-provider AI',
-    description: 'Bring your OpenAI key, or switch to Claude or Gemini. All providers work with diagnosis, insights, and chat.',
-  },
+    description: 'Bring your OpenAI key, or switch to Claude or Gemini. All providers work with diagnosis, insights, and chat.' },
 ]
 
 /* ------------------------------------------------------------------ */
@@ -149,18 +138,15 @@ const INSTALL_STEPS: InstallStep[] = [
       '  https://raw.githubusercontent.com/kubestellar/console/main/start.sh \\',
       '  | bash',
     ],
-    description: 'Downloads pre-built binaries, starts the console and kc-agent, and opens your browser. No build tools required.',
-  },
+    description: 'Downloads pre-built binaries, starts the console and kc-agent, and opens your browser. No build tools required.' },
   {
     step: 2,
     title: 'Add your AI provider',
-    description: 'Go to Settings and add your OpenAI, Claude, or Gemini API key. AI diagnosis works with any provider.',
-  },
+    description: 'Go to Settings and add your OpenAI, Claude, or Gemini API key. AI diagnosis works with any provider.' },
   {
     step: 3,
     title: 'Configure alerts',
-    description: 'Create alert rules with PagerDuty or OpsGenie channels. Your existing integration keys work directly.',
-  },
+    description: 'Create alert rules with PagerDuty or OpsGenie channels. Your existing integration keys work directly.' },
 ]
 
 /* ------------------------------------------------------------------ */
@@ -204,14 +190,14 @@ export function FromHolmesGPT() {
     return () => clearTimeout(copiedTimerRef.current)
   }, [])
 
-  const copyCommands = useCallback(async (commands: string[], step: number) => {
+  const copyCommands = async (commands: string[], step: number) => {
     const text = commands.join('\n')
     await copyToClipboard(text)
     setCopiedStep(`step-${step}`)
     clearTimeout(copiedTimerRef.current)
     copiedTimerRef.current = setTimeout(() => setCopiedStep(null), COPY_FEEDBACK_MS)
     emitInstallCommandCopied('from_holmesgpt', commands[0])
-  }, [])
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">

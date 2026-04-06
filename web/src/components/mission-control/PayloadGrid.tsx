@@ -2,7 +2,7 @@
  * PayloadGrid — Animated grid of PayloadCards with search/filter.
  */
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { Search, Package } from 'lucide-react'
 import type { PayloadProject } from './types'
@@ -23,11 +23,10 @@ export function PayloadGrid({
   onUpdatePriority,
   onHoverProject,
   onClickProject,
-  installedProjects,
-}: PayloadGridProps) {
+  installedProjects }: PayloadGridProps) {
   const [filter, setFilter] = useState('')
 
-  const filtered = useMemo(() => {
+  const filtered = (() => {
     if (!filter) return projects
     const q = filter.toLowerCase()
     return projects.filter(
@@ -36,7 +35,7 @@ export function PayloadGrid({
         p.displayName.toLowerCase().includes(q) ||
         p.category.toLowerCase().includes(q)
     )
-  }, [projects, filter])
+  })()
 
   if (projects.length === 0) {
     return (

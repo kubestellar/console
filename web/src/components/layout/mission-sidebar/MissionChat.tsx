@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Send,
@@ -20,8 +20,7 @@ import {
   RotateCcw,
   StopCircle,
   ListChecks,
-  Loader2,
-} from 'lucide-react'
+  Loader2 } from 'lucide-react'
 import { useMissions, type Mission } from '../../../hooks/useMissions'
 import { useAuth } from '../../../lib/auth'
 import { useDemoMode } from '../../../hooks/useDemoMode'
@@ -38,7 +37,6 @@ import { STATUS_CONFIG, TYPE_ICONS } from './types'
 import type { FontSize } from './types'
 import { TypingIndicator } from './TypingIndicator'
 import { MemoizedMessage } from './MemoizedMessage'
-import { safeRevokeObjectURL } from '../../../lib/download'
 
 export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontSize, onToggleFullScreen }: { mission: Mission; isFullScreen?: boolean; fontSize?: FontSize; onToggleFullScreen?: () => void }) {
   const { t } = useTranslation('common')
@@ -91,28 +89,27 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   }, [mission.id])
 
   /** Persist edits and exit editing mode */
-  const saveEdits = useCallback(() => {
+  const saveEdits = () => {
     updateSavedMission(mission.id, {
       description: editDescription.trim(),
-      steps: editSteps.map(s => ({ title: s.title.trim(), description: s.description.trim() })),
-    })
+      steps: editSteps.map(s => ({ title: s.title.trim(), description: s.description.trim() })) })
     setIsEditingMission(false)
-  }, [mission.id, editDescription, editSteps, updateSavedMission])
+  }
 
   /** Discard edits and exit editing mode */
-  const cancelEdits = useCallback(() => {
+  const cancelEdits = () => {
     setEditDescription(mission.description)
     setEditSteps((mission.importedFrom?.steps || []).map(s => ({ title: s.title, description: s.description })))
     setIsEditingMission(false)
-  }, [mission.description, mission.importedFrom?.steps])
+  }
 
   /** Update a single step's field */
-  const updateStep = useCallback((idx: number, field: 'title' | 'description', value: string) => {
+  const updateStep = (idx: number, field: 'title' | 'description', value: string) => {
     setEditSteps(prev => prev.map((s, i) => i === idx ? { ...s, [field]: value } : s))
-  }, [])
+  }
 
   // Find related resolutions based on mission content
-  const relatedResolutions = useMemo(() => {
+  const relatedResolutions = (() => {
     const content = [
       mission.title,
       mission.description,
@@ -125,10 +122,10 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
     }
 
     return findSimilarResolutions(signature as { type: string }, { minSimilarity: 0.4, limit: 5 })
-  }, [mission.title, mission.description, mission.messages, findSimilarResolutions])
+  })()
 
   // Save transcript as markdown file
-  const saveTranscript = useCallback(() => {
+  const saveTranscript = () => {
     const lines: string[] = [
       `# Mission: ${mission.title}`,
       '',
@@ -174,21 +171,21 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
-    safeRevokeObjectURL(url)
-  }, [mission])
+    URL.revokeObjectURL(url)
+  }
 
   // Check if user is at bottom of scroll container
-  const isAtBottom = useCallback(() => {
+  const isAtBottom = () => {
     const container = messagesContainerRef.current
     if (!container) return true
     const threshold = 50 // pixels from bottom to consider "at bottom"
     return container.scrollHeight - container.scrollTop - container.clientHeight < threshold
-  }, [])
+  }
 
   // Handle scroll events to detect user scrolling
-  const handleScroll = useCallback(() => {
+  const handleScroll = () => {
     setShouldAutoScroll(isAtBottom())
-  }, [isAtBottom])
+  }
 
   // Auto-scroll to bottom only when new messages are added (not on every render)
   useEffect(() => {
@@ -228,10 +225,10 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   }, [isFullScreen])
 
   // Get the original ask (first user message)
-  const originalAsk = useMemo(() => {
+  const originalAsk = (() => {
     const firstUserMsg = mission.messages.find(m => m.role === 'user')
     return firstUserMsg?.content || mission.description
-  }, [mission.messages, mission.description])
+  })()
 
   // Generate a simple summary based on conversation state
   const conversationSummary = useMemo(() => {
@@ -255,38 +252,37 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       keyPoints,
       hasToolExecution: assistantMsgs.some(m =>
         m.content.includes('```') && (m.content.includes('kubectl') || m.content.includes('executed'))
-      ),
-    }
+      ) }
   }, [mission.messages, mission.status, mission.updatedAt])
 
   /** Maximum allowed length for mission titles */
   const MAX_TITLE_LENGTH = 80
 
   /** Start inline title editing */
-  const startEditingTitle = useCallback(() => {
+  const startEditingTitle = () => {
     setEditTitleValue(mission.title)
     setIsEditingTitle(true)
     // Focus the input after React renders it
     requestAnimationFrame(() => titleInputRef.current?.select())
-  }, [mission.title])
+  }
 
   /** Save the edited title */
-  const saveTitle = useCallback(() => {
+  const saveTitle = () => {
     const trimmed = editTitleValue.trim()
     if (trimmed.length > 0 && trimmed.length <= MAX_TITLE_LENGTH && trimmed !== mission.title) {
       renameMission(mission.id, trimmed)
     }
     setIsEditingTitle(false)
-  }, [editTitleValue, mission.id, mission.title, renameMission])
+  }
 
   /** Cancel title editing */
-  const cancelEditTitle = useCallback(() => {
+  const cancelEditTitle = () => {
     setIsEditingTitle(false)
     setEditTitleValue('')
-  }, [])
+  }
 
   /** Handle keyboard events in the title input */
-  const handleTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault()
       saveTitle()
@@ -294,7 +290,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       e.preventDefault()
       cancelEditTitle()
     }
-  }, [saveTitle, cancelEditTitle])
+  }
 
   const handleSend = () => {
     if (!input.trim()) return
@@ -304,8 +300,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
         t('missionChat.messageTooLong', {
           current: input.length.toLocaleString(),
           max: MAX_MESSAGE_SIZE_CHARS.toLocaleString(),
-          defaultValue: `Message is too long ({{current}} characters). Maximum is {{max}} characters.`,
-        })
+          defaultValue: `Message is too long ({{current}} characters). Maximum is {{max}} characters.` })
       )
       return
     }
@@ -319,13 +314,13 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
     setTimeout(() => inputRef.current?.focus(), 0)
   }
 
-  const handleRetryMission = useCallback(() => {
+  const handleRetryMission = () => {
     // Find the last user message in the conversation (the one that failed)
     const lastUserMessage = [...mission.messages].reverse().find(m => m.role === 'user')
     const prompt = lastUserMessage?.content || ''
     if (!prompt.trim()) return
     sendMessage(mission.id, prompt)
-  }, [mission.id, mission.messages, sendMessage])
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {

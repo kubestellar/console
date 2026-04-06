@@ -1,11 +1,10 @@
-import { useState, useEffect, useCallback, use } from 'react'
+import { useState, useEffect, useContext } from 'react'
 import { AlertsContext } from '../contexts/AlertsContext'
 import type {
   Alert,
   AlertRule,
   AlertStats,
-  SlackWebhook,
-} from '../types/alerts'
+  SlackWebhook } from '../types/alerts'
 
 // Re-export types for convenience
 export type { Alert, AlertRule, AlertStats, SlackWebhook }
@@ -54,20 +53,18 @@ const _emptyAlertRule: AlertRule = {
   channels: [],
   aiDiagnose: false,
   createdAt: '',
-  updatedAt: '',
-}
+  updatedAt: '' }
 
 // Hook for managing alert rules - uses shared context
 export function useAlertRules() {
-  const context = use(AlertsContext)
+  const context = useContext(AlertsContext)
   if (!context) {
     return {
       rules: [] as AlertRule[],
       createRule: (() => ({ ..._emptyAlertRule })) as unknown as (rule: Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt'>) => AlertRule,
       updateRule: (_id: string, _updates: Partial<AlertRule>) => {},
       deleteRule: (_id: string) => {},
-      toggleRule: (_id: string) => {},
-    }
+      toggleRule: (_id: string) => {} }
   }
   const { rules, createRule, updateRule, deleteRule, toggleRule } = context
 
@@ -76,8 +73,7 @@ export function useAlertRules() {
     createRule,
     updateRule,
     deleteRule,
-    toggleRule,
-  }
+    toggleRule }
 }
 
 // Hook for managing Slack webhooks
@@ -90,32 +86,30 @@ export function useSlackWebhooks() {
     saveToStorage(SLACK_WEBHOOKS_KEY, webhooks)
   }, [webhooks])
 
-  const addWebhook = useCallback((name: string, webhookUrl: string, channel?: string) => {
+  const addWebhook = (name: string, webhookUrl: string, channel?: string) => {
     const webhook: SlackWebhook = {
       id: generateId(),
       name,
       webhookUrl,
       channel,
-      createdAt: new Date().toISOString(),
-    }
+      createdAt: new Date().toISOString() }
     setWebhooks(prev => [...prev, webhook])
     return webhook
-  }, [])
+  }
 
-  const removeWebhook = useCallback((id: string) => {
+  const removeWebhook = (id: string) => {
     setWebhooks(prev => prev.filter(w => w.id !== id))
-  }, [])
+  }
 
   return {
     webhooks,
     addWebhook,
-    removeWebhook,
-  }
+    removeWebhook }
 }
 
 // Hook for managing alerts - uses shared context
 export function useAlerts() {
-  const context = use(AlertsContext)
+  const context = useContext(AlertsContext)
   if (!context) {
     return {
       alerts: [] as Alert[],
@@ -129,8 +123,7 @@ export function useAlerts() {
       runAIDiagnosis: (() => null) as (alertId: string) => string | null,
       evaluateConditions: () => {},
       isLoadingData: false,
-      dataError: null as string | null,
-    }
+      dataError: null as string | null }
   }
   const {
     alerts,
@@ -144,8 +137,7 @@ export function useAlerts() {
     runAIDiagnosis,
     evaluateConditions,
     isLoadingData,
-    dataError,
-  } = context
+    dataError } = context
 
   return {
     alerts,
@@ -159,16 +151,14 @@ export function useAlerts() {
     runAIDiagnosis,
     evaluateConditions,
     isLoadingData,
-    dataError,
-  }
+    dataError }
 }
 
 // Hook for sending Slack notifications
 export function useSlackNotification() {
   const { webhooks } = useSlackWebhooks()
 
-  const sendNotification = useCallback(
-    async (alert: Alert, webhookId: string) => {
+  const sendNotification = async (alert: Alert, webhookId: string) => {
       const webhook = webhooks.find(w => w.id === webhookId)
       if (!webhook) {
         throw new Error('Webhook not found')
@@ -177,8 +167,7 @@ export function useSlackNotification() {
       const severityEmoji = {
         critical: ':red_circle:',
         warning: ':orange_circle:',
-        info: ':blue_circle:',
-      }
+        info: ':blue_circle:' }
 
       const payload = {
         blocks: [
@@ -186,40 +175,30 @@ export function useSlackNotification() {
             type: 'header',
             text: {
               type: 'plain_text',
-              text: `${severityEmoji[alert.severity]} ${alert.severity.toUpperCase()}: ${alert.ruleName}`,
-            },
-          },
+              text: `${severityEmoji[alert.severity]} ${alert.severity.toUpperCase()}: ${alert.ruleName}` } },
           {
             type: 'section',
             fields: [
               {
                 type: 'mrkdwn',
-                text: `*Cluster:* ${alert.cluster || 'N/A'}`,
-              },
+                text: `*Cluster:* ${alert.cluster || 'N/A'}` },
               {
                 type: 'mrkdwn',
-                text: `*Resource:* ${alert.resource || 'N/A'}`,
-              },
-            ],
-          },
+                text: `*Resource:* ${alert.resource || 'N/A'}` },
+            ] },
           {
             type: 'section',
             text: {
               type: 'mrkdwn',
-              text: alert.message,
-            },
-          },
-        ],
-      }
+              text: alert.message } },
+        ] }
 
       if (alert.aiDiagnosis) {
         payload.blocks.push({
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*AI Analysis:*\n${alert.aiDiagnosis.summary}\n\n*Suggestions:*\n${alert.aiDiagnosis.suggestions.map(s => `• ${s}`).join('\n')}`,
-          },
-        })
+            text: `*AI Analysis:*\n${alert.aiDiagnosis.summary}\n\n*Suggestions:*\n${alert.aiDiagnosis.suggestions.map(s => `• ${s}`).join('\n')}` } })
       }
 
       try {
@@ -235,9 +214,7 @@ export function useSlackNotification() {
         console.error('Failed to send Slack notification:', error)
         throw error
       }
-    },
-    [webhooks]
-  )
+    }
 
   return { sendNotification }
 }

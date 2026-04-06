@@ -102,8 +102,7 @@ export function useCardFilters<T>(
     filterByStatus,
     customFilter: globalCustomFilter,
     selectedClusters,
-    isAllClustersSelected,
-  } = useGlobalFilters()
+    isAllClustersSelected } = useGlobalFilters()
   const { deduplicatedClusters } = useClusters()
 
   // Local state with localStorage persistence for cluster filter
@@ -129,15 +128,14 @@ export function useCardFilters<T>(
       const rect = clusterFilterBtnRef.current.getBoundingClientRect()
       setDropdownStyle({
         top: rect.bottom + 4,
-        left: Math.max(8, rect.right - 192),
-      })
+        left: Math.max(8, rect.right - 192) })
     } else {
       setDropdownStyle(null)
     }
   }, [showClusterFilter])
 
   // Wrapper to persist to localStorage
-  const setLocalClusterFilter = useCallback((clusters: string[]) => {
+  const setLocalClusterFilter = (clusters: string[]) => {
     setLocalClusterFilterState(clusters)
     if (storageKey) {
       if (clusters.length === 0) {
@@ -146,7 +144,7 @@ export function useCardFilters<T>(
         localStorage.setItem(`${LOCAL_FILTER_STORAGE_PREFIX}${storageKey}`, JSON.stringify(clusters))
       }
     }
-  }, [storageKey])
+  }
 
   // Close dropdown when clicking outside (check both container and portaled dropdown)
   useEffect(() => {
@@ -164,22 +162,22 @@ export function useCardFilters<T>(
   }, [])
 
   // Available clusters for local filter dropdown (includes unreachable for display)
-  const availableClusters = useMemo(() => {
+  const availableClusters = (() => {
     if (isAllClustersSelected) return deduplicatedClusters
     return deduplicatedClusters.filter(c => selectedClusters.includes(c.name))
-  }, [deduplicatedClusters, selectedClusters, isAllClustersSelected])
+  })()
 
-  const toggleClusterFilter = useCallback((clusterName: string) => {
+  const toggleClusterFilter = (clusterName: string) => {
     if (localClusterFilter.includes(clusterName)) {
       setLocalClusterFilter(localClusterFilter.filter(c => c !== clusterName))
     } else {
       setLocalClusterFilter([...localClusterFilter, clusterName])
     }
-  }, [localClusterFilter, setLocalClusterFilter])
+  }
 
-  const clearClusterFilter = useCallback(() => {
+  const clearClusterFilter = () => {
     setLocalClusterFilter([])
-  }, [setLocalClusterFilter])
+  }
 
   // Apply all filters
   const filtered = useMemo(() => {
@@ -267,8 +265,7 @@ export function useCardFilters<T>(
     setShowClusterFilter,
     clusterFilterRef,
     clusterFilterBtnRef,
-    dropdownStyle,
-  }
+    dropdownStyle }
 }
 
 // ============================================================================
@@ -300,11 +297,11 @@ export function useCardSort<T, S extends string>(
   const [sortBy, setSortBy] = useState<S>(defaultField)
   const [sortDirection, setSortDirection] = useState<SortDirection>(defaultDirection ?? 'asc')
 
-  const toggleSortDirection = useCallback(() => {
+  const toggleSortDirection = () => {
     setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))
-  }, [])
+  }
 
-  const sorted = useMemo(() => {
+  const sorted = (() => {
     const comparator = comparators?.[sortBy]
     if (!comparator) return items
 
@@ -314,7 +311,7 @@ export function useCardSort<T, S extends string>(
     })
 
     return sortedItems
-  }, [items, sortBy, sortDirection, comparators])
+  })()
 
   return {
     sorted,
@@ -322,8 +319,7 @@ export function useCardSort<T, S extends string>(
     setSortBy,
     sortDirection,
     setSortDirection,
-    toggleSortDirection,
-  }
+    toggleSortDirection }
 }
 
 // ============================================================================
@@ -393,15 +389,15 @@ export function useCardData<T, S extends string = string>(
   }, [currentPage, totalPages])
 
   // Paginate
-  const paginatedItems = useMemo(() => {
+  const paginatedItems = (() => {
     if (itemsPerPage === 'unlimited') return sorted
     const start = (currentPage - 1) * effectivePerPage
     return sorted.slice(start, start + effectivePerPage)
-  }, [sorted, currentPage, effectivePerPage, itemsPerPage])
+  })()
 
-  const goToPage = useCallback((page: number) => {
+  const goToPage = (page: number) => {
     setCurrentPage(Math.max(1, Math.min(page, totalPages)))
-  }, [totalPages])
+  }
 
   // Stable height for paginated container
   const { containerRef, containerStyle } = useStablePageHeight(effectivePerPage, sorted.length)
@@ -423,8 +419,7 @@ export function useCardData<T, S extends string = string>(
     filters,
     sorting,
     containerRef,
-    containerStyle,
-  }
+    containerStyle }
 }
 
 // ============================================================================
@@ -485,7 +480,7 @@ export function useCardCollapse(
     return collapsed.has(cardId) || defaultCollapsed
   })
 
-  const setCollapsed = useCallback((collapsed: boolean) => {
+  const setCollapsed = (collapsed: boolean) => {
     setIsCollapsedState(collapsed)
     const collapsedCards = getCollapsedCards()
     if (collapsed) {
@@ -494,22 +489,21 @@ export function useCardCollapse(
       collapsedCards.delete(cardId)
     }
     saveCollapsedCards(collapsedCards)
-  }, [cardId])
+  }
 
-  const toggleCollapsed = useCallback(() => {
+  const toggleCollapsed = () => {
     setCollapsed(!isCollapsed)
-  }, [isCollapsed, setCollapsed])
+  }
 
-  const expand = useCallback(() => setCollapsed(false), [setCollapsed])
-  const collapse = useCallback(() => setCollapsed(true), [setCollapsed])
+  const expand = () => setCollapsed(false)
+  const collapse = () => setCollapsed(true)
 
   return {
     isCollapsed,
     toggleCollapsed,
     setCollapsed,
     expand,
-    collapse,
-  }
+    collapse }
 }
 
 /**
@@ -519,23 +513,23 @@ export function useCardCollapse(
 export function useCardCollapseAll(cardIds: string[]) {
   const [collapsedSet, setCollapsedSet] = useState<Set<string>>(() => getCollapsedCards())
 
-  const collapseAll = useCallback(() => {
+  const collapseAll = () => {
     const newSet = new Set([...collapsedSet, ...cardIds])
     setCollapsedSet(newSet)
     saveCollapsedCards(newSet)
-  }, [cardIds, collapsedSet])
+  }
 
-  const expandAll = useCallback(() => {
+  const expandAll = () => {
     const newSet = new Set([...collapsedSet].filter(id => !cardIds.includes(id)))
     setCollapsedSet(newSet)
     saveCollapsedCards(newSet)
-  }, [cardIds, collapsedSet])
+  }
 
-  const isCardCollapsed = useCallback((cardId: string) => {
+  const isCardCollapsed = (cardId: string) => {
     return collapsedSet.has(cardId)
-  }, [collapsedSet])
+  }
 
-  const toggleCard = useCallback((cardId: string) => {
+  const toggleCard = (cardId: string) => {
     const newSet = new Set(collapsedSet)
     if (newSet.has(cardId)) {
       newSet.delete(cardId)
@@ -544,7 +538,7 @@ export function useCardCollapseAll(cardIds: string[]) {
     }
     setCollapsedSet(newSet)
     saveCollapsedCards(newSet)
-  }, [collapsedSet])
+  }
 
   const allCollapsed = cardIds.every(id => collapsedSet.has(id))
   const allExpanded = cardIds.every(id => !collapsedSet.has(id))
@@ -556,8 +550,7 @@ export function useCardCollapseAll(cardIds: string[]) {
     toggleCard,
     allCollapsed,
     allExpanded,
-    collapsedCount: cardIds.filter(id => collapsedSet.has(id)).length,
-  }
+    collapsedCount: cardIds.filter(id => collapsedSet.has(id)).length }
 }
 
 // ============================================================================
@@ -591,8 +584,7 @@ export const commonComparators = {
     const aDate = new Date(a[field] as string | Date).getTime()
     const bDate = new Date(b[field] as string | Date).getTime()
     return aDate - bDate
-  },
-}
+  } }
 
 // ============================================================================
 // useCardFlash - Track significant data changes for card flash animation
@@ -648,8 +640,7 @@ export function useCardFlash(
     threshold = 0.1,
     cooldown = 5000,
     increaseType = 'info',
-    decreaseType = 'info',
-  } = options
+    decreaseType = 'info' } = options
 
   const [flashType, setFlashType] = useState<CardFlashType>('none')
   const prevValueRef = useRef<number | null>(null)
@@ -744,8 +735,7 @@ export function useSingleSelectCluster<T>(
     filterByStatus,
     customFilter: globalCustomFilter,
     selectedClusters,
-    isAllClustersSelected,
-  } = useGlobalFilters()
+    isAllClustersSelected } = useGlobalFilters()
   const { deduplicatedClusters } = useClusters()
 
   const [search, setSearch] = useState('')
@@ -857,8 +847,7 @@ export function useSingleSelectCluster<T>(
     isOutsideGlobalFilter,
     filtered,
     search,
-    setSearch,
-  }
+    setSearch }
 }
 
 // ============================================================================
@@ -927,8 +916,7 @@ export function useChartFilters(
       const rect = clusterFilterBtnRef.current.getBoundingClientRect()
       setDropdownStyle({
         top: rect.bottom + 4,
-        left: Math.max(8, rect.right - 192),
-      })
+        left: Math.max(8, rect.right - 192) })
     } else {
       setDropdownStyle(null)
     }
@@ -1001,8 +989,7 @@ export function useChartFilters(
     setShowClusterFilter,
     clusterFilterRef,
     clusterFilterBtnRef,
-    dropdownStyle,
-  }
+    dropdownStyle }
 }
 
 // ============================================================================
@@ -1152,8 +1139,7 @@ export function useCascadingSelection(
     selectedSecond,
     setSelectedSecond,
     availableFirstLevel,
-    resetSelection,
-  }
+    resetSelection }
 }
 
 // ============================================================================
@@ -1216,6 +1202,5 @@ export function useStatusFilter<S extends string>(
 
   return {
     statusFilter,
-    setStatusFilter,
-  }
+    setStatusFilter }
 }

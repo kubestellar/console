@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Globe, AlertCircle } from 'lucide-react'
 import { useCachedDNSTraces } from '../../../hooks/useGadget'
 import { useCardLoadingState, useCardDemoState } from '../CardDataContext'
@@ -22,11 +21,10 @@ export function DNSTraceCard({ config }: DNSTraceCardProps) {
     isDemoData: isDemoMode || isDemoData,
     hasAnyData: hasData,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
-  const queries = useMemo(() => [...data].slice(0, 20), [data])
-  const failures = useMemo(() => data.filter(d => d.responseCode !== 'NOERROR'), [data])
+  const queries = [...data].slice(0, 20)
+  const failures = data.filter(d => d.responseCode !== 'NOERROR')
 
   if (showSkeleton) {
     return (

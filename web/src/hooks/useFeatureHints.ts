@@ -12,16 +12,14 @@
  *   - 'update-available' — "Click to update" near update indicator
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   STORAGE_KEY_FEATURE_HINTS_DISMISSED,
-  STORAGE_KEY_HINTS_SUPPRESSED,
-} from '../lib/constants/storage'
+  STORAGE_KEY_HINTS_SUPPRESSED } from '../lib/constants/storage'
 import {
   emitFeatureHintShown,
   emitFeatureHintDismissed,
-  emitFeatureHintActioned,
-} from '../lib/analytics'
+  emitFeatureHintActioned } from '../lib/analytics'
 import { safeGetJSON, safeSetJSON, safeGetItem } from '../lib/utils/localStorage'
 
 export type FeatureHintType =
@@ -74,19 +72,19 @@ export function useFeatureHints(hintType: FeatureHintType): FeatureHintState {
     return () => clearTimeout(timer)
   }, [isVisible, hintType])
 
-  const dismiss = useCallback(() => {
+  const dismiss = () => {
     if (!isVisible) return
     emitFeatureHintDismissed(hintType)
     dismissHintInStorage(hintType)
     setIsVisible(false)
-  }, [isVisible, hintType])
+  }
 
-  const action = useCallback(() => {
+  const action = () => {
     if (!isVisible) return
     emitFeatureHintActioned(hintType)
     dismissHintInStorage(hintType)
     setIsVisible(false)
-  }, [isVisible, hintType])
+  }
 
   return { isVisible, dismiss, action }
 }

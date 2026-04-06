@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { AlertTriangle, AlertCircle, Clock, Scale, CheckCircle } from 'lucide-react'
 import type { TFunction } from 'i18next'
 import { useCachedDeploymentIssues } from '../../hooks/useCachedData'
@@ -13,8 +12,7 @@ import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import {
   CardSkeleton, CardEmptyState, CardSearchInput,
   CardControlsRow, CardListItem, CardPaginationFooter,
-  CardAIActions,
-} from '../../lib/cards/CardComponents'
+  CardAIActions } from '../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'status' | 'name' | 'cluster'
@@ -39,10 +37,7 @@ const getIssueIcon = (status: string, t: TFunction<readonly ['cards', 'common']>
 
 function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const SORT_OPTIONS = useMemo(() =>
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
-    [t]
-  )
+  const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
   const clusterConfig = config?.cluster as string | undefined
   const namespaceConfig = config?.namespace as string | undefined
   const {
@@ -65,8 +60,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
     isDemoData: isDemoFallback,
     hasAnyData: hasData,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {
@@ -87,33 +81,26 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
       availableClusters: availableClustersForFilter,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-    },
+      clusterFilterRef },
     sorting: {
       sortBy,
       setSortBy,
       sortDirection,
-      setSortDirection,
-    },
+      setSortDirection },
     containerRef,
-    containerStyle,
-  } = useCardData<DeploymentIssue, SortByOption>(rawIssues, {
+    containerStyle } = useCardData<DeploymentIssue, SortByOption>(rawIssues, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'reason', 'message'],
       clusterField: 'cluster',
-      storageKey: 'deployment-issues',
-    },
+      storageKey: 'deployment-issues' },
     sort: {
       defaultField: 'status',
       defaultDirection: 'asc',
       comparators: {
         status: (a, b) => (a.reason || '').localeCompare(b.reason || ''),
         name: commonComparators.string('name'),
-        cluster: (a, b) => (a.cluster || '').localeCompare(b.cluster || ''),
-      },
-    },
-    defaultLimit: 5,
-  })
+        cluster: (a, b) => (a.cluster || '').localeCompare(b.cluster || '') } },
+    defaultLimit: 5 })
 
   const handleDeploymentClick = (issue: DeploymentIssue) => {
     if (!issue.cluster) {
@@ -124,8 +111,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
       replicas: issue.replicas,
       readyReplicas: issue.readyReplicas,
       reason: issue.reason,
-      message: issue.message,
-    })
+      message: issue.message })
   }
 
   if (showSkeleton) {
@@ -175,8 +161,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
         <CardControlsRow
           clusterIndicator={{
             selectedCount: localClusterFilter.length,
-            totalCount: availableClustersForFilter.length,
-          }}
+            totalCount: availableClustersForFilter.length }}
           clusterFilter={{
             availableClusters: availableClustersForFilter,
             selectedClusters: localClusterFilter,
@@ -185,8 +170,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
             isOpen: showClusterFilter,
             setIsOpen: setShowClusterFilter,
             containerRef: clusterFilterRef,
-            minClusters: 1,
-          }}
+            minClusters: 1 }}
           cardControls={{
             limit: itemsPerPage,
             onLimitChange: setItemsPerPage,
@@ -194,8 +178,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
             sortOptions: SORT_OPTIONS,
             onSortChange: (v) => setSortBy(v as SortByOption),
             sortDirection,
-            onSortDirectionChange: setSortDirection,
-          }}
+            onSortDirectionChange: setSortDirection }}
         />
       </div>
 
@@ -251,8 +234,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
                     name: issue.name,
                     namespace: issue.namespace,
                     cluster: issue.cluster || 'default',
-                    status: issue.reason || 'Issue',
-                  }}
+                    status: issue.reason || 'Issue' }}
                   issues={[{ name: issue.reason || 'Unknown', message: issue.message || 'Deployment issue' }]}
                   additionalContext={{ replicas: issue.replicas, readyReplicas: issue.readyReplicas }}
                 />

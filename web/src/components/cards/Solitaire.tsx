@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Box, Server, Database, Cpu,
   RotateCcw, Trophy, Undo2, Play
@@ -20,8 +20,7 @@ const SUIT_CONFIG: Record<Suit, { Icon: typeof Box; color: string; isRed: boolea
   pods: { Icon: Box, color: 'text-blue-400', isRed: true },
   containers: { Icon: Database, color: 'text-green-400', isRed: true },
   clusters: { Icon: Server, color: 'text-orange-400', isRed: false },
-  nodes: { Icon: Cpu, color: 'text-purple-400', isRed: false },
-}
+  nodes: { Icon: Cpu, color: 'text-purple-400', isRed: false } }
 
 interface PlayingCard {
   id: string
@@ -80,8 +79,7 @@ function createDeck(): PlayingCard[] {
         id: `${suit}-${value}`,
         suit,
         value,
-        faceUp: false,
-      })
+        faceUp: false })
     }
   }
   // Fisher-Yates shuffle
@@ -114,8 +112,7 @@ function dealGame(): GameState {
     stock,
     waste: [],
     foundations: [[], [], [], []],
-    tableau,
-  }
+    tableau }
 }
 
 // Card sizing - small (in card), medium (expanded), large (fullscreen)
@@ -124,8 +121,7 @@ type CardSize = 'small' | 'medium' | 'large'
 const CARD_SIZES: Record<CardSize, { w: number; h: number; text: string; icon: string; centerIcon: string; overlap: number }> = {
   small: { w: 32, h: 44, text: 'text-[8px]', icon: 'w-2 h-2', centerIcon: 'w-4 h-4', overlap: -32 },
   medium: { w: 56, h: 77, text: 'text-xs', icon: 'w-3 h-3', centerIcon: 'w-6 h-6', overlap: -56 },
-  large: { w: 80, h: 110, text: 'text-sm', icon: 'w-4 h-4', centerIcon: 'w-8 h-8', overlap: -80 },
-}
+  large: { w: 80, h: 110, text: 'text-sm', icon: 'w-4 h-4', centerIcon: 'w-8 h-8', overlap: -80 } }
 
 // Card component
 function Card({
@@ -134,8 +130,7 @@ function Card({
   onDoubleClick,
   isDragging,
   isSelected,
-  size = 'medium',
-}: {
+  size = 'medium' }: {
   card: PlayingCard | null
   onClick?: () => void
   onDoubleClick?: () => void
@@ -201,8 +196,7 @@ function Card({
 function StockPile({
   cards,
   onClick,
-  size = 'medium',
-}: {
+  size = 'medium' }: {
   cards: PlayingCard[]
   onClick: () => void
   size?: CardSize
@@ -283,7 +277,7 @@ export function Solitaire(_props: CardComponentProps) {
   }, [game.foundations, moves, time, highScore])
 
   // Start new game
-  const newGame = useCallback(() => {
+  const newGame = () => {
     setGame(dealGame())
     setMoves(0)
     setTime(0)
@@ -292,30 +286,30 @@ export function Solitaire(_props: CardComponentProps) {
     setSelectedCard(null)
     setHistory([])
     emitGameStarted('solitaire')
-  }, [])
+  }
 
   // Start on mount
   useEffect(() => {
     newGame()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])  
 
   // Save state for undo
-  const saveHistory = useCallback(() => {
+  const saveHistory = () => {
     setHistory(h => [...h.slice(-19), { game: JSON.parse(JSON.stringify(game)), moves }])
-  }, [game, moves])
+  }
 
   // Undo
-  const undo = useCallback(() => {
+  const undo = () => {
     if (history.length === 0) return
     const prev = history[history.length - 1]
     setGame(prev.game)
     setMoves(prev.moves)
     setHistory(h => h.slice(0, -1))
     setSelectedCard(null)
-  }, [history])
+  }
 
   // Draw from stock
-  const drawFromStock = useCallback(() => {
+  const drawFromStock = () => {
     if (!isPlaying) return
     saveHistory()
 
@@ -325,23 +319,21 @@ export function Solitaire(_props: CardComponentProps) {
         return {
           ...g,
           stock: [...g.waste].reverse().map(c => ({ ...c, faceUp: false })),
-          waste: [],
-        }
+          waste: [] }
       }
       // Draw 1 card (standard draw-1 rules)
       const drawn = g.stock.slice(-1).map(c => ({ ...c, faceUp: true }))
       return {
         ...g,
         stock: g.stock.slice(0, -1),
-        waste: [...g.waste, ...drawn],
-      }
+        waste: [...g.waste, ...drawn] }
     })
     setMoves(m => m + 1)
     setSelectedCard(null)
-  }, [isPlaying, saveHistory])
+  }
 
   // Try to auto-move card to foundation
-  const tryAutoFoundation = useCallback((card: PlayingCard, source: string, _cardIndex?: number): boolean => {
+  const tryAutoFoundation = (card: PlayingCard, source: string, _cardIndex?: number): boolean => {
     for (let i = 0; i < 4; i++) {
       if (canPlaceOnFoundation(card, game.foundations[i])) {
         saveHistory()
@@ -373,10 +365,10 @@ export function Solitaire(_props: CardComponentProps) {
       }
     }
     return false
-  }, [game.foundations, saveHistory])
+  }
 
   // Handle card click (select or move)
-  const handleCardClick = useCallback((source: string, cardIndex?: number) => {
+  const handleCardClick = (source: string, cardIndex?: number) => {
     if (!isPlaying) return
 
     let card: PlayingCard | null = null
@@ -519,10 +511,10 @@ export function Solitaire(_props: CardComponentProps) {
 
     // Move failed, select new card
     setSelectedCard({ source, index: 0, cardIndex })
-  }, [isPlaying, game, selectedCard, saveHistory])
+  }
 
   // Handle double-click to auto-move to foundation
-  const handleDoubleClick = useCallback((source: string, cardIndex?: number) => {
+  const handleDoubleClick = (source: string, cardIndex?: number) => {
     if (!isPlaying) return
 
     let card: PlayingCard | null = null
@@ -541,7 +533,7 @@ export function Solitaire(_props: CardComponentProps) {
     if (card) {
       tryAutoFoundation(card, source, cardIndex)
     }
-  }, [isPlaying, game, tryAutoFoundation])
+  }
 
   // Format time
   const formatTime = (seconds: number) => {

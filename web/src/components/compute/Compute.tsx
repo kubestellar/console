@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { GitCompare, CheckSquare, Square, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react'
 import { Button } from '../ui/Button'
@@ -29,8 +29,7 @@ export function Compute() {
   const error = clustersError
   const {
     selectedClusters: globalSelectedClusters,
-    isAllClustersSelected,
-  } = useGlobalFilters()
+    isAllClustersSelected } = useGlobalFilters()
   const { drillToResources } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
@@ -67,8 +66,7 @@ export function Compute() {
     totalPods: reachableClusters.reduce((sum, c) => sum + (c.podCount || 0), 0),
     totalGPUs: gpuNodes
       .filter(node => isAllClustersSelected || globalSelectedClusters.includes(node.cluster.split('/')[0]))
-      .reduce((sum, node) => sum + node.gpuCount, 0),
-  }
+      .reduce((sum, node) => sum + node.gpuCount, 0) }
 
   // Check if we have any reachable clusters with actual data (not refreshing)
   const hasActualData = filteredClusters.some(c =>
@@ -124,7 +122,7 @@ export function Compute() {
   })()
 
   // Stats value getter for the configurable StatsOverview component
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'nodes':
         return { value: formatStatValue(stats?.totalNodes || 0, hasDataToShow), sublabel: 'total nodes', onClick: drillToResources, isClickable: hasDataToShow }
@@ -145,15 +143,12 @@ export function Compute() {
       default:
         return { value: '-', sublabel: '' }
     }
-  }, [stats, hasDataToShow, cpuUtilization, memoryUtilization, drillToResources])
+  }
 
-  const getStatValue = useCallback(
-    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
-    [getDashboardStatValue, getUniversalStatValue]
-  )
+  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
   // Cluster comparison handlers
-  const toggleClusterSelection = useCallback((clusterName: string) => {
+  const toggleClusterSelection = (clusterName: string) => {
     setSelectedForComparison(prev => {
       if (prev.includes(clusterName)) {
         return prev.filter(name => name !== clusterName)
@@ -162,17 +157,17 @@ export function Compute() {
       if (prev.length >= 4) return prev
       return [...prev, clusterName]
     })
-  }, [])
+  }
 
-  const handleCompare = useCallback(() => {
+  const handleCompare = () => {
     if (selectedForComparison.length >= 2) {
       navigate(`${ROUTES.COMPUTE_COMPARE}?clusters=${selectedForComparison.join(',')}`)
     }
-  }, [selectedForComparison, navigate])
+  }
 
-  const clearSelection = useCallback(() => {
+  const clearSelection = () => {
     setSelectedForComparison([])
-  }, [])
+  }
 
   // Cluster comparison section (rendered between stats and cards)
   const clusterComparisonSection = (
@@ -297,8 +292,7 @@ export function Compute() {
       beforeCards={clusterComparisonSection}
       emptyState={{
         title: 'Compute Dashboard',
-        description: 'Add cards to monitor CPU and memory utilization, node health, and resource quotas across your clusters.',
-      }}
+        description: 'Add cards to monitor CPU and memory utilization, node health, and resource quotas across your clusters.' }}
     >
       {/* Error Display */}
       {error && (

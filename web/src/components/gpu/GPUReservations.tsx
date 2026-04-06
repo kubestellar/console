@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Calendar,
@@ -11,14 +11,12 @@ import {
   Server,
   Filter,
   User,
-  LayoutDashboard,
-} from 'lucide-react'
+  LayoutDashboard } from 'lucide-react'
 import { BaseModal, useModalState } from '../../lib/modals'
 import {
   useGPUNodes,
   useResourceQuotas,
-  useClusters,
-} from '../../hooks/useMCP'
+  useClusters } from '../../hooks/useMCP'
 import { ReservationFormModal, type GPUClusterInfo } from './ReservationFormModal'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDemoMode, hasRealToken } from '../../hooks/useDemoMode'
@@ -40,18 +38,15 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core'
+  DragEndEvent } from '@dnd-kit/core'
 import {
   arrayMove,
-  sortableKeyboardCoordinates,
-} from '@dnd-kit/sortable'
+  sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 
 // Extracted sub-components and constants
 import {
   GPU_KEYS,
-  MAX_NAME_DISPLAY_LENGTH,
-} from './gpu-constants'
+  MAX_NAME_DISPLAY_LENGTH } from './gpu-constants'
 import type { GpuDashCard } from './SortableGpuCard'
 import { DEFAULT_GPU_CARDS } from './SortableGpuCard'
 import { GPUOverviewTab } from './GPUOverviewTab'
@@ -69,10 +64,10 @@ export function GPUReservations() {
   const { refetch: refetchClusters } = useClusters()
 
   // Refresh indicator for dashboard tab — refreshes GPU nodes + clusters
-  const refetchAll = useCallback(() => {
+  const refetchAll = () => {
     refetchGPUNodes()
     refetchClusters()
-  }, [refetchGPUNodes, refetchClusters])
+  }
   const { showIndicator: isRefreshingDashboard, triggerRefresh } = useRefreshIndicator(refetchAll)
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { isDemoMode: demoMode } = useDemoMode()
@@ -112,36 +107,36 @@ export function GPUReservations() {
     }
     return stored as GpuDashCard[]
   })
-  const handleAddDashboardCards = useCallback((suggestions: Array<{ type: string; title: string; visualization: string; config: Record<string, unknown> }>) => {
+  const handleAddDashboardCards = (suggestions: Array<{ type: string; title: string; visualization: string; config: Record<string, unknown> }>) => {
     setDashboardCards(prev => {
       const updated = [...prev, ...suggestions.map(s => ({ type: s.type, width: getDefaultCardWidth(s.type) }))]
       safeSetJSON(GPU_DASHBOARD_STORAGE_KEY, updated)
       return updated
     })
     closeAddCardModal()
-  }, [closeAddCardModal])
-  const handleRemoveDashboardCard = useCallback((index: number) => {
+  }
+  const handleRemoveDashboardCard = (index: number) => {
     setDashboardCards(prev => {
       const updated = prev.filter((_, i) => i !== index)
       safeSetJSON(GPU_DASHBOARD_STORAGE_KEY, updated)
       return updated
     })
-  }, [])
-  const handleDashCardWidthChange = useCallback((index: number, newWidth: number) => {
+  }
+  const handleDashCardWidthChange = (index: number, newWidth: number) => {
     setDashboardCards(prev => {
       const updated = prev.map((c, i) => i === index ? { ...c, width: newWidth } : c)
       safeSetJSON(GPU_DASHBOARD_STORAGE_KEY, updated)
       return updated
     })
-  }, [])
+  }
 
   // Drag-and-drop for dashboard tab card reordering
   const gpuDashSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
-  const dashCardIds = useMemo(() => dashboardCards.map((c, i) => `gpu-dash-${c.type}-${i}`), [dashboardCards])
-  const handleDashDragEnd = useCallback((event: DragEndEvent) => {
+  const dashCardIds = dashboardCards.map((c, i) => `gpu-dash-${c.type}-${i}`)
+  const handleDashDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (over && active.id !== over.id) {
       const oldIndex = dashCardIds.indexOf(active.id as string)
@@ -154,7 +149,7 @@ export function GPUReservations() {
         })
       }
     }
-  }, [dashCardIds])
+  }
 
 
   // API-backed reservations
@@ -163,23 +158,22 @@ export function GPUReservations() {
     isLoading: reservationsLoading,
     createReservation: apiCreateReservation,
     updateReservation: apiUpdateReservation,
-    deleteReservation: apiDeleteReservation,
-  } = useGPUReservations()
+    deleteReservation: apiDeleteReservation } = useGPUReservations()
 
   // Filter nodes by global cluster selection
-  const nodes = useMemo(() => {
+  const nodes = (() => {
     if (isAllClustersSelected) return rawNodes || []
     return (rawNodes || []).filter(n => selectedClusters.some(c => n.cluster.startsWith(c)))
-  }, [rawNodes, selectedClusters, isAllClustersSelected])
+  })()
 
   // GPU quotas from K8s (for overview stats only)
-  const gpuQuotas = useMemo(() => {
+  const gpuQuotas = (() => {
     const filtered = (resourceQuotas || []).filter(q =>
       Object.keys(q.hard || {}).some(k => GPU_KEYS.some(gk => k.includes(gk)))
     )
     if (isAllClustersSelected) return filtered
     return filtered.filter(q => q.cluster && selectedClusters.some(c => q.cluster!.startsWith(c)))
-  }, [resourceQuotas, selectedClusters, isAllClustersSelected])
+  })()
 
   // Filtered reservations respecting "My Reservations" toggle, cluster selection, and keyword search
   const filteredReservations = useMemo(() => {
@@ -211,14 +205,11 @@ export function GPUReservations() {
   }, [allReservations, showOnlyMine, user, selectedClusters, isAllClustersSelected, searchTerm])
 
   // Fetch utilization data for visible reservations
-  const visibleReservationIds = useMemo(
-    () => (filteredReservations || []).map(r => r.id),
-    [filteredReservations]
-  )
+  const visibleReservationIds = (filteredReservations || []).map(r => r.id)
   const { utilizations } = useGPUUtilizations(visibleReservationIds)
 
   // Clusters with GPU info for the dropdown
-  const gpuClusters = useMemo((): GPUClusterInfo[] => {
+  const gpuClusters = (() => {
     const clusterMap: Record<string, GPUClusterInfo> = {}
     for (const node of (rawNodes || [])) {
       if (!clusterMap[node.cluster]) {
@@ -227,8 +218,7 @@ export function GPUReservations() {
           totalGPUs: 0,
           allocatedGPUs: 0,
           availableGPUs: 0,
-          gpuTypes: [],
-        }
+          gpuTypes: [] }
       }
       const c = clusterMap[node.cluster]
       c.totalGPUs += node.gpuCount
@@ -239,7 +229,7 @@ export function GPUReservations() {
       }
     }
     return Object.values(clusterMap).filter(c => c.totalGPUs > 0)
-  }, [rawNodes])
+  })()
 
   // GPU stats
   const stats = useMemo(() => {
@@ -262,8 +252,7 @@ export function GPUReservations() {
     const typeChartData = Object.entries(gpuTypes).map(([name, data], i) => ({
       name,
       value: data.total,
-      color: getChartColor((i % 4) + 1),
-    }))
+      color: getChartColor((i % 4) + 1) }))
 
     // Usage by namespace from real quotas (include cluster context)
     const namespaceUsage: Record<string, number> = {}
@@ -278,14 +267,12 @@ export function GPUReservations() {
     const usageByNamespace = Object.entries(namespaceUsage).map(([name, value], i) => ({
       name,
       value,
-      color: getChartColor((i % 4) + 1),
-    }))
+      color: getChartColor((i % 4) + 1) }))
 
     // GPU allocation by cluster
     const clusterUsage = gpuClusters.map(c => ({
       name: c.name.length > MAX_NAME_DISPLAY_LENGTH ? c.name.slice(0, MAX_NAME_DISPLAY_LENGTH) + '...' : c.name,
-      value: c.allocatedGPUs,
-    }))
+      value: c.allocatedGPUs }))
 
     return {
       totalGPUs,
@@ -296,8 +283,7 @@ export function GPUReservations() {
       reservedGPUs,
       typeChartData,
       usageByNamespace,
-      clusterUsage,
-    }
+      clusterUsage }
   }, [nodes, gpuQuotas, gpuClusters, filteredReservations])
 
   // Calendar helpers
@@ -314,7 +300,7 @@ export function GPUReservations() {
   const { daysInMonth, startingDay } = getDaysInMonth(currentMonth)
 
   // Get the start/end day index (0-based from month start) for a reservation within the visible month
-  const getReservationDayRange = useCallback((r: GPUReservation) => {
+  const getReservationDayRange = (r: GPUReservation) => {
     if (!r.start_date) return null
     const start = new Date(r.start_date)
     start.setHours(0, 0, 0, 0)
@@ -332,7 +318,7 @@ export function GPUReservations() {
     const clampedStart = start < monthStart ? 1 : start.getDate()
     const clampedEnd = end > monthEnd ? daysInMonth : end.getDate()
     return { startDay: clampedStart, endDay: clampedEnd }
-  }, [currentMonth, daysInMonth])
+  }
 
   // Compute spanning reservation rows per calendar week
   const calendarWeeks = useMemo(() => {
@@ -404,8 +390,7 @@ export function GPUReservations() {
           spanCols: endCol - startCol + 1,
           row,
           isStart: barStartDay === range.startDay,
-          isEnd: barEndDay === range.endDay,
-        })
+          isEnd: barEndDay === range.endDay })
       }
     }
 
@@ -413,7 +398,7 @@ export function GPUReservations() {
   }, [filteredReservations, startingDay, daysInMonth, currentMonth, getReservationDayRange])
 
   // Get GPU count reserved on a specific day
-  const getGPUCountForDay = useCallback((day: number) => {
+  const getGPUCountForDay = (day: number) => {
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
     date.setHours(0, 0, 0, 0)
     let total = 0
@@ -429,18 +414,18 @@ export function GPUReservations() {
       }
     }
     return total
-  }, [currentMonth, filteredReservations])
+  }
 
-  const prevMonth = useCallback(() => {
+  const prevMonth = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))
-  }, [currentMonth])
+  }
 
-  const nextMonth = useCallback(() => {
+  const nextMonth = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
-  }, [currentMonth])
+  }
 
   // Handlers
-  const handleDeleteReservation = useCallback(async () => {
+  const handleDeleteReservation = async () => {
     if (!deleteConfirmId) return
     setIsDeleting(true)
     try {
@@ -452,7 +437,7 @@ export function GPUReservations() {
       setIsDeleting(false)
       setDeleteConfirmId(null)
     }
-  }, [deleteConfirmId, showToast, apiDeleteReservation])
+  }
 
   const deleteConfirmReservation = deleteConfirmId
     ? allReservations.find(r => r.id === deleteConfirmId)

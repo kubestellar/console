@@ -10,15 +10,13 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core'
+  DragEndEvent } from '@dnd-kit/core'
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
+  verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
   StatBlockConfig,
@@ -41,8 +39,7 @@ import {
   COST_STAT_BLOCKS,
   ALERTS_STAT_BLOCKS,
   DASHBOARD_STAT_BLOCKS,
-  OPERATORS_STAT_BLOCKS,
-} from './StatsBlockDefinitions'
+  OPERATORS_STAT_BLOCKS } from './StatsBlockDefinitions'
 import { safeGetJSON, safeSetJSON, safeRemoveItem } from '../../lib/utils/localStorage'
 
 // Re-export for backward compatibility
@@ -60,8 +57,7 @@ const colorClasses: Record<string, string> = {
   red: 'text-red-400',
   gray: 'text-muted-foreground',
   indigo: 'text-blue-400',
-  teal: 'text-cyan-400',
-}
+  teal: 'text-cyan-400' }
 
 // Icon emoji mapping for the config modal
 const iconEmojis: Record<string, string> = {
@@ -106,8 +102,7 @@ const iconEmojis: Record<string, string> = {
   FileCode: '📄',
   RotateCcw: '🔄',
   FolderTree: '🌲',
-  Shield: '🛡️',
-}
+  Shield: '🛡️' }
 
 interface SortableItemProps {
   block: StatBlockConfig
@@ -123,13 +118,11 @@ function SortableItem({ block, onToggleVisibility, onRemove, isCustom }: Sortabl
     listeners,
     setNodeRef,
     transform,
-    transition,
-  } = useSortable({ id: block.id })
+    transition } = useSortable({ id: block.id })
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
-  }
+    transition }
 
   return (
     <div
@@ -308,8 +301,7 @@ export function StatsConfigModal({
   blocks,
   onSave,
   defaultBlocks,
-  title = 'Configure Stats',
-}: StatsConfigModalProps) {
+  title = 'Configure Stats' }: StatsConfigModalProps) {
   const [localBlocks, setLocalBlocks] = useState<StatBlockConfig[]>(blocks)
   const [panelState, setPanelState] = useState<PanelState>({ showAddPanel: false, searchQuery: '', expandedCategories: new Set<string>() })
   const { showAddPanel, searchQuery, expandedCategories } = panelState
@@ -340,10 +332,10 @@ export function StatsConfigModal({
   )
 
   // Get IDs of blocks in the current dashboard defaults
-  const defaultBlockIds = useMemo(() => new Set(defaultBlocks.map(b => b.id)), [defaultBlocks])
+  const defaultBlockIds = new Set(defaultBlocks.map(b => b.id))
 
   // Get current block IDs to filter out already-added stats
-  const currentBlockIds = useMemo(() => new Set(localBlocks.map(b => b.id)), [localBlocks])
+  const currentBlockIds = new Set(localBlocks.map(b => b.id))
 
   // Get available stats per dashboard category, filtered by search
   const availableStatsByCategory = useMemo(() => {
@@ -549,8 +541,7 @@ export function useStatsConfig(
   const applyDefaultModes = (blockList: StatBlockConfig[]): StatBlockConfig[] =>
     blockList.map(b => ({
       ...b,
-      displayMode: b.displayMode ?? getDefaultDisplayMode(dashboardType, b.id),
-    }))
+      displayMode: b.displayMode ?? getDefaultDisplayMode(dashboardType, b.id) }))
 
   const [blocks, setBlocks] = useState<StatBlockConfig[]>(() => {
     const saved = safeGetJSON<StatBlockConfig[]>(key)
@@ -588,6 +579,5 @@ export function useStatsConfig(
     saveBlocks,
     resetBlocks,
     visibleBlocks,
-    defaultBlocks,
-  }
+    defaultBlocks }
 }

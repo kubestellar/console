@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { LOCAL_AGENT_WS_URL } from '../lib/constants/network'
 
 /** WebSocket reconnect delay after connection drops */
@@ -75,7 +75,7 @@ export function useClusterProgress() {
     }
   }, [])
 
-  const dismiss = useCallback(() => setProgress(null), [])
+  const dismiss = () => setProgress(null)
 
   return { progress, dismiss }
 }

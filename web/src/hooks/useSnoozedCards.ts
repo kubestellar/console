@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { emitSnoozed, emitUnsnoozed } from '../lib/analytics'
 
 export interface SnoozedSwap {
@@ -32,41 +32,40 @@ export function useSnoozedCards() {
     }
   }, [])
 
-  const snoozeSwap = useCallback((swap: Omit<SnoozedSwap, 'id' | 'snoozedAt' | 'snoozedUntil'>, durationMs: number = 3600000) => {
+  const snoozeSwap = (swap: Omit<SnoozedSwap, 'id' | 'snoozedAt' | 'snoozedUntil'>, durationMs: number = 3600000) => {
     const newSwap: SnoozedSwap = {
       ...swap,
       id: `snooze-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       snoozedAt: new Date(),
-      snoozedUntil: new Date(Date.now() + durationMs),
-    }
+      snoozedUntil: new Date(Date.now() + durationMs) }
     snoozedSwaps = [...snoozedSwaps, newSwap]
     notifyListeners()
     emitSnoozed('card')
     return newSwap
-  }, [])
+  }
 
-  const unsnoozeSwap = useCallback((id: string) => {
+  const unsnoozeSwap = (id: string) => {
     const swap = snoozedSwaps.find((s) => s.id === id)
     snoozedSwaps = snoozedSwaps.filter((s) => s.id !== id)
     notifyListeners()
     emitUnsnoozed('card')
     return swap
-  }, [])
+  }
 
-  const dismissSwap = useCallback((id: string) => {
+  const dismissSwap = (id: string) => {
     snoozedSwaps = snoozedSwaps.filter((s) => s.id !== id)
     notifyListeners()
-  }, [])
+  }
 
-  const getExpiredSwaps = useCallback(() => {
+  const getExpiredSwaps = () => {
     const now = new Date()
     return snoozedSwaps.filter((s) => s.snoozedUntil <= now)
-  }, [])
+  }
 
-  const getActiveSwaps = useCallback(() => {
+  const getActiveSwaps = () => {
     const now = new Date()
     return snoozedSwaps.filter((s) => s.snoozedUntil > now)
-  }, [])
+  }
 
   return {
     snoozedSwaps: swaps,
@@ -74,8 +73,7 @@ export function useSnoozedCards() {
     unsnoozeSwap,
     dismissSwap,
     getExpiredSwaps,
-    getActiveSwaps,
-  }
+    getActiveSwaps }
 }
 
 // Helper to format time remaining

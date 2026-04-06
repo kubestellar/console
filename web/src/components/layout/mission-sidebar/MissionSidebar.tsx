@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import {
   X,
   ChevronRight,
@@ -22,8 +22,7 @@ import {
   ShieldOff,
   BookOpen,
   Rocket,
-  Search,
-} from 'lucide-react'
+  Search } from 'lucide-react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { useMissions } from '../../../hooks/useMissions'
 import { useMobile } from '../../../hooks/useMobile'
@@ -114,7 +113,7 @@ export function MissionSidebar() {
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+  const handleResizeStart = (e: React.MouseEvent) => {
     e.preventDefault()
     setIsResizing(true)
     document.documentElement.dataset.missionResizing = '1'
@@ -145,7 +144,7 @@ export function MissionSidebar() {
     document.body.style.userSelect = 'none'
     document.addEventListener('mousemove', onMouseMove)
     document.addEventListener('mouseup', onMouseUp)
-  }, [sidebarWidth])
+  }
   const [showNewMission, setShowNewMission] = useState(false)
   const [showBrowser, setShowBrowser] = useState(false)
   const [showMissionControl, setShowMissionControl] = useState(false)
@@ -166,7 +165,7 @@ export function MissionSidebar() {
   // Resolution panel state (fullscreen left sidebar)
   const [resolutionPanelView, setResolutionPanelView] = useState<'related' | 'history'>('related')
   const { findSimilarResolutions, allResolutions } = useResolutions()
-  const relatedResolutions = useMemo(() => {
+  const relatedResolutions = (() => {
     if (!activeMission) return []
     const content = [
       activeMission.title,
@@ -176,13 +175,13 @@ export function MissionSidebar() {
     const signature = detectIssueSignature(content)
     if (!signature.type || signature.type === 'Unknown') return []
     return findSimilarResolutions(signature as { type: string }, { minSimilarity: 0.4, limit: 5 })
-  }, [activeMission?.title, activeMission?.description, activeMission?.messages, findSimilarResolutions])
+  })()
 
-  const handleApplyResolution = useCallback((resolution: { title: string; resolution: { summary: string; steps: string[]; yaml?: string } }) => {
+  const handleApplyResolution = (resolution: { title: string; resolution: { summary: string; steps: string[]; yaml?: string } }) => {
     if (!activeMission) return
     const applyMessage = `Please apply this saved resolution:\n\n**${resolution.title}**\n\n${resolution.resolution.summary}\n\nSteps:\n${resolution.resolution.steps.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}${resolution.resolution.yaml ? `\n\nYAML:\n\`\`\`yaml\n${resolution.resolution.yaml}\n\`\`\`` : ''}`
     sendMessage(activeMission.id, applyMessage)
-  }, [activeMission, sendMessage])
+  }
 
   // Deep-link: open MissionBrowser via ?mission= (specific) or ?browse=missions (explorer)
   // Direct import: ?import= fetches and imports mission directly (no browser popup)
@@ -243,8 +242,7 @@ export function MissionSidebar() {
       try {
         found = await Promise.any(paths.map(async (path) => {
           const res = await fetch(`/api/missions/file?path=${encodeURIComponent(path)}`, {
-            signal: controller.signal,
-          })
+            signal: controller.signal })
           if (!res.ok) throw new Error('not found')
           const raw = await res.text()
           const parsed = JSON.parse(raw)
@@ -265,8 +263,7 @@ export function MissionSidebar() {
       // Fallback: search index.json for nested paths
       try {
         const res = await fetch('/api/missions/file?path=fixes/index.json', {
-          signal: AbortSignal.timeout(MISSION_FILE_FETCH_TIMEOUT_MS),
-        })
+          signal: AbortSignal.timeout(MISSION_FILE_FETCH_TIMEOUT_MS) })
         if (res.ok) {
           const index = await res.json() as { missions?: Array<{ path: string }> }
           const match = (index.missions || []).find(m => {
@@ -275,8 +272,7 @@ export function MissionSidebar() {
           })
           if (match) {
             const fileRes = await fetch(`/api/missions/file?path=${encodeURIComponent(match.path)}`, {
-              signal: AbortSignal.timeout(MISSION_FILE_FETCH_TIMEOUT_MS),
-            })
+              signal: AbortSignal.timeout(MISSION_FILE_FETCH_TIMEOUT_MS) })
             if (fileRes.ok) {
               const raw = await fileRes.text()
               const parsed = JSON.parse(raw)
@@ -309,11 +305,11 @@ export function MissionSidebar() {
   }, [missionSearchQuery])
 
   // Split missions into saved (library) and active, applying search filter
-  const matchesSearch = useCallback((m: Mission) => {
+  const matchesSearch = (m: Mission) => {
     if (!missionSearchQuery.trim()) return true
     const q = missionSearchQuery.toLowerCase()
     return m.title.toLowerCase().includes(q) || m.description.toLowerCase().includes(q)
-  }, [missionSearchQuery])
+  }
   const savedMissions = missions.filter(m => m.status === 'saved' && matchesSearch(m))
   const activeMissions = missions
     .filter(m => m.status !== 'saved' && matchesSearch(m))
@@ -323,7 +319,7 @@ export function MissionSidebar() {
   const visibleActiveMissions = activeMissions.slice(0, visibleMissionCount)
   const hasMoreMissions = activeMissions.length > visibleMissionCount
 
-  const handleImportMission = useCallback((mission: MissionExport) => {
+  const handleImportMission = (mission: MissionExport) => {
     const missionType = mission.missionClass === 'install' ? 'deploy' as const
       : mission.type === 'troubleshoot' ? 'troubleshoot' as const
       : mission.type === 'deploy' ? 'deploy' as const
@@ -337,8 +333,7 @@ export function MissionSidebar() {
       cncfProject: mission.cncfProject,
       steps: mission.steps?.map(s => ({ title: s.title, description: s.description })),
       tags: mission.tags,
-      initialPrompt: mission.resolution?.summary || mission.description,
-    })
+      initialPrompt: mission.resolution?.summary || mission.description })
     setShowBrowser(false)
     // Auto-open the sidebar and highlight the imported mission so the user
     // immediately sees where it went and can act on it
@@ -367,10 +362,10 @@ export function MissionSidebar() {
       setShowSavedToast(mission.title)
       setTimeout(() => setShowSavedToast(null), SAVED_TOAST_MS)
     }
-  }, [saveMission, openSidebar, setActiveMission])
+  }
 
   /** Convert a saved Mission to MissionExport for the detail view */
-  const savedMissionToExport = useCallback((m: Mission): MissionExport => ({
+  const savedMissionToExport = (m: Mission): MissionExport => ({
     version: '1.0',
     title: m.importedFrom?.title || m.title,
     description: m.importedFrom?.description || m.description,
@@ -380,18 +375,16 @@ export function MissionSidebar() {
     cncfProject: m.importedFrom?.cncfProject,
     steps: (m.importedFrom?.steps || []).map(s => ({
       title: s.title,
-      description: s.description,
-    })),
-  }), [])
+      description: s.description })) })
 
-  const handleViewSavedMission = useCallback((m: Mission) => {
+  const handleViewSavedMission = (m: Mission) => {
     setViewingMission(savedMissionToExport(m))
     setViewingMissionRaw(false)
-  }, [savedMissionToExport])
+  }
 
   // Run mission — in demo mode (Netlify), block and open the install dialog instead.
   // For install/deploy types in live mode, show cluster picker first.
-  const handleRunMission = useCallback((missionId: string) => {
+  const handleRunMission = (missionId: string) => {
     if (isDemoMode()) {
       window.dispatchEvent(new CustomEvent('open-install'))
       return
@@ -403,7 +396,7 @@ export function MissionSidebar() {
     } else {
       runSavedMission(missionId)
     }
-  }, [missions, runSavedMission])
+  }
 
   const pendingMission = pendingRunMissionId ? missions.find(m => m.id === pendingRunMissionId) : null
 
@@ -663,8 +656,7 @@ export function MissionSidebar() {
                     type: 'custom',
                     title: newMissionPrompt.slice(0, 50) + (newMissionPrompt.length > 50 ? '...' : ''),
                     description: newMissionPrompt,
-                    initialPrompt: newMissionPrompt,
-                  })
+                    initialPrompt: newMissionPrompt })
                   setNewMissionPrompt('')
                   setShowNewMission(false)
                 }
@@ -691,8 +683,7 @@ export function MissionSidebar() {
                         type: 'custom',
                         title: newMissionPrompt.slice(0, 50) + (newMissionPrompt.length > 50 ? '...' : ''),
                         description: newMissionPrompt,
-                        initialPrompt: newMissionPrompt,
-                      })
+                        initialPrompt: newMissionPrompt })
                       setNewMissionPrompt('')
                       setShowNewMission(false)
                     }
@@ -1066,8 +1057,7 @@ export function MissionSidebar() {
                 >
                   {t('missionSidebar.loadMore', {
                     defaultValue: 'Load more ({{remaining}} remaining)',
-                    remaining: activeMissions.length - visibleMissionCount,
-                  })}
+                    remaining: activeMissions.length - visibleMissionCount })}
                 </button>
               )}
             </>

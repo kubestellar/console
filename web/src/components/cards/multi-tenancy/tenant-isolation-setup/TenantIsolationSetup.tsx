@@ -4,11 +4,9 @@
  * Shows component readiness, isolation levels, architecture description,
  * and CTA buttons to launch AI missions for configuration.
  */
-import { useCallback, useMemo } from 'react'
 import {
   CheckCircle, XCircle, AlertTriangle, Shield, Wand2, Download,
-  Network, Layers, Box, Monitor,
-} from 'lucide-react'
+  Network, Layers, Box, Monitor } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useMissions } from '../../../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../../console-missions/shared'
@@ -20,8 +18,7 @@ import {
   OVN_INSTALL_PROMPT,
   KUBEFLEX_INSTALL_PROMPT,
   K3S_INSTALL_PROMPT,
-  KUBEVIRT_INSTALL_PROMPT,
-} from './missionPrompts'
+  KUBEVIRT_INSTALL_PROMPT } from './missionPrompts'
 import { loadMissionPrompt } from '../missionLoader'
 
 import type { ComponentReadiness, IsolationLevel, IsolationStatus } from './useTenantIsolationSetup'
@@ -31,16 +28,14 @@ const COMPONENT_ICONS: Record<string, React.ComponentType<{ className?: string }
   ovn: Network,
   kubeflex: Layers,
   k3s: Box,
-  kubevirt: Monitor,
-}
+  kubevirt: Monitor }
 
 /** Install prompt map for per-component install buttons */
 const INSTALL_PROMPTS: Record<string, string> = {
   ovn: OVN_INSTALL_PROMPT,
   kubeflex: KUBEFLEX_INSTALL_PROMPT,
   k3s: K3S_INSTALL_PROMPT,
-  kubevirt: KUBEVIRT_INSTALL_PROMPT,
-}
+  kubevirt: KUBEVIRT_INSTALL_PROMPT }
 
 /** Status icon for isolation levels */
 function IsolationStatusIcon({ status }: { status: IsolationStatus }) {
@@ -58,8 +53,7 @@ function IsolationStatusIcon({ status }: { status: IsolationStatus }) {
 const ISOLATION_STATUS_COLORS: Record<IsolationStatus, string> = {
   ready: 'text-green-400',
   degraded: 'text-orange-400',
-  missing: 'text-zinc-500',
-}
+  missing: 'text-zinc-500' }
 
 /** Component readiness badge */
 function ReadinessBadge({ component, onInstall }: {
@@ -111,36 +105,30 @@ export function TenantIsolationSetup() {
     showKeyPrompt,
     checkKeyAndRun,
     goToSettings,
-    dismissPrompt,
-  } = useApiKeyCheck()
+    dismissPrompt } = useApiKeyCheck()
 
   // Use demo data when all hooks return demo data
-  const data = useMemo(
-    () => (liveData.isDemoData ? DEMO_TENANT_ISOLATION_SETUP : liveData),
-    [liveData],
-  )
+  const data = liveData.isDemoData ? DEMO_TENANT_ISOLATION_SETUP : liveData
 
   const { showSkeleton } = useCardLoadingState({
     isLoading: data.isLoading && !data.isDemoData,
     hasAnyData: true,
-    isDemoData: data.isDemoData,
-  })
+    isDemoData: data.isDemoData })
 
   // Launch the combined multi-tenancy setup mission (loads from console-kb)
-  const handleConfigureAll = useCallback(() => {
+  const handleConfigureAll = () => {
     checkKeyAndRun(async () => {
       const prompt = await loadMissionPrompt('multi-tenancy', MULTI_TENANCY_SETUP_PROMPT)
       startMission({
         title: 'Configure Multi-Tenancy',
         description: 'Set up OVN, KubeFlex, K3s, and KubeVirt for tenant isolation',
         type: 'deploy',
-        initialPrompt: prompt,
-      })
+        initialPrompt: prompt })
     })
-  }, [checkKeyAndRun, startMission])
+  }
 
   // Launch per-component install mission (loads from console-kb)
-  const handleInstallComponent = useCallback((key: string) => {
+  const handleInstallComponent = (key: string) => {
     const fallbackPrompt = INSTALL_PROMPTS[key]
     if (!fallbackPrompt) return
 
@@ -148,8 +136,7 @@ export function TenantIsolationSetup() {
       ovn: 'OVN-Kubernetes',
       kubeflex: 'KubeFlex',
       k3s: 'K3s',
-      kubevirt: 'KubeVirt',
-    }
+      kubevirt: 'KubeVirt' }
 
     checkKeyAndRun(async () => {
       const prompt = await loadMissionPrompt(key, fallbackPrompt)
@@ -157,10 +144,9 @@ export function TenantIsolationSetup() {
         title: `Install ${componentNames[key] || key}`,
         description: `Install and configure ${componentNames[key] || key} for multi-tenancy`,
         type: 'deploy',
-        initialPrompt: prompt,
-      })
+        initialPrompt: prompt })
     })
-  }, [checkKeyAndRun, startMission])
+  }
 
   if (showSkeleton) {
     return (

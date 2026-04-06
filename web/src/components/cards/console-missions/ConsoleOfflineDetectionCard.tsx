@@ -176,8 +176,7 @@ async function fetchAllNodes(): Promise<NodeData[]> {
   nodesFetchInProgress = true
   try {
     const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/nodes`, {
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-    })
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
     if (response.ok) {
       const data = await response.json()
       nodesCache = data.nodes || []
@@ -254,8 +253,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     hasAnyData: gpuNodes.length > 0 || nodesCache.length > 0 || allNodes.length > 0,
     isDemoData: isDemoMode || gpuDemoFallback || podsDemoFallback,
     isFailed: gpuFailed || podsFailed,
-    consecutiveFailures: Math.max(gpuFailures, podsFailures),
-  })
+    consecutiveFailures: Math.max(gpuFailures, podsFailures) })
 
   // Subscribe to cache updates and fetch nodes
   useEffect(() => {
@@ -288,7 +286,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   }, [shouldUseDemoData])
 
   // Filter nodes by global cluster filter
-  const nodes = useMemo(() => {
+  const nodes = (() => {
     let result = allNodes
 
     // Apply global cluster filter
@@ -306,11 +304,11 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     }
 
     return result
-  }, [allNodes, selectedClusters, isAllClustersSelected, customFilter])
+  })()
 
   // Detect any node that is not fully Ready (NotReady, Unknown, SchedulingDisabled, Cordoned, etc.)
   // Deduplicate by node name, preferring short cluster names
-  const offlineNodes = useMemo(() => {
+  const offlineNodes = (() => {
     const unhealthy = nodes.filter(n =>
       n.status !== 'Ready' || n.unschedulable === true
     )
@@ -323,10 +321,10 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
       }
     })
     return Array.from(byName.values())
-  }, [nodes])
+  })()
 
   // Detect GPU issues from GPU nodes data
-  const gpuIssues = useMemo(() => {
+  const gpuIssues = (() => {
     const issues: Array<{ cluster: string; nodeName: string; expected: number; available: number; reason: string }> = []
 
     // Filter GPU nodes by global cluster filter
@@ -348,7 +346,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     })
 
     return issues
-  }, [gpuNodes, selectedClusters, isAllClustersSelected])
+  })()
 
   // Predict potential failures using heuristics
   const heuristicPredictions = useMemo(() => {
@@ -373,8 +371,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
           reasonDetailed: `Pod has restarted ${pod.restarts} times, which indicates instability. This typically suggests memory pressure (OOMKill), application bugs, or configuration issues. Recommended actions: Check pod logs with 'kubectl logs ${pod.name}', describe the pod to see recent events, and review resource limits.`,
           metric: `${pod.restarts} restarts`,
           source: 'heuristic',
-          trend,
-        })
+          trend })
       }
     })
 
@@ -399,8 +396,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
             reasonDetailed: `Cluster CPU utilization is at ${cpuPercent.toFixed(1)}%, above the ${THRESHOLDS.cpuPressure}% warning threshold. At this level, workloads may experience throttling, increased latency, and degraded performance. Consider scaling up nodes, optimizing resource-intensive workloads, or implementing CPU limits.`,
             metric: `${cpuPercent.toFixed(0)}% CPU`,
             source: 'heuristic',
-            trend,
-          })
+            trend })
         }
       }
 
@@ -419,8 +415,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
             reasonDetailed: `Cluster memory utilization is at ${memPercent.toFixed(1)}%, above the ${THRESHOLDS.memoryPressure}% warning threshold. Pods may be OOMKilled, nodes may become unschedulable, and new deployments may fail. Consider scaling up memory, reviewing memory limits, or identifying memory leaks.`,
             metric: `${memPercent.toFixed(0)}% memory`,
             source: 'heuristic',
-            trend,
-          })
+            trend })
         }
       }
     })
@@ -454,8 +449,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
           reason: `GPU over-allocation: ${gpus.allocated}/${gpus.total}`,
           reasonDetailed: `Cluster ${cluster} has more GPUs allocated (${gpus.allocated}) than available (${gpus.total}). This may cause scheduling failures or workload evictions.`,
           metric: `${gpus.allocated}/${gpus.total} GPUs`,
-          source: 'heuristic',
-        })
+          source: 'heuristic' })
       } else if (gpus.total > 0 && gpus.allocated / gpus.total > GPU_CLUSTER_EXHAUSTION_THRESHOLD) {
         // Flag cluster-level near-exhaustion (>80% allocated)
         const pct = Math.round((gpus.allocated / gpus.total) * 100)
@@ -468,8 +462,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
           reason: `Cluster GPU capacity ${pct}% allocated`,
           reasonDetailed: `Cluster ${cluster} has ${gpus.allocated} of ${gpus.total} GPUs allocated (${pct}%). New GPU workloads may not schedule. Consider adding GPU nodes or optimizing utilization.`,
           metric: `${gpus.allocated}/${gpus.total} GPUs (${pct}%)`,
-          source: 'heuristic',
-        })
+          source: 'heuristic' })
       }
     })
 
@@ -540,8 +533,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
         reason: rootCause?.cause || (node.unschedulable ? 'Cordoned' : node.status),
         reasonDetailed: rootCause?.details,
         rootCause: rootCause || undefined,
-        nodeData: node,
-      })
+        nodeData: node })
     })
 
     // Add GPU issues
@@ -553,8 +545,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
         cluster: issue.cluster,
         severity: 'warning',
         reason: issue.reason,
-        gpuData: issue,
-      })
+        gpuData: issue })
     })
 
     // Add predictions
@@ -568,8 +559,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
         reason: risk.reason,
         reasonDetailed: risk.reasonDetailed,
         metric: risk.metric,
-        predictionData: risk,
-      })
+        predictionData: risk })
     })
 
     return items
@@ -603,14 +593,14 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   }, [])
 
   // Available clusters for filtering
-  const availableClustersForFilter = useMemo(() => {
+  const availableClustersForFilter = (() => {
     const clusterSet = new Set<string>()
     unifiedItems.forEach(item => clusterSet.add(item.cluster))
     return Array.from(clusterSet).sort()
-  }, [unifiedItems])
+  })()
 
   // Filter items
-  const filteredItems = useMemo(() => {
+  const filteredItems = (() => {
     let result = unifiedItems
 
     // Apply search
@@ -629,10 +619,10 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     }
 
     return result
-  }, [unifiedItems, search, localClusterFilter])
+  })()
 
   // Sort items
-  const sortedItems = useMemo(() => {
+  const sortedItems = (() => {
     const severityOrder: Record<string, number> = { critical: 0, warning: 1, info: 2 }
     const categoryOrder: Record<string, number> = { offline: 0, gpu: 1, prediction: 2 }
 
@@ -654,18 +644,18 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
       }
       return sortDirection === 'asc' ? cmp : -cmp
     })
-  }, [filteredItems, sortField, sortDirection])
+  })()
 
   // Pagination
   const effectivePerPage = itemsPerPage === 'unlimited' ? sortedItems.length : itemsPerPage
   const totalPages = Math.ceil(sortedItems.length / effectivePerPage) || 1
   const needsPagination = itemsPerPage !== 'unlimited' && sortedItems.length > effectivePerPage
 
-  const paginatedItems = useMemo(() => {
+  const paginatedItems = (() => {
     if (itemsPerPage === 'unlimited') return sortedItems
     const start = (currentPage - 1) * effectivePerPage
     return sortedItems.slice(start, start + effectivePerPage)
-  }, [sortedItems, currentPage, effectivePerPage, itemsPerPage])
+  })()
 
   // Reset page when filters change
   useEffect(() => {
@@ -746,8 +736,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
           details: groupDetails,
           items: [],
           severity: item.severity,
-          categories: new Set(),
-        })
+          categories: new Set() })
       }
 
       const group = groups.get(groupKey)!
@@ -866,9 +855,7 @@ Please:
         ]).size,
         criticalPredicted: filteredCriticalPredicted,
         aiPredictionCount: filteredAICount,
-        heuristicPredictionCount: filteredHeuristicCount,
-      },
-    })
+        heuristicPredictionCount: filteredHeuristicCount } })
   }
 
   const handleStartAnalysis = () => checkKeyAndRun(doStartAnalysis)
@@ -978,12 +965,10 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
           isOpen: showClusterFilter,
           setIsOpen: setShowClusterFilter,
           containerRef: clusterFilterRef,
-          minClusters: 1,
-        }}
+          minClusters: 1 }}
         clusterIndicator={localClusterFilter.length > 0 ? {
           selectedCount: localClusterFilter.length,
-          totalCount: availableClustersForFilter.length,
-        } : undefined}
+          totalCount: availableClustersForFilter.length } : undefined}
         cardControls={{
           limit: itemsPerPage,
           onLimitChange: setItemsPerPage,
@@ -991,8 +976,7 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
           sortOptions: SORT_OPTIONS,
           onSortChange: (s) => setSortField(s as SortField),
           sortDirection,
-          onSortDirectionChange: setSortDirection,
-        }}
+          onSortDirectionChange: setSortDirection }}
       />
 
       {/* Search and View Mode Toggle */}
@@ -1051,8 +1035,7 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
                     )}
                     style={{
                       backgroundColor: `rgba(${severityColor === 'red' ? '239,68,68' : severityColor === 'yellow' ? '234,179,8' : '59,130,246'}, 0.1)`,
-                      borderColor: `rgba(${severityColor === 'red' ? '239,68,68' : severityColor === 'yellow' ? '234,179,8' : '59,130,246'}, 0.2)`,
-                    }}
+                      borderColor: `rgba(${severityColor === 'red' ? '239,68,68' : severityColor === 'yellow' ? '234,179,8' : '59,130,246'}, 0.2)` }}
                     onClick={() => toggleGroupExpand(group.cause)}
                   >
                     <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -1070,8 +1053,7 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
                             className="px-1.5 py-0.5 text-2xs font-bold rounded"
                             style={{
                               backgroundColor: `rgba(${severityColor === 'red' ? '239,68,68' : severityColor === 'yellow' ? '234,179,8' : '59,130,246'}, 0.2)`,
-                              color: `rgb(${severityColor === 'red' ? '248,113,113' : severityColor === 'yellow' ? '250,204,21' : '96,165,250'})`,
-                            }}
+                              color: `rgb(${severityColor === 'red' ? '248,113,113' : severityColor === 'yellow' ? '250,204,21' : '96,165,250'})` }}
                           >
                             {group.items.length} item{group.items.length !== 1 ? 's' : ''}
                           </span>
@@ -1111,8 +1093,7 @@ TASK:
 2. Provide a single fix that will resolve all ${group.items.length} items
 3. List the specific commands or steps to remediate
 4. Explain any risks and how to verify the fix worked`,
-                          context: { rootCause: group.cause, affectedCount: group.items.length },
-                        })
+                          context: { rootCause: group.cause, affectedCount: group.items.length } })
                       }}
                       title={`Diagnose all ${group.items.length} items with this root cause`}
                     >
@@ -1175,8 +1156,7 @@ TASK:
                   unschedulable: node.unschedulable,
                   roles: node.roles,
                   issue: rootCause?.details || (node.unschedulable ? 'Node is cordoned and not accepting new workloads' : `Node status: ${node.status}`),
-                  rootCause: rootCause?.cause,
-                })}
+                  rootCause: rootCause?.cause })}
                 title={rootCause ? `${rootCause.cause}: ${rootCause.details}` : `Click to diagnose ${node.name}`}
               >
                 <div className="min-w-0 flex-1">

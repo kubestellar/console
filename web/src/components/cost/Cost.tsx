@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { STORAGE_KEY_CLUSTER_PROVIDER_OVERRIDES } from '../../lib/constants'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
@@ -41,8 +41,7 @@ export function Cost() {
     gcp: { cpu: 0.0475, memory: 0.0064, gpu: 2.48 },
     azure: { cpu: 0.05, memory: 0.011, gpu: 2.07 },
     oci: { cpu: 0.025, memory: 0.0015, gpu: 2.95 },
-    openshift: { cpu: 0.048, memory: 0.012, gpu: 3.00 },
-  }
+    openshift: { cpu: 0.048, memory: 0.012, gpu: 3.00 } }
 
   // Read provider overrides from localStorage (same key as ClusterCosts card)
   const [providerOverrides, setProviderOverrides] = useState<Record<string, CloudProvider>>(
@@ -79,14 +78,14 @@ export function Cost() {
   }
 
   // Count GPUs from GPU nodes
-  const gpuByCluster = useMemo(() => {
+  const gpuByCluster = (() => {
     const map: Record<string, number> = {}
     gpuNodes.forEach(node => {
       const clusterKey = node.cluster.split('/')[0]
       map[clusterKey] = (map[clusterKey] || 0) + node.gpuCount
     })
     return map
-  }, [gpuNodes])
+  })()
 
   // Calculate per-cluster costs (matches ClusterCosts card exactly)
   const costStats = useMemo(() => {
@@ -132,13 +131,12 @@ export function Cost() {
       cpuMonthly,
       memoryMonthly,
       gpuMonthly,
-      storageMonthly,
-    }
+      storageMonthly }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- CLOUD_PRICING and detectClusterProvider are stable module-level constants
   }, [reachableClusters, gpuByCluster, providerOverrides])
 
   // Stats value getter for the configurable StatsOverview component
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string): StatBlockValue => {
     const drillToCostType = (type: string) => {
       drillToCost('all', { costType: type, totalMonthly: costStats.totalMonthly })
     }
@@ -159,12 +157,9 @@ export function Cost() {
       default:
         return { value: 0 }
     }
-  }, [costStats, drillToCost])
+  }
 
-  const getStatValue = useCallback(
-    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
-    [getDashboardStatValue, getUniversalStatValue]
-  )
+  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
   return (
     <DashboardPage
@@ -183,8 +178,7 @@ export function Cost() {
       hasData={reachableClusters.length > 0}
       emptyState={{
         title: 'Cost Dashboard',
-        description: 'Add cards to monitor and optimize resource costs across your clusters.',
-      }}
+        description: 'Add cards to monitor and optimize resource costs across your clusters.' }}
     >
       {/* Error Display */}
       {error && (

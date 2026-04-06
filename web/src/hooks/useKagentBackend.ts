@@ -105,20 +105,20 @@ export function useKagentBackend(): UseKagentBackendResult {
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [refresh])
 
-  const selectKagentAgent = useCallback((agent: KagentAgent) => {
+  const selectKagentAgent = (agent: KagentAgent) => {
     setSelectedKagentAgent(agent)
     localStorage.setItem(KAGENT_SELECTED_AGENT_KEY, `${agent.namespace}/${agent.name}`)
-  }, [])
+  }
 
-  const selectKagentiAgent = useCallback((agent: KagentiProviderAgent) => {
+  const selectKagentiAgent = (agent: KagentiProviderAgent) => {
     setSelectedKagentiAgent(agent)
     localStorage.setItem(KAGENTI_SELECTED_AGENT_KEY, `${agent.namespace}/${agent.name}`)
-  }, [])
+  }
 
-  const setPreferredBackend = useCallback((backend: AgentBackendType) => {
+  const setPreferredBackend = (backend: AgentBackendType) => {
     setPreferredBackendState(backend)
     localStorage.setItem(BACKEND_PREF_KEY, backend)
-  }, [])
+  }
 
   const kagentAvailable = kagentStatus?.available ?? false
   const kagentiAvailable = kagentiStatus?.available ?? false
@@ -142,6 +142,5 @@ export function useKagentBackend(): UseKagentBackendResult {
     preferredBackend,
     setPreferredBackend,
     activeBackend,
-    refresh,
-  }
+    refresh }
 }

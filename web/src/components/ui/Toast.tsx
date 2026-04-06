@@ -1,4 +1,4 @@
-import { createContext, use, useState, useCallback, useEffect, useRef, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react'
 import { X, Check, AlertTriangle, Info } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Button } from './Button'
@@ -18,7 +18,7 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null)
 
 export function useToast() {
-  const context = use(ToastContext)
+  const context = useContext(ToastContext)
   if (!context) {
     throw new Error('useToast must be used within a ToastProvider')
   }
@@ -30,7 +30,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const timeoutsRef = useRef<Map<string, number>>(new Map())
 
   const toastCounter = useRef(0)
-  const showToast = useCallback((message: string, type: ToastType = 'success') => {
+  const showToast = (message: string, type: ToastType = 'success') => {
     const id = `toast-${Date.now()}-${++toastCounter.current}`
     setToasts((prev) => {
       // Deduplicate: skip if an identical message+type is already visible
@@ -46,9 +46,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       }
     }, 3000)
     timeoutsRef.current.set(id, timeoutId)
-  }, [])
+  }
 
-  const removeToast = useCallback((id: string) => {
+  const removeToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id))
     // Clear timeout if manually removed
     const timeoutId = timeoutsRef.current.get(id)
@@ -56,7 +56,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       clearTimeout(timeoutId)
       timeoutsRef.current.delete(id)
     }
-  }, [])
+  }
 
   // Cleanup all timeouts on unmount
   useEffect(() => {
@@ -107,22 +107,19 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
     success: <Check className="w-4 h-4" />,
     error: <X className="w-4 h-4" />,
     warning: <AlertTriangle className="w-4 h-4" />,
-    info: <Info className="w-4 h-4" />,
-  }
+    info: <Info className="w-4 h-4" /> }
 
   const colors: Record<ToastType, string> = {
     success: 'bg-green-900/80 border-green-400/70 text-green-100',
     error: 'bg-red-900/80 border-red-400/70 text-red-100',
     warning: 'bg-yellow-900/80 border-yellow-400/70 text-yellow-100',
-    info: 'bg-blue-900/80 border-blue-400/70 text-blue-100',
-  }
+    info: 'bg-blue-900/80 border-blue-400/70 text-blue-100' }
 
   const iconColors: Record<ToastType, string> = {
     success: 'text-green-300',
     error: 'text-red-300',
     warning: 'text-yellow-300',
-    info: 'text-blue-300',
-  }
+    info: 'text-blue-300' }
 
   return (
     <div

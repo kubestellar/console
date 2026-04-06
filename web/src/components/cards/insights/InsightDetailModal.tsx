@@ -5,7 +5,7 @@
  * drill-down without leaving the dashboard context.
  */
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Brain, CheckCircle, XCircle, Rocket, ArrowRight, AlertTriangle } from 'lucide-react'
 import { BaseModal } from '../../../lib/modals/BaseModal'
 import { StatusBadge } from '../../ui/StatusBadge'
@@ -16,8 +16,7 @@ import type { MultiClusterInsight, InsightSeverity, CascadeLink, ClusterDelta } 
 import {
   emitModalOpened, emitModalTabViewed, emitModalClosed,
   emitInsightAcknowledged, emitInsightDismissed,
-  emitActionClicked, emitAISuggestionViewed,
-} from '../../../lib/analytics'
+  emitActionClicked, emitAISuggestionViewed } from '../../../lib/analytics'
 
 interface InsightDetailModalProps {
   isOpen: boolean
@@ -28,8 +27,7 @@ interface InsightDetailModalProps {
 const SEVERITY_COLORS: Record<InsightSeverity, { badge: 'red' | 'yellow' | 'blue'; bg: string }> = {
   critical: { badge: 'red', bg: 'bg-red-500/10 border-red-500/20' },
   warning: { badge: 'yellow', bg: 'bg-yellow-500/10 border-yellow-500/20' },
-  info: { badge: 'blue', bg: 'bg-blue-500/10 border-blue-500/20' },
-}
+  info: { badge: 'blue', bg: 'bg-blue-500/10 border-blue-500/20' } }
 
 const MODAL_TYPE = 'insight_detail'
 
@@ -50,37 +48,37 @@ export function InsightDetailModal({ isOpen, onClose, insight }: InsightDetailMo
     }
   }, [isOpen, insight])
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     if (openTimeRef.current > 0) {
       const durationMs = Date.now() - openTimeRef.current
       emitModalClosed(MODAL_TYPE, durationMs)
       openTimeRef.current = 0
     }
     onClose()
-  }, [onClose])
+  }
 
-  const handleTabChange = useCallback((tab: string) => {
+  const handleTabChange = (tab: string) => {
     setActiveTab(tab as TabId)
     emitModalTabViewed(MODAL_TYPE, tab)
     if (tab === 'remediation' && insight) {
       emitAISuggestionViewed(insight.category, !!insight.remediation)
     }
-  }, [insight])
+  }
 
-  const handleAcknowledge = useCallback(() => {
+  const handleAcknowledge = () => {
     if (!insight) return
     acknowledgeInsight(insight.id)
     emitInsightAcknowledged(insight.category, insight.severity)
-  }, [insight, acknowledgeInsight])
+  }
 
-  const handleDismiss = useCallback(() => {
+  const handleDismiss = () => {
     if (!insight) return
     dismissInsight(insight.id)
     emitInsightDismissed(insight.category, insight.severity)
     handleClose()
-  }, [insight, dismissInsight, handleClose])
+  }
 
-  const handleCreateMission = useCallback(() => {
+  const handleCreateMission = () => {
     if (!insight) return
     emitActionClicked('create_mission', insight.category, 'insights')
     startMission({
@@ -96,12 +94,10 @@ Help me investigate and resolve this.`,
       context: {
         insightCategory: insight.category,
         severity: insight.severity,
-        affectedClusters: insight.affectedClusters,
-      },
-    })
+        affectedClusters: insight.affectedClusters } })
     openSidebar()
     handleClose()
-  }, [insight, startMission, openSidebar, handleClose])
+  }
 
   if (!insight) return null
 

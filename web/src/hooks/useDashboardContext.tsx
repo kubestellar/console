@@ -1,4 +1,4 @@
-import { createContext, use, useState, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, ReactNode } from 'react'
 import { useDashboardHealth, type DashboardHealthInfo } from './useDashboardHealth'
 
 // Card to be restored from history
@@ -43,33 +43,33 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   const health = useDashboardHealth()
 
-  const openAddCardModal = useCallback(() => {
+  const openAddCardModal = () => {
     setIsAddCardModalOpen(true)
-  }, [])
+  }
 
-  const closeAddCardModal = useCallback(() => {
+  const closeAddCardModal = () => {
     setIsAddCardModalOpen(false)
-  }, [])
+  }
 
-  const setPendingOpenAddCardModal = useCallback((pending: boolean) => {
+  const setPendingOpenAddCardModal = (pending: boolean) => {
     setPendingOpenAddCardModalState(pending)
-  }, [])
+  }
 
-  const openTemplatesModal = useCallback(() => {
+  const openTemplatesModal = () => {
     setIsTemplatesModalOpen(true)
-  }, [])
+  }
 
-  const closeTemplatesModal = useCallback(() => {
+  const closeTemplatesModal = () => {
     setIsTemplatesModalOpen(false)
-  }, [])
+  }
 
-  const setPendingRestoreCard = useCallback((card: PendingRestoreCard | null) => {
+  const setPendingRestoreCard = (card: PendingRestoreCard | null) => {
     setPendingRestoreCardState(card)
-  }, [])
+  }
 
-  const clearPendingRestoreCard = useCallback(() => {
+  const clearPendingRestoreCard = () => {
     setPendingRestoreCardState(null)
-  }, [])
+  }
 
   return (
     <DashboardContext.Provider
@@ -85,8 +85,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         pendingRestoreCard,
         setPendingRestoreCard,
         clearPendingRestoreCard,
-        health,
-      }}
+        health }}
     >
       {children}
     </DashboardContext.Provider>
@@ -94,7 +93,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 }
 
 export function useDashboardContext() {
-  const context = use(DashboardContext)
+  const context = useContext(DashboardContext)
   if (!context) {
     throw new Error('useDashboardContext must be used within a DashboardProvider')
   }
@@ -104,5 +103,5 @@ export function useDashboardContext() {
 // Optional hook that doesn't throw if used outside provider
 // Useful for components that might be rendered outside the dashboard
 export function useDashboardContextOptional() {
-  return use(DashboardContext)
+  return useContext(DashboardContext)
 }

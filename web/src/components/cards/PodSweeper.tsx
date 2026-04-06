@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { RotateCcw, Flag, Skull, Trophy, Timer, Bomb } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
@@ -24,8 +24,7 @@ interface GameConfig {
 const CONFIGS: Record<Difficulty, GameConfig> = {
   easy: { rows: 8, cols: 8, mines: 10 },
   medium: { rows: 12, cols: 12, mines: 25 },
-  hard: { rows: 16, cols: 16, mines: 50 },
-}
+  hard: { rows: 16, cols: 16, mines: 50 } }
 
 // Initialize empty grid
 function createEmptyGrid(rows: number, cols: number): CellState[][] {
@@ -34,8 +33,7 @@ function createEmptyGrid(rows: number, cols: number): CellState[][] {
       isMine: false,
       isRevealed: false,
       isFlagged: false,
-      adjacentMines: 0,
-    }))
+      adjacentMines: 0 }))
   )
 }
 
@@ -176,7 +174,7 @@ export function PodSweeper(_props: CardComponentProps) {
   }, [gameStarted, gameOver, startTime])
 
   // Start a new game
-  const newGame = useCallback((diff: Difficulty = difficulty) => {
+  const newGame = (diff: Difficulty = difficulty) => {
     const cfg = CONFIGS[diff]
     setDifficulty(diff)
     setGrid(createEmptyGrid(cfg.rows, cfg.cols))
@@ -185,10 +183,10 @@ export function PodSweeper(_props: CardComponentProps) {
     setWon(false)
     setStartTime(null)
     setElapsed(0)
-  }, [difficulty])
+  }
 
   // Handle cell click
-  const handleClick = useCallback((row: number, col: number) => {
+  const handleClick = (row: number, col: number) => {
     if (gameOver) return
     if (grid[row][col].isFlagged) return
     if (grid[row][col].isRevealed) return
@@ -231,10 +229,10 @@ export function PodSweeper(_props: CardComponentProps) {
       setWon(true)
       emitGameEnded('pod_sweeper', 'win', elapsed)
     }
-  }, [grid, gameStarted, gameOver, config])
+  }
 
   // Handle right-click (flag)
-  const handleRightClick = useCallback((e: React.MouseEvent, row: number, col: number) => {
+  const handleRightClick = (e: React.MouseEvent, row: number, col: number) => {
     e.preventDefault()
     if (gameOver) return
     if (grid[row][col].isRevealed) return
@@ -242,7 +240,7 @@ export function PodSweeper(_props: CardComponentProps) {
     const newGrid = cloneGrid(grid)
     newGrid[row][col].isFlagged = !newGrid[row][col].isFlagged
     setGrid(newGrid)
-  }, [grid, gameOver])
+  }
 
   // Timer effect
   const flagsRemaining = config.mines - countFlags(grid)

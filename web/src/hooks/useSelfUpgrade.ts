@@ -51,8 +51,7 @@ export function useSelfUpgrade() {
       const token = getToken()
       const resp = await fetch('/api/self-upgrade/status', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
-        signal: AbortSignal.timeout(SELF_UPGRADE_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(SELF_UPGRADE_TIMEOUT_MS) })
       if (resp.ok) {
         const data = (await resp.json()) as SelfUpgradeStatus
         setStatus(data)
@@ -67,7 +66,7 @@ export function useSelfUpgrade() {
   }, [])
 
   /** Poll /health until the backend responds, then reload the page */
-  const pollForRestart = useCallback(() => {
+  const pollForRestart = () => {
     setIsRestarting(true)
     setRestartComplete(false)
     setRestartError(null)
@@ -100,8 +99,7 @@ export function useSelfUpgrade() {
 
       try {
         const resp = await fetch('/health', {
-          signal: AbortSignal.timeout(RESTART_HEALTH_TIMEOUT_MS),
-        })
+          signal: AbortSignal.timeout(RESTART_HEALTH_TIMEOUT_MS) })
         if (resp.ok) {
           clearInterval(poll)
           clearInterval(tick)
@@ -121,10 +119,10 @@ export function useSelfUpgrade() {
       clearInterval(poll)
       clearInterval(tick)
     }
-  }, [])
+  }
 
   /** Trigger the self-upgrade by patching the Deployment image tag */
-  const triggerUpgrade = useCallback(async (imageTag: string): Promise<{ success: boolean; error?: string }> => {
+  const triggerUpgrade = async (imageTag: string): Promise<{ success: boolean; error?: string }> => {
     setIsTriggering(true)
     setTriggerError(null)
     try {
@@ -133,11 +131,9 @@ export function useSelfUpgrade() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+          ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ imageTag }),
-        signal: AbortSignal.timeout(SELF_UPGRADE_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(SELF_UPGRADE_TIMEOUT_MS) })
       const data = await resp.json()
       if (resp.ok && data.success) {
         setIsTriggering(false)
@@ -162,13 +158,13 @@ export function useSelfUpgrade() {
       setIsTriggering(false)
       return { success: false, error: msg }
     }
-  }, [pollForRestart])
+  }
 
   /** Cancel restart polling (e.g. user navigates away) */
-  const cancelRestartPoll = useCallback(() => {
+  const cancelRestartPoll = () => {
     pollAbortRef.current?.abort()
     setIsRestarting(false)
-  }, [])
+  }
 
   // Check status on mount
   useEffect(() => {
@@ -206,6 +202,5 @@ export function useSelfUpgrade() {
     /** Trigger the upgrade with a specific image tag */
     triggerUpgrade,
     /** Cancel restart polling */
-    cancelRestartPoll,
-  }
+    cancelRestartPoll }
 }

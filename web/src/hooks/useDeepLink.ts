@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useDrillDownActions } from './useDrillDown'
 import { scrollToCard } from '../lib/scrollToCard'
@@ -83,8 +83,7 @@ async function getNotificationSW(): Promise<ServiceWorkerRegistration | null> {
 
   try {
     swRegistration = await navigator.serviceWorker.register('/notification-sw.js', {
-      scope: '/',
-    })
+      scope: '/' })
     return swRegistration
   } catch {
     return null
@@ -122,8 +121,7 @@ export function sendNotificationWithDeepLink(
         icon: '/kubestellar-logo.svg',
         requireInteraction: true,
         data: { url },
-        ...options,
-      }).catch(() => {
+        ...options }).catch(() => {
         // SW registration lost — fall back to standard Notification API
         sendStandardNotification(title, body, url, options)
       })
@@ -146,8 +144,7 @@ function sendStandardNotification(
     body,
     icon: '/kubestellar-logo.svg',
     requireInteraction: true,
-    ...options,
-  })
+    ...options })
 
   notification.onclick = (event: Event) => {
     event.preventDefault()
@@ -270,24 +267,23 @@ export function useDeepLink() {
   }, [searchParams, setSearchParams, navigate, drillToNode, drillToPod, drillToCluster, drillToDeployment, drillToNamespace])
 
   // Build deep link URL helper
-  const buildURL = useCallback((params: DeepLinkParams) => {
+  const buildURL = (params: DeepLinkParams) => {
     return buildDeepLinkURL(params)
-  }, [])
+  }
 
   // Send notification helper
-  const sendNotification = useCallback((
+  const sendNotification = (
     title: string,
     body: string,
     params: DeepLinkParams,
     options?: NotificationOptions
   ): void => {
     sendNotificationWithDeepLink(title, body, params, options)
-  }, [])
+  }
 
   return {
     buildURL,
-    sendNotification,
-  }
+    sendNotification }
 }
 
 export default useDeepLink

@@ -20,8 +20,7 @@ import {
   Raycaster,
   Vector2,
   Mesh,
-  MeshLambertMaterial,
-} from 'three'
+  MeshLambertMaterial } from 'three'
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js'
 import { Play, Pause, RotateCcw, Sun, Moon } from 'lucide-react'
 
@@ -43,8 +42,7 @@ const BLOCK_COLORS: Record<BlockType, { top: number; side: number; bottom: numbe
   sand: { top: 0xF4A460, side: 0xF4A460, bottom: 0xF4A460 },
   brick: { top: 0xB22222, side: 0xB22222, bottom: 0xB22222 },
   glass: { top: 0xADD8E6, side: 0xADD8E6, bottom: 0xADD8E6, transparent: true },
-  bedrock: { top: 0x1a1a1a, side: 0x1a1a1a, bottom: 0x1a1a1a },
-}
+  bedrock: { top: 0x1a1a1a, side: 0x1a1a1a, bottom: 0x1a1a1a } }
 
 const BLOCK_TYPES: BlockType[] = ['grass', 'dirt', 'stone', 'wood', 'leaves', 'water', 'sand', 'brick', 'glass']
 
@@ -186,8 +184,7 @@ function KubeCraft3DInternal() {
     right: false,
     up: false,
     down: false,
-    velocity: new Vector3(),
-  })
+    velocity: new Vector3() })
 
   // Initialize Three.js scene
   useEffect(() => {
@@ -470,30 +467,30 @@ function KubeCraft3DInternal() {
     }
   }, [isLocked, selectedBlock, createBlockMesh])
 
-  const saveWorld = useCallback(() => {
+  const saveWorld = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(worldRef.current))
-  }, [])
+  }
 
-  const resetWorld = useCallback(() => {
+  const resetWorld = () => {
     worldRef.current = generateTerrain()
     localStorage.removeItem(STORAGE_KEY)
     // Reload the scene
     window.location.reload()
-  }, [])
+  }
 
-  const handlePlay = useCallback(() => {
+  const handlePlay = () => {
     if (controlsRef.current) {
       controlsRef.current.lock()
     }
     setIsPlaying(true)
-  }, [])
+  }
 
-  const handlePause = useCallback(() => {
+  const handlePause = () => {
     if (controlsRef.current) {
       controlsRef.current.unlock()
     }
     setIsPlaying(false)
-  }, [])
+  }
 
   const height = isExpanded ? 500 : 350
 

@@ -6,18 +6,16 @@
  * and demo data generation for all components.
  */
 
-import { useState, useCallback, useEffect, useRef, useMemo, type ReactNode } from 'react'
+import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react'
 import { UnifiedDemoContext } from './UnifiedDemoContext'
 import { useDemoMode, isDemoModeForced } from '../../../hooks/useDemoMode'
 import {
   registerDemoData,
   generateDemoDataSync,
-  clearDemoDataCache,
-} from './demoDataRegistry'
+  clearDemoDataCache } from './demoDataRegistry'
 import {
   triggerAllRefetches,
-  incrementModeTransitionVersion,
-} from '../../modeTransition'
+  incrementModeTransitionVersion } from '../../modeTransition'
 import type { UnifiedDemoContextValue, DemoDataEntry, DemoDataState } from './types'
 
 /**
@@ -76,9 +74,7 @@ export function UnifiedDemoProvider({ children }: UnifiedDemoProviderProps) {
           detail: {
             from: previousModeRef.current ? 'demo' : 'live',
             to: isDemoMode ? 'demo' : 'live',
-            timestamp: Date.now(),
-          },
-        })
+            timestamp: Date.now() } })
       )
 
       // End skeleton state after duration and trigger all registered refetches
@@ -114,34 +110,33 @@ export function UnifiedDemoProvider({ children }: UnifiedDemoProviderProps) {
   }, [])
 
   // Get demo data for a component
-  const getDemoData = useCallback(<T = unknown>(id: string): DemoDataState<T> => {
+  const getDemoData = <T = unknown>(id: string): DemoDataState<T> => {
     if (isModeSwitching) {
       // Return loading state during mode switch
       return {
         data: undefined,
         isLoading: true,
-        isDemoData: true,
-      }
+        isDemoData: true }
     }
 
     // Generate demo data synchronously
     return generateDemoDataSync<T>(id)
-  }, [isModeSwitching])
+  }
 
   // Register a demo data generator
-  const registerGenerator = useCallback(<T = unknown>(entry: DemoDataEntry<T>): void => {
+  const registerGenerator = <T = unknown>(entry: DemoDataEntry<T>): void => {
     registerDemoData(entry)
-  }, [])
+  }
 
   // Trigger data regeneration for a component
-  const regenerate = useCallback((id: string): void => {
+  const regenerate = (id: string): void => {
     clearDemoDataCache(id)
-  }, [])
+  }
 
   // Trigger data regeneration for all components
-  const regenerateAll = useCallback((): void => {
+  const regenerateAll = (): void => {
     clearDemoDataCache()
-  }, [])
+  }
 
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo<UnifiedDemoContextValue>(() => ({
@@ -154,8 +149,7 @@ export function UnifiedDemoProvider({ children }: UnifiedDemoProviderProps) {
     getDemoData,
     registerGenerator,
     regenerate,
-    regenerateAll,
-  }), [
+    regenerateAll }), [
     isDemoMode,
     isModeSwitching,
     modeVersion,
@@ -251,12 +245,12 @@ export function useUnifiedData<T = unknown>(
   const showSkeleton = forceSkeleton || isModeSwitching || (isLoading && data === undefined)
 
   // Refetch function
-  const refetch = useCallback(() => {
+  const refetch = () => {
     if (useDemoData) {
       regenerate(id)
     }
     // For live data, the caller should handle refetch
-  }, [useDemoData, regenerate, id])
+  }
 
   return {
     data,
@@ -264,8 +258,7 @@ export function useUnifiedData<T = unknown>(
     showSkeleton,
     isDemoData,
     error: useDemoData ? demoState?.error : (error ?? undefined),
-    refetch,
-  }
+    refetch }
 }
 
 // Re-export the context hook

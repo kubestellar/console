@@ -6,7 +6,7 @@
  *
  * When demo mode is enabled, provides fake demo stacks instead of live data.
  */
-import React, { createContext, use, useState, useEffect, useMemo, useCallback } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { useStackDiscovery, type LLMdStack, type LLMdStackComponent } from '../hooks/useStackDiscovery'
 import { useDemoMode } from '../hooks/useDemoMode'
 import { useClusters } from '../hooks/mcp/clusters'
@@ -30,8 +30,7 @@ function createDemoStacks(): LLMdStack[] {
     status,
     replicas,
     readyReplicas: status === 'running' ? replicas : 0,
-    model: 'Llama-3-70B',
-  })
+    model: 'Llama-3-70B' })
 
   return [
     // Demo disaggregated stack with WVA autoscaler (active replicas)
@@ -52,8 +51,7 @@ function createDemoStacks(): LLMdStack[] {
         ],
         both: [],
         epp: createComponent('inference-epp', 'llm-inference', 'demo-cluster-1', 'epp', 2),
-        gateway: createComponent('inference-gateway', 'llm-inference', 'demo-cluster-1', 'gateway', 1),
-      },
+        gateway: createComponent('inference-gateway', 'llm-inference', 'demo-cluster-1', 'gateway', 1) },
       status: 'healthy',
       hasDisaggregation: true,
       model: 'Llama-3-70B',
@@ -65,9 +63,7 @@ function createDemoStacks(): LLMdStack[] {
         minReplicas: 4,
         maxReplicas: 16,
         currentReplicas: 12,
-        desiredReplicas: 12,
-      },
-    },
+        desiredReplicas: 12 } },
     // Demo WVA-managed stack scaled to 0 (shows ghost nodes)
     {
       id: 'llm-idle@demo-cluster-1',
@@ -80,8 +76,7 @@ function createDemoStacks(): LLMdStack[] {
         decode: [],
         both: [],
         epp: createComponent('idle-epp', 'llm-idle', 'demo-cluster-1', 'epp', 1),
-        gateway: createComponent('idle-gateway', 'llm-idle', 'demo-cluster-1', 'gateway', 1),
-      },
+        gateway: createComponent('idle-gateway', 'llm-idle', 'demo-cluster-1', 'gateway', 1) },
       status: 'degraded',
       hasDisaggregation: false,
       model: 'Mistral-7B',
@@ -93,9 +88,7 @@ function createDemoStacks(): LLMdStack[] {
         minReplicas: 0,
         maxReplicas: 8,
         currentReplicas: 0,
-        desiredReplicas: 0,
-      },
-    },
+        desiredReplicas: 0 } },
     // Demo unified stack with HPA autoscaler
     {
       id: 'vllm-prod@demo-cluster-2',
@@ -112,8 +105,7 @@ function createDemoStacks(): LLMdStack[] {
           createComponent('vllm-server-2', 'vllm-prod', 'demo-cluster-2', 'both', 4),
         ],
         epp: createComponent('vllm-epp', 'vllm-prod', 'demo-cluster-2', 'epp', 1),
-        gateway: createComponent('vllm-gateway', 'vllm-prod', 'demo-cluster-2', 'gateway', 1),
-      },
+        gateway: createComponent('vllm-gateway', 'vllm-prod', 'demo-cluster-2', 'gateway', 1) },
       status: 'healthy',
       hasDisaggregation: false,
       model: 'Granite-13B',
@@ -125,9 +117,7 @@ function createDemoStacks(): LLMdStack[] {
         minReplicas: 6,
         maxReplicas: 24,
         currentReplicas: 14,
-        desiredReplicas: 14,
-      },
-    },
+        desiredReplicas: 14 } },
     // Demo degraded stack (no autoscaler - manual scaling)
     {
       id: 'inference-staging@demo-cluster-1',
@@ -143,8 +133,7 @@ function createDemoStacks(): LLMdStack[] {
         ],
         both: [],
         epp: createComponent('staging-epp', 'inference-staging', 'demo-cluster-1', 'epp', 1),
-        gateway: null,
-      },
+        gateway: null },
       status: 'degraded',
       hasDisaggregation: true,
       model: 'Qwen-32B',
@@ -188,22 +177,18 @@ export function StackProvider({ children }: StackProviderProps) {
 
   // Get only confirmed-reachable clusters — exclude offline and unknown
   const { deduplicatedClusters } = useClusters()
-  const onlineClusterNames = useMemo(() => {
-    return deduplicatedClusters
+  const onlineClusterNames = deduplicatedClusters
       .filter(c => c.reachable === true)
       .map(c => c.name)
-  }, [deduplicatedClusters])
 
   const { stacks: discoveredStacks, isLoading: liveLoading, error: liveError, refetch: liveRefetch, lastRefresh: liveLastRefresh } = useStackDiscovery(onlineClusterNames)
 
   // Filter out stacks from clusters that went offline since last discovery
-  const onlineClusterSet = useMemo(() => new Set(onlineClusterNames), [onlineClusterNames])
-  const liveStacks = useMemo(() => {
-    return discoveredStacks.filter(s => onlineClusterSet.has(s.cluster))
-  }, [discoveredStacks, onlineClusterSet])
+  const onlineClusterSet = new Set(onlineClusterNames)
+  const liveStacks = discoveredStacks.filter(s => onlineClusterSet.has(s.cluster))
 
   // Use demo stacks when in demo mode, otherwise live stacks
-  const demoStacks = useMemo(() => createDemoStacks(), [])
+  const demoStacks = createDemoStacks()
   const stacks = isDemoMode ? demoStacks : liveStacks
   const isLoading = isDemoMode ? false : liveLoading
   const error = isDemoMode ? null : liveError
@@ -249,22 +234,18 @@ export function StackProvider({ children }: StackProviderProps) {
     }
   }, [isLoading, stacks, selectedStackId, setSelectedStackId])
 
-  const getStackById = useCallback((id: string) => {
+  const getStackById = (id: string) => {
     return stacks.find(s => s.id === id)
-  }, [stacks])
+  }
 
-  const selectedStack = useMemo(() => {
+  const selectedStack = (() => {
     if (!selectedStackId) return null
     return stacks.find(s => s.id === selectedStackId) || null
-  }, [stacks, selectedStackId])
+  })()
 
-  const healthyStacks = useMemo(() => {
-    return stacks.filter(s => s.status === 'healthy')
-  }, [stacks])
+  const healthyStacks = stacks.filter(s => s.status === 'healthy')
 
-  const disaggregatedStacks = useMemo(() => {
-    return stacks.filter(s => s.hasDisaggregation)
-  }, [stacks])
+  const disaggregatedStacks = stacks.filter(s => s.hasDisaggregation)
 
   const value: StackContextType = {
     stacks,
@@ -278,8 +259,7 @@ export function StackProvider({ children }: StackProviderProps) {
     isDemoMode,
     getStackById,
     healthyStacks,
-    disaggregatedStacks,
-  }
+    disaggregatedStacks }
 
   return (
     <StackContext.Provider value={value}>
@@ -289,7 +269,7 @@ export function StackProvider({ children }: StackProviderProps) {
 }
 
 export function useStack() {
-  const context = use(StackContext)
+  const context = useContext(StackContext)
   if (!context) {
     throw new Error('useStack must be used within a StackProvider')
   }
@@ -298,5 +278,5 @@ export function useStack() {
 
 // Hook to check if we're inside a StackProvider
 export function useOptionalStack(): StackContextType | null {
-  return use(StackContext)
+  return useContext(StackContext)
 }

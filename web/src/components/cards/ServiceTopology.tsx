@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { ZoomIn, ZoomOut, Maximize2, ArrowRight } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { StatusBadge } from '../ui/StatusBadge'
@@ -49,36 +49,34 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
     isLoading,
     isFailed,
     consecutiveFailures,
-    isDemoData,
-  } = useTopology()
+    isDemoData } = useTopology()
 
   useReportCardDataState({
     hasData: !!graph,
     isFailed,
     consecutiveFailures,
     isDemoData,
-    isLoading,
-  })
+    isLoading })
 
   const [zoom, setZoom] = useState(1)
   const [selectedNode, setSelectedNode] = useState<string | null>(null)
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
 
   // Use nodes and edges from the topology hook (guarded against undefined)
-  const nodes = useMemo<TopologyNode[]>(() => graph?.nodes || [], [graph?.nodes])
-  const edges = useMemo<TopologyEdge[]>(() => graph?.edges || [], [graph?.edges])
+  const nodes = graph?.nodes || []
+  const edges = graph?.edges || []
 
   // Derive stat counts from nodes when API stats don't include per-type breakdowns
-  const derivedStats = useMemo(() => {
+  const derivedStats = (() => {
     const clusterCount = nodes.filter(n => n.type === 'cluster').length
     const serviceCount = nodes.filter(n => n.type === 'service').length
     const gatewayCount = nodes.filter(n => n.type === 'gateway').length
     const totalEdges = stats?.totalEdges ?? edges.length
     return { clusters: clusterCount, services: serviceCount, gateways: gatewayCount, totalEdges }
-  }, [nodes, edges, stats])
+  })()
 
   // Group nodes by cluster for layout
-  const nodesByCluster = useMemo(() => {
+  const nodesByCluster = (() => {
     const grouped: Record<string, TopologyNode[]> = {}
     for (const node of nodes) {
       if (!grouped[node.cluster]) {
@@ -87,7 +85,7 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
       grouped[node.cluster].push(node)
     }
     return grouped
-  }, [nodes])
+  })()
 
   // Calculate node positions for simple visualization
   const nodePositions = useMemo(() => {
@@ -114,9 +112,9 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
     return positions
   }, [nodesByCluster])
 
-  const handleZoomIn = useCallback(() => setZoom(z => Math.min(z + 0.2, 2)), [])
-  const handleZoomOut = useCallback(() => setZoom(z => Math.max(z - 0.2, 0.5)), [])
-  const handleResetZoom = useCallback(() => setZoom(1), [])
+  const handleZoomIn = () => setZoom(z => Math.min(z + 0.2, 2))
+  const handleZoomOut = () => setZoom(z => Math.max(z - 0.2, 0.5))
+  const handleResetZoom = () => setZoom(1)
 
   const selectedNodeData = selectedNode ? nodes.find(n => n.id === selectedNode) : null
 

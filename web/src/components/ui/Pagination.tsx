@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useReducer, useRef, useEffect } from 'react'
+import { useReducer, useRef, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from './Button'
@@ -29,8 +29,7 @@ function paginationReducer(state: PaginationPageState, action: PaginationAction)
 export function usePagination<T>(items: T[], defaultPerPage: number = 5, resetOnFilterChange: boolean = true) {
   const [{ currentPage, itemsPerPage }, dispatch] = useReducer(paginationReducer, {
     currentPage: 1,
-    itemsPerPage: defaultPerPage,
-  })
+    itemsPerPage: defaultPerPage })
   const prevDefaultPerPage = useRef(defaultPerPage)
   const prevItemsLength = useRef(items.length)
 
@@ -65,22 +64,22 @@ export function usePagination<T>(items: T[], defaultPerPage: number = 5, resetOn
     }
   }, [currentPage, totalPages])
 
-  const paginatedItems = useMemo(() => {
+  const paginatedItems = (() => {
     const start = (safePage - 1) * itemsPerPage
     return items.slice(start, start + itemsPerPage)
-  }, [items, safePage, itemsPerPage])
+  })()
 
   // Use ref to avoid stale totalPages in goToPage callback
   const totalPagesRef = useRef(totalPages)
   totalPagesRef.current = totalPages
 
-  const goToPage = useCallback((page: number) => {
+  const goToPage = (page: number) => {
     dispatch({ type: 'SET_PAGE', page: Math.max(1, Math.min(page, totalPagesRef.current)) })
-  }, [])
+  }
 
-  const setPerPage = useCallback((perPage: number) => {
+  const setPerPage = (perPage: number) => {
     dispatch({ type: 'SET_PER_PAGE', perPage })
-  }, [])
+  }
 
   return {
     paginatedItems,
@@ -91,8 +90,7 @@ export function usePagination<T>(items: T[], defaultPerPage: number = 5, resetOn
     goToPage,
     setPerPage,
     // Convenience: whether pagination is needed
-    needsPagination: totalItems > itemsPerPage,
-  }
+    needsPagination: totalItems > itemsPerPage }
 }
 
 interface PaginationProps {
@@ -116,8 +114,7 @@ export function Pagination({
   onItemsPerPageChange,
   className = '',
   showItemsPerPage = true,
-  itemsPerPageOptions = [5, 10, 20, 50],
-}: PaginationProps) {
+  itemsPerPageOptions = [5, 10, 20, 50] }: PaginationProps) {
   const { t } = useTranslation('common')
   const startItem = (currentPage - 1) * itemsPerPage + 1
   const endItem = Math.min(currentPage * itemsPerPage, totalItems)

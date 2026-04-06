@@ -5,7 +5,6 @@
  * to validate the unified framework works correctly.
  */
 
-import { useCallback } from 'react'
 import { Trans } from 'react-i18next'
 import { UnifiedStatsSection } from '../lib/unified/stats/UnifiedStatsSection'
 import { COMPUTE_STATS_CONFIG } from '../lib/unified/stats/configs'
@@ -20,14 +19,13 @@ const DEMO_STATS: Record<string, StatBlockValue> = {
   tpus: { value: 0, sublabel: 'total TPUs' },
   pods: { value: 1247, sublabel: 'running pods' },
   cpu_util: { value: '67%', sublabel: 'average' },
-  memory_util: { value: '54%', sublabel: 'average' },
-}
+  memory_util: { value: '54%', sublabel: 'average' } }
 
 export function UnifiedStatsTest() {
   // Stat value getter - same for both components
-  const getStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getStatValue = (blockId: string): StatBlockValue => {
     return DEMO_STATS[blockId] || { value: '-', sublabel: '' }
-  }, [])
+  }
 
   return (
     <div className="p-6 pt-20">

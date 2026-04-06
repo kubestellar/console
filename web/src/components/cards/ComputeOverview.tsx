@@ -28,25 +28,23 @@ export function ComputeOverview() {
     availableClusters,
     showClusterFilter,
     setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({
-    storageKey: 'compute-overview',
-  })
+    clusterFilterRef } = useChartFilters({
+    storageKey: 'compute-overview' })
 
   // Filter clusters by global selection first
-  const globalFilteredClusters = useMemo(() => {
+  const globalFilteredClusters = (() => {
     if (isAllClustersSelected) return clusters
     return clusters.filter(c => selectedClusters.includes(c.name))
-  }, [clusters, selectedClusters, isAllClustersSelected])
+  })()
 
   // Apply local cluster filter
-  const filteredClusters = useMemo(() => {
+  const filteredClusters = (() => {
     if (localClusterFilter.length === 0) return globalFilteredClusters
     return globalFilteredClusters.filter(c => localClusterFilter.includes(c.name))
-  }, [globalFilteredClusters, localClusterFilter])
+  })()
 
   // Filter GPU nodes by selection
-  const filteredGPUNodes = useMemo(() => {
+  const filteredGPUNodes = (() => {
     let result = gpuNodes
     if (!isAllClustersSelected) {
       result = result.filter(n => selectedClusters.some(c => n.cluster.startsWith(c)))
@@ -55,7 +53,7 @@ export function ComputeOverview() {
       result = result.filter(n => localClusterFilter.some(c => n.cluster.startsWith(c)))
     }
     return result
-  }, [gpuNodes, selectedClusters, isAllClustersSelected, localClusterFilter])
+  })()
 
   // Calculate compute stats
   const stats = useMemo(() => {
@@ -94,8 +92,7 @@ export function ComputeOverview() {
       clustersWithGPU: new Set(filteredGPUNodes.map(n => n.cluster.split('/')[0])).size,
       healthyClusters,
       degradedClusters,
-      offlineClusters,
-    }
+      offlineClusters }
   }, [filteredClusters, filteredGPUNodes])
 
   // Check if we have real data from reachable clusters
@@ -110,8 +107,7 @@ export function ComputeOverview() {
     hasAnyData: hasData,
     isFailed: clustersFailed,
     consecutiveFailures: clustersConsecutiveFailures,
-    isDemoData: isDemoMode || isDemoFallback,
-  })
+    isDemoData: isDemoMode || isDemoFallback })
 
   if (showSkeleton) {
     return (

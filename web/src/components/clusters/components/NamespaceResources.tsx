@@ -34,8 +34,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
     drillToConfigMap,
     drillToSecret,
     drillToServiceAccount,
-    drillToPVC,
-  } = useDrillDownActions()
+    drillToPVC } = useDrillDownActions()
 
   const [viewMode, setViewMode] = useState<'list' | 'tree'>('tree')
   const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set(['deployments', 'pods']))
@@ -74,7 +73,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
   }
 
   // Map pods to their deployment owners
-  const podsByDeployment = useMemo(() => {
+  const podsByDeployment = (() => {
     const groups: Record<string, typeof pods> = {}
     const standalone: typeof pods = []
 
@@ -88,7 +87,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
       }
     })
     return { byDeployment: groups, standalone }
-  }, [pods, deployments])
+  })()
 
   // Build flat list of all resources for list view
   const allResources = useMemo(() => {

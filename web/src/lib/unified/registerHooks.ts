@@ -10,7 +10,7 @@
  * rules of hooks - they are called consistently on every render.
  */
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { registerDataHook } from './card/hooks/useDataSource'
 import { SHORT_DELAY_MS } from '../constants/network'
@@ -18,8 +18,7 @@ import {
   useCachedPodIssues,
   useCachedEvents,
   useCachedDeployments,
-  useCachedDeploymentIssues,
-} from '../../hooks/useCachedData'
+  useCachedDeploymentIssues } from '../../hooks/useCachedData'
 import {
   useClusters,
   usePVCs,
@@ -44,12 +43,10 @@ import {
   useOperatorSubscriptions,
   useServiceAccounts,
   useK8sRoles,
-  useK8sRoleBindings,
-} from '../../hooks/mcp'
+  useK8sRoleBindings } from '../../hooks/mcp'
 import {
   useServiceExports,
-  useServiceImports,
-} from '../../hooks/useMCS'
+  useServiceImports } from '../../hooks/useMCS'
 
 // ============================================================================
 // Wrapper hooks that convert params object to positional args
@@ -64,8 +61,7 @@ function useUnifiedPodIssues(params?: Record<string, unknown>) {
     data: result.data,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: () => { result.refetch() },
-  }
+    refetch: () => { result.refetch() } }
 }
 
 function useUnifiedEvents(params?: Record<string, unknown>) {
@@ -76,8 +72,7 @@ function useUnifiedEvents(params?: Record<string, unknown>) {
     data: result.data,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: () => { result.refetch() },
-  }
+    refetch: () => { result.refetch() } }
 }
 
 function useUnifiedDeployments(params?: Record<string, unknown>) {
@@ -88,8 +83,7 @@ function useUnifiedDeployments(params?: Record<string, unknown>) {
     data: result.data,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: () => { result.refetch() },
-  }
+    refetch: () => { result.refetch() } }
 }
 
 function useUnifiedClusters() {
@@ -98,8 +92,7 @@ function useUnifiedClusters() {
     data: result.clusters,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedPVCs(params?: Record<string, unknown>) {
@@ -110,8 +103,7 @@ function useUnifiedPVCs(params?: Record<string, unknown>) {
     data: result.pvcs,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedServices(params?: Record<string, unknown>) {
@@ -122,8 +114,7 @@ function useUnifiedServices(params?: Record<string, unknown>) {
     data: result.services,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedDeploymentIssues(params?: Record<string, unknown>) {
@@ -134,8 +125,7 @@ function useUnifiedDeploymentIssues(params?: Record<string, unknown>) {
     data: result.issues || [],
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedOperators(params?: Record<string, unknown>) {
@@ -145,8 +135,7 @@ function useUnifiedOperators(params?: Record<string, unknown>) {
     data: result.operators,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedHelmReleases(params?: Record<string, unknown>) {
@@ -156,8 +145,7 @@ function useUnifiedHelmReleases(params?: Record<string, unknown>) {
     data: result.releases,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedConfigMaps(params?: Record<string, unknown>) {
@@ -168,8 +156,7 @@ function useUnifiedConfigMaps(params?: Record<string, unknown>) {
     data: result.configmaps,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedSecrets(params?: Record<string, unknown>) {
@@ -180,8 +167,7 @@ function useUnifiedSecrets(params?: Record<string, unknown>) {
     data: result.secrets,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedIngresses(params?: Record<string, unknown>) {
@@ -192,8 +178,7 @@ function useUnifiedIngresses(params?: Record<string, unknown>) {
     data: result.ingresses,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedNodes(params?: Record<string, unknown>) {
@@ -203,8 +188,7 @@ function useUnifiedNodes(params?: Record<string, unknown>) {
     data: result.nodes,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedJobs(params?: Record<string, unknown>) {
@@ -215,8 +199,7 @@ function useUnifiedJobs(params?: Record<string, unknown>) {
     data: result.jobs,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedCronJobs(params?: Record<string, unknown>) {
@@ -227,8 +210,7 @@ function useUnifiedCronJobs(params?: Record<string, unknown>) {
     data: result.cronjobs,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedStatefulSets(params?: Record<string, unknown>) {
@@ -239,8 +221,7 @@ function useUnifiedStatefulSets(params?: Record<string, unknown>) {
     data: result.statefulsets,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedDaemonSets(params?: Record<string, unknown>) {
@@ -251,8 +232,7 @@ function useUnifiedDaemonSets(params?: Record<string, unknown>) {
     data: result.daemonsets,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedHPAs(params?: Record<string, unknown>) {
@@ -263,8 +243,7 @@ function useUnifiedHPAs(params?: Record<string, unknown>) {
     data: result.hpas,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedReplicaSets(params?: Record<string, unknown>) {
@@ -275,8 +254,7 @@ function useUnifiedReplicaSets(params?: Record<string, unknown>) {
     data: result.replicasets,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedPVs(params?: Record<string, unknown>) {
@@ -286,8 +264,7 @@ function useUnifiedPVs(params?: Record<string, unknown>) {
     data: result.pvs,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedResourceQuotas(params?: Record<string, unknown>) {
@@ -298,8 +275,7 @@ function useUnifiedResourceQuotas(params?: Record<string, unknown>) {
     data: result.resourceQuotas,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedLimitRanges(params?: Record<string, unknown>) {
@@ -310,8 +286,7 @@ function useUnifiedLimitRanges(params?: Record<string, unknown>) {
     data: result.limitRanges,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedNetworkPolicies(params?: Record<string, unknown>) {
@@ -322,8 +297,7 @@ function useUnifiedNetworkPolicies(params?: Record<string, unknown>) {
     data: result.networkpolicies,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedNamespaces(params?: Record<string, unknown>) {
@@ -333,8 +307,7 @@ function useUnifiedNamespaces(params?: Record<string, unknown>) {
     data: result.namespaces,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedOperatorSubscriptions(params?: Record<string, unknown>) {
@@ -344,8 +317,7 @@ function useUnifiedOperatorSubscriptions(params?: Record<string, unknown>) {
     data: result.subscriptions,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedServiceAccounts(params?: Record<string, unknown>) {
@@ -356,8 +328,7 @@ function useUnifiedServiceAccounts(params?: Record<string, unknown>) {
     data: result.serviceAccounts,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedK8sRoles(params?: Record<string, unknown>) {
@@ -368,8 +339,7 @@ function useUnifiedK8sRoles(params?: Record<string, unknown>) {
     data: result.roles,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedK8sRoleBindings(params?: Record<string, unknown>) {
@@ -380,8 +350,7 @@ function useUnifiedK8sRoleBindings(params?: Record<string, unknown>) {
     data: result.bindings,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedServiceExports(params?: Record<string, unknown>) {
@@ -392,8 +361,7 @@ function useUnifiedServiceExports(params?: Record<string, unknown>) {
     data: result.exports,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 function useUnifiedServiceImports(params?: Record<string, unknown>) {
@@ -404,8 +372,7 @@ function useUnifiedServiceImports(params?: Record<string, unknown>) {
     data: result.imports,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 // ============================================================================
@@ -431,8 +398,7 @@ function useDemoDataHook<T>(demoData: T[]) {
     data: !demoMode ? [] : isLoading ? [] : demoData,
     isLoading,
     error: null,
-    refetch: () => {},
-  }
+    refetch: () => {} }
 }
 
 // Cluster metrics demo data
@@ -480,16 +446,14 @@ const DEMO_STORAGE_OVERVIEW = {
   totalCapacity: 2048,
   used: 1234,
   pvcs: 45,
-  unbound: 3,
-}
+  unbound: 3 }
 
 // Network overview demo data
 const DEMO_NETWORK_OVERVIEW = {
   services: 67,
   ingresses: 12,
   networkPolicies: 23,
-  loadBalancers: 5,
-}
+  loadBalancers: 5 }
 
 // Top pods demo data
 const DEMO_TOP_PODS = [
@@ -530,8 +494,7 @@ const DEMO_COMPUTE_OVERVIEW = {
   nodes: 12,
   cpuUsage: 48,
   memoryUsage: 62,
-  podCount: 156,
-}
+  podCount: 156 }
 
 // ============================================================================
 // Batch 4 demo data - ArgoCD, Prow, GPU, ML, Policy cards
@@ -612,8 +575,7 @@ const DEMO_COMPLIANCE_SCORE = {
     { name: 'Security', score: 92, passed: 46, failed: 4 },
     { name: 'Reliability', score: 78, passed: 39, failed: 11 },
     { name: 'Best Practices', score: 85, passed: 68, failed: 12 },
-  ],
-}
+  ] }
 
 // Namespace events demo data
 const DEMO_NAMESPACE_EVENTS = [
@@ -642,15 +604,13 @@ const DEMO_ARGOCD_HEALTH = {
   healthy: 12,
   degraded: 2,
   progressing: 1,
-  missing: 0,
-}
+  missing: 0 }
 
 // ArgoCD sync status demo data (stats-grid)
 const DEMO_ARGOCD_SYNC_STATUS = {
   synced: 11,
   outOfSync: 3,
-  unknown: 1,
-}
+  unknown: 1 }
 
 // Gateway status demo data
 const DEMO_GATEWAY_STATUS = [
@@ -684,8 +644,7 @@ const DEMO_PROW_STATUS = {
   running: 5,
   passed: 42,
   failed: 3,
-  pending: 2,
-}
+  pending: 2 }
 
 // Prow history demo data
 const DEMO_PROW_HISTORY = [
@@ -704,16 +663,14 @@ const DEMO_HELM_HISTORY = [
 const DEMO_EXTERNAL_SECRETS = {
   total: 25,
   ready: 23,
-  failed: 2,
-}
+  failed: 2 }
 
 // Cert manager demo data (stats-grid)
 const DEMO_CERT_MANAGER = {
   certificates: 15,
   ready: 14,
   expiringSoon: 1,
-  expired: 0,
-}
+  expired: 0 }
 
 // Vault secrets demo data
 const DEMO_VAULT_SECRETS = [
@@ -732,23 +689,20 @@ const DEMO_KUBESCAPE_SCAN = {
   passed: 85,
   failed: 12,
   skipped: 3,
-  riskScore: 22,
-}
+  riskScore: 22 }
 
 // Trivy scan demo data (stats-grid)
 const DEMO_TRIVY_SCAN = {
   critical: 2,
   high: 8,
   medium: 25,
-  low: 45,
-}
+  low: 45 }
 
 // Event summary demo data (stats-grid)
 const DEMO_EVENT_SUMMARY = {
   normal: 156,
   warning: 23,
-  error: 5,
-}
+  error: 5 }
 
 // App status demo data
 const DEMO_APP_STATUS = [
@@ -761,8 +715,7 @@ const DEMO_GPU_STATUS = {
   total: 24,
   available: 6,
   allocated: 18,
-  errored: 0,
-}
+  errored: 0 }
 
 // GPU utilization demo data (chart)
 const DEMO_GPU_UTILIZATION = [
@@ -794,8 +747,7 @@ const DEMO_NAMESPACE_OVERVIEW = {
   pods: 45,
   deployments: 12,
   services: 8,
-  configmaps: 15,
-}
+  configmaps: 15 }
 
 // Namespace quotas demo data
 const DEMO_NAMESPACE_QUOTAS = [
@@ -814,8 +766,7 @@ const DEMO_RESOURCE_CAPACITY = {
   cpuTotal: 96,
   cpuUsed: 48,
   memoryTotal: 384,
-  memoryUsed: 256,
-}
+  memoryUsed: 256 }
 
 // ============================================================================
 // Batch 6 demo data - Remaining compatible cards
@@ -843,8 +794,7 @@ const DEMO_KUBECOST_OVERVIEW = {
     { category: 'Storage', cost: 2500 },
     { category: 'Network', cost: 1500 },
     { category: 'Other', cost: 1000 },
-  ],
-}
+  ] }
 
 // OpenCost overview demo data
 const DEMO_OPENCOST_OVERVIEW = {
@@ -854,8 +804,7 @@ const DEMO_OPENCOST_OVERVIEW = {
     { category: 'Memory', cost: 2500 },
     { category: 'Storage', cost: 1000 },
     { category: 'GPU', cost: 500 },
-  ],
-}
+  ] }
 
 // Cluster costs demo data
 const DEMO_CLUSTER_COSTS = [
@@ -875,17 +824,16 @@ function useWarningEvents(params?: Record<string, unknown>) {
   const result = useCachedEvents(cluster, namespace)
 
   // Filter to only warning events
-  const warningEvents = useMemo(() => {
+  const warningEvents = (() => {
     if (!result.data) return []
     return result.data.filter(e => e.type === 'Warning')
-  }, [result.data])
+  })()
 
   return {
     data: warningEvents,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: () => { result.refetch() },
-  }
+    refetch: () => { result.refetch() } }
 }
 
 function useRecentEvents(params?: Record<string, unknown>) {
@@ -894,21 +842,20 @@ function useRecentEvents(params?: Record<string, unknown>) {
   const result = useCachedEvents(cluster, namespace)
 
   // Filter to events within the last hour
-  const recentEvents = useMemo(() => {
+  const recentEvents = (() => {
     if (!result.data) return []
     const oneHourAgo = Date.now() - 60 * 60 * 1000
     return result.data.filter(e => {
       if (!e.lastSeen) return false
       return new Date(e.lastSeen).getTime() >= oneHourAgo
     })
-  }, [result.data])
+  })()
 
   return {
     data: recentEvents,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: () => { result.refetch() },
-  }
+    refetch: () => { result.refetch() } }
 }
 
 // Demo hook factories
@@ -1017,18 +964,17 @@ function useNamespaceEvents(params?: Record<string, unknown>) {
   const result = useCachedEvents(cluster, namespace)
 
   // Filter to specific namespace if provided
-  const namespaceEvents = useMemo(() => {
+  const namespaceEvents = (() => {
     if (!result.data) return []
     if (!namespace) return result.data.slice(0, MAX_NAMESPACE_EVENTS_UNFILTERED)
     return result.data.filter(e => e.namespace === namespace)
-  }, [result.data, namespace])
+  })()
 
   return {
     data: namespaceEvents.length > 0 ? namespaceEvents : DEMO_NAMESPACE_EVENTS,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
-    refetch: () => { result.refetch() },
-  }
+    refetch: () => { result.refetch() } }
 }
 
 function useGPUWorkloads() {

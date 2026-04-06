@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { RotateCcw, Trophy, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
@@ -22,8 +22,7 @@ const TILE_COLORS: Record<number, { bg: string; text: string }> = {
   1024: { bg: 'bg-orange-500/80', text: 'text-white' },
   2048: { bg: 'bg-purple-500/80', text: 'text-white' },
   4096: { bg: 'bg-purple-500/80', text: 'text-white' },
-  8192: { bg: 'bg-red-500/80', text: 'text-white' },
-}
+  8192: { bg: 'bg-red-500/80', text: 'text-white' } }
 
 // Create empty 4x4 grid
 function createEmptyGrid(): Grid {
@@ -191,7 +190,7 @@ export function Game2048(_props: CardComponentProps) {
   const [keepPlaying, setKeepPlaying] = useState(false)
 
   // Handle move
-  const handleMove = useCallback((direction: 'up' | 'down' | 'left' | 'right') => {
+  const handleMove = (direction: 'up' | 'down' | 'left' | 'right') => {
     if (gameOver) return
 
     const result = moveGrid(grid, direction)
@@ -219,10 +218,10 @@ export function Game2048(_props: CardComponentProps) {
         emitGameEnded('2048', 'loss', newScore)
       }
     }
-  }, [grid, score, bestScore, gameOver, won, keepPlaying])
+  }
 
   // Keyboard controls — scoped to visible game container (KeepAlive-safe)
-  const handle2048KeyDown = useCallback((e: KeyboardEvent) => {
+  const handle2048KeyDown = (e: KeyboardEvent) => {
     if (gameOver && !won) return
 
     switch (e.key) {
@@ -251,24 +250,24 @@ export function Game2048(_props: CardComponentProps) {
         handleMove('right')
         break
     }
-  }, [handleMove, gameOver, won])
+  }
   useGameKeys(gameContainerRef, { onKeyDown: handle2048KeyDown })
 
   // New game
-  const newGame = useCallback(() => {
+  const newGame = () => {
     setGrid(initGame())
     setScore(0)
     setGameOver(false)
     setWon(false)
     setKeepPlaying(false)
     emitGameStarted('2048')
-  }, [])
+  }
 
   // Continue after winning
-  const continueGame = useCallback(() => {
+  const continueGame = () => {
     setWon(false)
     setKeepPlaying(true)
-  }, [])
+  }
 
   /** Grid columns in 2048 */
   const GRID_COLS = 4
@@ -334,8 +333,7 @@ export function Game2048(_props: CardComponentProps) {
             className="grid"
             style={{
               gridTemplateColumns: `repeat(4, ${cellSize}px)`,
-              gap,
-            }}
+              gap }}
           >
             {grid.map((row, r) =>
               row.map((value, c) => {

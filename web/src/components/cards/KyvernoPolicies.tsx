@@ -36,7 +36,7 @@ function KyvernoPoliciesInternal({ config: _config }: KyvernoPoliciesProps) {
   const [modalCluster, setModalCluster] = useState<string | null>(null)
 
   // Aggregate all policies across clusters, filtered by global cluster filter
-  const allPolicies = useMemo(() => {
+  const allPolicies = (() => {
     const policies: KyvernoPolicy[] = []
     for (const [clusterName, status] of Object.entries(statuses)) {
       if (!status.installed) continue
@@ -44,7 +44,7 @@ function KyvernoPoliciesInternal({ config: _config }: KyvernoPoliciesProps) {
       policies.push(...(status.policies || []))
     }
     return policies
-  }, [statuses, selectedClusters])
+  })()
 
   // Stats
   const stats = useMemo(() => {
@@ -62,7 +62,7 @@ function KyvernoPoliciesInternal({ config: _config }: KyvernoPoliciesProps) {
   }, [statuses, selectedClusters])
 
   // Filter policies by local search
-  const filteredPolicies = useMemo(() => {
+  const filteredPolicies = (() => {
     if (!localSearch.trim()) return allPolicies
     const query = localSearch.toLowerCase()
     return allPolicies.filter(policy =>
@@ -73,15 +73,14 @@ function KyvernoPoliciesInternal({ config: _config }: KyvernoPoliciesProps) {
       (policy.kind ?? '').toLowerCase().includes(query) ||
       (policy.cluster ?? '').toLowerCase().includes(query)
     )
-  }, [localSearch, allPolicies])
+  })()
 
   const hasData = installed || isDemoData
   useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
-    isDemoData,
-  })
+    isDemoData })
 
   const handleInstall = () => {
     startMission({
@@ -100,8 +99,7 @@ Use: helm install kyverno kyverno/kyverno --namespace kyverno --create-namespace
 Important: Set validationFailureAction to Audit (not Enforce) for all policies to avoid breaking workloads.
 
 Please proceed step by step.`,
-      context: {},
-    })
+      context: {} })
   }
 
   const handleDeploySamplePolicies = () => {
@@ -126,16 +124,15 @@ Important:
 - Check PolicyReports are generated: kubectl get policyreports -A
 
 Please proceed step by step.`,
-      context: {},
-    })
+      context: {} })
   }
 
   // Detect degraded state: installed but no policies configured
-  const isDegraded = useMemo(() => {
+  const isDegraded = (() => {
     if (!installed || isLoading) return false
     const installedClusters = Object.values(statuses).filter(s => s.installed)
     return installedClusters.length > 0 && installedClusters.every(s => s.totalPolicies === 0)
-  }, [installed, isLoading, statuses])
+  })()
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -153,8 +150,7 @@ Please proceed step by step.`,
       category: policy.category,
       description: policy.description,
       violationCount: policy.violations,
-      background: policy.background,
-    })
+      background: policy.background })
   }
 
   const getCategoryColor = (category: string) => {

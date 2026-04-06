@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { useClusters } from '../../hooks/useMCP'
 import { useMultiClusterInsights } from '../../hooks/useMultiClusterInsights'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
@@ -20,7 +19,7 @@ export function Insights() {
   const criticalCount = (insights || []).filter(i => i.severity === 'critical').length
   const warningCount = (insights || []).filter(i => i.severity === 'warning').length
 
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'clusters':
         return { value: reachableClusters.length, sublabel: 'clusters', isClickable: false }
@@ -33,12 +32,9 @@ export function Insights() {
       default:
         return { value: '-' }
     }
-  }, [reachableClusters, insights, criticalCount, warningCount, isDemoData])
+  }
 
-  const getStatValue = useCallback(
-    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
-    [getDashboardStatValue, getUniversalStatValue]
-  )
+  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
   return (
     <DashboardPage
@@ -58,8 +54,7 @@ export function Insights() {
       isDemoData={isDemoData}
       emptyState={{
         title: 'Insights Dashboard',
-        description: 'Add cards to detect cross-cluster correlations, config drift, cascade impacts, and resource imbalances.',
-      }}
+        description: 'Add cards to detect cross-cluster correlations, config drift, cascade impacts, and resource imbalances.' }}
     >
       {error && (
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">

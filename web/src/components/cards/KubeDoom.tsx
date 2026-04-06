@@ -82,8 +82,7 @@ function spawnEnemies(level: number): Enemy[] {
       alive: true,
       health: 1 + Math.floor(level / 3),
       type: i % ENEMY_NAMES.length,
-      hitTimer: 0,
-    })
+      hitTimer: 0 })
   }
   return enemies
 }
@@ -125,17 +124,17 @@ export function KubeDoom() {
     damageFlashRef.current = 0
   }, [])
 
-  const initLevel = useCallback((lvl: number) => {
+  const initLevel = (lvl: number) => {
     playerRef.current = { x: 1.5, y: 1.5, angle: 0 }
     enemiesRef.current = spawnEnemies(lvl)
     totalEnemiesRef.current = enemiesRef.current.length
     setAmmo(a => a + 25)
     shootFlashRef.current = 0
     damageFlashRef.current = 0
-  }, [])
+  }
 
   // Shoot
-  const shoot = useCallback(() => {
+  const shoot = () => {
     setAmmo(a => {
       if (a <= 0) return 0
       shootFlashRef.current = 8
@@ -188,7 +187,7 @@ export function KubeDoom() {
 
       return a - 1
     })
-  }, [])
+  }
 
   // Update
   const update = useCallback(() => {
@@ -514,7 +513,7 @@ export function KubeDoom() {
   }, [gameState, update, render])
 
   // Keyboard handlers — scoped to visible game container (KeepAlive-safe)
-  const handleDoomKeyDown = useCallback((e: KeyboardEvent) => {
+  const handleDoomKeyDown = (e: KeyboardEvent) => {
     const key = e.key.toLowerCase()
     if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'w', 'a', 's', 'd', 'q', 'e'].includes(key)) {
       e.preventDefault()
@@ -523,10 +522,10 @@ export function KubeDoom() {
     if (key === ' ' && gameState === 'playing') {
       shoot()
     }
-  }, [gameState, shoot])
-  const handleDoomKeyUp = useCallback((e: KeyboardEvent) => {
+  }
+  const handleDoomKeyUp = (e: KeyboardEvent) => {
     keysRef.current.delete(e.key.toLowerCase())
-  }, [])
+  }
   useGameKeys(gameContainerRef, { onKeyDown: handleDoomKeyDown, onKeyUp: handleDoomKeyUp })
 
   // Render initial frame

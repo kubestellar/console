@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useMemo } from 'react'
 import { Stethoscope, Wrench, Wand2 } from 'lucide-react'
 import { useMissions } from '../../../hooks/useMissions'
 import type { ResourceContext, AIAction, MissionType } from '../types/modal.types'
@@ -52,14 +52,13 @@ interface UseModalAIReturn {
 export function useModalAI({
   resource,
   additionalContext,
-  issues = [],
-}: UseModalAIOptions): UseModalAIReturn {
+  issues = [] }: UseModalAIOptions): UseModalAIReturn {
   const { startMission, agents } = useMissions()
 
   const isAgentConnected = agents.length > 0
 
   // Generate prompt templates based on resource
-  const generateDiagnosePrompt = useCallback(() => {
+  const generateDiagnosePrompt = () => {
     const { kind, name, namespace, cluster, status, labels } = resource
 
     const issuesList = issues.length > 0
@@ -81,9 +80,9 @@ Please provide:
 3. Root cause analysis
 4. Recommended actions to resolve issues
 5. Preventive measures`
-  }, [resource, issues])
+  }
 
-  const generateRepairPrompt = useCallback(() => {
+  const generateRepairPrompt = () => {
     const { kind, name, namespace, cluster } = resource
 
     const issuesList = issues.length > 0
@@ -102,13 +101,13 @@ For each issue, please:
 4. Warn about any potential side effects
 
 After I approve, help me execute the repairs step by step.`
-  }, [resource, issues])
+  }
 
-  const generateAskPrompt = useCallback(() => {
+  const generateAskPrompt = () => {
     const { kind, name, namespace, cluster } = resource
 
     return `I have a question about ${kind} "${name}"${namespace ? ` in namespace "${namespace}"` : ''} on cluster "${cluster}".`
-  }, [resource])
+  }
 
   // Default AI actions
   const defaultAIActions: AIAction[] = useMemo(() => {
@@ -123,8 +122,7 @@ After I approve, help me execute the repairs step by step.`
         missionType: 'troubleshoot' as MissionType,
         promptTemplate: generateDiagnosePrompt(),
         disabled: !isAgentConnected,
-        disabledReason: !isAgentConnected ? 'AI agent not connected' : undefined,
-      },
+        disabledReason: !isAgentConnected ? 'AI agent not connected' : undefined },
       {
         id: 'repair',
         label: 'Repair',
@@ -137,8 +135,7 @@ After I approve, help me execute the repairs step by step.`
           ? 'AI agent not connected'
           : !hasIssues
           ? 'No issues detected'
-          : undefined,
-      },
+          : undefined },
       {
         id: 'ask',
         label: 'Ask',
@@ -147,14 +144,12 @@ After I approve, help me execute the repairs step by step.`
         missionType: 'custom' as MissionType,
         promptTemplate: generateAskPrompt(),
         disabled: !isAgentConnected,
-        disabledReason: !isAgentConnected ? 'AI agent not connected' : undefined,
-      },
+        disabledReason: !isAgentConnected ? 'AI agent not connected' : undefined },
     ]
   }, [resource, issues, isAgentConnected, generateDiagnosePrompt, generateRepairPrompt, generateAskPrompt])
 
   // Handle executing an AI action
-  const handleAIAction = useCallback(
-    (action: AIAction) => {
+  const handleAIAction = (action: AIAction) => {
       if (action.disabled) return
 
       const { kind, name, namespace, cluster } = resource
@@ -171,16 +166,11 @@ After I approve, help me execute the repairs step by step.`
           name,
           namespace,
           cluster,
-          ...additionalContext,
-        },
-      })
-    },
-    [resource, additionalContext, startMission]
-  )
+          ...additionalContext } })
+    }
 
   // Start a custom mission with a specific prompt
-  const startCustomMission = useCallback(
-    (prompt: string) => {
+  const startCustomMission = (prompt: string) => {
       const { kind, name, namespace, cluster } = resource
       const shortName = name.length > MAX_NAME_LENGTH ? name.slice(0, TRUNCATED_NAME_LENGTH) + '...' : name
 
@@ -195,19 +185,14 @@ After I approve, help me execute the repairs step by step.`
           name,
           namespace,
           cluster,
-          ...additionalContext,
-        },
-      })
-    },
-    [resource, additionalContext, startMission]
-  )
+          ...additionalContext } })
+    }
 
   return {
     defaultAIActions,
     handleAIAction,
     isAgentConnected,
-    startCustomMission,
-  }
+    startCustomMission }
 }
 
 /**
@@ -228,8 +213,7 @@ export function generateMissionSuggestions(
       description: `Repair critical issues affecting ${resource.kind} ${resource.name}`,
       priority: 'critical' as const,
       missionType: 'repair' as const,
-      prompt: `Help me fix these critical issues with ${resource.kind} "${resource.name}":\n${criticalIssues.map(i => `- ${i.name}: ${i.message}`).join('\n')}`,
-    })
+      prompt: `Help me fix these critical issues with ${resource.kind} "${resource.name}":\n${criticalIssues.map(i => `- ${i.name}: ${i.message}`).join('\n')}` })
   }
 
   // Pods with restarts get troubleshoot suggestions
@@ -240,8 +224,7 @@ export function generateMissionSuggestions(
       description: 'Analyze why this pod keeps restarting',
       priority: 'high' as const,
       missionType: 'troubleshoot' as const,
-      prompt: `Analyze why pod "${resource.name}" in namespace "${resource.namespace}" keeps restarting. Check logs, events, and resource limits.`,
-    })
+      prompt: `Analyze why pod "${resource.name}" in namespace "${resource.namespace}" keeps restarting. Check logs, events, and resource limits.` })
   }
 
   // Deployments with unavailable replicas
@@ -252,8 +235,7 @@ export function generateMissionSuggestions(
       description: 'Get deployment back to healthy state',
       priority: 'high' as const,
       missionType: 'repair' as const,
-      prompt: `Help me fix deployment "${resource.name}" which has unavailable replicas. Diagnose the issue and suggest remediation.`,
-    })
+      prompt: `Help me fix deployment "${resource.name}" which has unavailable replicas. Diagnose the issue and suggest remediation.` })
   }
 
   return suggestions

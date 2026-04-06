@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import type { PredictionFeedback, StoredFeedback, PredictionType, PredictionStats } from '../types/predictions'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
@@ -94,7 +94,7 @@ export function usePredictionFeedback() {
   }, [])
 
   // Submit feedback for a prediction
-  const submitFeedback = useCallback((
+  const submitFeedback = (
     predictionId: string,
     feedback: PredictionFeedback,
     predictionType: PredictionType,
@@ -105,8 +105,7 @@ export function usePredictionFeedback() {
       feedback,
       timestamp: new Date().toISOString(),
       predictionType,
-      provider,
-    }
+      provider }
     feedbackMap.set(predictionId, entry)
     notifySubscribers()
     persistFeedback()
@@ -116,22 +115,22 @@ export function usePredictionFeedback() {
     sendFeedbackToBackend(predictionId, feedback).catch(() => {
       // Backend unavailable, feedback is still stored locally
     })
-  }, [])
+  }
 
   // Get feedback for a specific prediction
-  const getFeedback = useCallback((predictionId: string): PredictionFeedback | null => {
+  const getFeedback = (predictionId: string): PredictionFeedback | null => {
     return feedbackState.get(predictionId)?.feedback ?? null
-  }, [feedbackState])
+  }
 
   // Remove feedback for a prediction
-  const removeFeedback = useCallback((predictionId: string) => {
+  const removeFeedback = (predictionId: string) => {
     feedbackMap.delete(predictionId)
     notifySubscribers()
     persistFeedback()
-  }, [])
+  }
 
   // Calculate stats
-  const getStats = useCallback((): PredictionStats => {
+  const getStats = (): PredictionStats => {
     const entries = Array.from(feedbackState.values())
     const accurate = entries.filter(f => f.feedback === 'accurate').length
     const inaccurate = entries.filter(f => f.feedback === 'inaccurate').length
@@ -163,16 +162,15 @@ export function usePredictionFeedback() {
       accurateFeedback: accurate,
       inaccurateFeedback: inaccurate,
       accuracyRate: total > 0 ? accurate / total : 0,
-      byProvider,
-    }
-  }, [feedbackState])
+      byProvider }
+  }
 
   // Clear all feedback
-  const clearFeedback = useCallback(() => {
+  const clearFeedback = () => {
     feedbackMap.clear()
     notifySubscribers()
     persistFeedback()
-  }, [])
+  }
 
   return {
     submitFeedback,
@@ -180,8 +178,7 @@ export function usePredictionFeedback() {
     removeFeedback,
     getStats,
     clearFeedback,
-    feedbackCount: feedbackState.size,
-  }
+    feedbackCount: feedbackState.size }
 }
 
 /**
@@ -192,8 +189,7 @@ async function sendFeedbackToBackend(predictionId: string, feedback: PredictionF
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ predictionId, feedback }),
-    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-  })
+    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`)
   }

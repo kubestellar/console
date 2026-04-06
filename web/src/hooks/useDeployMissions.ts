@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useCardSubscribe } from '../lib/cardEvents'
 import { clusterCacheRef } from './mcp/shared'
 import { kubectlProxy } from '../lib/kubectlProxy'
@@ -124,9 +124,7 @@ function saveMissions(missions: DeployMission[]) {
     ...m,
     clusterStatuses: m.clusterStatuses.map(cs => ({
       ...cs,
-      logs: isTerminal(m.status) ? cs.logs : undefined,
-    })),
-  }))
+      logs: isTerminal(m.status) ? cs.logs : undefined })) }))
   localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(clean))
 }
 
@@ -165,11 +163,9 @@ export function useDeployMissions() {
           cluster: c,
           status: 'pending',
           replicas: 0,
-          readyReplicas: 0,
-        })),
+          readyReplicas: 0 })),
         startedAt: Date.now(),
-        pollCount: 0,
-      }
+        pollCount: 0 }
       setMissions(prev => [mission, ...prev].slice(0, MAX_MISSIONS))
     })
     return unsub
@@ -184,8 +180,7 @@ export function useDeployMissions() {
         return {
           ...m,
           dependencies: p.dependencies,
-          warnings: p.warnings,
-        }
+          warnings: p.warnings }
       }))
     })
     return unsub
@@ -224,8 +219,7 @@ export function useDeployMissions() {
                   const tid = setTimeout(() => ctrl.abort(), DEPLOY_ABORT_TIMEOUT_MS)
                   const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
                     signal: ctrl.signal,
-                    headers: { Accept: 'application/json' },
-                  })
+                    headers: { Accept: 'application/json' } })
                   clearTimeout(tid)
                   if (res.ok) {
                     const data = await res.json()
@@ -299,8 +293,7 @@ export function useDeployMissions() {
                   status,
                   replicas: data.replicas ?? 0,
                   readyReplicas: data.readyReplicas ?? 0,
-                  logs,
-                }
+                  logs }
               } catch {
                 return { cluster, status: 'pending', replicas: 0, readyReplicas: 0 }
               }
@@ -335,8 +328,7 @@ export function useDeployMissions() {
             pollCount,
             completedAt: (missionStatus === 'orbit' || missionStatus === 'abort')
               ? (mission.completedAt ?? Date.now())
-              : undefined,
-          }
+              : undefined }
         })
       )
 
@@ -364,15 +356,14 @@ export function useDeployMissions() {
   const activeMissions = missions.filter(m => m.status !== 'orbit' && m.status !== 'abort')
   const completedMissions = missions.filter(m => m.status === 'orbit' || m.status === 'abort')
 
-  const clearCompleted = useCallback(() => {
+  const clearCompleted = () => {
     setMissions(prev => prev.filter(m => m.status !== 'orbit' && m.status !== 'abort'))
-  }, [])
+  }
 
   return {
     missions,
     activeMissions,
     completedMissions,
     hasActive: activeMissions.length > 0,
-    clearCompleted,
-  }
+    clearCompleted }
 }

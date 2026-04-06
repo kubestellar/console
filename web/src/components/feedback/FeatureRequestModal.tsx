@@ -11,8 +11,7 @@ import {
   isTriaged,
   type RequestType,
   type RequestStatus,
-  type TargetRepo,
-} from '../../hooks/useFeatureRequests'
+  type TargetRepo } from '../../hooks/useFeatureRequests'
 import { useAuth } from '../../lib/auth'
 import { useRewards } from '../../hooks/useRewards'
 import { BACKEND_DEFAULT_URL, STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
@@ -80,8 +79,7 @@ function getStatusInfo(status: RequestStatus, closedByUser?: boolean): { label: 
     fix_ready: { color: 'text-green-400', bgColor: 'bg-green-500/20' },
     fix_complete: { color: 'text-green-400', bgColor: 'bg-green-500/20' },
     unable_to_fix: { color: 'text-orange-400', bgColor: 'bg-orange-500/20' },
-    closed: { color: 'text-muted-foreground', bgColor: 'bg-gray-500/20' },
-  }
+    closed: { color: 'text-muted-foreground', bgColor: 'bg-gray-500/20' } }
   // Show different label for closed status based on who closed it
   let label = STATUS_LABELS[status]
   if (status === 'closed' && closedByUser) {
@@ -236,8 +234,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
 
     fetch(`${BACKEND_DEFAULT_URL}/api/github/token/status`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-    })
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data && !data.hasToken) {
@@ -254,8 +251,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
     try {
       const res = await fetch(`${BACKEND_DEFAULT_URL}/api/feedback/preview/${prNumber}`, {
         headers: { Authorization: `Bearer ${token}` },
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (res.ok) {
         const data = await res.json()
         setPreviewResults(prev => ({ ...prev, [prNumber]: data }))
@@ -320,7 +316,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
   }
 
   /** Save current form content as a draft (new or update existing) */
-  const handleSaveDraft = useCallback(() => {
+  const handleSaveDraft = () => {
     if (description.trim().length < 5) {
       showToast('Draft is too short to save', 'error')
       return
@@ -330,27 +326,27 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
       setEditingDraftId(id)
       showToast(editingDraftId ? 'Draft updated' : 'Draft saved', 'success')
     }
-  }, [description, requestType, targetRepo, editingDraftId, saveDraft, showToast])
+  }
 
   /** Restore a draft into the submit form */
-  const handleRestoreDraft = useCallback((draft: FeedbackDraft) => {
+  const handleRestoreDraft = (draft: FeedbackDraft) => {
     setRequestType(draft.requestType)
     setTargetRepo(draft.targetRepo)
     setDescription(draft.description)
     setEditingDraftId(draft.id)
     setActiveTab('submit')
     showToast('Draft loaded into editor', 'success')
-  }, [showToast])
+  }
 
   /** Delete a draft and remove from editing state if it was active */
-  const handleDeleteDraft = useCallback((id: string) => {
+  const handleDeleteDraft = (id: string) => {
     deleteDraft(id)
     if (editingDraftId === id) {
       setEditingDraftId(null)
     }
     setConfirmDeleteDraft(null)
     showToast('Draft deleted', 'success')
-  }, [deleteDraft, editingDraftId, showToast])
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -393,13 +389,11 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
         description: extractedDesc,
         request_type: requestType,
         target_repo: targetRepo,
-        ...(hasScreenshots && { screenshots: screenshotDataURIs }),
-      }, hasScreenshots ? { timeout: FEEDBACK_UPLOAD_TIMEOUT_MS } : undefined)
+        ...(hasScreenshots && { screenshots: screenshotDataURIs }) }, hasScreenshots ? { timeout: FEEDBACK_UPLOAD_TIMEOUT_MS } : undefined)
       setSuccess({
         issueUrl: result.github_issue_url,
         screenshotsUploaded: result.screenshots_uploaded,
-        screenshotsFailed: result.screenshots_failed,
-      })
+        screenshotsFailed: result.screenshots_failed })
       // If submitting from a draft, delete it now that it's been submitted
       if (editingDraftId) {
         deleteDraft(editingDraftId)

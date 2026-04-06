@@ -1,4 +1,3 @@
-import { useCallback, useMemo } from 'react'
 import {
   useClusters,
   usePodIssues,
@@ -12,8 +11,7 @@ import {
   useHelmReleases,
   useOperatorSubscriptions,
   useOperators,
-  useGPUNodes,
-} from './useMCP'
+  useGPUNodes } from './useMCP'
 import { useAlerts, useAlertRules } from './useAlerts'
 import { StatBlockValue } from '../components/ui/StatsOverview'
 import { useDrillDownActions } from './useDrillDown'
@@ -42,8 +40,7 @@ export function useUniversalStats() {
     drillToAllClusters, drillToAllNodes, drillToAllPods,
     drillToAllDeployments, drillToAllServices, drillToAllEvents,
     drillToAllAlerts, drillToAllHelm, drillToAllOperators,
-    drillToAllSecurity, drillToAllGPU, drillToAllStorage,
-  } = useDrillDownActions()
+    drillToAllSecurity, drillToAllGPU, drillToAllStorage } = useDrillDownActions()
 
   // Domain-specific data — all guarded with || [] to prevent crashes on 404/500/empty
   const { issues: podIssues } = usePodIssues()
@@ -62,7 +59,7 @@ export function useUniversalStats() {
   const { rules: alertRules } = useAlertRules()
 
   // ─── Cluster-derived values ───
-  const safeClusters = useMemo(() => deduplicatedClusters || [], [deduplicatedClusters])
+  const safeClusters = deduplicatedClusters || []
   const totalClusters = safeClusters.length
   const healthyClusters = safeClusters.filter(c => c.healthy).length
   const unhealthyClusters = safeClusters.filter(c => !c.healthy).length
@@ -72,10 +69,7 @@ export function useUniversalStats() {
   const totalCPUs = safeClusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
   const totalMemoryGB = safeClusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0)
   const totalStorageGB = safeClusters.reduce((sum, c) => sum + (c.storageGB || 0), 0)
-  const uniqueNamespaces = useMemo(
-    () => new Set(safeClusters.flatMap(c => c.namespaces || [])),
-    [safeClusters]
-  )
+  const uniqueNamespaces = new Set(safeClusters.flatMap(c => c.namespaces || []))
 
   // ─── Pod-derived values ───
   const podIssuesList = podIssues || []
@@ -87,12 +81,9 @@ export function useUniversalStats() {
   const allDeploymentIssues = deploymentIssues || []
 
   // ─── PVC-derived values ───
-  const allPVCs = useMemo(() => pvcs || [], [pvcs])
+  const allPVCs = pvcs || []
   const boundPVCs = allPVCs.filter(p => p.status === 'Bound').length
-  const storageClassCount = useMemo(
-    () => new Set(allPVCs.map(p => p.storageClass).filter(Boolean)).size,
-    [allPVCs]
-  )
+  const storageClassCount = new Set(allPVCs.map(p => p.storageClass).filter(Boolean)).size
 
   // ─── Service-derived values ───
   const allServices = services || []
@@ -101,16 +92,16 @@ export function useUniversalStats() {
   const cipCount = allServices.filter(s => s.type === 'ClusterIP').length
 
   // ─── Event-derived values ───
-  const allEvents = useMemo(() => events || [], [events])
+  const allEvents = events || []
   const allWarningEvents = warningEvents || []
   const normalEvents = allEvents.filter(e => e.type === 'Normal').length
-  const recentEvents = useMemo(() => {
+  const recentEvents = (() => {
     const oneHourAgo = Date.now() - 60 * 60 * 1000
     return allEvents.filter(e => {
       if (!e.lastSeen) return false
       return new Date(e.lastSeen).getTime() > oneHourAgo
     }).length
-  }, [allEvents])
+  })()
 
   // ─── Security-derived values ───
   const secIssues = securityIssues || []
@@ -135,19 +126,15 @@ export function useUniversalStats() {
 
   // ─── GPU-derived values ───
   // Only count GPUs from reachable clusters
-  const unreachableClusterNames = useMemo(() => {
-    return new Set(
+  const unreachableClusterNames = new Set(
       safeClusters
         .filter(c => c.reachable === false)
         .map(c => c.name)
     )
-  }, [safeClusters])
 
-  const realGPUCount = useMemo(() => {
-    return (gpuNodes || [])
+  const realGPUCount = (gpuNodes || [])
       .filter(n => !unreachableClusterNames.has(n.cluster))
       .reduce((sum, n) => sum + (n.gpuCount || 0), 0)
-  }, [gpuNodes, unreachableClusterNames])
 
   // ─── Alert-derived values ───
   const firingAlerts = alertStats?.firing || 0
@@ -157,15 +144,15 @@ export function useUniversalStats() {
   const disabledRules = allRules.filter(r => r.enabled === false).length
 
   // ─── Cost estimates (demo) ───
-  const totalCost = useMemo(() => {
+  const totalCost = (() => {
     const cpu = totalCPUs * COST_PER_CPU
     const mem = totalMemoryGB * COST_PER_GB_MEMORY
     const stor = totalStorageGB * COST_PER_GB_STORAGE
     const gpu = realGPUCount * COST_PER_GPU
     return { total: cpu + mem + stor + gpu, cpu, mem, stor, gpu, network: 0 }
-  }, [totalCPUs, totalMemoryGB, totalStorageGB, realGPUCount])
+  })()
 
-  const getStatValue = useCallback((blockId: string): StatBlockValue | undefined => {
+  const getStatValue = (blockId: string): StatBlockValue | undefined => {
     switch (blockId) {
 
       // ══════════════════════════════════════════
@@ -433,44 +420,12 @@ export function useUniversalStats() {
       default:
         return undefined
     }
-  }, [
-    // Cluster
-    totalClusters, healthyClusters, unhealthyClusters, unreachableClusters,
-    totalNodes, totalPods, totalCPUs, totalMemoryGB, totalStorageGB,
-    uniqueNamespaces,
-    // Pod/Deployment
-    podIssuesList, pendingPods, highRestartPods,
-    allDeployments, allDeploymentIssues,
-    // Storage
-    allPVCs, boundPVCs, storageClassCount,
-    // Network
-    allServices, lbCount, npCount, cipCount,
-    // Events
-    allEvents, allWarningEvents, normalEvents, recentEvents,
-    // Security
-    highSeverity, mediumSeverity, lowSeverity, privilegedContainers, rootContainers,
-    // Helm/GitOps
-    allHelm, deployedHelm, failedHelm,
-    // Operators
-    allOps, allSubs, installedOps, installingOps, failingOps, upgradesAvailable,
-    // GPU
-    realGPUCount,
-    // Alerts
-    firingAlerts, resolvedAlerts, enabledRules, disabledRules,
-    // Cost
-    totalCost,
-    // Drill-downs
-    drillToAllClusters, drillToAllNodes, drillToAllPods,
-    drillToAllDeployments, drillToAllServices, drillToAllEvents,
-    drillToAllAlerts, drillToAllHelm, drillToAllOperators,
-    drillToAllSecurity, drillToAllGPU, drillToAllStorage,
-  ])
+  }
 
   return {
     getStatValue,
     isLoading,
-    clusters: safeClusters,
-  }
+    clusters: safeClusters }
 }
 
 /**

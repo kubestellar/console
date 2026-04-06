@@ -9,7 +9,6 @@ import { StatusBadge } from '../../ui/StatusBadge'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
 import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_FONT_SIZE_COMPACT, CHART_TICK_COLOR } from '../../../lib/constants/ui'
-import { OVERLOADED_COLOR, UNDERLOADED_COLOR, BALANCED_COLOR, AVERAGE_LINE_COLOR } from '../../../lib/theme/chartColors'
 import { InsightDetailModal } from './InsightDetailModal'
 import type { MultiClusterInsight } from '../../../types/insights'
 
@@ -27,18 +26,16 @@ export function ResourceImbalanceDetector() {
   const { selectedClusters } = useGlobalFilters()
   const [modalInsight, setModalInsight] = useState<MultiClusterInsight | null>(null)
 
-  const imbalanceInsightsRaw = useMemo(() => insightsByCategory['resource-imbalance'] || [], [insightsByCategory])
+  const imbalanceInsightsRaw = insightsByCategory['resource-imbalance'] || []
   const {
     sorted: imbalanceInsights,
-    sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
-  } = useInsightSort(imbalanceInsightsRaw)
+    sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit } = useInsightSort(imbalanceInsightsRaw)
 
   const hasData = imbalanceInsightsRaw.length > 0
   useCardLoadingState({
     isLoading: isLoading && !hasData,
     hasAnyData: hasData,
-    isDemoData,
-  })
+    isDemoData })
 
   // Build chart data from the first (CPU) insight's metrics
   const chartData = useMemo(() => {
@@ -50,8 +47,7 @@ export function ResourceImbalanceDetector() {
         name: name.length > CHART_LABEL_MAX_LEN ? name.slice(0, CHART_LABEL_TRUNCATE_LEN) + '...' : name,
         fullName: name,
         value,
-        fill: value > OVERLOADED_THRESHOLD_PCT ? OVERLOADED_COLOR : value < UNDERLOADED_THRESHOLD_PCT ? UNDERLOADED_COLOR : BALANCED_COLOR,
-      }))
+        fill: value > OVERLOADED_THRESHOLD_PCT ? '#ef4444' : value < UNDERLOADED_THRESHOLD_PCT ? '#3b82f6' : '#22c55e' }))
       .sort((a, b) => b.value - a.value)
   }, [imbalanceInsights, selectedClusters])
 
@@ -79,8 +75,7 @@ export function ResourceImbalanceDetector() {
           sortOptions: INSIGHT_SORT_OPTIONS,
           onSortChange: (v) => setSortBy(v as InsightSortField),
           sortDirection,
-          onSortDirectionChange: setSortDirection,
-        }}
+          onSortDirectionChange: setSortDirection }}
       />
 
       {(imbalanceInsights || []).map(insight => (
@@ -119,7 +114,7 @@ export function ResourceImbalanceDetector() {
                 contentStyle={{ ...CHART_TOOLTIP_CONTENT_STYLE, fontSize: CHART_TOOLTIP_FONT_SIZE_COMPACT }}
                 formatter={((value: number) => [`${value}%`, 'Usage']) as never}
               />
-              <ReferenceLine x={avgValue} stroke={AVERAGE_LINE_COLOR} strokeDasharray="5 5" label={{ value: `Avg ${avgValue}%`, position: 'top', fontSize: 10, fill: AVERAGE_LINE_COLOR }} />
+              <ReferenceLine x={avgValue} stroke="#f59e0b" strokeDasharray="5 5" label={{ value: `Avg ${avgValue}%`, position: 'top', fontSize: 10, fill: '#f59e0b' }} />
               <Bar dataKey="value" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>

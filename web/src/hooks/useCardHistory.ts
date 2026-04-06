@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 
 export interface CardHistoryEntry {
   id: string
@@ -31,18 +31,17 @@ export function useCardHistory() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(history))
   }, [history])
 
-  const addEntry = useCallback((entry: Omit<CardHistoryEntry, 'id' | 'timestamp'>) => {
+  const addEntry = (entry: Omit<CardHistoryEntry, 'id' | 'timestamp'>) => {
     setHistory((prev) => {
       const newEntry: CardHistoryEntry = {
         ...entry,
         id: `history-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        timestamp: Date.now(),
-      }
+        timestamp: Date.now() }
       return [newEntry, ...prev].slice(0, MAX_HISTORY)
     })
-  }, [])
+  }
 
-  const recordCardRemoved = useCallback((
+  const recordCardRemoved = (
     cardId: string,
     cardType: string,
     cardTitle?: string,
@@ -57,11 +56,10 @@ export function useCardHistory() {
       config: config || {},
       action: 'removed',
       dashboardId,
-      dashboardName,
-    })
-  }, [addEntry])
+      dashboardName })
+  }
 
-  const recordCardAdded = useCallback((
+  const recordCardAdded = (
     cardId: string,
     cardType: string,
     cardTitle?: string,
@@ -76,11 +74,10 @@ export function useCardHistory() {
       config: config || {},
       action: 'added',
       dashboardId,
-      dashboardName,
-    })
-  }, [addEntry])
+      dashboardName })
+  }
 
-  const recordCardReplaced = useCallback((
+  const recordCardReplaced = (
     cardId: string,
     newCardType: string,
     previousCardType: string,
@@ -97,11 +94,10 @@ export function useCardHistory() {
       action: 'replaced',
       dashboardId,
       dashboardName,
-      previousCardType,
-    })
-  }, [addEntry])
+      previousCardType })
+  }
 
-  const recordCardConfigured = useCallback((
+  const recordCardConfigured = (
     cardId: string,
     cardType: string,
     cardTitle?: string,
@@ -116,21 +112,20 @@ export function useCardHistory() {
       config: config || {},
       action: 'configured',
       dashboardId,
-      dashboardName,
-    })
-  }, [addEntry])
+      dashboardName })
+  }
 
-  const getRemovedCards = useCallback(() => {
+  const getRemovedCards = () => {
     return history.filter((entry) => entry.action === 'removed')
-  }, [history])
+  }
 
-  const clearHistory = useCallback(() => {
+  const clearHistory = () => {
     setHistory([])
-  }, [])
+  }
 
-  const removeEntry = useCallback((entryId: string) => {
+  const removeEntry = (entryId: string) => {
     setHistory((prev) => prev.filter((entry) => entry.id !== entryId))
-  }, [])
+  }
 
   return {
     history,
@@ -141,6 +136,5 @@ export function useCardHistory() {
     recordCardConfigured,
     getRemovedCards,
     clearHistory,
-    removeEntry,
-  }
+    removeEntry }
 }

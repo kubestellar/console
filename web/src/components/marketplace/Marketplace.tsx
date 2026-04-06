@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
@@ -6,8 +6,7 @@ import {
   Store, Search, Download, Tag, RefreshCw, Loader2, AlertCircle, Package,
   Check, Trash2, LayoutGrid, Puzzle, Palette, ExternalLink, Heart,
   HandHelping, ChevronDown, ChevronUp, Star, GraduationCap, Sparkles,
-  List, Grid3X3, SortAsc, SortDesc, Coins,
-} from 'lucide-react'
+  List, Grid3X3, SortAsc, SortDesc, Coins } from 'lucide-react'
 import { useMarketplace, useAuthorProfile, MarketplaceItem, MarketplaceItemType, CNCFStats } from '../../hooks/useMarketplace'
 import { useSidebarConfig } from '../../hooks/useSidebarConfig'
 import { useToast } from '../ui/Toast'
@@ -30,19 +29,16 @@ const BANNER_COLLAPSED_KEY = 'kc-cncf-banner-collapsed'
 const TYPE_LABELS: Record<MarketplaceItemType, { label: string; icon: typeof LayoutGrid }> = {
   dashboard: { label: 'Dashboards', icon: LayoutGrid },
   'card-preset': { label: 'Card Presets', icon: Puzzle },
-  theme: { label: 'Themes', icon: Palette },
-}
+  theme: { label: 'Themes', icon: Palette } }
 
 const DIFFICULTY_CONFIG = {
   beginner: { label: 'Beginner', color: 'text-green-400 bg-green-950', stars: 1 },
   intermediate: { label: 'Intermediate', color: 'text-yellow-400 bg-yellow-950', stars: 2 },
-  advanced: { label: 'Advanced', color: 'text-red-400 bg-red-950', stars: 3 },
-} as const
+  advanced: { label: 'Advanced', color: 'text-red-400 bg-red-950', stars: 3 } } as const
 
 const MATURITY_CONFIG = {
   graduated: { label: 'Graduated', color: 'text-green-400 bg-green-950 border-green-800' },
-  incubating: { label: 'Incubating', color: 'text-blue-400 bg-blue-950 border-blue-800' },
-} as const
+  incubating: { label: 'Incubating', color: 'text-blue-400 bg-blue-950 border-blue-800' } } as const
 
 // --- CNCF Progress Banner ---
 function CNCFProgressBanner({ stats }: { stats: CNCFStats }) {
@@ -561,8 +557,7 @@ export function Marketplace() {
     installItem,
     removeItem,
     isInstalled,
-    refresh,
-  } = useMarketplace()
+    refresh } = useMarketplace()
   const { config: sidebarConfig, addItem, removeItem: removeSidebarItem } = useSidebarConfig()
   const { showToast } = useToast()
 
@@ -589,7 +584,7 @@ export function Marketplace() {
   }
 
   // Sort items
-  const sortedItems = useMemo(() => {
+  const sortedItems = (() => {
     const sorted = [...items].sort((a, b) => {
       let cmp = 0
       switch (sortField) {
@@ -605,10 +600,10 @@ export function Marketplace() {
       return sortOrder === 'asc' ? cmp : -cmp
     })
     return sorted
-  }, [items, sortField, sortOrder])
+  })()
 
   // Group items by CNCF category when help-wanted is active
-  const groupedItems = useMemo(() => {
+  const groupedItems = (() => {
     if (!showHelpWanted) return null
     const groups: Record<string, MarketplaceItem[]> = {}
     for (const item of sortedItems) {
@@ -617,7 +612,7 @@ export function Marketplace() {
       groups[cat].push(item)
     }
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b))
-  }, [sortedItems, showHelpWanted])
+  })()
 
   const handleInstall = async (item: MarketplaceItem) => {
     try {
@@ -644,8 +639,7 @@ export function Marketplace() {
             icon: suggestIconSync(item.name),
             href,
             type: 'link',
-            description: item.description,
-          }, 'primary')
+            description: item.description }, 'primary')
         }
         showToast(`Installed "${item.name}" — redirecting to dashboard...`, 'success')
         setTimeout(() => navigate(href), NAV_AFTER_ANIMATION_MS)

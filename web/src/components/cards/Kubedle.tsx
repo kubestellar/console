@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { RotateCcw, HelpCircle, BarChart3, X } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
@@ -65,16 +65,14 @@ function loadStats(): GameStats {
       won: 0,
       currentStreak: 0,
       maxStreak: 0,
-      guessDistribution: [0, 0, 0, 0, 0, 0],
-    }
+      guessDistribution: [0, 0, 0, 0, 0, 0] }
   } catch {
     return {
       played: 0,
       won: 0,
       currentStreak: 0,
       maxStreak: 0,
-      guessDistribution: [0, 0, 0, 0, 0, 0],
-    }
+      guessDistribution: [0, 0, 0, 0, 0, 0] }
   }
 }
 
@@ -143,7 +141,7 @@ export function Kubedle(_props: CardComponentProps) {
   const [message, setMessage] = useState('')
 
   // Build keyboard letter states
-  const letterStates = useCallback(() => {
+  const letterStates = () => {
     const states: Record<string, LetterState> = {}
 
     for (const guess of guesses) {
@@ -162,10 +160,10 @@ export function Kubedle(_props: CardComponentProps) {
     }
 
     return states
-  }, [guesses, targetWord])
+  }
 
   // Handle key press
-  const handleKey = useCallback((key: string) => {
+  const handleKey = (key: string) => {
     if (gameOver) return
 
     if (key === 'ENTER' || key === 'Enter') {
@@ -198,8 +196,7 @@ export function Kubedle(_props: CardComponentProps) {
             won: prev.won + 1,
             currentStreak: prev.currentStreak + 1,
             maxStreak: Math.max(prev.maxStreak, prev.currentStreak + 1),
-            guessDistribution: [...prev.guessDistribution],
-          }
+            guessDistribution: [...prev.guessDistribution] }
           newStats.guessDistribution[newGuesses.length - 1]++
           saveStats(newStats)
           return newStats
@@ -214,8 +211,7 @@ export function Kubedle(_props: CardComponentProps) {
           const newStats = {
             ...prev,
             played: prev.played + 1,
-            currentStreak: 0,
-          }
+            currentStreak: 0 }
           saveStats(newStats)
           return newStats
         })
@@ -225,13 +221,13 @@ export function Kubedle(_props: CardComponentProps) {
     } else if (/^[A-Za-z]$/.test(key) && currentGuess.length < 5) {
       setCurrentGuess(prev => prev + key.toUpperCase())
     }
-  }, [currentGuess, guesses, gameOver, targetWord])
+  }
 
   // Physical keyboard — scoped to visible game container (KeepAlive-safe)
-  const handleKubedleKeyDown = useCallback((e: KeyboardEvent) => {
+  const handleKubedleKeyDown = (e: KeyboardEvent) => {
     if (showStats || showHelp) return
     handleKey(e.key)
-  }, [handleKey, showStats, showHelp])
+  }
   useGameKeys(gameContainerRef, { onKeyDown: handleKubedleKeyDown })
 
   // Cleanup shake timeout on unmount
@@ -242,7 +238,7 @@ export function Kubedle(_props: CardComponentProps) {
   }, [])
 
   // New game
-  const newGame = useCallback((practice: boolean = false) => {
+  const newGame = (practice: boolean = false) => {
     setPracticeMode(practice)
     setTargetWord(practice ? getRandomWord() : getTodaysWord())
     setGuesses([])
@@ -250,7 +246,7 @@ export function Kubedle(_props: CardComponentProps) {
     setGameOver(false)
     setMessage('')
     emitGameStarted('kubedle')
-  }, [])
+  }
 
   const states = letterStates()
   const cellSize = isExpanded ? 'w-12 h-12 text-xl' : 'w-8 h-8 text-sm'

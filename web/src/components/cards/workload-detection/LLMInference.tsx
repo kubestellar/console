@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   ExternalLink, Cpu, Layers, AlertCircle, Play, Pause, RefreshCw,
   ChevronDown, Server, Activity, Network, Box
@@ -44,7 +44,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
   // Dynamically discover LLM-d clusters instead of using static list
   const { deduplicatedClusters } = useClusters()
   const { nodes: gpuNodes } = useCachedGPUNodes()
-  const gpuClusterNames = useMemo(() => new Set(gpuNodes.map(n => n.cluster)), [gpuNodes])
+  const gpuClusterNames = new Set(gpuNodes.map(n => n.cluster))
   const llmdClusters = useLLMdClusters(deduplicatedClusters, gpuClusterNames)
 
   const { servers, isLoading, isRefreshing, lastRefresh, refetch, isFailed, consecutiveFailures, isDemoFallback, error } = useCachedLLMdServers(llmdClusters)
@@ -57,8 +57,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
     hasAnyData: hasData,
     isDemoData: isDemoFallback,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
   // Card-specific component filter (not handled by useCardData)
   const [componentFilter, setComponentFilter] = useState<LLMdComponentType | 'all' | 'autoscale'>('all')
@@ -77,11 +76,11 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
   }, [])
 
   // Pre-filter by component type before passing to useCardData
-  const componentFiltered = useMemo(() => {
+  const componentFiltered = (() => {
     if (componentFilter === 'all') return servers
     if (componentFilter === 'autoscale') return servers.filter(s => s.hasAutoscaler)
     return servers.filter(s => s.componentType === componentFilter)
-  }, [servers, componentFilter])
+  })()
 
   const statusOrder: Record<string, number> = { running: 0, scaling: 1, stopped: 2, error: 3 }
   const componentOrder: Record<string, number> = { model: 0, epp: 1, gateway: 2, prometheus: 3, autoscaler: 4, other: 5 }
@@ -90,14 +89,12 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
     items, totalItems, currentPage, totalPages, goToPage, needsPagination,
     itemsPerPage, setItemsPerPage, filters, sorting,
     containerRef,
-    containerStyle,
-  } = useCardData<LLMdServer, LLMdSortByOption>(componentFiltered, {
+    containerStyle } = useCardData<LLMdServer, LLMdSortByOption>(componentFiltered, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'status', 'componentType', 'type'] as (keyof LLMdServer)[],
       clusterField: 'cluster' as keyof LLMdServer,
       customPredicate: (s, q) => !!(s.model && s.model.toLowerCase().includes(q)),
-      storageKey: 'llm-inference',
-    },
+      storageKey: 'llm-inference' },
     sort: {
       defaultField: 'status' as LLMdSortByOption,
       defaultDirection: 'asc' as SortDirection,
@@ -106,11 +103,8 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
         name: commonComparators.string<LLMdServer>('name'),
         namespace: commonComparators.string<LLMdServer>('namespace'),
         component: commonComparators.statusOrder<LLMdServer>('componentType', componentOrder),
-        type: commonComparators.string<LLMdServer>('type'),
-      },
-    },
-    defaultLimit: 5,
-  })
+        type: commonComparators.string<LLMdServer>('type') } },
+    defaultLimit: 5 })
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -131,8 +125,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
       'tgi': 'bg-blue-500/20 text-blue-400',
       'llm-d': 'bg-cyan-500/20 text-cyan-400',
       'triton': 'bg-green-500/20 text-green-400',
-      'unknown': 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground',
-    }
+      'unknown': 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground' }
     return colors[type] || 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground'
   }
 
@@ -142,8 +135,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
       'tgi': 'TGI',
       'llm-d': 'llm-d',
       'triton': 'Triton',
-      'unknown': 'Unknown',
-    }
+      'unknown': 'Unknown' }
     return labels[type] || type
   }
 
@@ -154,8 +146,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
       'gateway': { bg: 'bg-blue-500/20', text: 'text-blue-400', label: 'Gateway' },
       'prometheus': { bg: 'bg-orange-500/20', text: 'text-orange-400', label: 'Prometheus' },
       'autoscaler': { bg: 'bg-yellow-500/20', text: 'text-yellow-400', label: 'Autoscaler' },
-      'other': { bg: 'bg-gray-500/20 dark:bg-gray-400/20', text: 'text-muted-foreground', label: 'Other' },
-    }
+      'other': { bg: 'bg-gray-500/20 dark:bg-gray-400/20', text: 'text-muted-foreground', label: 'Other' } }
     return config[componentType] || config['other']
   }
 

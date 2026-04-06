@@ -47,8 +47,7 @@ class CardErrorBoundary extends React.Component<CardErrorBoundaryProps, CardErro
   static getDerivedStateFromError(error: unknown): CardErrorBoundaryState {
     return {
       hasError: true,
-      message: error instanceof Error ? error.message : 'Unknown card render error',
-    }
+      message: error instanceof Error ? error.message : 'Unknown card render error' }
   }
 
   override render() {
@@ -76,22 +75,20 @@ export function AllCardsPerfTest() {
     []
   )
 
-  const selected = useMemo(() => {
+  const selected = (() => {
     const start = batch * batchSize
     const items = allCardTypes.slice(start, start + batchSize)
     return items.map((cardType, idx) => ({
       cardType,
-      cardId: `ttfi-${batch}-${idx}-${cardType}`,
-    }))
-  }, [allCardTypes, batch, batchSize])
+      cardId: `ttfi-${batch}-${idx}-${cardType}` }))
+  })()
 
   window.__TTFI_MANIFEST__ = {
     allCardTypes,
     totalCards: allCardTypes.length,
     batch,
     batchSize,
-    selected,
-  }
+    selected }
 
   return (
     <div className="p-4">

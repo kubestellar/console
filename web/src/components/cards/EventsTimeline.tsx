@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Activity, AlertTriangle, CheckCircle, Clock, Server } from 'lucide-react'
 import {
   AreaChart,
@@ -7,8 +7,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
-} from 'recharts'
+  ResponsiveContainer } from 'recharts'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -24,8 +23,7 @@ import {
   CHART_GRID_STROKE,
   CHART_AXIS_STROKE,
   CHART_TOOLTIP_CONTENT_STYLE,
-  CHART_TICK_COLOR,
-} from '../../lib/constants'
+  CHART_TICK_COLOR } from '../../lib/constants'
 
 interface TimePoint {
   time: string
@@ -60,8 +58,7 @@ function groupEventsByTime(events: Array<{ type: string; lastSeen?: string; firs
       timestamp: bucketTime,
       warnings: 0,
       normal: 0,
-      total: 0,
-    })
+      total: 0 })
   }
 
   // Place events in buckets
@@ -91,10 +88,7 @@ function groupEventsByTime(events: Array<{ type: string; lastSeen?: string; firs
 
 function EventsTimelineInternal() {
   const { t } = useTranslation(['cards', 'common'])
-  const TIME_RANGE_OPTIONS = useMemo(() =>
-    TIME_RANGE_OPTIONS_KEYS.map(opt => ({ ...opt, label: String(t(opt.labelKey)) })),
-    [t]
-  )
+  const TIME_RANGE_OPTIONS = TIME_RANGE_OPTIONS_KEYS.map(opt => ({ ...opt, label: String(t(opt.labelKey)) }))
   const { isDemoMode } = useDemoMode()
   const {
     events,
@@ -103,8 +97,7 @@ function EventsTimelineInternal() {
     isRefreshing,
     lastRefresh,
     isFailed,
-    consecutiveFailures,
-  } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
+    consecutiveFailures } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
 
   const { deduplicatedClusters: clusters } = useClusters()
 
@@ -115,8 +108,7 @@ function EventsTimelineInternal() {
     hasAnyData: events.length > 0,
     isFailed,
     consecutiveFailures,
-    isRefreshing,
-  })
+    isRefreshing })
   const { selectedClusters, isAllClustersSelected, clusterInfoMap } = useGlobalFilters()
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
@@ -135,21 +127,19 @@ function EventsTimelineInternal() {
   }, [])
 
   // Get reachable clusters
-  const reachableClusters = useMemo(() => {
-    return clusters.filter(c => c.reachable !== false)
-  }, [clusters])
+  const reachableClusters = clusters.filter(c => c.reachable !== false)
 
   // Get available clusters for local filter (respects global filter)
-  const availableClustersForFilter = useMemo(() => {
+  const availableClustersForFilter = (() => {
     if (isAllClustersSelected) return reachableClusters
     return reachableClusters.filter(c => selectedClusters.includes(c.name))
-  }, [reachableClusters, selectedClusters, isAllClustersSelected])
+  })()
 
   // Count filtered clusters for display
-  const filteredClusterCount = useMemo(() => {
+  const filteredClusterCount = (() => {
     if (localClusterFilter.length > 0) return localClusterFilter.length
     return availableClustersForFilter.length
-  }, [localClusterFilter, availableClustersForFilter])
+  })()
 
   const toggleClusterFilter = (clusterName: string) => {
     setLocalClusterFilter(prev => {
@@ -161,7 +151,7 @@ function EventsTimelineInternal() {
   }
 
   // Filter events by selected clusters AND exclude offline/unreachable clusters
-  const filteredEvents = useMemo(() => {
+  const filteredEvents = (() => {
     // First filter to only events from reachable clusters
     let result = events.filter(e => {
       if (!e.cluster) return true // Include events without cluster info
@@ -176,15 +166,13 @@ function EventsTimelineInternal() {
       result = result.filter(e => e.cluster && localClusterFilter.includes(e.cluster))
     }
     return result
-  }, [events, selectedClusters, isAllClustersSelected, clusterInfoMap, localClusterFilter])
+  })()
 
   // Get time range config
   const timeRangeConfig = TIME_RANGE_OPTIONS.find(t => t.value === timeRange) || TIME_RANGE_OPTIONS[1]
 
   // Group events into time buckets
-  const timeSeriesData = useMemo(() => {
-    return groupEventsByTime(filteredEvents, timeRangeConfig.bucketMinutes, timeRangeConfig.numBuckets)
-  }, [filteredEvents, timeRangeConfig.bucketMinutes, timeRangeConfig.numBuckets])
+  const timeSeriesData = groupEventsByTime(filteredEvents, timeRangeConfig.bucketMinutes, timeRangeConfig.numBuckets)
 
   // Calculate totals
   const totalWarnings = timeSeriesData.reduce((sum, d) => sum + d.warnings, 0)

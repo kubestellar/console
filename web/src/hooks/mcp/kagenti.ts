@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react'
+import { useMemo } from 'react'
 import { mapSettledWithConcurrency } from '../../lib/utils/concurrency'
 import { isAgentUnavailable, reportAgentDataSuccess } from '../useLocalAgent'
 import { clusterCacheRef, LOCAL_AGENT_URL } from './shared'
@@ -128,8 +128,7 @@ async function agentFetch<T>(path: string, cluster: string, namespace?: string):
   try {
     const res = await fetch(`${LOCAL_AGENT_URL}${path}?${params}`, {
       signal: ctrl.signal,
-      headers: { Accept: 'application/json' },
-    })
+      headers: { Accept: 'application/json' } })
     clearTimeout(tid)
     if (!res.ok) throw new Error(`Agent ${res.status}`)
     return await res.json()
@@ -188,8 +187,7 @@ export function useKagentiAgents(options?: { cluster?: string; namespace?: strin
       )
       reportAgentDataSuccess()
       return agents
-    },
-  })
+    } })
 }
 
 export function useKagentiBuilds(options?: { cluster?: string; namespace?: string }) {
@@ -206,8 +204,7 @@ export function useKagentiBuilds(options?: { cluster?: string; namespace?: strin
       )
       reportAgentDataSuccess()
       return builds
-    },
-  })
+    } })
 }
 
 export function useKagentiCards(options?: { cluster?: string; namespace?: string }) {
@@ -224,8 +221,7 @@ export function useKagentiCards(options?: { cluster?: string; namespace?: string
       )
       reportAgentDataSuccess()
       return cards
-    },
-  })
+    } })
 }
 
 export function useKagentiTools(options?: { cluster?: string; namespace?: string }) {
@@ -242,8 +238,7 @@ export function useKagentiTools(options?: { cluster?: string; namespace?: string
       )
       reportAgentDataSuccess()
       return tools
-    },
-  })
+    } })
 }
 
 /** Aggregated summary computed from all kagenti sub-hooks */
@@ -285,13 +280,12 @@ export function useKagentiSummary() {
       spiffeBound,
       spiffeTotal,
       clusterBreakdown: Array.from(clusterMap.entries()).map(([cluster, count]) => ({ cluster, agents: count })),
-      frameworks,
-    }
+      frameworks }
   }, [agents, builds, cards, tools, isLoading])
 
-  const refetch = useCallback(async () => {
+  const refetch = async () => {
     await Promise.all([refetchAgents(), refetchBuilds(), refetchCards(), refetchTools()])
-  }, [refetchAgents, refetchBuilds, refetchCards, refetchTools])
+  }
 
   return { summary, isLoading, isDemoData, error, refetch }
 }

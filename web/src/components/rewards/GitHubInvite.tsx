@@ -2,7 +2,7 @@
  * GitHub Invite component for inviting users and earning coins
  */
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { Github, Send, Coins, CheckCircle2, X, ExternalLink } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useRewards } from '../../hooks/useRewards'
@@ -36,8 +36,7 @@ function saveInvite(username: string): void {
   invites.push({
     username,
     timestamp: new Date().toISOString(),
-    status: 'pending',
-  })
+    status: 'pending' })
   safeSetItem(INVITES_STORAGE_KEY, JSON.stringify(invites))
 }
 
@@ -87,12 +86,12 @@ export function GitHubInviteModal({ isOpen, onClose }: GitHubInviteProps) {
     }
   }
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     setSuccess(false)
     setError('')
     setUsername('')
     onClose()
-  }, [onClose])
+  }
 
   // Keyboard navigation (ESC to close) and scroll lock
   useModalNavigation({ isOpen, onClose: handleClose, enableBackspace: false })

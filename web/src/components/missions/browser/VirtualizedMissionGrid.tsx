@@ -10,7 +10,7 @@
  * List mode: each item is its own row.
  */
 
-import { useRef, useMemo, useCallback, useState, useEffect } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import type { ViewMode } from './types'
 
@@ -71,8 +71,7 @@ export function VirtualizedMissionGrid<T>({
   gridRowHeight = GRID_CARD_HEIGHT_PX,
   listRowHeight = LIST_CARD_HEIGHT_PX,
   className,
-  style,
-}: VirtualizedMissionGridProps<T>) {
+  style }: VirtualizedMissionGridProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
 
@@ -97,7 +96,7 @@ export function VirtualizedMissionGrid<T>({
   const columnCount = isGrid ? getColumnCount(containerWidth, maxColumns) : 1
 
   // Group items into rows
-  const rows = useMemo(() => {
+  const rows = (() => {
     if (!isGrid) {
       // List mode: each item is its own row
       return items.map((item) => [item])
@@ -108,24 +107,20 @@ export function VirtualizedMissionGrid<T>({
       result.push(items.slice(i, i + columnCount))
     }
     return result
-  }, [items, columnCount, isGrid])
+  })()
 
   const estimatedRowHeight = isGrid ? gridRowHeight + CARD_GAP_PX : listRowHeight + CARD_GAP_PX
 
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: useCallback(() => estimatedRowHeight, [estimatedRowHeight]),
-    overscan: Math.ceil(OVERSCAN_PX / estimatedRowHeight),
-  })
+    estimateSize: () => estimatedRowHeight,
+    overscan: Math.ceil(OVERSCAN_PX / estimatedRowHeight) })
 
   const virtualItems = virtualizer.getVirtualItems()
 
   // Calculate the base index for each row's items
-  const getItemIndex = useCallback(
-    (rowIndex: number, colIndex: number) => rowIndex * columnCount + colIndex,
-    [columnCount],
-  )
+  const getItemIndex = (rowIndex: number, colIndex: number) => rowIndex * columnCount + colIndex
 
   return (
     <div
@@ -133,15 +128,13 @@ export function VirtualizedMissionGrid<T>({
       className={className}
       style={{
         overflow: 'auto',
-        ...style,
-      }}
+        ...style }}
     >
       <div
         style={{
           height: virtualizer.getTotalSize(),
           width: '100%',
-          position: 'relative',
-        }}
+          position: 'relative' }}
       >
         {virtualItems.map((virtualRow) => {
           const rowItems = rows[virtualRow.index]
@@ -155,8 +148,7 @@ export function VirtualizedMissionGrid<T>({
                 top: 0,
                 left: 0,
                 width: '100%',
-                transform: `translateY(${virtualRow.start}px)`,
-              }}
+                transform: `translateY(${virtualRow.start}px)` }}
             >
               {isGrid ? (
                 <div
@@ -164,8 +156,7 @@ export function VirtualizedMissionGrid<T>({
                     display: 'grid',
                     gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
                     gap: `${CARD_GAP_PX}px`,
-                    paddingBottom: `${CARD_GAP_PX}px`,
-                  }}
+                    paddingBottom: `${CARD_GAP_PX}px` }}
                 >
                   {rowItems.map((item, colIndex) => (
                     <div key={getItemIndex(virtualRow.index, colIndex)}>

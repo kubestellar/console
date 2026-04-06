@@ -1,4 +1,4 @@
-import { createContext, use, useState, useEffect, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { useClusters } from './useMCP'
 
 interface ClusterFilterContextType {
@@ -38,11 +38,11 @@ export function ClusterFilterProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(selectedClusters))
   }, [selectedClusters])
 
-  const setSelectedClusters = useCallback((clusters: string[]) => {
+  const setSelectedClusters = (clusters: string[]) => {
     setSelectedClustersState(clusters)
-  }, [])
+  }
 
-  const toggleCluster = useCallback((cluster: string) => {
+  const toggleCluster = (cluster: string) => {
     setSelectedClustersState(prev => {
       // If currently "all" (empty), switch to all except this one
       if (prev.length === 0) {
@@ -64,18 +64,18 @@ export function ClusterFilterProvider({ children }: { children: ReactNode }) {
         return newSelection
       }
     })
-  }, [availableClusters])
+  }
 
-  const selectAll = useCallback(() => {
+  const selectAll = () => {
     setSelectedClustersState([])
-  }, [])
+  }
 
-  const clearAll = useCallback(() => {
+  const clearAll = () => {
     // Select just the first cluster if available
     if (availableClusters.length > 0) {
       setSelectedClustersState([availableClusters[0]])
     }
-  }, [availableClusters])
+  }
 
   // Empty array means all clusters are selected
   const isAllSelected = selectedClusters.length === 0
@@ -91,8 +91,7 @@ export function ClusterFilterProvider({ children }: { children: ReactNode }) {
         clearAll,
         isAllSelected,
         isFiltered,
-        availableClusters,
-      }}
+        availableClusters }}
     >
       {children}
     </ClusterFilterContext.Provider>
@@ -100,7 +99,7 @@ export function ClusterFilterProvider({ children }: { children: ReactNode }) {
 }
 
 export function useClusterFilter() {
-  const context = use(ClusterFilterContext)
+  const context = useContext(ClusterFilterContext)
   if (!context) {
     throw new Error('useClusterFilter must be used within a ClusterFilterProvider')
   }

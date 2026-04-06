@@ -17,8 +17,7 @@ const STATUS_COLORS = {
   healthy: 'bg-green-500',
   degraded: 'bg-yellow-500',
   unhealthy: 'bg-red-500',
-  unknown: 'bg-gray-500 dark:bg-gray-400',
-}
+  unknown: 'bg-gray-500 dark:bg-gray-400' }
 
 type SortField = 'name' | 'accelerators' | 'status' | 'replicas'
 type SortDirection = 'asc' | 'desc'
@@ -98,8 +97,7 @@ const StackOption = memo(function StackOption({ stack, isSelected, onSelect }: S
     prefillCount: stack.components.prefill.reduce((sum, c) => sum + c.replicas, 0),
     decodeCount: stack.components.decode.reduce((sum, c) => sum + c.replicas, 0),
     unifiedCount: stack.components.both.reduce((sum, c) => sum + c.replicas, 0),
-    gpuInfo: estimateAccelerators(stack),
-  }), [stack])
+    gpuInfo: estimateAccelerators(stack) }), [stack])
 
   return (
     <button
@@ -311,8 +309,7 @@ export function StackSelector() {
   }
 
   // Group stacks by cluster (with fallback for undefined cluster names)
-  const stacksByCluster = useMemo(() => {
-    return filteredAndSortedStacks.reduce((acc, stack) => {
+  const stacksByCluster = filteredAndSortedStacks.reduce((acc, stack) => {
       const clusterName = stack.cluster || 'unknown'
       if (!acc[clusterName]) {
         acc[clusterName] = []
@@ -320,7 +317,6 @@ export function StackSelector() {
       acc[clusterName].push(stack)
       return acc
     }, {} as Record<string, LLMdStack[]>)
-  }, [filteredAndSortedStacks])
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {

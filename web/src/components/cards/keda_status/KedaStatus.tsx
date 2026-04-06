@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import {
   CheckCircle,
   AlertTriangle,
@@ -7,8 +7,7 @@ import {
   PauseCircle,
   XCircle,
   TrendingUp,
-  Server,
-} from 'lucide-react'
+  Server } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton, SkeletonStats, SkeletonList } from '../../ui/Skeleton'
 import { CardSearchInput } from '../../../lib/cards/CardComponents'
@@ -26,24 +25,19 @@ const STATUS_CONFIG: Record<
   ready: {
     label: 'Ready',
     color: 'text-green-400',
-    icon: <CheckCircle className="w-3.5 h-3.5 text-green-400" />,
-  },
+    icon: <CheckCircle className="w-3.5 h-3.5 text-green-400" /> },
   degraded: {
     label: 'Degraded',
     color: 'text-yellow-400',
-    icon: <AlertTriangle className="w-3.5 h-3.5 text-yellow-400" />,
-  },
+    icon: <AlertTriangle className="w-3.5 h-3.5 text-yellow-400" /> },
   paused: {
     label: 'Paused',
     color: 'text-blue-400',
-    icon: <PauseCircle className="w-3.5 h-3.5 text-blue-400" />,
-  },
+    icon: <PauseCircle className="w-3.5 h-3.5 text-blue-400" /> },
   error: {
     label: 'Error',
     color: 'text-red-400',
-    icon: <XCircle className="w-3.5 h-3.5 text-red-400" />,
-  },
-}
+    icon: <XCircle className="w-3.5 h-3.5 text-red-400" /> } }
 
 const TRIGGER_LABELS: Record<KedaTriggerType, string> = {
   kafka: 'Kafka',
@@ -55,8 +49,7 @@ const TRIGGER_LABELS: Record<KedaTriggerType, string> = {
   cron: 'Cron',
   cpu: 'CPU',
   memory: 'Memory',
-  external: 'External',
-}
+  external: 'External' }
 
 function useFormatRelativeTime() {
   const { t } = useTranslation('cards')
@@ -82,8 +75,7 @@ function StatTile({
   label,
   value,
   colorClass,
-  borderClass,
-}: {
+  borderClass }: {
   icon: React.ReactNode
   label: string
   value: number
@@ -104,8 +96,7 @@ function StatTile({
 function ReplicaBar({
   current,
   desired,
-  max,
-}: {
+  max }: {
   current: number
   desired: number
   max: number
@@ -206,22 +197,21 @@ export function KedaStatus() {
   const [search, setSearch] = useState('')
 
   // Derived stats
-  const stats = useMemo(() => {
+  const stats = (() => {
     const objs = data.scaledObjects || []
     return {
       total: objs.length,
       ready: objs.filter(o => o.status === 'ready').length,
       degradedOrError: objs.filter(o => o.status === 'degraded' || o.status === 'error').length,
-      paused: objs.filter(o => o.status === 'paused').length,
-    }
-  }, [data.scaledObjects])
+      paused: objs.filter(o => o.status === 'paused').length }
+  })()
 
   // Guard against undefined nested data from API/cache
-  const scaledObjects = useMemo(() => data.scaledObjects || [], [data.scaledObjects])
+  const scaledObjects = data.scaledObjects || []
   const operatorPods = data.operatorPods || { ready: 0, total: 0 }
 
   // Filtered list (local search)
-  const filteredObjects = useMemo(() => {
+  const filteredObjects = (() => {
     if (!search.trim()) return scaledObjects
     const q = search.toLowerCase()
     return scaledObjects.filter(
@@ -231,7 +221,7 @@ export function KedaStatus() {
         o.target.toLowerCase().includes(q) ||
         (o.triggers || []).some(tr => tr.type.includes(q) || tr.source.toLowerCase().includes(q)),
     )
-  }, [scaledObjects, search])
+  })()
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (showSkeleton) {

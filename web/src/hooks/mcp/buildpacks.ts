@@ -26,8 +26,7 @@ function getDemoBuildpackImages(): BuildpackImage[] {
       image: 'registry.io/frontend:v1.2.0',
       status: 'succeeded',
       updated: new Date(Date.now() - 3600000).toISOString(),
-      cluster: 'eks-prod-us-east-1',
-    },
+      cluster: 'eks-prod-us-east-1' },
     {
       name: 'payments-api',
       namespace: 'backend',
@@ -35,8 +34,7 @@ function getDemoBuildpackImages(): BuildpackImage[] {
       image: 'registry.io/payments:v3.4.1',
       status: 'failed',
       updated: new Date(Date.now() - 7200000).toISOString(),
-      cluster: 'gke-staging',
-    },
+      cluster: 'gke-staging' },
   ]
 }
 
@@ -95,8 +93,7 @@ const buildpackCache: BuildpackCache = {
   timestamp: stored.timestamp,
   consecutiveFailures: 0,
   lastError: null,
-  listeners: new Set(),
-}
+  listeners: new Set() }
 
 export function useBuildpackImages(cluster?: string) {
   const [images, setImages] = useState<BuildpackImage[]>(buildpackCache.data)
@@ -129,8 +126,7 @@ export function useBuildpackImages(cluster?: string) {
     }
   }, [])
 
-  const notifyListeners = useCallback(
-    (isRefreshing: boolean, isLoading = false, isDemoData = false) => {
+  const notifyListeners = (isRefreshing: boolean, isLoading = false, isDemoData = false) => {
       const state: BuildpackCacheState = {
         images: buildpackCache.data,
         isLoading,
@@ -139,12 +135,9 @@ export function useBuildpackImages(cluster?: string) {
         lastError: buildpackCache.lastError,
         lastRefresh:
           buildpackCache.timestamp > 0 ? buildpackCache.timestamp : null,
-        isDemoData,
-      }
+        isDemoData }
       buildpackCache.listeners.forEach(l => l(state))
-    },
-    []
-  )
+    }
 
   const refetch = useCallback(
     async (silent = false) => {
@@ -190,8 +183,7 @@ export function useBuildpackImages(cluster?: string) {
 
         const token = localStorage.getItem(STORAGE_KEY_TOKEN)
         const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-        }
+          'Content-Type': 'application/json' }
         if (token) {
           headers['Authorization'] = `Bearer ${token}`
         }
@@ -314,8 +306,7 @@ export function useBuildpackImages(cluster?: string) {
     consecutiveFailures,
     isFailed,
     lastRefresh,
-    isDemoData,
-  }
+    isDemoData }
 }
 
 if (typeof window !== 'undefined') {
@@ -339,8 +330,7 @@ if (typeof window !== 'undefined') {
         consecutiveFailures: 0,
         lastError: null,
         lastRefresh: null,
-        isDemoData: false,
-      })
+        isDemoData: false })
     )
   })
 }
