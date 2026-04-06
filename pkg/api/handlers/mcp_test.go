@@ -277,7 +277,7 @@ func TestMCPGetNodes_NetworkErrorReturnsUnavailable(t *testing.T) {
 	fakeClient, ok := k8sClient.(*k8sfake.Clientset)
 	require.True(t, ok, "expected fake clientset for test-cluster")
 
-	// Simulate a connection-refused error — should NOT return 500
+	// Simulate a connection-refused error — should return 503
 	fakeClient.PrependReactor("list", "nodes", func(action k8stesting.Action) (bool, runtime.Object, error) {
 		return true, nil, errors.New("dial tcp 10.0.0.1:443: connect: connection refused")
 	})
@@ -306,7 +306,7 @@ func TestMCPGetPods_AuthErrorReturnsUnavailable(t *testing.T) {
 	fakeClient, ok := k8sClient.(*k8sfake.Clientset)
 	require.True(t, ok, "expected fake clientset for test-cluster")
 
-	// Simulate an auth error — should NOT return 500
+	// Simulate an auth error — should return 503
 	fakeClient.PrependReactor("list", "pods", func(action k8stesting.Action) (bool, runtime.Object, error) {
 		return true, nil, errors.New("Unauthorized: token expired")
 	})
