@@ -815,18 +815,53 @@ class CacheStore<T> {
       // The fetch() completion below sets isLoading: false.
       // This lets CardWrapper show partial data + refresh spinner while
       // more clusters are still streaming in via SSE.
+      //
+      // Throttle progress updates to avoid overwhelming React with rapid-fire
+      // re-renders when multiple clusters respond within the same tick (#4935).
+      // Each update creates a new state object reference so useSyncExternalStore
+      // triggers a synchronous re-render.
+      /** Minimum interval (ms) between progress-driven re-renders */
+      const PROGRESS_THROTTLE_MS = 100
+      let lastProgressTs = 0
+      let pendingProgress: T | null = null
+      let progressTimerId: ReturnType<typeof setTimeout> | null = null
+
+      const flushProgress = () => {
+        if (pendingProgress === null) return
+        if (this.resetVersion !== fetchVersion) return
+        this.setState({ data: pendingProgress })
+        pendingProgress = null
+        lastProgressTs = Date.now()
+      }
+
       const onProgress = progressiveFetcher ? (partialData: T) => {
         if (this.resetVersion !== fetchVersion) return  // stale — ignore
         // Skip empty progress updates — don't wipe cached data with []
         if (isEquivalentToInitial(partialData, this.initialData)) return
-        this.setState({
-          data: partialData,
-        })
+
+        const now = Date.now()
+        pendingProgress = partialData
+
+        if (now - lastProgressTs >= PROGRESS_THROTTLE_MS) {
+          // Enough time has passed — flush immediately
+          if (progressTimerId) { clearTimeout(progressTimerId); progressTimerId = null }
+          flushProgress()
+        } else if (!progressTimerId) {
+          // Schedule a flush at the end of the throttle window
+          const remaining = PROGRESS_THROTTLE_MS - (now - lastProgressTs)
+          progressTimerId = setTimeout(() => {
+            progressTimerId = null
+            flushProgress()
+          }, remaining)
+        }
       } : undefined
 
       const newData = progressiveFetcher && onProgress
         ? await progressiveFetcher(onProgress)
         : await fetcher()
+
+      // Flush any pending throttled progress update before processing final data
+      if (progressTimerId) { clearTimeout(progressTimerId); progressTimerId = null }
 
       // If a reset happened during fetch, discard stale results
       if (this.resetVersion !== fetchVersion) {

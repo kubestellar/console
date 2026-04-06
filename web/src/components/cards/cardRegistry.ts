@@ -1495,6 +1495,13 @@ export function getCardComponent(cardType: string): CardComponent | undefined {
     return CARD_COMPONENTS['dynamic_card']
   }
 
+  // Log a warning so missing/misspelled card types are surfaced in the console
+  // instead of silently disappearing (#4932).
+  console.warn(
+    `[cardRegistry] Unknown card type "${cardType}" — no component registered. ` +
+    'Check for typos in the dashboard config or register the card in cardRegistry.ts.',
+  )
+
   return undefined
 }
 

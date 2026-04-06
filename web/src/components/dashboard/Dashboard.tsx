@@ -944,7 +944,7 @@ export function Dashboard() {
 
   if (isLoading && localCards.length === 0) {
     return (
-      <div className="pt-16">
+      <div className="pt-4">
         {/* Header skeleton */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -980,7 +980,7 @@ export function Dashboard() {
   }
 
   return (
-    <div data-testid="dashboard-page" className="pt-16">
+    <div data-testid="dashboard-page" className="pt-4">
       {/* Header */}
       <DashboardHeader
         title={t('dashboard.title')}

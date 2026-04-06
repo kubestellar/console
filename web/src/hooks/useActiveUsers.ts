@@ -2,6 +2,16 @@ import { useState, useEffect, useCallback } from 'react'
 import { getDemoMode, isDemoModeForced } from './useDemoMode'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
 
+/**
+ * Disconnect the presence WebSocket and stop the heartbeat.
+ * MUST be called during logout to prevent stale auth tokens from being
+ * transmitted on a persistent connection after the user signs out (#4936).
+ */
+export function disconnectPresence(): void {
+  stopPresenceConnection()
+  stopHeartbeat()
+}
+
 export interface ActiveUsersInfo {
   activeUsers: number
   totalConnections: number

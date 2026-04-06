@@ -88,6 +88,19 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
 
   const CardComponent = CARD_COMPONENTS[card.card_type]
 
+  // Render a visible fallback for missing/misspelled card types (#4932)
+  if (!CardComponent) {
+    return (
+      <div
+        ref={(el) => { setNodeRef(el); registerRef?.(el) }}
+        style={style}
+        className="glass rounded-lg p-4 flex items-center justify-center text-muted-foreground text-sm border border-dashed border-warning/40"
+      >
+        Unknown card type: <code className="ml-1 font-mono text-warning">{card.card_type}</code>
+      </div>
+    )
+  }
+
   return (
     <div
       ref={(el) => { setNodeRef(el); registerRef?.(el) }}

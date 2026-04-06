@@ -148,6 +148,8 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
   const promise = new Promise<T[]>((resolve, reject) => {
     const accumulated: T[] = []
     let aborted = false
+    /** Whether we received a proper "done" event from the server */
+    let receivedDone = false
     /** Timer ID for scheduled reconnect — cleared on unmount/abort */
     let reconnectTimerId: ReturnType<typeof setTimeout> | null = null
 
@@ -237,6 +239,7 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
                 console.error('[SSE] Failed to parse cluster_data:', e)
               }
             } else if (eventType === 'done') {
+              receivedDone = true
               clearTimeout(timeoutId)
               cleanup()
               try {
@@ -252,9 +255,15 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
           const pump = (): Promise<void> =>
             reader.read().then(({ done, value }) => {
               if (done) {
-                // Stream ended — flush remaining buffer
+                // Stream ended without a "done" event — partial data (#4934).
+                // Flush remaining buffer and resolve with what we have.
                 if (sseBuffer.trim()) {
                   parseSSEChunk(sseBuffer + '\n\n', handleEvent)
+                }
+                if (!receivedDone && accumulated.length > 0) {
+                  console.warn(
+                    `[SSE] Stream ended without "done" event — returning ${accumulated.length} partial items`,
+                  )
                 }
                 cleanup()
                 clearTimeout(timeoutId)
@@ -275,15 +284,9 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
             return
           }
 
-          // If we already collected some data, resolve with what we have
-          if (accumulated.length > 0) {
-            clearTimeout(timeoutId)
-            cleanup()
-            resolve(accumulated)
-            return
-          }
-
-          // Retry with exponential backoff if we haven't exceeded attempts
+          // Retry with exponential backoff if we haven't exceeded attempts (#4934).
+          // Even with partial data, a retry can complete the stream from remaining
+          // clusters. Only resolve with partial data when all retries are exhausted.
           const retriesRemaining = SSE_MAX_RECONNECT_ATTEMPTS - attemptNumber
           if (retriesRemaining > 0 && !aborted) {
             const delay = Math.min(
@@ -291,8 +294,8 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
               SSE_RECONNECT_MAX_MS,
             )
             console.warn(
-              `[SSE] Connection failed (attempt ${attemptNumber + 1}/${SSE_MAX_RECONNECT_ATTEMPTS + 1}), ` +
-              `retrying in ${delay}ms: ${err.message}`,
+              `[SSE] Connection failed (attempt ${attemptNumber + 1}/${SSE_MAX_RECONNECT_ATTEMPTS + 1}, ` +
+              `${accumulated.length} items so far), retrying in ${delay}ms: ${err.message}`,
             )
             reconnectTimerId = setTimeout(() => {
               reconnectTimerId = null
@@ -303,7 +306,16 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
             return
           }
 
-          // All retries exhausted — clean up and reject
+          // All retries exhausted — resolve with partial data if we have any
+          if (accumulated.length > 0) {
+            console.warn(`[SSE] All retries exhausted — resolving with ${accumulated.length} partial items`)
+            clearTimeout(timeoutId)
+            cleanup()
+            resolve(accumulated)
+            return
+          }
+
+          // No data at all — clean up and reject
           clearTimeout(timeoutId)
           cleanup()
           reject(new Error(`SSE stream error: ${err.message}`))

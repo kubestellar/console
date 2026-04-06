@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -19,6 +20,14 @@ import (
 
 	k8sclient "github.com/kubestellar/console/pkg/k8s"
 )
+
+// imageTagMaxLen is the maximum allowed length for an image tag to prevent abuse.
+const imageTagMaxLen = 128
+
+// validImageTagRe enforces a strict pattern for Docker/OCI image tags:
+// alphanumeric, dots, hyphens, plus signs, and underscores only — no slashes,
+// colons, at-signs, or path-traversal sequences.
+var validImageTagRe = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._+\-]{0,127}$`)
 
 // Self-upgrade timeout for Kubernetes API calls
 const selfUpgradeTimeout = 30 * time.Second
@@ -207,10 +216,11 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 		})
 	}
 
-	// Validate image tag format (prevent injection)
-	if strings.ContainsAny(req.ImageTag, " \t\n\"'\\{}") {
+	// Validate image tag: strict regex rejects path traversal (../, /), at-signs (@),
+	// colons (:), and any other characters that could alter the image reference.
+	if len(req.ImageTag) > imageTagMaxLen || !validImageTagRe.MatchString(req.ImageTag) {
 		return c.Status(fiber.StatusBadRequest).JSON(SelfUpgradeTriggerResponse{
-			Error: "invalid imageTag format",
+			Error: "invalid imageTag format — must be alphanumeric with dots, hyphens, or underscores only",
 		})
 	}
 

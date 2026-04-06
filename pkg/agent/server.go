@@ -446,11 +446,14 @@ func (s *Server) Start() error {
 	// WebSocket endpoint
 	mux.HandleFunc("/ws", s.handleWebSocket)
 
-	// CORS preflight - includes Private Network Access header for browser security
+	// CORS preflight - uses isAllowedOrigin() instead of wildcard to restrict access
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := r.Header.Get("Origin")
+		if s.isAllowedOrigin(origin) {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		w.Header().Set("Access-Control-Allow-Private-Network", "true")
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
