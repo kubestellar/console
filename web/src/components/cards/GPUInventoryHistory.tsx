@@ -3,6 +3,7 @@ import {
   Cpu, TrendingUp, TrendingDown, Minus, Clock, Server,
   BarChart3, Table2, ChevronDown, ArrowUpDown,
 } from 'lucide-react'
+import { getChartColors, getChartColorByName } from '../../lib/chartColors'
 import {
   AreaChart,
   Area,
@@ -79,19 +80,10 @@ const TABLE_PAGE_SIZE = 8
 const MAX_CHART_SERIES = 8
 
 /** Distinct colors for per-GPU-type area series in the chart */
-const GPU_TYPE_COLORS: string[] = [
-  '#9333ea', // purple-600
-  '#3b82f6', // blue-500
-  '#ef4444', // red-500
-  '#f59e0b', // amber-500
-  '#06b6d4', // cyan-500
-  '#ec4899', // pink-500
-  '#84cc16', // lime-500
-  '#8b5cf6', // violet-500
-]
+const GPU_TYPE_COLORS: string[] = getChartColors(MAX_CHART_SERIES)
 
 /** Color used for the "free" series area */
-const FREE_AREA_COLOR = '#22c55e'
+const FREE_AREA_COLOR = getChartColorByName('success')
 
 // ---------------------------------------------------------------------------
 // Types

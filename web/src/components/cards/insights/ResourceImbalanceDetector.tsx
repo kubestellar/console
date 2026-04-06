@@ -11,6 +11,7 @@ import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './i
 import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_FONT_SIZE_COMPACT, CHART_TICK_COLOR } from '../../../lib/constants/ui'
 import { InsightDetailModal } from './InsightDetailModal'
 import type { MultiClusterInsight } from '../../../types/insights'
+import { getChartColorByName } from '../../../lib/chartColors'
 
 /** Percentage threshold for coloring bars as overloaded */
 const OVERLOADED_THRESHOLD_PCT = 75
@@ -49,7 +50,7 @@ export function ResourceImbalanceDetector() {
         name: name.length > CHART_LABEL_MAX_LEN ? name.slice(0, CHART_LABEL_TRUNCATE_LEN) + '...' : name,
         fullName: name,
         value,
-        fill: value > OVERLOADED_THRESHOLD_PCT ? '#ef4444' : value < UNDERLOADED_THRESHOLD_PCT ? '#3b82f6' : '#22c55e',
+        fill: value > OVERLOADED_THRESHOLD_PCT ? getChartColorByName('error') : value < UNDERLOADED_THRESHOLD_PCT ? getChartColorByName('info') : getChartColorByName('success'),
       }))
       .sort((a, b) => b.value - a.value)
   }, [imbalanceInsights, selectedClusters])

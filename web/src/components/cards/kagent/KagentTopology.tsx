@@ -3,13 +3,30 @@ import { Bot, Wrench, Cpu } from 'lucide-react'
 import { useKagentCRDAgents, useKagentCRDTools, useKagentCRDModels } from '../../../hooks/mcp/kagent_crds'
 import { useCardLoadingState } from '../CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { getChartColor } from '../../../lib/chartColors'
+
+/** Color for Python agent runtime — blue-400 */
+const RUNTIME_COLOR_PYTHON = '#60a5fa'
+/** Color for Go agent runtime — emerald-400 */
+const RUNTIME_COLOR_GO = '#34d399'
+/** Color for BYO/unknown agent runtime — gray-400 */
+const RUNTIME_COLOR_DEFAULT = '#9ca3af'
 
 const RUNTIME_COLORS: Record<string, string> = {
-  python: '#60a5fa',
-  go: '#34d399',
-  byo: '#9ca3af',
-  '': '#9ca3af',
+  python: RUNTIME_COLOR_PYTHON,
+  go: RUNTIME_COLOR_GO,
+  byo: RUNTIME_COLOR_DEFAULT,
+  '': RUNTIME_COLOR_DEFAULT,
 }
+
+/** Color for tool server nodes — cyan */
+const TOOL_NODE_COLOR = getChartColor(6)
+/** Color for model nodes — emerald/green */
+const MODEL_NODE_COLOR = getChartColor(3)
+/** Color for agent-tool link edges — cyan */
+const AGENT_TOOL_EDGE_COLOR = getChartColor(6)
+/** Color for agent-model link edges — emerald/green */
+const AGENT_MODEL_EDGE_COLOR = getChartColor(3)
 
 interface TopoNode {
   id: string
@@ -100,7 +117,7 @@ export function KagentTopology({ config }: { config?: Record<string, unknown> })
           label: tool.name,
           type: 'tool',
           cluster: cl,
-          color: '#06b6d4',
+          color: TOOL_NODE_COLOR,
           x: midX,
           y: yOffset + i * rowHeight,
         })
@@ -113,7 +130,7 @@ export function KagentTopology({ config }: { config?: Record<string, unknown> })
           label: model.name,
           type: 'model',
           cluster: cl,
-          color: '#10b981',
+          color: MODEL_NODE_COLOR,
           x: rightX,
           y: yOffset + i * rowHeight,
         })
@@ -173,7 +190,7 @@ export function KagentTopology({ config }: { config?: Record<string, unknown> })
             const from = nodes.find(n => n.id === edge.from)
             const to = nodes.find(n => n.id === edge.to)
             if (!from || !to) return null
-            const strokeColor = edge.type === 'agent-tool' ? '#06b6d4' : '#10b981'
+            const strokeColor = edge.type === 'agent-tool' ? AGENT_TOOL_EDGE_COLOR : AGENT_MODEL_EDGE_COLOR
             return (
               <line
                 key={i}

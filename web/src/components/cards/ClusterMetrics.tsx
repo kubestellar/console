@@ -7,6 +7,7 @@ import { useChartFilters } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { getChartColors } from '../../lib/chartColors'
 
 type TimeRange = '15m' | '1h' | '6h' | '24h'
 
@@ -228,11 +229,9 @@ export function ClusterMetrics() {
       }
     })
 
-    // Colors for different clusters
-    const clusterColors = [
-      '#9333ea', '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
-      '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899',
-    ]
+    /** Number of distinct colors in the cluster chart palette */
+    const CLUSTER_PALETTE_SIZE = 10
+    const clusterColors = getChartColors(CLUSTER_PALETTE_SIZE)
 
     // Build series config
     const series = Array.from(clusterNames).map((name, i) => ({

@@ -12,17 +12,17 @@ import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './i
 import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_FONT_SIZE_COMPACT, CHART_TICK_COLOR } from '../../../lib/constants/ui'
 import { InsightDetailModal } from './InsightDetailModal'
 import type { MultiClusterInsight } from '../../../types/insights'
+import { getChartColors } from '../../../lib/chartColors'
 
 /** Time bucket size for the timeline chart (2 minutes) */
 const TIMELINE_BUCKET_MS = 2 * 60 * 1000
 /** Maximum number of buckets to show on the chart */
 const MAX_TIMELINE_BUCKETS = 30
 
+/** Number of distinct colors in the cluster event chart palette */
+const CLUSTER_PALETTE_SIZE = 10
 /** Color palette for cluster series in the stacked area chart */
-const CLUSTER_COLORS = [
-  '#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6',
-  '#06b6d4', '#ec4899', '#14b8a6', '#f97316', '#6366f1',
-]
+const CLUSTER_COLORS = getChartColors(CLUSTER_PALETTE_SIZE)
 
 export function CrossClusterEventCorrelation() {
   const { insightsByCategory, isLoading, isDemoData } = useMultiClusterInsights()

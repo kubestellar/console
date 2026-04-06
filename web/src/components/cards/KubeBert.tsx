@@ -19,17 +19,27 @@ const LEVEL_TRANSITION_DELAY_MS = 1000
 const MIN_ENEMY_SPAWN_INTERVAL_MS = 1000
 
 
-// Tile colors by state
-const TILE_COLORS = {
-  unvisited: '#1e3a5f',     // dark blue
-  visited: '#326ce5',       // Kubernetes blue
-  target: '#00d4aa',        // bright green (level target color)
-}
-
-const PLAYER_COLOR = '#ffd700'    // gold — the Kube Bert character
-const ENEMY_COILY_COLOR = '#ff4444'  // red snake enemy
-const ENEMY_BALL_COLOR = '#ff8800'   // orange bouncing ball
+/** Tile color when unvisited — dark blue */
+const TILE_UNVISITED_COLOR = '#1e3a5f'
+/** Tile color when visited — Kubernetes blue */
+const TILE_VISITED_COLOR = '#326ce5'
+/** Tile color for level target — bright green */
+const TILE_TARGET_COLOR = '#00d4aa'
+/** Player character color — gold */
+const PLAYER_COLOR = '#ffd700'
+/** Red snake enemy color */
+const ENEMY_COILY_COLOR = '#ff4444'
+/** Orange bouncing ball enemy color */
+const ENEMY_BALL_COLOR = '#ff8800'
+/** Game background color — dark navy */
 const BG_COLOR = '#0a1628'
+
+// Tile colors by state (references named constants above)
+const TILE_COLORS = {
+  unvisited: TILE_UNVISITED_COLOR,
+  visited: TILE_VISITED_COLOR,
+  target: TILE_TARGET_COLOR,
+}
 
 // Kubernetes-themed labels for tiles
 const KUBE_LABELS = ['Pod', 'Svc', 'Node', 'NS', 'Dep', 'RS', 'DS', 'Job', 'CRD', 'PV', 'CM', 'Sec', 'Ing', 'HPA', 'SA']
