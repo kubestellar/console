@@ -155,6 +155,8 @@ const WS_RECONNECT_INITIAL_DELAY_MS = 1_000
 const WS_RECONNECT_MAX_DELAY_MS = 30_000
 /** Maximum number of consecutive reconnection attempts before giving up */
 const WS_RECONNECT_MAX_RETRIES = 10
+/** Maximum time (ms) to wait for a WebSocket connection to open */
+const WS_CONNECTION_TIMEOUT_MS = 5_000
 /** Delay before showing "Waiting for response..." status */
 const STATUS_WAITING_DELAY_MS = 500
 /** Delay before showing "Processing with AI..." status */
@@ -474,15 +476,21 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       // Show loading state while connecting
       setAgentsLoading(true)
 
-      // Connection timeout - 5 seconds
+      // Connection timeout — nullify handlers before closing to prevent the
+      // onclose handler from scheduling a cascading reconnection (#4929).
       const timeout = setTimeout(() => {
-        if (wsRef.current) {
-          wsRef.current.close()
+        const ws = wsRef.current
+        if (ws) {
+          ws.onclose = null
+          ws.onerror = null
+          ws.onopen = null
+          ws.onmessage = null
+          ws.close()
           wsRef.current = null
         }
         setAgentsLoading(false)
         reject(new Error('CONNECTION_TIMEOUT'))
-      }, 5000)
+      }, WS_CONNECTION_TIMEOUT_MS)
 
       try {
         wsRef.current = new WebSocket(LOCAL_AGENT_WS_URL)
@@ -644,6 +652,16 @@ Install the console locally with the KubeStellar Console agent to use AI mission
 
         wsRef.current.onerror = () => {
           clearTimeout(timeout)
+          // Forcibly close the socket and clear the ref to prevent zombie
+          // connections. Nullify onclose first so the close doesn't trigger
+          // a cascading reconnection attempt (#4929).
+          const ws = wsRef.current
+          if (ws) {
+            ws.onclose = null
+            ws.close()
+            wsRef.current = null
+          }
+          setAgentsLoading(false)
           reject(new Error('CONNECTION_FAILED'))
         }
       } catch (err) {
