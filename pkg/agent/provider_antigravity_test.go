@@ -7,6 +7,9 @@ import (
 )
 
 func TestAntigravityProvider_Handshake_NotInstalled(t *testing.T) {
+	// Override PATH so detectCLI() cannot find a real CLI binary.
+	t.Setenv("PATH", t.TempDir())
+
 	p := &AntigravityProvider{} // No cliPath set
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

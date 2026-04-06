@@ -159,7 +159,9 @@ func TestMCPGetPods_InternalErrorIsSanitized(t *testing.T) {
 
 	var payload map[string]interface{}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
-	assert.Equal(t, "internal server error", payload["error"])
+	assert.Equal(t, "error", payload["clusterStatus"])
+	assert.Equal(t, "internal", payload["errorType"])
+	assert.Equal(t, "An internal error occurred", payload["errorMessage"])
 }
 
 func TestMCPGetPods_NetworkErrorReturnsUnavailable(t *testing.T) {
@@ -256,7 +258,7 @@ func TestMCPGetEvents_NetworkErrorReturnsUnavailable(t *testing.T) {
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode, "network errors should return 200, not 500")
+	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode, "network errors should return 503")
 
 	var payload map[string]interface{}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
@@ -285,7 +287,7 @@ func TestMCPGetNodes_NetworkErrorReturnsUnavailable(t *testing.T) {
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode, "network errors should return 200, not 500")
+	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode, "network errors should return 503")
 
 	var payload map[string]interface{}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
@@ -314,7 +316,7 @@ func TestMCPGetPods_AuthErrorReturnsUnavailable(t *testing.T) {
 
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode, "auth errors should return 200, not 500")
+	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode, "auth errors should return 503")
 
 	var payload map[string]interface{}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
