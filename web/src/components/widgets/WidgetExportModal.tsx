@@ -21,6 +21,7 @@ import {
 } from '../../lib/widgets/widgetRegistry'
 import { generateWidget, getWidgetFilename, type WidgetConfig } from '../../lib/widgets/codeGenerator'
 import { copyToClipboard } from '../../lib/clipboard'
+import { safeRevokeObjectURL } from '../../lib/download'
 
 interface WidgetExportModalProps {
   isOpen: boolean
@@ -113,7 +114,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    safeRevokeObjectURL(url)
     setIsLoading(false)
     emitWidgetDownloaded('uebersicht')
   }

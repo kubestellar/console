@@ -23,6 +23,7 @@ import { fullScan } from '../../lib/missions/scanner/index'
 import { cn } from '../../lib/cn'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { copyToClipboard } from '../../lib/clipboard'
+import { safeRevokeObjectURL } from '../../lib/download'
 
 interface ShareMissionDialogProps {
   resolution: Resolution
@@ -146,7 +147,7 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
         a.href = url
         a.download = `${mission.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60)}.json`
         a.click()
-        URL.revokeObjectURL(url)
+        safeRevokeObjectURL(url)
         break
       }
       case 'clipboard':
@@ -163,7 +164,7 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
         yamlAnchor.href = yamlUrl
         yamlAnchor.download = `${mission.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60)}.yaml`
         yamlAnchor.click()
-        URL.revokeObjectURL(yamlUrl)
+        safeRevokeObjectURL(yamlUrl)
         break
       }
     }

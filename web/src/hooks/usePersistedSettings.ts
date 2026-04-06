@@ -10,6 +10,7 @@ import {
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { isNetlifyDeployment } from '../lib/demoMode'
+import { safeRevokeObjectURL } from '../lib/download'
 
 const DEBOUNCE_MS = 1000
 const RETRY_DELAY_MS = 3000
@@ -117,7 +118,7 @@ export function usePersistedSettings() {
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      safeRevokeObjectURL(url)
     } catch (err) {
       console.error('[settings] export failed:', err)
       throw err

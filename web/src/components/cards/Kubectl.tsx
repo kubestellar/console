@@ -10,6 +10,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { copyToClipboard } from '../../lib/clipboard'
+import { safeRevokeObjectURL } from '../../lib/download'
 
 interface CommandHistoryItem {
   id: string
@@ -432,7 +433,7 @@ data:
     a.href = url
     a.download = 'manifest.yaml'
     a.click()
-    URL.revokeObjectURL(url)
+    safeRevokeObjectURL(url)
   }, [yamlContent])
 
   // Handle keyboard shortcuts

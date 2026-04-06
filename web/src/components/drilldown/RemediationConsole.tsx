@@ -7,6 +7,7 @@ import { AI_THINKING_DELAY_MS, FOCUS_DELAY_MS } from '../../lib/constants/networ
 import { authFetch } from '../../lib/api'
 import { useTranslation } from 'react-i18next'
 import { copyToClipboard } from '../../lib/clipboard'
+import { safeRevokeObjectURL } from '../../lib/download'
 
 interface LogEntry {
   id: string
@@ -383,7 +384,7 @@ Labels:       app=${resourceName.split('-')[0]}
     a.href = url
     a.download = `remediation-${resourceName}-${Date.now()}.log`
     a.click()
-    URL.revokeObjectURL(url)
+    safeRevokeObjectURL(url)
   }
 
   if (!isOpen) return null

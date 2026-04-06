@@ -38,6 +38,7 @@ import { STATUS_CONFIG, TYPE_ICONS } from './types'
 import type { FontSize } from './types'
 import { TypingIndicator } from './TypingIndicator'
 import { MemoizedMessage } from './MemoizedMessage'
+import { safeRevokeObjectURL } from '../../../lib/download'
 
 export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontSize, onToggleFullScreen }: { mission: Mission; isFullScreen?: boolean; fontSize?: FontSize; onToggleFullScreen?: () => void }) {
   const { t } = useTranslation('common')
@@ -173,7 +174,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    safeRevokeObjectURL(url)
   }, [mission])
 
   // Check if user is at bottom of scroll container

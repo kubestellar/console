@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { emitDataExported } from '../../../lib/analytics'
 import { copyToClipboard } from '../../../lib/clipboard'
+import { safeRevokeObjectURL } from '../../../lib/download'
 
 interface Props {
   data: Record<string, unknown>
@@ -80,7 +81,7 @@ export function YAMLDrillDown({ data }: Props) {
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    safeRevokeObjectURL(url)
     emitDataExported('yaml_download', resourceType)
   }
 

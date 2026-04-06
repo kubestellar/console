@@ -23,6 +23,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { useTranslation } from 'react-i18next'
 import { api, BackendUnavailableError, UnauthenticatedError } from '../../lib/api'
 import { useDashboards, Dashboard } from '../../hooks/useDashboards'
+import { safeRevokeObjectURL } from '../../lib/download'
 import { useClusters } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useSidebarConfig } from '../../hooks/useSidebarConfig'
@@ -696,7 +697,7 @@ export function CustomDashboard() {
             a.href = url
             a.download = `${(dashboard?.name || 'dashboard').replace(/\s+/g, '-').toLowerCase()}.json`
             a.click()
-            URL.revokeObjectURL(url)
+            safeRevokeObjectURL(url)
             showToast('Dashboard exported', 'success')
           } catch {
             showToast('Failed to export dashboard', 'error')

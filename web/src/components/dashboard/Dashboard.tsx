@@ -23,6 +23,7 @@ import {
 } from '@dnd-kit/sortable'
 import { useTranslation } from 'react-i18next'
 import { api, BackendUnavailableError, UnauthenticatedError } from '../../lib/api'
+import { safeRevokeObjectURL } from '../../lib/download'
 import { emitCardAdded, emitCardRemoved, emitCardDragged, emitCardConfigured } from '../../lib/analytics'
 import { useDashboards } from '../../hooks/useDashboards'
 import { useClusters } from '../../hooks/useMCP'
@@ -1155,7 +1156,7 @@ export function Dashboard() {
             a.href = url
             a.download = `${(dashboard.name || 'dashboard').replace(/\s+/g, '-').toLowerCase()}.json`
             a.click()
-            URL.revokeObjectURL(url)
+            safeRevokeObjectURL(url)
             showToast('Dashboard exported', 'success')
           } catch {
             showToast('Failed to export dashboard', 'error')
