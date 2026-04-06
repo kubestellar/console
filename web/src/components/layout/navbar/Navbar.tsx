@@ -109,9 +109,10 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
         </a>
       </div>
 
-      {/* Search - hidden on small mobile; min-w-0 + overflow-hidden prevent
-           overlap when the right-side AI Mission button is visible (#4409) */}
-      <div className="hidden sm:block flex-1 min-w-0 max-w-md mx-4 overflow-hidden">
+      {/* Search - hidden on small mobile; min-w-0 prevents layout overflow
+           when the right-side AI Mission button is visible (#4409).
+           min-w-[120px] ensures the input stays usable at narrow widths (#4955). */}
+      <div className="hidden sm:flex flex-1 min-w-[120px] max-w-md mx-4">
         <Suspense fallback={null}><SearchDropdown /></Suspense>
       </div>
 

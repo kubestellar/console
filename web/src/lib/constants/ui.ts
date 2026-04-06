@@ -66,3 +66,5 @@ export const NAVBAR_HEIGHT_PX = 64
 export const BANNER_HEIGHT_PX = 36
 /** Height of the green dev-mode indicator bar in pixels (h-5 = 20px) */
 export const DEV_BAR_HEIGHT_PX = 20
+/** Width reserved for the sidebar collapse/pin floating controls (p-1.5 + icon + gap) */
+export const SIDEBAR_CONTROLS_OFFSET_PX = 36

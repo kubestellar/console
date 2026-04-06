@@ -20,7 +20,7 @@ import { useBackendHealth } from '../../hooks/useBackendHealth'
 import { useDeepLink } from '../../hooks/useDeepLink'
 import { cn } from '../../lib/cn'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
-import { NAVBAR_HEIGHT_PX, BANNER_HEIGHT_PX } from '../../lib/constants/ui'
+import { NAVBAR_HEIGHT_PX, BANNER_HEIGHT_PX, SIDEBAR_CONTROLS_OFFSET_PX } from '../../lib/constants/ui'
 import { CLOSE_ANIMATION_MS, UI_FEEDBACK_TIMEOUT_MS, TOAST_DISMISS_MS } from '../../lib/constants/network'
 import { TourOverlay, TourPrompt } from '../onboarding/Tour'
 import { TourProvider } from '../../hooks/useTour'
@@ -496,7 +496,10 @@ export function Layout({ children }: LayoutProps) {
         </PageErrorBoundary>
         <main
           id="main-content"
-          style={{ marginLeft: sidebarWidthPx, marginRight: 'var(--mission-sidebar-width, 0px)' }}
+          style={{
+            marginLeft: isMobile ? 0 : sidebarWidthPx + SIDEBAR_CONTROLS_OFFSET_PX,
+            marginRight: 'var(--mission-sidebar-width, 0px)',
+          }}
           className="relative flex-1 p-4 pb-24 md:p-6 md:pb-28 transition-[margin] duration-300 overflow-y-auto scroll-enhanced min-w-0"
         >
           <NavigationProgress />
