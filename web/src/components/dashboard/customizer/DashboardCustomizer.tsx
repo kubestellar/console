@@ -60,12 +60,14 @@ export function DashboardCustomizer({
 }: DashboardCustomizerProps) {
   const { t: _t } = useTranslation()
   const t = _t as (key: string, defaultValue?: string) => string
-  const [activeSection, setActiveSection] = useState<CustomizerSection>(initialSection || DEFAULT_SECTION)
+  // User-driven section selection (null = use initialSection prop)
+  const [userSelectedSection, setUserSelectedSection] = useState<CustomizerSection | null>(null)
 
-  // Reset section when modal opens — prevents stale section from previous open
-  useEffect(() => {
-    if (isOpen) setActiveSection(initialSection || DEFAULT_SECTION)
-  }, [isOpen, initialSection])
+  // Reset user selection when modal opens so initialSection takes effect
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- needed to sync with external isOpen prop
+  useEffect(() => { if (isOpen) setUserSelectedSection(null) }, [isOpen])
+
+  const activeSection = userSelectedSection || initialSection || DEFAULT_SECTION
 
   // Global search reserved for future use
   const globalSearch = ''
@@ -93,7 +95,7 @@ export function DashboardCustomizer({
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <DashboardCustomizerSidebar
           activeSection={activeSection}
-          onSectionChange={setActiveSection}
+          onSectionChange={setUserSelectedSection}
         />
 
         {/* Main content — fixed height, sections fill this space */}
@@ -110,7 +112,7 @@ export function DashboardCustomizer({
           )}
 
           {activeSection === 'dashboards' && (
-            <NavigationSection onClose={onClose} />
+            <NavigationSection onClose={onClose} dashboardName={dashboardName} />
           )}
 
           {activeSection === 'collections' && onApplyTemplate && (
@@ -134,10 +136,10 @@ export function DashboardCustomizer({
           {activeSection === 'create-dashboard' && (
             <CreateDashboardModal
               isOpen={true}
-              onClose={() => setActiveSection('dashboards')}
+              onClose={() => setUserSelectedSection('dashboards')}
               onCreate={async (name) => {
                 await _createDashboard(name)
-                setActiveSection('dashboards')
+                setUserSelectedSection('dashboards')
               }}
               existingNames={dashboards.map(d => d.name)}
               embedded
@@ -148,7 +150,7 @@ export function DashboardCustomizer({
           {activeSection === 'card-factory' && (
             <CardFactoryModal
               isOpen={true}
-              onClose={() => setActiveSection('cards')}
+              onClose={() => setUserSelectedSection('cards')}
               onCardCreated={(cardId) => {
                 onAddCards([{
                   type: 'dynamic_card',
@@ -157,7 +159,7 @@ export function DashboardCustomizer({
                   visualization: 'status',
                   config: { dynamicCardId: cardId },
                 }])
-                setActiveSection('cards')
+                setUserSelectedSection('cards')
               }}
               embedded
             />
@@ -166,7 +168,7 @@ export function DashboardCustomizer({
           {activeSection === 'stat-factory' && (
             <StatBlockFactoryModal
               isOpen={true}
-              onClose={() => setActiveSection('cards')}
+              onClose={() => setUserSelectedSection('cards')}
               embedded
             />
           )}
@@ -177,39 +179,39 @@ export function DashboardCustomizer({
         )}
       </div>
 
-      {/* Footer — dashboard actions (undo/redo/reset) */}
-      {(canUndo || canRedo || (isCustomized && onReset)) && (
-        <div className="border-t border-border px-4 py-2 flex items-center gap-2">
-          <button
-            onClick={onUndo}
-            disabled={!canUndo}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          >
-            <Undo2 className="w-3.5 h-3.5" />
-            Undo
-          </button>
-          <button
-            onClick={onRedo}
-            disabled={!canRedo}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          >
-            <Redo2 className="w-3.5 h-3.5" />
-            Redo
-          </button>
-          {isCustomized && onReset && (
-            <>
-              <div className="flex-1" />
-              <button
-                onClick={onReset}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-md transition-colors"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                Reset Dashboard
-              </button>
-            </>
-          )}
-        </div>
-      )}
+      {/* Footer — always rendered to prevent height shift when undo/redo state changes */}
+      <div className={`border-t border-border px-4 py-2 flex items-center gap-2 flex-shrink-0 transition-opacity ${
+        canUndo || canRedo || (isCustomized && onReset) ? 'opacity-100' : 'opacity-0 pointer-events-none'
+      }`}>
+        <button
+          onClick={onUndo}
+          disabled={!canUndo}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <Undo2 className="w-3.5 h-3.5" />
+          Undo
+        </button>
+        <button
+          onClick={onRedo}
+          disabled={!canRedo}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <Redo2 className="w-3.5 h-3.5" />
+          Redo
+        </button>
+        {isCustomized && onReset && (
+          <>
+            <div className="flex-1" />
+            <button
+              onClick={onReset}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-md transition-colors"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Reset Dashboard
+            </button>
+          </>
+        )}
+      </div>
     </BaseModal>
 
       {/* Factories render inline via embedded prop — no separate modals */}

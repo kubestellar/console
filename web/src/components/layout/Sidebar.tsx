@@ -450,7 +450,7 @@ export function Sidebar() {
             onClick={() => {
               // Open Console Studio at Dashboards section
               if (dashboardContext?.openAddCardModal) {
-                dashboardContext.openAddCardModal()
+                dashboardContext.openAddCardModal('dashboards')
               } else {
                 setShowCustomizer(true)
               }

@@ -1,6 +1,9 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
 import { useDashboardHealth, type DashboardHealthInfo } from './useDashboardHealth'
 
+/** Valid initial sections for Console Studio */
+export type StudioInitialSection = 'cards' | 'dashboards' | 'collections'
+
 // Card to be restored from history
 export interface PendingRestoreCard {
   cardType: string
@@ -12,8 +15,11 @@ export interface PendingRestoreCard {
 interface DashboardContextType {
   // Add Card Modal state
   isAddCardModalOpen: boolean
-  openAddCardModal: () => void
+  openAddCardModal: (section?: StudioInitialSection) => void
   closeAddCardModal: () => void
+
+  /** Which section Console Studio should open to */
+  studioInitialSection: StudioInitialSection | undefined
 
   // Pending open flag - for triggering modal after navigation
   pendingOpenAddCardModal: boolean
@@ -37,18 +43,21 @@ const DashboardContext = createContext<DashboardContextType | null>(null)
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false)
+  const [studioInitialSection, setStudioInitialSection] = useState<StudioInitialSection | undefined>(undefined)
   const [pendingOpenAddCardModal, setPendingOpenAddCardModalState] = useState(false)
   const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false)
   const [pendingRestoreCard, setPendingRestoreCardState] = useState<PendingRestoreCard | null>(null)
 
   const health = useDashboardHealth()
 
-  const openAddCardModal = useCallback(() => {
+  const openAddCardModal = useCallback((section?: StudioInitialSection) => {
+    setStudioInitialSection(section)
     setIsAddCardModalOpen(true)
   }, [])
 
   const closeAddCardModal = useCallback(() => {
     setIsAddCardModalOpen(false)
+    setStudioInitialSection(undefined)
   }, [])
 
   const setPendingOpenAddCardModal = useCallback((pending: boolean) => {
@@ -77,6 +86,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         isAddCardModalOpen,
         openAddCardModal,
         closeAddCardModal,
+        studioInitialSection,
         pendingOpenAddCardModal,
         setPendingOpenAddCardModal,
         isTemplatesModalOpen,

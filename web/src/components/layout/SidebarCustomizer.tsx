@@ -217,7 +217,7 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
   const { createDashboard, dashboards } = useDashboards()
 
   const [isGenerating, setIsGenerating] = useState(false)
-  const { isOpen: isCreateDashboardOpen, open: openCreateDashboard, close: closeCreateDashboard } = useModalState()
+  const { isOpen: isCreateDashboardOpen, close: closeCreateDashboard } = useModalState()
   const [generationResult, setGenerationResult] = useState<string | null>(null)
   const [newItemTarget, setNewItemTarget] = useState<'primary' | 'secondary'>('primary')
   const [showAddForm, setShowAddForm] = useState(false)
@@ -585,7 +585,7 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
         )}
         <CreateDashboardModal
           isOpen={isCreateDashboardOpen}
-          onClose={() => setIsCreateDashboardOpen(false)}
+          onClose={closeCreateDashboard}
           onCreate={handleCreateDashboard}
           existingNames={dashboards.map(d => d.name)}
         />

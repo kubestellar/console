@@ -62,7 +62,8 @@ export function TemplateGallerySection({ onReplaceWithTemplate, onAddTemplate, d
   }
 
   return (
-    <div className="h-full overflow-y-auto p-4">
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto p-4">
       {/* Description — same pattern as Cards section */}
       <div className="mb-3">
         <p className="text-xs text-muted-foreground mb-2">
@@ -165,6 +166,7 @@ export function TemplateGallerySection({ onReplaceWithTemplate, onAddTemplate, d
             </div>
           </div>
         ))}
+      </div>
       </div>
     </div>
   )

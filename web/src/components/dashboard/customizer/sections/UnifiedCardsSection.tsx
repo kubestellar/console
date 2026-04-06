@@ -346,9 +346,10 @@ export function UnifiedCardsSection({
         </div>
       </div>
 
-      {/* Sticky footer — only shown when cards are selected */}
-      {totalSelected > 0 && (
-      <div className="border-t border-border px-4 py-3 flex items-center justify-between">
+      {/* Sticky footer — always rendered to prevent height shift; hidden when nothing selected */}
+      <div className={`border-t border-border px-4 py-3 flex items-center justify-between flex-shrink-0 transition-all ${
+        totalSelected > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none h-0 py-0 overflow-hidden border-t-0'
+      }`}>
         <span className="text-sm text-muted-foreground">
           {`${totalSelected} card${totalSelected !== 1 ? 's' : ''} selected`}
         </span>
@@ -365,7 +366,6 @@ export function UnifiedCardsSection({
           </button>
         </div>
       </div>
-      )}
 
       {/* Card/Stat factories are now separate Console Studio nav items */}
     </div>
