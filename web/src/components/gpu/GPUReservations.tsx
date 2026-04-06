@@ -197,11 +197,11 @@ export function GPUReservations() {
     if (searchTerm.trim()) {
       const term = searchTerm.trim().toLowerCase()
       filtered = filtered.filter(r =>
-        r.title.toLowerCase().includes(term) ||
-        r.namespace.toLowerCase().includes(term) ||
-        r.user_name.toLowerCase().includes(term) ||
-        r.cluster.toLowerCase().includes(term) ||
-        r.status.toLowerCase().includes(term) ||
+        (r.title ?? '').toLowerCase().includes(term) ||
+        (r.namespace ?? '').toLowerCase().includes(term) ||
+        (r.user_name ?? '').toLowerCase().includes(term) ||
+        (r.cluster ?? '').toLowerCase().includes(term) ||
+        (r.status ?? '').toLowerCase().includes(term) ||
         (r.gpu_type && r.gpu_type.toLowerCase().includes(term)) ||
         (r.description && r.description.toLowerCase().includes(term)) ||
         (r.notes && r.notes.toLowerCase().includes(term))

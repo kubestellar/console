@@ -66,12 +66,12 @@ function KyvernoPoliciesInternal({ config: _config }: KyvernoPoliciesProps) {
     if (!localSearch.trim()) return allPolicies
     const query = localSearch.toLowerCase()
     return allPolicies.filter(policy =>
-      policy.name.toLowerCase().includes(query) ||
-      policy.category.toLowerCase().includes(query) ||
-      policy.description.toLowerCase().includes(query) ||
-      policy.status.toLowerCase().includes(query) ||
-      policy.kind.toLowerCase().includes(query) ||
-      policy.cluster.toLowerCase().includes(query)
+      (policy.name ?? '').toLowerCase().includes(query) ||
+      (policy.category ?? '').toLowerCase().includes(query) ||
+      (policy.description ?? '').toLowerCase().includes(query) ||
+      (policy.status ?? '').toLowerCase().includes(query) ||
+      (policy.kind ?? '').toLowerCase().includes(query) ||
+      (policy.cluster ?? '').toLowerCase().includes(query)
     )
   }, [localSearch, allPolicies])
 

@@ -42,14 +42,14 @@ function parseCapacity(capacity?: string): number {
 }
 
 const PVC_SORT_COMPARATORS = {
-  status: (a: PVC, b: PVC) => (STATUS_ORDER[a.status.toLowerCase()] ?? 1) - (STATUS_ORDER[b.status.toLowerCase()] ?? 1),
+  status: (a: PVC, b: PVC) => (STATUS_ORDER[(a.status ?? '').toLowerCase()] ?? 1) - (STATUS_ORDER[(b.status ?? '').toLowerCase()] ?? 1),
   name: commonComparators.string<PVC>('name'),
   capacity: (a: PVC, b: PVC) => parseCapacity(b.capacity) - parseCapacity(a.capacity),
   age: (a: PVC, b: PVC) => (a.age || '').localeCompare(b.age || ''),
 }
 
 function getStatusIcon(status: string) {
-  switch (status.toLowerCase()) {
+  switch ((status ?? '').toLowerCase()) {
     case 'bound':
       return <CheckCircle className="w-3 h-3 text-green-400" />
     case 'pending':
@@ -60,7 +60,7 @@ function getStatusIcon(status: string) {
 }
 
 function getStatusColor(status: string) {
-  switch (status.toLowerCase()) {
+  switch ((status ?? '').toLowerCase()) {
     case 'bound':
       return 'text-green-400'
     case 'pending':
