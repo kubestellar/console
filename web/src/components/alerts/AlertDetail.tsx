@@ -150,7 +150,7 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
       <div className="p-4 space-y-4">
         {/* Message */}
         <div>
-          <p className="text-sm text-foreground">{alert.message}</p>
+          <div className="text-sm text-foreground">{alert.message}</div>
         </div>
 
         {/* Meta Info */}
@@ -225,14 +225,14 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
               {alert.aiDiagnosis.summary && (
                 <div>
                   <span className="text-xs text-muted-foreground">{t('alerts.summary')}</span>
-                  <p className="text-sm text-foreground mt-1">{alert.aiDiagnosis.summary}</p>
+                  <div className="text-sm text-foreground mt-1">{alert.aiDiagnosis.summary}</div>
                 </div>
               )}
 
               {alert.aiDiagnosis.rootCause && (
                 <div>
                   <span className="text-xs text-muted-foreground">{t('alerts.rootCause')}</span>
-                  <p className="text-sm text-foreground mt-1">{alert.aiDiagnosis.rootCause}</p>
+                  <div className="text-sm text-foreground mt-1">{alert.aiDiagnosis.rootCause}</div>
                 </div>
               )}
 
@@ -261,9 +261,9 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
               )}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground">
               {t('alerts.noDiagnosisYet')}
-            </p>
+            </div>
           )}
         </div>
 
@@ -289,9 +289,9 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
               ))}
             </div>
             {slackSent && (
-              <p className="text-xs text-green-400 mt-2">
+              <div className="text-xs text-green-400 mt-2">
                 {t('alerts.slackSent')}
-              </p>
+              </div>
             )}
           </div>
         )}

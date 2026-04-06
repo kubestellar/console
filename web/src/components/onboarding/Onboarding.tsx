@@ -196,7 +196,7 @@ export function Onboarding() {
         <div className="glass rounded-2xl p-8 animate-fade-in-up">
           <h2 className="text-2xl font-bold text-foreground mb-2">{currentQuestion.question}</h2>
           {currentQuestion.description && (
-            <p className="text-muted-foreground mb-6">{currentQuestion.description}</p>
+            <div className="text-muted-foreground mb-6">{currentQuestion.description}</div>
           )}
 
           {/* Options - Single select or Ranked Choice */}
