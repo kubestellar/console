@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { useSearchParams, useLocation } from 'react-router-dom'
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { AlertTriangle, ChevronRight, ChevronDown, Server, Scissors } from 'lucide-react'
 import { useClusters, useGPUNodes, useNVIDIAOperators, refreshSingleCluster } from '../../hooks/useMCP'
 import { ClusterDetailModal } from './ClusterDetailModal'
@@ -72,6 +72,7 @@ export function Clusters() {
   } = useGlobalFilters()
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
+  const navigate = useNavigate()
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
 
   // Read filter from URL, default to 'all'
@@ -219,28 +220,28 @@ export function Clusters() {
         return {
           value: hasData ? stats.totalNodes : '-',
           sublabel: 'total nodes',
-          onClick: () => { emitClusterStatsDrillDown('nodes'); window.location.href = '/compute' },
+          onClick: () => { emitClusterStatsDrillDown('nodes'); navigate('/compute') },
           isClickable: hasData,
         }
       case 'cpus':
         return {
           value: hasData ? stats.totalCPUs : '-',
           sublabel: 'cores allocatable',
-          onClick: () => { emitClusterStatsDrillDown('cpu'); window.location.href = '/compute' },
+          onClick: () => { emitClusterStatsDrillDown('cpu'); navigate('/compute') },
           isClickable: hasData,
         }
       case 'memory':
         return {
           value: hasData ? formatMemoryStat(stats.totalMemoryGB) : '-',
           sublabel: 'allocatable',
-          onClick: () => { emitClusterStatsDrillDown('memory'); window.location.href = '/compute' },
+          onClick: () => { emitClusterStatsDrillDown('memory'); navigate('/compute') },
           isClickable: hasData,
         }
       case 'storage':
         return {
           value: hasData ? formatMemoryStat(stats.totalStorageGB) : '-',
           sublabel: 'storage',
-          onClick: () => { emitClusterStatsDrillDown('storage'); window.location.href = '/storage' },
+          onClick: () => { emitClusterStatsDrillDown('storage'); navigate('/storage') },
           isClickable: hasData,
         }
       case 'gpus':
@@ -254,13 +255,13 @@ export function Clusters() {
         return {
           value: hasData ? stats.totalPods : '-',
           sublabel: 'running pods',
-          onClick: () => { emitClusterStatsDrillDown('pods'); window.location.href = '/workloads' },
+          onClick: () => { emitClusterStatsDrillDown('pods'); navigate('/workloads') },
           isClickable: hasData,
         }
       default:
         return { value: '-', sublabel: '' }
     }
-  }, [stats, setFilter, openGPUModal])
+  }, [stats, setFilter, openGPUModal, navigate])
 
   const getStatValue = useCallback(
     (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
