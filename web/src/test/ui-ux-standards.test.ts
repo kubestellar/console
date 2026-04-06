@@ -49,7 +49,7 @@ const COMPONENTS_DIR = path.resolve(
  *
  * Set to generous initial values; calibrated after first run.
  */
-const EXPECTED_RAW_HEX_COUNT = 272
+const EXPECTED_RAW_HEX_COUNT = 273
 const EXPECTED_RAW_RGBA_COUNT = 104
 const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 22
 const EXPECTED_INLINE_STYLE_COLOR_COUNT = 98
