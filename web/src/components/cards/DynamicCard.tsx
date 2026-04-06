@@ -348,39 +348,47 @@ export function Tier2CardRuntime({ definition, config }: Tier2Props) {
       setCompiling(true)
       setError(null)
 
-      const source = definition.sourceCode
-      if (!source) {
-        setError('No source code provided.')
-        setCompiling(false)
-        return
-      }
-
-      // Check for cached compiled code
-      let code = definition.compiledCode
-      if (!code) {
-        const result = await compileCardCode(source)
-        if (cancelled) return
-        if (result.error) {
-          setError(result.error)
+      try {
+        const source = definition.sourceCode
+        if (!source) {
+          setError('No source code provided.')
           setCompiling(false)
           return
         }
-        code = result.code!
-      }
 
-      // Create component from compiled code
-      const componentResult = createCardComponent(code)
-      if (cancelled) return
+        // Check for cached compiled code
+        let code = definition.compiledCode
+        if (!code) {
+          const result = await compileCardCode(source)
+          if (cancelled) return
+          if (result.error) {
+            setError(result.error)
+            setCompiling(false)
+            return
+          }
+          code = result.code!
+        }
 
-      if (componentResult.error) {
-        setError(componentResult.error)
+        // Create component from compiled code
+        const componentResult = createCardComponent(code)
+        if (cancelled) return
+
+        if (componentResult.error) {
+          setError(componentResult.error)
+          setCompiling(false)
+          return
+        }
+
+        cleanupRef.current = componentResult.cleanup
+        setCardComponent(() => componentResult.component)
         setCompiling(false)
-        return
+      } catch (err) {
+        if (cancelled) return
+        const message = err instanceof Error ? err.message : String(err)
+        console.error(`[DynamicCard] Unexpected compile error:`, err)
+        setError(`Unexpected error: ${message}`)
+        setCompiling(false)
       }
-
-      cleanupRef.current = componentResult.cleanup
-      setCardComponent(() => componentResult.component)
-      setCompiling(false)
     }
 
     compile()

@@ -64,7 +64,11 @@ export function createTimerScope() {
     }
     const id = window.setTimeout((...a: unknown[]) => {
       activeTimers.delete(id)
-      ;(callback as (...a: unknown[]) => void)(...a)
+      try {
+        ;(callback as (...a: unknown[]) => void)(...a)
+      } catch (err) {
+        console.error('[DynamicCard] Uncaught error in setTimeout callback:', err)
+      }
     }, sanitizeDelay(delay), ...args)
     return trackTimer(id)
   }
@@ -82,7 +86,14 @@ export function createTimerScope() {
       throw new Error(`Timer limit exceeded (max ${MAX_ACTIVE_TIMERS} concurrent timers per card)`)
     }
     const clamped = Math.max(sanitizeDelay(delay), MIN_INTERVAL_MS)
-    const id = window.setInterval(callback as (...a: unknown[]) => void, clamped, ...args)
+    const wrappedCallback = (...a: unknown[]) => {
+      try {
+        ;(callback as (...a: unknown[]) => void)(...a)
+      } catch (err) {
+        console.error('[DynamicCard] Uncaught error in setInterval callback:', err)
+      }
+    }
+    const id = window.setInterval(wrappedCallback, clamped, ...args)
     return trackTimer(id)
   }
 
