@@ -107,8 +107,9 @@ export function CardHistory({ onRestoreCard }: CardHistoryProps) {
           <button
             onClick={clearHistory}
             className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+            aria-label="Clear all card history"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-4 h-4" aria-hidden="true" />
             Clear History
           </button>
         )}
@@ -126,6 +127,8 @@ export function CardHistory({ onRestoreCard }: CardHistoryProps) {
                 ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
                 : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
             )}
+            aria-label={`Filter by ${action === 'all' ? 'all actions' : action}`}
+            aria-pressed={filter === action}
           >
             {action === 'all' ? 'All' : action.charAt(0).toUpperCase() + action.slice(1)}
             {action !== 'all' && (

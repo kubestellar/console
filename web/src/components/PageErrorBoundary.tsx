@@ -84,12 +84,14 @@ export class PageErrorBoundary extends Component<Props, State> {
             <button
               onClick={this.handleRecover}
               className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors"
+              aria-label="Try rendering the page again"
             >
               {i18next.t('common:pageError.tryAgain', 'Try again')}
             </button>
             <button
               onClick={this.handleGoHome}
               className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              aria-label="Go back to the dashboard"
             >
               <ArrowLeft className="w-4 h-4" aria-hidden="true" />
               {i18next.t('common:pageError.goHome', 'Dashboard')}
@@ -97,6 +99,7 @@ export class PageErrorBoundary extends Component<Props, State> {
             <button
               onClick={this.handleReload}
               className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              aria-label="Reload the page"
             >
               <RefreshCw className="w-4 h-4" aria-hidden="true" />
               {i18next.t('common:pageError.reload', 'Reload')}

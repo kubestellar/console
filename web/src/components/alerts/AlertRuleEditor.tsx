@@ -250,8 +250,10 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                           ? `${opt.color}/20 border border-${opt.value === 'critical' ? 'red' : opt.value === 'warning' ? 'orange' : 'blue'}-500/50 text-foreground`
                           : 'bg-secondary border border-border text-muted-foreground hover:text-foreground'
                       }`}
+                      aria-label={`Set severity to ${opt.label}`}
+                      aria-pressed={severity === opt.value}
                     >
-                      <span className={`w-2 h-2 rounded-full ${opt.color}`} />
+                      <span className={`w-2 h-2 rounded-full ${opt.color}`} aria-hidden="true" />
                       {opt.label}
                     </button>
                   ))}
@@ -266,8 +268,10 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                       ? 'bg-green-500/20 border border-green-500/50 text-green-400'
                       : 'bg-secondary border border-border text-muted-foreground'
                   }`}
+                  aria-label={enabled ? 'Disable alert rule' : 'Enable alert rule'}
+                  aria-pressed={enabled}
                 >
-                  {enabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+                  {enabled ? <Bell className="w-4 h-4" aria-hidden="true" /> : <BellOff className="w-4 h-4" aria-hidden="true" />}
                   {enabled ? t('alerts.enabled') : t('alerts.disabled')}
                 </button>
               </div>
@@ -292,6 +296,8 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                         ? 'bg-purple-500/20 border border-purple-500/50'
                         : 'bg-secondary border border-border hover:bg-secondary/80'
                     }`}
+                    aria-label={`${type.label}: ${type.description}`}
+                    aria-pressed={conditionType === type.value}
                   >
                     <span className="text-sm font-medium text-foreground">{type.label}</span>
                     <span className="block text-xs text-muted-foreground mt-0.5">{type.description}</span>
@@ -450,8 +456,10 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                           ? 'bg-purple-500/20 border border-purple-500/50 text-purple-400'
                           : 'bg-secondary border border-border text-muted-foreground hover:text-foreground'
                       }`}
+                      aria-label={`${selectedClusters.includes(cluster.name) ? 'Deselect' : 'Select'} cluster ${cluster.name}`}
+                      aria-pressed={selectedClusters.includes(cluster.name)}
                     >
-                      <Server className="w-3 h-3" />
+                      <Server className="w-3 h-3" aria-hidden="true" />
                       {cluster.name}
                     </button>
                   ))}
@@ -468,36 +476,41 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                 <button
                   onClick={() => addChannel('browser')}
                   className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors flex items-center gap-1"
+                  aria-label="Add browser notification channel"
                 >
-                  <Bell className="w-3 h-3" />
+                  <Bell className="w-3 h-3" aria-hidden="true" />
                   {t('alerts.browser')}
                 </button>
                 <button
                   onClick={() => addChannel('slack')}
                   className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors flex items-center gap-1"
+                  aria-label="Add Slack notification channel"
                 >
-                  <Slack className="w-3 h-3" />
+                  <Slack className="w-3 h-3" aria-hidden="true" />
                   {t('alerts.slack')}
                 </button>
                 <button
                   onClick={() => addChannel('webhook')}
                   className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors flex items-center gap-1"
+                  aria-label="Add webhook notification channel"
                 >
-                  <Webhook className="w-3 h-3" />
+                  <Webhook className="w-3 h-3" aria-hidden="true" />
                   {t('alerts.webhook')}
                 </button>
                 <button
                   onClick={() => addChannel('pagerduty')}
                   className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors flex items-center gap-1"
+                  aria-label="Add PagerDuty notification channel"
                 >
-                  <Siren className="w-3 h-3" />
+                  <Siren className="w-3 h-3" aria-hidden="true" />
                   PagerDuty
                 </button>
                 <button
                   onClick={() => addChannel('opsgenie')}
                   className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors flex items-center gap-1"
+                  aria-label="Add OpsGenie notification channel"
                 >
-                  <ShieldAlert className="w-3 h-3" />
+                  <ShieldAlert className="w-3 h-3" aria-hidden="true" />
                   OpsGenie
                 </button>
               </div>
@@ -511,11 +524,11 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      {channel.type === 'browser' && <Bell className="w-4 h-4" />}
-                      {channel.type === 'slack' && <Slack className="w-4 h-4" />}
-                      {channel.type === 'webhook' && <Webhook className="w-4 h-4" />}
-                      {channel.type === 'pagerduty' && <Siren className="w-4 h-4" />}
-                      {channel.type === 'opsgenie' && <ShieldAlert className="w-4 h-4" />}
+                      {channel.type === 'browser' && <Bell className="w-4 h-4" aria-hidden="true" />}
+                      {channel.type === 'slack' && <Slack className="w-4 h-4" aria-hidden="true" />}
+                      {channel.type === 'webhook' && <Webhook className="w-4 h-4" aria-hidden="true" />}
+                      {channel.type === 'pagerduty' && <Siren className="w-4 h-4" aria-hidden="true" />}
+                      {channel.type === 'opsgenie' && <ShieldAlert className="w-4 h-4" aria-hidden="true" />}
                       <span className="text-sm font-medium text-foreground capitalize">
                         {channel.type}
                       </span>
@@ -530,6 +543,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                             ? 'bg-green-500/20 text-green-400'
                             : 'bg-secondary text-muted-foreground'
                         }`}
+                        aria-label={`${channel.enabled ? 'Disable' : 'Enable'} ${channel.type} channel`}
                       >
                         {channel.enabled ? 'On' : 'Off'}
                       </button>
@@ -537,8 +551,9 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                         <button
                           onClick={() => removeChannel(index)}
                           className="p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
+                          aria-label={`Remove ${channel.type} channel`}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4" aria-hidden="true" />
                         </button>
                       )}
                     </div>
@@ -627,9 +642,11 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                   ? 'bg-purple-500/20 border border-purple-500/50'
                   : 'bg-secondary border border-border hover:bg-secondary/80'
               }`}
+              aria-label={aiDiagnose ? 'Disable AI diagnosis' : 'Enable AI diagnosis'}
+              aria-pressed={aiDiagnose}
             >
               <span className="flex items-center gap-2">
-                <Bot className={`w-5 h-5 ${aiDiagnose ? 'text-purple-400' : 'text-muted-foreground'}`} />
+                <Bot className={`w-5 h-5 ${aiDiagnose ? 'text-purple-400' : 'text-muted-foreground'}`} aria-hidden="true" />
                 <span>
                   <span className="block text-sm font-medium text-foreground">
                     {t('alerts.aiDiagnosis')}

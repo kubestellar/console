@@ -246,6 +246,8 @@ export function Onboarding() {
                       ? 'bg-purple-500/20 border-2 border-purple-500 text-foreground'
                       : 'bg-secondary/50 border-2 border-transparent hover:bg-secondary hover:border-purple-500/30 text-muted-foreground'
                   }`}
+                  aria-label={`Select ${option}`}
+                  aria-pressed={answers[currentQuestion.key] === option}
                 >
                   <div className="flex items-center justify-between">
                     <span>{option}</span>
