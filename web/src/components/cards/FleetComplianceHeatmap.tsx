@@ -264,13 +264,14 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
       } else if (ts.totalReports === 0) {
         trivyCell = { status: 'warning', label: 'No reports', tooltip: 'Trivy installed but no vulnerability reports generated' }
       } else {
-        const critHigh = ts.vulnerabilities.critical + ts.vulnerabilities.high
+        const vuln = ts.vulnerabilities ?? { critical: 0, high: 0, medium: 0, low: 0 }
+        const critHigh = vuln.critical + vuln.high
         const status: CellStatus = critHigh >= VULN_CRITICAL_THRESHOLD ? 'critical'
           : critHigh >= VULN_WARNING_THRESHOLD ? 'warning' : 'good'
         trivyCell = {
           status,
           label: `${critHigh} crit/high`,
-          tooltip: `C:${ts.vulnerabilities.critical} H:${ts.vulnerabilities.high} M:${ts.vulnerabilities.medium} L:${ts.vulnerabilities.low}`,
+          tooltip: `C:${vuln.critical} H:${vuln.high} M:${vuln.medium} L:${vuln.low}`,
         }
       }
 
