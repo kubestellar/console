@@ -349,7 +349,7 @@ function AuthorBadge({ author, github, compact }: { author: string; github?: str
 
   const link = (
     <a
-      ref={triggerRef as React.RefObject<HTMLAnchorElement>}
+      ref={triggerRef as React.RefObject<HTMLAnchorElement | null>}
       href={`https://github.com/${github}`}
       target="_blank"
       rel="noopener noreferrer"

@@ -81,9 +81,9 @@ export interface UseCardFiltersResult<T> {
   /** Set cluster filter dropdown visibility */
   setShowClusterFilter: (show: boolean) => void
   /** Ref for cluster filter dropdown (for click outside handling) */
-  clusterFilterRef: React.RefObject<HTMLDivElement>
+  clusterFilterRef: React.RefObject<HTMLDivElement | null>
   /** Ref for cluster filter button (portal positioning) */
-  clusterFilterBtnRef: React.RefObject<HTMLButtonElement>
+  clusterFilterBtnRef: React.RefObject<HTMLButtonElement | null>
   /** Computed fixed position for portaled cluster dropdown */
   dropdownStyle: { top: number; left: number } | null
 }
@@ -352,7 +352,7 @@ export interface UseCardDataResult<T, S extends string> {
   /** All sort controls */
   sorting: Omit<UseCardSortResult<T, S>, 'sorted'>
   /** Ref for the paginated items container (attach to keep height stable across pages) */
-  containerRef: React.RefObject<HTMLDivElement>
+  containerRef: React.RefObject<HTMLDivElement | null>
   /** Style to apply to the paginated items container for stable height */
   containerStyle: React.CSSProperties | undefined
 }
@@ -886,9 +886,9 @@ export interface UseChartFiltersResult {
   /** Set cluster filter dropdown visibility */
   setShowClusterFilter: (show: boolean) => void
   /** Ref for cluster filter dropdown (for click outside handling) */
-  clusterFilterRef: React.RefObject<HTMLDivElement>
+  clusterFilterRef: React.RefObject<HTMLDivElement | null>
   /** Ref for cluster filter button (portal positioning) */
-  clusterFilterBtnRef: React.RefObject<HTMLButtonElement>
+  clusterFilterBtnRef: React.RefObject<HTMLButtonElement | null>
   /** Computed fixed position for portaled cluster dropdown */
   dropdownStyle: { top: number; left: number } | null
 }

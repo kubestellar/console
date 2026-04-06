@@ -139,7 +139,7 @@ function saveMissions(missions: DeployMission[]) {
 export function useDeployMissions() {
   const [missions, setMissions] = useState<DeployMission[]>(() => loadMissions())
   const subscribe = useCardSubscribe()
-  const pollRef = useRef<ReturnType<typeof setInterval>>()
+  const pollRef = useRef<ReturnType<typeof setInterval>>(undefined)
   const missionsRef = useRef(missions)
   missionsRef.current = missions
 

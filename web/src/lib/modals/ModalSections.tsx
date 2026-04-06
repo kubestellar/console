@@ -82,7 +82,7 @@ function KeyValueItem({
   onNavigate?: (target: NavigationTarget) => void
 }) {
   const [copied, setCopied] = useState(false)
-  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
     return () => clearTimeout(copiedTimerRef.current)

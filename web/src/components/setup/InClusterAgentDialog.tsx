@@ -25,7 +25,7 @@ export function InClusterAgentDialog({ isOpen, onClose }: InClusterAgentDialogPr
   const [copiedStep, setCopiedStep] = useState<number | null>(null)
   const [showBuildFromSource, setShowBuildFromSource] = useState(false)
   const [showCorsDetails, setShowCorsDetails] = useState(false)
-  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
     return () => clearTimeout(copiedTimerRef.current)

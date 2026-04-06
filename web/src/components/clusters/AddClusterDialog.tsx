@@ -41,7 +41,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [selectedCloudProvider, setSelectedCloudProvider] = useState<CloudProvider>('eks')
   const [cloudCLIs, setCloudCLIs] = useState<CloudCLIInfo[]>([])
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
     return () => clearTimeout(closeTimerRef.current)

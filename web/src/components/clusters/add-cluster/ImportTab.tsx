@@ -13,7 +13,7 @@ interface ImportTabProps {
   errorMessage: string
   setErrorMessage: (msg: string) => void
   importedCount: number
-  fileInputRef: React.RefObject<HTMLInputElement>
+  fileInputRef: React.RefObject<HTMLInputElement | null>
   handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   handlePreview: () => void
   handleImport: () => void

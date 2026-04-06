@@ -244,7 +244,7 @@ export function Deploy() {
   })
 
   // Trap focus within group picker modal
-  useModalFocusTrap(groupPickerRef as React.RefObject<HTMLElement>, groupPickerWorkload !== null)
+  useModalFocusTrap(groupPickerRef as React.RefObject<HTMLElement | null>, groupPickerWorkload !== null)
 
   return (
     <DashboardPage

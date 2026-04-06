@@ -18,8 +18,8 @@ export function AgentSection({ isConnected, health, refresh }: AgentSectionProps
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const timeoutRef = useRef<number>()
-  const refreshTimerRef = useRef<number>()
+  const timeoutRef = useRef<number>(undefined)
+  const refreshTimerRef = useRef<number>(undefined)
 
   const copyInstallCommand = async () => {
     await copyToClipboard(INSTALL_COMMAND)

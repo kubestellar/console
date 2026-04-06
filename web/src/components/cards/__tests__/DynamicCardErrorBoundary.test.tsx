@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
@@ -23,7 +24,7 @@ vi.mock('../../../lib/chunkErrors', () => ({
 }))
 
 /** Component that always throws during render */
-function CrashingComponent(): JSX.Element {
+function CrashingComponent(): React.ReactElement {
   throw new Error('TSX execution crash')
 }
 

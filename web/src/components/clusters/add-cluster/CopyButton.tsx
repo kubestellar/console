@@ -5,7 +5,7 @@ import { copyToClipboard } from '../../../lib/clipboard'
 
 export function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
-  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
     return () => clearTimeout(copiedTimerRef.current)

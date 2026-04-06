@@ -38,7 +38,7 @@ export function InlineAIAssist<T>({
   const enabled = isFeatureEnabled('naturalLanguage')
   const trackedMission = missionId ? missions.find(m => m.id === missionId) : null
 
-  const phaseTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const phaseTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // Watch mission completion
   useEffect(() => {

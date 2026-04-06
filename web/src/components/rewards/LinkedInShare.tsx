@@ -26,7 +26,7 @@ export function LinkedInShareButton() {
   // Keyboard navigation (ESC to close) and scroll lock for confirm modal
   useModalNavigation({ isOpen: showConfirm, onClose: handleCloseConfirm, enableBackspace: false })
   // Focus trap within confirm modal
-  useModalFocusTrap(modalRef as React.RefObject<HTMLElement>, showConfirm)
+  useModalFocusTrap(modalRef as React.RefObject<HTMLElement | null>, showConfirm)
 
   const handleShare = () => {
     // Open LinkedIn share dialog

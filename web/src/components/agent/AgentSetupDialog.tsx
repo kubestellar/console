@@ -21,8 +21,8 @@ export function AgentSetupDialog() {
   const [show, setShow] = useState(false)
   const [copiedMacOS, setCopiedMacOS] = useState(false)
   const [copiedLinux, setCopiedLinux] = useState(false)
-  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>()
-  const copiedLinuxTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const copiedLinuxTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const macOSInstallCommand = 'brew tap kubestellar/tap && brew install --head kc-agent && kc-agent'
   const linuxBuildCommand = 'git clone https://github.com/kubestellar/console.git && cd console && go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent'

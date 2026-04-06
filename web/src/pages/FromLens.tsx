@@ -231,7 +231,7 @@ function ComparisonCell({ value, note, isConsole }: { value: string | boolean; n
 function DeploymentSection() {
   const [activeTab, setActiveTab] = useState<DeployTab>('localhost')
   const [copiedStep, setCopiedStep] = useState<string | null>(null)
-  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
     return () => clearTimeout(copiedTimerRef.current)

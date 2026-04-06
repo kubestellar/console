@@ -238,7 +238,7 @@ function VisibilityIcon({ visible }: { visible: boolean }) {
 function DeploymentSection() {
   const [activeTab, setActiveTab] = useState<DeployTab>('helm')
   const [copiedStep, setCopiedStep] = useState<string | null>(null)
-  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
     return () => clearTimeout(copiedTimerRef.current)

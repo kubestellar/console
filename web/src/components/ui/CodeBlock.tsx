@@ -18,7 +18,7 @@ type CopyStatus = 'idle' | 'copied' | 'failed'
 
 export function CodeBlock({ children, language = 'text', fontSize = 'sm' }: CodeBlockProps) {
   const [copyStatus, setCopyStatus] = useState<CopyStatus>('idle')
-  const timeoutRef = useRef<number>()
+  const timeoutRef = useRef<number>(undefined)
 
   const handleCopy = async () => {
     // Clear any pending timeout to avoid race conditions

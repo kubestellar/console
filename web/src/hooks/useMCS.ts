@@ -122,7 +122,7 @@ export function useServiceExports(cluster?: string, namespace?: string) {
     error: null,
     lastUpdated: null,
   })
-  const intervalRef = useRef<ReturnType<typeof setInterval>>()
+  const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined)
 
   const fetchExports = useCallback(async (isRefresh = false) => {
     setState((prev) => ({
@@ -214,7 +214,7 @@ export function useServiceImports(cluster?: string, namespace?: string) {
     error: null,
     lastUpdated: null,
   })
-  const intervalRef = useRef<ReturnType<typeof setInterval>>()
+  const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined)
 
   const fetchImports = useCallback(async (isRefresh = false) => {
     setState((prev) => ({

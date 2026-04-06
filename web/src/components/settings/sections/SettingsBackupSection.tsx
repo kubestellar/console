@@ -45,7 +45,7 @@ export function SettingsBackupSection({
   const [importError, setImportError] = useState<string | null>(null)
   const [importSuccess, setImportSuccess] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const importSuccessTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const importSuccessTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
     return () => clearTimeout(importSuccessTimerRef.current)

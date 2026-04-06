@@ -221,7 +221,7 @@ export function CardSearchInput({
 }: CardSearchInputProps) {
   const cardType = useCardType()
   const [localValue, setLocalValue] = useState(value)
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // Sync external value changes
   useEffect(() => {
@@ -282,7 +282,7 @@ export interface CardClusterFilterProps {
   /** Set dropdown visibility */
   setIsOpen: (open: boolean) => void
   /** Ref for click outside handling */
-  containerRef: React.RefObject<HTMLDivElement>
+  containerRef: React.RefObject<HTMLDivElement | null>
   /** Minimum number of clusters required to show filter (default: 2) */
   minClusters?: number
 }
@@ -686,7 +686,7 @@ export interface CardControlsRowProps {
     onClear: () => void
     isOpen: boolean
     setIsOpen: (open: boolean) => void
-    containerRef: React.RefObject<HTMLDivElement>
+    containerRef: React.RefObject<HTMLDivElement | null>
     minClusters?: number
   }
   /** Cluster indicator showing selected/total count */

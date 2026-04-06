@@ -63,7 +63,7 @@ function SearchResultsPanel({
   selectedIndex: number
   onSelect: (item: SearchItem, index: number) => void
   onAskAI: () => void
-  resultsRef: React.RefObject<HTMLDivElement>
+  resultsRef: React.RefObject<HTMLDivElement | null>
   /** Called when results change so the parent can handle Enter key selection and analytics */
   onResultsChange: (flatResults: SearchItem[], totalCount: number) => void
 }) {

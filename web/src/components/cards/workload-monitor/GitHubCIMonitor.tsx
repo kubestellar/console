@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useImperativeHandle, forwardRef } from 'react'
+import { useState, useMemo, useCallback, useImperativeHandle, type Ref } from 'react'
 import {
   GitBranch, AlertTriangle, CheckCircle, XCircle,
   Clock, Loader2, ExternalLink, Key, Settings, Plus, X, Check,
@@ -92,7 +92,7 @@ const DEMO_WORKFLOWS: WorkflowRun[] = [
 ]
 
 
-export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorProps>(function GitHubCIMonitor({ config }, ref) {
+export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: Ref<GitHubCIMonitorRef> }) {
   const { t } = useTranslation()
   const ghConfig = config as GitHubCIConfig | undefined
 
@@ -507,4 +507,4 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
       <WorkloadMonitorAlerts issues={issues} monitorType="GitHub CI" />
     </div>
   )
-})
+}

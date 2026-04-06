@@ -106,7 +106,7 @@ export function useModalNavigation({
  * ```
  */
 export function useModalBackdropClose(
-  ref: React.RefObject<HTMLElement>,
+  ref: React.RefObject<HTMLElement | null>,
   isOpen: boolean,
   onClose: () => void
 ) {
@@ -131,7 +131,7 @@ export function useModalBackdropClose(
  * Focuses first focusable element on open.
  */
 export function useModalFocusTrap(
-  ref: React.RefObject<HTMLElement>,
+  ref: React.RefObject<HTMLElement | null>,
   isOpen: boolean
 ) {
   useEffect(() => {
@@ -176,9 +176,9 @@ export function useModalFocusTrap(
  */
 export interface UseModalOptions extends UseModalNavigationOptions {
   /** Ref to modal container for focus trap */
-  modalRef?: React.RefObject<HTMLElement>
+  modalRef?: React.RefObject<HTMLElement | null>
   /** Ref to backdrop for click-to-close */
-  backdropRef?: React.RefObject<HTMLElement>
+  backdropRef?: React.RefObject<HTMLElement | null>
   /** Enable focus trap */
   enableFocusTrap?: boolean
   /** Enable backdrop click to close */

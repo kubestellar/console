@@ -170,7 +170,7 @@ export function Layout({ children }: LayoutProps) {
   // Grace period: when user manually toggles demo off, wait 8s for agent to connect before
   // re-enabling demo. The pill shows "connecting" → "disconnected" during this window.
   const demoAutoEnabledRef = useRef(false)
-  const demoReEnableTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const demoReEnableTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const prevDemoModeRef = useRef(isDemoMode)
   const userToggledOffRef = useRef(false)
   const AGENT_CONNECT_GRACE_MS = 8000

@@ -126,7 +126,7 @@ export function useModalNavigation({
  * Hook for managing focus trap within a modal
  * Keeps focus within the modal when tabbing
  */
-export function useFocusTrap(containerRef: React.RefObject<HTMLElement>, isOpen: boolean) {
+export function useFocusTrap(containerRef: React.RefObject<HTMLElement | null>, isOpen: boolean) {
   useEffect(() => {
     if (!isOpen || !containerRef.current) return
 

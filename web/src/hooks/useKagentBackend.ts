@@ -59,7 +59,7 @@ export function useKagentBackend(): UseKagentBackendResult {
     return 'kc-agent'
   })
 
-  const pollRef = useRef<ReturnType<typeof setInterval>>()
+  const pollRef = useRef<ReturnType<typeof setInterval>>(undefined)
   const selectedKagentRef = useRef(selectedKagentAgent)
   const selectedKagentiRef = useRef(selectedKagentiAgent)
   useEffect(() => {

@@ -97,7 +97,7 @@ export function GitHubInviteModal({ isOpen, onClose }: GitHubInviteProps) {
   // Keyboard navigation (ESC to close) and scroll lock
   useModalNavigation({ isOpen, onClose: handleClose, enableBackspace: false })
   // Focus trap within modal
-  useModalFocusTrap(modalRef as React.RefObject<HTMLElement>, isOpen)
+  useModalFocusTrap(modalRef as React.RefObject<HTMLElement | null>, isOpen)
 
   if (!isOpen) return null
 

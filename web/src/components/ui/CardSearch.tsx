@@ -43,7 +43,7 @@ export function CardSearch({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded || !!value)
   const [localValue, setLocalValue] = useState(value)
   const inputRef = useRef<HTMLInputElement>(null)
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // Sync local value with external value
   useEffect(() => {

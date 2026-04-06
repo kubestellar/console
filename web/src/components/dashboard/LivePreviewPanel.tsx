@@ -108,7 +108,7 @@ export function LivePreviewPanel({ tier, t1Config, t2Source, title, width = 6 }:
 function T1Preview({ config }: { config?: LivePreviewPanelProps['t1Config'] }) {
   const { t } = useTranslation()
   const [debouncedConfig, setDebouncedConfig] = useState(config)
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
     clearTimeout(timerRef.current)
@@ -161,7 +161,7 @@ function T2Preview({ source }: { source?: string }) {
   const [compiling, setCompiling] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [CardComponent, setCardComponent] = useState<CardComponent | null>(null)
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // Debounce source changes
   useEffect(() => {

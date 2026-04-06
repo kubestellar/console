@@ -38,7 +38,7 @@ function useMinSpin(refreshing: boolean, minDurationMs = MIN_SPIN_DURATION_MS): 
   const [spinning, setSpinning] = useState(false)
   const spinningRef = useRef(false)
   const spinStartRef = useRef(0)
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
     if (refreshing) {

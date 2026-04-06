@@ -13,7 +13,7 @@ interface ClusterFilterDropdownProps {
   setShowClusterFilter: (show: boolean) => void
   toggleClusterFilter: (cluster: string) => void
   clearClusterFilter: () => void
-  clusterFilterRef: React.RefObject<HTMLDivElement>
+  clusterFilterRef: React.RefObject<HTMLDivElement | null>
   /** Minimum clusters before showing the filter (default: 1) */
   minClusters?: number
 }

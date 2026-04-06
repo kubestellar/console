@@ -39,7 +39,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
   const [showOAuthGuide, setShowOAuthGuide] = useState(false)
   const [showDevGuide, setShowDevGuide] = useState(false)
   const [showK8sGuide, setShowK8sGuide] = useState(false)
-  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
     return () => clearTimeout(copiedTimerRef.current)

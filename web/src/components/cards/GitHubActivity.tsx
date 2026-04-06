@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react'
+import { useState, useMemo, useEffect, useCallback, useImperativeHandle, type Ref } from 'react'
 import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge, Settings, X, Plus, Check } from 'lucide-react'
 import { POLL_INTERVAL_SLOW_MS } from '../../lib/constants/network'
 import { Button } from '../ui/Button'
@@ -522,7 +522,7 @@ export interface GitHubActivityRef {
   refresh: () => void
 }
 
-export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubActivityConfig }>(function GitHubActivity({ config }, ref) {
+export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig; ref?: Ref<GitHubActivityRef> }) {
   const { t } = useTranslation(['cards', 'common'])
   const [viewMode, setViewMode] = useState<ViewMode>('prs')
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>(config?.timeRange || '30d')
@@ -1095,7 +1095,7 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
       />
     </div>
   )
-})
+}
 
 // Sub-components for rendering different item types
 function PRItem({ pr }: { pr: GitHubPR }) {
