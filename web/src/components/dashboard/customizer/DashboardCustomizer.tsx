@@ -16,6 +16,7 @@ import { TemplateGallerySection } from './sections/TemplateGallerySection'
 import { CardFactoryModal } from '../CardFactoryModal'
 import { StatBlockFactoryModal } from '../StatBlockFactoryModal'
 import { CreateDashboardModal } from '../CreateDashboardModal'
+import { WidgetExportModal } from '../../widgets/WidgetExportModal'
 import { DEFAULT_SECTION, type CustomizerSection } from './customizerNav'
 import { useDashboards } from '../../../hooks/useDashboards'
 import type { CardSuggestion, HoveredCard } from '../shared/cardCatalog'
@@ -130,6 +131,14 @@ export function DashboardCustomizer({
                 handleAddCards(cards)
               }}
               dashboardName={dashboardName}
+            />
+          )}
+
+          {activeSection === 'widgets' && (
+            <WidgetExportModal
+              isOpen={true}
+              onClose={() => setUserSelectedSection('cards')}
+              embedded
             />
           )}
 
