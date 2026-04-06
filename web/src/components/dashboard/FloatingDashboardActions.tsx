@@ -147,10 +147,10 @@ export function FloatingDashboardActions({
   // Unified mode: single FAB + inline undo/redo
   // =========================================================================
   if (isUnifiedMode) {
-    const showUndoRedo = canUndo || canRedo
+    const showActions = canUndo || canRedo || showResetOption
     return (
       <div className={`fixed ${positionClasses} z-40 flex ${isMobile ? 'items-start' : 'items-end'} gap-1.5 transition-all duration-300`}>
-        {showUndoRedo && (
+        {showActions && (
           <div className="flex gap-1 p-1 bg-card border border-border rounded-lg shadow-md animate-in fade-in duration-150 mr-1">
             <button
               onClick={onUndo}
@@ -168,6 +168,15 @@ export function FloatingDashboardActions({
             >
               <Redo2 className="w-3.5 h-3.5" />
             </button>
+            {showResetOption && (
+              <button
+                onClick={() => { if (onReset) onReset('replace'); else if (onResetToDefaults) onResetToDefaults() }}
+                className="p-1.5 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                title={t('dashboard.actions.reset', 'Reset dashboard to defaults')}
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         )}
         <button
