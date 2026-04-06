@@ -96,6 +96,8 @@ const DASHBOARD_STORAGE_KEY = STORAGE_KEY_MAIN_DASHBOARD_CARDS
 // Default cards loaded from centralized config
 const DEFAULT_DASHBOARD_CARDS: Card[] = getDefaultCardsForDashboard('main')
 
+/** Prefixes used for ephemeral cards that should not be persisted to the backend */
+const EPHEMERAL_CARD_PREFIXES = ['demo-', 'new-', 'rec-', 'template-', 'restored-', 'ai-'] as const
 
 export function Dashboard() {
   // Initialize from cache if available (progressive disclosure - no skeletons on navigation)
@@ -781,7 +783,7 @@ export function Dashboard() {
   }, [openConfigureCard])
 
   const handleWidthChange = useCallback(async (cardId: string, newWidth: number) => {
-    snapshot(localCards)
+    snapshot(localCardsRef.current)
     setLocalCards((prev) =>
       prev.map((c) =>
         c.id === cardId
@@ -790,10 +792,12 @@ export function Dashboard() {
       )
     )
 
-    // Persist width change to backend
-    if (dashboard?.id && !cardId.startsWith('demo-') && !cardId.startsWith('new-') && !cardId.startsWith('rec-') && !cardId.startsWith('template-') && !cardId.startsWith('restored-') && !cardId.startsWith('ai-')) {
+    // Persist width change to backend — read current state from ref to avoid
+    // stale closure over localCards (#5053)
+    const isEphemeral = EPHEMERAL_CARD_PREFIXES.some((prefix) => cardId.startsWith(prefix))
+    if (dashboard?.id && !isEphemeral) {
       try {
-        const card = localCards.find((c) => c.id === cardId)
+        const card = localCardsRef.current.find((c) => c.id === cardId)
         if (card) {
           await api.put(`/api/cards/${cardId}`, {
             position: { ...(card.position || { w: 4, h: 2 }), w: newWidth }
@@ -804,7 +808,7 @@ export function Dashboard() {
         showToast('Failed to update card width', 'error')
       }
     }
-  }, [dashboard, localCards, snapshot, showToast])
+  }, [dashboard, snapshot, showToast])
 
   const handleCardConfigured = useCallback(async (cardId: string, newConfig: Record<string, unknown>, newTitle?: string) => {
     const card = localCards.find((c) => c.id === cardId)
