@@ -132,6 +132,17 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
     return <CardSkeleton type="list" rows={3} showHeader rowHeight={100} />
   }
 
+  if (isFailed && !hookLoading && rawIssues.length === 0) {
+    return (
+      <CardEmptyState
+        icon={AlertTriangle}
+        title={t('deploymentIssues.failedToLoad', 'Failed to load deployment data')}
+        message={error || t('deploymentIssues.apiUnavailable', 'Deployment API is unavailable')}
+        variant="error"
+      />
+    )
+  }
+
   if (issues.length === 0 && rawIssues.length === 0) {
     return (
       <CardEmptyState

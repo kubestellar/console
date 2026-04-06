@@ -335,19 +335,27 @@ export function HardwareHealthCard() {
     setLocalClusterFilter([])
   }
 
+  // Track clear-alert error for user feedback
+  const [clearAlertError, setClearAlertError] = useState<string | null>(null)
+
   // Clear an alert (after power cycle) — triggers refetch to update cached data
   const clearAlert = async (alertId: string) => {
+    setClearAlertError(null)
     try {
-      await fetch(`${LOCAL_AGENT_HTTP_URL}/devices/alerts/clear`, {
+      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/devices/alerts/clear`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ alertId }),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
+      if (!response.ok) {
+        setClearAlertError(`Failed to clear alert (${response.status})`)
+        return
+      }
       // Refetch to update cached data (the cleared alert won't be in the response)
       refetch()
     } catch {
-      // Silently fail
+      setClearAlertError('Failed to clear alert — agent is unreachable')
     }
   }
 
@@ -430,8 +438,23 @@ export function HardwareHealthCard() {
     }
   }, [currentPage, currentTotalPages])
 
+  /** Auto-dismiss delay for alert clear error messages */
+  const CLEAR_ERROR_DISMISS_MS = 5000
+  useEffect(() => {
+    if (!clearAlertError) return
+    const timer = setTimeout(() => setClearAlertError(null), CLEAR_ERROR_DISMISS_MS)
+    return () => clearTimeout(timer)
+  }, [clearAlertError])
+
   return (
     <div className="h-full flex flex-col">
+      {/* Clear alert error feedback */}
+      {clearAlertError && (
+        <div className="mb-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
+          <XCircle className="w-4 h-4 flex-shrink-0" />
+          <span>{clearAlertError}</span>
+        </div>
+      )}
       {/* Status Summary */}
       <div className="grid grid-cols-3 gap-2 mb-4">
         <div className={cn(

@@ -1,4 +1,4 @@
-import { MemoryStick, ImageOff, Clock, RefreshCw, CheckCircle } from 'lucide-react'
+import { MemoryStick, ImageOff, Clock, RefreshCw, CheckCircle, AlertTriangle } from 'lucide-react'
 import { useCachedPodIssues } from '../../hooks/useCachedData'
 import type { PodIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -108,6 +108,17 @@ export function PodIssues() {
 
   if (showSkeleton) {
     return <CardSkeleton type="list" rows={3} showHeader rowHeight={80} />
+  }
+
+  if (isFailed && !hookLoading && rawIssues.length === 0) {
+    return (
+      <CardEmptyState
+        icon={AlertTriangle}
+        title="Failed to load pod data"
+        message={error || 'Pod API is unavailable'}
+        variant="error"
+      />
+    )
   }
 
   if (issues.length === 0 && rawIssues.length === 0) {

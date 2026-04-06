@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge, Settings, X, Plus, Check } from 'lucide-react'
-import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../lib/constants'
 import { POLL_INTERVAL_SLOW_MS } from '../../lib/constants/network'
 import { Button } from '../ui/Button'
 import { Skeleton } from '../ui/Skeleton'
@@ -253,10 +252,11 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
   // Token is injected server-side by the GitHub proxy — no client-side token needed
   const reposKey = useMemo(() => repos.join(','), [repos])
 
-  const fetchGitHubData = async (isManualRefresh = false) => {
+  const fetchGitHubData = useCallback(async (isManualRefresh = false, signal?: AbortSignal) => {
     if (isDemoMode) {
       const targetRepo = repos[0] || DEFAULT_REPO
       const demo = getDemoGitHubData(targetRepo)
+      if (signal?.aborted) return
       setRepoInfo(demo.repoInfo)
       setPRs(demo.prs)
       setIssues(demo.issues)
@@ -290,6 +290,7 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
       const cached = getCachedData(targetRepo)
       // Use cached data only if it has valid PR data (not empty from old buggy cache)
       if (cached && cached.prs && cached.prs.length > 0) {
+        if (signal?.aborted) return
         setRepoInfo(cached.repoInfo)
         setPRs(cached.prs)
         setIssues(cached.issues)
@@ -315,21 +316,24 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
       const headers: HeadersInit = {
         'Accept': 'application/vnd.github.v3+json',
       }
+      // Use the provided signal for all fetch calls to support cancellation
+      const fetchOptions = { headers, signal }
 
       // Fetch repository info
-      const repoResponse = await fetch(`/api/github/repos/${targetRepo}`, { headers, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
+      const repoResponse = await fetch(`/api/github/repos/${targetRepo}`, fetchOptions)
       if (!repoResponse.ok) throw new Error(`Failed to fetch repo: ${repoResponse.statusText}`)
       // Use .catch() directly on .json() to prevent Firefox from firing unhandledrejection
       // before the outer try/catch processes the rejection (Firefox-specific microtask timing).
       const repoData = await repoResponse.json().catch(() => null)
       if (!repoData) throw new Error('Failed to parse GitHub repo response: invalid JSON')
+      if (signal?.aborted) return
       setRepoInfo(repoData)
 
       // Fetch open PRs and closed/merged PRs separately to ensure we get merged PRs
       // For active repos, all "recently updated" PRs might be open ones
       const [openPRsResponse, closedPRsResponse] = await Promise.all([
-        fetch(`/api/github/repos/${targetRepo}/pulls?state=open&per_page=50&sort=updated`, { headers, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) }),
-        fetch(`/api/github/repos/${targetRepo}/pulls?state=closed&per_page=50&sort=updated`, { headers, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
+        fetch(`/api/github/repos/${targetRepo}/pulls?state=open&per_page=50&sort=updated`, fetchOptions),
+        fetch(`/api/github/repos/${targetRepo}/pulls?state=closed&per_page=50&sort=updated`, fetchOptions)
       ])
 
       if (!openPRsResponse.ok) throw new Error(`Failed to fetch open PRs: ${openPRsResponse.statusText}`)
@@ -344,13 +348,14 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
         .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
         .slice(0, 100) // Keep top 100 for display
 
+      if (signal?.aborted) return
       setPRs(allPRs)
       setOpenPRCount(openPRsData.length)
 
       // Fetch open Issues count and recent issues
       const [openIssuesResponse, recentIssuesResponse] = await Promise.all([
-        fetch(`/api/github/repos/${targetRepo}/issues?state=open&per_page=1`, { headers, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) }),
-        fetch(`/api/github/repos/${targetRepo}/issues?state=all&per_page=50&sort=updated`, { headers, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
+        fetch(`/api/github/repos/${targetRepo}/issues?state=open&per_page=1`, fetchOptions),
+        fetch(`/api/github/repos/${targetRepo}/issues?state=all&per_page=50&sort=updated`, fetchOptions)
       ])
 
       // Get open issue count from Link header or response body
@@ -364,6 +369,7 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
           const openIssues = await openIssuesResponse.json().catch(() => null)
           calculatedOpenIssueCount = (openIssues || []).filter((i: GitHubIssue & { pull_request?: unknown }) => !i.pull_request).length
         }
+        if (signal?.aborted) return
         setOpenIssueCount(calculatedOpenIssueCount)
       }
 
@@ -371,20 +377,23 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
       const issuesData: GitHubIssue[] = await recentIssuesResponse.json().catch(() => null) ?? []
       // Filter out pull requests (they come with issues endpoint but have pull_request field)
       const filteredIssues = issuesData.filter((issue: GitHubIssue & { pull_request?: unknown }) => !issue.pull_request)
+      if (signal?.aborted) return
       setIssues(filteredIssues)
 
       // Fetch Releases
-      const releasesResponse = await fetch(`/api/github/repos/${targetRepo}/releases?per_page=10`, { headers, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
+      const releasesResponse = await fetch(`/api/github/repos/${targetRepo}/releases?per_page=10`, fetchOptions)
       if (!releasesResponse.ok) throw new Error(`Failed to fetch releases: ${releasesResponse.statusText}`)
       const releasesData = await releasesResponse.json().catch(() => null)
       if (!releasesData) throw new Error('Failed to parse GitHub releases response: invalid JSON')
+      if (signal?.aborted) return
       setReleases(releasesData)
 
       // Fetch Contributors
-      const contributorsResponse = await fetch(`/api/github/repos/${targetRepo}/contributors?per_page=20`, { headers, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
+      const contributorsResponse = await fetch(`/api/github/repos/${targetRepo}/contributors?per_page=20`, fetchOptions)
       if (!contributorsResponse.ok) throw new Error(`Failed to fetch contributors: ${contributorsResponse.statusText}`)
       const contributorsData = await contributorsResponse.json().catch(() => null)
       if (!contributorsData) throw new Error('Failed to parse GitHub contributors response: invalid JSON')
+      if (signal?.aborted) return
       setContributors(contributorsData)
 
       // Cache the fetched data using the calculated counts
@@ -400,6 +409,10 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
 
       setLastRefresh(new Date())
     } catch (err) {
+      // Abort errors are expected during cleanup — do not treat as failures
+      if (err instanceof DOMException && err.name === 'AbortError') return
+      if (signal?.aborted) return
+
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch GitHub data'
       console.error('GitHub API error:', err)
 
@@ -426,20 +439,27 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
 
       setError(errorMessage)
     } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
+      if (!signal?.aborted) {
+        setIsLoading(false)
+        setIsRefreshing(false)
+      }
     }
-  }
+  }, [isDemoMode, repos, org])
 
   useEffect(() => {
-    fetchGitHubData().catch(() => { /* errors handled inside fetchGitHubData */ })
+    const controller = new AbortController()
+    fetchGitHubData(false, controller.signal).catch(() => { /* errors handled inside fetchGitHubData */ })
     // Auto-refresh every 60 seconds (bypasses cache for fresh data) — skip in demo mode
+    let interval: ReturnType<typeof setInterval> | undefined
     if (!isDemoMode) {
-      const interval = setInterval(() => fetchGitHubData(true).catch(() => { /* errors handled inside fetchGitHubData */ }), POLL_INTERVAL_SLOW_MS)
-      return () => clearInterval(interval)
+      interval = setInterval(() => fetchGitHubData(true, controller.signal).catch(() => { /* errors handled inside fetchGitHubData */ }), POLL_INTERVAL_SLOW_MS)
+    }
+    return () => {
+      controller.abort()
+      if (interval) clearInterval(interval)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reposKey, org, isDemoMode])
+  }, [reposKey, org, isDemoMode, fetchGitHubData])
 
   return {
     prs,

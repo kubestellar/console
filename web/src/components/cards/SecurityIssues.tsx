@@ -226,6 +226,20 @@ function SecurityIssuesInternal({ config }: SecurityIssuesProps) {
     )
   }
 
+  if (isFailed && !isLoading && issues.length === 0) {
+    return (
+      <div className="h-full flex flex-col">
+        <div className="flex-1 flex flex-col items-center justify-center text-center">
+          <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-3" title={t('securityIssues.failedToLoad', 'Failed to load security scan')}>
+            <AlertTriangle className="w-6 h-6 text-red-400" />
+          </div>
+          <p className="text-foreground font-medium">{t('securityIssues.failedToLoad', 'Failed to load security scan')}</p>
+          <p className="text-sm text-muted-foreground">{error || t('securityIssues.apiUnavailable', 'Security scan API is unavailable')}</p>
+        </div>
+      </div>
+    )
+  }
+
   if (showEmptyState || (!isLoading && issues.length === 0)) {
     return (
       <div className="h-full flex flex-col">

@@ -1,6 +1,6 @@
 import { ReactNode, useRef, useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { LucideIcon, CheckCircle, AlertTriangle, Info, Search, Filter, ChevronDown, ChevronRight, Server, Stethoscope, Wrench } from 'lucide-react'
+import { LucideIcon, CheckCircle, AlertTriangle, Info, Search, Filter, ChevronDown, ChevronRight, Server, Stethoscope, Wrench, XCircle } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../../components/cards/console-missions/shared'
 import { Skeleton } from '../../components/ui/Skeleton'
@@ -93,7 +93,7 @@ export interface CardEmptyStateProps {
   /** Secondary message */
   message?: string
   /** Variant determines color scheme */
-  variant?: 'success' | 'info' | 'warning' | 'neutral'
+  variant?: 'success' | 'info' | 'warning' | 'error' | 'neutral'
   /** Optional action button */
   action?: {
     label: string
@@ -116,6 +116,11 @@ const emptyStateVariants = {
     iconBg: 'bg-yellow-500/10',
     iconColor: 'text-yellow-400',
     icon: AlertTriangle,
+  },
+  error: {
+    iconBg: 'bg-red-500/10',
+    iconColor: 'text-red-400',
+    icon: XCircle,
   },
   neutral: {
     iconBg: 'bg-secondary',

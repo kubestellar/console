@@ -218,6 +218,7 @@ export function useDataCompliance() {
   const [isLoading, setIsLoading] = useState(!cachedSnapshot)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [failedClusters, setFailedClusters] = useState<string[]>([])
   const [isUsingDemoData, setIsUsingDemoData] = useState(!cachedSnapshot)
   const fetchInProgress = useRef(false)
   const initialLoadDone = useRef(!!cachedSnapshot)
@@ -260,17 +261,22 @@ export function useDataCompliance() {
         reachableClusters: clusters.length,
       }
 
+      const clusterFailures: string[] = []
       const tasks = clusters.map(cluster => async () => {
-        const data = await fetchClusterCompliance(cluster.name)
-        aggregated.totalSecrets += data.secrets.total
-        aggregated.opaqueSecrets += data.secrets.opaque
-        aggregated.tlsSecrets += data.secrets.tls
-        aggregated.saTokenSecrets += data.secrets.saToken
-        aggregated.dockerSecrets += data.secrets.docker
-        aggregated.rbacPolicies += data.roles
-        aggregated.roleBindings += data.roleBindings
-        aggregated.clusterAdminBindings += data.clusterAdminBindings
-        aggregated.totalNamespaces += data.namespaces
+        try {
+          const data = await fetchClusterCompliance(cluster.name)
+          aggregated.totalSecrets += data.secrets.total
+          aggregated.opaqueSecrets += data.secrets.opaque
+          aggregated.tlsSecrets += data.secrets.tls
+          aggregated.saTokenSecrets += data.secrets.saToken
+          aggregated.dockerSecrets += data.secrets.docker
+          aggregated.rbacPolicies += data.roles
+          aggregated.roleBindings += data.roleBindings
+          aggregated.clusterAdminBindings += data.clusterAdminBindings
+          aggregated.totalNamespaces += data.namespaces
+        } catch {
+          clusterFailures.push(cluster.name)
+        }
       })
 
       await settledWithConcurrency(tasks)
@@ -278,7 +284,12 @@ export function useDataCompliance() {
       setPosture(aggregated)
       saveToCache(aggregated)
       setIsUsingDemoData(false)
-      setError(null)
+      setFailedClusters(clusterFailures)
+      if (clusterFailures.length > 0) {
+        setError(`Data from ${clusterFailures.length}/${clusters.length} clusters unavailable`)
+      } else {
+        setError(null)
+      }
       initialLoadDone.current = true
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch compliance data')
@@ -296,6 +307,7 @@ export function useDataCompliance() {
       setIsLoading(false)
       setIsUsingDemoData(true)
       setError(null)
+      setFailedClusters([])
       initialLoadDone.current = true
       return
     }
@@ -315,6 +327,7 @@ export function useDataCompliance() {
       setIsLoading(true)
       setIsUsingDemoData(true)
       setError(null)
+      setFailedClusters([])
       initialLoadDone.current = false
     })
 
@@ -367,6 +380,7 @@ export function useDataCompliance() {
     isLoading,
     isRefreshing,
     error,
+    failedClusters,
     isDemoData: isUsingDemoData,
     refetch: () => refetch(false),
   }

@@ -22,7 +22,7 @@ export function DataCompliance() {
   const { isLoading: clustersLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
   useGlobalFilters() // Keep hook for potential future use
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
-  const { posture, scores, isLoading: complianceLoading, isDemoData, isRefreshing: complianceRefreshing } = useDataCompliance()
+  const { posture, scores, isLoading: complianceLoading, isDemoData, isRefreshing: complianceRefreshing, failedClusters } = useDataCompliance()
 
   const isLoading = clustersLoading || complianceLoading
   const isRefreshing = dataRefreshing || complianceRefreshing
@@ -109,6 +109,20 @@ export function DataCompliance() {
           <div>
             <div className="font-medium">Failed to load cluster data</div>
             <div className="text-sm text-muted-foreground">{error}</div>
+          </div>
+        </div>
+      )}
+      {/* Partial cluster failure warning */}
+      {failedClusters.length > 0 && !error && (
+        <div className="mb-4 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5" />
+          <div>
+            <div className="font-medium">
+              Data from {failedClusters.length}/{posture.totalClusters} clusters unavailable
+            </div>
+            <div className="text-sm text-muted-foreground">
+              Unreachable: {(failedClusters || []).join(', ')}
+            </div>
           </div>
         </div>
       )}
