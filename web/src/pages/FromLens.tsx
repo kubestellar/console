@@ -144,7 +144,7 @@ const CLUSTER_INGRESS_STEPS: InstallStep[] = [
     step: 3,
     title: 'Connect the kc-agent',
     commands: [
-      'brew tap kubestellar/tap && brew install --head kc-agent',
+      'brew tap kubestellar/tap && brew install kc-agent',
       'KC_ALLOWED_ORIGINS=https://console.example.com kc-agent',
     ],
     note: 'The kc-agent bridges your browser to your Kubernetes clusters via the in-cluster console. Set KC_ALLOWED_ORIGINS to your console\'s URL so the agent accepts cross-origin requests.',

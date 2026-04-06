@@ -469,7 +469,7 @@ export function useLocalAgent() {
     steps: [
       {
         title: 'Install via Homebrew (macOS / WSL)',
-        command: 'brew tap kubestellar/tap && brew install --head kc-agent && kc-agent',
+        command: 'brew tap kubestellar/tap && brew install kc-agent && kc-agent',
       },
       {
         title: 'Build from source (Linux / WSL — recommended)',
@@ -477,7 +477,7 @@ export function useLocalAgent() {
       },
       {
         title: 'Install via Linuxbrew (Linux / WSL — alternative)',
-        command: '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && brew tap kubestellar/tap && brew install --head kc-agent && kc-agent',
+        command: '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && brew tap kubestellar/tap && brew install kc-agent && kc-agent',
       },
     ],
     benefits: [

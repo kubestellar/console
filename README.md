@@ -21,7 +21,7 @@ Opens at [localhost:8080](http://localhost:8080). Deploy into a cluster with [`d
 **kc-agent** connects [console.kubestellar.io](https://console.kubestellar.io) to your local clusters:
 
 ```bash
-brew tap kubestellar/tap && brew install --head kc-agent   # macOS
+brew tap kubestellar/tap && brew install kc-agent   # macOS
 go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent  # Linux (Go 1.24+)
 ```
 

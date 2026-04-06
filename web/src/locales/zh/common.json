@@ -2790,7 +2790,7 @@
     "quickInstallMacOS": "Quick Install — macOS / WSL (Homebrew)",
     "linuxInstructions": "Linux / WSL installation instructions",
     "linuxBuildDesc": "Build from source (recommended for Linux / WSL). Requires Go 1.24+:",
-    "linuxBrewAlternative": "Alternatively, use Linuxbrew (Linux / WSL): brew tap kubestellar/tap && brew install --head kc-agent"
+    "linuxBrewAlternative": "Alternatively, use Linuxbrew (Linux / WSL): brew tap kubestellar/tap && brew install kc-agent"
   },
   "agentStatus": {
     "connectingToAgent": "Connecting to local agent...",

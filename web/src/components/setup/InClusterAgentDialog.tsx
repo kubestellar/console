@@ -11,7 +11,7 @@ interface InClusterAgentDialogProps {
   onClose: () => void
 }
 
-const BREW_INSTALL_CMD = 'brew tap kubestellar/tap && brew install --head kc-agent && kc-agent'
+const BREW_INSTALL_CMD = 'brew tap kubestellar/tap && brew install kc-agent && kc-agent'
 const BUILD_FROM_SOURCE_CMD = 'git clone https://github.com/kubestellar/console.git && cd console && go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent'
 const DOCS_URL = 'https://console-docs.kubestellar.io'
 
