@@ -3,7 +3,6 @@
  * GitHub avatar icon, full label, status indicator. Tooltip rendered by parent as HTML overlay.
  */
 
-import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { CNCF_CATEGORY_GRADIENTS } from '../../../lib/cncf-constants'
 
@@ -14,34 +13,6 @@ const STATUS_COLORS: Record<NodeStatus, string> = {
   running: '#f59e0b',
   completed: '#22c55e',
   failed: '#ef4444',
-}
-
-/** Map project keys to GitHub org for avatar URLs */
-const PROJECT_TO_GITHUB_ORG: Record<string, string> = {
-  envoy: 'envoyproxy', argo: 'argoproj', argocd: 'argoproj',
-  'argo-cd': 'argoproj', harbor: 'goharbor', jaeger: 'jaegertracing',
-  fluentd: 'fluent', 'fluent-bit': 'fluent', vitess: 'vitessio',
-  thanos: 'thanos-io', cortex: 'cortexproject', falco: 'falcosecurity',
-  keda: 'kedacore', flux: 'fluxcd', trivy: 'aquasecurity',
-  antrea: 'antrea-io', contour: 'projectcontour',
-  'open-policy-agent': 'open-policy-agent', opa: 'open-policy-agent',
-  'open-telemetry': 'open-telemetry', opentelemetry: 'open-telemetry',
-  strimzi: 'strimzi', spiffe: 'spiffe', spire: 'spiffe',
-  'cert-manager': 'cert-manager', prometheus: 'prometheus',
-  grafana: 'grafana', istio: 'istio', linkerd: 'linkerd',
-  helm: 'helm', cilium: 'cilium', calico: 'projectcalico',
-  'kube-prometheus': 'prometheus-operator', metallb: 'metallb',
-  kyverno: 'kyverno', crossplane: 'crossplane', dapr: 'dapr',
-  knative: 'knative', nats: 'nats-io', etcd: 'etcd-io',
-  coredns: 'coredns', rook: 'rook', longhorn: 'longhorn',
-  velero: 'vmware-tanzu', 'external-secrets': 'external-secrets',
-  kubevirt: 'kubevirt', 'chaos-mesh': 'chaos-mesh',
-  keycloak: 'keycloak', 'trivy-operator': 'aquasecurity',
-  'external-secrets-operator': 'external-secrets',
-  'opa-gatekeeper': 'open-policy-agent', gatekeeper: 'open-policy-agent',
-  'cert-manager-operator': 'cert-manager',
-  'prometheus-operator': 'prometheus-operator',
-  'kube-state-metrics': 'kubernetes', alertmanager: 'prometheus',
 }
 
 export interface ProjectNodeProps {
@@ -97,12 +68,6 @@ const OVERLAY_CATEGORIES: Record<string, Set<string>> = {
   security: new Set(['Security', 'Identity & Encryption', 'Policy Enforcement', 'Runtime Security', 'Vulnerability Scanning', 'Secrets Management']),
 }
 
-function getAvatarUrl(name: string): string {
-  const key = name.toLowerCase()
-  const org = PROJECT_TO_GITHUB_ORG[key] || key
-  return `https://github.com/${org}.png?size=40`
-}
-
 export function ProjectNode({
   id,
   name,
@@ -124,10 +89,9 @@ export function ProjectNode({
   glow = false,
   dimmed = false,
   onHover,
-  onDragStart,
-  onDragEnd,
+  onDragStart: _onDragStart,
+  onDragEnd: _onDragEnd,
 }: ProjectNodeProps) {
-  const [imgFailed, setImgFailed] = useState(false)
   const gradientColors = (CNCF_CATEGORY_GRADIENTS as Record<string, [string, string]>)[category]
   const primaryColor = gradientColors?.[0] ?? '#6366f1'
   const statusColor = STATUS_COLORS[status]
@@ -139,7 +103,7 @@ export function ProjectNode({
     false
   const overlayDim = overlay === 'architecture' ? 1 : isRelevant ? 1 : 0.25
 
-  const iconSize = radius * 1.2
+  void _onDragStart; void _onDragEnd // Props preserved for API compatibility
 
   return (
     <motion.g
@@ -199,57 +163,19 @@ export function ProjectNode({
         cursor="pointer"
       />
 
-      {/* Project icon via foreignObject — GitHub avatar or fallback letter */}
-      <foreignObject
-        x={cx - iconSize / 2}
-        y={cy - iconSize / 2}
-        width={iconSize}
-        height={iconSize}
+      {/* Project icon — colored letter initial (reliable across all SVG renderers) */}
+      <text
+        x={cx}
+        y={cy + radius * 0.3}
+        textAnchor="middle"
+        fill={primaryColor}
+        fontSize={radius * 0.9}
+        fontWeight={700}
+        fontFamily="system-ui, sans-serif"
+        style={{ pointerEvents: 'none' }}
       >
-        <div
-          draggable={!!onDragStart}
-          onDragStart={(e) => {
-            e.dataTransfer.setData('text/plain', name)
-            e.dataTransfer.effectAllowed = 'move'
-            onDragStart?.(name)
-          }}
-          onDragEnd={() => onDragEnd?.()}
-          style={{
-            width: iconSize,
-            height: iconSize,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '50%',
-            overflow: 'hidden',
-            cursor: onDragStart ? 'grab' : 'pointer',
-          }}
-        >
-          {!imgFailed ? (
-            <img
-              src={getAvatarUrl(name)}
-              alt={displayName}
-              style={{
-                width: iconSize,
-                height: iconSize,
-                borderRadius: '50%',
-                objectFit: 'cover',
-              }}
-              onError={() => setImgFailed(true)}
-            />
-          ) : (
-            <span style={{
-              color: primaryColor,
-              fontSize: radius * 0.8,
-              fontWeight: 700,
-              fontFamily: 'system-ui, sans-serif',
-              cursor: 'pointer',
-            }}>
-              {name.charAt(0).toUpperCase()}
-            </span>
-          )}
-        </div>
-      </foreignObject>
+        {name.charAt(0).toUpperCase()}
+      </text>
 
 
 

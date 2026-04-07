@@ -228,7 +228,7 @@ export function ClusterZone({
         </div>
       </foreignObject>
 
-      {/* Cluster name (positioned after icon, clipped to avoid overlapping stat blocks) */}
+      {/* Cluster name (positioned after icon) */}
       <text
         x={x + 30}
         y={y + 17}
@@ -239,9 +239,8 @@ export function ClusterZone({
         fontFamily="system-ui, sans-serif"
         opacity={0.9}
         cursor="pointer"
-        clipPath={`rect(0 ${width - 140} 30 0)`}
       >
-        {name.length > 18 ? `${name.slice(0, 16)}...` : name}
+        {name}
       </text>
 
       {/* ── Overlay-dependent resource display ─────────────── */}
@@ -250,13 +249,13 @@ export function ClusterZone({
       {showCompute && (
         <g>
           {/* Stat block row at top-right */}
-          <StatBlock x={x + width - 120} y={y + 6} label="CPU" value={cpuUsage} max={cpuCores} unit="" color={SVG_COLORS.cpu} displayOverride={pct(cpuUsage, cpuCores) != null ? `${pct(cpuUsage, cpuCores)}%` : cpuCores != null ? `${cpuCores} cores` : '—'} />
-          <StatBlock x={x + width - 60} y={y + 6} label="MEM" value={memUsage} max={memGB} unit="" color={SVG_COLORS.mem} displayOverride={pct(memUsage, memGB) != null ? `${pct(memUsage, memGB)}%` : memGB != null ? formatStorage(memGB) : '—'} />
+          <StatBlock x={x + width - 120} y={y + height - 18} label="CPU" value={cpuUsage} max={cpuCores} unit="" color={SVG_COLORS.cpu} displayOverride={pct(cpuUsage, cpuCores) != null ? `${pct(cpuUsage, cpuCores)}%` : cpuCores != null ? `${cpuCores} cores` : '—'} />
+          <StatBlock x={x + width - 60} y={y + height - 18} label="MEM" value={memUsage} max={memGB} unit="" color={SVG_COLORS.mem} displayOverride={pct(memUsage, memGB) != null ? `${pct(memUsage, memGB)}%` : memGB != null ? formatStorage(memGB) : '—'} />
           {/* GPU / TPU row */}
           {(gpuCount != null || tpuCount != null) && (
             <>
-              <StatBlock x={x + width - 120} y={y + 22} label="GPU" value={undefined} max={gpuCount} unit="" color={SVG_COLORS.gpu} />
-              <StatBlock x={x + width - 60} y={y + 22} label="TPU" value={undefined} max={tpuCount} unit="" color={SVG_COLORS.tpu} />
+              <StatBlock x={x + width - 120} y={y + height - 34} label="GPU" value={undefined} max={gpuCount} unit="" color={SVG_COLORS.gpu} />
+              <StatBlock x={x + width - 60} y={y + height - 34} label="TPU" value={undefined} max={tpuCount} unit="" color={SVG_COLORS.tpu} />
             </>
           )}
         </g>
@@ -265,8 +264,8 @@ export function ClusterZone({
       {/* Storage overlay: PVC, Storage capacity */}
       {showStorage && (
         <g>
-          <StatBlock x={x + width - 120} y={y + 6} label="DISK" value={undefined} max={storageGB != null ? Math.round(storageGB) : undefined} unit="" color={SVG_COLORS.disk} displayOverride={storageGB != null ? formatStorage(storageGB) : '—'} />
-          <StatBlock x={x + width - 60} y={y + 6} label="PVC" value={pvcBoundCount} max={pvcCount} unit="" color={SVG_COLORS.pvc} noAlert />
+          <StatBlock x={x + width - 120} y={y + height - 18} label="DISK" value={undefined} max={storageGB != null ? Math.round(storageGB) : undefined} unit="" color={SVG_COLORS.disk} displayOverride={storageGB != null ? formatStorage(storageGB) : '—'} />
+          <StatBlock x={x + width - 60} y={y + height - 18} label="PVC" value={pvcBoundCount} max={pvcCount} unit="" color={SVG_COLORS.pvc} noAlert />
         </g>
       )}
 
