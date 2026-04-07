@@ -172,7 +172,7 @@ vi.mock('../../../lib/cache', () => ({ setAutoRefreshPaused: vi.fn() }))
 vi.mock('../../../hooks/useRefreshIndicator', () => ({
   useRefreshIndicator: (fn: () => void) => ({ showIndicator: false, triggerRefresh: fn }),
 }))
-vi.mock('../../../hooks/useDemoMode', () => ({ getDemoMode: () => false }))
+vi.mock('../../../hooks/useDemoMode', () => ({ getDemoMode: () => false, isDemoModeForced: false }))
 
 const mockGlobalFilters = {
   selectedClusters: [] as string[],
@@ -206,6 +206,7 @@ vi.mock('../AdopterNudge', () => ({ AdopterNudge: () => null }))
 vi.mock('../DemoToLocalCTA', () => ({ DemoToLocalCTA: () => null }))
 vi.mock('../ContextualNudgeBanner', () => ({ ContextualNudgeBanner: () => null }))
 vi.mock('../DiscoverCardsPlaceholder', () => ({ DiscoverCardsPlaceholder: () => <div data-testid="discover" /> }))
+vi.mock('../customizer/DashboardCustomizer', () => ({ DashboardCustomizer: () => null }))
 vi.mock('../../widgets/WidgetExportModal', () => ({ WidgetExportModal: () => null }))
 vi.mock('../../deploy/DeployConfirmDialog', () => ({ DeployConfirmDialog: () => null }))
 vi.mock('../DashboardHealthIndicator', () => ({ DashboardHealthIndicator: () => null }))
