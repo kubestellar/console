@@ -39,6 +39,7 @@ on:
 env:
   BUNDLE_SIZE_LIMIT_KB: 5120
   MAX_ISSUES_PER_RUN: 3
+  ASSIGN_COPILOT: 'false'  # Set to 'true' to auto-assign Copilot to created issues
   COPILOT_ASSIGNMENT_DELAY_S: 120  # Seconds between Copilot assignments to avoid rate limiting
   ISSUE_PREFIX: "[Auto-QA]"
   NODE_VERSION: "20"
@@ -4647,9 +4648,13 @@ jobs:
               core.info(`Created issue #${issue.number}: ${check.title}`);
               createdTotal++;
 
-              // Auto-assign Copilot coding agent so no human triage is needed
+              // Auto-assign Copilot coding agent (gated by ASSIGN_COPILOT env var)
+              const assignCopilot = process.env.ASSIGN_COPILOT === 'true';
+              if (!assignCopilot) {
+                core.info(`Copilot assignment disabled (ASSIGN_COPILOT=${process.env.ASSIGN_COPILOT})`);
+              }
               const repo = `${context.repo.owner}/${context.repo.repo}`;
-              try {
+              if (assignCopilot) try {
                 await github.request('POST /repos/{owner}/{repo}/issues/{issue_number}/assignees', {
                   owner: context.repo.owner,
                   repo: context.repo.repo,
@@ -4679,13 +4684,13 @@ jobs:
               if (!check.bonus) {
                 created++;
 
-                // Throttle Copilot assignments to avoid rate limiting.
-                // Copilot's coding agent has concurrency limits — rapid-fire
-                // assignments cause silent failures or queuing issues.
-                const delaySeconds = parseInt(process.env.COPILOT_ASSIGNMENT_DELAY_S || '120');
-                if (created < maxIssues && delaySeconds > 0) {
-                  core.info(`Waiting ${delaySeconds}s before next Copilot assignment to avoid rate limits...`);
-                  await new Promise(resolve => setTimeout(resolve, delaySeconds * 1000));
+                // Throttle Copilot assignments to avoid rate limiting (only when enabled).
+                if (assignCopilot) {
+                  const delaySeconds = parseInt(process.env.COPILOT_ASSIGNMENT_DELAY_S || '120');
+                  if (created < maxIssues && delaySeconds > 0) {
+                    core.info(`Waiting ${delaySeconds}s before next Copilot assignment to avoid rate limits...`);
+                    await new Promise(resolve => setTimeout(resolve, delaySeconds * 1000));
+                  }
                 }
               } else {
                 core.info(`Bonus issue — does not count against maxIssues cap`);
