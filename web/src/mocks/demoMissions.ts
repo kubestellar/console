@@ -139,6 +139,11 @@ export const DEMO_MISSIONS: DemoMission[] = [
       description: 'Weekly pod readiness and service endpoint verification.',
       missionClass: 'orbit',
       cncfProject: 'prometheus',
+      steps: [
+        { title: 'Check pod health', description: 'Verify all Prometheus and Grafana pods are Running and Ready with no recent restarts.' },
+        { title: 'Verify service endpoints', description: 'Ensure prometheus-server, alertmanager, and grafana services have healthy endpoints.' },
+        { title: 'Check resource utilization', description: 'Verify CPU and memory usage are within acceptable thresholds (< 80%).' },
+      ],
     },
     context: {
       category: 'Observability',
@@ -173,6 +178,11 @@ export const DEMO_MISSIONS: DemoMission[] = [
       description: 'Monthly TLS certificate expiry check.',
       missionClass: 'orbit',
       cncfProject: 'cert-manager',
+      steps: [
+        { title: 'List certificates', description: 'Enumerate all TLS certificates and their expiry dates across namespaces.' },
+        { title: 'Flag expiring certificates', description: 'Identify certificates expiring within 30 days.' },
+        { title: 'Verify issuer health', description: 'Check that cert-manager issuers are ready and able to renew.' },
+      ],
     },
     context: {
       category: 'Security',
@@ -206,6 +216,11 @@ export const DEMO_MISSIONS: DemoMission[] = [
       description: 'Weekly Helm chart and image version drift detection.',
       missionClass: 'orbit',
       cncfProject: 'argocd',
+      steps: [
+        { title: 'Check Helm chart versions', description: 'Compare installed ArgoCD chart version against the upstream argo Helm repository.' },
+        { title: 'Check container image versions', description: 'Compare running image tags against latest available tags on ghcr.io.' },
+        { title: 'Report drift summary', description: 'Summarize which components are behind and flag security-related updates.' },
+      ],
     },
     context: {
       category: 'App Definition',
