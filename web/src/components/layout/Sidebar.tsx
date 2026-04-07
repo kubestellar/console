@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { Plus, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff, GripVertical, X, User, Pin, PinOff } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff, GripVertical, X, User, Pin, PinOff, Satellite } from 'lucide-react'
 import { iconRegistry } from '../../lib/icons'
 import { cn } from '../../lib/cn'
 import { SnoozedCards } from './SnoozedCards'
@@ -20,6 +20,8 @@ import { DASHBOARD_CONFIGS } from '../../config/dashboards/index'
 import { emitSidebarNavigated, emitDashboardRenamed } from '../../lib/analytics'
 import { prefetchDashboard } from '../../lib/prefetchDashboard'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
+import { STORAGE_KEY_GROUND_CONTROL_DASHBOARDS } from '../../lib/constants/storage'
+import { safeGetJSON } from '../../lib/utils/localStorage'
 
 // Lazy-load SidebarCustomizer — it pulls in dnd-kit and heavy UI (~50 KB)
 const SidebarCustomizer = lazy(() =>
@@ -43,6 +45,17 @@ const HREF_TO_DASHBOARD_ID: Record<string, string> = {
   '/deploy': 'deploy', '/ai-agents': 'ai-agents',
   '/llm-d-benchmarks': 'llm-d-benchmarks', '/cluster-admin': 'cluster-admin',
   '/insights': 'insights' }
+
+/** Prefix for custom dashboard routes */
+const CUSTOM_DASHBOARD_PREFIX = '/custom-dashboard/'
+
+/** Check if a sidebar item's href points to a Ground Control dashboard */
+function isGroundControlItem(href: string): boolean {
+  if (!href.startsWith(CUSTOM_DASHBOARD_PREFIX)) return false
+  const dashboardId = href.slice(CUSTOM_DASHBOARD_PREFIX.length)
+  const gcMapping = safeGetJSON<Record<string, unknown>>(STORAGE_KEY_GROUND_CONTROL_DASHBOARDS) ?? {}
+  return dashboardId in gcMapping
+}
 
 export function Sidebar() {
   const { config, toggleCollapsed, setCollapsed, reorderItems, updateItem, removeItem, closeMobileSidebar, setWidth } = useSidebarConfig()
@@ -370,11 +383,15 @@ export function Sidebar() {
             {!isCollapsed && (() => {
               const dashId = HREF_TO_DASHBOARD_ID[item.href]
               const count = dashId ? DASHBOARD_CONFIGS[dashId]?.cards?.length : null
+              const isGC = isGroundControlItem(item.href)
               return (
-                <span className="flex-1 min-w-0">
-                  {item.name}
+                <span className="flex-1 min-w-0 flex items-center gap-1">
+                  <span className="truncate">{item.name}</span>
+                  {isGC && (
+                    <Satellite className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" aria-label="Ground Control dashboard" />
+                  )}
                   {count != null && (
-                    <span className="text-[10px] text-muted-foreground/40 tabular-nums ml-1">{count}</span>
+                    <span className="text-[10px] text-muted-foreground/40 tabular-nums ml-0.5 flex-shrink-0">{count}</span>
                   )}
                 </span>
               )
