@@ -203,6 +203,10 @@ function loadMissions(): Mission[] {
     const stored = localStorage.getItem(MISSIONS_STORAGE_KEY)
     if (stored) {
       const parsed = JSON.parse(stored)
+      // In demo mode, if localStorage is empty use demo missions instead
+      if (getDemoMode() && Array.isArray(parsed) && parsed.length === 0) {
+        return DEMO_MISSIONS_AS_MISSIONS
+      }
       // Convert date strings back to Date objects
       // Mark running missions for auto-reconnection instead of failing them
       return parsed.map((m: Mission) => {

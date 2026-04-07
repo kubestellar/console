@@ -113,9 +113,9 @@ export function DashboardHeader({
   const isLoading = isFetching
 
   return (
-    <div data-testid="dashboard-header" className="flex items-center justify-between mb-6">
+    <div data-testid="dashboard-header" className="flex items-center justify-between gap-4 flex-wrap mb-6">
       {/* Left side: title + hourglass */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-0">
         <div>
           <h1 data-testid="dashboard-title" className="text-2xl font-bold text-foreground flex items-center gap-2">
             {icon}
@@ -136,7 +136,7 @@ export function DashboardHeader({
       </div>
 
       {/* Right side: controls + timestamp below */}
-      <div className="flex flex-col items-end gap-0.5">
+      <div className="flex flex-col items-end gap-0.5 shrink-0">
         <div className="flex items-center gap-3">
           {rightExtra}
           <label
