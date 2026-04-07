@@ -195,8 +195,7 @@ func MediumBlogHandler(c *fiber.Ctx) error {
 	posts, err := getMediumPosts()
 	if err != nil {
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
-			"error":  "failed to fetch blog posts",
-			"detail": err.Error(),
+			"error": "failed to fetch blog posts",
 		})
 	}
 

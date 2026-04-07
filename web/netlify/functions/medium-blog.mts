@@ -23,9 +23,32 @@ const ALLOWED_ORIGINS = [
   "https://console-deploy-preview.kubestellar.io",
 ];
 
+const ALLOWED_ORIGIN_SET = new Set(ALLOWED_ORIGINS);
+const ALLOWED_HOSTS = new Set(ALLOWED_ORIGINS.map((origin) => new URL(origin).hostname));
+
+function isAllowedOrigin(origin: string): boolean {
+  let parsedOrigin: URL;
+
+  try {
+    parsedOrigin = new URL(origin);
+  } catch {
+    return false;
+  }
+
+  if (parsedOrigin.protocol !== "https:") {
+    return false;
+  }
+
+  if (ALLOWED_ORIGIN_SET.has(parsedOrigin.origin) || ALLOWED_HOSTS.has(parsedOrigin.hostname)) {
+    return true;
+  }
+
+  return parsedOrigin.hostname === "kubestellar.io" || parsedOrigin.hostname.endsWith(".kubestellar.io");
+}
+
 function corsOrigin(origin: string | null): string {
   if (!origin) return ALLOWED_ORIGINS[0];
-  if (ALLOWED_ORIGINS.some((o) => origin.startsWith(o) || origin.endsWith(".kubestellar.io"))) {
+  if (isAllowedOrigin(origin)) {
     return origin;
   }
   return ALLOWED_ORIGINS[0];
@@ -123,9 +146,9 @@ export default async (req: Request) => {
       }),
       { status: 200, headers }
     );
-  } catch (err) {
+  } catch {
     return new Response(
-      JSON.stringify({ error: "Failed to fetch blog", detail: String(err) }),
+      JSON.stringify({ error: "Failed to fetch blog" }),
       { status: 502, headers }
     );
   }

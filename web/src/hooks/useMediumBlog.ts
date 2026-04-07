@@ -25,11 +25,24 @@ interface CacheEntry {
   timestamp: number
 }
 
+function isValidCacheEntry(value: unknown): value is CacheEntry {
+  if (typeof value !== 'object' || value === null) return false
+
+  const entry = value as Record<string, unknown>
+
+  return (
+    Number.isFinite(entry.timestamp) &&
+    Array.isArray(entry.posts) &&
+    typeof entry.channelUrl === 'string'
+  )
+}
+
 function readCache(): CacheEntry | null {
   try {
     const raw = sessionStorage.getItem(CACHE_KEY)
     if (!raw) return null
-    const entry: CacheEntry = JSON.parse(raw)
+    const entry: unknown = JSON.parse(raw)
+    if (!isValidCacheEntry(entry)) return null
     if (Date.now() - entry.timestamp > CACHE_TTL_MS) return null
     return entry
   } catch {
