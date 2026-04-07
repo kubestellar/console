@@ -30,7 +30,7 @@ import { useMobile } from '../../../hooks/useMobile'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { cn } from '../../../lib/cn'
 import { AgentSelector } from '../../agent/AgentSelector'
-import { AgentIcon } from '../../agent/AgentIcon'
+import { LogoWithStar } from '../../ui/LogoWithStar'
 const MissionBrowser = lazy(() =>
   import('../../missions/MissionBrowser').then(m => ({ default: m.MissionBrowser }))
 )
@@ -459,17 +459,6 @@ export function MissionSidebar() {
     })
   }
 
-  // Helper to get provider string for AgentIcon
-  const getAgentProvider = (agent: string | null | undefined) => {
-    switch (agent) {
-      case 'claude': return 'anthropic'
-      case 'openai': return 'openai'
-      case 'gemini': return 'google'
-      case 'bob': return 'bob'
-      case 'claude-code': return 'anthropic-local'
-      default: return agent || 'anthropic'
-    }
-  }
 
   // Minimized sidebar view (thin strip) - desktop only
   if (isSidebarMinimized && !isMobile) {
@@ -489,7 +478,7 @@ export function MissionSidebar() {
         </button>
 
         <div className="flex flex-col items-center gap-2">
-          <AgentIcon provider={getAgentProvider(selectedAgent)} className="w-5 h-5 text-primary" />
+          <LogoWithStar className="w-5 h-5" />
           {missions.length > 0 && (
             <span className="text-xs font-medium text-foreground">{missions.length}</span>
           )}
@@ -556,7 +545,7 @@ export function MissionSidebar() {
       {/* Header */}
       <div className="flex items-center justify-between p-3 md:p-4 border-b border-border min-w-0">
         <div className="flex items-center gap-2 flex-shrink-0">
-          <AgentIcon provider={getAgentProvider(selectedAgent)} className="w-5 h-5" />
+          <LogoWithStar className="w-5 h-5" />
           <h2 className="font-semibold text-foreground text-sm md:text-base whitespace-nowrap">{t('missionSidebar.aiMissions')}</h2>
           {needsAttention > 0 && (
             <StatusBadge color="purple" rounded="full">{needsAttention}</StatusBadge>
@@ -1215,7 +1204,7 @@ export function MissionSidebar() {
 // Toggle button for the sidebar (shown when sidebar is closed)
 export function MissionSidebarToggle() {
   const { t } = useTranslation(['common'])
-  const { missions, isSidebarOpen, openSidebar, selectedAgent } = useMissions()
+  const { missions, isSidebarOpen, openSidebar } = useMissions()
   const { isMobile } = useMobile()
 
   const needsAttention = missions.filter(m =>
@@ -1224,17 +1213,6 @@ export function MissionSidebarToggle() {
 
   const runningCount = missions.filter(m => m.status === 'running').length
 
-  // Helper to get provider string for AgentIcon
-  const getAgentProvider = (agent: string | null | undefined) => {
-    switch (agent) {
-      case 'claude': return 'anthropic'
-      case 'openai': return 'openai'
-      case 'gemini': return 'google'
-      case 'bob': return 'bob'
-      case 'claude-code': return 'anthropic-local'
-      default: return agent || 'anthropic'
-    }
-  }
 
   // Always show toggle when sidebar is closed (even with no missions)
   if (isSidebarOpen) {
@@ -1255,7 +1233,7 @@ export function MissionSidebarToggle() {
       )}
       title={t('missionSidebar.openAIMissions')}
     >
-      <AgentIcon provider={getAgentProvider(selectedAgent)} className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} />
+      <LogoWithStar className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} />
       {runningCount > 0 && (
         <Loader2 className={isMobile ? 'w-3 h-3 animate-spin' : 'w-4 h-4 animate-spin'} />
       )}
