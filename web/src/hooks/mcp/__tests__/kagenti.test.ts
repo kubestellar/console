@@ -784,11 +784,9 @@ describe('useKagentiAgents — fetcher callback', () => {
     })
 
     renderHook(() => useKagentiAgents())
-    // agentFetch returns null when response is not ok, which causes
-    // agentFetchAllClusters to throw 'No data' for that cluster
-    // but the settled results filter handles it
-    const result = await capturedFetcher!()
-    expect(result).toEqual([])
+    // agentFetch now throws on non-ok response; when all clusters fail,
+    // agentFetchAllClusters re-throws with an aggregate error
+    await expect(capturedFetcher!()).rejects.toThrow('All kagenti fetches failed')
 
     globalThis.fetch = originalFetch
   })
@@ -813,9 +811,9 @@ describe('useKagentiAgents — fetcher callback', () => {
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('ECONNREFUSED'))
 
     renderHook(() => useKagentiAgents())
-    const result = await capturedFetcher!()
-    // Should return empty array since the settled results filter rejects
-    expect(result).toEqual([])
+    // agentFetch now throws on network error; when all clusters fail,
+    // agentFetchAllClusters re-throws with an aggregate error
+    await expect(capturedFetcher!()).rejects.toThrow('All kagenti fetches failed')
 
     globalThis.fetch = originalFetch
   })
