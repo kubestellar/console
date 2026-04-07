@@ -608,6 +608,22 @@ Order phases by dependency — prerequisites first. Each phase completes before 
         }
       }
     }
+    // In demo mode, seed some projects as already installed to show the
+    // mixed installed/new-deploy visual in the Flight Plan blueprint
+    if (isDemoMode() && installed.size === 0 && state.projects.length > 0) {
+      // Prometheus and cert-manager are "already installed" on the first cluster
+      for (const name of ['prometheus', 'cert-manager']) {
+        if (state.projects.some(p => p.name === name)) {
+          installed.add(name)
+          const firstCluster = state.assignments[0]?.clusterName
+          if (firstCluster) {
+            if (!perCluster.has(name)) perCluster.set(name, new Set())
+            perCluster.get(name)!.add(firstCluster)
+          }
+        }
+      }
+    }
+
     return { installedProjects: installed, installedOnCluster: perCluster }
   }, [helmReleases, clusters, state.projects])
 
