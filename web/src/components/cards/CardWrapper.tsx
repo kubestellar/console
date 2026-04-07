@@ -570,10 +570,11 @@ export function CardWrapper({
   const menuButtonRef = useRef<HTMLButtonElement>(null)
 
   // Report callback for CardDataContext (childDataState is declared earlier for refresh animation)
-  const reportCallback = (state: CardDataState) => {
+  // Must be useCallback — CardDataContext children use this in useLayoutEffect deps
+  const reportCallback = useCallback((state: CardDataState) => {
     setChildDataState(state)
-  }
-  const reportCtx = { report: reportCallback }
+  }, [])
+  const reportCtx = useMemo(() => ({ report: reportCallback }), [reportCallback])
 
   // Merge child-reported state with props — child reports take priority when present
   const effectiveIsFailed = isFailed || childDataState?.isFailed || cardLoadingTimedOut
