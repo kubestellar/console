@@ -249,13 +249,13 @@ export function ClusterZone({
       {showCompute && (
         <g>
           {/* Stat block row at top-right */}
-          <StatBlock x={x + width - 120} y={y + height - 18} label="CPU" value={cpuUsage} max={cpuCores} unit="" color={SVG_COLORS.cpu} displayOverride={pct(cpuUsage, cpuCores) != null ? `${pct(cpuUsage, cpuCores)}%` : cpuCores != null ? `${cpuCores} cores` : '—'} />
-          <StatBlock x={x + width - 60} y={y + height - 18} label="MEM" value={memUsage} max={memGB} unit="" color={SVG_COLORS.mem} displayOverride={pct(memUsage, memGB) != null ? `${pct(memUsage, memGB)}%` : memGB != null ? formatStorage(memGB) : '—'} />
+          <StatBlock x={x + width - 120} y={y + height - 35} label="CPU" value={cpuUsage} max={cpuCores} unit="" color={SVG_COLORS.cpu} displayOverride={pct(cpuUsage, cpuCores) != null ? `${pct(cpuUsage, cpuCores)}%` : cpuCores != null ? `${cpuCores} cores` : '—'} />
+          <StatBlock x={x + width - 60} y={y + height - 35} label="MEM" value={memUsage} max={memGB} unit="" color={SVG_COLORS.mem} displayOverride={pct(memUsage, memGB) != null ? `${pct(memUsage, memGB)}%` : memGB != null ? formatStorage(memGB) : '—'} />
           {/* GPU / TPU row */}
           {(gpuCount != null || tpuCount != null) && (
             <>
-              <StatBlock x={x + width - 120} y={y + height - 34} label="GPU" value={undefined} max={gpuCount} unit="" color={SVG_COLORS.gpu} />
-              <StatBlock x={x + width - 60} y={y + height - 34} label="TPU" value={undefined} max={tpuCount} unit="" color={SVG_COLORS.tpu} />
+              <StatBlock x={x + width - 120} y={y + height - 51} label="GPU" value={undefined} max={gpuCount} unit="" color={SVG_COLORS.gpu} />
+              <StatBlock x={x + width - 60} y={y + height - 51} label="TPU" value={undefined} max={tpuCount} unit="" color={SVG_COLORS.tpu} />
             </>
           )}
         </g>
@@ -264,8 +264,8 @@ export function ClusterZone({
       {/* Storage overlay: PVC, Storage capacity */}
       {showStorage && (
         <g>
-          <StatBlock x={x + width - 120} y={y + height - 18} label="DISK" value={undefined} max={storageGB != null ? Math.round(storageGB) : undefined} unit="" color={SVG_COLORS.disk} displayOverride={storageGB != null ? formatStorage(storageGB) : '—'} />
-          <StatBlock x={x + width - 60} y={y + height - 18} label="PVC" value={pvcBoundCount} max={pvcCount} unit="" color={SVG_COLORS.pvc} noAlert />
+          <StatBlock x={x + width - 120} y={y + height - 35} label="DISK" value={undefined} max={storageGB != null ? Math.round(storageGB) : undefined} unit="" color={SVG_COLORS.disk} displayOverride={storageGB != null ? formatStorage(storageGB) : '—'} />
+          <StatBlock x={x + width - 60} y={y + height - 35} label="PVC" value={pvcBoundCount} max={pvcCount} unit="" color={SVG_COLORS.pvc} noAlert />
         </g>
       )}
 

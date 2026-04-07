@@ -1121,7 +1121,7 @@ export function MissionSidebar() {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-2xl"
           onClick={(e) => { if (e.target === e.currentTarget) setViewingMission(null) }}
-          onKeyDown={(e) => { if (e.key === 'Escape') setViewingMission(null) }}
+          onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setViewingMission(null) } }}
           tabIndex={-1}
           ref={(el) => el?.focus()}
         >
