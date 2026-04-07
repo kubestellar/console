@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Sparkles, Loader2, RefreshCw, ToggleLeft, Box } from 'lucide-react'
+import { Lightbulb, Loader2, RefreshCw, ToggleLeft, Box } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { BaseModal } from '../../lib/modals'
 import { Button } from '../ui/Button'
@@ -20,7 +20,7 @@ interface ReplaceCardModalProps {
   onReplace: (oldCardId: string, newCardType: string, newTitle?: string, newConfig?: Record<string, unknown>) => void
 }
 
-// Example prompts for the AI input
+// Example prompts for the keyword-matching suggestion input
 const EXAMPLE_PROMPTS = [
   "Show me CPU usage across all clusters",
   "Track warning events from the production namespace",
@@ -78,7 +78,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
 
   const tabs = [
     { id: 'select', label: t('dashboard.replace.chooseCardType'), icon: ToggleLeft },
-    { id: 'ai', label: t('dashboard.replace.describeWhatYouNeed'), icon: Sparkles },
+    { id: 'ai', label: t('dashboard.replace.describeWhatYouNeed'), icon: Lightbulb },
   ]
 
   const handleSelectReplace = () => {
@@ -93,12 +93,12 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
     setIsProcessing(true)
     setAiSuggestion(null)
 
-    // Simulate AI processing
+    // Simulate processing delay for keyword matching
     await new Promise((resolve) => setTimeout(resolve, NAV_AFTER_ANIMATION_MS))
 
     if (!isMountedRef.current) return
 
-    // Parse the natural language and suggest a card type
+    // Match keywords in the description and suggest a card type
     const prompt = nlPrompt.toLowerCase()
     let suggestion: typeof aiSuggestion = null
 
@@ -226,11 +226,11 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
             <div className="space-y-4">
               <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
                 <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="w-4 h-4 text-purple-400" />
-                  <span className="text-sm font-medium text-purple-300">{t('dashboard.replace.aiPoweredCreation')}</span>
+                  <Lightbulb className="w-4 h-4 text-purple-400" />
+                  <span className="text-sm font-medium text-purple-300">{t('dashboard.replace.smartSuggestions')}</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {t('dashboard.replace.aiCreationDescription')}
+                  {t('dashboard.replace.smartSuggestionsDescription')}
                 </p>
               </div>
 
@@ -264,17 +264,17 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4" />
+                    <Lightbulb className="w-4 h-4" />
                     {t('dashboard.replace.generateCard')}
                   </>
                 )}
               </button>
 
-              {/* AI Suggestion */}
+              {/* Suggestion result */}
               {aiSuggestion && (
                 <div className="mt-4 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
                   <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="w-4 h-4 text-green-400" />
+                    <Lightbulb className="w-4 h-4 text-green-400" />
                     <span className="text-sm font-medium text-green-300">{t('dashboard.replace.suggestedCard')}</span>
                   </div>
                   <div className="space-y-2">
