@@ -3200,7 +3200,9 @@
         "videoTutorials": "Video Tutorials",
         "comingSoon": "Coming soon",
         "subscribeToPlaylist": "Subscribe to playlist",
-        "resources": "Resources"
+        "resources": "Resources",
+        "latestBlogPosts": "Latest Blog Posts",
+        "viewAll": "View all"
       }
     },
     "missionSidebar": {

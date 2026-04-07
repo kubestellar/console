@@ -629,6 +629,9 @@ func (s *Server) setupRoutes() {
 	s.app.Get("/api/youtube/playlist", handlers.YouTubePlaylistHandler)
 	s.app.Get("/api/youtube/thumbnail/:id", handlers.YouTubeThumbnailProxy)
 
+	// Medium blog (public — proxies to Medium RSS feed, cached 1h)
+	s.app.Get("/api/medium/blog", handlers.MediumBlogHandler)
+
 	// Mission knowledge base browse/file (public — proxies to public GitHub repo)
 	missions := handlers.NewMissionsHandler()
 	missions.RegisterPublicRoutes(s.app.Group("/api/missions"))

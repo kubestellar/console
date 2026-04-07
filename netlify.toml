@@ -81,6 +81,12 @@
   to = "/.netlify/functions/youtube-playlist"
   status = 200
 
+# Medium blog API — proxy to Netlify Function
+[[redirects]]
+  from = "/api/medium/blog"
+  to = "/.netlify/functions/medium-blog"
+  status = 200
+
 # YouTube thumbnail proxy — serves thumbnails through our origin to avoid MSW blocking
 [[redirects]]
   from = "/api/youtube/thumbnail/*"

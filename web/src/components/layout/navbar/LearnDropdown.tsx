@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { useModalState } from '../../../lib/modals'
 import { useLocation } from 'react-router-dom'
-import { BookOpen, Play, ExternalLink, GraduationCap, Video, Loader2 } from 'lucide-react'
+import { BookOpen, Play, ExternalLink, GraduationCap, Video, Loader2, Newspaper } from 'lucide-react'
 import { useTour } from '../../../hooks/useTour'
 import { LogoWithStar } from '../../ui/LogoWithStar'
 import {
@@ -9,8 +9,10 @@ import {
   getYouTubeWatchUrl,
 } from '../../../config/learningVideos'
 import { usePlaylistVideos } from '../../../hooks/usePlaylistVideos'
+import { useMediumBlog } from '../../../hooks/useMediumBlog'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../../lib/cn'
+import { emitBlogPostClicked } from '../../../lib/analytics'
 
 export function LearnDropdown() {
   const { isOpen, close, toggle } = useModalState()
@@ -19,6 +21,7 @@ export function LearnDropdown() {
   const location = useLocation()
   const { t } = useTranslation()
   const { videos, playlistUrl, loading } = usePlaylistVideos()
+  const { posts: blogPosts, channelUrl: blogChannelUrl, loading: blogLoading } = useMediumBlog()
 
   const RESOURCES = [
     { label: t('layout.navbar.learn.documentation'), href: 'https://console-docs.kubestellar.io', description: t('layout.navbar.learn.docsDescription') },
@@ -151,6 +154,55 @@ export function LearnDropdown() {
                 {t('layout.navbar.learn.subscribeToPlaylist')}
               </a>
             </div>
+          )}
+
+          {/* Blog Posts */}
+          {(blogLoading || blogPosts.length > 0) && (
+            <>
+              <div className="border-t border-border" />
+              <div className="px-4 pt-3 pb-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <Newspaper className="w-3 h-3" />
+                    {t('layout.navbar.learn.latestBlogPosts')}
+                  </div>
+                  <a
+                    href={blogChannelUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] text-primary hover:underline"
+                  >
+                    {t('layout.navbar.learn.viewAll')}
+                  </a>
+                </div>
+              </div>
+              {blogLoading ? (
+                <div className="px-4 py-3 flex items-center justify-center">
+                  <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
+                </div>
+              ) : (
+                <div className="px-2 pb-2">
+                  {blogPosts.map(post => (
+                    <a
+                      key={post.link}
+                      href={post.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => emitBlogPostClicked(post.title)}
+                      className="block px-2 py-2 rounded-md hover:bg-secondary/50 transition-colors group"
+                      title={post.preview}
+                    >
+                      <div className="text-sm text-foreground group-hover:text-primary transition-colors leading-snug">
+                        {post.title}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                        {post.preview}
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
           <div className="border-t border-border" />

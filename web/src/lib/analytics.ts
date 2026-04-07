@@ -2058,3 +2058,7 @@ export function emitTipShown(page: string, tip: string) {
 export function emitStreakDay(streakCount: number) {
   send('ksc_streak_day', { streak_count: streakCount })
 }
+
+export function emitBlogPostClicked(title: string) {
+  send('ksc_blog_post_clicked', { blog_title: title })
+}
