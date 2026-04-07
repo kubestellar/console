@@ -489,7 +489,34 @@ func (s *Server) handleChatMessageStreaming(conn *websocket.Conn, msg protocol.M
 			})
 		}
 
+		// Heartbeat goroutine: sends periodic progress events to prevent the
+		// frontend's stream-inactivity timer from firing during long-running
+		// tool calls (e.g., `drasi init` which deploys Kubernetes components
+		// and can take several minutes with no output).
+		heartbeatDone := make(chan struct{})
+		go func() {
+			ticker := time.NewTicker(missionHeartbeatInterval)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-heartbeatDone:
+					return
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					safeWrite(ctx, protocol.Message{
+						ID:   msg.ID,
+						Type: protocol.TypeProgress,
+						Payload: protocol.ProgressPayload{
+							Step: "Still working...",
+						},
+					})
+				}
+			}
+		}()
+
 		resp, err = streamingProvider.StreamChatWithProgress(ctx, chatReq, onChunk, onProgress)
+		close(heartbeatDone)
 		if err != nil {
 			if ctx.Err() != nil {
 				// Distinguish timeout from user-initiated cancel (#2375)

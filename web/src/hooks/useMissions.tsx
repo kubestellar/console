@@ -833,6 +833,9 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           progress?: number
           tokens?: { input?: number; output?: number; total?: number }
         }
+        // Reset inactivity timer — progress events prove the agent is alive,
+        // even during long-running tool calls like `drasi init` (#5360).
+        lastStreamTimestamp.current.set(missionId, Date.now())
         // Track token delta for category usage
         if (payload.tokens?.total) {
           const previousTotal = m.tokenUsage?.total ?? 0

@@ -2358,6 +2358,44 @@ describe('mission timeout interval', () => {
     }
   })
 
+  it('progress events reset inactivity timer so long-running tools do not timeout', async () => {
+    vi.useFakeTimers()
+    try {
+      const { result } = renderHook(() => useMissions(), { wrapper })
+      const { missionId, requestId } = await startMissionWithConnection(result)
+
+      // Send a stream chunk to start tracking inactivity
+      act(() => {
+        MockWebSocket.lastInstance?.simulateMessage({
+          id: requestId,
+          type: 'stream',
+          payload: { content: 'Installing Drasi...', done: false },
+        })
+      })
+
+      // Advance 60s — within 90s window, still alive
+      act(() => { vi.advanceTimersByTime(60_000) })
+
+      // Send a progress event (heartbeat from tool execution)
+      act(() => {
+        MockWebSocket.lastInstance?.simulateMessage({
+          id: requestId,
+          type: 'progress',
+          payload: { step: 'Still working...' },
+        })
+      })
+
+      // Advance another 60s — 120s total, but only 60s since last progress event
+      act(() => { vi.advanceTimersByTime(60_000) })
+
+      // Mission should still be running (progress reset the timer)
+      const mission = result.current.missions.find(m => m.id === missionId)
+      expect(mission?.status).toBe('running')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('does not fire timeout when no running missions exist', async () => {
     vi.useFakeTimers()
     try {
