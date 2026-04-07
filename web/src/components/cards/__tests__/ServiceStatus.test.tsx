@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { ServiceStatus } from './ServiceStatus'
+import { ServiceStatus } from '../ServiceStatus'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -18,7 +18,7 @@ const mockDrillToService = vi.fn()
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-vi.mock('../../hooks/useCachedData', () => ({
+vi.mock('../../../hooks/useCachedData', () => ({
   useCachedServices: () => ({
     services: [],
     isLoading: false,
@@ -30,15 +30,15 @@ vi.mock('../../hooks/useCachedData', () => ({
   }),
 }))
 
-vi.mock('../../hooks/useDrillDown', () => ({
+vi.mock('../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({ drillToService: mockDrillToService }),
 }))
 
-vi.mock('./CardDataContext', () => ({
+vi.mock('../CardDataContext', () => ({
   useCardLoadingState: vi.fn(() => ({ showSkeleton: false })),
 }))
 
-vi.mock('../../lib/cards/cardHooks', () => ({
+vi.mock('../../../lib/cards/cardHooks', () => ({
   useCardData: (items: unknown[], _opts: unknown) => ({
     items,
     totalItems: (items as unknown[]).length,
@@ -74,7 +74,7 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }))
 
-vi.mock('../../lib/cards/CardComponents', () => ({
+vi.mock('../../../lib/cards/CardComponents', () => ({
   CardSearchInput: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
     <input data-testid="search" value={value} onChange={e => onChange(e.target.value)} />
   ),
@@ -82,11 +82,11 @@ vi.mock('../../lib/cards/CardComponents', () => ({
   CardPaginationFooter: () => <div data-testid="pagination" />,
 }))
 
-vi.mock('../ui/Skeleton', () => ({
+vi.mock('../../ui/Skeleton', () => ({
   Skeleton: () => <div data-testid="skeleton" />,
 }))
 
-vi.mock('../ui/ClusterBadge', () => ({
+vi.mock('../../ui/ClusterBadge', () => ({
   ClusterBadge: ({ cluster }: { cluster: string }) => <span data-testid="cluster-badge">{cluster}</span>,
 }))
 
@@ -97,7 +97,7 @@ describe('ServiceStatus', () => {
 
   describe('Skeleton', () => {
     it('renders skeletons when loading', async () => {
-      const { useCardLoadingState } = await import('./CardDataContext')
+      const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: true } as never)
       render(<ServiceStatus />)
       expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0)
@@ -111,7 +111,7 @@ describe('ServiceStatus', () => {
     })
 
     it('shows failed message on error', async () => {
-      const { useCachedServices } = await import('../../hooks/useCachedData')
+      const { useCachedServices } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedServices).mockReturnValue({
         services: [],
         isLoading: false,
@@ -128,7 +128,7 @@ describe('ServiceStatus', () => {
 
   describe('Stats row', () => {
     it('renders total, LB, NodePort, ClusterIP counts', async () => {
-      const { useCachedServices } = await import('../../hooks/useCachedData')
+      const { useCachedServices } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedServices).mockReturnValue({
         services: [
           makeService({ type: 'LoadBalancer' }),
@@ -152,7 +152,7 @@ describe('ServiceStatus', () => {
 
   describe('Service list', () => {
     it('renders service name and namespace', async () => {
-      const { useCachedServices } = await import('../../hooks/useCachedData')
+      const { useCachedServices } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedServices).mockReturnValue({
         services: [makeService()],
         isLoading: false,
@@ -168,7 +168,7 @@ describe('ServiceStatus', () => {
     })
 
     it('renders cluster badge for each service', async () => {
-      const { useCachedServices } = await import('../../hooks/useCachedData')
+      const { useCachedServices } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedServices).mockReturnValue({
         services: [makeService()],
         isLoading: false,
@@ -183,7 +183,7 @@ describe('ServiceStatus', () => {
     })
 
     it('shows service type badge', async () => {
-      const { useCachedServices } = await import('../../hooks/useCachedData')
+      const { useCachedServices } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedServices).mockReturnValue({
         services: [makeService({ type: 'LoadBalancer' })],
         isLoading: false,
@@ -198,7 +198,7 @@ describe('ServiceStatus', () => {
     })
 
     it('shows port info when ports exist', async () => {
-      const { useCachedServices } = await import('../../hooks/useCachedData')
+      const { useCachedServices } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedServices).mockReturnValue({
         services: [makeService({ ports: ['443/TCP', '80/TCP'] })],
         isLoading: false,
@@ -213,7 +213,7 @@ describe('ServiceStatus', () => {
     })
 
     it('calls drillToService when row clicked', async () => {
-      const { useCachedServices } = await import('../../hooks/useCachedData')
+      const { useCachedServices } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedServices).mockReturnValue({
         services: [makeService()],
         isLoading: false,

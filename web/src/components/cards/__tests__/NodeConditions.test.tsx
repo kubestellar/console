@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { NodeConditions } from './NodeConditions'
+import { NodeConditions } from '../NodeConditions'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -16,7 +16,7 @@ const mockExecute = vi.fn()
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-vi.mock('../../hooks/useCachedData', () => ({
+vi.mock('../../../hooks/useCachedData', () => ({
   useCachedNodes: () => ({
     nodes: [],
     isLoading: false,
@@ -27,15 +27,15 @@ vi.mock('../../hooks/useCachedData', () => ({
   }),
 }))
 
-vi.mock('../../hooks/useKubectl', () => ({
+vi.mock('../../../hooks/useKubectl', () => ({
   useKubectl: () => ({ execute: mockExecute }),
 }))
 
-vi.mock('./CardDataContext', () => ({
+vi.mock('../CardDataContext', () => ({
   useCardLoadingState: vi.fn(() => ({})),
 }))
 
-vi.mock('../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false }),
 }))
 
@@ -50,7 +50,7 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-vi.mock('../ui/StatusBadge', () => ({
+vi.mock('../../ui/StatusBadge', () => ({
   StatusBadge: ({ children }: { children: React.ReactNode }) => <span data-testid="status-badge">{children}</span>,
 }))
 
@@ -61,7 +61,7 @@ describe('NodeConditions', () => {
 
   describe('Loading state', () => {
     it('renders pulse skeletons when isLoading and no nodes', async () => {
-      const { useCachedNodes } = await import('../../hooks/useCachedData')
+      const { useCachedNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedNodes).mockReturnValue({
         nodes: [], isLoading: true, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
       } as never)
@@ -73,7 +73,7 @@ describe('NodeConditions', () => {
 
   describe('Filter pills', () => {
     it('renders all 4 filter pills', async () => {
-      const { useCachedNodes } = await import('../../hooks/useCachedData')
+      const { useCachedNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedNodes).mockReturnValue({
         nodes: [makeNode()], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
       } as never)
@@ -85,7 +85,7 @@ describe('NodeConditions', () => {
     })
 
     it('shows correct count in all pill', async () => {
-      const { useCachedNodes } = await import('../../hooks/useCachedData')
+      const { useCachedNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedNodes).mockReturnValue({
         nodes: [makeNode(), makeNode({ name: 'node-2' })],
         isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
@@ -95,7 +95,7 @@ describe('NodeConditions', () => {
     })
 
     it('filters to cordoned nodes on cordoned pill click', async () => {
-      const { useCachedNodes } = await import('../../hooks/useCachedData')
+      const { useCachedNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedNodes).mockReturnValue({
         nodes: [
           makeNode({ name: 'node-1', unschedulable: false }),
@@ -111,7 +111,7 @@ describe('NodeConditions', () => {
     })
 
     it('filters to healthy nodes', async () => {
-      const { useCachedNodes } = await import('../../hooks/useCachedData')
+      const { useCachedNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedNodes).mockReturnValue({
         nodes: [
           makeNode({ name: 'healthy-node' }),
@@ -128,7 +128,7 @@ describe('NodeConditions', () => {
 
   describe('Node rows', () => {
     it('renders node name and cluster', async () => {
-      const { useCachedNodes } = await import('../../hooks/useCachedData')
+      const { useCachedNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedNodes).mockReturnValue({
         nodes: [makeNode()],
         isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
@@ -139,7 +139,7 @@ describe('NodeConditions', () => {
     })
 
     it('shows Cordoned badge for unschedulable nodes', async () => {
-      const { useCachedNodes } = await import('../../hooks/useCachedData')
+      const { useCachedNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedNodes).mockReturnValue({
         nodes: [makeNode({ unschedulable: true })],
         isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
@@ -149,7 +149,7 @@ describe('NodeConditions', () => {
     })
 
     it('shows pressure labels for nodes under disk/mem/pid pressure', async () => {
-      const { useCachedNodes } = await import('../../hooks/useCachedData')
+      const { useCachedNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedNodes).mockReturnValue({
         nodes: [makeNode({
           conditions: [
@@ -166,7 +166,7 @@ describe('NodeConditions', () => {
 
   describe('Cordon/Uncordon action', () => {
     it('shows cordon button for schedulable nodes', async () => {
-      const { useCachedNodes } = await import('../../hooks/useCachedData')
+      const { useCachedNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedNodes).mockReturnValue({
         nodes: [makeNode()],
         isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
@@ -176,7 +176,7 @@ describe('NodeConditions', () => {
     })
 
     it('shows uncordon button for cordoned nodes', async () => {
-      const { useCachedNodes } = await import('../../hooks/useCachedData')
+      const { useCachedNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedNodes).mockReturnValue({
         nodes: [makeNode({ unschedulable: true })],
         isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
@@ -186,7 +186,7 @@ describe('NodeConditions', () => {
     })
 
     it('shows confirmation dialog when cordon button clicked', async () => {
-      const { useCachedNodes } = await import('../../hooks/useCachedData')
+      const { useCachedNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedNodes).mockReturnValue({
         nodes: [makeNode()],
         isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
@@ -197,7 +197,7 @@ describe('NodeConditions', () => {
     })
 
     it('cancels action when cancel button clicked', async () => {
-      const { useCachedNodes } = await import('../../hooks/useCachedData')
+      const { useCachedNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedNodes).mockReturnValue({
         nodes: [makeNode()],
         isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
@@ -209,7 +209,7 @@ describe('NodeConditions', () => {
     })
 
     it('calls execute with cordon command on confirm', async () => {
-      const { useCachedNodes } = await import('../../hooks/useCachedData')
+      const { useCachedNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedNodes).mockReturnValue({
         nodes: [makeNode()],
         isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
@@ -224,7 +224,7 @@ describe('NodeConditions', () => {
     })
 
     it('shows error message when execute fails', async () => {
-      const { useCachedNodes } = await import('../../hooks/useCachedData')
+      const { useCachedNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedNodes).mockReturnValue({
         nodes: [makeNode()],
         isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
@@ -240,7 +240,7 @@ describe('NodeConditions', () => {
 
   describe('Overflow truncation', () => {
     it('shows "more nodes" message when over 20 nodes', async () => {
-      const { useCachedNodes } = await import('../../hooks/useCachedData')
+      const { useCachedNodes } = await import('../../../hooks/useCachedData')
       const nodes = Array.from({ length: 25 }, (_, i) => makeNode({ name: `node-${i}` }))
       vi.mocked(useCachedNodes).mockReturnValue({
         nodes, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,

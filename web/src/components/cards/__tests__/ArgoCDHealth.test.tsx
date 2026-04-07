@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { ArgoCDHealth } from './ArgoCDHealth'
+import { ArgoCDHealth } from '../ArgoCDHealth'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-vi.mock('../../hooks/useArgoCD', () => ({
+vi.mock('../../../hooks/useArgoCD', () => ({
   useArgoCDHealth: () => ({
     stats: { healthy: 0, degraded: 0, progressing: 0, missing: 0, unknown: 0 },
     total: 0,
@@ -17,11 +17,11 @@ vi.mock('../../hooks/useArgoCD', () => ({
   }),
 }))
 
-vi.mock('./CardDataContext', () => ({
+vi.mock('../CardDataContext', () => ({
   useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
 }))
 
-vi.mock('../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false }),
 }))
 
@@ -29,7 +29,7 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }))
 
-vi.mock('../ui/Skeleton', () => ({
+vi.mock('../../ui/Skeleton', () => ({
   Skeleton: () => <div data-testid="skeleton" />,
 }))
 
@@ -40,7 +40,7 @@ describe('ArgoCDHealth', () => {
 
   describe('Skeleton', () => {
     it('renders skeletons during loading', async () => {
-      const { useCardLoadingState } = await import('./CardDataContext')
+      const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: true, showEmptyState: false } as never)
       render(<ArgoCDHealth />)
       expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0)
@@ -49,7 +49,7 @@ describe('ArgoCDHealth', () => {
 
   describe('Empty state', () => {
     it('shows no data message when showEmptyState', async () => {
-      const { useCardLoadingState } = await import('./CardDataContext')
+      const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false, showEmptyState: true } as never)
       render(<ArgoCDHealth />)
       expect(screen.getByText('argoCDHealth.noData')).toBeTruthy()
@@ -58,7 +58,7 @@ describe('ArgoCDHealth', () => {
 
   describe('Health gauge', () => {
     it('renders healthy percent and total', async () => {
-      const { useArgoCDHealth } = await import('../../hooks/useArgoCD')
+      const { useArgoCDHealth } = await import('../../../hooks/useArgoCD')
       vi.mocked(useArgoCDHealth).mockReturnValue({
         stats: { healthy: 8, degraded: 1, progressing: 1, missing: 0, unknown: 0 },
         total: 10,
@@ -77,7 +77,7 @@ describe('ArgoCDHealth', () => {
 
   describe('Health breakdown rows', () => {
     it('renders all 5 health status rows', async () => {
-      const { useArgoCDHealth } = await import('../../hooks/useArgoCD')
+      const { useArgoCDHealth } = await import('../../../hooks/useArgoCD')
       vi.mocked(useArgoCDHealth).mockReturnValue({
         stats: { healthy: 5, degraded: 2, progressing: 1, missing: 0, unknown: 1 },
         total: 9,
@@ -97,7 +97,7 @@ describe('ArgoCDHealth', () => {
     })
 
     it('shows correct counts per row', async () => {
-      const { useArgoCDHealth } = await import('../../hooks/useArgoCD')
+      const { useArgoCDHealth } = await import('../../../hooks/useArgoCD')
       vi.mocked(useArgoCDHealth).mockReturnValue({
         stats: { healthy: 7, degraded: 3, progressing: 0, missing: 0, unknown: 0 },
         total: 10,
@@ -116,7 +116,7 @@ describe('ArgoCDHealth', () => {
 
   describe('Demo notice', () => {
     it('shows integration notice when isDemoData is true', async () => {
-      const { useArgoCDHealth } = await import('../../hooks/useArgoCD')
+      const { useArgoCDHealth } = await import('../../../hooks/useArgoCD')
       vi.mocked(useArgoCDHealth).mockReturnValue({
         stats: { healthy: 1, degraded: 0, progressing: 0, missing: 0, unknown: 0 },
         total: 1,
@@ -139,7 +139,7 @@ describe('ArgoCDHealth', () => {
 
   describe('Docs link', () => {
     it('renders external link to ArgoCD docs', async () => {
-      const { useArgoCDHealth } = await import('../../hooks/useArgoCD')
+      const { useArgoCDHealth } = await import('../../../hooks/useArgoCD')
       vi.mocked(useArgoCDHealth).mockReturnValue({
         stats: { healthy: 1, degraded: 0, progressing: 0, missing: 0, unknown: 0 },
         total: 1,

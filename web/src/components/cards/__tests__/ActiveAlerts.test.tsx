@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { ActiveAlerts } from './ActiveAlerts'
+import { ActiveAlerts } from '../ActiveAlerts'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -8,7 +8,7 @@ const mockAcknowledgeAlert = vi.fn()
 const mockRunAIDiagnosis = vi.fn()
 const mockDrillToAlert = vi.fn()
 
-vi.mock('../../hooks/useAlerts', () => ({
+vi.mock('../../../hooks/useAlerts', () => ({
   useAlerts: () => ({
     activeAlerts: [],
     acknowledgedAlerts: [],
@@ -18,7 +18,7 @@ vi.mock('../../hooks/useAlerts', () => ({
   }),
 }))
 
-vi.mock('../../hooks/useGlobalFilters', () => ({
+vi.mock('../../../hooks/useGlobalFilters', () => ({
   useGlobalFilters: () => ({
     selectedSeverities: ['critical', 'warning', 'info'],
     isAllSeveritiesSelected: true,
@@ -26,23 +26,23 @@ vi.mock('../../hooks/useGlobalFilters', () => ({
   }),
 }))
 
-vi.mock('../../hooks/useDrillDown', () => ({
+vi.mock('../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({ drillToAlert: mockDrillToAlert }),
 }))
 
-vi.mock('../../hooks/useMissions', () => ({
+vi.mock('../../../hooks/useMissions', () => ({
   useMissions: () => ({ missions: [], setActiveMission: vi.fn(), openSidebar: vi.fn() }),
 }))
 
-vi.mock('./CardDataContext', () => ({
+vi.mock('../CardDataContext', () => ({
   useCardLoadingState: () => ({ showSkeleton: false, showEmptyState: false }),
 }))
 
-vi.mock('../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false }),
 }))
 
-vi.mock('../../lib/cards/cardHooks', () => ({
+vi.mock('../../../lib/cards/cardHooks', () => ({
   useCardData: (_items: unknown[], _opts: unknown) => ({
     items: [],
     totalItems: 0,
@@ -78,30 +78,30 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-vi.mock('../../lib/cards/CardComponents', () => ({
+vi.mock('../../../lib/cards/CardComponents', () => ({
   CardSearchInput: ({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) => (
     <input data-testid="search-input" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} />
   ),
   CardClusterFilter: () => <div data-testid="cluster-filter" />,
 }))
 
-vi.mock('../ui/CardControls', () => ({
+vi.mock('../../ui/CardControls', () => ({
   CardControls: () => <div data-testid="card-controls" />,
 }))
 
-vi.mock('../ui/StatusBadge', () => ({
+vi.mock('../../ui/StatusBadge', () => ({
   StatusBadge: ({ children }: { children: React.ReactNode }) => <span data-testid="status-badge">{children}</span>,
 }))
 
-vi.mock('../ui/Pagination', () => ({
+vi.mock('../../ui/Pagination', () => ({
   Pagination: () => <div data-testid="pagination" />,
 }))
 
-vi.mock('./NotificationVerifyIndicator', () => ({
+vi.mock('../NotificationVerifyIndicator', () => ({
   NotificationVerifyIndicator: () => <div data-testid="notification-indicator" />,
 }))
 
-vi.mock('./AlertListItem', () => ({
+vi.mock('../AlertListItem', () => ({
   AlertListItem: ({ alert }: { alert: { ruleName: string } }) => (
     <div data-testid="alert-item">{alert.ruleName}</div>
   ),
@@ -189,10 +189,10 @@ describe('ActiveAlerts', () => {
         details: {},
       }
 
-      vi.mocked(vi.importMock('../../hooks/useAlerts') as never)
+      vi.mocked(vi.importMock('../../../hooks/useAlerts') as never)
 
       // Re-mock useAlerts with an alert
-      vi.doMock('../../hooks/useAlerts', () => ({
+      vi.doMock('../../../hooks/useAlerts', () => ({
         useAlerts: () => ({
           activeAlerts: [alert],
           acknowledgedAlerts: [],

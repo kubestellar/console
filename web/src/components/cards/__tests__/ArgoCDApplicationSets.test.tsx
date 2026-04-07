@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { ArgoCDApplicationSets } from './ArgoCDApplicationSets'
+import { ArgoCDApplicationSets } from '../ArgoCDApplicationSets'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -18,7 +18,7 @@ const makeAppSet = (overrides = {}) => ({
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-vi.mock('../../hooks/useArgoCD', () => ({
+vi.mock('../../../hooks/useArgoCD', () => ({
   useArgoApplicationSets: () => ({
     applicationSets: [],
     isLoading: false,
@@ -29,11 +29,11 @@ vi.mock('../../hooks/useArgoCD', () => ({
   }),
 }))
 
-vi.mock('./CardDataContext', () => ({
+vi.mock('../CardDataContext', () => ({
   useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
 }))
 
-vi.mock('../../lib/cards/cardHooks', () => ({
+vi.mock('../../../lib/cards/cardHooks', () => ({
   useCardData: (items: unknown[], _opts: unknown) => ({
     items,
     totalItems: (items as unknown[]).length,
@@ -72,25 +72,25 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-vi.mock('../../lib/cards/CardComponents', () => ({
+vi.mock('../../../lib/cards/CardComponents', () => ({
   CardSearchInput: () => <input data-testid="search" />,
   CardControlsRow: () => <div data-testid="controls-row" />,
   CardPaginationFooter: () => <div data-testid="pagination" />,
 }))
 
-vi.mock('../ui/Skeleton', () => ({
+vi.mock('../../ui/Skeleton', () => ({
   Skeleton: () => <div data-testid="skeleton" />,
 }))
 
-vi.mock('../ui/ClusterBadge', () => ({
+vi.mock('../../ui/ClusterBadge', () => ({
   ClusterBadge: ({ cluster }: { cluster: string }) => <span>{cluster}</span>,
 }))
 
-vi.mock('../ui/StatusBadge', () => ({
+vi.mock('../../ui/StatusBadge', () => ({
   StatusBadge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }))
 
-vi.mock('./DynamicCardErrorBoundary', () => ({
+vi.mock('../DynamicCardErrorBoundary', () => ({
   DynamicCardErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
@@ -101,7 +101,7 @@ describe('ArgoCDApplicationSets', () => {
 
   describe('Skeleton', () => {
     it('renders skeletons during loading', async () => {
-      const { useCardLoadingState } = await import('./CardDataContext')
+      const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: true, showEmptyState: false } as never)
       render(<ArgoCDApplicationSets />)
       expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0)
@@ -110,7 +110,7 @@ describe('ArgoCDApplicationSets', () => {
 
   describe('Empty state', () => {
     it('shows no ApplicationSets message', async () => {
-      const { useCardLoadingState } = await import('./CardDataContext')
+      const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false, showEmptyState: true } as never)
       render(<ArgoCDApplicationSets />)
       expect(screen.getByText('No ApplicationSets found')).toBeTruthy()
@@ -119,7 +119,7 @@ describe('ArgoCDApplicationSets', () => {
 
   describe('Stats row', () => {
     it('renders healthy, progressing, error counts', async () => {
-      const { useArgoApplicationSets } = await import('../../hooks/useArgoCD')
+      const { useArgoApplicationSets } = await import('../../../hooks/useArgoCD')
       vi.mocked(useArgoApplicationSets).mockReturnValue({
         applicationSets: [
           makeAppSet({ status: 'Healthy' }),
@@ -141,7 +141,7 @@ describe('ArgoCDApplicationSets', () => {
 
   describe('AppSet list', () => {
     it('renders appset name', async () => {
-      const { useArgoApplicationSets } = await import('../../hooks/useArgoCD')
+      const { useArgoApplicationSets } = await import('../../../hooks/useArgoCD')
       vi.mocked(useArgoApplicationSets).mockReturnValue({
         applicationSets: [makeAppSet()],
         isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoData: false,
@@ -151,7 +151,7 @@ describe('ArgoCDApplicationSets', () => {
     })
 
     it('renders app count badge', async () => {
-      const { useArgoApplicationSets } = await import('../../hooks/useArgoCD')
+      const { useArgoApplicationSets } = await import('../../../hooks/useArgoCD')
       vi.mocked(useArgoApplicationSets).mockReturnValue({
         applicationSets: [makeAppSet({ appCount: 5 })],
         isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoData: false,
@@ -161,7 +161,7 @@ describe('ArgoCDApplicationSets', () => {
     })
 
     it('renders sync policy badge', async () => {
-      const { useArgoApplicationSets } = await import('../../hooks/useArgoCD')
+      const { useArgoApplicationSets } = await import('../../../hooks/useArgoCD')
       vi.mocked(useArgoApplicationSets).mockReturnValue({
         applicationSets: [makeAppSet({ syncPolicy: 'Automated' })],
         isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoData: false,
@@ -171,7 +171,7 @@ describe('ArgoCDApplicationSets', () => {
     })
 
     it('renders template line when template exists', async () => {
-      const { useArgoApplicationSets } = await import('../../hooks/useArgoCD')
+      const { useArgoApplicationSets } = await import('../../../hooks/useArgoCD')
       vi.mocked(useArgoApplicationSets).mockReturnValue({
         applicationSets: [makeAppSet({ template: 'my-template' })],
         isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoData: false,
@@ -181,7 +181,7 @@ describe('ArgoCDApplicationSets', () => {
     })
 
     it('renders demo notice when isDemoData is true', async () => {
-      const { useArgoApplicationSets } = await import('../../hooks/useArgoCD')
+      const { useArgoApplicationSets } = await import('../../../hooks/useArgoCD')
       vi.mocked(useArgoApplicationSets).mockReturnValue({
         applicationSets: [makeAppSet()],
         isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoData: true,
@@ -193,7 +193,7 @@ describe('ArgoCDApplicationSets', () => {
 
   describe('Config filtering', () => {
     it('filters by config.cluster when provided', async () => {
-      const { useArgoApplicationSets } = await import('../../hooks/useArgoCD')
+      const { useArgoApplicationSets } = await import('../../../hooks/useArgoCD')
       vi.mocked(useArgoApplicationSets).mockReturnValue({
         applicationSets: [
           makeAppSet({ cluster: 'cluster-1' }),

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { GPUInventory } from './GPUInventory'
+import { GPUInventory } from '../GPUInventory'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -17,7 +17,7 @@ const mockDrillToGPUNode = vi.fn()
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-vi.mock('../../hooks/useCachedData', () => ({
+vi.mock('../../../hooks/useCachedData', () => ({
   useCachedGPUNodes: () => ({
     nodes: [],
     isLoading: false,
@@ -29,15 +29,15 @@ vi.mock('../../hooks/useCachedData', () => ({
   }),
 }))
 
-vi.mock('../../hooks/useDrillDown', () => ({
+vi.mock('../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({ drillToGPUNode: mockDrillToGPUNode }),
 }))
 
-vi.mock('./CardDataContext', () => ({
+vi.mock('../CardDataContext', () => ({
   useCardLoadingState: vi.fn(() => ({})),
 }))
 
-vi.mock('../../lib/cards/cardHooks', () => ({
+vi.mock('../../../lib/cards/cardHooks', () => ({
   useCardData: (items: unknown[], _opts: unknown) => ({
     items,
     totalItems: (items as unknown[]).length,
@@ -79,30 +79,30 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-vi.mock('../../lib/cards/CardComponents', () => ({
+vi.mock('../../../lib/cards/CardComponents', () => ({
   CardSearchInput: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
     <input data-testid="search" value={value} onChange={e => onChange(e.target.value)} />
   ),
   CardClusterFilter: () => <div data-testid="cluster-filter" />,
 }))
 
-vi.mock('../ui/CardControls', () => ({
+vi.mock('../../ui/CardControls', () => ({
   CardControls: () => <div data-testid="card-controls" />,
 }))
 
-vi.mock('../ui/Pagination', () => ({
+vi.mock('../../ui/Pagination', () => ({
   Pagination: () => <div data-testid="pagination" />,
 }))
 
-vi.mock('../ui/Skeleton', () => ({
+vi.mock('../../ui/Skeleton', () => ({
   Skeleton: () => <div data-testid="skeleton" />,
 }))
 
-vi.mock('../ui/ClusterBadge', () => ({
+vi.mock('../../ui/ClusterBadge', () => ({
   ClusterBadge: ({ cluster }: { cluster: string }) => <span>{cluster}</span>,
 }))
 
-vi.mock('../ui/StatusBadge', () => ({
+vi.mock('../../ui/StatusBadge', () => ({
   StatusBadge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }))
 
@@ -113,7 +113,7 @@ describe('GPUInventory', () => {
 
   describe('Loading skeleton', () => {
     it('renders skeletons when isLoading and no nodes', async () => {
-      const { useCachedGPUNodes } = await import('../../hooks/useCachedData')
+      const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [], isLoading: true, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
       } as never)
@@ -132,7 +132,7 @@ describe('GPUInventory', () => {
 
   describe('Summary stats', () => {
     it('renders total, in-use, available GPU counts', async () => {
-      const { useCachedGPUNodes } = await import('../../hooks/useCachedData')
+      const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [makeNode()],
         isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
@@ -147,7 +147,7 @@ describe('GPUInventory', () => {
     })
 
     it('renders green badge with total GPU count', async () => {
-      const { useCachedGPUNodes } = await import('../../hooks/useCachedData')
+      const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [makeNode()],
         isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
@@ -159,7 +159,7 @@ describe('GPUInventory', () => {
 
   describe('Node list', () => {
     it('renders node name', async () => {
-      const { useCachedGPUNodes } = await import('../../hooks/useCachedData')
+      const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [makeNode()],
         isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
@@ -169,7 +169,7 @@ describe('GPUInventory', () => {
     })
 
     it('renders cluster badge', async () => {
-      const { useCachedGPUNodes } = await import('../../hooks/useCachedData')
+      const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [makeNode()],
         isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
@@ -179,7 +179,7 @@ describe('GPUInventory', () => {
     })
 
     it('renders GPU type and allocated/total', async () => {
-      const { useCachedGPUNodes } = await import('../../hooks/useCachedData')
+      const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [makeNode()],
         isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
@@ -190,7 +190,7 @@ describe('GPUInventory', () => {
     })
 
     it('calls drillToGPUNode on row click', async () => {
-      const { useCachedGPUNodes } = await import('../../hooks/useCachedData')
+      const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [makeNode()],
         isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
@@ -205,7 +205,7 @@ describe('GPUInventory', () => {
     })
 
     it('renders utilization progress bar', async () => {
-      const { useCachedGPUNodes } = await import('../../hooks/useCachedData')
+      const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [makeNode()],
         isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
@@ -219,7 +219,7 @@ describe('GPUInventory', () => {
 
   describe('Error banner', () => {
     it('shows simulated data warning when error exists', async () => {
-      const { useCachedGPUNodes } = await import('../../hooks/useCachedData')
+      const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [makeNode()],
         isLoading: false, isRefreshing: false, error: 'connection refused', isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
@@ -229,7 +229,7 @@ describe('GPUInventory', () => {
     })
 
     it('hides simulated data warning when no error', async () => {
-      const { useCachedGPUNodes } = await import('../../hooks/useCachedData')
+      const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [makeNode()],
         isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
@@ -241,7 +241,7 @@ describe('GPUInventory', () => {
 
   describe('Controls', () => {
     it('renders search input', async () => {
-      const { useCachedGPUNodes } = await import('../../hooks/useCachedData')
+      const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [makeNode()],
         isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
@@ -251,7 +251,7 @@ describe('GPUInventory', () => {
     })
 
     it('renders cluster filter', async () => {
-      const { useCachedGPUNodes } = await import('../../hooks/useCachedData')
+      const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [makeNode()],
         isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,

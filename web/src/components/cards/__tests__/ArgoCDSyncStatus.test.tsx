@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { ArgoCDSyncStatus } from './ArgoCDSyncStatus'
+import { ArgoCDSyncStatus } from '../ArgoCDSyncStatus'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-vi.mock('../../hooks/useArgoCD', () => ({
+vi.mock('../../../hooks/useArgoCD', () => ({
   useArgoCDSyncStatus: (_filter: string[]) => ({
     stats: { synced: 0, outOfSync: 0, unknown: 0 },
     total: 0,
@@ -18,15 +18,15 @@ vi.mock('../../hooks/useArgoCD', () => ({
   }),
 }))
 
-vi.mock('./CardDataContext', () => ({
+vi.mock('../CardDataContext', () => ({
   useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
 }))
 
-vi.mock('../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false }),
 }))
 
-vi.mock('../../lib/cards/cardHooks', () => ({
+vi.mock('../../../lib/cards/cardHooks', () => ({
   useChartFilters: () => ({
     localClusterFilter: [],
     toggleClusterFilter: vi.fn(),
@@ -42,11 +42,11 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }))
 
-vi.mock('../ui/Skeleton', () => ({
+vi.mock('../../ui/Skeleton', () => ({
   Skeleton: () => <div data-testid="skeleton" />,
 }))
 
-vi.mock('../../lib/cards/CardComponents', () => ({
+vi.mock('../../../lib/cards/CardComponents', () => ({
   CardClusterFilter: () => <div data-testid="cluster-filter" />,
 }))
 
@@ -57,7 +57,7 @@ describe('ArgoCDSyncStatus', () => {
 
   describe('Skeleton', () => {
     it('renders skeletons during loading', async () => {
-      const { useCardLoadingState } = await import('./CardDataContext')
+      const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: true, showEmptyState: false } as never)
       render(<ArgoCDSyncStatus />)
       expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0)
@@ -66,7 +66,7 @@ describe('ArgoCDSyncStatus', () => {
 
   describe('Empty state', () => {
     it('shows no data message', async () => {
-      const { useCardLoadingState } = await import('./CardDataContext')
+      const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false, showEmptyState: true } as never)
       render(<ArgoCDSyncStatus />)
       expect(screen.getByText('argoCDSyncStatus.noData')).toBeTruthy()
@@ -75,7 +75,7 @@ describe('ArgoCDSyncStatus', () => {
 
   describe('Stats legend', () => {
     it('renders synced, out-of-sync, unknown rows', async () => {
-      const { useArgoCDSyncStatus } = await import('../../hooks/useArgoCD')
+      const { useArgoCDSyncStatus } = await import('../../../hooks/useArgoCD')
       vi.mocked(useArgoCDSyncStatus).mockReturnValue({
         stats: { synced: 8, outOfSync: 2, unknown: 0 },
         total: 10,
@@ -94,7 +94,7 @@ describe('ArgoCDSyncStatus', () => {
     })
 
     it('shows correct counts', async () => {
-      const { useArgoCDSyncStatus } = await import('../../hooks/useArgoCD')
+      const { useArgoCDSyncStatus } = await import('../../../hooks/useArgoCD')
       vi.mocked(useArgoCDSyncStatus).mockReturnValue({
         stats: { synced: 6, outOfSync: 3, unknown: 1 },
         total: 10,
@@ -115,7 +115,7 @@ describe('ArgoCDSyncStatus', () => {
 
   describe('Donut chart', () => {
     it('renders total apps in centre of donut', async () => {
-      const { useArgoCDSyncStatus } = await import('../../hooks/useArgoCD')
+      const { useArgoCDSyncStatus } = await import('../../../hooks/useArgoCD')
       vi.mocked(useArgoCDSyncStatus).mockReturnValue({
         stats: { synced: 10, outOfSync: 0, unknown: 0 },
         total: 10,
@@ -135,7 +135,7 @@ describe('ArgoCDSyncStatus', () => {
 
   describe('Demo notice', () => {
     it('shows integration notice when isDemoData', async () => {
-      const { useArgoCDSyncStatus } = await import('../../hooks/useArgoCD')
+      const { useArgoCDSyncStatus } = await import('../../../hooks/useArgoCD')
       vi.mocked(useArgoCDSyncStatus).mockReturnValue({
         stats: { synced: 1, outOfSync: 0, unknown: 0 },
         total: 1,
@@ -154,7 +154,7 @@ describe('ArgoCDSyncStatus', () => {
 
   describe('Cluster filter', () => {
     it('renders cluster filter dropdown', async () => {
-      const { useArgoCDSyncStatus } = await import('../../hooks/useArgoCD')
+      const { useArgoCDSyncStatus } = await import('../../../hooks/useArgoCD')
       vi.mocked(useArgoCDSyncStatus).mockReturnValue({
         stats: { synced: 1, outOfSync: 0, unknown: 0 },
         total: 1,

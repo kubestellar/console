@@ -60,23 +60,23 @@ vi.mock('../clusters/utils', () => ({
   isClusterHealthy: (c: ClusterInfo) => c.healthy === true,
 }))
 
-vi.mock('../ui/Skeleton', () => ({
+vi.mock('../../ui/Skeleton', () => ({
   Skeleton: ({ variant }: { variant: string }) => <div data-testid={`skeleton-${variant}`} />,
   SkeletonStats: () => <div data-testid="skeleton-stats" />,
   SkeletonList: () => <div data-testid="skeleton-list" />,
 }))
 
-vi.mock('../ui/StatusBadge', () => ({
+vi.mock('../../ui/StatusBadge', () => ({
   StatusBadge: ({ children }: { children: React.ReactNode }) => (
     <span data-testid="status-badge">{children}</span>
   ),
 }))
 
-vi.mock('../ui/RefreshIndicator', () => ({
+vi.mock('../../ui/RefreshIndicator', () => ({
   RefreshIndicator: () => <div data-testid="refresh-indicator" />,
 }))
 
-vi.mock('../ui/CloudProviderIcon', () => ({
+vi.mock('../../ui/CloudProviderIcon', () => ({
   CloudProviderIcon: ({ provider }: { provider: string }) => <span data-testid={`cloud-${provider}`} />,
   detectCloudProvider: () => 'other',
   getProviderLabel: () => 'Other',

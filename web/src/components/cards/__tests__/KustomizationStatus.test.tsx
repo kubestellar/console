@@ -1,19 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { KustomizationStatus } from './KustomizationStatus'
+import { KustomizationStatus } from '../KustomizationStatus'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 const mockDrillToKustomization = vi.fn()
 
-vi.mock('../../hooks/useMCP', () => ({
+vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => ({
     deduplicatedClusters: [{ name: 'cluster-1' }, { name: 'cluster-2' }],
     isLoading: false,
   }),
 }))
 
-vi.mock('../../hooks/useGlobalFilters', () => ({
+vi.mock('../../../hooks/useGlobalFilters', () => ({
   useGlobalFilters: () => ({
     selectedClusters: [],
     isAllClustersSelected: true,
@@ -21,19 +21,19 @@ vi.mock('../../hooks/useGlobalFilters', () => ({
   }),
 }))
 
-vi.mock('../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: true }), // demo so we get data
 }))
 
-vi.mock('../../hooks/useDrillDown', () => ({
+vi.mock('../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({ drillToKustomization: mockDrillToKustomization }),
 }))
 
-vi.mock('./CardDataContext', () => ({
+vi.mock('../CardDataContext', () => ({
   useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
 }))
 
-vi.mock('../../lib/cards/cardHooks', () => ({
+vi.mock('../../../lib/cards/cardHooks', () => ({
   useCardData: (items: unknown[], _opts: unknown) => ({
     items,
     totalItems: (items as unknown[]).length,
@@ -74,18 +74,18 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-vi.mock('../../lib/cards/CardComponents', () => ({
+vi.mock('../../../lib/cards/CardComponents', () => ({
   CardSearchInput: () => <input data-testid="search" />,
   CardControlsRow: () => <div data-testid="controls-row" />,
   CardPaginationFooter: () => <div data-testid="pagination" />,
   CardAIActions: () => <div data-testid="ai-actions" />,
 }))
 
-vi.mock('../ui/Skeleton', () => ({
+vi.mock('../../ui/Skeleton', () => ({
   Skeleton: () => <div data-testid="skeleton" />,
 }))
 
-vi.mock('../ui/ClusterBadge', () => ({
+vi.mock('../../ui/ClusterBadge', () => ({
   ClusterBadge: ({ cluster }: { cluster: string }) => <span>{cluster}</span>,
 }))
 
@@ -96,7 +96,7 @@ describe('KustomizationStatus', () => {
 
   describe('Skeleton', () => {
     it('renders skeletons during loading', async () => {
-      const { useCardLoadingState } = await import('./CardDataContext')
+      const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: true, showEmptyState: false } as never)
       render(<KustomizationStatus />)
       expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0)
@@ -105,7 +105,7 @@ describe('KustomizationStatus', () => {
 
   describe('Empty state', () => {
     it('shows no kustomizations message', async () => {
-      const { useCardLoadingState } = await import('./CardDataContext')
+      const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false, showEmptyState: true } as never)
       render(<KustomizationStatus />)
       expect(screen.getByText('cards:kustomizationStatus.noKustomizations')).toBeTruthy()

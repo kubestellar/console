@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { AppStatus } from './AppStatus'
+import { AppStatus } from '../AppStatus'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -16,7 +16,7 @@ const makeDeployment = (overrides = {}) => ({
   ...overrides,
 })
 
-vi.mock('../../hooks/useCachedData', () => ({
+vi.mock('../../../hooks/useCachedData', () => ({
   useCachedDeployments: () => ({
     deployments: [],
     isLoading: false,
@@ -28,11 +28,11 @@ vi.mock('../../hooks/useCachedData', () => ({
   }),
 }))
 
-vi.mock('../../hooks/useDrillDown', () => ({
+vi.mock('../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({ drillToDeployment: mockDrillToDeployment }),
 }))
 
-vi.mock('../../hooks/useGlobalFilters', () => ({
+vi.mock('../../../hooks/useGlobalFilters', () => ({
   useGlobalFilters: () => ({
     selectedClusters: [],
     isAllClustersSelected: true,
@@ -40,11 +40,11 @@ vi.mock('../../hooks/useGlobalFilters', () => ({
   }),
 }))
 
-vi.mock('./CardDataContext', () => ({
+vi.mock('../CardDataContext', () => ({
   useCardLoadingState: () => ({ showSkeleton: false, showEmptyState: false }),
 }))
 
-vi.mock('../../lib/cards/cardHooks', () => ({
+vi.mock('../../../lib/cards/cardHooks', () => ({
   useCardData: (_items: unknown[], _opts: unknown) => ({
     items: _items,
     totalItems: (_items as unknown[]).length,
@@ -83,7 +83,7 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }))
 
-vi.mock('../../lib/cards/CardComponents', () => ({
+vi.mock('../../../lib/cards/CardComponents', () => ({
   CardSearchInput: () => <input data-testid="search" />,
   CardControlsRow: () => <div data-testid="controls-row" />,
   CardPaginationFooter: () => <div data-testid="pagination" />,
@@ -91,11 +91,11 @@ vi.mock('../../lib/cards/CardComponents', () => ({
   CardAIActions: () => <div data-testid="ai-actions" />,
 }))
 
-vi.mock('../ui/RefreshIndicator', () => ({
+vi.mock('../../ui/RefreshIndicator', () => ({
   RefreshIndicator: () => <div data-testid="refresh-indicator" />,
 }))
 
-vi.mock('../ui/ClusterBadge', () => ({
+vi.mock('../../ui/ClusterBadge', () => ({
   ClusterBadge: ({ cluster }: { cluster: string }) => <span>{cluster}</span>,
 }))
 
@@ -106,7 +106,7 @@ describe('AppStatus', () => {
 
   describe('Skeleton', () => {
     it('renders skeleton when showSkeleton is true', () => {
-      vi.doMock('./CardDataContext', () => ({
+      vi.doMock('../CardDataContext', () => ({
         useCardLoadingState: () => ({ showSkeleton: true, showEmptyState: false }),
       }))
     })
@@ -135,10 +135,10 @@ describe('AppStatus', () => {
   describe('App list', () => {
     it('renders app rows for each aggregated deployment', () => {
       const { useCachedDeployments } = vi.mocked(
-        await vi.importMock('../../hooks/useCachedData') as { useCachedDeployments: () => unknown }
+        await vi.importMock('../../../hooks/useCachedData') as { useCachedDeployments: () => unknown }
       )
 
-      vi.doMock('../../hooks/useCachedData', () => ({
+      vi.doMock('../../../hooks/useCachedData', () => ({
         useCachedDeployments: () => ({
           deployments: [
             makeDeployment({ name: 'api', cluster: 'cluster-1' }),

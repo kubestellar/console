@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { ControlPlaneHealth } from './ControlPlaneHealth'
+import { ControlPlaneHealth } from '../ControlPlaneHealth'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -16,7 +16,7 @@ const makePod = (overrides = {}) => ({
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-vi.mock('../../hooks/useCachedData', () => ({
+vi.mock('../../../hooks/useCachedData', () => ({
   useCachedPods: () => ({
     pods: [],
     isLoading: false,
@@ -27,14 +27,14 @@ vi.mock('../../hooks/useCachedData', () => ({
   }),
 }))
 
-vi.mock('../../hooks/useMCP', () => ({
+vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => ({
     clusters: [{ name: 'cluster-1' }],
     isLoading: false,
   }),
 }))
 
-vi.mock('./CardDataContext', () => ({
+vi.mock('../CardDataContext', () => ({
   useCardLoadingState: vi.fn(() => ({ showSkeleton: false })),
 }))
 
@@ -47,7 +47,7 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-vi.mock('../ui/Skeleton', () => ({
+vi.mock('../../ui/Skeleton', () => ({
   Skeleton: ({ height }: { height: number }) => <div data-testid="skeleton" style={{ height }} />,
 }))
 
@@ -58,7 +58,7 @@ describe('ControlPlaneHealth', () => {
 
   describe('Skeleton state', () => {
     it('renders skeletons when showSkeleton is true', async () => {
-      const { useCardLoadingState } = await import('./CardDataContext')
+      const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: true } as never)
       render(<ControlPlaneHealth />)
       expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0)
@@ -67,7 +67,7 @@ describe('ControlPlaneHealth', () => {
 
   describe('Managed cluster state', () => {
     it('shows managed cluster UI when no control-plane pods found and clusters exist', async () => {
-      const { useCardLoadingState } = await import('./CardDataContext')
+      const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
       render(<ControlPlaneHealth />)
       expect(screen.getByText('controlPlaneHealth.managedCluster')).toBeTruthy()
@@ -76,7 +76,7 @@ describe('ControlPlaneHealth', () => {
 
   describe('Component status rows', () => {
     it('renders all 5 component rows when control-plane pods are found', async () => {
-      const { useCachedPods } = await import('../../hooks/useCachedData')
+      const { useCachedPods } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedPods).mockReturnValue({
         pods: [
           makePod({ labels: { component: 'kube-apiserver' } }),
@@ -92,7 +92,7 @@ describe('ControlPlaneHealth', () => {
         consecutiveFailures: 0,
       } as never)
 
-      const { useCardLoadingState } = await import('./CardDataContext')
+      const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
 
       render(<ControlPlaneHealth />)
@@ -104,7 +104,7 @@ describe('ControlPlaneHealth', () => {
     })
 
     it('shows restart count for components with restarts', async () => {
-      const { useCachedPods } = await import('../../hooks/useCachedData')
+      const { useCachedPods } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedPods).mockReturnValue({
         pods: [makePod({ restarts: 3 })],
         isLoading: false,
@@ -114,7 +114,7 @@ describe('ControlPlaneHealth', () => {
         consecutiveFailures: 0,
       } as never)
 
-      const { useCardLoadingState } = await import('./CardDataContext')
+      const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
 
       render(<ControlPlaneHealth />)
@@ -124,7 +124,7 @@ describe('ControlPlaneHealth', () => {
 
   describe('Cluster filter buttons', () => {
     it('renders All button and per-cluster buttons when multiple clusters', async () => {
-      const { useCachedPods } = await import('../../hooks/useCachedData')
+      const { useCachedPods } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedPods).mockReturnValue({
         pods: [
           makePod({ cluster: 'cluster-1' }),
@@ -137,7 +137,7 @@ describe('ControlPlaneHealth', () => {
         consecutiveFailures: 0,
       } as never)
 
-      const { useCardLoadingState } = await import('./CardDataContext')
+      const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
 
       render(<ControlPlaneHealth />)
@@ -147,7 +147,7 @@ describe('ControlPlaneHealth', () => {
     })
 
     it('filters to selected cluster when cluster button is clicked', async () => {
-      const { useCachedPods } = await import('../../hooks/useCachedData')
+      const { useCachedPods } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedPods).mockReturnValue({
         pods: [
           makePod({ cluster: 'cluster-1' }),
@@ -160,7 +160,7 @@ describe('ControlPlaneHealth', () => {
         consecutiveFailures: 0,
       } as never)
 
-      const { useCardLoadingState } = await import('./CardDataContext')
+      const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
 
       render(<ControlPlaneHealth />)
@@ -172,7 +172,7 @@ describe('ControlPlaneHealth', () => {
 
   describe('Ready/total display', () => {
     it('shows 1/1 for running pod', async () => {
-      const { useCachedPods } = await import('../../hooks/useCachedData')
+      const { useCachedPods } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedPods).mockReturnValue({
         pods: [makePod()],
         isLoading: false,
@@ -182,7 +182,7 @@ describe('ControlPlaneHealth', () => {
         consecutiveFailures: 0,
       } as never)
 
-      const { useCardLoadingState } = await import('./CardDataContext')
+      const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
 
       render(<ControlPlaneHealth />)

@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { StorageOverview } from './StorageOverview'
+import { StorageOverview } from '../StorageOverview'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 const mockDrillToPVC = vi.fn()
 
-vi.mock('../../hooks/useMCP', () => ({
+vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => ({
     deduplicatedClusters: [{ name: 'cluster-1', storageGB: 100, nodeCount: 3, reachable: true }],
     isLoading: false,
@@ -14,7 +14,7 @@ vi.mock('../../hooks/useMCP', () => ({
   }),
 }))
 
-vi.mock('../../hooks/useCachedData', () => ({
+vi.mock('../../../hooks/useCachedData', () => ({
   useCachedPVCs: () => ({
     pvcs: [],
     isLoading: false,
@@ -25,19 +25,19 @@ vi.mock('../../hooks/useCachedData', () => ({
   }),
 }))
 
-vi.mock('../../hooks/useGlobalFilters', () => ({
+vi.mock('../../../hooks/useGlobalFilters', () => ({
   useGlobalFilters: () => ({ selectedClusters: [], isAllClustersSelected: true }),
 }))
 
-vi.mock('../../hooks/useDrillDown', () => ({
+vi.mock('../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({ drillToPVC: mockDrillToPVC }),
 }))
 
-vi.mock('./CardDataContext', () => ({
+vi.mock('../CardDataContext', () => ({
   useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
 }))
 
-vi.mock('../../hooks/useDemoMode', () => ({
+vi.mock('../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false }),
 }))
 
@@ -50,7 +50,7 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-vi.mock('../../lib/cards/cardHooks', () => ({
+vi.mock('../../../lib/cards/cardHooks', () => ({
   useChartFilters: () => ({
     localClusterFilter: [],
     toggleClusterFilter: vi.fn(),
@@ -62,11 +62,11 @@ vi.mock('../../lib/cards/cardHooks', () => ({
   }),
 }))
 
-vi.mock('../../lib/cards/CardComponents', () => ({
+vi.mock('../../../lib/cards/CardComponents', () => ({
   CardClusterFilter: () => <div data-testid="cluster-filter" />,
 }))
 
-vi.mock('../../lib/formatStats', () => ({
+vi.mock('../../../lib/formatStats', () => ({
   formatStat: (n: number) => String(n),
   formatStorageStat: (n: number, real?: boolean) => (real ? `${n}GB` : 'N/A'),
 }))
@@ -78,14 +78,14 @@ describe('StorageOverview', () => {
 
   describe('Skeleton / empty states', () => {
     it('renders loading spinner when showSkeleton', async () => {
-      const { useCardLoadingState } = await import('./CardDataContext')
+      const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: true, showEmptyState: false } as never)
       render(<StorageOverview />)
       expect(screen.getByText('storageOverview.loading')).toBeTruthy()
     })
 
     it('renders no data message when showEmptyState', async () => {
-      const { useCardLoadingState } = await import('./CardDataContext')
+      const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false, showEmptyState: true } as never)
       render(<StorageOverview />)
       expect(screen.getByText('storageOverview.noData')).toBeTruthy()
@@ -109,7 +109,7 @@ describe('StorageOverview', () => {
 
   describe('PVC counts', () => {
     it('counts bound/pending/failed PVCs correctly', async () => {
-      const { useCachedPVCs } = await import('../../hooks/useCachedData')
+      const { useCachedPVCs } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedPVCs).mockReturnValue({
         pvcs: [
           { cluster: 'cluster-1', namespace: 'default', name: 'pvc-1', status: 'Bound', storageClass: 'gp2' },
@@ -131,7 +131,7 @@ describe('StorageOverview', () => {
 
   describe('Storage classes', () => {
     it('renders storage class list when PVCs have classes', async () => {
-      const { useCachedPVCs } = await import('../../hooks/useCachedData')
+      const { useCachedPVCs } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedPVCs).mockReturnValue({
         pvcs: [
           { cluster: 'cluster-1', namespace: 'default', name: 'p1', status: 'Bound', storageClass: 'gp2' },
@@ -152,7 +152,7 @@ describe('StorageOverview', () => {
 
   describe('Drill-down', () => {
     it('calls drillToPVC when bound PVC tile clicked', async () => {
-      const { useCachedPVCs } = await import('../../hooks/useCachedData')
+      const { useCachedPVCs } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedPVCs).mockReturnValue({
         pvcs: [{ cluster: 'cluster-1', namespace: 'default', name: 'pvc-1', status: 'Bound', storageClass: 'gp2' }],
         isLoading: false,

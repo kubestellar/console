@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { HelmReleaseStatus } from './HelmReleaseStatus'
+import { HelmReleaseStatus } from '../HelmReleaseStatus'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -20,11 +20,11 @@ const mockDrillToHelm = vi.fn()
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-vi.mock('../../hooks/useMCP', () => ({
+vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => ({ isLoading: false }),
 }))
 
-vi.mock('../../hooks/useCachedData', () => ({
+vi.mock('../../../hooks/useCachedData', () => ({
   useCachedHelmReleases: () => ({
     releases: [],
     isLoading: false,
@@ -35,15 +35,15 @@ vi.mock('../../hooks/useCachedData', () => ({
   }),
 }))
 
-vi.mock('../../hooks/useDrillDown', () => ({
+vi.mock('../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({ drillToHelm: mockDrillToHelm }),
 }))
 
-vi.mock('./CardDataContext', () => ({
+vi.mock('../CardDataContext', () => ({
   useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
 }))
 
-vi.mock('../../lib/cards/cardHooks', () => ({
+vi.mock('../../../lib/cards/cardHooks', () => ({
   useCardData: (items: unknown[], _opts: unknown) => ({
     items,
     totalItems: (items as unknown[]).length,
@@ -84,18 +84,18 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-vi.mock('../../lib/cards/CardComponents', () => ({
+vi.mock('../../../lib/cards/CardComponents', () => ({
   CardSearchInput: () => <input data-testid="search" />,
   CardControlsRow: () => <div data-testid="controls-row" />,
   CardPaginationFooter: () => <div data-testid="pagination" />,
   CardAIActions: () => <div data-testid="ai-actions" />,
 }))
 
-vi.mock('../ui/Skeleton', () => ({
+vi.mock('../../ui/Skeleton', () => ({
   Skeleton: () => <div data-testid="skeleton" />,
 }))
 
-vi.mock('../ui/ClusterBadge', () => ({
+vi.mock('../../ui/ClusterBadge', () => ({
   ClusterBadge: ({ cluster }: { cluster: string }) => <span>{cluster}</span>,
 }))
 
@@ -106,7 +106,7 @@ describe('HelmReleaseStatus', () => {
 
   describe('Skeleton', () => {
     it('renders skeletons during loading', async () => {
-      const { useCardLoadingState } = await import('./CardDataContext')
+      const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: true, showEmptyState: false } as never)
       render(<HelmReleaseStatus />)
       expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0)
@@ -115,7 +115,7 @@ describe('HelmReleaseStatus', () => {
 
   describe('Empty state', () => {
     it('shows no releases message', async () => {
-      const { useCardLoadingState } = await import('./CardDataContext')
+      const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false, showEmptyState: true } as never)
       render(<HelmReleaseStatus />)
       expect(screen.getByText('helmReleaseStatus.noReleases')).toBeTruthy()
@@ -124,7 +124,7 @@ describe('HelmReleaseStatus', () => {
 
   describe('Summary stats', () => {
     it('renders total, deployed, failed counts', async () => {
-      const { useCachedHelmReleases } = await import('../../hooks/useCachedData')
+      const { useCachedHelmReleases } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedHelmReleases).mockReturnValue({
         releases: [makeRelease(), makeRelease({ name: 'broken', status: 'failed' })],
         isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
@@ -138,7 +138,7 @@ describe('HelmReleaseStatus', () => {
 
   describe('Release list', () => {
     it('renders release name', async () => {
-      const { useCachedHelmReleases } = await import('../../hooks/useCachedData')
+      const { useCachedHelmReleases } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedHelmReleases).mockReturnValue({
         releases: [makeRelease()],
         isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
@@ -148,7 +148,7 @@ describe('HelmReleaseStatus', () => {
     })
 
     it('renders chart@version', async () => {
-      const { useCachedHelmReleases } = await import('../../hooks/useCachedData')
+      const { useCachedHelmReleases } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedHelmReleases).mockReturnValue({
         releases: [makeRelease()],
         isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
@@ -158,7 +158,7 @@ describe('HelmReleaseStatus', () => {
     })
 
     it('renders status badge for each release', async () => {
-      const { useCachedHelmReleases } = await import('../../hooks/useCachedData')
+      const { useCachedHelmReleases } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedHelmReleases).mockReturnValue({
         releases: [makeRelease()],
         isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
@@ -168,7 +168,7 @@ describe('HelmReleaseStatus', () => {
     })
 
     it('calls drillToHelm on row click', async () => {
-      const { useCachedHelmReleases } = await import('../../hooks/useCachedData')
+      const { useCachedHelmReleases } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedHelmReleases).mockReturnValue({
         releases: [makeRelease()],
         isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
@@ -179,7 +179,7 @@ describe('HelmReleaseStatus', () => {
     })
 
     it('shows AI actions for failed releases', async () => {
-      const { useCachedHelmReleases } = await import('../../hooks/useCachedData')
+      const { useCachedHelmReleases } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedHelmReleases).mockReturnValue({
         releases: [makeRelease({ name: 'broken', status: 'failed' })],
         isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
@@ -189,7 +189,7 @@ describe('HelmReleaseStatus', () => {
     })
 
     it('does not show AI actions for deployed releases', async () => {
-      const { useCachedHelmReleases } = await import('../../hooks/useCachedData')
+      const { useCachedHelmReleases } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedHelmReleases).mockReturnValue({
         releases: [makeRelease()],
         isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
@@ -201,7 +201,7 @@ describe('HelmReleaseStatus', () => {
 
   describe('Namespace filter', () => {
     it('renders namespace dropdown', async () => {
-      const { useCachedHelmReleases } = await import('../../hooks/useCachedData')
+      const { useCachedHelmReleases } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedHelmReleases).mockReturnValue({
         releases: [makeRelease()],
         isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
@@ -211,7 +211,7 @@ describe('HelmReleaseStatus', () => {
     })
 
     it('populates namespace options from releases', async () => {
-      const { useCachedHelmReleases } = await import('../../hooks/useCachedData')
+      const { useCachedHelmReleases } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedHelmReleases).mockReturnValue({
         releases: [makeRelease({ namespace: 'monitoring' }), makeRelease({ name: 'grafana', namespace: 'default' })],
         isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,

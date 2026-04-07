@@ -114,6 +114,12 @@ vi.mock('../../lib/cards/CardComponents', () => ({
       )}
     </div>
   ),
+  CardEmptyState: ({ title, message }: { title: string; message: string }) => (
+    <div data-testid="card-empty-state">
+      <p>{title}</p>
+      <p>{message}</p>
+    </div>
+  ),
 }))
 
 // ---------------------------------------------------------------------------
