@@ -124,12 +124,12 @@ describe('useNPSSurvey', () => {
     act(() => { vi.advanceTimersByTime(30_000) })
 
     await act(async () => {
-      await result.current.submitResponse(1, 'Too complex')
+      await result.current.submitResponse(1, 'The UI is too complex and hard to navigate')
     })
 
     expect(mockApiPost).toHaveBeenCalledWith('/api/feedback/requests', {
       title: 'NPS Detractor Feedback (Score: 1)',
-      description: 'Too complex',
+      description: 'The UI is too complex and hard to navigate',
       request_type: 'bug',
     })
   })

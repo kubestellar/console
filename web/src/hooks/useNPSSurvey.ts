@@ -43,9 +43,14 @@ export interface NPSSurveyState {
   dismiss: () => void
 }
 
+/** Minimum description length required by the backend feedback API */
+const MIN_FEEDBACK_LENGTH = 20
+
 function daysSince(isoDate: string | null): number {
   if (!isoDate) return Infinity
-  return (Date.now() - new Date(isoDate).getTime()) / MS_PER_DAY
+  const timestamp = new Date(isoDate).getTime()
+  if (!Number.isFinite(timestamp)) return 0
+  return (Date.now() - timestamp) / MS_PER_DAY
 }
 
 function isEligible(state: NPSPersistentState): boolean {
@@ -92,15 +97,19 @@ export function useNPSSurvey(): NPSSurveyState {
   }, [isAuthenticated])
 
   const submitResponse = useCallback(async (score: number, feedback?: string) => {
-    const category = NPS_CATEGORIES[score - 1] || 'unknown'
+    if (!Number.isInteger(score) || score < 1 || score > 4) return
+
+    const category = NPS_CATEGORIES[score - 1]
     emitNPSResponse(score, category, feedback ? feedback.length : undefined)
 
     // Create GitHub issue for detractors (score 1 = "Not great")
-    if (score === 1 && feedback?.trim()) {
+    // Backend requires description >= MIN_FEEDBACK_LENGTH chars
+    const trimmed = feedback?.trim() || ''
+    if (score === 1 && trimmed.length >= MIN_FEEDBACK_LENGTH) {
       try {
         await api.post('/api/feedback/requests', {
           title: `NPS Detractor Feedback (Score: ${score})`,
-          description: feedback.trim(),
+          description: trimmed,
           request_type: 'bug',
         })
       } catch {

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { X, Send, CheckCircle2 } from 'lucide-react'
@@ -18,7 +18,7 @@ const THANK_YOU_DISPLAY_MS = 2_000
 
 const FEEDBACK_PROMPT_KEYS = {
   detractor: 'nps.feedbackNegative',
-  passive: 'nps.feedbackNegative',
+  passive: 'nps.feedbackNeutral',
   satisfied: 'nps.feedbackNeutral',
   promoter: 'nps.feedbackPositive',
 } as const
@@ -31,6 +31,12 @@ export function NPSSurvey() {
   const [feedback, setFeedback] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showThankYou, setShowThankYou] = useState(false)
+  const thankYouTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Cleanup thank-you timer on unmount
+  useEffect(() => () => {
+    if (thankYouTimerRef.current) clearTimeout(thankYouTimerRef.current)
+  }, [])
 
   const selectedOption = NPS_OPTIONS.find(o => o.score === selectedScore) ?? null
 
@@ -41,7 +47,7 @@ export function NPSSurvey() {
       await submitResponse(selectedScore, feedback.trim() || undefined)
       setShowThankYou(true)
       showToast(t('nps.thankYou'), 'success')
-      setTimeout(() => setShowThankYou(false), THANK_YOU_DISPLAY_MS)
+      thankYouTimerRef.current = setTimeout(() => setShowThankYou(false), THANK_YOU_DISPLAY_MS)
     } finally {
       setIsSubmitting(false)
     }
