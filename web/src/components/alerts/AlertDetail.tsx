@@ -5,13 +5,13 @@ import {
   Clock,
   Server,
   Bot,
-  Slack,
   Send,
   RefreshCw,
   ChevronDown,
   ChevronUp,
   ExternalLink,
 } from 'lucide-react'
+import { Slack } from '@/lib/icons'
 import { useAlerts, useSlackNotification, useSlackWebhooks } from '../../hooks/useAlerts'
 import { useMissions } from '../../hooks/useMissions'
 import { getSeverityIcon, getSeverityColor } from '../../types/alerts'

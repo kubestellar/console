@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo } from 'react'
-import { Github, AlertTriangle, ExternalLink, Settings } from 'lucide-react'
+import { AlertTriangle, ExternalLink, Settings } from 'lucide-react'
+import { Github } from '@/lib/icons'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
 import { checkOAuthConfigured } from '../../lib/api'

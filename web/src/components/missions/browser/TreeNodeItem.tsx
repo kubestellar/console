@@ -1,7 +1,8 @@
 import { memo } from 'react'
 import {
   Folder, FolderOpen, FileJson, FileCode, FileText, ChevronRight, ChevronDown,
-  Loader2, Globe, Github, HardDrive, Trash2, Plus, RefreshCw } from 'lucide-react'
+  Loader2, Globe, HardDrive, Trash2, Plus, RefreshCw } from 'lucide-react'
+import { Github } from '@/lib/icons'
 import { cn } from '../../../lib/cn'
 import type { TreeNode } from './types'
 

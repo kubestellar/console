@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Cpu, TrendingUp, Coins, User, Bell, Shield,
-  Palette, Eye, Plug, Github, LayoutGrid, Download, Database, Container, HardDrive,
+  Palette, Eye, Plug, LayoutGrid, Download, Database, Container, HardDrive,
   CheckCircle, Loader2, AlertCircle, WifiOff, BarChart3, X } from 'lucide-react'
+import { Github } from '@/lib/icons'
 import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../hooks/useTheme'
 import { useTokenUsage } from '../../hooks/useTokenUsage'

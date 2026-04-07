@@ -18,7 +18,6 @@ import { useTranslation } from 'react-i18next'
 import {
   FileCode2,
   Package,
-  Github,
   FolderGit2,
   Eye,
   Download,
@@ -26,6 +25,7 @@ import {
   CheckCircle2,
   X,
 } from 'lucide-react'
+import { Github } from '@/lib/icons'
 import * as yaml from 'js-yaml'
 import { BaseModal } from '../../lib/modals'
 import { Button } from '../ui/Button'

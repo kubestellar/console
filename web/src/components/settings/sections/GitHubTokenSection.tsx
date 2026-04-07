@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Save, RefreshCw, Check, X, Github, ExternalLink, Loader2, Server } from 'lucide-react'
+import { Save, RefreshCw, Check, X, ExternalLink, Loader2, Server } from 'lucide-react'
+import { Github } from '@/lib/icons'
 import { STORAGE_KEY_TOKEN, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_DISMISSED, FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
 import { emitGitHubTokenConfigured, emitGitHubTokenRemoved, emitConversionStep } from '../../../lib/analytics'
 import { UI_FEEDBACK_TIMEOUT_MS, SCROLL_COMPLETE_MS } from '../../../lib/constants/network'

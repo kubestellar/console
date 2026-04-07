@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { Slack, Check, X } from 'lucide-react'
+import { Check, X } from 'lucide-react'
+import { Slack } from '@/lib/icons'
 import { NotificationConfig } from '../../../types/alerts'
 import type { TestResultState } from './NotificationSettingsSection'
 

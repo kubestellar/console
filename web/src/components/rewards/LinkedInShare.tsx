@@ -3,7 +3,8 @@
  */
 
 import { useState, useRef } from 'react'
-import { Linkedin, Share2, Coins, CheckCircle2 } from 'lucide-react'
+import { Share2, Coins, CheckCircle2 } from 'lucide-react'
+import { Linkedin } from '@/lib/icons'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Button } from '../ui/Button'
 import { useRewards } from '../../hooks/useRewards'

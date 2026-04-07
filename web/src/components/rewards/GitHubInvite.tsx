@@ -3,7 +3,8 @@
  */
 
 import { useState, useRef } from 'react'
-import { Github, Send, Coins, CheckCircle2, X, ExternalLink } from 'lucide-react'
+import { Send, Coins, CheckCircle2, X, ExternalLink } from 'lucide-react'
+import { Github } from '@/lib/icons'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useRewards } from '../../hooks/useRewards'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'

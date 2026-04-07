@@ -3,7 +3,8 @@
  */
 
 import { useState } from 'react'
-import { Coins, Trophy, Gift, Github, Bug, Lightbulb, Star, ChevronRight, GitPullRequest, GitMerge, RefreshCw, ExternalLink, AlertCircle } from 'lucide-react'
+import { Coins, Trophy, Gift, Bug, Lightbulb, Star, ChevronRight, GitPullRequest, GitMerge, RefreshCw, ExternalLink, AlertCircle } from 'lucide-react'
+import { Github } from '@/lib/icons'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useRewards, REWARD_ACTIONS, ACHIEVEMENTS } from '../../hooks/useRewards'
 import { GitHubInviteModal, GitHubInviteButton } from './GitHubInvite'

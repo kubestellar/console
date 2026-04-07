@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Trash2, Server, Bell, BellOff, Bot, Slack, Webhook, Siren, ShieldAlert } from 'lucide-react'
+import { Trash2, Server, Bell, BellOff, Bot, Webhook, Siren, ShieldAlert } from 'lucide-react'
+import { Slack } from '@/lib/icons'
 import { useClusters } from '../../hooks/useMCP'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import type {

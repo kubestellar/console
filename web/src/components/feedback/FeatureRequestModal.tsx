@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, Pencil, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle, AlertTriangle, Linkedin, Trophy, Monitor, BookOpen, ImagePlus, Trash2, Copy, Maximize2, FileText, Save, RotateCcw } from 'lucide-react'
+import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, Pencil, RefreshCw, MessageSquare, Settings, Coins, Lightbulb, AlertCircle, AlertTriangle, Trophy, Monitor, BookOpen, ImagePlus, Trash2, Copy, Maximize2, FileText, Save, RotateCcw } from 'lucide-react'
+import { Github, Linkedin } from '@/lib/icons'
 import { Button } from '../ui/Button'
 import { StatusBadge } from '../ui/StatusBadge'
 import { BaseModal } from '../../lib/modals'
