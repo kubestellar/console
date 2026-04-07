@@ -13,6 +13,7 @@ const mockAuthFetch = vi.mocked(authFetch)
 let fetchKagentiProviderStatus: typeof import('../kagentiProviderBackend').fetchKagentiProviderStatus
 let fetchKagentiProviderAgents: typeof import('../kagentiProviderBackend').fetchKagentiProviderAgents
 let kagentiProviderCallTool: typeof import('../kagentiProviderBackend').kagentiProviderCallTool
+let kagentiProviderChat: typeof import('../kagentiProviderBackend').kagentiProviderChat
 
 beforeEach(async () => {
   vi.clearAllMocks()
@@ -20,6 +21,7 @@ beforeEach(async () => {
   fetchKagentiProviderStatus = mod.fetchKagentiProviderStatus
   fetchKagentiProviderAgents = mod.fetchKagentiProviderAgents
   kagentiProviderCallTool = mod.kagentiProviderCallTool
+  kagentiProviderChat = mod.kagentiProviderChat
 })
 
 describe('fetchKagentiProviderStatus', () => {
@@ -132,5 +134,124 @@ describe('kagentiProviderCallTool', () => {
     expect(callBody.namespace).toBe('myNs')
     expect(callBody.tool).toBe('myTool')
     expect(callBody.args).toEqual({ key: 'value' })
+  })
+})
+
+describe('kagentiProviderChat', () => {
+  it('calls onError when response is not ok', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 502,
+    } as Response)
+
+    const onChunk = vi.fn()
+    const onDone = vi.fn()
+    const onError = vi.fn()
+
+    await kagentiProviderChat('agent1', 'ns1', 'hello', { onChunk, onDone, onError })
+    expect(onError).toHaveBeenCalledWith('Chat failed: HTTP 502')
+    expect(onChunk).not.toHaveBeenCalled()
+    expect(onDone).not.toHaveBeenCalled()
+  })
+
+  it('calls onError when no response body stream', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: true,
+      body: null,
+    } as unknown as Response)
+
+    const onChunk = vi.fn()
+    const onDone = vi.fn()
+    const onError = vi.fn()
+
+    await kagentiProviderChat('agent1', 'ns1', 'hello', { onChunk, onDone, onError })
+    expect(onError).toHaveBeenCalledWith('No response stream')
+  })
+
+  it('processes SSE chunks and calls onDone when [DONE] received', async () => {
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode('data: chunk1\n\ndata: chunk2\n\ndata: [DONE]\n\n'))
+        controller.close()
+      },
+    })
+
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: true,
+      body: stream,
+    } as unknown as Response)
+
+    const onChunk = vi.fn()
+    const onDone = vi.fn()
+    const onError = vi.fn()
+
+    await kagentiProviderChat('agent1', 'ns1', 'hello', { onChunk, onDone, onError })
+    expect(onChunk).toHaveBeenCalledWith('chunk1')
+    expect(onChunk).toHaveBeenCalledWith('chunk2')
+    expect(onDone).toHaveBeenCalled()
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it('calls onDone when stream ends without [DONE]', async () => {
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode('data: chunk1\n\n'))
+        controller.close()
+      },
+    })
+
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: true,
+      body: stream,
+    } as unknown as Response)
+
+    const onChunk = vi.fn()
+    const onDone = vi.fn()
+    const onError = vi.fn()
+
+    await kagentiProviderChat('agent1', 'ns1', 'hello', { onChunk, onDone, onError })
+    expect(onChunk).toHaveBeenCalledWith('chunk1')
+    expect(onDone).toHaveBeenCalled()
+  })
+
+  it('silently ignores AbortError', async () => {
+    mockAuthFetch.mockRejectedValueOnce(new DOMException('The operation was aborted', 'AbortError'))
+
+    const onChunk = vi.fn()
+    const onDone = vi.fn()
+    const onError = vi.fn()
+
+    await kagentiProviderChat('agent1', 'ns1', 'hello', { onChunk, onDone, onError })
+    expect(onError).not.toHaveBeenCalled()
+    expect(onDone).not.toHaveBeenCalled()
+  })
+
+  it('calls onError with message for non-abort errors', async () => {
+    mockAuthFetch.mockRejectedValueOnce(new Error('Connection reset'))
+
+    const onChunk = vi.fn()
+    const onDone = vi.fn()
+    const onError = vi.fn()
+
+    await kagentiProviderChat('agent1', 'ns1', 'hello', { onChunk, onDone, onError })
+    expect(onError).toHaveBeenCalledWith('Connection reset')
+  })
+
+  it('sends contextId when provided', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+    } as Response)
+
+    const onChunk = vi.fn()
+    const onDone = vi.fn()
+    const onError = vi.fn()
+
+    await kagentiProviderChat('agent1', 'ns1', 'hello', { contextId: 'ctx-123', onChunk, onDone, onError })
+
+    const callBody = JSON.parse(mockAuthFetch.mock.calls[0][1]?.body as string)
+    expect(callBody.contextId).toBe('ctx-123')
   })
 })
