@@ -259,11 +259,15 @@ export function PDDisaggregation() {
     update()
     const interval = setInterval(update, POLL_INTERVAL_FAST_MS)
     return () => clearInterval(interval)
-  }, [stackServers])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  // Get server IDs for packet generation
-  const prefillIds = servers.filter(s => s.type === 'prefill').map(s => s.id)
-  const decodeIds = servers.filter(s => s.type === 'decode').map(s => s.id)
+  // Get server IDs for packet generation — stabilize with useMemo to avoid loop
+  const prefillIds = useMemo(() => servers.filter(s => s.type === 'prefill').map(s => s.id), [servers])
+  const decodeIds = useMemo(() => servers.filter(s => s.type === 'decode').map(s => s.id), [servers])
+  // Stable key for deps — only re-run effect when the actual IDs change
+  const prefillKey = prefillIds.join(',')
+  const decodeKey = decodeIds.join(',')
 
   // Generate transfer packets (only when disaggregated)
   useEffect(() => {
@@ -288,7 +292,8 @@ export function PDDisaggregation() {
 
     const interval = setInterval(spawnPacket, PACKET_SPAWN_INTERVAL_MS)
     return () => clearInterval(interval)
-  }, [prefillIds, decodeIds])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefillKey, decodeKey])
 
   // Animate packets
   useEffect(() => {

@@ -456,7 +456,8 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
       if (interval) clearInterval(interval)
     }
      
-  }, [reposKey, org, isDemoMode, fetchGitHubData])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reposKey, org, isDemoMode])
 
   return {
     prs,

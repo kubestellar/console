@@ -214,8 +214,8 @@ export function ThroughputComparison() {
 
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-2xs">
-        {groups.map(g => (
-          <div key={g.shortVariant} className="flex items-center gap-1.5">
+        {groups.map((g, i) => (
+          <div key={g.shortVariant || `group-${i}`} className="flex items-center gap-1.5">
             <div className="w-3 h-0.5 rounded-full" style={{ backgroundColor: g.color }} />
             <span className="text-muted-foreground">{g.shortVariant}</span>
           </div>

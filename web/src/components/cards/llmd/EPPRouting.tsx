@@ -737,7 +737,8 @@ function EPPRoutingInternal() {
     updateMetrics()
     const interval = setInterval(updateMetrics, POLL_INTERVAL_FAST_MS)
     return () => clearInterval(interval)
-  }, [dynamicNodes, nodePodMap, prometheusMetrics])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Get current node with live metrics (skip ghost nodes)
   const getNodeWithMetrics = (node: FlowNode): FlowNode => {

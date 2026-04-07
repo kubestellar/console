@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import type {
   WorkloadMonitorResponse,
   MonitoredResource,
@@ -74,8 +74,19 @@ export function useWorkloadMonitor(
   const hasLoadedOnce = useRef(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const fetchData = async () => {
-    if (!cluster || !namespace || !workload) return
+  // Store latest params in refs so fetchData can read them without being recreated
+  const clusterRef = useRef(cluster)
+  const namespaceRef = useRef(namespace)
+  const workloadRef = useRef(workload)
+  clusterRef.current = cluster
+  namespaceRef.current = namespace
+  workloadRef.current = workload
+
+  const fetchData = useCallback(async () => {
+    const c = clusterRef.current
+    const ns = namespaceRef.current
+    const w = workloadRef.current
+    if (!c || !ns || !w) return
 
     const isInitialLoad = !hasLoadedOnce.current
     if (isInitialLoad) {
@@ -86,7 +97,7 @@ export function useWorkloadMonitor(
 
     try {
       const res = await fetch(
-        `/api/workloads/monitor/${encodeURIComponent(cluster)}/${encodeURIComponent(namespace)}/${encodeURIComponent(workload)}`,
+        `/api/workloads/monitor/${encodeURIComponent(c)}/${encodeURIComponent(ns)}/${encodeURIComponent(w)}`,
         { headers: authHeaders(), signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) },
       )
 
@@ -113,27 +124,26 @@ export function useWorkloadMonitor(
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }
+  }, [])
 
-  // Initial fetch and auto-refresh
+  // Store enabled/refreshMs in refs to avoid effect re-firing on every render
+  const enabledRef = useRef(enabled)
+  const refreshMsRef = useRef(refreshMs)
+  enabledRef.current = enabled
+  refreshMsRef.current = refreshMs
+
+  // Initial fetch and auto-refresh — run once, use refs for latest values
+  const initRef = useRef(false)
   useEffect(() => {
-    if (!enabled) {
-      // Reset when disabled
-      hasLoadedOnce.current = false
-      setResources([])
-      setIssues([])
-      setOverallStatus('unknown')
-      setWorkloadKind('')
-      setWarnings([])
-      setError(null)
-      setConsecutiveFailures(0)
-      return
-    }
+    if (initRef.current) return
+    initRef.current = true
+
+    if (!enabledRef.current) return
 
     fetchData()
 
-    if (refreshMs > 0) {
-      intervalRef.current = setInterval(fetchData, refreshMs)
+    if (refreshMsRef.current > 0) {
+      intervalRef.current = setInterval(fetchData, refreshMsRef.current)
     }
 
     return () => {
@@ -142,7 +152,7 @@ export function useWorkloadMonitor(
         intervalRef.current = null
       }
     }
-  }, [enabled, fetchData, refreshMs])
+  }, [fetchData])
 
   const isFailed = consecutiveFailures >= 3
 
