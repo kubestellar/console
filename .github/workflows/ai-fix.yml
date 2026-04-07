@@ -19,6 +19,7 @@ permissions:
 
 jobs:
   ai-fix:
+    if: false # Copilot disabled — issues handled by Claude Code scanner
     uses: kubestellar/infra/.github/workflows/reusable-ai-fix.yml@main
     with:
       issue_number: ${{ github.event.inputs.issue_number || '' }}

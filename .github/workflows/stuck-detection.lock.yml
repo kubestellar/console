@@ -43,6 +43,7 @@ run-name: "Stuck Detection Workflow"
 
 jobs:
   activation:
+    if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-slim
     permissions:
       contents: read
@@ -232,6 +233,7 @@ jobs:
           retention-days: 1
 
   agent:
+    if: false # Copilot disabled — issues handled by Claude Code scanner
     needs: activation
     runs-on: ubuntu-latest
     permissions:
@@ -848,7 +850,7 @@ jobs:
       - activation
       - agent
       - safe_outputs
-    if: (always()) && ((needs.agent.result != 'skipped') || (needs.activation.outputs.lockdown_check_failed == 'true'))
+    if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-slim
     permissions:
       contents: read
@@ -951,7 +953,7 @@ jobs:
 
   safe_outputs:
     needs: agent
-    if: ((!cancelled()) && (needs.agent.result != 'skipped')) && (needs.agent.outputs.detection_success == 'true')
+    if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-slim
     permissions:
       contents: read

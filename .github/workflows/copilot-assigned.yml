@@ -13,10 +13,7 @@ permissions:
 
 jobs:
   handle-copilot-assignment:
-    if: |
-      github.event.assignee.login == 'Copilot' ||
-      github.event.assignee.login == 'copilot-swe-agent' ||
-      github.event.assignee.login == 'copilot-swe-agent[bot]'
+    if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
 
     steps:

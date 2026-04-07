@@ -88,7 +88,7 @@ jobs:
             -X POST -f content='rocket'
 
       - name: Assign Copilot to issue
-        if: steps.check_perms.outputs.authorized == 'true'
+        if: false # Copilot disabled — issues handled by Claude Code scanner
         id: assign_copilot
         env:
           GH_TOKEN: ${{ secrets.CONSOLE_AUTO }}
@@ -141,7 +141,7 @@ jobs:
           }
 
       - name: Update labels on assignment success
-        if: steps.check_perms.outputs.authorized == 'true' && steps.assign_copilot.outputs.success == 'true'
+        if: false # Copilot disabled — issues handled by Claude Code scanner
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -155,7 +155,7 @@ jobs:
           echo "Copilot assigned to issue #$ISSUE, status: ai-awaiting-fix"
 
       - name: Post instructions comment
-        if: steps.check_perms.outputs.authorized == 'true'
+        if: false # Copilot disabled — issues handled by Claude Code scanner
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -199,7 +199,7 @@ jobs:
           )"
 
       - name: Handle assignment failure
-        if: steps.check_perms.outputs.authorized == 'true' && steps.assign_copilot.outputs.success != 'true'
+        if: false # Copilot disabled — issues handled by Claude Code scanner
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -239,6 +239,7 @@ jobs:
 
     steps:
       - name: Skip if Copilot is already assigned
+        if: false # Copilot disabled — issues handled by Claude Code scanner
         id: check_existing
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -254,7 +255,6 @@ jobs:
           fi
 
       - name: Check actor permissions
-        if: steps.check_existing.outputs.skip == 'false'
         id: check_perms
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -272,7 +272,7 @@ jobs:
           fi
 
       - name: Add AI labels
-        if: steps.check_existing.outputs.skip == 'false' && steps.check_perms.outputs.authorized == 'true'
+        if: steps.check_perms.outputs.authorized == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -299,7 +299,7 @@ jobs:
           echo "Label-triggered triage for issue #$ISSUE: added ai-fix-requested + ai-processing"
 
       - name: Add rocket reaction to issue
-        if: steps.check_existing.outputs.skip == 'false' && steps.check_perms.outputs.authorized == 'true'
+        if: steps.check_perms.outputs.authorized == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -307,7 +307,7 @@ jobs:
             -X POST -f content='rocket'
 
       - name: Assign Copilot to issue
-        if: steps.check_existing.outputs.skip == 'false' && steps.check_perms.outputs.authorized == 'true'
+        if: false # Copilot disabled — issues handled by Claude Code scanner
         id: assign_copilot
         env:
           GH_TOKEN: ${{ secrets.CONSOLE_AUTO }}
@@ -358,7 +358,7 @@ jobs:
           }
 
       - name: Update labels on assignment success
-        if: steps.check_existing.outputs.skip == 'false' && steps.check_perms.outputs.authorized == 'true' && steps.assign_copilot.outputs.success == 'true'
+        if: false # Copilot disabled — issues handled by Claude Code scanner
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -371,7 +371,7 @@ jobs:
           echo "Copilot assigned to issue #$ISSUE, status: ai-awaiting-fix"
 
       - name: Post instructions comment
-        if: steps.check_existing.outputs.skip == 'false' && steps.check_perms.outputs.authorized == 'true'
+        if: false # Copilot disabled — issues handled by Claude Code scanner
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -415,7 +415,7 @@ jobs:
           )"
 
       - name: Handle assignment failure
-        if: steps.check_existing.outputs.skip == 'false' && steps.check_perms.outputs.authorized == 'true' && steps.assign_copilot.outputs.success != 'true'
+        if: false # Copilot disabled — issues handled by Claude Code scanner
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

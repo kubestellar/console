@@ -14,10 +14,7 @@ permissions:
 
 jobs:
   apply-copilot-review:
-    # Only trigger when Copilot review agent submits a non-approval review
-    if: |
-      contains(fromJSON('["github-copilot[bot]", "copilot"]'), github.event.review.user.login) &&
-      github.event.review.state != 'approved'
+    if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
     steps:
       - name: Apply Copilot review suggestions

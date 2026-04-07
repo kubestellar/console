@@ -15,6 +15,7 @@ permissions:
 
 jobs:
   build-lint:
+    if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
 
     steps:

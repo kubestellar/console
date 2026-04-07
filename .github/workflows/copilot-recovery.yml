@@ -39,16 +39,14 @@ jobs:
   # preventing GitHub from reporting "No jobs were run" as a failure
   # and sending noisy email notifications.
   gate:
+    if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
     steps:
       - run: echo "Event ${{ github.event_name }} received"
 
   # Override DCO for bot PRs automatically
   override-dco-for-bots:
-    if: |
-      github.event_name == 'check_run' &&
-      github.event.check_run.name == 'dco' &&
-      github.event.check_run.conclusion == 'failure'
+    if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
     steps:
       - name: Check if PR is from a bot
@@ -97,13 +95,7 @@ jobs:
   # Handle build failures on Copilot PRs
   # Only trigger on "Deploy Preview" check to avoid duplicate comments from Netlify sub-checks
   handle-build-failure:
-    if: |
-      github.event_name == 'check_run' &&
-      github.event.check_run.conclusion == 'failure' &&
-      github.event.check_run.name != 'dco' &&
-      !contains(github.event.check_run.name, 'Header rules') &&
-      !contains(github.event.check_run.name, 'Redirect rules') &&
-      !contains(github.event.check_run.name, 'Pages changed')
+    if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
     steps:
       - name: Get PR info
@@ -203,10 +195,7 @@ jobs:
   # Handle successful builds - trigger preview testing
   # Netlify check runs are named like "Header rules - kubestellarconsole"
   handle-build-success:
-    if: |
-      github.event_name == 'check_run' &&
-      github.event.check_run.conclusion == 'success' &&
-      contains(github.event.check_run.name, 'kubestellarconsole')
+    if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
     steps:
       - name: Get PR info
@@ -389,7 +378,7 @@ jobs:
 
   # Handle workflow run completion (for more complex build pipelines)
   handle-workflow-completion:
-    if: github.event_name == 'workflow_run'
+    if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
     steps:
       - name: Check workflow result
@@ -438,9 +427,7 @@ jobs:
 
   # Handle code review feedback on Copilot PRs
   handle-review-feedback:
-    if: |
-      (github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested') ||
-      github.event_name == 'pull_request_review_comment'
+    if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
     steps:
       - name: Check if PR is from Copilot
@@ -501,7 +488,7 @@ jobs:
 
   # Manual preview test (triggered via workflow_dispatch)
   manual-preview-test:
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.test_preview == 'true'
+    if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
     steps:
       - name: Test preview deployment
@@ -588,7 +575,7 @@ jobs:
 
   # Auto-request Copilot to test preview when commits are pushed
   request-copilot-preview-test:
-    if: github.event_name == 'pull_request_target' && github.event.action == 'synchronize'
+    if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
     steps:
       - name: Check if PR is from Copilot

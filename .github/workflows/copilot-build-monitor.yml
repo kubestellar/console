@@ -12,10 +12,8 @@ permissions:
 
 jobs:
   handle-build-failure:
+    if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
-    if: |
-      github.event.check_run.conclusion == 'failure' &&
-      contains(github.event.check_run.name, 'netlify')
     steps:
       - name: Handle Netlify Failure
         uses: actions/github-script@v7

@@ -19,6 +19,7 @@ permissions:
 
 jobs:
   monitor-copilot-prs:
+    if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
     steps:
       - name: Check Copilot PRs (3x with 20s intervals)

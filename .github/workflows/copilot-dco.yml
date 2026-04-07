@@ -6,4 +6,5 @@ on:
 
 jobs:
   copilot-dco:
+    if: false # Copilot disabled — issues handled by Claude Code scanner
     uses: kubestellar/infra/.github/workflows/reusable-copilot-dco.yml@main
