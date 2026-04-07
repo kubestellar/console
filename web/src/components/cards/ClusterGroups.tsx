@@ -30,6 +30,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
+import { ConfirmDialog } from '../../lib/modals'
 
 interface ClusterGroupsProps {
   config?: Record<string, unknown>
@@ -127,6 +128,8 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
 
   const groups = demoMode ? DEMO_GROUPS : [builtInGroup, ...liveGroups]
   const [isCreating, setIsCreating] = useState(false)
+  // Track which group is pending delete confirmation (#5197)
+  const [deleteConfirmName, setDeleteConfirmName] = useState<string | null>(null)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const hasData = clusters.length > 0 || groups.length > 0
@@ -224,7 +227,7 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
                 clusterHealthMap={new Map(clusters.map(c => [c.name, c.healthy]))}
                 onToggle={() => toggleExpanded(group.name)}
                 onEdit={() => setEditingGroup(group.name)}
-                onDelete={() => deleteGroup(group.name)}
+                onDelete={() => setDeleteConfirmName(group.name)}
               />
             )
           ))}
@@ -237,6 +240,24 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
           {t('cards:clusterGroups.dragWorkloadHint')}
         </p>
       </div>
+
+      {/* Delete confirmation dialog (#5197) */}
+      <ConfirmDialog
+        isOpen={deleteConfirmName !== null}
+        onClose={() => setDeleteConfirmName(null)}
+        onConfirm={() => {
+          if (deleteConfirmName) {
+            deleteGroup(deleteConfirmName)
+            setDeleteConfirmName(null)
+          }
+        }}
+        title={t('cards:clusterGroups.deleteGroup')}
+        message={t('cards:clusterGroups.deleteConfirmMessage', {
+          defaultValue: 'Are you sure you want to delete this cluster group? This action cannot be undone.',
+        })}
+        confirmLabel={t('common:actions.delete', { defaultValue: 'Delete' })}
+        variant="danger"
+      />
     </div>
   )
 }

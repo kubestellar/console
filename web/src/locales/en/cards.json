@@ -687,6 +687,7 @@
     "createDynamicGroup": "Create Dynamic Group",
     "editGroup": "Edit Group",
     "deleteGroup": "Delete Group",
+    "deleteConfirmMessage": "Are you sure you want to delete this cluster group? This action cannot be undone.",
     "groupName": "Group Name",
     "groupNamePlaceholder": "Group name...",
     "groupType": "Group Type",
