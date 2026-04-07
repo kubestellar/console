@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   Rocket,
   XCircle,
@@ -139,7 +139,28 @@ export function Missions(_props: MissionsProps) {
   const [hideCompleted, setHideCompleted] = useState(false)
 
   // AI mission hooks at card level
-  const { startMission } = useMissions()
+  const { startMission, missions: aiMissions } = useMissions()
+
+  // Find orbit missions for "In Orbit" status display
+  const orbitMissionsByProject = useMemo(() => {
+    const map = new Map<string, { cadence: string; lastResult?: string; overdue: boolean }>()
+    for (const m of aiMissions || []) {
+      if (m.importedFrom?.missionClass !== 'orbit') continue
+      const config = m.context?.orbitConfig as { cadence?: string; lastRunAt?: string; lastRunResult?: string } | undefined
+      if (!config) continue
+      const cadenceHours = config.cadence === 'daily' ? 24 : config.cadence === 'monthly' ? 720 : 168
+      const lastRun = config.lastRunAt ? new Date(config.lastRunAt).getTime() : 0
+      const overdue = lastRun ? (Date.now() - lastRun) > cadenceHours * 3_600_000 : false
+      for (const proj of (m.context?.orbitConfig as { projects?: string[] })?.projects || []) {
+        map.set(proj.toLowerCase(), {
+          cadence: config.cadence || 'weekly',
+          lastResult: config.lastRunResult,
+          overdue,
+        })
+      }
+    }
+    return map
+  }, [aiMissions])
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
 
   // Report state to CardWrapper for refresh animation
@@ -404,6 +425,7 @@ Please:
                 isActive={isActive}
                 onDiagnose={handleDiagnose}
                 onRepair={handleRepair}
+                orbitStatus={mission.status === 'orbit' ? orbitMissionsByProject.get(mission.workload.toLowerCase()) : undefined}
               />
             )
           })}
@@ -452,6 +474,12 @@ Please:
 // Mission Row
 // ============================================================================
 
+interface OrbitStatus {
+  cadence: string
+  lastResult?: string
+  overdue: boolean
+}
+
 interface MissionRowProps {
   mission: DeployMission
   isExpanded: boolean
@@ -459,9 +487,10 @@ interface MissionRowProps {
   isActive: boolean
   onDiagnose: (mission: DeployMission) => void
   onRepair: (mission: DeployMission) => void
+  orbitStatus?: OrbitStatus
 }
 
-function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRepair }: MissionRowProps) {
+function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRepair, orbitStatus }: MissionRowProps) {
   const { t } = useTranslation(['common', 'cards'])
   const config = STATUS_CONFIG[mission.status] || STATUS_CONFIG.launching
   const StatusIcon = config.icon
@@ -565,6 +594,28 @@ function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRep
           />
         </div>
       </div>
+
+      {/* Orbit maintenance status — shown for "in orbit" missions with maintenance configured */}
+      {mission.status === 'orbit' && orbitStatus && (
+        <div className="px-3 pb-2 flex items-center gap-1.5">
+          <Orbit className="w-2.5 h-2.5 text-purple-400" />
+          <span className="text-2xs text-muted-foreground">
+            {orbitStatus.cadence} maintenance
+          </span>
+          {orbitStatus.lastResult && (
+            <span className={cn(
+              'text-2xs font-medium',
+              orbitStatus.lastResult === 'success' ? 'text-green-400' :
+              orbitStatus.lastResult === 'warning' ? 'text-yellow-400' : 'text-red-400',
+            )}>
+              {orbitStatus.lastResult}
+            </span>
+          )}
+          {orbitStatus.overdue && (
+            <span className="text-2xs font-medium text-amber-400">overdue</span>
+          )}
+        </div>
+      )}
 
       {/* Per-cluster progress — visible for active missions; completed missions show on expand */}
       {isActive && !isExpanded && mission.clusterStatuses.length > 0 && (
