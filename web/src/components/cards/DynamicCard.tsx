@@ -103,6 +103,17 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
         ? (cardDefinition?.staticData || [])
         : apiData)
 
+  // Report loading state to CardWrapper so header stays in sync with body (#5208)
+  const isApiSource = !isInvalidConfig && cardDefinition?.dataSource === 'api'
+  useReportCardDataState({
+    isFailed: !!apiError,
+    consecutiveFailures: apiError ? 1 : 0,
+    errorMessage: apiError ?? undefined,
+    isLoading: isApiSource ? apiLoading : false,
+    hasData: isApiSource ? apiData.length > 0 : true,
+    isDemoData: false,
+  })
+
   // Fetch API data if needed
   useEffect(() => {
     if (isInvalidConfig || isMissingEndpoint) return
@@ -340,6 +351,16 @@ export function Tier2CardRuntime({ definition, config }: Tier2Props) {
   const [compiling, setCompiling] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const cleanupRef = useRef<(() => void) | undefined>(undefined)
+
+  // Report internal loading/error state to CardWrapper so header stays in sync (#5208)
+  useReportCardDataState({
+    isFailed: !!error,
+    consecutiveFailures: error ? 1 : 0,
+    errorMessage: error ?? undefined,
+    isLoading: compiling,
+    hasData: !!CardComponent,
+    isDemoData: false,
+  })
 
   useEffect(() => {
     let cancelled = false
