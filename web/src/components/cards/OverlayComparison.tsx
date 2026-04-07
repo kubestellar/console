@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react';
 import { Plus, Minus, Edit, Layers, ChevronRight } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -45,7 +45,7 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
   })
 
   // Apply global filters
-  const clusters = useMemo(() => {
+  const clusters = (() => {
     let result = allClusters
 
     if (!isAllClustersSelected) {
@@ -61,7 +61,7 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
     }
 
     return result
-  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
+  })()
 
   // Auto-select cluster and overlays in demo mode so card shows data immediately
   useEffect(() => {

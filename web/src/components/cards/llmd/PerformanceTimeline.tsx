@@ -5,7 +5,7 @@
  * throughput or latency. Each cell is colored by intensity with hover details.
  * Filter by experiment category and QPS level.
  */
-import { useState, useMemo } from 'react'
+import { useState } from 'react';
 import { LayoutGrid, ArrowDown, ArrowRight } from 'lucide-react'
 import { useReportCardDataState } from '../CardDataContext'
 import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
@@ -57,10 +57,7 @@ function getColor(value: number, min: number, max: number, higherBetter: boolean
 export function PerformanceTimeline() {
   const { t } = useTranslation()
   const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
-  const effectiveReports = useMemo(
-    () => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []),
-    [isDemoFallback, liveReports]
-  )
+  const effectiveReports = isDemoFallback ? generateBenchmarkReports() : (liveReports ?? [])
   useReportCardDataState({
     isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing,
     hasData: effectiveReports.length > 0 })
@@ -84,7 +81,7 @@ export function PerformanceTimeline() {
   const modeInfo = MODES.find(m => m.key === mode)!
 
   // Build heatmap data
-  const { cells, islValues, oslValues, minVal, maxVal } = useMemo(() => {
+  const { cells, islValues, oslValues, minVal, maxVal } = (() => {
     const cellMap = new Map<string, { total: number; count: number }>()
     const isls = new Set<number>()
     const osls = new Set<number>()
@@ -122,7 +119,7 @@ export function PerformanceTimeline() {
       oslValues: [...osls].sort((a, b) => a - b),
       minVal: min === Infinity ? 0 : min,
       maxVal: max === -Infinity ? 0 : max }
-  }, [effectiveReports, mode, category, qpsFilter])
+  })()
 
   const getCell = (isl: number, osl: number) => cells.find(c => c.isl === isl && c.osl === osl)
 

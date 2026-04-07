@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Box, CheckCircle, AlertTriangle, Clock, ChevronRight } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -62,7 +61,7 @@ export function AppStatus(_props: AppStatusProps) {
     customFilter } = useGlobalFilters()
 
   // Transform deployments into app data grouped by name
-  const rawApps = useMemo((): AppData[] => {
+  const rawApps = (() => {
     const appMap = new Map<string, AppData>()
 
     deployments.forEach(dep => {
@@ -92,7 +91,7 @@ export function AppStatus(_props: AppStatusProps) {
     })
 
     return Array.from(appMap.values())
-  }, [deployments])
+  })()
 
   // Pre-filter by global cluster filter and custom text filter
   // (useCardData's clusterField doesn't support array fields, so we handle it here)

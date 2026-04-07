@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { AlertTriangle, CheckCircle2, Activity, Server, ChevronDown, AlertCircle } from 'lucide-react'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -49,7 +48,7 @@ export function EventSummary() {
     return result
   })()
 
-  const summary = useMemo(() => {
+  const summary = (() => {
     const warnings = filteredEvents.filter(e => e.type === 'Warning').length
     const normal = filteredEvents.filter(e => e.type === 'Normal').length
 
@@ -73,7 +72,7 @@ export function EventSummary() {
       .slice(0, 5)
 
     return { warnings, normal, topReasons, topClusters }
-  }, [filteredEvents])
+  })()
 
   if (showSkeleton) {
     return <CardSkeleton type="status" rows={3} showHeader={false} />

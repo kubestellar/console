@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Box, ChevronRight, Server } from 'lucide-react'
 import { useCachedGPUNodes, useCachedAllPods } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -70,7 +69,7 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
     consecutiveFailures: Math.max(gpuFailures, podsFailures) })
 
   // Compute per-namespace GPU allocations
-  const namespaceAllocations = useMemo(() => {
+  const namespaceAllocations = (() => {
     const gpuNodeKeys = new Set(
       gpuNodes.map(node => `${normalizeClusterName(node.cluster || '')}:${node.name}`)
     )
@@ -105,7 +104,7 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
       gpuRequested: data.gpuRequested,
       podCount: data.podCount,
       clusters: Array.from(data.clusters) }))
-  }, [allPods, gpuNodes])
+  })()
 
   const {
     items: displayItems,

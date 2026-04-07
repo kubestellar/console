@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react';
 
 import { Play, RotateCcw, Pause, Trophy, Cpu, User } from 'lucide-react'
 import { useCardExpanded } from './CardWrapper'
@@ -89,7 +89,7 @@ export function KubePong() {
   }
 
   // Initialize game
-  const initGame = useCallback(() => {
+  const initGame = () => {
     playerPaddleRef.current = {
       y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2,
       score: 0 }
@@ -100,10 +100,10 @@ export function KubePong() {
     setPlayerScore(0)
     setAiScore(0)
     setWinner(null)
-  }, [resetBall])
+  }
 
   // Update game state
-  const update = useCallback(() => {
+  const update = () => {
     const ball = ballRef.current
     const playerPaddle = playerPaddleRef.current
     const aiPaddle = aiPaddleRef.current
@@ -201,10 +201,10 @@ export function KubePong() {
       }
       resetBall(1)
     }
-  }, [difficulty, aiScore, playerScore, resetBall, wins])
+  }
 
   // Render
-  const render = useCallback(() => {
+  const render = () => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -252,7 +252,7 @@ export function KubePong() {
     ctx.fillText(aiScore.toString(), (CANVAS_WIDTH / 4) * 3, 60)
     ctx.globalAlpha = 1
 
-  }, [playerScore, aiScore])
+  }
 
   // Game loop
   useEffect(() => {

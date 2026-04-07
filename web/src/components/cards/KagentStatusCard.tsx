@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Bot, Wrench, Cpu, Server } from 'lucide-react'
 import { useKagentCRDAgents, useKagentCRDTools, useKagentCRDModels } from '../../hooks/mcp/kagent_crds'
 import { useCardLoadingState } from './CardDataContext'
@@ -67,7 +66,7 @@ export function KagentStatusCard({ config }: KagentStatusCardProps) {
   })
 
   // Compute stats
-  const stats = useMemo(() => {
+  const stats = (() => {
     const readyAgents = agents.filter(a => a.status === 'Ready').length
     const totalDiscoveredTools = tools.reduce((sum, t) => sum + (t.discoveredTools?.length || 0), 0)
     const providerCount = new Set(models.map(m => m.provider)).size
@@ -95,7 +94,7 @@ export function KagentStatusCard({ config }: KagentStatusCardProps) {
     }
 
     return { readyAgents, totalDiscoveredTools, providerCount, runtimes, clusterData }
-  }, [agents, tools, models])
+  })()
 
   if (showSkeleton) {
     return (

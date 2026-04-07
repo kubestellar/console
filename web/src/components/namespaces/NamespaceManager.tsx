@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react';
 import {
   Folder,
   Plus,
@@ -82,7 +82,7 @@ export function NamespaceManager() {
 
   // Fetch namespaces from all available clusters and cache them
   // Uses progressive loading - updates UI as each cluster completes
-  const fetchNamespaces = useCallback(async (force = false) => {
+  const fetchNamespaces = async (force = false) => {
     // Determine which clusters to fetch
     const clustersToFetch = force
       ? allClusterNames // Force refresh fetches all clusters
@@ -233,13 +233,13 @@ export function NamespaceManager() {
     setLoading(false)
     setLoadingClusters(new Set())
     setLastUpdated(new Date())
-  }, [allClusterNames])
+  }
 
   const handleRefreshNamespaces = () => fetchNamespaces(true)
   const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefreshNamespaces)
   const isFetching = loading || showIndicator
 
-  const fetchAccess = useCallback(async (namespace: NamespaceDetails) => {
+  const fetchAccess = async (namespace: NamespaceDetails) => {
     setAccessLoading(true)
     try {
       const response = await api.get<{ bindings: typeof accessEntries }>(`/api/namespaces/${namespace.name}/access?cluster=${namespace.cluster}`)
@@ -251,7 +251,7 @@ export function NamespaceManager() {
     } finally {
       setAccessLoading(false)
     }
-  }, [showToast])
+  }
 
   // Initial fetch when clusters are loaded - fetches ALL clusters to populate cache
   // Subsequent filter changes will just filter cached data, no refetch needed
@@ -383,7 +383,6 @@ export function NamespaceManager() {
           </>
         }
       />
-
       {/* Error display */}
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400 flex items-center gap-2">
@@ -394,7 +393,6 @@ export function NamespaceManager() {
           </button>
         </div>
       )}
-
       {/* Search and Group By Toggle */}
       <div className="flex gap-4 mb-6">
         <div className="relative flex-1">
@@ -434,14 +432,13 @@ export function NamespaceManager() {
           </button>
         </div>
       </div>
-
       {/* Main content */}
       <div className="flex-1 flex gap-6 overflow-hidden">
         {/* Namespace list */}
         <div className="flex-1 overflow-y-auto space-y-4">
           {groupBy === 'cluster' ? (
             // Group by Cluster view
-            <>
+            (<>
               {targetClusters.map(clusterName => {
                 const cluster = clusters.find(c => c.name === clusterName)
                 const isUnreachable = cluster?.reachable === false
@@ -494,15 +491,14 @@ export function NamespaceManager() {
                         )}
                       </span>
                     </button>
-
                     {/* Cluster namespaces or skeleton */}
                     {!isCollapsed && (
                       <div className="space-y-2 ml-6">
                         {isClusterLoading && !hasData && !isUnreachable ? (
                           // Show skeleton for loading clusters (only on initial load, not refresh)
-                          [1, 2, 3].map((i) => (
+                          ([1, 2, 3].map((i) => (
                             <NamespaceCardSkeleton key={`${clusterName}-skeleton-${i}`} />
-                          ))
+                          )))
                         ) : clusterNamespaces.length > 0 ? (
                           clusterNamespaces.map(ns => {
                             const isSystem = ns.name.startsWith('kube-') ||
@@ -526,12 +522,12 @@ export function NamespaceManager() {
                       </div>
                     )}
                   </div>
-                )
+                );
               })}
-            </>
+            </>)
           ) : (
             // Group by Type view (user/system)
-            <>
+            (<>
               {/* User namespaces */}
               {userNamespaces.length > 0 && (
                 <div>
@@ -551,7 +547,6 @@ export function NamespaceManager() {
                   </div>
                 </div>
               )}
-
               {/* System namespaces */}
               {systemNamespaces.length > 0 && (
                 <div>
@@ -571,7 +566,6 @@ export function NamespaceManager() {
                   </div>
                 </div>
               )}
-
               {/* Skeleton loading */}
               {loading && filteredNamespaces.length === 0 && (
                 <div>
@@ -585,7 +579,7 @@ export function NamespaceManager() {
                   </div>
                 </div>
               )}
-            </>
+            </>)
           )}
 
           {filteredNamespaces.length === 0 && !loading && loadingClusters.size === 0 && (
@@ -656,7 +650,6 @@ export function NamespaceManager() {
           </div>
         )}
       </div>
-
       {/* Create Namespace Modal */}
       {showCreateModal && (
         <CreateNamespaceModal
@@ -673,7 +666,6 @@ export function NamespaceManager() {
           }}
         />
       )}
-
       {/* Grant Access Modal */}
       {showGrantAccessModal && selectedNamespace && (
         <GrantAccessModal
@@ -686,7 +678,6 @@ export function NamespaceManager() {
           }}
         />
       )}
-
       {/* Delete Confirmation Modal */}
       {namespaceToDelete && (
         <DeleteConfirmModal
@@ -696,6 +687,6 @@ export function NamespaceManager() {
         />
       )}
     </div>
-  )
+  );
 }
 

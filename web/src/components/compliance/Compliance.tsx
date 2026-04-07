@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -53,7 +52,7 @@ export function Compliance() {
   const filteredClusterNames = new Set(filteredClusters.map(c => c.name))
 
   // Aggregate real data across *filtered* clusters only
-  const realData = useMemo(() => {
+  const realData = (() => {
     // Kyverno aggregates — scoped to filtered clusters
     const kyvernoStatuses = Object.values(kyverno.statuses)
       .filter(s => s.installed && filteredClusterNames.has(s.cluster))
@@ -140,7 +139,7 @@ export function Compliance() {
       passing,
       failing,
       warning: Math.max(0, totalChecks - passing - failing) }
-  }, [kyverno.statuses, kubescape.statuses, trivy.statuses, filteredClusterNames])
+  })()
 
   // Only show demo/mock data when the user is explicitly in demo mode.
   // When connected to a live cluster without compliance tools, show zeros — not fake numbers.

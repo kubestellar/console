@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react';
 import { RotateCcw, Pause, Play } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
@@ -155,12 +155,12 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
   const gameLoopRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Calculate drop speed based on level
-  const getDropSpeed = useCallback(() => {
+  const getDropSpeed = () => {
     return Math.max(100, 1000 - (level - 1) * 100)
-  }, [level])
+  }
 
   // Move piece down
-  const moveDown = useCallback(() => {
+  const moveDown = () => {
     if (!piece || gameOver || isPaused) return
 
     const newPiece = { ...piece, y: piece.y + 1 }
@@ -197,7 +197,7 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
       setPiece(nextPiece)
       setNextPiece(getRandomPiece())
     }
-  }, [piece, board, gameOver, isPaused, nextPiece, level])
+  }
 
   // Move piece left/right
   const moveHorizontal = (dir: -1 | 1) => {

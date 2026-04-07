@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next'
 import { useClusters } from '../../hooks/useMCP'
 
@@ -53,10 +53,7 @@ export function MaintenanceWindows() {
   }, [windows.length])
 
   /** Available cluster names from connected clusters */
-  const clusterNames = useMemo(() =>
-    (clusters || []).map(c => c.name).filter(Boolean).sort(),
-    [clusters]
-  )
+  const clusterNames = (clusters || []).map(c => c.name).filter(Boolean).sort()
 
   const updateStatus = () => {
     const now = new Date()

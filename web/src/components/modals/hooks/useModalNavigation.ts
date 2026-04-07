@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useEffect } from 'react';
 
 interface UseModalNavigationOptions {
   /** Called when ESC is pressed or backdrop is clicked */
@@ -43,41 +43,38 @@ export function useModalNavigation({
   onBack,
   isOpen,
   enableKeyboard = true }: UseModalNavigationOptions): UseModalNavigationReturn {
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      // Don't handle if user is typing in an input or textarea
-      const target = e.target as HTMLElement
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
-      ) {
-        // Allow ESC to still work from inputs
-        if (e.key !== 'Escape') {
-          return
-        }
+  const handleKeyDown = (e: KeyboardEvent) => {
+    // Don't handle if user is typing in an input or textarea
+    const target = e.target as HTMLElement
+    if (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.isContentEditable
+    ) {
+      // Allow ESC to still work from inputs
+      if (e.key !== 'Escape') {
+        return
       }
+    }
 
-      switch (e.key) {
-        case 'Escape':
-          e.preventDefault()
-          e.stopPropagation()
+    switch (e.key) {
+      case 'Escape':
+        e.preventDefault()
+        e.stopPropagation()
+        onClose()
+        break
+
+      case 'Backspace':
+        e.preventDefault()
+        e.stopPropagation()
+        if (onBack) {
+          onBack()
+        } else {
           onClose()
-          break
-
-        case 'Backspace':
-          e.preventDefault()
-          e.stopPropagation()
-          if (onBack) {
-            onBack()
-          } else {
-            onClose()
-          }
-          break
-      }
-    },
-    [onClose, onBack]
-  )
+        }
+        break
+    }
+  }
 
   // Attach keyboard event listener when modal is open
   useEffect(() => {

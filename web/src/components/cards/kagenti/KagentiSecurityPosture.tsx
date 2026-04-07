@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Shield, ShieldAlert, ShieldCheck, Lock, Unlock, Bot } from 'lucide-react'
 import { useKagentiCards, useKagentiAgents, useKagentiTools } from '../../../hooks/useMCP'
 import { useCardLoadingState } from '../CardDataContext'
@@ -41,7 +40,7 @@ export function KagentiSecurityPosture({ config }: KagentiSecurityPostureProps) 
     isDemoData: isDemoMode,
   })
 
-  const security = useMemo(() => {
+  const security = (() => {
     const boundCards = cards.filter(c => c.identityBinding)
     const unboundCards = cards.filter(c => !c.identityBinding)
     const credentialedTools = tools.filter(t => t.hasCredential)
@@ -77,7 +76,7 @@ export function KagentiSecurityPosture({ config }: KagentiSecurityPostureProps) 
       totalAgents,
       score,
     }
-  }, [cards, agents, tools])
+  })()
 
   if (showSkeleton) {
     return (

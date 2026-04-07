@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next'
 import { Sparkles, Loader2, RefreshCw, ToggleLeft, Box } from 'lucide-react'
 import { cn } from '../../lib/cn'
@@ -50,17 +50,15 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
   }, [])
 
   // Build card type list from CARD_CONFIGS, excluding current card
-  const cardTypes = useMemo(() => {
-    return Object.entries(CARD_CONFIGS)
-      .filter(([type]) => type !== card?.card_type)
-      .map(([type, config]) => ({
-        type,
-        name: config.title,
-        description: config.description ?? '',
-        category: config.category ?? 'general',
-        iconColor: config.iconColor }))
-      .sort((a, b) => a.name.localeCompare(b.name))
-  }, [card?.card_type])
+  const cardTypes = Object.entries(CARD_CONFIGS)
+    .filter(([type]) => type !== card?.card_type)
+    .map(([type, config]) => ({
+      type,
+      name: config.title,
+      description: config.description ?? '',
+      category: config.category ?? 'general',
+      iconColor: config.iconColor }))
+    .sort((a, b) => a.name.localeCompare(b.name))
 
   // Filter by search query
   const filteredCards = (() => {

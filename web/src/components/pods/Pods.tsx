@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedPodIssues } from '../../hooks/useCachedData'
@@ -75,7 +74,7 @@ export function Pods() {
   })()
 
   // Calculate stats
-  const stats = useMemo(() => {
+  const stats = (() => {
     const totalPods = clusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
     const issueCount = filteredPodIssues.length
     const pendingCount = filteredPodIssues.filter(p => p.reason === 'Pending' || p.status === 'Pending').length
@@ -89,7 +88,7 @@ export function Pods() {
       pending: pendingCount,
       restarts: restartCount,
       clusters: clusterCount }
-  }, [clusters, filteredPodIssues, isAllClustersSelected, globalSelectedClusters])
+  })()
 
   // Dashboard-specific stats value getter
   const getDashboardStatValue = (blockId: string): StatBlockValue => {

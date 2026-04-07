@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react';
 import { TrendingUp, Cpu, MemoryStick, Box, Server, Clock } from 'lucide-react'
 import {
   LineChart,
@@ -139,13 +139,11 @@ export function ResourceTrend() {
   }
 
   // Calculate current totals
-  const currentTotals = useMemo(() => {
-    return {
-      cpuCores: filteredClusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0),
-      memoryGB: filteredClusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0),
-      pods: filteredClusters.reduce((sum, c) => sum + (c.podCount || 0), 0),
-      nodes: filteredClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0) }
-  }, [filteredClusters])
+  const currentTotals = {
+    cpuCores: filteredClusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0),
+    memoryGB: filteredClusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0),
+    pods: filteredClusters.reduce((sum, c) => sum + (c.podCount || 0), 0),
+    nodes: filteredClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0) }
 
   // Check if we have any reachable clusters with real data
   const hasReachableClusters = filteredClusters.some(c => c.reachable !== false && c.nodeCount !== undefined && c.nodeCount > 0)

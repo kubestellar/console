@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Shield, ShieldCheck, ShieldAlert, AlertTriangle, Lock } from 'lucide-react'
 import { useKagentCRDAgents, useKagentCRDTools } from '../../../hooks/mcp/kagent_crds'
 import { useCardLoadingState } from '../CardDataContext'
@@ -20,7 +19,7 @@ export function KagentSecurity({ config }: { config?: Record<string, unknown> })
     hasAnyData: hasData,
     isDemoData: agentsDemo || toolsDemo })
 
-  const stats = useMemo(() => {
+  const stats = (() => {
     const totalAgents = agents.length
     const declarative = agents.filter(a => a.agentType === 'Declarative').length
     const byo = agents.filter(a => a.agentType === 'BYO').length
@@ -48,7 +47,7 @@ export function KagentSecurity({ config }: { config?: Record<string, unknown> })
       remoteTools,
       readyTools,
       totalTools: tools.length }
-  }, [agents, tools])
+  })()
 
   const byoAgents = agents.filter(a => a.agentType === 'BYO')
 

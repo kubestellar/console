@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react';
 import { Server, Activity, Box, Cpu, ChevronRight } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
@@ -38,7 +38,7 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
   const { drillToCluster } = useDrillDownActions()
 
   // Apply global filters
-  const allClusters = useMemo(() => {
+  const allClusters = (() => {
     let result = rawClusters
 
     if (!isAllClustersSelected) {
@@ -60,7 +60,7 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
     })
 
     return result
-  }, [rawClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
+  })()
 
   // Reset local cluster selection when global filters change
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react';
 import {
   Cpu, TrendingUp, TrendingDown, Minus, Clock, Server,
   BarChart3, Table2, ChevronDown, ArrowUpDown } from 'lucide-react'
@@ -118,15 +118,6 @@ interface NodeTableRow {
   utilizationPct: number
 }
 
-/** Churn metrics computed from consecutive snapshot diffs */
-interface ChurnMetrics {
-  /** Average number of GPUs arriving (newly allocated) per snapshot interval */
-  arrivalRate: number
-  /** Average number of GPUs departing (freed) per snapshot interval */
-  departureRate: number
-  /** Average allocation duration in snapshot intervals (approximation) */
-  avgDurationIntervals: number
-}
 
 // ---------------------------------------------------------------------------
 // Demo data generators
@@ -265,32 +256,32 @@ export function GPUInventoryHistory() {
   }, [])
 
   // ── Available filter options (from history + current data) ──────────
-  const availableClusters = useMemo(() => {
+  const availableClusters = (() => {
     const names = new Set<string>()
     for (const n of (gpuNodes || [])) names.add(n.cluster)
     for (const s of (history || [])) {
       for (const g of (s.gpuNodes || [])) names.add(g.cluster)
     }
     return Array.from(names).sort().map(name => ({ name, reachable: true }))
-  }, [gpuNodes, history])
+  })()
 
-  const availableGPUTypes = useMemo(() => {
+  const availableGPUTypes = (() => {
     const types = new Set<string>()
     for (const n of (gpuNodes || [])) types.add(resolveGPUType(n.gpuType))
     for (const s of (history || [])) {
       for (const g of (s.gpuNodes || [])) types.add(resolveGPUType(g.gpuType))
     }
     return Array.from(types).sort()
-  }, [gpuNodes, history])
+  })()
 
-  const availableNodes = useMemo(() => {
+  const availableNodes = (() => {
     const nodes = new Set<string>()
     for (const n of (gpuNodes || [])) nodes.add(n.name)
     for (const s of (history || [])) {
       for (const g of (s.gpuNodes || [])) nodes.add(g.name)
     }
     return Array.from(nodes).sort()
-  }, [gpuNodes, history])
+  })()
 
   const toggleClusterFilter = (clusterName: string) => {
     setLocalClusterFilter(prev =>
@@ -328,7 +319,7 @@ export function GPUInventoryHistory() {
     }
 
   // ── Chart data ─────────────────────────────────────────────────────
-  const chartData = useMemo<GPUHistoryDataPoint[]>(() => {
+  const chartData = (() => {
     if (showDemo || (history || []).length === 0) {
       return generateDemoData()
     }
@@ -360,10 +351,10 @@ export function GPUInventoryHistory() {
 
       return point
     })
-  }, [history, showDemo, filterGPUNodes, chartMode])
+  })()
 
   /** All GPU type keys present in chart data */
-  const allGPUTypeKeys = useMemo(() => {
+  const allGPUTypeKeys = (() => {
     if (chartMode !== 'by-type') return []
     const types = new Set<string>()
     for (const dp of (chartData || [])) {
@@ -374,7 +365,7 @@ export function GPUInventoryHistory() {
       }
     }
     return Array.from(types).sort()
-  }, [chartData, chartMode])
+  })()
 
   /** Sorted list of GPU types for chart series (overflow aggregated into "Other") */
   const chartGPUTypes = (() => {
@@ -411,7 +402,7 @@ export function GPUInventoryHistory() {
   })()
 
   // ── Trend ──────────────────────────────────────────────────────────
-  const trend = useMemo<'up' | 'down' | 'stable'>(() => {
+  const trend = (() => {
     if ((chartData || []).length < MIN_TREND_SNAPSHOTS) return 'stable'
     const recent = chartData.slice(-RECENT_SNAPSHOT_WINDOW)
     if (recent.length < MIN_TREND_SNAPSHOTS) return 'stable'
@@ -427,10 +418,10 @@ export function GPUInventoryHistory() {
     if (diff > TREND_CHANGE_THRESHOLD) return 'up'
     if (diff < -TREND_CHANGE_THRESHOLD) return 'down'
     return 'stable'
-  }, [chartData])
+  })()
 
   // ── Churn metrics ──────────────────────────────────────────────────
-  const churnMetrics = useMemo<ChurnMetrics | null>(() => {
+  const churnMetrics = (() => {
     if (showDemo || (history || []).length < MIN_CHURN_SNAPSHOTS) return null
 
     let totalArrivals = 0
@@ -475,7 +466,7 @@ export function GPUInventoryHistory() {
     const avgDurationIntervals = arrivalRate > 0 ? meanAllocated / arrivalRate : 0
 
     return { arrivalRate, departureRate, avgDurationIntervals }
-  }, [history, showDemo, filterGPUNodes, chartData])
+  })()
 
   // ── Snapshot interval (computed from history timestamps) ────────────
   /** Median interval between consecutive snapshots in minutes, used to display churn metrics in real time units */
@@ -713,7 +704,6 @@ export function GPUInventoryHistory() {
           </div>
         </div>
       </div>
-
       {/* Stats row */}
       <div className="grid grid-cols-4 gap-2 mb-3">
         <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20" title={`${currentTotals.total} total GPUs`}>
@@ -745,7 +735,6 @@ export function GPUInventoryHistory() {
           <span className={`text-sm font-bold ${getUsageColor()}`}>{usagePercent}%</span>
         </div>
       </div>
-
       {/* Main content area */}
       <div className="flex-1 min-h-[160px]">
         {viewMode === 'chart' ? (
@@ -888,7 +877,7 @@ export function GPUInventoryHistory() {
           </>
         ) : (
           /* Table view — per-node, per-type breakdown */
-          <div className="flex-1 overflow-auto">
+          (<div className="flex-1 overflow-auto">
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border/50">
@@ -959,10 +948,9 @@ export function GPUInventoryHistory() {
                 </div>
               </div>
             )}
-          </div>
+          </div>)
         )}
       </div>
-
       {/* Footer — stats + churn metrics */}
       {(chartData || []).length > 0 && (
         <div className="mt-2 pt-2 border-t border-border/50 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -1011,5 +999,5 @@ export function GPUInventoryHistory() {
         </div>
       )}
     </div>
-  )
+  );
 }

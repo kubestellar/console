@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import type { ClusterInfo } from '../../hooks/mcp/types'
 import { isClusterUnreachable, isClusterHealthy } from './utils'
 
@@ -39,7 +38,7 @@ export function useClusterStats({
   globalFilteredClusters,
   gpuByCluster,
 }: ClusterStatsParams): ClusterStats {
-  const stats = useMemo(() => {
+  const stats = (() => {
     // Calculate total GPUs from GPU nodes that match filtered clusters
     // Only include GPUs from reachable clusters
     let totalGPUs = 0
@@ -85,7 +84,7 @@ export function useClusterStats({
       allocatedGPUs,
       hasResourceData,
     }
-  }, [globalFilteredClusters, gpuByCluster])
+  })()
 
   return stats
 }

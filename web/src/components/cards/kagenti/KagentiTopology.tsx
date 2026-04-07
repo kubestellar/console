@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Bot, Wrench } from 'lucide-react'
 import { useKagentiAgents, useKagentiTools, type KagentiAgent, type KagentiTool } from '../../../hooks/mcp/kagenti'
 import { useCardLoadingState } from '../CardDataContext'
@@ -39,7 +38,7 @@ export function KagentiTopology({ config }: { config?: Record<string, unknown> }
     isDemoData: agentsDemo || toolsDemo,
   })
 
-  const { nodes, edges } = useMemo(() => {
+  const { nodes, edges } = (() => {
     const nodesMap: TopoNode[] = []
     const edgesArr: TopoEdge[] = []
 
@@ -91,7 +90,7 @@ export function KagentiTopology({ config }: { config?: Record<string, unknown> }
     })
 
     return { nodes: nodesMap, edges: edgesArr }
-  }, [agents, tools])
+  })()
 
   if (agentsLoading || toolsLoading) {
     return (

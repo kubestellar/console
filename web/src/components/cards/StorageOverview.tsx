@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { HardDrive, Database, CheckCircle, AlertTriangle, Clock, Server } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedPVCs } from '../../hooks/useCachedData'
@@ -66,7 +65,7 @@ export function StorageOverview() {
   })()
 
   // Calculate storage stats
-  const stats = useMemo(() => {
+  const stats = (() => {
     const totalStorageGB = filteredClusters.reduce((sum, c) => sum + (c.storageGB || 0), 0)
     const totalPVCs = filteredPVCs.length
     const boundPVCs = filteredPVCs.filter(p => p.status === 'Bound').length
@@ -88,7 +87,7 @@ export function StorageOverview() {
       failedPVCs,
       storageClasses: Array.from(storageClasses.entries()).sort((a, b) => b[1] - a[1]),
       clustersWithStorage: filteredClusters.filter(c => (c.storageGB || 0) > 0).length }
-  }, [filteredClusters, filteredPVCs])
+  })()
 
   // Check if we have real data from reachable clusters
   const hasRealData = !isLoading && filteredClusters.length > 0 &&

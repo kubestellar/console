@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Gauge } from '../charts'
 import { Cpu, MemoryStick, Server } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
@@ -36,7 +35,7 @@ export function ResourceUsage() {
   })()
 
   // Calculate totals from real cluster data
-  const totals = useMemo(() => {
+  const totals = (() => {
     // Sum capacity from all clusters
     const totalCPUs = clusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
     const totalMemoryGB = clusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0)
@@ -62,7 +61,7 @@ export function ResourceUsage() {
       tpu: sumAccel(tpuOnly),
       aiu: sumAccel(aiuOnly),
       xpu: sumAccel(xpuOnly) }
-  }, [clusters, gpuNodes])
+  })()
 
   // Open resources drill down showing all clusters
   const handleDrillDown = () => {

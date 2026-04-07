@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Zap, Server, Layers, RefreshCw, Cpu, AlertCircle, HardDrive, CircuitBoard, Settings } from 'lucide-react'
 import { GPUNode, NVIDIAOperatorStatus } from '../../../hooks/useMCP'
 import { BaseModal } from '../../../lib/modals'
@@ -59,7 +58,7 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
 
   const { t } = useTranslation()
   // Calculate GPU type breakdown
-  const gpuTypeInfo = useMemo(() => {
+  const gpuTypeInfo = (() => {
     const typeMap = new Map<string, GPUTypeInfo>()
 
     gpuNodes.forEach(node => {
@@ -85,10 +84,10 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
     })
 
     return Array.from(typeMap.values()).sort((a, b) => b.totalGPUs - a.totalGPUs)
-  }, [gpuNodes])
+  })()
 
   // Calculate cluster breakdown
-  const clusterInfo = useMemo(() => {
+  const clusterInfo = (() => {
     const clusterMap = new Map<string, ClusterGPUInfo>()
 
     gpuNodes.forEach(node => {
@@ -113,7 +112,7 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
     })
 
     return Array.from(clusterMap.values()).sort((a, b) => b.totalGPUs - a.totalGPUs)
-  }, [gpuNodes])
+  })()
 
   // Calculate totals
   const totals = (() => {
@@ -141,7 +140,7 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
   })()
 
   // Get GPU specifications from nodes (memory, family, CUDA version)
-  const gpuSpecs = useMemo(() => {
+  const gpuSpecs = (() => {
     const specs = {
       totalMemoryGB: 0,
       families: new Set<string>(),
@@ -173,7 +172,7 @@ export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRe
       cudaDriverVersions: Array.from(specs.cudaDriverVersions),
       cudaRuntimeVersions: Array.from(specs.cudaRuntimeVersions),
       migCapableCount: specs.migCapableCount }
-  }, [gpuNodes])
+  })()
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="lg">

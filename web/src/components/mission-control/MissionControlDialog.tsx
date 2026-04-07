@@ -10,7 +10,7 @@
  * Phase 3: Flight Plan (SVG blueprint + deploy)
  */
 
-import { useEffect, useCallback, useState, lazy, Suspense } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   X,
@@ -73,12 +73,9 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
   const { state } = mc
 
   // Escape to close
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    },
-    [onClose]
-  )
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') onClose()
+  }
 
   // Track the highest phase the user has reached so they can click back to any visited phase
   const currentStepIndex = PHASE_STEPS.findIndex((s) => s.key === state.phase)
