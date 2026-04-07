@@ -13,6 +13,10 @@ vi.mock('react-i18next', () => ({
 const mockIsDemoMode = vi.fn(() => false)
 vi.mock('../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: mockIsDemoMode() }),
+  getDemoMode: () => true, default: () => true,
+  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
+  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
+  setGlobalDemoMode: vi.fn(),
 }))
 
 const mockClusters = vi.fn(() => [])
@@ -211,8 +215,9 @@ describe('VaultSecrets', () => {
 
     it('continues to next cluster on kubectl exception', async () => {
       mockClusters.mockReturnValue([reachableCluster('c1'), reachableCluster('c2')])
+      // c1: pods call fails -> catch skips to c2 (secrets call for c1 never runs)
+      // c2: pods call succeeds, secrets call succeeds
       mockKubectlExec
-        .mockRejectedValueOnce(new Error('timeout'))
         .mockRejectedValueOnce(new Error('timeout'))
         .mockResolvedValueOnce(kubectlSuccess(JSON.stringify({ items: [{ status: { phase: 'Running' } }] })))
         .mockResolvedValueOnce(kubectlSuccess('1'))
@@ -338,7 +343,7 @@ describe('ExternalSecrets', () => {
     })
 
     it('shows failed count', async () => {
-      setupESOInstalled({ synced: 3, failed: 2 })
+      setupESOInstalled({ synced: 3, failed: 2, stores: 1 })
       await act(async () => render(<ExternalSecrets />))
       await waitFor(() => expect(screen.getByText('2')).toBeInTheDocument())
     })
@@ -563,7 +568,7 @@ describe('CertManager', () => {
       // Shield SVG inside the issuer row should have text-green-400
       const row = screen.getByText('ready-issuer').closest('div')
       const shield = row?.querySelector('svg')
-      expect(shield?.className).toContain('text-green-400')
+      expect(shield?.getAttribute('class')).toContain('text-green-400')
     })
 
     it('applies red shield icon for not-ready issuer', () => {
@@ -573,7 +578,7 @@ describe('CertManager', () => {
       render(<CertManager />)
       const row = screen.getByText('bad-issuer').closest('div')
       const shield = row?.querySelector('svg')
-      expect(shield?.className).toContain('text-red-400')
+      expect(shield?.getAttribute('class')).toContain('text-red-400')
     })
   })
 

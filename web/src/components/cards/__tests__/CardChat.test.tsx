@@ -54,6 +54,9 @@ vi.mock('../../../lib/modals', () => ({
   ),
 }))
 
+// JSDOM does not implement scrollIntoView — stub it globally for these tests.
+Element.prototype.scrollIntoView = vi.fn()
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -88,9 +91,12 @@ function renderChat(props = {}) {
 // ---------------------------------------------------------------------------
 
 describe('CardChat', () => {
+  let user: ReturnType<typeof userEvent.setup>
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers()
+    user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
   })
 
   afterEach(() => {
@@ -189,7 +195,7 @@ describe('CardChat', () => {
       const msg = makeMessage({ role: 'assistant', action })
       renderChat({ messages: [msg] })
 
-      await userEvent.click(screen.getByText(/cardChat\.apply/i))
+      await user.click(screen.getByText(/cardChat\.apply/i))
       expect(defaultProps.onApplyAction).toHaveBeenCalledWith(action)
     })
   })
@@ -213,14 +219,14 @@ describe('CardChat', () => {
 
     it('clicking a quick prompt fills the textarea', async () => {
       renderChat({ cardType: 'cluster_health' })
-      await userEvent.click(screen.getByText('Show only unhealthy clusters'))
+      await user.click(screen.getByText('Show only unhealthy clusters'))
       const textarea = screen.getByRole('textbox')
       expect((textarea as HTMLTextAreaElement).value).toBe('Show only unhealthy clusters')
     })
 
     it('clicking a quick prompt focuses the textarea', async () => {
       renderChat({ cardType: 'cluster_health' })
-      await userEvent.click(screen.getByText('Show only unhealthy clusters'))
+      await user.click(screen.getByText('Show only unhealthy clusters'))
       const textarea = screen.getByRole('textbox')
       expect(document.activeElement).toBe(textarea)
     })
@@ -243,7 +249,7 @@ describe('CardChat', () => {
     it('Send button is enabled when input has text', async () => {
       renderChat()
       const textarea = screen.getByRole('textbox')
-      await userEvent.type(textarea, 'hello')
+      await user.type(textarea, 'hello')
       const footerButtons = screen.getByTestId('modal-footer').querySelectorAll('button')
       const sendBtnEl = footerButtons[footerButtons.length - 1] as HTMLButtonElement
       expect(sendBtnEl.disabled).toBe(false)
@@ -252,9 +258,9 @@ describe('CardChat', () => {
     it('calls onSendMessage with trimmed input on Send click', async () => {
       defaultProps.onSendMessage.mockResolvedValue(makeMessage({ role: 'assistant' }))
       renderChat()
-      await userEvent.type(screen.getByRole('textbox'), '  hello world  ')
+      await user.type(screen.getByRole('textbox'), '  hello world  ')
       const footerButtons = screen.getByTestId('modal-footer').querySelectorAll('button')
-      await userEvent.click(footerButtons[footerButtons.length - 1])
+      await user.click(footerButtons[footerButtons.length - 1])
       expect(defaultProps.onSendMessage).toHaveBeenCalledWith('hello world')
     })
 
@@ -262,9 +268,9 @@ describe('CardChat', () => {
       defaultProps.onSendMessage.mockResolvedValue(makeMessage())
       renderChat()
       const textarea = screen.getByRole('textbox') as HTMLTextAreaElement
-      await userEvent.type(textarea, 'test message')
+      await user.type(textarea, 'test message')
       const footerButtons = screen.getByTestId('modal-footer').querySelectorAll('button')
-      await userEvent.click(footerButtons[footerButtons.length - 1])
+      await user.click(footerButtons[footerButtons.length - 1])
       await waitFor(() => expect(textarea.value).toBe(''))
     })
 
@@ -272,7 +278,7 @@ describe('CardChat', () => {
       defaultProps.onSendMessage.mockResolvedValue(makeMessage())
       renderChat()
       const textarea = screen.getByRole('textbox')
-      await userEvent.type(textarea, 'enter message')
+      await user.type(textarea, 'enter message')
       fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: false })
       await waitFor(() => expect(defaultProps.onSendMessage).toHaveBeenCalledWith('enter message'))
     })
@@ -280,7 +286,7 @@ describe('CardChat', () => {
     it('pressing Shift+Enter does NOT send', async () => {
       renderChat()
       const textarea = screen.getByRole('textbox')
-      await userEvent.type(textarea, 'multi\nline')
+      await user.type(textarea, 'multi\nline')
       fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: true })
       expect(defaultProps.onSendMessage).not.toHaveBeenCalled()
     })
@@ -291,7 +297,7 @@ describe('CardChat', () => {
         new Promise<ChatMessage>((r) => { resolve = r })
       )
       renderChat()
-      await userEvent.type(screen.getByRole('textbox'), 'slow query')
+      await user.type(screen.getByRole('textbox'), 'slow query')
       fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter', shiftKey: false })
       await waitFor(() =>
         expect(screen.getByText('cardChat.thinking')).toBeInTheDocument()
@@ -305,7 +311,7 @@ describe('CardChat', () => {
         new Promise<ChatMessage>((r) => { resolve = r })
       )
       renderChat()
-      await userEvent.type(screen.getByRole('textbox'), 'slow query')
+      await user.type(screen.getByRole('textbox'), 'slow query')
       fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter', shiftKey: false })
       await waitFor(() => {
         const textarea = screen.getByRole('textbox') as HTMLTextAreaElement
@@ -317,7 +323,7 @@ describe('CardChat', () => {
     it('shows error toast when onSendMessage rejects', async () => {
       defaultProps.onSendMessage.mockRejectedValue(new Error('Network error'))
       renderChat()
-      await userEvent.type(screen.getByRole('textbox'), 'boom')
+      await user.type(screen.getByRole('textbox'), 'boom')
       fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter', shiftKey: false })
       await waitFor(() =>
         expect(mockShowToast).toHaveBeenCalledWith(
@@ -353,7 +359,7 @@ describe('CardChat', () => {
       // Find copy button — it's inside the message bubble
       const msgContent = screen.getByTestId('modal-content')
       const copyBtn = msgContent.querySelectorAll('button')[0]
-      await userEvent.click(copyBtn)
+      await user.click(copyBtn)
       expect(copyToClipboard).toHaveBeenCalledWith('Copy me')
     })
 
@@ -364,7 +370,7 @@ describe('CardChat', () => {
       renderChat({ messages: [msg] })
       const msgContent = screen.getByTestId('modal-content')
       const copyBtn = msgContent.querySelectorAll('button')[0]
-      await userEvent.click(copyBtn)
+      await user.click(copyBtn)
       // After click copiedId should be set — CheckCircle replaces Copy icon
       // We can't directly test icon, but we can verify no error thrown and timer fires
       act(() => vi.runAllTimers())
@@ -376,7 +382,7 @@ describe('CardChat', () => {
   describe('close behaviour', () => {
     it('calls onClose when modal close button is clicked', async () => {
       renderChat()
-      await userEvent.click(screen.getByTestId('modal-close'))
+      await user.click(screen.getByTestId('modal-close'))
       expect(defaultProps.onClose).toHaveBeenCalledTimes(1)
     })
   })

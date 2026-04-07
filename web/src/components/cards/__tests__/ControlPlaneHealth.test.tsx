@@ -17,14 +17,14 @@ const makePod = (overrides = {}) => ({
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedPods: () => ({
+  useCachedPods: vi.fn(() => ({
     pods: [],
     isLoading: false,
     isRefreshing: false,
     isDemoFallback: false,
     isFailed: false,
     consecutiveFailures: 0,
-  }),
+  })),
 }))
 
 vi.mock('../../../hooks/useMCP', () => ({
@@ -54,7 +54,11 @@ vi.mock('../../ui/Skeleton', () => ({
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('ControlPlaneHealth', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    const { useCardLoadingState } = await import('../CardDataContext')
+    vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
+  })
 
   describe('Skeleton state', () => {
     it('renders skeletons when showSkeleton is true', async () => {

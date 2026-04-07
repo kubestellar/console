@@ -15,6 +15,10 @@ vi.mock('react-i18next', () => ({
 const mockIsDemoMode = vi.fn(() => false)
 vi.mock('../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: mockIsDemoMode() }),
+  getDemoMode: () => true, default: () => true,
+  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
+  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
+  setGlobalDemoMode: vi.fn(),
 }))
 
 const mockUseCachedEvents = vi.fn()
@@ -86,6 +90,7 @@ vi.mock('../../../lib/cards/CardComponents', () => ({
   CardControlsRow: () => <div data-testid="card-controls-row" />,
   CardPaginationFooter: ({ needsPagination }: { needsPagination: boolean }) =>
     needsPagination ? <div data-testid="pagination" /> : null,
+  CardEmptyState: ({ title, message }: { title?: string; message?: string; icon?: unknown }) => <div data-testid="empty-state">{title}{message && <span>{message}</span>}</div>,
 }))
 
 // ---------------------------------------------------------------------------

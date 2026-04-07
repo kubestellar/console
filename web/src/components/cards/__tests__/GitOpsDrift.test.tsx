@@ -19,7 +19,7 @@ const makeDrift = (overrides = {}) => ({
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedGitOpsDrifts: () => ({
+  useCachedGitOpsDrifts: vi.fn(() => ({
     drifts: [],
     isLoading: false,
     isRefreshing: false,
@@ -27,15 +27,15 @@ vi.mock('../../../hooks/useCachedData', () => ({
     isFailed: false,
     consecutiveFailures: 0,
     isDemoFallback: false,
-  }),
+  })),
 }))
 
 vi.mock('../../../hooks/useGlobalFilters', () => ({
-  useGlobalFilters: () => ({
+  useGlobalFilters: vi.fn(() => ({
     selectedSeverities: ['critical', 'high', 'medium', 'low', 'info'],
     isAllSeveritiesSelected: true,
     customFilter: '',
-  }),
+  })),
 }))
 
 vi.mock('../CardDataContext', () => ({
@@ -112,7 +112,11 @@ vi.mock('../deploy/GitOpsDriftDetailModal', () => ({
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('GitOpsDrift', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    const { useCardLoadingState } = await import('../CardDataContext')
+    vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false, showEmptyState: false } as never)
+  })
 
   describe('Skeleton', () => {
     it('renders loader spinner when showSkeleton', async () => {

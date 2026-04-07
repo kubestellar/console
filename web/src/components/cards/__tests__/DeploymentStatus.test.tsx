@@ -38,7 +38,7 @@ vi.mock('../../../lib/cards/cardHooks', async (importOriginal) => {
       setStatusFilter: mockSetStatusFilter,
     }),
     useCardFilters: (_data: Deployment[]) => ({ filtered: _data }),
-    useCardData: (data: Deployment[]) => ({
+    useCardData: vi.fn((data: Deployment[]) => ({
       items: data,
       totalItems: data.length,
       currentPage: 1,
@@ -66,7 +66,7 @@ vi.mock('../../../lib/cards/cardHooks', async (importOriginal) => {
       },
       containerRef: { current: null },
       containerStyle: {},
-    }),
+    })),
     commonComparators: actual.commonComparators,
   }
 })
@@ -111,6 +111,7 @@ vi.mock('../../../lib/cards/CardComponents', () => ({
     />
   ),
   CardAIActions: () => <div data-testid="ai-actions" />,
+  CardEmptyState: ({ title, message }: { title?: string; message?: string; icon?: unknown }) => <div data-testid="empty-state">{title}{message && <span>{message}</span>}</div>,
 }))
 
 // ---------------------------------------------------------------------------
@@ -244,7 +245,8 @@ describe('DeploymentStatus', () => {
       const digest = 'sha256:abcdef1234567890abcdef'
       setupHooks({ deployments: [makeDeployment({ image: `nginx:${digest}` })] })
       render(<DeploymentStatus />)
-      expect(screen.getByText('sha256:abcde')).toBeInTheDocument()
+      // Last segment after splitting on ':' is 'abcdef1234567890abcdef' (22 chars > 20), truncated to 12
+      expect(screen.getByText('abcdef123456')).toBeInTheDocument()
     })
 
     it('shows "no match" message when paginatedDeployments is empty', () => {
@@ -383,11 +385,11 @@ describe('DeploymentStatus', () => {
       // Override useCardData for this test via module mock
       const { useCardData } = await import('../../../lib/cards/cardHooks')
       vi.mocked(useCardData).mockReturnValueOnce({
-        ...(vi.mocked(useCardData).getMockImplementation()?.([]) as ReturnType<typeof useCardData>),
-        needsPagination: true,
-        totalPages: 3,
-        currentPage: 2,
-        itemsPerPage: 5,
+        items: [], totalItems: 0, currentPage: 2, totalPages: 3, itemsPerPage: 5,
+        goToPage: vi.fn(), needsPagination: true, setItemsPerPage: vi.fn(),
+        filters: { search: '', setSearch: vi.fn(), localClusterFilter: [], toggleClusterFilter: vi.fn(), clearClusterFilter: vi.fn(), availableClusters: [], showClusterFilter: false, setShowClusterFilter: vi.fn(), clusterFilterRef: { current: null } },
+        sorting: { sortBy: 'status', setSortBy: vi.fn(), sortDirection: 'asc', setSortDirection: vi.fn() },
+        containerRef: { current: null }, containerStyle: {},
       } as ReturnType<typeof useCardData>)
 
       setupHooks({ deployments: [makeDeployment()] })
@@ -421,18 +423,11 @@ describe('DeploymentStatus', () => {
     it('shows cluster count indicator when localClusterFilter has entries', async () => {
       const { useCardData } = await import('../../../lib/cards/cardHooks')
       vi.mocked(useCardData).mockReturnValueOnce({
-        ...(vi.mocked(useCardData).getMockImplementation()?.([]) as ReturnType<typeof useCardData>),
-        filters: {
-          search: '',
-          setSearch: vi.fn(),
-          localClusterFilter: ['c1', 'c2'],
-          toggleClusterFilter: vi.fn(),
-          clearClusterFilter: vi.fn(),
-          availableClusters: ['c1', 'c2', 'c3'],
-          showClusterFilter: false,
-          setShowClusterFilter: vi.fn(),
-          clusterFilterRef: { current: null },
-        },
+        items: [], totalItems: 0, currentPage: 1, totalPages: 1, itemsPerPage: 5,
+        goToPage: vi.fn(), needsPagination: false, setItemsPerPage: vi.fn(),
+        filters: { search: '', setSearch: vi.fn(), localClusterFilter: ['c1', 'c2'], toggleClusterFilter: vi.fn(), clearClusterFilter: vi.fn(), availableClusters: ['c1', 'c2', 'c3'], showClusterFilter: false, setShowClusterFilter: vi.fn(), clusterFilterRef: { current: null } },
+        sorting: { sortBy: 'status', setSortBy: vi.fn(), sortDirection: 'asc', setSortDirection: vi.fn() },
+        containerRef: { current: null }, containerStyle: {},
       } as ReturnType<typeof useCardData>)
 
       setupHooks({ deployments: [] })

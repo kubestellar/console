@@ -73,7 +73,7 @@ export function VClusterStatus({ config: _config }: VClusterStatusProps) {
   const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
   const isLoading = false
   const hasError = false
-  useCardLoadingState({ isLoading, hasAnyData: DEMO_VCLUSTERS.length > 0, isDemoData: true })
+  useCardLoadingState({ isLoading: false, hasAnyData: DEMO_VCLUSTERS.length > 0, isDemoData: true })
   const {
     items: paginatedVClusters, totalItems, currentPage, totalPages, itemsPerPage,
     goToPage, needsPagination, setItemsPerPage,

@@ -133,7 +133,7 @@ describe('AppStatus', () => {
   })
 
   describe('App list', () => {
-    it('renders app rows for each aggregated deployment', () => {
+    it('renders app rows for each aggregated deployment', async () => {
       const { useCachedDeployments } = vi.mocked(
         await vi.importMock('../../../hooks/useCachedData') as { useCachedDeployments: () => unknown }
       )

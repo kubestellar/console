@@ -23,6 +23,10 @@ vi.mock('../../../hooks/useGlobalFilters', () => ({
 
 vi.mock('../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: true }), // demo so we get data
+  getDemoMode: () => true, default: () => true,
+  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
+  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
+  setGlobalDemoMode: vi.fn(),
 }))
 
 vi.mock('../../../hooks/useDrillDown', () => ({
@@ -92,7 +96,11 @@ vi.mock('../../ui/ClusterBadge', () => ({
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('KustomizationStatus', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    const { useCardLoadingState } = await import('../CardDataContext')
+    vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false, showEmptyState: false } as never)
+  })
 
   describe('Skeleton', () => {
     it('renders skeletons during loading', async () => {

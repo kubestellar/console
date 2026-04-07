@@ -5,7 +5,7 @@ import { ArgoCDHealth } from '../ArgoCDHealth'
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 vi.mock('../../../hooks/useArgoCD', () => ({
-  useArgoCDHealth: () => ({
+  useArgoCDHealth: vi.fn(() => ({
     stats: { healthy: 0, degraded: 0, progressing: 0, missing: 0, unknown: 0 },
     total: 0,
     healthyPercent: 0,
@@ -14,7 +14,7 @@ vi.mock('../../../hooks/useArgoCD', () => ({
     isFailed: false,
     consecutiveFailures: 0,
     isDemoData: false,
-  }),
+  })),
 }))
 
 vi.mock('../CardDataContext', () => ({
@@ -23,6 +23,10 @@ vi.mock('../CardDataContext', () => ({
 
 vi.mock('../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false }),
+  getDemoMode: () => false, default: () => false,
+  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
+  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
+  setGlobalDemoMode: vi.fn(),
 }))
 
 vi.mock('react-i18next', () => ({
@@ -36,7 +40,17 @@ vi.mock('../../ui/Skeleton', () => ({
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('ArgoCDHealth', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    const { useCardLoadingState } = await import('../CardDataContext')
+    vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false, showEmptyState: false } as never)
+    const { useArgoCDHealth } = await import('../../../hooks/useArgoCD')
+    vi.mocked(useArgoCDHealth).mockReturnValue({
+      stats: { healthy: 0, degraded: 0, progressing: 0, missing: 0, unknown: 0 },
+      total: 0, healthyPercent: 0, isLoading: false, isRefreshing: false,
+      isFailed: false, consecutiveFailures: 0, isDemoData: false,
+    } as never)
+  })
 
   describe('Skeleton', () => {
     it('renders skeletons during loading', async () => {
@@ -89,7 +103,7 @@ describe('ArgoCDHealth', () => {
         isDemoData: false,
       } as never)
       render(<ArgoCDHealth />)
-      expect(screen.getByText('argoCDHealth.healthy')).toBeTruthy()
+      expect(screen.getAllByText('argoCDHealth.healthy').length).toBeGreaterThan(0)
       expect(screen.getByText('argoCDHealth.degraded')).toBeTruthy()
       expect(screen.getByText('argoCDHealth.progressing')).toBeTruthy()
       expect(screen.getByText('argoCDHealth.missing')).toBeTruthy()

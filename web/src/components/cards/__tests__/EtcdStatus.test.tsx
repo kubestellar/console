@@ -18,14 +18,14 @@ const makeEtcdPod = (overrides = {}) => ({
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedPods: () => ({
+  useCachedPods: vi.fn(() => ({
     pods: [],
     isLoading: false,
     isRefreshing: false,
     isDemoFallback: false,
     isFailed: false,
     consecutiveFailures: 0,
-  }),
+  })),
 }))
 
 vi.mock('../CardDataContext', () => ({
@@ -44,7 +44,11 @@ vi.mock('react-i18next', () => ({
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('EtcdStatus', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    const { useCardLoadingState } = await import('../CardDataContext')
+    vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
+  })
 
   describe('Skeleton', () => {
     it('renders pulse skeletons when showSkeleton is true', async () => {

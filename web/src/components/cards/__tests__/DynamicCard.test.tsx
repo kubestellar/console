@@ -349,7 +349,7 @@ describe('Tier1CardRuntime', () => {
 
   describe('API data fetching', () => {
     beforeEach(() => {
-      vi.spyOn(Storage.prototype, 'getItem').mockReturnValue('test-token')
+      vi.spyOn(localStorage, 'getItem').mockReturnValue('test-token')
     })
 
     afterEach(() => {
@@ -432,7 +432,7 @@ describe('Tier1CardRuntime', () => {
     })
 
     it('sends no Authorization header when token is absent', async () => {
-      vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(null)
+      vi.spyOn(localStorage, 'getItem').mockReturnValue(null)
       global.fetch = vi.fn().mockResolvedValue(
         new Response(JSON.stringify([]), { status: 200 })
       ) as unknown as typeof fetch

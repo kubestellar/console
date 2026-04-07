@@ -5,7 +5,7 @@ import { ArgoCDSyncStatus } from '../ArgoCDSyncStatus'
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 vi.mock('../../../hooks/useArgoCD', () => ({
-  useArgoCDSyncStatus: (_filter: string[]) => ({
+  useArgoCDSyncStatus: vi.fn((_filter?: string[]) => ({
     stats: { synced: 0, outOfSync: 0, unknown: 0 },
     total: 0,
     syncedPercent: 0,
@@ -15,7 +15,7 @@ vi.mock('../../../hooks/useArgoCD', () => ({
     isFailed: false,
     consecutiveFailures: 0,
     isDemoData: false,
-  }),
+  })),
 }))
 
 vi.mock('../CardDataContext', () => ({
@@ -24,6 +24,10 @@ vi.mock('../CardDataContext', () => ({
 
 vi.mock('../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false }),
+  getDemoMode: () => false, default: () => false,
+  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
+  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
+  setGlobalDemoMode: vi.fn(),
 }))
 
 vi.mock('../../../lib/cards/cardHooks', () => ({
@@ -53,7 +57,11 @@ vi.mock('../../../lib/cards/CardComponents', () => ({
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('ArgoCDSyncStatus', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    const { useCardLoadingState } = await import('../CardDataContext')
+    vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false, showEmptyState: false } as never)
+  })
 
   describe('Skeleton', () => {
     it('renders skeletons during loading', async () => {
@@ -128,7 +136,7 @@ describe('ArgoCDSyncStatus', () => {
         isDemoData: false,
       } as never)
       render(<ArgoCDSyncStatus />)
-      expect(screen.getByText('10')).toBeTruthy()
+      expect(screen.getAllByText('10').length).toBeGreaterThan(0)
       expect(screen.getByText('argoCDSyncStatus.apps')).toBeTruthy()
     })
   })

@@ -18,29 +18,29 @@ vi.mock('../../../hooks/useMCP', () => ({
 }))
 
 vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedPodIssues: () => ({
+  useCachedPodIssues: vi.fn(() => ({
     issues: [],
     isDemoFallback: false,
     isRefreshing: false,
     isFailed: false,
     consecutiveFailures: 0,
     lastRefresh: null,
-  }),
-  useCachedDeploymentIssues: () => ({
+  })),
+  useCachedDeploymentIssues: vi.fn(() => ({
     issues: [],
     isDemoFallback: false,
     isRefreshing: false,
     isFailed: false,
     consecutiveFailures: 0,
     lastRefresh: null,
-  }),
-  useCachedNamespaces: () => ({
+  })),
+  useCachedNamespaces: vi.fn(() => ({
     namespaces: ['default', 'kube-system'],
     isRefreshing: false,
     isFailed: false,
     consecutiveFailures: 0,
     isDemoFallback: false,
-  }),
+  })),
 }))
 
 vi.mock('../../../hooks/useGlobalFilters', () => ({
@@ -90,9 +90,11 @@ vi.mock('../../../lib/constants/storage', () => ({
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('NamespaceOverview', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
     localStorage.clear()
+    const { useCardLoadingState } = await import('../CardDataContext')
+    vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false, showEmptyState: false } as never)
   })
 
   describe('Skeleton', () => {

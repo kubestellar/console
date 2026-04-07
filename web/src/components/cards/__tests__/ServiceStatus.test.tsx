@@ -19,7 +19,7 @@ const mockDrillToService = vi.fn()
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedServices: () => ({
+  useCachedServices: vi.fn(() => ({
     services: [],
     isLoading: false,
     isRefreshing: false,
@@ -27,7 +27,7 @@ vi.mock('../../../hooks/useCachedData', () => ({
     isFailed: false,
     consecutiveFailures: 0,
     error: null,
-  }),
+  })),
 }))
 
 vi.mock('../../../hooks/useDrillDown', () => ({
@@ -93,7 +93,11 @@ vi.mock('../../ui/ClusterBadge', () => ({
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('ServiceStatus', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    const { useCardLoadingState } = await import('../CardDataContext')
+    vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false, showEmptyState: false } as never)
+  })
 
   describe('Skeleton', () => {
     it('renders skeletons when loading', async () => {
@@ -145,8 +149,8 @@ describe('ServiceStatus', () => {
       render(<ServiceStatus />)
       // LB count = 1
       expect(screen.getByText('LB')).toBeTruthy()
-      expect(screen.getByText('NodePort')).toBeTruthy()
-      expect(screen.getByText('ClusterIP')).toBeTruthy()
+      expect(screen.getAllByText('NodePort').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('ClusterIP').length).toBeGreaterThan(0)
     })
   })
 

@@ -25,14 +25,14 @@ vi.mock('../../../hooks/useMCP', () => ({
 }))
 
 vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedHelmReleases: () => ({
+  useCachedHelmReleases: vi.fn(() => ({
     releases: [],
     isLoading: false,
     isRefreshing: false,
     isFailed: false,
     consecutiveFailures: 0,
     isDemoFallback: false,
-  }),
+  })),
 }))
 
 vi.mock('../../../hooks/useDrillDown', () => ({
@@ -89,6 +89,7 @@ vi.mock('../../../lib/cards/CardComponents', () => ({
   CardControlsRow: () => <div data-testid="controls-row" />,
   CardPaginationFooter: () => <div data-testid="pagination" />,
   CardAIActions: () => <div data-testid="ai-actions" />,
+  CardEmptyState: ({ title, message }: { title?: string; message?: string; icon?: unknown }) => <div data-testid="empty-state">{title}{message && <span>{message}</span>}</div>,
 }))
 
 vi.mock('../../ui/Skeleton', () => ({
@@ -102,7 +103,11 @@ vi.mock('../../ui/ClusterBadge', () => ({
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('HelmReleaseStatus', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    const { useCardLoadingState } = await import('../CardDataContext')
+    vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false, showEmptyState: false } as never)
+  })
 
   describe('Skeleton', () => {
     it('renders skeletons during loading', async () => {

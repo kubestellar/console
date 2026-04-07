@@ -18,20 +18,20 @@ const mockDrillToResources = vi.fn()
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedGPUNodes: () => ({
+  useCachedGPUNodes: vi.fn(() => ({
     nodes: [],
     isLoading: false,
     isRefreshing: false,
     isDemoFallback: false,
     isFailed: false,
     consecutiveFailures: 0,
-  }),
+  })),
 }))
 
 vi.mock('../../../hooks/useMCP', () => ({
-  useClusters: () => ({
+  useClusters: vi.fn(() => ({
     deduplicatedClusters: [{ name: 'cluster-1', reachable: true, nodeCount: 3, healthy: true }],
-  }),
+  })),
 }))
 
 vi.mock('../../../hooks/useGlobalFilters', () => ({
@@ -48,6 +48,10 @@ vi.mock('../CardDataContext', () => ({
 
 vi.mock('../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false }),
+  getDemoMode: () => false, default: () => false,
+  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
+  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
+  setGlobalDemoMode: vi.fn(),
 }))
 
 vi.mock('../../../lib/cards/cardHooks', () => ({
@@ -104,7 +108,19 @@ vi.mock('../../ui/ClusterStatusBadge', () => ({
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('GPUOverview', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    const { useCardLoadingState } = await import('../CardDataContext')
+    vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false, showEmptyState: false } as never)
+    const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
+    vi.mocked(useCachedGPUNodes).mockReturnValue({
+      nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
+    } as never)
+    const { useClusters } = await import('../../../hooks/useMCP')
+    vi.mocked(useClusters).mockReturnValue({
+      deduplicatedClusters: [{ name: 'cluster-1', reachable: true, nodeCount: 3, healthy: true }],
+    } as never)
+  })
 
   describe('Skeleton', () => {
     it('renders skeletons when showSkeleton and reachable clusters', async () => {
@@ -156,8 +172,8 @@ describe('GPUOverview', () => {
         isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
       } as never)
       render(<GPUOverview />)
-      expect(screen.getByText('4')).toBeTruthy() // totalGPUs
-      expect(screen.getByText('2')).toBeTruthy() // allocated
+      expect(screen.getAllByText('4').length).toBeGreaterThan(0) // totalGPUs
+      expect(screen.getAllByText('2').length).toBeGreaterThan(0) // allocated
       expect(screen.getByText('gpuOverview.totalGPUs')).toBeTruthy()
     })
 

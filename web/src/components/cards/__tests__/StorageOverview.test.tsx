@@ -15,14 +15,14 @@ vi.mock('../../../hooks/useMCP', () => ({
 }))
 
 vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedPVCs: () => ({
+  useCachedPVCs: vi.fn(() => ({
     pvcs: [],
     isLoading: false,
     isRefreshing: false,
     isDemoFallback: false,
     isFailed: false,
     consecutiveFailures: 0,
-  }),
+  })),
 }))
 
 vi.mock('../../../hooks/useGlobalFilters', () => ({
@@ -39,6 +39,10 @@ vi.mock('../CardDataContext', () => ({
 
 vi.mock('../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false }),
+  getDemoMode: () => false, default: () => false,
+  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
+  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
+  setGlobalDemoMode: vi.fn(),
 }))
 
 vi.mock('react-i18next', () => ({
@@ -74,7 +78,11 @@ vi.mock('../../../lib/formatStats', () => ({
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('StorageOverview', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    const { useCardLoadingState } = await import('../CardDataContext')
+    vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false, showEmptyState: false } as never)
+  })
 
   describe('Skeleton / empty states', () => {
     it('renders loading spinner when showSkeleton', async () => {

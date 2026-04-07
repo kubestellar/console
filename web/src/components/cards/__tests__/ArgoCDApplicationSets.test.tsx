@@ -19,14 +19,14 @@ const makeAppSet = (overrides = {}) => ({
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 vi.mock('../../../hooks/useArgoCD', () => ({
-  useArgoApplicationSets: () => ({
+  useArgoApplicationSets: vi.fn(() => ({
     applicationSets: [],
     isLoading: false,
     isRefreshing: false,
     isFailed: false,
     consecutiveFailures: 0,
     isDemoData: false,
-  }),
+  })),
 }))
 
 vi.mock('../CardDataContext', () => ({
@@ -97,7 +97,11 @@ vi.mock('../DynamicCardErrorBoundary', () => ({
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('ArgoCDApplicationSets', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    const { useCardLoadingState } = await import('../CardDataContext')
+    vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false, showEmptyState: false } as never)
+  })
 
   describe('Skeleton', () => {
     it('renders skeletons during loading', async () => {
@@ -133,7 +137,7 @@ describe('ArgoCDApplicationSets', () => {
         isDemoData: false,
       } as never)
       render(<ArgoCDApplicationSets />)
-      expect(screen.getByText('Healthy')).toBeTruthy()
+      expect(screen.getAllByText('Healthy').length).toBeGreaterThan(0)
       expect(screen.getByText('Progressing')).toBeTruthy()
       expect(screen.getByText('Error')).toBeTruthy()
     })

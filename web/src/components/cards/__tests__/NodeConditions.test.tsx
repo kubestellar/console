@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { NodeConditions } from '../NodeConditions'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -17,14 +17,14 @@ const mockExecute = vi.fn()
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedNodes: () => ({
+  useCachedNodes: vi.fn(() => ({
     nodes: [],
     isLoading: false,
     isRefreshing: false,
     isDemoFallback: false,
     isFailed: false,
     consecutiveFailures: 0,
-  }),
+  })),
 }))
 
 vi.mock('../../../hooks/useKubectl', () => ({
@@ -37,6 +37,10 @@ vi.mock('../CardDataContext', () => ({
 
 vi.mock('../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false }),
+  getDemoMode: () => false, default: () => false,
+  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
+  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
+  setGlobalDemoMode: vi.fn(),
 }))
 
 vi.mock('react-i18next', () => ({
@@ -216,10 +220,9 @@ describe('NodeConditions', () => {
       } as never)
       mockExecute.mockResolvedValue(undefined)
       render(<NodeConditions />)
-      fireEvent.click(screen.getByText('nodeConditions.cordon'))
-      // Find the cordon confirm button inside the dialog
+      await act(async () => fireEvent.click(screen.getByText('nodeConditions.cordon')))
       const buttons = screen.getAllByText('nodeConditions.cordon')
-      fireEvent.click(buttons[buttons.length - 1])
+      await act(async () => fireEvent.click(buttons[buttons.length - 1]))
       await waitFor(() => expect(mockExecute).toHaveBeenCalledWith('cluster-1', ['cordon', 'node-1']))
     })
 
@@ -231,9 +234,9 @@ describe('NodeConditions', () => {
       } as never)
       mockExecute.mockRejectedValue(new Error('kubectl failed'))
       render(<NodeConditions />)
-      fireEvent.click(screen.getByText('nodeConditions.cordon'))
+      await act(async () => fireEvent.click(screen.getByText('nodeConditions.cordon')))
       const buttons = screen.getAllByText('nodeConditions.cordon')
-      fireEvent.click(buttons[buttons.length - 1])
+      await act(async () => fireEvent.click(buttons[buttons.length - 1]))
       await waitFor(() => expect(screen.getByText(/kubectl failed/)).toBeTruthy())
     })
   })

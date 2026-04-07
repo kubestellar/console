@@ -18,7 +18,7 @@ const mockDrillToGPUNode = vi.fn()
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedGPUNodes: () => ({
+  useCachedGPUNodes: vi.fn(() => ({
     nodes: [],
     isLoading: false,
     isRefreshing: false,
@@ -26,7 +26,7 @@ vi.mock('../../../hooks/useCachedData', () => ({
     isDemoFallback: false,
     isFailed: false,
     consecutiveFailures: 0,
-  }),
+  })),
 }))
 
 vi.mock('../../../hooks/useDrillDown', () => ({
@@ -109,7 +109,13 @@ vi.mock('../../ui/StatusBadge', () => ({
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('GPUInventory', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
+    vi.mocked(useCachedGPUNodes).mockReturnValue({
+      nodes: [], isLoading: false, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
+    } as never)
+  })
 
   describe('Loading skeleton', () => {
     it('renders skeletons when isLoading and no nodes', async () => {

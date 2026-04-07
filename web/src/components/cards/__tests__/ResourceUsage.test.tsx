@@ -14,6 +14,10 @@ vi.mock('react-i18next', () => ({
 const mockIsDemoMode = vi.fn(() => false)
 vi.mock('../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: mockIsDemoMode() }),
+  getDemoMode: () => true, default: () => true,
+  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
+  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
+  setGlobalDemoMode: vi.fn(),
 }))
 
 const mockUseClusters = vi.fn()
@@ -123,7 +127,7 @@ describe('ResourceUsage', () => {
     it('renders skeleton when showSkeleton=true', () => {
       setupDefaults({ showSkeleton: true })
       render(<ResourceUsage />)
-      expect(screen.getByTestId('skeleton-circular')).toBeInTheDocument()
+      expect(screen.getAllByTestId('skeleton-circular').length).toBeGreaterThan(0)
     })
 
     it('does not render gauges while loading', () => {

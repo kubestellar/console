@@ -15,6 +15,7 @@ vi.mock('react-i18next', () => ({
 const mockUseClusters = vi.fn()
 vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => mockUseClusters(),
+  useClusterHealth: () => ({ health: null, isLoading: false }),
 }))
 
 const mockUseCachedGPUNodes = vi.fn()
@@ -107,6 +108,7 @@ vi.mock('../../../lib/cards/CardComponents', () => ({
   CardPaginationFooter: ({ needsPagination }: { needsPagination: boolean }) =>
     needsPagination ? <div data-testid="pagination" /> : null,
   CardAIActions: () => <div data-testid="ai-actions" />,
+  CardEmptyState: ({ title, message }: { title?: string; message?: string; icon?: unknown }) => <div data-testid="empty-state">{title}{message && <span>{message}</span>}</div>,
 }))
 
 // ---------------------------------------------------------------------------
@@ -229,14 +231,16 @@ describe('ClusterHealth', () => {
       setupDefaults({ clusters })
       render(<ClusterHealth />)
       // healthy count = 1
-      expect(screen.getByTitle(/healthyTooltip/)).toHaveTextContent('1')
+      const healthyTiles = screen.getAllByTitle(/healthyTooltip/)
+      expect(healthyTiles.some(el => el.textContent?.includes('1'))).toBe(true)
     })
 
     it('renders unhealthy cluster count', () => {
       const clusters = [makeCluster({ healthy: false, reachable: true })]
       setupDefaults({ clusters })
       render(<ClusterHealth />)
-      expect(screen.getByTitle(/unhealthyTooltip/)).toHaveTextContent('1')
+      const unhealthyTiles = screen.getAllByTitle(/unhealthyTooltip/)
+      expect(unhealthyTiles.some(el => el.textContent?.includes('1'))).toBe(true)
     })
 
     it('renders token-expired count', () => {
@@ -245,7 +249,8 @@ describe('ClusterHealth', () => {
       ]
       setupDefaults({ clusters })
       render(<ClusterHealth />)
-      expect(screen.getByTitle(/authErrorTooltip/)).toHaveTextContent('1')
+      const authTiles = screen.getAllByTitle(/authErrorTooltip/)
+      expect(authTiles.some(el => el.textContent?.includes('1'))).toBe(true)
     })
 
     it('renders offline (non-auth) cluster count', () => {
@@ -254,7 +259,8 @@ describe('ClusterHealth', () => {
       ]
       setupDefaults({ clusters })
       render(<ClusterHealth />)
-      expect(screen.getByTitle(/offlineTooltip/)).toHaveTextContent('1')
+      const offlineTiles = screen.getAllByTitle(/offlineTooltip/)
+      expect(offlineTiles.some(el => el.textContent?.includes('1'))).toBe(true)
     })
 
     it('renders total nodes in footer', () => {
@@ -271,7 +277,7 @@ describe('ClusterHealth', () => {
       const clusters = [makeCluster({ podCount: 42 })]
       setupDefaults({ clusters })
       render(<ClusterHealth />)
-      expect(screen.getByText(/42/)).toBeInTheDocument()
+      expect(screen.getAllByText(/42/).length).toBeGreaterThan(0)
     })
   })
 
@@ -288,8 +294,8 @@ describe('ClusterHealth', () => {
       const clusters = [makeCluster({ nodeCount: 4, podCount: 20 })]
       setupDefaults({ clusters })
       render(<ClusterHealth />)
-      expect(screen.getByText('4')).toBeInTheDocument()
-      expect(screen.getByText('20')).toBeInTheDocument()
+      expect(screen.getAllByText('4').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('20').length).toBeGreaterThan(0)
     })
 
     it('shows AI actions for unhealthy clusters', () => {

@@ -18,7 +18,7 @@ const mockDrillToCluster = vi.fn()
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedGPUNodes: () => ({
+  useCachedGPUNodes: vi.fn(() => ({
     nodes: [],
     isLoading: false,
     isRefreshing: false,
@@ -26,7 +26,7 @@ vi.mock('../../../hooks/useCachedData', () => ({
     isFailed: false,
     consecutiveFailures: 0,
     lastRefresh: null,
-  }),
+  })),
 }))
 
 vi.mock('../../../hooks/useDrillDown', () => ({
@@ -39,6 +39,10 @@ vi.mock('../CardDataContext', () => ({
 
 vi.mock('../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false }),
+  getDemoMode: () => false, default: () => false,
+  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
+  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
+  setGlobalDemoMode: vi.fn(),
 }))
 
 vi.mock('../../../lib/cards/cardHooks', () => ({
@@ -109,7 +113,11 @@ vi.mock('../../ui/RefreshIndicator', () => ({
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('GPUStatus', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    const { useCardLoadingState } = await import('../CardDataContext')
+    vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false, showEmptyState: false } as never)
+  })
 
   describe('Skeleton', () => {
     it('renders skeletons during loading', async () => {
