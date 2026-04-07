@@ -39,6 +39,7 @@ import type { MissionExport } from '../../../lib/missions/types'
 import type { Mission } from '../../../hooks/useMissions'
 import type { FontSize } from './types'
 import { MissionListItem } from './MissionListItem'
+import { OrbitReminderBanner } from '../../missions/OrbitReminderBanner'
 import { MissionChat } from './MissionChat'
 import { ClusterSelectionDialog } from '../../missions/ClusterSelectionDialog'
 import { ResolutionKnowledgePanel } from '../../missions/ResolutionKnowledgePanel'
@@ -1031,6 +1032,15 @@ export function MissionSidebar() {
               </div>
             </div>
           )}
+
+          {/* Orbit reminder banner — shows when orbit missions are due/overdue */}
+          <OrbitReminderBanner
+            missions={missions}
+            onRunMission={(missionId) => {
+              setActiveMission(missionId)
+              runSavedMission(missionId)
+            }}
+          />
 
           {/* Active missions section — paginated for performance (#4778) */}
           {activeMissions.length > 0 && (
