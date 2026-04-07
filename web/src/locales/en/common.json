@@ -1700,6 +1700,21 @@
     "upvote": "Upvote",
     "upvoted": "Upvoted"
   },
+  "nps": {
+    "title": "How's your experience with KubeStellar Console?",
+    "notGreat": "Not great",
+    "meh": "Meh",
+    "good": "Good",
+    "loveIt": "Love it!",
+    "feedbackNegative": "What could we improve?",
+    "feedbackNeutral": "What would make it even better?",
+    "feedbackPositive": "What do you love most?",
+    "feedbackPlaceholder": "Your feedback (optional)",
+    "submit": "Submit",
+    "dismiss": "Not now",
+    "thankYou": "Thank you for your feedback!",
+    "thankYouDetail": "Your input helps us improve KubeStellar Console."
+  },
   "update": {
     "available": "Update Available",
     "availableTag": "Update available: {{tag}}"

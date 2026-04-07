@@ -966,6 +966,27 @@ export function emitScreenshotUploadSuccess(screenshotCount: number) {
   send('ksc_screenshot_upload_success', { screenshot_count: screenshotCount })
 }
 
+// ── NPS Survey ────────────────────────────────────────────────────
+
+/** Fired when the NPS survey widget becomes visible */
+export function emitNPSSurveyShown() {
+  send('ksc_nps_survey_shown')
+}
+
+/** Fired when user submits an NPS response */
+export function emitNPSResponse(score: number, category: string, feedbackLength?: number) {
+  send('ksc_nps_response', {
+    nps_score: score,
+    nps_category: category,
+    ...(feedbackLength !== undefined && { nps_feedback_length: feedbackLength }),
+  })
+}
+
+/** Fired when user dismisses the NPS widget without responding */
+export function emitNPSDismissed(dismissCount: number) {
+  send('ksc_nps_dismissed', { dismiss_count: dismissCount })
+}
+
 // ── Errors ─────────────────────────────────────────────────────────
 
 // Maximum length for error detail strings to avoid oversized payloads

@@ -13,6 +13,7 @@ import { CardEventProvider } from './lib/cardEvents'
 import { ToastProvider } from './components/ui/Toast'
 import { AlertsProvider } from './contexts/AlertsContext'
 import { RewardsProvider } from './hooks/useRewards'
+import { NPSSurvey } from './components/feedback'
 import { UnifiedDemoProvider } from './lib/unified/demo'
 import { ChunkErrorBoundary } from './components/ChunkErrorBoundary'
 import { AppErrorBoundary } from './components/AppErrorBoundary'
@@ -483,6 +484,7 @@ function FullDashboardApp() {
       <DrillDownProvider>
       <AppErrorBoundary>
       <Suspense fallback={null}><DrillDownModal /></Suspense>
+      <NPSSurvey />
       <ChunkErrorBoundary>
       <Suspense fallback={<LoadingFallback />}>
       <Routes>
