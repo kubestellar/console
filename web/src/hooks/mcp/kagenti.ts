@@ -130,15 +130,20 @@ async function agentFetch<T>(path: string, cluster: string, namespace?: string):
       signal: ctrl.signal,
       headers: { Accept: 'application/json' } })
     clearTimeout(tid)
-    if (!res.ok) throw new Error(`Agent ${res.status}`)
+    if (!res.ok) throw new Error(`Agent returned ${res.status} for ${path} (cluster: ${cluster})`)
     return await res.json()
-  } catch {
+  } catch (err) {
     clearTimeout(tid)
-    return null
+    // Log the error so it is visible in the console
+    console.warn(`[kagenti] fetch failed for ${path} (cluster: ${cluster}):`, err)
+    // Re-throw so callers can surface the error to the UI
+    throw err
   }
 }
 
-/** Fetch from agent across all reachable clusters */
+/** Fetch from agent across all reachable clusters.
+ *  Throws if ALL clusters fail so the error propagates to the UI
+ *  instead of silently falling back to demo data. */
 async function agentFetchAllClusters<T>(
   path: string,
   key: string,
@@ -165,9 +170,17 @@ async function agentFetchAllClusters<T>(
   )
 
   const items: T[] = []
+  const errors: string[] = []
   for (const r of (results || [])) {
     if (r.status === 'fulfilled') items.push(...r.value)
+    else errors.push(r.reason?.message || 'unknown error')
   }
+
+  // If every cluster failed, throw so the error reaches the UI
+  if (items.length === 0 && errors.length > 0) {
+    throw new Error(`All kagenti fetches failed: ${errors.join('; ')}`)
+  }
+
   return items
 }
 
@@ -268,7 +281,11 @@ export function useKagentiSummary() {
     }
 
     const spiffeTotal = cards.length
-    const spiffeBound = cards.filter(c => c.identityBinding !== 'none').length
+    // Only count cards with an explicit, non-empty binding that is not "none".
+    // Empty string (missing field) must NOT be counted as SPIFFE-bound.
+    const spiffeBound = cards.filter(c =>
+      c.identityBinding !== '' && c.identityBinding !== 'none',
+    ).length
 
     return {
       agentCount: agents.length,

@@ -155,13 +155,36 @@ func (c *KagentiClient) Invoke(ctx context.Context, namespace, agentName, messag
 	return resp.Body, nil
 }
 
+// buildDetectCandidates constructs the list of candidate URLs for kagenti auto-detection.
+// The namespace, service name, port, and protocol are configurable via environment
+// variables so non-standard deployments can be discovered automatically.
+func buildDetectCandidates() []string {
+	namespace := os.Getenv("KAGENTI_NAMESPACE")
+	if namespace == "" {
+		namespace = "kagenti-system"
+	}
+	serviceName := os.Getenv("KAGENTI_SERVICE_NAME")
+	if serviceName == "" {
+		serviceName = "kagenti-controller"
+	}
+	port := os.Getenv("KAGENTI_SERVICE_PORT")
+	if port == "" {
+		port = "8083"
+	}
+	protocol := os.Getenv("KAGENTI_SERVICE_PROTOCOL")
+	if protocol == "" {
+		protocol = "http"
+	}
+	return []string{
+		fmt.Sprintf("%s://%s.%s.svc:%s", protocol, serviceName, namespace, port),
+		fmt.Sprintf("%s://%s.%s.svc.cluster.local:%s", protocol, serviceName, namespace, port),
+	}
+}
+
 // Detect tries common in-cluster kagenti service URLs and returns the first
 // reachable one. Returns an empty string if none are reachable.
 func (c *KagentiClient) Detect() string {
-	candidates := []string{
-		"http://kagenti-controller.kagenti-system.svc:8083",
-		"http://kagenti-controller.kagenti-system.svc.cluster.local:8083",
-	}
+	candidates := buildDetectCandidates()
 	for _, url := range candidates {
 		resp, err := c.httpClient.Get(url + "/health")
 		if err == nil {

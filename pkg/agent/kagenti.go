@@ -332,7 +332,13 @@ func (s *Server) handleKagentiCards(w http.ResponseWriter, r *http.Request) {
 			c.Skills = nestedStringSlice(specMap, "skills")
 			c.Capabilities = nestedStringSlice(specMap, "capabilities")
 			c.SyncPeriod = nestedString(specMap, "syncPeriod")
-			c.IdentityBinding = nestedString(specMap, "identityBinding", "spiffeId")
+			// identityBinding is a top-level spec field (e.g. "strict", "permissive", "none"),
+			// not nested under spiffeId. Fall back to "none" when the field is absent
+			// so the frontend doesn't classify empty strings as SPIFFE-bound.
+			c.IdentityBinding = nestedString(specMap, "identityBinding")
+			if c.IdentityBinding == "" {
+				c.IdentityBinding = "none"
+			}
 		}
 		cards = append(cards, c)
 	}

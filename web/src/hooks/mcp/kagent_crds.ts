@@ -74,15 +74,20 @@ async function agentFetch<T>(path: string, cluster: string, namespace?: string):
       headers: { Accept: 'application/json' },
     })
     clearTimeout(tid)
-    if (!res.ok) throw new Error(`Agent ${res.status}`)
+    if (!res.ok) throw new Error(`Agent returned ${res.status} for ${path} (cluster: ${cluster})`)
     return await res.json()
-  } catch {
+  } catch (err) {
     clearTimeout(tid)
-    return null
+    // Log the error so it is visible in the console
+    console.warn(`[kagent_crds] fetch failed for ${path} (cluster: ${cluster}):`, err)
+    // Re-throw so callers can surface the error to the UI
+    throw err
   }
 }
 
-/** Fetch from agent across all reachable clusters */
+/** Fetch from agent across all reachable clusters.
+ *  Throws if ALL clusters fail so the error propagates to the UI
+ *  instead of silently falling back to demo data. */
 async function agentFetchAllClusters<T>(
   path: string,
   key: string,
@@ -109,9 +114,17 @@ async function agentFetchAllClusters<T>(
   )
 
   const items: T[] = []
+  const errors: string[] = []
   for (const r of (results || [])) {
     if (r.status === 'fulfilled') items.push(...r.value)
+    else errors.push(r.reason?.message || 'unknown error')
   }
+
+  // If every cluster failed, throw so the error reaches the UI
+  if (items.length === 0 && errors.length > 0) {
+    throw new Error(`All kagent CRD fetches failed: ${errors.join('; ')}`)
+  }
+
   return items
 }
 
