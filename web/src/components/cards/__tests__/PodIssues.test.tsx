@@ -1,132 +1,429 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { PodIssues } from '../PodIssues'
+import type { PodIssue } from '../../../hooks/useMCP'
 
-// Standard mocks
-vi.mock('../../../lib/demoMode', () => ({
-  isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
-  isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
-  toggleDemoMode: vi.fn(), subscribeDemoMode: () => () => {},
-  isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
-  isFeatureEnabled: () => true,
-}))
-
-const mockUseDemoMode = vi.fn()
-vi.mock('../../../hooks/useDemoMode', () => ({
-  getDemoMode: () => true, default: () => true,
-  useDemoMode: () => mockUseDemoMode(),
-  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
-  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
-  setGlobalDemoMode: vi.fn(),
-}))
-
-vi.mock('../../../lib/analytics', () => ({
-  emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(), markErrorReported: vi.fn(),
-}))
-
-vi.mock('../../../hooks/useTokenUsage', () => ({
-  useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
-  tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },
-}))
+// ---------------------------------------------------------------------------
+// Mocks
+// ---------------------------------------------------------------------------
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
-  Trans: ({ children }: { children: React.ReactNode }) => children,
+  useTranslation: () => ({ t: (k: string) => k }),
+}))
+
+const mockUseCachedPodIssues = vi.fn()
+vi.mock('../../../hooks/useCachedData', () => ({
+  useCachedPodIssues: () => mockUseCachedPodIssues(),
 }))
 
 const mockUseCardLoadingState = vi.fn()
 vi.mock('../CardDataContext', () => ({
-  useReportCardDataState: vi.fn(),
-  useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
+  useCardLoadingState: (...args: unknown[]) => mockUseCardLoadingState(...args),
 }))
 
-const mockPodIssues = vi.fn()
-vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedPodIssues: () => mockPodIssues(),
-}))
+const mockUseCardData = vi.fn()
+vi.mock('../../../lib/cards/cardHooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../lib/cards/cardHooks')>()
+  return {
+    ...actual,
+    useCardData: (...args: unknown[]) => mockUseCardData(...args),
+  }
+})
 
-const mockDrillDown = vi.fn()
+const mockDrillToPod = vi.fn()
 vi.mock('../../../hooks/useDrillDown', () => ({
-  useDrillDownActions: () => mockDrillDown(),
+  useDrillDownActions: () => ({ drillToPod: mockDrillToPod }),
 }))
 
-vi.mock('../../../lib/cards/cardHooks', () => ({
-  useCardData: () => ({
-    items: [], totalItems: 0, currentPage: 1, totalPages: 0, itemsPerPage: 5,
-    goToPage: vi.fn(), needsPagination: false, setItemsPerPage: vi.fn(),
-    filters: { search: '', setSearch: vi.fn(), localClusterFilter: [], toggleClusterFilter: vi.fn(), clearClusterFilter: vi.fn(), availableClusters: [], showClusterFilter: false, setShowClusterFilter: vi.fn(), clusterFilterRef: { current: null }, clusterFilterBtnRef: { current: null }, dropdownStyle: null },
-    sorting: { sortBy: '', setSortBy: vi.fn(), sortDirection: 'asc' as const, setSortDirection: vi.fn(), toggleSortDirection: vi.fn() },
-    containerRef: { current: null }, containerStyle: undefined,
+vi.mock('../../ui/ClusterBadge', () => ({
+  ClusterBadge: ({ cluster }: { cluster: string }) => (
+    <span data-testid="cluster-badge">{cluster}</span>
+  ),
+}))
+
+vi.mock('../../ui/StatusBadge', () => ({
+  StatusBadge: ({ children }: { children: React.ReactNode }) => (
+    <span data-testid="status-badge">{children}</span>
+  ),
+}))
+
+vi.mock('../../ui/LimitedAccessWarning', () => ({
+  LimitedAccessWarning: ({ hasError }: { hasError: boolean }) =>
+    hasError ? <div data-testid="limited-access-warning" /> : null,
+}))
+
+vi.mock('../../../lib/cards/statusColors', () => ({
+  getStatusColors: () => ({
+    bg: 'bg-red-500/10',
+    border: 'border-red-500/20',
+    text: 'text-red-400',
+    iconBg: 'bg-red-500/20',
   }),
-  commonComparators: { string: () => () => 0, number: () => () => 0, statusOrder: () => () => 0, date: () => () => 0, boolean: () => () => 0 },
 }))
 
-vi.mock('../../../lib/cards/statusColors', () => ({ getStatusColors: () => ({ bg: '', text: '', border: '', dot: '' }) }))
+vi.mock('../../../lib/cards/CardComponents', () => ({
+  CardSkeleton: () => <div data-testid="card-skeleton" />,
+  CardEmptyState: ({
+    title,
+    message,
+  }: {
+    title: string
+    message: string
+  }) => (
+    <div data-testid="card-empty-state">
+      <p>{title}</p>
+      <p>{message}</p>
+    </div>
+  ),
+  CardSearchInput: ({
+    value,
+    onChange,
+  }: {
+    value: string
+    onChange: (v: string) => void
+  }) => (
+    <input
+      data-testid="search-input"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  ),
+  CardControlsRow: () => <div data-testid="card-controls-row" />,
+  CardListItem: ({
+    children,
+    onClick,
+  }: {
+    children: React.ReactNode
+    onClick: () => void
+  }) => (
+    <div data-testid="card-list-item" onClick={onClick}>
+      {children}
+    </div>
+  ),
+  CardPaginationFooter: ({ needsPagination }: { needsPagination: boolean }) =>
+    needsPagination ? <div data-testid="pagination" /> : null,
+  CardAIActions: () => <div data-testid="ai-actions" />,
+}))
 
-import { PodIssues } from '../PodIssues'
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function makePodIssue(overrides: Partial<PodIssue> = {}): PodIssue {
+  return {
+    name: 'crashing-pod',
+    namespace: 'default',
+    cluster: 'prod',
+    status: 'CrashLoopBackOff',
+    restarts: 5,
+    issues: ['Container exited with code 1'],
+    ...overrides,
+  } as PodIssue
+}
+
+function makeCardDataReturn(issues: PodIssue[] = []) {
+  return {
+    items: issues,
+    totalItems: issues.length,
+    currentPage: 1,
+    totalPages: 1,
+    itemsPerPage: 5,
+    goToPage: vi.fn(),
+    needsPagination: false,
+    setItemsPerPage: vi.fn(),
+    filters: {
+      search: '',
+      setSearch: vi.fn(),
+      localClusterFilter: [],
+      toggleClusterFilter: vi.fn(),
+      clearClusterFilter: vi.fn(),
+      availableClusters: [],
+      showClusterFilter: false,
+      setShowClusterFilter: vi.fn(),
+      clusterFilterRef: { current: null },
+    },
+    sorting: {
+      sortBy: 'status',
+      setSortBy: vi.fn(),
+      sortDirection: 'asc',
+      setSortDirection: vi.fn(),
+    },
+    containerRef: { current: null },
+    containerStyle: {},
+  }
+}
+
+function setupDefaults({
+  issues = [] as PodIssue[],
+  isLoading = false,
+  isRefreshing = false,
+  isDemoFallback = false,
+  isFailed = false,
+  consecutiveFailures = 0,
+  error = null as string | null,
+  showSkeleton = false,
+  showEmptyState = false,
+} = {}) {
+  mockUseCachedPodIssues.mockReturnValue({
+    issues,
+    isLoading,
+    isRefreshing,
+    isDemoFallback,
+    isFailed,
+    consecutiveFailures,
+    error,
+  })
+  mockUseCardLoadingState.mockReturnValue({ showSkeleton, showEmptyState })
+  mockUseCardData.mockReturnValue(makeCardDataReturn(issues))
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 
 describe('PodIssues', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
-    mockPodIssues.mockReturnValue({ issues: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    mockDrillDown.mockReturnValue({ drillToPod: vi.fn() })
+    setupDefaults()
   })
 
-  it('renders without crashing', () => {
-    const { container } = render(<PodIssues />)
-    expect(container).toBeTruthy()
+  // -------------------------------------------------------------------------
+  describe('loading state', () => {
+    it('shows CardSkeleton when showSkeleton=true', () => {
+      setupDefaults({ showSkeleton: true })
+      render(<PodIssues />)
+      expect(screen.getByTestId('card-skeleton')).toBeInTheDocument()
+    })
+
+    it('does not render issue rows while loading', () => {
+      setupDefaults({ showSkeleton: true, issues: [makePodIssue()] })
+      render(<PodIssues />)
+      expect(screen.queryByText('crashing-pod')).not.toBeInTheDocument()
+    })
   })
 
-  it('calls useCardLoadingState during render', () => {
-    render(<PodIssues />)
-    expect(mockUseCardLoadingState).toHaveBeenCalled()
+  // -------------------------------------------------------------------------
+  describe('error state', () => {
+    it('shows error CardEmptyState when isFailed and no data', () => {
+      setupDefaults({ isFailed: true, error: 'API unavailable', issues: [] })
+      render(<PodIssues />)
+      expect(screen.getByText('Failed to load pod data')).toBeInTheDocument()
+      expect(screen.getByText('API unavailable')).toBeInTheDocument()
+    })
+
+    it('shows fallback error message when error is null', () => {
+      setupDefaults({ isFailed: true, error: null, issues: [] })
+      render(<PodIssues />)
+      expect(screen.getByText('Pod API is unavailable')).toBeInTheDocument()
+    })
   })
 
-  it('renders skeleton UI when data is loading', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: true, showEmptyState: false, hasData: false, isRefreshing: false })
-    mockPodIssues.mockReturnValue({ issues: [], isLoading: true, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: null })
-    const { container } = render(<PodIssues />)
-    // Skeleton renders animate-pulse elements or similar loading indicators
-    expect(container.innerHTML.length).toBeGreaterThan(0)
+  // -------------------------------------------------------------------------
+  describe('all-healthy empty state', () => {
+    it('shows all-healthy CardEmptyState when no issues at all', () => {
+      setupDefaults({ issues: [] })
+      render(<PodIssues />)
+      expect(screen.getByText('All pods healthy')).toBeInTheDocument()
+      expect(screen.getByText('No issues detected')).toBeInTheDocument()
+    })
   })
 
-  it('handles empty data state gracefully', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: true, hasData: false, isRefreshing: false })
-    const { container } = render(<PodIssues />)
-    expect(container.innerHTML.length).toBeGreaterThan(0)
+  // -------------------------------------------------------------------------
+  describe('showEmptyState', () => {
+    it('shows no-pod-issues message when showEmptyState=true', () => {
+      // Need raw issues > 0 so the all-healthy path is skipped
+      setupDefaults({ showEmptyState: true, issues: [makePodIssue()] })
+      // Override useCardData to return empty items (simulating filter emptying the list)
+      mockUseCardData.mockReturnValue({ ...makeCardDataReturn([]), items: [] })
+      render(<PodIssues />)
+      expect(screen.getByText('No pod issues')).toBeInTheDocument()
+    })
   })
 
-  it('renders correctly in demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    const { container } = render(<PodIssues />)
-    expect(container).toBeTruthy()
+  // -------------------------------------------------------------------------
+  describe('issue list', () => {
+    it('renders pod name', () => {
+      setupDefaults({ issues: [makePodIssue({ name: 'my-bad-pod' })] })
+      render(<PodIssues />)
+      expect(screen.getByText('my-bad-pod')).toBeInTheDocument()
+    })
+
+    it('renders namespace', () => {
+      setupDefaults({ issues: [makePodIssue({ namespace: 'kube-system' })] })
+      render(<PodIssues />)
+      expect(screen.getByText('kube-system')).toBeInTheDocument()
+    })
+
+    it('renders cluster badge', () => {
+      setupDefaults({ issues: [makePodIssue({ cluster: 'us-west' })] })
+      render(<PodIssues />)
+      expect(screen.getByTestId('cluster-badge')).toHaveTextContent('us-west')
+    })
+
+    it('renders "unknown" cluster when cluster is undefined', () => {
+      setupDefaults({ issues: [makePodIssue({ cluster: undefined })] })
+      render(<PodIssues />)
+      expect(screen.getByTestId('cluster-badge')).toHaveTextContent('unknown')
+    })
+
+    it('renders status badge', () => {
+      setupDefaults({ issues: [makePodIssue({ status: 'OOMKilled' })] })
+      render(<PodIssues />)
+      expect(screen.getByText('OOMKilled')).toBeInTheDocument()
+    })
+
+    it('renders restart count when > 0', () => {
+      setupDefaults({ issues: [makePodIssue({ restarts: 12 })] })
+      render(<PodIssues />)
+      expect(screen.getByText('12 restarts')).toBeInTheDocument()
+    })
+
+    it('does NOT render restart text when restarts = 0', () => {
+      setupDefaults({ issues: [makePodIssue({ restarts: 0 })] })
+      render(<PodIssues />)
+      expect(screen.queryByText(/restarts/)).not.toBeInTheDocument()
+    })
+
+    it('renders issue messages joined by comma', () => {
+      setupDefaults({
+        issues: [makePodIssue({ issues: ['ImagePullError', 'BackOff'] })],
+      })
+      render(<PodIssues />)
+      expect(screen.getByText('ImagePullError, BackOff')).toBeInTheDocument()
+    })
+
+    it('renders AI actions for every issue', () => {
+      setupDefaults({
+        issues: [makePodIssue(), makePodIssue({ name: 'pod2', namespace: 'ns2' })],
+      })
+      render(<PodIssues />)
+      expect(screen.getAllByTestId('ai-actions')).toHaveLength(2)
+    })
+
+    it('renders multiple issues', () => {
+      setupDefaults({
+        issues: [
+          makePodIssue({ name: 'alpha' }),
+          makePodIssue({ name: 'beta', namespace: 'ns2' }),
+        ],
+      })
+      render(<PodIssues />)
+      expect(screen.getByText('alpha')).toBeInTheDocument()
+      expect(screen.getByText('beta')).toBeInTheDocument()
+    })
+
+    it('shows issue count in header badge', () => {
+      setupDefaults({ issues: [makePodIssue(), makePodIssue({ name: 'p2', namespace: 'n2' })] })
+      render(<PodIssues />)
+      expect(screen.getByTestId('status-badge')).toHaveTextContent('2 issues')
+    })
   })
 
-  it('renders correctly in non-demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    const { container } = render(<PodIssues />)
-    expect(container).toBeTruthy()
+  // -------------------------------------------------------------------------
+  describe('status icon mapping', () => {
+    it('shows OOM icon tooltip for OOMKilled status', () => {
+      setupDefaults({ issues: [makePodIssue({ status: 'OOMKilled' })] })
+      render(<PodIssues />)
+      // The CardListItem wraps the icon div with a title
+      const iconDiv = document.querySelector('[title="Out of Memory - Pod exceeded memory limits"]')
+      expect(iconDiv).toBeInTheDocument()
+    })
+
+    it('shows Image icon tooltip for ImagePullBackOff status', () => {
+      setupDefaults({ issues: [makePodIssue({ status: 'ImagePullBackOff' })] })
+      render(<PodIssues />)
+      const iconDiv = document.querySelector('[title="Image Pull Error - Failed to pull container image"]')
+      expect(iconDiv).toBeInTheDocument()
+    })
+
+    it('shows Pending icon tooltip for Pending status', () => {
+      setupDefaults({ issues: [makePodIssue({ status: 'Pending' })] })
+      render(<PodIssues />)
+      const iconDiv = document.querySelector('[title="Pending - Pod is waiting to be scheduled"]')
+      expect(iconDiv).toBeInTheDocument()
+    })
+
+    it('shows Restart icon tooltip for CrashLoopBackOff status', () => {
+      setupDefaults({ issues: [makePodIssue({ status: 'CrashLoopBackOff' })] })
+      render(<PodIssues />)
+      const iconDiv = document.querySelector('[title="Restart Loop - Pod is repeatedly crashing"]')
+      expect(iconDiv).toBeInTheDocument()
+    })
   })
 
-  it('handles data fetch failure', () => {
-    mockPodIssues.mockReturnValue({ issues: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: true, consecutiveFailures: 3, error: 'Network error', lastRefresh: null })
-    const { container } = render(<PodIssues />)
-    expect(container).toBeTruthy()
+  // -------------------------------------------------------------------------
+  describe('drill-down on click', () => {
+    it('calls drillToPod with correct args when row clicked', async () => {
+      const issue = makePodIssue({
+        name: 'web-pod',
+        namespace: 'prod',
+        cluster: 'east',
+        status: 'CrashLoopBackOff',
+        restarts: 3,
+        issues: ['exited 1'],
+      })
+      setupDefaults({ issues: [issue] })
+      render(<PodIssues />)
+      await userEvent.click(screen.getByTestId('card-list-item'))
+      expect(mockDrillToPod).toHaveBeenCalledWith('east', 'prod', 'web-pod', {
+        status: 'CrashLoopBackOff',
+        restarts: 3,
+        issues: ['exited 1'],
+      })
+    })
+
+    it('does NOT call drillToPod when cluster is undefined', async () => {
+      setupDefaults({ issues: [makePodIssue({ cluster: undefined })] })
+      render(<PodIssues />)
+      await userEvent.click(screen.getByTestId('card-list-item'))
+      expect(mockDrillToPod).not.toHaveBeenCalled()
+    })
   })
 
-  it('renders during background refresh with cached data', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: true })
-    mockPodIssues.mockReturnValue({ issues: [], isLoading: false, isRefreshing: true, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    const { container } = render(<PodIssues />)
-    expect(container).toBeTruthy()
+  // -------------------------------------------------------------------------
+  describe('controls & footer', () => {
+    it('renders search input', () => {
+      setupDefaults({ issues: [makePodIssue()] })
+      render(<PodIssues />)
+      expect(screen.getByTestId('search-input')).toBeInTheDocument()
+    })
+
+    it('renders card controls row', () => {
+      setupDefaults({ issues: [makePodIssue()] })
+      render(<PodIssues />)
+      expect(screen.getByTestId('card-controls-row')).toBeInTheDocument()
+    })
+
+    it('shows LimitedAccessWarning when error exists', () => {
+      setupDefaults({ issues: [makePodIssue()], error: 'forbidden' })
+      render(<PodIssues />)
+      expect(screen.getByTestId('limited-access-warning')).toBeInTheDocument()
+    })
+
+    it('does not show LimitedAccessWarning when no error', () => {
+      setupDefaults({ issues: [makePodIssue()] })
+      render(<PodIssues />)
+      expect(screen.queryByTestId('limited-access-warning')).not.toBeInTheDocument()
+    })
   })
 
-  it('reports demo fallback state', () => {
-    mockPodIssues.mockReturnValue({ issues: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    render(<PodIssues />)
-    expect(mockUseCardLoadingState).toHaveBeenCalled()
-  })
+  // -------------------------------------------------------------------------
+  describe('useCardLoadingState integration', () => {
+    it('passes isFailed and consecutiveFailures', () => {
+      setupDefaults({ isFailed: true, consecutiveFailures: 4, issues: [] })
+      render(<PodIssues />)
+      expect(mockUseCardLoadingState).toHaveBeenCalledWith(
+        expect.objectContaining({ isFailed: true, consecutiveFailures: 4 })
+      )
+    })
 
+    it('passes isDemoData when isDemoFallback=true', () => {
+      setupDefaults({ isDemoFallback: true, issues: [] })
+      render(<PodIssues />)
+      expect(mockUseCardLoadingState).toHaveBeenCalledWith(
+        expect.objectContaining({ isDemoData: true })
+      )
+    })
+  })
 })

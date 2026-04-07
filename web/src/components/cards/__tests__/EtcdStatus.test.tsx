@@ -1,107 +1,193 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import { EtcdStatus } from './EtcdStatus'
 
-// Standard mocks
-vi.mock('../../../lib/demoMode', () => ({
-  isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
-  isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
-  toggleDemoMode: vi.fn(), subscribeDemoMode: () => () => {},
-  isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
-  isFeatureEnabled: () => true,
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const makeEtcdPod = (overrides = {}) => ({
+  name: 'etcd-node1',
+  namespace: 'kube-system',
+  cluster: 'cluster-1',
+  status: 'Running',
+  labels: { component: 'etcd' },
+  restarts: 0,
+  containers: [{ name: 'etcd', image: 'registry.k8s.io/etcd:3.5.6-0' }],
+  ...overrides,
+})
+
+// ── Mocks ────────────────────────────────────────────────────────────────────
+
+vi.mock('../../hooks/useCachedData', () => ({
+  useCachedPods: () => ({
+    pods: [],
+    isLoading: false,
+    isRefreshing: false,
+    isDemoFallback: false,
+    isFailed: false,
+    consecutiveFailures: 0,
+  }),
 }))
 
-const mockUseDemoMode = vi.fn()
-vi.mock('../../../hooks/useDemoMode', () => ({
-  getDemoMode: () => true, default: () => true,
-  useDemoMode: () => mockUseDemoMode(),
-  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
-  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
-  setGlobalDemoMode: vi.fn(),
-}))
-
-vi.mock('../../../lib/analytics', () => ({
-  emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(), markErrorReported: vi.fn(),
-}))
-
-vi.mock('../../../hooks/useTokenUsage', () => ({
-  useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
-  tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },
+vi.mock('./CardDataContext', () => ({
+  useCardLoadingState: vi.fn(() => ({ showSkeleton: false })),
 }))
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
-  Trans: ({ children }: { children: React.ReactNode }) => children,
+  useTranslation: () => ({
+    t: (key: string, opts?: Record<string, unknown>) => {
+      if (opts) return `${key}:${JSON.stringify(opts)}`
+      return key
+    },
+  }),
 }))
 
-const mockUseCardLoadingState = vi.fn()
-vi.mock('../CardDataContext', () => ({
-  useReportCardDataState: vi.fn(),
-  useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
-}))
-
-const mockPods = vi.fn()
-vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedPods: () => mockPods(),
-}))
-
-import { EtcdStatus } from '../EtcdStatus'
+// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('EtcdStatus', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
-    mockPods.mockReturnValue({ pods: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+  beforeEach(() => vi.clearAllMocks())
+
+  describe('Skeleton', () => {
+    it('renders pulse skeletons when showSkeleton is true', async () => {
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: true } as never)
+      render(<EtcdStatus />)
+      const pulses = document.querySelectorAll('.animate-pulse')
+      expect(pulses.length).toBeGreaterThan(0)
+    })
   })
 
-  it('renders without crashing', () => {
-    const { container } = render(<EtcdStatus />)
-    expect(container).toBeTruthy()
+  describe('No pods state', () => {
+    it('shows managed-by-provider UI when no pods at all', async () => {
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
+      render(<EtcdStatus />)
+      expect(screen.getByText('etcdStatus.managedByProvider')).toBeTruthy()
+    })
+
+    it('shows not-detected UI when pods exist but no etcd', async () => {
+      const { useCachedPods } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedPods).mockReturnValue({
+        pods: [{ name: 'coredns-abc', namespace: 'kube-system', cluster: 'c1', status: 'Running', labels: {}, containers: [] }],
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+      } as never)
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
+      render(<EtcdStatus />)
+      expect(screen.getByText('etcdStatus.notDetected')).toBeTruthy()
+    })
   })
 
-  it('calls useCardLoadingState during render', () => {
-    render(<EtcdStatus />)
-    expect(mockUseCardLoadingState).toHaveBeenCalled()
+  describe('Members summary', () => {
+    it('renders member summary text with count and clusters', async () => {
+      const { useCachedPods } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedPods).mockReturnValue({
+        pods: [makeEtcdPod()],
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+      } as never)
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
+      render(<EtcdStatus />)
+      expect(screen.getByText(/etcdStatus.membersSummary/)).toBeTruthy()
+    })
   })
 
-  it('renders skeleton UI when data is loading', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: true, showEmptyState: false, hasData: false, isRefreshing: false })
-    mockPods.mockReturnValue({ pods: [], isLoading: true, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: null })
-    const { container } = render(<EtcdStatus />)
-    // Skeleton renders animate-pulse elements or similar loading indicators
-    expect(container.innerHTML.length).toBeGreaterThan(0)
+  describe('Cluster rows', () => {
+    it('renders a row per cluster with ready/total count', async () => {
+      const { useCachedPods } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedPods).mockReturnValue({
+        pods: [makeEtcdPod(), makeEtcdPod({ name: 'etcd-node2' })],
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+      } as never)
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
+      render(<EtcdStatus />)
+      expect(screen.getByText('cluster-1')).toBeTruthy()
+      expect(screen.getByText(/etcdStatus.membersCount/)).toBeTruthy()
+    })
+
+    it('shows restart badge when restarts > 0', async () => {
+      const { useCachedPods } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedPods).mockReturnValue({
+        pods: [makeEtcdPod({ restarts: 5 })],
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+      } as never)
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
+      render(<EtcdStatus />)
+      expect(screen.getByText(/etcdStatus.restarts/)).toBeTruthy()
+    })
   })
 
-  it('renders correctly in demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    const { container } = render(<EtcdStatus />)
-    expect(container).toBeTruthy()
+  describe('Version parsing', () => {
+    it('displays etcd version tag from container image', async () => {
+      const { useCachedPods } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedPods).mockReturnValue({
+        pods: [makeEtcdPod({ containers: [{ name: 'etcd', image: 'registry.k8s.io/etcd:3.5.9-0' }] })],
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+      } as never)
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
+      render(<EtcdStatus />)
+      expect(screen.getByText(/3.5.9-0/)).toBeTruthy()
+    })
+
+    it('shows checkmark for Running pods and X for non-running', async () => {
+      const { useCachedPods } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedPods).mockReturnValue({
+        pods: [
+          makeEtcdPod({ status: 'Running' }),
+          makeEtcdPod({ name: 'etcd-node2', status: 'CrashLoopBackOff' }),
+        ],
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+      } as never)
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
+      render(<EtcdStatus />)
+      expect(screen.getByText(/✓/)).toBeTruthy()
+      expect(screen.getByText(/✗/)).toBeTruthy()
+    })
   })
 
-  it('renders correctly in non-demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    const { container } = render(<EtcdStatus />)
-    expect(container).toBeTruthy()
+  describe('Operator/backup exclusion', () => {
+    it('excludes operator pods from etcd detection', async () => {
+      const { useCachedPods } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedPods).mockReturnValue({
+        pods: [{ name: 'etcd-operator-abc', namespace: 'kube-system', cluster: 'c1', status: 'Running', labels: {}, containers: [] }],
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+      } as never)
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
+      render(<EtcdStatus />)
+      // operator pod excluded → shows not detected (pods exist but no etcd)
+      expect(screen.getByText('etcdStatus.notDetected')).toBeTruthy()
+    })
   })
-
-  it('handles data fetch failure', () => {
-    mockPods.mockReturnValue({ pods: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: true, consecutiveFailures: 3, error: 'Network error', lastRefresh: null })
-    const { container } = render(<EtcdStatus />)
-    expect(container).toBeTruthy()
-  })
-
-  it('renders during background refresh with cached data', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: true })
-    mockPods.mockReturnValue({ pods: [], isLoading: false, isRefreshing: true, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    const { container } = render(<EtcdStatus />)
-    expect(container).toBeTruthy()
-  })
-
-  it('reports demo fallback state', () => {
-    mockPods.mockReturnValue({ pods: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    render(<EtcdStatus />)
-    expect(mockUseCardLoadingState).toHaveBeenCalled()
-  })
-
 })

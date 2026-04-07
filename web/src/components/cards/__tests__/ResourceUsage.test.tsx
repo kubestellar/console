@@ -1,48 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { ResourceUsage } from '../ResourceUsage'
 
-// Standard mocks
-vi.mock('../../../lib/demoMode', () => ({
-  isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
-  isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
-  toggleDemoMode: vi.fn(), subscribeDemoMode: () => () => {},
-  isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
-  isFeatureEnabled: () => true,
-}))
-
-const mockUseDemoMode = vi.fn()
-vi.mock('../../../hooks/useDemoMode', () => ({
-  getDemoMode: () => true, default: () => true,
-  useDemoMode: () => mockUseDemoMode(),
-  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
-  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
-  setGlobalDemoMode: vi.fn(),
-}))
-
-vi.mock('../../../lib/analytics', () => ({
-  emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(), markErrorReported: vi.fn(),
-}))
-
-vi.mock('../../../hooks/useTokenUsage', () => ({
-  useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
-  tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },
-}))
+// ---------------------------------------------------------------------------
+// Mocks
+// ---------------------------------------------------------------------------
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
-  Trans: ({ children }: { children: React.ReactNode }) => children,
+  useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => opts ? `${k}:${JSON.stringify(opts)}` : k }),
 }))
 
-const mockUseCardLoadingState = vi.fn()
-vi.mock('../CardDataContext', () => ({
-  useReportCardDataState: vi.fn(),
-  useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
-}))
-
-const mockGPUNodes = vi.fn()
-vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedGPUNodes: () => mockGPUNodes(),
+const mockIsDemoMode = vi.fn(() => false)
+vi.mock('../../../hooks/useDemoMode', () => ({
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode() }),
 }))
 
 const mockUseClusters = vi.fn()
@@ -50,93 +21,346 @@ vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => mockUseClusters(),
 }))
 
-const mockDrillDown = vi.fn()
+const mockUseCachedGPUNodes = vi.fn()
+vi.mock('../../../hooks/useCachedData', () => ({
+  useCachedGPUNodes: () => mockUseCachedGPUNodes(),
+}))
+
+const mockDrillToResources = vi.fn()
 vi.mock('../../../hooks/useDrillDown', () => ({
-  useDrillDownActions: () => mockDrillDown(),
+  useDrillDownActions: () => ({ drillToResources: mockDrillToResources }),
 }))
 
-vi.mock('../../../lib/cards/cardHooks', () => ({
-  useChartFilters: () => ({ localClusterFilter: [], toggleClusterFilter: vi.fn(), clearClusterFilter: vi.fn(), availableClusters: [], filteredClusters: [], showClusterFilter: false, setShowClusterFilter: vi.fn(), clusterFilterRef: { current: null } }),
-  commonComparators: { string: () => () => 0, number: () => () => 0, statusOrder: () => () => 0, date: () => () => 0, boolean: () => () => 0 },
+const mockUseChartFilters = vi.fn()
+vi.mock('../../../lib/cards/cardHooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../lib/cards/cardHooks')>()
+  return {
+    ...actual,
+    useChartFilters: (...args: unknown[]) => mockUseChartFilters(...args),
+  }
+})
+
+const mockUseCardLoadingState = vi.fn()
+vi.mock('../CardDataContext', () => ({
+  useCardLoadingState: (...args: unknown[]) => mockUseCardLoadingState(...args),
 }))
 
-vi.mock('../charts', () => ({ Gauge: () => null, TimeSeriesChart: () => null, MultiSeriesChart: () => null }))
+vi.mock('../../ui/Skeleton', () => ({
+  Skeleton: ({ variant }: { variant: string }) => <div data-testid={`skeleton-${variant}`} />,
+}))
 
-import { ResourceUsage } from '../ResourceUsage'
+vi.mock('../../charts', () => ({
+  Gauge: ({ value, max }: { value: number; max: number }) => (
+    <div data-testid="gauge" data-value={value} data-max={max}>{value}%</div>
+  ),
+}))
+
+vi.mock('../../../lib/cards/CardComponents', () => ({
+  CardClusterFilter: () => <div data-testid="cluster-filter" />,
+}))
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+type ClusterStub = {
+  name: string
+  cpuCores?: number
+  memoryGB?: number
+  cpuRequestsCores?: number
+  memoryRequestsGB?: number
+}
+
+type GPUNodeStub = {
+  cluster: string
+  gpuCount: number
+  gpuAllocated: number
+  acceleratorType?: string
+}
+
+function makeChartFiltersReturn(clusters: ClusterStub[] = []) {
+  return {
+    localClusterFilter: [],
+    toggleClusterFilter: vi.fn(),
+    clearClusterFilter: vi.fn(),
+    availableClusters: clusters.map((c) => c.name),
+    filteredClusters: clusters,
+    showClusterFilter: false,
+    setShowClusterFilter: vi.fn(),
+    clusterFilterRef: { current: null },
+  }
+}
+
+function setupDefaults({
+  clusters = [] as ClusterStub[],
+  gpuNodes = [] as GPUNodeStub[],
+  clustersLoading = false,
+  clustersRefreshing = false,
+  isDemoFallback = false,
+  gpuRefreshing = false,
+  showSkeleton = false,
+  showEmptyState = false,
+} = {}) {
+  mockUseClusters.mockReturnValue({ isLoading: clustersLoading, isRefreshing: clustersRefreshing })
+  mockUseCachedGPUNodes.mockReturnValue({ nodes: gpuNodes, isDemoFallback, isRefreshing: gpuRefreshing })
+  mockUseChartFilters.mockReturnValue(makeChartFiltersReturn(clusters))
+  mockUseCardLoadingState.mockReturnValue({ showSkeleton, showEmptyState })
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 
 describe('ResourceUsage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
-    mockGPUNodes.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now() })
-    mockDrillDown.mockReturnValue({ drillToResources: vi.fn() })
+    mockIsDemoMode.mockReturnValue(false)
+    setupDefaults()
   })
 
-  it('renders without crashing', () => {
-    const { container } = render(<ResourceUsage />)
-    expect(container).toBeTruthy()
-  })
-
-  it('calls useCardLoadingState during render', () => {
-    render(<ResourceUsage />)
-    expect(mockUseCardLoadingState).toHaveBeenCalled()
-  })
-
-  it('renders skeleton UI when data is loading', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: true, showEmptyState: false, hasData: false, isRefreshing: false })
-    mockGPUNodes.mockReturnValue({ nodes: [], isLoading: true, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: null })
-    mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: true, isRefreshing: false, error: null, lastRefresh: null })
-    const { container } = render(<ResourceUsage />)
-    // Skeleton renders animate-pulse elements or similar loading indicators
-    expect(container.innerHTML.length).toBeGreaterThan(0)
-  })
-
-  it('handles empty data state gracefully', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: true, hasData: false, isRefreshing: false })
-    const { container } = render(<ResourceUsage />)
-    expect(container.innerHTML.length).toBeGreaterThan(0)
-  })
-
-  it('renders correctly in demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    const { container } = render(<ResourceUsage />)
-    expect(container).toBeTruthy()
-  })
-
-  it('renders correctly in non-demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    const { container } = render(<ResourceUsage />)
-    expect(container).toBeTruthy()
-  })
-
-  it('handles GPU data fetch failure', () => {
-    mockGPUNodes.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: true, consecutiveFailures: 3, error: 'Network error', lastRefresh: null })
-    const { container } = render(<ResourceUsage />)
-    expect(container).toBeTruthy()
-  })
-
-  it('renders during background refresh with cached data', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: true })
-    mockGPUNodes.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: true, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    const { container } = render(<ResourceUsage />)
-    expect(container).toBeTruthy()
-  })
-
-  it('renders with cluster data available', () => {
-    mockUseClusters.mockReturnValue({
-      clusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }], deduplicatedClusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }],
-      isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now(),
+  // -------------------------------------------------------------------------
+  describe('loading state', () => {
+    it('renders skeleton when showSkeleton=true', () => {
+      setupDefaults({ showSkeleton: true })
+      render(<ResourceUsage />)
+      expect(screen.getByTestId('skeleton-circular')).toBeInTheDocument()
     })
-    const { container } = render(<ResourceUsage />)
-    expect(container).toBeTruthy()
+
+    it('does not render gauges while loading', () => {
+      setupDefaults({ showSkeleton: true })
+      render(<ResourceUsage />)
+      expect(screen.queryByTestId('gauge')).not.toBeInTheDocument()
+    })
   })
 
-  it('reports GPU demo fallback state', () => {
-    mockGPUNodes.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    render(<ResourceUsage />)
-    expect(mockUseCardLoadingState).toHaveBeenCalled()
+  // -------------------------------------------------------------------------
+  describe('empty state', () => {
+    it('shows empty state message when showEmptyState=true', () => {
+      setupDefaults({ showEmptyState: true })
+      render(<ResourceUsage />)
+      expect(screen.getByText('resourceUsage.noClusters')).toBeInTheDocument()
+    })
   })
 
+  // -------------------------------------------------------------------------
+  describe('CPU and memory gauges', () => {
+    it('renders CPU gauge', () => {
+      setupDefaults({
+        clusters: [{ name: 'c1', cpuCores: 16, cpuRequestsCores: 8 }],
+      })
+      render(<ResourceUsage />)
+      const gauges = screen.getAllByTestId('gauge')
+      expect(gauges.length).toBeGreaterThanOrEqual(2)
+    })
+
+    it('shows correct CPU percent', () => {
+      setupDefaults({
+        clusters: [{ name: 'c1', cpuCores: 10, cpuRequestsCores: 5 }],
+      })
+      render(<ResourceUsage />)
+      // 5/10 = 50%
+      expect(screen.getAllByTestId('gauge')[0]).toHaveAttribute('data-value', '50')
+    })
+
+    it('shows 0% CPU when no total cores', () => {
+      setupDefaults({ clusters: [{ name: 'c1', cpuCores: 0, cpuRequestsCores: 0 }] })
+      render(<ResourceUsage />)
+      expect(screen.getAllByTestId('gauge')[0]).toHaveAttribute('data-value', '0')
+    })
+
+    it('shows correct memory percent', () => {
+      setupDefaults({
+        clusters: [{ name: 'c1', memoryGB: 100, memoryRequestsGB: 75 }],
+      })
+      render(<ResourceUsage />)
+      expect(screen.getAllByTestId('gauge')[1]).toHaveAttribute('data-value', '75')
+    })
+
+    it('shows 0% memory when no total memory', () => {
+      setupDefaults({ clusters: [{ name: 'c1', memoryGB: 0, memoryRequestsGB: 0 }] })
+      render(<ResourceUsage />)
+      expect(screen.getAllByTestId('gauge')[1]).toHaveAttribute('data-value', '0')
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  describe('footer totals', () => {
+    it('shows total CPU cores', () => {
+      setupDefaults({
+        clusters: [
+          { name: 'c1', cpuCores: 8 },
+          { name: 'c2', cpuCores: 4 },
+        ],
+      })
+      render(<ResourceUsage />)
+      expect(screen.getByText('12 resourceUsage.cores')).toBeInTheDocument()
+    })
+
+    it('shows total RAM in GB', () => {
+      setupDefaults({
+        clusters: [{ name: 'c1', memoryGB: 128 }],
+      })
+      render(<ResourceUsage />)
+      expect(screen.getByText('128 GB')).toBeInTheDocument()
+    })
+
+    it('accumulates cores across multiple clusters', () => {
+      setupDefaults({
+        clusters: [
+          { name: 'c1', cpuCores: 16, memoryGB: 64 },
+          { name: 'c2', cpuCores: 8, memoryGB: 32 },
+        ],
+      })
+      render(<ResourceUsage />)
+      expect(screen.getByText('24 resourceUsage.cores')).toBeInTheDocument()
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  describe('GPU accelerators', () => {
+    it('shows GPU gauge when GPU nodes exist', () => {
+      setupDefaults({
+        clusters: [{ name: 'c1' }],
+        gpuNodes: [{ cluster: 'c1', gpuCount: 4, gpuAllocated: 2 }],
+      })
+      render(<ResourceUsage />)
+      const gauges = screen.getAllByTestId('gauge')
+      expect(gauges.length).toBe(3) // CPU + Memory + GPU
+    })
+
+    it('shows correct GPU percent', () => {
+      setupDefaults({
+        clusters: [{ name: 'c1' }],
+        gpuNodes: [{ cluster: 'c1', gpuCount: 8, gpuAllocated: 4 }],
+      })
+      render(<ResourceUsage />)
+      const gpuGauge = screen.getAllByTestId('gauge')[2]
+      expect(gpuGauge).toHaveAttribute('data-value', '50')
+    })
+
+    it('shows TPU gauge for TPU accelerator nodes', () => {
+      setupDefaults({
+        clusters: [{ name: 'c1' }],
+        gpuNodes: [{ cluster: 'c1', gpuCount: 2, gpuAllocated: 1, acceleratorType: 'TPU' }],
+      })
+      render(<ResourceUsage />)
+      expect(screen.getByText('TPU')).toBeInTheDocument()
+    })
+
+    it('shows AIU gauge for AIU accelerator nodes', () => {
+      setupDefaults({
+        clusters: [{ name: 'c1' }],
+        gpuNodes: [{ cluster: 'c1', gpuCount: 2, gpuAllocated: 1, acceleratorType: 'AIU' }],
+      })
+      render(<ResourceUsage />)
+      expect(screen.getByText('AIU')).toBeInTheDocument()
+    })
+
+    it('shows XPU gauge for XPU accelerator nodes', () => {
+      setupDefaults({
+        clusters: [{ name: 'c1' }],
+        gpuNodes: [{ cluster: 'c1', gpuCount: 2, gpuAllocated: 1, acceleratorType: 'XPU' }],
+      })
+      render(<ResourceUsage />)
+      expect(screen.getByText('XPU')).toBeInTheDocument()
+    })
+
+    it('does NOT show GPU gauge when no GPU nodes', () => {
+      setupDefaults({ clusters: [{ name: 'c1' }], gpuNodes: [] })
+      render(<ResourceUsage />)
+      expect(screen.getAllByTestId('gauge')).toHaveLength(2) // CPU + Memory only
+    })
+
+    it('filters GPU nodes to match selected clusters only', () => {
+      // c2 nodes should be excluded when clusters only contains c1
+      setupDefaults({
+        clusters: [{ name: 'c1' }],
+        gpuNodes: [
+          { cluster: 'c1', gpuCount: 4, gpuAllocated: 2 },
+          { cluster: 'c2', gpuCount: 8, gpuAllocated: 8 },
+        ],
+      })
+      render(<ResourceUsage />)
+      // GPU gauge should show 2/4 = 50%, not include c2's 8/8
+      const gpuGauge = screen.getAllByTestId('gauge')[2]
+      expect(gpuGauge).toHaveAttribute('data-value', '50')
+    })
+
+    it('handles cluster names with slash prefix (cluster/node)', () => {
+      setupDefaults({
+        clusters: [{ name: 'c1' }],
+        gpuNodes: [{ cluster: 'c1/node-1', gpuCount: 2, gpuAllocated: 1 }],
+      })
+      render(<ResourceUsage />)
+      // GPU gauge should appear — cluster prefix matches
+      expect(screen.getAllByTestId('gauge')).toHaveLength(3)
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  describe('drill-down', () => {
+    it('calls drillToResources when gauge area is clicked', async () => {
+      setupDefaults({ clusters: [{ name: 'c1', cpuCores: 4 }] })
+      render(<ResourceUsage />)
+      // The wrapper div is clickable
+      const clickTarget = screen.getAllByTestId('gauge')[0].closest('div[class*="cursor-pointer"]')!
+      await userEvent.click(clickTarget)
+      expect(mockDrillToResources).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  describe('cluster count display', () => {
+    it('shows cluster count label when no filter active', () => {
+      setupDefaults({ clusters: [{ name: 'c1' }, { name: 'c2' }] })
+      render(<ResourceUsage />)
+      // t('common:common.nClusters', { count: 2 })
+      expect(screen.getByText(/nClusters/)).toBeInTheDocument()
+    })
+
+    it('shows selected/total count badge when cluster filter active', () => {
+      setupDefaults({ clusters: [{ name: 'c1' }] })
+      mockUseChartFilters.mockReturnValue({
+        ...makeChartFiltersReturn([{ name: 'c1' }]),
+        localClusterFilter: ['c1'],
+        availableClusters: ['c1', 'c2'],
+      })
+      render(<ResourceUsage />)
+      expect(screen.getByText('1/2')).toBeInTheDocument()
+    })
+
+    it('renders cluster filter component', () => {
+      setupDefaults({ clusters: [] })
+      render(<ResourceUsage />)
+      expect(screen.getByTestId('cluster-filter')).toBeInTheDocument()
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  describe('useCardLoadingState integration', () => {
+    it('passes isDemoData=true when isDemoMode', () => {
+      mockIsDemoMode.mockReturnValue(true)
+      setupDefaults()
+      render(<ResourceUsage />)
+      expect(mockUseCardLoadingState).toHaveBeenCalledWith(
+        expect.objectContaining({ isDemoData: true })
+      )
+    })
+
+    it('passes isDemoData=true when isDemoFallback', () => {
+      setupDefaults({ isDemoFallback: true })
+      render(<ResourceUsage />)
+      expect(mockUseCardLoadingState).toHaveBeenCalledWith(
+        expect.objectContaining({ isDemoData: true })
+      )
+    })
+
+    it('passes isRefreshing combining clusters and GPU refreshing', () => {
+      setupDefaults({ clustersRefreshing: true, gpuRefreshing: false })
+      render(<ResourceUsage />)
+      expect(mockUseCardLoadingState).toHaveBeenCalledWith(
+        expect.objectContaining({ isRefreshing: true })
+      )
+    })
+  })
 })

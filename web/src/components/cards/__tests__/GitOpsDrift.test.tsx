@@ -1,128 +1,223 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { GitOpsDrift } from './GitOpsDrift'
 
-// Standard mocks
-vi.mock('../../../lib/demoMode', () => ({
-  isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
-  isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
-  toggleDemoMode: vi.fn(), subscribeDemoMode: () => () => {},
-  isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
-  isFeatureEnabled: () => true,
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const makeDrift = (overrides = {}) => ({
+  resource: 'my-deployment',
+  kind: 'Deployment',
+  cluster: 'cluster-1',
+  namespace: 'default',
+  driftType: 'modified',
+  severity: 'high' as const,
+  details: 'replicas changed',
+  gitVersion: 'main@abc123',
+  ...overrides,
+})
+
+// ── Mocks ────────────────────────────────────────────────────────────────────
+
+vi.mock('../../hooks/useCachedData', () => ({
+  useCachedGitOpsDrifts: () => ({
+    drifts: [],
+    isLoading: false,
+    isRefreshing: false,
+    error: null,
+    isFailed: false,
+    consecutiveFailures: 0,
+    isDemoFallback: false,
+  }),
 }))
 
-const mockUseDemoMode = vi.fn()
-vi.mock('../../../hooks/useDemoMode', () => ({
-  getDemoMode: () => true, default: () => true,
-  useDemoMode: () => mockUseDemoMode(),
-  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
-  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
-  setGlobalDemoMode: vi.fn(),
+vi.mock('../../hooks/useGlobalFilters', () => ({
+  useGlobalFilters: () => ({
+    selectedSeverities: ['critical', 'high', 'medium', 'low', 'info'],
+    isAllSeveritiesSelected: true,
+    customFilter: '',
+  }),
 }))
 
-vi.mock('../../../lib/analytics', () => ({
-  emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(), markErrorReported: vi.fn(),
+vi.mock('./CardDataContext', () => ({
+  useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
 }))
 
-vi.mock('../../../hooks/useTokenUsage', () => ({
-  useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
-  tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },
+vi.mock('../../lib/cards/cardHooks', () => ({
+  useCardData: (items: unknown[], _opts: unknown) => ({
+    items,
+    totalItems: (items as unknown[]).length,
+    currentPage: 1,
+    totalPages: 1,
+    itemsPerPage: 5,
+    goToPage: vi.fn(),
+    needsPagination: false,
+    setItemsPerPage: vi.fn(),
+    filters: {
+      search: '',
+      setSearch: vi.fn(),
+      localClusterFilter: [],
+      toggleClusterFilter: vi.fn(),
+      clearClusterFilter: vi.fn(),
+      availableClusters: [],
+      showClusterFilter: false,
+      setShowClusterFilter: vi.fn(),
+      clusterFilterRef: { current: null },
+    },
+    sorting: {
+      sortBy: 'severity',
+      setSortBy: vi.fn(),
+      sortDirection: 'asc',
+      setSortDirection: vi.fn(),
+    },
+    containerRef: { current: null },
+    containerStyle: {},
+  }),
 }))
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
-  Trans: ({ children }: { children: React.ReactNode }) => children,
-}))
-
-const mockUseCardLoadingState = vi.fn()
-vi.mock('../CardDataContext', () => ({
-  useReportCardDataState: vi.fn(),
-  useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
-}))
-
-const mockGitOpsDrifts = vi.fn()
-vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedGitOpsDrifts: () => mockGitOpsDrifts(),
-}))
-
-vi.mock('../../../hooks/useGlobalFilters', () => ({
-  useGlobalFilters: () => ({ selectedClusters: [], isAllClustersSelected: true, selectedSeverities: [], isAllSeveritiesSelected: true, customFilter: '' }),
-}))
-
-vi.mock('../../../lib/cards/cardHooks', () => ({
-  useCardData: () => ({
-    items: [], totalItems: 0, currentPage: 1, totalPages: 0, itemsPerPage: 5,
-    goToPage: vi.fn(), needsPagination: false, setItemsPerPage: vi.fn(),
-    filters: { search: '', setSearch: vi.fn(), localClusterFilter: [], toggleClusterFilter: vi.fn(), clearClusterFilter: vi.fn(), availableClusters: [], showClusterFilter: false, setShowClusterFilter: vi.fn(), clusterFilterRef: { current: null }, clusterFilterBtnRef: { current: null }, dropdownStyle: null },
-    sorting: { sortBy: '', setSortBy: vi.fn(), sortDirection: 'asc' as const, setSortDirection: vi.fn(), toggleSortDirection: vi.fn() },
-    containerRef: { current: null }, containerStyle: undefined,
+  useTranslation: () => ({
+    t: (k: string, opts?: Record<string, unknown>) => {
+      if (opts?.count !== undefined) return `${k}:${opts.count}`
+      return k
+    },
   }),
-  commonComparators: { string: () => () => 0, number: () => () => 0, statusOrder: () => () => 0, date: () => () => 0, boolean: () => () => 0 },
 }))
 
-import { GitOpsDrift } from '../GitOpsDrift'
+vi.mock('../../lib/cards/CardComponents', () => ({
+  CardSearchInput: () => <input data-testid="search" />,
+  CardClusterFilter: () => <div data-testid="cluster-filter" />,
+}))
+
+vi.mock('../ui/CardControls', () => ({
+  CardControls: () => <div data-testid="card-controls" />,
+}))
+
+vi.mock('../ui/Pagination', () => ({
+  Pagination: () => <div data-testid="pagination" />,
+}))
+
+vi.mock('../ui/StatusBadge', () => ({
+  StatusBadge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+}))
+
+vi.mock('../ui/ClusterBadge', () => ({
+  ClusterBadge: ({ cluster }: { cluster: string }) => <span>{cluster}</span>,
+}))
+
+vi.mock('./deploy/GitOpsDriftDetailModal', () => ({
+  GitOpsDriftDetailModal: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="drift-modal" /> : null,
+}))
+
+// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('GitOpsDrift', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
-    mockGitOpsDrifts.mockReturnValue({ drifts: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+  beforeEach(() => vi.clearAllMocks())
+
+  describe('Skeleton', () => {
+    it('renders loader spinner when showSkeleton', async () => {
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: true, showEmptyState: false } as never)
+      render(<GitOpsDrift />)
+      // Loader2 renders as svg with animate-spin
+      const spinner = document.querySelector('.animate-spin')
+      expect(spinner).toBeTruthy()
+    })
   })
 
-  it('renders without crashing', () => {
-    const { container } = render(<GitOpsDrift />)
-    expect(container).toBeTruthy()
+  describe('Empty state', () => {
+    it('shows no drift message when showEmptyState', async () => {
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false, showEmptyState: true } as never)
+      render(<GitOpsDrift />)
+      expect(screen.getByText('gitOpsDrift.noDrift')).toBeTruthy()
+    })
+
+    it('shows in sync message when drift list is empty', () => {
+      render(<GitOpsDrift />)
+      expect(screen.getByText('gitOpsDrift.noDriftDetected')).toBeTruthy()
+    })
   })
 
-  it('calls useCardLoadingState during render', () => {
-    render(<GitOpsDrift />)
-    expect(mockUseCardLoadingState).toHaveBeenCalled()
+  describe('Drift list', () => {
+    it('renders drift resource name and kind', async () => {
+      const { useCachedGitOpsDrifts } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedGitOpsDrifts).mockReturnValue({
+        drifts: [makeDrift()],
+        isLoading: false, isRefreshing: false, error: null, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+      } as never)
+      render(<GitOpsDrift />)
+      expect(screen.getByText('my-deployment')).toBeTruthy()
+      expect(screen.getByText('Deployment')).toBeTruthy()
+    })
+
+    it('renders cluster badge', async () => {
+      const { useCachedGitOpsDrifts } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedGitOpsDrifts).mockReturnValue({
+        drifts: [makeDrift()],
+        isLoading: false, isRefreshing: false, error: null, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+      } as never)
+      render(<GitOpsDrift />)
+      expect(screen.getByText('cluster-1')).toBeTruthy()
+    })
+
+    it('renders drift type badge', async () => {
+      const { useCachedGitOpsDrifts } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedGitOpsDrifts).mockReturnValue({
+        drifts: [makeDrift({ driftType: 'modified' })],
+        isLoading: false, isRefreshing: false, error: null, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+      } as never)
+      render(<GitOpsDrift />)
+      expect(screen.getByText('cards:gitOpsDrift.modified')).toBeTruthy()
+    })
+
+    it('shows high severity count badge when high drifts exist', async () => {
+      const { useCachedGitOpsDrifts } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedGitOpsDrifts).mockReturnValue({
+        drifts: [makeDrift({ severity: 'high' })],
+        isLoading: false, isRefreshing: false, error: null, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+      } as never)
+      render(<GitOpsDrift />)
+      expect(screen.getByText(/gitOpsDrift.nCritical/)).toBeTruthy()
+    })
+
+    it('opens modal when drift item clicked', async () => {
+      const { useCachedGitOpsDrifts } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedGitOpsDrifts).mockReturnValue({
+        drifts: [makeDrift()],
+        isLoading: false, isRefreshing: false, error: null, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+      } as never)
+      render(<GitOpsDrift />)
+      fireEvent.click(screen.getByText('my-deployment'))
+      expect(screen.getByTestId('drift-modal')).toBeTruthy()
+    })
+
+    it('renders git version code', async () => {
+      const { useCachedGitOpsDrifts } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedGitOpsDrifts).mockReturnValue({
+        drifts: [makeDrift({ gitVersion: 'main@abc123' })],
+        isLoading: false, isRefreshing: false, error: null, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+      } as never)
+      render(<GitOpsDrift />)
+      expect(screen.getByText('main@abc123')).toBeTruthy()
+    })
   })
 
-  it('renders skeleton UI when data is loading', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: true, showEmptyState: false, hasData: false, isRefreshing: false })
-    mockGitOpsDrifts.mockReturnValue({ drifts: [], isLoading: true, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: null })
-    const { container } = render(<GitOpsDrift />)
-    // Skeleton renders animate-pulse elements or similar loading indicators
-    expect(container.innerHTML.length).toBeGreaterThan(0)
+  describe('Severity filter', () => {
+    it('filters out low severity drifts when only critical selected', async () => {
+      const { useGlobalFilters } = await import('../../hooks/useGlobalFilters')
+      vi.mocked(useGlobalFilters).mockReturnValue({
+        selectedSeverities: ['critical'],
+        isAllSeveritiesSelected: false,
+        customFilter: '',
+      } as never)
+      const { useCachedGitOpsDrifts } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedGitOpsDrifts).mockReturnValue({
+        drifts: [makeDrift({ severity: 'low', resource: 'low-resource' })],
+        isLoading: false, isRefreshing: false, error: null, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+      } as never)
+      render(<GitOpsDrift />)
+      expect(screen.queryByText('low-resource')).toBeNull()
+    })
   })
-
-  it('handles empty data state gracefully', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: true, hasData: false, isRefreshing: false })
-    const { container } = render(<GitOpsDrift />)
-    expect(container.innerHTML.length).toBeGreaterThan(0)
-  })
-
-  it('renders correctly in demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    const { container } = render(<GitOpsDrift />)
-    expect(container).toBeTruthy()
-  })
-
-  it('renders correctly in non-demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    const { container } = render(<GitOpsDrift />)
-    expect(container).toBeTruthy()
-  })
-
-  it('handles data fetch failure', () => {
-    mockGitOpsDrifts.mockReturnValue({ drifts: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: true, consecutiveFailures: 3, error: 'Network error', lastRefresh: null })
-    const { container } = render(<GitOpsDrift />)
-    expect(container).toBeTruthy()
-  })
-
-  it('renders during background refresh with cached data', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: true })
-    mockGitOpsDrifts.mockReturnValue({ drifts: [], isLoading: false, isRefreshing: true, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    const { container } = render(<GitOpsDrift />)
-    expect(container).toBeTruthy()
-  })
-
-  it('reports demo fallback state', () => {
-    mockGitOpsDrifts.mockReturnValue({ drifts: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    render(<GitOpsDrift />)
-    expect(mockUseCardLoadingState).toHaveBeenCalled()
-  })
-
 })

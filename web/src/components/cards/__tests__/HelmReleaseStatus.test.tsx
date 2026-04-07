@@ -1,146 +1,224 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { HelmReleaseStatus } from './HelmReleaseStatus'
 
-// Standard mocks
-vi.mock('../../../lib/demoMode', () => ({
-  isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
-  isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
-  toggleDemoMode: vi.fn(), subscribeDemoMode: () => () => {},
-  isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
-  isFeatureEnabled: () => true,
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const makeRelease = (overrides = {}) => ({
+  name: 'prometheus',
+  namespace: 'monitoring',
+  chart: 'prometheus-25.8.0',
+  app_version: '2.48.0',
+  status: 'deployed',
+  updated: new Date(Date.now() - 3600000).toISOString(),
+  revision: '3',
+  cluster: 'cluster-1',
+  ...overrides,
+})
+
+const mockDrillToHelm = vi.fn()
+
+// ── Mocks ────────────────────────────────────────────────────────────────────
+
+vi.mock('../../hooks/useMCP', () => ({
+  useClusters: () => ({ isLoading: false }),
 }))
 
-const mockUseDemoMode = vi.fn()
-vi.mock('../../../hooks/useDemoMode', () => ({
-  getDemoMode: () => true, default: () => true,
-  useDemoMode: () => mockUseDemoMode(),
-  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
-  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
-  setGlobalDemoMode: vi.fn(),
+vi.mock('../../hooks/useCachedData', () => ({
+  useCachedHelmReleases: () => ({
+    releases: [],
+    isLoading: false,
+    isRefreshing: false,
+    isFailed: false,
+    consecutiveFailures: 0,
+    isDemoFallback: false,
+  }),
 }))
 
-vi.mock('../../../lib/analytics', () => ({
-  emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(), markErrorReported: vi.fn(),
+vi.mock('../../hooks/useDrillDown', () => ({
+  useDrillDownActions: () => ({ drillToHelm: mockDrillToHelm }),
 }))
 
-vi.mock('../../../hooks/useTokenUsage', () => ({
-  useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
-  tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },
+vi.mock('./CardDataContext', () => ({
+  useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
+}))
+
+vi.mock('../../lib/cards/cardHooks', () => ({
+  useCardData: (items: unknown[], _opts: unknown) => ({
+    items,
+    totalItems: (items as unknown[]).length,
+    currentPage: 1,
+    totalPages: 1,
+    itemsPerPage: 5,
+    goToPage: vi.fn(),
+    needsPagination: false,
+    setItemsPerPage: vi.fn(),
+    filters: {
+      search: '',
+      setSearch: vi.fn(),
+      localClusterFilter: [],
+      toggleClusterFilter: vi.fn(),
+      clearClusterFilter: vi.fn(),
+      availableClusters: [{ name: 'cluster-1' }],
+      showClusterFilter: false,
+      setShowClusterFilter: vi.fn(),
+      clusterFilterRef: { current: null },
+    },
+    sorting: {
+      sortBy: 'status',
+      setSortBy: vi.fn(),
+      sortDirection: 'asc',
+      setSortDirection: vi.fn(),
+    },
+    containerRef: { current: null },
+    containerStyle: {},
+  }),
 }))
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
-  Trans: ({ children }: { children: React.ReactNode }) => children,
-}))
-
-const mockUseCardLoadingState = vi.fn()
-vi.mock('../CardDataContext', () => ({
-  useReportCardDataState: vi.fn(),
-  useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
-}))
-
-const mockHelmReleases = vi.fn()
-vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedHelmReleases: () => mockHelmReleases(),
-}))
-
-const mockUseClusters = vi.fn()
-vi.mock('../../../hooks/useMCP', () => ({
-  useClusters: () => mockUseClusters(),
-}))
-
-const mockDrillDown = vi.fn()
-vi.mock('../../../hooks/useDrillDown', () => ({
-  useDrillDownActions: () => mockDrillDown(),
-}))
-
-vi.mock('../../../lib/cards/cardHooks', () => ({
-  useCardData: () => ({
-    items: [], totalItems: 0, currentPage: 1, totalPages: 0, itemsPerPage: 5,
-    goToPage: vi.fn(), needsPagination: false, setItemsPerPage: vi.fn(),
-    filters: { search: '', setSearch: vi.fn(), localClusterFilter: [], toggleClusterFilter: vi.fn(), clearClusterFilter: vi.fn(), availableClusters: [], showClusterFilter: false, setShowClusterFilter: vi.fn(), clusterFilterRef: { current: null }, clusterFilterBtnRef: { current: null }, dropdownStyle: null },
-    sorting: { sortBy: '', setSortBy: vi.fn(), sortDirection: 'asc' as const, setSortDirection: vi.fn(), toggleSortDirection: vi.fn() },
-    containerRef: { current: null }, containerStyle: undefined,
+  useTranslation: () => ({
+    t: (k: string, opts?: Record<string, unknown>) => {
+      if (opts?.count !== undefined) return `${k}:${opts.count}`
+      return k
+    },
   }),
-  commonComparators: { string: () => () => 0, number: () => () => 0, statusOrder: () => () => 0, date: () => () => 0, boolean: () => () => 0 },
 }))
 
-import { HelmReleaseStatus } from '../HelmReleaseStatus'
+vi.mock('../../lib/cards/CardComponents', () => ({
+  CardSearchInput: () => <input data-testid="search" />,
+  CardControlsRow: () => <div data-testid="controls-row" />,
+  CardPaginationFooter: () => <div data-testid="pagination" />,
+  CardAIActions: () => <div data-testid="ai-actions" />,
+}))
+
+vi.mock('../ui/Skeleton', () => ({
+  Skeleton: () => <div data-testid="skeleton" />,
+}))
+
+vi.mock('../ui/ClusterBadge', () => ({
+  ClusterBadge: ({ cluster }: { cluster: string }) => <span>{cluster}</span>,
+}))
+
+// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('HelmReleaseStatus', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
-    mockHelmReleases.mockReturnValue({ releases: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now() })
-    mockDrillDown.mockReturnValue({ drillToHelm: vi.fn() })
-  })
+  beforeEach(() => vi.clearAllMocks())
 
-  it('renders without crashing', () => {
-    const { container } = render(<HelmReleaseStatus />)
-    expect(container).toBeTruthy()
-  })
-
-  it('calls useCardLoadingState during render', () => {
-    render(<HelmReleaseStatus />)
-    expect(mockUseCardLoadingState).toHaveBeenCalled()
-  })
-
-  it('renders skeleton UI when data is loading', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: true, showEmptyState: false, hasData: false, isRefreshing: false })
-    mockHelmReleases.mockReturnValue({ releases: [], isLoading: true, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: null })
-    mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: true, isRefreshing: false, error: null, lastRefresh: null })
-    const { container } = render(<HelmReleaseStatus />)
-    // Skeleton renders animate-pulse elements or similar loading indicators
-    expect(container.innerHTML.length).toBeGreaterThan(0)
-  })
-
-  it('handles empty data state gracefully', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: true, hasData: false, isRefreshing: false })
-    const { container } = render(<HelmReleaseStatus />)
-    expect(container.innerHTML.length).toBeGreaterThan(0)
-  })
-
-  it('renders correctly in demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    const { container } = render(<HelmReleaseStatus />)
-    expect(container).toBeTruthy()
-  })
-
-  it('renders correctly in non-demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    const { container } = render(<HelmReleaseStatus />)
-    expect(container).toBeTruthy()
-  })
-
-  it('handles data fetch failure', () => {
-    mockHelmReleases.mockReturnValue({ releases: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: true, consecutiveFailures: 3, error: 'Network error', lastRefresh: null })
-    const { container } = render(<HelmReleaseStatus />)
-    expect(container).toBeTruthy()
-  })
-
-  it('renders during background refresh with cached data', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: true })
-    mockHelmReleases.mockReturnValue({ releases: [], isLoading: false, isRefreshing: true, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    const { container } = render(<HelmReleaseStatus />)
-    expect(container).toBeTruthy()
-  })
-
-  it('renders with cluster data available', () => {
-    mockUseClusters.mockReturnValue({
-      clusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }], deduplicatedClusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }],
-      isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now(),
+  describe('Skeleton', () => {
+    it('renders skeletons during loading', async () => {
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: true, showEmptyState: false } as never)
+      render(<HelmReleaseStatus />)
+      expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0)
     })
-    const { container } = render(<HelmReleaseStatus />)
-    expect(container).toBeTruthy()
   })
 
-  it('reports demo fallback state', () => {
-    mockHelmReleases.mockReturnValue({ releases: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    render(<HelmReleaseStatus />)
-    expect(mockUseCardLoadingState).toHaveBeenCalled()
+  describe('Empty state', () => {
+    it('shows no releases message', async () => {
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false, showEmptyState: true } as never)
+      render(<HelmReleaseStatus />)
+      expect(screen.getByText('helmReleaseStatus.noReleases')).toBeTruthy()
+    })
   })
 
+  describe('Summary stats', () => {
+    it('renders total, deployed, failed counts', async () => {
+      const { useCachedHelmReleases } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedHelmReleases).mockReturnValue({
+        releases: [makeRelease(), makeRelease({ name: 'broken', status: 'failed' })],
+        isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+      } as never)
+      render(<HelmReleaseStatus />)
+      expect(screen.getByText('common:common.total')).toBeTruthy()
+      expect(screen.getByText('helmReleaseStatus.deployed')).toBeTruthy()
+      expect(screen.getByText('common:common.failed')).toBeTruthy()
+    })
+  })
+
+  describe('Release list', () => {
+    it('renders release name', async () => {
+      const { useCachedHelmReleases } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedHelmReleases).mockReturnValue({
+        releases: [makeRelease()],
+        isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+      } as never)
+      render(<HelmReleaseStatus />)
+      expect(screen.getByText('prometheus')).toBeTruthy()
+    })
+
+    it('renders chart@version', async () => {
+      const { useCachedHelmReleases } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedHelmReleases).mockReturnValue({
+        releases: [makeRelease()],
+        isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+      } as never)
+      render(<HelmReleaseStatus />)
+      expect(screen.getByText('prometheus@25.8.0')).toBeTruthy()
+    })
+
+    it('renders status badge for each release', async () => {
+      const { useCachedHelmReleases } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedHelmReleases).mockReturnValue({
+        releases: [makeRelease()],
+        isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+      } as never)
+      render(<HelmReleaseStatus />)
+      expect(screen.getByText('deployed')).toBeTruthy()
+    })
+
+    it('calls drillToHelm on row click', async () => {
+      const { useCachedHelmReleases } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedHelmReleases).mockReturnValue({
+        releases: [makeRelease()],
+        isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+      } as never)
+      render(<HelmReleaseStatus />)
+      fireEvent.click(screen.getByText('prometheus'))
+      expect(mockDrillToHelm).toHaveBeenCalledWith('cluster-1', 'monitoring', 'prometheus', expect.any(Object))
+    })
+
+    it('shows AI actions for failed releases', async () => {
+      const { useCachedHelmReleases } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedHelmReleases).mockReturnValue({
+        releases: [makeRelease({ name: 'broken', status: 'failed' })],
+        isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+      } as never)
+      render(<HelmReleaseStatus />)
+      expect(screen.getByTestId('ai-actions')).toBeTruthy()
+    })
+
+    it('does not show AI actions for deployed releases', async () => {
+      const { useCachedHelmReleases } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedHelmReleases).mockReturnValue({
+        releases: [makeRelease()],
+        isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+      } as never)
+      render(<HelmReleaseStatus />)
+      expect(screen.queryByTestId('ai-actions')).toBeNull()
+    })
+  })
+
+  describe('Namespace filter', () => {
+    it('renders namespace dropdown', async () => {
+      const { useCachedHelmReleases } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedHelmReleases).mockReturnValue({
+        releases: [makeRelease()],
+        isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+      } as never)
+      render(<HelmReleaseStatus />)
+      expect(screen.getByRole('combobox')).toBeTruthy()
+    })
+
+    it('populates namespace options from releases', async () => {
+      const { useCachedHelmReleases } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedHelmReleases).mockReturnValue({
+        releases: [makeRelease({ namespace: 'monitoring' }), makeRelease({ name: 'grafana', namespace: 'default' })],
+        isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoFallback: false,
+      } as never)
+      render(<HelmReleaseStatus />)
+      expect(screen.getByText('monitoring')).toBeTruthy()
+      expect(screen.getByText('default')).toBeTruthy()
+    })
+  })
 })

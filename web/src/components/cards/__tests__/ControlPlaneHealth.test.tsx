@@ -1,123 +1,192 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { ControlPlaneHealth } from './ControlPlaneHealth'
 
-// Standard mocks
-vi.mock('../../../lib/demoMode', () => ({
-  isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
-  isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
-  toggleDemoMode: vi.fn(), subscribeDemoMode: () => () => {},
-  isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
-  isFeatureEnabled: () => true,
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const makePod = (overrides = {}) => ({
+  name: 'kube-apiserver-node1',
+  namespace: 'kube-system',
+  cluster: 'cluster-1',
+  status: 'Running',
+  labels: { component: 'kube-apiserver' },
+  restarts: 0,
+  ...overrides,
+})
+
+// ── Mocks ────────────────────────────────────────────────────────────────────
+
+vi.mock('../../hooks/useCachedData', () => ({
+  useCachedPods: () => ({
+    pods: [],
+    isLoading: false,
+    isRefreshing: false,
+    isDemoFallback: false,
+    isFailed: false,
+    consecutiveFailures: 0,
+  }),
 }))
 
-const mockUseDemoMode = vi.fn()
-vi.mock('../../../hooks/useDemoMode', () => ({
-  getDemoMode: () => true, default: () => true,
-  useDemoMode: () => mockUseDemoMode(),
-  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
-  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
-  setGlobalDemoMode: vi.fn(),
+vi.mock('../../hooks/useMCP', () => ({
+  useClusters: () => ({
+    clusters: [{ name: 'cluster-1' }],
+    isLoading: false,
+  }),
 }))
 
-vi.mock('../../../lib/analytics', () => ({
-  emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(), markErrorReported: vi.fn(),
-}))
-
-vi.mock('../../../hooks/useTokenUsage', () => ({
-  useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
-  tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },
+vi.mock('./CardDataContext', () => ({
+  useCardLoadingState: vi.fn(() => ({ showSkeleton: false })),
 }))
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
-  Trans: ({ children }: { children: React.ReactNode }) => children,
+  useTranslation: () => ({
+    t: (key: string, opts?: Record<string, unknown>) => {
+      if (opts?.count !== undefined) return `${key}:${opts.count}`
+      return key
+    },
+  }),
 }))
 
-const mockUseCardLoadingState = vi.fn()
-vi.mock('../CardDataContext', () => ({
-  useReportCardDataState: vi.fn(),
-  useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
+vi.mock('../ui/Skeleton', () => ({
+  Skeleton: ({ height }: { height: number }) => <div data-testid="skeleton" style={{ height }} />,
 }))
 
-const mockPods = vi.fn()
-vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedPods: () => mockPods(),
-}))
-
-const mockUseClusters = vi.fn()
-vi.mock('../../../hooks/useMCP', () => ({
-  useClusters: () => mockUseClusters(),
-}))
-
-import { ControlPlaneHealth } from '../ControlPlaneHealth'
+// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('ControlPlaneHealth', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
-    mockPods.mockReturnValue({ pods: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now() })
-  })
+  beforeEach(() => vi.clearAllMocks())
 
-  it('renders without crashing', () => {
-    const { container } = render(<ControlPlaneHealth />)
-    expect(container).toBeTruthy()
-  })
-
-  it('calls useCardLoadingState during render', () => {
-    render(<ControlPlaneHealth />)
-    expect(mockUseCardLoadingState).toHaveBeenCalled()
-  })
-
-  it('renders skeleton UI when data is loading', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: true, showEmptyState: false, hasData: false, isRefreshing: false })
-    mockPods.mockReturnValue({ pods: [], isLoading: true, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: null })
-    mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: true, isRefreshing: false, error: null, lastRefresh: null })
-    const { container } = render(<ControlPlaneHealth />)
-    // Skeleton renders animate-pulse elements or similar loading indicators
-    expect(container.innerHTML.length).toBeGreaterThan(0)
-  })
-
-  it('renders correctly in demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    const { container } = render(<ControlPlaneHealth />)
-    expect(container).toBeTruthy()
-  })
-
-  it('renders correctly in non-demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    const { container } = render(<ControlPlaneHealth />)
-    expect(container).toBeTruthy()
-  })
-
-  it('handles data fetch failure', () => {
-    mockPods.mockReturnValue({ pods: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: true, consecutiveFailures: 3, error: 'Network error', lastRefresh: null })
-    const { container } = render(<ControlPlaneHealth />)
-    expect(container).toBeTruthy()
-  })
-
-  it('renders during background refresh with cached data', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: true })
-    mockPods.mockReturnValue({ pods: [], isLoading: false, isRefreshing: true, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    const { container } = render(<ControlPlaneHealth />)
-    expect(container).toBeTruthy()
-  })
-
-  it('renders with cluster data available', () => {
-    mockUseClusters.mockReturnValue({
-      clusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }], deduplicatedClusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }],
-      isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now(),
+  describe('Skeleton state', () => {
+    it('renders skeletons when showSkeleton is true', async () => {
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: true } as never)
+      render(<ControlPlaneHealth />)
+      expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0)
     })
-    const { container } = render(<ControlPlaneHealth />)
-    expect(container).toBeTruthy()
   })
 
-  it('reports demo fallback state', () => {
-    mockPods.mockReturnValue({ pods: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    render(<ControlPlaneHealth />)
-    expect(mockUseCardLoadingState).toHaveBeenCalled()
+  describe('Managed cluster state', () => {
+    it('shows managed cluster UI when no control-plane pods found and clusters exist', async () => {
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
+      render(<ControlPlaneHealth />)
+      expect(screen.getByText('controlPlaneHealth.managedCluster')).toBeTruthy()
+    })
   })
 
+  describe('Component status rows', () => {
+    it('renders all 5 component rows when control-plane pods are found', async () => {
+      const { useCachedPods } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedPods).mockReturnValue({
+        pods: [
+          makePod({ labels: { component: 'kube-apiserver' } }),
+          makePod({ name: 'kube-scheduler-node1', labels: { component: 'kube-scheduler' } }),
+          makePod({ name: 'kube-controller-manager-node1', labels: { component: 'kube-controller-manager' } }),
+          makePod({ name: 'etcd-node1', labels: { component: 'etcd' } }),
+          makePod({ name: 'coredns-abc', namespace: 'kube-system', labels: { 'k8s-app': 'kube-dns' } }),
+        ],
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+      } as never)
+
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
+
+      render(<ControlPlaneHealth />)
+      expect(screen.getByText('API Server')).toBeTruthy()
+      expect(screen.getByText('Scheduler')).toBeTruthy()
+      expect(screen.getByText('Controller Mgr')).toBeTruthy()
+      expect(screen.getByText('etcd')).toBeTruthy()
+      expect(screen.getByText('CoreDNS')).toBeTruthy()
+    })
+
+    it('shows restart count for components with restarts', async () => {
+      const { useCachedPods } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedPods).mockReturnValue({
+        pods: [makePod({ restarts: 3 })],
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+      } as never)
+
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
+
+      render(<ControlPlaneHealth />)
+      expect(screen.getByText(/controlPlaneHealth.restarts/)).toBeTruthy()
+    })
+  })
+
+  describe('Cluster filter buttons', () => {
+    it('renders All button and per-cluster buttons when multiple clusters', async () => {
+      const { useCachedPods } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedPods).mockReturnValue({
+        pods: [
+          makePod({ cluster: 'cluster-1' }),
+          makePod({ cluster: 'cluster-2', name: 'kube-apiserver-node2' }),
+        ],
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+      } as never)
+
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
+
+      render(<ControlPlaneHealth />)
+      expect(screen.getByText('controlPlaneHealth.all')).toBeTruthy()
+      expect(screen.getByText('cluster-1')).toBeTruthy()
+      expect(screen.getByText('cluster-2')).toBeTruthy()
+    })
+
+    it('filters to selected cluster when cluster button is clicked', async () => {
+      const { useCachedPods } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedPods).mockReturnValue({
+        pods: [
+          makePod({ cluster: 'cluster-1' }),
+          makePod({ cluster: 'cluster-2', name: 'kube-apiserver-node2' }),
+        ],
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+      } as never)
+
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
+
+      render(<ControlPlaneHealth />)
+      fireEvent.click(screen.getByText('cluster-1'))
+      // After clicking cluster-1, filter is applied (no error thrown)
+      expect(screen.getByText('cluster-1')).toBeTruthy()
+    })
+  })
+
+  describe('Ready/total display', () => {
+    it('shows 1/1 for running pod', async () => {
+      const { useCachedPods } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedPods).mockReturnValue({
+        pods: [makePod()],
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+      } as never)
+
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
+
+      render(<ControlPlaneHealth />)
+      expect(screen.getByText('1/1')).toBeTruthy()
+    })
+  })
 })

@@ -1,130 +1,385 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { EventStream } from '../EventStream'
+import type { ClusterEvent } from '../../../hooks/useMCP'
 
-// Standard mocks
-vi.mock('../../../lib/demoMode', () => ({
-  isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
-  isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
-  toggleDemoMode: vi.fn(), subscribeDemoMode: () => () => {},
-  isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
-  isFeatureEnabled: () => true,
-}))
-
-const mockUseDemoMode = vi.fn()
-vi.mock('../../../hooks/useDemoMode', () => ({
-  getDemoMode: () => true, default: () => true,
-  useDemoMode: () => mockUseDemoMode(),
-  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
-  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
-  setGlobalDemoMode: vi.fn(),
-}))
-
-vi.mock('../../../lib/analytics', () => ({
-  emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(), markErrorReported: vi.fn(),
-}))
-
-vi.mock('../../../hooks/useTokenUsage', () => ({
-  useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
-  tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },
-}))
+// ---------------------------------------------------------------------------
+// Mocks
+// ---------------------------------------------------------------------------
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
-  Trans: ({ children }: { children: React.ReactNode }) => children,
+  useTranslation: () => ({ t: (k: string) => k }),
+}))
+
+const mockIsDemoMode = vi.fn(() => false)
+vi.mock('../../../hooks/useDemoMode', () => ({
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode() }),
+}))
+
+const mockUseCachedEvents = vi.fn()
+vi.mock('../../../hooks/useCachedData', () => ({
+  useCachedEvents: (...args: unknown[]) => mockUseCachedEvents(...args),
 }))
 
 const mockUseCardLoadingState = vi.fn()
 vi.mock('../CardDataContext', () => ({
-  useReportCardDataState: vi.fn(),
-  useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
+  useCardLoadingState: (...args: unknown[]) => mockUseCardLoadingState(...args),
 }))
 
-const mockEvents = vi.fn()
-vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedEvents: () => mockEvents(),
-}))
+const mockUseCardData = vi.fn()
+vi.mock('../../../lib/cards/cardHooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../lib/cards/cardHooks')>()
+  return {
+    ...actual,
+    useCardData: (...args: unknown[]) => mockUseCardData(...args),
+  }
+})
 
-const mockDrillDown = vi.fn()
+const mockDrillToEvents = vi.fn()
+const mockDrillToPod = vi.fn()
+const mockDrillToDeployment = vi.fn()
 vi.mock('../../../hooks/useDrillDown', () => ({
-  useDrillDownActions: () => mockDrillDown(),
-}))
-
-vi.mock('../../../lib/cards/cardHooks', () => ({
-  useCardData: () => ({
-    items: [], totalItems: 0, currentPage: 1, totalPages: 0, itemsPerPage: 5,
-    goToPage: vi.fn(), needsPagination: false, setItemsPerPage: vi.fn(),
-    filters: { search: '', setSearch: vi.fn(), localClusterFilter: [], toggleClusterFilter: vi.fn(), clearClusterFilter: vi.fn(), availableClusters: [], showClusterFilter: false, setShowClusterFilter: vi.fn(), clusterFilterRef: { current: null }, clusterFilterBtnRef: { current: null }, dropdownStyle: null },
-    sorting: { sortBy: '', setSortBy: vi.fn(), sortDirection: 'asc' as const, setSortDirection: vi.fn(), toggleSortDirection: vi.fn() },
-    containerRef: { current: null }, containerStyle: undefined,
+  useDrillDownActions: () => ({
+    drillToEvents: mockDrillToEvents,
+    drillToPod: mockDrillToPod,
+    drillToDeployment: mockDrillToDeployment,
   }),
-  commonComparators: { string: () => () => 0, number: () => () => 0, statusOrder: () => () => 0, date: () => () => 0, boolean: () => () => 0 },
 }))
 
-import { EventStream } from '../EventStream'
+vi.mock('../DynamicCardErrorBoundary', () => ({
+  DynamicCardErrorBoundary: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="error-boundary">{children}</div>
+  ),
+}))
+
+vi.mock('../../ui/ClusterBadge', () => ({
+  ClusterBadge: ({ cluster }: { cluster: string }) => (
+    <span data-testid="cluster-badge">{cluster}</span>
+  ),
+}))
+
+vi.mock('../../ui/LimitedAccessWarning', () => ({
+  LimitedAccessWarning: ({ hasError }: { hasError: boolean }) =>
+    hasError ? <div data-testid="limited-access-warning" /> : null,
+}))
+
+vi.mock('../../ui/RefreshIndicator', () => ({
+  RefreshIndicator: () => <div data-testid="refresh-indicator" />,
+}))
+
+vi.mock('../../../lib/cards/CardComponents', () => ({
+  CardSkeleton: () => <div data-testid="card-skeleton" />,
+  CardSearchInput: ({
+    value,
+    onChange,
+  }: {
+    value: string
+    onChange: (v: string) => void
+  }) => (
+    <input
+      data-testid="search-input"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  ),
+  CardControlsRow: () => <div data-testid="card-controls-row" />,
+  CardPaginationFooter: ({ needsPagination }: { needsPagination: boolean }) =>
+    needsPagination ? <div data-testid="pagination" /> : null,
+}))
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function makeEvent(overrides: Partial<ClusterEvent> = {}): ClusterEvent {
+  return {
+    type: 'Normal',
+    message: 'Pod started successfully',
+    object: 'Pod/my-pod',
+    namespace: 'default',
+    cluster: 'prod',
+    count: 1,
+    lastSeen: new Date().toISOString(),
+    ...overrides,
+  } as ClusterEvent
+}
+
+function makeCardDataReturn(events: ClusterEvent[] = []) {
+  return {
+    items: events,
+    totalItems: events.length,
+    currentPage: 1,
+    totalPages: 1,
+    itemsPerPage: 5,
+    goToPage: vi.fn(),
+    needsPagination: false,
+    setItemsPerPage: vi.fn(),
+    filters: {
+      search: '',
+      setSearch: vi.fn(),
+      localClusterFilter: [],
+      toggleClusterFilter: vi.fn(),
+      clearClusterFilter: vi.fn(),
+      availableClusters: [],
+      showClusterFilter: false,
+      setShowClusterFilter: vi.fn(),
+      clusterFilterRef: { current: null },
+    },
+    sorting: {
+      sortBy: 'time',
+      setSortBy: vi.fn(),
+      sortDirection: 'desc',
+      setSortDirection: vi.fn(),
+    },
+    containerRef: { current: null },
+    containerStyle: {},
+  }
+}
+
+function setupDefaults({
+  events = [] as ClusterEvent[],
+  isLoading = false,
+  isRefreshing = false,
+  isFailed = false,
+  consecutiveFailures = 0,
+  error = null as string | null,
+  isDemoFallback = false,
+  showSkeleton = false,
+  showEmptyState = false,
+} = {}) {
+  mockUseCachedEvents.mockReturnValue({
+    events,
+    isLoading,
+    isRefreshing,
+    isDemoFallback,
+    isFailed,
+    consecutiveFailures,
+    error,
+    lastRefresh: null,
+  })
+  mockUseCardLoadingState.mockReturnValue({ showSkeleton, showEmptyState })
+  mockUseCardData.mockReturnValue(makeCardDataReturn(events))
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 
 describe('EventStream', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
-    mockEvents.mockReturnValue({ events: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    mockDrillDown.mockReturnValue({ drillToEvent: vi.fn() })
+    mockIsDemoMode.mockReturnValue(false)
+    setupDefaults()
   })
 
-  it('renders without crashing', () => {
-    const { container } = render(<EventStream />)
-    expect(container).toBeTruthy()
-  })
-
-  it('calls useCardLoadingState during render', () => {
+  it('wraps content in DynamicCardErrorBoundary', () => {
     render(<EventStream />)
-    expect(mockUseCardLoadingState).toHaveBeenCalled()
+    expect(screen.getByTestId('error-boundary')).toBeInTheDocument()
   })
 
-  it('renders skeleton UI when data is loading', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: true, showEmptyState: false, hasData: false, isRefreshing: false })
-    mockEvents.mockReturnValue({ events: [], isLoading: true, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: null })
-    const { container } = render(<EventStream />)
-    // Skeleton renders animate-pulse elements or similar loading indicators
-    expect(container.innerHTML.length).toBeGreaterThan(0)
+  // -------------------------------------------------------------------------
+  describe('loading state', () => {
+    it('shows CardSkeleton when showSkeleton=true', () => {
+      setupDefaults({ showSkeleton: true })
+      render(<EventStream />)
+      expect(screen.getByTestId('card-skeleton')).toBeInTheDocument()
+    })
+
+    it('does not render event rows while loading', () => {
+      setupDefaults({ showSkeleton: true, events: [makeEvent()] })
+      render(<EventStream />)
+      expect(screen.queryByText('Pod started successfully')).not.toBeInTheDocument()
+    })
   })
 
-  it('handles empty data state gracefully', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: true, hasData: false, isRefreshing: false })
-    const { container } = render(<EventStream />)
-    expect(container.innerHTML.length).toBeGreaterThan(0)
+  // -------------------------------------------------------------------------
+  describe('empty state', () => {
+    it('shows empty state when showEmptyState=true', () => {
+      setupDefaults({ showEmptyState: true })
+      render(<EventStream />)
+      expect(screen.getByText('No events')).toBeInTheDocument()
+    })
+
+    it('shows no-recent-events message when events list is empty after filtering', () => {
+      setupDefaults({ events: [] })
+      render(<EventStream />)
+      expect(screen.getByText('No recent events')).toBeInTheDocument()
+    })
   })
 
-  it('renders correctly in demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    const { container } = render(<EventStream />)
-    expect(container).toBeTruthy()
+  // -------------------------------------------------------------------------
+  describe('event list', () => {
+    it('renders event message', () => {
+      setupDefaults({ events: [makeEvent({ message: 'OOMKilled detected' })] })
+      render(<EventStream />)
+      expect(screen.getByText('OOMKilled detected')).toBeInTheDocument()
+    })
+
+    it('renders event object', () => {
+      setupDefaults({ events: [makeEvent({ object: 'Deployment/api-server' })] })
+      render(<EventStream />)
+      expect(screen.getByText('Deployment/api-server')).toBeInTheDocument()
+    })
+
+    it('renders namespace', () => {
+      setupDefaults({ events: [makeEvent({ namespace: 'kube-system' })] })
+      render(<EventStream />)
+      expect(screen.getByText('kube-system')).toBeInTheDocument()
+    })
+
+    it('renders cluster badge', () => {
+      setupDefaults({ events: [makeEvent({ cluster: 'us-east' })] })
+      render(<EventStream />)
+      expect(screen.getByTestId('cluster-badge')).toHaveTextContent('us-east')
+    })
+
+    it('shows "unknown" cluster badge when cluster is undefined', () => {
+      setupDefaults({ events: [makeEvent({ cluster: undefined })] })
+      render(<EventStream />)
+      expect(screen.getByTestId('cluster-badge')).toHaveTextContent('unknown')
+    })
+
+    it('shows count badge when count > 1', () => {
+      setupDefaults({ events: [makeEvent({ count: 5 })] })
+      render(<EventStream />)
+      expect(screen.getByText('x5')).toBeInTheDocument()
+    })
+
+    it('does not show count badge when count is 1', () => {
+      setupDefaults({ events: [makeEvent({ count: 1 })] })
+      render(<EventStream />)
+      expect(screen.queryByText('x1')).not.toBeInTheDocument()
+    })
+
+    it('renders multiple events', () => {
+      setupDefaults({
+        events: [
+          makeEvent({ message: 'Alpha event' }),
+          makeEvent({ message: 'Beta event', object: 'Pod/other', namespace: 'ns2' }),
+        ],
+      })
+      render(<EventStream />)
+      expect(screen.getByText('Alpha event')).toBeInTheDocument()
+      expect(screen.getByText('Beta event')).toBeInTheDocument()
+    })
   })
 
-  it('renders correctly in non-demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    const { container } = render(<EventStream />)
-    expect(container).toBeTruthy()
+  // -------------------------------------------------------------------------
+  describe('event styles', () => {
+    it('applies Warning style for Warning type events', () => {
+      setupDefaults({ events: [makeEvent({ type: 'Warning', message: 'Warn msg' })] })
+      render(<EventStream />)
+      const iconBox = screen.getByTitle('Warning event - Potential issue detected')
+      expect(iconBox.className).toContain('bg-yellow-500/10')
+    })
+
+    it('applies Error style for Error type events', () => {
+      setupDefaults({ events: [makeEvent({ type: 'Error', message: 'Err msg' })] })
+      render(<EventStream />)
+      const iconBox = screen.getByTitle('Error event - Action required')
+      expect(iconBox.className).toContain('bg-red-500/10')
+    })
+
+    it('applies Normal/Info style for Normal type events', () => {
+      setupDefaults({ events: [makeEvent({ type: 'Normal', message: 'Info msg' })] })
+      render(<EventStream />)
+      const iconBox = screen.getByTitle('Informational event')
+      expect(iconBox.className).toContain('bg-blue-500/10')
+    })
   })
 
-  it('handles data fetch failure', () => {
-    mockEvents.mockReturnValue({ events: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: true, consecutiveFailures: 3, error: 'Network error', lastRefresh: null })
-    const { container } = render(<EventStream />)
-    expect(container).toBeTruthy()
+  // -------------------------------------------------------------------------
+  describe('drill-down on click', () => {
+    it('calls drillToPod for Pod resource type', async () => {
+      setupDefaults({
+        events: [makeEvent({ object: 'Pod/my-pod', cluster: 'c1', namespace: 'ns1' })],
+      })
+      render(<EventStream />)
+      await userEvent.click(screen.getByText('Pod started successfully'))
+      expect(mockDrillToPod).toHaveBeenCalledWith('c1', 'ns1', 'my-pod', { fromEvent: true })
+    })
+
+    it('calls drillToDeployment for Deployment resource type', async () => {
+      setupDefaults({
+        events: [makeEvent({ object: 'Deployment/my-deploy', cluster: 'c1', namespace: 'ns1', message: 'Deploy event' })],
+      })
+      render(<EventStream />)
+      await userEvent.click(screen.getByText('Deploy event'))
+      expect(mockDrillToDeployment).toHaveBeenCalledWith('c1', 'ns1', 'my-deploy', { fromEvent: true })
+    })
+
+    it('calls drillToDeployment for ReplicaSet resource type', async () => {
+      setupDefaults({
+        events: [makeEvent({ object: 'ReplicaSet/rs-1', cluster: 'c1', namespace: 'ns1', message: 'RS event' })],
+      })
+      render(<EventStream />)
+      await userEvent.click(screen.getByText('RS event'))
+      expect(mockDrillToDeployment).toHaveBeenCalledWith('c1', 'ns1', 'rs-1', { fromEvent: true })
+    })
+
+    it('calls drillToEvents for generic resource type', async () => {
+      setupDefaults({
+        events: [makeEvent({ object: 'Service/my-svc', cluster: 'c1', namespace: 'ns1', message: 'Svc event' })],
+      })
+      render(<EventStream />)
+      await userEvent.click(screen.getByText('Svc event'))
+      expect(mockDrillToEvents).toHaveBeenCalledWith('c1', 'ns1', 'Service/my-svc')
+    })
+
+    it('does not call any drill-down when cluster is undefined', async () => {
+      setupDefaults({
+        events: [makeEvent({ object: 'Pod/p', cluster: undefined, message: 'No cluster' })],
+      })
+      render(<EventStream />)
+      await userEvent.click(screen.getByText('No cluster'))
+      expect(mockDrillToPod).not.toHaveBeenCalled()
+      expect(mockDrillToEvents).not.toHaveBeenCalled()
+    })
   })
 
-  it('renders during background refresh with cached data', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: true })
-    mockEvents.mockReturnValue({ events: [], isLoading: false, isRefreshing: true, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    const { container } = render(<EventStream />)
-    expect(container).toBeTruthy()
+  // -------------------------------------------------------------------------
+  describe('controls & footer', () => {
+    it('renders search input', () => {
+      setupDefaults({ events: [] })
+      render(<EventStream />)
+      expect(screen.getByTestId('search-input')).toBeInTheDocument()
+    })
+
+    it('renders card controls row', () => {
+      setupDefaults({ events: [] })
+      render(<EventStream />)
+      expect(screen.getByTestId('card-controls-row')).toBeInTheDocument()
+    })
+
+    it('renders refresh indicator', () => {
+      setupDefaults({ events: [] })
+      render(<EventStream />)
+      expect(screen.getByTestId('refresh-indicator')).toBeInTheDocument()
+    })
+
+    it('shows LimitedAccessWarning when error exists', () => {
+      setupDefaults({ events: [], error: 'forbidden' })
+      render(<EventStream />)
+      expect(screen.getByTestId('limited-access-warning')).toBeInTheDocument()
+    })
+
+    it('does not show LimitedAccessWarning when no error', () => {
+      setupDefaults({ events: [] })
+      render(<EventStream />)
+      expect(screen.queryByTestId('limited-access-warning')).not.toBeInTheDocument()
+    })
   })
 
-  it('reports demo fallback state', () => {
-    mockEvents.mockReturnValue({ events: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    render(<EventStream />)
-    expect(mockUseCardLoadingState).toHaveBeenCalled()
+  // -------------------------------------------------------------------------
+  describe('useCachedEvents args', () => {
+    it('calls useCachedEvents with limit:100 and category:realtime', () => {
+      render(<EventStream />)
+      expect(mockUseCachedEvents).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        expect.objectContaining({ limit: 100, category: 'realtime' })
+      )
+    })
   })
-
 })

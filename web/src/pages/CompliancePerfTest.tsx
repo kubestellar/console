@@ -98,13 +98,15 @@ export function CompliancePerfTest() {
     }))
   }, [allCardTypes, batch, batchSize])
 
-  window.__COMPLIANCE_MANIFEST__ = {
-    allCardTypes,
-    totalCards: allCardTypes.length,
-    batch,
-    batchSize,
-    selected,
-  }
+  useEffect(() => {
+    window.__COMPLIANCE_MANIFEST__ = {
+      allCardTypes,
+      totalCards: allCardTypes.length,
+      batch,
+      batchSize,
+      selected,
+    }
+  }, [allCardTypes, batch, batchSize, selected])
 
   return (
     <div className="p-4">

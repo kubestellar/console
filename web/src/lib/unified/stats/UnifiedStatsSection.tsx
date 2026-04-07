@@ -5,7 +5,7 @@
  * collapsing, configuration modal, and last updated timestamp.
  */
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { Activity, ChevronDown, ChevronRight, Settings, FlaskConical } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
@@ -89,10 +89,11 @@ export function UnifiedStatsSection({
   }, [storageKey])
 
   // Load custom blocks on mount
-  useMemo(() => {
+  useEffect(() => {
     try {
       const saved = localStorage.getItem(`${storageKey}-blocks`)
       if (saved) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setCustomBlocks(JSON.parse(saved))
       }
     } catch {

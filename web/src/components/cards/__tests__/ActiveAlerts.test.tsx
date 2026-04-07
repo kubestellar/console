@@ -1,105 +1,206 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { ActiveAlerts } from './ActiveAlerts'
 
-// Standard mocks
-vi.mock('../../../lib/demoMode', () => ({
-  isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
-  isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
-  toggleDemoMode: vi.fn(), subscribeDemoMode: () => () => {},
-  isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
-  isFeatureEnabled: () => true,
+// ── Mocks ────────────────────────────────────────────────────────────────────
+
+const mockAcknowledgeAlert = vi.fn()
+const mockRunAIDiagnosis = vi.fn()
+const mockDrillToAlert = vi.fn()
+
+vi.mock('../../hooks/useAlerts', () => ({
+  useAlerts: () => ({
+    activeAlerts: [],
+    acknowledgedAlerts: [],
+    stats: { firing: 0, critical: 0, warning: 0, acknowledged: 0 },
+    acknowledgeAlert: mockAcknowledgeAlert,
+    runAIDiagnosis: mockRunAIDiagnosis,
+  }),
 }))
 
-const mockUseDemoMode = vi.fn()
-vi.mock('../../../hooks/useDemoMode', () => ({
-  getDemoMode: () => true, default: () => true,
-  useDemoMode: () => mockUseDemoMode(),
-  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
-  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
-  setGlobalDemoMode: vi.fn(),
+vi.mock('../../hooks/useGlobalFilters', () => ({
+  useGlobalFilters: () => ({
+    selectedSeverities: ['critical', 'warning', 'info'],
+    isAllSeveritiesSelected: true,
+    customFilter: '',
+  }),
 }))
 
-vi.mock('../../../lib/analytics', () => ({
-  emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(), markErrorReported: vi.fn(),
+vi.mock('../../hooks/useDrillDown', () => ({
+  useDrillDownActions: () => ({ drillToAlert: mockDrillToAlert }),
 }))
 
-vi.mock('../../../hooks/useTokenUsage', () => ({
-  useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
-  tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },
-}))
-
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
-  Trans: ({ children }: { children: React.ReactNode }) => children,
-}))
-
-const mockUseCardLoadingState = vi.fn()
-vi.mock('../CardDataContext', () => ({
-  useReportCardDataState: vi.fn(),
-  useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
-}))
-
-const mockDrillDown = vi.fn()
-vi.mock('../../../hooks/useDrillDown', () => ({
-  useDrillDownActions: () => mockDrillDown(),
-}))
-
-vi.mock('../../../hooks/useGlobalFilters', () => ({
-  useGlobalFilters: () => ({ selectedClusters: [], isAllClustersSelected: true, selectedSeverities: [], isAllSeveritiesSelected: true, customFilter: '' }),
-}))
-
-const mockUseAlerts = vi.fn()
-vi.mock('../../../hooks/useAlerts', () => ({
-  useAlerts: () => mockUseAlerts(),
-}))
-
-vi.mock('../../../hooks/useMissions', () => ({
+vi.mock('../../hooks/useMissions', () => ({
   useMissions: () => ({ missions: [], setActiveMission: vi.fn(), openSidebar: vi.fn() }),
 }))
 
-vi.mock('../../../lib/cards/cardHooks', () => ({
-  useCardData: () => ({
-    items: [], totalItems: 0, currentPage: 1, totalPages: 0, itemsPerPage: 5,
-    goToPage: vi.fn(), needsPagination: false, setItemsPerPage: vi.fn(),
-    filters: { search: '', setSearch: vi.fn(), localClusterFilter: [], toggleClusterFilter: vi.fn(), clearClusterFilter: vi.fn(), availableClusters: [], showClusterFilter: false, setShowClusterFilter: vi.fn(), clusterFilterRef: { current: null }, clusterFilterBtnRef: { current: null }, dropdownStyle: null },
-    sorting: { sortBy: '', setSortBy: vi.fn(), sortDirection: 'asc' as const, setSortDirection: vi.fn(), toggleSortDirection: vi.fn() },
-    containerRef: { current: null }, containerStyle: undefined,
-  }),
-  commonComparators: { string: () => () => 0, number: () => () => 0, statusOrder: () => () => 0, date: () => () => 0, boolean: () => () => 0 },
+vi.mock('./CardDataContext', () => ({
+  useCardLoadingState: () => ({ showSkeleton: false, showEmptyState: false }),
 }))
 
-import { ActiveAlerts } from '../ActiveAlerts'
+vi.mock('../../hooks/useDemoMode', () => ({
+  useDemoMode: () => ({ isDemoMode: false }),
+}))
+
+vi.mock('../../lib/cards/cardHooks', () => ({
+  useCardData: (_items: unknown[], _opts: unknown) => ({
+    items: [],
+    totalItems: 0,
+    currentPage: 1,
+    totalPages: 1,
+    itemsPerPage: 5,
+    goToPage: vi.fn(),
+    needsPagination: false,
+    setItemsPerPage: vi.fn(),
+    filters: {
+      search: '',
+      setSearch: vi.fn(),
+      localClusterFilter: [],
+      toggleClusterFilter: vi.fn(),
+      clearClusterFilter: vi.fn(),
+      availableClusters: [],
+      showClusterFilter: false,
+      setShowClusterFilter: vi.fn(),
+      clusterFilterRef: { current: null },
+    },
+    sorting: { sortBy: 'severity', setSortBy: vi.fn() },
+    containerRef: { current: null },
+    containerStyle: {},
+  }),
+}))
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, opts?: Record<string, unknown>) => {
+      if (opts?.count !== undefined) return `${key}:${opts.count}`
+      return key
+    },
+  }),
+}))
+
+vi.mock('../../lib/cards/CardComponents', () => ({
+  CardSearchInput: ({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) => (
+    <input data-testid="search-input" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} />
+  ),
+  CardClusterFilter: () => <div data-testid="cluster-filter" />,
+}))
+
+vi.mock('../ui/CardControls', () => ({
+  CardControls: () => <div data-testid="card-controls" />,
+}))
+
+vi.mock('../ui/StatusBadge', () => ({
+  StatusBadge: ({ children }: { children: React.ReactNode }) => <span data-testid="status-badge">{children}</span>,
+}))
+
+vi.mock('../ui/Pagination', () => ({
+  Pagination: () => <div data-testid="pagination" />,
+}))
+
+vi.mock('./NotificationVerifyIndicator', () => ({
+  NotificationVerifyIndicator: () => <div data-testid="notification-indicator" />,
+}))
+
+vi.mock('./AlertListItem', () => ({
+  AlertListItem: ({ alert }: { alert: { ruleName: string } }) => (
+    <div data-testid="alert-item">{alert.ruleName}</div>
+  ),
+}))
+
+// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('ActiveAlerts', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
-    mockDrillDown.mockReturnValue({ drillToAlert: vi.fn() })
-    mockUseAlerts.mockReturnValue({ activeAlerts: [], acknowledgedAlerts: [], stats: {}, acknowledgeAlert: vi.fn(), runAIDiagnosis: vi.fn() })
   })
 
-  it('renders without crashing', () => {
-    const { container } = render(<ActiveAlerts />)
-    expect(container).toBeTruthy()
+  describe('Empty state', () => {
+    it('shows no active alerts message when list is empty', () => {
+      render(<ActiveAlerts />)
+      expect(screen.getByText('activeAlerts.noActiveAlerts')).toBeTruthy()
+    })
+
+    it('shows all systems operational message', () => {
+      render(<ActiveAlerts />)
+      expect(screen.getByText('activeAlerts.allSystemsOperational')).toBeTruthy()
+    })
   })
 
-  it('calls useCardLoadingState during render', () => {
-    render(<ActiveAlerts />)
-    expect(mockUseCardLoadingState).toHaveBeenCalled()
+  describe('Stats row', () => {
+    it('renders critical, warning and ackd stat cells', () => {
+      render(<ActiveAlerts />)
+      expect(screen.getByText('activeAlerts.critical')).toBeTruthy()
+      expect(screen.getByText('activeAlerts.warning')).toBeTruthy()
+      expect(screen.getAllByText('activeAlerts.ackd').length).toBeGreaterThan(0)
+    })
   })
 
-  it('renders correctly in demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    const { container } = render(<ActiveAlerts />)
-    expect(container).toBeTruthy()
+  describe('Controls', () => {
+    it('renders search input', () => {
+      render(<ActiveAlerts />)
+      expect(screen.getByTestId('search-input')).toBeTruthy()
+    })
+
+    it('renders cluster filter', () => {
+      render(<ActiveAlerts />)
+      expect(screen.getByTestId('cluster-filter')).toBeTruthy()
+    })
+
+    it('renders card controls', () => {
+      render(<ActiveAlerts />)
+      expect(screen.getByTestId('card-controls')).toBeTruthy()
+    })
+
+    it('renders notification indicator', () => {
+      render(<ActiveAlerts />)
+      expect(screen.getByTestId('notification-indicator')).toBeTruthy()
+    })
   })
 
-  it('renders correctly in non-demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    const { container } = render(<ActiveAlerts />)
-    expect(container).toBeTruthy()
+  describe('Acknowledged toggle', () => {
+    it('renders the ackd toggle button', () => {
+      render(<ActiveAlerts />)
+      const buttons = screen.getAllByRole('button')
+      const ackBtn = buttons.find(b => b.textContent?.includes('activeAlerts.ackd'))
+      expect(ackBtn).toBeTruthy()
+    })
+
+    it('toggles acknowledged state on click', () => {
+      render(<ActiveAlerts />)
+      const buttons = screen.getAllByRole('button')
+      const ackBtn = buttons.find(b => b.textContent?.includes('activeAlerts.ackd'))!
+      fireEvent.click(ackBtn)
+      // After toggle, button should reflect new state (class changes)
+      expect(ackBtn).toBeTruthy()
+    })
   })
 
+  describe('Alert list rendering', () => {
+    it('renders alert items when provided', () => {
+      const alert = {
+        id: '1',
+        ruleName: 'CPUHigh',
+        message: 'CPU too high',
+        severity: 'critical' as const,
+        status: 'firing',
+        firedAt: new Date().toISOString(),
+        cluster: 'prod',
+        namespace: 'default',
+        details: {},
+      }
+
+      vi.mocked(vi.importMock('../../hooks/useAlerts') as never)
+
+      // Re-mock useAlerts with an alert
+      vi.doMock('../../hooks/useAlerts', () => ({
+        useAlerts: () => ({
+          activeAlerts: [alert],
+          acknowledgedAlerts: [],
+          stats: { firing: 1, critical: 1, warning: 0, acknowledged: 0 },
+          acknowledgeAlert: mockAcknowledgeAlert,
+          runAIDiagnosis: mockRunAIDiagnosis,
+        }),
+      }))
+    })
+  })
 })

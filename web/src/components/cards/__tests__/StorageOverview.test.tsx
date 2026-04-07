@@ -1,144 +1,183 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { StorageOverview } from './StorageOverview'
 
-// Standard mocks
-vi.mock('../../../lib/demoMode', () => ({
-  isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
-  isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
-  toggleDemoMode: vi.fn(), subscribeDemoMode: () => () => {},
-  isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
-  isFeatureEnabled: () => true,
+// ── Mocks ────────────────────────────────────────────────────────────────────
+
+const mockDrillToPVC = vi.fn()
+
+vi.mock('../../hooks/useMCP', () => ({
+  useClusters: () => ({
+    deduplicatedClusters: [{ name: 'cluster-1', storageGB: 100, nodeCount: 3, reachable: true }],
+    isLoading: false,
+    isRefreshing: false,
+  }),
 }))
 
-const mockUseDemoMode = vi.fn()
-vi.mock('../../../hooks/useDemoMode', () => ({
-  getDemoMode: () => true, default: () => true,
-  useDemoMode: () => mockUseDemoMode(),
-  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
-  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
-  setGlobalDemoMode: vi.fn(),
+vi.mock('../../hooks/useCachedData', () => ({
+  useCachedPVCs: () => ({
+    pvcs: [],
+    isLoading: false,
+    isRefreshing: false,
+    isDemoFallback: false,
+    isFailed: false,
+    consecutiveFailures: 0,
+  }),
 }))
 
-vi.mock('../../../lib/analytics', () => ({
-  emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(), markErrorReported: vi.fn(),
+vi.mock('../../hooks/useGlobalFilters', () => ({
+  useGlobalFilters: () => ({ selectedClusters: [], isAllClustersSelected: true }),
 }))
 
-vi.mock('../../../hooks/useTokenUsage', () => ({
-  useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
-  tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },
+vi.mock('../../hooks/useDrillDown', () => ({
+  useDrillDownActions: () => ({ drillToPVC: mockDrillToPVC }),
+}))
+
+vi.mock('./CardDataContext', () => ({
+  useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
+}))
+
+vi.mock('../../hooks/useDemoMode', () => ({
+  useDemoMode: () => ({ isDemoMode: false }),
 }))
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
-  Trans: ({ children }: { children: React.ReactNode }) => children,
+  useTranslation: () => ({
+    t: (k: string, opts?: Record<string, unknown>) => {
+      if (opts?.count !== undefined) return `${k}:${opts.count}`
+      return k
+    },
+  }),
 }))
 
-const mockUseCardLoadingState = vi.fn()
-vi.mock('../CardDataContext', () => ({
-  useReportCardDataState: vi.fn(),
-  useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
+vi.mock('../../lib/cards/cardHooks', () => ({
+  useChartFilters: () => ({
+    localClusterFilter: [],
+    toggleClusterFilter: vi.fn(),
+    clearClusterFilter: vi.fn(),
+    availableClusters: [{ name: 'cluster-1' }],
+    showClusterFilter: false,
+    setShowClusterFilter: vi.fn(),
+    clusterFilterRef: { current: null },
+  }),
 }))
 
-const mockPVCs = vi.fn()
-vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedPVCs: () => mockPVCs(),
+vi.mock('../../lib/cards/CardComponents', () => ({
+  CardClusterFilter: () => <div data-testid="cluster-filter" />,
 }))
 
-const mockUseClusters = vi.fn()
-vi.mock('../../../hooks/useMCP', () => ({
-  useClusters: () => mockUseClusters(),
+vi.mock('../../lib/formatStats', () => ({
+  formatStat: (n: number) => String(n),
+  formatStorageStat: (n: number, real?: boolean) => (real ? `${n}GB` : 'N/A'),
 }))
 
-const mockDrillDown = vi.fn()
-vi.mock('../../../hooks/useDrillDown', () => ({
-  useDrillDownActions: () => mockDrillDown(),
-}))
-
-vi.mock('../../../hooks/useGlobalFilters', () => ({
-  useGlobalFilters: () => ({ selectedClusters: [], isAllClustersSelected: true, selectedSeverities: [], isAllSeveritiesSelected: true, customFilter: '' }),
-}))
-
-vi.mock('../../../lib/cards/cardHooks', () => ({
-  useChartFilters: () => ({ localClusterFilter: [], toggleClusterFilter: vi.fn(), clearClusterFilter: vi.fn(), availableClusters: [], filteredClusters: [], showClusterFilter: false, setShowClusterFilter: vi.fn(), clusterFilterRef: { current: null } }),
-  commonComparators: { string: () => () => 0, number: () => () => 0, statusOrder: () => () => 0, date: () => () => 0, boolean: () => () => 0 },
-}))
-
-import { StorageOverview } from '../StorageOverview'
+// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('StorageOverview', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
-    mockPVCs.mockReturnValue({ pvcs: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now() })
-    mockDrillDown.mockReturnValue({ drillToStorage: vi.fn() })
-  })
+  beforeEach(() => vi.clearAllMocks())
 
-  it('renders without crashing', () => {
-    const { container } = render(<StorageOverview />)
-    expect(container).toBeTruthy()
-  })
-
-  it('calls useCardLoadingState during render', () => {
-    render(<StorageOverview />)
-    expect(mockUseCardLoadingState).toHaveBeenCalled()
-  })
-
-  it('renders skeleton UI when data is loading', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: true, showEmptyState: false, hasData: false, isRefreshing: false })
-    mockPVCs.mockReturnValue({ pvcs: [], isLoading: true, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: null })
-    mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: true, isRefreshing: false, error: null, lastRefresh: null })
-    const { container } = render(<StorageOverview />)
-    // Skeleton renders animate-pulse elements or similar loading indicators
-    expect(container.innerHTML.length).toBeGreaterThan(0)
-  })
-
-  it('handles empty data state gracefully', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: true, hasData: false, isRefreshing: false })
-    const { container } = render(<StorageOverview />)
-    expect(container.innerHTML.length).toBeGreaterThan(0)
-  })
-
-  it('renders correctly in demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    const { container } = render(<StorageOverview />)
-    expect(container).toBeTruthy()
-  })
-
-  it('renders correctly in non-demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    const { container } = render(<StorageOverview />)
-    expect(container).toBeTruthy()
-  })
-
-  it('handles data fetch failure', () => {
-    mockPVCs.mockReturnValue({ pvcs: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: true, consecutiveFailures: 3, error: 'Network error', lastRefresh: null })
-    const { container } = render(<StorageOverview />)
-    expect(container).toBeTruthy()
-  })
-
-  it('renders during background refresh with cached data', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: true })
-    mockPVCs.mockReturnValue({ pvcs: [], isLoading: false, isRefreshing: true, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    const { container } = render(<StorageOverview />)
-    expect(container).toBeTruthy()
-  })
-
-  it('renders with cluster data available', () => {
-    mockUseClusters.mockReturnValue({
-      clusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }], deduplicatedClusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }],
-      isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now(),
+  describe('Skeleton / empty states', () => {
+    it('renders loading spinner when showSkeleton', async () => {
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: true, showEmptyState: false } as never)
+      render(<StorageOverview />)
+      expect(screen.getByText('storageOverview.loading')).toBeTruthy()
     })
-    const { container } = render(<StorageOverview />)
-    expect(container).toBeTruthy()
+
+    it('renders no data message when showEmptyState', async () => {
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false, showEmptyState: true } as never)
+      render(<StorageOverview />)
+      expect(screen.getByText('storageOverview.noData')).toBeTruthy()
+    })
   })
 
-  it('reports demo fallback state', () => {
-    mockPVCs.mockReturnValue({ pvcs: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    render(<StorageOverview />)
-    expect(mockUseCardLoadingState).toHaveBeenCalled()
+  describe('Main stats', () => {
+    it('renders total capacity and PVCs tiles', () => {
+      render(<StorageOverview />)
+      expect(screen.getByText('storageOverview.totalCapacity')).toBeTruthy()
+      expect(screen.getByText('storageOverview.pvcs')).toBeTruthy()
+    })
+
+    it('renders bound, pending, failed PVC breakdown', () => {
+      render(<StorageOverview />)
+      expect(screen.getByText('storageOverview.bound')).toBeTruthy()
+      expect(screen.getByText('common:common.pending')).toBeTruthy()
+      expect(screen.getByText('common:common.failed')).toBeTruthy()
+    })
   })
 
+  describe('PVC counts', () => {
+    it('counts bound/pending/failed PVCs correctly', async () => {
+      const { useCachedPVCs } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedPVCs).mockReturnValue({
+        pvcs: [
+          { cluster: 'cluster-1', namespace: 'default', name: 'pvc-1', status: 'Bound', storageClass: 'gp2' },
+          { cluster: 'cluster-1', namespace: 'default', name: 'pvc-2', status: 'Pending', storageClass: 'gp2' },
+          { cluster: 'cluster-1', namespace: 'default', name: 'pvc-3', status: 'Lost', storageClass: 'gp2' },
+        ],
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+      } as never)
+      render(<StorageOverview />)
+      // bound=1, pending=1, failed=1 — all rendered as "1"
+      const ones = screen.getAllByText('1')
+      expect(ones.length).toBeGreaterThanOrEqual(3)
+    })
+  })
+
+  describe('Storage classes', () => {
+    it('renders storage class list when PVCs have classes', async () => {
+      const { useCachedPVCs } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedPVCs).mockReturnValue({
+        pvcs: [
+          { cluster: 'cluster-1', namespace: 'default', name: 'p1', status: 'Bound', storageClass: 'gp2' },
+          { cluster: 'cluster-1', namespace: 'default', name: 'p2', status: 'Bound', storageClass: 'standard' },
+        ],
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+      } as never)
+      render(<StorageOverview />)
+      expect(screen.getByText('storageOverview.storageClasses')).toBeTruthy()
+      expect(screen.getByText('gp2')).toBeTruthy()
+      expect(screen.getByText('standard')).toBeTruthy()
+    })
+  })
+
+  describe('Drill-down', () => {
+    it('calls drillToPVC when bound PVC tile clicked', async () => {
+      const { useCachedPVCs } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedPVCs).mockReturnValue({
+        pvcs: [{ cluster: 'cluster-1', namespace: 'default', name: 'pvc-1', status: 'Bound', storageClass: 'gp2' }],
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+      } as never)
+      render(<StorageOverview />)
+      fireEvent.click(screen.getByText('storageOverview.bound').closest('div')!)
+      expect(mockDrillToPVC).toHaveBeenCalledWith('cluster-1', 'default', 'pvc-1')
+    })
+  })
+
+  describe('Cluster filter', () => {
+    it('renders cluster filter dropdown', () => {
+      render(<StorageOverview />)
+      expect(screen.getByTestId('cluster-filter')).toBeTruthy()
+    })
+  })
+
+  describe('Footer', () => {
+    it('renders footer with PVC and cluster count', () => {
+      render(<StorageOverview />)
+      expect(screen.getByText(/storageOverview.footer/)).toBeTruthy()
+    })
+  })
 })

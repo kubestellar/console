@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useEffect } from 'react'
 import { CardWrapper } from '../components/cards/CardWrapper'
 import { DEMO_DATA_CARDS, getCardComponent, getRegisteredCardTypes } from '../components/cards/cardRegistry'
 import { formatCardTitle } from '../lib/formatCardTitle'
@@ -85,13 +85,15 @@ export function AllCardsPerfTest() {
     }))
   }, [allCardTypes, batch, batchSize])
 
-  window.__TTFI_MANIFEST__ = {
-    allCardTypes,
-    totalCards: allCardTypes.length,
-    batch,
-    batchSize,
-    selected,
-  }
+  useEffect(() => {
+    window.__TTFI_MANIFEST__ = {
+      allCardTypes,
+      totalCards: allCardTypes.length,
+      batch,
+      batchSize,
+      selected,
+    }
+  }, [allCardTypes, batch, batchSize, selected])
 
   return (
     <div className="p-4">
