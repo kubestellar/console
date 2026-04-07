@@ -97,6 +97,7 @@ export function ContributorBanner() {
                   current.color === 'purple' ? 'bg-purple-400' :
                   current.color === 'yellow' ? 'bg-yellow-400' :
                   current.color === 'orange' ? 'bg-orange-400' :
+                  current.color === 'red' ? 'bg-red-400' :
                   'bg-yellow-400'
                 }`}
                 style={{ width: `${progress}%` }}

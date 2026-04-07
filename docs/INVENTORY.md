@@ -8,7 +8,7 @@ Last Verified: 2026-03-05 (Auto-QA verification - all 25 drill-down views and 39
 | Category | Count |
 |----------|-------|
 | Dashboard Pages | 22 (1 main + 21 dedicated) |
-| Card Types | 143 |
+| Card Types | 141 |
 | Cards with Drill-Down | 37 (+ 3 planned) |
 | Drill-Down Views | 25 |
 | Modal Dialogs | 39 standalone + 7 inline |
@@ -230,7 +230,7 @@ Last Verified: 2026-03-05 (Auto-QA verification - all 25 drill-down views and 39
 | 87 | `mobile_browser` | Mobile Browser | interactive |
 | 88 | `stock_market_ticker` | Stock Market Ticker | status |
 
-### Category: Games (22 cards)
+### Category: Games (20 cards)
 | # | Type | Title | Visualization |
 |---|------|-------|---------------|
 | 89 | `sudoku_game` | Sudoku Game | interactive |
@@ -251,65 +251,63 @@ Last Verified: 2026-03-05 (Auto-QA verification - all 25 drill-down views and 39
 | 104 | `kube_pong` | Kube Pong | interactive |
 | 105 | `kube_snake` | Kube Snake | interactive |
 | 106 | `kube_galaga` | Kube Galaga | interactive |
-| 107 | `kube_craft` | KubeCraft | interactive |
-| 108 | `kube_chess` | Kube Chess | interactive |
-| 109 | `kube_craft_3d` | KubeCraft 3D | interactive |
-| 110 | `kube_doom` | Kube Doom | interactive |
+| 107 | `kube_chess` | Kube Chess | interactive |
+| 108 | `kube_doom` | Kube Doom | interactive |
 
 ### Category: NEW - Kubernetes Resources (17 cards)
 | # | Type | Title | Visualization | Demo Data |
 |---|------|-------|---------------|-----------|
-| 111 | `configmap_status` | ConfigMap Status | table | ❌ Live |
-| 112 | `secret_status` | Secret Status | table | ❌ Live |
-| 113 | `node_status` | Node Status | table | ❌ Live |
-| 114 | `job_status` | Job Status | table | ❌ Live |
-| 115 | `cronjob_status` | CronJob Status | table | ❌ Live |
-| 116 | `daemonset_status` | DaemonSet Status | table | ❌ Live |
-| 117 | `statefulset_status` | StatefulSet Status | table | ❌ Live |
-| 118 | `replicaset_status` | ReplicaSet Status | table | ❌ Live |
-| 119 | `hpa_status` | HPA Status | table | ❌ Live |
-| 120 | `pv_status` | PV Status | table | ❌ Live |
-| 121 | `ingress_status` | Ingress Status | table | ❌ Live |
-| 122 | `namespace_status` | Namespace Status | table | ❌ Live |
-| 123 | `limit_range_status` | LimitRange Status | table | ❌ Live |
-| 124 | `resource_quota_status` | ResourceQuota Status | table | ❌ Live |
-| 125 | `network_policy_status` | NetworkPolicy Status | table | ❌ Live |
-| 126 | `service_account_status` | ServiceAccount Status | table | ❌ Live |
-| 127 | `role_status` | Role Status | table | ❌ Live |
-| 128 | `role_binding_status` | RoleBinding Status | table | ❌ Live |
+| 109 | `configmap_status` | ConfigMap Status | table | ❌ Live |
+| 110 | `secret_status` | Secret Status | table | ❌ Live |
+| 111 | `node_status` | Node Status | table | ❌ Live |
+| 112 | `job_status` | Job Status | table | ❌ Live |
+| 113 | `cronjob_status` | CronJob Status | table | ❌ Live |
+| 114 | `daemonset_status` | DaemonSet Status | table | ❌ Live |
+| 115 | `statefulset_status` | StatefulSet Status | table | ❌ Live |
+| 116 | `replicaset_status` | ReplicaSet Status | table | ❌ Live |
+| 117 | `hpa_status` | HPA Status | table | ❌ Live |
+| 118 | `pv_status` | PV Status | table | ❌ Live |
+| 119 | `ingress_status` | Ingress Status | table | ❌ Live |
+| 120 | `namespace_status` | Namespace Status | table | ❌ Live |
+| 121 | `limit_range_status` | LimitRange Status | table | ❌ Live |
+| 122 | `resource_quota_status` | ResourceQuota Status | table | ❌ Live |
+| 123 | `network_policy_status` | NetworkPolicy Status | table | ❌ Live |
+| 124 | `service_account_status` | ServiceAccount Status | table | ❌ Live |
+| 125 | `role_status` | Role Status | table | ❌ Live |
+| 126 | `role_binding_status` | RoleBinding Status | table | ❌ Live |
 
 ### Category: NEW - Events & Monitoring (4 cards)
 | # | Type | Title | Visualization | Demo Data |
 |---|------|-------|---------------|-----------|
-| 129 | `warning_events` | Warning Events | events | ❌ Live |
-| 130 | `recent_events` | Recent Events | events | ❌ Live |
-| 131 | `event_summary` | Event Summary | status | ✅ Demo |
-| 132 | `provider_health` | Provider Health | status | ✅ Demo |
+| 127 | `warning_events` | Warning Events | events | ❌ Live |
+| 128 | `recent_events` | Recent Events | events | ❌ Live |
+| 129 | `event_summary` | Event Summary | status | ✅ Demo |
+| 130 | `provider_health` | Provider Health | status | ✅ Demo |
 
 ### Category: NEW - Deploy & GitOps (5 cards)
 | # | Type | Title | Visualization | Demo Data |
 |---|------|-------|---------------|-----------|
-| 133 | `cluster_groups` | Cluster Groups | status | ✅ Demo |
-| 134 | `deployment_missions` | Deployment Missions | status | ✅ Demo |
-| 135 | `resource_marshall` | Resource Marshall | interactive | ❌ Live |
-| 136 | `workload_deployment` | Workload Deployment | table | ❌ Live |
-| 137 | `workload_monitor` | Workload Monitor | status | ❌ Live |
+| 131 | `cluster_groups` | Cluster Groups | status | ✅ Demo |
+| 132 | `deployment_missions` | Deployment Missions | status | ✅ Demo |
+| 133 | `resource_marshall` | Resource Marshall | interactive | ❌ Live |
+| 134 | `workload_deployment` | Workload Deployment | table | ❌ Live |
+| 135 | `workload_monitor` | Workload Monitor | status | ❌ Live |
 
 ### Category: NEW - AI & Integrations (5 cards)
 | # | Type | Title | Visualization | Demo Data |
 |---|------|-------|---------------|-----------|
-| 138 | `console_ai_offline_detection` | AI Offline Detection | status | ✅ Demo |
-| 139 | `cluster_health_monitor` | Cluster Health Monitor | status | ❌ Live |
-| 140 | `github_ci_monitor` | GitHub CI Monitor | status | ❌ Live |
-| 141 | `prow_ci_monitor` | Prow CI Monitor | status | ❌ Live |
-| 142 | `llmd_stack_monitor` | LLM-d Stack Monitor | status | ❌ Live |
+| 136 | `console_ai_offline_detection` | AI Offline Detection | status | ✅ Demo |
+| 137 | `cluster_health_monitor` | Cluster Health Monitor | status | ❌ Live |
+| 138 | `github_ci_monitor` | GitHub CI Monitor | status | ❌ Live |
+| 139 | `prow_ci_monitor` | Prow CI Monitor | status | ❌ Live |
+| 140 | `llmd_stack_monitor` | LLM-d Stack Monitor | status | ❌ Live |
 
 ### Category: NEW - Misc (3 cards)
 | # | Type | Title | Visualization | Demo Data |
 |---|------|-------|---------------|-----------|
-| 143 | `dynamic_card` | Dynamic Card | dynamic | ❌ Live |
-| 144 | `rss_feed` | RSS Feed | events | ✅ Demo |
-| 145 | `pod_crosser` | Pod Crosser | interactive | ❌ Game |
+| 141 | `dynamic_card` | Dynamic Card | dynamic | ❌ Live |
+| 142 | `rss_feed` | RSS Feed | events | ✅ Demo |
+| 143 | `pod_crosser` | Pod Crosser | interactive | ❌ Game |
 
 ---
 

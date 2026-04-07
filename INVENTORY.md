@@ -222,5 +222,4 @@ The Auto-QA workflow uses this file to verify component consistency.
 | KubeGalaga | web/src/components/cards/KubeGalaga.tsx | `kube_galaga` |
 | KubeBert | web/src/components/cards/KubeBert.tsx | `kube_bert` |
 | KubeDoom | web/src/components/cards/KubeDoom.tsx | `kube_doom` |
-| KubeCraft | web/src/components/cards/KubeCraft.tsx | `kube_craft` |
 | KubeChess | web/src/components/cards/KubeChess.tsx | `kube_chess` |
