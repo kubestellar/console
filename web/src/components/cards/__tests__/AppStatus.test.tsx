@@ -105,7 +105,7 @@ describe('AppStatus', () => {
   beforeEach(() => vi.clearAllMocks())
 
   describe('Skeleton', () => {
-    it('renders skeleton when showSkeleton is true', () => {
+    it('renders skeleton when showSkeleton is true', async () => {
       vi.doMock('../CardDataContext', () => ({
         useCardLoadingState: () => ({ showSkeleton: true, showEmptyState: false }),
       }))

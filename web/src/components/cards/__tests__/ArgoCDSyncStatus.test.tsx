@@ -30,7 +30,7 @@ vi.mock('../../../hooks/useDemoMode', () => ({
   setGlobalDemoMode: vi.fn(),
 }))
 
-vi.mock('../../../lib/cards/cardHooks', () => ({
+vi.mock('../../lib/cards/cardHooks', () => ({
   useChartFilters: () => ({
     localClusterFilter: [],
     toggleClusterFilter: vi.fn(),
@@ -50,7 +50,7 @@ vi.mock('../../ui/Skeleton', () => ({
   Skeleton: () => <div data-testid="skeleton" />,
 }))
 
-vi.mock('../../../lib/cards/CardComponents', () => ({
+vi.mock('../../lib/cards/CardComponents', () => ({
   CardClusterFilter: () => <div data-testid="cluster-filter" />,
 }))
 

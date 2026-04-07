@@ -176,7 +176,7 @@ describe('ActiveAlerts', () => {
   })
 
   describe('Alert list rendering', () => {
-    it('renders alert items when provided', () => {
+    it('renders alert items when provided', async () => {
       const alert = {
         id: '1',
         ruleName: 'CPUHigh',
@@ -189,7 +189,7 @@ describe('ActiveAlerts', () => {
         details: {},
       }
 
-      vi.mocked(vi.importMock('../../../hooks/useAlerts') as never)
+      vi.mocked(await vi.importMock('../../../hooks/useAlerts') as never)
 
       // Re-mock useAlerts with an alert
       vi.doMock('../../../hooks/useAlerts', () => ({
