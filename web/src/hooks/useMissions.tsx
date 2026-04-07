@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useRef, useEffect, ReactNode } fro
 import type { AgentInfo, AgentsListPayload, AgentSelectedPayload, ChatStreamPayload } from '../types/agent'
 import { AgentCapabilityToolExec } from '../types/agent'
 import { getDemoMode } from './useDemoMode'
-import { DEMO_ORBIT_MISSIONS } from '../mocks/orbitDemoData'
+import { DEMO_MISSIONS } from '../mocks/demoMissions'
 import { addCategoryTokens, setActiveTokenCategory } from './useTokenUsage'
 import { detectIssueSignature, findSimilarResolutionsStandalone, generateResolutionPromptContext } from './useResolutions'
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
@@ -190,15 +190,11 @@ const MISSION_INACTIVITY_TIMEOUT_MS = 90_000 // 90 seconds of stream silence
  */
 const CANCEL_ACK_TIMEOUT_MS = 10_000 // 10 seconds
 
-/** Pre-converted demo orbit missions for demo mode — avoids re-creating on every call */
-const DEMO_ORBIT_AS_MISSIONS: Mission[] = DEMO_ORBIT_MISSIONS.map(m => ({
+/** Pre-converted demo missions for demo mode — showcases all mission types */
+const DEMO_MISSIONS_AS_MISSIONS: Mission[] = DEMO_MISSIONS.map(m => ({
   ...m,
   type: m.type as Mission['type'],
   status: m.status as Mission['status'],
-  createdAt: new Date(Date.now() - 7 * 86_400_000),
-  updatedAt: new Date(),
-  messages: [],
-  cluster: (m.context.orbitConfig.clusters || [])[0],
 }))
 
 // Load missions from localStorage
@@ -252,7 +248,7 @@ function loadMissions(): Mission[] {
 
   // In demo mode, seed with orbit demo missions so the feature is visible
   if (getDemoMode()) {
-    return DEMO_ORBIT_AS_MISSIONS
+    return DEMO_MISSIONS_AS_MISSIONS
   }
 
   return []
