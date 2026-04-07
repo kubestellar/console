@@ -1,130 +1,217 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { GPUStatus } from './GPUStatus'
 
-// Standard mocks
-vi.mock('../../../lib/demoMode', () => ({
-  isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
-  isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
-  toggleDemoMode: vi.fn(), subscribeDemoMode: () => () => {},
-  isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
-  isFeatureEnabled: () => true,
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const makeNode = (overrides = {}) => ({
+  name: 'gpu-node-1',
+  cluster: 'cluster-1',
+  gpuType: 'NVIDIA A100',
+  gpuCount: 4,
+  gpuAllocated: 2,
+  ...overrides,
+})
+
+const mockDrillToCluster = vi.fn()
+
+// ── Mocks ────────────────────────────────────────────────────────────────────
+
+vi.mock('../../hooks/useCachedData', () => ({
+  useCachedGPUNodes: () => ({
+    nodes: [],
+    isLoading: false,
+    isRefreshing: false,
+    isDemoFallback: false,
+    isFailed: false,
+    consecutiveFailures: 0,
+    lastRefresh: null,
+  }),
 }))
 
-const mockUseDemoMode = vi.fn()
-vi.mock('../../../hooks/useDemoMode', () => ({
-  getDemoMode: () => true, default: () => true,
-  useDemoMode: () => mockUseDemoMode(),
-  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
-  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
-  setGlobalDemoMode: vi.fn(),
+vi.mock('../../hooks/useDrillDown', () => ({
+  useDrillDownActions: () => ({ drillToCluster: mockDrillToCluster }),
 }))
 
-vi.mock('../../../lib/analytics', () => ({
-  emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-  emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(), markErrorReported: vi.fn(),
+vi.mock('./CardDataContext', () => ({
+  useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
 }))
 
-vi.mock('../../../hooks/useTokenUsage', () => ({
-  useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
-  tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },
+vi.mock('../../hooks/useDemoMode', () => ({
+  useDemoMode: () => ({ isDemoMode: false }),
+}))
+
+vi.mock('../../lib/cards/cardHooks', () => ({
+  useCardData: (items: unknown[], _opts: unknown) => ({
+    items,
+    totalItems: (items as unknown[]).length,
+    currentPage: 1,
+    totalPages: 1,
+    itemsPerPage: 5,
+    goToPage: vi.fn(),
+    needsPagination: false,
+    setItemsPerPage: vi.fn(),
+    filters: {
+      search: '',
+      setSearch: vi.fn(),
+      localClusterFilter: [],
+      toggleClusterFilter: vi.fn(),
+      clearClusterFilter: vi.fn(),
+      availableClusters: [],
+      showClusterFilter: false,
+      setShowClusterFilter: vi.fn(),
+      clusterFilterRef: { current: null },
+    },
+    sorting: {
+      sortBy: 'utilization',
+      setSortBy: vi.fn(),
+      sortDirection: 'desc',
+      setSortDirection: vi.fn(),
+    },
+    containerRef: { current: null },
+    containerStyle: {},
+  }),
+  commonComparators: { string: () => () => 0 },
 }))
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
-  Trans: ({ children }: { children: React.ReactNode }) => children,
-}))
-
-const mockUseCardLoadingState = vi.fn()
-vi.mock('../CardDataContext', () => ({
-  useReportCardDataState: vi.fn(),
-  useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
-}))
-
-const mockGPUNodes = vi.fn()
-vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedGPUNodes: () => mockGPUNodes(),
-}))
-
-const mockDrillDown = vi.fn()
-vi.mock('../../../hooks/useDrillDown', () => ({
-  useDrillDownActions: () => mockDrillDown(),
-}))
-
-vi.mock('../../../lib/cards/cardHooks', () => ({
-  useCardData: () => ({
-    items: [], totalItems: 0, currentPage: 1, totalPages: 0, itemsPerPage: 5,
-    goToPage: vi.fn(), needsPagination: false, setItemsPerPage: vi.fn(),
-    filters: { search: '', setSearch: vi.fn(), localClusterFilter: [], toggleClusterFilter: vi.fn(), clearClusterFilter: vi.fn(), availableClusters: [], showClusterFilter: false, setShowClusterFilter: vi.fn(), clusterFilterRef: { current: null }, clusterFilterBtnRef: { current: null }, dropdownStyle: null },
-    sorting: { sortBy: '', setSortBy: vi.fn(), sortDirection: 'asc' as const, setSortDirection: vi.fn(), toggleSortDirection: vi.fn() },
-    containerRef: { current: null }, containerStyle: undefined,
+  useTranslation: () => ({
+    t: (k: string, opts?: Record<string, unknown>) => {
+      if (opts?.count !== undefined) return `${k}:${opts.count}`
+      if (opts?.percent !== undefined) return `${k}:${opts.percent}`
+      return k
+    },
   }),
-  commonComparators: { string: () => () => 0, number: () => () => 0, statusOrder: () => () => 0, date: () => () => 0, boolean: () => () => 0 },
 }))
 
-import { GPUStatus } from '../GPUStatus'
+vi.mock('../../lib/cards/CardComponents', () => ({
+  CardSearchInput: () => <input data-testid="search" />,
+  CardControlsRow: () => <div data-testid="controls-row" />,
+  CardPaginationFooter: () => <div data-testid="pagination" />,
+}))
+
+vi.mock('../ui/Skeleton', () => ({
+  Skeleton: () => <div data-testid="skeleton" />,
+}))
+
+vi.mock('../ui/ClusterBadge', () => ({
+  ClusterBadge: ({ cluster }: { cluster: string }) => <span>{cluster}</span>,
+}))
+
+vi.mock('../ui/StatusBadge', () => ({
+  StatusBadge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+}))
+
+vi.mock('../ui/RefreshIndicator', () => ({
+  RefreshIndicator: () => <div data-testid="refresh-indicator" />,
+}))
+
+// ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('GPUStatus', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
-    mockGPUNodes.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    mockDrillDown.mockReturnValue({ drillToGPU: vi.fn() })
+  beforeEach(() => vi.clearAllMocks())
+
+  describe('Skeleton', () => {
+    it('renders skeletons during loading', async () => {
+      const { useCardLoadingState } = await import('./CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: true, showEmptyState: false } as never)
+      render(<GPUStatus />)
+      expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0)
+    })
   })
 
-  it('renders without crashing', () => {
-    const { container } = render(<GPUStatus />)
-    expect(container).toBeTruthy()
+  describe('Empty state', () => {
+    it('shows no GPU data message when empty', () => {
+      render(<GPUStatus />)
+      expect(screen.getByText('gpuStatus.noGPUData')).toBeTruthy()
+    })
   })
 
-  it('calls useCardLoadingState during render', () => {
-    render(<GPUStatus />)
-    expect(mockUseCardLoadingState).toHaveBeenCalled()
+  describe('Cluster GPU stats', () => {
+    it('renders cluster rows with utilization badge', async () => {
+      const { useCachedGPUNodes } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedGPUNodes).mockReturnValue({
+        nodes: [makeNode()],
+        isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, lastRefresh: null,
+      } as never)
+      render(<GPUStatus />)
+      expect(screen.getByText('cluster-1')).toBeTruthy()
+      // used/total
+      expect(screen.getByText('2/4 gpuStatus.gpus')).toBeTruthy()
+    })
+
+    it('aggregates multiple nodes in same cluster', async () => {
+      const { useCachedGPUNodes } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedGPUNodes).mockReturnValue({
+        nodes: [
+          makeNode({ gpuCount: 4, gpuAllocated: 2 }),
+          makeNode({ name: 'gpu-node-2', gpuCount: 4, gpuAllocated: 4 }),
+        ],
+        isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, lastRefresh: null,
+      } as never)
+      render(<GPUStatus />)
+      // total=8, used=6
+      expect(screen.getByText('6/8 gpuStatus.gpus')).toBeTruthy()
+    })
+
+    it('calls drillToCluster on row click', async () => {
+      const { useCachedGPUNodes } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedGPUNodes).mockReturnValue({
+        nodes: [makeNode()],
+        isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, lastRefresh: null,
+      } as never)
+      render(<GPUStatus />)
+      fireEvent.click(screen.getByText('cluster-1').closest('.cursor-pointer')!)
+      expect(mockDrillToCluster).toHaveBeenCalledWith('cluster-1', expect.any(Object))
+    })
+
+    it('shows red utilization badge above 80%', async () => {
+      const { useCachedGPUNodes } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedGPUNodes).mockReturnValue({
+        nodes: [makeNode({ gpuCount: 10, gpuAllocated: 9 })],
+        isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, lastRefresh: null,
+      } as never)
+      render(<GPUStatus />)
+      const badge = document.querySelector('.bg-red-500\\/20')
+      expect(badge).toBeTruthy()
+    })
   })
 
-  it('renders skeleton UI when data is loading', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: true, showEmptyState: false, hasData: false, isRefreshing: false })
-    mockGPUNodes.mockReturnValue({ nodes: [], isLoading: true, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: null })
-    const { container } = render(<GPUStatus />)
-    // Skeleton renders animate-pulse elements or similar loading indicators
-    expect(container.innerHTML.length).toBeGreaterThan(0)
+  describe('GPU type filter', () => {
+    it('renders GPU type dropdown when multiple types present', async () => {
+      const { useCachedGPUNodes } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedGPUNodes).mockReturnValue({
+        nodes: [
+          makeNode({ gpuType: 'NVIDIA A100' }),
+          makeNode({ name: 'n2', gpuType: 'NVIDIA H100', cluster: 'cluster-2' }),
+        ],
+        isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, lastRefresh: null,
+      } as never)
+      render(<GPUStatus />)
+      const selects = screen.getAllByRole('combobox')
+      expect(selects.length).toBeGreaterThan(0)
+    })
+
+    it('does not render GPU type dropdown with single type', async () => {
+      const { useCachedGPUNodes } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedGPUNodes).mockReturnValue({
+        nodes: [makeNode()],
+        isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, lastRefresh: null,
+      } as never)
+      render(<GPUStatus />)
+      expect(screen.queryByRole('combobox')).toBeNull()
+    })
   })
 
-  it('handles empty data state gracefully', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: true, hasData: false, isRefreshing: false })
-    const { container } = render(<GPUStatus />)
-    expect(container.innerHTML.length).toBeGreaterThan(0)
+  describe('Cluster count badge', () => {
+    it('renders cluster count status badge', async () => {
+      const { useCachedGPUNodes } = await import('../../hooks/useCachedData')
+      vi.mocked(useCachedGPUNodes).mockReturnValue({
+        nodes: [makeNode()],
+        isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, lastRefresh: null,
+      } as never)
+      render(<GPUStatus />)
+      expect(screen.getByText(/gpuStatus.clusterCount/)).toBeTruthy()
+    })
   })
-
-  it('renders correctly in demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    const { container } = render(<GPUStatus />)
-    expect(container).toBeTruthy()
-  })
-
-  it('renders correctly in non-demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    const { container } = render(<GPUStatus />)
-    expect(container).toBeTruthy()
-  })
-
-  it('handles GPU data fetch failure', () => {
-    mockGPUNodes.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: true, consecutiveFailures: 3, error: 'Network error', lastRefresh: null })
-    const { container } = render(<GPUStatus />)
-    expect(container).toBeTruthy()
-  })
-
-  it('renders during background refresh with cached data', () => {
-    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: true })
-    mockGPUNodes.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: true, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    const { container } = render(<GPUStatus />)
-    expect(container).toBeTruthy()
-  })
-
-  it('reports GPU demo fallback state', () => {
-    mockGPUNodes.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
-    render(<GPUStatus />)
-    expect(mockUseCardLoadingState).toHaveBeenCalled()
-  })
-
 })

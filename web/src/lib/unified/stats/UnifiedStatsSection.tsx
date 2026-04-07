@@ -85,10 +85,11 @@ export function UnifiedStatsSection({
   }
 
   // Load custom blocks on mount
-  useMemo(() => {
+  useEffect(() => {
     try {
       const saved = localStorage.getItem(`${storageKey}-blocks`)
       if (saved) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setCustomBlocks(JSON.parse(saved))
       }
     } catch {
