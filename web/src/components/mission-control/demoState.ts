@@ -129,25 +129,8 @@ const DEMO_PHASES: DeployPhase[] = [
   },
 ]
 
-const DEMO_LAUNCH_PROGRESS: PhaseProgress[] = [
-  {
-    phase: 1,
-    status: 'completed',
-    projects: [
-      { name: 'cert-manager', missionId: 'demo-mc-certmgr', status: 'completed' },
-      { name: 'prometheus', missionId: 'demo-mc-prom', status: 'completed' },
-    ],
-  },
-  {
-    phase: 2,
-    status: 'completed',
-    projects: [
-      { name: 'falco', missionId: 'demo-mc-falco', status: 'completed' },
-      { name: 'kyverno', missionId: 'demo-mc-kyverno', status: 'completed' },
-      { name: 'grafana', missionId: 'demo-mc-grafana', status: 'completed' },
-    ],
-  },
-]
+/** Blueprint phase = pre-deploy, so launch progress is empty (no checkmarks) */
+const DEMO_LAUNCH_PROGRESS: PhaseProgress[] = []
 
 /**
  * Returns a pre-populated MissionControlState for demo mode.
