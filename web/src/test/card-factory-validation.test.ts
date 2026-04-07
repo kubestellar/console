@@ -209,6 +209,37 @@ describe('Dynamic Card Registry', () => {
     clearDynamicCards()
     expect(getAllDynamicCards()).toEqual([])
   })
+
+  // =========================================================================
+  // #5284 — Runtime behavior validation for dynamic card registry
+  // =========================================================================
+
+  it('getDynamicCard returns undefined for empty string', () => {
+    expect(getDynamicCard('')).toBeUndefined()
+  })
+
+  it('registering a card with the same ID overwrites the previous', () => {
+    registerDynamicCard(testCard)
+    expect(getDynamicCard('test_dynamic_card')?.title).toBe('Test Dynamic Card')
+
+    registerDynamicCard({ ...testCard, title: 'Updated Title' })
+    expect(getDynamicCard('test_dynamic_card')?.title).toBe('Updated Title')
+    // Should still be only one card with that ID
+    const all = getAllDynamicCards()
+    const matches = all.filter(c => c.id === 'test_dynamic_card')
+    expect(matches).toHaveLength(1)
+  })
+
+  it('unregistering a non-existent card returns false and does not crash', () => {
+    expect(unregisterDynamicCard('')).toBe(false)
+    expect(unregisterDynamicCard('__never_registered__')).toBe(false)
+  })
+
+  it('clearDynamicCards is idempotent', () => {
+    clearDynamicCards()
+    clearDynamicCards()
+    expect(getAllDynamicCards()).toEqual([])
+  })
 })
 
 // ============================================================================
@@ -335,5 +366,60 @@ describe('Card Registry consistency checks', () => {
     const invalid = types.filter(t => /[A-Z\s]/.test(t))
 
     expect(invalid).toEqual([])
+  })
+
+  // =========================================================================
+  // #5284 — Runtime behavior validation (beyond schema-only checks)
+  // =========================================================================
+
+  it('getCardComponent returns undefined for empty string', () => {
+    expect(getCardComponent('')).toBeUndefined()
+  })
+
+  it('getCardComponent returns undefined for null-like inputs', () => {
+    // @ts-expect-error intentional
+    expect(getCardComponent(null)).toBeUndefined()
+    // @ts-expect-error intentional
+    expect(getCardComponent(undefined)).toBeUndefined()
+  })
+
+  it('isCardTypeRegistered returns false for empty string', () => {
+    expect(isCardTypeRegistered('')).toBe(false)
+  })
+
+  it('getDefaultCardWidth returns consistent default for unregistered types', () => {
+    const DEFAULT_WIDTH = 4
+    const unregisteredTypes = ['__fake_1__', '__fake_2__', '!!!', '']
+    for (const t of unregisteredTypes) {
+      expect(getDefaultCardWidth(t)).toBe(DEFAULT_WIDTH)
+    }
+  })
+
+  it('each registered card component is callable (not null/undefined)', () => {
+    const types = getRegisteredCardTypes()
+    const uncallable: string[] = []
+
+    for (const cardType of types) {
+      const component = getCardComponent(cardType)
+      if (!component || (typeof component !== 'function' && typeof component !== 'object')) {
+        uncallable.push(cardType)
+      }
+    }
+
+    expect(uncallable).toEqual([])
+  })
+
+  it('registered card types are all non-empty strings', () => {
+    const types = getRegisteredCardTypes()
+    const emptyTypes = types.filter(t => !t || t.trim().length === 0)
+    expect(emptyTypes).toEqual([])
+  })
+
+  it('CARD_DEFAULT_WIDTHS keys are a subset of registered card types', () => {
+    const registeredTypes = new Set(getRegisteredCardTypes())
+    const widthKeys = Object.keys(CARD_DEFAULT_WIDTHS)
+    const unregisteredWidths = widthKeys.filter(k => !registeredTypes.has(k))
+    // Every card type with a custom width should be registered
+    expect(unregisteredWidths).toEqual([])
   })
 })

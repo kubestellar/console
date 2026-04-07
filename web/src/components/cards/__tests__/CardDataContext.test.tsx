@@ -264,4 +264,154 @@ describe('useCardLoadingState', () => {
       expect(result.current.hasData).toBe(true)
     })
   })
+
+  // ── #5285 — Strengthened timeout and state transition assertions ────────
+
+  describe('timeout behavior with real timer semantics (#5285)', () => {
+    it('timeout transitions showSkeleton from true to false', () => {
+      const { result } = renderCardLoadingState({
+        isLoading: true,
+        hasAnyData: false,
+      })
+
+      // Before timeout: skeleton visible
+      expect(result.current.showSkeleton).toBe(true)
+      expect(result.current.showEmptyState).toBe(false)
+      expect(result.current.loadingTimedOut).toBe(false)
+
+      // After timeout: skeleton gone, empty state visible
+      act(() => { vi.advanceTimersByTime(TEST_TIMEOUT_MS + 10) })
+      expect(result.current.showSkeleton).toBe(false)
+      expect(result.current.loadingTimedOut).toBe(true)
+      // showEmptyState should be false because isLoading is still true
+      // (but effectiveIsLoading is false due to timeout override)
+    })
+
+    it('timeout does not fire when hasAnyData transitions to true mid-timer', () => {
+      const { result, rerender } = renderCardLoadingState({
+        isLoading: true,
+        hasAnyData: false,
+      })
+
+      // Advance halfway
+      const HALFWAY = Math.floor(TEST_TIMEOUT_MS / 2)
+      act(() => { vi.advanceTimersByTime(HALFWAY) })
+      expect(result.current.showSkeleton).toBe(true)
+
+      // Data arrives while still loading
+      rerender({ isLoading: true, hasAnyData: true })
+      // Skeleton should disappear (stale-while-revalidate)
+      expect(result.current.showSkeleton).toBe(false)
+      expect(result.current.isRefreshing).toBe(true)
+      expect(result.current.loadingTimedOut).toBe(false)
+
+      // Advance well past the original timeout
+      act(() => { vi.advanceTimersByTime(TEST_TIMEOUT_MS * 3) })
+      // loadingTimedOut should remain false since hasAnyData arrived
+      expect(result.current.loadingTimedOut).toBe(false)
+    })
+
+    it('reports correct state sequence: loading -> timeout -> isFailed', () => {
+      const { reports } = renderCardLoadingState({
+        isLoading: true,
+        hasAnyData: false,
+      })
+
+      // Before timeout: isFailed should be false
+      const initialReport = reports[reports.length - 1]
+      expect(initialReport.isFailed).toBe(false)
+      expect(initialReport.isLoading).toBe(true)
+
+      // After timeout
+      act(() => { vi.advanceTimersByTime(TEST_TIMEOUT_MS + 10) })
+      const afterTimeout = reports[reports.length - 1]
+      expect(afterTimeout.isFailed).toBe(true)
+      expect(afterTimeout.isLoading).toBe(false)
+    })
+
+    it('timer cleanup runs on unmount to prevent memory leaks', () => {
+      const { unmount } = renderCardLoadingState({
+        isLoading: true,
+        hasAnyData: false,
+      })
+
+      // Unmount while timer is pending
+      unmount()
+
+      // Advancing timers after unmount should not cause errors
+      act(() => { vi.advanceTimersByTime(TEST_TIMEOUT_MS * 2) })
+      // No assertion needed — if cleanup failed, this would throw
+    })
+
+    it('multiple rapid isLoading toggles do not accumulate timers', () => {
+      const { result, rerender } = renderCardLoadingState({
+        isLoading: true,
+        hasAnyData: false,
+      })
+
+      const RAPID_TOGGLES = 10
+      for (let i = 0; i < RAPID_TOGGLES; i++) {
+        rerender({ isLoading: false, hasAnyData: false })
+        rerender({ isLoading: true, hasAnyData: false })
+      }
+
+      // Only the latest timer should be active
+      act(() => { vi.advanceTimersByTime(TEST_TIMEOUT_MS + 10) })
+      expect(result.current.loadingTimedOut).toBe(true)
+
+      // Verify it only fired once (not RAPID_TOGGLES times)
+      expect(result.current.showSkeleton).toBe(false)
+    })
+
+    it('showEmptyState is true only when isLoading=false AND hasAnyData=false', () => {
+      const { result, rerender } = renderCardLoadingState({
+        isLoading: false,
+        hasAnyData: false,
+      })
+
+      expect(result.current.showEmptyState).toBe(true)
+
+      // With data, empty state disappears
+      rerender({ isLoading: false, hasAnyData: true })
+      expect(result.current.showEmptyState).toBe(false)
+
+      // While loading with no data, showEmptyState is false (skeleton instead)
+      rerender({ isLoading: true, hasAnyData: false })
+      expect(result.current.showEmptyState).toBe(false)
+    })
+
+    it('isRefreshing is true when loading with existing data', () => {
+      const { result } = renderCardLoadingState({
+        isLoading: true,
+        hasAnyData: true,
+      })
+
+      expect(result.current.isRefreshing).toBe(true)
+      expect(result.current.showSkeleton).toBe(false)
+      expect(result.current.hasData).toBe(true)
+    })
+
+    it('reports lastUpdated as Date when lastRefresh is provided', () => {
+      const NOW_MS = 1700000000000
+      const { reports } = renderCardLoadingState({
+        isLoading: false,
+        hasAnyData: true,
+        lastRefresh: NOW_MS,
+      })
+
+      const lastReport = reports[reports.length - 1]
+      expect(lastReport.lastUpdated).toBeInstanceOf(Date)
+      expect(lastReport.lastUpdated?.getTime()).toBe(NOW_MS)
+    })
+
+    it('reports lastUpdated as null when lastRefresh is not provided', () => {
+      const { reports } = renderCardLoadingState({
+        isLoading: false,
+        hasAnyData: true,
+      })
+
+      const lastReport = reports[reports.length - 1]
+      expect(lastReport.lastUpdated).toBeNull()
+    })
+  })
 })

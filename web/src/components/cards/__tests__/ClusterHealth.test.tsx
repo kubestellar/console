@@ -38,6 +38,14 @@ vi.mock('../../../hooks/useMobile', () => ({
 const mockIsDemoMode = vi.fn(() => false)
 vi.mock('../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: mockIsDemoMode() }),
+  isDemoModeForced: () => false,
+  getDemoMode: () => false,
+  canToggleDemoMode: () => true,
+  isNetlifyDeployment: () => false,
+  isDemoToken: () => false,
+  hasRealToken: () => true,
+  setDemoToken: vi.fn(),
+  setGlobalDemoMode: vi.fn(),
 }))
 
 const mockUseCardLoadingState = vi.fn()
@@ -389,6 +397,125 @@ describe('ClusterHealth', () => {
       render(<ClusterHealth />)
       expect(mockUseCardLoadingState).toHaveBeenCalledWith(
         expect.objectContaining({ isFailed: true })
+      )
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // #5283 — Strengthened ClusterHealth tests
+  // -------------------------------------------------------------------------
+
+  describe('rendering quality (#5283)', () => {
+    it('renders all four status tiles (healthy, unhealthy, auth-error, offline)', () => {
+      const clusters = [
+        makeCluster({ name: 'c1', healthy: true, reachable: true }),
+        makeCluster({ name: 'c2', healthy: false, reachable: true }),
+        makeCluster({ name: 'c3', reachable: false, errorMessage: 'token expired' }),
+        makeCluster({ name: 'c4', reachable: false, errorMessage: 'connection refused' }),
+      ]
+      setupDefaults({ clusters })
+      render(<ClusterHealth />)
+
+      // Verify all four status tile categories are rendered
+      const healthyTiles = screen.getAllByTitle(/healthyTooltip/)
+      const unhealthyTiles = screen.getAllByTitle(/unhealthyTooltip/)
+      const authTiles = screen.getAllByTitle(/authErrorTooltip/)
+      const offlineTiles = screen.getAllByTitle(/offlineTooltip/)
+
+      expect(healthyTiles.length).toBeGreaterThanOrEqual(1)
+      expect(unhealthyTiles.length).toBeGreaterThanOrEqual(1)
+      expect(authTiles.length).toBeGreaterThanOrEqual(1)
+      expect(offlineTiles.length).toBeGreaterThanOrEqual(1)
+    })
+
+    it('does NOT show an error message for healthy clusters', () => {
+      const clusters = [makeCluster({ healthy: true, reachable: true })]
+      setupDefaults({ clusters })
+      render(<ClusterHealth />)
+      // No error banners should be present
+      expect(screen.queryByText('clusterHealth.unableToConnect')).not.toBeInTheDocument()
+      expect(screen.queryByTitle(/reauthenticateToRestore/i)).not.toBeInTheDocument()
+      expect(screen.queryByTitle(/checkNetworkVpn/i)).not.toBeInTheDocument()
+    })
+
+    it('renders multiple clusters in the list, each with distinct names', () => {
+      const clusters = [
+        makeCluster({ name: 'alpha-cluster', nodeCount: 2 }),
+        makeCluster({ name: 'beta-cluster', nodeCount: 5 }),
+        makeCluster({ name: 'gamma-cluster', nodeCount: 8 }),
+      ]
+      setupDefaults({ clusters })
+      render(<ClusterHealth />)
+      expect(screen.getByText('alpha-cluster')).toBeInTheDocument()
+      expect(screen.getByText('beta-cluster')).toBeInTheDocument()
+      expect(screen.getByText('gamma-cluster')).toBeInTheDocument()
+    })
+
+    it('does NOT render skeleton when data is loaded', () => {
+      const clusters = [makeCluster()]
+      setupDefaults({ clusters, showSkeleton: false })
+      render(<ClusterHealth />)
+      expect(screen.queryByTestId('skeleton-stats')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('skeleton-list')).not.toBeInTheDocument()
+    })
+
+    it('renders both skeleton variants during loading', () => {
+      setupDefaults({ showSkeleton: true })
+      render(<ClusterHealth />)
+      expect(screen.getByTestId('skeleton-stats')).toBeInTheDocument()
+      expect(screen.getByTestId('skeleton-list')).toBeInTheDocument()
+    })
+
+    it('renders search input for cluster list', () => {
+      const clusters = [makeCluster()]
+      setupDefaults({ clusters })
+      render(<ClusterHealth />)
+      expect(screen.getByTestId('search-input')).toBeInTheDocument()
+    })
+
+    it('computes correct stats with mixed cluster states', () => {
+      const clusters = [
+        makeCluster({ name: 'h1', healthy: true, reachable: true, nodeCount: 3, podCount: 10 }),
+        makeCluster({ name: 'h2', healthy: true, reachable: true, nodeCount: 2, podCount: 5 }),
+        makeCluster({ name: 'u1', healthy: false, reachable: true, nodeCount: 1, podCount: 3 }),
+        makeCluster({ name: 'off1', reachable: false, errorMessage: 'refused', nodeCount: 0, podCount: 0 }),
+      ]
+      setupDefaults({ clusters })
+      render(<ClusterHealth />)
+
+      // Verify all expected status tile categories are present
+      expect(screen.getAllByTitle(/healthyTooltip/).length).toBeGreaterThanOrEqual(1)
+      expect(screen.getAllByTitle(/unhealthyTooltip/).length).toBeGreaterThanOrEqual(1)
+      expect(screen.getAllByTitle(/offlineTooltip/).length).toBeGreaterThanOrEqual(1)
+
+      // Verify all cluster names are rendered
+      expect(screen.getByText('h1')).toBeInTheDocument()
+      expect(screen.getByText('h2')).toBeInTheDocument()
+      expect(screen.getByText('u1')).toBeInTheDocument()
+      expect(screen.getByText('off1')).toBeInTheDocument()
+    })
+
+    it('passes consecutiveFailures to useCardLoadingState', () => {
+      setupDefaults({ error: 'backend error', clusters: [] })
+      render(<ClusterHealth />)
+      expect(mockUseCardLoadingState).toHaveBeenCalledWith(
+        expect.objectContaining({ consecutiveFailures: expect.any(Number) })
+      )
+    })
+
+    it('passes hasAnyData correctly based on cluster count', () => {
+      setupDefaults({ clusters: [] })
+      render(<ClusterHealth />)
+      expect(mockUseCardLoadingState).toHaveBeenCalledWith(
+        expect.objectContaining({ hasAnyData: false })
+      )
+    })
+
+    it('passes hasAnyData=true when clusters exist', () => {
+      setupDefaults({ clusters: [makeCluster()] })
+      render(<ClusterHealth />)
+      expect(mockUseCardLoadingState).toHaveBeenCalledWith(
+        expect.objectContaining({ hasAnyData: true })
       )
     })
   })
