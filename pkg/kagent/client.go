@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	neturl "net/url"
 	"os"
 	"strings"
 	"time"
@@ -79,7 +80,8 @@ func (c *KagentClient) ListAgents() ([]AgentInfo, error) {
 
 // Discover fetches the A2A agent card for the given agent.
 func (c *KagentClient) Discover(namespace, agentName string) (*AgentCard, error) {
-	url := fmt.Sprintf("%s/api/a2a/%s/%s/.well-known/agent.json", c.baseURL, namespace, agentName)
+	url := fmt.Sprintf("%s/api/a2a/%s/%s/.well-known/agent.json",
+		c.baseURL, neturl.PathEscape(namespace), neturl.PathEscape(agentName))
 	resp, err := c.httpClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to discover agent %s/%s: %w", namespace, agentName, err)
@@ -134,7 +136,8 @@ func (c *KagentClient) Invoke(ctx context.Context, namespace, agentName, message
 		return nil, fmt.Errorf("failed to marshal A2A request: %w", err)
 	}
 
-	url := fmt.Sprintf("%s/api/a2a/%s/%s", c.baseURL, namespace, agentName)
+	url := fmt.Sprintf("%s/api/a2a/%s/%s",
+		c.baseURL, neturl.PathEscape(namespace), neturl.PathEscape(agentName))
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(string(payload)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -166,7 +169,9 @@ func (c *KagentClient) Detect() string {
 		resp, err := c.httpClient.Get(url + "/health")
 		if err == nil {
 			resp.Body.Close()
-			return url
+			if resp.StatusCode < 400 {
+				return url
+			}
 		}
 	}
 	return ""

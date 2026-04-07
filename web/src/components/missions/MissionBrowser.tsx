@@ -1183,7 +1183,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
 
       {/* Filter bar — constrained height on mobile with scroll */}
       {showFilters && (
-        <div className="px-4 py-2.5 bg-card border-b border-border space-y-2 max-h-[40vh] md:max-h-none overflow-y-auto">
+        <div className="px-4 py-2.5 bg-card border-b border-border space-y-2 max-h-[40vh] md:max-h-[50vh] overflow-y-auto">
           {/* Row 1: Clear all + Match % + Source + Category */}
           <div className="flex items-center gap-3 flex-wrap">
             {activeFilterCount > 0 && (
