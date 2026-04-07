@@ -12,6 +12,7 @@ import {
   Hammer,
   Bookmark,
   ShieldAlert,
+  Orbit,
 } from 'lucide-react'
 import type { Mission, MissionStatus, MissionMessage } from '../../../hooks/useMissions'
 
@@ -45,6 +46,7 @@ export const TYPE_ICONS: Record<Mission['type'], typeof ArrowUpCircle> = {
   deploy: Rocket,
   repair: Hammer,
   custom: Sparkles,
+  maintain: Orbit,
 }
 
 export type FontSize = 'sm' | 'base' | 'lg'

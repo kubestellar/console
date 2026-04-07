@@ -34,7 +34,7 @@ export interface Mission {
   id: string
   title: string
   description: string
-  type: 'upgrade' | 'troubleshoot' | 'analyze' | 'deploy' | 'repair' | 'custom'
+  type: 'upgrade' | 'troubleshoot' | 'analyze' | 'deploy' | 'repair' | 'custom' | 'maintain'
   status: MissionStatus
   progress?: number
   cluster?: string

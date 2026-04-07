@@ -33,6 +33,7 @@ import { AgentBadge, AgentIcon } from '../../agent/AgentIcon'
 import { PreflightFailure } from '../../missions/PreflightFailure'
 import { SaveResolutionDialog } from '../../missions/SaveResolutionDialog'
 import { SetupInstructionsDialog } from '../../setup/SetupInstructionsDialog'
+import { OrbitSetupOffer } from '../../missions/OrbitSetupOffer'
 import { STATUS_CONFIG, TYPE_ICONS } from './types'
 import type { FontSize } from './types'
 import { TypingIndicator } from './TypingIndicator'
@@ -902,6 +903,19 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 </div>
               </div>
             </div>
+
+            {/* Orbit Setup Offer — shown after install/deploy missions complete */}
+            {(mission.importedFrom?.missionClass === 'install' || mission.type === 'deploy') && (
+              <OrbitSetupOffer
+                projects={mission.importedFrom?.cncfProject
+                  ? [{ name: mission.importedFrom.cncfProject, cncfProject: mission.importedFrom.cncfProject, category: (mission.context?.category as string) }]
+                  : [{ name: mission.title, category: (mission.context?.category as string) }]}
+                clusters={mission.cluster ? [mission.cluster] : []}
+                onCreateOrbit={() => {/* handled internally by OrbitSetupOffer */}}
+                onDashboardCreated={() => {/* navigation handled internally */}}
+                onSkip={() => {/* dismiss is internal */}}
+              />
+            )}
 
             <button
               onClick={() => setActiveMission(null)}

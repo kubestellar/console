@@ -6,6 +6,7 @@ import {
   Trash2,
   StopCircle,
   Loader2,
+  Satellite,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { Mission } from '../../../hooks/useMissions'
@@ -113,6 +114,12 @@ export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpan
         >
           <p className="text-xs text-muted-foreground truncate">{mission.description}</p>
           <div className="flex items-center gap-2 mt-1">
+            {mission.importedFrom?.missionClass === 'orbit' && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded-full border border-purple-500/20">
+                <Satellite className="w-2.5 h-2.5" />
+                {t('orbit.title')}
+              </span>
+            )}
             {mission.cluster && (
               <span className="text-xs text-purple-400">@{mission.cluster}</span>
             )}
