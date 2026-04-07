@@ -9,6 +9,8 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useMissions } from '../../hooks/useMissions'
 import { useHelmReleases } from '../../hooks/mcp/helm'
 import { useClusters } from '../../hooks/mcp/clusters'
+import { isDemoMode } from '../../lib/demoMode'
+import { getDemoMissionControlState } from './demoState'
 import type {
   MissionControlState,
   PayloadProject,
@@ -34,13 +36,19 @@ interface PersistedStateEntry {
 function loadPersistedState(): Partial<MissionControlState> | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY) // TTL validation applied below via WIZARD_STATE_TTL_MS
-    if (!raw) return null
+    if (!raw) {
+      // In demo mode, seed with a pre-populated Mission Control state so
+      // visitors see the full blueprint visualization on console.kubestellar.io
+      if (isDemoMode()) return getDemoMissionControlState()
+      return null
+    }
     const entry = JSON.parse(raw) as PersistedStateEntry | Partial<MissionControlState>
     // Support both new format (with savedAt timestamp) and legacy format (plain state)
     if ('savedAt' in entry && typeof entry.savedAt === 'number') {
       // Check TTL — discard wizard state older than WIZARD_STATE_TTL_MS
       if (Date.now() - entry.savedAt > WIZARD_STATE_TTL_MS) {
         localStorage.removeItem(STORAGE_KEY)
+        if (isDemoMode()) return getDemoMissionControlState()
         return null
       }
       return entry.state
