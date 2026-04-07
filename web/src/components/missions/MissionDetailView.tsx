@@ -25,6 +25,7 @@ import {
   Shield,
   MessageSquarePlus,
   Link } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { StatusBadge } from '../ui/StatusBadge'
 import type { MissionExport, MissionStep } from '../../lib/missions/types'
@@ -210,6 +211,7 @@ export function MissionDetailView({
   loading = false,
   error = null,
   onRetry }: MissionDetailViewProps) {
+  const { t } = useTranslation()
   const [linkCopied, setLinkCopied] = useState(false)
   const linkCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -221,31 +223,31 @@ export function MissionDetailView({
   const tabs: TabDef[] = [
     {
       id: 'install',
-      label: 'Install',
+      label: t('missions.detail.tabs.install'),
       icon: Download,
       steps: mission.steps || [],
-      emptyMessage: 'No install steps available.',
+      emptyMessage: t('missions.detail.tabs.installEmpty'),
       color: 'bg-green-500/20 text-green-400' },
     {
       id: 'uninstall',
-      label: 'Uninstall',
+      label: t('missions.detail.tabs.uninstall'),
       icon: Trash2,
       steps: mission.uninstall || [],
-      emptyMessage: 'Uninstall steps not yet available for this mission.',
+      emptyMessage: t('missions.detail.tabs.uninstallEmpty'),
       color: 'bg-red-500/20 text-red-400' },
     {
       id: 'upgrade',
-      label: 'Update / Upgrade',
+      label: t('missions.detail.tabs.upgrade'),
       icon: ArrowUpCircle,
       steps: mission.upgrade || [],
-      emptyMessage: 'Upgrade steps not yet available for this mission.',
+      emptyMessage: t('missions.detail.tabs.upgradeEmpty'),
       color: 'bg-blue-500/20 text-blue-400' },
     {
       id: 'troubleshooting',
-      label: 'Troubleshooting',
+      label: t('missions.detail.tabs.troubleshooting'),
       icon: Wrench,
       steps: mission.troubleshooting || [],
-      emptyMessage: 'Troubleshooting steps not yet available for this mission.',
+      emptyMessage: t('missions.detail.tabs.troubleshootingEmpty'),
       color: 'bg-yellow-500/20 text-yellow-400' },
   ]
 

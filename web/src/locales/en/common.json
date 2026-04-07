@@ -3214,5 +3214,19 @@
       "troubleshoot": "Troubleshoot",
       "replicasReady": "{{readyReplicas}}/{{replicas}} ready"
     }
+  },
+  "missions": {
+    "detail": {
+      "tabs": {
+        "install": "Install",
+        "installEmpty": "No install steps available.",
+        "uninstall": "Uninstall",
+        "uninstallEmpty": "Uninstall steps not yet available for this mission.",
+        "upgrade": "Update / Upgrade",
+        "upgradeEmpty": "Upgrade steps not yet available for this mission.",
+        "troubleshooting": "Troubleshooting",
+        "troubleshootingEmpty": "Troubleshooting steps not yet available for this mission."
+      }
+    }
   }
 }
