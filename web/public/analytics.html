@@ -1124,7 +1124,7 @@
       const chart = new Chart(ctx, {
         type: 'doughnut',
         data: {
-          labels: errors.map(e => e.event),
+          labels: errors.map(e => e.detail && e.detail !== '(not set)' && e.detail !== '—' ? e.detail : e.event),
           datasets: [{
             data: errors.map(e => e.count),
             backgroundColor: ERROR_COLORS.slice(0, errors.length),

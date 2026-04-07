@@ -123,16 +123,15 @@ function EventsTimelineInternal() {
   const reachableClusters = clusters.filter(c => c.reachable !== false)
 
   // Get available clusters for local filter (respects global filter)
-  const availableClustersForFilter = (() => {
+  const availableClustersForFilter = useMemo(() => {
     if (isAllClustersSelected) return reachableClusters
     return reachableClusters.filter(c => selectedClusters.includes(c.name))
-  })()
+  }, [isAllClustersSelected, reachableClusters, selectedClusters])
 
   // Count filtered clusters for display
-  const filteredClusterCount = (() => {
-    if (localClusterFilter.length > 0) return localClusterFilter.length
-    return availableClustersForFilter.length
-  })()
+  const filteredClusterCount = localClusterFilter.length > 0
+    ? localClusterFilter.length
+    : availableClustersForFilter.length
 
   const toggleClusterFilter = (clusterName: string) => {
     setLocalClusterFilter(prev => {
@@ -144,9 +143,9 @@ function EventsTimelineInternal() {
   }
 
   // Filter events by selected clusters AND exclude offline/unreachable clusters
-  const filteredEvents = (() => {
+  const filteredEvents = useMemo(() => {
     // First filter to only events from reachable clusters
-    let result = events.filter(e => {
+    let result = (events || []).filter(e => {
       if (!e.cluster) return true // Include events without cluster info
       const clusterInfo = clusterInfoMap[e.cluster]
       return !clusterInfo || clusterInfo.reachable !== false
@@ -159,13 +158,16 @@ function EventsTimelineInternal() {
       result = result.filter(e => e.cluster && localClusterFilter.includes(e.cluster))
     }
     return result
-  })()
+  }, [events, clusterInfoMap, isAllClustersSelected, selectedClusters, localClusterFilter])
 
   // Get time range config
   const timeRangeConfig = TIME_RANGE_OPTIONS.find(t => t.value === timeRange) || TIME_RANGE_OPTIONS[1]
 
   // Group events into time buckets
-  const timeSeriesData = groupEventsByTime(filteredEvents, timeRangeConfig.bucketMinutes, timeRangeConfig.numBuckets)
+  const timeSeriesData = useMemo(
+    () => groupEventsByTime(filteredEvents, timeRangeConfig.bucketMinutes, timeRangeConfig.numBuckets),
+    [filteredEvents, timeRangeConfig.bucketMinutes, timeRangeConfig.numBuckets],
+  )
 
   // Calculate totals
   const totalWarnings = timeSeriesData.reduce((sum, d) => sum + d.warnings, 0)

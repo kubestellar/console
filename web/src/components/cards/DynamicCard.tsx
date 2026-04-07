@@ -145,8 +145,9 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
     return () => { cancelled = true }
   }, [isInvalidConfig, isMissingEndpoint, cardDefinition?.dataSource, cardDefinition?.apiEndpoint])
 
-  // useCardData for search/pagination
+  // useCardData for search/pagination — guard against undefined cardDefinition
   const searchFields = ((cardDefinition?.searchFields || []) as (keyof Record<string, unknown>)[])
+  const defaultSortField = searchFields.length > 0 ? (searchFields[0] as string) : 'name'
   const {
     items,
     totalItems,
@@ -158,16 +159,16 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
     filters,
     containerRef,
     containerStyle,
-  } = useCardData(data, {
+  } = useCardData(data ?? [], {
     filter: {
       searchFields,
     },
     sort: {
-      defaultField: searchFields[0] as string || 'name',
-      defaultDirection: 'asc',
+      defaultField: defaultSortField,
+      defaultDirection: 'asc' as const,
       comparators: {},
     },
-    defaultLimit: cardDefinition?.defaultLimit || 5,
+    defaultLimit: cardDefinition?.defaultLimit ?? 5,
   })
 
   // Validation-based early returns — placed after all hooks to respect Rules of Hooks (#4910)
