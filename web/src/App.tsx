@@ -14,6 +14,7 @@ import { ToastProvider } from './components/ui/Toast'
 import { AlertsProvider } from './contexts/AlertsContext'
 import { RewardsProvider } from './hooks/useRewards'
 import { NPSSurvey } from './components/feedback'
+import { useOrbitAutoRun } from './hooks/useOrbitAutoRun'
 import { UnifiedDemoProvider } from './lib/unified/demo'
 import { ChunkErrorBoundary } from './components/ChunkErrorBoundary'
 import { AppErrorBoundary } from './components/AppErrorBoundary'
@@ -144,6 +145,9 @@ if (typeof window !== 'undefined') {
     setTimeout(prefetchRoutes, SHORT_DELAY_MS)
   }
 }
+
+/** Runs orbit auto-maintenance checks — must be inside provider tree */
+function OrbitAutoRunner() { useOrbitAutoRun(); return null }
 
 // Loading fallback component with delay to prevent flash on fast navigation
 function LoadingFallback() {
@@ -485,6 +489,7 @@ function FullDashboardApp() {
       <AppErrorBoundary>
       <Suspense fallback={null}><DrillDownModal /></Suspense>
       <NPSSurvey />
+      <OrbitAutoRunner />
       <ChunkErrorBoundary>
       <Suspense fallback={<LoadingFallback />}>
       <Routes>

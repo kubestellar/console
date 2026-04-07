@@ -24,3 +24,6 @@ export const ORBIT_DEFAULT_CADENCE: OrbitCadence = 'weekly'
 
 /** Default dashboard name template — {project} is replaced at runtime */
 export const GROUND_CONTROL_DASHBOARD_NAME_TEMPLATE = 'Ground Control — {project}'
+
+/** How often (ms) the auto-run check scans for due orbit missions */
+export const ORBIT_AUTORUN_CHECK_INTERVAL_MS = 60_000

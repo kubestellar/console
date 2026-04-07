@@ -1742,6 +1742,7 @@
     "changeCadence": "Change Cadence",
     "groundControl": "Ground Control",
     "groundControlDescription": "Auto-generate a monitoring dashboard for your deployment.",
+    "autoRunDescription": "Run maintenance automatically when due.",
     "createDashboard": "Create Dashboard",
     "viewDashboard": "View Dashboard",
     "cardRequest": "No monitoring card for {{project}} yet",

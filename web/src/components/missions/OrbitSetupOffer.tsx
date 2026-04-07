@@ -28,6 +28,7 @@ interface OrbitSetupOfferProps {
   onCreateOrbit: (params: {
     orbitType: OrbitType
     cadence: OrbitCadence
+    autoRun: boolean
     title: string
     projects: string[]
     clusters: string[]
@@ -61,6 +62,7 @@ export function OrbitSetupOffer({
   )
   const [cadence, setCadence] = useState<OrbitCadence>(ORBIT_DEFAULT_CADENCE)
   const [createDashboard, setCreateDashboard] = useState(true)
+  const [autoRun, setAutoRun] = useState(false)
   const [isExpanded, setIsExpanded] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
   const [createdDashboardId, setCreatedDashboardId] = useState<string | null>(null)
@@ -86,6 +88,7 @@ export function OrbitSetupOffer({
         onCreateOrbit({
           orbitType,
           cadence,
+          autoRun,
           title: `${template.title} — ${(projects || []).map(p => p.name).join(', ')}`,
           projects: (projects || []).map(p => p.name),
           clusters: clusters || [],
@@ -108,7 +111,7 @@ export function OrbitSetupOffer({
     } finally {
       setIsCreating(false)
     }
-  }, [selectedOrbits, cadence, createDashboard, projects, clusters, missionControlStateKey, onCreateOrbit, onDashboardCreated, generateGroundControlDashboard, applicableTemplates])
+  }, [selectedOrbits, cadence, autoRun, createDashboard, projects, clusters, missionControlStateKey, onCreateOrbit, onDashboardCreated, generateGroundControlDashboard, applicableTemplates])
 
   if (isDone) {
     return (
@@ -199,7 +202,7 @@ export function OrbitSetupOffer({
           </div>
 
           {/* Ground Control dashboard toggle */}
-          <label className="flex items-center gap-2 mb-4 cursor-pointer">
+          <label className="flex items-center gap-2 mb-2 cursor-pointer">
             <input
               type="checkbox"
               checked={createDashboard}
@@ -208,6 +211,18 @@ export function OrbitSetupOffer({
             />
             <LayoutDashboard className="w-3.5 h-3.5 text-muted-foreground" />
             <span className="text-xs text-foreground">{t('orbit.groundControlDescription')}</span>
+          </label>
+
+          {/* Auto-run toggle */}
+          <label className="flex items-center gap-2 mb-4 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoRun}
+              onChange={e => setAutoRun(e.target.checked)}
+              className="accent-purple-500"
+            />
+            <Orbit className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-xs text-foreground">{t('orbit.autoRunDescription')}</span>
           </label>
 
           {/* Actions */}

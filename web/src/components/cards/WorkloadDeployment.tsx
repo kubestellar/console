@@ -12,7 +12,6 @@ import {
   Server,
   Database,
   Gauge,
-  Plus,
   Minus,
   GripVertical,
   Loader2,

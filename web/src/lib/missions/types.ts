@@ -48,6 +48,8 @@ export interface OrbitConfig {
   groundControlDashboardId?: string
   /** Run history (capped at ORBIT_MAX_HISTORY_ENTRIES) */
   history?: OrbitRunHistoryEntry[]
+  /** Auto-run when due — executes automatically when the console is open */
+  autoRun?: boolean
 }
 
 export interface MissionExport {
