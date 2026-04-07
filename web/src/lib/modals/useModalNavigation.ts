@@ -243,8 +243,8 @@ export interface UseModalStateResult {
 
 export function useModalState(initialOpen = false): UseModalStateResult {
   const [isOpen, setIsOpen] = useState(initialOpen)
-  const open = () => setIsOpen(true)
-  const close = () => setIsOpen(false)
-  const toggle = () => setIsOpen(prev => !prev)
+  const open = useCallback(() => setIsOpen(true), [])
+  const close = useCallback(() => setIsOpen(false), [])
+  const toggle = useCallback(() => setIsOpen(prev => !prev), [])
   return { isOpen, open, close, toggle }
 }
