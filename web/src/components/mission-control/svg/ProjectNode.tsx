@@ -271,8 +271,8 @@ export function ProjectNode({
         />
       )}
 
-      {/* Name label — only shown when this node is glowing, placed above to avoid edge labels */}
-      {glow && (() => {
+      {/* Name label — shown on hover (glow) or when completed so project names are always visible */}
+      {(glow || status === 'completed') && (() => {
         const shortName = name.length <= 16 ? name : name.replace(/-/g, ' ')
         const labelW = shortName.length * 3 + 6
         const labelY = cy - radius - 8

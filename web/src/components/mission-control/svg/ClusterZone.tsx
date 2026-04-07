@@ -228,7 +228,7 @@ export function ClusterZone({
         </div>
       </foreignObject>
 
-      {/* Cluster name (positioned after icon) */}
+      {/* Cluster name (positioned after icon, clipped to avoid overlapping stat blocks) */}
       <text
         x={x + 30}
         y={y + 17}
@@ -239,8 +239,9 @@ export function ClusterZone({
         fontFamily="system-ui, sans-serif"
         opacity={0.9}
         cursor="pointer"
+        clipPath={`rect(0 ${width - 140} 30 0)`}
       >
-        {name}
+        {name.length > 18 ? `${name.slice(0, 16)}...` : name}
       </text>
 
       {/* ── Overlay-dependent resource display ─────────────── */}
