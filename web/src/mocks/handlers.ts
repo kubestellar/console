@@ -206,6 +206,17 @@ export const handlers = [
   http.all('https://fonts.gstatic.com/*', () => passthrough()),
   http.all('https://fonts.googleapis.com/*', () => passthrough()),
   http.all('https://img.youtube.com/*', () => passthrough()),
+  // GitHub avatar URLs — return transparent 1x1 PNG to avoid CSP violation
+  // (connect-src doesn't include github.com on Netlify)
+  http.get('https://github.com/*.png', () => {
+    const TRANSPARENT_1X1_PNG = new Uint8Array([
+      137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,0,0,0,1,0,0,0,1,8,6,0,0,0,
+      31,21,196,137,0,0,0,10,73,68,65,84,120,156,98,0,0,0,6,0,5,130,217,36,0,0,
+      0,0,73,69,78,68,174,66,96,130,
+    ])
+    return new HttpResponse(TRANSPARENT_1X1_PNG, { headers: { 'Content-Type': 'image/png' } })
+  }),
+  http.get('https://avatars.githubusercontent.com/*', () => passthrough()),
 
   // ── Auth refresh (OAuth token exchange) ────────────────────────────
   // Mock the /auth/refresh endpoint used by AuthCallback and silent token refresh
@@ -629,6 +640,25 @@ export const handlers = [
     await delay(100)
     currentUser.onboarded = true
     return HttpResponse.json({ success: true })
+  }),
+
+  // ── Prometheus query mock (vLLM metrics in demo mode) ────────────
+  // Return mock Prometheus-style responses for AI/ML dashboard metrics
+  http.get('/prometheus/query', ({ request }) => {
+    const url = new URL(request.url)
+    const query = url.searchParams.get('query') || ''
+    // Return a plausible scalar value based on the metric
+    let value = 0.5
+    if (query.includes('gpu_cache_usage')) value = 0.42
+    else if (query.includes('num_requests_running')) value = 3
+    else if (query.includes('num_requests_waiting')) value = 1
+    else if (query.includes('throughput')) value = 145.7
+    else if (query.includes('time_to_first_token')) value = 0.028
+    else if (query.includes('time_per_output_token')) value = 0.006
+    return HttpResponse.json({
+      status: 'success',
+      data: { resultType: 'vector', result: [{ metric: {}, value: [Date.now() / 1000, String(value)] }] },
+    })
   }),
 
   // ── Passthrough for Netlify Functions that work in demo mode ─────
