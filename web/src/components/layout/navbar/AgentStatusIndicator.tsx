@@ -265,6 +265,22 @@ export function AgentStatusIndicator() {
                 </span>
               )}
             </div>
+            {/* Show selected agent name and model when connected */}
+            {isConnected && selectedAgent && selectedAgent !== 'none' && (() => {
+              const activeAgent = agents.find(a => a.name === selectedAgent)
+              return activeAgent ? (
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="text-xs text-foreground font-medium">{activeAgent.displayName}</span>
+                  {activeAgent.model ? (
+                    <span className="text-2xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+                      {activeAgent.model}
+                    </span>
+                  ) : activeAgent.provider === 'github-cli' ? (
+                    <span className="text-2xs text-muted-foreground italic">Default model</span>
+                  ) : null}
+                </div>
+              ) : null
+            })()}
             <p className="text-xs text-muted-foreground mt-1">
               {isDemoMode
                 ? t('agent.agentBypassedInDemo')

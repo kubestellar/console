@@ -313,6 +313,13 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
         <p className={cn('text-xs', agent.available ? 'text-muted-foreground' : 'text-muted-foreground/60')}>
           {agent.description}
         </p>
+        {agent.model ? (
+          <span className="text-2xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+            {agent.model}
+          </span>
+        ) : agent.provider === 'github-cli' ? (
+          <span className="text-2xs text-muted-foreground italic">Default model</span>
+        ) : null}
         {!agent.available && agent.installMissionId && (
           <div className="flex items-center gap-2 mt-1">
             <button

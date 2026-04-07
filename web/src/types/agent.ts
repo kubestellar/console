@@ -35,6 +35,7 @@ export interface AgentInfo {
   provider: AgentProvider
   available: boolean
   capabilities?: number // bitmask of capabilities
+  model?: string // Current model name (e.g. "gpt-4o", "claude-3.5-sonnet")
   installUrl?: string // shown when agent is not available
   installMissionId?: string // AI mission ID for automated install
 }
@@ -80,6 +81,7 @@ export interface ChatStreamPayload {
   agent: string
   sessionId: string
   done: boolean
+  model?: string // Model name used for this response
   usage?: ChatTokenUsage
 }
 
