@@ -284,6 +284,14 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
             return
           }
 
+          // Don't retry on auth errors (401) — expected in demo mode
+          const isAuthError = err.message?.includes('401')
+          if (isAuthError) {
+            console.debug('[SSE] Auth error — skipping retries (demo mode)')
+            resolve(accumulated)
+            return
+          }
+
           // Retry with exponential backoff if we haven't exceeded attempts (#4934).
           // Even with partial data, a retry can complete the stream from remaining
           // clusters. Only resolve with partial data when all retries are exhausted.

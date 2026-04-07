@@ -6,7 +6,7 @@
  *
  * When demo mode is enabled, provides fake demo stacks instead of live data.
  */
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import { useStackDiscovery, type LLMdStack, type LLMdStackComponent } from '../hooks/useStackDiscovery'
 import { useDemoMode } from '../hooks/useDemoMode'
 import { useClusters } from '../hooks/mcp/clusters'
@@ -184,11 +184,16 @@ export function StackProvider({ children }: StackProviderProps) {
   const { stacks: discoveredStacks, isLoading: liveLoading, error: liveError, refetch: liveRefetch, lastRefresh: liveLastRefresh } = useStackDiscovery(onlineClusterNames)
 
   // Filter out stacks from clusters that went offline since last discovery
-  const onlineClusterSet = new Set(onlineClusterNames)
-  const liveStacks = discoveredStacks.filter(s => onlineClusterSet.has(s.cluster))
+  // Memoize to prevent unstable array references triggering useEffect loops
+  const onlineClusterKey = onlineClusterNames.join(',')
+  const liveStacks = useMemo(() => {
+    const onlineSet = new Set(onlineClusterNames)
+    return discoveredStacks.filter(s => onlineSet.has(s.cluster))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [discoveredStacks, onlineClusterKey])
 
   // Use demo stacks when in demo mode, otherwise live stacks
-  const demoStacks = createDemoStacks()
+  const demoStacks = useMemo(() => createDemoStacks(), [])
   const stacks = isDemoMode ? demoStacks : liveStacks
   const isLoading = isDemoMode ? false : liveLoading
   const error = isDemoMode ? null : liveError
@@ -243,9 +248,9 @@ export function StackProvider({ children }: StackProviderProps) {
     return stacks.find(s => s.id === selectedStackId) || null
   })()
 
-  const healthyStacks = stacks.filter(s => s.status === 'healthy')
+  const healthyStacks = useMemo(() => stacks.filter(s => s.status === 'healthy'), [stacks])
 
-  const disaggregatedStacks = stacks.filter(s => s.hasDisaggregation)
+  const disaggregatedStacks = useMemo(() => stacks.filter(s => s.hasDisaggregation), [stacks])
 
   const value: StackContextType = {
     stacks,

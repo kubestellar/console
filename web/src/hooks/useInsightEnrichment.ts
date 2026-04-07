@@ -257,14 +257,17 @@ export function useInsightEnrichment(heuristicInsights: MultiClusterInsight[]): 
     }, ENRICHMENT_DEBOUNCE_MS)
   }, [])
 
+  // Stabilize with a length-based key to avoid re-firing on every new array reference
+  const insightsKey = heuristicInsights.length
   useEffect(() => {
-    if (heuristicInsights.length > 0) {
+    if (insightsKey > 0) {
       triggerEnrichment()
     }
     return () => {
       if (requestRef.current) clearTimeout(requestRef.current)
     }
-  }, [heuristicInsights, triggerEnrichment])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [insightsKey, triggerEnrichment])
 
   const enrichedInsights = mergeEnrichments(heuristicInsights)
   const enrichmentCount = enrichments.size

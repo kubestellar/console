@@ -500,7 +500,9 @@ export function Layout({ children: _children }: LayoutProps) {
           className="relative flex-1 p-4 pb-24 md:p-6 md:pb-28 transition-[margin] duration-300 overflow-y-auto scroll-enhanced min-w-0"
         >
           <NavigationProgress />
-          <Outlet />
+          <Suspense fallback={<ContentLoadingSkeleton />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
 

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, lazy, Suspense, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense, type ReactNode } from 'react'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { useMissions } from '../hooks/useMissions'
 import { useDemoMode } from '../hooks/useDemoMode'
@@ -605,8 +605,8 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     )
   }
 
-  // Calculate alert statistics
-  const stats: AlertStats = (() => {
+  // Calculate alert statistics — memoize to prevent unstable references in context consumers
+  const stats: AlertStats = useMemo(() => {
     const unacknowledgedFiring = alerts.filter(a => a.status === 'firing' && !a.acknowledgedAt)
     return {
       total: alerts.length,
@@ -616,19 +616,19 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       warning: unacknowledgedFiring.filter(a => a.severity === 'warning').length,
       info: unacknowledgedFiring.filter(a => a.severity === 'info').length,
       acknowledged: alerts.filter(a => a.acknowledgedAt && a.status === 'firing').length }
-  })()
+  }, [alerts])
 
   // Get active (firing) alerts - exclude acknowledged alerts. Deduplicated via shared helper.
-  const activeAlerts = (() => {
+  const activeAlerts = useMemo(() => {
     const firing = alerts.filter(a => a.status === 'firing' && !a.acknowledgedAt)
     return deduplicateAlerts(firing, rules)
-  })()
+  }, [alerts, rules])
 
   // Get acknowledged alerts that are still firing. Deduplicated via shared helper.
-  const acknowledgedAlerts = (() => {
+  const acknowledgedAlerts = useMemo(() => {
     const acked = alerts.filter(a => a.status === 'firing' && a.acknowledgedAt)
     return deduplicateAlerts(acked, rules)
-  })()
+  }, [alerts, rules])
 
   // Acknowledge an alert
   const acknowledgeAlert = (alertId: string, acknowledgedBy?: string) => {
