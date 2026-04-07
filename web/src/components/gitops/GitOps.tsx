@@ -94,6 +94,9 @@ export function GitOps() {
   const [isDetecting, setIsDetecting] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
+  // Cache helm releases count to prevent showing 0 during refresh
+  const cachedHelmCount = useRef(0)
+
   // Set initial lastUpdated on mount
   useEffect(() => {
     setLastUpdated(new Date())
@@ -220,8 +223,6 @@ export function GitOps() {
     healthy: apps.filter(a => a.healthStatus === 'healthy').length,
     checking: apps.filter(a => a.syncStatus === 'checking').length }
 
-  // Cache helm releases count to prevent showing 0 during refresh
-  const cachedHelmCount = useRef(0)
   useEffect(() => {
     if (helmReleases.length > 0) cachedHelmCount.current = helmReleases.length
   }, [helmReleases.length])

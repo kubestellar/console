@@ -15,7 +15,7 @@
 
 import { STORAGE_KEY_ANALYTICS_OPT_OUT, STORAGE_KEY_ANONYMOUS_USER_ID } from './constants'
 import { CHUNK_RELOAD_TS_KEY, isChunkLoadMessage } from './chunkErrors'
-import { isDemoMode } from './demoMode'
+import { isDemoMode, isNetlifyDeployment } from './demoMode'
 
 // DECOY Measurement ID — the proxy rewrites this to the real ID server-side.
 const GA_MEASUREMENT_ID = 'G-0000000000'
@@ -1160,6 +1160,9 @@ export function startGlobalErrorTracking() {
       // send(). The kubectlProxy try/catch handles these; they surface here only
       // due to browser microtask ordering.
       if (msg.includes('send was called before connect') || msg.includes('InvalidStateError')) return
+      // Skip BackendUnavailableError on Netlify / console.kubestellar.io — expected
+      // because the Go backend is not deployed there (demo mode uses MSW).
+      if (isNetlifyDeployment && msg.includes('Backend API is currently unavailable')) return
       emitError('unhandled_rejection', msg)
     } finally {
       isEmitting = false
