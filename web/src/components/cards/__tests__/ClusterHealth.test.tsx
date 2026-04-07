@@ -63,7 +63,7 @@ vi.mock('../../../lib/cards/cardHooks', async (importOriginal) => {
   }
 })
 
-vi.mock('../clusters/utils', () => ({
+vi.mock('../../clusters/utils', () => ({
   isClusterUnreachable: (c: ClusterInfo) => c.reachable === false,
   isClusterTokenExpired: (c: ClusterInfo) => c.errorMessage?.includes('token') ?? false,
   isClusterHealthy: (c: ClusterInfo) => c.healthy === true,
@@ -91,7 +91,7 @@ vi.mock('../../ui/CloudProviderIcon', () => ({
   getProviderLabel: () => 'Other',
 }))
 
-vi.mock('../clusters/ClusterDetailModal', () => ({
+vi.mock('../../clusters/ClusterDetailModal', () => ({
   ClusterDetailModal: ({ clusterName, onClose }: { clusterName: string; onClose: () => void }) => (
     <div data-testid="cluster-detail-modal">
       <span>{clusterName}</span>
@@ -294,8 +294,9 @@ describe('ClusterHealth', () => {
       const clusters = [makeCluster({ nodeCount: 4, podCount: 20 })]
       setupDefaults({ clusters })
       render(<ClusterHealth />)
-      expect(screen.getAllByText('4').length).toBeGreaterThan(0)
-      expect(screen.getAllByText('20').length).toBeGreaterThan(0)
+      // Node and pod counts are rendered inline with translated labels (e.g. "4 nodes")
+      expect(screen.getAllByText(/\b4\b/).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/\b20\b/).length).toBeGreaterThan(0)
     })
 
     it('shows AI actions for unhealthy clusters', () => {
@@ -328,7 +329,8 @@ describe('ClusterHealth', () => {
       render(<ClusterHealth />)
       await userEvent.click(screen.getByText('click-me'))
       expect(screen.getByTestId('cluster-detail-modal')).toBeInTheDocument()
-      expect(screen.getByText('click-me')).toBeInTheDocument()
+      // Cluster name appears both in the list row and in the modal
+      expect(screen.getAllByText('click-me').length).toBeGreaterThanOrEqual(2)
     })
 
     it('closes modal when onClose is called', async () => {

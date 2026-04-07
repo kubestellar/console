@@ -220,9 +220,11 @@ describe('NodeConditions', () => {
       } as never)
       mockExecute.mockResolvedValue(undefined)
       render(<NodeConditions />)
+      // Click the row cordon button to open the confirmation dialog
       await act(async () => fireEvent.click(screen.getByText('nodeConditions.cordon')))
+      // The confirm button in the dialog renders first in DOM, row button second
       const buttons = screen.getAllByText('nodeConditions.cordon')
-      await act(async () => fireEvent.click(buttons[buttons.length - 1]))
+      await act(async () => fireEvent.click(buttons[0]))
       await waitFor(() => expect(mockExecute).toHaveBeenCalledWith('cluster-1', ['cordon', 'node-1']))
     })
 
@@ -234,9 +236,11 @@ describe('NodeConditions', () => {
       } as never)
       mockExecute.mockRejectedValue(new Error('kubectl failed'))
       render(<NodeConditions />)
+      // Click the row cordon button to open the confirmation dialog
       await act(async () => fireEvent.click(screen.getByText('nodeConditions.cordon')))
+      // The confirm button in the dialog renders first in DOM, row button second
       const buttons = screen.getAllByText('nodeConditions.cordon')
-      await act(async () => fireEvent.click(buttons[buttons.length - 1]))
+      await act(async () => fireEvent.click(buttons[0]))
       await waitFor(() => expect(screen.getByText(/kubectl failed/)).toBeTruthy())
     })
   })

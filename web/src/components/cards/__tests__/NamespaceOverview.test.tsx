@@ -130,8 +130,9 @@ describe('NamespaceOverview', () => {
 
     it('populates cluster options from useClusters', () => {
       render(<NamespaceOverview />)
-      expect(screen.getByText('cluster-1')).toBeTruthy()
-      expect(screen.getByText('cluster-2')).toBeTruthy()
+      // Cluster names may appear in both select options and badges
+      expect(screen.getAllByText('cluster-1').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('cluster-2').length).toBeGreaterThan(0)
     })
 
     it('shows select cluster and namespace prompt when neither selected', () => {
@@ -203,7 +204,8 @@ describe('NamespaceOverview', () => {
   describe('Footer', () => {
     it('renders cluster and namespace in footer when both selected', () => {
       render(<NamespaceOverview config={{ cluster: 'cluster-1', namespace: 'default' }} />)
-      expect(screen.getByText('default')).toBeTruthy()
+      // "default" appears in both the select options and the footer
+      expect(screen.getAllByText('default').length).toBeGreaterThan(0)
     })
   })
 })

@@ -138,8 +138,8 @@ describe('ArgoCDApplicationSets', () => {
       } as never)
       render(<ArgoCDApplicationSets />)
       expect(screen.getAllByText('Healthy').length).toBeGreaterThan(0)
-      expect(screen.getByText('Progressing')).toBeTruthy()
-      expect(screen.getByText('Error')).toBeTruthy()
+      expect(screen.getAllByText('Progressing').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('Error').length).toBeGreaterThan(0)
     })
   })
 

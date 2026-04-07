@@ -95,7 +95,7 @@ describe('CardChat', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.useFakeTimers()
+    vi.useFakeTimers({ shouldAdvanceTime: true })
     user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
   })
 
