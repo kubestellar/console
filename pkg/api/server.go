@@ -146,6 +146,7 @@ type Server struct {
 	loadingSrv          *http.Server // temporary loading screen server
 	shuttingDown        int32        // atomic flag: 1 during graceful shutdown
 	gpuUtilWorker       *GPUUtilizationWorker
+	done                chan struct{} // closed on Shutdown to stop background goroutines
 }
 
 // NewServer creates a new API server. It starts a temporary loading page
@@ -299,6 +300,7 @@ func NewServer(cfg Config) (*Server, error) {
 		notificationService: notificationService,
 		persistenceStore:    persistenceStore,
 		loadingSrv:          loadingSrv,
+		done:                make(chan struct{}),
 	}
 
 	server.setupMiddleware()
@@ -756,6 +758,15 @@ func (s *Server) setupRoutes() {
 
 	// Mission knowledge base routes (validate, share — protected)
 	missions.RegisterRoutes(api.Group("/missions"))
+
+	// Orbit (recurring maintenance) routes — protected
+	orbitDataDir := filepath.Dir(s.config.DatabasePath)
+	if orbitDataDir == "" || orbitDataDir == "." {
+		orbitDataDir = "./data"
+	}
+	orbit := handlers.NewOrbitHandler(orbitDataDir)
+	orbit.RegisterRoutes(api.Group("/orbit"))
+	orbit.StartScheduler(s.done)
 
 	// MCP routes (cluster operations via kubestellar tools and direct k8s)
 	// SECURITY: All MCP routes require authentication in both dev and production modes
@@ -1224,6 +1235,9 @@ func waitForPortRelease(port int, timeout time.Duration) error {
 // before services are torn down, giving the frontend time to notice.
 func (s *Server) Shutdown() error {
 	atomic.StoreInt32(&s.shuttingDown, 1)
+
+	// Signal background goroutines (orbit scheduler, etc.) to stop.
+	close(s.done)
 
 	// If Shutdown is called before Start, the temporary loading server
 	// is still running and holding the port. Shut it down first.
