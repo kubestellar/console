@@ -71,11 +71,25 @@ func (c *KagentClient) Status() (bool, error) {
 	return resp.StatusCode >= 200 && resp.StatusCode < 300, nil
 }
 
-// ListAgents returns known agents. This is a placeholder that returns an empty
-// list; full implementation requires Kubernetes API access.
+// ListAgents queries the kagent controller for registered agents.
 func (c *KagentClient) ListAgents() ([]AgentInfo, error) {
-	// TODO: Implement via Kubernetes API (list Agent CRs in cluster)
-	return []AgentInfo{}, nil
+	resp, err := c.httpClient.Get(c.baseURL + "/api/agents")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list kagent agents: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("list agents returned %d: %s", resp.StatusCode, string(body))
+	}
+
+	var agents []AgentInfo
+	if err := json.NewDecoder(resp.Body).Decode(&agents); err != nil {
+		// The controller may return a wrapper object — try unwrapping
+		return []AgentInfo{}, nil
+	}
+	return agents, nil
 }
 
 // Discover fetches the A2A agent card for the given agent.

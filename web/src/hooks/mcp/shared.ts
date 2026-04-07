@@ -39,6 +39,20 @@ export const MIN_REFRESH_INDICATOR_MS = 500
 // Re-export for backward compatibility
 export const LOCAL_AGENT_URL = LOCAL_AGENT_HTTP_URL
 
+/**
+ * Drop-in replacement for `fetch()` that auto-injects the KC_AGENT_TOKEN
+ * Authorization header when calling the kc-agent HTTP API. Without this,
+ * requests to kc-agent are rejected when KC_AGENT_TOKEN is configured.
+ */
+export function agentFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const headers = new Headers(init?.headers)
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+  return fetch(input, { ...init, headers })
+}
+
 // ============================================================================
 // Shared Cluster State - ensures all useClusters() consumers see the same data
 // ============================================================================
@@ -790,7 +804,7 @@ async function fetchClusterListFromAgent(): Promise<ClusterInfo[] | null> {
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), MCP_PROBE_TIMEOUT_MS)
-    const response = await fetch(`${LOCAL_AGENT_URL}/clusters`, {
+    const response = await agentFetch(`${LOCAL_AGENT_URL}/clusters`, {
       signal: controller.signal,
     })
     clearTimeout(timeoutId)
@@ -862,7 +876,7 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
       const context = kubectlContext || clusterName
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
-      const response = await fetch(`${LOCAL_AGENT_URL}/cluster-health?cluster=${encodeURIComponent(context)}`, {
+      const response = await agentFetch(`${LOCAL_AGENT_URL}/cluster-health?cluster=${encodeURIComponent(context)}`, {
         signal: controller.signal,
         headers: { 'Accept': 'application/json' },
       })

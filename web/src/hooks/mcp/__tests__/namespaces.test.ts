@@ -51,6 +51,7 @@ vi.mock('../../../lib/kubectlProxy', () => ({
 
 vi.mock('../shared', () => ({
   LOCAL_AGENT_URL: 'http://localhost:8585',
+  agentFetch: (...args: unknown[]) => fetch(...(args as Parameters<typeof fetch>)),
   clusterCacheRef: mockClusterCacheRef,
 }))
 

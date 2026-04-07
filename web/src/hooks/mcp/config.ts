@@ -6,7 +6,7 @@ import { isDemoMode } from '../../lib/demoMode'
 import { useDemoMode } from '../useDemoMode'
 import { registerRefetch } from '../../lib/modeTransition'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
-import { LOCAL_AGENT_URL } from './shared'
+import { LOCAL_AGENT_URL, agentFetch } from './shared'
 import { MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
 import type { ConfigMap, Secret, ServiceAccount } from './types'
 
@@ -33,7 +33,7 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
-        const response = await fetch(`${LOCAL_AGENT_URL}/configmaps?${params}`, {
+        const response = await agentFetch(`${LOCAL_AGENT_URL}/configmaps?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
         })
@@ -136,7 +136,7 @@ export function useSecrets(cluster?: string, namespace?: string) {
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
-        const response = await fetch(`${LOCAL_AGENT_URL}/secrets?${params}`, {
+        const response = await agentFetch(`${LOCAL_AGENT_URL}/secrets?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
         })
@@ -239,7 +239,7 @@ export function useServiceAccounts(cluster?: string, namespace?: string) {
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
-        const response = await fetch(`${LOCAL_AGENT_URL}/serviceaccounts?${params}`, {
+        const response = await agentFetch(`${LOCAL_AGENT_URL}/serviceaccounts?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
         })

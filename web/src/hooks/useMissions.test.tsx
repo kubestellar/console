@@ -804,11 +804,11 @@ describe('demo mode', () => {
     expect(MockWebSocket.lastInstance).toBeNull()
   })
 
-  it('returns empty missions initially when localStorage has no data', () => {
+  it('returns pre-populated demo missions when localStorage has no data', () => {
     vi.mocked(getDemoMode).mockReturnValue(true)
     const { result } = renderHook(() => useMissions(), { wrapper })
-    // No missions are in localStorage — provider starts with []
-    expect(result.current.missions).toHaveLength(0)
+    // Demo mode seeds with pre-populated missions so the feature is visible
+    expect(result.current.missions.length).toBeGreaterThan(0)
   })
 
   it('startMission in demo mode transitions mission to failed (no agent)', async () => {

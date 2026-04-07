@@ -414,19 +414,19 @@ func (h *FeedbackHandler) CheckPreviewStatus(c *fiber.Ctx) error {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return c.JSON(fiber.Map{"status": "error", "message": "Failed to reach GitHub API"})
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"status": "error", "message": "Failed to reach GitHub API"})
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return c.JSON(fiber.Map{"status": "error", "message": fmt.Sprintf("GitHub API returned %d", resp.StatusCode)})
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"status": "error", "message": fmt.Sprintf("GitHub API returned %d", resp.StatusCode)})
 	}
 
 	var deployments []struct {
 		ID int `json:"id"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&deployments); err != nil {
-		return c.JSON(fiber.Map{"status": "error", "message": "Failed to parse deployments"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to parse deployments"})
 	}
 
 	if len(deployments) == 0 {
@@ -446,12 +446,12 @@ func (h *FeedbackHandler) CheckPreviewStatus(c *fiber.Ctx) error {
 
 	resp2, err := client.Do(req2)
 	if err != nil {
-		return c.JSON(fiber.Map{"status": "error", "message": "Failed to fetch deployment status"})
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"status": "error", "message": "Failed to fetch deployment status"})
 	}
 	defer resp2.Body.Close()
 
 	if resp2.StatusCode != http.StatusOK {
-		return c.JSON(fiber.Map{"status": "error", "message": fmt.Sprintf("GitHub status API returned %d", resp2.StatusCode)})
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"status": "error", "message": fmt.Sprintf("GitHub status API returned %d", resp2.StatusCode)})
 	}
 
 	var statuses []struct {
@@ -460,7 +460,7 @@ func (h *FeedbackHandler) CheckPreviewStatus(c *fiber.Ctx) error {
 		CreatedAt string `json:"created_at"`
 	}
 	if err := json.NewDecoder(resp2.Body).Decode(&statuses); err != nil {
-		return c.JSON(fiber.Map{"status": "error", "message": "Failed to parse deployment statuses"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to parse deployment statuses"})
 	}
 
 	if len(statuses) == 0 {

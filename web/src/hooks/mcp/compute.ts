@@ -6,7 +6,7 @@ import { isDemoMode } from '../../lib/demoMode'
 import { useDemoMode } from '../useDemoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
-import { GPU_POLL_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
+import { GPU_POLL_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, agentFetch, clusterCacheRef } from './shared'
 import { subscribePolling } from './pollingManager'
 import { MCP_EXTENDED_TIMEOUT_MS, MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
 import type { GPUNode, NodeInfo, NVIDIAOperatorStatus } from './types'
@@ -148,7 +148,7 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
       try {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), MCP_EXTENDED_TIMEOUT_MS)
-        const response = await fetch(`${LOCAL_AGENT_URL}/gpu-nodes?${params}`, {
+        const response = await agentFetch(`${LOCAL_AGENT_URL}/gpu-nodes?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
         })
@@ -450,7 +450,7 @@ export function useNodes(cluster?: string) {
       try {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
-        const response = await fetch(`${LOCAL_AGENT_URL}/nodes?cluster=${encodeURIComponent(cluster)}`, {
+        const response = await agentFetch(`${LOCAL_AGENT_URL}/nodes?cluster=${encodeURIComponent(cluster)}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
         })

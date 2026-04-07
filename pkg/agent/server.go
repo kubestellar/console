@@ -173,6 +173,8 @@ func NewServer(cfg Config) (*Server, error) {
 	agentToken := os.Getenv("KC_AGENT_TOKEN")
 	if agentToken != "" {
 		slog.Info("Agent token authentication enabled")
+	} else {
+		slog.Warn("KC_AGENT_TOKEN is not set — all requests will be accepted without authentication. Set KC_AGENT_TOKEN to enable token validation.")
 	}
 
 	now := time.Now()

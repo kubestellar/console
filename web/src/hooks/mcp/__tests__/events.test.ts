@@ -58,6 +58,7 @@ vi.mock('../shared', () => ({
   MIN_REFRESH_INDICATOR_MS: 500,
   getEffectiveInterval: (ms: number) => ms,
   LOCAL_AGENT_URL: 'http://localhost:8585',
+  agentFetch: (...args: unknown[]) => fetch(...(args as Parameters<typeof fetch>)),
 }))
 
 vi.mock('../../../lib/constants/network', async (importOriginal) => {

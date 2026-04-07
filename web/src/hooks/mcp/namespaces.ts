@@ -3,7 +3,7 @@ import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { isDemoMode } from '../../lib/demoMode'
-import { LOCAL_AGENT_URL, clusterCacheRef } from './shared'
+import { LOCAL_AGENT_URL, agentFetch, clusterCacheRef } from './shared'
 import type { PodInfo, NamespaceStats } from './types'
 
 // Large clusters (100+ namespaces) can take 30s+ to list all namespaces.
@@ -60,7 +60,7 @@ export function useNamespaces(cluster?: string, forceLive = false) {
       try {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), NAMESPACE_FETCH_TIMEOUT_MS)
-        const response = await fetch(`${LOCAL_AGENT_URL}/namespaces?cluster=${encodeURIComponent(cluster)}`, {
+        const response = await agentFetch(`${LOCAL_AGENT_URL}/namespaces?cluster=${encodeURIComponent(cluster)}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
         })

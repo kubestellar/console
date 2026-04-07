@@ -6,7 +6,7 @@ import { useDemoMode } from '../useDemoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
-import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
+import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, agentFetch, clusterCacheRef } from './shared'
 import { subscribePolling } from './pollingManager'
 import { MCP_HOOK_TIMEOUT_MS, DEPLOY_ABORT_TIMEOUT_MS } from '../../lib/constants/network'
 import type { Service, Ingress, NetworkPolicy } from './types'
@@ -165,7 +165,7 @@ export function useServices(cluster?: string, namespace?: string) {
         if (namespace) agentParams.append('namespace', namespace)
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
-        const response = await fetch(`${LOCAL_AGENT_URL}/services?${agentParams}`, {
+        const response = await agentFetch(`${LOCAL_AGENT_URL}/services?${agentParams}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
         })
@@ -362,7 +362,7 @@ export function useIngresses(cluster?: string, namespace?: string) {
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
-        const response = await fetch(`${LOCAL_AGENT_URL}/ingresses?${params}`, {
+        const response = await agentFetch(`${LOCAL_AGENT_URL}/ingresses?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
         })
@@ -443,7 +443,7 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
-        const response = await fetch(`${LOCAL_AGENT_URL}/networkpolicies?${params}`, {
+        const response = await agentFetch(`${LOCAL_AGENT_URL}/networkpolicies?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
         })

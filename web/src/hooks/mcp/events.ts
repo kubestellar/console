@@ -5,7 +5,7 @@ import { isDemoMode } from '../../lib/demoMode'
 import { useDemoMode } from '../useDemoMode'
 import { registerRefetch } from '../../lib/modeTransition'
 import { registerCacheReset } from '../../lib/modeTransition'
-import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL } from './shared'
+import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, agentFetch } from './shared'
 import { subscribePolling } from './pollingManager'
 import { MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
 import type { ClusterEvent } from './types'
@@ -116,7 +116,7 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
         params.append('limit', limit.toString())
 
         const timeoutId = setTimeout(() => abortControllerRef.current?.abort(), MCP_HOOK_TIMEOUT_MS)
-        const response = await fetch(`${LOCAL_AGENT_URL}/events?${params}`, {
+        const response = await agentFetch(`${LOCAL_AGENT_URL}/events?${params}`, {
           signal,
           headers: { 'Accept': 'application/json' },
         })

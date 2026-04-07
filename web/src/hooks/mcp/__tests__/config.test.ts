@@ -53,6 +53,7 @@ vi.mock('../../../lib/modeTransition', () => ({
 
 vi.mock('../shared', () => ({
   LOCAL_AGENT_URL: 'http://localhost:8585',
+  agentFetch: (...args: unknown[]) => fetch(...(args as Parameters<typeof fetch>)),
 }))
 
 vi.mock('../../../lib/constants/network', async (importOriginal) => {
