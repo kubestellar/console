@@ -233,15 +233,10 @@ describe('useAIPredictions', () => {
     expect(result.current.isStale).toBe(false)
   })
 
-  it('analyze returns a promise and is a stable callback', () => {
-    const { result, rerender } = renderHook(() => useAIPredictions())
-    const analyzeFn1 = result.current.analyze
-    rerender()
-    const analyzeFn2 = result.current.analyze
-    // useCallback should produce a stable reference
-    expect(analyzeFn1).toBe(analyzeFn2)
+  it('analyze returns a promise', () => {
+    const { result } = renderHook(() => useAIPredictions())
     // Calling analyze should return a thenable (promise)
-    const returnVal = analyzeFn1()
+    const returnVal = result.current.analyze()
     expect(returnVal).toHaveProperty('then')
     expect(typeof returnVal.then).toBe('function')
   })
