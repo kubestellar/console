@@ -132,6 +132,8 @@ interface SaveMissionParams {
   steps?: Array<{ title: string; description: string }>
   tags?: string[]
   initialPrompt: string
+  /** Optional context (e.g. orbitConfig) stored on the mission */
+  context?: Record<string, unknown>
 }
 
 /** Fields that can be updated on a saved (not-yet-run) mission */
@@ -1420,6 +1422,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       messages: [],
       createdAt: new Date(),
       updatedAt: new Date(),
+      context: params.context,
       importedFrom: {
         title: params.title,
         description: params.description,

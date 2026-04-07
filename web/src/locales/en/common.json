@@ -1748,7 +1748,17 @@
     "cardRequest": "No monitoring card for {{project}} yet",
     "cardRequestAction": "Request Card",
     "reminderTitle": "Orbital maintenance due",
-    "reminderDismiss": "Dismiss"
+    "reminderDismiss": "Dismiss",
+    "standaloneTitle": "New Orbit Mission",
+    "standaloneSelectType": "Select orbit type",
+    "standaloneCadence": "Cadence",
+    "standaloneTargetClusters": "Target clusters",
+    "standaloneClustersLoading": "Loading clusters...",
+    "standaloneNoClusters": "No clusters available",
+    "standaloneSelectAll": "Select all",
+    "standaloneDeselectAll": "Deselect all",
+    "standaloneCreate": "Create Orbit",
+    "addOrbit": "Add Orbit"
   },
   "update": {
     "available": "Update Available",

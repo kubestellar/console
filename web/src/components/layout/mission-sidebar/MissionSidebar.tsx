@@ -22,7 +22,8 @@ import {
   ShieldOff,
   BookOpen,
   Rocket,
-  Search } from 'lucide-react'
+  Search,
+  Satellite } from 'lucide-react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { useMissions } from '../../../hooks/useMissions'
 import { useMobile } from '../../../hooks/useMobile'
@@ -40,6 +41,7 @@ import type { Mission } from '../../../hooks/useMissions'
 import type { FontSize } from './types'
 import { MissionListItem } from './MissionListItem'
 import { OrbitReminderBanner } from '../../missions/OrbitReminderBanner'
+import { StandaloneOrbitDialog } from '../../missions/StandaloneOrbitDialog'
 import { MissionChat } from './MissionChat'
 import { ClusterSelectionDialog } from '../../missions/ClusterSelectionDialog'
 import { ResolutionKnowledgePanel } from '../../missions/ResolutionKnowledgePanel'
@@ -149,6 +151,7 @@ export function MissionSidebar() {
   const [showNewMission, setShowNewMission] = useState(false)
   const [showBrowser, setShowBrowser] = useState(false)
   const [showMissionControl, setShowMissionControl] = useState(false)
+  const [showOrbitDialog, setShowOrbitDialog] = useState(false)
   const [newMissionPrompt, setNewMissionPrompt] = useState('')
   const [showSavedToast, setShowSavedToast] = useState<string | null>(null)
   /** Countdown seconds remaining for the saved-mission toast */
@@ -977,6 +980,18 @@ export function MissionSidebar() {
             </div>
           )}
 
+          {/* Add Orbit button — always visible above saved missions */}
+          <div className="mb-2 px-2">
+            <button
+              onClick={() => setShowOrbitDialog(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-400 border border-purple-500/30 rounded-lg hover:bg-purple-500/10 transition-colors w-full justify-center"
+              title={t('orbit.addOrbit')}
+            >
+              <Satellite className="w-3.5 h-3.5" />
+              {t('orbit.addOrbit')}
+            </button>
+          </div>
+
           {/* Saved missions section */}
           {savedMissions.length > 0 && (
             <div className="mb-3">
@@ -1165,6 +1180,11 @@ export function MissionSidebar() {
         open={showMissionControl}
         onClose={() => setShowMissionControl(false)}
       />
+
+      {/* Standalone Orbit Mission Dialog */}
+      {showOrbitDialog && (
+        <StandaloneOrbitDialog onClose={() => setShowOrbitDialog(false)} />
+      )}
 
       {/* Cluster Selection Dialog for install missions */}
       {pendingRunMissionId && (
