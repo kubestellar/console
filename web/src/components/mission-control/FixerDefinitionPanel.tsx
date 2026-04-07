@@ -941,7 +941,7 @@ function TargetClusterSelector({
   const isAllSelected = selected.length === 0 || selected.length === clusters.length
 
   return (
-    <div ref={ref} className="relative z-10">
+    <div ref={ref} className="relative z-20">
       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
         Target Clusters
       </label>
