@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { ChevronRight, Plus, Rocket } from 'lucide-react'
 import { useDeploymentIssues, usePodIssues, useClusters, useDeployments } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -14,6 +15,7 @@ import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { RotatingTip } from '../ui/RotatingTip'
+import { ROUTES } from '../../config/routes'
 import { useTranslation } from 'react-i18next'
 
 const WORKLOADS_CARDS_KEY = 'kubestellar-workloads-cards'
@@ -32,6 +34,7 @@ interface AppSummary {
 
 export function Workloads() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   // Data fetching
   const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, lastUpdated, refetch: refetchPodIssues } = usePodIssues()
   const { issues: deploymentIssues, isLoading: deploymentIssuesLoading, isRefreshing: deploymentIssuesRefreshing, refetch: refetchDeploymentIssues } = useDeploymentIssues()
@@ -197,7 +200,19 @@ export function Workloads() {
       title="Workloads"
       subtitle="View and manage deployed applications across clusters"
       icon="Layers"
-      rightExtra={<RotatingTip page="workloads" />}
+      rightExtra={
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate(ROUTES.DEPLOY)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors"
+            title={t('workloads.addWorkload', 'Deploy a new workload')}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            {t('workloads.addWorkload', 'Add Workload')}
+          </button>
+          <RotatingTip page="workloads" />
+        </div>
+      }
       storageKey={WORKLOADS_CARDS_KEY}
       defaultCards={DEFAULT_WORKLOAD_CARDS}
       statsType="workloads"
@@ -232,8 +247,15 @@ export function Workloads() {
       ) : apps.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">📦</div>
-          <p className="text-lg text-foreground">No workloads found</p>
-          <p className="text-sm text-muted-foreground">No deployments detected across your clusters</p>
+          <p className="text-lg text-foreground">{t('workloads.noWorkloadsTitle', 'No workloads found')}</p>
+          <p className="text-sm text-muted-foreground mb-6">{t('workloads.noWorkloadsDesc', 'No deployments detected across your clusters')}</p>
+          <button
+            onClick={() => navigate(ROUTES.DEPLOY)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors"
+          >
+            <Rocket className="w-4 h-4" />
+            {t('workloads.deployWorkload', 'Deploy a Workload')}
+          </button>
         </div>
       ) : (
         <div className="space-y-3">
