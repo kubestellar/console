@@ -76,8 +76,16 @@ const (
 	ClusterHealthUnknown     ClusterHealth = "unknown"
 )
 
-// DefaultNamespace is the default namespace for console CRs
-const DefaultNamespace = "kubestellar-console"
+// DefaultNamespace is the default namespace for console CRs.
+// Overridden by POD_NAMESPACE env var when running in-cluster.
+var DefaultNamespace = getDefaultNamespace()
+
+func getDefaultNamespace() string {
+	if ns := os.Getenv("POD_NAMESPACE"); ns != "" {
+		return ns
+	}
+	return "kubestellar-console"
+}
 
 // PersistenceStore manages persistence configuration
 type PersistenceStore struct {

@@ -19,6 +19,14 @@ import (
 	"github.com/kubestellar/console/pkg/settings"
 )
 
+// writeJSON encodes v as JSON to w and logs any encoding error.
+// After headers have been written, the only safe action is to log the failure.
+func writeJSON(w http.ResponseWriter, v interface{}) {
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		slog.Error("[HTTP] failed to encode JSON response", "error", err)
+	}
+}
+
 func (s *Server) handleClustersHTTP(w http.ResponseWriter, r *http.Request) {
 	origin := r.Header.Get("Origin")
 	if s.isAllowedOrigin(origin) {
@@ -42,7 +50,7 @@ func (s *Server) handleClustersHTTP(w http.ResponseWriter, r *http.Request) {
 
 	s.kubectl.Reload()
 	clusters, current := s.kubectl.ListContexts()
-	json.NewEncoder(w).Encode(protocol.ClustersPayload{Clusters: clusters, Current: current})
+	writeJSON(w, protocol.ClustersPayload{Clusters: clusters, Current: current})
 }
 
 // handleGPUNodesHTTP returns GPU nodes across all clusters
@@ -61,7 +69,7 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"nodes": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 
@@ -75,7 +83,7 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		nodes, err := s.k8sClient.GetGPUNodes(ctx, cluster)
 		if err != nil {
 			slog.Info("error fetching nodes", "error", err)
-			json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
+			writeJSON(w,map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
 			return
 		}
 		allNodes = nodes
@@ -84,7 +92,7 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		clusters, err := s.k8sClient.ListClusters(ctx)
 		if err != nil {
 			slog.Info("error fetching nodes", "error", err)
-			json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
+			writeJSON(w,map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
 			return
 		}
 
@@ -112,7 +120,7 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		wg.Wait()
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{"nodes": allNodes, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"nodes": allNodes, "source": "agent"})
 }
 
 // handleNodesHTTP returns nodes for a cluster or all clusters
@@ -131,7 +139,7 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"nodes": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 
@@ -146,7 +154,7 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		nodes, err := s.k8sClient.GetNodes(ctx, cluster)
 		if err != nil {
 			slog.Info("error fetching nodes", "error", err)
-			json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
+			writeJSON(w,map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
 			return
 		}
 		allNodes = nodes
@@ -155,7 +163,7 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		clusters, err := s.k8sClient.ListClusters(ctx)
 		if err != nil {
 			slog.Info("error fetching nodes", "error", err)
-			json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
+			writeJSON(w,map[string]interface{}{"nodes": []interface{}{}, "error": "internal server error"})
 			return
 		}
 
@@ -184,7 +192,7 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		wg.Wait()
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{"nodes": allNodes, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"nodes": allNodes, "source": "agent"})
 }
 
 // handleEventsHTTP returns events for a cluster/namespace/object
@@ -203,7 +211,7 @@ func (s *Server) handleEventsHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"events": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"events": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 
@@ -222,7 +230,7 @@ func (s *Server) handleEventsHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"events": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"events": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 
@@ -233,7 +241,7 @@ func (s *Server) handleEventsHTTP(w http.ResponseWriter, r *http.Request) {
 	events, err := s.k8sClient.GetEvents(ctx, cluster, namespace, limit)
 	if err != nil {
 		slog.Info("error fetching events", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"events": []interface{}{}, "error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"events": []interface{}{}, "error": "internal server error"})
 		return
 	}
 
@@ -248,7 +256,7 @@ func (s *Server) handleEventsHTTP(w http.ResponseWriter, r *http.Request) {
 		events = filtered
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{"events": events, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"events": events, "source": "agent"})
 }
 
 // handleNamespacesHTTP returns namespaces for a cluster
@@ -262,13 +270,13 @@ func (s *Server) handleNamespacesHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"namespaces": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"namespaces": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 
 	cluster := r.URL.Query().Get("cluster")
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"namespaces": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"namespaces": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 
@@ -278,11 +286,11 @@ func (s *Server) handleNamespacesHTTP(w http.ResponseWriter, r *http.Request) {
 	namespaces, err := s.k8sClient.ListNamespacesWithDetails(ctx, cluster)
 	if err != nil {
 		slog.Info("error fetching namespaces", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"namespaces": []interface{}{}, "error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"namespaces": []interface{}{}, "error": "internal server error"})
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{"namespaces": namespaces, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"namespaces": namespaces, "source": "agent"})
 }
 
 // handleDeploymentsHTTP returns deployments for a cluster/namespace
@@ -296,14 +304,14 @@ func (s *Server) handleDeploymentsHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"deployments": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"deployments": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"deployments": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"deployments": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 
@@ -318,11 +326,11 @@ func (s *Server) handleDeploymentsHTTP(w http.ResponseWriter, r *http.Request) {
 	deployments, err := s.k8sClient.GetDeployments(ctx, cluster, namespace)
 	if err != nil {
 		slog.Info("error fetching deployments", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"deployments": []interface{}{}, "error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"deployments": []interface{}{}, "error": "internal server error"})
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{"deployments": deployments, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"deployments": deployments, "source": "agent"})
 }
 
 // handleReplicaSetsHTTP returns replicasets for a cluster/namespace
@@ -334,13 +342,13 @@ func (s *Server) handleReplicaSetsHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"replicasets": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"replicasets": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"replicasets": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"replicasets": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
@@ -348,10 +356,10 @@ func (s *Server) handleReplicaSetsHTTP(w http.ResponseWriter, r *http.Request) {
 	replicasets, err := s.k8sClient.GetReplicaSets(ctx, cluster, namespace)
 	if err != nil {
 		slog.Info("error fetching replicasets", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"replicasets": []interface{}{}, "error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"replicasets": []interface{}{}, "error": "internal server error"})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{"replicasets": replicasets, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"replicasets": replicasets, "source": "agent"})
 }
 
 // handleStatefulSetsHTTP returns statefulsets for a cluster/namespace
@@ -363,13 +371,13 @@ func (s *Server) handleStatefulSetsHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"statefulsets": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"statefulsets": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"statefulsets": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"statefulsets": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
@@ -377,10 +385,10 @@ func (s *Server) handleStatefulSetsHTTP(w http.ResponseWriter, r *http.Request) 
 	statefulsets, err := s.k8sClient.GetStatefulSets(ctx, cluster, namespace)
 	if err != nil {
 		slog.Info("error fetching statefulsets", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"statefulsets": []interface{}{}, "error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"statefulsets": []interface{}{}, "error": "internal server error"})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{"statefulsets": statefulsets, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"statefulsets": statefulsets, "source": "agent"})
 }
 
 // handleDaemonSetsHTTP returns daemonsets for a cluster/namespace
@@ -392,13 +400,13 @@ func (s *Server) handleDaemonSetsHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"daemonsets": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"daemonsets": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"daemonsets": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"daemonsets": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
@@ -406,10 +414,10 @@ func (s *Server) handleDaemonSetsHTTP(w http.ResponseWriter, r *http.Request) {
 	daemonsets, err := s.k8sClient.GetDaemonSets(ctx, cluster, namespace)
 	if err != nil {
 		slog.Info("error fetching daemonsets", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"daemonsets": []interface{}{}, "error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"daemonsets": []interface{}{}, "error": "internal server error"})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{"daemonsets": daemonsets, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"daemonsets": daemonsets, "source": "agent"})
 }
 
 // handleCronJobsHTTP returns cronjobs for a cluster/namespace
@@ -421,13 +429,13 @@ func (s *Server) handleCronJobsHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"cronjobs": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"cronjobs": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"cronjobs": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"cronjobs": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
@@ -435,10 +443,10 @@ func (s *Server) handleCronJobsHTTP(w http.ResponseWriter, r *http.Request) {
 	cronjobs, err := s.k8sClient.GetCronJobs(ctx, cluster, namespace)
 	if err != nil {
 		slog.Info("error fetching cronjobs", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"cronjobs": []interface{}{}, "error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"cronjobs": []interface{}{}, "error": "internal server error"})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{"cronjobs": cronjobs, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"cronjobs": cronjobs, "source": "agent"})
 }
 
 // handleIngressesHTTP returns ingresses for a cluster/namespace
@@ -450,13 +458,13 @@ func (s *Server) handleIngressesHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"ingresses": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"ingresses": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"ingresses": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"ingresses": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
@@ -464,10 +472,10 @@ func (s *Server) handleIngressesHTTP(w http.ResponseWriter, r *http.Request) {
 	ingresses, err := s.k8sClient.GetIngresses(ctx, cluster, namespace)
 	if err != nil {
 		slog.Info("error fetching ingresses", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"ingresses": []interface{}{}, "error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"ingresses": []interface{}{}, "error": "internal server error"})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{"ingresses": ingresses, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"ingresses": ingresses, "source": "agent"})
 }
 
 // handleNetworkPoliciesHTTP returns network policies for a cluster/namespace
@@ -479,13 +487,13 @@ func (s *Server) handleNetworkPoliciesHTTP(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"networkpolicies": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"networkpolicies": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"networkpolicies": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"networkpolicies": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
@@ -493,10 +501,10 @@ func (s *Server) handleNetworkPoliciesHTTP(w http.ResponseWriter, r *http.Reques
 	policies, err := s.k8sClient.GetNetworkPolicies(ctx, cluster, namespace)
 	if err != nil {
 		slog.Info("error fetching networkpolicies", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"networkpolicies": []interface{}{}, "error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"networkpolicies": []interface{}{}, "error": "internal server error"})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{"networkpolicies": policies, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"networkpolicies": policies, "source": "agent"})
 }
 
 // handleServicesHTTP returns services for a cluster/namespace
@@ -508,13 +516,13 @@ func (s *Server) handleServicesHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"services": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"services": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"services": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"services": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
@@ -522,10 +530,10 @@ func (s *Server) handleServicesHTTP(w http.ResponseWriter, r *http.Request) {
 	services, err := s.k8sClient.GetServices(ctx, cluster, namespace)
 	if err != nil {
 		slog.Info("error fetching services", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"services": []interface{}{}, "error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"services": []interface{}{}, "error": "internal server error"})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{"services": services, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"services": services, "source": "agent"})
 }
 
 // handleConfigMapsHTTP returns configmaps for a cluster/namespace
@@ -537,13 +545,13 @@ func (s *Server) handleConfigMapsHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"configmaps": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"configmaps": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"configmaps": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"configmaps": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
@@ -551,10 +559,10 @@ func (s *Server) handleConfigMapsHTTP(w http.ResponseWriter, r *http.Request) {
 	configmaps, err := s.k8sClient.GetConfigMaps(ctx, cluster, namespace)
 	if err != nil {
 		slog.Info("error fetching configmaps", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"configmaps": []interface{}{}, "error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"configmaps": []interface{}{}, "error": "internal server error"})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{"configmaps": configmaps, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"configmaps": configmaps, "source": "agent"})
 }
 
 // handleSecretsHTTP returns secrets for a cluster/namespace
@@ -573,13 +581,13 @@ func (s *Server) handleSecretsHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"secrets": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"secrets": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"secrets": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"secrets": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
@@ -587,10 +595,10 @@ func (s *Server) handleSecretsHTTP(w http.ResponseWriter, r *http.Request) {
 	secrets, err := s.k8sClient.GetSecrets(ctx, cluster, namespace)
 	if err != nil {
 		slog.Info("error fetching secrets", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"secrets": []interface{}{}, "error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"secrets": []interface{}{}, "error": "internal server error"})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{"secrets": secrets, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"secrets": secrets, "source": "agent"})
 }
 
 // handleServiceAccountsHTTP returns service accounts for a cluster/namespace
@@ -602,13 +610,13 @@ func (s *Server) handleServiceAccountsHTTP(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"serviceaccounts": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"serviceaccounts": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"serviceaccounts": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"serviceaccounts": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
@@ -616,10 +624,10 @@ func (s *Server) handleServiceAccountsHTTP(w http.ResponseWriter, r *http.Reques
 	serviceaccounts, err := s.k8sClient.GetServiceAccounts(ctx, cluster, namespace)
 	if err != nil {
 		slog.Info("error fetching serviceaccounts", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"serviceaccounts": []interface{}{}, "error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"serviceaccounts": []interface{}{}, "error": "internal server error"})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{"serviceaccounts": serviceaccounts, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"serviceaccounts": serviceaccounts, "source": "agent"})
 }
 
 // handleJobsHTTP returns jobs for a cluster/namespace
@@ -631,13 +639,13 @@ func (s *Server) handleJobsHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"jobs": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"jobs": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"jobs": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"jobs": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
@@ -645,10 +653,10 @@ func (s *Server) handleJobsHTTP(w http.ResponseWriter, r *http.Request) {
 	jobs, err := s.k8sClient.GetJobs(ctx, cluster, namespace)
 	if err != nil {
 		slog.Info("error fetching jobs", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"jobs": []interface{}{}, "error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"jobs": []interface{}{}, "error": "internal server error"})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{"jobs": jobs, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"jobs": jobs, "source": "agent"})
 }
 
 // handleHPAsHTTP returns HPAs for a cluster/namespace
@@ -660,13 +668,13 @@ func (s *Server) handleHPAsHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"hpas": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"hpas": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"hpas": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"hpas": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
@@ -674,10 +682,10 @@ func (s *Server) handleHPAsHTTP(w http.ResponseWriter, r *http.Request) {
 	hpas, err := s.k8sClient.GetHPAs(ctx, cluster, namespace)
 	if err != nil {
 		slog.Info("error fetching hpas", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"hpas": []interface{}{}, "error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"hpas": []interface{}{}, "error": "internal server error"})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{"hpas": hpas, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"hpas": hpas, "source": "agent"})
 }
 
 // handlePVCsHTTP returns PVCs for a cluster/namespace
@@ -689,13 +697,13 @@ func (s *Server) handlePVCsHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"pvcs": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"pvcs": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"pvcs": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"pvcs": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
@@ -703,10 +711,10 @@ func (s *Server) handlePVCsHTTP(w http.ResponseWriter, r *http.Request) {
 	pvcs, err := s.k8sClient.GetPVCs(ctx, cluster, namespace)
 	if err != nil {
 		slog.Info("error fetching pvcs", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"pvcs": []interface{}{}, "error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"pvcs": []interface{}{}, "error": "internal server error"})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{"pvcs": pvcs, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"pvcs": pvcs, "source": "agent"})
 }
 
 // handleRolesHTTP returns Roles for a cluster/namespace
@@ -718,13 +726,13 @@ func (s *Server) handleRolesHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"roles": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"roles": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"roles": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"roles": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
@@ -732,10 +740,10 @@ func (s *Server) handleRolesHTTP(w http.ResponseWriter, r *http.Request) {
 	roles, err := s.k8sClient.ListRoles(ctx, cluster, namespace)
 	if err != nil {
 		slog.Info("error fetching roles", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"roles": []interface{}{}, "error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"roles": []interface{}{}, "error": "internal server error"})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{"roles": roles, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"roles": roles, "source": "agent"})
 }
 
 // handleRoleBindingsHTTP returns RoleBindings for a cluster/namespace
@@ -747,13 +755,13 @@ func (s *Server) handleRoleBindingsHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"rolebindings": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"rolebindings": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"rolebindings": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"rolebindings": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
@@ -761,10 +769,10 @@ func (s *Server) handleRoleBindingsHTTP(w http.ResponseWriter, r *http.Request) 
 	bindings, err := s.k8sClient.ListRoleBindings(ctx, cluster, namespace)
 	if err != nil {
 		slog.Info("error fetching rolebindings", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"rolebindings": []interface{}{}, "error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"rolebindings": []interface{}{}, "error": "internal server error"})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{"rolebindings": bindings, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"rolebindings": bindings, "source": "agent"})
 }
 
 // handleResourceQuotasHTTP returns ResourceQuotas for a cluster/namespace
@@ -776,13 +784,13 @@ func (s *Server) handleResourceQuotasHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"resourcequotas": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"resourcequotas": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"resourcequotas": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"resourcequotas": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
@@ -790,10 +798,10 @@ func (s *Server) handleResourceQuotasHTTP(w http.ResponseWriter, r *http.Request
 	quotas, err := s.k8sClient.GetResourceQuotas(ctx, cluster, namespace)
 	if err != nil {
 		slog.Info("error fetching resourcequotas", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"resourcequotas": []interface{}{}, "error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"resourcequotas": []interface{}{}, "error": "internal server error"})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{"resourcequotas": quotas, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"resourcequotas": quotas, "source": "agent"})
 }
 
 // handleLimitRangesHTTP returns LimitRanges for a cluster/namespace
@@ -805,13 +813,13 @@ func (s *Server) handleLimitRangesHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"limitranges": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"limitranges": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"limitranges": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"limitranges": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
@@ -819,10 +827,10 @@ func (s *Server) handleLimitRangesHTTP(w http.ResponseWriter, r *http.Request) {
 	ranges, err := s.k8sClient.GetLimitRanges(ctx, cluster, namespace)
 	if err != nil {
 		slog.Info("error fetching limitranges", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"limitranges": []interface{}{}, "error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"limitranges": []interface{}{}, "error": "internal server error"})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{"limitranges": ranges, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"limitranges": ranges, "source": "agent"})
 }
 
 // handleResolveDepsHTTP resolves workload dependencies dynamically by walking
@@ -835,7 +843,7 @@ func (s *Server) handleResolveDepsHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(w,map[string]interface{}{
 			"dependencies": []interface{}{},
 			"error":        "k8s client not initialized",
 		})
@@ -845,7 +853,7 @@ func (s *Server) handleResolveDepsHTTP(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
 	name := r.URL.Query().Get("name")
 	if cluster == "" || namespace == "" || name == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(w,map[string]interface{}{
 			"dependencies": []interface{}{},
 			"error":        "cluster, namespace, and name parameters required",
 		})
@@ -858,7 +866,7 @@ func (s *Server) handleResolveDepsHTTP(w http.ResponseWriter, r *http.Request) {
 	kind, bundle, err := s.k8sClient.ResolveWorkloadDependencies(ctx, cluster, namespace, name)
 	if err != nil {
 		slog.Info("error resolving dependencies", "namespace", namespace, "name", name, "cluster", cluster, "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(w,map[string]interface{}{
 			"workload":     name,
 			"kind":         "Deployment",
 			"namespace":    namespace,
@@ -881,7 +889,7 @@ func (s *Server) handleResolveDepsHTTP(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w,map[string]interface{}{
 		"workload":     name,
 		"kind":         kind,
 		"namespace":    namespace,
@@ -906,14 +914,14 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 	// SECURITY: Require auth — scaling is a mutating operation (#4150).
 	if !s.validateToken(r) {
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{"error": "unauthorized"})
+		writeJSON(w,map[string]string{"error": "unauthorized"})
 		return
 	}
 
 	// SECURITY: Only allow POST — GET mutations enable CSRF (#4150).
 	if r.Method != "POST" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(w,map[string]interface{}{
 			"success": false,
 			"error":   "POST required",
 		})
@@ -921,7 +929,7 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(w,map[string]interface{}{
 			"success": false,
 			"error":   "k8s client not initialized",
 		})
@@ -936,7 +944,7 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(w,map[string]interface{}{
 			"success": false,
 			"error":   "invalid request body",
 		})
@@ -953,7 +961,7 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if replicas < 0 {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(w,map[string]interface{}{
 			"success": false,
 			"error":   "replicas must be a non-negative integer",
 		})
@@ -961,7 +969,7 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if cluster == "" || namespace == "" || name == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(w,map[string]interface{}{
 			"success": false,
 			"error":   "cluster, namespace, and name are required",
 		})
@@ -974,7 +982,7 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 	result, err := s.k8sClient.ScaleWorkload(ctx, namespace, name, []string{cluster}, replicas)
 	if err != nil {
 		slog.Info("error scaling resource", "namespace", namespace, "name", name, "cluster", cluster, "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(w,map[string]interface{}{
 			"success": false,
 			"error":   err.Error(),
 			"source":  "agent",
@@ -982,7 +990,7 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w,map[string]interface{}{
 		"success":        result.Success,
 		"message":        result.Message,
 		"deployedTo":     result.DeployedTo,
@@ -1007,14 +1015,14 @@ func (s *Server) handlePodsHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"pods": []interface{}{}, "error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"pods": []interface{}{}, "error": "k8s client not initialized"})
 		return
 	}
 
 	cluster := r.URL.Query().Get("cluster")
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"pods": []interface{}{}, "error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"pods": []interface{}{}, "error": "cluster parameter required"})
 		return
 	}
 
@@ -1024,11 +1032,11 @@ func (s *Server) handlePodsHTTP(w http.ResponseWriter, r *http.Request) {
 	pods, err := s.k8sClient.GetPods(ctx, cluster, namespace)
 	if err != nil {
 		slog.Info("error fetching pods", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"pods": []interface{}{}, "error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"pods": []interface{}{}, "error": "internal server error"})
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{"pods": pods, "source": "agent"})
+	writeJSON(w,map[string]interface{}{"pods": pods, "source": "agent"})
 }
 
 // handleClusterHealthHTTP returns health info for a cluster
@@ -1047,13 +1055,13 @@ func (s *Server) handleClusterHealthHTTP(w http.ResponseWriter, r *http.Request)
 	}
 
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"error": "k8s client not initialized"})
+		writeJSON(w,map[string]interface{}{"error": "k8s client not initialized"})
 		return
 	}
 
 	cluster := r.URL.Query().Get("cluster")
 	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"error": "cluster parameter required"})
+		writeJSON(w,map[string]interface{}{"error": "cluster parameter required"})
 		return
 	}
 
@@ -1066,11 +1074,11 @@ func (s *Server) handleClusterHealthHTTP(w http.ResponseWriter, r *http.Request)
 	health, err := s.k8sClient.GetClusterHealth(ctx, cluster)
 	if err != nil {
 		slog.Error("request error", "error", err)
-		json.NewEncoder(w).Encode(map[string]interface{}{"error": "internal server error"})
+		writeJSON(w,map[string]interface{}{"error": "internal server error"})
 		return
 	}
 
-	json.NewEncoder(w).Encode(health)
+	writeJSON(w,health)
 }
 
 // setCORSHeaders sets common CORS headers for HTTP endpoints
@@ -1107,7 +1115,7 @@ func (s *Server) handleRestartBackend(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != "POST" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(map[string]string{"error": "POST required"})
+		writeJSON(w,map[string]string{"error": "POST required"})
 		return
 	}
 
@@ -1119,7 +1127,7 @@ func (s *Server) handleRestartBackend(w http.ResponseWriter, r *http.Request) {
 	if err := s.startBackendProcess(); err != nil {
 		slog.Error("[RestartBackend] failed to start backend", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(w,map[string]interface{}{
 			"success": false,
 			"message": "operation failed",
 		})
@@ -1131,7 +1139,7 @@ func (s *Server) handleRestartBackend(w http.ResponseWriter, r *http.Request) {
 	healthy := s.checkBackendHealth()
 
 	slog.Info("[RestartBackend] backend restarted", "killed", killed, "healthy", healthy)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w,map[string]interface{}{
 		"success": true,
 		"killed":  killed,
 		"healthy": healthy,
@@ -1224,7 +1232,7 @@ func (s *Server) handleAutoUpdateConfig(w http.ResponseWriter, r *http.Request) 
 
 	if !s.validateToken(r) {
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{"error": "unauthorized"})
+		writeJSON(w,map[string]string{"error": "unauthorized"})
 		return
 	}
 
@@ -1240,7 +1248,7 @@ func (s *Server) handleAutoUpdateConfig(w http.ResponseWriter, r *http.Request) 
 				channel = all.AutoUpdateChannel
 			}
 		}
-		json.NewEncoder(w).Encode(AutoUpdateConfigRequest{
+		writeJSON(w,AutoUpdateConfigRequest{
 			Enabled: enabled,
 			Channel: channel,
 		})
@@ -1249,7 +1257,7 @@ func (s *Server) handleAutoUpdateConfig(w http.ResponseWriter, r *http.Request) 
 		var req AutoUpdateConfigRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{"error": "invalid request body"})
+			writeJSON(w,map[string]string{"error": "invalid request body"})
 			return
 		}
 
@@ -1259,7 +1267,7 @@ func (s *Server) handleAutoUpdateConfig(w http.ResponseWriter, r *http.Request) 
 			// ok
 		default:
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{"error": "invalid channel"})
+			writeJSON(w,map[string]string{"error": "invalid channel"})
 			return
 		}
 
@@ -1276,7 +1284,7 @@ func (s *Server) handleAutoUpdateConfig(w http.ResponseWriter, r *http.Request) 
 			s.updateChecker.Configure(req.Enabled, req.Channel)
 		}
 
-		json.NewEncoder(w).Encode(map[string]interface{}{"success": true})
+		writeJSON(w,map[string]interface{}{"success": true})
 
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -1300,11 +1308,11 @@ func (s *Server) handleAutoUpdateStatus(w http.ResponseWriter, r *http.Request) 
 
 	if s.updateChecker == nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(map[string]string{"error": "update checker not initialized"})
+		writeJSON(w,map[string]string{"error": "update checker not initialized"})
 		return
 	}
 
-	json.NewEncoder(w).Encode(s.updateChecker.Status())
+	writeJSON(w,s.updateChecker.Status())
 }
 
 // handleAutoUpdateTrigger triggers an immediate update check.
@@ -1325,13 +1333,13 @@ func (s *Server) handleAutoUpdateTrigger(w http.ResponseWriter, r *http.Request)
 
 	if !s.validateToken(r) {
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{"error": "unauthorized"})
+		writeJSON(w,map[string]string{"error": "unauthorized"})
 		return
 	}
 
 	if s.updateChecker == nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(map[string]string{"error": "update checker not initialized"})
+		writeJSON(w,map[string]string{"error": "update checker not initialized"})
 		return
 	}
 
@@ -1343,16 +1351,16 @@ func (s *Server) handleAutoUpdateTrigger(w http.ResponseWriter, r *http.Request)
 	if r.Body != nil {
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil && err != io.EOF {
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{"error": "invalid JSON body"})
+			writeJSON(w,map[string]string{"error": "invalid JSON body"})
 			return
 		}
 	}
 	if !s.updateChecker.TriggerNow(body.Channel) {
 		w.WriteHeader(http.StatusConflict)
-		json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "update already in progress"})
+		writeJSON(w,map[string]interface{}{"success": false, "error": "update already in progress"})
 		return
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "message": "update check triggered"})
+	writeJSON(w,map[string]interface{}{"success": true, "message": "update check triggered"})
 }
 
 // handleRenameContextHTTP renames a kubeconfig context
@@ -1379,32 +1387,32 @@ func (s *Server) handleRenameContextHTTP(w http.ResponseWriter, r *http.Request)
 
 	if r.Method != "POST" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "method_not_allowed", Message: "POST required"})
+		writeJSON(w,protocol.ErrorPayload{Code: "method_not_allowed", Message: "POST required"})
 		return
 	}
 
 	var req protocol.RenameContextRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_request", Message: "Invalid JSON"})
+		writeJSON(w,protocol.ErrorPayload{Code: "invalid_request", Message: "Invalid JSON"})
 		return
 	}
 
 	if req.OldName == "" || req.NewName == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_names", Message: "Both oldName and newName required"})
+		writeJSON(w,protocol.ErrorPayload{Code: "invalid_names", Message: "Both oldName and newName required"})
 		return
 	}
 
 	if err := s.kubectl.RenameContext(req.OldName, req.NewName); err != nil {
 		slog.Error("rename context error", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "rename_failed", Message: "failed to rename context"})
+		writeJSON(w,protocol.ErrorPayload{Code: "rename_failed", Message: "failed to rename context"})
 		return
 	}
 
 	slog.Info("renamed context", "from", req.OldName, "to", req.NewName)
-	json.NewEncoder(w).Encode(protocol.RenameContextResponse{Success: true, OldName: req.OldName, NewName: req.NewName})
+	writeJSON(w,protocol.RenameContextResponse{Success: true, OldName: req.OldName, NewName: req.NewName})
 }
 
 // kubeconfigImportRequest is the JSON body for kubeconfig import/preview
@@ -1448,20 +1456,20 @@ func (s *Server) handleKubeconfigPreviewHTTP(w http.ResponseWriter, r *http.Requ
 
 	if r.Method != "POST" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "method_not_allowed", Message: "POST required"})
+		writeJSON(w,protocol.ErrorPayload{Code: "method_not_allowed", Message: "POST required"})
 		return
 	}
 
 	var req kubeconfigImportRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_request", Message: "Invalid JSON"})
+		writeJSON(w,protocol.ErrorPayload{Code: "invalid_request", Message: "Invalid JSON"})
 		return
 	}
 
 	if req.Kubeconfig == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_request", Message: "kubeconfig field is required"})
+		writeJSON(w,protocol.ErrorPayload{Code: "invalid_request", Message: "kubeconfig field is required"})
 		return
 	}
 
@@ -1469,11 +1477,11 @@ func (s *Server) handleKubeconfigPreviewHTTP(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		slog.Error("kubeconfig preview error", "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "preview_failed", Message: "invalid kubeconfig"})
+		writeJSON(w,protocol.ErrorPayload{Code: "preview_failed", Message: err.Error()})
 		return
 	}
 
-	json.NewEncoder(w).Encode(kubeconfigPreviewResponse{Contexts: entries})
+	writeJSON(w,kubeconfigPreviewResponse{Contexts: entries})
 }
 
 // handleKubeconfigImportHTTP merges new contexts from a kubeconfig YAML into the local kubeconfig
@@ -1499,20 +1507,20 @@ func (s *Server) handleKubeconfigImportHTTP(w http.ResponseWriter, r *http.Reque
 
 	if r.Method != "POST" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "method_not_allowed", Message: "POST required"})
+		writeJSON(w,protocol.ErrorPayload{Code: "method_not_allowed", Message: "POST required"})
 		return
 	}
 
 	var req kubeconfigImportRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_request", Message: "Invalid JSON"})
+		writeJSON(w,protocol.ErrorPayload{Code: "invalid_request", Message: "Invalid JSON"})
 		return
 	}
 
 	if req.Kubeconfig == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_request", Message: "kubeconfig field is required"})
+		writeJSON(w,protocol.ErrorPayload{Code: "invalid_request", Message: "kubeconfig field is required"})
 		return
 	}
 
@@ -1520,12 +1528,12 @@ func (s *Server) handleKubeconfigImportHTTP(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		slog.Error("kubeconfig import error", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(kubeconfigImportResponse{Success: false, Error: "failed to import kubeconfig"})
+		writeJSON(w,kubeconfigImportResponse{Success: false, Error: "failed to import kubeconfig"})
 		return
 	}
 
 	slog.Info("kubeconfig import complete", "added", len(added), "skipped", len(skipped))
-	json.NewEncoder(w).Encode(kubeconfigImportResponse{Success: true, Added: added, Skipped: skipped})
+	writeJSON(w,kubeconfigImportResponse{Success: true, Added: added, Skipped: skipped})
 }
 
 // kubeconfigAddResponse is the response from the add cluster endpoint
@@ -1557,26 +1565,26 @@ func (s *Server) handleKubeconfigAddHTTP(w http.ResponseWriter, r *http.Request)
 
 	if r.Method != "POST" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "method_not_allowed", Message: "POST required"})
+		writeJSON(w,protocol.ErrorPayload{Code: "method_not_allowed", Message: "POST required"})
 		return
 	}
 
 	var req AddClusterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_request", Message: "Invalid JSON"})
+		writeJSON(w,protocol.ErrorPayload{Code: "invalid_request", Message: "Invalid JSON"})
 		return
 	}
 
 	if err := s.kubectl.AddCluster(req); err != nil {
 		slog.Error("add cluster error", "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(kubeconfigAddResponse{Success: false, Error: "failed to add cluster"})
+		writeJSON(w,kubeconfigAddResponse{Success: false, Error: err.Error()})
 		return
 	}
 
 	slog.Info("added cluster via form", "context", req.ContextName, "cluster", req.ClusterName)
-	json.NewEncoder(w).Encode(kubeconfigAddResponse{Success: true})
+	writeJSON(w,kubeconfigAddResponse{Success: true})
 }
 
 // handleKubeconfigTestHTTP tests a connection to a Kubernetes API server
@@ -1602,14 +1610,14 @@ func (s *Server) handleKubeconfigTestHTTP(w http.ResponseWriter, r *http.Request
 
 	if r.Method != "POST" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "method_not_allowed", Message: "POST required"})
+		writeJSON(w,protocol.ErrorPayload{Code: "method_not_allowed", Message: "POST required"})
 		return
 	}
 
 	var req TestConnectionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_request", Message: "Invalid JSON"})
+		writeJSON(w,protocol.ErrorPayload{Code: "invalid_request", Message: "Invalid JSON"})
 		return
 	}
 
@@ -1617,11 +1625,11 @@ func (s *Server) handleKubeconfigTestHTTP(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		slog.Error("test connection error", "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(TestConnectionResult{Reachable: false, Error: "connection test failed"})
+		writeJSON(w,TestConnectionResult{Reachable: false, Error: "connection test failed"})
 		return
 	}
 
-	json.NewEncoder(w).Encode(result)
+	writeJSON(w,result)
 }
 
 // handleWebSocket handles WebSocket connections

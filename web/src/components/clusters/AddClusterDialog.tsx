@@ -199,14 +199,30 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
     }
   }
 
+  // Validate server URL has a valid scheme and host
+  const isValidServerUrl = (urlStr: string): boolean => {
+    try {
+      const parsed = new URL(urlStr)
+      return (parsed.protocol === 'https:' || parsed.protocol === 'http:') && parsed.hostname !== ''
+    } catch {
+      return false
+    }
+  }
+
   const goToConnectStep = (step: ConnectStep) => {
+    // Validate URL before advancing past step 1
+    if (step >= 2 && !isValidServerUrl(serverUrl)) {
+      setConnectError('Server URL must be a valid URL with scheme (e.g. https://api.example.com:6443)')
+      return
+    }
+    setConnectError('')
     if (step === 3) {
       try {
         const url = new URL(serverUrl)
         const host = url.hostname.replace(/\./g, '-')
         if (!contextName) setContextName(host)
         if (!clusterName) setClusterName(host)
-      } catch { /* ignore parse errors */ }
+      } catch { /* fallback: auto-name won't be set, user can type manually */ }
     }
     setConnectStep(step)
   }

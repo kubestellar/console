@@ -532,8 +532,9 @@ func (b *Bridge) parseHealthResult(result *CallToolResult) (*ClusterHealth, erro
 	for _, content := range result.Content {
 		if content.Type == "text" {
 			if err := json.Unmarshal([]byte(content.Text), &health); err != nil {
-				// Parse from text format
-				health.Healthy = true // Default assumption
+				// JSON parse failed — treat as unhealthy rather than false positive
+				health.Healthy = false
+				health.ErrorMessage = fmt.Sprintf("failed to parse health response: %v", err)
 				return &health, nil
 			}
 		}

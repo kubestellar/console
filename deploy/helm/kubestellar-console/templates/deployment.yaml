@@ -45,8 +45,13 @@ spec:
               # Schema-only DBs are <=200KB; anything larger has real data
               MIN_DATA_SIZE=200000
 
+              # get_file_size: portable file size using stat (GNU/BSD) or wc -c fallback
+              get_file_size() {
+                stat -c%s "$1" 2>/dev/null || stat -f%z "$1" 2>/dev/null || wc -c < "$1" 2>/dev/null | tr -d ' ' || echo "0"
+              }
+
               if [ -f "$DB_PATH" ]; then
-                DB_SIZE=$(stat -c%s "$DB_PATH" 2>/dev/null || stat -f%z "$DB_PATH" 2>/dev/null || echo "0")
+                DB_SIZE=$(get_file_size "$DB_PATH")
                 if [ "$DB_SIZE" -gt "$MIN_DATA_SIZE" ]; then
                   echo "Database exists with data (${DB_SIZE} bytes), skipping restore"
                   exit 0
@@ -63,7 +68,7 @@ spec:
                 exit 0
               fi
 
-              BACKUP_SIZE=$(stat -c%s "$LATEST" 2>/dev/null || stat -f%z "$LATEST" 2>/dev/null || echo "0")
+              BACKUP_SIZE=$(get_file_size "$LATEST")
               if [ "$BACKUP_SIZE" -le "$MIN_DATA_SIZE" ]; then
                 echo "Latest backup $LATEST is also empty (${BACKUP_SIZE} bytes), skipping"
                 exit 0
@@ -90,6 +95,18 @@ spec:
             - name: http
               containerPort: 8080
               protocol: TCP
+          {{- if .Values.watchdog.enabled }}
+          # Startup probe gives the watchdog reverse proxy time to initialize
+          # before liveness/readiness probes begin. Without this, the pod may
+          # enter CrashLoopBackOff on slow nodes.
+          startupProbe:
+            httpGet:
+              path: /watchdog/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 12
+          {{- end }}
           livenessProbe:
             httpGet:
               path: {{ if .Values.watchdog.enabled }}/watchdog/health{{ else }}/healthz{{ end }}

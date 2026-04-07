@@ -17,9 +17,12 @@ serviceAccount:
 
 # RBAC configuration
 # When deployed in-cluster without the kc-agent, the console uses
-# its ServiceAccount for read-only cluster access + ResourceQuota CRUD
+# its ServiceAccount for read-only cluster access + ResourceQuota CRUD.
+# Set resourceQuotasReadOnly to true to restrict ResourceQuota permissions
+# to read-only (disables GPU reservation enforcement).
 rbac:
   create: true
+  resourceQuotasReadOnly: false
 
 podAnnotations: {}
 podLabels: {}
@@ -112,8 +115,13 @@ ai:
     criticalThreshold: 95 # Percentage at which to restrict AI features
 
 # JWT configuration
-# A random JWT secret is auto-generated if left empty.
-# To provide your own, set jwt.secret or use an existing Kubernetes secret.
+# A random 64-character JWT secret is auto-generated if both jwt.secret and
+# jwt.existingSecret are left empty. To provide your own, either:
+#   1. Set jwt.secret to a string value, or
+#   2. Set jwt.existingSecret to the name of a pre-existing Kubernetes Secret
+#      (the secret MUST exist in the release namespace before install/upgrade).
+# WARNING: If jwt.existingSecret references a non-existent Secret, the pod
+# will fail to start with a CrashLoopBackOff.
 jwt:
   secret: ""
   existingSecret: ""

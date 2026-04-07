@@ -223,10 +223,10 @@ func NewServer(cfg Config) (*Server, error) {
 	// Initialize Kubernetes multi-cluster client
 	k8sClient, err := k8s.NewMultiClusterClient(cfg.Kubeconfig)
 	if err != nil {
-		slog.Info("No kubeconfig found — connect clusters via Settings or place a kubeconfig at ~/.kube/config")
+		slog.Warn("Kubernetes client initialization failed — connect clusters via Settings or place a kubeconfig at ~/.kube/config", "error", err)
 	} else {
 		if err := k8sClient.LoadConfig(); err != nil {
-			slog.Info("No kubeconfig found — connect clusters via Settings or place a kubeconfig at ~/.kube/config")
+			slog.Warn("Failed to load kubeconfig — connect clusters via Settings or place a kubeconfig at ~/.kube/config", "error", err)
 		} else {
 			slog.Info("Kubernetes client initialized successfully")
 			// Warmup: probe all clusters to populate health cache before serving.
@@ -240,8 +240,7 @@ func NewServer(cfg Config) (*Server, error) {
 				slog.Info("Broadcasted kubeconfig change to all clients")
 			})
 			if err := k8sClient.StartWatching(); err != nil {
-				// Watcher fails when kubeconfig doesn't exist — already logged above
-				_ = err
+				slog.Warn("Kubeconfig file watcher failed to start", "error", err)
 			}
 		}
 	}
@@ -1284,7 +1283,11 @@ func customErrorHandler(c *fiber.Ctx, err error) error {
 func LoadConfigFromEnv() Config {
 	port := 8080
 	if p := os.Getenv("PORT"); p != "" {
-		fmt.Sscanf(p, "%d", &port)
+		if v, err := strconv.Atoi(p); err != nil {
+			slog.Warn("[Server] invalid PORT, using default", "value", p, "default", port, "error", err)
+		} else {
+			port = v
+		}
 	}
 
 	var backendPort int

@@ -109,8 +109,11 @@ export function Onboarding() {
     }
   }
 
+  const [errorMessage, setErrorMessage] = useState('')
+
   const handleComplete = async () => {
     setIsSubmitting(true)
+    setErrorMessage('')
     try {
       // Save responses - convert arrays to comma-separated strings
       const responses = Object.entries(answers).map(([question_key, answer]) => ({
@@ -136,13 +139,17 @@ export function Onboarding() {
       await refreshUser()
 
       navigate(ROUTES.HOME)
-    } catch {
+    } catch (err) {
       // For demo mode, still allow navigation even if there's an error
       const token = safeGetItem(STORAGE_KEY_TOKEN)
       if (token === DEMO_TOKEN_VALUE) {
         safeSetItem(STORAGE_KEY_ONBOARDED, 'true')
         await refreshUser()
         navigate(ROUTES.HOME)
+      } else {
+        // Real user: show error message so they are not stranded
+        const message = err instanceof Error ? err.message : 'Failed to complete onboarding. Please try again.'
+        setErrorMessage(message)
       }
     } finally {
       setIsSubmitting(false)
@@ -257,6 +264,13 @@ export function Onboarding() {
                   </div>
                 </button>
               ))}
+            </div>
+          )}
+
+          {/* Error message */}
+          {errorMessage && (
+            <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+              {errorMessage}
             </div>
           )}
 

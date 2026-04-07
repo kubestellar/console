@@ -140,6 +140,11 @@ export function ConnectTab({
                 placeholder={t('cluster.connectServerPlaceholder')}
                 className="bg-secondary rounded-lg px-4 py-2.5 text-sm w-full border border-border dark:border-white/10 focus:border-purple-500 focus:outline-none"
               />
+              {connectError && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-400">
+                  {connectError}
+                </div>
+              )}
               <div className="flex justify-end">
                 <button
                   onClick={() => goToConnectStep(2)}

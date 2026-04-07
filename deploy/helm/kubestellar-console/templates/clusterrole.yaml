@@ -22,11 +22,12 @@ rules:
       - namespaces
     verbs: ["get", "list", "watch"]
 
-  # ResourceQuotas - full CRUD for GPU reservation enforcement
+  # ResourceQuotas — full CRUD for GPU reservation enforcement,
+  # or read-only when rbac.resourceQuotasReadOnly is true.
   - apiGroups: [""]
     resources:
       - resourcequotas
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+    verbs: ["get", "list", "watch"{{- if not .Values.rbac.resourceQuotasReadOnly }}, "create", "update", "patch", "delete"{{- end }}]
 
   # Apps v1 - read-only
   - apiGroups: ["apps"]

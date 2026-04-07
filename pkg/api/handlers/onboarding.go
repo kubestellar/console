@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"log/slog"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -127,9 +128,8 @@ func generateDefaultCards(responses []models.OnboardingResponse) []models.Card {
 	case "Platform Engineer":
 		cards = append(cards,
 			models.Card{ID: uuid.New(), CardType: models.CardTypeDeploymentIssues},
-			cards[0], // Remove duplicate, add upgrade status
+			models.Card{ID: uuid.New(), CardType: models.CardTypeUpgradeStatus},
 		)
-		cards[len(cards)-1] = models.Card{ID: uuid.New(), CardType: models.CardTypeUpgradeStatus}
 	case "Developer":
 		cards = append(cards,
 			models.Card{ID: uuid.New(), CardType: models.CardTypeAppStatus},
@@ -150,8 +150,12 @@ func generateDefaultCards(responses []models.OnboardingResponse) []models.Card {
 		cards = append(cards, models.Card{ID: uuid.New(), CardType: models.CardTypeGitOpsDrift})
 	}
 
-	// Security focus
-	if respMap["monitoring_priority"] == "Security" {
+	// Security focus — check both singular (legacy) and plural (ranked-choice) keys
+	monitoringPriority := respMap["monitoring_priority"]
+	if monitoringPriority == "" {
+		monitoringPriority = respMap["monitoring_priorities"]
+	}
+	if monitoringPriority == "Security" || strings.Contains(monitoringPriority, "Security") {
 		cards = append(cards,
 			models.Card{ID: uuid.New(), CardType: models.CardTypeSecurityIssues},
 			models.Card{ID: uuid.New(), CardType: models.CardTypePolicyViolations},
