@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { TrendingUp, Cpu, Server, Clock } from 'lucide-react'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import {
@@ -128,7 +128,7 @@ export function GPUUsageTrend() {
   })()
 
   // Filter GPU nodes by selected clusters AND local filter
-  const filteredNodes = (() => {
+  const filteredNodes = useMemo(() => {
     let filtered = gpuNodes
 
     // Apply global cluster filter
@@ -158,7 +158,7 @@ export function GPUUsageTrend() {
     }
 
     return filtered
-  })()
+  }, [gpuNodes, selectedClusters, isAllClustersSelected, localClusterFilter])
 
   const toggleClusterFilter = (clusterName: string) => {
     setLocalClusterFilter(prev => {
@@ -170,14 +170,14 @@ export function GPUUsageTrend() {
   }
 
   // Calculate current GPU totals
-  const currentTotals = (() => {
+  const currentTotals = useMemo(() => {
     const available = filteredNodes.reduce((sum, n) => sum + (n.gpuCount || 0), 0)
     const allocated = filteredNodes.reduce((sum, n) => sum + (n.gpuAllocated || 0), 0)
     return {
       available,
       allocated,
       free: available - allocated }
-  })()
+  }, [filteredNodes])
 
   // Get time range config
   const timeRangeConfig = TIME_RANGE_OPTIONS.find(t => t.value === timeRange) || TIME_RANGE_OPTIONS[1]

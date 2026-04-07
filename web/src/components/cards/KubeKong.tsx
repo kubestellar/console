@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { RotateCcw, Trophy } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
@@ -152,7 +152,7 @@ export function KubeKong(_props: CardComponentProps) {
   }
 
   // Draw game
-  const draw = () => {
+  const draw = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -355,7 +355,7 @@ export function KubeKong(_props: CardComponentProps) {
     }
 
     ctx.restore()
-  }
+  }, [player, barrels, bossFrame, helpText, isExpanded])
 
   // Stable ref for draw to avoid restarting the game loop when draw changes
   const drawRef = useRef(draw)

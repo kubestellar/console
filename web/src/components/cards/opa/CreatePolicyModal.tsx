@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Shield, FileCode, LayoutTemplate, Sparkles, Copy, MessageSquareText, ScanSearch, Loader2 } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { BaseModal } from '../../../lib/modals'
@@ -33,7 +33,10 @@ export function CreatePolicyModal({
   useEffect(() => () => { mountedRef.current = false }, [])
 
   // Clusters that have Gatekeeper installed
-  const installedClusters = Object.entries(statuses).filter(([, s]) => s.installed).map(([name]) => name)
+  const installedClusters = useMemo(
+    () => Object.entries(statuses).filter(([, s]) => s.installed).map(([name]) => name),
+    [statuses]
+  )
 
   // Reset state and auto-select first installed cluster when modal opens
   useEffect(() => {
@@ -223,16 +226,17 @@ Please proceed with applying this policy.`,
         showBack={flow !== 'choose'}
         onBack={() => setFlow('choose')}
       />
+
       <BaseModal.Content className="max-h-[60vh]">
         {isClustersLoading && installedClusters.length === 0 ? (
           /* Still checking clusters for Gatekeeper */
-          (<div className="flex flex-col items-center justify-center py-8 text-muted-foreground gap-2">
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground gap-2">
             <Loader2 className="w-6 h-6 animate-spin opacity-50" />
             <p className="text-sm">Checking clusters for OPA Gatekeeper...</p>
-          </div>)
+          </div>
         ) : noGatekeeper ? (
           /* No clusters with Gatekeeper */
-          (<div className="text-center py-8 text-muted-foreground">
+          <div className="text-center py-8 text-muted-foreground">
             <Shield className="w-10 h-10 mx-auto mb-3 opacity-40" />
             <p className="text-sm font-medium mb-1">No clusters have OPA Gatekeeper installed</p>
             <p className="text-xs mb-4">Install Gatekeeper on a cluster first, then create policies.</p>
@@ -257,7 +261,7 @@ Please proceed with applying this policy.`,
             >
               Install Gatekeeper with AI
             </Button>
-          </div>)
+          </div>
         ) : (
           <div className="space-y-4">
             {/* Target Cluster Selector */}
@@ -453,6 +457,7 @@ Please proceed with applying this policy.`,
           </div>
         )}
       </BaseModal.Content>
+
       <BaseModal.Footer>
         <Button
           variant="ghost"
@@ -464,5 +469,5 @@ Please proceed with applying this policy.`,
         <div className="flex-1" />
       </BaseModal.Footer>
     </BaseModal>
-  );
+  )
 }

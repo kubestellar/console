@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo } from "react"
 import { useFrame } from "@react-three/fiber"
 import { Mesh, Points } from "three"
 
@@ -17,7 +17,7 @@ const DataPacket = ({ path, speed = 1, color = "#00E396", size = 0.08 }: DataPac
   const [progress, setProgress] = useState(0)
   const trailRef = useRef<Points>(null)
 
-  const trailPositions = new Float32Array(TRAIL_LENGTH * 3)
+  const trailPositions = useMemo(() => new Float32Array(TRAIL_LENGTH * 3), [])
 
   useFrame(() => {
     setProgress(prev => (prev >= 1 ? 0 : prev + 0.005 * speed))
@@ -43,7 +43,7 @@ const DataPacket = ({ path, speed = 1, color = "#00E396", size = 0.08 }: DataPac
     }
   })
 
-  const position = (() => {
+  const position = useMemo(() => {
     if (path.length < 2) return [0, 0, 0] as [number, number, number]
     const [start, end] = path
     return [
@@ -51,7 +51,7 @@ const DataPacket = ({ path, speed = 1, color = "#00E396", size = 0.08 }: DataPac
       start[1] + (end[1] - start[1]) * progress,
       start[2] + (end[2] - start[2]) * progress,
     ] as [number, number, number]
-  })()
+  }, [path, progress])
 
   return (
     <group>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import {
   TrendingUp, TrendingDown, Clock, BarChart3,
   ChevronDown, ChevronRight, Search as SearchIcon,
@@ -594,7 +594,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
     defaultLimit: 10 })
 
   // Search for stocks
-  const performStockSearch = async (query: string) => {
+  const performStockSearch = useCallback(async (query: string) => {
     if (!query || query.length < 1) {
       setStockSearchResults([])
       setShowStockDropdown(false)
@@ -616,7 +616,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
     } finally {
       setIsSearching(false)
     }
-  }
+  }, [showToast, t])
 
   // Debounced stock search
   useEffect(() => {
@@ -636,7 +636,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   }, [stockSearchInput, performStockSearch])
 
   // Add stock from search results
-  const addStock = (stock: StockSearchResult) => {
+  const addStock = useCallback((stock: StockSearchResult) => {
     if (!activeSymbols.includes(stock.symbol)) {
       setActiveSymbols(prev => [...prev, stock.symbol])
 
@@ -653,7 +653,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
     setStockSearchInput('')
     setShowStockDropdown(false)
     setStockSearchResults([])
-  }
+  }, [activeSymbols, savedStocks])
 
   // Remove stock from active list
   const removeStock = (symbol: string) => {
@@ -694,14 +694,14 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   const marketStatus = getMarketStatus(t)
 
   // Calculate portfolio summary
-  const portfolioSummary = (() => {
+  const portfolioSummary = useMemo(() => {
     const totalChange = stockData.reduce((sum, stock) => sum + stock.changePercent, 0)
     const avgChange = totalChange / stockData.length
     const gainers = stockData.filter(s => s.change > 0).length
     const losers = stockData.filter(s => s.change < 0).length
 
     return { avgChange, gainers, losers }
-  })()
+  }, [stockData])
 
   return (
     <div className="h-full flex flex-col">

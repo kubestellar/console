@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Activity, Globe, Server, Wifi, WifiOff, Clock,
   Play, Square, Trash2, Plus, CheckCircle, XCircle,
@@ -131,7 +131,7 @@ export function NetworkUtils() {
   // The backend performs a real HTTP HEAD request and returns the actual
   // status code and server-side measured latency, avoiding the browser's
   // no-cors limitation where opaque responses hide failures.
-  const pingHost = async (host: string): Promise<PingResult> => {
+  const pingHost = useCallback(async (host: string): Promise<PingResult> => {
     try {
       // Ensure URL has protocol for the backend
       let targetUrl = host
@@ -191,10 +191,10 @@ export function NetworkUtils() {
         timestamp: new Date(),
         error: error instanceof Error ? error.message : 'unknown error' }
     }
-  }
+  }, [])
 
   // Ping all saved hosts
-  const pingAllHosts = async () => {
+  const pingAllHosts = useCallback(async () => {
     // Use ref for guard to prevent callback reference from changing
     if (isPingingRef.current) return
     isPingingRef.current = true
@@ -215,7 +215,7 @@ export function NetworkUtils() {
 
     isPingingRef.current = false
     setIsPinging(false)
-  } // Removed isPinging from deps - use ref instead
+  }, [savedHosts, pingHost]) // Removed isPinging from deps - use ref instead
 
   // Save ping interval to localStorage
   useEffect(() => {

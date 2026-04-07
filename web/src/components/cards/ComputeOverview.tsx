@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Cpu, MemoryStick, Zap, Server, Box, Activity } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
@@ -55,7 +56,7 @@ export function ComputeOverview() {
   })()
 
   // Calculate compute stats
-  const stats = (() => {
+  const stats = useMemo(() => {
     const totalCPUs = filteredClusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
     const totalMemoryGB = filteredClusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0)
     const totalNodes = filteredClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
@@ -92,7 +93,7 @@ export function ComputeOverview() {
       healthyClusters,
       degradedClusters,
       offlineClusters }
-  })()
+  }, [filteredClusters, filteredGPUNodes])
 
   // Check if we have real data from reachable clusters
   const hasRealData = !isLoading && filteredClusters.length > 0 &&

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 import { Save, Download, Trash2, Grid, Sun, Moon } from 'lucide-react'
 
@@ -147,7 +147,7 @@ export function KubeCraft() {
   }
 
   // Render world
-  const render = () => {
+  const render = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -262,7 +262,7 @@ export function KubeCraft() {
         ctx.stroke()
       }
     }
-  }
+  }, [world, showGrid, isDaytime])
 
   // Animation loop for water
   useEffect(() => {

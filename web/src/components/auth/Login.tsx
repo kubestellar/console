@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useMemo } from 'react'
 import { Github, AlertTriangle, ExternalLink, Settings } from 'lucide-react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
@@ -136,7 +136,7 @@ export function Login() {
   const { login, isAuthenticated, isLoading } = useAuth()
   const [searchParams] = useSearchParams()
   const sessionExpired = searchParams.get('reason') === 'session_expired'
-  const oauthError = searchParams.get('error')
+  const oauthError = useMemo(() => searchParams.get('error'), [searchParams])
   const errorDetail = searchParams.get('error_detail')
   const errorInfo = (() => {
     if (!oauthError) return null

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import { AlertCircle, RefreshCw, Terminal, Copy, CheckCircle, Server, Layers } from 'lucide-react'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { ClusterBadge } from '../../ui/ClusterBadge'
@@ -70,7 +70,7 @@ export function EventsDrillDown({ data }: Props) {
   const pageSize = 20
 
   // Fetch events from local agent (no auth required)
-  const refetch = async (silent = false) => {
+  const refetch = useCallback(async (silent = false) => {
     // Skip agent requests in demo mode (no local agent on Netlify)
     if (getDemoMode()) {
       setIsLoading(false)
@@ -107,7 +107,7 @@ export function EventsDrillDown({ data }: Props) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [clusterShort, namespace, objectName])
 
   // Initial fetch and auto-refresh every 30 seconds
   useEffect(() => {
@@ -119,7 +119,7 @@ export function EventsDrillDown({ data }: Props) {
   }, [refetch])
 
   // Filter by object name, sort by lastSeen, and paginate
-  const { filteredEvents } = (() => {
+  const { filteredEvents } = useMemo(() => {
     let result = events
 
     // Filter by object name if specified
@@ -137,7 +137,7 @@ export function EventsDrillDown({ data }: Props) {
     result = result.slice(start, start + pageSize)
 
     return { filteredEvents: result }
-  })()
+  }, [events, objectName, currentPage])
 
   const copyCommand = () => {
     const cmd = objectName

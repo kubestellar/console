@@ -9,7 +9,7 @@
  * in the created issue as markdown images.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, Linkedin, ImagePlus, Trash2, Copy, Check, AlertTriangle, Loader2 } from 'lucide-react'
@@ -230,13 +230,13 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   descriptionRef.current = description
   successRef.current = success
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (!successRef.current && (titleRef.current.trim() !== '' || descriptionRef.current.trim() !== '')) {
       setShowDiscardConfirm(true)
       return
     }
     forceClose()
-  }
+  }, [forceClose])
 
   // Keyboard navigation - ESC to close, Space to close when not typing
   useEffect(() => {

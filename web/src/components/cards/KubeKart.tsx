@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 import { Play, RotateCcw, Pause, Trophy, Flag, Timer, Gauge } from 'lucide-react'
 
@@ -104,7 +104,7 @@ export function KubeKart() {
   const bestTimeRef = useRef(bestTime)
 
   // Generate track checkpoints
-  const initTrack = () => {
+  const initTrack = useCallback(() => {
     checkpointsRef.current = [0, 500, 1000, 1500, 2000]
 
     // Reset player
@@ -148,7 +148,7 @@ export function KubeKart() {
     trackScrollRef.current = 0
     activeBoostRef.current = 0
     activeShieldRef.current = 0
-  }
+  }, [])
 
   // Get track curve at position
   const getTrackCurve = (y: number): number => {
@@ -189,7 +189,7 @@ export function KubeKart() {
   }
 
   // Game update
-  const update = () => {
+  const update = useCallback(() => {
     const player = playerRef.current
     const keys = keysRef.current
 
@@ -304,10 +304,10 @@ export function KubeKart() {
     const playerPos = positions.findIndex(k => k.isPlayer) + 1
     setPosition(playerPos)
 
-  }
+  }, [isOnTrack, updateAI, totalLaps])
 
   // Render
-  const render = () => {
+  const render = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -404,7 +404,7 @@ export function KubeKart() {
     ctx.strokeStyle = '#fff'
     ctx.strokeRect(10, CANVAS_HEIGHT - 20, CANVAS_WIDTH - 20, 10)
 
-  }
+  }, [getTrackCurve])
 
   // Draw kart helper
   const drawKart = (ctx: CanvasRenderingContext2D, kart: Kart, hasBoost = false, _hasShield = false, aiIndex = -1) => {

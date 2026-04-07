@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react'
 import { ChevronRight, ChevronDown, Box, Layers, Network, List, GitBranch, Activity, Briefcase, Lock, Settings, Loader2, User, HardDrive, AlertCircle } from 'lucide-react'
 import { usePods, useDeployments, useServices, useJobs, useHPAs, useConfigMaps, useSecrets, useServiceAccounts, usePVCs } from '../../../hooks/useMCP'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
@@ -90,7 +90,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
   })()
 
   // Build flat list of all resources for list view
-  const allResources = (() => {
+  const allResources = useMemo(() => {
     const resources: Array<{
       kind: ResourceKind
       name: string
@@ -190,7 +190,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
     }))
 
     return resources
-  })()
+  }, [deployments, pods, services, jobs, hpas, configmaps, secrets, serviceAccounts, pvcs])
 
   // Resource kind icon mapping
   const getKindIcon = (kind: ResourceKind) => {
@@ -305,9 +305,10 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
           </button>
         </div>
       </div>
+
       {viewMode === 'list' ? (
         /* List View - Individual resources with icons */
-        (<div className="space-y-1 max-h-[300px] overflow-y-auto">
+        <div className="space-y-1 max-h-[300px] overflow-y-auto">
           {allResources.slice(0, 50).map((resource, idx) => (
             <div
               key={`${resource.kind}-${resource.name}-${idx}`}
@@ -330,10 +331,10 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
             </div>
           ))}
           {allResources.length > 50 && <div className="text-xs text-muted-foreground text-center py-2">+{allResources.length - 50} more resources</div>}
-        </div>)
+        </div>
       ) : (
         /* Tree View */
-        (<div className="font-mono text-xs max-h-[300px] overflow-y-auto">
+        <div className="font-mono text-xs max-h-[300px] overflow-y-auto">
           <div className="border-l border-border/50 pl-2">
             {deployments.length > 0 && (
               <div className="mb-1">
@@ -606,13 +607,14 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
               </div>
             )}
           </div>
-        </div>)
+        </div>
       )}
+
       {!hasResources && (
         <div className="text-sm text-muted-foreground text-center py-4">
           No resources found in this namespace
         </div>
       )}
     </div>
-  );
+  )
 }

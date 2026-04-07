@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react'
 import { Server, Cpu, HardDrive, TrendingUp, Info, ExternalLink, ChevronDown, Sparkles, Settings2, ChevronRight } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
@@ -218,7 +218,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
   }, [clusterProviderOverrides])
 
   // Auto-detect cloud provider from cluster names
-  const detectedProvider = (() => {
+  const detectedProvider = useMemo((): CloudProvider | null => {
     const clusterNames = allClusters.map(c => c.name.toLowerCase())
     const contexts = allClusters.map(c => (c.context || '').toLowerCase())
     const allNames = [...clusterNames, ...contexts]
@@ -238,7 +238,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
     if (allNames.some(n => n.includes('oke') || n.includes('oci') || n.includes('oracle'))) return 'oci'
 
     return null
-  })()
+  }, [allClusters])
 
   // Auto-select detected provider (only once on mount)
   useEffect(() => {
@@ -264,7 +264,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
   })()
 
   // Get the provider for a specific cluster (memoized to prevent re-renders)
-  const getClusterProvider = (clusterName: string, context?: string): CloudProvider => {
+  const getClusterProvider = useCallback((clusterName: string, context?: string): CloudProvider => {
     // Check for manual override first
     if (clusterProviderOverrides[clusterName]) {
       return clusterProviderOverrides[clusterName]
@@ -275,38 +275,40 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
     }
     // In per-cluster mode, detect from cluster name
     return detectClusterProvider(clusterName, context)
-  }
+  }, [clusterProviderOverrides, pricingMode, selectedProvider])
 
   // Compute cost data for ALL clusters (no filtering/sorting -- useCardData handles that)
-  const allClusterCosts = allClusters.map(cluster => {
-    const cpus = cluster.cpuCores || 0
-    const memory = 32 * (cluster.nodeCount || 0) // Estimate 32GB per node
-    const gpus = gpuByCluster[cluster.name] || 0
+  const allClusterCosts = useMemo(() => {
+    return allClusters.map(cluster => {
+      const cpus = cluster.cpuCores || 0
+      const memory = 32 * (cluster.nodeCount || 0) // Estimate 32GB per node
+      const gpus = gpuByCluster[cluster.name] || 0
 
-    // Get per-cluster pricing
-    const provider = getClusterProvider(cluster.name, cluster.context)
-    const clusterPricing = CLOUD_PRICING[provider]
-    const clusterCpuCost = config?.cpuCostPerHour ?? clusterPricing.cpu
-    const clusterMemoryCost = config?.memoryCostPerGBHour ?? clusterPricing.memory
-    const clusterGpuCost = config?.gpuCostPerHour ?? clusterPricing.gpu
+      // Get per-cluster pricing
+      const provider = getClusterProvider(cluster.name, cluster.context)
+      const clusterPricing = CLOUD_PRICING[provider]
+      const clusterCpuCost = config?.cpuCostPerHour ?? clusterPricing.cpu
+      const clusterMemoryCost = config?.memoryCostPerGBHour ?? clusterPricing.memory
+      const clusterGpuCost = config?.gpuCostPerHour ?? clusterPricing.gpu
 
-    const hourly = (cpus * clusterCpuCost) + (memory * clusterMemoryCost) + (gpus * clusterGpuCost)
-    const daily = hourly * 24
-    const monthly = daily * 30
+      const hourly = (cpus * clusterCpuCost) + (memory * clusterMemoryCost) + (gpus * clusterGpuCost)
+      const daily = hourly * 24
+      const monthly = daily * 30
 
-    return {
-      cluster: cluster.name,
-      name: cluster.name,
-      healthy: cluster.healthy,
-      cpus,
-      memory,
-      gpus,
-      hourly,
-      daily,
-      monthly,
-      provider,
-      context: cluster.context } as ClusterCostItem
-  })
+      return {
+        cluster: cluster.name,
+        name: cluster.name,
+        healthy: cluster.healthy,
+        cpus,
+        memory,
+        gpus,
+        hourly,
+        daily,
+        monthly,
+        provider,
+        context: cluster.context } as ClusterCostItem
+    })
+  }, [allClusters, gpuByCluster, getClusterProvider, config])
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {
@@ -406,6 +408,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
           </button>
         </div>
       </div>
+
       {/* Pricing Mode and Provider Selector */}
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
@@ -531,12 +534,13 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
           </a>
         )}
       </div>
+
       {/* Rates Info Panel */}
       {showRatesInfo && (
         <div className="mb-3 p-3 rounded-lg bg-secondary/30 border border-border/50 text-xs">
           {pricingMode === 'uniform' ? (
             // Uniform mode - show single provider rates
-            (<>
+            <>
               <div className="flex items-center justify-between mb-2">
                 <span className="font-medium text-foreground">{t('cards:clusterCosts.pricingRates', { provider: pricing.name })}</span>
                 {pricing.pricingUrl && (
@@ -569,10 +573,10 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                 </div>
               </div>
               <p className="text-muted-foreground italic">{t(`cards:clusterCosts.notes.${selectedProvider}`, { defaultValue: pricing.notes })}</p>
-            </>)
+            </>
           ) : (
             // Per-cluster mode - show all providers' rates
-            (<>
+            <>
               <div className="flex items-center justify-between mb-2">
                 <span className="font-medium text-foreground">{t('cards:clusterCosts.perClusterPricingRates')}</span>
                 <span className="text-muted-foreground">{t('cards:clusterCosts.clickBadgesToChange')}</span>
@@ -611,10 +615,11 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                   )
                 })}
               </div>
-            </>)
+            </>
           )}
         </div>
       )}
+
       {/* Local Search */}
       <CardSearchInput
         value={search}
@@ -622,6 +627,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
         placeholder={t('common:common.searchClusters')}
         className="mb-3"
       />
+
       {/* Total costs */}
       <div className="p-4 rounded-lg bg-gradient-to-r from-green-500/20 to-green-500/20 border border-green-500/30 mb-4">
         <div className="flex items-center justify-between">
@@ -635,6 +641,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
           </div>
         </div>
       </div>
+
       {/* Per-cluster breakdown */}
       <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
         {clusterCosts.map((cluster) => {
@@ -740,6 +747,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
           )
         })}
       </div>
+
       {/* Pagination */}
       <CardPaginationFooter
         currentPage={currentPage}
@@ -749,6 +757,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
         onPageChange={goToPage}
         needsPagination={needsPagination}
       />
+
       {/* Footer */}
       <div className="mt-4 pt-3 border-t border-border/50 space-y-2 text-xs text-muted-foreground">
         <div className="flex items-center justify-between">
@@ -827,5 +836,5 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
         </div>
       </div>
     </div>
-  );
+  )
 }

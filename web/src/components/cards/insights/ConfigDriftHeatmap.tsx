@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Diff, ChevronRight } from 'lucide-react'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
@@ -44,7 +44,7 @@ export function ConfigDriftHeatmap() {
     isDemoData })
 
   // Build cluster-pair drift counts
-  const { clusters, driftMatrix } = (() => {
+  const { clusters, driftMatrix } = useMemo(() => {
     const clusterSet = new Set<string>()
     for (const insight of driftInsights || []) {
       for (const c of insight.affectedClusters || []) {
@@ -68,7 +68,7 @@ export function ConfigDriftHeatmap() {
     }
 
     return { clusters: clusterList, driftMatrix: matrix }
-  })()
+  }, [driftInsights, selectedClusters])
 
   const maxDrift = Math.max(1, ...Array.from(driftMatrix.values()))
 

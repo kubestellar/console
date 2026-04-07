@@ -7,7 +7,7 @@
  * Consumes all compliance hooks for a cross-cluster compliance overview.
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import { AlertTriangle, Info, Loader2 } from 'lucide-react'
 import { ProgressRing } from '../ui/ProgressRing'
 import { useTranslation } from 'react-i18next'
@@ -49,6 +49,12 @@ interface HeatmapCell {
   tooltip: string
 }
 
+interface HeatmapRow {
+  cluster: string
+  kyverno: HeatmapCell
+  kubescape: HeatmapCell
+  trivy: HeatmapCell
+}
 
 const STATUS_COLORS: Record<CellStatus, string> = {
   good: 'bg-green-500/20 text-green-400 border-green-500/30',
@@ -215,7 +221,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
 
   useCardLoadingState({ isLoading: isLoading && !isDemoData, isRefreshing, hasAnyData: true, isDemoData })
 
-  const rows = (() => {
+  const rows = useMemo((): HeatmapRow[] => {
     // Collect all cluster names from compliance hooks + useClusters fallback
     const clusterSet = new Set<string>()
     for (const name of Object.keys(kyvernoStatuses || {})) clusterSet.add(name)
@@ -289,7 +295,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
 
       return { cluster, kyverno: kyvernoCell, kubescape: kubescapeCell, trivy: trivyCell }
     })
-  })()
+  }, [kyvernoStatuses, trivyStatuses, kubescapeStatuses, deduplicatedClusters, selectedClusters, isAllClustersSelected])
 
   if (hasError) {
     return (

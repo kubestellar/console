@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Bot, Hammer, Wrench, Server } from 'lucide-react'
 import { useKagentiAgents, useKagentiBuilds, useKagentiTools } from '../../hooks/useMCP'
 import { useCardLoadingState } from './CardDataContext'
@@ -71,7 +72,7 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
     isDemoData: agentDemo || buildDemo || toolDemo })
 
   // Compute stats
-  const stats = (() => {
+  const stats = useMemo(() => {
     const readyAgents = agents.filter(a => a.status === 'Running' || a.status === 'Ready').length
     const activeBuilds = builds.filter(b => b.status === 'Building' || b.status === 'Pending').length
 
@@ -95,7 +96,7 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
     }
 
     return { readyAgents, activeBuilds, frameworks, clusterAgents }
-  })()
+  }, [agents, builds, tools])
 
   // Recent builds for list view
   const recentBuilds = [...builds]

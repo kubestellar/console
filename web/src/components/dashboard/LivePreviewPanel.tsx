@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff, Maximize2, Minimize2, AlertTriangle, Loader2, Database } from 'lucide-react'
 import { Tier1CardRuntime } from '../cards/DynamicCard'
@@ -171,7 +171,7 @@ function T2Preview({ source }: { source?: string }) {
   }, [source])
 
   // Compile when debounced source updates
-  const compiledKey = debouncedSource
+  const compiledKey = useMemo(() => debouncedSource, [debouncedSource])
 
   useEffect(() => {
     if (!compiledKey) {

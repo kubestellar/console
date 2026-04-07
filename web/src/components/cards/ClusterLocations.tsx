@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { Globe, Server, Cloud, ZoomIn, ZoomOut, Maximize2, Filter, X } from 'lucide-react'
 import { useClusters, type ClusterInfo } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -279,7 +279,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
   const [hoveredCluster, setHoveredCluster] = useState<string | null>(null)
 
   // Apply global filters
-  const clusters = (() => {
+  const clusters = useMemo(() => {
     let result = allClusters.filter(c => c.reachable !== false)
 
     if (!isAllClustersSelected) {
@@ -310,7 +310,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
     }
 
     return result
-  })()
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter, statusFilter, searchFilter])
 
   // Group clusters by region
   const regionGroups = (() => {

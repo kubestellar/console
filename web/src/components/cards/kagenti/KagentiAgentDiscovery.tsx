@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Radar, Shield, Tag, Server } from 'lucide-react'
 import { useKagentiCards } from '../../../hooks/useMCP'
 import { useCardLoadingState } from '../CardDataContext'
@@ -33,7 +34,7 @@ export function KagentiAgentDiscovery({ config }: KagentiAgentDiscoveryProps) {
   })
 
   // Aggregate skill counts
-  const skillSummary = (() => {
+  const skillSummary = useMemo(() => {
     const counts: Record<string, number> = {}
     for (const card of cards) {
       for (const skill of card.skills || []) {
@@ -41,7 +42,7 @@ export function KagentiAgentDiscovery({ config }: KagentiAgentDiscoveryProps) {
       }
     }
     return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8)
-  })()
+  }, [cards])
 
   const {
     items: paginatedItems,

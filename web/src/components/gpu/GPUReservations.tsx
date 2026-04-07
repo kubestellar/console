@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Calendar,
@@ -176,7 +176,7 @@ export function GPUReservations() {
   })()
 
   // Filtered reservations respecting "My Reservations" toggle, cluster selection, and keyword search
-  const filteredReservations = (() => {
+  const filteredReservations = useMemo(() => {
     let filtered = allReservations || []
     // Filter by cluster selection
     if (!isAllClustersSelected) {
@@ -202,7 +202,7 @@ export function GPUReservations() {
       )
     }
     return filtered
-  })()
+  }, [allReservations, showOnlyMine, user, selectedClusters, isAllClustersSelected, searchTerm])
 
   // Fetch utilization data for visible reservations
   const visibleReservationIds = (filteredReservations || []).map(r => r.id)
@@ -232,7 +232,7 @@ export function GPUReservations() {
   })()
 
   // GPU stats
-  const stats = (() => {
+  const stats = useMemo(() => {
     const totalGPUs = nodes.reduce((sum, n) => sum + n.gpuCount, 0)
     const allocatedGPUs = nodes.reduce((sum, n) => sum + n.gpuAllocated, 0)
     const availableGPUs = totalGPUs - allocatedGPUs
@@ -284,7 +284,7 @@ export function GPUReservations() {
       typeChartData,
       usageByNamespace,
       clusterUsage }
-  })()
+  }, [nodes, gpuQuotas, gpuClusters, filteredReservations])
 
   // Calendar helpers
   const getDaysInMonth = (date: Date) => {
@@ -321,7 +321,7 @@ export function GPUReservations() {
   }
 
   // Compute spanning reservation rows per calendar week
-  const calendarWeeks = (() => {
+  const calendarWeeks = useMemo(() => {
     const totalCells = startingDay + daysInMonth
     const numWeeks = Math.ceil(totalCells / 7)
     const weeks: { days: (number | null)[]; bars: CalendarBar[] }[] = []
@@ -395,7 +395,7 @@ export function GPUReservations() {
     }
 
     return weeks
-  })()
+  }, [filteredReservations, startingDay, daysInMonth, currentMonth, getReservationDayRange])
 
   // Get GPU count reserved on a specific day
   const getGPUCountForDay = (day: number) => {

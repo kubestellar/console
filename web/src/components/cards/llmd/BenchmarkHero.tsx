@@ -5,7 +5,7 @@
  * TPOT, request latency), delta indicators vs previous run, and a bottom
  * strip with total requests, failure rate, GPU util, and power draw.
  */
-import { useState } from 'react';
+import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Zap, Clock, Activity, Cpu, TrendingUp, TrendingDown, ArrowRight, CalendarDays } from 'lucide-react'
 import { useReportCardDataState } from '../CardDataContext'
@@ -114,7 +114,7 @@ export function BenchmarkHero() {
     }
   }
 
-  const { latest, prev, engine, gpuMetrics } = (() => {
+  const { latest, prev, engine, gpuMetrics } = useMemo(() => {
     const reports = effectiveReports
     if (reports.length === 0) return { latest: null, prev: null, engine: null, gpuMetrics: [] }
 
@@ -141,7 +141,7 @@ export function BenchmarkHero() {
 
     const gpuM = best.results.observability?.metrics ?? []
     return { latest: best, prev: baseline, engine: eng, gpuMetrics: gpuM }
-  })()
+  }, [effectiveReports])
 
   if (!latest) return <div className="p-5 h-full flex items-center justify-center text-muted-foreground text-sm">No benchmark data available</div>
 

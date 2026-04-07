@@ -7,7 +7,7 @@
  * Empty state: "All clusters within baseline" with green checkmark.
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import { AlertTriangle, CheckCircle2, TrendingDown, TrendingUp, ChevronRight, Info, Loader2 } from 'lucide-react'
 import { ProgressRing } from '../ui/ProgressRing'
 import { Button } from '../ui/Button'
@@ -82,7 +82,7 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
 
   useCardLoadingState({ isLoading: isLoading && !isDemoData, isRefreshing, hasAnyData: true, isDemoData })
 
-  const drifts = (() => {
+  const drifts = useMemo((): DriftEntry[] => {
     const result: DriftEntry[] = []
 
     // Helper to filter clusters by global selection
@@ -165,7 +165,7 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
     // Sort by magnitude descending (worst drifts first)
     result.sort((a, b) => b.magnitude - a.magnitude)
     return result
-  })()
+  }, [kyvernoStatuses, trivyStatuses, kubescapeStatuses, selectedClusters, isAllClustersSelected])
 
   // Loading state: show spinner while initial data loads
   if (isLoading && drifts.length === 0) {

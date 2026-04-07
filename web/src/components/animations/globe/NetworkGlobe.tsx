@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useMemo, useState, useEffect } from "react"
 import { useFrame } from "@react-three/fiber"
 import { Sphere, Line, Text, Torus, Billboard } from "@react-three/drei"
 import { Mesh, Group, Material, Color, Object3D } from "three"
@@ -69,51 +69,54 @@ const NetworkGlobe = ({ isLoaded = true }: NetworkGlobeProps) => {
   const [animationProgress, setAnimationProgress] = useState(0)
 
   // Create cluster configurations with Console-related names and descriptions
-  const clusters = [
-    {
-      name: translations.clusters.kubeflexCore.name,
-      position: [0, 3, 0] as [number, number, number],
-      nodeCount: 6,
-      radius: 0.8,
-      color: COLORS.primary,
-      description: translations.clusters.kubeflexCore.description,
-    },
-    {
-      name: translations.clusters.edgeClusters.name,
-      position: [3, 0, 0] as [number, number, number],
-      nodeCount: 8,
-      radius: 1,
-      color: COLORS.highlight,
-      description: translations.clusters.edgeClusters.description,
-    },
-    {
-      name: translations.clusters.productionCluster.name,
-      position: [0, -3, 0] as [number, number, number],
-      nodeCount: 5,
-      radius: 0.7,
-      color: COLORS.success,
-      description: translations.clusters.productionCluster.description,
-    },
-    {
-      name: translations.clusters.devTestCluster.name,
-      position: [-3, 0, 0] as [number, number, number],
-      nodeCount: 7,
-      radius: 0.9,
-      color: COLORS.accent2,
-      description: translations.clusters.devTestCluster.description,
-    },
-    {
-      name: translations.clusters.multiCloudHub.name,
-      position: [2, 2, -2] as [number, number, number],
-      nodeCount: 4,
-      radius: 0.6,
-      color: COLORS.accent1,
-      description: translations.clusters.multiCloudHub.description,
-    },
-  ]
+  const clusters = useMemo(
+    () => [
+      {
+        name: translations.clusters.kubeflexCore.name,
+        position: [0, 3, 0] as [number, number, number],
+        nodeCount: 6,
+        radius: 0.8,
+        color: COLORS.primary,
+        description: translations.clusters.kubeflexCore.description,
+      },
+      {
+        name: translations.clusters.edgeClusters.name,
+        position: [3, 0, 0] as [number, number, number],
+        nodeCount: 8,
+        radius: 1,
+        color: COLORS.highlight,
+        description: translations.clusters.edgeClusters.description,
+      },
+      {
+        name: translations.clusters.productionCluster.name,
+        position: [0, -3, 0] as [number, number, number],
+        nodeCount: 5,
+        radius: 0.7,
+        color: COLORS.success,
+        description: translations.clusters.productionCluster.description,
+      },
+      {
+        name: translations.clusters.devTestCluster.name,
+        position: [-3, 0, 0] as [number, number, number],
+        nodeCount: 7,
+        radius: 0.9,
+        color: COLORS.accent2,
+        description: translations.clusters.devTestCluster.description,
+      },
+      {
+        name: translations.clusters.multiCloudHub.name,
+        position: [2, 2, -2] as [number, number, number],
+        nodeCount: 4,
+        radius: 0.6,
+        color: COLORS.accent1,
+        description: translations.clusters.multiCloudHub.description,
+      },
+    ],
+    []
+  )
 
   // Generate data flow paths
-  const dataFlows = (() => {
+  const dataFlows = useMemo(() => {
     const flows: {
       path: [number, number, number][]
       id: number
@@ -166,7 +169,7 @@ const NetworkGlobe = ({ isLoaded = true }: NetworkGlobeProps) => {
     }
 
     return flows
-  })()
+  }, [clusters])
 
   // Animate data flows - only start when loaded
   useEffect(() => {

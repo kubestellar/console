@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import { Server, Globe, Shield, ExternalLink } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -52,7 +52,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
   const cluster = clusters.find(c => c.name === selectedCluster)
 
   // Parse server URL for display
-  const serverInfo = (() => {
+  const serverInfo = useMemo(() => {
     if (!cluster?.server) return null
     try {
       const url = new URL(cluster.server)
@@ -63,7 +63,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
     } catch {
       return { host: cluster.server, port: '443', protocol: 'https' }
     }
-  })()
+  }, [cluster])
 
   if (showSkeleton) {
     return (

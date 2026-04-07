@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Wifi, AlertTriangle, CheckCircle, XCircle, RotateCcw } from 'lucide-react'
 import { useCachedCoreDNSStatus, type CoreDNSClusterStatus } from '../../../hooks/useCachedData'
@@ -35,13 +36,13 @@ export function CoreDNSStatus({ config }: CoreDNSStatusProps) {
   })
 
   // summary stats derived only from pod metadata
-  const totals = (() => {
+  const totals = useMemo(() => {
     if (clusters.length === 0) return null
     const totalPods = clusters.reduce((s, c) => s + c.pods.length, 0)
     const healthyClusters = clusters.filter(c => c.healthy).length
     const totalRestarts = clusters.reduce((s, c) => s + c.totalRestarts, 0)
     return { totalPods, healthyClusters, totalRestarts }
-  })()
+  }, [clusters])
 
   if (showSkeleton) {
     return (

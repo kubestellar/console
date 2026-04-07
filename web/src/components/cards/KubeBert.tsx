@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Play, RotateCcw, Trophy, Heart, ArrowUp, ArrowDown } from 'lucide-react'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
@@ -243,7 +243,7 @@ export function KubeBert() {
   // Build tile label map (stable per pyramid)
   const tileLabelMap = useRef<string[][]>([])
 
-  const buildTileLabels = () => {
+  const buildTileLabels = useCallback(() => {
     const labels: string[][] = []
     let idx = 0
     for (let r = 0; r < PYRAMID_ROWS; r++) {
@@ -254,10 +254,10 @@ export function KubeBert() {
       }
     }
     tileLabelMap.current = labels
-  }
+  }, [])
 
   // Initialize tile grid
-  const initTiles = () => {
+  const initTiles = useCallback(() => {
     const tiles: boolean[][] = []
     for (let r = 0; r < PYRAMID_ROWS; r++) {
       tiles[r] = []
@@ -266,7 +266,7 @@ export function KubeBert() {
       }
     }
     tilesRef.current = tiles
-  }
+  }, [])
 
   // Check if all tiles are visited
   const allTilesVisited = () => {
@@ -284,7 +284,7 @@ export function KubeBert() {
   }
 
   // Stop all intervals
-  const stopIntervals = () => {
+  const stopIntervals = useCallback(() => {
     if (enemySpawnRef.current) {
       clearInterval(enemySpawnRef.current)
       enemySpawnRef.current = null
@@ -297,7 +297,7 @@ export function KubeBert() {
       cancelAnimationFrame(gameLoopRef.current)
       gameLoopRef.current = 0
     }
-  }
+  }, [])
 
   // Spawn an enemy at the top of the pyramid
   const spawnEnemy = () => {
@@ -471,7 +471,7 @@ export function KubeBert() {
   }
 
   // Render the game
-  const render = () => {
+  const render = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -529,7 +529,7 @@ export function KubeBert() {
       ctx.textAlign = 'center'
       ctx.fillText(`Level ${levelRef.current} Complete!`, w / 2, h / 2)
     }
-  }
+  }, [])
 
   // Game loop
   const startGameLoop = () => {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Clock, ChevronDown, ChevronUp, X, Plus, AlertTriangle, Info, Lightbulb, Timer } from 'lucide-react'
 import { Button } from '../ui/Button'
@@ -46,7 +46,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
   void snoozedRecommendations
 
   // Start / stop countdown timer
-  const startCountdown = () => {
+  const startCountdown = useCallback(() => {
     if (countdownRef.current) clearInterval(countdownRef.current)
     countdownRef.current = setInterval(() => {
       setCountdown((prev) => {
@@ -62,7 +62,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
         return prev - 1
       })
     }, COUNTDOWN_TICK_MS)
-  }
+  }, [])
 
   // Manage countdown lifecycle based on minimized state
   useEffect(() => {

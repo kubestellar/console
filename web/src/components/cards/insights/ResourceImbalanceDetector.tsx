@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react'
 import { Scale, ChevronRight } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
@@ -38,7 +38,7 @@ export function ResourceImbalanceDetector() {
     isDemoData })
 
   // Build chart data from the first (CPU) insight's metrics
-  const chartData = (() => {
+  const chartData = useMemo(() => {
     const insight = imbalanceInsights[0]
     if (!insight?.metrics) return []
     return Object.entries(insight.metrics)
@@ -49,7 +49,7 @@ export function ResourceImbalanceDetector() {
         value,
         fill: value > OVERLOADED_THRESHOLD_PCT ? '#ef4444' : value < UNDERLOADED_THRESHOLD_PCT ? '#3b82f6' : '#22c55e' }))
       .sort((a, b) => b.value - a.value)
-  })()
+  }, [imbalanceInsights, selectedClusters])
 
   const avgValue = chartData.length > 0
     ? Math.round(chartData.reduce((sum, d) => sum + d.value, 0) / chartData.length)

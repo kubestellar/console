@@ -7,7 +7,7 @@
  * Install: Click browser menu → "Install app" or "Add to Desktop"
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { RefreshCw, Maximize2, Download } from 'lucide-react'
 import { useClusters, useGPUNodes, usePodIssues } from '../../hooks/useMCP'
 import { cn } from '../../lib/cn'
@@ -99,7 +99,7 @@ export function MiniDashboard() {
   const [allNodes, setAllNodes] = useState<NodeData[]>([])
   const [nodesLoading, setNodesLoading] = useState(true)
 
-  const fetchNodes = async () => {
+  const fetchNodes = useCallback(async () => {
     try {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/nodes`, {
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
@@ -112,7 +112,7 @@ export function MiniDashboard() {
     } finally {
       setNodesLoading(false)
     }
-  }
+  }, [])
 
   // Initial fetch and subscribe to updates
   useEffect(() => {
@@ -178,12 +178,12 @@ export function MiniDashboard() {
   }, [offlineCount, offlineNodes])
 
   // Manual refresh
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true)
     await Promise.all([refetchClusters?.(), refetchGPU?.(), refetchIssues?.(), fetchNodes()])
     setLastUpdated(new Date())
     setIsRefreshing(false)
-  }
+  }, [refetchClusters, refetchGPU, refetchIssues, fetchNodes])
 
   // Auto-refresh every 30 seconds
   useEffect(() => {

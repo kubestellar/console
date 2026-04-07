@@ -5,7 +5,7 @@
  * and opens GitHub's file creation UI to submit it as a PR to kubestellar/console-kb.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   X,
   BookUp,
@@ -250,7 +250,7 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
   const fullPath = `${targetDir}/${filename}`
 
   // Run security scan
-  const runScan = () => {
+  const runScan = useCallback(() => {
     setScanning(true)
     try {
       const result = fullScan(kbContent as unknown as MissionExport)
@@ -261,7 +261,7 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
       setScanning(false)
       scanRanRef.current = true
     }
-  }
+  }, [kbContent])
 
   // Auto-scan on first open
   useEffect(() => {

@@ -5,7 +5,7 @@
  * and aggregate statistics. Grouped by platform (OCP, GKE).
  * Fetches from GitHub Actions API; falls back to demo data without a token.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import {
@@ -103,12 +103,12 @@ function RunDot({ run, guide, isHighlighted, onMouseEnter, onMouseLeave }: {
 
   const logsUrl = `${run.htmlUrl}#logs`
 
-  const cancelHide = () => {
+  const cancelHide = useCallback(() => {
     if (hideTimerRef.current) {
       clearTimeout(hideTimerRef.current)
       hideTimerRef.current = null
     }
-  }
+  }, [])
 
   const scheduleHide = () => {
     cancelHide()
@@ -863,7 +863,7 @@ export function NightlyE2EStatus() {
     return guides.find(g => `${g.guide}-${g.platform}` === selectedKey) ?? null
   })()
 
-  const { stats, grouped, lastRunTime } = (() => {
+  const { stats, grouped, lastRunTime } = useMemo(() => {
     const total = guides.length
     const allRuns = guides.flatMap(g => g.runs)
     const completedRuns = allRuns.filter(r => r.status === 'completed')
@@ -890,7 +890,7 @@ export function NightlyE2EStatus() {
       stats: { total, overallPassRate, failing },
       grouped: byPlatform,
       lastRunTime: mostRecent ? new Date(mostRecent).toISOString() : null }
-  })()
+  }, [guides])
 
   if (showSkeleton) {
     return (

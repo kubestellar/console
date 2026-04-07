@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Bell, AlertTriangle, CheckCircle, Clock, ChevronRight, X, Server, Search, ExternalLink, CheckSquare, Square, MinusSquare } from 'lucide-react'
@@ -146,7 +146,7 @@ export function AlertBadge() {
   }
 
   // Filter and sort alerts
-  const filteredAlerts = (() => {
+  const filteredAlerts = useMemo(() => {
     let result = [...activeAlerts]
 
     // Apply search filter
@@ -171,7 +171,7 @@ export function AlertBadge() {
       if (severityDiff !== 0) return severityDiff
       return new Date(b.firedAt).getTime() - new Date(a.firedAt).getTime()
     })
-  })()
+  }, [activeAlerts, searchQuery, severityFilter])
 
   // Show all filtered alerts (scrollable container handles overflow)
   const displayedAlerts = filteredAlerts

@@ -5,7 +5,7 @@
  * for Übersicht (macOS) and other platforms.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Download, Monitor, Smartphone, Copy, Check, ExternalLink, Info, AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { BACKEND_DEFAULT_URL } from '../../lib/constants'
@@ -88,14 +88,14 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
   })()
 
   // Generate widget code
-  const widgetCode = (() => {
+  const widgetCode = useMemo(() => {
     if (!exportConfig) return ''
     try {
       return generateWidget(exportConfig)
     } catch (err) {
       return `// Error generating widget: ${err}`
     }
-  })()
+  }, [exportConfig])
 
   const filename = exportConfig ? getWidgetFilename(exportConfig) : 'widget.jsx'
 
@@ -424,7 +424,7 @@ function TemplateCard({
         {template.size.width}×{template.size.height}px • {template.layout} layout
       </div>
     </button>
-  );
+  )
 }
 
 // Card item component
@@ -524,14 +524,13 @@ const ps = {
     display: 'flex',
     alignItems: 'center',
     gap: PREV_SM } as React.CSSProperties,
-  dot: (color: string) => (({
+  dot: (color: string) => ({
     width: 7,
     height: 7,
     borderRadius: '50%',
     backgroundColor: color,
     display: 'inline-block',
-    flexShrink: 0
-  }) as React.CSSProperties),
+    flexShrink: 0 }) as React.CSSProperties,
   statBlock: {
     backgroundColor: 'rgba(17, 24, 39, 0.9)',
     borderRadius: '6px',

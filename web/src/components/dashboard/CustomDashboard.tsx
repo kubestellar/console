@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { GripVertical, Trash2, AlertTriangle } from 'lucide-react'
 import {
@@ -286,7 +286,7 @@ export function CustomDashboard() {
   )
 
   // Load dashboard
-  const loadDashboard = async (isRefresh = false) => {
+  const loadDashboard = useCallback(async (isRefresh = false) => {
     if (!id) return
 
     // Increment request ID so stale responses are discarded (#4664)
@@ -353,7 +353,7 @@ export function CustomDashboard() {
         setIsRefreshing(false)
       }
     }
-  }
+  }, [id, getDashboardWithCards, showToast, storageKey])
 
   const handleRefreshDashboard = () => loadDashboard(true)
   const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefreshDashboard, id)
@@ -586,6 +586,7 @@ export function CustomDashboard() {
           </button>
         }
       />
+
       {/* Stats Overview */}
       <StatsOverview
         dashboardType="dashboard"
@@ -595,13 +596,16 @@ export function CustomDashboard() {
         lastUpdated={lastUpdated}
         collapsedStorageKey={`kubestellar-custom-${id}-stats-collapsed`}
       />
+
       {/* AI Recommendations - always shown to help users add relevant cards */}
       <CardRecommendations
         currentCardTypes={currentCardTypes}
         onAddCard={handleAddRecommendedCard}
       />
+
       {/* Mission Suggestions */}
       <MissionSuggestions />
+
       {/* Empty state */}
       {cards.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -631,7 +635,7 @@ export function CustomDashboard() {
         </div>
       ) : (
         /* Card grid with drag and drop */
-        (<DndContext
+        <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragStart={handleDragStart}
@@ -656,6 +660,7 @@ export function CustomDashboard() {
               ))}
             </div>
           </SortableContext>
+
           <DragOverlay>
             {activeId ? (
               (() => {
@@ -668,8 +673,9 @@ export function CustomDashboard() {
               })()
             ) : null}
           </DragOverlay>
-        </DndContext>)
+        </DndContext>
       )}
+
       {/* Floating action buttons */}
       <FloatingDashboardActions
         onAddCard={() => openAddCard()}
@@ -704,6 +710,7 @@ export function CustomDashboard() {
         canUndo={canUndo}
         canRedo={canRedo}
       />
+
       {/* Add Card Modal */}
       <AddCardModal
         isOpen={isAddCardOpen}
@@ -711,6 +718,7 @@ export function CustomDashboard() {
         onAddCards={handleAddCards}
         existingCardTypes={currentCardTypes}
       />
+
       {/* Configure Card Modal */}
       <ConfigureCardModal
         isOpen={isConfigureCardOpen}
@@ -721,12 +729,14 @@ export function CustomDashboard() {
         }}
         onSave={handleCardConfigured}
       />
+
       {/* Templates Modal */}
       <TemplatesModal
         isOpen={isTemplatesOpen}
         onClose={closeTemplates}
         onApplyTemplate={handleApplyTemplate}
       />
+
       {/* Delete Confirmation Modal */}
       <BaseModal isOpen={isDeleteConfirmOpen} onClose={closeDeleteConfirm} size="md">
         <BaseModal.Header
@@ -767,5 +777,5 @@ export function CustomDashboard() {
         </BaseModal.Footer>
       </BaseModal>
     </div>
-  );
+  )
 }

@@ -6,7 +6,7 @@
  *
  * Now supports live data from selected llm-d stack via StackContext.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CircleDot } from 'lucide-react'
 import { generateServerMetrics, type ServerMetrics } from '../../../lib/llmd/mockData'
@@ -592,7 +592,7 @@ export function LLMdFlow() {
   useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0, hasData: true })
 
   // Build dynamic node positions based on actual stack topology
-  const { nodePositions: rawPositions, connections, nodeLabels } = (() => {
+  const { nodePositions: rawPositions, connections, nodeLabels } = useMemo(() => {
     // Only show demo topology if demo mode is ON
     if (!selectedStack && isDemoMode) {
       return {
@@ -739,7 +739,7 @@ export function LLMdFlow() {
     }
 
     return { nodePositions: positions, connections: conns, nodeLabels: labels }
-  })()
+  }, [selectedStack, isDemoMode])
 
   // Scale node positions wider when in fullscreen to fill the wider SVG viewBox (240w vs 120w)
   const nodePositions = (() => {

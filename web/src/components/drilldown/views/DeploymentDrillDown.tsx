@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
@@ -263,7 +263,7 @@ export function DeploymentDrillDown({ data }: Props) {
   }
 
   // Check if user can scale deployments in this namespace
-  const checkScalePermission = async () => {
+  const checkScalePermission = useCallback(async () => {
     try {
       const result = await checkPermission({
         cluster,
@@ -287,7 +287,7 @@ export function DeploymentDrillDown({ data }: Props) {
         setCanScale(false)
       }
     }
-  }
+  }, [cluster, namespace, checkPermission])
 
   // Check scale permission on mount
   useEffect(() => {

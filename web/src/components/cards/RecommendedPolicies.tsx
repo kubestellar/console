@@ -7,7 +7,7 @@
  * that saves time and tokens.
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react'
 import { Sparkles, Shield, ChevronRight, CheckCircle2, AlertTriangle, Zap, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { ProgressRing } from '../ui/ProgressRing'
@@ -264,7 +264,7 @@ function RecommendedPoliciesInternal({ config: _config }: CardConfig) {
   const allChecked = minChecked >= totalChecking && totalChecking > 0
 
   // Build recommendations from real cluster data
-  const { recommendations, fleetCoverage, totalGaps } = (() => {
+  const { recommendations, fleetCoverage, totalGaps } = useMemo(() => {
     const totalClusters = (deduplicatedClusters || []).length
     const recs: PolicyRecommendation[] = []
 
@@ -309,7 +309,7 @@ function RecommendedPoliciesInternal({ config: _config }: CardConfig) {
     const gaps = recs.filter(r => r.coveredClusters.length < r.eligibleClusters.length).length
 
     return { recommendations: recs, fleetCoverage: coverage, totalGaps: gaps }
-  })()
+  }, [kyvernoStatuses, deduplicatedClusters, selectedClusters])
 
   // Group by category
   const grouped = (() => {

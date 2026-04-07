@@ -7,7 +7,7 @@
  * Sorted by most discrepancies first.
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import { AlertTriangle, CheckCircle2, XCircle, Minus, Info, Loader2 } from 'lucide-react'
 import { ProgressRing } from '../ui/ProgressRing'
 import { useTranslation } from 'react-i18next'
@@ -57,7 +57,7 @@ function CrossClusterPolicyComparisonInternal({ config: _config }: CardConfig) {
   useCardLoadingState({ isLoading: isLoading && !isDemoData, isRefreshing, hasAnyData: true, isDemoData, isFailed: hasError, consecutiveFailures: hasError ? 1 : 0 })
 
   // Filter clusters by global filters + custom filter
-  const allClusters = (() => {
+  const allClusters = useMemo(() => {
     let result = (rawClusters || []).map(c => c.name)
     if (!isAllClustersSelected && globalSelectedClusters.length > 0) {
       result = result.filter(c => globalSelectedClusters.includes(c))
@@ -69,7 +69,7 @@ function CrossClusterPolicyComparisonInternal({ config: _config }: CardConfig) {
     // Only include clusters where Kyverno is actually installed
     result = result.filter(c => kyvernoStatuses?.[c]?.installed)
     return result.sort()
-  })()
+  }, [rawClusters, globalSelectedClusters, isAllClustersSelected, customFilter, kyvernoStatuses])
 
   // Determine which clusters to compare
   const clustersToCompare = (() => {
@@ -90,7 +90,7 @@ function CrossClusterPolicyComparisonInternal({ config: _config }: CardConfig) {
   }
 
   // Build policy comparison table
-  const policyRows = (() => {
+  const policyRows = useMemo((): PolicyRow[] => {
     if (clustersToCompare.length === 0) return []
 
     // Collect all unique policies across selected clusters
@@ -138,7 +138,7 @@ function CrossClusterPolicyComparisonInternal({ config: _config }: CardConfig) {
     // Sort by most discrepancies first, then alphabetically
     rows.sort((a, b) => b.discrepancies - a.discrepancies || a.name.localeCompare(b.name))
     return rows
-  })()
+  }, [kyvernoStatuses, clustersToCompare])
 
   const statusIcon = (status: PolicyStatus) => {
     switch (status) {

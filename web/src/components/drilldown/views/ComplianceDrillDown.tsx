@@ -6,7 +6,7 @@
  * TrestleScan card when clicking a stat (passed/failed/other count).
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import {
   Shield, CheckCircle, XCircle, AlertCircle, Info,
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
@@ -84,7 +84,7 @@ export function ComplianceDrillDown({ data }: Props) {
   const [page, setPage] = useState(0)
 
   // Build flat list with cluster info
-  const allRows = (() => {
+  const allRows = useMemo(() => {
     const rows: ControlRow[] = []
     for (const [clusterName, clusterStatus] of Object.entries(statuses)) {
       if (!clusterStatus.installed) continue
@@ -94,11 +94,11 @@ export function ComplianceDrillDown({ data }: Props) {
       }
     }
     return rows
-  })()
+  }, [statuses, selectedClusters])
 
   // Unique values for filter dropdowns
   const uniqueClusters = [...new Set(allRows.map(r => r.cluster))].sort()
-  const uniqueProfiles = [...new Set(allRows.map(r => r.profile).filter(Boolean))].sort()
+  const uniqueProfiles = useMemo(() => [...new Set(allRows.map(r => r.profile).filter(Boolean))].sort(), [allRows])
   const uniqueStatuses = [...new Set(allRows.map(r => r.status))].sort()
 
   // Filtered rows

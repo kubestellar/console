@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Key, Check, AlertCircle, Loader2, Trash2, Eye, EyeOff, ExternalLink, Copy, Plug } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { AgentIcon } from './AgentIcon'
@@ -132,7 +132,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
     }
   }, [])
 
-  const fetchKeysStatus = async () => {
+  const fetchKeysStatus = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -150,7 +150,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [t])
 
   useEffect(() => {
     if (isOpen) {

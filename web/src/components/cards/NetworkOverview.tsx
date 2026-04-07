@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Globe, Server, Layers, ExternalLink, Activity } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedServices } from '../../hooks/useCachedData'
@@ -61,7 +62,7 @@ export function NetworkOverview() {
   })()
 
   // Calculate network stats
-  const stats = (() => {
+  const stats = useMemo(() => {
     const totalServices = filteredServices.length
     const loadBalancers = filteredServices.filter(s => s.type === 'LoadBalancer').length
     const nodePort = filteredServices.filter(s => s.type === 'NodePort').length
@@ -91,7 +92,7 @@ export function NetworkOverview() {
       healthyClusters,
       degradedClusters,
       offlineClusters }
-  })()
+  }, [filteredServices, filteredClusters])
 
   if (showSkeleton) {
     return (

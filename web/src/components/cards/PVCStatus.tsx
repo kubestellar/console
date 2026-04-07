@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { CheckCircle, AlertTriangle, Clock, ChevronRight } from 'lucide-react'
 import type { PVC } from '../../hooks/useMCP'
 import { useCachedPVCs } from '../../hooks/useCachedData'
@@ -130,7 +131,7 @@ function PVCStatusInternal() {
   })
 
   // Stats based on filtered data (approximate: apply local cluster filter + search to pvcs)
-  const stats = (() => {
+  const stats = useMemo(() => {
     let result = pvcs
 
     // Apply local cluster filter
@@ -158,7 +159,7 @@ function PVCStatusInternal() {
       pending: result.filter(p => p.status === 'Pending').length,
       failed: result.filter(p => !['Bound', 'Pending'].includes(p.status)).length,
     }
-  })()
+  }, [pvcs, localClusterFilter, search])
 
   if (showSkeleton) {
     return (

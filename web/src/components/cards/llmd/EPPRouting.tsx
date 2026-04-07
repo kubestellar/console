@@ -7,7 +7,7 @@
  * Uses live stack data when available, demo data when in demo mode.
  * Note: kvCacheUsage refers to GPU KV-cache (AI inference), not UI data timestamp tracking.
  */
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Zap, ArrowRight, CircleDot } from 'lucide-react'
 import { Acronym } from './shared/PortalTooltip'
@@ -190,6 +190,7 @@ function PremiumNode({ node, uniqueId, isSelected, onClick }: PremiumNodeProps) 
           <stop offset="100%" stopColor="#0f172a" />
         </radialGradient>
       </defs>
+
       {/* Selection highlight ring */}
       {isSelected && (
         <motion.circle
@@ -204,6 +205,7 @@ function PremiumNode({ node, uniqueId, isSelected, onClick }: PremiumNodeProps) 
           transition={{ duration: 1.5, repeat: Infinity }}
         />
       )}
+
       {/* Outer glow ring */}
       <circle
         cx={node.x}
@@ -215,6 +217,7 @@ function PremiumNode({ node, uniqueId, isSelected, onClick }: PremiumNodeProps) 
         opacity={0.3}
         style={{ filter: `blur(0.5px)` }}
       />
+
       {/* Track background (270 degree arc) - dashed for ghost nodes */}
       <path
         d={createArc(NODE_RADIUS, startAngle, endAngle)}
@@ -225,6 +228,7 @@ function PremiumNode({ node, uniqueId, isSelected, onClick }: PremiumNodeProps) 
         strokeDasharray={isGhost ? '1 1' : undefined}
         opacity={isGhost ? 0.5 : 0.9}
       />
+
       {/* Load arc with glow */}
       {load > 0 && (
         <motion.path
@@ -239,6 +243,7 @@ function PremiumNode({ node, uniqueId, isSelected, onClick }: PremiumNodeProps) 
           transition={{ duration: 1, ease: 'easeOut' }}
         />
       )}
+
       {/* Dark center fill with gradient for depth */}
       <circle
         cx={node.x}
@@ -246,6 +251,7 @@ function PremiumNode({ node, uniqueId, isSelected, onClick }: PremiumNodeProps) 
         r={NODE_RADIUS - 1.5}
         fill={`url(#${centerGradientId})`}
       />
+
       {/* Inner ambient glow overlay */}
       <circle
         cx={node.x}
@@ -253,13 +259,14 @@ function PremiumNode({ node, uniqueId, isSelected, onClick }: PremiumNodeProps) 
         r={NODE_RADIUS - 1.5}
         fill={`url(#${innerGlowId})`}
       />
+
       {/* Load percentage inside gauge - or pause icon for ghost */}
       {isGhost ? (
         /* Pause icon for ghost nodes */
-        (<g transform={`translate(${node.x - 1.5}, ${node.y - 1.5})`}>
+        <g transform={`translate(${node.x - 1.5}, ${node.y - 1.5})`}>
           <rect x="0" y="0" width="1" height="3" fill="#64748b" rx="0.2" />
           <rect x="2" y="0" width="1" height="3" fill="#64748b" rx="0.2" />
-        </g>)
+        </g>
       ) : load > 0 ? (
         <text
           x={node.x}
@@ -274,6 +281,7 @@ function PremiumNode({ node, uniqueId, isSelected, onClick }: PremiumNodeProps) 
           {load}%
         </text>
       ) : null}
+
       {/* Node label below */}
       <text
         x={node.x}
@@ -286,7 +294,7 @@ function PremiumNode({ node, uniqueId, isSelected, onClick }: PremiumNodeProps) 
         {node.label}
       </text>
     </motion.g>
-  );
+  )
 }
 
 // Flow particle component - uses SVG animateMotion for guaranteed path following
@@ -407,6 +415,7 @@ function HorseshoeNode({ node, uniqueId, isSelected, onClick }: HorseshoeNodePro
           </feMerge>
         </filter>
       </defs>
+
       {/* Selection highlight ring */}
       {isSelected && (
         <motion.circle
@@ -421,6 +430,7 @@ function HorseshoeNode({ node, uniqueId, isSelected, onClick }: HorseshoeNodePro
           transition={{ duration: 1.5, repeat: Infinity }}
         />
       )}
+
       {/* Track background arc - dashed for ghost nodes */}
       <path
         d={createArc(radius, startAngle, endAngle, totalSweep)}
@@ -431,6 +441,7 @@ function HorseshoeNode({ node, uniqueId, isSelected, onClick }: HorseshoeNodePro
         strokeDasharray={isGhost ? '2 2' : undefined}
         opacity={isGhost ? 0.5 : 1}
       />
+
       {/* Value arc */}
       {load > 0 && !isGhost && (
         <motion.path
@@ -445,6 +456,7 @@ function HorseshoeNode({ node, uniqueId, isSelected, onClick }: HorseshoeNodePro
           transition={{ duration: 0.8, ease: 'easeOut' }}
         />
       )}
+
       {/* Center fill */}
       <circle
         cx={cx}
@@ -452,13 +464,14 @@ function HorseshoeNode({ node, uniqueId, isSelected, onClick }: HorseshoeNodePro
         r={radius - 3}
         fill="#0f172a"
       />
+
       {/* Percentage text - or pause icon for ghost */}
       {isGhost ? (
         /* Pause icon for ghost nodes */
-        (<g transform={`translate(${cx - 2}, ${cy - 2})`}>
+        <g transform={`translate(${cx - 2}, ${cy - 2})`}>
           <rect x="0" y="0" width="1.5" height="4" fill="#64748b" rx="0.3" />
           <rect x="2.5" y="0" width="1.5" height="4" fill="#64748b" rx="0.3" />
-        </g>)
+        </g>
       ) : (
         <text
           x={cx}
@@ -473,6 +486,7 @@ function HorseshoeNode({ node, uniqueId, isSelected, onClick }: HorseshoeNodePro
           {load}%
         </text>
       )}
+
       {/* Label below */}
       <text
         x={cx}
@@ -485,7 +499,7 @@ function HorseshoeNode({ node, uniqueId, isSelected, onClick }: HorseshoeNodePro
         {node.label}
       </text>
     </motion.g>
-  );
+  )
 }
 
 function EPPRoutingInternal() {
@@ -518,7 +532,7 @@ function EPPRoutingInternal() {
   useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0, hasData: true })
 
   // Build dynamic nodes from stack topology
-  const rawNodes = (() => {
+  const rawNodes = useMemo((): FlowNode[] => {
     // Only show demo nodes if demo mode is ON
     if (!selectedStack && isDemoMode) {
       return NODES // Default demo nodes
@@ -630,7 +644,7 @@ function EPPRoutingInternal() {
     }
 
     return nodes
-  })()
+  }, [selectedStack, isDemoMode])
 
   // Scale node positions wider when in fullscreen to fill the wider SVG viewBox
   const dynamicNodes = (() => {
@@ -652,7 +666,7 @@ function EPPRoutingInternal() {
   }
 
   // Build node-id → pod-name mapping for Prometheus lookups
-  const nodePodMap = (() => {
+  const nodePodMap = useMemo((): Record<string, string[]> => {
     if (!selectedStack) return {}
     const map: Record<string, string[]> = {}
     let pi = 0
@@ -680,7 +694,7 @@ function EPPRoutingInternal() {
       }
     }
     return map
-  })()
+  }, [selectedStack])
 
   // Update metrics — uses Prometheus when available, falls back to simulated
   useEffect(() => {
@@ -735,7 +749,7 @@ function EPPRoutingInternal() {
   }
 
   // Transform routing stats to flow links based on topology
-  const links = (() => {
+  const links = useMemo((): FlowLink[] => {
     const flowLinks: FlowLink[] = [
       { source: 'requests', target: 'epp', value: 450, percentage: 100, type: 'prefill' as const },
     ]
@@ -830,10 +844,10 @@ function EPPRoutingInternal() {
     }
 
     return flowLinks
-  })()
+  }, [dynamicNodes])
 
   // Aggregate metrics
-  const metrics = (() => {
+  const metrics = useMemo(() => {
     const prefillTotal = links
       .filter(l => l.source === 'epp' && l.target.startsWith('prefill'))
       .reduce((sum, l) => sum + l.value, 0)
@@ -847,7 +861,7 @@ function EPPRoutingInternal() {
       decodeRps: decodeTotal,
       prefillPercent: Math.round((prefillTotal / 450) * 100),
       decodePercent: Math.round((decodeTotal / 450) * 100) }
-  })()
+  }, [links])
 
   // Generate path between nodes - must match FlowParticle curve calculation exactly
   const generatePath = (source: FlowNode, target: FlowNode): string => {

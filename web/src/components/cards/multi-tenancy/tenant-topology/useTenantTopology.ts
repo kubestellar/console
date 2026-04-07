@@ -1,3 +1,13 @@
+/**
+ * useTenantTopology — Aggregates the 4 technology hooks plus network stats
+ * to determine component detection status and live throughput for each
+ * topology node.
+ *
+ * Returns simple detected/healthy booleans per component, per-connection
+ * throughput rates (bytes/sec), and a combined isDemoData flag that the card
+ * uses for the Demo badge via useCardLoadingState.
+ */
+import { useMemo } from 'react'
 import { useOvnStatus } from '../ovn-status/useOvnStatus'
 import { useKubeFlexStatus } from '../kubeflex-status/useKubeflexStatus'
 import { useK3sStatus } from '../k3s-status/useK3sStatus'
@@ -52,28 +62,43 @@ export function useTenantTopology(): TenantTopologyData {
   // Demo when ALL hooks are returning demo fallback data
   const isDemoData = ovnResult.isDemoData && kubeflexResult.isDemoData && k3sResult.isDemoData && kubevirtResult.isDemoData
 
-  return ({
-    ovnDetected: ovn.detected,
-    ovnHealthy: ovn.health === 'healthy',
-    kubeflexDetected: kubeflex.detected,
-    kubeflexHealthy: kubeflex.health === 'healthy',
-    k3sDetected: k3s.detected,
-    k3sHealthy: k3s.health === 'healthy',
-    kubevirtDetected: kubevirt.detected,
-    kubevirtHealthy: kubevirt.health === 'healthy',
-    kvEth0Rate: netStats.kvEth0Rate,
-    kvEth1Rate: netStats.kvEth1Rate,
-    k3sEth0Rate: netStats.k3sEth0Rate,
-    k3sEth1Rate: netStats.k3sEth1Rate,
-    kvEth0Rx: netStats.kvEth0Rx,
-    kvEth0Tx: netStats.kvEth0Tx,
-    kvEth1Rx: netStats.kvEth1Rx,
-    kvEth1Tx: netStats.kvEth1Tx,
-    k3sEth0Rx: netStats.k3sEth0Rx,
-    k3sEth0Tx: netStats.k3sEth0Tx,
-    k3sEth1Rx: netStats.k3sEth1Rx,
-    k3sEth1Tx: netStats.k3sEth1Tx,
-    isLoading,
-    isDemoData
-  });
+  return useMemo(
+    () => ({
+      ovnDetected: ovn.detected,
+      ovnHealthy: ovn.health === 'healthy',
+      kubeflexDetected: kubeflex.detected,
+      kubeflexHealthy: kubeflex.health === 'healthy',
+      k3sDetected: k3s.detected,
+      k3sHealthy: k3s.health === 'healthy',
+      kubevirtDetected: kubevirt.detected,
+      kubevirtHealthy: kubevirt.health === 'healthy',
+      kvEth0Rate: netStats.kvEth0Rate,
+      kvEth1Rate: netStats.kvEth1Rate,
+      k3sEth0Rate: netStats.k3sEth0Rate,
+      k3sEth1Rate: netStats.k3sEth1Rate,
+      kvEth0Rx: netStats.kvEth0Rx,
+      kvEth0Tx: netStats.kvEth0Tx,
+      kvEth1Rx: netStats.kvEth1Rx,
+      kvEth1Tx: netStats.kvEth1Tx,
+      k3sEth0Rx: netStats.k3sEth0Rx,
+      k3sEth0Tx: netStats.k3sEth0Tx,
+      k3sEth1Rx: netStats.k3sEth1Rx,
+      k3sEth1Tx: netStats.k3sEth1Tx,
+      isLoading,
+      isDemoData,
+    }),
+    [
+      ovn.detected, ovn.health,
+      kubeflex.detected, kubeflex.health,
+      k3s.detected, k3s.health,
+      kubevirt.detected, kubevirt.health,
+      netStats.kvEth0Rate, netStats.kvEth1Rate,
+      netStats.k3sEth0Rate, netStats.k3sEth1Rate,
+      netStats.kvEth0Rx, netStats.kvEth0Tx,
+      netStats.kvEth1Rx, netStats.kvEth1Tx,
+      netStats.k3sEth0Rx, netStats.k3sEth0Tx,
+      netStats.k3sEth1Rx, netStats.k3sEth1Tx,
+      isLoading, isDemoData,
+    ],
+  )
 }

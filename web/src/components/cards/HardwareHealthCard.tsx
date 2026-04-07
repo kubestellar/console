@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { AlertTriangle, CheckCircle, Cpu, HardDrive, Wifi, Server, RefreshCw, XCircle, ChevronRight, List, AlertCircle, BellOff, Clock, MoreVertical } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useCardLoadingState } from './CardDataContext'
@@ -251,7 +251,9 @@ export function HardwareHealthCard() {
   })()
 
   // Count of active (non-snoozed) alerts
-  const activeAlertCount = deduplicatedAlerts.filter(alert => !isSnoozed(alert.id)).length
+  const activeAlertCount = useMemo(() => {
+    return deduplicatedAlerts.filter(alert => !isSnoozed(alert.id)).length
+  }, [deduplicatedAlerts, isSnoozed])
 
   // Auto-switch to alerts tab on initial load when active alerts exist.
   // Once the user has explicitly clicked a view tab, stop overriding.
@@ -275,7 +277,9 @@ export function HardwareHealthCard() {
   }, [viewMode]) // eslint-disable-line react-hooks/exhaustive-deps -- intentionally only reacts to viewMode changes
 
   // Get IDs of visible alerts for "Snooze All"
-  const visibleAlertIds = filteredAlerts.filter(a => !isSnoozed(a.id)).map(a => a.id)
+  const visibleAlertIds = useMemo(() => {
+    return filteredAlerts.filter(a => !isSnoozed(a.id)).map(a => a.id)
+  }, [filteredAlerts, isSnoozed])
 
   // Sort alerts
   const sortedAlerts = (() => {
@@ -380,26 +384,28 @@ export function HardwareHealthCard() {
   // Sort inventory
   /** Weight multiplier so GPU-heavy nodes sort above nodes with only other device types */
   const GPU_SORT_WEIGHT = 100
-  const sortedInventory = [...filteredInventory].sort((a, b) => {
-    let cmp = 0
-    switch (sortField) {
-      case 'nodeName':
-        cmp = a.nodeName.localeCompare(b.nodeName)
-        break
-      case 'cluster':
-        cmp = a.cluster.localeCompare(b.cluster)
-        break
-      case 'totalDevices':
-      default: {
-        // Sort by total device count for inventory (GPUs prioritized via weight)
-        const aTotal = getTotalDevices(a.devices) + (a.devices.gpuCount * GPU_SORT_WEIGHT)
-        const bTotal = getTotalDevices(b.devices) + (b.devices.gpuCount * GPU_SORT_WEIGHT)
-        cmp = aTotal - bTotal
-        break
+  const sortedInventory = useMemo(() => {
+    return [...filteredInventory].sort((a, b) => {
+      let cmp = 0
+      switch (sortField) {
+        case 'nodeName':
+          cmp = a.nodeName.localeCompare(b.nodeName)
+          break
+        case 'cluster':
+          cmp = a.cluster.localeCompare(b.cluster)
+          break
+        case 'totalDevices':
+        default: {
+          // Sort by total device count for inventory (GPUs prioritized via weight)
+          const aTotal = getTotalDevices(a.devices) + (a.devices.gpuCount * GPU_SORT_WEIGHT)
+          const bTotal = getTotalDevices(b.devices) + (b.devices.gpuCount * GPU_SORT_WEIGHT)
+          cmp = aTotal - bTotal
+          break
+        }
       }
-    }
-    return sortDirection === 'asc' ? cmp : -cmp
-  })
+      return sortDirection === 'asc' ? cmp : -cmp
+    })
+  }, [filteredInventory, sortField, sortDirection])
 
   // Pagination for inventory
   const inventoryTotalPages = Math.ceil(sortedInventory.length / effectivePerPage) || 1

@@ -7,7 +7,7 @@
  * Right-side legend with hardware-colored dots, info pills, and Reset filter.
  * Connected smooth scatter lines with GPU count labels. Built with ECharts.
  */
-import { useState, useRef } from 'react';
+import { useState, useMemo, useRef } from 'react'
 import ReactECharts from 'echarts-for-react'
 import { Download, RotateCcw } from 'lucide-react'
 import { useReportCardDataState } from '../CardDataContext'
@@ -309,7 +309,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
   })()
 
   // ---- Series grouped by hardware ----
-  const seriesMap = (() => {
+  const seriesMap = useMemo(() => {
     const map = new Map<string, ParetoPoint[]>()
     for (const pt of displayPoints) {
       const hw = getHardwareShort(pt.hardware)
@@ -320,7 +320,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
       pts.sort((a, b) => preset.xAxis.getValue(a) - preset.xAxis.getValue(b))
     }
     return map
-  })()
+  }, [displayPoints, preset])
 
   // ---- Callbacks ----
   const toggleHw = (hw: string) => {
@@ -363,7 +363,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
   })()
 
   // ---- ECharts option ----
-  const option = (() => {
+  const option = useMemo(() => {
     const allSeries: EChartsSeriesConfig[] = [...seriesMap.entries()]
       .filter(([hw]) => !hiddenHw.has(hw))
       .map(([hw, pts]) => {
@@ -471,7 +471,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
         { type: 'inside', yAxisIndex: 0, filterMode: 'weakFilter' },
       ],
       series: allSeries }
-  })()
+  }, [seriesMap, frontier, hideNonOptimal, hideLabels, highContrast, hiddenHw, preset])
 
   // ---- Legend items (hardware only) ----
   const legendItems = [...seriesMap.keys()].map(hw => ({

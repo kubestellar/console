@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 import { Play, RotateCcw, Pause, Trophy, Target, Heart, Zap } from 'lucide-react'
 
@@ -116,7 +116,7 @@ export function KubeGalaga() {
   }
 
   // Initialize game
-  const initGame = () => {
+  const initGame = useCallback(() => {
     playerRef.current = { x: CANVAS_WIDTH / 2 - PLAYER_WIDTH / 2, y: CANVAS_HEIGHT - 50 }
     bulletsRef.current = []
     setScore(0)
@@ -125,7 +125,7 @@ export function KubeGalaga() {
     initStars()
     initEnemies(1)
     invincibleRef.current = 0
-  }
+  }, [initStars, initEnemies])
 
   // Shoot bullet
   const shoot = () => {
@@ -167,7 +167,7 @@ export function KubeGalaga() {
   }
 
   // Update game state
-  const update = () => {
+  const update = useCallback(() => {
     const keys = keysRef.current
     const player = playerRef.current
 
@@ -353,10 +353,10 @@ export function KubeGalaga() {
       setGameState('gameover')
       emitGameEnded('kube_galaga', 'loss', score)
     }
-  }
+  }, [shoot, enemyShoot, startDive, score, highScore])
 
   // Render
-  const render = () => {
+  const render = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -430,7 +430,7 @@ export function KubeGalaga() {
       ctx.arc(enemy.x + (ENEMY_WIDTH * 2) / 3, enemy.y + ENEMY_HEIGHT / 3, 3, 0, Math.PI * 2)
       ctx.fill()
     })
-  }
+  }, [])
 
   // Game loop
   useEffect(() => {

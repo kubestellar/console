@@ -6,7 +6,7 @@
  *
  * Uses live stack data when available, demo data when in demo mode.
  */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Database, TrendingUp, TrendingDown, CircleDot, Grid3X3 } from 'lucide-react'
@@ -517,7 +517,7 @@ export function KVCacheMonitor() {
   }, [generateStats])
 
   // Calculate aggregate metrics
-  const aggregateMetrics = (() => {
+  const aggregateMetrics = useMemo(() => {
     if (stats.length === 0) return { avgUtil: 0, totalUsed: 0, totalCapacity: 0, avgHitRate: 0 }
 
     return {
@@ -525,7 +525,7 @@ export function KVCacheMonitor() {
       totalUsed: stats.reduce((sum, s) => sum + s.usedGB, 0),
       totalCapacity: stats.reduce((sum, s) => sum + s.totalCapacityGB, 0),
       avgHitRate: Math.round(stats.reduce((sum, s) => sum + s.hitRate, 0) / stats.length * 100) }
-  })()
+  }, [stats])
 
   // Trend indicator
   const trend = (() => {

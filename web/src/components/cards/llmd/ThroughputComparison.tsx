@@ -5,7 +5,7 @@
  * One line per experiment variant. Shows how throughput scales with load.
  * Filter by experiment category, ISL/OSL, and model.
  */
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import {
   Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, Area, ComposedChart } from 'recharts'
@@ -68,12 +68,13 @@ export function ThroughputComparison() {
     osl: oslFilter || undefined })
 
   // Build chart data: one row per QPS, columns per experiment
-  const chartData: ChartRow[] = (() => {
+  const { chartData } = useMemo(() => {
     const qpsSet = new Set<number>()
     groups.forEach(g => g.points.forEach(p => qpsSet.add(p.qps)))
     const allQps = [...qpsSet].sort((a, b) => a - b)
 
-    return allQps.map(qps => {
+    const keys = groups.map(g => g.shortVariant)
+    const data: ChartRow[] = allQps.map(qps => {
       const row: ChartRow = { qps }
       for (const g of groups) {
         const pt = g.points.find(p => p.qps === qps)
@@ -81,7 +82,8 @@ export function ThroughputComparison() {
       }
       return row
     })
-  })()
+    return { chartData: data, lineKeys: keys }
+  }, [groups])
 
   // Peak throughput summary
   const peakInfo = (() => {
@@ -135,6 +137,7 @@ export function ThroughputComparison() {
           </select>
         </div>
       </div>
+
       {/* Chart */}
       <div className="flex-1 min-h-0" style={{ minHeight: 200 }}>
         {chartData.length > 0 ? (
@@ -191,6 +194,7 @@ export function ThroughputComparison() {
           </div>
         )}
       </div>
+
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-2xs">
         {groups.map(g => (
@@ -201,7 +205,7 @@ export function ThroughputComparison() {
         ))}
       </div>
     </div>
-  );
+  )
 }
 
 export default ThroughputComparison

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react'
 import { Activity, ChevronRight } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
@@ -42,7 +42,7 @@ export function CrossClusterEventCorrelation() {
   })
 
   // Build timeline chart data from warning events
-  const { chartData, clusterNames } = (() => {
+  const { chartData, clusterNames } = useMemo(() => {
     const filtered = (warningEvents || []).filter(
       e => e.cluster && e.lastSeen && (selectedClusters.length === 0 || selectedClusters.includes(e.cluster)),
     )
@@ -72,7 +72,7 @@ export function CrossClusterEventCorrelation() {
       }))
 
     return { chartData: sorted, clusterNames: clusters }
-  })()
+  }, [warningEvents, selectedClusters])
 
   if (!isLoading && correlationInsightsRaw.length === 0 && chartData.length === 0) {
     return (

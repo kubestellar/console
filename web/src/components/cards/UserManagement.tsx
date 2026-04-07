@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import {
   Users,
   Key,
@@ -122,13 +122,13 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   })()
 
   // Extract unique namespaces from service accounts (filtered by cluster if selected)
-  const namespaces = (() => {
+  const namespaces = useMemo(() => {
     const filteredSAs = selectedCluster
       ? allServiceAccounts.filter(sa => sa.cluster === selectedCluster)
       : allServiceAccounts
     const nsSet = new Set(filteredSAs.map(sa => sa.namespace))
     return Array.from(nsSet).sort()
-  })()
+  }, [allServiceAccounts, selectedCluster])
 
   // Pre-filter OpenShift users by in-tab cluster dropdown (before passing to useCardData)
   const openshiftUsersPreFiltered = (() => {

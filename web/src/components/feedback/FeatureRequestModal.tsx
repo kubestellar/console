@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, GitMerge, Eye, Pencil, RefreshCw, MessageSquare, Settings, Github, Coins, Lightbulb, AlertCircle, AlertTriangle, Linkedin, Trophy, Monitor, BookOpen, ImagePlus, Trash2, Copy, Maximize2, FileText, Save, RotateCcw } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { StatusBadge } from '../ui/StatusBadge'
@@ -141,11 +141,11 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
   const screenshotPreviewRef = useRef<HTMLDivElement>(null)
 
   // Close fullscreen preview on Escape key
-  const handleFullscreenKeyDown = (e: KeyboardEvent) => {
+  const handleFullscreenKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       setIsPreviewFullscreen(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     if (isPreviewFullscreen) {
@@ -507,7 +507,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
           <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 pointer-events-none">
             {isDemoModeForced ? (
               /* Demo mode: simple prompt to get their own console */
-              (<div
+              <div
                 className="bg-background border border-border rounded-lg shadow-xl p-6 max-w-sm w-full pointer-events-auto"
                 onClick={e => e.stopPropagation()}
               >
@@ -533,10 +533,10 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
                     {t('feedback.getYourOwn')}
                   </button>
                 </div>
-              </div>)
+              </div>
             ) : (
               /* Localhost/cluster: OAuth setup guidance + GitHub issues fallback */
-              (<div
+              <div
                 className="bg-background border border-border rounded-lg shadow-xl p-6 max-w-md w-full pointer-events-auto"
                 onClick={e => e.stopPropagation()}
               >
@@ -548,9 +548,11 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
                     {t('feedback.oauthRequired')}
                   </h3>
                 </div>
+
                 <p className="text-sm text-muted-foreground mb-4">
                   {t('feedback.oauthExplanation')}
                 </p>
+
                 {/* How it works */}
                 <div className="p-3 bg-purple-500/5 border border-purple-500/20 rounded-lg mb-3">
                   <div className="flex items-center gap-1.5 mb-2">
@@ -572,6 +574,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
                     </li>
                   </ul>
                 </div>
+
                 {/* In the meantime */}
                 <div className="p-3 bg-secondary/30 border border-border rounded-lg mb-4">
                   <div className="flex items-center gap-1.5 mb-2">
@@ -582,6 +585,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
                     {t('feedback.githubIssuesInfo')}
                   </p>
                 </div>
+
                 {/* Actions */}
                 <div className="flex flex-col gap-2">
                   <div className="flex gap-2">
@@ -620,16 +624,18 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
                     {t('feedback.alreadySetUp')}
                   </button>
                 </div>
-              </div>)
+              </div>
             )}
           </div>
         </>
       )}
+
       {/* Setup Instructions Dialog — shown when demo users click login */}
       <SetupInstructionsDialog
         isOpen={showSetupDialog}
         onClose={() => setShowSetupDialog(false)}
       />
+
       {/* Header */}
       <div className="p-4 border-b border-border flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
@@ -653,6 +659,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
           <X className="w-5 h-5" />
         </button>
       </div>
+
       {/* Tabs */}
       <div className="flex border-b border-border flex-shrink-0">
             <button
@@ -696,6 +703,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
               )}
             </button>
           </div>
+
       {/* Login banner for demo/unauthenticated users */}
       {!canPerformActions && (
         <button
@@ -710,11 +718,12 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
           <StatusBadge color="yellow">{isDemoModeForced ? t('feedback.loginWithGitHub') : t('feedback.setupOAuth')}</StatusBadge>
         </button>
       )}
+
       {/* Content - scrollable area with fixed flex layout */}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         {activeTab === 'drafts' ? (
           /* Drafts Tab — list saved drafts with restore/delete actions */
-          (<div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {/* Drafts header */}
             <div className="p-2 border-b border-border/50 flex items-center justify-between flex-shrink-0">
               <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -748,6 +757,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
                 )
               )}
             </div>
+
             <div className="flex-1 min-h-0 overflow-y-auto">
               {draftCount === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">
@@ -846,128 +856,161 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
                 })
               )}
             </div>
-          </div>)
+          </div>
         ) : activeTab === 'updates' ? (
           /* Updates Tab — unified scrollable view */
-          (<div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            {/* Contributor banner — coins + level + progress */}
-            <ContributorBanner />
-            {/* Link to full leaderboard on docs site */}
-            <div className="border-b border-border/50 px-3 py-2">
-              <a
-                href="https://kubestellar.io/leaderboard"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
-              >
-                <Trophy className="w-3.5 h-3.5" />
-                <span>View Full Leaderboard</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-            {/* Actions header */}
-            <div className="p-2 border-b border-border/50 flex items-center justify-between flex-shrink-0">
-              {actionError ? (
-                <span className="text-xs text-red-400">{actionError}</span>
-              ) : (
-                <span />
-              )}
-              <button
-                onClick={() => {
-                  setActionError(null)
-                  refreshRequests()
-                  refreshNotifications()
-                }}
-                disabled={isRefreshing}
-                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 disabled:opacity-50"
-                title={t('common.refresh')}
-              >
-                <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-                Refresh
-              </button>
-            </div>
-            <div className="flex-1 min-h-0 overflow-y-auto">
-                {/* ── Your Requests section ── */}
-                <div className="p-2 border-b border-border/50 flex-shrink-0">
-                  <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Your Requests ({requests.length})
-                  </span>
-                </div>
-                  {requestsLoading && requests.length === 0 ? (
-                    <div className="p-8 text-center text-muted-foreground">
-                      <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin" />
-                      <p className="text-sm">{t('common.loading')}</p>
-                    </div>
-                  ) : requests.length === 0 ? (
-                    <div className="p-8 text-center text-muted-foreground">
-                      <Bug className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No requests in queue</p>
-                      <p className="text-xs mt-1">Submit a bug report or feature request to get started</p>
-                    </div>
-                  ) : (
-                    requests.map(request => {
-                    const statusInfo = getStatusInfo(request.status, request.closed_by_user)
-                    const isLoading = actionLoading === request.id
-                    const showConfirm = confirmClose === request.id
-                    // Check ownership by github_login (for queue items) or user_id
-                    const isOwnedByUser = request.github_login
-                      ? request.github_login === currentGitHubLogin
-                      : request.user_id === currentGitHubLogin
-                    // Blur untriaged issues that aren't owned by the current user
-                    const shouldBlur = !isTriaged(request.status) && !isOwnedByUser
-                    // Get unread notification count for this request
-                    const requestUnreadCount = getUnreadCountForRequest(request.id)
-                    return (
-                      <div
-                        key={request.id}
-                        className={`p-3 border-b border-border/50 hover:bg-secondary/30 transition-colors ${
-                          requestUnreadCount > 0 ? 'bg-purple-500/5' : ''
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className={`px-1.5 py-0.5 text-2xs font-medium rounded ${
-                                request.request_type === 'bug' ? 'bg-red-500/20 text-red-400' : 'bg-purple-500/20 text-purple-400'
-                              }`}>
-                                {request.request_type === 'bug' ? 'Bug' : 'Feature'}
-                              </span>
-                              {request.github_issue_number && (
-                                <span className="text-xs text-muted-foreground">
-                                  #{request.github_issue_number}
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              {/* Contributor banner — coins + level + progress */}
+              <ContributorBanner />
+
+              {/* Link to full leaderboard on docs site */}
+              <div className="border-b border-border/50 px-3 py-2">
+                <a
+                  href="https://kubestellar.io/leaderboard"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                >
+                  <Trophy className="w-3.5 h-3.5" />
+                  <span>View Full Leaderboard</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+
+              {/* Actions header */}
+              <div className="p-2 border-b border-border/50 flex items-center justify-between flex-shrink-0">
+                {actionError ? (
+                  <span className="text-xs text-red-400">{actionError}</span>
+                ) : (
+                  <span />
+                )}
+                <button
+                  onClick={() => {
+                    setActionError(null)
+                    refreshRequests()
+                    refreshNotifications()
+                  }}
+                  disabled={isRefreshing}
+                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 disabled:opacity-50"
+                  title={t('common.refresh')}
+                >
+                  <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                  {/* ── Your Requests section ── */}
+                  <div className="p-2 border-b border-border/50 flex-shrink-0">
+                    <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Your Requests ({requests.length})
+                    </span>
+                  </div>
+                    {requestsLoading && requests.length === 0 ? (
+                      <div className="p-8 text-center text-muted-foreground">
+                        <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin" />
+                        <p className="text-sm">{t('common.loading')}</p>
+                      </div>
+                    ) : requests.length === 0 ? (
+                      <div className="p-8 text-center text-muted-foreground">
+                        <Bug className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No requests in queue</p>
+                        <p className="text-xs mt-1">Submit a bug report or feature request to get started</p>
+                      </div>
+                    ) : (
+                      requests.map(request => {
+                      const statusInfo = getStatusInfo(request.status, request.closed_by_user)
+                      const isLoading = actionLoading === request.id
+                      const showConfirm = confirmClose === request.id
+                      // Check ownership by github_login (for queue items) or user_id
+                      const isOwnedByUser = request.github_login
+                        ? request.github_login === currentGitHubLogin
+                        : request.user_id === currentGitHubLogin
+                      // Blur untriaged issues that aren't owned by the current user
+                      const shouldBlur = !isTriaged(request.status) && !isOwnedByUser
+                      // Get unread notification count for this request
+                      const requestUnreadCount = getUnreadCountForRequest(request.id)
+                      return (
+                        <div
+                          key={request.id}
+                          className={`p-3 border-b border-border/50 hover:bg-secondary/30 transition-colors ${
+                            requestUnreadCount > 0 ? 'bg-purple-500/5' : ''
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`px-1.5 py-0.5 text-2xs font-medium rounded ${
+                                  request.request_type === 'bug' ? 'bg-red-500/20 text-red-400' : 'bg-purple-500/20 text-purple-400'
+                                }`}>
+                                  {request.request_type === 'bug' ? 'Bug' : 'Feature'}
                                 </span>
-                              )}
-                              {isOwnedByUser && (
-                                <StatusBadge color="blue" size="xs">Yours</StatusBadge>
-                              )}
-                              {/* Unread updates badge with clear button */}
-                              {requestUnreadCount > 0 && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    markRequestNotificationsAsRead(request.id)
-                                  }}
-                                  className="flex items-center gap-1 px-1.5 py-0.5 text-2xs font-medium rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
-                                  title="Click to clear updates"
-                                >
-                                  <Bell className="w-3 h-3" />
-                                  {requestUnreadCount} update{requestUnreadCount !== 1 ? 's' : ''}
-                                  <X className="w-3 h-3 ml-0.5 hover:text-purple-300" />
-                                </button>
-                              )}
-                            </div>
-                            {/* For untriaged items (open, needs_triage), show info based on ownership */}
-                            {!isTriaged(request.status) ? (
-                              <>
-                                {isOwnedByUser ? (
-                                  <>
-                                    <p className="text-sm font-medium text-foreground mt-1 truncate blur-sm select-none">
-                                      {request.request_type === 'bug' ? '🐛 ' : '✨ '}{request.title}
-                                    </p>
+                                {request.github_issue_number && (
+                                  <span className="text-xs text-muted-foreground">
+                                    #{request.github_issue_number}
+                                  </span>
+                                )}
+                                {isOwnedByUser && (
+                                  <StatusBadge color="blue" size="xs">Yours</StatusBadge>
+                                )}
+                                {/* Unread updates badge with clear button */}
+                                {requestUnreadCount > 0 && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      markRequestNotificationsAsRead(request.id)
+                                    }}
+                                    className="flex items-center gap-1 px-1.5 py-0.5 text-2xs font-medium rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
+                                    title="Click to clear updates"
+                                  >
+                                    <Bell className="w-3 h-3" />
+                                    {requestUnreadCount} update{requestUnreadCount !== 1 ? 's' : ''}
+                                    <X className="w-3 h-3 ml-0.5 hover:text-purple-300" />
+                                  </button>
+                                )}
+                              </div>
+                              {/* For untriaged items (open, needs_triage), show info based on ownership */}
+                              {!isTriaged(request.status) ? (
+                                <>
+                                  {isOwnedByUser ? (
+                                    <>
+                                      <p className="text-sm font-medium text-foreground mt-1 truncate blur-sm select-none">
+                                        {request.request_type === 'bug' ? '🐛 ' : '✨ '}{request.title}
+                                      </p>
+                                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                        <span className={`px-1.5 py-0.5 text-2xs font-medium rounded ${statusInfo.bgColor} ${statusInfo.color}`}>
+                                          {statusInfo.label}
+                                        </span>
+                                        {request.github_issue_url && (
+                                          <a
+                                            href={request.github_issue_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                                            onClick={e => e.stopPropagation()}
+                                          >
+                                            <ExternalLink className="w-3 h-3" />
+                                            View on GitHub
+                                          </a>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-muted-foreground italic mt-1.5">
+                                        Details will be visible to you once we accept triage
+                                      </p>
+                                    </>
+                                  ) : (
                                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                       <span className={`px-1.5 py-0.5 text-2xs font-medium rounded ${statusInfo.bgColor} ${statusInfo.color}`}>
                                         {statusInfo.label}
                                       </span>
+                                      <span className="text-xs text-muted-foreground italic">
+                                        Awaiting maintainer attention
+                                      </span>
+                                      {request.github_issue_number && (
+                                        <span className="text-xs text-muted-foreground">
+                                          #{request.github_issue_number}
+                                        </span>
+                                      )}
                                       {request.github_issue_url && (
                                         <a
                                           href={request.github_issue_url}
@@ -981,451 +1024,421 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
                                         </a>
                                       )}
                                     </div>
-                                    <p className="text-xs text-muted-foreground italic mt-1.5">
-                                      Details will be visible to you once we accept triage
-                                    </p>
-                                  </>
-                                ) : (
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  {/* Show emoji prefix based on request type */}
+                                  <p className={`text-sm font-medium text-foreground mt-1 truncate ${shouldBlur ? 'blur-sm select-none' : ''}`}>
+                                    {request.request_type === 'bug' ? '🐛 ' : '✨ '}{request.title}
+                                  </p>
                                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                     <span className={`px-1.5 py-0.5 text-2xs font-medium rounded ${statusInfo.bgColor} ${statusInfo.color}`}>
                                       {statusInfo.label}
                                     </span>
-                                    <span className="text-xs text-muted-foreground italic">
-                                      Awaiting maintainer attention
-                                    </span>
-                                    {request.github_issue_number && (
-                                      <span className="text-xs text-muted-foreground">
-                                        #{request.github_issue_number}
+                                    {request.status === 'fix_complete' && (
+                                      <span className="px-1.5 py-0.5 text-2xs font-medium rounded bg-gray-500/20 text-muted-foreground">
+                                        Closed
                                       </span>
                                     )}
-                                    {request.github_issue_url && (
-                                      <a
-                                        href={request.github_issue_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
-                                        onClick={e => e.stopPropagation()}
-                                      >
-                                        <ExternalLink className="w-3 h-3" />
-                                        View on GitHub
-                                      </a>
+                                    {getStatusDescription(request.status, request.closed_by_user) && (
+                                      <span className={`text-xs text-muted-foreground ${shouldBlur ? 'blur-sm select-none' : ''}`}>
+                                        {getStatusDescription(request.status, request.closed_by_user)}
+                                      </span>
                                     )}
                                   </div>
-                                )}
-                              </>
-                            ) : (
-                              <>
-                                {/* Show emoji prefix based on request type */}
-                                <p className={`text-sm font-medium text-foreground mt-1 truncate ${shouldBlur ? 'blur-sm select-none' : ''}`}>
-                                  {request.request_type === 'bug' ? '🐛 ' : '✨ '}{request.title}
-                                </p>
-                                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                  <span className={`px-1.5 py-0.5 text-2xs font-medium rounded ${statusInfo.bgColor} ${statusInfo.color}`}>
-                                    {statusInfo.label}
-                                  </span>
-                                  {request.status === 'fix_complete' && (
-                                    <span className="px-1.5 py-0.5 text-2xs font-medium rounded bg-gray-500/20 text-muted-foreground">
-                                      Closed
-                                    </span>
-                                  )}
-                                  {getStatusDescription(request.status, request.closed_by_user) && (
-                                    <span className={`text-xs text-muted-foreground ${shouldBlur ? 'blur-sm select-none' : ''}`}>
-                                      {getStatusDescription(request.status, request.closed_by_user)}
-                                    </span>
-                                  )}
-                                </div>
-                              </>
-                            )}
-                            {/* Show PR link during AI processing (feasibility_study) */}
-                            {request.status === 'feasibility_study' && request.pr_url && (
-                              <a
-                                href={request.pr_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs flex items-center gap-1 mt-1.5 text-purple-400 hover:text-purple-300"
-                                onClick={e => e.stopPropagation()}
-                              >
-                                <GitPullRequest className="w-3 h-3" />
-                                PR #{request.pr_number}
-                              </a>
-                            )}
-                            {/* Show PR link if fix is ready */}
-                            {request.status === 'fix_ready' && request.pr_url && (
-                              <a
-                                href={request.pr_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs flex items-center gap-1 mt-1.5 text-green-400 hover:text-green-300"
-                                onClick={e => e.stopPropagation()}
-                              >
-                                <GitPullRequest className="w-3 h-3" />
-                                View PR #{request.pr_number}
-                              </a>
-                            )}
-                            {/* Show merged celebration for fix_complete */}
-                            {request.status === 'fix_complete' && (
-                              <div className="mt-2 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <div className="flex items-center gap-1.5">
-                                    <Check className="w-4 h-4 text-green-400" />
-                                    <span className="text-xs font-semibold text-green-400">Merged</span>
+                                </>
+                              )}
+                              {/* Show PR link during AI processing (feasibility_study) */}
+                              {request.status === 'feasibility_study' && request.pr_url && (
+                                <a
+                                  href={request.pr_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs flex items-center gap-1 mt-1.5 text-purple-400 hover:text-purple-300"
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  <GitPullRequest className="w-3 h-3" />
+                                  PR #{request.pr_number}
+                                </a>
+                              )}
+                              {/* Show PR link if fix is ready */}
+                              {request.status === 'fix_ready' && request.pr_url && (
+                                <a
+                                  href={request.pr_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs flex items-center gap-1 mt-1.5 text-green-400 hover:text-green-300"
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  <GitPullRequest className="w-3 h-3" />
+                                  View PR #{request.pr_number}
+                                </a>
+                              )}
+                              {/* Show merged celebration for fix_complete */}
+                              {request.status === 'fix_complete' && (
+                                <div className="mt-2 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <div className="flex items-center gap-1.5">
+                                      <Check className="w-4 h-4 text-green-400" />
+                                      <span className="text-xs font-semibold text-green-400">Merged</span>
+                                    </div>
                                   </div>
-                                </div>
-                                <p className="text-xs text-green-300/80 mb-2">
-                                  Thank you for your feedback! Your {request.request_type === 'bug' ? 'bug fix' : 'feature'} has been merged and will be available in the next nightly build and weekly release.
-                                </p>
-                                <div className="flex items-center gap-3 flex-wrap">
-                                  <a
-                                    href="https://github.com/kubestellar/console/releases"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-xs flex items-center gap-1 text-green-400 hover:text-green-300"
-                                    onClick={e => e.stopPropagation()}
-                                  >
-                                    <ExternalLink className="w-3 h-3" />
-                                    Releases
-                                  </a>
-                                  {request.pr_url && (
+                                  <p className="text-xs text-green-300/80 mb-2">
+                                    Thank you for your feedback! Your {request.request_type === 'bug' ? 'bug fix' : 'feature'} has been merged and will be available in the next nightly build and weekly release.
+                                  </p>
+                                  <div className="flex items-center gap-3 flex-wrap">
                                     <a
-                                      href={request.pr_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-xs flex items-center gap-1 text-green-400 hover:text-green-300"
-                                      onClick={e => e.stopPropagation()}
-                                    >
-                                      <GitPullRequest className="w-3 h-3" />
-                                      PR #{request.pr_number}
-                                    </a>
-                                  )}
-                                  {request.github_issue_url && (
-                                    <a
-                                      href={request.github_issue_url}
+                                      href="https://github.com/kubestellar/console/releases"
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="text-xs flex items-center gap-1 text-green-400 hover:text-green-300"
                                       onClick={e => e.stopPropagation()}
                                     >
                                       <ExternalLink className="w-3 h-3" />
-                                      Issue #{request.github_issue_number}
+                                      Releases
                                     </a>
-                                  )}
+                                    {request.pr_url && (
+                                      <a
+                                        href={request.pr_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs flex items-center gap-1 text-green-400 hover:text-green-300"
+                                        onClick={e => e.stopPropagation()}
+                                      >
+                                        <GitPullRequest className="w-3 h-3" />
+                                        PR #{request.pr_number}
+                                      </a>
+                                    )}
+                                    {request.github_issue_url && (
+                                      <a
+                                        href={request.github_issue_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs flex items-center gap-1 text-green-400 hover:text-green-300"
+                                        onClick={e => e.stopPropagation()}
+                                      >
+                                        <ExternalLink className="w-3 h-3" />
+                                        Issue #{request.github_issue_number}
+                                      </a>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
-                            {/* Show latest comment if unable to fix */}
-                            {request.status === 'unable_to_fix' && request.latest_comment && (
-                              <div className="mt-2 p-2 bg-red-500/10 border border-red-500/20 rounded text-xs text-muted-foreground">
-                                <div className="flex items-center gap-1 text-red-400 mb-1">
-                                  <MessageSquare className="w-3 h-3" />
-                                  <span className="font-medium">{t('drilldown.fields.reason')}</span>
+                              )}
+                              {/* Show latest comment if unable to fix */}
+                              {request.status === 'unable_to_fix' && request.latest_comment && (
+                                <div className="mt-2 p-2 bg-red-500/10 border border-red-500/20 rounded text-xs text-muted-foreground">
+                                  <div className="flex items-center gap-1 text-red-400 mb-1">
+                                    <MessageSquare className="w-3 h-3" />
+                                    <span className="font-medium">{t('drilldown.fields.reason')}</span>
+                                  </div>
+                                  <p className="line-clamp-3">{request.latest_comment}</p>
                                 </div>
-                                <p className="line-clamp-3">{request.latest_comment}</p>
-                              </div>
-                            )}
-                            {/* Preview section: only for fix_ready/fix_complete — not during AI working */}
-                            {(request.status === 'fix_ready' || request.status === 'fix_complete') && (() => {
-                              const checkedPreview = request.pr_number ? previewResults[request.pr_number] : null
-                              const previewUrl = request.netlify_preview_url || (checkedPreview?.status === 'ready' ? checkedPreview.preview_url : null)
-                              const isCheckingThis = previewChecking === request.pr_number
+                              )}
+                              {/* Preview section: only for fix_ready/fix_complete — not during AI working */}
+                              {(request.status === 'fix_ready' || request.status === 'fix_complete') && (() => {
+                                const checkedPreview = request.pr_number ? previewResults[request.pr_number] : null
+                                const previewUrl = request.netlify_preview_url || (checkedPreview?.status === 'ready' ? checkedPreview.preview_url : null)
+                                const isCheckingThis = previewChecking === request.pr_number
 
-                              // Check warmup: if preview just became ready, wait before showing link
-                              const readyAt = checkedPreview?.ready_at ? new Date(checkedPreview.ready_at) : null
-                              const secondsSinceReady = readyAt ? (Date.now() - readyAt.getTime()) / 1000 : Infinity
-                              const isWarmingUp = secondsSinceReady < PREVIEW_WARMUP_SECONDS
+                                // Check warmup: if preview just became ready, wait before showing link
+                                const readyAt = checkedPreview?.ready_at ? new Date(checkedPreview.ready_at) : null
+                                const secondsSinceReady = readyAt ? (Date.now() - readyAt.getTime()) / 1000 : Infinity
+                                const isWarmingUp = secondsSinceReady < PREVIEW_WARMUP_SECONDS
 
-                              if (previewUrl && request.status === 'fix_ready') {
-                                if (isWarmingUp) {
-                                  // Netlify route is warming up — show countdown
-                                  const secondsLeft = Math.ceil(PREVIEW_WARMUP_SECONDS - secondsSinceReady)
+                                if (previewUrl && request.status === 'fix_ready') {
+                                  if (isWarmingUp) {
+                                    // Netlify route is warming up — show countdown
+                                    const secondsLeft = Math.ceil(PREVIEW_WARMUP_SECONDS - secondsSinceReady)
+                                    return (
+                                      <div className="mt-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded">
+                                        <div className="flex items-center gap-2">
+                                          <Loader2 className="w-4 h-4 text-yellow-400 animate-spin" />
+                                          <span className="text-xs text-yellow-400 font-medium">Preview warming up... ({secondsLeft}s)</span>
+                                        </div>
+                                      </div>
+                                    )
+                                  }
+                                  // Prominent preview for fix_ready status
                                   return (
-                                    <div className="mt-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded">
-                                      <div className="flex items-center gap-2">
-                                        <Loader2 className="w-4 h-4 text-yellow-400 animate-spin" />
-                                        <span className="text-xs text-yellow-400 font-medium">Preview warming up... ({secondsLeft}s)</span>
+                                    <div className="mt-2 p-2 bg-green-500/10 border border-green-500/30 rounded">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2">
+                                          <Eye className="w-4 h-4 text-green-400" />
+                                          <span className="text-xs text-green-400 font-medium">Preview Available</span>
+                                        </div>
+                                        <a
+                                          href={previewUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="px-2 py-1 text-xs rounded bg-green-500 hover:bg-green-600 text-white transition-colors flex items-center gap-1"
+                                          onClick={e => e.stopPropagation()}
+                                        >
+                                          <ExternalLink className="w-3 h-3" />
+                                          Try It
+                                        </a>
                                       </div>
                                     </div>
                                   )
                                 }
-                                // Prominent preview for fix_ready status
-                                return (
-                                  <div className="mt-2 p-2 bg-green-500/10 border border-green-500/30 rounded">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <div className="flex items-center gap-2">
-                                        <Eye className="w-4 h-4 text-green-400" />
-                                        <span className="text-xs text-green-400 font-medium">Preview Available</span>
-                                      </div>
-                                      <a
-                                        href={previewUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="px-2 py-1 text-xs rounded bg-green-500 hover:bg-green-600 text-white transition-colors flex items-center gap-1"
-                                        onClick={e => e.stopPropagation()}
+                                if (previewUrl) {
+                                  return (
+                                    <a
+                                      href={previewUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1 mt-1"
+                                      onClick={e => e.stopPropagation()}
+                                    >
+                                      <Eye className="w-3 h-3" />
+                                      Preview
+                                    </a>
+                                  )
+                                }
+                                // No preview yet — show Check Preview button
+                                if (request.pr_number && request.status === 'fix_ready') {
+                                  return (
+                                    <div className="mt-1.5 flex items-center gap-2">
+                                      <button
+                                        onClick={e => { e.stopPropagation(); handleCheckPreview(request.pr_number!) }}
+                                        disabled={isCheckingThis}
+                                        className="text-xs text-muted-foreground hover:text-green-400 flex items-center gap-1 transition-colors disabled:opacity-50"
                                       >
-                                        <ExternalLink className="w-3 h-3" />
-                                        Try It
-                                      </a>
+                                        {isCheckingThis ? (
+                                          <Loader2 className="w-3 h-3 animate-spin" />
+                                        ) : (
+                                          <Eye className="w-3 h-3" />
+                                        )}
+                                        Check Preview
+                                      </button>
+                                      {checkedPreview && checkedPreview.status !== 'ready' && (
+                                        <span className="text-2xs text-muted-foreground">
+                                          {checkedPreview.status === 'pending' ? 'Building...' : checkedPreview.message || checkedPreview.status}
+                                        </span>
+                                      )}
                                     </div>
-                                  </div>
-                                )
-                              }
-                              if (previewUrl) {
-                                return (
+                                  )
+                                }
+                                return null
+                              })()}
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {formatRelativeTime(request.created_at)}
+                                </span>
+                                {request.github_issue_url && (
                                   <a
-                                    href={previewUrl}
+                                    href={request.github_issue_url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1 mt-1"
+                                    className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
                                     onClick={e => e.stopPropagation()}
                                   >
-                                    <Eye className="w-3 h-3" />
-                                    Preview
+                                    <ExternalLink className="w-3 h-3" />
+                                    GitHub
                                   </a>
-                                )
-                              }
-                              // No preview yet — show Check Preview button
-                              if (request.pr_number && request.status === 'fix_ready') {
-                                return (
-                                  <div className="mt-1.5 flex items-center gap-2">
-                                    <button
-                                      onClick={e => { e.stopPropagation(); handleCheckPreview(request.pr_number!) }}
-                                      disabled={isCheckingThis}
-                                      className="text-xs text-muted-foreground hover:text-green-400 flex items-center gap-1 transition-colors disabled:opacity-50"
-                                    >
-                                      {isCheckingThis ? (
-                                        <Loader2 className="w-3 h-3 animate-spin" />
-                                      ) : (
-                                        <Eye className="w-3 h-3" />
-                                      )}
-                                      Check Preview
-                                    </button>
-                                    {checkedPreview && checkedPreview.status !== 'ready' && (
-                                      <span className="text-2xs text-muted-foreground">
-                                        {checkedPreview.status === 'pending' ? 'Building...' : checkedPreview.message || checkedPreview.status}
-                                      </span>
-                                    )}
-                                  </div>
-                                )
-                              }
-                              return null
-                            })()}
-                            <div className="flex items-center gap-2 mt-2">
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {formatRelativeTime(request.created_at)}
-                              </span>
-                              {request.github_issue_url && (
-                                <a
-                                  href={request.github_issue_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                                  onClick={e => e.stopPropagation()}
-                                >
-                                  <ExternalLink className="w-3 h-3" />
-                                  GitHub
-                                </a>
-                              )}
-                            </div>
-                            {/* Actions - only show for user's own active requests (not closed or fix_complete) */}
-                            {isOwnedByUser && request.status !== 'closed' && request.status !== 'fix_complete' && (
-                              <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
-                                {!canPerformActions ? (
-                                  /* Not authenticated or demo mode - show login prompts */
-                                  (<>
-                                    <button
-                                      onClick={() => setShowLoginPrompt(true)}
-                                      className="px-2 py-1 text-xs rounded bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors flex items-center gap-1"
-                                      title="Please login to request updates"
-                                    >
-                                      <RefreshCw className="w-3 h-3" />
-                                      Request Update
-                                    </button>
-                                    <button
-                                      onClick={() => setShowLoginPrompt(true)}
-                                      className="px-2 py-1 text-xs rounded text-muted-foreground/60 hover:text-muted-foreground transition-colors"
-                                      title="Please login to close requests"
-                                    >
-                                      Close
-                                    </button>
-                                  </>)
-                                ) : showConfirm ? (
-                                  <>
-                                    <span className="text-xs text-muted-foreground">Close this request?</span>
-                                    <button
-                                      onClick={() => handleCloseRequest(request.id)}
-                                      disabled={isLoading}
-                                      className="px-2 py-1 text-xs rounded bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors disabled:opacity-50"
-                                    >
-                                      {isLoading ? 'Closing...' : 'Confirm'}
-                                    </button>
-                                    <button
-                                      onClick={() => setConfirmClose(null)}
-                                      className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-muted-foreground transition-colors"
-                                    >
-                                      Cancel
-                                    </button>
-                                  </>
-                                ) : (
-                                  <>
-                                    <button
-                                      onClick={() => handleRequestUpdate(request.id)}
-                                      disabled={isLoading}
-                                      className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors flex items-center gap-1 disabled:opacity-50"
-                                    >
-                                      {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                                      Request Update
-                                    </button>
-                                    <button
-                                      onClick={() => setConfirmClose(request.id)}
-                                      className="px-2 py-1 text-xs rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                                    >
-                                      Close
-                                    </button>
-                                  </>
                                 )}
                               </div>
+                              {/* Actions - only show for user's own active requests (not closed or fix_complete) */}
+                              {isOwnedByUser && request.status !== 'closed' && request.status !== 'fix_complete' && (
+                                <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
+                                  {!canPerformActions ? (
+                                    /* Not authenticated or demo mode - show login prompts */
+                                    <>
+                                      <button
+                                        onClick={() => setShowLoginPrompt(true)}
+                                        className="px-2 py-1 text-xs rounded bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors flex items-center gap-1"
+                                        title="Please login to request updates"
+                                      >
+                                        <RefreshCw className="w-3 h-3" />
+                                        Request Update
+                                      </button>
+                                      <button
+                                        onClick={() => setShowLoginPrompt(true)}
+                                        className="px-2 py-1 text-xs rounded text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                                        title="Please login to close requests"
+                                      >
+                                        Close
+                                      </button>
+                                    </>
+                                  ) : showConfirm ? (
+                                    <>
+                                      <span className="text-xs text-muted-foreground">Close this request?</span>
+                                      <button
+                                        onClick={() => handleCloseRequest(request.id)}
+                                        disabled={isLoading}
+                                        className="px-2 py-1 text-xs rounded bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors disabled:opacity-50"
+                                      >
+                                        {isLoading ? 'Closing...' : 'Confirm'}
+                                      </button>
+                                      <button
+                                        onClick={() => setConfirmClose(null)}
+                                        className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-muted-foreground transition-colors"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <button
+                                        onClick={() => handleRequestUpdate(request.id)}
+                                        disabled={isLoading}
+                                        className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors flex items-center gap-1 disabled:opacity-50"
+                                      >
+                                        {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                                        Request Update
+                                      </button>
+                                      <button
+                                        onClick={() => setConfirmClose(request.id)}
+                                        className="px-2 py-1 text-xs rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                      >
+                                        Close
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    }))}
+
+
+                  {/* ── GitHub Contributions section ── */}
+                      <div className="p-2 border-b border-border/50 flex items-center justify-between flex-shrink-0">
+                        <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                          <Github className="w-3 h-3" />
+                          {currentGitHubLogin ? `${currentGitHubLogin}'s` : ''} GitHub Contributions
+                          {githubRewards && (
+                            <span className="ml-1 text-yellow-400 font-bold">{githubPoints.toLocaleString()} coins</span>
+                          )}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {githubRewards && githubPoints > 0 && (
+                            <button
+                              onClick={() => {
+                                const bd = githubRewards.breakdown
+                                const prCount = (bd?.prs_merged ?? 0) + (bd?.prs_opened ?? 0)
+                                const issueCount = (bd?.bug_issues ?? 0) + (bd?.feature_issues ?? 0) + (bd?.other_issues ?? 0)
+                                const text = `I've earned ${githubPoints.toLocaleString()} contributor coins on the KubeStellar Console! ${prCount > 0 ? `${prCount} PRs` : ''}${prCount > 0 && issueCount > 0 ? ' and ' : ''}${issueCount > 0 ? `${issueCount} issues` : ''} contributed to the open-source KubeStellar project.`
+                                const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://kubestellar.io')}&summary=${encodeURIComponent(text)}`
+                                window.open(linkedInUrl, '_blank', 'noopener,noreferrer,width=600,height=600')
+                                emitLinkedInShare('feature_request')
+                              }}
+                              className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-[#0A66C2] transition-colors"
+                              title={`Share ${githubPoints.toLocaleString()} coins on LinkedIn`}
+                            >
+                              <Linkedin className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button
+                            onClick={handleRefreshGitHub}
+                            disabled={isGitHubRefreshing}
+                            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 disabled:opacity-50"
+                          >
+                            <RefreshCw className={`w-3 h-3 ${isGitHubRefreshing ? 'animate-spin' : ''}`} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {githubRewards && githubRewards.breakdown && (
+                        <div className="px-3 py-2 border-b border-border/50 flex-shrink-0">
+                          <div className="flex flex-wrap gap-1.5">
+                            {githubRewards.breakdown.prs_merged > 0 && (
+                              <StatusBadge color="purple" size="xs" rounded="full" icon={<GitMerge className="w-2.5 h-2.5" />}>
+                                {githubRewards.breakdown.prs_merged} Merged
+                              </StatusBadge>
+                            )}
+                            {githubRewards.breakdown.prs_opened > 0 && (
+                              <StatusBadge color="green" size="xs" rounded="full" icon={<GitPullRequest className="w-2.5 h-2.5" />}>
+                                {githubRewards.breakdown.prs_opened} PRs
+                              </StatusBadge>
+                            )}
+                            {githubRewards.breakdown.bug_issues > 0 && (
+                              <StatusBadge color="red" size="xs" rounded="full" icon={<Bug className="w-2.5 h-2.5" />}>
+                                {githubRewards.breakdown.bug_issues} Bugs
+                              </StatusBadge>
+                            )}
+                            {githubRewards.breakdown.feature_issues > 0 && (
+                              <StatusBadge color="yellow" size="xs" rounded="full" icon={<Lightbulb className="w-2.5 h-2.5" />}>
+                                {githubRewards.breakdown.feature_issues} Features
+                              </StatusBadge>
+                            )}
+                            {githubRewards.breakdown.other_issues > 0 && (
+                              <StatusBadge color="purple" size="xs" rounded="full" className="!bg-gray-500/20 !text-muted-foreground" icon={<AlertCircle className="w-2.5 h-2.5" />}>
+                                {githubRewards.breakdown.other_issues} Issues
+                              </StatusBadge>
                             )}
                           </div>
                         </div>
-                      </div>
-                    );
-                  }))}
+                      )}
 
-
-                {/* ── GitHub Contributions section ── */}
-                    <div className="p-2 border-b border-border/50 flex items-center justify-between flex-shrink-0">
-                      <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                        <Github className="w-3 h-3" />
-                        {currentGitHubLogin ? `${currentGitHubLogin}'s` : ''} GitHub Contributions
-                        {githubRewards && (
-                          <span className="ml-1 text-yellow-400 font-bold">{githubPoints.toLocaleString()} coins</span>
-                        )}
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        {githubRewards && githubPoints > 0 && (
-                          <button
-                            onClick={() => {
-                              const bd = githubRewards.breakdown
-                              const prCount = (bd?.prs_merged ?? 0) + (bd?.prs_opened ?? 0)
-                              const issueCount = (bd?.bug_issues ?? 0) + (bd?.feature_issues ?? 0) + (bd?.other_issues ?? 0)
-                              const text = `I've earned ${githubPoints.toLocaleString()} contributor coins on the KubeStellar Console! ${prCount > 0 ? `${prCount} PRs` : ''}${prCount > 0 && issueCount > 0 ? ' and ' : ''}${issueCount > 0 ? `${issueCount} issues` : ''} contributed to the open-source KubeStellar project.`
-                              const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://kubestellar.io')}&summary=${encodeURIComponent(text)}`
-                              window.open(linkedInUrl, '_blank', 'noopener,noreferrer,width=600,height=600')
-                              emitLinkedInShare('feature_request')
-                            }}
-                            className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-[#0A66C2] transition-colors"
-                            title={`Share ${githubPoints.toLocaleString()} coins on LinkedIn`}
-                          >
-                            <Linkedin className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        <button
-                          onClick={handleRefreshGitHub}
-                          disabled={isGitHubRefreshing}
-                          className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 disabled:opacity-50"
-                        >
-                          <RefreshCw className={`w-3 h-3 ${isGitHubRefreshing ? 'animate-spin' : ''}`} />
-                        </button>
-                      </div>
-                    </div>
-
-                    {githubRewards && githubRewards.breakdown && (
-                      <div className="px-3 py-2 border-b border-border/50 flex-shrink-0">
-                        <div className="flex flex-wrap gap-1.5">
-                          {githubRewards.breakdown.prs_merged > 0 && (
-                            <StatusBadge color="purple" size="xs" rounded="full" icon={<GitMerge className="w-2.5 h-2.5" />}>
-                              {githubRewards.breakdown.prs_merged} Merged
-                            </StatusBadge>
-                          )}
-                          {githubRewards.breakdown.prs_opened > 0 && (
-                            <StatusBadge color="green" size="xs" rounded="full" icon={<GitPullRequest className="w-2.5 h-2.5" />}>
-                              {githubRewards.breakdown.prs_opened} PRs
-                            </StatusBadge>
-                          )}
-                          {githubRewards.breakdown.bug_issues > 0 && (
-                            <StatusBadge color="red" size="xs" rounded="full" icon={<Bug className="w-2.5 h-2.5" />}>
-                              {githubRewards.breakdown.bug_issues} Bugs
-                            </StatusBadge>
-                          )}
-                          {githubRewards.breakdown.feature_issues > 0 && (
-                            <StatusBadge color="yellow" size="xs" rounded="full" icon={<Lightbulb className="w-2.5 h-2.5" />}>
-                              {githubRewards.breakdown.feature_issues} Features
-                            </StatusBadge>
-                          )}
-                          {githubRewards.breakdown.other_issues > 0 && (
-                            <StatusBadge color="purple" size="xs" rounded="full" className="!bg-gray-500/20 !text-muted-foreground" icon={<AlertCircle className="w-2.5 h-2.5" />}>
-                              {githubRewards.breakdown.other_issues} Issues
-                            </StatusBadge>
-                          )}
+                      {!githubRewards ? (
+                        <div className="p-6 text-center text-muted-foreground">
+                          <Github className="w-6 h-6 mx-auto mb-2 opacity-50" />
+                          <p className="text-xs">Log in with GitHub to see contributions</p>
                         </div>
-                      </div>
-                    )}
-
-                    {!githubRewards ? (
-                      <div className="p-6 text-center text-muted-foreground">
-                        <Github className="w-6 h-6 mx-auto mb-2 opacity-50" />
-                        <p className="text-xs">Log in with GitHub to see contributions</p>
-                      </div>
-                    ) : !githubRewards.contributions?.length ? (
-                      <div className="p-6 text-center text-muted-foreground">
-                        <Github className="w-6 h-6 mx-auto mb-2 opacity-50" />
-                        <p className="text-xs">No contributions found — open issues or PRs to earn points</p>
-                      </div>
-                    ) : (
-                      (() => {
-                        // Blur titles of contributions that match untriaged feedback requests.
-                        // While requests are still loading, blur all console issue contributions
-                        // as a safe default to prevent title leak.
-                        const requestsReady = !requestsLoading && requests.length > 0
-                        const untriagedIssueNumbers = new Set(
-                          (requests || [])
-                            .filter(r => !isTriaged(r.status) && r.github_issue_number)
-                            .map(r => r.github_issue_number)
-                        )
-                        return githubRewards.contributions.map((contrib: GitHubContribution, idx: number) => {
-                        const isConsoleIssue = contrib.type.startsWith('issue_') && contrib.repo?.includes('console')
-                        const isUntriaged = requestsReady
-                          ? untriagedIssueNumbers.has(contrib.number)
-                          : isConsoleIssue
-                        return (
-                        <a
-                          key={`${contrib.repo}-${contrib.number}-${contrib.type}-${idx}`}
-                          href={contrib.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-between p-2.5 border-b border-border/50 hover:bg-secondary/30 transition-colors group"
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                            <GitHubContributionIcon type={contrib.type} />
-                            <div className="min-w-0 flex-1">
-                              <p className={`text-sm text-foreground truncate group-hover:text-blue-400 transition-colors ${isUntriaged ? 'blur-sm select-none' : ''}`}>
-                                {contrib.title}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                @{currentGitHubLogin} · {contrib.repo} #{contrib.number} · {GITHUB_REWARD_LABELS[contrib.type]}
-                              </p>
+                      ) : !githubRewards.contributions?.length ? (
+                        <div className="p-6 text-center text-muted-foreground">
+                          <Github className="w-6 h-6 mx-auto mb-2 opacity-50" />
+                          <p className="text-xs">No contributions found — open issues or PRs to earn points</p>
+                        </div>
+                      ) : (
+                        (() => {
+                          // Blur titles of contributions that match untriaged feedback requests.
+                          // While requests are still loading, blur all console issue contributions
+                          // as a safe default to prevent title leak.
+                          const requestsReady = !requestsLoading && requests.length > 0
+                          const untriagedIssueNumbers = new Set(
+                            (requests || [])
+                              .filter(r => !isTriaged(r.status) && r.github_issue_number)
+                              .map(r => r.github_issue_number)
+                          )
+                          return githubRewards.contributions.map((contrib: GitHubContribution, idx: number) => {
+                          const isConsoleIssue = contrib.type.startsWith('issue_') && contrib.repo?.includes('console')
+                          const isUntriaged = requestsReady
+                            ? untriagedIssueNumbers.has(contrib.number)
+                            : isConsoleIssue
+                          return (
+                          <a
+                            key={`${contrib.repo}-${contrib.number}-${contrib.type}-${idx}`}
+                            href={contrib.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between p-2.5 border-b border-border/50 hover:bg-secondary/30 transition-colors group"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <GitHubContributionIcon type={contrib.type} />
+                              <div className="min-w-0 flex-1">
+                                <p className={`text-sm text-foreground truncate group-hover:text-blue-400 transition-colors ${isUntriaged ? 'blur-sm select-none' : ''}`}>
+                                  {contrib.title}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  @{currentGitHubLogin} · {contrib.repo} #{contrib.number} · {GITHUB_REWARD_LABELS[contrib.type]}
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                            <span className="text-xs text-yellow-400 font-medium">+{contrib.points}</span>
-                            <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </div>
-                        </a>
-                        )
-                      })
-                      })()
+                            <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                              <span className="text-xs text-yellow-400 font-medium">+{contrib.points}</span>
+                              <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          </a>
+                          )
+                        })
+                        })()
+                      )}
+
+                    {githubRewards?.from_cache && (
+                      <div className="p-2 border-t border-border/50">
+                        <p className="text-2xs text-muted-foreground text-center">
+                          Cached {new Date(githubRewards.cached_at).toLocaleTimeString()}
+                        </p>
+                      </div>
                     )}
 
-                  {githubRewards?.from_cache && (
-                    <div className="p-2 border-t border-border/50">
-                      <p className="text-2xs text-muted-foreground text-center">
-                        Cached {new Date(githubRewards.cached_at).toLocaleTimeString()}
-                      </p>
-                    </div>
-                  )}
-
+              </div>
             </div>
-          </div>)
           ) : success ? (
             <div className="p-6 text-center flex-1 overflow-y-auto min-h-0">
               <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
@@ -1798,6 +1811,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
             </form>
           )}
       </div>
+
       {/* Footer - always visible */}
       <div className="p-4 border-t border-border flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3 text-2xs text-muted-foreground/50">
@@ -1896,6 +1910,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
         )}
         </div>
       </div>
+
       {/* Fullscreen markdown preview overlay */}
       {isPreviewFullscreen && (
         <div
@@ -1933,6 +1948,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
           </div>
         </div>
       )}
+
       {/* Screenshot image preview overlay */}
       {previewImageSrc && (
         <div
@@ -1978,7 +1994,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
         </div>
       )}
     </BaseModal>
-  );
+  )
 }
 
 function GitHubContributionIcon({ type }: { type: string }) {

@@ -1,3 +1,13 @@
+/**
+ * useMultiTenancyOverview — Aggregates status from all 4 multi-tenancy hooks.
+ *
+ * Derives component detection, isolation level readiness, tenant count,
+ * and an overall score from the individual technology hooks.
+ *
+ * Note: OVN, K3s, and KubeVirt hooks return `{ data, loading, ... }` (cache-backed),
+ * while KubeFlex is still a stub returning flat `{ detected, health, ... }`.
+ */
+import { useMemo } from 'react'
 import { useOvnStatus } from '../ovn-status/useOvnStatus'
 import { useKubeFlexStatus } from '../kubeflex-status/useKubeflexStatus'
 import { useK3sStatus } from '../k3s-status/useK3sStatus'
@@ -58,7 +68,7 @@ export function useMultiTenancyOverview(): MultiTenancyOverviewData {
     { name: 'KubeVirt', detected: kubevirt.detected, health: kubevirt.health, icon: 'monitor' },
   ]
 
-  const isolationLevels: IsolationLevel[] = (() => {
+  const isolationLevels: IsolationLevel[] = useMemo(() => {
     // Control-plane: Ready if KubeFlex AND K3s detected
     const controlPlaneDetected = kubeflex.detected && k3s.detected
     const controlPlaneStatus: IsolationStatus = controlPlaneDetected
@@ -80,7 +90,7 @@ export function useMultiTenancyOverview(): MultiTenancyOverviewData {
       { type: 'Data-plane', status: dataPlaneStatus, provider: 'KubeVirt' },
       { type: 'Network', status: networkStatus, provider: 'OVN-Kubernetes' },
     ]
-  })()
+  }, [kubeflex.detected, kubeflex.health, k3s.detected, k3s.health, kubevirt.detected, kubevirt.health, ovn.detected, ovn.health])
 
   const overallScore = (isolationLevels || []).filter(l => l.status === 'ready').length
 

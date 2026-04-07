@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Cloud, Wind, Droplets, Gauge, Eye,
   MapPin, Calendar, Search as SearchIcon, Star, X,
@@ -206,7 +206,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   }, [currentLocation])
 
   // City search with Open-Meteo Geocoding API
-  const searchCities = async (query: string) => {
+  const searchCities = useCallback(async (query: string) => {
     if (!query || query.length < 2) {
       setCitySearchResults([])
       setShowCityDropdown(false)
@@ -236,7 +236,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
     } finally {
       setIsSearching(false)
     }
-  }
+  }, [showToast, t])
   useEffect(() => {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current)

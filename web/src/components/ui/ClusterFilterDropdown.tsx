@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Filter, ChevronDown, Server } from 'lucide-react'
@@ -37,7 +37,7 @@ export function ClusterFilterDropdown({
   const [dropdownStyle, setDropdownStyle] = useState<{ top: number; left?: number; right?: number } | null>(null)
 
   // Calculate dropdown position when opening (using fixed positioning for portal)
-  const calculatePosition = () => {
+  const calculatePosition = useCallback(() => {
     if (!buttonRef.current) return null
 
     const buttonRect = buttonRef.current.getBoundingClientRect()
@@ -62,7 +62,7 @@ export function ClusterFilterDropdown({
         ? { top, left: buttonRect.left }
         : { top, right: window.innerWidth - buttonRect.right }
     }
-  }
+  }, [])
 
   // Update position when dropdown opens
   useEffect(() => {

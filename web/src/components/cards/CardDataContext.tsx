@@ -39,7 +39,7 @@
  * ```
  */
 
-import { createContext, use, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createContext, use, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { isAgentUnavailable } from '../../hooks/useLocalAgent'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
@@ -312,7 +312,7 @@ export function useCardDemoState(options: CardDemoStateOptions = {}): CardDemoSt
   const stackContext = useOptionalStack()
 
   // Memoize the result to prevent unnecessary re-renders
-  return (() => {
+  return useMemo(() => {
     // Priority order for demo reasons:
 
     // 1. Demo-only card (requires: 'none')
@@ -352,7 +352,7 @@ export function useCardDemoState(options: CardDemoStateOptions = {}): CardDemoSt
 
     // All checks passed - use live data
     return { shouldUseDemoData: false, reason: null, showDemoBadge: false }
-  })();
+  }, [isDemoMode, requires, isLiveDataAvailable, stackContext?.selectedStack])
 }
 
 /**

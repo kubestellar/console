@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 import { Play, RotateCcw, Pause, Trophy, Heart, Star } from 'lucide-react'
 
@@ -108,7 +108,7 @@ export function PodBrothers() {
   const livesRef = useRef<number>(3)
 
   // Initialize level
-  const initLevel = () => {
+  const initLevel = useCallback(() => {
     levelRef.current = LEVEL_DATA.map(row => [...row])
     enemiesRef.current = []
     coinsRef.current = []
@@ -144,7 +144,7 @@ export function PodBrothers() {
 
     // Grant spawn invincibility to prevent instant death from overlapping enemies
     invincibilityRef.current = INVINCIBILITY_FRAMES
-  }
+  }, [])
 
   // Collision detection
   const getTileAt = (x: number, y: number): number => {
@@ -161,7 +161,7 @@ export function PodBrothers() {
   }
 
   // Game loop
-  const update = () => {
+  const update = useCallback(() => {
     const player = playerRef.current
     const keys = keysRef.current
 
@@ -343,10 +343,10 @@ export function PodBrothers() {
         return
       }
     }
-  }
+  }, [getTileAt, isSolid, initLevel, highScore])
 
   // Render
-  const render = () => {
+  const render = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -453,7 +453,7 @@ export function PodBrothers() {
       ctx.fillStyle = '#000'
       ctx.fillRect(player.x + PLAYER_SIZE / 2 + eyeOffset - 2, player.y + 6, 4, 4)
     }
-  }
+  }, [])
 
   // Game loop
   useEffect(() => {

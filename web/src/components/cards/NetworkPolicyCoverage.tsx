@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCachedPods } from '../../hooks/useCachedData'
 import { useNetworkPolicies } from '../../hooks/mcp/networking'
@@ -54,7 +54,7 @@ export function NetworkPolicyCoverage() {
   })()
 
   // Build namespace coverage from pod data + real policy data
-  const coverage = (() => {
+  const coverage = useMemo((): NamespaceCoverage[] => {
     const nsMap = new Map<string, NamespaceCoverage>()
     for (const pod of pods) {
       const ns = pod.namespace || 'default'
@@ -83,7 +83,7 @@ export function NetworkPolicyCoverage() {
       nsMap.get(key)!.podCount++
     }
     return Array.from(nsMap.values()).sort((a, b) => b.podCount - a.podCount)
-  })()
+  }, [pods, isEstimated, policyNamespaceKeys, policyCountByNs])
 
   const coveredCount = coverage.filter(c => c.hasPolicies).length
   const totalCount = coverage.length

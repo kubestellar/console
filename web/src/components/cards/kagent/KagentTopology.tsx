@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Bot, Wrench, Cpu } from 'lucide-react'
 import { useKagentCRDAgents, useKagentCRDTools, useKagentCRDModels } from '../../../hooks/mcp/kagent_crds'
 import { useCardLoadingState } from '../CardDataContext'
@@ -44,7 +45,7 @@ export function KagentTopology({ config }: { config?: Record<string, unknown> })
     isDemoData: agentsDemo || toolsDemo || modelsDemo,
   })
 
-  const { nodes, edges } = (() => {
+  const { nodes, edges } = useMemo(() => {
     const nodesArr: TopoNode[] = []
     const edgesArr: TopoEdge[] = []
 
@@ -126,7 +127,7 @@ export function KagentTopology({ config }: { config?: Record<string, unknown> })
     })
 
     return { nodes: nodesArr, edges: edgesArr }
-  })()
+  }, [agents, tools, models])
 
   if (agentsLoading || toolsLoading || modelsLoading) {
     return (

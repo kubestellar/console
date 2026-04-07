@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { AlertTriangle, CheckCircle, ExternalLink, XCircle, Info, ChevronRight, RefreshCw, Plus, WifiOff, Loader2 } from 'lucide-react'
 import { ProgressRing } from '../ui/ProgressRing'
 import { useTranslation } from 'react-i18next'
@@ -210,7 +210,9 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
   }, [shouldUseDemoData])
 
   // Use agent clusters if shared state is empty - memoize for stability
-  const effectiveClusters = clusters.length > 0 ? clusters : agentClusters
+  const effectiveClusters = useMemo(() => {
+    return clusters.length > 0 ? clusters : agentClusters
+  }, [clusters, agentClusters])
 
   // Initialize statuses from demo data or localStorage cache for instant display.
   // In demo mode, provide synthetic statuses immediately so the card never enters
@@ -309,7 +311,7 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
   // Check Gatekeeper on specified clusters using two-phase loading:
   // Phase 1 (fast): Single kubectl call per cluster to check installed/not-installed (~1-2s)
   // Phase 2 (lazy): Fetch policies, violations in background for installed clusters
-  const checkClusters = async (clusters: { name: string }[], forceCheck = false) => {
+  const checkClusters = useCallback(async (clusters: { name: string }[], forceCheck = false) => {
     if (clusters.length === 0) return
 
     // In demo mode, kubectlProxy is unavailable — skip real checks
@@ -434,10 +436,12 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
       isCheckingRef.current = false
       globalCheckInProgress = false
     }
-  }
+  }, [shouldUseDemoData])
 
   // Filter clusters to only include reachable ones for OPA checks
-  const reachableClusters = effectiveClusters.filter(c => (c as { reachable?: boolean }).reachable !== false)
+  const reachableClusters = useMemo(() => {
+    return effectiveClusters.filter(c => (c as { reachable?: boolean }).reachable !== false)
+  }, [effectiveClusters])
 
   // Ref for reachable clusters for manual refresh
   const reachableClustersRef = useRef(reachableClusters)

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Search,
@@ -68,14 +68,14 @@ function SearchResultsPanel({
   const { results, totalCount } = useSearchIndex(searchQuery)
 
   // Flatten results into a single list for keyboard navigation
-  const flatResults = (() => {
+  const flatResults = useMemo(() => {
     const flat: SearchItem[] = []
     for (const cat of CATEGORY_ORDER) {
       const items = results.get(cat)
       if (items) flat.push(...items)
     }
     return flat
-  })()
+  }, [results])
 
   // Sync flat results and total count to parent for keyboard handling + analytics
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Activity, AlertTriangle, Clock, Bell, ChevronRight, CheckCircle2, Calendar, Zap } from 'lucide-react'
 import { useCachedEvents } from '../../hooks/useCachedData'
@@ -119,7 +119,7 @@ export function Events() {
   })()
 
   // Filtered events for list/timeline views
-  const filteredEvents = (() => {
+  const filteredEvents = useMemo(() => {
     let result = filter === 'warning' ? warningEvents : allEvents
     if (!isAllClustersSelected) {
       result = result.filter(e => e.cluster && globalSelectedClusters.includes(e.cluster))
@@ -146,10 +146,10 @@ export function Events() {
       )
     }
     return result
-  })()
+  }, [filter, allEvents, warningEvents, searchQuery, selectedNamespace, selectedReason, globalSelectedClusters, isAllClustersSelected, filterBySeverity, globalCustomFilter])
 
   // Stats calculation
-  const stats = (() => {
+  const stats = useMemo(() => {
     const warnings = globalFilteredWarningEvents.length
     const normal = globalFilteredAllEvents.filter(e => e.type === 'Normal').length
     const reasonCounts = globalFilteredAllEvents.reduce((acc, e) => { acc[e.reason] = (acc[e.reason] || 0) + 1; return acc }, {} as Record<string, number>)
@@ -178,7 +178,7 @@ export function Events() {
       total: globalFilteredAllEvents.length, warnings, normal, recentCount, topReasons, clusterData, hourlyData,
       typeChartData: [{ name: 'Warnings', value: warnings, color: getChartColorByName('warning') }, { name: 'Normal', value: normal, color: getChartColorByName('success') }].filter(d => d.value > 0)
     }
-  })()
+  }, [globalFilteredAllEvents, globalFilteredWarningEvents])
 
   // Update cache
   useEffect(() => {

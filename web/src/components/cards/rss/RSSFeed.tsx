@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   Rss, RefreshCw, ExternalLink, Settings, X, Plus,
   Clock, ArrowUp, ChevronDown, Star, Filter, Pencil
@@ -171,7 +171,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
 
   // Pre-filter: apply RSS-specific source filter and include/exclude filters
   // before handing off to useCardData for search, sort, and pagination
-  const preFilteredItems = (() => {
+  const preFilteredItems = useMemo(() => {
     let result = [...items]
 
     // Apply source filter (for aggregate feeds)
@@ -199,7 +199,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     }
 
     return result
-  })()
+  }, [items, activeFeed?.filter, activeFeed?.isAggregate, sourceFilter])
 
   // useCardData: handles search, sort, and pagination
   const {
@@ -281,7 +281,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 pubDate: item.pubDate ? new Date(item.pubDate) : undefined,
                 author: item.author || '',
                 thumbnail: thumb,
-                subreddit: item.link?.match(/reddit\.com\/r\/([^/]+)/)?.[1] };
+                subreddit: item.link?.match(/reddit\.com\/r\/([^/]+)/)?.[1] }
             })
           } else {
             throw new Error(data.message || 'Invalid RSS feed')
@@ -329,7 +329,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
   }
 
   // Fetch RSS feed (or aggregate) — uses demo data in demo mode
-  const fetchFeed = async (isManualRefresh = false) => {
+  const fetchFeed = useCallback(async (isManualRefresh = false) => {
     if (isDemoMode) {
       const demoItems = getDemoRSSItems()
       setItems(demoItems)
@@ -449,7 +449,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }
+  }, [activeFeed?.url, activeFeed?.name, activeFeed?.isAggregate, activeFeed?.sourceUrls, isDemoMode, feeds, fetchSingleFeed])
 
   // Fetch on mount and when feed changes
   useEffect(() => {
@@ -750,6 +750,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
           </button>
         </div>
       </div>
+
       {/* Row 2: Search */}
       <div className="flex flex-col gap-2 mb-2 flex-shrink-0">
         <CardSearchInput
@@ -758,6 +759,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
           placeholder={t('cards:rssFeed.searchItems')}
         />
       </div>
+
       {/* Row 3: Feed Pills - Quick Navigation */}
       {feeds.length > 1 && (
         <div className="flex items-center gap-1 mb-2 overflow-x-auto scrollbar-thin flex-shrink-0 h-6">
@@ -785,6 +787,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
           ))}
         </div>
       )}
+
       {/* Sort & Filter Controls */}
       <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
@@ -874,6 +877,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
           )}
         </div>
       </div>
+
       {/* Filter Editor Modal */}
       {showFilterEditor && (
         <div className="mb-2 p-2 bg-purple-500/10 border border-purple-500/20 rounded-lg flex-shrink-0 max-h-36 overflow-y-auto">
@@ -931,6 +935,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
           </div>
         </div>
       )}
+
       {/* Settings Panel - absolute positioned to not affect card height */}
       {showSettings && (
         <div className="absolute inset-x-3 top-16 bottom-3 p-3 bg-card border border-border rounded-lg shadow-lg z-40 flex flex-col overflow-hidden">
@@ -1244,6 +1249,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
           </div>
         </div>
       )}
+
       {/* Status area - fixed height to prevent layout shifts */}
       <div className="h-5 mb-1 flex-shrink-0 flex items-center">
         {(isLoading || isRefreshing) && !error ? (
@@ -1275,18 +1281,19 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
           </span>
         ) : null}
       </div>
+
       {/* Feed items */}
       <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2 min-h-0 scrollbar-thin" style={containerStyle}>
         {showListSkeleton ? (
           /* Show skeleton items while loading */
-          (<div className="space-y-2 animate-pulse">
+          <div className="space-y-2 animate-pulse">
             {[1, 2, 3, 4, 5].map(i => (
               <div key={i} className="p-3 rounded-lg bg-secondary/20 border border-border/50">
                 <div className="h-4 w-3/4 bg-secondary/50 rounded mb-2" />
                 <div className="h-3 w-1/2 bg-secondary/30 rounded" />
               </div>
             ))}
-          </div>)
+          </div>
         ) : totalItems === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
             <Rss className="w-8 h-8 mb-2 opacity-50" />
@@ -1383,6 +1390,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
           ))
         )}
       </div>
+
       {/* Pagination */}
       <div className="flex-shrink-0">
         <CardPaginationFooter
@@ -1394,8 +1402,9 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
           needsPagination={needsPagination}
         />
       </div>
+
     </div>
-  );
+  )
 }
 
 export function RSSFeed(props: RSSFeedProps) {

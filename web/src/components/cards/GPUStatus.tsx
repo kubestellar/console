@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import { Activity, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
@@ -74,7 +74,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
 
   // Step 2: Aggregate to cluster-level stats
   // Don't apply cluster/search filters here - useCardData handles that
-  const clusterStatsList = (() => {
+  const clusterStatsList = useMemo(() => {
     const clusterStats = preFilteredNodes.reduce((acc, node) => {
       if (!acc[node.cluster]) {
         acc[node.cluster] = { total: 0, used: 0, types: new Set<string>() }
@@ -91,7 +91,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
       used: stats.used,
       types: Array.from(stats.types),
       utilization: stats.total > 0 ? (stats.used / stats.total) * 100 : 0 }))
-  })()
+  }, [preFilteredNodes])
 
   // Step 3: useCardData for search/cluster filter/sort/pagination
   const {

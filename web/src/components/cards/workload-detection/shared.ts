@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import type { ClusterInfo } from '../../../hooks/mcp/types'
 
 export interface DemoState {
@@ -34,7 +34,7 @@ export function useLLMdClusters(
   clusters: ClusterInfo[],
   gpuClusterNames: Set<string> = new Set()
 ): string[] {
-  return (() => {
+  return useMemo(() => {
     // If clusters not loaded yet, use known fallback clusters
     if (clusters.length === 0) {
       return LLMD_CLUSTERS
@@ -68,7 +68,7 @@ export function useLLMdClusters(
     }
 
     return candidates
-  })();
+  }, [clusters, gpuClusterNames])
 }
 
 export const DEMO_ML_JOBS = [

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react'
 import { Layers, Box, Activity, AlertTriangle, Server } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useClusters } from '../../hooks/useMCP'
@@ -41,7 +41,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   const { drillToPod, drillToDeployment } = useDrillDownActions()
 
   // Apply global filters
-  const clusters = (() => {
+  const clusters = useMemo(() => {
     let result = allClusters
 
     if (!isAllClustersSelected) {
@@ -57,7 +57,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
     }
 
     return result
-  })()
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   // Persist cluster selection so it survives page navigation (#3115)
   useEffect(() => {

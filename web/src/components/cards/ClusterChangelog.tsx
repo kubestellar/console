@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertCircle } from 'lucide-react'
 import { useCachedEvents } from '../../hooks/useCachedData'
@@ -32,19 +32,21 @@ export function ClusterChangelog() {
     return now - hours[timeRange] * 3600000
   })()
 
-  const changeEvents = events
-    .filter(e => {
-      if (!CHANGE_REASONS.has(e.reason || '')) return false
-      const ts = e.lastSeen || e.firstSeen
-      if (!ts) return true
-      return new Date(ts).getTime() > cutoff
-    })
-    .sort((a, b) => {
-      const ta = new Date(a.lastSeen || a.firstSeen || 0).getTime()
-      const tb = new Date(b.lastSeen || b.firstSeen || 0).getTime()
-      return tb - ta
-    })
-    .slice(0, 50)
+  const changeEvents = useMemo(() => {
+    return events
+      .filter(e => {
+        if (!CHANGE_REASONS.has(e.reason || '')) return false
+        const ts = e.lastSeen || e.firstSeen
+        if (!ts) return true
+        return new Date(ts).getTime() > cutoff
+      })
+      .sort((a, b) => {
+        const ta = new Date(a.lastSeen || a.firstSeen || 0).getTime()
+        const tb = new Date(b.lastSeen || b.firstSeen || 0).getTime()
+        return tb - ta
+      })
+      .slice(0, 50)
+  }, [events, cutoff])
 
   if (showSkeleton) {
     return (

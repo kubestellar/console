@@ -1,4 +1,4 @@
-import { useState, useEffect, useImperativeHandle, type Ref } from 'react';
+import { useState, useMemo, useEffect, useCallback, useImperativeHandle, type Ref } from 'react'
 import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge, Settings, X, Plus, Check } from 'lucide-react'
 import { POLL_INTERVAL_SLOW_MS } from '../../lib/constants/network'
 import { Button } from '../ui/Button'
@@ -249,9 +249,9 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
   const org = config?.org
   // Note: Token stored in localStorage base64 encoded - decode before use
   // Token is injected server-side by the GitHub proxy — no client-side token needed
-  const reposKey = repos.join(',')
+  const reposKey = useMemo(() => repos.join(','), [repos])
 
-  const fetchGitHubData = async (isManualRefresh = false, signal?: AbortSignal) => {
+  const fetchGitHubData = useCallback(async (isManualRefresh = false, signal?: AbortSignal) => {
     if (isDemoMode) {
       const targetRepo = repos[0] || DEFAULT_REPO
       const demo = getDemoGitHubData(targetRepo)
@@ -372,7 +372,7 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
       }
 
       if (!recentIssuesResponse.ok) throw new Error(`Failed to fetch issues: ${recentIssuesResponse.statusText}`)
-      const issuesData: GitHubIssue[] = (await recentIssuesResponse.json().catch(() => null)) ?? []
+      const issuesData: GitHubIssue[] = await recentIssuesResponse.json().catch(() => null) ?? []
       // Filter out pull requests (they come with issues endpoint but have pull_request field)
       const filteredIssues = issuesData.filter((issue: GitHubIssue & { pull_request?: unknown }) => !issue.pull_request)
       if (signal?.aborted) return
@@ -441,7 +441,7 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
         setIsRefreshing(false)
       }
     }
-  }
+  }, [isDemoMode, repos, org])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -589,7 +589,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
   }
 
   // Pre-filter data by viewMode and timeRange before passing to useCardData
-  const preFilteredData = (() => {
+  const preFilteredData = useMemo(() => {
     const now = Date.now()
     const rangeMs = {
       '7d': 7 * 24 * 60 * 60 * 1000,
@@ -623,7 +623,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
       return contributors
     }
     return []
-  })()
+  }, [viewMode, prs, issues, releases, contributors, timeRange])
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {

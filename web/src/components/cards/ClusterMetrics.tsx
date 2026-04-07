@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { TimeSeriesChart, MultiSeriesChart } from '../charts'
 import { useClusters } from '../../hooks/useMCP'
 import { Server, Clock, Layers, TrendingUp } from 'lucide-react'
@@ -126,13 +126,13 @@ export function ClusterMetrics() {
   }, [history])
 
   // Calculate real current values from cluster data
-  const realValues = (() => {
+  const realValues = useMemo(() => {
     const totalCPUs = clusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
     const totalMemoryGB = clusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0)
     const totalPods = clusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
     const totalNodes = clusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
     return { cpu: totalCPUs, memory: totalMemoryGB, pods: totalPods, nodes: totalNodes }
-  })()
+  }, [clusters])
 
   // Check if we have real data
   const hasRealData = clusters.some(c => c.cpuCores !== undefined || c.memoryGB !== undefined)
@@ -196,7 +196,7 @@ export function ClusterMetrics() {
   })()
 
   // Generate per-cluster data for comparison mode
-  const perClusterData = (() => {
+  const perClusterData = useMemo(() => {
     if (chartMode !== 'per-cluster') return { data: [], series: [] }
 
     const now = Date.now()
@@ -242,7 +242,7 @@ export function ClusterMetrics() {
     })
 
     return { data: chartData, series }
-  })()
+  }, [history, selectedMetric, timeRange, chartMode])
 
   const config = metricConfig[selectedMetric]
   // Use real current value if available, otherwise use last chart value

@@ -5,7 +5,7 @@
  * Shows stack health, component counts, namespace, and GPU usage.
  * Includes search, sort, and filter capabilities.
  */
-import { useState, useRef, useEffect, memo } from 'react';
+import { useState, useRef, useEffect, useMemo, memo, useCallback } from 'react'
 import { ChevronDown, ChevronUp, Server, Layers, RefreshCw, Cpu, Search, X } from 'lucide-react'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import type { LLMdStack } from '../../../hooks/useStackDiscovery'
@@ -88,17 +88,16 @@ interface StackOptionProps {
 
 // Memoize StackOption to prevent re-renders when scrolling through large lists
 const StackOption = memo(function StackOption({ stack, isSelected, onSelect }: StackOptionProps) {
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     onSelect(stack.id)
-  }
+  }, [onSelect, stack.id])
 
   // Memoize expensive calculations to avoid recalculating on every scroll
-  const { prefillCount, decodeCount, unifiedCount, gpuInfo } = ({
+  const { prefillCount, decodeCount, unifiedCount, gpuInfo } = useMemo(() => ({
     prefillCount: stack.components.prefill.reduce((sum, c) => sum + c.replicas, 0),
     decodeCount: stack.components.decode.reduce((sum, c) => sum + c.replicas, 0),
     unifiedCount: stack.components.both.reduce((sum, c) => sum + c.replicas, 0),
-    gpuInfo: estimateAccelerators(stack)
-  })
+    gpuInfo: estimateAccelerators(stack) }), [stack])
 
   return (
     <button
@@ -249,7 +248,7 @@ export function StackSelector() {
   const isDemoMode = stackContext?.isDemoMode ?? false
 
   // Filter and sort stacks
-  const filteredAndSortedStacks = (() => {
+  const filteredAndSortedStacks = useMemo(() => {
     let result = stacks
 
     // Filter by search query
@@ -297,7 +296,7 @@ export function StackSelector() {
     })
 
     return result
-  })()
+  }, [stacks, searchQuery, sortField, sortDirection])
 
   // Handle refetch with error tracking
   const handleRefetch = async () => {
@@ -329,10 +328,10 @@ export function StackSelector() {
   }
 
   // Memoize stack selection handler to prevent re-renders
-  const handleSelectStack = (stackId: string) => {
+  const handleSelectStack = useCallback((stackId: string) => {
     setSelectedStackId?.(stackId)
     closeDropdown()
-  }
+  }, [setSelectedStackId, closeDropdown])
 
   // If no context, show placeholder (after all hooks have been called)
   if (!stackContext) {

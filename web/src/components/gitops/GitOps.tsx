@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useMemo, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { useClusters, useHelmReleases, useOperatorSubscriptions } from '../../hooks/useMCP'
@@ -185,7 +185,7 @@ export function GitOps() {
   }
 
   // Build apps list with real drift status
-  const apps = (() => {
+  const apps = useMemo(() => {
     const configs = getGitOpsAppConfigs()
     return configs.map((config): GitOpsApp => {
       if (syncedApps.has(config.name)) {
@@ -203,7 +203,7 @@ export function GitOps() {
       }
       return { ...config, syncStatus: 'unknown', healthStatus: 'missing', lastSyncTime: undefined, driftDetails: undefined }
     })
-  })()
+  }, [driftResults, isDetecting, syncedApps])
 
   const filteredApps = apps.map(app => syncedApps.has(app.name) ? { ...app, syncStatus: 'synced' as const, healthStatus: 'healthy' as const, driftDetails: undefined, lastSyncTime: new Date().toISOString() } : app)
       .filter(app => {

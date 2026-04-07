@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Cpu, Box, ChevronRight, AlertTriangle, CheckCircle, Loader2, Server } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedGPUNodes, useCachedAllPods } from '../../hooks/useCachedData'
@@ -87,7 +88,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
 
   // Pre-filter pods to only GPU workloads (domain-specific logic before hook)
   // Show pods that: 1) request GPU resources, 2) are assigned to GPU nodes, or 3) have GPU workload labels
-  const gpuWorkloadSource = (() => {
+  const gpuWorkloadSource = useMemo(() => {
     // Create a map of cluster+node combinations for fast lookup
     // Format: "cluster:nodename" -> true
     const gpuNodeKeys = new Set(
@@ -131,8 +132,8 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
       }
 
       return false
-    });
-  })()
+    })
+  }, [allPods, gpuNodes])
 
   // Use unified card data hook for filtering, sorting, and pagination
   const {

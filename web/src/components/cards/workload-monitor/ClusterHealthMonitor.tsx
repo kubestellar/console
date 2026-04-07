@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react'
 import {
   Server, AlertTriangle, CheckCircle, XCircle,
   RefreshCw, Loader2, ChevronDown, ChevronRight,
@@ -19,6 +19,14 @@ interface ClusterHealthMonitorProps {
   config?: Record<string, unknown>
 }
 
+interface ClusterHealthSummary {
+  name: string
+  status: ResourceHealthStatus
+  nodes: number
+  podIssueCount: number
+  deployIssueCount: number
+  totalIssues: number
+}
 
 const STATUS_BADGE: Record<string, string> = {
   healthy: 'bg-green-500/20 text-green-400',
@@ -60,29 +68,31 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
   })()
 
   // Build per-cluster health summaries
-  const clusterSummaries = clusters.map(cluster => {
-    const podIssues = allPodIssues.filter(p => p.cluster === cluster.name)
-    const deployIssues = allDeployIssues.filter(d => d.cluster === cluster.name)
-    const totalIssues = podIssues.length + deployIssues.length
+  const clusterSummaries = useMemo<ClusterHealthSummary[]>(() => {
+    return clusters.map(cluster => {
+      const podIssues = allPodIssues.filter(p => p.cluster === cluster.name)
+      const deployIssues = allDeployIssues.filter(d => d.cluster === cluster.name)
+      const totalIssues = podIssues.length + deployIssues.length
 
-    let status: ResourceHealthStatus = 'healthy'
-    if (totalIssues > 5) status = 'unhealthy'
-    else if (totalIssues > 0) status = 'degraded'
+      let status: ResourceHealthStatus = 'healthy'
+      if (totalIssues > 5) status = 'unhealthy'
+      else if (totalIssues > 0) status = 'degraded'
 
-    return {
-      name: cluster.name,
-      status,
-      nodes: cluster.nodeCount || 0,
-      podIssueCount: podIssues.length,
-      deployIssueCount: deployIssues.length,
-      totalIssues }
-  }).sort((a, b) => {
-    const order: Record<string, number> = { unhealthy: 0, degraded: 1, unknown: 2, healthy: 3 }
-    return (order[a.status] ?? 2) - (order[b.status] ?? 2)
-  })
+      return {
+        name: cluster.name,
+        status,
+        nodes: cluster.nodeCount || 0,
+        podIssueCount: podIssues.length,
+        deployIssueCount: deployIssues.length,
+        totalIssues }
+    }).sort((a, b) => {
+      const order: Record<string, number> = { unhealthy: 0, degraded: 1, unknown: 2, healthy: 3 }
+      return (order[a.status] ?? 2) - (order[b.status] ?? 2)
+    })
+  }, [clusters, allPodIssues, allDeployIssues])
 
   // Overall stats
-  const stats = (() => {
+  const stats = useMemo(() => {
     const total = clusterSummaries.length
     const healthy = clusterSummaries.filter(c => c.status === 'healthy').length
     const degraded = clusterSummaries.filter(c => c.status === 'degraded').length
@@ -91,7 +101,7 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
     const totalDeployIssues = allDeployIssues.length
     const totalNodes = clusterSummaries.reduce((sum, c) => sum + c.nodes, 0)
     return { total, healthy, degraded, unhealthy, totalPodIssues, totalDeployIssues, totalNodes }
-  })()
+  }, [clusterSummaries, allPodIssues, allDeployIssues])
 
   const overallHealth = (() => {
     if (stats.unhealthy > 0) return 'unhealthy'
@@ -101,7 +111,7 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
   })()
 
   // Synthesize issues
-  const issues = (() => {
+  const issues = useMemo<MonitorIssue[]>(() => {
     const result: MonitorIssue[] = []
 
     // Pod issues
@@ -151,7 +161,7 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
     })
 
     return result.slice(0, 50)
-  })()
+  }, [allPodIssues, allDeployIssues, selectedClusters, isAllClustersSelected])
 
   // Synthesize resources for diagnose
   const monitorResources = clusterSummaries.map((c, idx) => ({

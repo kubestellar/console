@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import { Cpu, HardDrive, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useClusters, GPUNode } from '../../hooks/useMCP'
@@ -98,7 +98,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
   })()
 
   // Calculate real totals from cluster data
-  const totals = (() => {
+  const totals = useMemo(() => {
     const clusterTotals = clusters.reduce(
       (acc, c) => ({
         nodes: acc.nodes + (c.nodeCount || 0),
@@ -122,10 +122,10 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
     )
 
     return { ...clusterTotals, ...gpuTotals }
-  })()
+  }, [clusters, filteredGPUNodes])
 
   // Build resource items list
-  const resourceItems = (() => {
+  const resourceItems = useMemo(() => {
     const formatGB = (v: number) => v >= 1024 ? `${(v / 1024).toFixed(1)} TB` : `${Math.round(v)} GB`
 
     const items: ResourceItem[] = []
@@ -189,7 +189,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
     })
 
     return sorted
-  })()
+  }, [totals, sortBy, sortDirection])
 
   // Pagination
   const effectivePerPage = limit === 'unlimited' ? 100 : limit

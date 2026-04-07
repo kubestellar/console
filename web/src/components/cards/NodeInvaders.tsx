@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { RotateCcw, Trophy, Rocket } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
@@ -95,7 +95,7 @@ export function NodeInvaders(_props: CardComponentProps) {
   }
 
   // Draw
-  const draw = () => {
+  const draw = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -171,7 +171,7 @@ export function NodeInvaders(_props: CardComponentProps) {
     }
 
     ctx.restore()
-  }
+  }, [player, bullets, invaders, shields, isExpanded])
 
   // Game loop
   useEffect(() => {

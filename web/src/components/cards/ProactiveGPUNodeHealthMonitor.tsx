@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { CheckCircle, AlertTriangle, XCircle, ChevronRight, ChevronDown, Server, Clock, Play, Trash2, Loader2, Settings2, RefreshCw, Shield } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
@@ -451,7 +451,7 @@ function ProactiveGPUNodeHealthMonitorInternal() {
   })()
 
   // Filter, search, sort
-  const filteredNodes = (() => {
+  const filteredNodes = useMemo(() => {
     let result = [...nodes]
 
     // Cluster filter
@@ -491,7 +491,7 @@ function ProactiveGPUNodeHealthMonitorInternal() {
     })
 
     return result
-  })()
+  }, [nodes, localClusterFilter, search, sortField, sortDirection])
 
   // Pagination
   const totalItems = filteredNodes.length

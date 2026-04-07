@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useCardExpanded } from './CardWrapper'
 import {
   ExternalLink, Settings, X, AlertTriangle, Loader2,
@@ -81,7 +81,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
     }
   }, [instanceId, config?.url, savedEmbeds])
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     if (!iframeRef.current || !url) return
     setIsLoading(true)
     setLoadError(null)
@@ -94,7 +94,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
       }
     }, 50)
     setLastRefresh(new Date())
-  }
+  }, [url])
 
   // Auto-refresh
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -43,7 +43,7 @@ export function ClusterSelect({
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null)
 
-  const calculatePosition = () => {
+  const calculatePosition = useCallback(() => {
     if (!buttonRef.current) return null
     const rect = buttonRef.current.getBoundingClientRect()
     return {
@@ -51,7 +51,7 @@ export function ClusterSelect({
       left: rect.left,
       width: rect.width,
     }
-  }
+  }, [])
 
   useEffect(() => {
     if (isOpen) {
@@ -113,6 +113,7 @@ export function ClusterSelect({
       >
         <span className="flex-1 truncate">{value || placeholder}</span>
       </Button>
+
       {isOpen && dropdownPos && createPortal(
         <div
           ref={dropdownRef}
@@ -196,5 +197,5 @@ export function ClusterSelect({
         document.body,
       )}
     </>
-  );
+  )
 }

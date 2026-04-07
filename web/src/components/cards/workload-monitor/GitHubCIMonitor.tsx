@@ -1,4 +1,4 @@
-import { useState, useImperativeHandle, type Ref } from 'react';
+import { useState, useMemo, useImperativeHandle, type Ref } from 'react'
 import {
   GitBranch, AlertTriangle, CheckCircle, XCircle,
   Clock, Loader2, ExternalLink, Key, Settings, Plus, X, Check } from 'lucide-react'
@@ -14,6 +14,7 @@ import { useCache } from '../../../lib/cache'
 import type { SortDirection } from '../../../lib/cards/cardHooks'
 import { cn } from '../../../lib/cn'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
+import type { MonitorIssue } from '../../../types/workloadMonitor'
 import { useTranslation } from 'react-i18next'
 import { formatTimeAgo, loadRepos, saveRepos } from './gitHubCIUtils'
 
@@ -228,25 +229,27 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
     defaultLimit: 8 })
 
   // Synthesize issues
-  const issues = workflows
-    .filter(w => w.conclusion === 'failure' || w.conclusion === 'timed_out')
-    .map(w => ({
-      id: `gh-${w.id}`,
-      resource: {
-        id: `WorkflowRun/${w.repo}/${w.name}`,
-        kind: 'WorkflowRun',
-        name: w.name,
-        namespace: w.repo,
-        cluster: 'github',
-        status: 'unhealthy' as const,
-        category: 'workload' as const,
-        lastChecked: w.updatedAt,
-        optional: false,
-        order: 0 },
-      severity: w.conclusion === 'failure' ? 'critical' as const : 'warning' as const,
-      title: `${w.name} ${w.conclusion} on ${w.branch}`,
-      description: `Workflow run #${w.runNumber} in ${w.repo} ${w.conclusion}. Event: ${w.event}. Updated ${formatTimeAgo(w.updatedAt)}.`,
-      detectedAt: w.updatedAt }))
+  const issues = useMemo<MonitorIssue[]>(() => {
+    return workflows
+      .filter(w => w.conclusion === 'failure' || w.conclusion === 'timed_out')
+      .map(w => ({
+        id: `gh-${w.id}`,
+        resource: {
+          id: `WorkflowRun/${w.repo}/${w.name}`,
+          kind: 'WorkflowRun',
+          name: w.name,
+          namespace: w.repo,
+          cluster: 'github',
+          status: 'unhealthy' as const,
+          category: 'workload' as const,
+          lastChecked: w.updatedAt,
+          optional: false,
+          order: 0 },
+        severity: w.conclusion === 'failure' ? 'critical' as const : 'warning' as const,
+        title: `${w.name} ${w.conclusion} on ${w.branch}`,
+        description: `Workflow run #${w.runNumber} in ${w.repo} ${w.conclusion}. Event: ${w.event}. Updated ${formatTimeAgo(w.updatedAt)}.`,
+        detectedAt: w.updatedAt }))
+  }, [workflows])
 
   const overallHealth = (() => {
     if (stats.failed > 0) return 'degraded'

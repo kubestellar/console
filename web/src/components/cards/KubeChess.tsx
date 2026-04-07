@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { RotateCcw, ChevronLeft, ChevronRight, Crown, Settings } from 'lucide-react'
@@ -564,7 +564,7 @@ function KubeChessInternal() {
     return { wins: 0, losses: 0, draws: 0 }
   })
 
-  const gameResult = getGameResult(gameState)
+  const gameResult = useMemo(() => getGameResult(gameState), [gameState])
   const inCheck = isInCheck(gameState.board, gameState.turn, gameState)
 
   // Save game state

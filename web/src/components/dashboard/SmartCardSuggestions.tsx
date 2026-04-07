@@ -6,7 +6,7 @@
  * or "Add all" for the full set.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Lightbulb, Plus, ChevronUp, CheckCircle2 } from 'lucide-react'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
@@ -93,7 +93,7 @@ export function SmartCardSuggestions({
   }, [])
 
   // Build cluster context from live data
-  const clusterContext: ClusterContext = (() => {
+  const clusterContext: ClusterContext = useMemo(() => {
     const clusterList = clusters || []
     // Detect GPU presence via namespace hints (gpu-operator, nvidia-gpu-operator)
     const hasGpu = clusterList.some(c =>
@@ -109,7 +109,7 @@ export function SmartCardSuggestions({
       hasArgo: clusterList.some(c => (c.namespaces || []).some(ns => ns.includes('argocd') || ns.includes('argo'))),
       totalPods: clusterList.reduce((sum, c) => sum + (c.podCount || 0), 0),
       totalNodes: clusterList.reduce((sum, c) => sum + (c.nodeCount || 0), 0) }
-  })()
+  }, [clusters])
 
   // Generate suggestions based on cluster context, excluding existing cards
   const suggestions: Suggestion[] = (() => {

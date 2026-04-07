@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import type { ClusterInfo } from '../../hooks/mcp/types'
 import { isClusterUnreachable, isClusterHealthy } from './utils'
 import { detectCloudProvider, getProviderLabel } from '../ui/CloudProviderIcon'
@@ -42,7 +43,7 @@ export function useClusterFiltering({
   sortBy,
   sortAsc,
   customOrder }: ClusterFilteringParams): ClusterFilteringResult {
-  const filteredClusters = (() => {
+  const filteredClusters = useMemo(() => {
     let result = clusters || []
 
     // Apply global cluster filter
@@ -114,7 +115,7 @@ export function useClusterFiltering({
     }
 
     return result
-  })()
+  }, [clusters, filter, globalSelectedClusters, isAllClustersSelected, customFilter, sortBy, sortAsc, customOrder])
 
   // Base clusters after global filter (before local health filter)
   const globalFilteredClusters = (() => {

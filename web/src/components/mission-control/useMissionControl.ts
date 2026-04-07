@@ -5,7 +5,7 @@
  * console-kb project index lookup, and localStorage persistence.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useMissions } from '../../hooks/useMissions'
 import { useHelmReleases } from '../../hooks/mcp/helm'
 import { useClusters } from '../../hooks/mcp/clusters'
@@ -148,11 +148,11 @@ export function useMissionControl() {
 
   // Track content length of the latest assistant message so we can re-parse
   // when streaming appends to it (messages.length stays the same during streaming)
-  const latestAssistantContent = (() => {
+  const latestAssistantContent = useMemo(() => {
     if (!planningMission) return ''
     const msgs = planningMission.messages.filter((m) => m.role === 'assistant')
     return msgs[msgs.length - 1]?.content ?? ''
-  })()
+  }, [planningMission?.messages])
 
   useEffect(() => {
     if (!planningMission) return
@@ -540,7 +540,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
   }
 
   // Detect installed projects via helm releases + cluster namespaces
-  const { installedProjects, installedOnCluster } = (() => {
+  const { installedProjects, installedOnCluster } = useMemo(() => {
     const installed = new Set<string>()
     const perCluster = new Map<string, Set<string>>() // projectName → Set<clusterName>
     if (!state.projects.length) return { installedProjects: installed, installedOnCluster: perCluster }
@@ -592,7 +592,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
       }
     }
     return { installedProjects: installed, installedOnCluster: perCluster }
-  })()
+  }, [helmReleases, clusters, state.projects])
 
   // ---------------------------------------------------------------------------
   // Auto-assign: deterministic local algorithm (no AI)

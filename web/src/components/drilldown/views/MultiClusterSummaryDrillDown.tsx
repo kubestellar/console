@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import { Search, Server, Layers, Rocket, Box, Settings as SettingsIcon, AlertCircle, HardDrive, Cpu, Ship, Zap, CheckCircle, XCircle, AlertTriangle, Activity, Filter, ChevronRight } from 'lucide-react'
 import { useClusterData } from '../../../hooks/useClusterData'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
@@ -180,7 +180,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
   const Icon = config.icon
 
   // Get items based on view type
-  const allItems = (() => {
+  const allItems = useMemo(() => {
     switch (viewType) {
       case 'all-clusters':
         // Use deduplicated clusters to avoid showing duplicate contexts for the same server
@@ -292,7 +292,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
       default:
         return []
     }
-  })()
+  }, [viewType, clusters, deduplicatedClusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues, cachedNodes])
 
   // Apply initial filter from data prop
   const preFilteredItems = (() => {
@@ -316,7 +316,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
   })()
 
   // Filter items
-  const filteredItems = (() => {
+  const filteredItems = useMemo(() => {
     let result = preFilteredItems
 
     // Apply search
@@ -348,7 +348,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
     }
 
     return result
-  })()
+  }, [preFilteredItems, searchQuery, statusFilter, clusterFilter, config])
 
   // Handle item click - navigate to appropriate single-resource view
   const handleItemClick = (item: Record<string, unknown>) => {

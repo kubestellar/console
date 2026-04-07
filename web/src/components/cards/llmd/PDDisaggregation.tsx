@@ -6,7 +6,7 @@
  *
  * Uses live stack data when available, demo data when in demo mode.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Split, ArrowRight, Cpu, Zap, Clock, Activity, AlertCircle } from 'lucide-react'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
@@ -195,7 +195,7 @@ export function PDDisaggregation() {
   const [packets, setPackets] = useState<TransferPacket[]>([])
 
   // Build server stats from stack or use demo data, using Prometheus when available
-  const stackServers = (() => {
+  const stackServers = useMemo((): ServerStats[] => {
     // Only show demo servers if demo mode is ON
     if (!selectedStack && isDemoMode) {
       return generateServerStats()
@@ -247,7 +247,7 @@ export function PDDisaggregation() {
     }
 
     return stats
-  })()
+  }, [selectedStack, isDemoMode, prometheusMetrics])
 
   // Check if stack has disaggregation
   const hasDisaggregation = selectedStack?.hasDisaggregation ??
@@ -306,7 +306,7 @@ export function PDDisaggregation() {
   const decodeServers = servers.filter(s => s.type === 'decode')
 
   // Aggregate metrics
-  const metrics = (() => {
+  const metrics = useMemo(() => {
     const prefill = prefillServers.reduce((acc, s) => ({
       throughput: acc.throughput + s.throughput,
       avgLatency: acc.avgLatency + s.latencyMs }), { throughput: 0, avgLatency: 0 })
@@ -322,7 +322,7 @@ export function PDDisaggregation() {
       decodeAvgTPOT: decodeServers.length ? Math.round(decode.avgLatency / decodeServers.length) : 0,
       kvTransferRate: Math.round(packets.length * 150), // Simulated KB/s
     }
-  })()
+  }, [prefillServers, decodeServers, packets])
 
   return (
     <div className={`p-4 h-full flex-1 flex flex-col ${isExpanded ? 'min-h-[500px]' : ''}`}>

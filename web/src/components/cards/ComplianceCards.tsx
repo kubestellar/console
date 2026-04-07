@@ -6,7 +6,7 @@
  * installed, it falls back to demo data and offers an AI mission install link.
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import { AlertTriangle, AlertCircle, Shield, ExternalLink, Info, Loader2, ChevronRight } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
@@ -398,7 +398,7 @@ export function KubescapeScan({ config: _config }: CardConfig) {
   const allChecked = clustersChecked >= totalClusters && totalClusters > 0
 
   // Filter by selected clusters
-  const filtered = (() => {
+  const filtered = useMemo(() => {
     if (selectedClusters.length === 0) return aggregated
     const clusterStatuses = Object.entries(statuses)
       .filter(([name, s]) => s.installed && selectedClusters.includes(name))
@@ -411,7 +411,7 @@ export function KubescapeScan({ config: _config }: CardConfig) {
       totalControls: clusterStatuses.reduce((sum, s) => sum + s.totalControls, 0),
       passedControls: clusterStatuses.reduce((sum, s) => sum + s.passedControls, 0),
       failedControls: clusterStatuses.reduce((sum, s) => sum + s.failedControls, 0) }
-  })()
+  }, [statuses, aggregated, selectedClusters])
 
   const ksHasData = installed || isDemoData
   useCardLoadingState({ isLoading: isLoading && !ksHasData, isRefreshing, hasAnyData: ksHasData, isDemoData })
@@ -671,7 +671,7 @@ export function PolicyViolations({ config: _config }: CardConfig) {
   // Aggregate violations from Kyverno reports. Per-policy violation counts are
   // back-populated from PolicyReport results in the hook, but we also use
   // reports for namespace-level breakdown since some policies may lack result data.
-  const violations = (() => {
+  const violations = useMemo(() => {
     const result: Array<{ policy: string; count: number; tool: string; clusters: string[] }> = []
     const clusterViolations = new Map<string, { count: number; clusters: string[] }>()
 
@@ -712,7 +712,7 @@ export function PolicyViolations({ config: _config }: CardConfig) {
     }
 
     return result.sort((a, b) => b.count - a.count).slice(0, MAX_VIOLATION_ENTRIES)
-  })()
+  }, [kyvernoStatuses, selectedClusters])
 
   // Detect degraded state: installed but no policies configured
   const isDegraded = (() => {
@@ -899,7 +899,7 @@ export function ComplianceScore({ config: _config }: CardConfig) {
   const allChecked = minChecked >= totalChecking && totalChecking > 0
 
   // Compute composite score from available tools
-  const { score, breakdown, usingFallback } = (() => {
+  const { score, breakdown, usingFallback } = useMemo(() => {
     const scores: Array<{ name: string; value: number }> = []
 
     // Kubescape score (filtered by cluster if needed)
@@ -946,10 +946,10 @@ export function ComplianceScore({ config: _config }: CardConfig) {
 
     const avg = Math.round(scores.reduce((sum, s) => sum + s.value, 0) / scores.length)
     return { score: avg, breakdown: scores, usingFallback: false }
-  })()
+  }, [kubescapeAgg, kyvernoStatuses, selectedClusters])
 
   // Kyverno aggregation for breakdown modal
-  const kyvernoBreakdownData = (() => {
+  const kyvernoBreakdownData = useMemo(() => {
     let totalPolicies = 0
     let totalViolations = 0
     let enforcingCount = 0
@@ -963,7 +963,7 @@ export function ComplianceScore({ config: _config }: CardConfig) {
       auditCount += status.auditCount
     }
     return totalPolicies > 0 ? { totalPolicies, totalViolations, enforcingCount, auditCount } : undefined
-  })()
+  }, [kyvernoStatuses, selectedClusters])
 
   // Mark as demo data only when hooks report demo mode (explicit demo or forced Netlify).
   // When compliance tools are not installed, show an install prompt instead of a fake demo score.
@@ -984,7 +984,7 @@ export function ComplianceScore({ config: _config }: CardConfig) {
   const scoreCtx = getScoreContext(score)
 
   // Clusters contributing to the composite score
-  const scoreClusters = (() => {
+  const scoreClusters = useMemo(() => {
     const clusters = new Set<string>()
     for (const s of Object.values(kubescapeStatuses)) {
       if (s.installed) clusters.add(s.cluster)
@@ -993,7 +993,7 @@ export function ComplianceScore({ config: _config }: CardConfig) {
       if (s.installed) clusters.add(s.cluster)
     }
     return Array.from(clusters)
-  })()
+  }, [kubescapeStatuses, kyvernoStatuses])
 
   // Whether no compliance tools are installed (and we've finished loading)
   const noToolsInstalled = !isLoading && !ksInstalled && !kyInstalled && !isDemoData

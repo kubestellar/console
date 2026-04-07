@@ -5,7 +5,7 @@
  * - Cert-Manager: TLS certificate lifecycle management
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react'
 import { Shield, CheckCircle2, AlertTriangle, Clock, AlertCircle } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCertManager } from '../../hooks/useCertManager'
@@ -45,7 +45,10 @@ export function VaultSecrets({ config: _config }: CardConfig) {
   const [isLoading, setIsLoading] = useState(true)
   const [secretCount, setSecretCount] = useState(0)
 
-  const clusters = allClusters.filter(c => c.reachable === true)
+  const clusters = useMemo(() =>
+    allClusters.filter(c => c.reachable === true),
+    [allClusters]
+  )
 
   useEffect(() => {
     if (isDemoMode || clusters.length === 0) {
@@ -212,7 +215,10 @@ export function ExternalSecrets({ config: _config }: CardConfig) {
   const [esoStatus, setEsoStatus] = useState<ESOStatus>(DEMO_ESO)
   const [isLoading, setIsLoading] = useState(true)
 
-  const clusters = allClusters.filter(c => c.reachable === true)
+  const clusters = useMemo(() =>
+    allClusters.filter(c => c.reachable === true),
+    [allClusters]
+  )
 
   useEffect(() => {
     if (isDemoMode || clusters.length === 0) {

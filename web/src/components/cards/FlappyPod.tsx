@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { RotateCcw, Trophy } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
@@ -69,7 +69,7 @@ export function FlappyPod(_props: CardComponentProps) {
   }
 
   // End game
-  const endGame = () => {
+  const endGame = useCallback(() => {
     setGameOver(true)
     setIsPlaying(false)
     emitGameEnded('flappy_pod', 'loss', scoreRef.current)
@@ -78,7 +78,7 @@ export function FlappyPod(_props: CardComponentProps) {
       setHighScore(scoreRef.current)
       localStorage.setItem('flappy-pod-high', String(scoreRef.current))
     }
-  }
+  }, [highScore])
 
   // Spawn pipes
   useEffect(() => {

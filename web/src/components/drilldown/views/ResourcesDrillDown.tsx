@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react'
 import { useClusters, useGPUNodes } from '../../../hooks/useMCP'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { Gauge } from '../../charts/Gauge'
@@ -185,7 +185,7 @@ export function ResourcesDrillDown({ data: _data }: Props) {
   const [clusterOrder, setClusterOrder] = useState<string[]>([])
 
   // Sorted clusters based on user's drag order, or alphabetically by default
-  const clusters = (() => {
+  const clusters = useMemo(() => {
     if (clusterOrder.length === 0) {
       // Default: sort alphabetically by cluster name
       return [...initialClusters].sort((a, b) => a.name.localeCompare(b.name))
@@ -205,7 +205,7 @@ export function ResourcesDrillDown({ data: _data }: Props) {
       // Neither has order - sort alphabetically
       return a.name.localeCompare(b.name)
     })
-  })()
+  }, [initialClusters, clusterOrder])
 
   // Build a map of raw cluster names to deduplicated primary names
   const clusterNameMap = (() => {
@@ -266,7 +266,7 @@ export function ResourcesDrillDown({ data: _data }: Props) {
   })()
 
   // Calculate totals
-  const totals = (() => {
+  const totals = useMemo(() => {
     const totalCPUs = clusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
     const totalCPURequests = clusters.reduce((sum, c) => sum + (c.cpuRequestsCores || 0), 0)
     const totalNodes = clusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
@@ -288,7 +288,7 @@ export function ResourcesDrillDown({ data: _data }: Props) {
       memoryGB: totalMemoryGB,
       memoryRequestsGB: totalMemoryRequestsGB,
       memoryPercent }
-  })()
+  }, [clusters])
 
   // DnD sensors
   const sensors = useSensors(

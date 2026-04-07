@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Stethoscope, Wrench, Wand2 } from 'lucide-react'
 import { useMissions } from '../../../hooks/useMissions'
 import type { ResourceContext, AIAction, MissionType } from '../types/modal.types'
@@ -109,7 +110,7 @@ After I approve, help me execute the repairs step by step.`
   }
 
   // Default AI actions
-  const defaultAIActions: AIAction[] = (() => {
+  const defaultAIActions: AIAction[] = useMemo(() => {
     const hasIssues = issues.length > 0
 
     return [
@@ -145,7 +146,7 @@ After I approve, help me execute the repairs step by step.`
         disabled: !isAgentConnected,
         disabledReason: !isAgentConnected ? 'AI agent not connected' : undefined },
     ]
-  })()
+  }, [resource, issues, isAgentConnected, generateDiagnosePrompt, generateRepairPrompt, generateAskPrompt])
 
   // Handle executing an AI action
   const handleAIAction = (action: AIAction) => {

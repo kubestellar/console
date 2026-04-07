@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { RotateCcw, Trophy } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
@@ -163,7 +163,7 @@ export function KubeMan(_props: CardComponentProps) {
   }, [playerPos, playerDir, nextDir, ghosts, maze, powerMode, deathAnimation])
 
   // Draw game
-  const draw = () => {
+  const draw = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -287,10 +287,10 @@ export function KubeMan(_props: CardComponentProps) {
         ctx.fill()
       }
     }
-  }
+  }, [maze, playerPos, playerDir, ghosts, mouthOpen, isExpanded, deathAnimation])
 
   // Ghost AI: Get target position based on ghost personality
-  const getGhostTarget = (ghost: Ghost, playerPos: Position, playerDir: Direction): Position => {
+  const getGhostTarget = useCallback((ghost: Ghost, playerPos: Position, playerDir: Direction): Position => {
     if (ghost.scared) {
       // When scared, run to opposite corner from player
       return {
@@ -341,7 +341,7 @@ export function KubeMan(_props: CardComponentProps) {
       default:
         return { ...playerPos }
     }
-  }
+  }, [])
 
   // Game loop
   useEffect(() => {

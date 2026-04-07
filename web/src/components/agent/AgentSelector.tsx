@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { ChevronDown, Check, Loader2, Sparkles, Play, BookOpen, X, RefreshCw, AlertTriangle, ExternalLink } from 'lucide-react'
@@ -85,10 +85,9 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   const hasCliAgent = agents.some(a => a.available)
 
   // Known KB paths for install missions (stable reference to avoid recreating callbacks)
-  const INSTALL_MISSION_PATHS: Record<string, string[]> = ({
+  const INSTALL_MISSION_PATHS = useMemo<Record<string, string[]>>(() => ({
     'install-kagent': ['fixes/cncf-install/install-kagent.json'],
-    'install-kagenti': ['fixes/platform-install/install-kagenti.json']
-  })
+    'install-kagenti': ['fixes/platform-install/install-kagenti.json'] }), [])
 
   const openInstallGuide = async (missionId: string) => {
     closeDropdown()

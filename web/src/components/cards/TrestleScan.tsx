@@ -9,7 +9,7 @@
  * Compliance Trestle is a CNCF Sandbox project for compliance-as-code using NIST OSCAL.
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import { Shield, ExternalLink, Info, Loader2, ChevronRight, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
@@ -124,7 +124,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
   }
 
   // Get all profiles from all clusters
-  const allProfiles = (() => {
+  const allProfiles = useMemo(() => {
     const profileMap = new Map<string, OscalProfile>()
     for (const [name, s] of Object.entries(statuses)) {
       if (!s.installed) continue
@@ -142,7 +142,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
       }
     }
     return Array.from(profileMap.values())
-  })()
+  }, [statuses, selectedClusters])
 
   // Only show full-screen spinner on very first load with zero data
   if (isLoading && Object.keys(statuses).length === 0) {

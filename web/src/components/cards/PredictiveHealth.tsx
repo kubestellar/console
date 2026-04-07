@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCachedNodes, useCachedPods } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -67,7 +67,7 @@ export function PredictiveHealth() {
     isFailed: nodesFailed || podsFailed,
     consecutiveFailures: Math.max(nodesFailures, podsFailures) })
 
-  const predictions = (() => {
+  const predictions = useMemo((): Prediction[] => {
     if (nodes.length === 0 && pods.length === 0) return []
 
     const results: Prediction[] = []
@@ -144,7 +144,7 @@ export function PredictiveHealth() {
       const order = { critical: 0, warning: 1, info: 2 }
       return order[a.severity] - order[b.severity]
     })
-  })()
+  }, [nodes, pods])
 
   if (showSkeleton) {
     return (

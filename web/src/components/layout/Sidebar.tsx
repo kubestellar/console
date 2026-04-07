@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, lazy, Suspense } from 'react';
+import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { Plus, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff, GripVertical, X, User, Pin, PinOff } from 'lucide-react'
@@ -70,12 +70,12 @@ export function Sidebar() {
   })
   const autoHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const clearAutoHideTimer = () => {
+  const clearAutoHideTimer = useCallback(() => {
     if (autoHideTimerRef.current) {
       clearTimeout(autoHideTimerRef.current)
       autoHideTimerRef.current = null
     }
-  }
+  }, [])
 
   const handleSidebarMouseEnter = () => {
     clearAutoHideTimer()
@@ -328,7 +328,7 @@ export function Sidebar() {
       >
         {isEditing ? (
           // Inline editing mode
-          (<div className={cn(
+          <div className={cn(
             'flex items-center gap-3 rounded-lg text-sm font-medium',
             'bg-purple-500/20 text-purple-400',
             isCollapsed ? 'justify-center p-3' : 'px-3 py-2'
@@ -349,10 +349,10 @@ export function Sidebar() {
               />
             )}
             {!isCollapsed && <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />}
-          </div>)
+          </div>
         ) : (
           // Normal navigation mode
-          (<NavLink
+          <NavLink
             to={item.href}
             onClick={() => emitSidebarNavigated(item.href)}
             onDoubleClick={(e) => handleDoubleClick(item, e)}
@@ -405,10 +405,10 @@ export function Sidebar() {
                 </span>
               </span>
             )}
-          </NavLink>)
+          </NavLink>
         )}
       </div>
-    );
+    )
   }
 
   return (

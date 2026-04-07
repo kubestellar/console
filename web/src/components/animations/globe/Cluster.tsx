@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useMemo, useEffect } from "react"
 import { useFrame } from "@react-three/fiber"
 import { Sphere, Line, Text, Billboard } from "@react-three/drei"
 import { Group, Vector3 } from "three"
@@ -35,16 +35,18 @@ const Cluster = ({
   const [hovered, setHovered] = useState(false)
 
   // Generate nodes
-  const nodes = Array.from({ length: nodeCount }, (_, i) => {
-    const phi = Math.acos(-1 + (2 * i) / nodeCount)
-    const theta = Math.sqrt(nodeCount * Math.PI) * phi
+  const nodes = useMemo(() => {
+    return Array.from({ length: nodeCount }, (_, i) => {
+      const phi = Math.acos(-1 + (2 * i) / nodeCount)
+      const theta = Math.sqrt(nodeCount * Math.PI) * phi
 
-    return [
-      radius * Math.cos(theta) * Math.sin(phi),
-      radius * Math.sin(theta) * Math.sin(phi),
-      radius * Math.cos(phi),
-    ] as [number, number, number]
-  })
+      return [
+        radius * Math.cos(theta) * Math.sin(phi),
+        radius * Math.sin(theta) * Math.sin(phi),
+        radius * Math.cos(phi),
+      ] as [number, number, number]
+    })
+  }, [nodeCount, radius])
 
   // Randomly activate nodes
   useEffect(() => {

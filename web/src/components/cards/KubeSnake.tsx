@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 import { Play, RotateCcw, Pause, Trophy, Apple, Zap } from 'lucide-react'
 import { useCardExpanded } from './CardWrapper'
@@ -83,7 +83,7 @@ export function KubeSnake() {
   }
 
   // Initialize game
-  const initGame = () => {
+  const initGame = useCallback(() => {
     snakeRef.current = [
       { x: 10, y: 10 },
       { x: 9, y: 10 },
@@ -94,10 +94,10 @@ export function KubeSnake() {
     setScore(0)
     setSpeed(INITIAL_SPEED)
     generateFood()
-  }
+  }, [generateFood])
 
   // Move snake
-  const moveSnake = () => {
+  const moveSnake = useCallback(() => {
     const snake = snakeRef.current
     const direction = nextDirectionRef.current
     directionRef.current = direction
@@ -165,10 +165,10 @@ export function KubeSnake() {
     }
 
     snakeRef.current = newSnake
-  }
+  }, [score, highScore, generateFood])
 
   // Render
-  const render = () => {
+  const render = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -267,7 +267,7 @@ export function KubeSnake() {
         ctx.fill()
       }
     })
-  }
+  }, [])
 
   // Game loop
   useEffect(() => {

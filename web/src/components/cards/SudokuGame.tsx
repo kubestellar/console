@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react'
 import {
   Play, Pause, Lightbulb, Pencil, Undo2, Redo2,
   Save, Trophy, Settings, Sparkles, X
@@ -297,7 +297,7 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
   }
 
   // Start new game
-  const startNewGame = (difficulty: Difficulty) => {
+  const startNewGame = useCallback((difficulty: Difficulty) => {
     const { puzzle, solution } = generatePuzzle(difficulty)
     const newState: GameState = {
       board: puzzle,
@@ -314,7 +314,7 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
     setShowSettings(false)
     setShowVictory(false)
     emitGameStarted('sudoku')
-  }
+  }, [])
 
   // Initialize with easy game if no saved state
   useEffect(() => {

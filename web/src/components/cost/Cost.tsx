@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { STORAGE_KEY_CLUSTER_PROVIDER_OVERRIDES } from '../../lib/constants'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
@@ -88,7 +88,7 @@ export function Cost() {
   })()
 
   // Calculate per-cluster costs (matches ClusterCosts card exactly)
-  const costStats = (() => {
+  const costStats = useMemo(() => {
     let totalCPU = 0
     let totalMemoryGB = 0
     let totalGPUs = 0
@@ -133,7 +133,7 @@ export function Cost() {
       gpuMonthly,
       storageMonthly }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- CLOUD_PRICING and detectClusterProvider are stable module-level constants
-  })()
+  }, [reachableClusters, gpuByCluster, providerOverrides])
 
   // Stats value getter for the configurable StatsOverview component
   const getDashboardStatValue = (blockId: string): StatBlockValue => {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCachedPods } from '../../hooks/useCachedData'
 import { useClusters } from '../../hooks/useMCP'
@@ -41,31 +41,33 @@ export function ControlPlaneHealth() {
     isFailed,
     consecutiveFailures })
 
-  const clusterNames = (() => {
+  const clusterNames = useMemo(() => {
     const names = new Set(pods.map(p => p.cluster).filter(Boolean))
     return Array.from(names).sort()
-  })()
+  }, [pods])
 
   const filtered = selectedCluster ? pods.filter(p => p.cluster === selectedCluster) : pods
 
-  const componentStatus = Object.entries(CP_LABELS).map(([name, labels]) => {
-    const matching = filtered.filter(pod => {
-      const podLabels = pod.labels
-      if (!podLabels) {
+  const componentStatus = useMemo(() => {
+    return Object.entries(CP_LABELS).map(([name, labels]) => {
+      const matching = filtered.filter(pod => {
+        const podLabels = pod.labels
+        if (!podLabels) {
+          return labels.some(l => {
+            const [, val] = l.split('=')
+            return pod.name?.includes(val)
+          })
+        }
         return labels.some(l => {
-          const [, val] = l.split('=')
-          return pod.name?.includes(val)
+          const [key, val] = l.split('=')
+          return podLabels[key] === val
         })
-      }
-      return labels.some(l => {
-        const [key, val] = l.split('=')
-        return podLabels[key] === val
       })
+      const ready = matching.filter(p => p.status === 'Running')
+      const totalRestarts = matching.reduce((sum, p) => sum + (p.restarts || 0), 0)
+      return { name, total: matching.length, ready: ready.length, restarts: totalRestarts }
     })
-    const ready = matching.filter(p => p.status === 'Running')
-    const totalRestarts = matching.reduce((sum, p) => sum + (p.restarts || 0), 0)
-    return { name, total: matching.length, ready: ready.length, restarts: totalRestarts }
-  })
+  }, [filtered])
 
   // Only declare "managed cluster" when data has fully and successfully loaded
   // (not loading, not failed, not demo) and no control-plane pods were found.

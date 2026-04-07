@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { RotateCcw, Trophy } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
@@ -142,7 +142,7 @@ export function PodCrosser(_props: CardComponentProps) {
   }
 
   // Draw game
-  const draw = () => {
+  const draw = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -278,7 +278,7 @@ export function PodCrosser(_props: CardComponentProps) {
     ctx.fillRect(10, CANVAS_HEIGHT - 15, (CANVAS_WIDTH - 20) * (time / 60), 8)
 
     ctx.restore()
-  }
+  }, [player, vehicles, logs, homeSlots, time, isExpanded])
 
   // Game loop
   useEffect(() => {

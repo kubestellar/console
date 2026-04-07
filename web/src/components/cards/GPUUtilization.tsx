@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { TrendingUp, Clock, Server } from 'lucide-react'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import { Skeleton, SkeletonStats } from '../ui/Skeleton'
@@ -131,13 +131,13 @@ export function GPUUtilization() {
   })()
 
   // Calculate current stats
-  const currentStats = (() => {
+  const currentStats = useMemo(() => {
     const total = filteredNodes.reduce((sum, n) => sum + n.gpuCount, 0)
     const allocated = filteredNodes.reduce((sum, n) => sum + n.gpuAllocated, 0)
     const available = total - allocated
     const utilization = total > 0 ? Math.round((allocated / total) * 100) : 0
     return { total, allocated, available, utilization }
-  })()
+  }, [filteredNodes])
 
   // Add data point to history on each update
   useEffect(() => {

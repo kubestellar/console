@@ -6,7 +6,7 @@
  * Offers AI mission install link in demo/uninstalled state.
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import { AlertTriangle, CheckCircle, ExternalLink, AlertCircle, FileCheck, Sparkles, Loader2 } from 'lucide-react'
 import { ProgressRing } from '../ui/ProgressRing'
 import { CardSearchInput } from '../../lib/cards/CardComponents'
@@ -47,7 +47,7 @@ function KyvernoPoliciesInternal({ config: _config }: KyvernoPoliciesProps) {
   })()
 
   // Stats
-  const stats = (() => {
+  const stats = useMemo(() => {
     let totalPolicies = 0
     let enforcingCount = 0
     let totalViolations = 0
@@ -59,7 +59,7 @@ function KyvernoPoliciesInternal({ config: _config }: KyvernoPoliciesProps) {
       totalViolations += status.totalViolations
     }
     return { totalPolicies, enforcingCount, totalViolations }
-  })()
+  }, [statuses, selectedClusters])
 
   // Filter policies by local search
   const filteredPolicies = (() => {

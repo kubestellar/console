@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import {
   Box,
@@ -600,7 +600,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
     }
     return deduplicatedClusters.filter(c => c.reachable !== false)
   })()
-  const workloads: Workload[] = (() => {
+  const workloads: Workload[] = useMemo(() => {
     if (isDemo) return DEMO_WORKLOADS
     if (!realWorkloads || realWorkloads.length === 0) return []
     // Transform API workloads to card format
@@ -649,7 +649,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
       }
     }
     return Array.from(grouped.values())
-  })()
+  }, [realWorkloads, isDemo])
 
   // Calculate stats from actual workloads
   const stats = (() => {

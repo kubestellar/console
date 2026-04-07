@@ -5,7 +5,7 @@
  * Shows throughput, TTFT, TPOT, and p99 latency side by side.
  * Highlight best-in-class for each metric.
  */
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, Cell } from 'recharts'
@@ -86,7 +86,7 @@ export function ResourceUtilization() {
 
   const modeInfo = MODES.find(m => m.key === mode)!
 
-  const { data, bestVariant, bestValue } = (() => {
+  const { data, bestVariant, bestValue } = useMemo(() => {
     const entries: BarEntry[] = []
 
     for (const g of groups) {
@@ -118,7 +118,7 @@ export function ResourceUtilization() {
       ),
       bestVariant: best?.name ?? '',
       bestValue: best?.value ?? 0 }
-  })()
+  }, [groups, effectiveQps, mode, modeInfo.higherBetter])
 
   return (
     <div className="p-4 h-full flex flex-col">

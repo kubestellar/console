@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
@@ -140,7 +140,7 @@ export function Settings() {
 
   const getScrollContainer = () => document.getElementById('main-content')
 
-  const scrollToSection = (sectionId: string, smooth = true) => {
+  const scrollToSection = useCallback((sectionId: string, smooth = true) => {
     const element = document.getElementById(sectionId)
     const container = getScrollContainer()
     if (!element || !container) return
@@ -148,7 +148,7 @@ export function Settings() {
     const elementRect = element.getBoundingClientRect()
     const y = elementRect.top - containerRect.top + container.scrollTop - SCROLL_OFFSET
     container.scrollTo({ top: y, behavior: smooth ? 'smooth' : 'auto' })
-  }
+  }, [])
 
   // Handle deep linking — scroll to section based on URL hash.
   // Depends on both pathname and hash so it fires when navigating TO settings

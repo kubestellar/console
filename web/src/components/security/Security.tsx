@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { Shield, ShieldAlert, ShieldCheck, ShieldX, Users, Key, Lock, Eye, Clock, AlertTriangle, CheckCircle2, XCircle, ChevronRight } from 'lucide-react'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -72,7 +72,7 @@ export function Security() {
   const { issues: cachedSecurityIssues, isLoading: securityLoading, isRefreshing: securityRefreshing } = useCachedSecurityIssues()
 
   // Refresh function for security data
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true)
     setRefreshError(null)
     try {
@@ -86,7 +86,7 @@ export function Security() {
     } finally {
       setIsRefreshing(false)
     }
-  }
+  }, [])
 
   // Handle addCard URL param - open modal and clear param.
   // Guard: KeepAlive keeps hidden dashboards mounted; only process on active route.
@@ -103,7 +103,7 @@ export function Security() {
   }, [handleRefresh])
 
   // Transform cached issues to match the page format
-  const securityIssues = (() => {
+  const securityIssues = useMemo(() => {
     if (isDemoMode) return getMockSecurityData()
 
     // Transform cached data to match mock format
@@ -125,7 +125,7 @@ export function Security() {
         cluster: issue.cluster || 'unknown',
         message: issue.details || issue.issue }
     })
-  })()
+  }, [isDemoMode, cachedSecurityIssues])
 
   // RBAC and compliance data fetching requires backend API endpoints to be implemented first.
   // Once /api/mcp/rbac and /api/mcp/compliance endpoints are available, create useCachedRBAC()
@@ -179,7 +179,7 @@ export function Security() {
     return complianceChecks.filter(c => globalSelectedClusters.includes(c.cluster))
   })()
 
-  const stats = (() => {
+  const stats = useMemo(() => {
     const high = globalFilteredIssues.filter(i => i.severity === 'high').length
     const medium = globalFilteredIssues.filter(i => i.severity === 'medium').length
     const low = globalFilteredIssues.filter(i => i.severity === 'low').length
@@ -244,8 +244,8 @@ export function Security() {
         { name: 'Pass', value: compliancePass, color: '#10b981' },
         { name: 'Warn', value: complianceWarn, color: '#f59e0b' },
         { name: 'Fail', value: complianceFail, color: '#ef4444' },
-      ].filter(d => d.value > 0) };
-  })()
+      ].filter(d => d.value > 0) }
+  }, [globalFilteredIssues, filteredRBAC, filteredCompliance])
 
   const severityColor = (severity: string) => {
     switch (severity) {

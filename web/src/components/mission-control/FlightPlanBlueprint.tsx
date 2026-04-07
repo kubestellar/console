@@ -5,7 +5,7 @@
  * populates the right panel with details. Overlays toggle resource views.
  */
 
-import { useId, useState, useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react';
+import { useId, useMemo, useState, useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Zap,
@@ -505,7 +505,7 @@ export function FlightPlanBlueprint({
   const { clusters } = useClusters()
 
   // Filter out explicitly unhealthy clusters and redistribute orphaned projects to healthy ones
-  const healthyState = (() => {
+  const healthyState = useMemo(() => {
     let assignments = state.assignments
     // Only build the unhealthy set from clusters that are explicitly marked unhealthy/unreachable.
     // Clusters not present in the clusters list (e.g. not yet loaded) are left alone so that
@@ -536,7 +536,7 @@ export function FlightPlanBlueprint({
 
     // Allow projects on multiple clusters — composite keys handle positioning
     return { ...state, assignments }
-  })()
+  }, [state, clusters])
 
   const layout = computeLayout(healthyState)
   const [infoPanel, setInfoPanel] = useState<InfoPanelData | null>(null)
@@ -585,7 +585,7 @@ export function FlightPlanBlueprint({
   const hoveredCluster = hoveredProjectKey?.split('/')[0] ?? null
 
   // Compute which edges should glow — cluster-scoped
-  const glowEdges = (() => {
+  const glowEdges = useMemo(() => {
     const edges = new Set<string>()
     if (hoveredEdge && layout) {
       for (const edge of layout.dependencyEdges) {
@@ -607,10 +607,10 @@ export function FlightPlanBlueprint({
       }
     }
     return edges
-  })()
+  }, [hoveredEdge, hoveredProjectKey, hoveredProjectName, hoveredCluster, layout])
 
   // Compute which project nodes should glow — composite keys for cluster scoping
-  const glowProjectKeys = (() => {
+  const glowProjectKeys = useMemo(() => {
     const keys = new Set<string>()
     if (hoveredEdge && layout) {
       for (const key of layout.projectPositions.keys()) {
@@ -644,7 +644,7 @@ export function FlightPlanBlueprint({
       }
     }
     return keys
-  })()
+  }, [hoveredEdge, hoveredProjectKey, hoveredProjectName, hoveredCluster, layout])
 
   // Detect installed projects via helm releases
 

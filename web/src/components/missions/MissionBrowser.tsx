@@ -5,7 +5,7 @@
  * Sources: KubeStellar Community repo, GitHub repos with kubestellar-missions, local files.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   Search, X, Upload, Filter, Grid3X3, List, Sparkles, CheckCircle,
   Loader2, ExternalLink, RefreshCw } from 'lucide-react'
@@ -949,7 +949,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   // ============================================================================
 
   // Compute dynamic facet counts from unfiltered recommendations
-  const facetCounts = (() => {
+  const facetCounts = useMemo(() => {
     const tags = new Map<string, number>()
     const maturity = new Map<string, number>()
     const difficulty = new Map<string, number>()
@@ -977,7 +977,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       .map(([tag, count]: [string, number]) => ({ tag, count }))
 
     return { clusterMatched, community, maturity, difficulty, missionClass, topTags }
-  })()
+  }, [recommendations])
 
   const activeFilterCount = (() => {
     let count = 0
@@ -1004,7 +1004,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     setSearchQuery('')
   }
 
-  const filteredRecommendations = (() => {
+  const filteredRecommendations = useMemo(() => {
     let recs = recommendations
 
     if (minMatchPercent > 0) {
@@ -1059,7 +1059,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     }
 
     return recs
-  })()
+  }, [recommendations, categoryFilter, cncfFilter, searchQuery, minMatchPercent, matchSourceFilter, maturityFilter, missionClassFilter, difficultyFilter, selectedTags])
 
   // ============================================================================
   // Keyboard

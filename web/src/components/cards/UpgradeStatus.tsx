@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { ArrowUp, CheckCircle, AlertTriangle, Rocket, WifiOff, Loader2 } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -528,33 +528,35 @@ Please proceed step by step and ask for confirmation before making any changes.`
   const latestMinor = deriveLatestMinor(clusterVersions)
 
   // Build version data from real cluster versions
-  const clusterVersionData = globalFilteredClusters.map((c) => {
-    // A cluster is reachable if it has nodes (same logic as other components)
-    const hasNodes = c.nodeCount && c.nodeCount > 0
-    const isUnreachable = c.reachable === false || (!hasNodes && c.healthy === false)
-    const isStillLoading = !hasNodes && c.nodeCount === undefined && c.reachable === undefined
+  const clusterVersionData = useMemo(() => {
+    return globalFilteredClusters.map((c) => {
+      // A cluster is reachable if it has nodes (same logic as other components)
+      const hasNodes = c.nodeCount && c.nodeCount > 0
+      const isUnreachable = c.reachable === false || (!hasNodes && c.healthy === false)
+      const isStillLoading = !hasNodes && c.nodeCount === undefined && c.reachable === undefined
 
-    // Try state first, then fresh cache, then stale cache (survives page refresh), then fallback
-    const stateVersion = clusterVersions[c.name]
-    const freshCached = getCachedVersion(c.name)
-    const staleCached = getStaleCachedVersion(c.name)
-    const currentVersion = stateVersion || freshCached || staleCached ||
-      (isUnreachable ? '-' : (isStillLoading || (!fetchCompleted && agentConnected) ? 'loading...' : '-'))
+      // Try state first, then fresh cache, then stale cache (survives page refresh), then fallback
+      const stateVersion = clusterVersions[c.name]
+      const freshCached = getCachedVersion(c.name)
+      const staleCached = getStaleCachedVersion(c.name)
+      const currentVersion = stateVersion || freshCached || staleCached ||
+        (isUnreachable ? '-' : (isStillLoading || (!fetchCompleted && agentConnected) ? 'loading...' : '-'))
 
-    const targetVersion = getRecommendedUpgrade(currentVersion, latestMinor)
-    const hasUpgrade = targetVersion && targetVersion !== currentVersion && currentVersion !== '-' && currentVersion !== 'loading...'
+      const targetVersion = getRecommendedUpgrade(currentVersion, latestMinor)
+      const hasUpgrade = targetVersion && targetVersion !== currentVersion && currentVersion !== '-' && currentVersion !== 'loading...'
 
-    return {
-      name: c.name,
-      currentVersion,
-      targetVersion: hasUpgrade ? targetVersion : currentVersion,
-      status: isUnreachable ? 'unreachable' as const :
-              isStillLoading ? 'loading' as const :
-              hasUpgrade ? 'available' as const : 'current' as const,
-      progress: 0,
-      isUnreachable,
-      isLoading: isStillLoading }
-  })
+      return {
+        name: c.name,
+        currentVersion,
+        targetVersion: hasUpgrade ? targetVersion : currentVersion,
+        status: isUnreachable ? 'unreachable' as const :
+                isStillLoading ? 'loading' as const :
+                hasUpgrade ? 'available' as const : 'current' as const,
+        progress: 0,
+        isUnreachable,
+        isLoading: isStillLoading }
+    })
+  }, [globalFilteredClusters, clusterVersions, agentConnected, fetchCompleted, latestMinor])
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {

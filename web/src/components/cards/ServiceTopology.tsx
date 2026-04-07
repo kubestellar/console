@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import { ZoomIn, ZoomOut, Maximize2, ArrowRight } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { StatusBadge } from '../ui/StatusBadge'
@@ -88,7 +88,7 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
   })()
 
   // Calculate node positions for simple visualization
-  const nodePositions = (() => {
+  const nodePositions = useMemo(() => {
     const positions: Record<string, { x: number; y: number }> = {}
     const clusterKeys = Object.keys(nodesByCluster)
     const clusterWidth = 100 / (clusterKeys.length + 1)
@@ -110,7 +110,7 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
     })
 
     return positions
-  })()
+  }, [nodesByCluster])
 
   const handleZoomIn = () => setZoom(z => Math.min(z + 0.2, 2))
   const handleZoomOut = () => setZoom(z => Math.max(z - 0.2, 0.5))

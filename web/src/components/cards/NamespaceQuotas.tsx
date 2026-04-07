@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import { Gauge, Cpu, HardDrive, Box, ChevronRight, Plus, Pencil, Trash2, Zap } from 'lucide-react'
 import { BaseModal, useModalState } from '../../lib/modals'
 import { Button } from '../ui/Button'
@@ -406,7 +406,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   }
 
   // Transform ResourceQuotas to QuotaUsage format for display (pre-filter by selectors only)
-  const quotaUsages = (() => {
+  const quotaUsages = useMemo(() => {
     const usages: QuotaUsage[] = []
 
     // Filter quotas based on selection
@@ -438,7 +438,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
       })
 
     return usages
-  })()
+  }, [resourceQuotas, selectedCluster, selectedNamespace])
 
   // Get unique quotas for edit/delete actions
   const uniqueQuotas = (() => {

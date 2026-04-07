@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { useDeploymentIssues, usePodIssues, useClusters, useDeployments } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -64,7 +65,7 @@ export function Workloads() {
     customFilter } = useGlobalFilters()
 
   // Group applications by namespace with global filter applied
-  const apps = (() => {
+  const apps = useMemo(() => {
     let filteredDeployments = allDeployments
     let filteredPodIssues = podIssues
     let filteredDeploymentIssues = deploymentIssues
@@ -158,17 +159,16 @@ export function Workloads() {
       }
       return b.deploymentCount - a.deploymentCount
     })
-  })()
+  }, [allDeployments, podIssues, deploymentIssues, globalSelectedClusters, isAllClustersSelected, customFilter])
 
-  const stats = ({
+  const stats = useMemo(() => ({
     total: apps.length,
     healthy: apps.filter(a => a.status === 'healthy').length,
     warning: apps.filter(a => a.status === 'warning').length,
     critical: apps.filter(a => a.status === 'error').length,
     totalDeployments: apps.reduce((sum, a) => sum + a.deploymentCount, 0),
     totalPodIssues: podIssues.length,
-    totalDeploymentIssues: deploymentIssues.length
-  })
+    totalDeploymentIssues: deploymentIssues.length }), [apps, podIssues, deploymentIssues])
 
   // Dashboard-specific stats value getter
   const getDashboardStatValue = (blockId: string): StatBlockValue => {
@@ -280,13 +280,14 @@ export function Workloads() {
           ))}
         </div>
       )}
+
       {/* Clusters Summary */}
       <div className="mt-8">
         <h2 className="text-lg font-semibold text-foreground mb-4">Clusters Overview</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {forceSkeletonForOffline ? (
             // Show skeleton when agent is offline and demo mode is OFF
-            ([1, 2, 3, 4, 5].map((i) => (
+            [1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="glass p-3 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <Skeleton variant="circular" width={16} height={16} />
@@ -294,7 +295,7 @@ export function Workloads() {
                 </div>
                 <Skeleton variant="text" width={80} height={12} />
               </div>
-            )))
+            ))
           ) : (
             clusters
               .filter(cluster => isAllClustersSelected || globalSelectedClusters.includes(cluster.name))
@@ -318,5 +319,5 @@ export function Workloads() {
         </div>
       </div>
     </DashboardPage>
-  );
+  )
 }

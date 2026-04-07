@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { RotateCcw, Trophy, Crosshair } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
@@ -124,7 +124,7 @@ export function MissileCommand(_props: CardComponentProps) {
   }, [cities, batteries, enemyMissiles, playerMissiles, explosions, score, wave, gameOver, cursorPos])
 
   /** Spawn a new wave of enemy missiles without touching city/battery state. */
-  const spawnWave = (waveNum: number) => {
+  const spawnWave = useCallback((waveNum: number) => {
     const count = ENEMY_BASE_COUNT + waveNum * ENEMY_COUNT_INCREMENT
     const newMissiles: EnemyMissile[] = []
     for (let i = 0; i < count; i++) {
@@ -141,7 +141,7 @@ export function MissileCommand(_props: CardComponentProps) {
     setEnemyMissiles(newMissiles)
     setPlayerMissiles([])
     setExplosions([])
-  }
+  }, [])
 
   /** Full reset — new game only. Cities and batteries are always restored here. */
   const initGame = () => {
@@ -152,7 +152,7 @@ export function MissileCommand(_props: CardComponentProps) {
     spawnWave(1)
   }
 
-  const draw = () => {
+  const draw = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -269,7 +269,7 @@ export function MissileCommand(_props: CardComponentProps) {
     }
 
     ctx.restore()
-  }
+  }, [isExpanded, isPlaying])
 
   // Game loop
   useEffect(() => {

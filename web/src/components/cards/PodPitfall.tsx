@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { RotateCcw, Trophy } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
@@ -157,7 +157,7 @@ export function PodPitfall(_props: CardComponentProps) {
   }
 
   // Draw
-  const draw = () => {
+  const draw = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -302,7 +302,7 @@ export function PodPitfall(_props: CardComponentProps) {
     ctx.fillText(`DIST: ${distance}m`, CANVAS_WIDTH / 2 - 30, 15)
 
     ctx.restore()
-  }
+  }, [player, cameraX, platforms, obstacles, collectibles, vines, score, time, distance, isExpanded])
 
   // Game loop
   useEffect(() => {

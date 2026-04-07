@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCachedNodes } from '../../hooks/useCachedData'
 import { StatusBadge } from '../ui/StatusBadge'
@@ -51,7 +51,7 @@ export function NodeConditions() {
     return { total: nodes.length, healthy: healthy.length, cordoned: cordoned.length, pressure: pressure.length }
   })()
 
-  const filtered = (() => {
+  const filtered = useMemo(() => {
     switch (filter) {
       case 'healthy':
         return nodes.filter(n => {
@@ -71,7 +71,7 @@ export function NodeConditions() {
       default:
         return nodes
     }
-  })()
+  }, [nodes, filter])
 
   /** Show confirmation dialog before executing cordon/uncordon */
   const requestAction = (nodeName: string, cluster: string, action: 'cordon' | 'uncordon') => {

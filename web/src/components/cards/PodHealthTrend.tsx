@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { CheckCircle, AlertTriangle, Clock, Server } from 'lucide-react'
 import {
   AreaChart,
@@ -161,13 +161,13 @@ export function PodHealthTrend() {
   })()
 
   // Calculate current stats
-  const currentStats = (() => {
+  const currentStats = useMemo(() => {
     const totalPods = filteredClusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
     const issuePods = filteredIssues.length
     const pendingPods = filteredIssues.filter(i => i.status === 'Pending').length
     const healthyPods = Math.max(0, totalPods - issuePods)
     return { healthy: healthyPods, issues: issuePods - pendingPods, pending: pendingPods, total: totalPods }
-  })()
+  }, [filteredClusters, filteredIssues])
 
   // Check if we have any reachable clusters
   const hasReachableClusters = filteredClusters.some(c => c.reachable !== false && c.nodeCount !== undefined && c.nodeCount > 0)

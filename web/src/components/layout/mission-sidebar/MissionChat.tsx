@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Send,
@@ -231,7 +231,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   })()
 
   // Generate a simple summary based on conversation state
-  const conversationSummary = (() => {
+  const conversationSummary = useMemo(() => {
     const userMsgs = mission.messages.filter(m => m.role === 'user')
     const assistantMsgs = mission.messages.filter(m => m.role === 'assistant')
     const lastAssistant = assistantMsgs[assistantMsgs.length - 1]
@@ -253,7 +253,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       hasToolExecution: assistantMsgs.some(m =>
         m.content.includes('```') && (m.content.includes('kubectl') || m.content.includes('executed'))
       ) }
-  })()
+  }, [mission.messages, mission.status, mission.updatedAt])
 
   /** Maximum allowed length for mission titles */
   const MAX_TITLE_LENGTH = 80

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Play, RotateCcw, Pause, Trophy, Target, Heart, Crosshair } from 'lucide-react'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
@@ -111,7 +111,7 @@ export function KubeDoom() {
   const damageFlashRef = useRef(0)
   const totalEnemiesRef = useRef(0)
 
-  const initGame = () => {
+  const initGame = useCallback(() => {
     playerRef.current = { x: 1.5, y: 1.5, angle: 0 }
     enemiesRef.current = spawnEnemies(1)
     totalEnemiesRef.current = enemiesRef.current.length
@@ -122,7 +122,7 @@ export function KubeDoom() {
     setKills(0)
     shootFlashRef.current = 0
     damageFlashRef.current = 0
-  }
+  }, [])
 
   const initLevel = (lvl: number) => {
     playerRef.current = { x: 1.5, y: 1.5, angle: 0 }
@@ -190,7 +190,7 @@ export function KubeDoom() {
   }
 
   // Update
-  const update = () => {
+  const update = useCallback(() => {
     const keys = keysRef.current
     const player = playerRef.current
 
@@ -279,10 +279,10 @@ export function KubeDoom() {
       setLevel(l => l + 1)
       setGameState('levelcomplete')
     }
-  }
+  }, [level, highScore, shoot])
 
   // Render
-  const render = () => {
+  const render = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -496,7 +496,7 @@ export function KubeDoom() {
       ctx.arc(mmOffX + enemy.x * mmScale, mmOffY + enemy.y * mmScale, 1.5, 0, Math.PI * 2)
       ctx.fill()
     }
-  }
+  }, [])
 
   // Game loop
   useEffect(() => {

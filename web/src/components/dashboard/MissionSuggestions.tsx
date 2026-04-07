@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, startTransition } from 'react';
+import { useState, useEffect, useRef, useCallback, startTransition } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Lightbulb, Clock, X, ChevronDown, ChevronUp, Zap, AlertTriangle, Shield, Server, Scale, Activity, Wrench, Stethoscope, Timer } from 'lucide-react'
@@ -60,7 +60,7 @@ export function MissionSuggestions() {
   void snoozedMissions
 
   // Start / stop countdown timer
-  const startCountdown = () => {
+  const startCountdown = useCallback(() => {
     if (countdownRef.current) clearInterval(countdownRef.current)
     countdownRef.current = setInterval(() => {
       setCountdown((prev) => {
@@ -76,7 +76,7 @@ export function MissionSuggestions() {
         return prev - 1
       })
     }, COUNTDOWN_TICK_MS)
-  }
+  }, [])
 
   // Manage countdown lifecycle based on minimized state
   useEffect(() => {

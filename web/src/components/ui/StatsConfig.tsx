@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Settings, Check, GripVertical, Eye, EyeOff, Plus, Trash2, Search, ChevronRight, ChevronDown } from 'lucide-react'
 import { Button } from './Button'
@@ -338,7 +338,7 @@ export function StatsConfigModal({
   const currentBlockIds = new Set(localBlocks.map(b => b.id))
 
   // Get available stats per dashboard category, filtered by search
-  const availableStatsByCategory = (() => {
+  const availableStatsByCategory = useMemo(() => {
     const query = searchQuery.toLowerCase().trim()
     const result: Map<DashboardStatsType, StatBlockConfig[]> = new Map()
 
@@ -356,7 +356,7 @@ export function StatsConfigModal({
       }
     }
     return result
-  })()
+  }, [currentBlockIds, searchQuery])
 
   // Check if any stats are available
   const hasAvailableStats = availableStatsByCategory.size > 0

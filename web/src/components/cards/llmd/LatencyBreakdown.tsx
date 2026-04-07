@@ -5,7 +5,7 @@
  * Tabs for TTFT p50, TPOT p50, p99 Request Latency, ITL.
  * Shows how latency degrades as load increases.
  */
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import {
   Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, Area, ComposedChart, ReferenceLine } from 'recharts'
@@ -85,7 +85,7 @@ function LatencyBreakdownInternal() {
     isl: islFilter || undefined,
     osl: oslFilter || undefined })
 
-  const { chartData, maxLatency } = (() => {
+  const { chartData, maxLatency } = useMemo(() => {
     const qpsSet = new Set<number>()
     groups.forEach(g => g.points.forEach(p => qpsSet.add(p.qps)))
     const allQps = [...qpsSet].sort((a, b) => a - b)
@@ -102,7 +102,7 @@ function LatencyBreakdownInternal() {
       return row
     })
     return { chartData: data, maxLatency: maxLat }
-  })()
+  }, [groups, tab])
 
   // Find worst offender at max QPS
   const degradationWarning = (() => {
@@ -165,6 +165,7 @@ function LatencyBreakdownInternal() {
           </select>
         </div>
       </div>
+
       {/* Metric tabs */}
       <div className="flex gap-1 mb-3 bg-secondary/80 rounded-lg p-0.5 w-fit">
         {TABS.map(t => (
@@ -179,6 +180,7 @@ function LatencyBreakdownInternal() {
           </button>
         ))}
       </div>
+
       {/* Chart */}
       <div className="flex-1 min-h-0" style={{ minHeight: 200 }}>
         {chartData.length > 0 ? (
@@ -246,6 +248,7 @@ function LatencyBreakdownInternal() {
           </div>
         )}
       </div>
+
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-2xs">
         {groups.map(g => (
@@ -256,7 +259,7 @@ function LatencyBreakdownInternal() {
         ))}
       </div>
     </div>
-  );
+  )
 }
 
 export function LatencyBreakdown() {

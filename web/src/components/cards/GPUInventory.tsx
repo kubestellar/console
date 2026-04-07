@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Cpu, Server, ChevronRight } from 'lucide-react'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -95,7 +96,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
   // using the same filter criteria that useCardData applies internally.
   // Since useCardData returns totalItems = filtered+sorted count, we can
   // use a lightweight useMemo that mirrors the filter logic for aggregation.
-  const stats = (() => {
+  const stats = useMemo(() => {
     // The hook's totalItems reflects the filtered count, but we need
     // per-field aggregation. We'll filter rawNodes the same way the hook does
     // by leveraging the hook's internal filter state exposed through `filters`.
@@ -113,7 +114,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
     const allocatedGPUs = rawNodes.reduce((sum, n) => sum + n.gpuAllocated, 0)
     const availableGPUs = totalGPUs - allocatedGPUs
     return { totalGPUs, allocatedGPUs, availableGPUs }
-  })()
+  }, [rawNodes])
 
   if (isLoading) {
     return (

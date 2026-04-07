@@ -5,7 +5,7 @@
  * AI recommendations overlay.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Loader2, Wand2, Shuffle, LayoutGrid, Table, Plus, X } from 'lucide-react'
 import { motion } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
@@ -50,9 +50,12 @@ export function ClusterAssignmentPanel({
   const [showClusterPicker, setShowClusterPicker] = useState(false)
 
   // Healthy clusters only — sort by name for stable ordering when toggling projects (#4548)
-  const allHealthyClusters = clusters
-    .filter((c) => c.healthy !== false && c.reachable !== false)
-    .sort((a, b) => a.name.localeCompare(b.name))
+  const allHealthyClusters = useMemo(
+    () => clusters
+      .filter((c) => c.healthy !== false && c.reachable !== false)
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    [clusters]
+  )
   // Active clusters = healthy minus excluded
   const healthyClusters = allHealthyClusters.filter((c) => !excludedClusters.has(c.name))
   // Excluded but available
@@ -61,7 +64,7 @@ export function ClusterAssignmentPanel({
   const projectNames = state.projects.map((p) => p.name)
 
   // Generate per-cluster inspection notes from helm release data
-  const clusterInspectionNotes = (() => {
+  const clusterInspectionNotes = useMemo(() => {
     const notes = new Map<string, string[]>()
     if (!helmReleases?.length) return notes
     for (const cluster of healthyClusters) {
@@ -87,7 +90,7 @@ export function ClusterAssignmentPanel({
       if (clusterNotes.length > 0) notes.set(cluster.name, clusterNotes)
     }
     return notes
-  })()
+  }, [helmReleases, healthyClusters, state.projects])
 
   const handleAutoAssign = () => {
     if (healthyClusters.length === 0) return

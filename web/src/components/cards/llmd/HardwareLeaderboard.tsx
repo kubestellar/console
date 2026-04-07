@@ -7,7 +7,7 @@
  * TTFT p50, TPOT p50, p99 Latency, Score, llm-d Advantage %.
  * Top 3 get medal styling.
  */
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import { Trophy, ChevronUp, ChevronDown, ArrowUpDown } from 'lucide-react'
 import { useReportCardDataState } from '../CardDataContext'
 import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
@@ -68,7 +68,7 @@ export function HardwareLeaderboard() {
 
   const models = [...new Set(allRows.map(r => r.model))]
 
-  const sortedRows = (() => {
+  const sortedRows = useMemo(() => {
     let filtered = modelFilter === 'all' ? allRows : allRows.filter(r => r.model === modelFilter)
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
@@ -84,7 +84,7 @@ export function HardwareLeaderboard() {
       return sortDir === 'desc' ? (bv as number) - (av as number) : (av as number) - (bv as number)
     })
     return filtered.map((r, i) => ({ ...r, rank: i + 1 }))
-  })()
+  }, [allRows, sortKey, sortDir, modelFilter, searchQuery])
 
   const {
     paginatedItems: rows,

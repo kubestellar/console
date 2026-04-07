@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Cpu, Network, Activity, Layers, Server,
@@ -20,7 +20,7 @@ import { useClusters } from '../../../hooks/useMCP'
 import { ClusterStatusDot, getClusterState } from '../../ui/ClusterStatusBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { useCardLoadingState } from '../CardDataContext'
-import type { MonitoredResource } from '../../../types/workloadMonitor'
+import type { MonitorIssue, MonitoredResource } from '../../../types/workloadMonitor'
 import { useTranslation } from 'react-i18next'
 
 type SortField = 'name' | 'status' | 'type' | 'cluster'
@@ -298,7 +298,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   })()
 
   // Combine issues from monitor and synthesized from llm-d (respects cluster filter)
-  const allIssues = (() => {
+  const allIssues = useMemo<MonitorIssue[]>(() => {
     // Filter monitor issues by cluster if filter is active
     let monitorIssues = [...issues]
     if (localClusterFilter.length > 0) {
@@ -333,7 +333,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
       }
     })
     return monitorIssues
-  })()
+  }, [issues, servers, localClusterFilter])
 
   // Filter issues by search and severity
   const filteredIssues = (() => {

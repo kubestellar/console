@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
@@ -338,7 +338,7 @@ function KubeCraft3DInternal() {
   }, [isExpanded, isDaytime, showGrid])
 
   // Create a block mesh
-  const createBlockMesh = (x: number, y: number, z: number, type: BlockType, scene: Scene, geometry?: BoxGeometry) => {
+  const createBlockMesh = useCallback((x: number, y: number, z: number, type: BlockType, scene: Scene, geometry?: BoxGeometry) => {
     const colors = BLOCK_COLORS[type]
     if (!colors || type === 'air') return
 
@@ -362,7 +362,7 @@ function KubeCraft3DInternal() {
     const key = `${x},${y},${z}`
     meshesRef.current.set(key, mesh)
     scene.add(mesh)
-  }
+  }, [])
 
   // Handle keyboard events
   useEffect(() => {

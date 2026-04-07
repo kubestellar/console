@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useMissions } from '../../../hooks/useMissions'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
@@ -119,7 +119,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   const passedAnnotations = data.annotations as Record<string, string> | undefined
 
   // Compute all issues including status-based ones
-  const issues = (() => {
+  const issues = useMemo(() => {
     const allIssues = [...passedIssues]
 
     // Check status from data prop
@@ -166,7 +166,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
     }
 
     return allIssues
-  })()
+  }, [passedIssues, status, reason, podStatusOutput, podName])
 
   // Use passed labels/annotations if available
   useEffect(() => {
@@ -675,7 +675,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
   }
 
   // Check if user can delete pods in this namespace
-  const checkDeletePermission = async () => {
+  const checkDeletePermission = useCallback(async () => {
     try {
       const result = await checkPermission({
         cluster,
@@ -686,7 +686,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
     } catch {
       setCanDeletePod(false)
     }
-  }
+  }, [cluster, namespace, checkPermission])
 
   // Check delete permission on mount
   useEffect(() => {
@@ -1176,7 +1176,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
   ]
 
   // Extract container names from YAML output for exec tab
-  const containerNames = (() => {
+  const containerNames = useMemo(() => {
     if (!yamlOutput) return []
     const names: string[] = []
     // In kubectl YAML, container objects live under "  containers:" or "  initContainers:"
@@ -1204,7 +1204,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
       }
     }
     return names
-  })()
+  }, [yamlOutput])
 
   return (
     <div className="flex flex-col h-full -m-6">

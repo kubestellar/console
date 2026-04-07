@@ -4,7 +4,7 @@
  * Interactive visualization of LLM-d tuning options
  * with preset configurations and impact previews.
  */
-import { useState } from 'react';
+import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Settings, Zap, Split, Layers, Scale, ChevronRight, Check, Copy, ExternalLink } from 'lucide-react'
 import { getConfiguratorPresets, type ConfiguratorPreset } from '../../../lib/llmd/mockData'
@@ -171,7 +171,7 @@ export function LLMdConfigurator() {
   }
 
   // Generate YAML config
-  const yamlConfig = (() => {
+  const yamlConfig = useMemo(() => {
     if (!selectedPreset) return ''
 
     const params = currentParams.reduce((acc, p) => {
@@ -188,7 +188,7 @@ spec:
   preset: ${selectedPreset.id}
   config:
 ${Object.entries(params).map(([k, v]) => `    ${k}: ${v}`).join('\n')}`
-  })()
+  }, [selectedPreset, currentParams])
 
   const copyConfig = () => {
     copyToClipboard(yamlConfig)
