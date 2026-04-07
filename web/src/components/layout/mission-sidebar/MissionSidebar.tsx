@@ -41,6 +41,7 @@ import type { Mission } from '../../../hooks/useMissions'
 import type { FontSize } from './types'
 import { MissionListItem } from './MissionListItem'
 import { OrbitReminderBanner } from '../../missions/OrbitReminderBanner'
+import { MissionTypeExplainer } from '../../missions/MissionTypeExplainer'
 import { StandaloneOrbitDialog } from '../../missions/StandaloneOrbitDialog'
 import { MissionChat } from './MissionChat'
 import { ClusterSelectionDialog } from '../../missions/ClusterSelectionDialog'
@@ -968,6 +969,9 @@ export function MissionSidebar() {
               )}
             </div>
           )}
+
+          {/* Mission type explainer — demo mode only */}
+          <MissionTypeExplainer />
 
           {/* Add Orbit button — always visible above saved missions */}
           <div className="mb-2 px-2">
