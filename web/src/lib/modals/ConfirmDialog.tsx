@@ -18,7 +18,7 @@
  * ```
  */
 
-import { AlertTriangle, AlertCircle, Info, Loader2 } from 'lucide-react'
+import { AlertTriangle, AlertCircle, Info } from 'lucide-react'
 import { BaseModal } from './BaseModal'
 import { Button } from '../../components/ui/Button'
 
@@ -101,14 +101,16 @@ export function ConfirmDialog({
           >
             {cancelLabel}
           </Button>
-          <button
+          <Button
+            variant="ghost"
+            size="lg"
             onClick={onConfirm}
             disabled={isLoading}
-            className={`flex-1 px-4 py-2 text-sm rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2 ${config.confirmBg}`}
+            loading={isLoading}
+            className={`flex-1 ${config.confirmBg}`}
           >
-            {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
             {confirmLabel}
-          </button>
+          </Button>
         </div>
       </div>
     </BaseModal>

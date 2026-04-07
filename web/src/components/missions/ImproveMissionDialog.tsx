@@ -7,11 +7,11 @@
 
 import { useState } from 'react'
 import {
-  X,
   MessageSquarePlus,
   ExternalLink,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { BaseModal } from '../../lib/modals/BaseModal'
 import type { MissionExport } from '../../lib/missions/types'
 
 const IMPROVEMENT_CATEGORIES = [
@@ -86,8 +86,6 @@ export function ImproveMissionDialog({
   const [details, setDetails] = useState('')
   const [activeSection, setActiveSection] = useState<SectionName>(section)
 
-  if (!isOpen) return null
-
   const sections: { id: SectionName; label: string }[] = [
     { id: 'general', label: 'General' },
     { id: 'install', label: 'Install' },
@@ -103,26 +101,11 @@ export function ImproveMissionDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-2xl">
-      <div className="w-full max-w-lg mx-4 bg-background border border-border rounded-xl shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <MessageSquarePlus className="w-5 h-5 text-yellow-400" />
-            <h3 className="text-base font-semibold text-foreground">
-              Improve this AI Mission
-            </h3>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="sm">
+      <BaseModal.Header title="Improve this AI Mission" icon={MessageSquarePlus} onClose={onClose} />
 
-        {/* Body */}
-        <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+      <BaseModal.Content noPadding>
+        <div className="p-4 space-y-4">
           {/* Mission info */}
           <div className="p-3 rounded-lg bg-secondary/50 border border-border">
             <p className="text-sm font-medium text-foreground">{mission.title}</p>
@@ -209,29 +192,28 @@ export function ImproveMissionDialog({
             />
           </div>
         </div>
+      </BaseModal.Content>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-border">
-          <p className="text-xs text-muted-foreground">
-            Opens a GitHub issue in kubestellar/console-kb
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="px-3 py-1.5 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white transition-colors"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              Open Issue
-            </button>
-          </div>
+      <BaseModal.Footer showKeyboardHints={false}>
+        <p className="text-xs text-muted-foreground">
+          Opens a GitHub issue in kubestellar/console-kb
+        </p>
+        <div className="flex items-center gap-2 ml-auto">
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white transition-colors"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            Open Issue
+          </button>
         </div>
-      </div>
-    </div>
+      </BaseModal.Footer>
+    </BaseModal>
   )
 }

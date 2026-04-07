@@ -7,7 +7,6 @@
 
 import { useState, useEffect, useRef } from 'react'
 import {
-  X,
   Download,
   Copy,
   FileText,
@@ -20,6 +19,7 @@ import type { Resolution } from '../../hooks/useResolutions'
 import type { MissionExport, FileScanResult } from '../../lib/missions/types'
 import { fullScan } from '../../lib/missions/scanner/index'
 import { cn } from '../../lib/cn'
+import { BaseModal } from '../../lib/modals/BaseModal'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { copyToClipboard } from '../../lib/clipboard'
 import { safeRevokeObjectURL } from '../../lib/download'
@@ -168,24 +168,13 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
     exportedTimeoutRef.current = setTimeout(() => setExported(null), UI_FEEDBACK_TIMEOUT_MS)
   }
 
-  if (!isOpen) return null
-
   const hasWarnings = scanResult && scanResult.findings.some(f => f.severity === 'warning' || f.severity === 'error')
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-2xl">
-      <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-md mx-4">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Export Mission</h3>
-          </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="sm">
+      <BaseModal.Header title="Export Mission" icon={Shield} onClose={onClose} />
 
+      <BaseModal.Content noPadding>
         {/* Mission preview */}
         <div className="p-4 border-b border-border">
           <p className="text-xs font-medium text-foreground truncate">{resolution.title}</p>
@@ -250,8 +239,8 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
             onClick={() => handleExport('yaml')}
           />
         </div>
-      </div>
-    </div>
+      </BaseModal.Content>
+    </BaseModal>
   )
 }
 

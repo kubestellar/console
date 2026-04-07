@@ -1,6 +1,10 @@
 /**
  * BaseModal - Compound component for building modals
  *
+ * Naming Convention:
+ * - *Modal  → Complex flows with multiple sections (use BaseModal)
+ * - *Dialog → Simple confirm/prompt (use ConfirmDialog from ./ConfirmDialog.tsx)
+ *
  * Provides standardized modal structure:
  * - Backdrop with blur effect
  * - Responsive sizing
@@ -110,7 +114,7 @@ export function BaseModal({
   return createPortal(
     <div
       ref={backdropRef}
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] p-4 overflow-y-auto overscroll-contain"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-modal p-4 overflow-y-auto overscroll-contain"
       onClick={handleBackdropClick}
     >
       <div

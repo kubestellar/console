@@ -274,7 +274,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   const coins = type === 'bug' ? REWARD_ACTIONS.bug_report.coins : REWARD_ACTIONS.feature_suggestion.coins
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-2xl">
+    <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <ConfirmDialog
         isOpen={showDiscardConfirm}
         onClose={() => setShowDiscardConfirm(false)}
@@ -556,7 +556,7 @@ export function FeedbackButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="fixed bottom-20 right-4 flex items-center gap-2 px-4 py-2.5 rounded-full bg-purple-500 hover:bg-purple-600 text-white shadow-lg transition-all hover:scale-105 z-40"
+      className="fixed bottom-20 right-4 flex items-center gap-2 px-4 py-2.5 rounded-full bg-purple-500 hover:bg-purple-600 text-white shadow-lg transition-all hover:scale-105 z-sticky"
       title="Submit feedback"
     >
       <Lightbulb className="w-4 h-4" />

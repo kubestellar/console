@@ -321,7 +321,7 @@ export function CardClusterFilter({
 
       {isOpen && dropdownPos && createPortal(
         <div
-          className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
+          className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-dropdown"
           style={{ top: dropdownPos.top, left: dropdownPos.left }}
           onMouseDown={e => e.stopPropagation()}
           onKeyDown={(e) => {

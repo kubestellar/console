@@ -402,7 +402,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
           ref={panelRef}
           role="listbox"
           aria-label={t('agent.selectAgent')}
-          className="fixed z-[9999] w-96 max-h-[calc(100vh-8rem)] rounded-lg bg-card border border-border shadow-lg overflow-hidden flex flex-col"
+          className="fixed z-dropdown w-96 max-h-[calc(100vh-8rem)] rounded-lg bg-card border border-border shadow-lg overflow-hidden flex flex-col"
           style={{ top: dropdownPos.top, right: dropdownPos.right }}
           onKeyDown={(e) => {
             if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
@@ -621,7 +621,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
     {/* Install guide modal */}
     {(installGuide || installGuideLoading || installGuideError) && createPortal(
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-2xl"
+        className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-sm"
         onClick={(e) => { if (e.target === e.currentTarget) { setInstallGuide(null); setInstallGuideLoading(false); setInstallGuideError(false) } }}
         onKeyDown={(e) => { if (e.key === 'Escape') { setInstallGuide(null); setInstallGuideLoading(false); setInstallGuideError(false) } }}
         tabIndex={-1}

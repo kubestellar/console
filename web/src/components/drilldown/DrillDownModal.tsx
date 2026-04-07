@@ -300,7 +300,7 @@ export function DrillDownModal() {
 
   return (
     <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-2xl flex items-center justify-center z-[9999] p-2 md:p-4"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-modal p-2 md:p-4"
       onClick={close}
     >
       <div

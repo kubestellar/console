@@ -25,7 +25,7 @@ export function DashboardDropZone({
   if (!isDragging) return null
 
   return (
-    <div className="fixed right-6 top-24 z-50 animate-fade-in-up">
+    <div className="fixed right-6 top-24 z-dropdown animate-fade-in-up">
       <div className="glass rounded-xl border border-border/50 p-4 w-64 shadow-2xl">
         <div className="flex items-center gap-2 mb-3 text-sm font-medium text-foreground">
           <LayoutDashboard className="w-4 h-4 text-purple-400" />

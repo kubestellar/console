@@ -730,7 +730,7 @@ export function GPUInventoryHistory() {
                 <ChevronDown className="w-3 h-3" />
               </button>
               {showTypeDropdown && (
-                <div className="absolute right-0 top-full mt-1 z-50 min-w-[160px] rounded-md border border-border bg-popover shadow-lg py-1">
+                <div className="absolute right-0 top-full mt-1 z-dropdown min-w-[160px] rounded-md border border-border bg-popover shadow-lg py-1">
                   <button
                     onClick={() => { setSelectedGPUType('all'); setShowTypeDropdown(false) }}
                     className={cn('w-full text-left px-3 py-1.5 text-xs hover:bg-secondary/80 transition-colors',
@@ -773,7 +773,7 @@ export function GPUInventoryHistory() {
                 <ChevronDown className="w-3 h-3" />
               </button>
               {showNodeDropdown && (
-                <div className="absolute right-0 top-full mt-1 z-50 min-w-[160px] max-h-[200px] overflow-y-auto rounded-md border border-border bg-popover shadow-lg py-1">
+                <div className="absolute right-0 top-full mt-1 z-dropdown min-w-[160px] max-h-[200px] overflow-y-auto rounded-md border border-border bg-popover shadow-lg py-1">
                   <button
                     onClick={() => { setSelectedNode('all'); setShowNodeDropdown(false) }}
                     className={cn('w-full text-left px-3 py-1.5 text-xs hover:bg-secondary/80 transition-colors',

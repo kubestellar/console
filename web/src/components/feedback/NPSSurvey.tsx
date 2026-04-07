@@ -62,7 +62,7 @@ export function NPSSurvey() {
   if (!isVisible && !showThankYou) return null
 
   const content = showThankYou ? (
-    <div className="fixed bottom-4 right-4 z-50 w-80 rounded-xl border border-border bg-card shadow-xl p-5 animate-in slide-in-from-bottom-4 duration-300">
+    <div className="fixed bottom-4 right-4 z-sticky w-80 rounded-xl border border-border bg-card shadow-xl p-5 animate-in slide-in-from-bottom-4 duration-300">
       <div className="flex flex-col items-center gap-2 text-center">
         <CheckCircle2 className="w-8 h-8 text-green-400" />
         <p className="text-sm font-medium text-foreground">{t('nps.thankYou')}</p>
@@ -70,7 +70,7 @@ export function NPSSurvey() {
       </div>
     </div>
   ) : (
-    <div className="fixed bottom-4 right-4 z-50 w-80 rounded-xl border border-border bg-card shadow-xl animate-in slide-in-from-bottom-4 duration-300">
+    <div className="fixed bottom-4 right-4 z-sticky w-80 rounded-xl border border-border bg-card shadow-xl animate-in slide-in-from-bottom-4 duration-300">
       {/* Header */}
       <div className="flex items-start justify-between px-4 pt-4 pb-2">
         <p className="text-sm font-medium text-foreground pr-2">{t('nps.title')}</p>

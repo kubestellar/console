@@ -264,7 +264,7 @@ export function MissionSuggestions() {
                   <div
                     id={`mission-dropdown-${suggestion.id}`}
                     role="menu"
-                    className="absolute top-full left-0 mt-1 z-50 w-72 rounded-lg border border-border/50 bg-card shadow-xl"
+                    className="absolute top-full left-0 mt-1 z-dropdown w-72 rounded-lg border border-border/50 bg-card shadow-xl"
                     style={{ isolation: 'isolate' }}
                     onKeyDown={(e) => {
                       if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
@@ -418,7 +418,7 @@ export function MissionSuggestions() {
                 <div
                   id={`mission-dropdown-${suggestion.id}`}
                   role="menu"
-                  className="absolute top-full left-0 mt-1 z-50 w-72 rounded-lg border border-border/50 bg-card shadow-xl"
+                  className="absolute top-full left-0 mt-1 z-dropdown w-72 rounded-lg border border-border/50 bg-card shadow-xl"
                   style={{ isolation: 'isolate' }}
                   onKeyDown={(e) => {
                     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return

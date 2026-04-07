@@ -371,7 +371,7 @@ function AuthorBadge({ author, github, compact }: { author: string; github?: str
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 5 }}
               transition={{ duration: 0.15 }}
-              className="fixed z-[9999] pointer-events-none"
+              className="fixed z-dropdown pointer-events-none"
               style={{ left: pos.x, top: pos.y, transform: 'translate(-50%, -100%)' }}
             >
               <div className="px-4 py-3 bg-background border border-border rounded-lg shadow-xl backdrop-blur-sm min-w-[200px]">

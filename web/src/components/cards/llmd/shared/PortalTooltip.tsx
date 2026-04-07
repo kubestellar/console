@@ -63,7 +63,7 @@ export function PortalTooltip({ children, content, className = '' }: PortalToolt
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 5 }}
               transition={{ duration: 0.15 }}
-              className="fixed z-[9999] pointer-events-none"
+              className="fixed z-dropdown pointer-events-none"
               style={{
                 left: position.x,
                 top: position.y,

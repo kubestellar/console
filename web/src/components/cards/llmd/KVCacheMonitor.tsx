@@ -672,7 +672,7 @@ export function KVCacheMonitor() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.15 }}
-                className="fixed bg-background/95 backdrop-blur-sm rounded-lg border border-border p-3 shadow-2xl w-[200px] z-[9999]"
+                className="fixed bg-background/95 backdrop-blur-sm rounded-lg border border-border p-3 shadow-2xl w-[200px] z-dropdown"
                 style={{ left: panelPosition.x, top: panelPosition.y }}
               >
                 {(() => {

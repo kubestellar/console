@@ -204,7 +204,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
                   <div
                     id={`rec-dropdown-${rec.id}`}
                     role="menu"
-                    className="absolute top-full left-0 mt-1 z-50 w-72 rounded-lg border border-border/50 bg-card shadow-xl"
+                    className="absolute top-full left-0 mt-1 z-dropdown w-72 rounded-lg border border-border/50 bg-card shadow-xl"
                     onKeyDown={(e) => {
                       if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
                       e.preventDefault()
@@ -331,7 +331,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
                 <div
                   id={`rec-dropdown-${rec.id}`}
                   role="menu"
-                  className="absolute top-full left-0 mt-1 z-50 w-72 rounded-lg border border-border/50 bg-card shadow-xl"
+                  className="absolute top-full left-0 mt-1 z-dropdown w-72 rounded-lg border border-border/50 bg-card shadow-xl"
                   onKeyDown={(e) => {
                     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
                     e.preventDefault()

@@ -229,7 +229,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
                   <label className="block text-xs text-muted-foreground">{t('widgets.apiEndpoint')}</label>
                   <div className="relative group">
                     <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 cursor-help" />
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2.5 rounded-lg bg-card border border-border shadow-xl text-xs text-muted-foreground opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2.5 rounded-lg bg-card border border-border shadow-xl text-xs text-muted-foreground opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-dropdown">
                       Widgets require a locally installed or cluster-deployed Console. The API endpoint must match your deployment.
                       {isOnPublicSite && (
                         <a

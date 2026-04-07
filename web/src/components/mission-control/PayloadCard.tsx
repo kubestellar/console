@@ -241,7 +241,7 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
               </span>
               {showDeps && depRef.current && createPortal(
                 <div
-                  className="fixed z-[100] pointer-events-none"
+                  className="fixed z-overlay pointer-events-none"
                   style={{
                     left: depRef.current.getBoundingClientRect().left + depRef.current.getBoundingClientRect().width / 2,
                     top: depRef.current.getBoundingClientRect().top - 4,

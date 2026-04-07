@@ -392,7 +392,7 @@ Labels:       app=${resourceName.split('-')[0]}
   const REMEDIATION_MODAL_TITLE_ID = 'remediation-console-title'
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-2xl flex items-center justify-center z-[60]">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-modal">
       <div
         role="dialog"
         aria-modal="true"

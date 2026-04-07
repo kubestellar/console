@@ -136,7 +136,7 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
 
           {/* Dropdown Menu */}
           {themeDropdownOpen && (
-            <div role="listbox" aria-labelledby="theme-dropdown-label" className="absolute z-[9999] mt-2 w-full max-h-[400px] overflow-y-auto rounded-lg bg-card border border-border shadow-xl" style={{ transform: 'translateZ(0)' }}>
+            <div role="listbox" aria-labelledby="theme-dropdown-label" className="absolute z-dropdown mt-2 w-full max-h-[400px] overflow-y-auto rounded-lg bg-card border border-border shadow-xl" style={{ transform: 'translateZ(0)' }}>
               {themeGroups.map((group) => (
                 <div key={group.name}>
                   <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-secondary/50 sticky top-0">

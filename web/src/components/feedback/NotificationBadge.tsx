@@ -108,7 +108,7 @@ export function NotificationBadge() {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-overlay"
             onClick={close}
           />
 
@@ -116,7 +116,7 @@ export function NotificationBadge() {
           <div
             role="menu"
             aria-label="Notifications"
-            className="absolute right-0 top-full mt-2 w-80 bg-background border border-border rounded-lg shadow-xl z-50"
+            className="absolute right-0 top-full mt-2 w-80 bg-background border border-border rounded-lg shadow-xl z-dropdown"
             onKeyDown={(e) => {
               if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
               e.preventDefault()

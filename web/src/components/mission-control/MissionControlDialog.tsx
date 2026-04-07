@@ -142,7 +142,7 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
         <>
           {/* ── Backdrop ──────────────────────────────────────────── */}
           <motion.div
-            className="fixed inset-0 z-[199] bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-modal bg-black/60 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -156,7 +156,7 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
             role="dialog"
             aria-modal="true"
             aria-label={state.title || 'Mission Control'}
-            className="fixed z-[200] flex flex-col bg-background rounded-xl border border-border shadow-2xl shadow-black/30 overflow-hidden"
+            className="fixed z-modal flex flex-col bg-background rounded-xl border border-border shadow-2xl shadow-black/30 overflow-hidden"
             style={{
               inset: `${MODAL_INSET_PX}px`,
             }}

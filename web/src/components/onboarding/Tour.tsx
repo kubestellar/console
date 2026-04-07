@@ -319,7 +319,7 @@ export function TourOverlay() {
   if (!isActive || !currentStep) return null
 
   return (
-    <div className="fixed inset-0 z-[100] pointer-events-none">
+    <div className="fixed inset-0 z-overlay pointer-events-none">
       {/* Overlay with cutout for target */}
       {overlay.rect && currentStep.highlight ? (
         // Use box-shadow trick to create cutout - the highlighted area stays clear.

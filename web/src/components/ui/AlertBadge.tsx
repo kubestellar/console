@@ -280,7 +280,7 @@ export function AlertBadge() {
           {/* Mobile backdrop */}
           {isMobile && (
             <div
-              className="fixed inset-0 bg-black/60 backdrop-blur-2xl z-40"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-overlay"
               aria-hidden="true"
               onClick={close}
             />

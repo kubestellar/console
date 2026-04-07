@@ -22,6 +22,7 @@ import { useIsModeSwitching } from '../../lib/unified/demo'
 import { useStatHistory, MIN_SPARKLINE_POINTS } from '../../hooks/useStatHistory'
 import { wrapAbbreviations } from '../shared/TechnicalAcronym'
 import { safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
+import { STAT_BLOCK_COLORS as COLOR_HEX } from '../../lib/tokens'
 
 // Icon mapping for dynamic rendering
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -63,17 +64,6 @@ const VALUE_COLORS: Record<string, string> = {
   low: 'text-blue-400',
   privileged: 'text-red-400',
   root: 'text-orange-400' }
-
-/** Hex color values for chart components, keyed by stat block color name */
-const COLOR_HEX: Record<string, string> = {
-  purple: '#9333ea',
-  green: '#22c55e',
-  orange: '#f97316',
-  yellow: '#eab308',
-  cyan: '#06b6d4',
-  blue: '#3b82f6',
-  red: '#ef4444',
-  gray: '#6b7280' }
 
 /** Stat block IDs that represent percentage-type values (0-100) */
 const PERCENTAGE_STAT_IDS = new Set([

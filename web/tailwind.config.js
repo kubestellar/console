@@ -41,7 +41,50 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        /**
+         * Semantic status colors — use for health indicators, alerts, badges.
+         * Defined as CSS variables in index.css so themes can override them.
+         * Usage: text-status-success, bg-status-error, border-status-warning
+         * Note: opacity modifiers (e.g., /20) are not supported with var() values.
+         */
+        status: {
+          success: "var(--color-success)",
+          warning: "var(--color-warning)",
+          error: "var(--color-error)",
+          info: "var(--color-info)",
+          neutral: "var(--color-neutral)",
+          pending: "var(--color-pending)",
+        },
       },
+      /**
+       * Z-Index Scale — semantic layers for global stacking.
+       * Use these instead of arbitrary z-[N] values on fixed/sticky elements.
+       *
+       * z-dropdown (100) — Popovers, dropdowns, tooltips, floating panels
+       * z-sticky   (200) — Sticky headers, floating action buttons
+       * z-overlay  (300) — Non-modal backdrops (mobile sidebar, notification dimmer)
+       * z-modal    (400) — All modals and dialogs
+       * z-toast    (500) — Toast notifications (always on top of modals)
+       * z-critical (600) — Confirmation dialogs stacked on top of modals
+       *
+       * Local stacking (z-10, z-20) within a positioned parent is fine as-is.
+       */
+      zIndex: {
+        dropdown: '100',
+        sticky: '200',
+        overlay: '300',
+        modal: '400',
+        toast: '500',
+        critical: '600',
+      },
+      /**
+       * Border-Radius Convention:
+       * - rounded-full  — Pills, avatars, circular indicators only
+       * - rounded-xl    — Modals, large panels, marketing page cards
+       * - rounded-lg    — Dashboard cards, buttons, inputs (the default)
+       * - rounded-md    — Small inline elements, badges
+       * - rounded-sm    — Tiny legend swatches, heatmap cells (≤16px elements)
+       */
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",

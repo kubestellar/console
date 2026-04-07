@@ -5,8 +5,9 @@
  */
 
 import { useState, useEffect } from 'react'
-import { X, Server, Check, CheckCheck, RefreshCw, Search } from 'lucide-react'
+import { Server, Check, CheckCheck, RefreshCw, Search } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { BaseModal } from '../../lib/modals/BaseModal'
 import { useClusters } from '../../hooks/mcp/clusters'
 import { Button } from '../ui/Button'
 
@@ -52,16 +53,6 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
     }
   }, [onlineClusters, selected.size, onSelect])
 
-  // Close on Escape
-  useEffect(() => {
-    if (!open) return
-    const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopImmediatePropagation(); onCancel() } }
-    document.addEventListener('keydown', handleEsc)
-    return () => document.removeEventListener('keydown', handleEsc)
-  }, [open, onCancel])
-
-  if (!open) return null
-
   const toggleCluster = (id: string) => {
     setSelected(prev => {
       const next = new Set(prev)
@@ -87,17 +78,10 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
   const allSelected = onlineClusters.length > 0 && selected.size === onlineClusters.length
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-2xl" role="presentation" onClick={onCancel}>
-      <div className="w-full max-w-lg rounded-lg border border-border bg-card shadow-xl flex flex-col max-h-[80vh]" role="dialog" aria-modal="true" aria-labelledby="cluster-selection-dialog-title" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
-          <div>
-            <h3 id="cluster-selection-dialog-title" className="text-sm font-semibold text-foreground">Select Target Clusters</h3>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[380px]">{missionTitle}</p>
-          </div>
-          <Button variant="ghost" onClick={onCancel} className="p-1 rounded-md min-h-11 min-w-11" aria-label="Close" icon={<X className="w-4 h-4" />} />
-        </div>
+    <BaseModal isOpen={open} onClose={onCancel} size="md">
+      <BaseModal.Header title="Select Target Clusters" description={missionTitle} icon={Server} onClose={onCancel} />
 
+      <BaseModal.Content noPadding>
         {/* Search + bulk actions */}
         {onlineClusters.length > 5 && (
           <div className="px-3 pt-3 flex-shrink-0">
@@ -199,25 +183,26 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
             )
           })}
         </div>
+      </BaseModal.Content>
 
-        {/* Actions */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-border flex-shrink-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onSelect([])}
-          >
-            Skip (use current context)
-          </Button>
-          <button
-            onClick={() => onSelect(Array.from(selected))}
-            disabled={selected.size === 0}
-            className="px-4 py-1.5 text-xs font-medium rounded bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            Run on {selected.size || '...'} cluster{selected.size !== 1 ? 's' : ''}
-          </button>
-        </div>
-      </div>
-    </div>
+      <BaseModal.Footer showKeyboardHints={false}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onSelect([])}
+        >
+          Skip (use current context)
+        </Button>
+        <Button
+          variant="accent"
+          size="sm"
+          onClick={() => onSelect(Array.from(selected))}
+          disabled={selected.size === 0}
+          className="ml-auto"
+        >
+          Run on {selected.size || '...'} cluster{selected.size !== 1 ? 's' : ''}
+        </Button>
+      </BaseModal.Footer>
+    </BaseModal>
   )
 }

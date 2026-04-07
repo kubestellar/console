@@ -772,7 +772,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
 
           {/* Search results dropdown */}
           {showStockDropdown && stockSearchResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-[100] max-h-60 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-dropdown max-h-60 overflow-y-auto">
               {stockSearchResults.map((result) => (
                 <button
                   key={result.symbol}

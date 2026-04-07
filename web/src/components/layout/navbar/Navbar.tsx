@@ -201,7 +201,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
             <>
               {/* Backdrop */}
               <div
-                className="fixed inset-0 bg-black/60 backdrop-blur-2xl z-40"
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-overlay"
                 onClick={() => setShowMobileMore(false)}
               />
               {/* Bottom sheet menu on mobile */}

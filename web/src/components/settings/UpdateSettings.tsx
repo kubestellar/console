@@ -349,7 +349,7 @@ export function UpdateSettings() {
             />
           </button>
           {channelDropdownOpen && (
-            <div className="absolute z-50 mt-2 w-full rounded-lg bg-card border border-border shadow-xl">
+            <div className="absolute z-dropdown mt-2 w-full rounded-lg bg-card border border-border shadow-xl">
               {visibleChannels.map((option) => (
                 <button
                   key={option.value}

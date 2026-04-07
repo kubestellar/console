@@ -998,7 +998,7 @@ function TargetClusterSelector({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 mt-1 w-64 max-h-48 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg">
+        <div className="absolute z-dropdown mt-1 w-64 max-h-48 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg">
           {/* All clusters toggle */}
           <button
             type="button"

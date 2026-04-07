@@ -46,7 +46,7 @@ export function KagentAgentPicker({ agents, selectedAgent, onSelect }: KagentAge
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 mt-1 w-72 rounded-lg border border-border bg-popover shadow-lg z-50 max-h-64 overflow-y-auto">
+        <div className="absolute top-full left-0 mt-1 w-72 rounded-lg border border-border bg-popover shadow-lg z-dropdown max-h-64 overflow-y-auto">
           {agents.map(agent => {
             const key = `${agent.namespace}/${agent.name}`
             const isSelected = selectedAgent?.name === agent.name && selectedAgent?.namespace === agent.namespace

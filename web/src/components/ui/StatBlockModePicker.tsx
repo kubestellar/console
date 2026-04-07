@@ -128,7 +128,7 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
           ref={popoverRef}
           role="menu"
           aria-label="Display mode"
-          className="fixed z-[100] bg-card border border-border rounded-lg shadow-xl p-1.5 animate-in fade-in zoom-in-95 duration-150"
+          className="fixed z-dropdown bg-card border border-border rounded-lg shadow-xl p-1.5 animate-in fade-in zoom-in-95 duration-150"
           style={{ top: position.top, left: position.left, width: 160 }}
         >
           <div className="text-2xs text-muted-foreground px-2 py-1 font-medium uppercase tracking-wider">

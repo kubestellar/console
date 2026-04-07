@@ -241,6 +241,7 @@ export function useKubevirtStatus(): UseKubevirtStatusResult {
       category: OPERATOR_REFRESH_CATEGORY,
       initialData: INITIAL_DATA,
       demoData: toDemoStatus(KUBEVIRT_DEMO_DATA),
+      demoWhenEmpty: true,
       persist: true,
       fetcher: fetchKubevirtStatus,
     })

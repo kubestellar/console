@@ -1451,7 +1451,7 @@ function TemplateDropdown<T extends { name: string }>({
         {label}
       </button>
       {open && (
-        <div className="absolute z-50 top-full mt-1 left-0 bg-card border border-border rounded-lg shadow-lg p-1.5 min-w-[200px]">
+        <div className="absolute z-dropdown top-full mt-1 left-0 bg-card border border-border rounded-lg shadow-lg p-1.5 min-w-[200px]">
           {templates.map(tpl => (
             <button
               key={tpl.name}

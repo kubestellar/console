@@ -264,7 +264,7 @@ export function PodExecTerminal({
                 <ChevronDown className="w-3 h-3 text-muted-foreground" />
               </button>
               {showContainerPicker && (
-                <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded shadow-lg">
+                <div className="absolute top-full left-0 mt-1 z-dropdown bg-card border border-border rounded shadow-lg">
                   {(containers || []).map((c) => (
                     <button
                       key={c}

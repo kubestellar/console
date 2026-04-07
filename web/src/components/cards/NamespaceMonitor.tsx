@@ -9,6 +9,7 @@ import { useClusters } from '../../hooks/useMCP'
 import { useCachedNamespaces, useCachedDeployments, useCachedServices, useCachedPVCs, useCachedPods, useCachedConfigMaps, useCachedSecrets, useCachedJobs } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { BaseModal } from '../../lib/modals/BaseModal'
 import { CardComponentProps } from './cardRegistry'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -443,30 +444,15 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   const ResourceModal = () => {
     if (!modalResource) return null
 
+    const handleCloseModal = () => setModalResource(null)
+    const ResourceIcon = ResourceIcons[modalResource.type]
+
     return (
-      <div 
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-2xl" 
-        onClick={() => setModalResource(null)}
-      >
-        <div 
-          className="bg-card border border-border rounded-lg shadow-xl w-full max-w-lg mx-4" 
-          onClick={e => e.stopPropagation()}
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="flex items-center justify-between p-4 border-b border-border">
-            <div className="flex items-center gap-2">
-              {(() => {
-                const Icon = ResourceIcons[modalResource.type]
-                return <Icon className={`w-5 h-5 ${ResourceColors[modalResource.type]}`} />
-              })()}
-              <span className="font-medium text-foreground">{modalResource.name}</span>
-            </div>
-            <button onClick={() => setModalResource(null)} className="p-2 hover:bg-secondary rounded min-h-11 min-w-11 flex items-center justify-center">
-              <X className="w-4 h-4 text-muted-foreground" />
-            </button>
-          </div>
-          <div className="p-4 space-y-3">
+      <BaseModal isOpen={!!modalResource} onClose={handleCloseModal} size="sm">
+        <BaseModal.Header title={modalResource.name} icon={ResourceIcon} onClose={handleCloseModal} />
+
+        <BaseModal.Content>
+          <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm">
               <Server className="w-4 h-4 text-muted-foreground" />
               <span className="text-muted-foreground">Cluster:</span>
@@ -483,28 +469,29 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
               <span className="text-foreground capitalize">{modalResource.type}</span>
             </div>
           </div>
-          <div className="flex justify-end gap-2 p-4 border-t border-border">
-            <button
-              onClick={() => {
-                if (modalResource.type === 'pods') {
-                  drillToPod(modalResource.cluster, modalResource.namespace, modalResource.name)
-                } else if (modalResource.type === 'deployments') {
-                  drillToDeployment(modalResource.cluster, modalResource.namespace, modalResource.name)
-                } else if (modalResource.type === 'services') {
-                  drillToService(modalResource.cluster, modalResource.namespace, modalResource.name)
-                } else if (modalResource.type === 'pvcs') {
-                  drillToPVC(modalResource.cluster, modalResource.namespace, modalResource.name)
-                }
-                setModalResource(null)
-              }}
-              className="flex items-center gap-2 px-3 py-1.5 bg-purple-500 hover:bg-purple-600 rounded text-sm text-white transition-colors"
-            >
-              <Eye className="w-4 h-4" />
-              View Details
-            </button>
-          </div>
-        </div>
-      </div>
+        </BaseModal.Content>
+
+        <BaseModal.Footer showKeyboardHints={false}>
+          <button
+            onClick={() => {
+              if (modalResource.type === 'pods') {
+                drillToPod(modalResource.cluster, modalResource.namespace, modalResource.name)
+              } else if (modalResource.type === 'deployments') {
+                drillToDeployment(modalResource.cluster, modalResource.namespace, modalResource.name)
+              } else if (modalResource.type === 'services') {
+                drillToService(modalResource.cluster, modalResource.namespace, modalResource.name)
+              } else if (modalResource.type === 'pvcs') {
+                drillToPVC(modalResource.cluster, modalResource.namespace, modalResource.name)
+              }
+              setModalResource(null)
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 bg-purple-500 hover:bg-purple-600 rounded text-sm text-white transition-colors ml-auto"
+          >
+            <Eye className="w-4 h-4" />
+            View Details
+          </button>
+        </BaseModal.Footer>
+      </BaseModal>
     )
   }
 

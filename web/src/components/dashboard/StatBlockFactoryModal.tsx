@@ -513,7 +513,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                               <IconComponent className={cn('w-4 h-4', COLOR_CLASSES[block.color])} />
                             </button>
                             {editingBlockIcon === idx && (
-                              <div className="absolute z-50 top-full mt-1 left-0 bg-card border border-border rounded-lg shadow-lg p-2 w-64 max-h-40 overflow-y-auto">
+                              <div className="absolute z-dropdown top-full mt-1 left-0 bg-card border border-border rounded-lg shadow-lg p-2 w-64 max-h-40 overflow-y-auto">
                                 <div className="grid grid-cols-8 gap-1">
                                   {POPULAR_ICONS.map(iconName => {
                                     const Ic = getIcon(iconName)

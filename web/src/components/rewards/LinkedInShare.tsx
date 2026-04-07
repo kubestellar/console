@@ -2,32 +2,25 @@
  * LinkedIn Share component for sharing KubeStellar and earning coins
  */
 
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { Share2, Coins, CheckCircle2 } from 'lucide-react'
 import { Linkedin } from '@/lib/icons'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Button } from '../ui/Button'
+import { BaseModal } from '../../lib/modals/BaseModal'
 import { useRewards } from '../../hooks/useRewards'
 import { emitLinkedInShare } from '../../lib/analytics'
-import { useModalNavigation, useModalFocusTrap } from '../../lib/modals/useModalNavigation'
 
 const LINKEDIN_SHARE_URL = 'https://www.linkedin.com/sharing/share-offsite/'
 const KUBESTELLAR_URL = 'https://kubestellar.io'
-const LINKEDIN_CONFIRM_MODAL_TITLE_ID = 'linkedin-confirm-modal-title'
 
 export function LinkedInShareButton() {
   const [showConfirm, setShowConfirm] = useState(false)
   const { awardCoins, getActionCount } = useRewards()
-  const modalRef = useRef<HTMLDivElement>(null)
 
   const shareCount = getActionCount('linkedin_share')
 
   const handleCloseConfirm = () => setShowConfirm(false)
-
-  // Keyboard navigation (ESC to close) and scroll lock for confirm modal
-  useModalNavigation({ isOpen: showConfirm, onClose: handleCloseConfirm, enableBackspace: false })
-  // Focus trap within confirm modal
-  useModalFocusTrap(modalRef as React.RefObject<HTMLElement | null>, showConfirm)
 
   const handleShare = () => {
     // Open LinkedIn share dialog
@@ -57,59 +50,51 @@ export function LinkedInShareButton() {
       </button>
 
       {/* Confirmation Modal */}
-      {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-2xl">
-          <div
-            ref={modalRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={LINKEDIN_CONFIRM_MODAL_TITLE_ID}
-            className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6"
-          >
-            <div className="text-center">
-              <div className="w-14 h-14 rounded-full bg-blue-600/20 flex items-center justify-center mx-auto mb-4">
-                <Share2 className="w-7 h-7 text-blue-400" />
-              </div>
-              <h3 id={LINKEDIN_CONFIRM_MODAL_TITLE_ID} className="text-lg font-medium text-foreground mb-2">
-                Did you share on LinkedIn?
-              </h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Confirm that you shared KubeStellar Console to earn your coins!
-              </p>
-
-              <div className="flex items-center justify-center gap-2 mb-4 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                <Coins className="w-4 h-4 text-yellow-500" />
-                <span className="text-sm text-yellow-400 font-medium">+200 coins</span>
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  onClick={() => setShowConfirm(false)}
-                  className="flex-1"
-                >
-                  Not yet
-                </Button>
-                <Button
-                  variant="primary"
-                  size="lg"
-                  onClick={handleConfirmShare}
-                  className="flex-1"
-                >
-                  Yes, I shared!
-                </Button>
-              </div>
-
-              {shareCount > 0 && (
-                <p className="mt-3 text-xs text-muted-foreground">
-                  You&apos;ve shared {shareCount} time{shareCount > 1 ? 's' : ''}
-                </p>
-              )}
+      <BaseModal isOpen={showConfirm} onClose={handleCloseConfirm} size="sm" enableBackspace={false}>
+        <BaseModal.Content>
+          <div className="text-center">
+            <div className="w-14 h-14 rounded-full bg-blue-600/20 flex items-center justify-center mx-auto mb-4">
+              <Share2 className="w-7 h-7 text-blue-400" />
             </div>
+            <h3 className="text-lg font-medium text-foreground mb-2">
+              Did you share on LinkedIn?
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Confirm that you shared KubeStellar Console to earn your coins!
+            </p>
+
+            <div className="flex items-center justify-center gap-2 mb-4 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+              <Coins className="w-4 h-4 text-yellow-500" />
+              <span className="text-sm text-yellow-400 font-medium">+200 coins</span>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={() => setShowConfirm(false)}
+                className="flex-1"
+              >
+                Not yet
+              </Button>
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={handleConfirmShare}
+                className="flex-1"
+              >
+                Yes, I shared!
+              </Button>
+            </div>
+
+            {shareCount > 0 && (
+              <p className="mt-3 text-xs text-muted-foreground">
+                You&apos;ve shared {shareCount} time{shareCount > 1 ? 's' : ''}
+              </p>
+            )}
           </div>
-        </div>
-      )}
+        </BaseModal.Content>
+      </BaseModal>
     </>
   )
 }

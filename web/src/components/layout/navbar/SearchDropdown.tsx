@@ -88,7 +88,7 @@ function SearchResultsPanel({
   let flatIndex = 0
 
   return (
-    <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-lg shadow-xl overflow-hidden z-[60]">
+    <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-lg shadow-xl overflow-hidden z-dropdown">
       {flatResults.length > 0 ? (
         <div ref={resultsRef} className="py-1 max-h-96 overflow-y-auto">
           {CATEGORY_ORDER.map(cat => {

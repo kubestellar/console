@@ -81,7 +81,7 @@ export function ClusterDropZone({
   )
 
   return (
-    <div className="fixed right-6 top-24 z-50 animate-fade-in-up">
+    <div className="fixed right-6 top-24 z-dropdown animate-fade-in-up">
       <div className={cn(
         'glass rounded-xl border p-4 w-72 shadow-2xl backdrop-blur-sm',
         isDemo
