@@ -51,10 +51,19 @@ function loadPersistedState(): Partial<MissionControlState> | null {
         if (isDemoMode()) return getDemoMissionControlState()
         return null
       }
-      return entry.state
+      // In demo mode, replace empty/default persisted state with demo data
+      const s = entry.state
+      if (isDemoMode() && (!s?.projects || s.projects.length === 0)) {
+        return getDemoMissionControlState()
+      }
+      return s
     }
     // Legacy format — no expiry info, return as-is
-    return entry as Partial<MissionControlState>
+    const legacy = entry as Partial<MissionControlState>
+    if (isDemoMode() && (!legacy.projects || legacy.projects.length === 0)) {
+      return getDemoMissionControlState()
+    }
+    return legacy
   } catch {
     return null
   }
