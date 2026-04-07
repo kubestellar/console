@@ -987,6 +987,24 @@ export function emitNPSDismissed(dismissCount: number) {
   send('ksc_nps_dismissed', { dismiss_count: dismissCount })
 }
 
+// ── Orbit (Recurring Maintenance) ─────────────────────────────────
+
+export function emitOrbitMissionCreated(orbitType: string, cadence: string) {
+  send('ksc_orbit_mission_created', { orbit_type: orbitType, cadence })
+}
+
+export function emitOrbitMissionRun(orbitType: string, result: string) {
+  send('ksc_orbit_mission_run', { orbit_type: orbitType, result })
+}
+
+export function emitGroundControlDashboardCreated(cardCount: number) {
+  send('ksc_ground_control_dashboard_created', { card_count: cardCount })
+}
+
+export function emitGroundControlCardRequestOpened(project: string) {
+  send('ksc_ground_control_card_request', { project })
+}
+
 // ── Errors ─────────────────────────────────────────────────────────
 
 // Maximum length for error detail strings to avoid oversized payloads

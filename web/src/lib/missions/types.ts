@@ -8,7 +8,7 @@
 // Core Mission Export Format
 // ============================================================================
 
-export type MissionType = 'upgrade' | 'troubleshoot' | 'analyze' | 'deploy' | 'repair' | 'custom'
+export type MissionType = 'upgrade' | 'troubleshoot' | 'analyze' | 'deploy' | 'repair' | 'custom' | 'maintain'
 
 export interface MissionStep {
   title: string
@@ -18,7 +18,37 @@ export interface MissionStep {
   validation?: string
 }
 
-export type MissionClass = 'fixer' | 'install'
+export type MissionClass = 'fixer' | 'install' | 'orbit'
+
+// ── Orbit (Recurring Maintenance) Types ────────────────────────────
+
+export type OrbitCadence = 'daily' | 'weekly' | 'monthly'
+export type OrbitType = 'health-check' | 'cert-rotation' | 'version-drift' | 'resource-quota' | 'backup-verification'
+
+export interface OrbitRunHistoryEntry {
+  timestamp: string
+  result: 'success' | 'warning' | 'failure'
+  summary?: string
+}
+
+export interface OrbitConfig {
+  cadence: OrbitCadence
+  orbitType: OrbitType
+  /** Links to the Mission Control session that spawned this orbit (projects, clusters, phases) */
+  parentMissionControlStateKey?: string
+  /** CNCF projects covered by this orbit (from the Mission Control payload) */
+  projects?: string[]
+  /** Target clusters for this orbit */
+  clusters?: string[]
+  /** ISO timestamp of the last run */
+  lastRunAt?: string | null
+  /** Result of the last run */
+  lastRunResult?: 'success' | 'warning' | 'failure'
+  /** ID of the auto-generated Ground Control dashboard */
+  groundControlDashboardId?: string
+  /** Run history (capped at ORBIT_MAX_HISTORY_ENTRIES) */
+  history?: OrbitRunHistoryEntry[]
+}
 
 export interface MissionExport {
   version: string
@@ -38,6 +68,8 @@ export interface MissionExport {
   uninstall?: MissionStep[]
   upgrade?: MissionStep[]
   troubleshooting?: MissionStep[]
+  /** Orbit (recurring maintenance) configuration — present when missionClass is 'orbit' */
+  orbitConfig?: OrbitConfig
   resolution?: {
     summary: string
     steps: string[]
@@ -121,7 +153,7 @@ export interface ValidationResult {
   data: MissionExport
 }
 
-const MISSION_TYPES: string[] = ['upgrade', 'troubleshoot', 'analyze', 'deploy', 'repair', 'custom']
+const MISSION_TYPES: string[] = ['upgrade', 'troubleshoot', 'analyze', 'deploy', 'repair', 'custom', 'maintain']
 
 /**
  * Normalize a raw mission object into a flat MissionExport shape.
