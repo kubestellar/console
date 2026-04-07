@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Hammer, CheckCircle, XCircle, Clock, Server } from 'lucide-react'
 import { useKagentiBuilds } from '../../../hooks/useMCP'
 import { useCardLoadingState } from '../CardDataContext'
@@ -47,22 +46,19 @@ export function KagentiBuildPipeline({ config }: KagentiBuildPipelineProps) {
     data: builds,
     isLoading,
     isDemoFallback,
-    consecutiveFailures,
-  } = useKagentiBuilds({ cluster: config?.cluster })
+    consecutiveFailures } = useKagentiBuilds({ cluster: config?.cluster })
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: builds.length > 0,
     isFailed: consecutiveFailures >= 3,
     consecutiveFailures,
-    isDemoData: isDemoFallback,
-  })
+    isDemoData: isDemoFallback })
 
-  const stats = useMemo(() => ({
+  const stats = {
     active: builds.filter(b => b.status === 'Building' || b.status === 'Pending').length,
     succeeded: builds.filter(b => b.status === 'Succeeded').length,
-    failed: builds.filter(b => b.status === 'Failed').length,
-  }), [builds])
+    failed: builds.filter(b => b.status === 'Failed').length }
 
   const {
     items: paginatedItems,
@@ -76,12 +72,10 @@ export function KagentiBuildPipeline({ config }: KagentiBuildPipelineProps) {
     itemsPerPage,
     setItemsPerPage,
     containerRef,
-    containerStyle,
-  } = useCardData(builds, {
+    containerStyle } = useCardData(builds, {
     filter: {
       searchFields: ['name', 'namespace', 'source', 'pipeline', 'status', 'cluster'],
-      clusterField: 'cluster',
-    },
+      clusterField: 'cluster' },
     sort: {
       defaultField: 'status' as SortField,
       defaultDirection: 'desc',
@@ -91,11 +85,8 @@ export function KagentiBuildPipeline({ config }: KagentiBuildPipelineProps) {
           const order: Record<string, number> = { Building: 0, Pending: 1, Failed: 2, Succeeded: 3 }
           return (order[a.status] ?? 99) - (order[b.status] ?? 99)
         },
-        cluster: commonComparators.string('cluster'),
-      } as Record<SortField, (a: typeof builds[number], b: typeof builds[number]) => number>,
-    },
-    defaultLimit: 8,
-  })
+        cluster: commonComparators.string('cluster') } as Record<SortField, (a: typeof builds[number], b: typeof builds[number]) => number> },
+    defaultLimit: 8 })
 
   if (showSkeleton) {
     return (
@@ -142,8 +133,7 @@ export function KagentiBuildPipeline({ config }: KagentiBuildPipelineProps) {
       <CardControlsRow
         clusterIndicator={{
           selectedCount: filters.localClusterFilter.length,
-          totalCount: filters.availableClusters.length,
-        }}
+          totalCount: filters.availableClusters.length }}
         clusterFilter={{
           availableClusters: filters.availableClusters,
           selectedClusters: filters.localClusterFilter,
@@ -152,8 +142,7 @@ export function KagentiBuildPipeline({ config }: KagentiBuildPipelineProps) {
           isOpen: filters.showClusterFilter,
           setIsOpen: filters.setShowClusterFilter,
           containerRef: filters.clusterFilterRef,
-          minClusters: 1,
-        }}
+          minClusters: 1 }}
         cardControls={{
           limit: itemsPerPage,
           onLimitChange: setItemsPerPage,
@@ -161,8 +150,7 @@ export function KagentiBuildPipeline({ config }: KagentiBuildPipelineProps) {
           sortOptions: SORT_OPTIONS,
           onSortChange: (v) => sorting.setSortBy(v as SortField),
           sortDirection: sorting.sortDirection,
-          onSortDirectionChange: sorting.setSortDirection,
-        }}
+          onSortDirectionChange: sorting.setSortDirection }}
         extra={
           <CardSearchInput value={filters.search} onChange={filters.setSearch} placeholder="Search builds..." />
         }

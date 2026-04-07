@@ -9,7 +9,7 @@
  *
  * Caps at MAX_CACHED routes to bound memory. Least-recently-used eviction.
  */
-import { Suspense, useRef, useCallback, useMemo } from 'react'
+import { Suspense, useRef } from 'react'
 import { useLocation, useOutlet } from 'react-router-dom'
 import { ContentLoadingSkeleton } from './Layout'
 import { ChunkErrorBoundary } from '../ChunkErrorBoundary'
@@ -55,24 +55,24 @@ export function KeepAliveOutlet() {
   }
 
   // Trigger re-render on window resize so hidden charts can recalculate
-  const triggerResizeOnActivation = useCallback((path: string) => {
+  const triggerResizeOnActivation = (path: string) => {
     if (path === currentPath) {
       // Small delay to let display:contents take effect before dispatching resize
       requestAnimationFrame(() => {
         window.dispatchEvent(new Event('resize'))
       })
     }
-  }, [currentPath])
+  }
 
   // Build the rendered output — all cached routes, only active one visible
-  const entries = useMemo(() => {
+  const entries = (() => {
     const result: Array<{ path: string; element: React.ReactNode; active: boolean }> = []
     for (const [path, entry] of cacheRef.current) {
       result.push({ path, element: entry.element, active: path === currentPath })
     }
     return result
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPath, cache.size])
+     
+  })()
 
   return (
     <>

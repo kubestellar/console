@@ -10,7 +10,7 @@
  *   <UnifiedCard config={clusterHealthConfig} title="Custom Title" />
  */
 
-import { useMemo, useCallback, ReactNode } from 'react'
+import { ReactNode } from 'react'
 import { 
   AlertTriangle, 
   Info, 
@@ -24,8 +24,7 @@ import {
 import type {
   UnifiedCardConfig,
   UnifiedCardProps,
-  CardContent,
-} from '../types'
+  CardContent } from '../types'
 import { useDataSource } from './hooks/useDataSource'
 import { useCardFiltering } from './hooks/useCardFiltering'
 import { ListVisualization } from './visualizations/ListVisualization'
@@ -44,20 +43,18 @@ export function UnifiedCard({
   instanceConfig,
   title: _titleOverride,
   className,
-  overrideData,
-}: UnifiedCardProps) {
+  overrideData }: UnifiedCardProps) {
   // Check if mode is switching (show skeleton during transition)
   const isModeSwitching = useIsModeSwitching()
 
   // Merge instance config with base config
-  const mergedConfig = useMemo(() => {
+  const mergedConfig = (() => {
     if (!instanceConfig) return config
     return {
       ...config,
       // Instance config can override certain fields
-      ...instanceConfig,
-    } as UnifiedCardConfig
-  }, [config, instanceConfig])
+      ...instanceConfig } as UnifiedCardConfig
+  })()
 
   // Fetch data using the configured data source (skipped if overrideData provided)
   const { data: fetchedData, isLoading: isDataLoading, error, refetch } = useDataSource(
@@ -96,8 +93,7 @@ export function UnifiedCard({
   const drillDownActions = useDrillDownActions()
 
   // Create drill-down handler based on config
-  const handleDrillDown = useCallback(
-    (item: Record<string, unknown>) => {
+  const handleDrillDown = (item: Record<string, unknown>) => {
       const drillDown = mergedConfig.drillDown
       if (!drillDown) return
 
@@ -122,12 +118,10 @@ export function UnifiedCard({
       // Call the action with params + context
       // Action signatures vary, so we spread params and pass context as last arg
       ;(actionFn as (...args: unknown[]) => void)(...params, contextData)
-    },
-    [mergedConfig.drillDown, drillDownActions]
-  )
+    }
 
   // Determine what to render
-  const content = useMemo(() => {
+  const content = (() => {
     // Error state
     if (error) {
       return (
@@ -150,7 +144,7 @@ export function UnifiedCard({
 
     // Render the appropriate visualization based on content type
     return renderContent(mergedConfig.content, filteredData, mergedConfig, handleDrillDown)
-  }, [error, isLoading, filteredData, mergedConfig, refetch, handleDrillDown])
+  })()
 
   return (
     <div className={className}>
@@ -243,8 +237,7 @@ function renderContent(
 function PlaceholderVisualization({
   type,
   itemCount,
-  columns,
-}: {
+  columns }: {
   type: string
   itemCount: number
   columns?: number
@@ -268,8 +261,7 @@ function PlaceholderVisualization({
  * Note: The refresh icon in the card header animates while this is shown
  */
 function LoadingState({
-  config,
-}: {
+  config }: {
   config?: UnifiedCardConfig['loadingState']
 }) {
   const rows = config?.rows ?? 3
@@ -316,8 +308,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   'alert-circle': AlertCircle,
   'check-circle': CheckCircle,
   'x-circle': XCircle,
-  'help-circle': HelpCircle,
-}
+  'help-circle': HelpCircle }
 
 /**
  * Get icon component by name (case-insensitive, kebab-case format)
@@ -331,8 +322,7 @@ function getIconComponent(iconName?: string): LucideIcon {
  * Empty state component
  */
 function EmptyState({
-  config,
-}: {
+  config }: {
   config?: UnifiedCardConfig['emptyState']
 }) {
   const title = config?.title ?? 'No data'
@@ -344,8 +334,7 @@ function EmptyState({
     success: 'text-green-400',
     info: 'text-blue-400',
     warning: 'text-yellow-400',
-    neutral: 'text-muted-foreground',
-  }
+    neutral: 'text-muted-foreground' }
 
   return (
     <div className="flex flex-col items-center justify-center p-6 text-center">
@@ -365,8 +354,7 @@ function EmptyState({
  */
 function ErrorState({
   message,
-  onRetry,
-}: {
+  onRetry }: {
   message: string
   onRetry?: () => void
 }) {
@@ -396,8 +384,7 @@ function ErrorState({
  */
 function InlineStats({
   stats,
-  data: _data,
-}: {
+  data: _data }: {
   stats: NonNullable<UnifiedCardConfig['stats']>
   data: unknown[] | undefined
 }) {
@@ -419,8 +406,7 @@ function InlineStats({
  */
 function CardFooter({
   config,
-  data,
-}: {
+  data }: {
   config: NonNullable<UnifiedCardConfig['footer']>
   data: unknown[] | undefined
 }) {

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { CheckCircle, Clock, XCircle, Loader2, Filter, ChevronRight, Server } from 'lucide-react'
 import { useCachedDeployments } from '../../hooks/useCachedData'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -29,31 +29,26 @@ const statusConfig: Record<string, { icon: typeof CheckCircle; color: string; bg
     color: 'text-green-400',
     bg: 'bg-green-500/20',
     barColor: 'bg-green-500',
-    label: 'Running',
-  },
+    label: 'Running' },
   deploying: {
     icon: Clock,
     color: 'text-yellow-400',
     bg: 'bg-yellow-500/20',
     barColor: 'bg-yellow-500',
-    label: 'Deploying',
-  },
+    label: 'Deploying' },
   failed: {
     icon: XCircle,
     color: 'text-red-400',
     bg: 'bg-red-500/20',
     barColor: 'bg-red-500',
-    label: 'Failed',
-  },
-}
+    label: 'Failed' } }
 
 const UNKNOWN_STATUS_STYLE = {
   icon: Loader2,
   color: 'text-muted-foreground',
   bg: 'bg-secondary/20',
   barColor: 'bg-secondary',
-  label: 'Unknown',
-} as const
+  label: 'Unknown' } as const
 
 interface DeploymentProgressProps {
   config?: {
@@ -77,8 +72,7 @@ function extractVersion(image?: string): string {
 const SORT_COMPARATORS: Record<SortByOption, (a: Deployment, b: Deployment) => number> = {
   status: commonComparators.statusOrder<Deployment>('status', statusOrder),
   name: commonComparators.string<Deployment>('name'),
-  cluster: commonComparators.string<Deployment>('cluster'),
-}
+  cluster: commonComparators.string<Deployment>('cluster') }
 
 export function DeploymentProgress({ config }: DeploymentProgressProps) {
   const { t } = useTranslation()
@@ -103,30 +97,26 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
     isDemoData: isDemoFallback,
     hasAnyData: hasData,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
   // Card-specific status filter (kept as separate state)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
 
   // Pre-filter to progressing deployments only, then apply card-specific status filter
-  const progressingDeployments = useMemo(() =>
-    deployments.filter((d) => d.readyReplicas < d.replicas),
-  [deployments])
+  const progressingDeployments = deployments.filter((d) => d.readyReplicas < d.replicas)
 
   // Status counts (computed from all progressing deployments before status filter)
-  const statusCounts = useMemo(() => ({
+  const statusCounts = {
     all: progressingDeployments.length,
     running: progressingDeployments.filter((d) => d.status === 'running').length,
     deploying: progressingDeployments.filter((d) => d.status === 'deploying').length,
-    failed: progressingDeployments.filter((d) => d.status === 'failed').length,
-  }), [progressingDeployments])
+    failed: progressingDeployments.filter((d) => d.status === 'failed').length }
 
   // Apply card-specific status filter before passing to useCardData
-  const statusFilteredDeployments = useMemo(() => {
+  const statusFilteredDeployments = (() => {
     if (statusFilter === 'all') return progressingDeployments
     return progressingDeployments.filter((d) => d.status === statusFilter)
-  }, [progressingDeployments, statusFilter])
+  })()
 
   // useCardData handles: global filters, local cluster filter, search, sort, pagination
   const {
@@ -141,20 +131,16 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
     filters,
     sorting,
     containerRef,
-    containerStyle,
-  } = useCardData<Deployment, SortByOption>(statusFilteredDeployments, {
+    containerStyle } = useCardData<Deployment, SortByOption>(statusFilteredDeployments, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster'] as (keyof Deployment)[],
       clusterField: 'cluster' as keyof Deployment,
-      storageKey: 'deployment-progress',
-    },
+      storageKey: 'deployment-progress' },
     sort: {
       defaultField: 'status' as SortByOption,
       defaultDirection: 'asc' as SortDirection,
-      comparators: SORT_COMPARATORS,
-    },
-    defaultLimit: 5,
-  })
+      comparators: SORT_COMPARATORS },
+    defaultLimit: 5 })
 
   // Handle filter changes (reset page)
   const handleFilterChange = (newFilter: StatusFilter) => {
@@ -173,8 +159,7 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
       version: extractVersion(deployment.image),
       replicas: deployment.replicas,
       readyReplicas: deployment.readyReplicas,
-      progress: deployment.progress,
-    })
+      progress: deployment.progress })
   }
 
   if (isLoading && deployments.length === 0) {

@@ -277,6 +277,14 @@ func TestDeleteWorkload(t *testing.T) {
 	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Delete("/api/workloads/:cluster/:namespace/:name", handler.DeleteWorkload)
 
+	// Inject a dynamic client for cluster "c1" with a deployment matching the
+	// delete request so the handler can resolve the cluster and find the resource.
+	scheme := newK8sScheme()
+	dep := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: "del-app", Namespace: "default"},
+	}
+	injectDynamicClusterWithObjects(env, "c1", scheme, []runtime.Object{dep})
+
 	req, err := http.NewRequest("DELETE", "/api/workloads/c1/default/del-app", nil)
 	require.NoError(t, err)
 	require.NotNil(t, req)

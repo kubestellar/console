@@ -52,8 +52,7 @@ const DIFFICULTIES: Record<Difficulty, { label: string; cellsToRemove: number; h
   easy: { label: 'Easy', cellsToRemove: 35, hints: 5 },
   medium: { label: 'Medium', cellsToRemove: 45, hints: 3 },
   hard: { label: 'Hard', cellsToRemove: 52, hints: 2 },
-  expert: { label: 'Expert', cellsToRemove: 58, hints: 1 },
-}
+  expert: { label: 'Expert', cellsToRemove: 58, hints: 1 } }
 
 const STORAGE_KEY = 'sudoku-game-state'
 const BEST_TIMES_KEY = 'sudoku-best-times'
@@ -65,8 +64,7 @@ function createEmptyBoard(): Cell[][] {
       value: null,
       isOriginal: false,
       notes: new Set<number>(),
-      isConflict: false,
-    }))
+      isConflict: false }))
   )
 }
 
@@ -246,8 +244,7 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
           parsed.board = parsed.board.map((row) =>
             row.map((cell) => ({
               ...cell,
-              notes: new Set(Array.isArray(cell.notes) ? cell.notes : []),
-            }))
+              notes: new Set(Array.isArray(cell.notes) ? cell.notes : []) }))
           )
           setGameState(parsed)
         } catch (e) {
@@ -282,7 +279,7 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
   }, [gameState?.isPaused, gameState?.isComplete])
 
   // Save game state
-  const saveGame = useCallback(() => {
+  const saveGame = () => {
     if (!gameState) return
     
     const toSave = {
@@ -290,16 +287,14 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
       board: gameState.board.map(row =>
         row.map(cell => ({
           ...cell,
-          notes: Array.from(cell.notes),
-        }))
-      ),
-    }
+          notes: Array.from(cell.notes) }))
+      ) }
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave))
     } catch {
       // Ignore storage errors (e.g. private browsing, quota exceeded)
     }
-  }, [gameState])
+  }
 
   // Start new game
   const startNewGame = useCallback((difficulty: Difficulty) => {
@@ -311,8 +306,7 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
       timer: 0,
       isPaused: false,
       hintsRemaining: DIFFICULTIES[difficulty].hints,
-      isComplete: false,
-    }
+      isComplete: false }
     setGameState(newState)
     setHistory([{ board: puzzle, timer: 0 }])
     setHistoryIndex(0)
@@ -329,47 +323,45 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
     }
   }, [gameState, startNewGame])
 
-  const addToHistory = useCallback((board: Cell[][], timer: number) => {
+  const addToHistory = (board: Cell[][], timer: number) => {
     setHistory(prev => {
       const newHistory = prev.slice(0, historyIndex + 1)
       newHistory.push({ board: board.map(row => row.map(cell => ({ ...cell }))), timer })
       return newHistory.slice(-50) // Keep last 50 moves
     })
     setHistoryIndex(prev => Math.min(prev + 1, 49))
-  }, [historyIndex])
+  }
 
-  const undo = useCallback(() => {
+  const undo = () => {
     if (historyIndex > 0 && gameState) {
       const prevState = history[historyIndex - 1]
       setGameState({
         ...gameState,
         board: prevState.board.map(row => row.map(cell => ({ ...cell }))),
-        timer: prevState.timer,
-      })
+        timer: prevState.timer })
       setHistoryIndex(prev => prev - 1)
     }
-  }, [historyIndex, history, gameState])
+  }
 
-  const redo = useCallback(() => {
+  const redo = () => {
     if (historyIndex < history.length - 1 && gameState) {
       const nextState = history[historyIndex + 1]
       setGameState({
         ...gameState,
         board: nextState.board.map(row => row.map(cell => ({ ...cell }))),
-        timer: nextState.timer,
-      })
+        timer: nextState.timer })
       setHistoryIndex(prev => prev + 1)
     }
-  }, [historyIndex, history, gameState])
+  }
 
-  const handleCellClick = useCallback((row: number, col: number) => {
+  const handleCellClick = (row: number, col: number) => {
     if (!gameState || gameState.isComplete) return
     if (gameState.board[row][col].isOriginal) return
     
     setSelectedCell([row, col])
-  }, [gameState])
+  }
 
-  const handleNumberInput = useCallback((num: number) => {
+  const handleNumberInput = (num: number) => {
     if (!gameState || !selectedCell || gameState.isComplete) return
     const [row, col] = selectedCell
     if (gameState.board[row][col].isOriginal) return
@@ -399,8 +391,7 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
     setGameState(prev => prev ? {
       ...prev,
       board: updatedBoard,
-      isComplete: complete,
-    } : null)
+      isComplete: complete } : null)
 
     addToHistory(updatedBoard, gameState.timer)
 
@@ -418,9 +409,9 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
         }
       }
     }
-  }, [gameState, selectedCell, pencilMode, addToHistory, bestTimes])
+  }
 
-  const handleHint = useCallback(() => {
+  const handleHint = () => {
     if (!gameState || !selectedCell || gameState.hintsRemaining <= 0 || gameState.isComplete) return
     const [row, col] = selectedCell
     if (gameState.board[row][col].isOriginal) return
@@ -439,11 +430,10 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
     setGameState(prev => prev ? {
       ...prev,
       board: updatedBoard,
-      hintsRemaining: prev.hintsRemaining - 1,
-    } : null)
+      hintsRemaining: prev.hintsRemaining - 1 } : null)
 
     addToHistory(updatedBoard, gameState.timer)
-  }, [gameState, selectedCell, addToHistory])
+  }
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)

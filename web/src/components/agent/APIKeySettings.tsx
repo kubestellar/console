@@ -115,7 +115,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
   const [showKey, setShowKey] = useState(false)
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
-  const timeoutRef = useRef<number>()
+  const timeoutRef = useRef<number>(undefined)
 
   const copyInstallCommand = async () => {
     await copyToClipboard(INSTALL_COMMAND)

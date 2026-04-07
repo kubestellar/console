@@ -42,16 +42,14 @@ const DEFAULT_CONFIG: PersistenceConfig = {
   enabled: false,
   primaryCluster: '',
   namespace: 'kubestellar-console',
-  syncMode: 'primary-only',
-}
+  syncMode: 'primary-only' }
 
 const DEFAULT_STATUS: PersistenceStatus = {
   active: false,
   activeCluster: '',
   primaryHealth: 'unknown',
   failoverActive: false,
-  message: 'Not configured',
-}
+  message: 'Not configured' }
 
 // =============================================================================
 // Hook
@@ -80,8 +78,7 @@ export function usePersistence() {
     try {
       const response = await fetch('/api/persistence/config', {
         headers: { Authorization: `Bearer ${token}` },
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
         const data = await response.json()
         setConfig(data)
@@ -102,8 +99,7 @@ export function usePersistence() {
     try {
       const response = await fetch('/api/persistence/status', {
         headers: { Authorization: `Bearer ${token}` },
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
         const data = await response.json()
         setStatus(data)
@@ -115,7 +111,7 @@ export function usePersistence() {
   }, [isBackendAvailable, hasRealToken, token])
 
   // Update config
-  const updateConfig = useCallback(async (newConfig: Partial<PersistenceConfig>): Promise<boolean> => {
+  const updateConfig = async (newConfig: Partial<PersistenceConfig>): Promise<boolean> => {
     if (!isBackendAvailable) {
       setError('Backend not available')
       return false
@@ -127,8 +123,7 @@ export function usePersistence() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedConfig),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
       if (response.ok) {
         const data = await response.json()
@@ -147,10 +142,10 @@ export function usePersistence() {
       setError('Failed to update config')
       return false
     }
-  }, [isBackendAvailable, config, fetchStatus])
+  }
 
   // Enable persistence
-  const enablePersistence = useCallback(async (primaryCluster: string, options?: {
+  const enablePersistence = async (primaryCluster: string, options?: {
     secondaryCluster?: string
     namespace?: string
     syncMode?: 'primary-only' | 'active-passive'
@@ -160,17 +155,16 @@ export function usePersistence() {
       primaryCluster,
       secondaryCluster: options?.secondaryCluster,
       namespace: options?.namespace || 'kubestellar-console',
-      syncMode: options?.syncMode || 'primary-only',
-    })
-  }, [updateConfig])
+      syncMode: options?.syncMode || 'primary-only' })
+  }
 
   // Disable persistence
-  const disablePersistence = useCallback(async (): Promise<boolean> => {
+  const disablePersistence = async (): Promise<boolean> => {
     return updateConfig({ enabled: false })
-  }, [updateConfig])
+  }
 
   // Test connection to a cluster
-  const testConnection = useCallback(async (cluster: string): Promise<TestConnectionResult> => {
+  const testConnection = async (cluster: string): Promise<TestConnectionResult> => {
     if (!isBackendAvailable) {
       return { cluster, health: 'unknown', success: false }
     }
@@ -180,8 +174,7 @@ export function usePersistence() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cluster }),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
       if (response.ok) {
         return await response.json()
@@ -191,10 +184,10 @@ export function usePersistence() {
     }
 
     return { cluster, health: 'unknown', success: false }
-  }, [isBackendAvailable])
+  }
 
   // Trigger sync
-  const syncNow = useCallback(async (): Promise<boolean> => {
+  const syncNow = async (): Promise<boolean> => {
     if (!isBackendAvailable || !config.enabled) return false
 
     setSyncing(true)
@@ -210,7 +203,7 @@ export function usePersistence() {
       setSyncing(false)
     }
     return false
-  }, [isBackendAvailable, config.enabled, fetchStatus])
+  }
 
   // Initial fetch
   useEffect(() => {
@@ -248,8 +241,7 @@ export function usePersistence() {
     disablePersistence,
     testConnection,
     syncNow,
-    refreshStatus: fetchStatus,
-  }
+    refreshStatus: fetchStatus }
 }
 
 // =============================================================================

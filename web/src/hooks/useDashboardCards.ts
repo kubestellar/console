@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 export interface DashboardCard {
   id: string
@@ -46,9 +46,9 @@ export function useDashboardCards({ storageKey, defaultCards = [], defaultCollap
     localStorage.setItem(collapsedKey, JSON.stringify(isCollapsed))
   }, [isCollapsed, collapsedKey])
 
-  const toggleCollapsed = useCallback(() => {
+  const toggleCollapsed = () => {
     setIsCollapsed(prev => !prev)
-  }, [])
+  }
 
   // Save to localStorage when cards change — skip if resetToDefaults just fired
   useEffect(() => {
@@ -59,42 +59,41 @@ export function useDashboardCards({ storageKey, defaultCards = [], defaultCollap
     localStorage.setItem(storageKey, JSON.stringify(cards))
   }, [cards, storageKey])
 
-  const addCard = useCallback((cardType: string, config: Record<string, unknown> = {}, title?: string) => {
+  const addCard = (cardType: string, config: Record<string, unknown> = {}, title?: string) => {
     const newCard: DashboardCard = {
       id: `${cardType}-${Date.now()}`,
       card_type: cardType,
       config,
-      title,
-    }
+      title }
     setCards(prev => [...prev, newCard])
     return newCard.id
-  }, [])
+  }
 
-  const removeCard = useCallback((cardId: string) => {
+  const removeCard = (cardId: string) => {
     setCards(prev => prev.filter(c => c.id !== cardId))
-  }, [])
+  }
 
-  const updateCardConfig = useCallback((cardId: string, config: Record<string, unknown>) => {
+  const updateCardConfig = (cardId: string, config: Record<string, unknown>) => {
     setCards(prev => prev.map(c =>
       c.id === cardId ? { ...c, config: { ...c.config, ...config } } : c
     ))
-  }, [])
+  }
 
-  const replaceCards = useCallback((newCards: DashboardCard[]) => {
+  const replaceCards = (newCards: DashboardCard[]) => {
     setCards(newCards)
-  }, [])
+  }
 
-  const clearCards = useCallback(() => {
+  const clearCards = () => {
     setCards([])
-  }, [])
+  }
 
-  const resetToDefaults = useCallback(() => {
+  const resetToDefaults = () => {
     skipPersistRef.current = true
     setCards(defaultCards)
     localStorage.removeItem(storageKey)
-  }, [defaultCards, storageKey])
+  }
 
-  const isCustomized = useCallback(() => {
+  const isCustomized = () => {
     const stored = localStorage.getItem(storageKey)
     if (stored === null) return false
     // Compare actual content to defaults — key existence alone is not sufficient
@@ -105,7 +104,7 @@ export function useDashboardCards({ storageKey, defaultCards = [], defaultCollap
     } catch {
       return false
     }
-  }, [storageKey, defaultCards])
+  }
 
   return {
     cards,
@@ -121,6 +120,5 @@ export function useDashboardCards({ storageKey, defaultCards = [], defaultCollap
     setIsCollapsed,
     toggleCollapsed,
     /** Convenience: showCards = !isCollapsed */
-    showCards: !isCollapsed,
-  }
+    showCards: !isCollapsed }
 }

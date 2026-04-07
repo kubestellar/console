@@ -8,8 +8,7 @@
 import { useState, useMemo } from 'react'
 import {
   Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid, Area, ComposedChart, ReferenceLine,
-} from 'recharts'
+  CartesianGrid, Area, ComposedChart, ReferenceLine } from 'recharts'
 import { Clock, AlertTriangle } from 'lucide-react'
 import { useReportCardDataState } from '../CardDataContext'
 import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
@@ -17,8 +16,7 @@ import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import {
   groupByExperiment,
   getFilterOptions,
-  type ScalingPoint,
-} from '../../../lib/llmd/benchmarkDataUtils'
+  type ScalingPoint } from '../../../lib/llmd/benchmarkDataUtils'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
 
@@ -66,16 +64,15 @@ function LatencyBreakdownInternal() {
   const { data: reports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, lastRefresh } = useCachedBenchmarkReports()
   // Use hook data directly — it already returns cached live data or demo fallback.
   // Calling generateBenchmarkReports() here would bypass the warm cache (#3397).
-  const effectiveReports = useMemo(() => reports ?? [], [reports])
+  const effectiveReports = reports ?? []
   // Freshness tracking: lastRefresh → lastUpdated Date reported to CardWrapper via useReportCardDataState
   const lastUpdated = lastRefresh ? new Date(lastRefresh) : null
   useReportCardDataState({
     isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing,
     hasData: effectiveReports.length > 0,
-    lastUpdated,
-  })
+    lastUpdated })
 
-  const filterOpts = useMemo(() => getFilterOptions(effectiveReports), [effectiveReports])
+  const filterOpts = getFilterOptions(effectiveReports)
   const [tab, setTab] = useState<MetricTab>('ttftP50Ms')
   const [category, setCategory] = useState<string>('all')
   const [islFilter, setIslFilter] = useState<number>(0)
@@ -83,11 +80,10 @@ function LatencyBreakdownInternal() {
 
   const tabInfo = TABS.find(t => t.key === tab)!
 
-  const groups = useMemo(() => groupByExperiment(effectiveReports, {
+  const groups = groupByExperiment(effectiveReports, {
     category: category !== 'all' ? category : undefined,
     isl: islFilter || undefined,
-    osl: oslFilter || undefined,
-  }), [effectiveReports, category, islFilter, oslFilter])
+    osl: oslFilter || undefined })
 
   const { chartData, maxLatency } = useMemo(() => {
     const qpsSet = new Set<number>()
@@ -109,7 +105,7 @@ function LatencyBreakdownInternal() {
   }, [groups, tab])
 
   // Find worst offender at max QPS
-  const degradationWarning = useMemo(() => {
+  const degradationWarning = (() => {
     if (groups.length === 0) return null
     let worstIncrease = 0
     let worstVariant = ''
@@ -126,7 +122,7 @@ function LatencyBreakdownInternal() {
       }
     }
     return worstIncrease > 50 ? { variant: worstVariant, increase: worstIncrease } : null
-  }, [groups, tab])
+  })()
 
   return (
     <div className="p-4 h-full flex flex-col">

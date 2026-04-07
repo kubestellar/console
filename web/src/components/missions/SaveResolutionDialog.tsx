@@ -5,7 +5,7 @@
  * Uses AI to generate a clean problem/solution summary for reuse.
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import {
   X,
   Save,
@@ -18,8 +18,7 @@ import {
   Code,
   Loader2,
   Sparkles,
-  RefreshCw,
-} from 'lucide-react'
+  RefreshCw } from 'lucide-react'
 import type { Mission } from '../../hooks/useMissions'
 import { useResolutions, detectIssueSignature, type IssueSignature, type ResolutionSteps } from '../../hooks/useResolutions'
 import { cn } from '../../lib/cn'
@@ -112,8 +111,7 @@ Return ONLY valid JSON, no markdown code blocks or explanation.`
         payload: {
           prompt: prompt,
           sessionId: `resolution-${mission.id}`,
-          agent: mission.agent || undefined,
-        }
+          agent: mission.agent || undefined }
       }))
     }
 
@@ -148,8 +146,7 @@ Return ONLY valid JSON, no markdown code blocks or explanation.`
                 problem: parsed.problem || '',
                 solution: parsed.solution || '',
                 steps: Array.isArray(parsed.steps) ? parsed.steps : [],
-                yaml: parsed.yaml,
-              })
+                yaml: parsed.yaml })
             } else {
               reject(new Error('Could not parse AI response as JSON'))
             }
@@ -187,13 +184,12 @@ export function SaveResolutionDialog({
   mission,
   isOpen,
   onClose,
-  onSaved,
-}: SaveResolutionDialogProps) {
+  onSaved }: SaveResolutionDialogProps) {
   const { t } = useTranslation(['common', 'cards'])
   const { saveResolution } = useResolutions()
 
   // Auto-detect issue signature from mission content
-  const autoDetectedSignature = useMemo(() => {
+  const autoDetectedSignature = (() => {
     const content = [
       mission.title,
       mission.description,
@@ -201,7 +197,7 @@ export function SaveResolutionDialog({
     ].join('\n')
 
     return detectIssueSignature(content)
-  }, [mission])
+  })()
 
   // Form state
   const [title, setTitle] = useState('')
@@ -219,7 +215,7 @@ export function SaveResolutionDialog({
   const [aiError, setAiError] = useState<string | null>(null)
 
   // Generate AI summary
-  const generateSummary = useCallback(async () => {
+  const generateSummary = async () => {
     setIsGenerating(true)
     setAiError(null)
 
@@ -241,7 +237,7 @@ export function SaveResolutionDialog({
     } finally {
       setIsGenerating(false)
     }
-  }, [mission, autoDetectedSignature])
+  }
 
   // Initialize form when dialog opens - auto-generate AI summary
   useEffect(() => {
@@ -297,14 +293,12 @@ export function SaveResolutionDialog({
         type: issueType.trim(),
         resourceKind: resourceKind.trim() || undefined,
         errorPattern: autoDetectedSignature.errorPattern,
-        namespace: autoDetectedSignature.namespace,
-      }
+        namespace: autoDetectedSignature.namespace }
 
       const resolution: ResolutionSteps = {
         summary: summary.trim(),
         steps: steps.filter(s => s.trim()),
-        yaml: yaml.trim() || undefined,
-      }
+        yaml: yaml.trim() || undefined }
 
       saveResolution({
         missionId: mission.id,
@@ -312,10 +306,8 @@ export function SaveResolutionDialog({
         issueSignature,
         resolution,
         context: {
-          cluster: mission.cluster,
-        },
-        visibility,
-      })
+          cluster: mission.cluster },
+        visibility })
 
       onSaved?.()
       onClose()

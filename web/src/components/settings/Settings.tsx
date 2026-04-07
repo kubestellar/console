@@ -4,8 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Cpu, TrendingUp, Coins, User, Bell, Shield,
   Palette, Eye, Plug, Github, LayoutGrid, Download, Database, Container, HardDrive,
-  CheckCircle, Loader2, AlertCircle, WifiOff, BarChart3, X,
-} from 'lucide-react'
+  CheckCircle, Loader2, AlertCircle, WifiOff, BarChart3, X } from 'lucide-react'
 import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../hooks/useTheme'
 import { useTokenUsage } from '../../hooks/useTokenUsage'
@@ -33,8 +32,7 @@ import {
   PersistenceSection,
   LocalClustersSection,
   SettingsBackupSection,
-  AnalyticsSection,
-} from './sections'
+  AnalyticsSection } from './sections'
 import { cn } from '../../lib/cn'
 
 // Labels are filled at render time via t()
@@ -43,8 +41,7 @@ const SYNC_ICONS: Record<SyncStatus, { icon: typeof CheckCircle; className: stri
   saving:  { icon: Loader2,     className: 'text-yellow-400' },
   saved:   { icon: CheckCircle, className: 'text-green-400' },
   error:   { icon: AlertCircle, className: 'text-red-400' },
-  offline: { icon: WifiOff,     className: 'text-muted-foreground' },
-}
+  offline: { icon: WifiOff,     className: 'text-muted-foreground' } }
 
 // Define settings navigation structure with groups
 // Labels use i18n keys resolved at render time
@@ -56,30 +53,26 @@ const SETTINGS_NAV = [
       { id: 'prediction-settings', labelKey: 'settings.nav.predictions' as const, icon: TrendingUp },
       { id: 'agent-settings', labelKey: 'settings.nav.localAgent' as const, icon: Plug },
       { id: 'token-usage-settings', labelKey: 'settings.nav.tokenUsage' as const, icon: Coins },
-    ],
-  },
+    ] },
   {
     groupKey: 'settings.groups.integrations' as const,
     items: [
       { id: 'github-token-settings', labelKey: 'settings.nav.github' as const, icon: Github },
       { id: 'widget-settings', labelKey: 'settings.nav.desktopWidget' as const, icon: LayoutGrid },
       { id: 'persistence-settings', labelKey: 'settings.nav.deployPersistence' as const, icon: Database },
-    ],
-  },
+    ] },
   {
     groupKey: 'settings.groups.userAlerts' as const,
     items: [
       { id: 'profile-settings', labelKey: 'settings.nav.profile' as const, icon: User },
       { id: 'notifications-settings', labelKey: 'settings.nav.notifications' as const, icon: Bell },
-    ],
-  },
+    ] },
   {
     groupKey: 'settings.groups.appearance' as const,
     items: [
       { id: 'theme-settings', labelKey: 'settings.nav.theme' as const, icon: Palette },
       { id: 'accessibility-settings', labelKey: 'settings.nav.accessibility' as const, icon: Eye },
-    ],
-  },
+    ] },
   {
     groupKey: 'settings.groups.utilities' as const,
     items: [
@@ -88,8 +81,7 @@ const SETTINGS_NAV = [
       { id: 'permissions-settings', labelKey: 'settings.nav.permissions' as const, icon: Shield },
       { id: 'analytics-settings', labelKey: 'settings.nav.analytics' as const, icon: BarChart3 },
       { id: 'system-updates-settings', labelKey: 'settings.nav.updates' as const, icon: Download },
-    ],
-  },
+    ] },
 ]
 
 export function Settings() {
@@ -114,13 +106,13 @@ export function Settings() {
    *  navigation (key !== 'default') or by directly loading the URL
    *  (key === 'default'). navigate(-1) on a direct load would exit the
    *  app, so we fall back to HOME in that case. */
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     if (location.key !== 'default') {
       navigate(-1)
     } else {
       navigate(ROUTES.HOME)
     }
-  }, [navigate, location.key])
+  }
 
   // Suppresses IntersectionObserver updates during programmatic scrolls
   // so the sidebar highlight stays on the clicked item instead of flickering
@@ -229,8 +221,7 @@ export function Settings() {
       {
         root: container,
         rootMargin: '0px 0px -40% 0px',
-        threshold: [0, 0.1, 0.5],
-      }
+        threshold: [0, 0.1, 0.5] }
     )
 
     for (const id of allSectionIds) {
@@ -276,8 +267,7 @@ export function Settings() {
     saving: t('settings.syncStatus.saving'),
     saved: t('settings.syncStatus.savedToFile'),
     error: t('settings.syncStatus.saveFailed'),
-    offline: t('settings.syncStatus.localOnly'),
-  }
+    offline: t('settings.syncStatus.localOnly') }
   const sync = SYNC_ICONS[syncStatus]
   const SyncIcon = sync.icon
   const syncLabel = SYNC_LABELS[syncStatus]

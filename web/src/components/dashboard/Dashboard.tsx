@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   DndContext,
@@ -13,16 +13,15 @@ import {
   DragOverlay,
   DragStartEvent,
   DragOverEvent,
-  type CollisionDetection,
-} from '@dnd-kit/core'
+  type CollisionDetection } from '@dnd-kit/core'
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  rectSortingStrategy,
-} from '@dnd-kit/sortable'
+  rectSortingStrategy } from '@dnd-kit/sortable'
 import { useTranslation } from 'react-i18next'
 import { api, BackendUnavailableError, UnauthenticatedError } from '../../lib/api'
+import { safeRevokeObjectURL } from '../../lib/download'
 import { emitCardAdded, emitCardRemoved, emitCardDragged, emitCardConfigured } from '../../lib/analytics'
 import { useDashboards } from '../../hooks/useDashboards'
 import { useClusters } from '../../hooks/useMCP'
@@ -138,8 +137,7 @@ export function Dashboard() {
     closeTemplatesModal: _closeTemplatesModal,
     openTemplatesModal: _openTemplatesModal,
     pendingRestoreCard,
-    clearPendingRestoreCard,
-  } = useDashboardContext()
+    clearPendingRestoreCard } = useDashboardContext()
 
   // Missions context for Getting Started banner + PostConnectBanner
   const { openSidebar: openMissionSidebar, startMission } = useMissions()
@@ -163,8 +161,7 @@ export function Dashboard() {
     storageKey: DASHBOARD_STORAGE_KEY,
     defaultCards: DEFAULT_DASHBOARD_CARDS,
     setCards: setLocalCards,
-    cards: localCards,
-  })
+    cards: localCards })
 
   // Undo/redo for card mutations
   const localCardsRef = useRef(localCards)
@@ -204,11 +201,11 @@ export function Dashboard() {
 
   // Apply global cluster filter before computing stats so the overview
   // reflects only the user's current cluster selection.
-  const filteredClusters = useMemo(() => {
+  const filteredClusters = (() => {
     const all = clusters || []
     if (isAllClustersSelected) return all
     return all.filter(c => globalSelectedClusters.includes(c.name))
-  }, [clusters, globalSelectedClusters, isAllClustersSelected])
+  })()
 
   // Stats calculations for StatsOverview (scoped to filtered clusters)
   const healthyClusters = filteredClusters.filter(c => c.healthy).length
@@ -218,7 +215,7 @@ export function Dashboard() {
   const totalNodes = filteredClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
 
   // Dashboard-specific stats value getter
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'clusters':
         return { value: filteredClusters.length, sublabel: 'total clusters', onClick: () => drillToAllClusters(), isClickable: filteredClusters.length > 0 }
@@ -237,13 +234,10 @@ export function Dashboard() {
       default:
         return { value: '-' }
     }
-  }, [filteredClusters, healthyClusters, unhealthyClusters, totalNamespaces, totalNodes, totalPods, drillToAllClusters, drillToAllNodes, drillToAllPods, navigate])
+  }
 
   // Merged getter: dashboard-specific values first, then universal fallback
-  const getStatValue = useCallback(
-    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
-    [getDashboardStatValue, getUniversalStatValue]
-  )
+  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
   // Auto-refresh state (persisted in localStorage)
   const [autoRefresh, setAutoRefresh] = useState(() => {
@@ -280,30 +274,26 @@ export function Dashboard() {
 
   // Keyboard navigation for accessibility (Phase 2, issue #1151)
   const expandTriggersRef = useRef<Map<string, () => void>>(new Map())
-  const handleExpandCard = useCallback((cardId: string) => {
+  const handleExpandCard = (cardId: string) => {
     expandTriggersRef.current.get(cardId)?.()
-  }, [])
+  }
   const { registerCardRef, handleGridKeyDown } = useCardGridNavigation({
     cards: localCards,
-    onExpandCard: handleExpandCard,
-  })
+    onExpandCard: handleExpandCard })
 
   // Drag and drop sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 3,
-      },
-    }),
+        distance: 3 } }),
     useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+      coordinateGetter: sortableKeyboardCoordinates })
   )
 
   // Custom collision detection: when dragging a workload, prioritize cluster-group
   // and cluster-drop droppable zones (detected via pointerWithin) over the larger
   // sortable card containers that would otherwise always win with closestCenter.
-  const collisionDetection: CollisionDetection = useCallback((args) => {
+  const collisionDetection: CollisionDetection = (args) => {
     const isWorkloadDrag = args.active.data.current?.type === 'workload'
     if (isWorkloadDrag) {
       // For workload drags, prioritize cluster-group drop targets.
@@ -341,7 +331,7 @@ export function Dashboard() {
     }
     // Normal card reorder uses closestCenter
     return closestCenter(args)
-  }, [])
+  }
 
   const handleDragStart = (event: DragStartEvent) => {
     const id = event.active.id as string
@@ -392,8 +382,7 @@ export function Dashboard() {
           namespace: workloadData.namespace,
           sourceCluster: workloadData.sourceCluster,
           targetClusters: groupData.clusters,
-          groupName: groupData.groupName,
-        })
+          groupName: groupData.groupName })
       }
       return
     }
@@ -456,7 +445,7 @@ export function Dashboard() {
   }
 
   // Handle confirmed deploy from confirmation dialog
-  const handleConfirmDeploy = useCallback(async () => {
+  const handleConfirmDeploy = async () => {
     if (!pendingDeploy) return
     const { workloadName, namespace, sourceCluster, targetClusters, groupName } = pendingDeploy
     setPendingDeploy(null)
@@ -472,9 +461,7 @@ export function Dashboard() {
         sourceCluster,
         targetClusters,
         groupName,
-        timestamp: Date.now(),
-      },
-    })
+        timestamp: Date.now() } })
 
     showToast(
       `Deploying ${workloadName} to ${targetClusters.length} cluster${targetClusters.length !== 1 ? 's' : ''} in "${groupName}"`,
@@ -486,8 +473,7 @@ export function Dashboard() {
         workloadName,
         namespace,
         sourceCluster,
-        targetClusters,
-      }, {
+        targetClusters }, {
         onSuccess: (result) => {
           const resp = result as unknown as {
             success?: boolean
@@ -507,12 +493,9 @@ export function Dashboard() {
                 deployedTo: resp.deployedTo,
                 failedClusters: resp.failedClusters,
                 dependencies: resp.dependencies as DeployResultPayload['dependencies'],
-                warnings: resp.warnings,
-              },
-            })
+                warnings: resp.warnings } })
           }
-        },
-      })
+        } })
     } catch (err) {
       console.error('Deploy failed:', err)
       showToast(
@@ -520,7 +503,7 @@ export function Dashboard() {
         'error'
       )
     }
-  }, [pendingDeploy, publishCardEvent, deployWorkload, showToast])
+  }
 
   const handleCreateDashboard = () => {
     openCreateDashboard()
@@ -537,8 +520,7 @@ export function Dashboard() {
           card_type: tc.card_type,
           config: tc.config || {},
           position: { x: 0, y: 0, w: tc.position?.w || 4, h: tc.position?.h || 2 },
-          title: tc.title,
-        }))
+          title: tc.title }))
 
         // Persist template cards to the new dashboard
         for (const card of templateCards) {
@@ -600,8 +582,7 @@ export function Dashboard() {
         card_type: pendingRestoreCard.cardType,
         config: pendingRestoreCard.config || {},
         position: { x: 0, y: 0, ...size },
-        title: pendingRestoreCard.cardTitle,
-      }
+        title: pendingRestoreCard.cardTitle }
       // Record the card addition in history
       recordCardAdded(
         newCard.id,
@@ -737,8 +718,7 @@ export function Dashboard() {
         card_type: cardType,
         config: s.config,
         position: { x: 0, y: 0, ...size },
-        title: s.title,
-      }
+        title: s.title }
     })
     // Record each card addition in history
     newCards.forEach((card) => {
@@ -767,7 +747,7 @@ export function Dashboard() {
     }
   }
 
-  const handleRemoveCard = useCallback(async (cardId: string) => {
+  const handleRemoveCard = async (cardId: string) => {
     // Find the card to get its details before removing
     const cardToRemove = localCards.find((c) => c.id === cardId)
     if (cardToRemove) {
@@ -793,14 +773,14 @@ export function Dashboard() {
         showToast('Failed to delete card from backend', 'error')
       }
     }
-  }, [localCards, dashboard, recordCardRemoved, snapshot, showToast])
+  }
 
-  const handleConfigureCard = useCallback((card: Card) => {
+  const handleConfigureCard = (card: Card) => {
     setSelectedCard(card)
     openConfigureCard()
-  }, [openConfigureCard])
+  }
 
-  const handleWidthChange = useCallback(async (cardId: string, newWidth: number) => {
+  const handleWidthChange = async (cardId: string, newWidth: number) => {
     snapshot(localCards)
     setLocalCards((prev) =>
       prev.map((c) =>
@@ -824,9 +804,9 @@ export function Dashboard() {
         showToast('Failed to update card width', 'error')
       }
     }
-  }, [dashboard, localCards, snapshot, showToast])
+  }
 
-  const handleCardConfigured = useCallback(async (cardId: string, newConfig: Record<string, unknown>, newTitle?: string) => {
+  const handleCardConfigured = async (cardId: string, newConfig: Record<string, unknown>, newTitle?: string) => {
     const card = localCards.find((c) => c.id === cardId)
     if (card) {
       emitCardConfigured(card.card_type)
@@ -859,9 +839,9 @@ export function Dashboard() {
         showToast('Failed to update card configuration', 'error')
       }
     }
-  }, [localCards, dashboard, recordCardConfigured, closeConfigureCard, snapshot, showToast])
+  }
 
-  const handleAddRecommendedCard = useCallback((cardType: string, config?: Record<string, unknown>, title?: string) => {
+  const handleAddRecommendedCard = (cardType: string, config?: Record<string, unknown>, title?: string) => {
     snapshot(localCards)
     setLocalCards((prev) => {
       // Check if a card with the same type already exists
@@ -879,24 +859,22 @@ export function Dashboard() {
         card_type: cardType,
         config: config || {},
         position: { x: 0, y: 0, ...size },
-        title,
-      }
+        title }
       // Record in history
       recordCardAdded(newCard.id, cardType, title, config, dashboard?.id, dashboard?.name)
       return [newCard, ...prev]
     })
-  }, [dashboard, recordCardAdded, snapshot, localCards])
+  }
 
   // Create a new card from AI configuration
-  const handleCreateCardFromAI = useCallback((cardType: string, config: Record<string, unknown>, title?: string) => {
+  const handleCreateCardFromAI = (cardType: string, config: Record<string, unknown>, title?: string) => {
     const size = getDefaultCardSize(cardType)
     const newCard: Card = {
       id: `ai-${Date.now()}`,
       card_type: cardType,
       config: config || {},
       position: { x: 0, y: 0, ...size },
-      title,
-    }
+      title }
     // Record in history
     recordCardAdded(newCard.id, cardType, title, config, dashboard?.id, dashboard?.name)
     // Add at TOP and close the configure modal
@@ -904,17 +882,16 @@ export function Dashboard() {
     setLocalCards((prev) => [newCard, ...prev])
     closeConfigureCard()
     setSelectedCard(null)
-  }, [dashboard, recordCardAdded, closeConfigureCard, snapshot, localCards])
+  }
 
   // Apply template - add all template cards to dashboard
-  const handleApplyTemplate = useCallback((template: DashboardTemplate) => {
+  const handleApplyTemplate = (template: DashboardTemplate) => {
     const newCards: Card[] = template.cards.map((tc, index) => ({
       id: `template-${Date.now()}-${index}`,
       card_type: tc.card_type,
       config: tc.config || {},
       position: { x: 0, y: 0, w: tc.position?.w || 4, h: tc.position?.h || 2 },
-      title: tc.title,
-    }))
+      title: tc.title }))
     // Record each card addition in history
     newCards.forEach((card) => {
       recordCardAdded(card.id, card.card_type, card.title, card.config, dashboard?.id, dashboard?.name)
@@ -923,32 +900,31 @@ export function Dashboard() {
     snapshot(localCards)
     setLocalCards((prev) => [...newCards, ...prev])
     showToast(`Applied "${template.name}" template with ${newCards.length} cards`, 'success')
-  }, [dashboard, recordCardAdded, showToast, snapshot, localCards])
+  }
 
   // Handle single card addition from smart suggestions or discover placeholder
-  const handleAddSingleCard = useCallback((cardType: string) => {
+  const handleAddSingleCard = (cardType: string) => {
     const size = getDefaultCardSize(cardType)
     const newCard: Card = {
       id: `rec-${Date.now()}`,
       card_type: cardType,
       config: {},
-      position: { x: 0, y: 0, ...size },
-    }
+      position: { x: 0, y: 0, ...size } }
     recordCardAdded(newCard.id, cardType, undefined, {}, dashboard?.id, dashboard?.name)
     emitCardAdded(cardType, 'smart_suggestion')
     snapshot(localCards)
     setLocalCards((prev) => [newCard, ...prev])
-  }, [dashboard, recordCardAdded, snapshot, localCards])
+  }
 
   // Handle nudge CTA actions
-  const handleNudgeAction = useCallback(() => {
+  const handleNudgeAction = () => {
     if (activeNudge === 'customize') {
       openAddCardModal()
     } else if (activeNudge === 'pwa-install') {
       openWidgetExport()
     }
     actionNudge()
-  }, [activeNudge, actionNudge, openAddCardModal, openWidgetExport])
+  }
 
   const currentCardTypes = localCards.map(c => {
     if (c.card_type === 'dynamic_card' && c.config?.dynamicCardId) {
@@ -1048,8 +1024,7 @@ export function Dashboard() {
             title: 'Cluster Health Check',
             description: 'AI-powered audit of your connected clusters',
             type: 'custom',
-            initialPrompt: 'Run a comprehensive health check on all my connected clusters. Check for pod issues, resource constraints, and security concerns.',
-          })
+            initialPrompt: 'Run a comprehensive health check on all my connected clusters. Check for pod issues, resource constraints, and security concerns.' })
         }}
         onExploreClusters={() => navigate(ROUTES.CLUSTERS)}
         onSetupAlerts={() => navigate(ROUTES.ALERTS)}
@@ -1181,7 +1156,7 @@ export function Dashboard() {
             a.href = url
             a.download = `${(dashboard.name || 'dashboard').replace(/\s+/g, '-').toLowerCase()}.json`
             a.click()
-            URL.revokeObjectURL(url)
+            safeRevokeObjectURL(url)
             showToast('Dashboard exported', 'success')
           } catch {
             showToast('Failed to export dashboard', 'error')

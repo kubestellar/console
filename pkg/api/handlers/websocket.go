@@ -20,6 +20,9 @@ const (
 	// Connections that exceed this without sending a ping are closed to prevent DoS via
 	// exhausted file descriptors.
 	wsIdleTimeout = 90 * time.Second
+	// wsMaxBroadcastBytes is the maximum serialized size of a single broadcast message.
+	// Messages exceeding this limit are dropped to prevent memory spikes.
+	wsMaxBroadcastBytes = 1 * 1024 * 1024 // 1 MB
 )
 
 // Message represents a WebSocket message
@@ -148,6 +151,11 @@ func (h *Hub) Broadcast(userID uuid.UUID, msg Message) {
 		return
 	}
 
+	if len(data) > wsMaxBroadcastBytes {
+		slog.Warn("[WebSocket] dropping oversized broadcast message", "user", userID, "type", msg.Type, "bytes", len(data), "limit", wsMaxBroadcastBytes)
+		return
+	}
+
 	select {
 	case h.broadcast <- broadcastMessage{userID: userID, data: data}:
 		// Message queued successfully
@@ -230,6 +238,11 @@ func (h *Hub) BroadcastAll(msg Message) {
 	data, err := json.Marshal(msg)
 	if err != nil {
 		slog.Error("[WebSocket] failed to marshal message", "error", err)
+		return
+	}
+
+	if len(data) > wsMaxBroadcastBytes {
+		slog.Warn("[WebSocket] dropping oversized broadcast-all message", "type", msg.Type, "bytes", len(data), "limit", wsMaxBroadcastBytes)
 		return
 	}
 

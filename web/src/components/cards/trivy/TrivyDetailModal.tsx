@@ -8,7 +8,7 @@
  * Follows the ClusterOPAModal pattern using BaseModal compound components.
  */
 
-import { useMemo, useState, useCallback } from 'react'
+import { useState } from 'react'
 import { Shield, Search, ExternalLink, Rocket } from 'lucide-react'
 import { BaseModal } from '../../../lib/modals'
 import { StatusBadge } from '../../ui/StatusBadge'
@@ -35,15 +35,14 @@ export function TrivyDetailModal({
   clusterName,
   status,
   onRefresh,
-  isRefreshing = false,
-}: TrivyDetailModalProps) {
+  isRefreshing = false }: TrivyDetailModalProps) {
   const [search, setSearch] = useState('')
   const { startMission, openSidebar } = useMissions()
 
   const { critical, high, medium, low } = status.vulnerabilities
 
   // Filter images by search
-  const filteredImages = useMemo(() => {
+  const filteredImages = (() => {
     const images = status.images || []
     if (!search.trim()) return images
     const q = search.toLowerCase()
@@ -52,7 +51,7 @@ export function TrivyDetailModal({
       (img.tag || '').toLowerCase().includes(q) ||
       (img.namespace || '').toLowerCase().includes(q)
     )
-  }, [status.images, search])
+  })()
 
   // Severity bar widths
   const total = critical + high + medium + low
@@ -63,7 +62,7 @@ export function TrivyDetailModal({
     { label: 'Low', count: low, color: 'bg-blue-500', textColor: 'text-blue-400' },
   ] : []
 
-  const handleFixImage = useCallback((img: { image: string; tag: string; namespace: string; critical: number; high: number; medium: number; low: number }) => {
+  const handleFixImage = (img: { image: string; tag: string; namespace: string; critical: number; high: number; medium: number; low: number }) => {
     emitActionClicked('fix_vulns', 'trivy_scan', 'compliance')
     startMission({
       title: `Fix vulns: ${img.image}:${img.tag}`,
@@ -89,14 +88,12 @@ Please proceed step by step.`,
         namespace: img.namespace,
         cluster: clusterName,
         critical: img.critical,
-        high: img.high,
-      },
-    })
+        high: img.high } })
     openSidebar()
     onClose()
-  }, [clusterName, startMission, openSidebar, onClose])
+  }
 
-  const handleTriageCritical = useCallback(() => {
+  const handleTriageCritical = () => {
     emitActionClicked('triage_critical', 'trivy_scan', 'compliance')
     const criticalImages = (status.images || [])
       .filter(img => img.critical > 0)
@@ -127,12 +124,10 @@ Please proceed step by step.`,
       context: {
         cluster: clusterName,
         totalCritical: critical,
-        imageCount: criticalImages.length,
-      },
-    })
+        imageCount: criticalImages.length } })
     openSidebar()
     onClose()
-  }, [status.images, critical, clusterName, startMission, openSidebar, onClose])
+  }
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false}>
@@ -304,8 +299,7 @@ const SEVERITY_COLORS: Record<string, string> = {
   critical: 'text-red-400 font-bold',
   high: 'text-orange-400 font-medium',
   medium: 'text-yellow-400',
-  low: 'text-blue-400',
-}
+  low: 'text-blue-400' }
 
 function SeverityCell({ count, level }: { count: number; level: string }) {
   if (count === 0) return <span className="text-xs text-zinc-600">0</span>

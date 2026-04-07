@@ -5,7 +5,7 @@
  * table layout with sortable columns and pagination.
  */
 
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react'
 import type { CardContentTable, CardDrillDownConfig } from '../../types'
 import { renderCell } from '../renderers'
@@ -31,15 +31,13 @@ export function TableVisualization({
   content,
   data,
   drillDown,
-  onDrillDown,
-}: TableVisualizationProps) {
+  onDrillDown }: TableVisualizationProps) {
   const {
     columns,
     sortable = true,
     defaultSort,
     defaultDirection = 'asc',
-    pageSize = 10,
-  } = content
+    pageSize = 10 } = content
 
   // Sort state
   const [sortField, setSortField] = useState<string | undefined>(defaultSort)
@@ -49,10 +47,7 @@ export function TableVisualization({
   const [currentPage, setCurrentPage] = useState(0)
 
   // Get visible columns
-  const visibleColumns = useMemo(
-    () => columns.filter((col) => !col.hidden),
-    [columns]
-  )
+  const visibleColumns = columns.filter((col) => !col.hidden)
 
   // Sort data
   const sortedData = useMemo(() => {
@@ -82,15 +77,14 @@ export function TableVisualization({
 
   // Paginate data
   const totalPages = Math.ceil(sortedData.length / pageSize)
-  const paginatedData = useMemo(() => {
+  const paginatedData = (() => {
     if (!pageSize || pageSize <= 0) return sortedData
     const start = currentPage * pageSize
     return sortedData.slice(start, start + pageSize)
-  }, [sortedData, currentPage, pageSize])
+  })()
 
   // Handle sort click
-  const handleSort = useCallback(
-    (field: string) => {
+  const handleSort = (field: string) => {
       if (!sortable) return
       if (sortField === field) {
         // Toggle direction
@@ -102,19 +96,14 @@ export function TableVisualization({
       }
       // Reset to first page on sort change
       setCurrentPage(0)
-    },
-    [sortable, sortField]
-  )
+    }
 
   // Handle row click
-  const handleRowClick = useCallback(
-    (item: Record<string, unknown>) => {
+  const handleRowClick = (item: Record<string, unknown>) => {
       if (onDrillDown) {
         onDrillDown(item)
       }
-    },
-    [onDrillDown]
-  )
+    }
 
   const isClickable = !!(drillDown || onDrillDown)
 
@@ -141,8 +130,7 @@ export function TableVisualization({
                   style={
                     column.width
                       ? {
-                          width: typeof column.width === 'number' ? `${column.width}px` : column.width,
-                        }
+                          width: typeof column.width === 'number' ? `${column.width}px` : column.width }
                       : undefined
                   }
                   onClick={

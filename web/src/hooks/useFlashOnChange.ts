@@ -7,7 +7,7 @@ import { useState, useEffect, useRef } from 'react'
 export function useFlashOnChange<T>(value: T, duration = 1000): boolean {
   const [isFlashing, setIsFlashing] = useState(false)
   const prevValueRef = useRef<T>(value)
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>()
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
     // Skip initial render and only flash on actual changes

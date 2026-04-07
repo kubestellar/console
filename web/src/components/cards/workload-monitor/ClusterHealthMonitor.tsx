@@ -2,8 +2,7 @@ import { useMemo, useState } from 'react'
 import {
   Server, AlertTriangle, CheckCircle, XCircle,
   RefreshCw, Loader2, ChevronDown, ChevronRight,
-  Box, Activity,
-} from 'lucide-react'
+  Box, Activity } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { useClusters } from '../../../hooks/useMCP'
 import { useCachedPodIssues, useCachedDeploymentIssues } from '../../../hooks/useCachedData'
@@ -13,7 +12,7 @@ import { StatusBadge } from '../../ui/StatusBadge'
 import { useCardLoadingState } from '../CardDataContext'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
 import { WorkloadMonitorDiagnose } from './WorkloadMonitorDiagnose'
-import type { MonitorIssue, MonitoredResource, ResourceHealthStatus } from '../../../types/workloadMonitor'
+import type { MonitorIssue, ResourceHealthStatus } from '../../../types/workloadMonitor'
 import { useTranslation } from 'react-i18next'
 
 interface ClusterHealthMonitorProps {
@@ -33,15 +32,13 @@ const STATUS_BADGE: Record<string, string> = {
   healthy: 'bg-green-500/20 text-green-400',
   degraded: 'bg-yellow-500/20 text-yellow-400',
   unhealthy: 'bg-red-500/20 text-red-400',
-  unknown: 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground',
-}
+  unknown: 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground' }
 
 const STATUS_DOT: Record<string, string> = {
   healthy: 'bg-green-400',
   degraded: 'bg-yellow-400',
   unhealthy: 'bg-red-400',
-  unknown: 'bg-gray-400',
-}
+  unknown: 'bg-gray-400' }
 
 export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorProps) {
   const { t } = useTranslation()
@@ -62,14 +59,13 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
     hasAnyData: hasData,
     isDemoData: podsDemoFallback || deploysDemoFallback,
     isFailed: podsFailed || deploysFailed,
-    consecutiveFailures: Math.max(podsFailures, deploysFailures),
-  })
+    consecutiveFailures: Math.max(podsFailures, deploysFailures) })
 
   // Filter clusters by global filter
-  const clusters = useMemo(() => {
+  const clusters = (() => {
     if (isAllClustersSelected) return allClusters
     return allClusters.filter(c => selectedClusters.includes(c.name))
-  }, [allClusters, selectedClusters, isAllClustersSelected])
+  })()
 
   // Build per-cluster health summaries
   const clusterSummaries = useMemo<ClusterHealthSummary[]>(() => {
@@ -88,8 +84,7 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
         nodes: cluster.nodeCount || 0,
         podIssueCount: podIssues.length,
         deployIssueCount: deployIssues.length,
-        totalIssues,
-      }
+        totalIssues }
     }).sort((a, b) => {
       const order: Record<string, number> = { unhealthy: 0, degraded: 1, unknown: 2, healthy: 3 }
       return (order[a.status] ?? 2) - (order[b.status] ?? 2)
@@ -108,12 +103,12 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
     return { total, healthy, degraded, unhealthy, totalPodIssues, totalDeployIssues, totalNodes }
   }, [clusterSummaries, allPodIssues, allDeployIssues])
 
-  const overallHealth = useMemo<ResourceHealthStatus>(() => {
+  const overallHealth = (() => {
     if (stats.unhealthy > 0) return 'unhealthy'
     if (stats.degraded > 0) return 'degraded'
     if (stats.total === 0) return 'unknown'
     return 'healthy'
-  }, [stats])
+  })()
 
   // Synthesize issues
   const issues = useMemo<MonitorIssue[]>(() => {
@@ -135,13 +130,11 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
           category: 'workload',
           lastChecked: new Date().toISOString(),
           optional: false,
-          order: idx,
-        },
+          order: idx },
         severity: p.restarts > 10 ? 'critical' : 'warning',
         title: `Pod ${p.name} issue`,
         description: p.reason || `Pod in ${p.status} state with ${p.restarts || 0} restarts`,
-        detectedAt: new Date().toISOString(),
-      })
+        detectedAt: new Date().toISOString() })
     })
 
     // Deployment issues
@@ -160,21 +153,18 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
           category: 'workload',
           lastChecked: new Date().toISOString(),
           optional: false,
-          order: idx,
-        },
+          order: idx },
         severity: 'warning',
         title: `Deployment ${d.name} issue`,
         description: d.reason || `Deployment has ${d.readyReplicas || 0}/${d.replicas || 0} ready replicas`,
-        detectedAt: new Date().toISOString(),
-      })
+        detectedAt: new Date().toISOString() })
     })
 
     return result.slice(0, 50)
   }, [allPodIssues, allDeployIssues, selectedClusters, isAllClustersSelected])
 
   // Synthesize resources for diagnose
-  const monitorResources = useMemo<MonitoredResource[]>(() => {
-    return clusterSummaries.map((c, idx) => ({
+  const monitorResources = clusterSummaries.map((c, idx) => ({
       id: `Cluster/${c.name}`,
       kind: 'Cluster',
       name: c.name,
@@ -184,9 +174,7 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
       category: 'workload' as const,
       lastChecked: new Date().toISOString(),
       optional: false,
-      order: idx,
-    }))
-  }, [clusterSummaries])
+      order: idx }))
 
   const toggleCluster = (name: string) => {
     setExpandedClusters(prev => {
@@ -391,9 +379,7 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
             name: c.name,
             status: c.status,
             nodes: c.nodes,
-            issues: c.totalIssues,
-          })),
-        }}
+            issues: c.totalIssues })) }}
       />
     </div>
   )

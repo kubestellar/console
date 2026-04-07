@@ -4,7 +4,6 @@
  * Multi-cluster operations dashboard for Karmada-based environments.
  * Monitors KubeRay fleet, Trino gateways, SLO compliance, and failover events.
  */
-import { useCallback } from 'react'
 import { useClusters } from '../../hooks/useMCP'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
@@ -23,19 +22,16 @@ export function KarmadaOps() {
   const hasRealData = reachableClusters.length > 0
   const isDemoData = !hasRealData && !isLoading
 
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'clusters':
         return { value: reachableClusters.length, sublabel: 'clusters', isClickable: false }
       default:
         return { value: '-' }
     }
-  }, [reachableClusters])
+  }
 
-  const getStatValue = useCallback(
-    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
-    [getDashboardStatValue, getUniversalStatValue]
-  )
+  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
   return (
     <DashboardPage
@@ -54,8 +50,7 @@ export function KarmadaOps() {
       isDemoData={isDemoData}
       emptyState={{
         title: 'Karmada Operations',
-        description: 'Monitor Karmada multi-cluster orchestration, KubeRay inference fleet, Trino data platform, SLO compliance, and cross-region failover events.',
-      }}
+        description: 'Monitor Karmada multi-cluster orchestration, KubeRay inference fleet, Trino data platform, SLO compliance, and cross-region failover events.' }}
     >
       {error && (
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">

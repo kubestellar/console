@@ -5,11 +5,10 @@
  * Sources: KubeStellar Community repo, GitHub repos with kubestellar-missions, local files.
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   Search, X, Upload, Filter, Grid3X3, List, Sparkles, CheckCircle,
-  Loader2, ExternalLink, RefreshCw,
-} from 'lucide-react'
+  Loader2, ExternalLink, RefreshCw } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
@@ -22,14 +21,12 @@ import {
   emitFixerImported,
   emitFixerImportError,
   emitFixerGitHubLink,
-  emitFixerLinkCopied,
-} from '../../lib/analytics'
+  emitFixerLinkCopied } from '../../lib/analytics'
 import type {
   MissionExport,
   MissionMatch,
   BrowseEntry,
-  FileScanResult,
-} from '../../lib/missions/types'
+  FileScanResult } from '../../lib/missions/types'
 import { validateMissionExport } from '../../lib/missions/types'
 import { parseFileContent, type UnstructuredPreview } from '../../lib/missions/fileParser'
 import type { ApiGroupMapping } from '../../lib/missions/apiGroupMapping'
@@ -48,8 +45,7 @@ import {
   missionCache, startMissionCacheFetch, resetMissionCache,
   fetchMissionContent, BROWSER_TABS,
   VirtualizedMissionGrid,
-  getCachedRecommendations, setCachedRecommendations,
-} from './browser'
+  getCachedRecommendations, setCachedRecommendations } from './browser'
 import type { TreeNode, ViewMode, BrowserTab } from './browser'
 import { copyToClipboard } from '../../lib/clipboard'
 import { useToast } from '../ui/Toast'
@@ -231,8 +227,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
         type: 'directory',
         source: 'community',
         loaded: false,
-        description: 'console-kb',
-      },
+        description: 'console-kb' },
       {
         id: 'kubara',
         name: 'Kubara Platform Catalog',
@@ -242,8 +237,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
         loaded: false,
         description: 'Production-tested Helm values from kubara-io/kubara',
         repoOwner: 'kubara-io',
-        repoName: 'kubara',
-      },
+        repoName: 'kubara' },
     ]
 
     if (isAuthenticated && user) {
@@ -262,9 +256,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           type: 'directory' as const,
           source: 'github' as const,
           loaded: false,
-          description: repo,
-        })),
-      })
+          description: repo })) })
     }
 
     rootNodes.push({
@@ -281,10 +273,8 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
         type: 'directory' as const,
         source: 'local' as const,
         loaded: false,
-        description: p,
-      })),
-      description: 'Drop files or add paths',
-    })
+        description: p })),
+      description: 'Drop files or add paths' })
 
     setTreeNodes(rootNodes)
     setSelectedPath(null)
@@ -328,8 +318,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           step: done ? 'Done' : 'Scanning',
           detail: `${allMissions.length} fixes`,
           found: allMissions.length,
-          scanned: allMissions.length,
-        })
+          scanned: allMissions.length })
         return
       }
 
@@ -345,8 +334,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
         step: done ? 'Done' : 'Scanning',
         detail: `${allMissions.length} fixes`,
         found: allMissions.length,
-        scanned: allMissions.length,
-      })
+        scanned: allMissions.length })
     }
 
     // Run immediately and subscribe to cache updates
@@ -385,7 +373,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   // Select a card mission — fetch full content on demand
   // ============================================================================
 
-  const selectCardMission = useCallback(async (mission: MissionExport) => {
+  const selectCardMission = async (mission: MissionExport) => {
     // Show index metadata immediately for instant feedback
     setSelectedMission(mission)
     setIsMissionLoading(true)
@@ -405,18 +393,18 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     } finally {
       setIsMissionLoading(false)
     }
-  }, [])
+  }
 
   // ============================================================================
   // Copy shareable link for a mission
   // ============================================================================
 
-  const handleCopyLink = useCallback((mission: MissionExport, e: React.MouseEvent) => {
+  const handleCopyLink = (mission: MissionExport, e: React.MouseEvent) => {
     e.stopPropagation()
     const url = getMissionShareUrl(mission)
     copyToClipboard(url)
     emitFixerLinkCopied(mission.title, mission.cncfProject)
-  }, [])
+  }
 
   // ============================================================================
   // Deep-link: auto-select mission by name when initialMission is set.
@@ -523,15 +511,15 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   const effectiveFixerSearch = fixerSearch || searchQuery
 
   /** When user types in a tab-specific search, clear the global search so it does not interfere */
-  const handleInstallerSearchChange = useCallback((value: string) => {
+  const handleInstallerSearchChange = (value: string) => {
     setInstallerSearch(value)
     if (value && searchQuery) setSearchQuery('')
-  }, [searchQuery])
+  }
 
-  const handleFixerSearchChange = useCallback((value: string) => {
+  const handleFixerSearchChange = (value: string) => {
     setFixerSearch(value)
     if (value && searchQuery) setSearchQuery('')
-  }, [searchQuery])
+  }
 
   // AND search: each space-separated term must match somewhere in the mission
   const andMatch = (text: string, query: string) => {
@@ -545,7 +533,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     return andMatch(haystack, query)
   }
 
-  const filteredInstallers = useMemo(() => {
+  const filteredInstallers = (() => {
     let list = installerMissions
     if (installerCategoryFilter !== 'All') {
       list = list.filter(m => m.category === installerCategoryFilter)
@@ -557,9 +545,9 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       list = list.filter(m => matchesMission(m, effectiveInstallerSearch))
     }
     return list
-  }, [installerMissions, installerCategoryFilter, installerMaturityFilter, effectiveInstallerSearch])
+  })()
 
-  const filteredFixers = useMemo(() => {
+  const filteredFixers = (() => {
     let list = fixerMissions
     if (fixerTypeFilter !== 'All') {
       list = list.filter(m => m.type === fixerTypeFilter.toLowerCase())
@@ -568,13 +556,13 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       list = list.filter(m => matchesMission(m, effectiveFixerSearch))
     }
     return list
-  }, [fixerMissions, fixerTypeFilter, effectiveFixerSearch])
+  })()
 
   // ============================================================================
   // Tree expansion & lazy loading
   // ============================================================================
 
-  const toggleNode = useCallback(async (node: TreeNode) => {
+  const toggleNode = async (node: TreeNode) => {
     const nodeId = node.id
 
     if (expandedNodes.has(nodeId)) {
@@ -613,8 +601,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
               type: e.type,
               source: 'community' as const,
               loaded: e.type === 'file',
-              description: e.description,
-            }))
+              description: e.description }))
         } else if (node.source === 'github') {
           if (nodeId === 'github') {
             // Root "My Repositories" node — list user's repos
@@ -628,8 +615,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
               type: 'directory' as const,
               source: 'github' as const,
               loaded: false,
-              description: r.full_name,
-            }))
+              description: r.full_name }))
           } else {
             // Specific repo node — list repo contents via GitHub Contents API
             const repoPath = node.path
@@ -645,8 +631,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                 type: (e.type === 'dir' ? 'directory' : 'file') as TreeNode['type'],
                 source: 'github' as const,
                 loaded: e.type !== 'dir',
-                description: e.size ? `${e.size} bytes` : undefined,
-              }))
+                description: e.size ? `${e.size} bytes` : undefined }))
           }
         }
 
@@ -663,8 +648,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
               children,
               loaded: true,
               loading: false,
-              isEmpty: children.length === 0,
-            })
+              isEmpty: children.length === 0 })
           )
         }
       } catch {
@@ -675,18 +659,17 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             loaded: true,
             loading: false,
             isEmpty: true,
-            description: 'Failed to load — check network or GitHub rate limits',
-          })
+            description: 'Failed to load — check network or GitHub rate limits' })
         )
       }
     }
-  }, [expandedNodes])
+  }
 
   // ============================================================================
   // Select a node (directory → show listing, file → show preview)
   // ============================================================================
 
-  const selectNode = useCallback(async (node: TreeNode) => {
+  const selectNode = async (node: TreeNode) => {
     setSelectedPath(node.id)
     setSelectedMission(null)
     setRawContent(null)
@@ -724,8 +707,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
               name: e.name,
               path: node.repoOwner ? e.path : `${owner}/${repo}/${e.path}`,
               type: e.type === 'dir' ? 'directory' as const : 'file' as const,
-              size: e.size,
-            }))
+              size: e.size }))
           setDirectoryEntries(entries)
         } else {
           setDirectoryEntries([])
@@ -760,8 +742,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             content = atob(ghFile.content.replace(/\n/g, ''))
           } else if (ghFile.download_url) {
             const rawResp = await fetch(ghFile.download_url, {
-              signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS),
-            })
+              signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
             content = await rawResp.text()
           } else {
             content = JSON.stringify(ghFile)
@@ -806,13 +787,13 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
         setLoading(false)
       }
     }
-  }, [])
+  }
 
   // ============================================================================
   // Import flow
   // ============================================================================
 
-  const handleImport = useCallback(async (mission: MissionExport, raw?: string) => {
+  const handleImport = async (mission: MissionExport, raw?: string) => {
     setPendingImport(mission)
     pendingImportRef.current = mission
     setIsScanning(true)
@@ -853,18 +834,16 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           severity: 'error' as const,
           code: 'SCHEMA_VALIDATION',
           message: e.message,
-          path: e.path ?? '',
-        })),
-        metadata: null,
-      })
+          path: e.path ?? '' })),
+        metadata: null })
       return
     }
 
     const result = fullScan(validation.data)
     setScanResult(result)
-  }, [])
+  }
 
-  const handleScanComplete = useCallback((result: FileScanResult) => {
+  const handleScanComplete = (result: FileScanResult) => {
     // Use ref to avoid stale closure — pendingImport state may not have
     // updated yet when scan completes synchronously after async fetch
     const mission = pendingImportRef.current
@@ -874,19 +853,19 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       onClose()
     }
     setIsScanning(false)
-  }, [onImport, onClose])
+  }
 
-  const handleScanDismiss = useCallback(() => {
+  const handleScanDismiss = () => {
     setIsScanning(false)
     setScanResult(null)
     setPendingImport(null)
-  }, [])
+  }
 
   // ============================================================================
   // Local file handling
   // ============================================================================
 
-  const processLocalFile = useCallback((file: File) => {
+  const processLocalFile = (file: File) => {
     const reader = new FileReader()
     reader.onload = (e) => {
       const content = e.target?.result as string
@@ -897,8 +876,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
         path: file.name,
         type: 'file',
         source: 'local',
-        loaded: true,
-      }
+        loaded: true }
 
       setTreeNodes((prev) =>
         prev.map((n) =>
@@ -928,9 +906,9 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       }
     }
     reader.readAsText(file)
-  }, [])
+  }
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
     const files = Array.from(e.dataTransfer.files).filter(
@@ -939,19 +917,19 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     if (files.length > 0) {
       processLocalFile(files[0])
     }
-  }, [processLocalFile])
+  }
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) processLocalFile(file)
     e.target.value = ''
-  }, [processLocalFile])
+  }
 
   // ============================================================================
   // Filtered directory entries
   // ============================================================================
 
-  const filteredEntries = useMemo(() => {
+  const filteredEntries = (() => {
     let entries = directoryEntries
 
     if (searchQuery) {
@@ -964,7 +942,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     }
 
     return entries
-  }, [directoryEntries, searchQuery])
+  })()
 
   // ============================================================================
   // Filtered recommendations
@@ -1001,7 +979,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     return { clusterMatched, community, maturity, difficulty, missionClass, topTags }
   }, [recommendations])
 
-  const activeFilterCount = useMemo(() => {
+  const activeFilterCount = (() => {
     let count = 0
     if (minMatchPercent > 0) count++
     if (categoryFilter !== 'All') count++
@@ -1012,9 +990,9 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     if (selectedTags.size > 0) count++
     if (cncfFilter) count++
     return count
-  }, [minMatchPercent, categoryFilter, matchSourceFilter, maturityFilter, missionClassFilter, difficultyFilter, selectedTags, cncfFilter])
+  })()
 
-  const clearAllFilters = useCallback(() => {
+  const clearAllFilters = () => {
     setMinMatchPercent(0)
     setCategoryFilter('All')
     setMatchSourceFilter('all')
@@ -1024,7 +1002,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     setSelectedTags(new Set())
     setCncfFilter('')
     setSearchQuery('')
-  }, [])
+  }
 
   const filteredRecommendations = useMemo(() => {
     let recs = recommendations
@@ -1454,8 +1432,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                         updateNodeInTree(prev, child.id, {
                           loaded: false,
                           loading: false,
-                          children: [],
-                        })
+                          children: [] })
                       )
                       // Collapse and re-expand to trigger load
                       setExpandedNodes((prev) => {
@@ -1808,8 +1785,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
                     path: entry.path,
                     type: entry.type,
                     source: entrySource,
-                    loaded: entry.type === 'file',
-                  }
+                    loaded: entry.type === 'file' }
                   if (entry.type === 'file') {
                     selectNode(node)
                   } else {

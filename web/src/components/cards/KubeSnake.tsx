@@ -29,8 +29,7 @@ const COLORS = {
   snakeHead: '#00d4aa',
   food: '#ff6b6b',
   foodGlow: 'rgba(255, 107, 107, 0.3)',
-  powerUp: '#ffd700',
-}
+  powerUp: '#ffd700' }
 
 interface Point {
   x: number
@@ -72,17 +71,16 @@ export function KubeSnake() {
   const lastMoveRef = useRef<number>(0)
 
   // Generate random food position
-  const generateFood = useCallback(() => {
+  const generateFood = () => {
     const snake = snakeRef.current
     let newFood: Point
     do {
       newFood = {
         x: Math.floor(Math.random() * GRID_SIZE),
-        y: Math.floor(Math.random() * GRID_SIZE),
-      }
+        y: Math.floor(Math.random() * GRID_SIZE) }
     } while (snake.some(segment => segment.x === newFood.x && segment.y === newFood.y))
     foodRef.current = newFood
-  }, [])
+  }
 
   // Initialize game
   const initGame = useCallback(() => {
@@ -290,7 +288,7 @@ export function KubeSnake() {
   }, [gameState, speed, moveSnake, render])
 
   // Keyboard handlers — scoped to visible game container (KeepAlive-safe)
-  const handleSnakeKeyDown = useCallback((e: KeyboardEvent) => {
+  const handleSnakeKeyDown = (e: KeyboardEvent) => {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'].includes(e.key.toLowerCase())) {
       e.preventDefault()
     }
@@ -308,7 +306,7 @@ export function KubeSnake() {
     } else if ((key === 'arrowright' || key === 'd') && current !== 'left') {
       nextDirectionRef.current = 'right'
     }
-  }, [])
+  }
   useGameKeys(gameContainerRef, { onKeyDown: handleSnakeKeyDown })
 
   // Render initial frame

@@ -30,13 +30,11 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
     isRefreshing,
     hasAnyData: hasData,
     isDemoData: isDemoMode || isDemoFallback,
-    lastRefresh,
-  })
+    lastRefresh })
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
-    customFilter,
-  } = useGlobalFilters()
+    customFilter } = useGlobalFilters()
   const { drillToCluster } = useDrillDownActions()
 
   // Apply global filters
@@ -71,22 +69,22 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
     setSelectedClusters(prev => prev.filter(name => availableNames.has(name)))
   }, [allClusters])
 
-  const gpuByCluster = useMemo(() => {
+  const gpuByCluster = (() => {
     const map: Record<string, number> = {}
     gpuNodes.forEach(node => {
       const clusterKey = node.cluster.split('/')[0]
       map[clusterKey] = (map[clusterKey] || 0) + node.gpuCount
     })
     return map
-  }, [gpuNodes])
+  })()
 
-  const clustersToCompare = useMemo(() => {
+  const clustersToCompare = (() => {
     if (selectedClusters.length >= 2) {
       return allClusters.filter(c => selectedClusters.includes(c.name))
     }
     // Default to first 2-3 clusters
     return allClusters.slice(0, 3)
-  }, [allClusters, selectedClusters])
+  })()
 
   const toggleCluster = (name: string) => {
     setSelectedClusters(prev => {
@@ -179,8 +177,7 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
                       podCount: c.podCount,
                       cpuCores: c.cpuCores,
                       gpuCount: gpuByCluster[c.name] || 0,
-                      healthy: c.healthy,
-                    })}
+                      healthy: c.healthy })}
                     className="flex items-center justify-end gap-1 w-full hover:text-purple-400 transition-colors group min-w-0"
                     title={c.name}
                   >

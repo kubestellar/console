@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Folder,
   Plus,
@@ -68,21 +68,17 @@ export function NamespaceManager() {
   const lastFetchKeyRef = useRef<string>('')
 
   // Get all available clusters
-  const allClusterNames = useMemo(() => deduplicatedClusters.map(c => c.name), [deduplicatedClusters])
+  const allClusterNames = deduplicatedClusters.map(c => c.name)
 
   // Get target clusters based on global filter selection
   // We don't check permissions upfront - let the API handle auth errors per-cluster
-  const targetClusters = useMemo(() => {
-    return isAllClustersSelected
+  const targetClusters = isAllClustersSelected
       ? deduplicatedClusters.map(c => c.name)
       : selectedClusters
-  }, [deduplicatedClusters, selectedClusters, isAllClustersSelected])
 
 
   // Filter namespaces from cache based on selected clusters (no refetch needed)
-  const namespaces = useMemo(() => {
-    return allNamespaces.filter(ns => targetClusters.includes(ns.cluster))
-  }, [allNamespaces, targetClusters])
+  const namespaces = allNamespaces.filter(ns => targetClusters.includes(ns.cluster))
 
   // Fetch namespaces from all available clusters and cache them
   // Uses progressive loading - updates UI as each cluster completes
@@ -156,8 +152,7 @@ export function NamespaceManager() {
                 cluster,
                 status: ns.status || 'Active',
                 labels: ns.labels,
-                created_at: ns.created_at || new Date().toISOString(),
-              }))
+                created_at: ns.created_at || new Date().toISOString() }))
             }
           }
         } catch {
@@ -182,8 +177,7 @@ export function NamespaceManager() {
                 name: ns,
                 cluster,
                 status: 'Active',
-                created_at: new Date().toISOString(),
-              })
+                created_at: new Date().toISOString() })
             })
           } catch {
             // API also failed - cluster is likely unreachable
@@ -241,7 +235,7 @@ export function NamespaceManager() {
     setLastUpdated(new Date())
   }, [allClusterNames])
 
-  const handleRefreshNamespaces = useCallback(() => fetchNamespaces(true), [fetchNamespaces])
+  const handleRefreshNamespaces = () => fetchNamespaces(true)
   const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefreshNamespaces)
   const isFetching = loading || showIndicator
 

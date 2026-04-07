@@ -329,9 +329,12 @@ jobs:
           git push origin gh-pages --force
 
   notify:
-    needs: [determine-version, release, helm-release]
+    needs: [determine-version, test, release, helm-release]
     runs-on: ubuntu-latest
     if: always()
+    permissions:
+      issues: write
+      contents: read
     steps:
       - name: Release summary
         run: |
@@ -356,3 +359,44 @@ jobs:
           else
             echo "### Status: ${{ needs.release.result }}" >> $GITHUB_STEP_SUMMARY
           fi
+
+      - name: Open issue on release failure
+        if: needs.test.result == 'failure' || needs.release.result == 'failure' || needs.helm-release.result == 'failure'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const version = '${{ needs.determine-version.outputs.version }}';
+            const releaseType = '${{ needs.determine-version.outputs.release_type }}';
+            const testResult = '${{ needs.test.result }}';
+            const releaseResult = '${{ needs.release.result }}';
+            const helmResult = '${{ needs.helm-release.result }}';
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            const failedJobs = [];
+            if (testResult === 'failure') failedJobs.push('test');
+            if (releaseResult === 'failure') failedJobs.push('release');
+            if (helmResult === 'failure') failedJobs.push('helm-release');
+
+            const title = `🚨 ${releaseType} release failed: ${version}`;
+            const body = [
+              `## Release Failure`,
+              ``,
+              `The **${releaseType}** release for \`${version}\` failed.`,
+              ``,
+              `**Failed jobs:** ${failedJobs.join(', ')}`,
+              `- test: ${testResult}`,
+              `- release: ${releaseResult}`,
+              `- helm-release: ${helmResult}`,
+              ``,
+              `**Workflow run:** ${runUrl}`,
+              ``,
+              `This issue was auto-created by the release workflow.`,
+            ].join('\n');
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['bug', 'release-failure'],
+            });

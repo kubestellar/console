@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { CheckCircle2, Clock, XCircle, HelpCircle, AlertCircle, ExternalLink, Server } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
@@ -50,8 +49,7 @@ const statusOrder: Record<string, number> = { Failed: 0, Pending: 1, Ready: 2 }
 const EXPORT_SORT_COMPARATORS = {
   name: commonComparators.string<ServiceExport>('name'),
   status: (a: ServiceExport, b: ServiceExport) => (statusOrder[a.status] || 3) - (statusOrder[b.status] || 3),
-  cluster: commonComparators.string<ServiceExport>('cluster'),
-}
+  cluster: commonComparators.string<ServiceExport>('cluster') }
 
 interface ServiceExportsProps {
   config?: Record<string, unknown>
@@ -60,17 +58,13 @@ interface ServiceExportsProps {
 function ServiceExportsInternal({ config: _config }: ServiceExportsProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { exports: allExports, isLoading, isDemoData } = useServiceExports()
-  const SORT_OPTIONS = useMemo(() =>
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
-    [t]
-  )
+  const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton } = useCardLoadingState({
     isLoading,
     hasAnyData: allExports.length > 0,
-    isDemoData,
-  })
+    isDemoData })
 
   const {
     items: filteredExports,
@@ -90,29 +84,23 @@ function ServiceExportsInternal({ config: _config }: ServiceExportsProps) {
       availableClusters,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-    },
+      clusterFilterRef },
     sorting: {
       sortBy,
       setSortBy,
       sortDirection,
-      setSortDirection,
-    },
+      setSortDirection },
     containerRef,
-    containerStyle,
-  } = useCardData<ServiceExport, SortByOption>(allExports, {
+    containerStyle } = useCardData<ServiceExport, SortByOption>(allExports, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'serviceName', 'status'],
       clusterField: 'cluster',
-      storageKey: 'service-exports',
-    },
+      storageKey: 'service-exports' },
     sort: {
       defaultField: 'status',
       defaultDirection: 'asc',
-      comparators: EXPORT_SORT_COMPARATORS,
-    },
-    defaultLimit: 5,
-  })
+      comparators: EXPORT_SORT_COMPARATORS },
+    defaultLimit: 5 })
 
   // Compute stats from the data
   const readyCount = allExports.filter(e => e.status === 'Ready').length
@@ -168,8 +156,7 @@ function ServiceExportsInternal({ config: _config }: ServiceExportsProps) {
             isOpen: showClusterFilter,
             setIsOpen: setShowClusterFilter,
             containerRef: clusterFilterRef,
-            minClusters: 1,
-          }}
+            minClusters: 1 }}
           cardControls={{
             limit: itemsPerPage,
             onLimitChange: setItemsPerPage,
@@ -177,8 +164,7 @@ function ServiceExportsInternal({ config: _config }: ServiceExportsProps) {
             sortOptions: SORT_OPTIONS,
             onSortChange: (v) => setSortBy(v as SortByOption),
             sortDirection,
-            onSortDirectionChange: setSortDirection,
-          }}
+            onSortDirectionChange: setSortDirection }}
         />
       </div>
 

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { X, CheckCircle, AlertTriangle, WifiOff, Pencil, ChevronRight, ChevronDown, Layers, Server, Network, HardDrive, Box, FolderOpen, Loader2, Cpu, MemoryStick, Database, Wand2, Stethoscope, Wrench, Bot, ExternalLink } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNodes, useNamespaceStats, useDeployments, useClusters } from '../../hooks/useMCP'
@@ -105,7 +105,7 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
 
   // Get cached cluster info for distribution detection (lastUpdated via parent refresh cycle)
   // First try deduplicated clusters, then raw clusters, also check aliases
-  const clusterInfo = useMemo(() => {
+  const clusterInfo = (() => {
     // Direct match in deduplicated clusters
     let found = deduplicatedClusters.find(c => c.name === clusterName)
     if (found) return found
@@ -114,10 +114,10 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
     if (found) return found
     // Fallback to raw clusters
     return rawClusters.find(c => c.name === clusterName)
-  }, [deduplicatedClusters, rawClusters, clusterName])
+  })()
 
   // Build a map of raw cluster names to deduplicated primary names for GPU deduplication
-  const clusterNameMap = useMemo(() => {
+  const clusterNameMap = (() => {
     const map: Record<string, string> = {}
     deduplicatedClusters.forEach(c => {
       map[c.name] = c.name // Primary maps to itself
@@ -126,10 +126,10 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
       })
     })
     return map
-  }, [deduplicatedClusters])
+  })()
 
   // Deduplicate GPU nodes by name to avoid counting same physical node twice
-  const deduplicatedGpuNodes = useMemo(() => {
+  const deduplicatedGpuNodes = (() => {
     const seenNodes = new Map<string, typeof gpuNodes[0]>()
     gpuNodes.forEach(node => {
       const nodeKey = node.name
@@ -140,7 +140,7 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
       }
     })
     return Array.from(seenNodes.values())
-  }, [gpuNodes, clusterNameMap])
+  })()
 
   const [showAllNamespaces, setShowAllNamespaces] = useState(false)
   const [showPodsByNamespace, setShowPodsByNamespace] = useState(false)
@@ -196,8 +196,7 @@ Please analyze this cluster and provide:
         clusterName,
         health,
         podIssuesCount: podIssues.length,
-        deploymentIssuesCount: clusterDeploymentIssues.length,
-      }
+        deploymentIssuesCount: clusterDeploymentIssues.length }
     })
     onClose()
   }
@@ -229,8 +228,7 @@ After I approve, help me execute the repairs step by step.`,
       context: {
         clusterName,
         podIssues: podIssues.slice(0, 10),
-        deploymentIssues: clusterDeploymentIssues.slice(0, 10),
-      }
+        deploymentIssues: clusterDeploymentIssues.slice(0, 10) }
     })
     onClose()
   }
@@ -245,7 +243,7 @@ After I approve, help me execute the repairs step by step.`,
   const isHealthy = !isLoading && !isUnreachable && health?.healthy !== false
 
   // Group GPUs by type for summary
-  const gpuByType = useMemo(() => {
+  const gpuByType = (() => {
     const map: Record<string, { total: number; allocated: number; nodes: typeof clusterGPUs }> = {}
     clusterGPUs.forEach(node => {
       const type = node.gpuType || 'Unknown'
@@ -257,7 +255,7 @@ After I approve, help me execute the repairs step by step.`,
       map[type].nodes.push(node)
     })
     return map
-  }, [clusterGPUs])
+  })()
 
   // Show modal immediately with loading state for data - don't block on isLoading
   return (
@@ -664,8 +662,7 @@ After I approve, help me execute the repairs step by step.`,
                       status: issue.status,
                       restarts: issue.restarts,
                       issues: issue.issues,
-                      reason: issue.reason,
-                    })
+                      reason: issue.reason })
                     onClose()
                   }}
                   className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
@@ -694,8 +691,7 @@ After I approve, help me execute the repairs step by step.`,
                       replicas: issue.replicas,
                       readyReplicas: issue.readyReplicas,
                       reason: issue.reason,
-                      message: issue.message,
-                    })
+                      message: issue.message })
                     onClose()
                   }}
                   className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
@@ -828,8 +824,7 @@ After I approve, help me execute the repairs step by step.`,
           nodes={clusterNodes.map(n => ({
             name: n.name,
             cpuCapacity: parseInt(n.cpuCapacity) || 0,
-            cpuAllocatable: parseInt(n.cpuCapacity) || 0,
-          }))}
+            cpuAllocatable: parseInt(n.cpuCapacity) || 0 }))}
           isLoading={nodesLoading}
           onClose={() => setShowCPUDetail(false)}
         />
@@ -855,8 +850,7 @@ After I approve, help me execute the repairs step by step.`,
             return {
               name: n.name,
               memoryCapacityGB: memGB,
-              memoryAllocatableGB: memGB,
-            }
+              memoryAllocatableGB: memGB }
           })}
           isLoading={nodesLoading}
           onClose={() => setShowMemoryDetail(false)}
@@ -881,8 +875,7 @@ After I approve, help me execute the repairs step by step.`,
             }
             return {
               name: n.name,
-              ephemeralStorageGB: storageGB,
-            }
+              ephemeralStorageGB: storageGB }
           })}
           isLoading={nodesLoading}
           onClose={() => setShowStorageDetail(false)}
@@ -896,8 +889,7 @@ After I approve, help me execute the repairs step by step.`,
             name: n.name,
             gpuType: n.gpuType || 'Unknown',
             gpuCount: n.gpuCount,
-            gpuAllocated: n.gpuAllocated,
-          }))}
+            gpuAllocated: n.gpuAllocated }))}
           isLoading={isLoading}
           onClose={() => setShowGPUDetail(false)}
         />

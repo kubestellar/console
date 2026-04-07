@@ -8,8 +8,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
-} from 'recharts'
+  ResponsiveContainer } from 'recharts'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedPodIssues } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -22,8 +21,7 @@ import {
   CHART_GRID_STROKE,
   CHART_AXIS_STROKE,
   CHART_TOOLTIP_CONTENT_STYLE,
-  CHART_TICK_COLOR,
-} from '../../lib/constants'
+  CHART_TICK_COLOR } from '../../lib/constants'
 import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface HealthPoint {
@@ -61,8 +59,7 @@ export function PodHealthTrend() {
     hasAnyData: hasData,
     isDemoData: isDemoModeActive || isDemoFallback,
     isFailed: clustersFailed || issuesFailed,
-    consecutiveFailures: Math.max(clustersFailures, issuesFailures),
-  })
+    consecutiveFailures: Math.max(clustersFailures, issuesFailures) })
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
   const [showClusterFilter, setShowClusterFilter] = useState(false)
@@ -110,8 +107,7 @@ export function PodHealthTrend() {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({
           data: history,
-          timestamp: Date.now(),
-        }))
+          timestamp: Date.now() }))
       } catch {
         // Ignore storage errors (quota exceeded, etc.)
       }
@@ -119,18 +115,16 @@ export function PodHealthTrend() {
   }, [history])
 
   // Get reachable clusters
-  const reachableClusters = useMemo(() => {
-    return clusters.filter(c => c.reachable !== false)
-  }, [clusters])
+  const reachableClusters = clusters.filter(c => c.reachable !== false)
 
   // Get available clusters for local filter (respects global filter)
-  const availableClustersForFilter = useMemo(() => {
+  const availableClustersForFilter = (() => {
     if (isAllClustersSelected) return reachableClusters
     return reachableClusters.filter(c => selectedClusters.includes(c.name))
-  }, [reachableClusters, selectedClusters, isAllClustersSelected])
+  })()
 
   // Filter by selected clusters AND local filter AND exclude offline/unreachable clusters
-  const filteredClusters = useMemo(() => {
+  const filteredClusters = (() => {
     let filtered = reachableClusters
     if (!isAllClustersSelected) {
       filtered = filtered.filter(c => selectedClusters.includes(c.name))
@@ -139,7 +133,7 @@ export function PodHealthTrend() {
       filtered = filtered.filter(c => localClusterFilter.includes(c.name))
     }
     return filtered
-  }, [reachableClusters, selectedClusters, isAllClustersSelected, localClusterFilter])
+  })()
 
   const toggleClusterFilter = (clusterName: string) => {
     setLocalClusterFilter(prev => {
@@ -151,11 +145,9 @@ export function PodHealthTrend() {
   }
 
   // Get names of reachable clusters for issue filtering
-  const reachableClusterNames = useMemo(() => {
-    return new Set(clusters.filter(c => c.reachable !== false).map(c => c.name))
-  }, [clusters])
+  const reachableClusterNames = new Set(clusters.filter(c => c.reachable !== false).map(c => c.name))
 
-  const filteredIssues = useMemo(() => {
+  const filteredIssues = (() => {
     // First filter to only issues from reachable clusters
     let result = issues.filter(i => i.cluster && reachableClusterNames.has(i.cluster))
     if (!isAllClustersSelected) {
@@ -166,7 +158,7 @@ export function PodHealthTrend() {
       result = result.filter(i => i.cluster && localClusterFilter.includes(i.cluster))
     }
     return result
-  }, [issues, selectedClusters, isAllClustersSelected, reachableClusterNames, localClusterFilter])
+  })()
 
   // Calculate current stats
   const currentStats = useMemo(() => {
@@ -186,13 +178,14 @@ export function PodHealthTrend() {
     if (clustersLoading || issuesLoading) return
     if (currentStats.total === 0) return
 
+    let cancelled = false
+
     const now = new Date()
     const newPoint: HealthPoint = {
       time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       healthy: currentStats.healthy,
       issues: currentStats.issues,
-      pending: currentStats.pending,
-    }
+      pending: currentStats.pending }
 
     // Only add if data changed or 30 seconds passed
     const lastPoint = historyRef.current[historyRef.current.length - 1]
@@ -201,42 +194,52 @@ export function PodHealthTrend() {
       lastPoint.issues !== newPoint.issues ||
       lastPoint.pending !== newPoint.pending
 
-    if (shouldAdd) {
-      const newHistory = [...historyRef.current, newPoint].slice(-20) // Keep last 20 points
+    if (shouldAdd && !cancelled) {
+      const MAX_HISTORY_POINTS = 20
+      const newHistory = [...historyRef.current, newPoint].slice(-MAX_HISTORY_POINTS)
       historyRef.current = newHistory
       setHistory(newHistory)
     }
+
+    return () => { cancelled = true }
   }, [currentStats, clustersLoading, issuesLoading])
 
   // Initialize history — seed multiple points in demo mode for visible chart
   useEffect(() => {
     if (history.length === 0 && currentStats.total > 0) {
+      let cancelled = false
       const now = new Date()
       if (isDemoMode()) {
         // Seed 8 historical points so the time-series chart renders immediately
+        const DEMO_SEED_POINTS = 8
+        const DEMO_INTERVAL_MS = 5 * 60000 // 5-min intervals
+        const MAX_JITTER = 3
         const points: HealthPoint[] = []
-        for (let i = 7; i >= 0; i--) {
-          const t = new Date(now.getTime() - i * 5 * 60000) // 5-min intervals
-          const jitter = Math.floor(Math.random() * 3)
+        for (let i = DEMO_SEED_POINTS - 1; i >= 0; i--) {
+          const t = new Date(now.getTime() - i * DEMO_INTERVAL_MS)
+          const jitter = Math.floor(Math.random() * MAX_JITTER)
           points.push({
             time: t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             healthy: currentStats.healthy + jitter,
             issues: Math.max(0, currentStats.issues - jitter + Math.floor(Math.random() * 2)),
-            pending: Math.max(0, currentStats.pending + (i % 3 === 0 ? 1 : 0)),
-          })
+            pending: Math.max(0, currentStats.pending + (i % 3 === 0 ? 1 : 0)) })
         }
-        historyRef.current = points
-        setHistory(points)
+        if (!cancelled) {
+          historyRef.current = points
+          setHistory(points)
+        }
       } else {
         const initialPoint: HealthPoint = {
           time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           healthy: currentStats.healthy,
           issues: currentStats.issues,
-          pending: currentStats.pending,
+          pending: currentStats.pending }
+        if (!cancelled) {
+          historyRef.current = [initialPoint]
+          setHistory([initialPoint])
         }
-        historyRef.current = [initialPoint]
-        setHistory([initialPoint])
       }
+      return () => { cancelled = true }
     }
   }, [currentStats, history.length])
 

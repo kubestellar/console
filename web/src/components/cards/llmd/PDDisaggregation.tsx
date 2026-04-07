@@ -51,8 +51,7 @@ function generateServerStats(): ServerStats[] {
       queueDepth: Math.round(3 + Math.random() * 4),
       throughput: Math.round(120 + wave * 20),
       latencyMs: Math.round(45 + wave * 10),
-      gpuMemory: Math.round(75 + wave * 10),
-    },
+      gpuMemory: Math.round(75 + wave * 10) },
     {
       id: 'prefill-1',
       name: 'Prefill-1',
@@ -61,8 +60,7 @@ function generateServerStats(): ServerStats[] {
       queueDepth: Math.round(2 + Math.random() * 3),
       throughput: Math.round(115 + wave * 18),
       latencyMs: Math.round(42 + wave * 8),
-      gpuMemory: Math.round(72 + wave * 8),
-    },
+      gpuMemory: Math.round(72 + wave * 8) },
     {
       id: 'prefill-2',
       name: 'Prefill-2',
@@ -71,8 +69,7 @@ function generateServerStats(): ServerStats[] {
       queueDepth: Math.round(4 + Math.random() * 5),
       throughput: Math.round(95 + wave * 15),
       latencyMs: Math.round(48 + wave * 12),
-      gpuMemory: Math.round(68 + wave * 12),
-    },
+      gpuMemory: Math.round(68 + wave * 12) },
     // Decode servers
     {
       id: 'decode-0',
@@ -82,8 +79,7 @@ function generateServerStats(): ServerStats[] {
       queueDepth: Math.round(1 + Math.random() * 2),
       throughput: Math.round(180 + wave * 25),
       latencyMs: Math.round(8 + wave * 2),
-      gpuMemory: Math.round(85 + wave * 8),
-    },
+      gpuMemory: Math.round(85 + wave * 8) },
     {
       id: 'decode-1',
       name: 'Decode-1',
@@ -92,8 +88,7 @@ function generateServerStats(): ServerStats[] {
       queueDepth: Math.round(1 + Math.random() * 2),
       throughput: Math.round(175 + wave * 22),
       latencyMs: Math.round(9 + wave * 2),
-      gpuMemory: Math.round(82 + wave * 10),
-    },
+      gpuMemory: Math.round(82 + wave * 10) },
   ]
 }
 
@@ -168,8 +163,7 @@ function ServerCard({ server, isHighlighted }: ServerCardProps) {
           <motion.div
             className="h-full rounded-full"
             style={{
-              backgroundColor: server.gpuMemory > 85 ? '#ef4444' : server.gpuMemory > 70 ? '#f59e0b' : '#22c55e',
-            }}
+              backgroundColor: server.gpuMemory > 85 ? '#ef4444' : server.gpuMemory > 70 ? '#f59e0b' : '#22c55e' }}
             animate={{ width: `${server.gpuMemory}%` }}
           />
         </div>
@@ -228,8 +222,7 @@ export function PDDisaggregation() {
           queueDepth: prom ? Math.round(prom.requestsWaiting) : Math.round(2 + Math.random() * 4),
           throughput: prom ? Math.round(prom.throughputTps) : Math.round(100 + wave * 20 + Math.random() * 30),
           latencyMs: prom ? Math.round(prom.ttftP50 * 1000) : Math.round(40 + wave * 10 + Math.random() * 10),
-          gpuMemory: prom ? Math.round(prom.kvCacheUsage * 100) : Math.round(70 + wave * 10 + Math.random() * 10),
-        })
+          gpuMemory: prom ? Math.round(prom.kvCacheUsage * 100) : Math.round(70 + wave * 10 + Math.random() * 10) })
         prefillIndex++
       }
     }
@@ -248,8 +241,7 @@ export function PDDisaggregation() {
           queueDepth: prom ? Math.round(prom.requestsWaiting) : Math.round(1 + Math.random() * 2),
           throughput: prom ? Math.round(prom.throughputTps) : Math.round(160 + wave * 25 + Math.random() * 30),
           latencyMs: prom ? Math.round(prom.tpotP50 * 1000) : Math.round(6 + wave * 2 + Math.random() * 3),
-          gpuMemory: prom ? Math.round(prom.kvCacheUsage * 100) : Math.round(80 + wave * 8 + Math.random() * 10),
-        })
+          gpuMemory: prom ? Math.round(prom.kvCacheUsage * 100) : Math.round(80 + wave * 8 + Math.random() * 10) })
         decodeIndex++
       }
     }
@@ -270,8 +262,8 @@ export function PDDisaggregation() {
   }, [stackServers])
 
   // Get server IDs for packet generation
-  const prefillIds = useMemo(() => servers.filter(s => s.type === 'prefill').map(s => s.id), [servers])
-  const decodeIds = useMemo(() => servers.filter(s => s.type === 'decode').map(s => s.id), [servers])
+  const prefillIds = servers.filter(s => s.type === 'prefill').map(s => s.id)
+  const decodeIds = servers.filter(s => s.type === 'decode').map(s => s.id)
 
   // Generate transfer packets (only when disaggregated)
   useEffect(() => {
@@ -289,8 +281,7 @@ export function PDDisaggregation() {
         fromServer: from,
         toServer: to,
         progress: 0,
-        size: Math.round(50 + Math.random() * 200),
-      }
+        size: Math.round(50 + Math.random() * 200) }
 
       setPackets(prev => [...prev.slice(-10), newPacket])
     }
@@ -311,20 +302,18 @@ export function PDDisaggregation() {
     return () => clearInterval(animate)
   }, [])
 
-  const prefillServers = useMemo(() => servers.filter(s => s.type === 'prefill'), [servers])
-  const decodeServers = useMemo(() => servers.filter(s => s.type === 'decode'), [servers])
+  const prefillServers = servers.filter(s => s.type === 'prefill')
+  const decodeServers = servers.filter(s => s.type === 'decode')
 
   // Aggregate metrics
   const metrics = useMemo(() => {
     const prefill = prefillServers.reduce((acc, s) => ({
       throughput: acc.throughput + s.throughput,
-      avgLatency: acc.avgLatency + s.latencyMs,
-    }), { throughput: 0, avgLatency: 0 })
+      avgLatency: acc.avgLatency + s.latencyMs }), { throughput: 0, avgLatency: 0 })
 
     const decode = decodeServers.reduce((acc, s) => ({
       throughput: acc.throughput + s.throughput,
-      avgLatency: acc.avgLatency + s.latencyMs,
-    }), { throughput: 0, avgLatency: 0 })
+      avgLatency: acc.avgLatency + s.latencyMs }), { throughput: 0, avgLatency: 0 })
 
     return {
       prefillThroughput: prefill.throughput,
@@ -462,8 +451,7 @@ export function PDDisaggregation() {
                     className="absolute w-4 h-4 rounded bg-cyan-500 flex items-center justify-center"
                     style={{
                       top: `${20 + packet.progress * 60}%`,
-                      filter: 'drop-shadow(0 0 6px #06b6d4)',
-                    }}
+                      filter: 'drop-shadow(0 0 6px #06b6d4)' }}
                     initial={{ opacity: 0, scale: 0 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0 }}

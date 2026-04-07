@@ -89,14 +89,11 @@ export function useMissionSuggestions() {
         action: {
           type: 'ai',
           target: `Diagnose why these ${highRestartPods.length} pods are restarting frequently:\n\n${podDetails}\n\nCheck container logs, resource limits, liveness/readiness probes, and OOM kills. Provide specific remediation steps.`,
-          label: 'Diagnose',
-        },
+          label: 'Diagnose' },
         context: {
           count: highRestartPods.length,
-          details: topPods.map(p => `${p.name} in ${p.namespace} (${p.restarts} restarts)`),
-        },
-        detectedAt: now,
-      })
+          details: topPods.map(p => `${p.name} in ${p.namespace} (${p.restarts} restarts)`) },
+        detectedAt: now })
     }
 
     // 2. Check for deployments with unavailable replicas
@@ -115,14 +112,11 @@ export function useMissionSuggestions() {
         action: {
           type: 'ai',
           target: `Diagnose why these ${unavailableDeployments.length} deployments have unavailable replicas:\n\n${deploymentDetails}\n\nCheck pod status, events, resource availability, and image pull issues. Provide specific remediation steps.`,
-          label: 'Diagnose',
-        },
+          label: 'Diagnose' },
         context: {
           count: unavailableDeployments.length,
-          details: topDeployments.map(d => `${d.name} in ${d.namespace}: ${d.replicas - d.readyReplicas}/${d.replicas} unavailable`),
-        },
-        detectedAt: now,
-      })
+          details: topDeployments.map(d => `${d.name} in ${d.namespace}: ${d.replicas - d.readyReplicas}/${d.replicas} unavailable`) },
+        detectedAt: now })
     }
 
     // 3. Check for high severity security issues
@@ -138,14 +132,11 @@ export function useMissionSuggestions() {
         action: {
           type: 'ai',
           target: `Analyze and help remediate ${highSeverityIssues.length} high severity security issues:\n\n${issueDetails}\n\nProvide specific remediation steps for each issue.`,
-          label: 'Analyze Security',
-        },
+          label: 'Analyze Security' },
         context: {
           count: highSeverityIssues.length,
-          details: highSeverityIssues.slice(0, MAX_DETAIL_ITEMS).map(i => `${i.issue} (${i.cluster || 'unknown'})`),
-        },
-        detectedAt: now,
-      })
+          details: highSeverityIssues.slice(0, MAX_DETAIL_ITEMS).map(i => `${i.issue} (${i.cluster || 'unknown'})`) },
+        detectedAt: now })
     }
 
     // 4. Check for unhealthy clusters
@@ -161,14 +152,11 @@ export function useMissionSuggestions() {
         action: {
           type: 'ai',
           target: `Diagnose health issues for ${unhealthyClusters.length} cluster(s):\n\n${clusterDetails}\n\nCheck API server connectivity, control plane health, node status, and certificate expiration. Provide troubleshooting steps.`,
-          label: 'Diagnose',
-        },
+          label: 'Diagnose' },
         context: {
           count: unhealthyClusters.length,
-          details: unhealthyClusters.map(c => `${c.name}: ${c.errorMessage || 'unhealthy'}`),
-        },
-        detectedAt: now,
-      })
+          details: unhealthyClusters.map(c => `${c.name}: ${c.errorMessage || 'unhealthy'}`) },
+        detectedAt: now })
     }
 
     // 5. Check for pods without resource limits (best practice)
@@ -192,14 +180,11 @@ export function useMissionSuggestions() {
         action: {
           type: 'ai',
           target: `Analyze ${podsWithoutLimits.length} pods that may be missing resource limits:\n\nSample pods:\n${samplePods}\n\nRecommend appropriate CPU/memory requests and limits based on workload type. Explain the risks of missing limits (OOM kills, noisy neighbors, scheduling issues).`,
-          label: 'Analyze with AI',
-        },
+          label: 'Analyze with AI' },
         context: {
           count: podsWithoutLimits.length,
-          details: podsWithoutLimits.slice(0, MAX_DETAIL_ITEMS_EXPANDED).map(p => `${p.name} in ${p.namespace}`),
-        },
-        detectedAt: now,
-      })
+          details: podsWithoutLimits.slice(0, MAX_DETAIL_ITEMS_EXPANDED).map(p => `${p.name} in ${p.namespace}`) },
+        detectedAt: now })
     }
 
     // 6. Check for nodes under resource pressure
@@ -223,14 +208,11 @@ export function useMissionSuggestions() {
         action: {
           type: 'ai',
           target: `Diagnose resource pressure on ${pressuredNodes.length} node(s):\n\n${nodeDetails}\n\nIdentify resource-hungry workloads, check for memory leaks, and recommend remediation (eviction, scaling, adding nodes).`,
-          label: 'Diagnose',
-        },
+          label: 'Diagnose' },
         context: {
           count: pressuredNodes.length,
-          details: pressuredNodes.map(n => n.name),
-        },
-        detectedAt: now,
-      })
+          details: pressuredNodes.map(n => n.name) },
+        detectedAt: now })
     }
 
     // 7. Check for deployments that might benefit from scaling
@@ -247,14 +229,11 @@ export function useMissionSuggestions() {
         action: {
           type: 'ai',
           target: 'Review deployments with single replicas and recommend scaling for high availability',
-          label: 'Review with AI',
-        },
+          label: 'Review with AI' },
         context: {
           count: lowReplicaDeployments.length,
-          details: lowReplicaDeployments.slice(0, MAX_DETAIL_ITEMS).map(d => d.name),
-        },
-        detectedAt: now,
-      })
+          details: lowReplicaDeployments.slice(0, MAX_DETAIL_ITEMS).map(d => d.name) },
+        detectedAt: now })
     }
 
     // Sort by priority
@@ -284,18 +263,16 @@ export function useMissionSuggestions() {
   }, [suggestions, isSnoozed, isDismissed, snoozedMissions, dismissedMissions])
 
   // Stats
-  const stats = useMemo(() => ({
+  const stats = {
     total: suggestions.length,
     visible: visibleSuggestions.length,
     critical: visibleSuggestions.filter(s => s.priority === 'critical').length,
-    high: visibleSuggestions.filter(s => s.priority === 'high').length,
-  }), [suggestions, visibleSuggestions])
+    high: visibleSuggestions.filter(s => s.priority === 'high').length }
 
   return {
     suggestions: visibleSuggestions,
     allSuggestions: suggestions,
     hasSuggestions: visibleSuggestions.length > 0,
     stats,
-    refresh: analyzeAndSuggest,
-  }
+    refresh: analyzeAndSuggest }
 }

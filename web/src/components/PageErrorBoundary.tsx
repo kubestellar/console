@@ -69,16 +69,16 @@ export class PageErrorBoundary extends Component<Props, State> {
           <h2 className="text-lg font-semibold text-foreground mb-2">
             {i18next.t('common:pageError.title', 'This page encountered an error')}
           </h2>
-          <p className="text-sm text-muted-foreground mb-2 max-w-md">
+          <div className="text-sm text-muted-foreground mb-2 max-w-md">
             {i18next.t(
               'common:pageError.description',
               'Something went wrong while rendering this page. You can try again, go back to the dashboard, or reload.',
             )}
-          </p>
+          </div>
           {this.state.error && (
-            <p className="text-xs text-muted-foreground/70 font-mono mb-6 break-all max-w-lg">
+            <div className="text-xs text-muted-foreground/70 font-mono mb-6 break-all max-w-lg">
               {this.state.error.message}
-            </p>
+            </div>
           )}
           <div className="flex items-center gap-3">
             <button

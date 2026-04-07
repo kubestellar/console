@@ -11,8 +11,7 @@ import {
   createOrUpdateResourceQuota,
   deleteResourceQuota,
   COMMON_RESOURCE_TYPES,
-  GPU_RESOURCE_TYPES,
-} from '../../hooks/useMCP'
+  GPU_RESOURCE_TYPES } from '../../hooks/useMCP'
 import { useCachedNamespaces } from '../../hooks/useCachedData'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -59,14 +58,12 @@ const SORT_OPTIONS = [
 
 const QUOTA_SORT_COMPARATORS: Record<SortByOption, (a: QuotaUsage, b: QuotaUsage) => number> = {
   name: commonComparators.string<QuotaUsage>('resource'),
-  percent: commonComparators.number<QuotaUsage>('percent'),
-}
+  percent: commonComparators.number<QuotaUsage>('percent') }
 
 const LIMIT_SORT_COMPARATORS: Record<SortByOption, (a: LimitRangeItem, b: LimitRangeItem) => number> = {
   name: commonComparators.string<LimitRangeItem>('name'),
   // For limits, sort by name for both options (no percent on limits)
-  percent: commonComparators.string<LimitRangeItem>('name'),
-}
+  percent: commonComparators.string<LimitRangeItem>('name') }
 
 // Parse quantity string to numeric value (handles Kubernetes resource quantities)
 function parseQuantity(value: string): number {
@@ -92,8 +89,7 @@ function QuotaModal({
   selectedCluster,
   selectedNamespace,
   editingQuota,
-  isLoading,
-}: {
+  isLoading }: {
   isOpen: boolean
   onClose: () => void
   onSave: (spec: { cluster: string; namespace: string; name: string; hard: Record<string, string> }) => Promise<void>
@@ -376,8 +372,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
     hasAnyData: allClusters.length > 0 || resourceQuotas.length > 0 || limitRanges.length > 0,
     isDemoData: isDemoMode || isDemoFallback,
     isFailed: clustersFailed,
-    consecutiveFailures: clustersFailures,
-  })
+    consecutiveFailures: clustersFailures })
 
   // Handle save quota
   const handleSaveQuota = async (spec: { cluster: string; namespace: string; name: string; hard: Record<string, string> }) => {
@@ -438,8 +433,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
             percent,
             cluster: quota.cluster,
             namespace: quota.namespace,
-            quotaName: quota.name,
-          })
+            quotaName: quota.name })
         })
       })
 
@@ -447,17 +441,17 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   }, [resourceQuotas, selectedCluster, selectedNamespace])
 
   // Get unique quotas for edit/delete actions
-  const uniqueQuotas = useMemo(() => {
+  const uniqueQuotas = (() => {
     const quotaMap = new Map<string, ResourceQuota>()
     resourceQuotas.forEach(q => {
       const key = `${q.cluster}/${q.namespace}/${q.name}`
       quotaMap.set(key, q)
     })
     return Array.from(quotaMap.values())
-  }, [resourceQuotas])
+  })()
 
   // Transform LimitRanges for display (pre-filter by selectors only)
-  const limitRangeItems = useMemo(() => {
+  const limitRangeItems = (() => {
     const items: LimitRangeItem[] = []
 
     // Filter limit ranges based on selection
@@ -474,13 +468,12 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
             type: limit.type,
             limits: limit,
             cluster: lr.cluster,
-            namespace: lr.namespace,
-          })
+            namespace: lr.namespace })
         })
       })
 
     return items
-  }, [limitRanges, selectedCluster, selectedNamespace])
+  })()
 
   // useCardData for Quotas tab
   const {
@@ -495,20 +488,16 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
     filters: quotaFilters,
     sorting: quotaSorting,
     containerRef,
-    containerStyle,
-  } = useCardData<QuotaUsage, SortByOption>(quotaUsages, {
+    containerStyle } = useCardData<QuotaUsage, SortByOption>(quotaUsages, {
     filter: {
       searchFields: ['resource', 'rawResource', 'cluster', 'namespace', 'quotaName'] as (keyof QuotaUsage)[],
       clusterField: 'cluster' as keyof QuotaUsage,
-      storageKey: 'namespace-quotas',
-    },
+      storageKey: 'namespace-quotas' },
     sort: {
       defaultField: 'name',
       defaultDirection: 'asc' as SortDirection,
-      comparators: QUOTA_SORT_COMPARATORS,
-    },
-    defaultLimit: 5,
-  })
+      comparators: QUOTA_SORT_COMPARATORS },
+    defaultLimit: 5 })
 
   // useCardData for Limits tab
   const {
@@ -518,20 +507,16 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
     totalPages: limitTotalPages,
     itemsPerPage: limitItemsPerPage,
     goToPage: limitGoToPage,
-    needsPagination: limitNeedsPagination,
-  } = useCardData<LimitRangeItem, SortByOption>(limitRangeItems, {
+    needsPagination: limitNeedsPagination } = useCardData<LimitRangeItem, SortByOption>(limitRangeItems, {
     filter: {
       searchFields: ['name', 'type', 'cluster', 'namespace'] as (keyof LimitRangeItem)[],
       clusterField: 'cluster' as keyof LimitRangeItem,
-      storageKey: 'namespace-quotas-limits',
-    },
+      storageKey: 'namespace-quotas-limits' },
     sort: {
       defaultField: 'name',
       defaultDirection: 'asc' as SortDirection,
-      comparators: LIMIT_SORT_COMPARATORS,
-    },
-    defaultLimit: 5,
-  })
+      comparators: LIMIT_SORT_COMPARATORS },
+    defaultLimit: 5 })
 
   // Derive active tab state
   const activePagination = activeTab === 'quotas'
@@ -587,8 +572,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
           <CardControlsRow
             clusterIndicator={{
               selectedCount: quotaFilters.localClusterFilter.length,
-              totalCount: quotaFilters.availableClusters.length,
-            }}
+              totalCount: quotaFilters.availableClusters.length }}
             clusterFilter={{
               availableClusters: quotaFilters.availableClusters,
               selectedClusters: quotaFilters.localClusterFilter,
@@ -597,8 +581,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
               isOpen: quotaFilters.showClusterFilter,
               setIsOpen: quotaFilters.setShowClusterFilter,
               containerRef: quotaFilters.clusterFilterRef,
-              minClusters: 1,
-            }}
+              minClusters: 1 }}
             cardControls={{
               limit: quotaItemsPerPage,
               onLimitChange: quotaSetItemsPerPage,
@@ -606,8 +589,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
               sortOptions: SORT_OPTIONS,
               onSortChange: (v) => quotaSorting.setSortBy(v as SortByOption),
               sortDirection: quotaSorting.sortDirection,
-              onSortDirectionChange: quotaSorting.setSortDirection,
-            }}
+              onSortDirectionChange: quotaSorting.setSortDirection }}
             extra={
               <button
                 onClick={() => {

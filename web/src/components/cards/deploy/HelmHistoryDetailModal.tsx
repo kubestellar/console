@@ -5,7 +5,7 @@
  * Shows revision details and "Rollback with AI Mission" action.
  */
 
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect } from 'react'
 import { RotateCcw, Rocket } from 'lucide-react'
 import { BaseModal } from '../../../lib/modals/BaseModal'
 import { StatusBadge } from '../../ui/StatusBadge'
@@ -30,12 +30,10 @@ const STATUS_COLORS: Record<string, 'green' | 'red' | 'blue' | 'gray'> = {
   failed: 'red',
   'pending-rollback': 'blue',
   'pending-upgrade': 'blue',
-  superseded: 'gray',
-}
+  superseded: 'gray' }
 
 export function HelmHistoryDetailModal({
-  isOpen, onClose, entry, releaseName, clusterName, namespace, currentRevision,
-}: HelmHistoryDetailModalProps) {
+  isOpen, onClose, entry, releaseName, clusterName, namespace, currentRevision }: HelmHistoryDetailModalProps) {
   const openTimeRef = useRef<number>(0)
   const { startMission, openSidebar } = useMissions()
 
@@ -46,15 +44,15 @@ export function HelmHistoryDetailModal({
     }
   }, [isOpen, entry])
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     if (openTimeRef.current > 0) {
       emitModalClosed(MODAL_TYPE, Date.now() - openTimeRef.current)
       openTimeRef.current = 0
     }
     onClose()
-  }, [onClose])
+  }
 
-  const handleRollback = useCallback(() => {
+  const handleRollback = () => {
     if (!entry) return
     emitActionClicked('rollback', 'helm_history', 'deploy')
     startMission({
@@ -82,12 +80,10 @@ Please proceed step by step.`,
         namespace,
         cluster: clusterName,
         targetRevision: entry.revision,
-        currentRevision,
-      },
-    })
+        currentRevision } })
     openSidebar()
     handleClose()
-  }, [entry, releaseName, namespace, clusterName, currentRevision, startMission, openSidebar, handleClose])
+  }
 
   if (!entry) return null
 
@@ -96,8 +92,7 @@ Please proceed step by step.`,
     const date = new Date(timestamp)
     return date.toLocaleDateString('en-US', {
       month: 'short', day: 'numeric', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    })
+      hour: '2-digit', minute: '2-digit' })
   }
 
   return (

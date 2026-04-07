@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import {
   CheckCircle, XCircle, AlertTriangle, ExternalLink
 } from 'lucide-react'
@@ -30,8 +29,7 @@ const STATE_ORDER: Record<string, number> = {
   failure: 0,
   error: 1,
   aborted: 2,
-  success: 3,
-}
+  success: 3 }
 
 export function ProwHistory({ config: _config }: ProwHistoryProps) {
   const { t } = useTranslation(['common', 'cards'])
@@ -48,22 +46,16 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
     hasAnyData: hasData,
     isFailed,
     consecutiveFailures: consecutiveFailures ?? 0,
-    isDemoData: shouldUseDemoData,
-  })
+    isDemoData: shouldUseDemoData })
 
   // Pre-filter to only completed jobs
-  const completedJobs = useMemo(() =>
-    jobs.filter(j => j.state === 'success' || j.state === 'failure' || j.state === 'error' || j.state === 'aborted'),
-    [jobs]
-  )
+  const completedJobs = jobs.filter(j => j.state === 'success' || j.state === 'failure' || j.state === 'error' || j.state === 'aborted')
 
   const { items, totalItems, currentPage, totalPages, goToPage, needsPagination, itemsPerPage, setItemsPerPage, filters, sorting,
     containerRef,
-    containerStyle,
-  } = useCardData<ProwJob, SortField>(completedJobs, {
+    containerStyle } = useCardData<ProwJob, SortField>(completedJobs, {
     filter: {
-      searchFields: ['name', 'state', 'type', 'duration'] as (keyof ProwJob)[],
-    },
+      searchFields: ['name', 'state', 'type', 'duration'] as (keyof ProwJob)[] },
     sort: {
       defaultField: 'started',
       defaultDirection: 'desc',
@@ -71,11 +63,8 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
         started: (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
         name: (a, b) => a.name.localeCompare(b.name),
         state: (a, b) => (STATE_ORDER[a.state] ?? 5) - (STATE_ORDER[b.state] ?? 5),
-        duration: (a, b) => a.duration.localeCompare(b.duration),
-      },
-    },
-    defaultLimit: 5,
-  })
+        duration: (a, b) => a.duration.localeCompare(b.duration) } },
+    defaultLimit: 5 })
 
   if (isLoading && !hasData) {
     return (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { isBackendUnavailable } from '../lib/api'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
 
@@ -72,10 +72,8 @@ export function usePermissions() {
       const response = await fetch(`${API_BASE}/api/permissions/summary`, {
         headers: {
           'Authorization': token ? `Bearer ${token}` : '',
-          'Content-Type': 'application/json',
-        },
-        signal: AbortSignal.timeout(5000),
-      })
+          'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(5000) })
 
       if (!response.ok) {
         // Don't throw on 500 - just silently fail
@@ -102,52 +100,52 @@ export function usePermissions() {
 
   // Check if user is cluster admin for a specific cluster
   // If permissions data is not available for a cluster, assume admin (don't show warning)
-  const isClusterAdmin = useCallback((cluster: string): boolean => {
+  const isClusterAdmin = (cluster: string): boolean => {
     if (!permissions?.clusters?.[cluster]) return true // Assume admin if no data
     return permissions.clusters[cluster].isClusterAdmin
-  }, [permissions])
+  }
 
   // Check if user has a specific permission
-  const hasPermission = useCallback((
+  const hasPermission = (
     cluster: string,
     permission: keyof Omit<ClusterPermissions, 'accessibleNamespaces'>
   ): boolean => {
     if (!permissions?.clusters?.[cluster]) return false
     return permissions.clusters[cluster][permission]
-  }, [permissions])
+  }
 
   // Check if user can access a namespace
-  const canAccessNamespace = useCallback((cluster: string, namespace: string): boolean => {
+  const canAccessNamespace = (cluster: string, namespace: string): boolean => {
     if (!permissions?.clusters?.[cluster]) return false
     const clusterPerms = permissions.clusters[cluster]
     // Cluster admins can access all namespaces
     if (clusterPerms.isClusterAdmin) return true
     return clusterPerms.accessibleNamespaces.includes(namespace)
-  }, [permissions])
+  }
 
   // Get accessible namespaces for a cluster
-  const getAccessibleNamespaces = useCallback((cluster: string): string[] => {
+  const getAccessibleNamespaces = (cluster: string): string[] => {
     if (!permissions?.clusters?.[cluster]) return []
     return permissions.clusters[cluster].accessibleNamespaces
-  }, [permissions])
+  }
 
   // Get permissions for a specific cluster
-  const getClusterPermissions = useCallback((cluster: string): ClusterPermissions | null => {
+  const getClusterPermissions = (cluster: string): ClusterPermissions | null => {
     if (!permissions?.clusters?.[cluster]) return null
     return permissions.clusters[cluster]
-  }, [permissions])
+  }
 
   // Get all clusters
-  const clusters = useMemo(() => {
+  const clusters = (() => {
     if (!permissions?.clusters) return []
     return Object.keys(permissions.clusters)
-  }, [permissions])
+  })()
 
   // Check if user has limited access (not cluster-admin) on any cluster
-  const hasLimitedAccess = useMemo(() => {
+  const hasLimitedAccess = (() => {
     if (!permissions?.clusters) return false
     return Object.values(permissions.clusters).some(p => !p.isClusterAdmin)
-  }, [permissions])
+  })()
 
   return {
     permissions,
@@ -160,8 +158,7 @@ export function usePermissions() {
     getAccessibleNamespaces,
     getClusterPermissions,
     clusters,
-    hasLimitedAccess,
-  }
+    hasLimitedAccess }
 }
 
 /**
@@ -172,7 +169,7 @@ export function useCanI() {
   const [result, setResult] = useState<CanIResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const checkPermission = useCallback(async (request: CanIRequest): Promise<CanIResponse> => {
+  const checkPermission = async (request: CanIRequest): Promise<CanIResponse> => {
     // Skip if backend is known to be unavailable
     if (isBackendUnavailable()) {
       return { allowed: true } // Assume allowed in demo mode
@@ -188,11 +185,9 @@ export function useCanI() {
         method: 'POST',
         headers: {
           'Authorization': token ? `Bearer ${token}` : '',
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json' },
         body: JSON.stringify(request),
-        signal: AbortSignal.timeout(5000),
-      })
+        signal: AbortSignal.timeout(5000) })
 
       if (!response.ok) {
         // Silently fail on error - assume allowed in demo mode
@@ -208,20 +203,19 @@ export function useCanI() {
     } finally {
       setChecking(false)
     }
-  }, [])
+  }
 
-  const reset = useCallback(() => {
+  const reset = () => {
     setResult(null)
     setError(null)
-  }, [])
+  }
 
   return {
     checkPermission,
     checking,
     result,
     error,
-    reset,
-  }
+    reset }
 }
 
 /**

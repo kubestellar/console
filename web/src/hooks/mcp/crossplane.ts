@@ -41,17 +41,13 @@ function getDemoManagedResources(): CrossplaneManagedResource[] {
         namespace: 'infra',
         creationTimestamp: '2026-02-10T10:00:00Z',
         annotations: {
-          'crossplane.io/external-name': 'prod-db-abc123',
-        },
-      },
+          'crossplane.io/external-name': 'prod-db-abc123' } },
       spec: { providerConfigRef: { name: 'aws-provider' } },
       status: {
         conditions: [
           { type: 'Ready', status: 'True', reason: 'Available' },
           { type: 'Synced', status: 'True', reason: 'ReconcileSuccess' },
-        ],
-      },
-    },
+        ] } },
   ]
 }
 
@@ -85,8 +81,7 @@ function loadFromStorage() {
       if (Array.isArray(parsed.data)) {
         return {
           data: parsed.data,
-          timestamp: parsed.timestamp || 0,
-        }
+          timestamp: parsed.timestamp || 0 }
       }
     }
   } catch (err) {
@@ -120,8 +115,7 @@ const managedCache: ManagedCache = {
   timestamp: stored.timestamp,
   consecutiveFailures: 0,
   lastError: null,
-  listeners: new Set(),
-}
+  listeners: new Set() }
 
 export function useCrossplaneManagedResources(cluster?: string) {
   const [resources, setResources] = useState(managedCache.data)
@@ -158,8 +152,7 @@ export function useCrossplaneManagedResources(cluster?: string) {
     }
   }, [])
 
-  const notifyListeners = useCallback(
-    (isRefreshing: boolean, isLoading = false, isDemoData = false) => {
+  const notifyListeners = (isRefreshing: boolean, isLoading = false, isDemoData = false) => {
       const state: ManagedCacheState = {
         resources: managedCache.data,
         isLoading,
@@ -170,13 +163,10 @@ export function useCrossplaneManagedResources(cluster?: string) {
           managedCache.timestamp > 0
             ? managedCache.timestamp
             : null,
-        isDemoData,
-      }
+        isDemoData }
 
       managedCache.listeners.forEach(l => l(state))
-    },
-    []
-  )
+    }
 
   const refetch = useCallback(
     async (silent = false) => {
@@ -323,8 +313,7 @@ export function useCrossplaneManagedResources(cluster?: string) {
     consecutiveFailures,
     isFailed,
     lastRefresh,
-    isDemoData,
-  }
+    isDemoData }
 }
 
 if (typeof window !== 'undefined') {
@@ -348,8 +337,7 @@ if (typeof window !== 'undefined') {
         consecutiveFailures: 0,
         lastError: null,
         lastRefresh: null,
-        isDemoData: false,
-      })
+        isDemoData: false })
     )
   })
 }

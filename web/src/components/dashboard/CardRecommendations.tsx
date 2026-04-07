@@ -26,8 +26,7 @@ const COUNTDOWN_TICK_MS = 1000
 const CHIP_STYLE = {
   bg: 'bg-secondary/50',
   border: 'border-border/50',
-  text: 'text-foreground',
-}
+  text: 'text-foreground' }
 
 export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
   const { t } = useTranslation()
@@ -80,16 +79,16 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
   }, [minimized, startCountdown])
 
   // Pause countdown on hover, resume on leave
-  const handleMouseEnter = useCallback(() => {
+  const handleMouseEnter = () => {
     if (countdownRef.current) {
       clearInterval(countdownRef.current)
       countdownRef.current = null
     }
-  }, [])
+  }
 
-  const handleMouseLeave = useCallback(() => {
+  const handleMouseLeave = () => {
     if (!minimized) startCountdown()
-  }, [minimized, startCountdown])
+  }
 
   // Close dropdown when clicking outside or pressing Escape
   useEffect(() => {

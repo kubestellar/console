@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { CheckCircle, Clock, XCircle, ChevronRight, Filter, Server } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -29,23 +28,19 @@ const statusConfig = {
     color: 'text-green-400',
     bg: 'bg-green-500/20',
     barColor: 'bg-green-500',
-    label: 'Running',
-  },
+    label: 'Running' },
   deploying: {
     icon: Clock,
     color: 'text-yellow-400',
     bg: 'bg-yellow-500/20',
     barColor: 'bg-yellow-500',
-    label: 'Deploying',
-  },
+    label: 'Deploying' },
   failed: {
     icon: XCircle,
     color: 'text-red-400',
     bg: 'bg-red-500/20',
     barColor: 'bg-red-500',
-    label: 'Failed',
-  },
-}
+    label: 'Failed' } }
 
 // Extract version from container image
 function extractVersion(image?: string): string {
@@ -64,8 +59,7 @@ const FILTER_CONFIG = {
   searchFields: ['name', 'namespace', 'cluster', 'image'] as (keyof Deployment)[],
   clusterField: 'cluster' as keyof Deployment,
   statusField: 'status' as keyof Deployment,
-  storageKey: 'deployment-status',
-}
+  storageKey: 'deployment-status' }
 
 export function DeploymentStatus() {
   const { t } = useTranslation()
@@ -76,8 +70,7 @@ export function DeploymentStatus() {
     isRefreshing,
     isDemoFallback,
     isFailed,
-    consecutiveFailures,
-  } = useCachedDeployments()
+    consecutiveFailures } = useCachedDeployments()
 
   // Report data state to CardWrapper for failure badge rendering
   const { showSkeleton, showEmptyState } = useCardLoadingState({
@@ -86,33 +79,30 @@ export function DeploymentStatus() {
     isDemoData: isDemoFallback,
     hasAnyData: allDeployments.length > 0,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
   const isLoading = showSkeleton
 
   // Card-specific status filter (kept as separate hook)
   const { statusFilter, setStatusFilter } = useStatusFilter({
     statuses: ['all', 'running', 'deploying', 'failed'] as const,
     defaultStatus: 'all',
-    storageKey: 'deployment-status',
-  })
+    storageKey: 'deployment-status' })
 
   // Use useCardFilters for status counts (globally filtered, before status chip/search)
   const { filtered: globalFilteredDeployments } = useCardFilters(allDeployments, FILTER_CONFIG)
 
   // Status counts (from globally filtered data, before status chip)
-  const statusCounts = useMemo(() => ({
+  const statusCounts = {
     all: globalFilteredDeployments.length,
     running: globalFilteredDeployments.filter((d) => d.status === 'running').length,
     deploying: globalFilteredDeployments.filter((d) => d.status === 'deploying').length,
-    failed: globalFilteredDeployments.filter((d) => d.status === 'failed').length,
-  }), [globalFilteredDeployments])
+    failed: globalFilteredDeployments.filter((d) => d.status === 'failed').length }
 
   // Pre-filter by status chip before passing to useCardData
-  const statusPreFiltered = useMemo(() => {
+  const statusPreFiltered = (() => {
     if (statusFilter === 'all') return allDeployments
     return allDeployments.filter((d) => d.status === statusFilter)
-  }, [allDeployments, statusFilter])
+  })()
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {
@@ -133,34 +123,27 @@ export function DeploymentStatus() {
       availableClusters,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-    },
+      clusterFilterRef },
     sorting: {
       sortBy,
       setSortBy,
       sortDirection,
-      setSortDirection,
-    },
+      setSortDirection },
     containerRef,
-    containerStyle,
-  } = useCardData<Deployment, SortByOption>(statusPreFiltered, {
+    containerStyle } = useCardData<Deployment, SortByOption>(statusPreFiltered, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster'] as (keyof Deployment)[],
       clusterField: 'cluster',
       statusField: 'status',
-      storageKey: 'deployment-status',
-    },
+      storageKey: 'deployment-status' },
     sort: {
       defaultField: 'status',
       defaultDirection: 'asc' as SortDirection,
       comparators: {
         status: commonComparators.statusOrder<Deployment>('status', statusOrder),
         name: commonComparators.string<Deployment>('name'),
-        cluster: commonComparators.string<Deployment>('cluster'),
-      },
-    },
-    defaultLimit: 5,
-  })
+        cluster: commonComparators.string<Deployment>('cluster') } },
+    defaultLimit: 5 })
 
   // Handle filter changes (reset page)
   const handleFilterChange = (newFilter: StatusFilter) => {
@@ -179,8 +162,7 @@ export function DeploymentStatus() {
       version: extractVersion(deployment.image),
       replicas: deployment.replicas,
       readyReplicas: deployment.readyReplicas,
-      progress: deployment.progress,
-    })
+      progress: deployment.progress })
   }
 
   if (isLoading) {
@@ -334,8 +316,7 @@ export function DeploymentStatus() {
                           name: deployment.name,
                           namespace: deployment.namespace,
                           cluster: clusterName,
-                          status: deployment.status,
-                        }}
+                          status: deployment.status }}
                         issues={[{ name: 'Failed', message: `${deployment.readyReplicas}/${deployment.replicas} replicas ready` }]}
                         additionalContext={{ image: deployment.image, progress: deployment.progress }}
                       />

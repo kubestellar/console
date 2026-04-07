@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Activity, AlertTriangle, CheckCircle, CircleDashed, RadioTower, RefreshCw, Send } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CardSearchInput, MetricTile } from '../../../lib/cards/CardComponents'
@@ -9,23 +9,18 @@ import type { CloudEventResourceState } from './demoData'
 const STATUS_STYLE: Record<CloudEventResourceState, { badge: string; icon: React.ReactNode }> = {
   ready: {
     badge: 'bg-green-500/15 text-green-400',
-    icon: <CheckCircle className="w-3.5 h-3.5 text-green-400" />,
-  },
+    icon: <CheckCircle className="w-3.5 h-3.5 text-green-400" /> },
   degraded: {
     badge: 'bg-yellow-500/15 text-yellow-400',
-    icon: <CircleDashed className="w-3.5 h-3.5 text-yellow-400" />,
-  },
+    icon: <CircleDashed className="w-3.5 h-3.5 text-yellow-400" /> },
   error: {
     badge: 'bg-red-500/15 text-red-400',
-    icon: <AlertTriangle className="w-3.5 h-3.5 text-red-400" />,
-  },
-}
+    icon: <AlertTriangle className="w-3.5 h-3.5 text-red-400" /> } }
 
 const STATUS_LABEL_KEY: Record<CloudEventResourceState, 'cloudevents.status_ready' | 'cloudevents.status_degraded' | 'cloudevents.status_error'> = {
   ready: 'cloudevents.status_ready',
   degraded: 'cloudevents.status_degraded',
-  error: 'cloudevents.status_error',
-}
+  error: 'cloudevents.status_error' }
 
 function useFormatRelativeTime() {
   const { t } = useTranslation('cards')
@@ -52,7 +47,7 @@ export function CloudEventsStatus() {
 
   const isHealthy = data.health === 'healthy'
 
-  const filteredResources = useMemo(() => {
+  const filteredResources = (() => {
     const resources = data.resources || []
     const query = search.trim().toLowerCase()
     if (!query) return resources
@@ -63,7 +58,7 @@ export function CloudEventsStatus() {
       resource.namespace.toLowerCase().includes(query) ||
       resource.cluster.toLowerCase().includes(query),
     )
-  }, [data.resources, search])
+  })()
 
   if (showSkeleton) {
     return (

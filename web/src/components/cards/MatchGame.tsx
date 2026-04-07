@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Box, Container, Database, Server, Cloud, Network, HardDrive,
   Cpu, Lock, Shield, Globe, GitBranch, Terminal,
@@ -45,8 +45,7 @@ interface HighScore {
 const DIFFICULTY_CONFIG = {
   easy: { rows: 3, cols: 4, pairs: 6 },
   medium: { rows: 4, cols: 4, pairs: 8 },
-  hard: { rows: 4, cols: 6, pairs: 12 },
-}
+  hard: { rows: 4, cols: 6, pairs: 12 } }
 
 export function MatchGame(_props: CardComponentProps) {
   const { t } = useTranslation()
@@ -64,8 +63,7 @@ export function MatchGame(_props: CardComponentProps) {
   const [highScores, setHighScores] = useState<Record<Difficulty, HighScore | null>>({
     easy: null,
     medium: null,
-    hard: null,
-  })
+    hard: null })
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
@@ -83,7 +81,7 @@ export function MatchGame(_props: CardComponentProps) {
   }, [showToast, t])
 
   // Initialize game
-  const initGame = useCallback(() => {
+  const initGame = () => {
     const config = DIFFICULTY_CONFIG[difficulty]
     const selectedIcons = CARD_ICONS.slice(0, config.pairs)
     const cardPairs = selectedIcons.flatMap(icon => [
@@ -105,7 +103,7 @@ export function MatchGame(_props: CardComponentProps) {
     setIsPaused(false)
     setGameWon(false)
     emitGameStarted('match')
-  }, [difficulty])
+  }
 
   // Timer
   useEffect(() => {
@@ -146,7 +144,7 @@ export function MatchGame(_props: CardComponentProps) {
   }, [cards, isPlaying, moves, time, difficulty, highScores])
 
   // Handle card flip
-  const handleCardClick = useCallback((cardId: string) => {
+  const handleCardClick = (cardId: string) => {
     if (flippedCards.length >= 2 || flippedCards.includes(cardId) || isPaused || gameWon) {
       return
     }
@@ -181,7 +179,7 @@ export function MatchGame(_props: CardComponentProps) {
         }, 1000)
       }
     }
-  }, [flippedCards, cards, isPaused, gameWon])
+  }
 
   // Confetti animation
   const triggerConfetti = () => {
@@ -217,8 +215,7 @@ export function MatchGame(_props: CardComponentProps) {
         color: colors[Math.floor(Math.random() * colors.length)],
         size: Math.random() * 8 + 4,
         rotation: Math.random() * Math.PI * 2,
-        rotationSpeed: (Math.random() - 0.5) * 0.2,
-      })
+        rotationSpeed: (Math.random() - 0.5) * 0.2 })
     }
 
     let animationFrame: number
@@ -389,8 +386,7 @@ export function MatchGame(_props: CardComponentProps) {
           className="flex-1 grid gap-1.5 items-center justify-items-center"
           style={{
             gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-            gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
-          }}
+            gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}
         >
           {cards.map(card => {
             const icon = CARD_ICONS.find(i => i.id === card.iconId)

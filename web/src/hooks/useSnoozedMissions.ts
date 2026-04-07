@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { MissionSuggestion } from './useMissionSuggestions'
 import { emitSnoozed, emitUnsnoozed } from '../lib/analytics'
 
@@ -66,7 +66,7 @@ export function useSnoozedMissions() {
     }
   }, [])
 
-  const snoozeMission = useCallback((suggestion: MissionSuggestion, durationMs = SNOOZE_DURATION_MS) => {
+  const snoozeMission = (suggestion: MissionSuggestion, durationMs = SNOOZE_DURATION_MS) => {
     // Check if already snoozed
     if (state.snoozed.some(s => s.suggestion.id === suggestion.id)) {
       return null
@@ -77,65 +77,64 @@ export function useSnoozedMissions() {
       id: `snoozed-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       suggestion,
       snoozedAt: now,
-      expiresAt: now + durationMs,
-    }
+      expiresAt: now + durationMs }
     state.snoozed = [...state.snoozed, newSnoozed]
     saveState()
     notifyListeners()
     emitSnoozed('mission')
     return newSnoozed
-  }, [])
+  }
 
-  const unsnoozeMission = useCallback((id: string) => {
+  const unsnoozeMission = (id: string) => {
     const mission = state.snoozed.find((s) => s.id === id)
     state.snoozed = state.snoozed.filter((s) => s.id !== id)
     saveState()
     notifyListeners()
     emitUnsnoozed('mission')
     return mission
-  }, [])
+  }
 
-  const dismissMission = useCallback((suggestionId: string) => {
+  const dismissMission = (suggestionId: string) => {
     if (!state.dismissed.includes(suggestionId)) {
       state.dismissed = [...state.dismissed, suggestionId]
       saveState()
       notifyListeners()
     }
-  }, [])
+  }
 
-  const undismissMission = useCallback((suggestionId: string) => {
+  const undismissMission = (suggestionId: string) => {
     state.dismissed = state.dismissed.filter((id) => id !== suggestionId)
     saveState()
     notifyListeners()
-  }, [])
+  }
 
-  const isSnoozed = useCallback((suggestionId: string) => {
+  const isSnoozed = (suggestionId: string) => {
     const now = Date.now()
     return state.snoozed.some(s => s.suggestion.id === suggestionId && s.expiresAt > now)
-  }, [])
+  }
 
-  const isDismissed = useCallback((suggestionId: string) => {
+  const isDismissed = (suggestionId: string) => {
     return state.dismissed.includes(suggestionId)
-  }, [])
+  }
 
-  const clearAllSnoozed = useCallback(() => {
+  const clearAllSnoozed = () => {
     state.snoozed = []
     saveState()
     notifyListeners()
-  }, [])
+  }
 
-  const clearAllDismissed = useCallback(() => {
+  const clearAllDismissed = () => {
     state.dismissed = []
     saveState()
     notifyListeners()
-  }, [])
+  }
 
   // Get time remaining on snooze
-  const getSnoozeRemaining = useCallback((suggestionId: string): number | null => {
+  const getSnoozeRemaining = (suggestionId: string): number | null => {
     const snoozed = state.snoozed.find(s => s.suggestion.id === suggestionId)
     if (!snoozed) return null
     return Math.max(0, snoozed.expiresAt - Date.now())
-  }, [])
+  }
 
   return {
     snoozedMissions: localState.snoozed,
@@ -148,8 +147,7 @@ export function useSnoozedMissions() {
     isDismissed,
     clearAllSnoozed,
     clearAllDismissed,
-    getSnoozeRemaining,
-  }
+    getSnoozeRemaining }
 }
 
 // Helper to format time remaining

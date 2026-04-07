@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import {
   CheckCircle,
   AlertTriangle,
@@ -7,8 +7,7 @@ import {
   Server,
   XCircle,
   HelpCircle,
-  GitBranch,
-} from 'lucide-react'
+  GitBranch } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton, SkeletonStats, SkeletonList } from '../../ui/Skeleton'
 import { CardSearchInput } from '../../../lib/cards/CardComponents'
@@ -25,17 +24,13 @@ const CLUSTER_STATUS_CONFIG: Record<
 > = {
   Ready: {
     color: 'text-green-400',
-    icon: <CheckCircle className="w-3.5 h-3.5 text-green-400" />,
-  },
+    icon: <CheckCircle className="w-3.5 h-3.5 text-green-400" /> },
   NotReady: {
     color: 'text-red-400',
-    icon: <XCircle className="w-3.5 h-3.5 text-red-400" />,
-  },
+    icon: <XCircle className="w-3.5 h-3.5 text-red-400" /> },
   Unknown: {
     color: 'text-yellow-400',
-    icon: <HelpCircle className="w-3.5 h-3.5 text-yellow-400" />,
-  },
-}
+    icon: <HelpCircle className="w-3.5 h-3.5 text-yellow-400" /> } }
 
 /** Map ResourceBinding status to a visual severity color */
 function bindingStatusColor(status: KarmadaBindingStatus): string {
@@ -58,8 +53,7 @@ function StatTile({
   label,
   value,
   colorClass,
-  borderClass,
-}: {
+  borderClass }: {
   icon: React.ReactNode
   label: string
   value: number
@@ -129,29 +123,28 @@ export function KarmadaStatus() {
   const [view, setView] = useState<'clusters' | 'bindings'>('clusters')
 
   // Guard arrays
-  const memberClusters = useMemo(() => data.memberClusters || [], [data.memberClusters])
-  const resourceBindings = useMemo(() => data.resourceBindings || [], [data.resourceBindings])
-  const propagationPolicies = useMemo(() => data.propagationPolicies || [], [data.propagationPolicies])
+  const memberClusters = data.memberClusters || []
+  const resourceBindings = data.resourceBindings || []
+  const propagationPolicies = data.propagationPolicies || []
   const controllerPods = data.controllerPods || { ready: 0, total: 0 }
 
   // Derived stats
-  const stats = useMemo(() => ({
+  const stats = {
     totalClusters: memberClusters.length,
     readyClusters: memberClusters.filter(c => c.status === 'Ready').length,
     failedBindings: resourceBindings.filter(b => b.status === 'Failed').length,
-    totalPolicies: propagationPolicies.length + data.clusterPoliciesCount,
-  }), [memberClusters, resourceBindings, propagationPolicies, data.clusterPoliciesCount])
+    totalPolicies: propagationPolicies.length + data.clusterPoliciesCount }
 
   // Filtered lists
-  const filteredClusters = useMemo(() => {
+  const filteredClusters = (() => {
     if (!search.trim()) return memberClusters
     const q = search.toLowerCase()
     return memberClusters.filter(
       c => c.name.toLowerCase().includes(q) || c.kubernetesVersion.toLowerCase().includes(q),
     )
-  }, [memberClusters, search])
+  })()
 
-  const filteredBindings = useMemo(() => {
+  const filteredBindings = (() => {
     if (!search.trim()) return resourceBindings
     const q = search.toLowerCase()
     return resourceBindings.filter(
@@ -159,7 +152,7 @@ export function KarmadaStatus() {
         b.resourceKind.toLowerCase().includes(q) ||
         (b.boundClusters || []).some(c => c.toLowerCase().includes(q)),
     )
-  }, [resourceBindings, search])
+  })()
 
   // ── Loading ───────────────────────────────────────────────────────────────
   if (showSkeleton) {

@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Layers, AlertCircle, RefreshCw } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { RefreshIndicator } from '../../ui/RefreshIndicator'
@@ -30,7 +29,7 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
   // Dynamically discover LLM-d clusters instead of using static list
   const { deduplicatedClusters } = useClusters()
   const { nodes: gpuNodes } = useCachedGPUNodes()
-  const gpuClusterNames = useMemo(() => new Set(gpuNodes.map(n => n.cluster)), [gpuNodes])
+  const gpuClusterNames = new Set(gpuNodes.map(n => n.cluster))
   const llmdClusters = useLLMdClusters(deduplicatedClusters, gpuClusterNames)
 
   const { models, isLoading, isRefreshing, isFailed, consecutiveFailures, lastRefresh, isDemoFallback } = useCachedLLMdModels(llmdClusters)
@@ -43,8 +42,7 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
     hasAnyData: hasData,
     isDemoData: isDemoFallback,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
   const {
     items: paginatedItems,
@@ -58,13 +56,11 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
     filters,
     sorting,
     containerRef,
-    containerStyle,
-  } = useCardData<LLMdModel, SortByOption>(models, {
+    containerStyle } = useCardData<LLMdModel, SortByOption>(models, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster'] as (keyof LLMdModel)[],
       clusterField: 'cluster' as keyof LLMdModel,
-      storageKey: 'llm-models',
-    },
+      storageKey: 'llm-models' },
     sort: {
       defaultField: 'name',
       defaultDirection: 'asc',
@@ -72,11 +68,8 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
         name: (a, b) => a.name.localeCompare(b.name),
         namespace: (a, b) => a.namespace.localeCompare(b.namespace),
         cluster: (a, b) => a.cluster.localeCompare(b.cluster),
-        status: (a, b) => a.status.localeCompare(b.status),
-      },
-    },
-    defaultLimit: 5,
-  })
+        status: (a, b) => a.status.localeCompare(b.status) } },
+    defaultLimit: 5 })
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -135,8 +128,7 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
                   isOpen: filters.showClusterFilter,
                   setIsOpen: filters.setShowClusterFilter,
                   containerRef: filters.clusterFilterRef,
-                  minClusters: 1,
-                }
+                  minClusters: 1 }
               : undefined
           }
           cardControls={{
@@ -146,8 +138,7 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
             sortOptions: SORT_OPTIONS,
             onSortChange: (v) => sorting.setSortBy(v as SortByOption),
             sortDirection: sorting.sortDirection,
-            onSortDirectionChange: sorting.setSortDirection,
-          }}
+            onSortDirectionChange: sorting.setSortDirection }}
           className="mb-0"
         />
       </div>

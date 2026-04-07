@@ -108,8 +108,7 @@ async function fetchWorkloadsViaAgent(opts?: {
       opts?.signal?.addEventListener('abort', onParentAbort)
       const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
         signal: ctrl.signal,
-        headers: { Accept: 'application/json' },
-      })
+        headers: { Accept: 'application/json' } })
       clearTimeout(tid)
       opts?.signal?.removeEventListener('abort', onParentAbort)
 
@@ -131,8 +130,7 @@ async function fetchWorkloadsViaAgent(opts?: {
           readyReplicas: Number(d.readyReplicas || 0),
           status: ws,
           image: String(d.image || ''),
-          createdAt: new Date().toISOString(),
-        }
+          createdAt: new Date().toISOString() }
       })
     },
   )
@@ -189,8 +187,7 @@ export function useWorkloads(options?: {
       const agentData = await fetchWorkloadsViaAgent({
         cluster: options?.cluster,
         namespace: options?.namespace,
-        signal,
-      })
+        signal })
       // Discard result if a newer request has started or this request was aborted
       if (signal?.aborted || currentRequestId !== requestIdRef.current) return
       if (agentData) {
@@ -311,7 +308,7 @@ export function useDeployWorkload() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
 
-  const mutate = useCallback(async (
+  const mutate = async (
     request: DeployRequest,
     options?: {
       onSuccess?: (data: DeployResult[]) => void
@@ -326,8 +323,7 @@ export function useDeployWorkload() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(request),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!res.ok) {
         const errorData = await res.json()
         throw new Error(errorData.error || 'Failed to deploy workload')
@@ -343,7 +339,7 @@ export function useDeployWorkload() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }
 
   return { mutate, isLoading, error }
 }
@@ -353,7 +349,7 @@ export function useScaleWorkload() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
 
-  const mutate = useCallback(async (
+  const mutate = async (
     request: {
       workloadName: string
       namespace: string
@@ -373,8 +369,7 @@ export function useScaleWorkload() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(request),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!res.ok) {
         const errorData = await res.json()
         throw new Error(errorData.error || 'Failed to scale workload')
@@ -390,7 +385,7 @@ export function useScaleWorkload() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }
 
   return { mutate, isLoading, error }
 }
@@ -400,7 +395,7 @@ export function useDeleteWorkload() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
 
-  const mutate = useCallback(async (
+  const mutate = async (
     params: {
       cluster: string
       namespace: string
@@ -418,8 +413,7 @@ export function useDeleteWorkload() {
       const res = await fetch(`/api/workloads/${params.cluster}/${params.namespace}/${params.name}`, {
         method: 'DELETE',
         headers: authHeaders(),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!res.ok) {
         const errorData = await res.json()
         throw new Error(errorData.error || 'Failed to delete workload')
@@ -433,7 +427,7 @@ export function useDeleteWorkload() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }
 
   return { mutate, isLoading, error }
 }

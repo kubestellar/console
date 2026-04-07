@@ -5,7 +5,7 @@
  * collapsing, configuration modal, and last updated timestamp.
  */
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { Activity, ChevronDown, ChevronRight, Settings, FlaskConical } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
@@ -23,8 +23,7 @@ export function UnifiedStatsSection({
   hasData = true,
   isLoading = false,
   lastUpdated,
-  className = '',
-}: UnifiedStatsSectionProps) {
+  className = '' }: UnifiedStatsSectionProps) {
   // Collapsed state with localStorage persistence
   const storageKey = config.storageKey || `kubestellar-${config.type}-stats-collapsed`
   const [isExpanded, setIsExpanded] = useState(() => {
@@ -41,22 +40,22 @@ export function UnifiedStatsSection({
   const [customBlocks, setCustomBlocks] = useState<UnifiedStatBlockConfig[] | null>(null)
 
   // Determine visible blocks
-  const visibleBlocks = useMemo(() => {
+  const visibleBlocks = (() => {
     const blocks = customBlocks || config.blocks
     return blocks.filter((block) => block.visible !== false)
-  }, [config.blocks, customBlocks])
+  })()
 
   // Check if any block uses demo data
-  const isDemoData = useMemo(() => {
+  const isDemoData = (() => {
     if (!data) return false
     return visibleBlocks.some((block) => {
       const resolved = resolveStatValue(block.valueSource, data, block.format)
       return resolved.isDemo
     })
-  }, [visibleBlocks, data])
+  })()
 
   // Toggle collapsed state
-  const toggleExpanded = useCallback(() => {
+  const toggleExpanded = () => {
     const newValue = !isExpanded
     setIsExpanded(newValue)
     try {
@@ -64,21 +63,18 @@ export function UnifiedStatsSection({
     } catch {
       // Ignore storage errors
     }
-  }, [isExpanded, storageKey])
+  }
 
   // Get value for a block
-  const getBlockValue = useCallback(
-    (block: UnifiedStatBlockConfig): (() => StatBlockValue) | undefined => {
+  const getBlockValue = (block: UnifiedStatBlockConfig): (() => StatBlockValue) | undefined => {
       if (getStatValue) {
         return () => getStatValue(block.id)
       }
       return undefined
-    },
-    [getStatValue]
-  )
+    }
 
   // Save custom block configuration
-  const saveBlocks = useCallback((blocks: UnifiedStatBlockConfig[]) => {
+  const saveBlocks = (blocks: UnifiedStatBlockConfig[]) => {
     setCustomBlocks(blocks)
     // Persist to localStorage
     try {
@@ -86,7 +82,7 @@ export function UnifiedStatsSection({
     } catch {
       // Ignore storage errors
     }
-  }, [storageKey])
+  }
 
   // Load custom blocks on mount
   useMemo(() => {
@@ -101,7 +97,7 @@ export function UnifiedStatsSection({
   }, [storageKey])
 
   // Dynamic grid columns based on visible blocks
-  const gridCols = useMemo(() => {
+  const gridCols = (() => {
     const count = visibleBlocks.length
 
     // Use custom grid config if provided
@@ -116,7 +112,7 @@ export function UnifiedStatsSection({
     if (count <= 6) return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6'
     if (count <= 8) return 'grid-cols-2 md:grid-cols-4 lg:grid-cols-8'
     return 'grid-cols-2 md:grid-cols-5 lg:grid-cols-10'
-  }, [visibleBlocks.length, config.grid])
+  })()
 
   const collapsible = config.collapsible !== false
 
@@ -220,8 +216,7 @@ function StatsConfigModal({
   blocks,
   onSave,
   defaultBlocks,
-  title,
-}: StatsConfigModalProps) {
+  title }: StatsConfigModalProps) {
   const [localBlocks, setLocalBlocks] = useState(blocks)
 
   if (!isOpen) return null

@@ -26,18 +26,16 @@ export function ResourceImbalanceDetector() {
   const { selectedClusters } = useGlobalFilters()
   const [modalInsight, setModalInsight] = useState<MultiClusterInsight | null>(null)
 
-  const imbalanceInsightsRaw = useMemo(() => insightsByCategory['resource-imbalance'] || [], [insightsByCategory])
+  const imbalanceInsightsRaw = insightsByCategory['resource-imbalance'] || []
   const {
     sorted: imbalanceInsights,
-    sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
-  } = useInsightSort(imbalanceInsightsRaw)
+    sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit } = useInsightSort(imbalanceInsightsRaw)
 
   const hasData = imbalanceInsightsRaw.length > 0
   useCardLoadingState({
     isLoading: isLoading && !hasData,
     hasAnyData: hasData,
-    isDemoData,
-  })
+    isDemoData })
 
   // Build chart data from the first (CPU) insight's metrics
   const chartData = useMemo(() => {
@@ -49,8 +47,7 @@ export function ResourceImbalanceDetector() {
         name: name.length > CHART_LABEL_MAX_LEN ? name.slice(0, CHART_LABEL_TRUNCATE_LEN) + '...' : name,
         fullName: name,
         value,
-        fill: value > OVERLOADED_THRESHOLD_PCT ? '#ef4444' : value < UNDERLOADED_THRESHOLD_PCT ? '#3b82f6' : '#22c55e',
-      }))
+        fill: value > OVERLOADED_THRESHOLD_PCT ? '#ef4444' : value < UNDERLOADED_THRESHOLD_PCT ? '#3b82f6' : '#22c55e' }))
       .sort((a, b) => b.value - a.value)
   }, [imbalanceInsights, selectedClusters])
 
@@ -78,8 +75,7 @@ export function ResourceImbalanceDetector() {
           sortOptions: INSIGHT_SORT_OPTIONS,
           onSortChange: (v) => setSortBy(v as InsightSortField),
           sortDirection,
-          onSortDirectionChange: setSortDirection,
-        }}
+          onSortDirectionChange: setSortDirection }}
       />
 
       {(imbalanceInsights || []).map(insight => (

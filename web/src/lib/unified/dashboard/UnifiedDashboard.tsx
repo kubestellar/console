@@ -9,15 +9,14 @@
  *   <UnifiedDashboard config={mainDashboardConfig} />
  */
 
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Activity, RefreshCw, Plus, ExternalLink } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { AgentIcon } from '../../../components/agent/AgentIcon'
 import type {
   UnifiedDashboardProps,
   DashboardCardPlacement,
-  DashboardTab,
-} from '../types'
+  DashboardTab } from '../types'
 import { UnifiedStatsSection } from '../stats'
 import { DashboardGrid } from './DashboardGrid'
 import { DashboardHealthIndicator } from '../../../components/dashboard/DashboardHealthIndicator'
@@ -49,8 +48,7 @@ interface ConfigurableCard {
 export function UnifiedDashboard({
   config,
   statsData,
-  className = '',
-}: UnifiedDashboardProps) {
+  className = '' }: UnifiedDashboardProps) {
   // Card state - load from localStorage or use config defaults
   const [cards, setCards] = useState<DashboardCardPlacement[]>(() => {
     if (config.storageKey) {
@@ -88,11 +86,11 @@ export function UnifiedDashboard({
   })
 
   // Get cards for the active tab (or all cards if no tabs)
-  const activeCards = useMemo(() => {
+  const activeCards = (() => {
     if (!hasTabs) return cards
     const activeTab = config.tabs?.find(t => t.id === activeTabId)
     return activeTab?.cards ?? []
-  }, [hasTabs, cards, config.tabs, activeTabId])
+  })()
 
   // Loading state
   const [isLoading, setIsLoading] = useState(false)
@@ -115,45 +113,44 @@ export function UnifiedDashboard({
   }, [cards, config.storageKey])
 
   // Handle card reorder
-  const handleReorder = useCallback((newCards: DashboardCardPlacement[]) => {
+  const handleReorder = (newCards: DashboardCardPlacement[]) => {
     setCards(newCards)
-  }, [])
+  }
 
   // Handle card removal
-  const handleRemoveCard = useCallback((cardId: string) => {
+  const handleRemoveCard = (cardId: string) => {
     setCards((prev) => prev.filter((c) => c.id !== cardId))
-  }, [])
+  }
 
   // Handle card configuration
-  const handleConfigureCard = useCallback((cardId: string) => {
+  const handleConfigureCard = (cardId: string) => {
     const card = cards.find((c) => c.id === cardId)
     if (card) {
       setCardToEdit({
         id: card.id,
         card_type: card.cardType,
         config: card.config || {},
-        title: card.title,
-      })
+        title: card.title })
       setIsConfigureCardModalOpen(true)
     }
-  }, [cards])
+  }
 
   // Handle refresh
-  const handleRefresh = useCallback(async () => {
+  const handleRefresh = async () => {
     setIsLoading(true)
     // Simulate refresh - in real implementation this would trigger data refetch
     await new Promise((resolve) => setTimeout(resolve, SHORT_DELAY_MS))
     setLastUpdated(new Date())
     setIsLoading(false)
-  }, [])
+  }
 
   // Handle add card
-  const handleAddCard = useCallback(() => {
+  const handleAddCard = () => {
     setIsAddCardModalOpen(true)
-  }, [])
+  }
 
   // Handle adding cards from AddCardModal
-  const handleAddCards = useCallback((newCards: CardSuggestion[]) => {
+  const handleAddCards = (newCards: CardSuggestion[]) => {
     setCards((prev) => {
       const additions: DashboardCardPlacement[] = newCards.map((card, index) => ({
         id: `${card.type}-${Date.now()}-${index}`,
@@ -165,32 +162,30 @@ export function UnifiedDashboard({
           y: Math.floor((prev.length + index) / 2) * 3, // Stack rows
           w: 6, // Default width
           h: 3, // Default height
-        },
-      }))
+        } }))
       return [...prev, ...additions]
     })
     setIsAddCardModalOpen(false)
-  }, [])
+  }
 
   // Handle saving card configuration
-  const handleSaveCardConfig = useCallback((cardId: string, newConfig: Record<string, unknown>, title?: string) => {
+  const handleSaveCardConfig = (cardId: string, newConfig: Record<string, unknown>, title?: string) => {
     setCards((prev) =>
       prev.map((card) =>
         card.id === cardId
           ? {
               ...card,
               config: { ...card.config, ...newConfig },
-              title: title || card.title,
-            }
+              title: title || card.title }
           : card
       )
     )
     setIsConfigureCardModalOpen(false)
     setCardToEdit(null)
-  }, [])
+  }
 
   // Handle reset to defaults
-  const handleReset = useCallback(() => {
+  const handleReset = () => {
     setCards(config.cards)
     if (config.storageKey) {
       try {
@@ -199,10 +194,10 @@ export function UnifiedDashboard({
         // Ignore storage errors
       }
     }
-  }, [config.cards, config.storageKey])
+  }
 
   // Check if customized (different from defaults)
-  const isCustomized = useMemo(() => {
+  const isCustomized = (() => {
     if (cards.length !== config.cards.length) return true
     return cards.some((card, i) => {
       const defaultCard = config.cards[i]
@@ -213,7 +208,7 @@ export function UnifiedDashboard({
         card.position?.h !== defaultCard?.position?.h
       )
     })
-  }, [cards, config.cards])
+  })()
 
   // Features with defaults
   const features = config.features || {}

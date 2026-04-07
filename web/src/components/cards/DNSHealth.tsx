@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCachedPods } from '../../hooks/useCachedData'
 import { useCardLoadingState } from './CardDataContext'
@@ -20,19 +19,16 @@ export function DNSHealth() {
     hasAnyData: hasData,
     isDemoData: isDemoFallback,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
-  const dnsPods = useMemo(() => {
-    return pods.filter(p => {
+  const dnsPods = pods.filter(p => {
       // Only consider pods in known DNS namespaces
       if (!DNS_NAMESPACES.includes(p.namespace || '')) return false
       const name = p.name?.toLowerCase() || ''
       return DNS_POD_PATTERNS.some(pattern => name.includes(pattern))
     })
-  }, [pods])
 
-  const byCluster = useMemo(() => {
+  const byCluster = (() => {
     const map = new Map<string, typeof dnsPods>()
     for (const pod of dnsPods) {
       const cluster = pod.cluster || 'unknown'
@@ -40,7 +36,7 @@ export function DNSHealth() {
       map.get(cluster)!.push(pod)
     }
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b))
-  }, [dnsPods])
+  })()
 
   if (showSkeleton) {
     return (

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { useKagentiSummary } from '../../hooks/mcp/kagenti'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
@@ -11,8 +11,7 @@ import { RotatingTip } from '../ui/RotatingTip'
 
 const STORAGE_KEYS: Record<string, string> = {
   kagenti: 'kubestellar-aiagents-kagenti-cards',
-  kagent: 'kubestellar-aiagents-kagent-cards',
-}
+  kagent: 'kubestellar-aiagents-kagent-cards' }
 
 // Build default cards per tab from config
 function getTabDefaultCards(tabId: string) {
@@ -21,8 +20,7 @@ function getTabDefaultCards(tabId: string) {
   return tab.cards.map(card => ({
     type: card.cardType,
     title: card.title,
-    position: { w: card.position?.w || 4, h: card.position?.h || 2 },
-  }))
+    position: { w: card.position?.w || 4, h: card.position?.h || 2 } }))
 }
 
 export function AIAgents() {
@@ -35,7 +33,7 @@ export function AIAgents() {
   const hasData = !!summary && summary.agentCount > 0
   const isDemoData = hookIsDemoData || (!hasData && !isLoading)
 
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string): StatBlockValue => {
     if (!summary) return { value: '-' }
     switch (blockId) {
       case 'agents':
@@ -53,12 +51,9 @@ export function AIAgents() {
       default:
         return { value: '-' }
     }
-  }, [summary, isDemoData])
+  }
 
-  const getStatValue = useCallback(
-    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
-    [getDashboardStatValue, getUniversalStatValue]
-  )
+  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
   const tabBar = tabs.length > 0 ? (
     <div className="flex items-center gap-1 mb-6 border-b border-border">
@@ -113,8 +108,7 @@ export function AIAgents() {
       beforeCards={tabBar}
       emptyState={{
         title: t('aiAgents.emptyStateTitle'),
-        description: t('aiAgents.emptyStateDescription'),
-      }}
+        description: t('aiAgents.emptyStateDescription') }}
     >
       {error && (
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">

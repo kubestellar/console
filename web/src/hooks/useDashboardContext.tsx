@@ -65,25 +65,25 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setStudioWidgetCardType(undefined)
   }, [])
 
-  const setPendingOpenAddCardModal = useCallback((pending: boolean) => {
+  const setPendingOpenAddCardModal = (pending: boolean) => {
     setPendingOpenAddCardModalState(pending)
-  }, [])
+  }
 
-  const openTemplatesModal = useCallback(() => {
+  const openTemplatesModal = () => {
     setIsTemplatesModalOpen(true)
-  }, [])
+  }
 
-  const closeTemplatesModal = useCallback(() => {
+  const closeTemplatesModal = () => {
     setIsTemplatesModalOpen(false)
-  }, [])
+  }
 
-  const setPendingRestoreCard = useCallback((card: PendingRestoreCard | null) => {
+  const setPendingRestoreCard = (card: PendingRestoreCard | null) => {
     setPendingRestoreCardState(card)
-  }, [])
+  }
 
-  const clearPendingRestoreCard = useCallback(() => {
+  const clearPendingRestoreCard = () => {
     setPendingRestoreCardState(null)
-  }, [])
+  }
 
   return (
     <DashboardContext.Provider
@@ -101,8 +101,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         pendingRestoreCard,
         setPendingRestoreCard,
         clearPendingRestoreCard,
-        health,
-      }}
+        health }}
     >
       {children}
     </DashboardContext.Provider>

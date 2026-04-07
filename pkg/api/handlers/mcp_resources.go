@@ -193,6 +193,18 @@ func (h *MCPHandlers) InstallGPUHealthCronJob(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "cluster is required"})
 	}
 
+	// Validate cron schedule format (5-field standard cron expression)
+	if body.Schedule != "" && !isValidCronSchedule(body.Schedule) {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid cron schedule format — expected 5-field cron expression (e.g. '*/15 * * * *')"})
+	}
+
+	// Validate tier range
+	const minTier = 1
+	const maxTier = 3
+	if body.Tier < minTier || body.Tier > maxTier {
+		return c.Status(400).JSON(fiber.Map{"error": fmt.Sprintf("tier must be between %d and %d", minTier, maxTier)})
+	}
+
 	ctx, cancel := context.WithTimeout(c.Context(), mcpExtendedTimeout)
 	defer cancel()
 

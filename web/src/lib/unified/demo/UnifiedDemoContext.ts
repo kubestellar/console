@@ -5,7 +5,7 @@
  * Components use this context to access demo data and skeleton states.
  */
 
-import { createContext, useContext } from 'react'
+import { createContext, use } from 'react'
 import type { UnifiedDemoContextValue, DemoDataState } from './types'
 
 /**
@@ -55,7 +55,7 @@ export const UnifiedDemoContext = createContext<UnifiedDemoContextValue>(default
  * @returns The demo context value
  */
 export function useUnifiedDemoContext(): UnifiedDemoContextValue {
-  return useContext(UnifiedDemoContext)
+  return use(UnifiedDemoContext)
 }
 
 /**
@@ -63,7 +63,7 @@ export function useUnifiedDemoContext(): UnifiedDemoContextValue {
  * @returns Whether demo mode is on
  */
 export function useIsDemoMode(): boolean {
-  const { isDemoMode } = useContext(UnifiedDemoContext)
+  const { isDemoMode } = use(UnifiedDemoContext)
   return isDemoMode
 }
 
@@ -72,7 +72,7 @@ export function useIsDemoMode(): boolean {
  * @returns Whether mode is switching
  */
 export function useIsModeSwitching(): boolean {
-  const { isModeSwitching } = useContext(UnifiedDemoContext)
+  const { isModeSwitching } = use(UnifiedDemoContext)
   return isModeSwitching
 }
 
@@ -82,6 +82,6 @@ export function useIsModeSwitching(): boolean {
  * @returns Current mode version
  */
 export function useModeVersion(): number {
-  const { modeVersion } = useContext(UnifiedDemoContext)
+  const { modeVersion } = use(UnifiedDemoContext)
   return modeVersion
 }

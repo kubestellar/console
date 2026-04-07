@@ -15,8 +15,7 @@ import { loadSavedFeeds, saveFeeds, getCachedFeed, cacheFeed } from './storage'
 import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import {
   parseRSSFeed, stripHTML, decodeHTMLEntities,
-  isValidThumbnail, normalizeRedditLink, formatTimeAgo,
-} from './RSSParser'
+  isValidThumbnail, normalizeRedditLink, formatTimeAgo } from './RSSParser'
 import { useTranslation } from 'react-i18next'
 import { TOAST_DISMISS_MS } from '../../../lib/constants/network'
 
@@ -28,8 +27,7 @@ const SORT_COMPARATORS: Record<SortByOption, (a: FeedItem, b: FeedItem) => numbe
     const bTime = b.pubDate?.getTime() || 0
     return aTime - bTime
   },
-  title: commonComparators.string<FeedItem>('title'),
-}
+  title: commonComparators.string<FeedItem>('title') }
 
 // Demo RSS feed items (avoids external API calls in demo mode)
 function getDemoRSSItems(): FeedItem[] {
@@ -157,7 +155,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
   const itemsMatchActiveFeed = itemsSourceUrl === currentCacheKey
 
   // Get unique sources from items (for aggregate feed source filter)
-  const availableSources = useMemo(() => {
+  const availableSources = (() => {
     if (!activeFeed?.isAggregate) return []
     const sources = new Map<string, { url: string, name: string, icon: string }>()
     for (const item of items) {
@@ -165,12 +163,11 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
         sources.set(item.sourceUrl, {
           url: item.sourceUrl,
           name: item.sourceName || 'Unknown',
-          icon: item.sourceIcon || '📰',
-        })
+          icon: item.sourceIcon || '📰' })
       }
     }
     return Array.from(sources.values()).sort((a, b) => a.name.localeCompare(b.name))
-  }, [items, activeFeed?.isAggregate])
+  })()
 
   // Pre-filter: apply RSS-specific source filter and include/exclude filters
   // before handing off to useCardData for search, sort, and pagination
@@ -217,8 +214,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     filters,
     sorting,
     containerRef,
-    containerStyle,
-  } = useCardData<FeedItem, SortByOption>(preFilteredItems, {
+    containerStyle } = useCardData<FeedItem, SortByOption>(preFilteredItems, {
     filter: {
       searchFields: ['title', 'description', 'author'] as (keyof FeedItem)[],
       customPredicate: (item, query) => {
@@ -226,15 +222,12 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
         if (item.sourceName && item.sourceName.toLowerCase().includes(query)) return true
         return false
       },
-      storageKey: 'rss-feed',
-    },
+      storageKey: 'rss-feed' },
     sort: {
       defaultField: 'date',
       defaultDirection: 'desc',
-      comparators: SORT_COMPARATORS,
-    },
-    defaultLimit: 10,
-  })
+      comparators: SORT_COMPARATORS },
+    defaultLimit: 10 })
 
   // Fetch with timeout helper
   const fetchWithTimeout = async (url: string, timeoutMs: number): Promise<Response> => {
@@ -288,8 +281,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 pubDate: item.pubDate ? new Date(item.pubDate) : undefined,
                 author: item.author || '',
                 thumbnail: thumb,
-                subreddit: item.link?.match(/reddit\.com\/r\/([^/]+)/)?.[1],
-              }
+                subreddit: item.link?.match(/reddit\.com\/r\/([^/]+)/)?.[1] }
             })
           } else {
             throw new Error(data.message || 'Invalid RSS feed')
@@ -408,8 +400,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
               ...item,
               sourceUrl: url,
               sourceName,
-              sourceIcon,
-            }))
+              sourceIcon }))
           })
         )
         // Combine and deduplicate by link
@@ -500,7 +491,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
   }, [feeds, config?.feedUrl])
 
   // Add a new feed
-  const addFeed = useCallback((feed: FeedConfig) => {
+  const addFeed = (feed: FeedConfig) => {
     if (!feeds.some(f => f.url === feed.url && !f.isAggregate)) {
       setFeeds(prev => [...prev, feed])
       setActiveFeedIndex(feeds.length)
@@ -520,11 +511,11 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     setNewFeedUrl('')
     setNewFeedName('')
     setShowSettings(false)
-  }, [feeds, activeFeedIndex])
+  }
 
   // Create an aggregate feed from multiple sources
   // Open aggregate editor with existing values
-  const editAggregate = useCallback((index: number) => {
+  const editAggregate = (index: number) => {
     const feed = feeds[index]
     if (!feed?.isAggregate) return
 
@@ -534,10 +525,10 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     setAggregateIncludeTerms((feed.filter?.includeTerms ?? []).join(', '))
     setAggregateExcludeTerms((feed.filter?.excludeTerms ?? []).join(', '))
     setShowAggregateCreator(true)
-  }, [feeds])
+  }
 
   // Create or update aggregate feed
-  const saveAggregate = useCallback(() => {
+  const saveAggregate = () => {
     if (!aggregateName.trim() || selectedSourceUrls.length === 0) return
 
     const includeTerms = aggregateIncludeTerms.split(',').map(t => t.trim()).filter(t => t)
@@ -553,8 +544,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       sourceUrls: selectedSourceUrls,
       filter: includeTerms.length > 0 || excludeTerms.length > 0
         ? { includeTerms, excludeTerms }
-        : undefined,
-    }
+        : undefined }
 
     if (editingAggregateIndex !== null) {
       // Update existing aggregate
@@ -577,35 +567,35 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     setAggregateIncludeTerms('')
     setAggregateExcludeTerms('')
     setShowSettings(false)
-  }, [aggregateName, selectedSourceUrls, aggregateIncludeTerms, aggregateExcludeTerms, feeds, editingAggregateIndex])
+  }
 
   // Remove a feed
-  const removeFeed = useCallback((index: number) => {
+  const removeFeed = (index: number) => {
     if (feeds.length > 1) {
       setFeeds(prev => prev.filter((_, i) => i !== index))
       if (activeFeedIndex >= index && activeFeedIndex > 0) {
         setActiveFeedIndex(prev => prev - 1)
       }
     }
-  }, [feeds.length, activeFeedIndex])
+  }
 
   // Update feed filter
-  const updateFeedFilter = useCallback((index: number, filter: FeedFilter | undefined) => {
+  const updateFeedFilter = (index: number, filter: FeedFilter | undefined) => {
     setFeeds(prev => prev.map((feed, i) =>
       i === index ? { ...feed, filter } : feed
     ))
-  }, [])
+  }
 
   // Initialize filter editor with current feed's filter
-  const openFilterEditor = useCallback(() => {
+  const openFilterEditor = () => {
     const filter = activeFeed?.filter
     setTempIncludeTerms((filter?.includeTerms ?? []).join(', '))
     setTempExcludeTerms((filter?.excludeTerms ?? []).join(', '))
     setShowFilterEditor(true)
-  }, [activeFeed?.filter])
+  }
 
   // Save filter from editor
-  const saveFilter = useCallback(() => {
+  const saveFilter = () => {
     const includeTerms = tempIncludeTerms.split(',').map(t => t.trim()).filter(t => t)
     const excludeTerms = tempExcludeTerms.split(',').map(t => t.trim()).filter(t => t)
 
@@ -615,7 +605,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       updateFeedFilter(activeFeedIndex, { includeTerms, excludeTerms })
     }
     setShowFilterEditor(false)
-  }, [activeFeedIndex, tempIncludeTerms, tempExcludeTerms, updateFeedFilter])
+  }
 
   // Check if URL looks like a Reddit URL and convert to RSS
   const normalizeUrl = (url: string): string => {
@@ -813,8 +803,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
               ],
               onSortChange: (v) => sorting.setSortBy(v as SortByOption),
               sortDirection: sorting.sortDirection,
-              onSortDirectionChange: sorting.setSortDirection,
-            }}
+              onSortDirectionChange: sorting.setSortDirection }}
           />
 
           {/* Filter button */}
@@ -997,8 +986,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                     addFeed({
                       url,
                       name: newFeedName || defaultName,
-                      icon: url.includes('reddit.com') ? '🔴' : '📰',
-                    })
+                      icon: url.includes('reddit.com') ? '🔴' : '📰' })
                   }
                 }}
                 disabled={!newFeedUrl.trim()}

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { Alert, AlertChannel } from '../types/alerts'
 import { BACKEND_DEFAULT_URL, STORAGE_KEY_AUTH_TOKEN } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
@@ -19,16 +19,14 @@ export function useNotificationAPI() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const getAuthHeaders = useCallback(() => {
+  const getAuthHeaders = () => {
     const token = localStorage.getItem(STORAGE_KEY_AUTH_TOKEN)
     return {
       'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-    }
-  }, [])
+      ...(token && { Authorization: `Bearer ${token}` }) }
+  }
 
-  const testNotification = useCallback(
-    async (type: 'slack' | 'email' | 'webhook' | 'pagerduty' | 'opsgenie', config: Record<string, unknown>) => {
+  const testNotification = async (type: 'slack' | 'email' | 'webhook' | 'pagerduty' | 'opsgenie', config: Record<string, unknown>) => {
       setIsLoading(true)
       setError(null)
 
@@ -37,8 +35,7 @@ export function useNotificationAPI() {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({ type, config } as TestNotificationRequest),
-          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-        })
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
         const data = await response.json()
 
@@ -54,12 +51,9 @@ export function useNotificationAPI() {
       } finally {
         setIsLoading(false)
       }
-    },
-    [getAuthHeaders]
-  )
+    }
 
-  const sendAlertNotification = useCallback(
-    async (alert: Alert, channels: AlertChannel[]) => {
+  const sendAlertNotification = async (alert: Alert, channels: AlertChannel[]) => {
       setIsLoading(true)
       setError(null)
 
@@ -68,8 +62,7 @@ export function useNotificationAPI() {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({ alert, channels } as SendAlertNotificationRequest),
-          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-        })
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
         const data = await response.json()
 
@@ -85,14 +78,11 @@ export function useNotificationAPI() {
       } finally {
         setIsLoading(false)
       }
-    },
-    [getAuthHeaders]
-  )
+    }
 
   return {
     testNotification,
     sendAlertNotification,
     isLoading,
-    error,
-  }
+    error }
 }

@@ -104,8 +104,7 @@ const DEMO_POSTURE: CompliancePosture = {
   expiredCertificates: 1,
   totalNamespaces: 12,
   totalClusters: 3,
-  reachableClusters: 3,
-}
+  reachableClusters: 3 }
 
 // ── Per-cluster data fetching ─────────────────────────────────────────────
 
@@ -123,8 +122,7 @@ async function fetchClusterCompliance(cluster: string): Promise<ClusterComplianc
     roles: 0,
     roleBindings: 0,
     clusterAdminBindings: 0,
-    namespaces: 0,
-  }
+    namespaces: 0 }
 
   // Fetch secrets summary (count by type)
   try {
@@ -223,10 +221,7 @@ export function useDataCompliance() {
   const fetchInProgress = useRef(false)
   const initialLoadDone = useRef(!!cachedSnapshot)
 
-  const clusters = useMemo(() =>
-    allClusters.filter(c => c.reachable === true),
-    [allClusters]
-  )
+  const clusters = allClusters.filter(c => c.reachable === true)
 
   const refetch = useCallback(async (silent = false) => {
     if (clusters.length === 0) {
@@ -258,8 +253,7 @@ export function useDataCompliance() {
         expiredCertificates: certStatus.expired,
         totalNamespaces: 0,
         totalClusters: allClusters.length,
-        reachableClusters: clusters.length,
-      }
+        reachableClusters: clusters.length }
 
       const clusterFailures: string[] = []
       const tasks = clusters.map(cluster => async () => {
@@ -382,6 +376,5 @@ export function useDataCompliance() {
     error,
     failedClusters,
     isDemoData: isUsingDemoData,
-    refetch: () => refetch(false),
-  }
+    refetch: () => refetch(false) }
 }

@@ -10,8 +10,7 @@ import { useState, useMemo } from 'react'
 import {
   Shield, CheckCircle, XCircle, AlertCircle, Info,
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
-  Search, X, Filter,
-} from 'lucide-react'
+  Search, X, Filter } from 'lucide-react'
 import { useTrestle, type OscalControlResult } from '../../../hooks/useTrestle'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { StatusBadge } from '../../ui/StatusBadge'
@@ -98,12 +97,12 @@ export function ComplianceDrillDown({ data }: Props) {
   }, [statuses, selectedClusters])
 
   // Unique values for filter dropdowns
-  const uniqueClusters = useMemo(() => [...new Set(allRows.map(r => r.cluster))].sort(), [allRows])
+  const uniqueClusters = [...new Set(allRows.map(r => r.cluster))].sort()
   const uniqueProfiles = useMemo(() => [...new Set(allRows.map(r => r.profile).filter(Boolean))].sort(), [allRows])
-  const uniqueStatuses = useMemo(() => [...new Set(allRows.map(r => r.status))].sort(), [allRows])
+  const uniqueStatuses = [...new Set(allRows.map(r => r.status))].sort()
 
   // Filtered rows
-  const filteredRows = useMemo(() => {
+  const filteredRows = (() => {
     let rows = allRows
     if (statusFilter) rows = rows.filter(r => r.status === statusFilter)
     if (severityFilter) rows = rows.filter(r => r.severity === severityFilter)
@@ -118,10 +117,10 @@ export function ComplianceDrillDown({ data }: Props) {
       )
     }
     return rows
-  }, [allRows, statusFilter, severityFilter, clusterFilter, profileFilter, searchQuery])
+  })()
 
   // Sorted rows
-  const sortedRows = useMemo(() => {
+  const sortedRows = (() => {
     const sorted = [...filteredRows]
     sorted.sort((a, b) => {
       let cmp = 0
@@ -145,14 +144,11 @@ export function ComplianceDrillDown({ data }: Props) {
       return sortDir === 'asc' ? cmp : -cmp
     })
     return sorted
-  }, [filteredRows, sortField, sortDir])
+  })()
 
   // Paginated rows
   const totalPages = Math.ceil(sortedRows.length / PAGE_SIZE)
-  const pagedRows = useMemo(
-    () => sortedRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
-    [sortedRows, page],
-  )
+  const pagedRows = sortedRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   // Reset page when filters change
   const resetPage = () => setPage(0)

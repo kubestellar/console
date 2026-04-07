@@ -28,15 +28,13 @@ const MISSION_ICONS: Record<MissionType, typeof Zap> = {
   unavailable: AlertTriangle,
   security: Shield,
   health: Server,
-  resource: Activity,
-}
+  resource: Activity }
 
 /** Neutral card-gray styling for all priority levels */
 const CHIP_STYLE = {
   bg: 'bg-secondary/50',
   border: 'border-border/50',
-  text: 'text-foreground',
-}
+  text: 'text-foreground' }
 
 export function MissionSuggestions() {
   const { t } = useTranslation()
@@ -95,16 +93,16 @@ export function MissionSuggestions() {
   }, [minimized, hasSuggestions, startCountdown])
 
   // Pause countdown on hover, resume on leave
-  const handleMouseEnter = useCallback(() => {
+  const handleMouseEnter = () => {
     if (countdownRef.current) {
       clearInterval(countdownRef.current)
       countdownRef.current = null
     }
-  }, [])
+  }
 
-  const handleMouseLeave = useCallback(() => {
+  const handleMouseLeave = () => {
     if (!minimized) startCountdown()
-  }, [minimized, startCountdown])
+  }
 
   // Emit analytics once when panel first renders with suggestions
   useEffect(() => {
@@ -170,8 +168,7 @@ export function MissionSuggestions() {
           description: suggestion.description,
           type: suggestion.type === 'security' ? 'analyze' : 'troubleshoot',
           initialPrompt: suggestion.action.target,
-          context: suggestion.context,
-        })
+          context: suggestion.context })
       }
     }, 0)
   }
@@ -196,8 +193,7 @@ export function MissionSuggestions() {
         description: t('dashboard.missions.autoRepairPrefix', { description: suggestion.description }),
         type: 'repair',
         initialPrompt: t('dashboard.missions.repairPrompt', { target: suggestion.action.target }),
-        context: suggestion.context,
-      })
+        context: suggestion.context })
     }, 0)
   }
 

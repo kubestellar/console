@@ -10,7 +10,7 @@
  * - Automatic reconnection with exponential backoff and countdown (#3029)
  */
 
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { useExecSession, type ExecSessionConfig, type SessionStatus } from '../../hooks/useExecSession'
@@ -59,8 +59,7 @@ const TERMINAL_THEME = {
   brightBlue: '#79c0ff',
   brightMagenta: '#d2a8ff',
   brightCyan: '#56d4dd',
-  brightWhite: '#f0f6fc',
-} as const
+  brightWhite: '#f0f6fc' } as const
 
 // ============================================================================
 // Types
@@ -85,8 +84,7 @@ export function PodExecTerminal({
   namespace,
   pod,
   containers = [],
-  defaultContainer,
-}: PodExecTerminalProps) {
+  defaultContainer }: PodExecTerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -107,8 +105,7 @@ export function PodExecTerminal({
     sendInput,
     resize,
     onData,
-    onExit,
-  } = useExecSession()
+    onExit } = useExecSession()
 
   // Initialize xterm.js terminal
   useEffect(() => {
@@ -119,8 +116,7 @@ export function PodExecTerminal({
       fontSize: TERMINAL_FONT_SIZE,
       lineHeight: TERMINAL_LINE_HEIGHT,
       fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-      theme: TERMINAL_THEME,
-    })
+      theme: TERMINAL_THEME })
 
     const fitAddon = new FitAddon()
     term.loadAddon(fitAddon)
@@ -202,7 +198,7 @@ export function PodExecTerminal({
   }, [resize])
 
   // Connect to exec session
-  const handleConnect = useCallback(() => {
+  const handleConnect = () => {
     setExitCode(null)
     const term = xtermRef.current
     const fitAddon = fitAddonRef.current
@@ -223,10 +219,9 @@ export function PodExecTerminal({
       command: ['/bin/sh'],
       tty: true,
       cols: term?.cols || DEFAULT_TERMINAL_COLS,
-      rows: term?.rows || DEFAULT_TERMINAL_ROWS,
-    }
+      rows: term?.rows || DEFAULT_TERMINAL_ROWS }
     connect(config)
-  }, [cluster, namespace, pod, selectedContainer, connect])
+  }
 
   // Auto-connect on mount if container is known
   useEffect(() => {
@@ -237,13 +232,13 @@ export function PodExecTerminal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleDisconnect = useCallback(() => {
+  const handleDisconnect = () => {
     disconnect()
-  }, [disconnect])
+  }
 
-  const handleReconnect = useCallback(() => {
+  const handleReconnect = () => {
     handleConnect()
-  }, [handleConnect])
+  }
 
   // Focus terminal when connected
   useEffect(() => {
@@ -402,8 +397,7 @@ function StatusIndicator({ status, reconnectAttempt, reconnectCountdown }: Statu
     connecting: { color: 'bg-yellow-600 animate-pulse', label: 'Connecting...' },
     connected: { color: 'bg-green-500', label: 'Connected' },
     error: { color: 'bg-red-500', label: 'Error', Icon: WifiOff },
-    reconnecting: { color: 'bg-yellow-600 animate-pulse', label: `Reconnecting${reconnectCountdown > 0 ? ` (${reconnectCountdown}s)` : '...'}` },
-  }
+    reconnecting: { color: 'bg-yellow-600 animate-pulse', label: `Reconnecting${reconnectCountdown > 0 ? ` (${reconnectCountdown}s)` : '...'}` } }
 
   const { color, label, Icon } = config[status]
 

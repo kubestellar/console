@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronRight, Plus, Edit, Filter, ChevronDown, Server, RotateCcw } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
@@ -82,8 +82,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
       const rect = clusterFilterBtnRef.current.getBoundingClientRect()
       setDropdownStyle({
         top: rect.bottom + 4,
-        left: Math.max(8, rect.right - 192),
-      })
+        left: Math.max(8, rect.right - 192) })
     } else {
       setDropdownStyle(null)
     }
@@ -97,8 +96,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
-    customFilter,
-  } = useGlobalFilters()
+    customFilter } = useGlobalFilters()
 
   // Sync local selection with global filter changes
   useEffect(() => {
@@ -148,20 +146,19 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   }, [isDemoData, allHelmReleases, allClusters])
 
   // Look up namespace from the selected release (required for helm commands)
-  const selectedReleaseNamespace = useMemo(() => {
+  const selectedReleaseNamespace = (() => {
     if (!selectedCluster || !selectedRelease) return undefined
     const release = allHelmReleases.find(
       r => r.cluster === selectedCluster && r.name === selectedRelease
     )
     return release?.namespace
-  }, [allHelmReleases, selectedCluster, selectedRelease])
+  })()
 
   // Fetch values for selected release (hook handles caching)
   const {
     values,
     isLoading: valuesLoading,
-    isRefreshing: valuesRefreshing,
-  } = useCachedHelmValues(
+    isRefreshing: valuesRefreshing } = useCachedHelmValues(
     selectedCluster || undefined,
     selectedRelease || undefined,
     selectedReleaseNamespace
@@ -175,8 +172,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
     hasAnyData: hasClusterData,
     isDemoData,
     isFailed: clustersFailed,
-    consecutiveFailures: clustersFailures,
-  })
+    consecutiveFailures: clustersFailures })
   // Cached hook doesn't return format; values are always JSON objects
   const format = 'json' as string
 
@@ -184,7 +180,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   const isLoading = (clustersLoading || releasesLoading) && allHelmReleases.length === 0
 
   // Apply global filters to clusters
-  const clusters = useMemo(() => {
+  const clusters = (() => {
     let result = allClusters
 
     if (!isAllClustersSelected) {
@@ -200,12 +196,10 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
     }
 
     return result
-  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
+  })()
 
   // Available clusters for the local cluster filter dropdown
-  const chartFilterClusters = useMemo(() => {
-    return clusters.filter(c => c.reachable !== false)
-  }, [clusters])
+  const chartFilterClusters = clusters.filter(c => c.reachable !== false)
 
   const toggleClusterFilter = (clusterName: string) => {
     if (localClusterFilter.includes(clusterName)) {
@@ -220,19 +214,19 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   }
 
   // Filter releases locally by selected cluster (no API call)
-  const filteredReleases = useMemo(() => {
+  const filteredReleases = (() => {
     if (!selectedCluster) return allHelmReleases
     return allHelmReleases.filter(r => r.cluster === selectedCluster)
-  }, [allHelmReleases, selectedCluster])
+  })()
 
   // Get unique release names for dropdown
-  const releases = useMemo(() => {
+  const releases = (() => {
     const releaseSet = new Set(filteredReleases.map(r => r.name))
     return Array.from(releaseSet).sort()
-  }, [filteredReleases])
+  })()
 
   // Process values into entries (before useCardData filtering)
-  const rawValueEntries = useMemo(() => {
+  const rawValueEntries = (() => {
     if (!values) return []
 
     let entries: ValueEntry[] = []
@@ -245,7 +239,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
     }
 
     return entries
-  }, [values, format])
+  })()
 
   // Use useCardData for filtering, sorting, and pagination
   const {
@@ -260,21 +254,16 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
     filters,
     sorting,
     containerRef,
-    containerStyle,
-  } = useCardData<ValueEntry, SortByOption>(rawValueEntries, {
+    containerStyle } = useCardData<ValueEntry, SortByOption>(rawValueEntries, {
     filter: {
-      searchFields: ['path', 'value'],
-    },
+      searchFields: ['path', 'value'] },
     sort: {
       defaultField: 'name',
       defaultDirection: 'asc',
       comparators: {
         name: commonComparators.string<ValueEntry>('path'),
-        cluster: commonComparators.string<ValueEntry>('value'),
-      },
-    },
-    defaultLimit: 5,
-  })
+        cluster: commonComparators.string<ValueEntry>('value') } },
+    defaultLimit: 5 })
 
   if (isLoading) {
     return (
@@ -375,8 +364,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
               sortOptions: SORT_OPTIONS,
               onSortChange: (v) => sorting.setSortBy(v as SortByOption),
               sortDirection: sorting.sortDirection,
-              onSortDirectionChange: sorting.setSortDirection,
-            }}
+              onSortDirectionChange: sorting.setSortDirection }}
           />
         </div>
       </div>
@@ -437,8 +425,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
             onClick={() => {
               if (selectedCluster && selectedRelease && selectedReleaseNamespace) {
                 drillToHelm(selectedCluster, selectedReleaseNamespace, selectedRelease, {
-                  valuesCount: totalItems,
-                })
+                  valuesCount: totalItems })
               }
             }}
             className="flex items-center gap-2 mb-4 p-2 -mx-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer group min-w-0 overflow-hidden"

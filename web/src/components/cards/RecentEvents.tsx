@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Clock, AlertTriangle, CheckCircle2, Activity, AlertCircle } from 'lucide-react'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -33,8 +32,7 @@ export function RecentEvents() {
     refetch,
     isFailed,
     consecutiveFailures,
-    lastRefresh,
-  } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
+    lastRefresh } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
   const { filterByCluster } = useGlobalFilters()
 
   // Report data state to CardWrapper for failure badge rendering
@@ -45,17 +43,16 @@ export function RecentEvents() {
     isDemoData: isDemoMode || isDemoFallback,
     hasAnyData: hasData,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
   // Pre-filter to events within the last hour (before handing to useCardData)
-  const recentEventsCandidates = useMemo(() => {
+  const recentEventsCandidates = (() => {
     const cutoff = Date.now() - ONE_HOUR_MS
     return filterByCluster(events).filter(e => {
       if (!e.lastSeen) return false
       return new Date(e.lastSeen).getTime() >= cutoff
     })
-  }, [events, filterByCluster])
+  })()
 
   const {
     items: paginatedItems,
@@ -69,24 +66,19 @@ export function RecentEvents() {
     filters,
     sorting,
     containerRef,
-    containerStyle,
-  } = useCardData<ClusterEvent, SortByOption>(recentEventsCandidates, {
+    containerStyle } = useCardData<ClusterEvent, SortByOption>(recentEventsCandidates, {
     filter: {
       searchFields: ['reason', 'object', 'message', 'namespace'],
       clusterField: 'cluster',
-      storageKey: 'recent-events',
-    },
+      storageKey: 'recent-events' },
     sort: {
       defaultField: 'time',
       defaultDirection: 'desc',
       comparators: {
         time: commonComparators.date<ClusterEvent>('lastSeen'),
         reason: commonComparators.string<ClusterEvent>('reason'),
-        object: commonComparators.string<ClusterEvent>('object'),
-      },
-    },
-    defaultLimit: 5,
-  })
+        object: commonComparators.string<ClusterEvent>('object') } },
+    defaultLimit: 5 })
 
   if (showSkeleton) {
     return <CardSkeleton rows={3} type="list" showHeader={false} />
@@ -125,8 +117,7 @@ export function RecentEvents() {
               onClear: filters.clearClusterFilter,
               isOpen: filters.showClusterFilter,
               setIsOpen: filters.setShowClusterFilter,
-              containerRef: filters.clusterFilterRef,
-            }}
+              containerRef: filters.clusterFilterRef }}
             cardControls={{
               limit: itemsPerPage,
               onLimitChange: setItemsPerPage,
@@ -138,8 +129,7 @@ export function RecentEvents() {
               ],
               onSortChange: (v) => sorting.setSortBy(v as SortByOption),
               sortDirection: sorting.sortDirection,
-              onSortDirectionChange: sorting.setSortDirection,
-            }}
+              onSortDirectionChange: sorting.setSortDirection }}
           />
           <RefreshButton
             isRefreshing={isRefreshing}

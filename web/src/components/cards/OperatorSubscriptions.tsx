@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Clock, AlertTriangle, AlertCircle, Settings, RefreshCw, ChevronRight } from 'lucide-react'
 import { useClusters, OperatorSubscription } from '../../hooks/useMCP'
 import { useCachedOperatorSubscriptions } from '../../hooks/useCachedData'
@@ -11,8 +10,7 @@ import { useCardData, useCardFilters, commonComparators, type SortDirection } fr
 import {
   CardSearchInput,
   CardControlsRow,
-  CardPaginationFooter,
-} from '../../lib/cards/CardComponents'
+  CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
 
 interface OperatorSubscriptionsProps {
@@ -35,22 +33,17 @@ const SUBSCRIPTION_SORT_COMPARATORS = {
     (a.pendingUpgrade ? 0 : 1) - (b.pendingUpgrade ? 0 : 1),
   name: commonComparators.string<OperatorSubscription>('name'),
   approval: commonComparators.string<OperatorSubscription>('installPlanApproval'),
-  channel: commonComparators.string<OperatorSubscription>('channel'),
-}
+  channel: commonComparators.string<OperatorSubscription>('channel') }
 
 // Shared filter config for counting and display
 const FILTER_CONFIG = {
   searchFields: ['name', 'namespace', 'channel', 'currentCSV'] as (keyof OperatorSubscription)[],
   clusterField: 'cluster' as keyof OperatorSubscription,
-  storageKey: 'operator-subscriptions',
-}
+  storageKey: 'operator-subscriptions' }
 
 export function OperatorSubscriptions({ config: _config }: OperatorSubscriptionsProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const SORT_OPTIONS = useMemo(() =>
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
-    [t]
-  )
+  const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
   const { isLoading: clustersLoading } = useClusters()
   const { drillToOperator } = useDrillDownActions()
 
@@ -65,8 +58,7 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
     hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
-    isDemoData,
-  })
+    isDemoData })
 
   // Use useCardFilters for summary counts (globally filtered, before local search/pagination)
   const { filtered: globalFilteredSubscriptions } = useCardFilters(rawSubscriptions, FILTER_CONFIG)
@@ -90,36 +82,29 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
       availableClusters,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-    },
+      clusterFilterRef },
     sorting: {
       sortBy,
       setSortBy,
       sortDirection,
-      setSortDirection,
-    },
+      setSortDirection },
     containerRef,
-    containerStyle,
-  } = useCardData<OperatorSubscription, SortByOption>(rawSubscriptions, {
+    containerStyle } = useCardData<OperatorSubscription, SortByOption>(rawSubscriptions, {
     filter: {
       searchFields: ['name', 'namespace', 'channel', 'currentCSV'] as (keyof OperatorSubscription)[],
       clusterField: 'cluster',
-      storageKey: 'operator-subscriptions',
-    },
+      storageKey: 'operator-subscriptions' },
     sort: {
       defaultField: 'pending',
       defaultDirection: 'asc' as SortDirection,
-      comparators: SUBSCRIPTION_SORT_COMPARATORS,
-    },
-    defaultLimit: 5,
-  })
+      comparators: SUBSCRIPTION_SORT_COMPARATORS },
+    defaultLimit: 5 })
 
   // Summary counts from globally filtered data (before local search/pagination)
-  const { autoCount, manualCount, pendingCount } = useMemo(() => ({
+  const { autoCount, manualCount, pendingCount } = {
     autoCount: globalFilteredSubscriptions.filter(s => s.installPlanApproval === 'Automatic').length,
     manualCount: globalFilteredSubscriptions.filter(s => s.installPlanApproval === 'Manual').length,
-    pendingCount: globalFilteredSubscriptions.filter(s => s.pendingUpgrade).length,
-  }), [globalFilteredSubscriptions])
+    pendingCount: globalFilteredSubscriptions.filter(s => s.pendingUpgrade).length }
 
   if (showSkeleton) {
     return (
@@ -177,8 +162,7 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
         <CardControlsRow
           clusterIndicator={localClusterFilter.length > 0 ? {
             selectedCount: localClusterFilter.length,
-            totalCount: availableClusters.length,
-          } : undefined}
+            totalCount: availableClusters.length } : undefined}
           clusterFilter={{
             availableClusters,
             selectedClusters: localClusterFilter,
@@ -187,8 +171,7 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
             isOpen: showClusterFilter,
             setIsOpen: setShowClusterFilter,
             containerRef: clusterFilterRef,
-            minClusters: 1,
-          }}
+            minClusters: 1 }}
           cardControls={{
             limit: itemsPerPage,
             onLimitChange: setItemsPerPage,
@@ -196,8 +179,7 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
             sortOptions: SORT_OPTIONS,
             onSortChange: (v) => setSortBy(v as SortByOption),
             sortDirection,
-            onSortDirectionChange: setSortDirection,
-          }}
+            onSortDirectionChange: setSortDirection }}
         />
       </div>
 
@@ -253,8 +235,7 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
                   channel: sub.channel,
                   currentCSV: sub.currentCSV,
                   installPlanApproval: sub.installPlanApproval,
-                  pendingUpgrade: sub.pendingUpgrade,
-                })}
+                  pendingUpgrade: sub.pendingUpgrade })}
                 className={`p-3 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors group ${sub.pendingUpgrade ? 'bg-orange-500/10 border border-orange-500/20' : 'bg-secondary/30'}`}
                 title={`Click to view operator ${sub.name} details`}
               >

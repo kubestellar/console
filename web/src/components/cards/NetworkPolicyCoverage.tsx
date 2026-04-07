@@ -30,11 +30,10 @@ export function NetworkPolicyCoverage() {
     isDemoData: isDemoFallback,
     isFailed,
     consecutiveFailures: podsFailures,
-    errorMessage: isFailed ? 'Failed to load network policy data' : undefined,
-  })
+    errorMessage: isFailed ? 'Failed to load network policy data' : undefined })
 
   // Build a set of namespace keys that have real NetworkPolicy resources
-  const policyNamespaceKeys = useMemo(() => {
+  const policyNamespaceKeys = (() => {
     const keys = new Set<string>()
     for (const policy of networkpolicies) {
       const cluster = policy.cluster || 'unknown'
@@ -42,17 +41,17 @@ export function NetworkPolicyCoverage() {
       keys.add(`${cluster}/${ns}`)
     }
     return keys
-  }, [networkpolicies])
+  })()
 
   // Count policies per namespace key
-  const policyCountByNs = useMemo(() => {
+  const policyCountByNs = (() => {
     const counts = new Map<string, number>()
     for (const policy of networkpolicies) {
       const key = `${policy.cluster || 'unknown'}/${policy.namespace || 'default'}`
       counts.set(key, (counts.get(key) || 0) + 1)
     }
     return counts
-  }, [networkpolicies])
+  })()
 
   // Build namespace coverage from pod data + real policy data
   const coverage = useMemo((): NamespaceCoverage[] => {
@@ -79,8 +78,7 @@ export function NetworkPolicyCoverage() {
           cluster,
           podCount: 0,
           hasPolicies,
-          policyCount,
-        })
+          policyCount })
       }
       nsMap.get(key)!.podCount++
     }

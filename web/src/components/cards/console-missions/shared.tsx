@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Bot } from 'lucide-react'
 import { useMissions } from '../../../hooks/useMissions'
 import { useToast } from '../../ui/Toast'
@@ -12,7 +12,7 @@ export function useApiKeyCheck() {
   const { agents, selectedAgent, openSidebar } = useMissions()
 
   // Check if any agent is available (bob, claude CLI, or API-based)
-  const hasAvailableAgent = useCallback(() => {
+  const hasAvailableAgent = () => {
     // First check if any agent in the list is available
     if (agents.some(a => a.available)) {
       return true
@@ -20,12 +20,12 @@ export function useApiKeyCheck() {
     // Fallback: check for local API key
     const key = localStorage.getItem(ANTHROPIC_KEY_STORAGE)
     return !!key && key.trim().length > 0
-  }, [agents])
+  }
 
   // Deprecated: for backwards compatibility
   const hasApiKey = hasAvailableAgent
 
-  const checkKeyAndRun = useCallback((onSuccess: () => void | Promise<void>) => {
+  const checkKeyAndRun = (onSuccess: () => void | Promise<void>) => {
     if (hasAvailableAgent()) {
       // Wrap in Promise.resolve so async callbacks (returning Promise) have their
       // rejections caught — without this, an unhandled rejection is created when
@@ -37,17 +37,17 @@ export function useApiKeyCheck() {
     } else {
       setShowKeyPrompt(true)
     }
-  }, [hasAvailableAgent, showToast])
+  }
 
-  const goToSettings = useCallback(() => {
+  const goToSettings = () => {
     setShowKeyPrompt(false)
     // Open the sidebar which has agent settings
     openSidebar()
-  }, [openSidebar])
+  }
 
-  const dismissPrompt = useCallback(() => {
+  const dismissPrompt = () => {
     setShowKeyPrompt(false)
-  }, [])
+  }
 
   return {
     showKeyPrompt,
@@ -56,8 +56,7 @@ export function useApiKeyCheck() {
     dismissPrompt,
     hasApiKey,
     hasAvailableAgent,
-    selectedAgent,
-  }
+    selectedAgent }
 }
 
 // Reusable AI Agent Prompt Modal

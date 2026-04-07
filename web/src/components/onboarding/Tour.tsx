@@ -387,7 +387,7 @@ export function TourOverlay() {
         </div>
 
         {/* Content */}
-        <p className="text-sm text-muted-foreground mb-4">{currentStep.content}</p>
+        <div className="text-sm text-muted-foreground mb-4">{currentStep.content}</div>
 
         {/* Footer */}
         <div className="flex items-center justify-between">

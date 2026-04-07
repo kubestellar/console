@@ -42,8 +42,7 @@ export function useModalNavigation({
   onClose,
   onBack,
   isOpen,
-  enableKeyboard = true,
-}: UseModalNavigationOptions): UseModalNavigationReturn {
+  enableKeyboard = true }: UseModalNavigationOptions): UseModalNavigationReturn {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       // Don't handle if user is typing in an input or textarea
@@ -100,33 +99,29 @@ export function useModalNavigation({
     }
   }, [isOpen])
 
-  const handleBackdropClick = useCallback(
-    (e: React.MouseEvent) => {
+  const handleBackdropClick = (e: React.MouseEvent) => {
       // Only close if clicking directly on the backdrop
       if (e.target === e.currentTarget) {
         onClose()
       }
-    },
-    [onClose]
-  )
+    }
 
-  const handleContentClick = useCallback((e: React.MouseEvent) => {
+  const handleContentClick = (e: React.MouseEvent) => {
     // Stop propagation to prevent backdrop click handler
     e.stopPropagation()
-  }, [])
+  }
 
   return {
     handleKeyDown,
     handleBackdropClick,
-    handleContentClick,
-  }
+    handleContentClick }
 }
 
 /**
  * Hook for managing focus trap within a modal
  * Keeps focus within the modal when tabbing
  */
-export function useFocusTrap(containerRef: React.RefObject<HTMLElement>, isOpen: boolean) {
+export function useFocusTrap(containerRef: React.RefObject<HTMLElement | null>, isOpen: boolean) {
   useEffect(() => {
     if (!isOpen || !containerRef.current) return
 
@@ -173,5 +168,4 @@ export const KEYBOARD_HINTS = {
   close: { key: 'ESC', label: 'Close' },
   back: { key: '⌫', label: 'Back' },
   navigate: { key: '↑↓', label: 'Navigate' },
-  select: { key: '↵', label: 'Select' },
-} as const
+  select: { key: '↵', label: 'Select' } } as const

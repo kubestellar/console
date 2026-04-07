@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Workflow, ArrowRight, AlertTriangle, ChevronRight } from 'lucide-react'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
 import { useCardLoadingState } from '../CardDataContext'
@@ -13,38 +13,34 @@ import type { InsightSeverity, MultiClusterInsight } from '../../../types/insigh
 const SEVERITY_COLORS: Record<InsightSeverity, string> = {
   critical: 'border-red-500/40 bg-red-500/10',
   warning: 'border-yellow-500/40 bg-yellow-500/10',
-  info: 'border-blue-500/40 bg-blue-500/10',
-}
+  info: 'border-blue-500/40 bg-blue-500/10' }
 
 const SEVERITY_DOT_COLORS: Record<InsightSeverity, string> = {
   critical: 'bg-red-500',
   warning: 'bg-yellow-500',
-  info: 'bg-blue-500',
-}
+  info: 'bg-blue-500' }
 
 export function CascadeImpactMap() {
   const { insightsByCategory, isLoading, isDemoData } = useMultiClusterInsights()
   const { selectedClusters } = useGlobalFilters()
   const [modalInsight, setModalInsight] = useState<MultiClusterInsight | null>(null)
 
-  const cascadeInsightsRaw = useMemo(() => {
+  const cascadeInsightsRaw = (() => {
     const all = insightsByCategory['cascade-impact'] || []
     if (selectedClusters.length === 0) return all
     return all.filter(i =>
       (i.affectedClusters || []).some(c => selectedClusters.includes(c)),
     )
-  }, [insightsByCategory, selectedClusters])
+  })()
   const {
     sorted: cascadeInsights,
-    sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
-  } = useInsightSort(cascadeInsightsRaw)
+    sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit } = useInsightSort(cascadeInsightsRaw)
 
   const hasData = cascadeInsightsRaw.length > 0
   useCardLoadingState({
     isLoading: isLoading && !hasData,
     hasAnyData: hasData,
-    isDemoData,
-  })
+    isDemoData })
 
   if (!isLoading && cascadeInsightsRaw.length === 0) {
     return (
@@ -66,8 +62,7 @@ export function CascadeImpactMap() {
           sortOptions: INSIGHT_SORT_OPTIONS,
           onSortChange: (v) => setSortBy(v as InsightSortField),
           sortDirection,
-          onSortDirectionChange: setSortDirection,
-        }}
+          onSortDirectionChange: setSortDirection }}
       />
 
       {(cascadeInsights || []).map(insight => (

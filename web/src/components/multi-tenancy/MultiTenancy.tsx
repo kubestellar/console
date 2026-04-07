@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { useClusters } from '../../hooks/useMCP'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
@@ -17,19 +16,16 @@ export function MultiTenancy() {
   // Use deduplicated clusters to avoid double-counting in multi-cluster setups
   const reachableClusters = deduplicatedClusters.filter(c => c.reachable !== false)
 
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string): StatBlockValue => {
     // Multi-tenancy stats are resolved via useUniversalStats for now;
     // real pod-label detection will be added when card components land.
     switch (blockId) {
       default:
         return { value: '-' }
     }
-  }, [])
+  }
 
-  const getStatValue = useCallback(
-    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
-    [getDashboardStatValue, getUniversalStatValue]
-  )
+  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
   return (
     <DashboardPage
@@ -49,8 +45,7 @@ export function MultiTenancy() {
       isDemoData={true}
       emptyState={{
         title: 'Multi-Tenancy Dashboard',
-        description: 'Add cards to monitor tenant isolation layers including OVN networking, KubeFlex control planes, K3s clusters, and KubeVirt VMs.',
-      }}
+        description: 'Add cards to monitor tenant isolation layers including OVN networking, KubeFlex control planes, K3s clusters, and KubeVirt VMs.' }}
     >
       {error && (
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">

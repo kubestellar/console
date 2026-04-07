@@ -153,7 +153,7 @@ export function useExecSession(): UseExecSessionResult {
     setReconnectCountdown(0)
   }, [])
 
-  const updateStatus = useCallback((newStatus: SessionStatus, newError?: string) => {
+  const updateStatus = (newStatus: SessionStatus, newError?: string) => {
     setStatus(newStatus)
     if (newError !== undefined) {
       setError(newError)
@@ -161,7 +161,7 @@ export function useExecSession(): UseExecSessionResult {
     if (statusCallbackRef.current) {
       statusCallbackRef.current(newStatus, newError ?? undefined)
     }
-  }, [])
+  }
 
   const cleanup = useCallback(() => {
     clearReconnectTimers()
@@ -169,7 +169,7 @@ export function useExecSession(): UseExecSessionResult {
     wsRef.current = null
   }, [clearReconnectTimers])
 
-  const scheduleReconnect = useCallback((config: ExecSessionConfig) => {
+  const scheduleReconnect = (config: ExecSessionConfig) => {
     const attempt = reconnectAttemptsRef.current
     if (attempt >= MAX_RECONNECT_ATTEMPTS) {
       updateStatus(
@@ -206,7 +206,7 @@ export function useExecSession(): UseExecSessionResult {
       reconnectAttemptsRef.current = attempt + 1
       connectInternalRef.current(config, true)
     }, delay)
-  }, [updateStatus])
+  }
 
   const connectInternal = useCallback((config: ExecSessionConfig, isReconnect = false) => {
     // Clean up existing WebSocket connection
@@ -262,8 +262,7 @@ export function useExecSession(): UseExecSessionResult {
         command: config.command || ['/bin/sh'],
         tty: config.tty !== false,
         cols: config.cols || DEFAULT_TERMINAL_COLS,
-        rows: config.rows || DEFAULT_TERMINAL_ROWS,
-      }
+        rows: config.rows || DEFAULT_TERMINAL_ROWS }
       ws.send(JSON.stringify(initMsg))
     }
 
@@ -358,10 +357,10 @@ export function useExecSession(): UseExecSessionResult {
     connectInternalRef.current = connectInternal
   }, [connectInternal])
 
-  const connect = useCallback((config: ExecSessionConfig) => {
+  const connect = (config: ExecSessionConfig) => {
     intentionalDisconnectRef.current = false
     connectInternal(config, false)
-  }, [connectInternal])
+  }
 
   const disconnect = useCallback(() => {
     intentionalDisconnectRef.current = true
@@ -372,29 +371,29 @@ export function useExecSession(): UseExecSessionResult {
     updateStatus('disconnected')
   }, [cleanup, clearReconnectTimers, updateStatus])
 
-  const sendInput = useCallback((data: string) => {
+  const sendInput = (data: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'stdin', data }))
     }
-  }, [])
+  }
 
-  const resize = useCallback((cols: number, rows: number) => {
+  const resize = (cols: number, rows: number) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'resize', cols, rows }))
     }
-  }, [])
+  }
 
-  const onData = useCallback((callback: (data: string) => void) => {
+  const onData = (callback: (data: string) => void) => {
     dataCallbackRef.current = callback
-  }, [])
+  }
 
-  const onExit = useCallback((callback: (code: number) => void) => {
+  const onExit = (callback: (code: number) => void) => {
     exitCallbackRef.current = callback
-  }, [])
+  }
 
-  const onStatusChange = useCallback((callback: (status: SessionStatus, error?: string) => void) => {
+  const onStatusChange = (callback: (status: SessionStatus, error?: string) => void) => {
     statusCallbackRef.current = callback
-  }, [])
+  }
 
   // Cleanup on unmount
   useEffect(() => {
@@ -415,6 +414,5 @@ export function useExecSession(): UseExecSessionResult {
     resize,
     onData,
     onExit,
-    onStatusChange,
-  }
+    onStatusChange }
 }

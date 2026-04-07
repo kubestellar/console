@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, useMemo, startTransition } from 'react'
+import { useState, useEffect, useRef, startTransition } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Plus, X, Save, Trash2, Activity, Sparkles,
@@ -10,15 +10,13 @@ import {
   Terminal, Code, Wifi, WifiOff, Clock, Users,
   Gauge, TrendingUp, TrendingDown, ArrowUpRight, Flame,
   HelpCircle,
-  type LucideIcon,
-} from 'lucide-react'
+  type LucideIcon } from 'lucide-react'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { cn } from '../../lib/cn'
 import {
   saveDynamicStatsDefinition,
   deleteDynamicStatsDefinition,
-  getAllDynamicStats,
-} from '../../lib/dynamic-cards'
+  getAllDynamicStats } from '../../lib/dynamic-cards'
 import type { StatsDefinition, StatBlockDefinition, StatBlockColor, StatBlockValueSource } from '../../lib/stats/types'
 import { COLOR_CLASSES } from '../../lib/stats/types'
 import { AiGenerationPanel } from './AiGenerationPanel'
@@ -78,8 +76,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Layers, Box, Shield, Lock, Globe, Cloud, GitBranch,
   Terminal, Code, Wifi, WifiOff, Clock, Users,
   Gauge, TrendingUp, TrendingDown, ArrowUpRight, Flame,
-  HelpCircle,
-}
+  HelpCircle }
 
 function getIcon(name: string): LucideIcon {
   return ICON_MAP[name] ?? HelpCircle
@@ -93,8 +90,7 @@ function createEmptyBlock(): BlockEditorItem {
     color: 'purple',
     field: '',
     format: '',
-    tooltip: '',
-  }
+    tooltip: '' }
 }
 
 // ============================================================================
@@ -283,7 +279,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
     }
   }, [])
 
-  const handleTabChange = useCallback((newTab: Tab) => {
+  const handleTabChange = (newTab: Tab) => {
     // Batch state updates to prevent flicker
     startTransition(() => {
       setTab(newTab)
@@ -291,13 +287,13 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
         setExistingStats(getAllDynamicStats())
       }
     })
-  }, [])
+  }
 
-  const addBlock = useCallback(() => {
+  const addBlock = () => {
     setBlocks(prev => [...prev, createEmptyBlock()])
-  }, [])
+  }
 
-  const updateBlock = useCallback((idx: number, field: keyof BlockEditorItem, value: string) => {
+  const updateBlock = (idx: number, field: keyof BlockEditorItem, value: string) => {
     setBlocks(prev => prev.map((b, i) => {
       if (i !== idx) return b
       const updated = { ...b, [field]: value }
@@ -307,13 +303,13 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
       }
       return updated
     }))
-  }, [])
+  }
 
-  const removeBlock = useCallback((idx: number) => {
+  const removeBlock = (idx: number) => {
     setBlocks(prev => prev.filter((_, i) => i !== idx))
-  }, [])
+  }
 
-  const moveBlock = useCallback((idx: number, direction: 'up' | 'down') => {
+  const moveBlock = (idx: number, direction: 'up' | 'down') => {
     setBlocks(prev => {
       const newBlocks = [...prev]
       const targetIdx = direction === 'up' ? idx - 1 : idx + 1
@@ -321,9 +317,9 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
       ;[newBlocks[idx], newBlocks[targetIdx]] = [newBlocks[targetIdx], newBlocks[idx]]
       return newBlocks
     })
-  }, [])
+  }
 
-  const handleSave = useCallback(() => {
+  const handleSave = () => {
     const type = statsType.trim() || `custom_${Date.now()}`
     if (blocks.filter(b => b.label.trim()).length === 0) {
       // Validation feedback should show immediately
@@ -344,18 +340,15 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
         order: idx,
         valueSource: b.field ? {
           field: b.field,
-          format: (b.format || undefined) as StatBlockValueSource['format'],
-        } : undefined,
-        tooltip: b.tooltip || undefined,
-      }))
+          format: (b.format || undefined) as StatBlockValueSource['format'] } : undefined,
+        tooltip: b.tooltip || undefined }))
 
     const definition: StatsDefinition = {
       type,
       title: title.trim() || 'Custom Stats',
       blocks: statBlocks,
       defaultCollapsed: false,
-      grid: gridCols > 0 ? { columns: gridCols } : undefined,
-    }
+      grid: gridCols > 0 ? { columns: gridCols } : undefined }
 
     saveDynamicStatsDefinition(definition)
     setSaveMessage(`Stats "${definition.title}" created!`)
@@ -363,18 +356,18 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
 
     const saveSuccessTimeoutId = window.setTimeout(() => setSaveMessage(null), SAVE_MESSAGE_TIMEOUT_MS)
     timeoutsRef.current.push(saveSuccessTimeoutId)
-  }, [statsType, blocks, title, gridCols, onStatsCreated])
+  }
 
-  const handleDelete = useCallback((type: string) => {
+  const handleDelete = (type: string) => {
     // Batch state updates to prevent flicker
     deleteDynamicStatsDefinition(type)
     startTransition(() => {
       setExistingStats(getAllDynamicStats())
     })
-  }, [])
+  }
 
   // Handle inline AI assist result
-  const handleAssistResult = useCallback((result: StatAssistResult) => {
+  const handleAssistResult = (result: StatAssistResult) => {
     // Batch state updates to prevent flicker
     startTransition(() => {
       if (result.title) setTitle(result.title)
@@ -386,21 +379,17 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
           color: (AVAILABLE_COLORS.includes(b.color as StatBlockColor) ? b.color : 'purple') as StatBlockColor,
           field: b.field || '',
           format: b.format || '',
-          tooltip: b.tooltip || '',
-        })))
+          tooltip: b.tooltip || '' })))
       }
     })
-  }, [])
+  }
 
   // Smart default suggestions per block
-  const smartDefaults = useMemo(
-    () => blocks.map(b => getSmartDefault(b.label)),
-    [blocks]
-  )
+  const smartDefaults = blocks.map(b => getSmartDefault(b.label))
 
-  const applySmartDefault = useCallback((idx: number, defaults: SmartDefault) => {
+  const applySmartDefault = (idx: number, defaults: SmartDefault) => {
     setBlocks(prev => prev.map((b, i) => i === idx ? { ...b, icon: defaults.icon, color: defaults.color } : b))
-  }, [])
+  }
 
   const tabs = [
     { id: 'builder' as Tab, label: t('dashboard.statFactory.buildTab'), icon: Activity },
@@ -711,8 +700,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                   color: (AVAILABLE_COLORS.includes(b.color as StatBlockColor) ? b.color : 'purple') as StatBlockColor,
                   field: b.field,
                   format: b.format || '',
-                  tooltip: b.tooltip || '',
-                }))}
+                  tooltip: b.tooltip || '' }))}
               />
             )}
             onSave={(result) => {
@@ -726,17 +714,14 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                 order: idx,
                 valueSource: b.field ? {
                   field: b.field,
-                  format: (b.format || undefined) as StatBlockValueSource['format'],
-                } : undefined,
-                tooltip: b.tooltip || undefined,
-              }))
+                  format: (b.format || undefined) as StatBlockValueSource['format'] } : undefined,
+                tooltip: b.tooltip || undefined }))
 
               const definition: StatsDefinition = {
                 type,
                 title: result.title || 'AI-Generated Stats',
                 blocks: statBlocks,
-                defaultCollapsed: false,
-              }
+                defaultCollapsed: false }
 
               saveDynamicStatsDefinition(definition)
               // Execute parent callback and show success message immediately

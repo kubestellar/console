@@ -3,12 +3,16 @@ import { Bot, Wrench, Cpu } from 'lucide-react'
 import { useKagentCRDAgents, useKagentCRDTools, useKagentCRDModels } from '../../../hooks/mcp/kagent_crds'
 import { useCardLoadingState } from '../CardDataContext'
 import { useTranslation } from 'react-i18next'
+import {
+  KAGENT_RUNTIME_PYTHON, KAGENT_RUNTIME_GO, KAGENT_RUNTIME_BYO,
+  KAGENT_EDGE_AGENT_TOOL, KAGENT_EDGE_AGENT_MODEL,
+} from '../../../lib/theme/chartColors'
 
 const RUNTIME_COLORS: Record<string, string> = {
-  python: '#60a5fa',
-  go: '#34d399',
-  byo: '#9ca3af',
-  '': '#9ca3af',
+  python: KAGENT_RUNTIME_PYTHON,
+  go: KAGENT_RUNTIME_GO,
+  byo: KAGENT_RUNTIME_BYO,
+  '': KAGENT_RUNTIME_BYO,
 }
 
 interface TopoNode {
@@ -173,7 +177,7 @@ export function KagentTopology({ config }: { config?: Record<string, unknown> })
             const from = nodes.find(n => n.id === edge.from)
             const to = nodes.find(n => n.id === edge.to)
             if (!from || !to) return null
-            const strokeColor = edge.type === 'agent-tool' ? '#06b6d4' : '#10b981'
+            const strokeColor = edge.type === 'agent-tool' ? KAGENT_EDGE_AGENT_TOOL : KAGENT_EDGE_AGENT_MODEL
             return (
               <line
                 key={i}

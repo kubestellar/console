@@ -32,8 +32,7 @@ const COLORS = {
   enemy2: '#ffd93d',
   enemy3: '#6bcb77',
   enemyBullet: '#ff4444',
-  star: '#ffffff',
-}
+  star: '#ffffff' }
 
 interface Bullet {
   x: number
@@ -85,17 +84,16 @@ export function KubeGalaga() {
   const invincibleRef = useRef(0)
 
   // Initialize stars
-  const initStars = useCallback(() => {
+  const initStars = () => {
     starsRef.current = Array.from({ length: 50 }, () => ({
       x: Math.random() * CANVAS_WIDTH,
       y: Math.random() * CANVAS_HEIGHT,
       speed: 0.5 + Math.random() * 1.5,
-      size: Math.random() > 0.7 ? 2 : 1,
-    }))
-  }, [])
+      size: Math.random() > 0.7 ? 2 : 1 }))
+  }
 
   // Initialize enemies
-  const initEnemies = useCallback((lvl: number) => {
+  const initEnemies = (lvl: number) => {
     const enemies: Enemy[] = []
     const rows = Math.min(ENEMY_ROWS + Math.floor(lvl / 3), 6)
     const cols = Math.min(ENEMY_COLS + Math.floor(lvl / 2), 10)
@@ -110,13 +108,12 @@ export function KubeGalaga() {
           diving: false,
           diveX: 0,
           diveY: 0,
-          diveAngle: 0,
-        })
+          diveAngle: 0 })
       }
     }
     enemiesRef.current = enemies
     enemyDirRef.current = 1
-  }, [])
+  }
 
   // Initialize game
   const initGame = useCallback(() => {
@@ -131,18 +128,17 @@ export function KubeGalaga() {
   }, [initStars, initEnemies])
 
   // Shoot bullet
-  const shoot = useCallback(() => {
+  const shoot = () => {
     if (shootCooldownRef.current > 0) return
     bulletsRef.current.push({
       x: playerRef.current.x + PLAYER_WIDTH / 2 - BULLET_WIDTH / 2,
       y: playerRef.current.y - BULLET_HEIGHT,
-      isEnemy: false,
-    })
+      isEnemy: false })
     shootCooldownRef.current = 15
-  }, [])
+  }
 
   // Enemy shoots
-  const enemyShoot = useCallback(() => {
+  const enemyShoot = () => {
     const aliveEnemies = enemiesRef.current.filter(e => e.alive)
     if (aliveEnemies.length === 0) return
 
@@ -152,13 +148,12 @@ export function KubeGalaga() {
       bulletsRef.current.push({
         x: shooter.x + ENEMY_WIDTH / 2 - 2,
         y: shooter.y + ENEMY_HEIGHT,
-        isEnemy: true,
-      })
+        isEnemy: true })
     }
-  }, [level])
+  }
 
   // Start enemy dive
-  const startDive = useCallback(() => {
+  const startDive = () => {
     const aliveEnemies = enemiesRef.current.filter(e => e.alive && !e.diving)
     if (aliveEnemies.length === 0) return
 
@@ -169,7 +164,7 @@ export function KubeGalaga() {
       diver.diveY = diver.y
       diver.diveAngle = 0
     }
-  }, [level])
+  }
 
   // Update game state
   const update = useCallback(() => {

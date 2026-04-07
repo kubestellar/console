@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -31,8 +31,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
     isRefreshing,
     isDemoFallback,
     isFailed,
-    consecutiveFailures,
-  } = useCachedGPUNodes()
+    consecutiveFailures } = useCachedGPUNodes()
   const { deduplicatedClusters: clusters } = useClusters()
   const { isDemoMode } = useDemoMode()
 
@@ -46,8 +45,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
     hasAnyData: hasData,
     isDemoData: isDemoMode || isDemoFallback,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
   const isLoading = showSkeleton
   const { drillToResources } = useDrillDownActions()
 
@@ -59,57 +57,50 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
     filters,
     sorting,
     containerRef,
-    containerStyle,
-  } = useCardData(rawNodes, {
+    containerStyle } = useCardData(rawNodes, {
     filter: {
       searchFields: ['gpuType' as keyof typeof rawNodes[number]],
       clusterField: 'cluster' as keyof typeof rawNodes[number],
-      storageKey: 'gpu-overview',
-    },
+      storageKey: 'gpu-overview' },
     sort: {
       defaultField: 'count' as SortByOption,
       defaultDirection: 'desc',
       comparators: {
         count: commonComparators.number('gpuCount' as keyof typeof rawNodes[number]),
-        name: commonComparators.string('gpuType' as keyof typeof rawNodes[number]),
-      } as Record<SortByOption, (a: typeof rawNodes[number], b: typeof rawNodes[number]) => number>,
-    },
-    defaultLimit: 'unlimited',
-  })
+        name: commonComparators.string('gpuType' as keyof typeof rawNodes[number]) } as Record<SortByOption, (a: typeof rawNodes[number], b: typeof rawNodes[number]) => number> },
+    defaultLimit: 'unlimited' })
 
   // Get all unique GPU types for filter dropdown (from raw data)
-  const allGpuTypes = useMemo(() => {
+  const allGpuTypes = (() => {
     const types = new Set<string>()
     rawNodes.forEach(n => types.add(n.gpuType))
     return Array.from(types).sort()
-  }, [rawNodes])
+  })()
 
   // Check if any selected clusters are reachable
-  const filteredClusters = useMemo(() => {
+  const filteredClusters = (() => {
     if (isAllClustersSelected) return clusters
     return clusters.filter(c => selectedClusters.includes(c.name))
-  }, [clusters, selectedClusters, isAllClustersSelected])
+  })()
 
   // Get set of unreachable cluster names to filter out their GPU nodes
-  const unreachableClusterNames = useMemo(() => {
-    return new Set(
+  const unreachableClusterNames = new Set(
       filteredClusters
         .filter(c => c.reachable === false || (c.nodeCount === undefined && c.reachable !== true))
         .map(c => c.name)
     )
-  }, [filteredClusters])
 
   const hasReachableClusters = filteredClusters.some(c => c.reachable !== false && c.nodeCount !== undefined && c.nodeCount > 0)
 
   // Apply GPU type filter on top of useCardData filtered nodes
   // Also filter out nodes from unreachable clusters
-  const nodes = useMemo(() => {
+  const nodes = (() => {
     let result = filteredNodes.filter(n => !unreachableClusterNames.has(n.cluster))
     if (selectedGpuType !== 'all') {
       result = result.filter(n => n.gpuType === selectedGpuType)
     }
     return result
-  }, [filteredNodes, selectedGpuType, unreachableClusterNames])
+  })()
 
   if (isLoading && hasReachableClusters) {
     return (
@@ -231,8 +222,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
                   isOpen: filters.showClusterFilter,
                   setIsOpen: filters.setShowClusterFilter,
                   containerRef: filters.clusterFilterRef,
-                  minClusters: 1,
-                }
+                  minClusters: 1 }
               : undefined
           }
           cardControls={{
@@ -242,8 +232,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
             sortOptions: SORT_OPTIONS,
             onSortChange: (v) => sorting.setSortBy(v as SortByOption),
             sortDirection: sorting.sortDirection,
-            onSortDirectionChange: sorting.setSortDirection,
-          }}
+            onSortDirectionChange: sorting.setSortDirection }}
           className="mb-0"
         />
       </div>

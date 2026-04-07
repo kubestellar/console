@@ -5,7 +5,7 @@
  * Shows tabs for each tool (Kubescape, Kyverno) with pass/fail counts.
  */
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Shield } from 'lucide-react'
 import { BaseModal } from '../../../lib/modals/BaseModal'
 import { StatusBadge } from '../../ui/StatusBadge'
@@ -42,8 +42,7 @@ const MODAL_TYPE = 'compliance_score'
 const MAX_TOP_FAILING = 5
 
 export function ComplianceScoreBreakdownModal({
-  isOpen, onClose, score, breakdown, kubescapeData, kyvernoData,
-}: ComplianceScoreBreakdownModalProps) {
+  isOpen, onClose, score, breakdown, kubescapeData, kyvernoData }: ComplianceScoreBreakdownModalProps) {
   const toolNames = breakdown.map(b => b.name)
   const [activeTab, setActiveTab] = useState(toolNames[0] || 'Overview')
   const openTimeRef = useRef<number>(0)
@@ -57,26 +56,25 @@ export function ComplianceScoreBreakdownModal({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     if (openTimeRef.current > 0) {
       emitModalClosed(MODAL_TYPE, Date.now() - openTimeRef.current)
       openTimeRef.current = 0
     }
     onClose()
-  }, [onClose])
+  }
 
-  const handleTabChange = useCallback((tab: string) => {
+  const handleTabChange = (tab: string) => {
     setActiveTab(tab)
     emitModalTabViewed(MODAL_TYPE, tab)
-  }, [])
+  }
 
   const scoreCtx = getScoreContext(score)
 
   const tabs = toolNames.map(name => ({
     id: name,
     label: name,
-    badge: String(breakdown.find(b => b.name === name)?.value ?? '—') + '%',
-  }))
+    badge: String(breakdown.find(b => b.name === name)?.value ?? '—') + '%' }))
 
   // Add overview tab if multiple tools
   if (tabs.length > 1) {

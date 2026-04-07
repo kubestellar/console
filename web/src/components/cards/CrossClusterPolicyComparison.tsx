@@ -72,12 +72,12 @@ function CrossClusterPolicyComparisonInternal({ config: _config }: CardConfig) {
   }, [rawClusters, globalSelectedClusters, isAllClustersSelected, customFilter, kyvernoStatuses])
 
   // Determine which clusters to compare
-  const clustersToCompare = useMemo(() => {
+  const clustersToCompare = (() => {
     if (localSelected.length >= 2) {
       return localSelected.filter(c => allClusters.includes(c))
     }
     return allClusters.slice(0, DEFAULT_CLUSTER_COUNT)
-  }, [allClusters, localSelected])
+  })()
 
   const toggleCluster = (name: string) => {
     setLocalSelected(prev => {
@@ -113,8 +113,7 @@ function CrossClusterPolicyComparisonInternal({ config: _config }: CardConfig) {
             name: policy.name,
             kind: policy.kind,
             statuses: {},
-            discrepancies: 0,
-          })
+            discrepancies: 0 })
         }
         const row = policyMap.get(key)!
         const isAudit = policy.status === 'audit'

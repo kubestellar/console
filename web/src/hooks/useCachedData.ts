@@ -15,7 +15,7 @@
  * The hooks maintain the same return interface for easy migration.
  */
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useCache, type RefreshCategory } from '../lib/cache'
 import { isBackendUnavailable, authFetch } from '../lib/api'
 import { kubectlProxy } from '../lib/kubectlProxy'
@@ -57,8 +57,7 @@ import type {
   K8sRole,
   K8sRoleBinding,
   K8sServiceAccountInfo,
-  GPUHealthCronJobStatus,
-} from './useMCP'
+  GPUHealthCronJobStatus } from './useMCP'
 import type { Workload } from './useWorkloads'
 import { fetchProwJobs } from './useCachedProw'
 import { fetchLLMdServers, fetchLLMdModels } from './useCachedLLMd'
@@ -97,10 +96,8 @@ async function fetchAPI<T>(
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-  })
+      Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
   if (!response.ok) {
     throw new Error(`API error: ${response.status}`)
@@ -208,8 +205,7 @@ async function fetchViaSSE<T>(
       onClusterData: (_cluster, items) => {
         accumulated.push(...items)
         onProgress?.([...accumulated])
-      },
-    })
+      } })
   } catch {
     // SSE failed — fall back to per-cluster REST
     return fetchFromAllClusters<T>(endpoint, resultKey, params, true, onProgress)
@@ -238,8 +234,7 @@ async function fetchViaGitOpsSSE<T>(
     onClusterData: (_cluster, items) => {
       accumulated.push(...items)
       onProgress?.([...accumulated])
-    },
-  })
+    } })
 }
 
 /**
@@ -263,8 +258,7 @@ async function fetchGitOpsAPI<T>(
   const response = await fetch(url, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-  })
+    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
   if (!response.ok) throw new Error(`API error: ${response.status}`)
   const gitopsText = await response.text()
@@ -299,8 +293,7 @@ async function fetchRbacAPI<T>(
   const response = await fetch(url, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(RBAC_FETCH_TIMEOUT_MS),
-  })
+    signal: AbortSignal.timeout(RBAC_FETCH_TIMEOUT_MS) })
 
   if (!response.ok) throw new Error(`API error: ${response.status}`)
   const rbacText = await response.text()
@@ -365,8 +358,7 @@ async function fetchDeploymentsViaAgent(namespace?: string, onProgress?: (partia
     const timeoutId = setTimeout(() => controller.abort(), AGENT_HTTP_TIMEOUT_MS)
     const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
       signal: controller.signal,
-      headers: { Accept: 'application/json' },
-    })
+      headers: { Accept: 'application/json' } })
     clearTimeout(timeoutId)
 
     if (!response.ok) throw new Error(`Agent returned ${response.status}`)
@@ -377,8 +369,7 @@ async function fetchDeploymentsViaAgent(namespace?: string, onProgress?: (partia
     // Always use the short name — agent echoes back context path as cluster
     const tagged = ((data.deployments || []) as Deployment[]).map(d => ({
       ...d,
-      cluster: name,
-    }))
+      cluster: name }))
     accumulated.push(...tagged)
     onProgress?.([...accumulated])
     return tagged
@@ -502,8 +493,7 @@ export function useCachedPods(
       return pods
         .sort((a, b) => (b.restarts || 0) - (a.restarts || 0))
         .slice(0, limit)
-    },
-  })
+    } })
 
   return {
     pods: result.data,
@@ -515,8 +505,7 @@ export function useCachedPods(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -597,8 +586,7 @@ export function useCachedEvents(
       }
       // Fall back to SSE via backend
       return await fetchViaSSE<ClusterEvent>('events', 'events', { namespace, limit }, onProgress)
-    },
-  })
+    } })
 
   return {
     events: result.data,
@@ -610,8 +598,7 @@ export function useCachedEvents(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -679,8 +666,7 @@ export function useCachedPodIssues(
         onProgress(sortIssues([...partial]))
       })
       return sortIssues(issues)
-    },
-  })
+    } })
 
   return {
     issues: result.data,
@@ -692,8 +678,7 @@ export function useCachedPodIssues(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -716,8 +701,7 @@ export function useCachedDeploymentIssues(
         cluster: d.cluster,
         replicas: d.replicas ?? 1,
         readyReplicas: d.readyReplicas ?? 0,
-        reason: d.status === 'failed' ? 'DeploymentFailed' : 'ReplicaFailure',
-      }))
+        reason: d.status === 'failed' ? 'DeploymentFailed' : 'ReplicaFailure' }))
 
   const result = useCache({
     key,
@@ -736,8 +720,7 @@ export function useCachedDeploymentIssues(
               const ctrl = new AbortController()
               const tid = setTimeout(() => ctrl.abort(), AGENT_HTTP_TIMEOUT_MS)
               const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
-                signal: ctrl.signal, headers: { Accept: 'application/json' },
-              })
+                signal: ctrl.signal, headers: { Accept: 'application/json' } })
               clearTimeout(tid)
               if (!res.ok) return []
               const data = await res.json().catch(() => null)
@@ -770,8 +753,7 @@ export function useCachedDeploymentIssues(
       // Fall back to SSE streaming -> REST per-cluster
       const issues = await fetchViaSSE<DeploymentIssue>('deployment-issues', 'issues', { namespace }, onProgress)
       return issues
-    },
-  })
+    } })
 
   return {
     issues: result.data,
@@ -783,8 +765,7 @@ export function useCachedDeploymentIssues(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -816,8 +797,7 @@ export function useCachedDeployments(
           const timeoutId = setTimeout(() => controller.abort(), AGENT_HTTP_TIMEOUT_MS)
           const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
             signal: controller.signal,
-            headers: { Accept: 'application/json' },
-          })
+            headers: { Accept: 'application/json' } })
           clearTimeout(timeoutId)
 
           if (response.ok) {
@@ -825,8 +805,7 @@ export function useCachedDeployments(
             if (!data) return []
             return ((data.deployments || []) as Deployment[]).map(d => ({
               ...d,
-              cluster: cluster,
-            }))
+              cluster: cluster }))
           }
         }
         return fetchDeploymentsViaAgent(namespace)
@@ -853,8 +832,7 @@ export function useCachedDeployments(
 
       // Fall back to SSE streaming -> REST per-cluster
       return await fetchViaSSE<Deployment>('deployments', 'deployments', { namespace }, onProgress)
-    },
-  })
+    } })
 
   return {
     deployments: result.data,
@@ -866,8 +844,7 @@ export function useCachedDeployments(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -895,8 +872,7 @@ export function useCachedServices(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return await fetchViaSSE<Service>('services', 'services', { namespace }, onProgress)
-    },
-  })
+    } })
 
   return {
     services: result.data,
@@ -908,8 +884,7 @@ export function useCachedServices(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 
@@ -956,8 +931,7 @@ async function fetchWorkloadsFromAgent(onProgress?: (partial: Workload[]) => voi
     const tid = setTimeout(() => ctrl.abort(), AGENT_HTTP_TIMEOUT_MS)
     const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
       signal: ctrl.signal,
-      headers: { Accept: 'application/json' },
-    })
+      headers: { Accept: 'application/json' } })
     clearTimeout(tid)
 
     if (!res.ok) throw new Error(`Agent ${res.status}`)
@@ -979,8 +953,7 @@ async function fetchWorkloadsFromAgent(onProgress?: (partial: Workload[]) => voi
         readyReplicas: Number(d.readyReplicas || 0),
         status: ws,
         image: String(d.image || ''),
-        createdAt: new Date().toISOString(),
-      }
+        createdAt: new Date().toISOString() }
     })
     accumulated.push(...tagged)
     onProgress?.([...accumulated])
@@ -1018,10 +991,8 @@ export function useCachedWorkloads(
         const res = await fetch('/api/workloads', {
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-        })
+            Authorization: `Bearer ${token}` },
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
         if (res.ok) {
           const data = await res.json().catch(() => null)
           if (!data) return []
@@ -1037,8 +1008,7 @@ export function useCachedWorkloads(
             status: (String(d.status || 'Running')) as Workload['status'],
             image: String(d.image || ''),
             labels: (d.labels as Record<string, string>) || {},
-            createdAt: String(d.createdAt || new Date().toISOString()),
-          }))
+            createdAt: String(d.createdAt || new Date().toISOString()) }))
         }
       }
 
@@ -1051,8 +1021,7 @@ export function useCachedWorkloads(
 
       // Fall back to SSE streaming -> progressive per-cluster
       return await fetchViaSSE<Workload>('workloads', 'workloads', {}, onProgress)
-    },
-  })
+    } })
 
   return {
     workloads: result.data,
@@ -1064,8 +1033,7 @@ export function useCachedWorkloads(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 // ============================================================================
@@ -1203,10 +1171,8 @@ export function useCachedSecurityIssues(
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-          })
+              Authorization: `Bearer ${token}` },
+            signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
           if (response.ok) {
             const data = await response.json().catch(() => null) as { issues: SecurityIssue[] } | null
             if (data?.issues && data.issues.length > 0) return data.issues
@@ -1232,8 +1198,7 @@ export function useCachedSecurityIssues(
 
       // Fall back to SSE streaming -> REST per-cluster
       return await fetchViaSSE<SecurityIssue>('security-issues', 'issues', { namespace }, onProgress)
-    } : undefined,
-  })
+    } : undefined })
 
   return {
     issues: result.data,
@@ -1245,8 +1210,7 @@ export function useCachedSecurityIssues(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 // ============================================================================
@@ -1284,8 +1248,7 @@ export function useCachedNodes(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return fetchViaSSE<NodeInfo>('nodes', 'nodes', {}, onProgress)
-    },
-  })
+    } })
 
   return {
     nodes: result.data,
@@ -1297,8 +1260,7 @@ export function useCachedNodes(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 // ============================================================================
@@ -1318,8 +1280,7 @@ const getDemoCachedGPUNodeHealth = (): GPUNodeHealthStatus[] => [
       { name: 'stuck_pods', passed: true },
       { name: 'gpu_events', passed: true },
     ],
-    issues: [], stuckPods: 0, checkedAt: new Date().toISOString(),
-  },
+    issues: [], stuckPods: 0, checkedAt: new Date().toISOString() },
   {
     nodeName: 'gpu-node-2', cluster: 'vllm-gpu-cluster', status: 'degraded',
     gpuCount: 8, gpuType: 'NVIDIA A100-SXM4-80GB',
@@ -1332,8 +1293,7 @@ const getDemoCachedGPUNodeHealth = (): GPUNodeHealthStatus[] => [
       { name: 'stuck_pods', passed: true },
       { name: 'gpu_events', passed: true },
     ],
-    issues: ['gpu-feature-discovery: CrashLoopBackOff (12 restarts)'], stuckPods: 0, checkedAt: new Date().toISOString(),
-  },
+    issues: ['gpu-feature-discovery: CrashLoopBackOff (12 restarts)'], stuckPods: 0, checkedAt: new Date().toISOString() },
   {
     nodeName: 'gpu-node-3', cluster: 'eks-prod-us-east-1', status: 'unhealthy',
     gpuCount: 4, gpuType: 'NVIDIA V100',
@@ -1347,8 +1307,7 @@ const getDemoCachedGPUNodeHealth = (): GPUNodeHealthStatus[] => [
       { name: 'gpu_events', passed: false, message: '3 GPU warning events in last hour' },
     ],
     issues: ['Node is NotReady', 'Node is cordoned', 'gpu-feature-discovery: CrashLoopBackOff (128 restarts)', '54 pods stuck'],
-    stuckPods: 54, checkedAt: new Date().toISOString(),
-  },
+    stuckPods: 54, checkedAt: new Date().toISOString() },
 ]
 
 /**
@@ -1374,8 +1333,7 @@ export function useCachedGPUNodeHealth(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return fetchViaSSE<GPUNodeHealthStatus>('gpu-nodes/health', 'nodes', {}, onProgress)
-    },
-  })
+    } })
 
   return {
     nodes: result.data,
@@ -1387,8 +1345,7 @@ export function useCachedGPUNodeHealth(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 // ============================================================================
@@ -1414,10 +1371,9 @@ export function useGPUHealthCronJob(cluster?: string) {
     fetcher: async () => {
       if (!cluster) return null
       return fetchAPI<GPUHealthCronJobStatus>('gpu-nodes/health/cronjob', { cluster })
-    },
-  })
+    } })
 
-  const install = useCallback(async (opts?: { namespace?: string; schedule?: string; tier?: number }) => {
+  const install = async (opts?: { namespace?: string; schedule?: string; tier?: number }) => {
     if (!cluster) return
     setActionInProgress('install')
     setActionError(null)
@@ -1428,16 +1384,13 @@ export function useGPUHealthCronJob(cluster?: string) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+          Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           cluster,
           namespace: opts?.namespace,
           schedule: opts?.schedule,
-          tier: opts?.tier ?? 2,
-        }),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+          tier: opts?.tier ?? 2 }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!response.ok) {
         const text = await response.text()
         throw new Error(text || `Install failed: ${response.status}`)
@@ -1448,9 +1401,9 @@ export function useGPUHealthCronJob(cluster?: string) {
     } finally {
       setActionInProgress(null)
     }
-  }, [cluster, result])
+  }
 
-  const uninstall = useCallback(async (opts?: { namespace?: string }) => {
+  const uninstall = async (opts?: { namespace?: string }) => {
     if (!cluster) return
     setActionInProgress('uninstall')
     setActionError(null)
@@ -1461,14 +1414,11 @@ export function useGPUHealthCronJob(cluster?: string) {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+          Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           cluster,
-          namespace: opts?.namespace,
-        }),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+          namespace: opts?.namespace }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!response.ok) {
         const text = await response.text()
         throw new Error(text || `Uninstall failed: ${response.status}`)
@@ -1479,7 +1429,7 @@ export function useGPUHealthCronJob(cluster?: string) {
     } finally {
       setActionInProgress(null)
     }
-  }, [cluster, result])
+  }
 
   return {
     status: result.data,
@@ -1488,8 +1438,7 @@ export function useGPUHealthCronJob(cluster?: string) {
     actionInProgress,
     install,
     uninstall,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 // ============================================================================
@@ -1532,8 +1481,7 @@ export function useCachedWarningEvents(
         onProgress(partial.slice(0, limit))
       })
       return events.slice(0, limit)
-    },
-  })
+    } })
 
   return {
     events: result.data,
@@ -1545,8 +1493,7 @@ export function useCachedWarningEvents(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 // ============================================================================
@@ -1586,8 +1533,7 @@ export const coreFetchers = {
           cluster: d.cluster,
           replicas: d.replicas ?? 1,
           readyReplicas: d.readyReplicas ?? 0,
-          reason: d.status === 'failed' ? 'DeploymentFailed' : 'ReplicaFailure',
-        }))
+          reason: d.status === 'failed' ? 'DeploymentFailed' : 'ReplicaFailure' }))
     }
     const token = getToken()
     if (token && token !== 'demo-token' && !isBackendUnavailable()) {
@@ -1623,10 +1569,8 @@ export const coreFetchers = {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+          Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
         const data = await response.json().catch(() => null) as { issues: SecurityIssue[] } | null
         if (data && data.issues && data.issues.length > 0) return data.issues
@@ -1648,10 +1592,8 @@ export const coreFetchers = {
       const res = await fetch('/api/workloads', {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+          Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (res.ok) {
         const data = await res.json().catch(() => null)
         if (!data) return []
@@ -1667,13 +1609,11 @@ export const coreFetchers = {
           status: (String(d.status || 'Running')) as Workload['status'],
           image: String(d.image || ''),
           labels: (d.labels as Record<string, string>) || {},
-          createdAt: String(d.createdAt || new Date().toISOString()),
-        }))
+          createdAt: String(d.createdAt || new Date().toISOString()) }))
       }
     }
     return []
-  },
-}
+  } }
 
 // ============================================================================
 // Hardware Health (device alerts + inventory)
@@ -1743,8 +1683,7 @@ const DEMO_HW_ALERTS: DeviceAlert[] = [
     droppedCount: 2,
     firstSeen: new Date().toISOString(),
     lastSeen: new Date().toISOString(),
-    severity: 'critical',
-  },
+    severity: 'critical' },
   {
     id: 'demo-2',
     nodeName: 'gpu-node-2',
@@ -1755,8 +1694,7 @@ const DEMO_HW_ALERTS: DeviceAlert[] = [
     droppedCount: 1,
     firstSeen: new Date().toISOString(),
     lastSeen: new Date().toISOString(),
-    severity: 'warning',
-  },
+    severity: 'warning' },
 ]
 
 const DEMO_HW_INVENTORY: NodeDeviceInventory[] = [
@@ -1764,35 +1702,30 @@ const DEMO_HW_INVENTORY: NodeDeviceInventory[] = [
     nodeName: 'gpu-node-1',
     cluster: 'production',
     devices: { gpuCount: 8, nicCount: 2, nvmeCount: 4, infinibandCount: 2, sriovCapable: true, rdmaAvailable: true, mellanoxPresent: true, nvidiaNicPresent: false, spectrumScale: false, mofedReady: true, gpuDriverReady: true },
-    lastSeen: new Date().toISOString(),
-  },
+    lastSeen: new Date().toISOString() },
   {
     nodeName: 'gpu-node-2',
     cluster: 'production',
     devices: { gpuCount: 8, nicCount: 2, nvmeCount: 4, infinibandCount: 2, sriovCapable: true, rdmaAvailable: true, mellanoxPresent: true, nvidiaNicPresent: false, spectrumScale: false, mofedReady: true, gpuDriverReady: true },
-    lastSeen: new Date().toISOString(),
-  },
+    lastSeen: new Date().toISOString() },
   {
     nodeName: 'compute-node-1',
     cluster: 'staging',
     devices: { gpuCount: 0, nicCount: 1, nvmeCount: 2, infinibandCount: 0, sriovCapable: false, rdmaAvailable: false, mellanoxPresent: false, nvidiaNicPresent: false, spectrumScale: false, mofedReady: false, gpuDriverReady: false },
-    lastSeen: new Date().toISOString(),
-  },
+    lastSeen: new Date().toISOString() },
 ]
 
 const HW_INITIAL_DATA: HardwareHealthData = {
   alerts: [],
   inventory: [],
   nodeCount: 0,
-  lastUpdate: null,
-}
+  lastUpdate: null }
 
 const HW_DEMO_DATA: HardwareHealthData = {
   alerts: DEMO_HW_ALERTS,
   inventory: DEMO_HW_INVENTORY,
   nodeCount: DEMO_HW_INVENTORY.length,
-  lastUpdate: new Date().toISOString(),
-}
+  lastUpdate: new Date().toISOString() }
 
 async function fetchHardwareHealth(): Promise<HardwareHealthData> {
   const controller = new AbortController()
@@ -1803,13 +1736,11 @@ async function fetchHardwareHealth(): Promise<HardwareHealthData> {
       fetch(`${LOCAL_AGENT_HTTP_URL}/devices/alerts`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
-        signal: controller.signal,
-      }).catch(() => null),
+        signal: controller.signal }).catch(() => null),
       fetch(`${LOCAL_AGENT_HTTP_URL}/devices/inventory`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
-        signal: controller.signal,
-      }).catch(() => null),
+        signal: controller.signal }).catch(() => null),
     ])
     clearTimeout(timeoutId)
 
@@ -1817,8 +1748,7 @@ async function fetchHardwareHealth(): Promise<HardwareHealthData> {
       alerts: [],
       inventory: [],
       nodeCount: 0,
-      lastUpdate: new Date().toISOString(),
-    }
+      lastUpdate: new Date().toISOString() }
 
     if (alertsRes?.ok) {
       const data = await alertsRes.json().catch(() => null) as DeviceAlertsResponse | null
@@ -1864,8 +1794,7 @@ export function useCachedHardwareHealth(): CachedHookResult<HardwareHealthData> 
     // Don't gate on isAgentUnavailable() — the agent may connect after the hook
     // mounts and `enabled` is only read once. The fetcher handles unavailability
     // internally by throwing, which useCache tracks as consecutive failures.
-    fetcher: fetchHardwareHealth,
-  })
+    fetcher: fetchHardwareHealth })
 
   return {
     data: result.data,
@@ -1876,16 +1805,14 @@ export function useCachedHardwareHealth(): CachedHookResult<HardwareHealthData> 
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /** Specialty data fetchers — lower priority, prefetched after core data */
 export const specialtyFetchers = {
   prowJobs: () => fetchProwJobs('prow', 'prow'),
   llmdServers: () => fetchLLMdServers(['vllm-d', 'platform-eval']),
-  llmdModels: () => fetchLLMdModels(['vllm-d', 'platform-eval']),
-}
+  llmdModels: () => fetchLLMdModels(['vllm-d', 'platform-eval']) }
 
 // -- CoreDNS status --
 
@@ -1912,8 +1839,7 @@ const getDemoCoreDNSStatus = (): CoreDNSClusterStatus[] => [
       { name: 'coredns-7db6d8ff4d-n9wq3', status: 'Running', ready: '1/1', restarts: 0, version: '1.11.1' },
     ],
     healthy: true,
-    totalRestarts: 0,
-  },
+    totalRestarts: 0 },
   {
     cluster: 'gke-staging',
     pods: [
@@ -1921,16 +1847,14 @@ const getDemoCoreDNSStatus = (): CoreDNSClusterStatus[] => [
       { name: 'coredns-6d4b75cb6d-fghij', status: 'Running', ready: '1/1', restarts: 0, version: '1.10.1' },
     ],
     healthy: true,
-    totalRestarts: 2,
-  },
+    totalRestarts: 2 },
   {
     cluster: 'aks-dev-westeu',
     pods: [
       { name: 'coredns-abc123-xyz99', status: 'CrashLoopBackOff', ready: '0/1', restarts: 7, version: '1.9.3' },
     ],
     healthy: false,
-    totalRestarts: 7,
-  },
+    totalRestarts: 7 },
 ]
 
 // fetches coredns pods from kube-system and builds per-cluster health info
@@ -1976,17 +1900,14 @@ export function useCachedCoreDNSStatus(
             status: p.status,
             ready: p.ready,
             restarts: p.restarts || 0,
-            version: p.containers?.[0]?.image?.split(':')[1]?.replace(/^v/, '') || '',
-          })),
+            version: p.containers?.[0]?.image?.split(':')[1]?.replace(/^v/, '') || '' })),
           healthy,
-          totalRestarts,
-        } satisfies CoreDNSClusterStatus
+          totalRestarts } satisfies CoreDNSClusterStatus
       })
 
       // Sort clusters alphabetically for stable UI ordering
       return clusters.sort((a, b) => a.cluster.localeCompare(b.cluster))
-    },
-  })
+    } })
 
   return {
     clusters: result.data,
@@ -1998,8 +1919,7 @@ export function useCachedCoreDNSStatus(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 // ============================================================================
@@ -2094,8 +2014,7 @@ const getDemoHelmValues = (): Record<string, unknown> => ({
   replicaCount: 2,
   image: { repository: 'prom/prometheus', tag: 'v2.48.1', pullPolicy: 'IfNotPresent' },
   service: { type: 'ClusterIP', port: 9090 },
-  resources: { limits: { cpu: '500m', memory: '512Mi' }, requests: { cpu: '200m', memory: '256Mi' } },
-})
+  resources: { limits: { cpu: '500m', memory: '512Mi' }, requests: { cpu: '200m', memory: '256Mi' } } })
 
 const getDemoOperators = (): Operator[] => [
   { name: 'prometheus-operator', namespace: 'monitoring', version: '0.72.0', status: 'Succeeded', cluster: 'eks-prod-us-east-1' },
@@ -2161,8 +2080,7 @@ export function useCachedGPUNodes(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return await fetchViaSSE<GPUNode>('gpu-nodes', 'nodes', {}, onProgress)
-    },
-  })
+    } })
 
   return {
     nodes: result.data,
@@ -2174,8 +2092,7 @@ export function useCachedGPUNodes(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -2203,8 +2120,7 @@ export function useCachedAllPods(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return await fetchViaSSE<PodInfo>('pods', 'pods', {}, onProgress)
-    },
-  })
+    } })
 
   return {
     pods: result.data,
@@ -2216,8 +2132,7 @@ export function useCachedAllPods(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -2245,8 +2160,7 @@ export function useCachedPVCs(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return await fetchViaSSE<PVC>('pvcs', 'pvcs', { namespace }, onProgress)
-    },
-  })
+    } })
 
   return {
     pvcs: result.data,
@@ -2258,8 +2172,7 @@ export function useCachedPVCs(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -2285,13 +2198,11 @@ export function useCachedNamespaces(
       if (!token) throw new Error('No authentication token')
       const response = await fetch(`/api/namespaces?cluster=${encodeURIComponent(cluster)}`, {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!response.ok) throw new Error(`API error: ${response.status}`)
       const data = await response.json().catch(() => null) as Array<{ name?: string; Name?: string }> | null
       return (data || []).map((ns: { name?: string; Name?: string }) => ns.name || ns.Name || '').filter(Boolean)
-    },
-  })
+    } })
 
   return {
     namespaces: result.data,
@@ -2303,8 +2214,7 @@ export function useCachedNamespaces(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -2332,8 +2242,7 @@ export function useCachedJobs(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return await fetchViaSSE<Job>('jobs', 'jobs', { namespace }, onProgress)
-    },
-  })
+    } })
 
   return {
     jobs: result.data,
@@ -2345,8 +2254,7 @@ export function useCachedJobs(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -2374,8 +2282,7 @@ export function useCachedHPAs(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return await fetchViaSSE<HPA>('hpas', 'hpas', { namespace }, onProgress)
-    },
-  })
+    } })
 
   return {
     hpas: result.data,
@@ -2387,8 +2294,7 @@ export function useCachedHPAs(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -2416,8 +2322,7 @@ export function useCachedConfigMaps(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return await fetchViaSSE<ConfigMap>('configmaps', 'configmaps', { namespace }, onProgress)
-    },
-  })
+    } })
 
   return {
     configmaps: result.data,
@@ -2429,8 +2334,7 @@ export function useCachedConfigMaps(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -2458,8 +2362,7 @@ export function useCachedSecrets(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return await fetchViaSSE<Secret>('secrets', 'secrets', { namespace }, onProgress)
-    },
-  })
+    } })
 
   return {
     secrets: result.data,
@@ -2471,8 +2374,7 @@ export function useCachedSecrets(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -2500,8 +2402,7 @@ export function useCachedServiceAccounts(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return await fetchViaSSE<ServiceAccount>('serviceaccounts', 'serviceaccounts', { namespace }, onProgress)
-    },
-  })
+    } })
 
   return {
     serviceAccounts: result.data,
@@ -2513,8 +2414,7 @@ export function useCachedServiceAccounts(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -2542,8 +2442,7 @@ export function useCachedReplicaSets(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return await fetchViaSSE<ReplicaSet>('replicasets', 'replicasets', { namespace }, onProgress)
-    },
-  })
+    } })
 
   return {
     replicasets: result.data,
@@ -2555,8 +2454,7 @@ export function useCachedReplicaSets(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -2584,8 +2482,7 @@ export function useCachedStatefulSets(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return await fetchViaSSE<StatefulSet>('statefulsets', 'statefulsets', { namespace }, onProgress)
-    },
-  })
+    } })
 
   return {
     statefulsets: result.data,
@@ -2597,8 +2494,7 @@ export function useCachedStatefulSets(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -2626,8 +2522,7 @@ export function useCachedDaemonSets(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return await fetchViaSSE<DaemonSet>('daemonsets', 'daemonsets', { namespace }, onProgress)
-    },
-  })
+    } })
 
   return {
     daemonsets: result.data,
@@ -2639,8 +2534,7 @@ export function useCachedDaemonSets(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -2668,8 +2562,7 @@ export function useCachedCronJobs(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return await fetchViaSSE<CronJob>('cronjobs', 'cronjobs', { namespace }, onProgress)
-    },
-  })
+    } })
 
   return {
     cronjobs: result.data,
@@ -2681,8 +2574,7 @@ export function useCachedCronJobs(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -2710,8 +2602,7 @@ export function useCachedIngresses(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return await fetchViaSSE<Ingress>('ingresses', 'ingresses', { namespace }, onProgress)
-    },
-  })
+    } })
 
   return {
     ingresses: result.data,
@@ -2723,8 +2614,7 @@ export function useCachedIngresses(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -2752,8 +2642,7 @@ export function useCachedNetworkPolicies(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return await fetchViaSSE<NetworkPolicy>('networkpolicies', 'networkpolicies', { namespace }, onProgress)
-    },
-  })
+    } })
 
   return {
     networkpolicies: result.data,
@@ -2765,8 +2654,7 @@ export function useCachedNetworkPolicies(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -2790,8 +2678,7 @@ export function useCachedHelmReleases(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return await fetchViaGitOpsSSE<HelmRelease>('helm-releases', 'releases', {}, onProgress)
-    },
-  })
+    } })
 
   return {
     releases: result.data,
@@ -2803,8 +2690,7 @@ export function useCachedHelmReleases(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -2828,8 +2714,7 @@ export function useCachedHelmHistory(
     fetcher: async () => {
       const data = await fetchGitOpsAPI<{ history: HelmHistoryEntry[] }>('helm-history', { cluster, release, namespace })
       return data.history || []
-    },
-  })
+    } })
 
   return {
     history: result.data,
@@ -2841,8 +2726,7 @@ export function useCachedHelmHistory(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -2866,8 +2750,7 @@ export function useCachedHelmValues(
     fetcher: async () => {
       const data = await fetchGitOpsAPI<{ values: Record<string, unknown> }>('helm-values', { cluster, release, namespace })
       return data.values || {}
-    },
-  })
+    } })
 
   return {
     values: result.data,
@@ -2879,8 +2762,7 @@ export function useCachedHelmValues(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -2904,8 +2786,7 @@ export function useCachedOperators(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return await fetchViaGitOpsSSE<Operator>('operators', 'operators', {}, onProgress)
-    },
-  })
+    } })
 
   return {
     operators: result.data,
@@ -2917,8 +2798,7 @@ export function useCachedOperators(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -2942,8 +2822,7 @@ export function useCachedOperatorSubscriptions(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return await fetchViaGitOpsSSE<OperatorSubscription>('operator-subscriptions', 'subscriptions', {}, onProgress)
-    },
-  })
+    } })
 
   return {
     subscriptions: result.data,
@@ -2955,8 +2834,7 @@ export function useCachedOperatorSubscriptions(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -2978,8 +2856,7 @@ export function useCachedGitOpsDrifts(
     fetcher: async () => {
       const data = await fetchGitOpsAPI<{ drifts: GitOpsDrift[] }>('drifts', { cluster, namespace })
       return data.drifts || []
-    },
-  })
+    } })
 
   return {
     drifts: result.data,
@@ -2991,8 +2868,7 @@ export function useCachedGitOpsDrifts(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -3023,8 +2899,7 @@ export function useCachedBuildpackImages(
         }
         throw err
       }
-    },
-  })
+    } })
 
   return {
     images: result.data,
@@ -3036,8 +2911,7 @@ export function useCachedBuildpackImages(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -3059,8 +2933,7 @@ export function useCachedK8sRoles(
     fetcher: async () => {
       const data = await fetchRbacAPI<{ roles: K8sRole[] }>('roles', { cluster, namespace, includeSystem })
       return data.roles || []
-    },
-  })
+    } })
 
   return {
     roles: result.data,
@@ -3072,8 +2945,7 @@ export function useCachedK8sRoles(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -3095,8 +2967,7 @@ export function useCachedK8sRoleBindings(
     fetcher: async () => {
       const data = await fetchRbacAPI<{ bindings: K8sRoleBinding[] }>('bindings', { cluster, namespace, includeSystem })
       return data.bindings || []
-    },
-  })
+    } })
 
   return {
     bindings: result.data,
@@ -3108,8 +2979,7 @@ export function useCachedK8sRoleBindings(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 /**
@@ -3131,8 +3001,7 @@ export function useCachedK8sServiceAccounts(
     fetcher: async () => {
       const data = await fetchRbacAPI<{ serviceAccounts: K8sServiceAccountInfo[] }>('service-accounts', { cluster, namespace })
       return data.serviceAccounts || []
-    },
-  })
+    } })
 
   return {
     serviceAccounts: result.data,
@@ -3144,8 +3013,7 @@ export function useCachedK8sServiceAccounts(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
-  }
+    refetch: result.refetch }
 }
 
 // ============================================================================

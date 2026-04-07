@@ -6,7 +6,7 @@
  * (KubeStellar values) if the endpoint is unavailable or returns no branding.
  */
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { createContext, use, useState, useEffect, type ReactNode } from 'react'
 import { DEFAULT_BRANDING, mergeBranding, type BrandingConfig } from '../lib/branding'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { updateAnalyticsIds } from '../lib/analytics'
@@ -15,7 +15,7 @@ const BrandingContext = createContext<BrandingConfig>(DEFAULT_BRANDING)
 
 /** Access the current branding configuration */
 export function useBranding(): BrandingConfig {
-  return useContext(BrandingContext)
+  return use(BrandingContext)
 }
 
 interface BrandingProviderProps {

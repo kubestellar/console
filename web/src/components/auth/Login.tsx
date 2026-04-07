@@ -29,8 +29,7 @@ const OAUTH_ERROR_INFO: Record<string, OAuthErrorEntry> = {
       'Verify the Client Secret in your GitHub OAuth app matches what\'s in .env (regenerate if unsure)',
       'Confirm the "Authorization callback URL" in your GitHub OAuth app is set to: http://localhost:8080/auth/github/callback',
       'Restart the console after updating .env',
-    ],
-  },
+    ] },
   invalid_client: {
     title: 'Invalid OAuth Client Credentials',
     message: 'GitHub rejected the client ID or client secret. Your OAuth app may be misconfigured or the credentials may have been rotated.',
@@ -39,8 +38,7 @@ const OAUTH_ERROR_INFO: Record<string, OAuthErrorEntry> = {
       'Update GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in your .env file',
       'If using GitHub Enterprise, verify GITHUB_URL points to the correct instance',
       'Restart the console after updating .env',
-    ],
-  },
+    ] },
   redirect_mismatch: {
     title: 'OAuth Callback URL Mismatch',
     message: 'The callback URL configured in the console does not match the one registered in your GitHub OAuth app.',
@@ -49,8 +47,7 @@ const OAUTH_ERROR_INFO: Record<string, OAuthErrorEntry> = {
       'Set "Authorization callback URL" to: http://localhost:8080/auth/github/callback',
       'If using a custom BACKEND_URL, make sure the callback URL matches: <BACKEND_URL>/auth/github/callback',
       'Restart the console after updating the GitHub OAuth app',
-    ],
-  },
+    ] },
   network_error: {
     title: 'Network Error',
     message: 'The console backend could not reach GitHub to complete authentication. This is usually a connectivity issue.',
@@ -59,8 +56,7 @@ const OAUTH_ERROR_INFO: Record<string, OAuthErrorEntry> = {
       'If behind a corporate proxy or firewall, ensure github.com and api.github.com are reachable',
       'Try again in a few moments — GitHub may be experiencing an outage',
       'Check https://www.githubstatus.com for service status',
-    ],
-  },
+    ] },
   csrf_validation_failed: {
     title: 'Login Session Expired',
     message: 'The login session timed out or was interrupted. This can happen with Safari or slow networks.',
@@ -68,8 +64,7 @@ const OAUTH_ERROR_INFO: Record<string, OAuthErrorEntry> = {
       'Try logging in again — click "Continue with GitHub" below',
       'If using Safari, try Chrome or Firefox instead',
       'Clear your browser cookies for localhost and try again',
-    ],
-  },
+    ] },
   missing_code: {
     title: 'GitHub Login Incomplete',
     message: 'GitHub did not return an authorization code. The OAuth flow may have been interrupted.',
@@ -77,8 +72,7 @@ const OAUTH_ERROR_INFO: Record<string, OAuthErrorEntry> = {
       'Try logging in again — click "Continue with GitHub" below',
       'Check that your GitHub OAuth app is not suspended or deleted',
       'Verify the "Homepage URL" in your GitHub OAuth app settings',
-    ],
-  },
+    ] },
   access_denied: {
     title: 'Access Denied',
     message: 'You denied the GitHub authorization request, or the OAuth app does not have permission to access your account.',
@@ -86,8 +80,7 @@ const OAUTH_ERROR_INFO: Record<string, OAuthErrorEntry> = {
       'Click "Continue with GitHub" below and approve the authorization prompt',
       'If you did not deny access, check that the GitHub OAuth app is not restricted by your organization\'s policies',
       'Contact your GitHub organization admin if SSO enforcement is blocking access',
-    ],
-  },
+    ] },
   github_error: {
     title: 'GitHub Authorization Error',
     message: 'GitHub returned an error during the authorization process.',
@@ -95,8 +88,7 @@ const OAUTH_ERROR_INFO: Record<string, OAuthErrorEntry> = {
       'Try logging in again — this may be a temporary issue',
       'Verify your GitHub OAuth app is not suspended or deleted',
       'Check https://www.githubstatus.com for service status',
-    ],
-  },
+    ] },
   user_fetch_failed: {
     title: 'Could Not Retrieve GitHub Profile',
     message: 'Login succeeded but the console was unable to fetch your GitHub profile.',
@@ -104,16 +96,14 @@ const OAUTH_ERROR_INFO: Record<string, OAuthErrorEntry> = {
       'Try logging in again — this may be a temporary GitHub API issue',
       'Check that your GitHub OAuth app has the "user:email" scope',
       'Verify your internet connection to api.github.com',
-    ],
-  },
+    ] },
   db_error: {
     title: 'Database Error',
     message: 'The console backend encountered a database error while processing your login.',
     steps: [
       'Restart the console and try again',
       'Check the backend logs for more details',
-    ],
-  },
+    ] },
   create_user_failed: {
     title: 'Account Creation Failed',
     message: 'The console was unable to create your user account in its local database.',
@@ -121,8 +111,7 @@ const OAUTH_ERROR_INFO: Record<string, OAuthErrorEntry> = {
       'Restart the console and try again',
       'Check the backend logs for database errors',
       'If the problem persists, try deleting the local database file and restarting',
-    ],
-  },
+    ] },
   jwt_failed: {
     title: 'Session Token Generation Failed',
     message: 'The console backend was unable to generate a session token after successful GitHub login.',
@@ -130,9 +119,7 @@ const OAUTH_ERROR_INFO: Record<string, OAuthErrorEntry> = {
       'Restart the console and try again',
       'Ensure JWT_SECRET is set in your .env file (any random string)',
       'Check the backend logs for more details',
-    ],
-  },
-}
+    ] } }
 
 /** Fallback error info for unrecognized error codes. */
 const UNKNOWN_ERROR_FALLBACK: OAuthErrorEntry = {
@@ -142,37 +129,32 @@ const UNKNOWN_ERROR_FALLBACK: OAuthErrorEntry = {
     'Try logging in again — click "Continue with GitHub" below',
     'Restart the console and try again',
     'Check the backend logs for more details',
-  ],
-}
+  ] }
 
 export function Login() {
   const { t } = useTranslation('common')
   const { login, isAuthenticated, isLoading } = useAuth()
   const [searchParams] = useSearchParams()
-  const sessionExpired = useMemo(() => searchParams.get('reason') === 'session_expired', [searchParams])
+  const sessionExpired = searchParams.get('reason') === 'session_expired'
   const oauthError = useMemo(() => searchParams.get('error'), [searchParams])
-  const errorDetail = useMemo(() => searchParams.get('error_detail'), [searchParams])
-  const errorInfo = useMemo(() => {
+  const errorDetail = searchParams.get('error_detail')
+  const errorInfo = (() => {
     if (!oauthError) return null
     const known = OAUTH_ERROR_INFO[oauthError]
     if (known) return known
     // Fallback for unrecognized error codes so the user always sees actionable UI
     return { ...UNKNOWN_ERROR_FALLBACK, message: `An unexpected error occurred during login (code: ${oauthError}).` }
-  }, [oauthError])
+  })()
   const branding = useBranding()
 
   // Pre-compute random star positions so render stays pure (no Math.random() in JSX)
   const STAR_COUNT = 30
-  const starStyles = useMemo(() =>
-    Array.from({ length: STAR_COUNT }, () => ({
+  const starStyles = Array.from({ length: STAR_COUNT }, () => ({
       width: Math.random() * 3 + 1 + 'px',
       height: Math.random() * 3 + 1 + 'px',
       left: Math.random() * 100 + '%',
       top: Math.random() * 100 + '%',
-      animationDelay: Math.random() * 3 + 's',
-    })),
-    [] // computed once on mount
-  )
+      animationDelay: Math.random() * 3 + 's' }))
 
   // Auto-login for Netlify deploy previews or when backend has no OAuth configured
   // Skip auto-login when there's an OAuth error so the user can see the troubleshooting info

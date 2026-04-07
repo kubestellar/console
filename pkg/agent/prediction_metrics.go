@@ -84,15 +84,48 @@ func RecordPrediction(predType, severity, source, provider string) {
 	predictionsTotal.WithLabelValues(predType, severity, source, provider).Inc()
 }
 
+// allowedCategories is the set of valid prediction categories for Prometheus labels.
+// Values outside this set are mapped to "other" to prevent unbounded cardinality.
+var allowedCategories = map[string]bool{
+	"performance": true,
+	"security":    true,
+	"cost":        true,
+	"reliability": true,
+	"scaling":     true,
+	"networking":  true,
+	"storage":     true,
+	"config":      true,
+	"other":       true,
+}
+
+// allowedSeverities is the set of valid prediction severities for Prometheus labels.
+var allowedSeverities = map[string]bool{
+	"critical": true,
+	"high":     true,
+	"medium":   true,
+	"low":      true,
+	"info":     true,
+}
+
+// sanitizeLabel returns the label value if it is in the allowed set, otherwise "other".
+func sanitizeLabel(value string, allowed map[string]bool) string {
+	if allowed[value] {
+		return value
+	}
+	return "other"
+}
+
 // SetActivePredictions updates the gauge of active predictions
 func SetActivePredictions(predictions []AIPrediction) {
 	// Reset all gauges
 	predictionsActive.Reset()
 
-	// Count by type, severity, source
+	// Count by type, severity, source — sanitize labels to prevent unbounded cardinality
 	counts := make(map[string]float64)
 	for _, p := range predictions {
-		key := p.Category + "|" + p.Severity + "|ai"
+		category := sanitizeLabel(p.Category, allowedCategories)
+		severity := sanitizeLabel(p.Severity, allowedSeverities)
+		key := category + "|" + severity + "|ai"
 		counts[key]++
 	}
 

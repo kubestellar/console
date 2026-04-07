@@ -8,7 +8,7 @@
  * - context: Read from React context
  */
 
-import { useState, useEffect, useMemo, useCallback, useSyncExternalStore } from 'react'
+import { useState, useEffect, useCallback, useSyncExternalStore } from 'react'
 import type { CardDataSource } from '../../types'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../constants'
 
@@ -106,8 +106,7 @@ const EMPTY_RESULT: UseDataSourceResult = {
   data: undefined,
   isLoading: false,
   error: null,
-  refetch: () => {},
-}
+  refetch: () => {} }
 
 /**
  * Unified data source hook
@@ -168,8 +167,7 @@ export function useDataSource(
         data: undefined,
         isLoading: false,
         error: new Error(`Unknown data source type: ${(_exhaustiveCheck as CardDataSource).type}`),
-        refetch: () => {},
-      }
+        refetch: () => {} }
     }
   }
 }
@@ -206,8 +204,7 @@ function useHookDataSourceInternal(
       data: undefined,
       isLoading: true,
       error: null,
-      refetch: () => {},
-    }
+      refetch: () => {} }
   }
 
   // Hook is registered -- call it. This is safe because after a key-based
@@ -218,8 +215,7 @@ function useHookDataSourceInternal(
     data: hookResult.data,
     isLoading: hookResult.isLoading,
     error: hookResult.error,
-    refetch: hookResult.refetch ?? (() => {}),
-  }
+    refetch: hookResult.refetch ?? (() => {}) }
 }
 
 /**
@@ -236,7 +232,7 @@ function useApiDataSourceInternal(
   const [error, setError] = useState<Error | null>(null)
 
   // Stringify params for stable dependency comparison
-  const paramsKey = useMemo(() => (params ? JSON.stringify(params) : ''), [params])
+  const paramsKey = params ? JSON.stringify(params) : ''
 
   const fetchData = useCallback(async () => {
     if (!endpoint) return
@@ -260,8 +256,7 @@ function useApiDataSourceInternal(
         method,
         headers: method === 'POST' ? { 'Content-Type': 'application/json' } : undefined,
         body: method === 'POST' && params ? JSON.stringify(params) : undefined,
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
       if (!response.ok) {
         throw new Error(`API error: ${response.status} ${response.statusText}`)
@@ -308,18 +303,14 @@ function useApiDataSourceInternal(
  * Static data source (internal - always runs but skips if data is null)
  */
 function useStaticDataSourceInternal(staticData: unknown[] | null): UseDataSourceResult {
-  return useMemo(
-    () => {
+  return (() => {
       if (!staticData) return EMPTY_RESULT
       return {
         data: staticData,
         isLoading: false,
         error: null,
-        refetch: () => {},
-      }
-    },
-    [staticData]
-  )
+        refetch: () => {} }
+    })()
 }
 
 /**
@@ -331,18 +322,14 @@ function useStaticDataSourceInternal(staticData: unknown[] | null): UseDataSourc
  * hook registry (see registerDataHook above).
  */
 function useContextDataSourceInternal(contextKey: string | null): UseDataSourceResult {
-  return useMemo(
-    () => {
+  return (() => {
       if (!contextKey) return EMPTY_RESULT
       return {
         data: undefined,
         isLoading: false,
         error: new Error(`Context data source not yet implemented: ${contextKey}`),
-        refetch: () => {},
-      }
-    },
-    [contextKey]
-  )
+        refetch: () => {} }
+    })()
 }
 
 export default useDataSource

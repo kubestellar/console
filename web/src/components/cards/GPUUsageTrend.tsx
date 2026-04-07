@@ -9,8 +9,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
-} from 'recharts'
+  Legend } from 'recharts'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -24,8 +23,7 @@ import {
   CHART_AXIS_STROKE,
   CHART_TOOLTIP_CONTENT_STYLE,
   CHART_TICK_COLOR,
-  CHART_LEGEND_WRAPPER_STYLE,
-} from '../../lib/constants'
+  CHART_LEGEND_WRAPPER_STYLE } from '../../lib/constants'
 
 interface GPUDataPoint {
   time: string
@@ -58,8 +56,7 @@ export function GPUUsageTrend() {
     isRefreshing,
     isDemoFallback,
     isFailed,
-    consecutiveFailures,
-  } = useCachedGPUNodes()
+    consecutiveFailures } = useCachedGPUNodes()
   const { deduplicatedClusters: clusters } = useClusters()
   const { isDemoMode } = useDemoMode()
 
@@ -75,8 +72,7 @@ export function GPUUsageTrend() {
     hasAnyData: hasData,
     isDemoData: isDemoMode || isDemoFallback,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
   const [showClusterFilter, setShowClusterFilter] = useState(false)
@@ -112,8 +108,7 @@ export function GPUUsageTrend() {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({
           data: history,
-          timestamp: Date.now(),
-        }))
+          timestamp: Date.now() }))
       } catch {
         // Ignore storage errors (quota exceeded, etc.)
       }
@@ -121,16 +116,16 @@ export function GPUUsageTrend() {
   }, [history])
 
   // Get reachable clusters (those with GPU nodes)
-  const gpuClusters = useMemo(() => {
+  const gpuClusters = (() => {
     const clusterNames = new Set(gpuNodes.map(n => normalizeClusterName(n.cluster)))
     return clusters.filter(c => clusterNames.has(normalizeClusterName(c.name)) && c.reachable !== false)
-  }, [gpuNodes, clusters])
+  })()
 
   // Get available clusters for local filter (respects global filter)
-  const availableClustersForFilter = useMemo(() => {
+  const availableClustersForFilter = (() => {
     if (isAllClustersSelected) return gpuClusters
     return gpuClusters.filter(c => selectedClusters.includes(c.name))
-  }, [gpuClusters, selectedClusters, isAllClustersSelected])
+  })()
 
   // Filter GPU nodes by selected clusters AND local filter
   const filteredNodes = useMemo(() => {
@@ -181,8 +176,7 @@ export function GPUUsageTrend() {
     return {
       available,
       allocated,
-      free: available - allocated,
-    }
+      free: available - allocated }
   }, [filteredNodes])
 
   // Get time range config
@@ -196,8 +190,7 @@ export function GPUUsageTrend() {
     const now = new Date()
     const newPoint: GPUDataPoint = {
       time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      ...currentTotals,
-    }
+      ...currentTotals }
 
     // Only add if data changed significantly
     const lastPoint = historyRef.current[historyRef.current.length - 1]

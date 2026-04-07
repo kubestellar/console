@@ -6,7 +6,6 @@
  * indicators, overall score, and tenant count. Purely derived from
  * the 4 individual technology hooks (no direct fetch).
  */
-import { useMemo } from 'react'
 import { Network, Layers, Box, Monitor, Shield, CheckCircle, XCircle, AlertTriangle, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useMultiTenancyOverview } from './useMultiTenancyOverview'
@@ -25,24 +24,21 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   network: Network,
   layers: Layers,
   box: Box,
-  monitor: Monitor,
-}
+  monitor: Monitor }
 
 /** Color classes for health states */
 const HEALTH_COLORS: Record<string, string> = {
   healthy: 'text-green-400',
   degraded: 'text-orange-400',
   unhealthy: 'text-red-400',
-  unknown: 'text-zinc-500',
-}
+  unknown: 'text-zinc-500' }
 
 /** Background classes for health states */
 const HEALTH_BG: Record<string, string> = {
   healthy: 'bg-green-500/10 border-green-500/20',
   degraded: 'bg-orange-500/10 border-orange-500/20',
   unhealthy: 'bg-red-500/10 border-red-500/20',
-  unknown: 'bg-zinc-500/10 border-zinc-500/20',
-}
+  unknown: 'bg-zinc-500/10 border-zinc-500/20' }
 
 /** Status icon for isolation levels */
 function IsolationStatusIcon({ status }: { status: IsolationStatus }) {
@@ -60,8 +56,7 @@ function IsolationStatusIcon({ status }: { status: IsolationStatus }) {
 const ISOLATION_STATUS_COLORS: Record<IsolationStatus, string> = {
   ready: 'text-green-400',
   degraded: 'text-orange-400',
-  missing: 'text-zinc-500',
-}
+  missing: 'text-zinc-500' }
 
 /** Single component badge in the 2x2 grid */
 function ComponentBadge({ component, onClick }: { component: ComponentStatus; onClick?: () => void }) {
@@ -107,18 +102,14 @@ export function MultiTenancyOverview() {
   const { isOpen: isDetailModalOpen, open: openDetailModal, close: closeDetailModal } = useModalState()
 
   // Use demo data when all hooks return demo data
-  const data = useMemo(
-    () => (liveData.isDemoData ? DEMO_MULTI_TENANCY_OVERVIEW : liveData),
-    [liveData],
-  )
+  const data = liveData.isDemoData ? DEMO_MULTI_TENANCY_OVERVIEW : liveData
 
   const hasData = (data.components || []).length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: data.isLoading && !hasData,
     hasAnyData: hasData,
     isDemoData: data.isDemoData,
-    isFailed: !!data.isFailed,
-  })
+    isFailed: !!data.isFailed })
 
   if (showSkeleton) {
     return (

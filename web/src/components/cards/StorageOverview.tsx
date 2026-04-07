@@ -28,8 +28,7 @@ export function StorageOverview() {
     hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
-    isDemoData: isDemoFallback || isDemoMode,
-  })
+    isDemoData: isDemoFallback || isDemoMode })
 
   // Local cluster filter
   const {
@@ -39,25 +38,23 @@ export function StorageOverview() {
     availableClusters,
     showClusterFilter,
     setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({
-    storageKey: 'storage-overview',
-  })
+    clusterFilterRef } = useChartFilters({
+    storageKey: 'storage-overview' })
 
   // Filter clusters by global selection first
-  const globalFilteredClusters = useMemo(() => {
+  const globalFilteredClusters = (() => {
     if (isAllClustersSelected) return clusters
     return clusters.filter(c => selectedClusters.includes(c.name))
-  }, [clusters, selectedClusters, isAllClustersSelected])
+  })()
 
   // Apply local cluster filter
-  const filteredClusters = useMemo(() => {
+  const filteredClusters = (() => {
     if (localClusterFilter.length === 0) return globalFilteredClusters
     return globalFilteredClusters.filter(c => localClusterFilter.includes(c.name))
-  }, [globalFilteredClusters, localClusterFilter])
+  })()
 
   // Filter PVCs by selection
-  const filteredPVCs = useMemo(() => {
+  const filteredPVCs = (() => {
     let result = pvcs
     if (!isAllClustersSelected) {
       result = result.filter(p => p.cluster && selectedClusters.includes(p.cluster))
@@ -66,7 +63,7 @@ export function StorageOverview() {
       result = result.filter(p => p.cluster && localClusterFilter.includes(p.cluster))
     }
     return result
-  }, [pvcs, selectedClusters, isAllClustersSelected, localClusterFilter])
+  })()
 
   // Calculate storage stats
   const stats = useMemo(() => {
@@ -90,8 +87,7 @@ export function StorageOverview() {
       pendingPVCs,
       failedPVCs,
       storageClasses: Array.from(storageClasses.entries()).sort((a, b) => b[1] - a[1]),
-      clustersWithStorage: filteredClusters.filter(c => (c.storageGB || 0) > 0).length,
-    }
+      clustersWithStorage: filteredClusters.filter(c => (c.storageGB || 0) > 0).length }
   }, [filteredClusters, filteredPVCs])
 
   // Check if we have real data from reachable clusters

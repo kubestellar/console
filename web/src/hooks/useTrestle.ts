@@ -14,7 +14,7 @@
  * framework, producing AssessmentResult resources.
  */
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useClusters } from './useMCP'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
@@ -177,8 +177,7 @@ function generateDemoControlResults(cluster: string, total: number, passed: numb
         description: `Ensure ${family.name.toLowerCase()} control ${controlId} requirements are satisfied`,
         status,
         severity: DEMO_SEVERITIES[Math.floor(rand * 4)],
-        profile: profiles[idx % 2 === 0 ? 0 : 1],
-      })
+        profile: profiles[idx % 2 === 0 ? 0 : 1] })
       idx++
     }
   }
@@ -204,23 +203,20 @@ function getDemoStatus(cluster: string): TrestleClusterStatus {
         totalControls: Math.round(total * 0.6),
         controlsPassed: Math.round(passed * 0.6),
         controlsFailed: Math.round(failed * 0.6),
-        controlsOther: Math.round(other * 0.6),
-      },
+        controlsOther: Math.round(other * 0.6) },
       {
         name: 'FedRAMP Moderate',
         totalControls: Math.round(total * 0.4),
         controlsPassed: Math.round(passed * 0.4),
         controlsFailed: Math.round(failed * 0.4),
-        controlsOther: Math.round(other * 0.4),
-      },
+        controlsOther: Math.round(other * 0.4) },
     ],
     totalControls: total,
     passedControls: passed,
     failedControls: failed,
     otherControls: other,
     controlResults: generateDemoControlResults(cluster, total, passed, failed, other),
-    lastAssessment: new Date(Date.now() - (seed % 60) * 60_000).toISOString(),
-  }
+    lastAssessment: new Date(Date.now() - (seed % 60) * 60_000).toISOString() }
 }
 
 // ── CRD names for detection ──────────────────────────────────────────────
@@ -253,8 +249,7 @@ function emptyStatus(cluster: string, installed: boolean, error?: string): Trest
     passedControls: 0,
     failedControls: 0,
     otherControls: 0,
-    controlResults: [],
-  }
+    controlResults: [] }
 }
 
 // ── Single-cluster fetch (used in parallel) ──────────────────────────────
@@ -339,8 +334,7 @@ async function fetchSingleCluster(cluster: string): Promise<TrestleClusterStatus
                   controlResults.push({
                     controlId, title,
                     status: controlStatus === 'not-applicable' ? 'not-applicable' : 'other',
-                    description, severity, profile: profileName,
-                  })
+                    description, severity, profile: profileName })
                 }
               }
 
@@ -349,8 +343,7 @@ async function fetchSingleCluster(cluster: string): Promise<TrestleClusterStatus
                 totalControls: passed + failed + other,
                 controlsPassed: passed,
                 controlsFailed: failed,
-                controlsOther: other,
-              })
+                controlsOther: other })
             }
 
             const totalControls = controlResults.length
@@ -372,8 +365,7 @@ async function fetchSingleCluster(cluster: string): Promise<TrestleClusterStatus
               failedControls,
               otherControls,
               controlResults,
-              lastAssessment: new Date().toISOString(),
-            }
+              lastAssessment: new Date().toISOString() }
           }
         } catch {
           // JSON parse error, try next API group
@@ -405,10 +397,7 @@ export function useTrestle() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const mountedRef = useRef(true)
 
-  const clusterNames = useMemo(
-    () => (deduplicatedClusters || []).map(c => c.name),
-    [deduplicatedClusters],
-  )
+  const clusterNames = (deduplicatedClusters || []).map(c => c.name)
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (clusterNames.length === 0 && !isDemoMode) {
@@ -520,14 +509,11 @@ export function useTrestle() {
     }
   }, [fetchData])
 
-  const installed = useMemo(
-    () => Object.values(statuses).some(s => s.installed),
-    [statuses],
-  )
+  const installed = Object.values(statuses).some(s => s.installed)
 
   const isDemoData = isDemoMode || (!installed && !isLoading)
 
-  const aggregated = useMemo(() => {
+  const aggregated = (() => {
     const agg = { totalControls: 0, passedControls: 0, failedControls: 0, otherControls: 0, overallScore: 0 }
     const installedStatuses = Object.values(statuses).filter(s => s.installed)
     if (installedStatuses.length === 0) return agg
@@ -541,7 +527,7 @@ export function useTrestle() {
       ? Math.round((agg.passedControls / agg.totalControls) * 100)
       : 0
     return agg
-  }, [statuses])
+  })()
 
   return {
     statuses,
@@ -555,6 +541,5 @@ export function useTrestle() {
     clustersChecked,
     /** Total number of clusters being checked */
     totalClusters: clusterNames.length,
-    refetch: () => fetchData(true),
-  }
+    refetch: () => fetchData(true) }
 }

@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useCache } from '../lib/cache'
 import { useClusters } from './mcp/clusters'
 import { detectCloudProvider, getProviderLabel } from '../components/ui/CloudProviderIcon'
@@ -18,8 +18,7 @@ interface BackendHealthResponse {
 /** Statuspage.io JSON API endpoints (CORS-safe, no redirects) */
 const STATUSPAGE_API: Record<string, string> = {
   anthropic: 'https://status.claude.com/api/v2/status.json',
-  openai: 'https://status.openai.com/api/v2/status.json',
-}
+  openai: 'https://status.openai.com/api/v2/status.json' }
 
 /** Check a single provider via Statuspage.io directly from browser */
 async function checkStatuspageDirect(apiUrl: string): Promise<HealthStatus> {
@@ -49,8 +48,7 @@ async function checkServiceHealth(providerIds: string[]): Promise<Map<string, He
   if (!getDemoMode()) {
     try {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/providers/health`, {
-        signal: AbortSignal.timeout(STATUS_CHECK_TIMEOUT),
-      })
+        signal: AbortSignal.timeout(STATUS_CHECK_TIMEOUT) })
       if (response.ok) {
         const data: BackendHealthResponse = await response.json()
         for (const p of (data.providers || [])) {
@@ -102,8 +100,7 @@ const STATUS_PAGES: Record<string, string> = {
   oci: 'https://ocistatus.oraclecloud.com',
   alibaba: 'https://status.alibabacloud.com',
   digitalocean: 'https://status.digitalocean.com',
-  rancher: 'https://status.rancher.com',
-}
+  rancher: 'https://status.rancher.com' }
 
 /** Display name mapping for AI providers */
 const AI_PROVIDER_NAMES: Record<string, string> = {
@@ -113,8 +110,7 @@ const AI_PROVIDER_NAMES: Record<string, string> = {
   google: 'Google (Gemini)',
   gemini: 'Google (Gemini)',
   bob: 'Bob (Built-in)',
-  'anthropic-local': 'Claude Code (Local)',
-}
+  'anthropic-local': 'Claude Code (Local)' }
 
 /** Normalize AI provider ID for dedup and status lookup */
 function normalizeAIProvider(provider: string): string {
@@ -158,8 +154,7 @@ async function fetchProviders(clusterSnapshot: Array<{ name: string; server?: st
   const unconfiguredProviders: string[] = []
   try {
     const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/settings/keys`, {
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-    })
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
     if (response.ok) {
       const data: KeysStatusResponse = await response.json()
       const seen = new Set<string>()
@@ -199,8 +194,7 @@ async function fetchProviders(clusterSnapshot: Array<{ name: string; server?: st
           status,
           configured,
           statusUrl: STATUS_PAGES[normalized],
-          detail,
-        })
+          detail })
       }
     }
   } catch {
@@ -243,8 +237,7 @@ async function fetchProviders(clusterSnapshot: Array<{ name: string; server?: st
         status: 'operational',
         configured: true,
         statusUrl: STATUS_PAGES[provider],
-        detail: `${count} cluster${count !== 1 ? 's' : ''} detected`,
-      })
+        detail: `${count} cluster${count !== 1 ? 's' : ''} detected` })
     }
   }
 
@@ -269,8 +262,7 @@ export function useProviderHealth() {
     demoData: DEMO_PROVIDERS,
     demoWhenEmpty: true,
     fetcher: () => fetchProviders(clustersRef.current),
-    refreshInterval: 60_000,
-  })
+    refreshInterval: 60_000 })
 
   // Re-fetch when the cluster count changes (cloud provider list depends on clusters)
   const prevClusterCountRef = useRef<number | null>(null)
@@ -285,8 +277,8 @@ export function useProviderHealth() {
     }
   }, [clusters.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const aiProviders = useMemo(() => cacheResult.data.filter(p => p.category === 'ai'), [cacheResult.data])
-  const cloudProviders = useMemo(() => cacheResult.data.filter(p => p.category === 'cloud'), [cacheResult.data])
+  const aiProviders = cacheResult.data.filter(p => p.category === 'ai')
+  const cloudProviders = cacheResult.data.filter(p => p.category === 'cloud')
 
   // Don't signal demo fallback while still loading — card should show skeleton, not demo data
   const effectiveIsDemoFallback = cacheResult.isDemoFallback && !cacheResult.isLoading
@@ -300,6 +292,5 @@ export function useProviderHealth() {
     isDemoFallback: effectiveIsDemoFallback,
     isFailed: cacheResult.isFailed,
     consecutiveFailures: cacheResult.consecutiveFailures,
-    refetch: cacheResult.refetch,
-  }
+    refetch: cacheResult.refetch }
 }

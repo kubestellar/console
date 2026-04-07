@@ -8,8 +8,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
-} from 'recharts'
+  Legend } from 'recharts'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useCardLoadingState } from './CardDataContext'
@@ -21,8 +20,7 @@ import {
   CHART_AXIS_STROKE,
   CHART_TOOLTIP_CONTENT_STYLE,
   CHART_TICK_COLOR,
-  CHART_LEGEND_WRAPPER_STYLE,
-} from '../../lib/constants'
+  CHART_LEGEND_WRAPPER_STYLE } from '../../lib/constants'
 import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface ResourcePoint {
@@ -60,8 +58,7 @@ export function ResourceTrend() {
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
-    isDemoData: isDemoMode,
-  })
+    isDemoData: isDemoMode })
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -104,8 +101,7 @@ export function ResourceTrend() {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({
           data: history,
-          timestamp: Date.now(),
-        }))
+          timestamp: Date.now() }))
       } catch {
         // Ignore storage errors (quota exceeded, etc.)
       }
@@ -113,18 +109,16 @@ export function ResourceTrend() {
   }, [history])
 
   // Get reachable clusters
-  const reachableClusters = useMemo(() => {
-    return clusters.filter(c => c.reachable !== false)
-  }, [clusters])
+  const reachableClusters = clusters.filter(c => c.reachable !== false)
 
   // Get available clusters for local filter (respects global filter)
-  const availableClustersForFilter = useMemo(() => {
+  const availableClustersForFilter = (() => {
     if (isAllClustersSelected) return reachableClusters
     return reachableClusters.filter(c => selectedClusters.includes(c.name))
-  }, [reachableClusters, selectedClusters, isAllClustersSelected])
+  })()
 
   // Filter by selected clusters AND local filter AND exclude offline/unreachable clusters
-  const filteredClusters = useMemo(() => {
+  const filteredClusters = (() => {
     let filtered = reachableClusters
     if (!isAllClustersSelected) {
       filtered = filtered.filter(c => selectedClusters.includes(c.name))
@@ -133,7 +127,7 @@ export function ResourceTrend() {
       filtered = filtered.filter(c => localClusterFilter.includes(c.name))
     }
     return filtered
-  }, [reachableClusters, selectedClusters, isAllClustersSelected, localClusterFilter])
+  })()
 
   const toggleClusterFilter = (clusterName: string) => {
     setLocalClusterFilter(prev => {
@@ -150,8 +144,7 @@ export function ResourceTrend() {
       cpuCores: filteredClusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0),
       memoryGB: filteredClusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0),
       pods: filteredClusters.reduce((sum, c) => sum + (c.podCount || 0), 0),
-      nodes: filteredClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0),
-    }
+      nodes: filteredClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0) }
   }, [filteredClusters])
 
   // Check if we have any reachable clusters with real data
@@ -166,8 +159,7 @@ export function ResourceTrend() {
     const now = new Date()
     const newPoint: ResourcePoint = {
       time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      ...currentTotals,
-    }
+      ...currentTotals }
 
     // Only add if data changed
     const lastPoint = historyRef.current[historyRef.current.length - 1]
@@ -193,8 +185,7 @@ export function ResourceTrend() {
         cpuCores: currentTotals.cpuCores,
         memoryGB: currentTotals.memoryGB,
         pods: currentTotals.pods,
-        nodes: currentTotals.nodes,
-      }
+        nodes: currentTotals.nodes }
       historyRef.current = [initialPoint]
       setHistory([initialPoint])
     }

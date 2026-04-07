@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Server, Cpu, MemoryStick, Box, Activity, AlertCircle, GitBranch } from 'lucide-react'
 import { useClusters, ClusterInfo } from '../../hooks/useMCP'
@@ -19,19 +18,16 @@ export function ClusterComparisonPage() {
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
 
   // Get cluster names from URL
-  const clusterNames = useMemo(() => {
+  const clusterNames = (() => {
     const names = searchParams.get('clusters')?.split(',').filter(Boolean) || []
     return names
-  }, [searchParams])
+  })()
 
   // Filter to only the clusters we're comparing
-  const clustersToCompare = useMemo(() => {
-    return clusters.filter(c => clusterNames.includes(c.name))
-  }, [clusters, clusterNames])
+  const clustersToCompare = clusters.filter(c => clusterNames.includes(c.name))
 
   // Calculate metrics for each cluster
-  const clusterMetrics: ClusterMetrics[] = useMemo(() => {
-    return clustersToCompare.map(cluster => {
+  const clusterMetrics: ClusterMetrics[] = clustersToCompare.map(cluster => {
       const cpuUtilization = cluster.cpuCores && cluster.cpuRequestsCores
         ? Math.round((cluster.cpuRequestsCores / cluster.cpuCores) * 100)
         : 0
@@ -43,10 +39,8 @@ export function ClusterComparisonPage() {
       return {
         cluster,
         cpuUtilization,
-        memoryUtilization,
-      }
+        memoryUtilization }
     })
-  }, [clustersToCompare])
 
   // Find differences (values that vary across clusters)
   const hasDifference = (getValue: (m: ClusterMetrics) => number | string | undefined) => {

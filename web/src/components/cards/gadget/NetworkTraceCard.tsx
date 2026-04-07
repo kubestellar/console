@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Network, ArrowRight } from 'lucide-react'
 import { useCachedNetworkTraces } from '../../../hooks/useGadget'
 import { useCardLoadingState, useCardDemoState } from '../CardDataContext'
@@ -22,12 +21,9 @@ export function NetworkTraceCard({ config }: NetworkTraceCardProps) {
     isDemoData: isDemoMode || isDemoData,
     hasAnyData: hasData,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
-  const connections = useMemo(() => {
-    return [...data].slice(0, 20)
-  }, [data])
+  const connections = [...data].slice(0, 20)
 
   if (showSkeleton) {
     return (

@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Play, CheckCircle, Clock, ChevronRight } from 'lucide-react'
 import { useMissions } from '../../../hooks/useMissions'
 import { useCachedPodIssues, useCachedDeploymentIssues } from '../../../hooks/useCachedData'
@@ -27,11 +26,10 @@ export function ConsoleIssuesCard(_props: ConsoleMissionCardProps) {
     hasAnyData: allPodIssues.length > 0 || allDeploymentIssues.length > 0 || missions.length > 0,
     isDemoData: podsDemoFallback || deploysDemoFallback,
     isFailed: podsFailed || deploysFailed,
-    consecutiveFailures: Math.max(podsFailures, deploysFailures),
-  })
+    consecutiveFailures: Math.max(podsFailures, deploysFailures) })
 
   // Filter issues by global cluster filter
-  const podIssues = useMemo(() => {
+  const podIssues = (() => {
     let result = allPodIssues
 
     // Apply global cluster filter
@@ -50,9 +48,9 @@ export function ConsoleIssuesCard(_props: ConsoleMissionCardProps) {
     }
 
     return result
-  }, [allPodIssues, selectedClusters, isAllClustersSelected, customFilter])
+  })()
 
-  const deploymentIssues = useMemo(() => {
+  const deploymentIssues = (() => {
     let result = allDeploymentIssues
 
     // Apply global cluster filter
@@ -71,7 +69,7 @@ export function ConsoleIssuesCard(_props: ConsoleMissionCardProps) {
     }
 
     return result
-  }, [allDeploymentIssues, selectedClusters, isAllClustersSelected, customFilter])
+  })()
 
   const totalIssues = podIssues.length + deploymentIssues.length
   const clustersWithIssues = new Set([
@@ -106,9 +104,7 @@ Please:
       context: {
         podIssues: podIssues.slice(0, 20),
         deploymentIssues: deploymentIssues.slice(0, 20),
-        clustersWithIssues,
-      },
-    })
+        clustersWithIssues } })
   }
 
   const handleStartRepair = () => checkKeyAndRun(doStartRepair)

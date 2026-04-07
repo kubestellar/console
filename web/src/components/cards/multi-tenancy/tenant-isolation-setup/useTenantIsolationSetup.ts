@@ -4,7 +4,6 @@
  *
  * No caching needed — purely derived from the individual status hooks.
  */
-import { useMemo } from 'react'
 import { useOvnStatus } from '../ovn-status/useOvnStatus'
 import { useKubeFlexStatus } from '../kubeflex-status/useKubeflexStatus'
 import { useK3sStatus } from '../k3s-status/useK3sStatus'
@@ -57,14 +56,14 @@ export function useTenantIsolationSetup(): TenantIsolationSetupData {
   // Demo when ALL hooks are returning demo fallback data (useCache in demo mode)
   const isDemoData = ovnResult.isDemoData && kubeflexResult.isDemoData && k3sResult.isDemoData && kubevirtResult.isDemoData
 
-  const components: ComponentReadiness[] = useMemo(() => [
+  const components: ComponentReadiness[] = [
     { name: 'OVN-Kubernetes', key: 'ovn', detected: ovn.detected, health: ovn.health },
     { name: 'KubeFlex', key: 'kubeflex', detected: kubeflex.detected, health: kubeflex.health },
     { name: 'K3s', key: 'k3s', detected: k3s.detected, health: k3s.health },
     { name: 'KubeVirt', key: 'kubevirt', detected: kubevirt.detected, health: kubevirt.health },
-  ], [ovn.detected, ovn.health, kubeflex.detected, kubeflex.health, k3s.detected, k3s.health, kubevirt.detected, kubevirt.health])
+  ]
 
-  const isolationLevels: IsolationLevel[] = useMemo(() => {
+  const isolationLevels: IsolationLevel[] = (() => {
     const controlPlaneDetected = kubeflex.detected && k3s.detected
     const controlPlaneStatus: IsolationStatus = controlPlaneDetected
       ? (kubeflex.health === 'healthy' && k3s.health === 'healthy' ? 'ready' : 'degraded')
@@ -83,7 +82,7 @@ export function useTenantIsolationSetup(): TenantIsolationSetupData {
       { type: 'Data-plane', status: dataPlaneStatus, provider: 'KubeVirt' },
       { type: 'Network', status: networkStatus, provider: 'OVN-Kubernetes' },
     ]
-  }, [kubeflex.detected, kubeflex.health, k3s.detected, k3s.health, kubevirt.detected, kubevirt.health, ovn.detected, ovn.health])
+  })()
 
   const readyCount = (components || []).filter(c => c.detected).length
   const allReady = readyCount === (components || []).length
@@ -98,6 +97,5 @@ export function useTenantIsolationSetup(): TenantIsolationSetupData {
     isolationScore,
     totalIsolationLevels: TOTAL_ISOLATION_LEVELS,
     isLoading,
-    isDemoData,
-  }
+    isDemoData }
 }

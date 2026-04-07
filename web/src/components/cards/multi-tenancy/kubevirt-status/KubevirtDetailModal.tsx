@@ -7,7 +7,7 @@
  * Follows the TrivyDetailModal pattern using BaseModal compound components.
  */
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Monitor, Search, ExternalLink, CheckCircle, XCircle, Server, Users, RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { BaseModal } from '../../../../lib/modals'
@@ -29,8 +29,7 @@ const VM_STATE_BADGE_COLORS: Record<string, string> = {
   migrating: 'text-blue-400 bg-blue-500/15',
   pending: 'text-yellow-400 bg-yellow-500/15',
   failed: 'text-red-400 bg-red-500/15',
-  unknown: 'text-muted-foreground bg-secondary',
-}
+  unknown: 'text-muted-foreground bg-secondary' }
 
 /** VM state color for the breakdown bar */
 const VM_STATE_BAR_COLORS: Record<string, string> = {
@@ -39,8 +38,7 @@ const VM_STATE_BAR_COLORS: Record<string, string> = {
   migrating: 'bg-blue-500',
   pending: 'bg-yellow-500',
   failed: 'bg-red-500',
-  unknown: 'bg-zinc-600',
-}
+  unknown: 'bg-zinc-600' }
 
 /** VM state text colors for breakdown labels */
 const VM_STATE_TEXT_COLORS: Record<string, string> = {
@@ -49,8 +47,7 @@ const VM_STATE_TEXT_COLORS: Record<string, string> = {
   migrating: 'text-blue-400',
   pending: 'text-yellow-400',
   failed: 'text-red-400',
-  unknown: 'text-muted-foreground',
-}
+  unknown: 'text-muted-foreground' }
 
 // ============================================================================
 // Types
@@ -102,16 +99,16 @@ export function KubevirtDetailModal({ isOpen, onClose, data, isDemoData }: Kubev
   const isHealthy = data.health === 'healthy'
 
   // Count VMs by state
-  const stateCounts = useMemo(() => {
+  const stateCounts = (() => {
     const counts: Record<string, number> = {}
     for (const vm of vms) {
       counts[vm.state] = (counts[vm.state] || 0) + 1
     }
     return counts
-  }, [vms])
+  })()
 
   // Breakdown segments for the state bar
-  const stateSegments = useMemo(() => {
+  const stateSegments = (() => {
     const total = vms.length
     if (total === 0) return []
     return Object.entries(stateCounts)
@@ -121,12 +118,11 @@ export function KubevirtDetailModal({ isOpen, onClose, data, isDemoData }: Kubev
         count,
         pct: (count / total) * 100,
         barColor: VM_STATE_BAR_COLORS[state] || VM_STATE_BAR_COLORS.unknown,
-        textColor: VM_STATE_TEXT_COLORS[state] || VM_STATE_TEXT_COLORS.unknown,
-      }))
-  }, [vms.length, stateCounts])
+        textColor: VM_STATE_TEXT_COLORS[state] || VM_STATE_TEXT_COLORS.unknown }))
+  })()
 
   // Group VMs by namespace for tenant distribution
-  const tenantDistribution = useMemo(() => {
+  const tenantDistribution = (() => {
     const nsMap = new Map<string, number>()
     for (const vm of vms) {
       nsMap.set(vm.namespace, (nsMap.get(vm.namespace) || 0) + 1)
@@ -134,10 +130,10 @@ export function KubevirtDetailModal({ isOpen, onClose, data, isDemoData }: Kubev
     return Array.from(nsMap.entries())
       .sort((a, b) => b[1] - a[1])
       .map(([ns, count]) => ({ namespace: ns, vmCount: count }))
-  }, [vms])
+  })()
 
   // Filter VMs by search
-  const filteredVMs = useMemo(() => {
+  const filteredVMs = (() => {
     if (!search.trim()) return vms
     const q = search.toLowerCase()
     return vms.filter(
@@ -146,7 +142,7 @@ export function KubevirtDetailModal({ isOpen, onClose, data, isDemoData }: Kubev
         vm.namespace.toLowerCase().includes(q) ||
         vm.state.toLowerCase().includes(q),
     )
-  }, [vms, search])
+  })()
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false} className={isDemoData ? 'ring-2 ring-yellow-500/60 shadow-[0_0_20px_rgba(234,179,8,0.25)]' : ''}>

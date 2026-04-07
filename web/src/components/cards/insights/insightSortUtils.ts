@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import type { MultiClusterInsight, InsightSeverity } from '../../../types/insights'
 import type { SortDirection } from '../../ui/CardControls'
 
@@ -6,8 +6,7 @@ import type { SortDirection } from '../../ui/CardControls'
 const INSIGHT_SEVERITY_ORDER: Record<InsightSeverity, number> = {
   critical: 0,
   warning: 1,
-  info: 2,
-}
+  info: 2 }
 
 /** Default number of insight items to display */
 const DEFAULT_INSIGHT_LIMIT = 5
@@ -28,8 +27,7 @@ const insightComparators: Record<InsightSortField, (a: MultiClusterInsight, b: M
     (a.affectedClusters?.length ?? 0) - (b.affectedClusters?.length ?? 0),
   time: (a, b) =>
     new Date(a.detectedAt).getTime() - new Date(b.detectedAt).getTime(),
-  title: (a, b) => a.title.localeCompare(b.title),
-}
+  title: (a, b) => a.title.localeCompare(b.title) }
 
 /**
  * Hook that provides sort/limit state and sorted+limited insights array.
@@ -44,13 +42,13 @@ export function useInsightSort(
   const [sortDirection, setSortDirection] = useState<SortDirection>(defaultDirection)
   const [limit, setLimit] = useState<number | 'unlimited'>(DEFAULT_INSIGHT_LIMIT)
 
-  const sorted = useMemo(() => {
+  const sorted = (() => {
     const cmp = insightComparators[sortBy]
     const dirMul = sortDirection === 'asc' ? 1 : -1
     const result = [...insights].sort((a, b) => dirMul * cmp(a, b))
     if (limit === 'unlimited') return result
     return result.slice(0, limit)
-  }, [insights, sortBy, sortDirection, limit])
+  })()
 
   return {
     sorted,
@@ -59,6 +57,5 @@ export function useInsightSort(
     sortDirection,
     setSortDirection,
     limit,
-    setLimit,
-  }
+    setLimit }
 }

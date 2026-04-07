@@ -18,8 +18,7 @@ import {
   PodRelatedTab,
   PodOutputTab,
   PodAiAnalysis,
-  PodDeleteSection,
-} from './pod-drilldown'
+  PodDeleteSection } from './pod-drilldown'
 import type { TabType, RelatedResource, CachedData } from './pod-drilldown'
 import { copyToClipboard } from '../../../lib/clipboard'
 
@@ -61,8 +60,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   // Update cache metadata
   setPodCache(cluster, namespace, podName, {
     lastOpened: now,
-    openCount: (persistentCache?.openCount || 0) + 1,
-  })
+    openCount: (persistentCache?.openCount || 0) + 1 })
 
   // Clean up old cache entries periodically
   cleanupPodCache()
@@ -116,7 +114,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   const status = data.status as string
   const restarts = (data.restarts as number) || 0
   const reason = data.reason as string
-  const passedIssues = useMemo(() => (data.issues as string[]) || [], [data.issues])
+  const passedIssues = (data.issues as string[]) || []
   const passedLabels = data.labels as Record<string, string> | undefined
   const passedAnnotations = data.annotations as Record<string, string> | undefined
 
@@ -643,8 +641,7 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
       pvcs: pvcs.length > 0 ? pvcs : undefined,
       serviceAccount: serviceAccount || undefined,
       ownerChain: ownerChain.length > 0 ? ownerChain : undefined,
-      fetchedAt: Date.now(),
-    })
+      fetchedAt: Date.now() })
   }, [cluster, namespace, podName, describeOutput, logsOutput, eventsOutput, yamlOutput, podStatusOutput, aiAnalysis, labels, annotations, configMaps, secrets, pvcs, serviceAccount, ownerChain])
 
   const handleRepairPod = () => {
@@ -674,9 +671,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
         cluster,
         status,
         restarts,
-        issues,
-      },
-    })
+        issues } })
   }
 
   // Check if user can delete pods in this namespace
@@ -686,8 +681,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
         cluster,
         verb: 'delete',
         resource: 'pods',
-        namespace,
-      })
+        namespace })
       setCanDeletePod(result.allowed)
     } catch {
       setCanDeletePod(false)

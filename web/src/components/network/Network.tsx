@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { useServices } from '../../hooks/useMCP'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
@@ -20,8 +19,7 @@ export function Network() {
 
   const {
     selectedClusters: globalSelectedClusters,
-    isAllClustersSelected,
-  } = useGlobalFilters()
+    isAllClustersSelected } = useGlobalFilters()
   const { drillToService } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const isModeSwitching = useIsModeSwitching()
@@ -37,7 +35,7 @@ export function Network() {
   const clusterIPServices = filteredServices.filter(s => s.type === 'ClusterIP').length
 
   // Stats value getter for the configurable StatsOverview component
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string): StatBlockValue => {
     const drillToFirstService = () => {
       if (filteredServices.length > 0 && filteredServices[0]) {
         const svc = filteredServices[0]
@@ -81,12 +79,9 @@ export function Network() {
       default:
         return { value: '-', sublabel: '' }
     }
-  }, [filteredServices, loadBalancers, nodePortServices, clusterIPServices, drillToService])
+  }
 
-  const getStatValue = useCallback(
-    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
-    [getDashboardStatValue, getUniversalStatValue]
-  )
+  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
   // Show skeleton during mode switching for smooth transitions
   const showSkeletons = (services.length === 0 && servicesLoading) || isModeSwitching
@@ -108,8 +103,7 @@ export function Network() {
       hasData={services.length > 0 || !showSkeletons}
       emptyState={{
         title: 'Network Dashboard',
-        description: 'Add cards to monitor Ingresses, NetworkPolicies, and service mesh configurations across your clusters.',
-      }}
+        description: 'Add cards to monitor Ingresses, NetworkPolicies, and service mesh configurations across your clusters.' }}
     >
       {/* Error Display */}
       {error && (

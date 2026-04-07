@@ -8,7 +8,7 @@
  * Follows the ClusterOPAModal pattern using BaseModal compound components.
  */
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState } from 'react'
 import { Shield, FileCheck, BarChart3, Search, ExternalLink, Sparkles, AlertTriangle, ChevronRight } from 'lucide-react'
 import { BaseModal } from '../../../lib/modals'
 import { StatusBadge } from '../../ui/StatusBadge'
@@ -37,14 +37,13 @@ export function KyvernoDetailModal({
   clusterName,
   status,
   onRefresh,
-  isRefreshing = false,
-}: KyvernoDetailModalProps) {
+  isRefreshing = false }: KyvernoDetailModalProps) {
   const [activeTab, setActiveTab] = useState<KyvernoTab>('policies')
   const [search, setSearch] = useState('')
   const { startMission } = useMissions()
   const { drillToPolicy } = useDrillDownActions()
 
-  const handlePolicyClick = useCallback((policy: KyvernoPolicy) => {
+  const handlePolicyClick = (policy: KyvernoPolicy) => {
     onClose()
     drillToPolicy(policy.cluster, policy.namespace, policy.name, {
       policyType: 'kyverno',
@@ -53,9 +52,8 @@ export function KyvernoDetailModal({
       category: policy.category,
       description: policy.description,
       violationCount: policy.violations,
-      background: policy.background,
-    })
-  }, [onClose, drillToPolicy])
+      background: policy.background })
+  }
 
   const tabs = [
     { id: 'policies' as const, label: 'Policies', icon: FileCheck, badge: status.totalPolicies },
@@ -63,7 +61,7 @@ export function KyvernoDetailModal({
   ]
 
   // Filter policies by search
-  const filteredPolicies = useMemo(() => {
+  const filteredPolicies = (() => {
     const policies = status.policies || []
     if (!search.trim()) return policies
     const q = search.toLowerCase()
@@ -73,12 +71,10 @@ export function KyvernoDetailModal({
       p.description?.toLowerCase().includes(q) ||
       p.status?.toLowerCase().includes(q)
     )
-  }, [status.policies, search])
+  })()
 
   // Sort reports by failures descending
-  const sortedReports = useMemo(() => {
-    return [...(status.reports || [])].sort((a, b) => b.fail - a.fail)
-  }, [status.reports])
+  const sortedReports = [...(status.reports || [])].sort((a, b) => b.fail - a.fail)
 
   const handleDeploySamplePolicies = () => {
     onClose()
@@ -104,8 +100,7 @@ Important:
 - Check PolicyReports are generated: kubectl get policyreports -A
 
 Please proceed step by step.`,
-      context: { clusterName },
-    })
+      context: { clusterName } })
   }
 
   const getStatusColor = (policyStatus: string): 'green' | 'yellow' | 'blue' => {
@@ -258,8 +253,7 @@ function PolicyRow({
   policy,
   getStatusColor,
   getCategoryColor,
-  onClick,
-}: {
+  onClick }: {
   policy: KyvernoPolicy
   getStatusColor: (s: string) => 'green' | 'yellow' | 'blue'
   getCategoryColor: (c: string) => string

@@ -117,7 +117,7 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
     const trivyEntries = Object.entries(trivyStatuses || {})
       .filter(([name, s]) => s.installed && shouldInclude(name))
     if (trivyEntries.length >= MIN_CLUSTERS_FOR_DRIFT) {
-      const values = trivyEntries.map(([, s]) => s.vulnerabilities.critical + s.vulnerabilities.high)
+      const values = trivyEntries.map(([, s]) => (s.vulnerabilities?.critical ?? 0) + (s.vulnerabilities?.high ?? 0))
       const { mean, stdDev } = stats(values)
       if (stdDev > 0) {
         trivyEntries.forEach(([cluster], i) => {

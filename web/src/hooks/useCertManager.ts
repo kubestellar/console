@@ -29,8 +29,7 @@ function loadFromCache(): CacheData | null {
       ...c,
       notBefore: c.notBefore ? new Date(c.notBefore) : undefined,
       notAfter: c.notAfter ? new Date(c.notAfter) : undefined,
-      renewalTime: c.renewalTime ? new Date(c.renewalTime) : undefined,
-    }))
+      renewalTime: c.renewalTime ? new Date(c.renewalTime) : undefined }))
     return data
   } catch {
     return null
@@ -43,8 +42,7 @@ function saveToCache(certificates: Certificate[], issuers: Issuer[], installed: 
       certificates,
       issuers,
       installed,
-      timestamp: Date.now(),
-    }))
+      timestamp: Date.now() }))
   } catch {
     // Ignore storage errors
   }
@@ -225,10 +223,7 @@ export function useCertManager() {
   const fetchInProgress = useRef(false)
 
   // Filter to reachable clusters
-  const clusters = useMemo(() =>
-    allClusters.filter(c => c.reachable === true).map(c => c.name),
-    [allClusters]
-  )
+  const clusters = allClusters.filter(c => c.reachable === true).map(c => c.name)
 
   const refetch = useCallback(async (silent = false) => {
     if (clusters.length === 0) {
@@ -292,8 +287,7 @@ export function useCertManager() {
                 notBefore: cert.status?.notBefore ? new Date(cert.status.notBefore) : undefined,
                 notAfter: cert.status?.notAfter ? new Date(cert.status.notAfter) : undefined,
                 renewalTime: cert.status?.renewalTime ? new Date(cert.status.renewalTime) : undefined,
-                message: cert.status?.conditions?.find(c => c.type === 'Ready')?.message,
-              })
+                message: cert.status?.conditions?.find(c => c.type === 'Ready')?.message })
             }
           }
 
@@ -340,8 +334,7 @@ export function useCertManager() {
                 kind: 'ClusterIssuer',
                 type: detectIssuerType(issuer.spec),
                 status: getIssuerStatus(issuer),
-                certificateCount: 0,
-              })
+                certificateCount: 0 })
             }
           }
         } catch (err) {
@@ -440,8 +433,7 @@ export function useCertManager() {
       pending: pending.length,
       failed: failed.length,
       issuers,
-      recentRenewals,
-    }
+      recentRenewals }
   }, [certificates, issuers, installed])
 
   return {
@@ -454,6 +446,5 @@ export function useCertManager() {
     consecutiveFailures,
     lastRefresh,
     refetch,
-    isFailed: consecutiveFailures >= 3,
-  }
+    isFailed: consecutiveFailures >= 3 }
 }

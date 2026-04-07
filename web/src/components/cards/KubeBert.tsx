@@ -4,6 +4,10 @@ import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeys } from '../../hooks/useGameKeys'
+import {
+  KUBEBERT_TILE_UNVISITED, KUBEBERT_TILE_VISITED, KUBEBERT_TILE_TARGET,
+  KUBEBERT_PLAYER, KUBEBERT_ENEMY_COILY, KUBEBERT_ENEMY_BALL, KUBEBERT_BG,
+} from '../../lib/theme/chartColors'
 
 // ─── Game Constants ───────────────────────────────────────────────────────────
 const PYRAMID_ROWS = 7
@@ -21,15 +25,15 @@ const MIN_ENEMY_SPAWN_INTERVAL_MS = 1000
 
 // Tile colors by state
 const TILE_COLORS = {
-  unvisited: '#1e3a5f',     // dark blue
-  visited: '#326ce5',       // Kubernetes blue
-  target: '#00d4aa',        // bright green (level target color)
+  unvisited: KUBEBERT_TILE_UNVISITED,     // dark blue
+  visited: KUBEBERT_TILE_VISITED,         // Kubernetes blue
+  target: KUBEBERT_TILE_TARGET,           // bright green (level target color)
 }
 
-const PLAYER_COLOR = '#ffd700'    // gold — the Kube Bert character
-const ENEMY_COILY_COLOR = '#ff4444'  // red snake enemy
-const ENEMY_BALL_COLOR = '#ff8800'   // orange bouncing ball
-const BG_COLOR = '#0a1628'
+const PLAYER_COLOR = KUBEBERT_PLAYER          // gold — the Kube Bert character
+const ENEMY_COILY_COLOR = KUBEBERT_ENEMY_COILY  // red snake enemy
+const ENEMY_BALL_COLOR = KUBEBERT_ENEMY_BALL    // orange bouncing ball
+const BG_COLOR = KUBEBERT_BG
 
 // Kubernetes-themed labels for tiles
 const KUBE_LABELS = ['Pod', 'Svc', 'Node', 'NS', 'Dep', 'RS', 'DS', 'Job', 'CRD', 'PV', 'CM', 'Sec', 'Ing', 'HPA', 'SA']
@@ -265,19 +269,19 @@ export function KubeBert() {
   }, [])
 
   // Check if all tiles are visited
-  const allTilesVisited = useCallback(() => {
+  const allTilesVisited = () => {
     for (let r = 0; r < PYRAMID_ROWS; r++) {
       for (let c = 0; c <= r; c++) {
         if (!tilesRef.current[r]?.[c]) return false
       }
     }
     return true
-  }, [])
+  }
 
   // Check if position is valid on pyramid
-  const isValidPosition = useCallback((row: number, col: number) => {
+  const isValidPosition = (row: number, col: number) => {
     return row >= 0 && row < PYRAMID_ROWS && col >= 0 && col <= row
-  }, [])
+  }
 
   // Stop all intervals
   const stopIntervals = useCallback(() => {
@@ -296,20 +300,19 @@ export function KubeBert() {
   }, [])
 
   // Spawn an enemy at the top of the pyramid
-  const spawnEnemy = useCallback(() => {
+  const spawnEnemy = () => {
     if (gameStateRef.current !== 'playing') return
     const type = Math.random() < 0.4 ? 'coily' : 'ball'
     const startCol = Math.random() < 0.5 ? 0 : 1
     const enemy: Enemy = {
       pos: { row: 0, col: startCol },
       type,
-      id: enemyIdRef.current++,
-    }
+      id: enemyIdRef.current++ }
     enemiesRef.current.push(enemy)
-  }, [])
+  }
 
   // Move enemies down the pyramid
-  const moveEnemies = useCallback(() => {
+  const moveEnemies = () => {
     if (gameStateRef.current !== 'playing') return
 
     const player = playerRef.current
@@ -355,10 +358,10 @@ export function KubeBert() {
       surviving.push(enemy)
     }
     enemiesRef.current = surviving
-  }, [isValidPosition, highScore, stopIntervals])
+  }
 
   // Move player
-  const movePlayer = useCallback((direction: 'up-left' | 'up-right' | 'down-left' | 'down-right') => {
+  const movePlayer = (direction: 'up-left' | 'up-right' | 'down-left' | 'down-right') => {
     if (gameStateRef.current !== 'playing' || moveLockedRef.current) return
     moveLockedRef.current = true
     setTimeout(() => { moveLockedRef.current = false }, PLAYER_MOVE_COOLDOWN_MS)
@@ -465,7 +468,7 @@ export function KubeBert() {
         }
       }, LEVEL_TRANSITION_DELAY_MS)
     }
-  }, [isValidPosition, allTilesVisited, initTiles, highScore, stopIntervals])
+  }
 
   // Render the game
   const render = useCallback(() => {
@@ -529,28 +532,28 @@ export function KubeBert() {
   }, [])
 
   // Game loop
-  const startGameLoop = useCallback(() => {
+  const startGameLoop = () => {
     const loop = () => {
       render()
       gameLoopRef.current = requestAnimationFrame(loop)
     }
     gameLoopRef.current = requestAnimationFrame(loop)
-  }, [render])
+  }
   // Keep ref in sync so movePlayer's setTimeout can call the latest version
   startGameLoopRef.current = startGameLoop
 
   // Enemy intervals
-  const startEnemies = useCallback(() => {
+  const startEnemies = () => {
     // Spawn faster at higher levels
     const spawnRate = Math.max(MIN_ENEMY_SPAWN_INTERVAL_MS, ENEMY_SPAWN_INTERVAL_MS - (levelRef.current - 1) * 300)
     const moveRate = Math.max(400, ENEMY_MOVE_INTERVAL_MS - (levelRef.current - 1) * 50)
 
     enemySpawnRef.current = setInterval(spawnEnemy, spawnRate)
     enemyMoveRef.current = setInterval(moveEnemies, moveRate)
-  }, [spawnEnemy, moveEnemies])
+  }
   // Keep ref in sync so movePlayer's setTimeout can call the latest version
   startEnemiesRef.current = startEnemies
-  const startGame = useCallback(() => {
+  const startGame = () => {
     stopIntervals()
     buildTileLabels()
     initTiles()
@@ -575,10 +578,10 @@ export function KubeBert() {
 
     startEnemies()
     startGameLoop()
-  }, [stopIntervals, buildTileLabels, initTiles, startEnemies, startGameLoop])
+  }
 
   // Keyboard controls — scoped to visible game container (KeepAlive-safe)
-  const handleBertKeyDown = useCallback((e: KeyboardEvent) => {
+  const handleBertKeyDown = (e: KeyboardEvent) => {
     if (gameStateRef.current !== 'playing') return
 
     // Q*bert uses diagonal movement mapped to arrow keys:
@@ -609,7 +612,7 @@ export function KubeBert() {
         movePlayer('down-left')
         break
     }
-  }, [movePlayer])
+  }
   useGameKeys(containerRef, { onKeyDown: handleBertKeyDown })
 
   // Resize canvas to container

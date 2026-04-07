@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Rocket, CheckCircle2, AlertTriangle, Clock, ChevronRight } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
@@ -42,31 +42,29 @@ export function DeploymentRolloutTracker() {
   const { insightsByCategory, isLoading, isDemoData } = useMultiClusterInsights()
   const { selectedClusters } = useGlobalFilters()
 
-  const rolloutInsightsRaw = useMemo(() => {
+  const rolloutInsightsRaw = (() => {
     const all = insightsByCategory['rollout-tracker'] || []
     if (selectedClusters.length === 0) return all
     return all.filter(i =>
       (i.affectedClusters || []).some(c => selectedClusters.includes(c)),
     )
-  }, [insightsByCategory, selectedClusters])
+  })()
   const {
     sorted: rolloutInsights,
-    sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
-  } = useInsightSort(rolloutInsightsRaw)
+    sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit } = useInsightSort(rolloutInsightsRaw)
 
   const hasData = rolloutInsightsRaw.length > 0
   useCardLoadingState({
     isLoading: isLoading && !hasData,
     hasAnyData: hasData,
-    isDemoData,
-  })
+    isDemoData })
 
   const [selectedRollout, setSelectedRollout] = useState(0)
   const insight = rolloutInsights[selectedRollout] || rolloutInsights[0]
   const [modalInsight, setModalInsight] = useState<MultiClusterInsight | null>(null)
 
   // Build per-cluster progress data from insight metrics
-  const clusterProgress = useMemo(() => {
+  const clusterProgress = (() => {
     if (!insight?.metrics) return []
     const clusters = insight.affectedClusters || []
     return (clusters || []).map(cluster => {
@@ -78,10 +76,9 @@ export function DeploymentRolloutTracker() {
       return {
         cluster,
         progress: typeof progress === 'number' ? progress : 0,
-        status,
-      }
+        status }
     })
-  }, [insight])
+  })()
 
   if (!isLoading && rolloutInsightsRaw.length === 0) {
     return (
@@ -103,8 +100,7 @@ export function DeploymentRolloutTracker() {
           sortOptions: INSIGHT_SORT_OPTIONS,
           onSortChange: (v) => setSortBy(v as InsightSortField),
           sortDirection,
-          onSortDirectionChange: setSortDirection,
-        }}
+          onSortDirectionChange: setSortDirection }}
       />
 
       {/* Rollout selector */}
@@ -188,8 +184,7 @@ export function DeploymentRolloutTracker() {
                       className="h-full rounded-full transition-all"
                       style={{
                         width: `${cp.progress}%`,
-                        backgroundColor: getProgressColor(cp.status),
-                      }}
+                        backgroundColor: getProgressColor(cp.status) }}
                     />
                   </div>
                   <span className="text-2xs text-muted-foreground w-10 text-right">{cp.progress}%</span>

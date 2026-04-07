@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useEffect, useRef, useState } from 'react'
+import { useMemo, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { useClusters, useHelmReleases, useOperatorSubscriptions } from '../../hooks/useMCP'
@@ -99,10 +99,10 @@ export function GitOps() {
     setLastUpdated(new Date())
   }, [])
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = () => {
     refetch()
     setLastUpdated(new Date())
-  }, [refetch])
+  }
 
   // Detect drift for all apps on mount (skip in demo mode - no backend).
   // Guard: verify backend is reachable first to avoid slow sequential failures
@@ -143,8 +143,7 @@ export function GitOps() {
             repoUrl: appConfig.repoUrl,
             path: appConfig.path,
             namespace: appConfig.namespace,
-            cluster: appConfig.cluster || undefined,
-          })
+            cluster: appConfig.cluster || undefined })
           return { name: appConfig.name, result: { drifted: response.data.drifted, resources: response.data.resources || [] } as DriftResult }
         } catch {
           return { name: appConfig.name, result: { drifted: false, resources: [], error: 'Failed to detect drift' } as DriftResult }
@@ -167,12 +166,12 @@ export function GitOps() {
   }, [])
 
   // Handle sync action - open the sync dialog
-  const handleSync = useCallback((app: GitOpsApp) => {
+  const handleSync = (app: GitOpsApp) => {
     setSyncDialogApp(app)
-  }, [])
+  }
 
   // Handle sync complete - mark app as synced and refresh drift status
-  const handleSyncComplete = useCallback(() => {
+  const handleSyncComplete = () => {
     if (syncDialogApp) {
       // React 18+ automatically batches these state updates
       setSyncedApps(prev => new Set(prev).add(syncDialogApp.name))
@@ -183,7 +182,7 @@ export function GitOps() {
       })
       showToast(`${syncDialogApp.name} synced successfully!`, 'success')
     }
-  }, [syncDialogApp, showToast])
+  }
 
   // Build apps list with real drift status
   const apps = useMemo(() => {
@@ -206,23 +205,20 @@ export function GitOps() {
     })
   }, [driftResults, isDetecting, syncedApps])
 
-  const filteredApps = useMemo(() => {
-    return apps.map(app => syncedApps.has(app.name) ? { ...app, syncStatus: 'synced' as const, healthStatus: 'healthy' as const, driftDetails: undefined, lastSyncTime: new Date().toISOString() } : app)
+  const filteredApps = apps.map(app => syncedApps.has(app.name) ? { ...app, syncStatus: 'synced' as const, healthStatus: 'healthy' as const, driftDetails: undefined, lastSyncTime: new Date().toISOString() } : app)
       .filter(app => {
         if (selectedCluster && app.cluster !== selectedCluster) return false
         if (statusFilter === 'synced' && app.syncStatus !== 'synced') return false
         if (statusFilter === 'drifted' && app.syncStatus !== 'out-of-sync') return false
         return true
       })
-  }, [apps, selectedCluster, statusFilter, syncedApps])
 
-  const stats = useMemo(() => ({
+  const stats = {
     total: apps.length,
     synced: apps.filter(a => a.syncStatus === 'synced').length,
     drifted: apps.filter(a => a.syncStatus === 'out-of-sync').length,
     healthy: apps.filter(a => a.healthStatus === 'healthy').length,
-    checking: apps.filter(a => a.syncStatus === 'checking').length,
-  }), [apps])
+    checking: apps.filter(a => a.syncStatus === 'checking').length }
 
   // Cache helm releases count to prevent showing 0 during refresh
   const cachedHelmCount = useRef(0)
@@ -258,7 +254,7 @@ export function GitOps() {
   }
 
   // Stats value getter
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'total': return { value: stats.total, sublabel: t('gitops.appsConfigured'), onClick: () => drillToAllHelm(), isClickable: stats.total > 0 }
       case 'helm': return { value: helmCount, sublabel: t('gitops.helmReleases'), onClick: () => drillToAllHelm(), isClickable: helmCount > 0 }
@@ -270,12 +266,9 @@ export function GitOps() {
       case 'other': return { value: stats.healthy, sublabel: t('gitops.healthy'), onClick: () => drillToAllHelm('healthy'), isClickable: stats.healthy > 0 }
       default: return { value: 0 }
     }
-  }, [stats, helmCount, operatorSubs, drillToAllHelm, drillToAllOperators, t])
+  }
 
-  const getStatValue = useCallback(
-    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
-    [getDashboardStatValue, getUniversalStatValue]
-  )
+  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
   // Filters and Apps List - rendered before cards
   const filtersAndAppsList = (
@@ -424,8 +417,7 @@ export function GitOps() {
         beforeCards={filtersAndAppsList}
         emptyState={{
           title: t('gitops.dashboardTitle'),
-          description: t('gitops.dashboardDescription'),
-        }}
+          description: t('gitops.dashboardDescription') }}
         isDemoData={true}
       >
         {/* Info */}

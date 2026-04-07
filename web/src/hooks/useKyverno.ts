@@ -10,7 +10,7 @@
  * - Demo fallback when no clusters are connected
  */
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useClusters } from './useMCP'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
@@ -135,8 +135,7 @@ function getDemoStatus(cluster: string): KyvernoClusterStatus {
     totalPolicies: policies.length,
     totalViolations: policies.reduce((sum, p) => sum + p.violations, 0),
     enforcingCount: policies.filter(p => p.status === 'enforcing').length,
-    auditCount: policies.filter(p => p.status === 'audit').length,
-  }
+    auditCount: policies.filter(p => p.status === 'audit').length }
 }
 
 // ── Kubernetes resource types ────────────────────────────────────────────
@@ -174,8 +173,7 @@ interface PolicyReportResource {
 function emptyStatus(cluster: string, installed: boolean, error?: string): KyvernoClusterStatus {
   return {
     cluster, installed, loading: false, error, policies: [], reports: [],
-    totalPolicies: 0, totalViolations: 0, enforcingCount: 0, auditCount: 0,
-  }
+    totalPolicies: 0, totalViolations: 0, enforcingCount: 0, auditCount: 0 }
 }
 
 // ── Single-cluster fetch (used in parallel) ──────────────────────────────
@@ -219,8 +217,7 @@ async function fetchSingleCluster(cluster: string): Promise<KyvernoClusterStatus
           status: action === 'enforce' ? 'enforcing' : 'audit',
           violations: 0, // Will be populated from reports
           description: item.metadata.annotations?.['policies.kyverno.io/description'] || '',
-          background: item.spec.background !== false,
-        })
+          background: item.spec.background !== false })
       }
     }
 
@@ -243,8 +240,7 @@ async function fetchSingleCluster(cluster: string): Promise<KyvernoClusterStatus
           status: action === 'enforce' ? 'enforcing' : 'audit',
           violations: 0,
           description: item.metadata.annotations?.['policies.kyverno.io/description'] || '',
-          background: item.spec.background !== false,
-        })
+          background: item.spec.background !== false })
       }
     }
 
@@ -268,8 +264,7 @@ async function fetchSingleCluster(cluster: string): Promise<KyvernoClusterStatus
           fail: summary.fail,
           warn: summary.warn,
           error: summary.error,
-          skip: summary.skip,
-        })
+          skip: summary.skip })
         totalViolations += summary.fail
 
         // Back-populate per-policy violation counts from report results
@@ -321,8 +316,7 @@ async function fetchSingleCluster(cluster: string): Promise<KyvernoClusterStatus
       totalPolicies: policies.length,
       totalViolations,
       enforcingCount: policies.filter(p => p.status === 'enforcing').length,
-      auditCount: policies.filter(p => p.status === 'audit').length,
-    }
+      auditCount: policies.filter(p => p.status === 'audit').length }
   } catch (err) {
     const isDemoError = err instanceof Error && err.message.includes('demo mode')
     if (!isDemoError) {
@@ -358,10 +352,7 @@ export function useKyverno() {
   /** Guard to prevent concurrent refetch calls from flooding the request queue */
   const fetchInProgress = useRef(false)
 
-  const clusters = useMemo(() =>
-    allClusters.filter(c => c.reachable === true).map(c => c.name),
-    [allClusters]
-  )
+  const clusters = allClusters.filter(c => c.reachable === true).map(c => c.name)
 
   const refetch = useCallback(async (silent = false) => {
     if (clusters.length === 0) {
@@ -471,10 +462,7 @@ export function useKyverno() {
   const installed = Object.values(statuses).some(s => s.installed)
 
   /** True when at least one cluster had a fetch error (distinct from "not installed") */
-  const hasErrors = useMemo(() =>
-    Object.values(statuses).some(s => !!s.error),
-    [statuses]
-  )
+  const hasErrors = Object.values(statuses).some(s => !!s.error)
 
   return {
     statuses,
@@ -489,6 +477,5 @@ export function useKyverno() {
     clustersChecked,
     /** Total number of clusters being checked */
     totalClusters: clusters.length,
-    refetch,
-  }
+    refetch }
 }

@@ -29,7 +29,7 @@ export function DeveloperSetupDialog({ isOpen, onClose }: DeveloperSetupDialogPr
   const { t } = useTranslation()
   const [copiedStep, setCopiedStep] = useState<number | null>(null)
   const [showUpdateChannel, setShowUpdateChannel] = useState(false)
-  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
     return () => clearTimeout(copiedTimerRef.current)

@@ -7,7 +7,7 @@
  * Follows the TrivyDetailModal pattern using BaseModal compound components.
  */
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Box, Search, ExternalLink, CheckCircle, XCircle, Server } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { BaseModal } from '../../../../lib/modals'
@@ -26,8 +26,7 @@ const SUMMARY_GRID_COLS = 3
 const POD_STATUS_COLORS: Record<string, string> = {
   running: 'text-green-400 bg-green-500/15',
   pending: 'text-yellow-400 bg-yellow-500/15',
-  failed: 'text-red-400 bg-red-500/15',
-}
+  failed: 'text-red-400 bg-red-500/15' }
 
 // ============================================================================
 // Types
@@ -85,16 +84,16 @@ export function K3sDetailModal({ isOpen, onClose, data, isDemoData }: K3sDetailM
   const isHealthy = data.health === 'healthy'
 
   // Collect unique versions
-  const versions = useMemo(() => {
+  const versions = (() => {
     const versionSet = new Set<string>()
     for (const pod of serverPods) {
       versionSet.add(pod.version)
     }
     return Array.from(versionSet)
-  }, [serverPods])
+  })()
 
   // Filter pods by search
-  const filteredPods = useMemo(() => {
+  const filteredPods = (() => {
     if (!search.trim()) return serverPods
     const q = search.toLowerCase()
     return serverPods.filter(
@@ -104,7 +103,7 @@ export function K3sDetailModal({ isOpen, onClose, data, isDemoData }: K3sDetailM
         pod.version.toLowerCase().includes(q) ||
         pod.status.toLowerCase().includes(q),
     )
-  }, [serverPods, search])
+  })()
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false} className={isDemoData ? 'ring-2 ring-yellow-500/60 shadow-[0_0_20px_rgba(234,179,8,0.25)]' : ''}>

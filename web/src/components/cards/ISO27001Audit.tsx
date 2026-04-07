@@ -6,7 +6,6 @@
  * 70 controls across 14 categories mapped to ISO 27001.
  */
 
-import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Shield, CheckCircle2, XCircle, AlertTriangle, MinusCircle, Terminal, ChevronDown, ChevronRight } from 'lucide-react'
 import { useCachedISO27001Audit, type ISO27001Finding } from '../../hooks/useCachedData'
@@ -15,7 +14,7 @@ import { useCardData } from '../../lib/cards/cardHooks'
 import { CardClusterFilter, CardSearchInput, CardSkeleton } from '../../lib/cards/CardComponents'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 
 // ── Demo Data ──────────────────────────────────────────────────────
 
@@ -56,8 +55,7 @@ const VERIFY_COMMANDS: Record<string, string> = {
   'Secrets Management': 'kubectl get secrets -A -o json | jq -r \'.items[].metadata.name\'',
   'Pod Security': 'kubectl get pods -A -o json | jq \'.items[] | select(.spec.securityContext.runAsNonRoot==null)\'',
   'Image Security': 'kubectl get pods -A -o jsonpath=\'{range .items[*]}{.spec.containers[*].image}{"\\n"}{end}\' | sort -u',
-  'Cluster Configuration': 'kubectl version --short',
-}
+  'Cluster Configuration': 'kubectl version --short' }
 
 // ── Sort options ───────────────────────────────────────────────────
 
@@ -104,15 +102,11 @@ export function ISO27001Audit({ config }: ISO27001AuditProps) {
     isRefreshing: cachedRefreshing,
     isDemoFallback,
     isFailed: cachedFailed,
-    consecutiveFailures: cachedFailures,
-  } = useCachedISO27001Audit(clusterConfig)
+    consecutiveFailures: cachedFailures } = useCachedISO27001Audit(clusterConfig)
 
   // 3. Switch between demo and live data (fall back to demo if fetch failed with no cache)
   const useDemoData = isDemoMode || isDemoFallback
-  const rawFindings = useMemo(
-    () => useDemoData ? getDemoFindings() : cachedFindings,
-    [useDemoData, cachedFindings]
-  )
+  const rawFindings = useDemoData ? getDemoFindings() : cachedFindings
   const isLoading = useDemoData ? false : cachedLoading
   const isRefreshing = useDemoData ? false : cachedRefreshing
   const isFailed = useDemoData ? false : cachedFailed
@@ -126,8 +120,7 @@ export function ISO27001Audit({ config }: ISO27001AuditProps) {
     isDemoData: isDemoMode || isDemoFallback,
     hasAnyData: hasData,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
   // 5. Unified card controls
   const {
@@ -148,17 +141,14 @@ export function ISO27001Audit({ config }: ISO27001AuditProps) {
       availableClusters,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-    },
+      clusterFilterRef },
     sorting: { sortBy, setSortBy, sortDirection, setSortDirection },
     containerRef,
-    containerStyle,
-  } = useCardData<ISO27001Finding, SortField>(rawFindings, {
+    containerStyle } = useCardData<ISO27001Finding, SortField>(rawFindings, {
     filter: {
       searchFields: ['label', 'category', 'cluster', 'details', 'status', 'severity'],
       clusterField: 'cluster',
-      storageKey: 'iso27001-audit',
-    },
+      storageKey: 'iso27001-audit' },
     sort: {
       defaultField: 'severity',
       defaultDirection: 'desc',
@@ -166,31 +156,28 @@ export function ISO27001Audit({ config }: ISO27001AuditProps) {
         severity: (a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9),
         category: (a, b) => a.category.localeCompare(b.category),
         status: (a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9),
-        cluster: (a, b) => a.cluster.localeCompare(b.cluster),
-      },
-    },
-    defaultLimit: 10,
-  })
+        cluster: (a, b) => a.cluster.localeCompare(b.cluster) } },
+    defaultLimit: 10 })
 
   // 6. Expandable verify commands
   const [expandedVerify, setExpandedVerify] = useState<Set<string>>(new Set())
-  const toggleVerify = useCallback((cat: string) => {
+  const toggleVerify = (cat: string) => {
     setExpandedVerify(prev => {
       const next = new Set(prev)
       if (next.has(cat)) next.delete(cat)
       else next.add(cat)
       return next
     })
-  }, [])
+  }
 
   // 7. Stats
-  const stats = useMemo(() => {
+  const stats = (() => {
     const pass = rawFindings.filter(f => f.status === 'pass').length
     const fail = rawFindings.filter(f => f.status === 'fail').length
     const warn = rawFindings.filter(f => f.status === 'warning').length
     const manual = rawFindings.filter(f => f.status === 'manual').length
     return { pass, fail, warn, manual, total: rawFindings.length }
-  }, [rawFindings])
+  })()
 
   const passPercent = stats.total > 0 ? Math.round((stats.pass / stats.total) * 100) : 0
 

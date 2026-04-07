@@ -37,8 +37,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
-    customFilter,
-  } = useGlobalFilters()
+    customFilter } = useGlobalFilters()
   const { drillToPod, drillToDeployment } = useDrillDownActions()
 
   // Apply global filters
@@ -93,15 +92,15 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   }, [selectedCluster, selectedNamespace, namespaces])
 
   // Filter by namespace
-  const podIssues = useMemo(() => {
+  const podIssues = (() => {
     if (!selectedNamespace) return allPodIssues
     return allPodIssues.filter(p => p.namespace === selectedNamespace)
-  }, [allPodIssues, selectedNamespace])
+  })()
 
-  const deploymentIssues = useMemo(() => {
+  const deploymentIssues = (() => {
     if (!selectedNamespace) return allDeploymentIssues
     return allDeploymentIssues.filter(d => d.namespace === selectedNamespace)
-  }, [allDeploymentIssues, selectedNamespace])
+  })()
 
   const cluster = clusters.find(c => c.name === selectedCluster)
 
@@ -126,8 +125,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
     hasAnyData: hasData,
     isDemoData: podIssuesDemoFallback || deploymentIssuesDemoFallback || namespacesDemoFallback,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
   if (showSkeleton) {
     return (

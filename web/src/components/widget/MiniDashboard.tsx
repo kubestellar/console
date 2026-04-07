@@ -7,7 +7,7 @@
  * Install: Click browser menu → "Install app" or "Add to Desktop"
  */
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { RefreshCw, Maximize2, Download } from 'lucide-react'
 import { useClusters, useGPUNodes, usePodIssues } from '../../hooks/useMCP'
 import { cn } from '../../lib/cn'
@@ -35,8 +35,7 @@ function StatCard({
   value,
   color,
   subValue,
-  onClick,
-}: {
+  onClick }: {
   label: string
   value: string | number
   color: string
@@ -66,8 +65,7 @@ function StatusDot({ status }: { status: 'healthy' | 'warning' | 'error' }) {
   const colors = {
     healthy: 'bg-green-500',
     warning: 'bg-yellow-500',
-    error: 'bg-red-500',
-  }
+    error: 'bg-red-500' }
   return (
     <span className={cn('w-2 h-2 rounded-full inline-block animate-pulse', colors[status])} />
   )
@@ -104,8 +102,7 @@ export function MiniDashboard() {
   const fetchNodes = useCallback(async () => {
     try {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/nodes`, {
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
         const data = await response.json()
         setAllNodes(data.nodes || [])
@@ -125,9 +122,7 @@ export function MiniDashboard() {
   }, [fetchNodes])
 
   // Calculate offline nodes (not Ready or unschedulable)
-  const offlineNodes = useMemo(() => {
-    return allNodes.filter(n => n.status !== 'Ready' || n.unschedulable === true)
-  }, [allNodes])
+  const offlineNodes = allNodes.filter(n => n.status !== 'Ready' || n.unschedulable === true)
   const { issues: podIssues, isLoading: issuesLoading, refetch: refetchIssues } = usePodIssues()
 
   const isLoading = clustersLoading || gpuLoading || issuesLoading || nodesLoading
@@ -174,8 +169,7 @@ export function MiniDashboard() {
             drilldown: 'node',
             cluster: firstOfflineNode?.cluster || 'unknown',
             node: firstOfflineNode?.name || 'unknown',
-            issue: 'Node went offline',
-          },
+            issue: 'Node went offline' },
           { tag: 'node-offline' }
         )
       }
@@ -248,7 +242,7 @@ export function MiniDashboard() {
 
   // Open URL in system browser (not in PWA) with GA4 widget campaign attribution.
   // Swaps localhost <-> 127.0.0.1 to force Chrome to open in a browser window.
-  const openInBrowser = useCallback((path: string) => {
+  const openInBrowser = (path: string) => {
     emitWidgetNavigation(path)
     const currentHost = window.location.host
     let targetOrigin = window.location.origin
@@ -261,7 +255,7 @@ export function MiniDashboard() {
 
     const separator = path.includes('?') ? '&' : '?'
     window.open(`${targetOrigin}${path}${separator}${WIDGET_UTM_PARAMS}`, '_blank', 'noopener,noreferrer')
-  }, [])
+  }
 
   // Open full dashboard in new window
   const openFullDashboard = () => {

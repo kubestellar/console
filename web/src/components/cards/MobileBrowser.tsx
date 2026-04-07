@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   ChevronLeft, ChevronRight, Grid3X3,
   Plus, X, Lock, Bookmark, Star,
@@ -121,7 +121,7 @@ export function MobileBrowser() {
     setUrlInput(activeTab?.url || '')
   }, [activeTabId, activeTab?.url])
 
-  const navigateTo = useCallback((url: string) => {
+  const navigateTo = (url: string) => {
     if (!url.trim()) return
 
     let fullUrl = url.trim()
@@ -150,15 +150,15 @@ export function MobileBrowser() {
       return newHistory
     })
     setHistoryIndex(prev => prev + 1)
-  }, [activeTabId, historyIndex])
+  }
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       navigateTo(urlInput)
     }
-  }, [navigateTo, urlInput])
+  }
 
-  const goBack = useCallback(() => {
+  const goBack = () => {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1
       setHistoryIndex(newIndex)
@@ -170,9 +170,9 @@ export function MobileBrowser() {
       ))
       setUrlInput(url)
     }
-  }, [historyIndex, history, activeTabId])
+  }
 
-  const goForward = useCallback(() => {
+  const goForward = () => {
     if (historyIndex < history.length - 1) {
       const newIndex = historyIndex + 1
       setHistoryIndex(newIndex)
@@ -184,18 +184,18 @@ export function MobileBrowser() {
       ))
       setUrlInput(url)
     }
-  }, [historyIndex, history, activeTabId])
+  }
 
-  const newTab = useCallback(() => {
+  const newTab = () => {
     const id = Date.now().toString()
     setTabs(prev => [...prev, { id, url: '', title: 'New Tab' }])
     setActiveTabId(id)
     setShowTabs(false)
     setHistory([])
     setHistoryIndex(-1)
-  }, [])
+  }
 
-  const closeTab = useCallback((tabId: string, e: React.MouseEvent) => {
+  const closeTab = (tabId: string, e: React.MouseEvent) => {
     e.stopPropagation()
     if (tabs.length === 1) {
       // Don't close last tab, just clear it
@@ -207,16 +207,16 @@ export function MobileBrowser() {
         setActiveTabId(tabs[0].id === tabId ? tabs[1].id : tabs[0].id)
       }
     }
-  }, [tabs, activeTabId])
+  }
 
-  const addBookmark = useCallback(() => {
+  const addBookmark = () => {
     if (activeTab.url) {
       const exists = bookmarks.some(b => b.url === activeTab.url)
       if (!exists) {
         setBookmarks(prev => [...prev, { url: activeTab.url, title: activeTab.title }])
       }
     }
-  }, [activeTab, bookmarks])
+  }
 
   const isBookmarked = bookmarks.some(b => b.url === activeTab.url)
 
@@ -304,8 +304,7 @@ export function MobileBrowser() {
                     className="w-full h-full border-none"
                     style={{
                       transform: 'scale(1)',
-                      transformOrigin: 'top left',
-                    }}
+                      transformOrigin: 'top left' }}
                     sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                     onLoad={() => setIsLoading(false)}
                     onError={() => setIsLoading(false)}

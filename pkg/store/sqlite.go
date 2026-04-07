@@ -27,6 +27,32 @@ const (
 	sqliteDefaultConnMaxIdleTime = 2 * time.Minute
 )
 
+// parseUUID parses a UUID string, logging a warning if malformed instead of
+// silently returning the zero UUID. This prevents data misattribution when
+// the database contains corrupted UUID strings.
+func parseUUID(s string, field string) uuid.UUID {
+	id, err := uuid.Parse(s)
+	if err != nil {
+		slog.Warn("[Store] malformed UUID in database — using zero UUID", "field", field, "value", s, "error", err)
+	}
+	return id
+}
+
+// maxSQLLimit is the maximum allowed value for SQL LIMIT parameters.
+// This provides defense-in-depth against unbounded queries from internal callers.
+const maxSQLLimit = 1000
+
+// clampLimit ensures a SQL LIMIT parameter is within safe bounds (1 to maxSQLLimit).
+func clampLimit(limit int) int {
+	if limit < 1 {
+		return 1
+	}
+	if limit > maxSQLLimit {
+		return maxSQLLimit
+	}
+	return limit
+}
+
 // getEnvInt reads an integer from the environment, falling back to defaultVal.
 func getEnvInt(key string, defaultVal int) int {
 	if v := os.Getenv(key); v != "" {
@@ -285,7 +311,7 @@ func (s *SQLiteStore) scanUser(row *sql.Row) (*models.User, error) {
 		return nil, err
 	}
 
-	u.ID, _ = uuid.Parse(idStr)
+	u.ID = parseUUID(idStr, "user.ID")
 	u.Onboarded = onboarded == 1
 	if email.Valid {
 		u.Email = email.String
@@ -352,7 +378,7 @@ func (s *SQLiteStore) ListUsers() ([]models.User, error) {
 			return nil, err
 		}
 
-		u.ID, _ = uuid.Parse(idStr)
+		u.ID = parseUUID(idStr, "u.ID")
 		u.Onboarded = onboarded == 1
 		if email.Valid {
 			u.Email = email.String
@@ -452,8 +478,8 @@ func (s *SQLiteStore) GetOnboardingResponses(userID uuid.UUID) ([]models.Onboard
 		if err := rows.Scan(&idStr, &userIDStr, &r.QuestionKey, &r.Answer, &r.CreatedAt); err != nil {
 			return nil, err
 		}
-		r.ID, _ = uuid.Parse(idStr)
-		r.UserID, _ = uuid.Parse(userIDStr)
+		r.ID = parseUUID(idStr, "r.ID")
+		r.UserID = parseUUID(userIDStr, "r.UserID")
 		responses = append(responses, r)
 	}
 	return responses, rows.Err()
@@ -509,8 +535,8 @@ func (s *SQLiteStore) scanDashboard(row *sql.Row) (*models.Dashboard, error) {
 		return nil, err
 	}
 
-	d.ID, _ = uuid.Parse(idStr)
-	d.UserID, _ = uuid.Parse(userIDStr)
+	d.ID = parseUUID(idStr, "d.ID")
+	d.UserID = parseUUID(userIDStr, "d.UserID")
 	d.IsDefault = isDefault == 1
 	if layout.Valid {
 		d.Layout = json.RawMessage(layout.String)
@@ -533,8 +559,8 @@ func (s *SQLiteStore) scanDashboardRow(rows *sql.Rows) (*models.Dashboard, error
 		return nil, err
 	}
 
-	d.ID, _ = uuid.Parse(idStr)
-	d.UserID, _ = uuid.Parse(userIDStr)
+	d.ID = parseUUID(idStr, "d.ID")
+	d.UserID = parseUUID(userIDStr, "d.UserID")
 	d.IsDefault = isDefault == 1
 	if layout.Valid {
 		d.Layout = json.RawMessage(layout.String)
@@ -622,14 +648,15 @@ func (s *SQLiteStore) scanCard(row *sql.Row) (*models.Card, error) {
 		return nil, err
 	}
 
-	c.ID, _ = uuid.Parse(idStr)
-	c.DashboardID, _ = uuid.Parse(dashboardIDStr)
+	c.ID = parseUUID(idStr, "c.ID")
+	c.DashboardID = parseUUID(dashboardIDStr, "c.DashboardID")
 	c.CardType = models.CardType(cardType)
 	if config.Valid {
 		c.Config = json.RawMessage(config.String)
 	}
 	if err := json.Unmarshal([]byte(positionStr), &c.Position); err != nil {
-		slog.Error("[Store] failed to unmarshal card position — card will use zero position", "cardID", idStr, "error", err)
+		// Log only that the position was corrupt — omit raw content to prevent information disclosure
+		slog.Warn("[Store] corrupt card position data — card will use zero position", "cardID", idStr)
 	}
 	if lastSummary.Valid {
 		c.LastSummary = lastSummary.String
@@ -652,14 +679,15 @@ func (s *SQLiteStore) scanCardRow(rows *sql.Rows) (*models.Card, error) {
 		return nil, err
 	}
 
-	c.ID, _ = uuid.Parse(idStr)
-	c.DashboardID, _ = uuid.Parse(dashboardIDStr)
+	c.ID = parseUUID(idStr, "c.ID")
+	c.DashboardID = parseUUID(dashboardIDStr, "c.DashboardID")
 	c.CardType = models.CardType(cardType)
 	if config.Valid {
 		c.Config = json.RawMessage(config.String)
 	}
 	if err := json.Unmarshal([]byte(positionStr), &c.Position); err != nil {
-		slog.Error("[Store] failed to unmarshal card position — card will use zero position", "cardID", idStr, "error", err)
+		// Log only that the position was corrupt — omit raw content to prevent information disclosure
+		slog.Warn("[Store] corrupt card position data — card will use zero position", "cardID", idStr)
 	}
 	if lastSummary.Valid {
 		c.LastSummary = lastSummary.String
@@ -742,6 +770,7 @@ func (s *SQLiteStore) AddCardHistory(history *models.CardHistory) error {
 }
 
 func (s *SQLiteStore) GetUserCardHistory(userID uuid.UUID, limit int) ([]models.CardHistory, error) {
+	limit = clampLimit(limit)
 	rows, err := s.db.Query(`SELECT id, user_id, original_card_id, card_type, config, swapped_out_at, reason FROM card_history WHERE user_id = ? ORDER BY swapped_out_at DESC LIMIT ?`, userID.String(), limit)
 	if err != nil {
 		return nil, err
@@ -759,11 +788,11 @@ func (s *SQLiteStore) GetUserCardHistory(userID uuid.UUID, limit int) ([]models.
 			return nil, err
 		}
 
-		h.ID, _ = uuid.Parse(idStr)
-		h.UserID, _ = uuid.Parse(userIDStr)
+		h.ID = parseUUID(idStr, "h.ID")
+		h.UserID = parseUUID(userIDStr, "h.UserID")
 		h.CardType = models.CardType(cardType)
 		if origCardID.Valid {
-			id, _ := uuid.Parse(origCardID.String)
+			id := parseUUID(origCardID.String, "id")
 			h.OriginalCardID = &id
 		}
 		if config.Valid {
@@ -833,9 +862,9 @@ func (s *SQLiteStore) scanPendingSwap(row *sql.Row) (*models.PendingSwap, error)
 		return nil, err
 	}
 
-	swap.ID, _ = uuid.Parse(idStr)
-	swap.UserID, _ = uuid.Parse(userIDStr)
-	swap.CardID, _ = uuid.Parse(cardIDStr)
+	swap.ID = parseUUID(idStr, "swap.ID")
+	swap.UserID = parseUUID(userIDStr, "swap.UserID")
+	swap.CardID = parseUUID(cardIDStr, "swap.CardID")
 	swap.NewCardType = models.CardType(newCardType)
 	swap.Status = models.SwapStatus(status)
 	if config.Valid {
@@ -857,9 +886,9 @@ func (s *SQLiteStore) scanPendingSwapRow(rows *sql.Rows) (*models.PendingSwap, e
 		return nil, err
 	}
 
-	swap.ID, _ = uuid.Parse(idStr)
-	swap.UserID, _ = uuid.Parse(userIDStr)
-	swap.CardID, _ = uuid.Parse(cardIDStr)
+	swap.ID = parseUUID(idStr, "swap.ID")
+	swap.UserID = parseUUID(userIDStr, "swap.UserID")
+	swap.CardID = parseUUID(cardIDStr, "swap.CardID")
 	swap.NewCardType = models.CardType(newCardType)
 	swap.Status = models.SwapStatus(status)
 	if config.Valid {
@@ -944,11 +973,11 @@ func (s *SQLiteStore) GetRecentEvents(userID uuid.UUID, since time.Duration) ([]
 			return nil, err
 		}
 
-		e.ID, _ = uuid.Parse(idStr)
-		e.UserID, _ = uuid.Parse(userIDStr)
+		e.ID = parseUUID(idStr, "e.ID")
+		e.UserID = parseUUID(userIDStr, "e.UserID")
 		e.EventType = models.EventType(eventType)
 		if cardID.Valid {
-			id, _ := uuid.Parse(cardID.String)
+			id := parseUUID(cardID.String, "id")
 			e.CardID = &id
 		}
 		if metadata.Valid {
@@ -1045,8 +1074,8 @@ func (s *SQLiteStore) scanFeatureRequest(row *sql.Row) (*models.FeatureRequest, 
 		return nil, err
 	}
 
-	r.ID, _ = uuid.Parse(idStr)
-	r.UserID, _ = uuid.Parse(userIDStr)
+	r.ID = parseUUID(idStr, "r.ID")
+	r.UserID = parseUUID(userIDStr, "r.UserID")
 	r.RequestType = models.RequestType(requestType)
 	r.Status = models.RequestStatus(status)
 	if issueNumber.Valid {
@@ -1089,8 +1118,8 @@ func (s *SQLiteStore) scanFeatureRequestRow(rows *sql.Rows) (*models.FeatureRequ
 		return nil, err
 	}
 
-	r.ID, _ = uuid.Parse(idStr)
-	r.UserID, _ = uuid.Parse(userIDStr)
+	r.ID = parseUUID(idStr, "r.ID")
+	r.UserID = parseUUID(userIDStr, "r.UserID")
 	r.RequestType = models.RequestType(requestType)
 	r.Status = models.RequestStatus(status)
 	if issueNumber.Valid {
@@ -1201,9 +1230,9 @@ func (s *SQLiteStore) GetPRFeedback(featureRequestID uuid.UUID) ([]models.PRFeed
 			return nil, err
 		}
 
-		f.ID, _ = uuid.Parse(idStr)
-		f.FeatureRequestID, _ = uuid.Parse(requestIDStr)
-		f.UserID, _ = uuid.Parse(userIDStr)
+		f.ID = parseUUID(idStr, "f.ID")
+		f.FeatureRequestID = parseUUID(requestIDStr, "f.FeatureRequestID")
+		f.UserID = parseUUID(userIDStr, "f.UserID")
 		f.FeedbackType = models.FeedbackType(feedbackType)
 		if comment.Valid {
 			f.Comment = comment.String
@@ -1253,12 +1282,12 @@ func (s *SQLiteStore) GetUserNotifications(userID uuid.UUID, limit int) ([]model
 			return nil, err
 		}
 
-		n.ID, _ = uuid.Parse(idStr)
-		n.UserID, _ = uuid.Parse(userIDStr)
+		n.ID = parseUUID(idStr, "n.ID")
+		n.UserID = parseUUID(userIDStr, "n.UserID")
 		n.NotificationType = models.NotificationType(notificationType)
 		n.Read = read == 1
 		if featureRequestID.Valid {
-			id, _ := uuid.Parse(featureRequestID.String)
+			id := parseUUID(featureRequestID.String, "id")
 			n.FeatureRequestID = &id
 		}
 		notifications = append(notifications, n)
@@ -1397,8 +1426,8 @@ func (s *SQLiteStore) scanGPUReservation(row *sql.Row) (*models.GPUReservation, 
 		return nil, err
 	}
 
-	r.ID, _ = uuid.Parse(idStr)
-	r.UserID, _ = uuid.Parse(userIDStr)
+	r.ID = parseUUID(idStr, "r.ID")
+	r.UserID = parseUUID(userIDStr, "r.UserID")
 	r.Status = models.ReservationStatus(status)
 	r.QuotaEnforced = quotaEnforced == 1
 	if updatedAt.Valid {
@@ -1421,8 +1450,8 @@ func (s *SQLiteStore) scanGPUReservationRow(rows *sql.Rows) (*models.GPUReservat
 		return nil, err
 	}
 
-	r.ID, _ = uuid.Parse(idStr)
-	r.UserID, _ = uuid.Parse(userIDStr)
+	r.ID = parseUUID(idStr, "r.ID")
+	r.UserID = parseUUID(userIDStr, "r.UserID")
 	r.Status = models.ReservationStatus(status)
 	r.QuotaEnforced = quotaEnforced == 1
 	if updatedAt.Valid {

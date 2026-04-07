@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Shield, ShieldCheck, ShieldAlert, AlertTriangle } from 'lucide-react'
 import { useKagentiCards, type KagentiCard } from '../../../hooks/mcp/kagenti'
 import { useCardLoadingState } from '../CardDataContext'
@@ -11,10 +10,9 @@ export function KagentiSecurity({ config }: { config?: Record<string, unknown> }
   useCardLoadingState({
     isLoading: isLoading && !hasData,
     hasAnyData: hasData,
-    isDemoData: isDemoFallback,
-  })
+    isDemoData: isDemoFallback })
 
-  const stats = useMemo(() => {
+  const stats = (() => {
     const total = cards.length
     const strict = cards.filter((c: KagentiCard) => c.identityBinding === 'strict').length
     const permissive = cards.filter((c: KagentiCard) => c.identityBinding === 'permissive').length
@@ -22,11 +20,9 @@ export function KagentiSecurity({ config }: { config?: Record<string, unknown> }
     const bound = strict + permissive
     const pct = total > 0 ? Math.round((bound / total) * 100) : 0
     return { total, strict, permissive, unbound, bound, pct }
-  }, [cards])
+  })()
 
-  const unboundAgents = useMemo(() =>
-    cards.filter((c: KagentiCard) => c.identityBinding === 'none'),
-  [cards])
+  const unboundAgents = cards.filter((c: KagentiCard) => c.identityBinding === 'none')
 
   if (isLoading && !hasData) {
     return (

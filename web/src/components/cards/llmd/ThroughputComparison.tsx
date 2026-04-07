@@ -8,19 +8,16 @@
 import { useState, useMemo } from 'react'
 import {
   Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid, Area, ComposedChart,
-} from 'recharts'
+  CartesianGrid, Area, ComposedChart } from 'recharts'
 import { Zap, TrendingUp } from 'lucide-react'
 import { useReportCardDataState } from '../CardDataContext'
 import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
 import {
-  generateBenchmarkReports,
-} from '../../../lib/llmd/benchmarkMockData'
+  generateBenchmarkReports } from '../../../lib/llmd/benchmarkMockData'
 import {
   groupByExperiment,
   getFilterOptions,
-  type ExperimentGroup,
-} from '../../../lib/llmd/benchmarkDataUtils'
+  type ExperimentGroup } from '../../../lib/llmd/benchmarkDataUtils'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
 
@@ -55,25 +52,20 @@ function CustomTooltip({ active, payload, label }: {
 export function ThroughputComparison() {
   const { t } = useTranslation()
   const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
-  const effectiveReports = useMemo(
-    () => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []),
-    [isDemoFallback, liveReports]
-  )
+  const effectiveReports = isDemoFallback ? generateBenchmarkReports() : (liveReports ?? [])
   useReportCardDataState({
     isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing,
-    hasData: effectiveReports.length > 0,
-  })
+    hasData: effectiveReports.length > 0 })
 
-  const filterOpts = useMemo(() => getFilterOptions(effectiveReports), [effectiveReports])
+  const filterOpts = getFilterOptions(effectiveReports)
   const [category, setCategory] = useState<string>('all')
   const [islFilter, setIslFilter] = useState<number>(0)
   const [oslFilter, setOslFilter] = useState<number>(0)
 
-  const groups = useMemo(() => groupByExperiment(effectiveReports, {
+  const groups = groupByExperiment(effectiveReports, {
     category: category !== 'all' ? category : undefined,
     isl: islFilter || undefined,
-    osl: oslFilter || undefined,
-  }), [effectiveReports, category, islFilter, oslFilter])
+    osl: oslFilter || undefined })
 
   // Build chart data: one row per QPS, columns per experiment
   const { chartData } = useMemo(() => {
@@ -94,7 +86,7 @@ export function ThroughputComparison() {
   }, [groups])
 
   // Peak throughput summary
-  const peakInfo = useMemo(() => {
+  const peakInfo = (() => {
     let best: ExperimentGroup | null = null
     let bestVal = 0
     for (const g of groups) {
@@ -102,7 +94,7 @@ export function ThroughputComparison() {
       if (peak > bestVal) { bestVal = peak; best = g }
     }
     return best ? { variant: best.shortVariant, value: bestVal } : null
-  }, [groups])
+  })()
 
   return (
     <div className="p-4 h-full flex flex-col">

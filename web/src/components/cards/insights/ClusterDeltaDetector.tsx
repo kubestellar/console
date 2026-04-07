@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { GitCompare, ChevronRight } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
@@ -20,8 +20,7 @@ const CLUSTER_B_COLOR = '#f59e0b'
 const SIGNIFICANCE_COLORS: Record<string, string> = {
   high: 'border-red-500/30 bg-red-500/5',
   medium: 'border-yellow-500/30 bg-yellow-500/5',
-  low: 'border-border bg-secondary/30',
-}
+  low: 'border-border bg-secondary/30' }
 
 export function ClusterDeltaDetector() {
   const { insightsByCategory, isLoading, isDemoData } = useMultiClusterInsights()
@@ -29,22 +28,20 @@ export function ClusterDeltaDetector() {
   const deltaInsightsRaw = insightsByCategory['cluster-delta'] || []
   const {
     sorted: deltaInsights,
-    sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit,
-  } = useInsightSort(deltaInsightsRaw)
+    sortBy, setSortBy, sortDirection, setSortDirection, limit, setLimit } = useInsightSort(deltaInsightsRaw)
 
   const hasData = deltaInsightsRaw.length > 0
   useCardLoadingState({
     isLoading: isLoading && !hasData,
     hasAnyData: hasData,
-    isDemoData,
-  })
+    isDemoData })
 
   // Use first insight's clusters as default selection
   const [selectedInsight, setSelectedInsight] = useState(0)
   const insight = deltaInsights[selectedInsight] || deltaInsights[0]
   const [modalInsight, setModalInsight] = useState<MultiClusterInsight | null>(null)
 
-  const numericDeltas = useMemo(() => {
+  const numericDeltas = (() => {
     if (!insight?.deltas) return []
     return (insight.deltas || [])
       .filter(d => typeof d.clusterA.value === 'number' && typeof d.clusterB.value === 'number')
@@ -52,16 +49,15 @@ export function ClusterDeltaDetector() {
         dimension: d.dimension,
         [d.clusterA.name]: d.clusterA.value as number,
         [d.clusterB.name]: d.clusterB.value as number,
-        significance: d.significance,
-      }))
-  }, [insight])
+        significance: d.significance }))
+  })()
 
-  const nonNumericDeltas = useMemo(() => {
+  const nonNumericDeltas = (() => {
     if (!insight?.deltas) return []
     return (insight.deltas || []).filter(
       d => typeof d.clusterA.value === 'string' || typeof d.clusterB.value === 'string',
     )
-  }, [insight])
+  })()
 
   if (!isLoading && deltaInsightsRaw.length === 0) {
     return (
@@ -85,8 +81,7 @@ export function ClusterDeltaDetector() {
           sortOptions: INSIGHT_SORT_OPTIONS,
           onSortChange: (v) => setSortBy(v as InsightSortField),
           sortDirection,
-          onSortDirectionChange: setSortDirection,
-        }}
+          onSortDirectionChange: setSortDirection }}
       />
 
       {/* Workload selector */}

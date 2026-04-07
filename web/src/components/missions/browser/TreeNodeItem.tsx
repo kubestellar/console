@@ -1,8 +1,7 @@
-import { memo, useMemo } from 'react'
+import { memo } from 'react'
 import {
   Folder, FolderOpen, FileJson, FileCode, FileText, ChevronRight, ChevronDown,
-  Loader2, Globe, Github, HardDrive, Trash2, Plus, RefreshCw,
-} from 'lucide-react'
+  Loader2, Globe, Github, HardDrive, Trash2, Plus, RefreshCw } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import type { TreeNode } from './types'
 
@@ -57,8 +56,7 @@ export const TreeNodeItem = memo(function TreeNodeItem({
   onSelect,
   onRemove,
   onRefresh,
-  onAdd,
-}: {
+  onAdd }: {
   node: TreeNode
   depth: number
   expandedNodes: Set<string>
@@ -92,8 +90,8 @@ export const TreeNodeItem = memo(function TreeNodeItem({
   const showHeaderActions = showRemoveButton || showRefreshButton || (depth === 0 && !!onAdd)
 
   // Memoize inline style objects to avoid creating new references on each render
-  const paddingStyle = useMemo(() => ({ paddingLeft: `${depth * 16 + 8}px` }), [depth])
-  const emptyPaddingStyle = useMemo(() => ({ paddingLeft: `${(depth + 1) * 16 + 8}px` }), [depth])
+  const paddingStyle = { paddingLeft: `${depth * 16 + 8}px` }
+  const emptyPaddingStyle = { paddingLeft: `${(depth + 1) * 16 + 8}px` }
 
   return (
     <div>

@@ -6,7 +6,7 @@
  *
  * Uses live stack data when available, demo data when in demo mode.
  */
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Database, TrendingUp, TrendingDown, CircleDot, Grid3X3 } from 'lucide-react'
@@ -53,7 +53,7 @@ function PremiumGauge({ value, maxValue, label, sublabel, size = 140 }: PremiumG
   }
 
   const colors = getColors(percentage)
-  const uniqueId = useMemo(() => `gauge-${Math.random().toString(36).substr(2, 9)}`, [])
+  const uniqueId = `gauge-${Math.random().toString(36).substr(2, 9)}`
 
   // Convert polar to cartesian
   const polarToCartesian = (angle: number, r: number) => {
@@ -179,16 +179,14 @@ function HeatCell({ stat, delay }: HeatCellProps) {
       style={{
         background: colors.bg,
         boxShadow: `0 0 12px ${colors.glow}, inset 0 0 8px rgba(255,255,255,0.1)`,
-        height: '32px',
-      }}
+        height: '32px' }}
       initial={{ opacity: 0, scale: 0 }}
       animate={{ opacity: 0.85, scale: 1 }}
       transition={{ delay, type: 'spring', stiffness: 200 }}
       whileHover={{
         opacity: 1,
         scale: 1.1,
-        boxShadow: `0 0 20px ${colors.glow}, inset 0 0 12px rgba(255,255,255,0.2)`,
-      }}
+        boxShadow: `0 0 20px ${colors.glow}, inset 0 0 12px rgba(255,255,255,0.2)` }}
     >
       {/* Tooltip */}
       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-background/95 backdrop-blur-sm rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-border shadow-xl">
@@ -276,19 +274,18 @@ export function KVCacheMonitor() {
   useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0, hasData: true })
 
   // Helper: get average KV cache usage from Prometheus for a set of pods
-  const getPromKVCache = useCallback((podNames?: string[]) => {
+  const getPromKVCache = (podNames?: string[]) => {
     if (!prometheusMetrics || !podNames?.length) return null
     const matched = podNames.filter(p => prometheusMetrics[p])
     if (matched.length === 0) return null
     const avg = (fn: (p: string) => number) =>
       matched.reduce((sum, p) => sum + fn(p), 0) / matched.length
     return {
-      utilization: avg(p => prometheusMetrics[p].kvCacheUsage * 100),
-    }
-  }, [prometheusMetrics])
+      utilization: avg(p => prometheusMetrics[p].kvCacheUsage * 100) }
+  }
 
   // Generate stats from stack data or demo, using Prometheus when available
-  const generateStats = useCallback((): KVCacheStats[] => {
+  const generateStats = (): KVCacheStats[] => {
     // Only show demo data if demo mode is ON
     if (!selectedStack && isDemoMode) {
       return generateKVCacheStats()
@@ -327,8 +324,7 @@ export function KVCacheMonitor() {
           usedGB: Math.round((util / 100) * totalCapacity * 10) / 10,
           hitRate: 0.88 + Math.random() * 0.08,
           evictionRate: Math.random() * 0.03,
-          lastUpdated: new Date(),
-        })
+          lastUpdated: new Date() })
       }
 
       // Aggregate decode (if any)
@@ -349,8 +345,7 @@ export function KVCacheMonitor() {
           usedGB: Math.round((util / 100) * totalCapacity * 10) / 10,
           hitRate: 0.92 + Math.random() * 0.06,
           evictionRate: Math.random() * 0.02,
-          lastUpdated: new Date(),
-        })
+          lastUpdated: new Date() })
       }
 
       // Aggregate unified (if any)
@@ -371,8 +366,7 @@ export function KVCacheMonitor() {
           usedGB: Math.round((util / 100) * totalCapacity * 10) / 10,
           hitRate: 0.85 + Math.random() * 0.10,
           evictionRate: Math.random() * 0.04,
-          lastUpdated: new Date(),
-        })
+          lastUpdated: new Date() })
       }
     } else {
       // Disaggregated mode: one gauge per replica
@@ -395,8 +389,7 @@ export function KVCacheMonitor() {
             usedGB: Math.round((baseUtil / 100) * capacity * 10) / 10,
             hitRate: 0.88 + Math.random() * 0.08,
             evictionRate: Math.random() * 0.03,
-            lastUpdated: new Date(),
-          })
+            lastUpdated: new Date() })
         }
       })
 
@@ -419,8 +412,7 @@ export function KVCacheMonitor() {
             usedGB: Math.round((baseUtil / 100) * capacity * 10) / 10,
             hitRate: 0.92 + Math.random() * 0.06,
             evictionRate: Math.random() * 0.02,
-            lastUpdated: new Date(),
-          })
+            lastUpdated: new Date() })
         }
       })
 
@@ -443,14 +435,13 @@ export function KVCacheMonitor() {
             usedGB: Math.round((baseUtil / 100) * capacity * 10) / 10,
             hitRate: 0.85 + Math.random() * 0.10,
             evictionRate: Math.random() * 0.04,
-            lastUpdated: new Date(),
-          })
+            lastUpdated: new Date() })
         }
       })
     }
 
     return stackStats
-  }, [selectedStack, isDemoMode, aggregationMode, getPromKVCache, prometheusMetrics])
+  }
 
   // Handle gauge click - calculate portal position
   const handleGaugeClick = (podName: string, element: HTMLDivElement | null) => {
@@ -463,8 +454,7 @@ export function KVCacheMonitor() {
         const rect = element.getBoundingClientRect()
         setPanelPosition({
           x: rect.right + 8,
-          y: rect.top,
-        })
+          y: rect.top })
       }
     }
   }
@@ -515,8 +505,7 @@ export function KVCacheMonitor() {
           }
           updated[s.podName] = {
             util: [...updated[s.podName].util.slice(-19), s.utilizationPercent],
-            hitRate: [...updated[s.podName].hitRate.slice(-19), s.hitRate * 100],
-          }
+            hitRate: [...updated[s.podName].hitRate.slice(-19), s.hitRate * 100] }
         })
         return updated
       })
@@ -535,15 +524,14 @@ export function KVCacheMonitor() {
       avgUtil: Math.round(stats.reduce((sum, s) => sum + s.utilizationPercent, 0) / stats.length),
       totalUsed: stats.reduce((sum, s) => sum + s.usedGB, 0),
       totalCapacity: stats.reduce((sum, s) => sum + s.totalCapacityGB, 0),
-      avgHitRate: Math.round(stats.reduce((sum, s) => sum + s.hitRate, 0) / stats.length * 100),
-    }
+      avgHitRate: Math.round(stats.reduce((sum, s) => sum + s.hitRate, 0) / stats.length * 100) }
   }, [stats])
 
   // Trend indicator
-  const trend = useMemo(() => {
+  const trend = (() => {
     if (history.length < 2) return 0
     return history[history.length - 1] - history[history.length - 2]
-  }, [history])
+  })()
 
   // Show empty state when no stack selected in live mode
   const showEmptyState = !selectedStack && !isDemoMode

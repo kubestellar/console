@@ -1035,6 +1035,13 @@ func preCompressedStatic(root string) fiber.Handler {
 		}
 		filePath := filepath.Join(root, p)
 
+		// Security: prevent path traversal — ensure resolved path stays within root
+		absRoot, _ := filepath.Abs(root)
+		absFile, _ := filepath.Abs(filePath)
+		if !strings.HasPrefix(absFile, absRoot+string(filepath.Separator)) && absFile != absRoot {
+			return c.Next()
+		}
+
 		// Only serve actual static files
 		info, err := os.Stat(filePath)
 		if err != nil || info.IsDir() {

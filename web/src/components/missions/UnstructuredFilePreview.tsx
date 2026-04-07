@@ -7,7 +7,7 @@
  * combining with matched console-kb install missions.
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   ArrowLeft,
   FileCode,
@@ -17,8 +17,7 @@ import {
   CheckCircle,
   AlertTriangle,
   Terminal,
-  Copy,
-} from 'lucide-react'
+  Copy } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import type { MissionExport } from '../../lib/missions/types'
 import type { UnstructuredPreview } from '../../lib/missions/fileParser'
@@ -57,8 +56,7 @@ export function UnstructuredFilePreview({
   detectedProjects,
   fileName,
   onConvert,
-  onBack,
-}: UnstructuredFilePreviewProps) {
+  onBack }: UnstructuredFilePreviewProps) {
   const [showFullContent, setShowFullContent] = useState(false)
   const [copied, setCopied] = useState(false)
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -78,13 +76,13 @@ export function UnstructuredFilePreview({
 
   const FormatIcon = format === 'yaml' ? FileCode : FileText
 
-  const handleCopy = useCallback(async () => {
+  const handleCopy = async () => {
     await copyToClipboard(content)
     setCopied(true)
     if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
     const COPY_FEEDBACK_MS = 2_000
     copyTimerRef.current = setTimeout(() => setCopied(false), COPY_FEEDBACK_MS)
-  }, [content])
+  }
 
   return (
     <div className="space-y-4">
@@ -216,13 +214,10 @@ export function UnstructuredFilePreview({
                 title: `Apply ${fileName}`,
                 description: `Content imported from ${format === 'yaml' ? 'YAML' : 'Markdown'} file`,
                 ...(format === 'yaml' ? { yaml: content } : {}),
-                ...(format === 'markdown' ? { description: content } : {}),
-              }],
+                ...(format === 'markdown' ? { description: content } : {}) }],
               ...(detectedProjects.length > 0 ? { cncfProject: detectedProjects[0].project } : {}),
               metadata: {
-                source: `${format}-import`,
-              },
-            }
+                source: `${format}-import` } }
             onConvert(mission)
           }}
           className={cn(

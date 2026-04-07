@@ -7,7 +7,6 @@
  * are enriched with AI explanations and remediation suggestions.
  */
 
-import { useMemo } from 'react'
 import { useCachedEvents, useCachedWarningEvents, useCachedDeployments, useCachedPodIssues } from './useCachedData'
 import { useClusters } from './mcp/clusters'
 import { useDemoMode } from './useDemoMode'
@@ -18,8 +17,7 @@ import type {
   InsightSeverity,
   UseMultiClusterInsightsResult,
   CascadeLink,
-  ClusterDelta,
-} from '../types/insights'
+  ClusterDelta } from '../types/insights'
 import type { ClusterEvent, Deployment, PodIssue } from './mcp/types'
 import type { ClusterInfo } from './mcp/types'
 
@@ -211,8 +209,7 @@ export function detectEventCorrelations(events: ClusterEvent[]): MultiClusterIns
       description: `${totalEvents} warning events across ${affectedClusters.join(', ')} within a 5-minute window. Common reasons: ${reasons}.`,
       affectedClusters,
       relatedResources: [...new Set((allEvents || []).map(e => String(e.object || '')))].slice(0, 5),
-      detectedAt: new Date(bucket).toISOString(),
-    })
+      detectedAt: new Date(bucket).toISOString() })
   }
 
   return insights.slice(0, MAX_INSIGHTS_PER_CATEGORY)
@@ -254,8 +251,7 @@ export function detectClusterDeltas(
             dimension: 'Image Version',
             clusterA: { name: clusterA, value: depA.image },
             clusterB: { name: clusterB, value: depB.image },
-            significance: 'high',
-          })
+            significance: 'high' })
         }
 
         // Replica count delta
@@ -267,8 +263,7 @@ export function detectClusterDeltas(
             dimension: 'Replica Count',
             clusterA: { name: clusterA, value: depA.replicas },
             clusterB: { name: clusterB, value: depB.replicas },
-            significance: pctDiff >= DELTA_SIGNIFICANCE_HIGH_PCT ? 'high' : pctDiff >= DELTA_SIGNIFICANCE_MEDIUM_PCT ? 'medium' : 'low',
-          })
+            significance: pctDiff >= DELTA_SIGNIFICANCE_HIGH_PCT ? 'high' : pctDiff >= DELTA_SIGNIFICANCE_MEDIUM_PCT ? 'medium' : 'low' })
         }
 
         // Ready vs desired delta
@@ -277,8 +272,7 @@ export function detectClusterDeltas(
             dimension: 'Status',
             clusterA: { name: clusterA, value: depA.status },
             clusterB: { name: clusterB, value: depB.status },
-            significance: depA.status === 'failed' || depB.status === 'failed' ? 'high' : 'medium',
-          })
+            significance: depA.status === 'failed' || depB.status === 'failed' ? 'high' : 'medium' })
         }
       }
     }
@@ -297,8 +291,7 @@ export function detectClusterDeltas(
         affectedClusters,
         relatedResources: [workloadKey],
         detectedAt: now(),
-        deltas,
-      })
+        deltas })
     }
   }
 
@@ -327,8 +320,7 @@ export function detectCascadeImpact(events: ClusterEvent[]): MultiClusterInsight
       resource: warnings[i].object,
       event: warnings[i].reason,
       timestamp: warnings[i].lastSeen || '',
-      severity: 'warning',
-    }]
+      severity: 'warning' }]
     usedEvents.add(i)
 
     const baseTs = parseTimestamp(warnings[i].lastSeen)
@@ -347,8 +339,7 @@ export function detectCascadeImpact(events: ClusterEvent[]): MultiClusterInsight
         resource: warnings[j].object,
         event: warnings[j].reason,
         timestamp: warnings[j].lastSeen || '',
-        severity: 'warning',
-      })
+        severity: 'warning' })
       seenClusters.add(warnings[j].cluster)
       usedEvents.add(j)
     }
@@ -364,8 +355,7 @@ export function detectCascadeImpact(events: ClusterEvent[]): MultiClusterInsight
         description: `Issues started in ${chain[0].cluster} (${chain[0].event}) and spread to ${affectedClusters.slice(1).join(', ')} within ${Math.round(CASCADE_DETECTION_WINDOW_MS / 60000)} minutes.`,
         affectedClusters,
         detectedAt: chain[0].timestamp,
-        chain,
-      })
+        chain })
     }
   }
 
@@ -411,8 +401,7 @@ export function detectConfigDrift(deployments: Deployment[]): MultiClusterInsigh
       description: `${workloadKey} has ${driftDimensions.join(' and ')} across ${affectedClusters.length} clusters.`,
       affectedClusters,
       relatedResources: [workloadKey],
-      detectedAt: now(),
-    })
+      detectedAt: now() })
   }
 
   return insights.slice(0, MAX_INSIGHTS_PER_CATEGORY)
@@ -430,8 +419,7 @@ export function detectResourceImbalance(clusters: ClusterInfo[]): MultiClusterIn
   // CPU imbalance
   const cpuPcts = healthy.map(c => ({
     name: c.name,
-    pct: pct(c.cpuRequestsCores || c.cpuUsageCores, c.cpuCores),
-  }))
+    pct: pct(c.cpuRequestsCores || c.cpuUsageCores, c.cpuCores) }))
   const avgCpu = cpuPcts.reduce((sum, c) => sum + c.pct, 0) / cpuPcts.length
   const overloaded = cpuPcts.filter(c => c.pct - avgCpu > RESOURCE_IMBALANCE_THRESHOLD_PCT)
   const underloaded = cpuPcts.filter(c => avgCpu - c.pct > RESOURCE_IMBALANCE_THRESHOLD_PCT)
@@ -457,8 +445,7 @@ export function detectResourceImbalance(clusters: ClusterInfo[]): MultiClusterIn
       description: `${parts.join('; ')}. Fleet average: ${Math.round(avgCpu)}%.`,
       affectedClusters: [...overloaded, ...underloaded].map(c => c.name),
       detectedAt: now(),
-      metrics,
-    })
+      metrics })
   }
 
   // Memory imbalance
@@ -466,8 +453,7 @@ export function detectResourceImbalance(clusters: ClusterInfo[]): MultiClusterIn
     .filter(c => c.memoryGB && c.memoryGB > 0)
     .map(c => ({
       name: c.name,
-      pct: pct(c.memoryRequestsGB || c.memoryUsageGB, c.memoryGB),
-    }))
+      pct: pct(c.memoryRequestsGB || c.memoryUsageGB, c.memoryGB) }))
 
   if (memPcts.length >= 2) {
     const avgMem = memPcts.reduce((sum, c) => sum + c.pct, 0) / memPcts.length
@@ -487,8 +473,7 @@ export function detectResourceImbalance(clusters: ClusterInfo[]): MultiClusterIn
         description: `Memory utilization ranges from ${Math.min(...memPcts.map(c => c.pct))}% to ${Math.max(...memPcts.map(c => c.pct))}%. Fleet average: ${Math.round(avgMem)}%.`,
         affectedClusters: [...memOverloaded, ...memUnderloaded].map(c => c.name),
         detectedAt: now(),
-        metrics,
-      })
+        metrics })
     }
   }
 
@@ -534,8 +519,7 @@ export function detectRestartCorrelation(podIssues: PodIssue[]): MultiClusterIns
         description: `${workload} has ${totalRestarts} total restarts across ${affectedClusters.join(', ')}. Same workload failing everywhere suggests an application-level issue.`,
         affectedClusters,
         relatedResources: [workload],
-        detectedAt: now(),
-      })
+        detectedAt: now() })
     }
   }
 
@@ -559,8 +543,7 @@ export function detectRestartCorrelation(podIssues: PodIssue[]): MultiClusterIns
         description: `Multiple different workloads (${Array.from(workloads).slice(0, 5).join(', ')}) are restarting in ${cluster}. This pattern suggests an infrastructure problem rather than an application bug.`,
         affectedClusters: [cluster],
         relatedResources: Array.from(workloads).slice(0, 10),
-        detectedAt: now(),
-      })
+        detectedAt: now() })
     }
   }
 
@@ -607,8 +590,7 @@ export function trackRolloutProgress(deployments: Deployment[]): MultiClusterIns
       completed: completed.length,
       pending: pending.length,
       failed: failed.length,
-      total: deps.length,
-    }
+      total: deps.length }
     for (const dep of (deps || [])) {
       if (!dep.cluster) continue
       if (dep.status === 'failed') {
@@ -633,8 +615,7 @@ export function trackRolloutProgress(deployments: Deployment[]): MultiClusterIns
       affectedClusters,
       relatedResources: [workloadKey],
       detectedAt: now(),
-      metrics,
-    })
+      metrics })
   }
 
   return insights.slice(0, MAX_INSIGHTS_PER_CATEGORY)
@@ -659,8 +640,7 @@ function getDemoInsights(): MultiClusterInsight[] {
       affectedClusters: ['eks-prod-us-east-1', 'gke-staging', 'openshift-prod'],
       relatedResources: ['api-server', 'metrics-collector'],
       detectedAt: fiveMinAgo,
-      remediation: 'Check shared infrastructure (DNS, load balancer, or shared storage) that all three clusters depend on. The simultaneous timing strongly suggests a common upstream dependency failure.',
-    },
+      remediation: 'Check shared infrastructure (DNS, load balancer, or shared storage) that all three clusters depend on. The simultaneous timing strongly suggests a common upstream dependency failure.' },
     {
       id: 'demo-resource-imbalance-cpu',
       category: 'resource-imbalance',
@@ -678,9 +658,7 @@ function getDemoInsights(): MultiClusterInsight[] {
         'gke-staging': 55,
         'openshift-prod': 62,
         'aks-dev-westeu': 22,
-        'vllm-gpu-cluster': 45,
-      },
-    },
+        'vllm-gpu-cluster': 45 } },
     {
       id: 'demo-restart-app-bug',
       category: 'restart-correlation',
@@ -691,8 +669,7 @@ function getDemoInsights(): MultiClusterInsight[] {
       affectedClusters: ['eks-prod-us-east-1', 'gke-staging', 'openshift-prod'],
       relatedResources: ['default/api-server'],
       detectedAt: tenMinAgo,
-      remediation: 'Check api-server logs for OOMKilled or panic traces. Since the same workload fails across all clusters, this is almost certainly an application bug — not infrastructure. Roll back to the previous image if this started after a recent deployment.',
-    },
+      remediation: 'Check api-server logs for OOMKilled or panic traces. Since the same workload fails across all clusters, this is almost certainly an application bug — not infrastructure. Roll back to the previous image if this started after a recent deployment.' },
     {
       id: 'demo-restart-infra-issue',
       category: 'restart-correlation',
@@ -702,8 +679,7 @@ function getDemoInsights(): MultiClusterInsight[] {
       description: 'Multiple different workloads (default/metrics-collector, default/cache-redis, default/gpu-scheduler, default/log-agent) are restarting in vllm-gpu-cluster. This pattern suggests an infrastructure problem rather than an application bug.',
       affectedClusters: ['vllm-gpu-cluster'],
       relatedResources: ['default/metrics-collector', 'default/cache-redis', 'default/gpu-scheduler', 'default/log-agent'],
-      detectedAt: tenMinAgo,
-    },
+      detectedAt: tenMinAgo },
     {
       id: 'demo-cascade-1',
       category: 'cascade-impact',
@@ -720,8 +696,7 @@ function getDemoInsights(): MultiClusterInsight[] {
         { cluster: 'openshift-prod', resource: 'config-service', event: 'FailedMount', timestamp: fifteenMinAgo, severity: 'warning' },
         { cluster: 'eks-prod-us-east-1', resource: 'api-gateway', event: 'Unhealthy', timestamp: tenMinAgo, severity: 'warning' },
         { cluster: 'gke-staging', resource: 'frontend', event: 'CrashLoopBackOff', timestamp: fiveMinAgo, severity: 'critical' },
-      ],
-    },
+      ] },
     {
       id: 'demo-config-drift-1',
       category: 'config-drift',
@@ -732,8 +707,7 @@ function getDemoInsights(): MultiClusterInsight[] {
       affectedClusters: ['eks-prod-us-east-1', 'gke-staging', 'openshift-prod', 'aks-dev-westeu'],
       relatedResources: ['default/api-server'],
       detectedAt: fiveMinAgo,
-      remediation: 'Standardize on the newest stable image across all clusters. Use a KubeStellar BindingPolicy to enforce consistent image versions and replica counts fleet-wide.',
-    },
+      remediation: 'Standardize on the newest stable image across all clusters. Use a KubeStellar BindingPolicy to enforce consistent image versions and replica counts fleet-wide.' },
     {
       id: 'demo-cluster-delta-1',
       category: 'cluster-delta',
@@ -748,8 +722,7 @@ function getDemoInsights(): MultiClusterInsight[] {
         { dimension: 'Image Version', clusterA: { name: 'eks-prod-us-east-1', value: 'api-server:v2.1.0' }, clusterB: { name: 'gke-staging', value: 'api-server:v2.0.3' }, significance: 'high' },
         { dimension: 'Replica Count', clusterA: { name: 'eks-prod-us-east-1', value: 5 }, clusterB: { name: 'gke-staging', value: 3 }, significance: 'medium' },
         { dimension: 'Status', clusterA: { name: 'eks-prod-us-east-1', value: 'running' }, clusterB: { name: 'gke-staging', value: 'deploying' }, significance: 'medium' },
-      ],
-    },
+      ] },
     {
       id: 'demo-rollout-1',
       category: 'rollout-tracker',
@@ -771,9 +744,7 @@ function getDemoInsights(): MultiClusterInsight[] {
         'aks-dev-westeu_progress': PARTIAL_PROGRESS,
         'aks-dev-westeu_status': ROLLOUT_STATUS_IN_PROGRESS,
         'vllm-gpu-cluster_progress': 0,
-        'vllm-gpu-cluster_status': ROLLOUT_STATUS_FAILED,
-      },
-    },
+        'vllm-gpu-cluster_status': ROLLOUT_STATUS_FAILED } },
   ]
 }
 
@@ -782,8 +753,7 @@ function getDemoInsights(): MultiClusterInsight[] {
 const SEVERITY_RANK: Record<InsightSeverity, number> = {
   critical: 3,
   warning: 2,
-  info: 1,
-}
+  info: 1 }
 
 // ── Main Hook ─────────────────────────────────────────────────────────
 
@@ -798,7 +768,7 @@ export function useMultiClusterInsights(): UseMultiClusterInsightsResult {
   const isDemoData = isDemoMode || (eventsDemoFallback && deploymentsDemoFallback && podIssuesDemoFallback)
   const isLoading = clustersLoading || eventsLoading || deploymentsLoading
 
-  const insights = useMemo(() => {
+  const insights = (() => {
     if (isDemoData) return getDemoInsights()
 
     const all: MultiClusterInsight[] = [
@@ -817,14 +787,14 @@ export function useMultiClusterInsights(): UseMultiClusterInsightsResult {
       if (sevDiff !== 0) return sevDiff
       return b.affectedClusters.length - a.affectedClusters.length
     })
-  }, [isDemoData, events, warningEvents, deployments, deduplicatedClusters, podIssues])
+  })()
 
   // AI enrichment: when agent is connected, enrich heuristic insights
   // with AI-generated descriptions, root causes, and remediation.
   // Falls back gracefully to heuristic-only when agent is unavailable.
   const { enrichedInsights } = useInsightEnrichment(insights)
 
-  const insightsByCategory = useMemo(() => {
+  const insightsByCategory = (() => {
     const result: Record<InsightCategory, MultiClusterInsight[]> = {
       'event-correlation': [],
       'cluster-delta': [],
@@ -832,24 +802,19 @@ export function useMultiClusterInsights(): UseMultiClusterInsightsResult {
       'config-drift': [],
       'resource-imbalance': [],
       'restart-correlation': [],
-      'rollout-tracker': [],
-    }
+      'rollout-tracker': [] }
     for (const insight of enrichedInsights || []) {
       result[insight.category].push(insight)
     }
     return result
-  }, [enrichedInsights])
+  })()
 
-  const topInsights = useMemo(
-    () => (enrichedInsights || []).slice(0, MAX_TOP_INSIGHTS),
-    [enrichedInsights],
-  )
+  const topInsights = (enrichedInsights || []).slice(0, MAX_TOP_INSIGHTS)
 
   return {
     insights: enrichedInsights,
     isLoading,
     isDemoData: !!isDemoData,
     insightsByCategory,
-    topInsights,
-  }
+    topInsights }
 }

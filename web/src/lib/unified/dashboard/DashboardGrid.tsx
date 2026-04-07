@@ -4,7 +4,7 @@
  * Renders a responsive grid of cards with optional drag-and-drop support.
  */
 
-import { useMemo, useState, useCallback, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -14,15 +14,13 @@ import {
   useSensors,
   DragEndEvent,
   DragStartEvent,
-  DragOverlay,
-} from '@dnd-kit/core'
+  DragOverlay } from '@dnd-kit/core'
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   rectSortingStrategy,
-  useSortable,
-} from '@dnd-kit/sortable'
+  useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical } from 'lucide-react'
 import type { DashboardCardPlacement, DashboardFeatures } from '../types'
@@ -63,8 +61,7 @@ export function DashboardGrid({
   onRemoveCard,
   onConfigureCard,
   isLoading = false,
-  className = '',
-}: DashboardGridProps) {
+  className = '' }: DashboardGridProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const health = useDashboardHealth()
 
@@ -72,28 +69,24 @@ export function DashboardGrid({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
-      },
-    }),
+        distance: 8 } }),
     useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+      coordinateGetter: sortableKeyboardCoordinates })
   )
 
   // Get the active card for drag overlay
-  const activeCard = useMemo(() => {
+  const activeCard = (() => {
     if (!activeId) return null
     return cards.find((c) => c.id === activeId) || null
-  }, [activeId, cards])
+  })()
 
   // Handle drag start
-  const handleDragStart = useCallback((event: DragStartEvent) => {
+  const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string)
-  }, [])
+  }
 
   // Handle drag end
-  const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
       setActiveId(null)
 
       const { active, over } = event
@@ -106,9 +99,7 @@ export function DashboardGrid({
         const newCards = arrayMove(cards, oldIndex, newIndex)
         onReorder(newCards)
       }
-    },
-    [cards, onReorder]
-  )
+    }
 
   // Enable drag-drop if configured and we have a reorder handler
   const enableDragDrop = features?.dragDrop !== false && !!onReorder
@@ -190,8 +181,7 @@ function DashboardCardWrapper({
   isOverlay = false,
   isLoading = false,
   onRemove,
-  onConfigure,
-}: DashboardCardWrapperProps) {
+  onConfigure }: DashboardCardWrapperProps) {
   // Get sortable props if draggable
   const {
     attributes,
@@ -199,11 +189,9 @@ function DashboardCardWrapper({
     setNodeRef,
     transform,
     transition,
-    isDragging,
-  } = useSortable({
+    isDragging } = useSortable({
     id: placement.id,
-    disabled: !isDraggable,
-  })
+    disabled: !isDraggable })
 
   // At narrow viewports (< 1024px), clamp small cards to min 6 cols
   const [isNarrow, setIsNarrow] = useState(() =>
@@ -238,10 +226,8 @@ function DashboardCardWrapper({
       ? {
           transform: CSS.Transform.toString(transform),
           transition,
-          opacity: isDragging ? 0.5 : 1,
-        }
-      : {}),
-  }
+          opacity: isDragging ? 0.5 : 1 }
+      : {}) }
 
   // Fallback: component-only cards (no config file) render directly via CardWrapper
   const DirectComponent = !cardConfig && cardTypeKey ? getCardComponent(cardTypeKey) : undefined

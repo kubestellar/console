@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { isDemoModeForced } from './useDemoMode'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { TRANSITION_DELAY_MS } from '../lib/constants/network'
@@ -61,10 +61,7 @@ const DEMO_DATA: AgentHealth = {
     tokenUsage: {
       session: { input: 0, output: 0 },
       today: { input: 0, output: 0 },
-      thisMonth: { input: 0, output: 0 },
-    },
-  },
-}
+      thisMonth: { input: 0, output: 0 } } } }
 
 // ============================================================================
 // Singleton Agent Manager - ensures only ONE polling loop exists globally
@@ -88,15 +85,13 @@ class AgentManager {
     error: 'Demo mode - agent connection skipped',
     connectionEvents: [],
     dataErrorCount: 0,
-    lastDataError: null,
-  } : {
+    lastDataError: null } : {
     status: 'connecting',
     health: null,
     error: null,
     connectionEvents: [],
     dataErrorCount: 0,
-    lastDataError: null,
-  }
+    lastDataError: null }
   private listeners: Set<Listener> = new Set()
   private pollInterval: ReturnType<typeof setInterval> | null = null
   private failureCount = 0
@@ -120,8 +115,7 @@ class AgentManager {
       this.setState({
         status: 'disconnected',
         health: DEMO_DATA,
-        error: 'Demo mode - agent connection skipped',
-      })
+        error: 'Demo mode - agent connection skipped' })
       return
     }
 
@@ -197,8 +191,7 @@ class AgentManager {
     const event: ConnectionEvent = {
       timestamp: new Date(),
       type,
-      message,
-    }
+      message }
     // Keep only the most recent events
     this.state.connectionEvents = [
       event,
@@ -217,8 +210,7 @@ class AgentManager {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
         method: 'GET',
         headers: { Accept: 'application/json' },
-        signal: AbortSignal.timeout(AGENT_HEALTH_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(AGENT_HEALTH_TIMEOUT_MS) })
 
       if (response.ok) {
         const data = await response.json()
@@ -236,8 +228,7 @@ class AgentManager {
           this.setState({
             health: data,
             status: 'connected',
-            error: null,
-          })
+            error: null })
           // Demo mode transition is handled by Layout based on agentStatus changes
           emitAgentConnected(data.version || 'unknown', data.clusters || 0)
           emitAgentProvidersDetected(data.availableProviders || [])
@@ -248,8 +239,7 @@ class AgentManager {
           this.setState({
             health: data,
             status: 'connected',
-            error: null,
-          })
+            error: null })
           emitAgentConnected(data.version || 'unknown', data.clusters || 0)
           emitAgentProvidersDetected(data.availableProviders || [])
           // Stamp the first-ever agent connection for time-based nudges
@@ -265,8 +255,7 @@ class AgentManager {
           this.setState({
             health: data,
             status: 'connected',
-            error: null,
-          })
+            error: null })
         }
         // If wasDisconnected but not enough successes yet, don't change status
       } else {
@@ -288,8 +277,7 @@ class AgentManager {
         this.setState({
           status: 'disconnected',
           health: DEMO_DATA,
-          error: 'Local agent not available',
-        })
+          error: 'Local agent not available' })
         // Demo mode fallback is handled by Layout based on agentStatus changes
         // Slow down polling when disconnected to avoid spamming console errors
         this.adjustPollInterval(DISCONNECTED_POLL_INTERVAL)
@@ -321,14 +309,12 @@ class AgentManager {
       this.setState({
         status: 'degraded',
         dataErrorCount: recentErrors,
-        lastDataError: `${endpoint}: ${error}`,
-      })
+        lastDataError: `${endpoint}: ${error}` })
     } else if (this.state.status === 'degraded') {
       // Update error count while degraded
       this.setState({
         dataErrorCount: recentErrors,
-        lastDataError: `${endpoint}: ${error}`,
-      })
+        lastDataError: `${endpoint}: ${error}` })
     }
   }
 
@@ -346,8 +332,7 @@ class AgentManager {
         this.setState({
           status: 'connected',
           dataErrorCount: 0,
-          lastDataError: null,
-        })
+          lastDataError: null })
       }
     }
   }
@@ -367,8 +352,7 @@ class AgentManager {
     this.addEvent('connecting', 'Aggressive detection: searching for local agent...')
     this.setState({
       status: 'connecting',
-      error: null,
-    })
+      error: null })
 
     this.adjustPollInterval(AGGRESSIVE_POLL_INTERVAL)
     this.checkAgent()
@@ -457,9 +441,9 @@ export function useLocalAgent() {
     return unsubscribe
   }, [])
 
-  const refresh = useCallback(() => {
+  const refresh = () => {
     agentManager.checkAgent()
-  }, [])
+  }
 
   // Install instructions
   const installInstructions = {
@@ -469,31 +453,27 @@ export function useLocalAgent() {
     steps: [
       {
         title: 'Install via Homebrew (macOS / WSL)',
-        command: 'brew tap kubestellar/tap && brew install --head kc-agent && kc-agent',
-      },
+        command: 'brew tap kubestellar/tap && brew install --head kc-agent && kc-agent' },
       {
         title: 'Build from source (Linux / WSL — recommended)',
-        command: 'git clone https://github.com/kubestellar/console.git && cd console && go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent',
-      },
+        command: 'git clone https://github.com/kubestellar/console.git && cd console && go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent' },
       {
         title: 'Install via Linuxbrew (Linux / WSL — alternative)',
-        command: '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && brew tap kubestellar/tap && brew install --head kc-agent && kc-agent',
-      },
+        command: '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && brew tap kubestellar/tap && brew install --head kc-agent && kc-agent' },
     ],
     benefits: [
       'Access all your kubeconfig clusters',
       'Real-time token usage tracking',
       'Secure local-only connection (127.0.0.1)',
-    ],
+    ] }
+
+  const reportDataError = (endpoint: string, error: string) => {
+    agentManager.reportDataError(endpoint, error)
   }
 
-  const reportDataError = useCallback((endpoint: string, error: string) => {
-    agentManager.reportDataError(endpoint, error)
-  }, [])
-
-  const reportDataSuccess = useCallback(() => {
+  const reportDataSuccess = () => {
     agentManager.reportDataSuccess()
-  }, [])
+  }
 
   return {
     status: state.status,
@@ -508,6 +488,5 @@ export function useLocalAgent() {
     installInstructions,
     refresh,
     reportDataError,
-    reportDataSuccess,
-  }
+    reportDataSuccess }
 }

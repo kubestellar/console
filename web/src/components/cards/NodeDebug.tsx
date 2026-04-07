@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCachedNodes } from '../../hooks/useCachedData'
 import { useKubectl } from '../../hooks/useKubectl'
@@ -52,15 +52,13 @@ const CATEGORY_COLORS: Record<string, { bg: string; hover: string; text: string 
   system: { bg: 'bg-orange-500/10', hover: 'hover:bg-orange-500/20', text: 'text-orange-400' },
   kubernetes: { bg: 'bg-blue-500/10', hover: 'hover:bg-blue-500/20', text: 'text-blue-400' },
   network: { bg: 'bg-green-500/10', hover: 'hover:bg-green-500/20', text: 'text-green-400' },
-  storage: { bg: 'bg-purple-500/10', hover: 'hover:bg-purple-500/20', text: 'text-purple-400' },
-}
+  storage: { bg: 'bg-purple-500/10', hover: 'hover:bg-purple-500/20', text: 'text-purple-400' } }
 
 const CATEGORY_KEYS: Record<string, 'nodeDebug.categorySystem' | 'nodeDebug.categoryKubernetes' | 'nodeDebug.categoryNetwork' | 'nodeDebug.categoryStorage'> = {
   system: 'nodeDebug.categorySystem',
   kubernetes: 'nodeDebug.categoryKubernetes',
   network: 'nodeDebug.categoryNetwork',
-  storage: 'nodeDebug.categoryStorage',
-}
+  storage: 'nodeDebug.categoryStorage' }
 
 const OUTPUT_MAX_LINES = 500
 const OUTPUT_MAX_BYTES = 50_000
@@ -103,8 +101,7 @@ export function NodeDebug() {
     hasAnyData: nodes.length > 0,
     isDemoData: isDemoFallback,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
   const [selectedCluster, setSelectedCluster] = useState<string>('')
   const [selectedNode, setSelectedNode] = useState<string>('')
   const [output, setOutput] = useState<string>('')
@@ -119,16 +116,16 @@ export function NodeDebug() {
 
   // Resolve the effective cluster: explicit selection first, then the selected node's cluster.
   // Never fall back to 'default' — that could silently target the wrong cluster.
-  const effectiveCluster = useMemo(() => {
+  const effectiveCluster = (() => {
     if (selectedCluster) return selectedCluster
     if (selectedNode) {
       const nodeInfo = nodes.find(n => n.name === selectedNode)
       return nodeInfo?.cluster || ''
     }
     return ''
-  }, [selectedCluster, selectedNode, nodes])
+  })()
 
-  const handleRun = useCallback(async (cmdFn: (node: string) => string[]) => {
+  const handleRun = async (cmdFn: (node: string) => string[]) => {
     if (!selectedNode) return
     if (!effectiveCluster) {
       showToast(t('nodeDebug.clusterRequired'), 'error')
@@ -151,9 +148,9 @@ export function NodeDebug() {
     } finally {
       setIsRunning(false)
     }
-  }, [selectedNode, effectiveCluster, execute, showToast, t])
+  }
 
-  const handleExec = useCallback(async (shellCmd: string) => {
+  const handleExec = async (shellCmd: string) => {
     if (!selectedNode || !shellCmd.trim()) return
     if (!effectiveCluster) {
       showToast(t('nodeDebug.clusterRequired'), 'error')
@@ -181,7 +178,7 @@ export function NodeDebug() {
     } finally {
       setIsRunning(false)
     }
-  }, [selectedNode, effectiveCluster, execImage, execute, showToast, t])
+  }
 
   if (showSkeleton) {
     return (

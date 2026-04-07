@@ -1,18 +1,16 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Zap,
   Calendar,
   Plus,
   Trash2,
-  Loader2,
-} from 'lucide-react'
+  Loader2 } from 'lucide-react'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import {
   useNamespaces,
   createOrUpdateResourceQuota,
-  COMMON_RESOURCE_TYPES,
-} from '../../hooks/useMCP'
+  COMMON_RESOURCE_TYPES } from '../../hooks/useMCP'
 import type { GPUNode } from '../../hooks/useMCP'
 import type { GPUReservation, CreateGPUReservationInput, UpdateGPUReservationInput } from '../../hooks/useGPUReservations'
 import { cn } from '../../lib/cn'
@@ -41,8 +39,7 @@ export function ReservationFormModal({
   onSave,
   onActivate,
   onSaved,
-  onError,
-}: {
+  onError }: {
   isOpen: boolean
   onClose: () => void
   editingReservation: GPUReservation | null
@@ -91,21 +88,19 @@ export function ReservationFormModal({
   const { namespaces: rawNamespaces } = useNamespaces(cluster || undefined, forceLive)
 
   // Filter out system namespaces from the dropdown
-  const FILTERED_NS_PREFIXES = useMemo(() => ['openshift-', 'kube-'], [])
-  const FILTERED_NS_EXACT = useMemo(() => ['default', 'kube-system', 'kube-public', 'kube-node-lease'], [])
-  const clusterNamespaces = useMemo(() =>
-    rawNamespaces.filter(ns =>
+  const FILTERED_NS_PREFIXES = ['openshift-', 'kube-']
+  const FILTERED_NS_EXACT = ['default', 'kube-system', 'kube-public', 'kube-node-lease']
+  const clusterNamespaces = rawNamespaces.filter(ns =>
       !FILTERED_NS_PREFIXES.some(prefix => ns.startsWith(prefix)) &&
       !FILTERED_NS_EXACT.includes(ns)
-    ),
-  [rawNamespaces, FILTERED_NS_PREFIXES, FILTERED_NS_EXACT])
+    )
 
   // Get the selected cluster's GPU info
   const selectedClusterInfo = gpuClusters.find(c => c.name === cluster)
   const maxGPUs = selectedClusterInfo?.availableGPUs ?? 0
 
   // Auto-detect GPU resource key from cluster's GPU types
-  const gpuResourceKey = useMemo(() => {
+  const gpuResourceKey = (() => {
     if (!cluster) return 'limits.nvidia.com/gpu'
     const clusterNodes = allNodes.filter(n => n.cluster === cluster)
     const hasAMD = clusterNodes.some(n => n.gpuType.toLowerCase().includes('amd') || n.manufacturer?.toLowerCase().includes('amd'))
@@ -113,10 +108,10 @@ export function ReservationFormModal({
     if (hasAMD) return 'limits.amd.com/gpu'
     if (hasIntel) return 'gpu.intel.com/i915'
     return 'limits.nvidia.com/gpu'
-  }, [cluster, allNodes])
+  })()
 
   // GPU types available on selected cluster with per-type counts
-  const clusterGPUTypes = useMemo(() => {
+  const clusterGPUTypes = (() => {
     if (!cluster) return [] as Array<{ type: string; total: number; available: number }>
     const typeMap: Record<string, { total: number; allocated: number }> = {}
     for (const n of allNodes.filter(n => n.cluster === cluster)) {
@@ -127,9 +122,8 @@ export function ReservationFormModal({
     return Object.entries(typeMap).map(([type, d]) => ({
       type,
       total: d.total,
-      available: d.total - d.allocated,
-    }))
-  }, [cluster, allNodes])
+      available: d.total - d.allocated }))
+  })()
 
   // Auto-generate quota name from title
   const quotaName = title
@@ -169,8 +163,7 @@ export function ReservationFormModal({
           notes,
           quota_enforced: enforceQuota,
           quota_name: enforceQuota ? quotaName : '',
-          max_cluster_gpus: selectedClusterInfo?.totalGPUs,
-        }
+          max_cluster_gpus: selectedClusterInfo?.totalGPUs }
         reservationId = await onSave(input)
       } else {
         // Create
@@ -186,8 +179,7 @@ export function ReservationFormModal({
           notes,
           quota_enforced: enforceQuota,
           quota_name: enforceQuota ? quotaName : '',
-          max_cluster_gpus: selectedClusterInfo?.totalGPUs,
-        }
+          max_cluster_gpus: selectedClusterInfo?.totalGPUs }
         reservationId = await onSave(input)
       }
 
@@ -195,8 +187,7 @@ export function ReservationFormModal({
       if (enforceQuota) {
         try {
           const hard: Record<string, string> = {
-            [gpuResourceKey]: String(count),
-          }
+            [gpuResourceKey]: String(count) }
           for (const r of extraResources) {
             if (r.key && r.value) hard[r.key] = r.value
           }

@@ -12,8 +12,7 @@ import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
 import { generateBenchmarkReports } from '../../../lib/llmd/benchmarkMockData'
 import {
   extractExperimentMeta,
-  getFilterOptions,
-} from '../../../lib/llmd/benchmarkDataUtils'
+  getFilterOptions } from '../../../lib/llmd/benchmarkDataUtils'
 import type { BenchmarkReport } from '../../../lib/llmd/benchmarkMockData'
 import { useTranslation } from 'react-i18next'
 
@@ -64,24 +63,23 @@ export function PerformanceTimeline() {
   )
   useReportCardDataState({
     isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing,
-    hasData: effectiveReports.length > 0,
-  })
+    hasData: effectiveReports.length > 0 })
 
-  const filterOpts = useMemo(() => getFilterOptions(effectiveReports), [effectiveReports])
+  const filterOpts = getFilterOptions(effectiveReports)
   const [mode, setMode] = useState<MetricMode>('throughput')
   const [category, setCategory] = useState<string>('all')
   const [qpsFilter, setQpsFilter] = useState<number>(0)
   const [hoveredCell, setHoveredCell] = useState<CellData | null>(null)
 
   // Get available QPS values
-  const qpsValues = useMemo(() => {
+  const qpsValues = (() => {
     const values = new Set<number>()
     for (const r of effectiveReports) {
       const meta = extractExperimentMeta(r)
       if (meta.qps > 0) values.add(meta.qps)
     }
     return [...values].sort((a, b) => a - b)
-  }, [effectiveReports])
+  })()
 
   const modeInfo = MODES.find(m => m.key === mode)!
 
@@ -123,8 +121,7 @@ export function PerformanceTimeline() {
       islValues: [...isls].sort((a, b) => a - b),
       oslValues: [...osls].sort((a, b) => a - b),
       minVal: min === Infinity ? 0 : min,
-      maxVal: max === -Infinity ? 0 : max,
-    }
+      maxVal: max === -Infinity ? 0 : max }
   }, [effectiveReports, mode, category, qpsFilter])
 
   const getCell = (isl: number, osl: number) => cells.find(c => c.isl === isl && c.osl === osl)

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { DEFAULT_PREDICTION_SETTINGS, type PredictionSettings } from '../types/predictions'
 
 const STORAGE_KEY = 'kubestellar-prediction-settings'
@@ -89,42 +89,40 @@ export function usePredictionSettings() {
   }, [])
 
   // Update settings (partial update supported)
-  const updateSettings = useCallback((updates: Partial<PredictionSettings>) => {
+  const updateSettings = (updates: Partial<PredictionSettings>) => {
     updateSharedSettings(updates)
     persistSettings()
-  }, [])
+  }
 
   // Reset to defaults
-  const resetSettings = useCallback(() => {
+  const resetSettings = () => {
     updateSharedSettings(DEFAULT_PREDICTION_SETTINGS)
     persistSettings()
-  }, [])
+  }
 
   // Toggle AI enabled
-  const toggleAI = useCallback(() => {
+  const toggleAI = () => {
     updateSharedSettings({ aiEnabled: !sharedSettings.aiEnabled })
     persistSettings()
-  }, [])
+  }
 
   // Toggle consensus mode
-  const toggleConsensus = useCallback(() => {
+  const toggleConsensus = () => {
     updateSharedSettings({ consensusMode: !sharedSettings.consensusMode })
     persistSettings()
-  }, [])
+  }
 
   // Update a single threshold
-  const updateThreshold = useCallback((
+  const updateThreshold = (
     key: keyof PredictionSettings['thresholds'],
     value: number
   ) => {
     updateSharedSettings({
       thresholds: {
         ...sharedSettings.thresholds,
-        [key]: value,
-      },
-    })
+        [key]: value } })
     persistSettings()
-  }, [])
+  }
 
   return {
     settings,
@@ -132,8 +130,7 @@ export function usePredictionSettings() {
     resetSettings,
     toggleAI,
     toggleConsensus,
-    updateThreshold,
-  }
+    updateThreshold }
 }
 
 /**

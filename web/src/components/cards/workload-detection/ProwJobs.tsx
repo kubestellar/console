@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import {
   CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink,
   Play
@@ -33,8 +33,7 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
     lastRefresh,
     isFailed,
     consecutiveFailures,
-    formatTimeAgo,
-  } = useCachedProwJobs('prow', 'prow')
+    formatTimeAgo } = useCachedProwJobs('prow', 'prow')
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const hasData = jobs.length > 0
@@ -44,14 +43,13 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
     hasAnyData: hasData,
     isFailed,
     consecutiveFailures: consecutiveFailures ?? 0,
-    isDemoData: shouldUseDemoData,
-  })
+    isDemoData: shouldUseDemoData })
 
   const [typeFilter, setTypeFilter] = useState<ProwJob['type'] | 'all'>('all')
   const [stateFilter, setStateFilter] = useState<ProwJob['state'] | 'all'>('all')
 
   // Pre-filter by type and state before passing to useCardData
-  const preFilteredJobs = useMemo(() => {
+  const preFilteredJobs = (() => {
     let filtered = jobs
     if (typeFilter !== 'all') {
       filtered = filtered.filter(j => j.type === typeFilter)
@@ -60,7 +58,7 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
       filtered = filtered.filter(j => j.state === stateFilter)
     }
     return filtered
-  }, [jobs, typeFilter, stateFilter])
+  })()
 
   const {
     items,
@@ -74,23 +72,18 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
     filters,
     sorting,
     containerRef,
-    containerStyle,
-  } = useCardData<ProwJob, 'name' | 'state' | 'started'>(preFilteredJobs, {
+    containerStyle } = useCardData<ProwJob, 'name' | 'state' | 'started'>(preFilteredJobs, {
     filter: {
       searchFields: ['name', 'state', 'type'] as (keyof ProwJob)[],
-      customPredicate: (j, q) => !!(j.pr && String(j.pr).includes(q)),
-    },
+      customPredicate: (j, q) => !!(j.pr && String(j.pr).includes(q)) },
     sort: {
       defaultField: 'started',
       defaultDirection: 'desc' as SortDirection,
       comparators: {
         name: commonComparators.string<ProwJob>('name'),
         state: commonComparators.string<ProwJob>('state'),
-        started: (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
-      },
-    },
-    defaultLimit: 5,
-  })
+        started: (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime() } },
+    defaultLimit: 5 })
 
   const getStateIcon = (state: string) => {
     switch (state) {
@@ -110,8 +103,7 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
       presubmit: 'bg-blue-500/20 text-blue-400',
       postsubmit: 'bg-green-500/20 text-green-400',
       periodic: 'bg-purple-500/20 text-purple-400',
-      batch: 'bg-cyan-500/20 text-cyan-400',
-    }
+      batch: 'bg-cyan-500/20 text-cyan-400' }
     return colors[type] || 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground'
   }
 

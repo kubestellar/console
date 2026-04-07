@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Server, Box, Wifi, WifiOff, Loader2 } from 'lucide-react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useMissions } from '../../../hooks/useMissions'
@@ -28,12 +28,11 @@ export function AgentStatusIndicator() {
 
   // Fetch agents from kc-agent health endpoint (works even in demo mode
   // when the WebSocket is not connected)
-  const fetchAgentsFromHealth = useCallback(async () => {
+  const fetchAgentsFromHealth = async () => {
     setIsDiscoveringAgents(true)
     try {
       const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
-        signal: AbortSignal.timeout(BACKEND_HEALTH_CHECK_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(BACKEND_HEALTH_CHECK_TIMEOUT_MS) })
       if (!res.ok) return
       const data = await res.json()
       if (data.availableProviders) {
@@ -46,23 +45,21 @@ export function AgentStatusIndicator() {
           'antigravity': 'google-ag',
           'bob': 'bob',
           'gh-copilot': 'github',
-          'vscode': 'microsoft',
-        }
+          'vscode': 'microsoft' }
         setDiscoveredAgents(data.availableProviders.map((p: { name: string; displayName: string; capabilities: number }) => ({
           name: p.name,
           displayName: p.displayName,
           description: '',
           provider: nameToProvider[p.name] || p.name,
           available: true,
-          capabilities: p.capabilities,
-        })))
+          capabilities: p.capabilities })))
       }
     } catch {
       // kc-agent not reachable
     } finally {
       setIsDiscoveringAgents(false)
     }
-  }, [])
+  }
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // ── Stabilize pill status ──────────────────────────────────────────────
@@ -77,7 +74,7 @@ export function AgentStatusIndicator() {
   //    Fix: sticky demo styling that persists until agent actually connects.
 
   // --- Status debounce (fixes navigation flicker) ---
-  const connectingTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const connectingTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const [stableStatus, setStableStatus] = useState(agentStatus)
 
   useEffect(() => {
@@ -101,7 +98,7 @@ export function AgentStatusIndicator() {
   // When demo mode is on, showDemoStyle=true. When demo mode is toggled off,
   // showDemoStyle stays true (sticky) until the agent connects or 3s elapses.
   const [showDemoStyle, setShowDemoStyle] = useState(isDemoMode)
-  const demoExitTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const demoExitTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // Set sticky flag when entering demo mode
   useEffect(() => {

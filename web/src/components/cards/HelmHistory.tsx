@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { CheckCircle, XCircle, RotateCcw, ArrowUp, Clock, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useClusters, type HelmHistoryEntry } from '../../hooks/useMCP'
@@ -35,15 +35,11 @@ const STATUS_ORDER: Record<string, number> = {
   'pending-upgrade': 1,
   'pending-rollback': 2,
   deployed: 3,
-  superseded: 4,
-}
+  superseded: 4 }
 
 export function HelmHistory({ config }: HelmHistoryProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const SORT_OPTIONS = useMemo(() =>
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
-    [t]
-  )
+  const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
   const { deduplicatedClusters: allClusters } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
@@ -56,8 +52,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
-    customFilter,
-  } = useGlobalFilters()
+    customFilter } = useGlobalFilters()
   const { drillToHelm } = useDrillDownActions()
   const [modalEntry, setModalEntry] = useState<HelmHistoryEntry | null>(null)
 
@@ -109,13 +104,13 @@ export function HelmHistory({ config }: HelmHistoryProps) {
   }, [isDemoData, allHelmReleases, allClusters])
 
   // Look up namespace from the selected release (required for helm history command)
-  const selectedReleaseNamespace = useMemo(() => {
+  const selectedReleaseNamespace = (() => {
     if (!selectedCluster || !selectedRelease) return undefined
     const release = allHelmReleases.find(
       r => r.cluster === selectedCluster && r.name === selectedRelease
     )
     return release?.namespace
-  }, [allHelmReleases, selectedCluster, selectedRelease])
+  })()
 
   // Fetch history for selected release (hook handles caching)
   const {
@@ -123,8 +118,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     isLoading: historyLoading,
     isRefreshing: historyRefreshing,
     isFailed,
-    consecutiveFailures,
-  } = useCachedHelmHistory(
+    consecutiveFailures } = useCachedHelmHistory(
     selectedCluster || undefined,
     selectedRelease || undefined,
     selectedReleaseNamespace
@@ -138,11 +132,10 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     hasAnyData: rawHistory.length > 0 || !selectedRelease,
     isFailed,
     consecutiveFailures,
-    isDemoData,
-  })
+    isDemoData })
 
   // Apply global filters to clusters
-  const clusters = useMemo(() => {
+  const clusters = (() => {
     let result = allClusters
 
     if (!isAllClustersSelected) {
@@ -158,19 +151,19 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     }
 
     return result
-  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
+  })()
 
   // Filter releases locally by selected cluster (no API call)
-  const filteredReleases = useMemo(() => {
+  const filteredReleases = (() => {
     if (!selectedCluster) return allHelmReleases
     return allHelmReleases.filter(r => r.cluster === selectedCluster)
-  }, [allHelmReleases, selectedCluster])
+  })()
 
   // Get unique release names for dropdown
-  const releases = useMemo(() => {
+  const releases = (() => {
     const releaseSet = new Set(filteredReleases.map(r => r.name))
     return Array.from(releaseSet).sort()
-  }, [filteredReleases])
+  })()
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {
@@ -191,33 +184,26 @@ export function HelmHistory({ config }: HelmHistoryProps) {
       availableClusters,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-    },
+      clusterFilterRef },
     sorting: {
       sortBy,
       setSortBy,
       sortDirection,
-      setSortDirection,
-    },
+      setSortDirection },
     containerRef,
-    containerStyle,
-  } = useCardData<HelmHistoryEntry, SortByOption>(rawHistory, {
+    containerStyle } = useCardData<HelmHistoryEntry, SortByOption>(rawHistory, {
     filter: {
       searchFields: ['chart', 'status', 'description'] as (keyof HelmHistoryEntry)[],
       customPredicate: (item, query) => String(item.revision).includes(query),
-      storageKey: 'helm-history',
-    },
+      storageKey: 'helm-history' },
     sort: {
       defaultField: 'revision',
       defaultDirection: 'desc',
       comparators: {
         revision: (a, b) => a.revision - b.revision,
         status: (a, b) => (STATUS_ORDER[a.status] ?? 5) - (STATUS_ORDER[b.status] ?? 5),
-        updated: (a, b) => new Date(a.updated).getTime() - new Date(b.updated).getTime(),
-      },
-    },
-    defaultLimit: 5,
-  })
+        updated: (a, b) => new Date(a.updated).getTime() - new Date(b.updated).getTime() } },
+    defaultLimit: 5 })
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -289,12 +275,10 @@ export function HelmHistory({ config }: HelmHistoryProps) {
             isOpen: showClusterFilter,
             setIsOpen: setShowClusterFilter,
             containerRef: clusterFilterRef,
-            minClusters: 1,
-          }}
+            minClusters: 1 }}
           clusterIndicator={localClusterFilter.length > 0 ? {
             selectedCount: localClusterFilter.length,
-            totalCount: availableClusters.length,
-          } : undefined}
+            totalCount: availableClusters.length } : undefined}
           cardControls={{
             limit: itemsPerPage,
             onLimitChange: setItemsPerPage,
@@ -302,8 +286,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
             sortOptions: SORT_OPTIONS,
             onSortChange: (v) => setSortBy(v as SortByOption),
             sortDirection,
-            onSortDirectionChange: setSortDirection,
-          }}
+            onSortDirectionChange: setSortDirection }}
         />
       </div>
 
@@ -354,8 +337,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
           <button
             onClick={() => drillToHelm(selectedCluster, selectedReleaseNamespace || 'default', selectedRelease, {
               history: rawHistory,
-              currentRevision: rawHistory.find(h => h.status === 'deployed')?.revision,
-            })}
+              currentRevision: rawHistory.find(h => h.status === 'deployed')?.revision })}
             className="group flex items-center gap-2 mb-4 p-2 -m-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer min-w-0 max-w-full overflow-hidden"
             title={`Click to view details for ${selectedRelease}`}
           >

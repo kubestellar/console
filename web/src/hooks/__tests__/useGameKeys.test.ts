@@ -17,7 +17,7 @@ describe('useGameKeys', () => {
 
   it('calls onKeyDown when key is pressed and container is visible', () => {
     const onKeyDown = vi.fn()
-    const containerRef = { current: container } as RefObject<HTMLDivElement>
+    const containerRef = { current: container } as RefObject<HTMLDivElement | null>
 
     renderHook(() => useGameKeys(containerRef, { onKeyDown }))
 
@@ -39,7 +39,7 @@ describe('useGameKeys', () => {
 
   it('does not call onKeyDown when target is an input element', () => {
     const onKeyDown = vi.fn()
-    const containerRef = { current: container } as RefObject<HTMLDivElement>
+    const containerRef = { current: container } as RefObject<HTMLDivElement | null>
 
     renderHook(() => useGameKeys(containerRef, { onKeyDown }))
 
@@ -56,7 +56,7 @@ describe('useGameKeys', () => {
   it('does not fire when container is hidden by KeepAlive', () => {
     const onKeyDown = vi.fn()
     container.style.display = 'none'
-    const containerRef = { current: container } as RefObject<HTMLDivElement>
+    const containerRef = { current: container } as RefObject<HTMLDivElement | null>
 
     renderHook(() => useGameKeys(containerRef, { onKeyDown }))
 
@@ -66,7 +66,7 @@ describe('useGameKeys', () => {
 
   it('calls onKeyUp when provided', () => {
     const onKeyUp = vi.fn()
-    const containerRef = { current: container } as RefObject<HTMLDivElement>
+    const containerRef = { current: container } as RefObject<HTMLDivElement | null>
 
     renderHook(() => useGameKeys(containerRef, { onKeyUp }))
 
@@ -76,7 +76,7 @@ describe('useGameKeys', () => {
 
   it('cleans up event listeners on unmount', () => {
     const onKeyDown = vi.fn()
-    const containerRef = { current: container } as RefObject<HTMLDivElement>
+    const containerRef = { current: container } as RefObject<HTMLDivElement | null>
 
     const { unmount } = renderHook(() => useGameKeys(containerRef, { onKeyDown }))
     unmount()
@@ -100,7 +100,7 @@ describe('useGameKeyTracking', () => {
 
   it('adds keys to the set on keydown', () => {
     const keysRef = { current: new Set<string>() } as MutableRefObject<Set<string>>
-    const containerRef = { current: container } as RefObject<HTMLDivElement>
+    const containerRef = { current: container } as RefObject<HTMLDivElement | null>
 
     renderHook(() => useGameKeyTracking(containerRef, keysRef))
 
@@ -110,7 +110,7 @@ describe('useGameKeyTracking', () => {
 
   it('removes keys from the set on keyup', () => {
     const keysRef = { current: new Set<string>() } as MutableRefObject<Set<string>>
-    const containerRef = { current: container } as RefObject<HTMLDivElement>
+    const containerRef = { current: container } as RefObject<HTMLDivElement | null>
 
     renderHook(() => useGameKeyTracking(containerRef, keysRef))
 
@@ -123,7 +123,7 @@ describe('useGameKeyTracking', () => {
 
   it('converts to lowercase when option is set', () => {
     const keysRef = { current: new Set<string>() } as MutableRefObject<Set<string>>
-    const containerRef = { current: container } as RefObject<HTMLDivElement>
+    const containerRef = { current: container } as RefObject<HTMLDivElement | null>
 
     renderHook(() => useGameKeyTracking(containerRef, keysRef, { lowercase: true }))
 
@@ -133,7 +133,7 @@ describe('useGameKeyTracking', () => {
 
   it('clears set on unmount', () => {
     const keysRef = { current: new Set<string>() } as MutableRefObject<Set<string>>
-    const containerRef = { current: container } as RefObject<HTMLDivElement>
+    const containerRef = { current: container } as RefObject<HTMLDivElement | null>
 
     const { unmount } = renderHook(() => useGameKeyTracking(containerRef, keysRef))
 

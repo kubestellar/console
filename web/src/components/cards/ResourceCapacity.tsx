@@ -45,8 +45,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
   const { isDemoMode } = useDemoMode()
   const {
     selectedClusters: globalSelectedClusters,
-    isAllClustersSelected,
-  } = useGlobalFilters()
+    isAllClustersSelected } = useGlobalFilters()
 
   const [sortBy, setSortBy] = useState<SortByOption>('name')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
@@ -61,8 +60,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
     isFailed,
     consecutiveFailures,
     errorMessage: error ?? undefined,
-    isDemoData: isDemoMode || isDemoFallback,
-  })
+    isDemoData: isDemoMode || isDemoFallback })
 
   // Local cluster filter
   const {
@@ -72,13 +70,11 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
     availableClusters,
     showClusterFilter,
     setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({
-    storageKey: 'resource-capacity',
-  })
+    clusterFilterRef } = useChartFilters({
+    storageKey: 'resource-capacity' })
 
   // Filter clusters by global selection first, then apply local filter
-  const clusters = useMemo(() => {
+  const clusters = (() => {
     let result = allClusters
     if (!isAllClustersSelected) {
       result = result.filter(c => globalSelectedClusters.includes(c.name))
@@ -87,10 +83,10 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
       result = result.filter(c => localClusterFilter.includes(c.name))
     }
     return result
-  }, [allClusters, globalSelectedClusters, isAllClustersSelected, localClusterFilter])
+  })()
 
   // Filter GPU nodes by selection
-  const filteredGPUNodes = useMemo(() => {
+  const filteredGPUNodes = (() => {
     let result = gpuNodes
     if (!isAllClustersSelected) {
       result = result.filter(n => globalSelectedClusters.includes(n.cluster))
@@ -99,7 +95,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
       result = result.filter(n => localClusterFilter.includes(n.cluster))
     }
     return result
-  }, [gpuNodes, globalSelectedClusters, isAllClustersSelected, localClusterFilter])
+  })()
 
   // Calculate real totals from cluster data
   const totals = useMemo(() => {
@@ -112,8 +108,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
         memoryGB: acc.memoryGB + (c.memoryGB || 0),
         memoryRequestsGB: acc.memoryRequestsGB + (c.memoryRequestsGB || 0),
         storageGB: acc.storageGB + (c.storageGB || 0),
-        pvcCount: acc.pvcCount + (c.pvcCount || 0),
-      }),
+        pvcCount: acc.pvcCount + (c.pvcCount || 0) }),
       { nodes: 0, pods: 0, cpuCores: 0, cpuRequestsCores: 0, memoryGB: 0, memoryRequestsGB: 0, storageGB: 0, pvcCount: 0 }
     )
 
@@ -122,8 +117,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
       (acc: { totalGPUs: number; allocatedGPUs: number; gpuMemoryGB: number }, n: GPUNode) => ({
         totalGPUs: acc.totalGPUs + (n.gpuCount || 0),
         allocatedGPUs: acc.allocatedGPUs + (n.gpuAllocated || 0),
-        gpuMemoryGB: acc.gpuMemoryGB + ((n.gpuMemoryMB || 0) / 1024),
-      }),
+        gpuMemoryGB: acc.gpuMemoryGB + ((n.gpuMemoryMB || 0) / 1024) }),
       { totalGPUs: 0, allocatedGPUs: 0, gpuMemoryGB: 0 }
     )
 
@@ -146,8 +140,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
         requested: totals.cpuRequestsCores,
         capacity: totals.cpuCores,
         unit: 'cores',
-        color: 'blue',
-      })
+        color: 'blue' })
     }
 
     // Only include memory if we have capacity data
@@ -160,8 +153,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
         capacity: totals.memoryGB,
         unit: 'GB',
         color: 'purple',
-        format: formatGB,
-      })
+        format: formatGB })
     }
 
     // Add GPU if available
@@ -173,8 +165,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
         requested: totals.allocatedGPUs,
         capacity: totals.totalGPUs,
         unit: 'GPUs',
-        color: 'yellow',
-      })
+        color: 'yellow' })
     }
 
     // Sort items
@@ -287,15 +278,13 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
               purple: 'bg-purple-500',
               green: 'bg-green-500',
               yellow: 'bg-yellow-500',
-              orange: 'bg-orange-500',
-            }
+              orange: 'bg-orange-500' }
             const textClasses: Record<string, string> = {
               blue: 'text-blue-400',
               purple: 'text-purple-400',
               green: 'text-green-400',
               yellow: 'text-yellow-400',
-              orange: 'text-orange-400',
-            }
+              orange: 'text-orange-400' }
 
             const formatValue = (v: number) => {
               if (item.format) return item.format(v)

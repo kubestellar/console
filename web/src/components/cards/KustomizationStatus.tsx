@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { CheckCircle, AlertTriangle, XCircle, RefreshCw, Clock, GitBranch, ChevronRight } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -106,8 +106,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
-    customFilter,
-  } = useGlobalFilters()
+    customFilter } = useGlobalFilters()
   const { drillToKustomization } = useDrillDownActions()
 
   // In demo mode, use demo data; in live mode, use localStorage cache (real data)
@@ -130,8 +129,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: kustomizationData.length > 0,
-    isDemoData: demoMode,
-  })
+    isDemoData: demoMode })
 
   // Auto-select first cluster in demo mode so card shows data immediately
   useEffect(() => {
@@ -141,7 +139,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
   }, [demoMode, selectedCluster, allClusters])
 
   // Apply global filters to cluster list for the dropdown
-  const clusters = useMemo(() => {
+  const clusters = (() => {
     let result = allClusters
 
     if (!isAllClustersSelected) {
@@ -157,22 +155,22 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
     }
 
     return result
-  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
+  })()
 
   // Filter kustomizations based on selected cluster
-  const allKustomizations: Kustomization[] = useMemo(() => selectedCluster ? kustomizationData : [], [selectedCluster, kustomizationData])
+  const allKustomizations: Kustomization[] = selectedCluster ? kustomizationData : []
 
   // Get unique namespaces
-  const namespaces = useMemo(() => {
+  const namespaces = (() => {
     const nsSet = new Set(allKustomizations.map(k => k.namespace))
     return Array.from(nsSet).sort()
-  }, [allKustomizations])
+  })()
 
   // Pre-filter by namespace before passing to useCardData
-  const namespacedKustomizations = useMemo(() => {
+  const namespacedKustomizations = (() => {
     if (!selectedNamespace) return allKustomizations
     return allKustomizations.filter(k => k.namespace === selectedNamespace)
-  }, [allKustomizations, selectedNamespace])
+  })()
 
   const statusOrder: Record<string, number> = { NotReady: 0, Progressing: 1, Suspended: 2, Ready: 3 }
 
@@ -195,21 +193,17 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
       availableClusters,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-    },
+      clusterFilterRef },
     sorting: {
       sortBy,
       setSortBy,
       sortDirection,
-      setSortDirection,
-    },
+      setSortDirection },
     containerRef,
-    containerStyle,
-  } = useCardData<Kustomization, SortByOption>(namespacedKustomizations, {
+    containerStyle } = useCardData<Kustomization, SortByOption>(namespacedKustomizations, {
     filter: {
       searchFields: ['name', 'namespace', 'path', 'sourceRef'] as (keyof Kustomization)[],
-      storageKey: 'kustomization-status',
-    },
+      storageKey: 'kustomization-status' },
     sort: {
       defaultField: 'status',
       defaultDirection: 'asc',
@@ -217,11 +211,8 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
         status: (a, b) => (statusOrder[a.status] ?? 5) - (statusOrder[b.status] ?? 5),
         name: (a, b) => a.name.localeCompare(b.name),
         namespace: (a, b) => a.namespace.localeCompare(b.namespace),
-        lastApplied: (a, b) => new Date(b.lastApplied).getTime() - new Date(a.lastApplied).getTime(),
-      },
-    },
-    defaultLimit: 5,
-  })
+        lastApplied: (a, b) => new Date(b.lastApplied).getTime() - new Date(a.lastApplied).getTime() } },
+    defaultLimit: 5 })
 
   const readyCount = namespacedKustomizations.filter(k => k.status === 'Ready').length
   const notReadyCount = namespacedKustomizations.filter(k => k.status === 'NotReady').length
@@ -270,8 +261,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
             isOpen: showClusterFilter,
             setIsOpen: setShowClusterFilter,
             containerRef: clusterFilterRef,
-            minClusters: 1,
-          }}
+            minClusters: 1 }}
           cardControls={{
             limit: itemsPerPage,
             onLimitChange: setItemsPerPage,
@@ -279,8 +269,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
             sortOptions: SORT_OPTIONS,
             onSortChange: (v) => setSortBy(v as SortByOption),
             sortDirection,
-            onSortDirectionChange: setSortDirection,
-          }}
+            onSortDirectionChange: setSortDirection }}
         />
       </div>
 
@@ -367,8 +356,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
                     sourceRef: ks.sourceRef,
                     status: ks.status,
                     lastApplied: ks.lastApplied,
-                    revision: ks.revision,
-                  })}
+                    revision: ks.revision })}
                   className={`p-3 rounded-lg cursor-pointer group ${ks.status === 'NotReady' ? 'bg-red-500/10 border border-red-500/20' : 'bg-secondary/30'} hover:bg-secondary/50 transition-colors`}
                   title={`Click to view ${ks.name} details`}
                 >

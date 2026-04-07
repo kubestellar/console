@@ -1,4 +1,3 @@
-import { useCallback, useMemo } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { useClusters, useOperatorSubscriptions, useOperators } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -26,11 +25,11 @@ export function Operators() {
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected, filterByStatus, customFilter } = useGlobalFilters()
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = () => {
     refetch()
     refetchSubs()
     refetchOps()
-  }, [refetch, refetchSubs, refetchOps])
+  }
 
   // Filter clusters based on global selection
   const filteredClusters = clusters.filter(c =>
@@ -39,7 +38,7 @@ export function Operators() {
   const reachableClusters = filteredClusters.filter(c => c.reachable !== false)
 
   // Filter operator subscriptions based on global cluster selection
-  const filteredSubscriptions = useMemo(() => {
+  const filteredSubscriptions = (() => {
     let result = operatorSubs.filter(op => {
       if (isAllClustersSelected) return true
       const clusterName = op.cluster?.split('/')[0] || ''
@@ -54,10 +53,10 @@ export function Operators() {
       )
     }
     return result
-  }, [operatorSubs, isAllClustersSelected, globalSelectedClusters, customFilter])
+  })()
 
   // Filter operators based on global cluster selection
-  const filteredOperatorsAPI = useMemo(() => {
+  const filteredOperatorsAPI = (() => {
     let result = allOperators.filter(op => {
       if (isAllClustersSelected) return true
       const clusterName = op.cluster?.split('/')[0] || ''
@@ -73,7 +72,7 @@ export function Operators() {
       )
     }
     return result
-  }, [allOperators, isAllClustersSelected, globalSelectedClusters, filterByStatus, customFilter])
+  })()
 
   // Calculate operator stats
   const totalOperators = filteredOperatorsAPI.length
@@ -83,7 +82,7 @@ export function Operators() {
   const failingOperators = filteredOperatorsAPI.filter(op => op.status === 'Failed').length
 
   // Stats value getter
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'operators':
         return { value: totalOperators, sublabel: t('common:operators.totalOperators'), onClick: () => drillToAllOperators(), isClickable: totalOperators > 0 }
@@ -104,12 +103,9 @@ export function Operators() {
       default:
         return { value: 0 }
     }
-  }, [totalOperators, installedOperators, installingOperators, upgradesAvailable, failingOperators, reachableClusters.length, filteredSubscriptions, drillToAllOperators, drillToAllClusters, t])
+  }
 
-  const getStatValue = useCallback(
-    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
-    [getDashboardStatValue, getUniversalStatValue]
-  )
+  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
   return (
     <DashboardPage
@@ -128,8 +124,7 @@ export function Operators() {
       hasData={totalOperators > 0 || reachableClusters.length > 0}
       emptyState={{
         title: t('common:operators.dashboardTitle'),
-        description: t('common:operators.emptyDescription'),
-      }}
+        description: t('common:operators.emptyDescription') }}
     >
       {/* Error Display */}
       {error && (

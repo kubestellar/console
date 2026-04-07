@@ -20,7 +20,7 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLo
   const [isSaving, setIsSaving] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const timeoutRef = useRef<number>()
+  const timeoutRef = useRef<number>(undefined)
 
   // Cleanup timeout on unmount
   useEffect(() => {

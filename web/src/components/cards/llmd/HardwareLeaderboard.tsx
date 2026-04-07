@@ -14,8 +14,7 @@ import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
 import {
   generateLeaderboardRows,
   CONFIG_COLORS,
-  type LeaderboardRow,
-} from '../../../lib/llmd/benchmarkMockData'
+  type LeaderboardRow } from '../../../lib/llmd/benchmarkMockData'
 import { CardSearch, useCardSearch } from '../../ui/CardSearch'
 import { CardControls, type SortDirection } from '../../ui/CardControls'
 import { usePagination, Pagination } from '../../ui/Pagination'
@@ -57,7 +56,7 @@ export function HardwareLeaderboard() {
   const { data: reports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
   // Use hook data directly — it already returns cached live data or demo fallback.
   // Calling generateBenchmarkReports() here would bypass the warm cache (#3397).
-  const effectiveReports = useMemo(() => reports ?? [], [reports])
+  const effectiveReports = reports ?? []
   useReportCardDataState({ isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, hasData: effectiveReports.length > 0 })
 
   const [sortKey, setSortKey] = useState<SortKey>('score')
@@ -65,11 +64,9 @@ export function HardwareLeaderboard() {
   const [modelFilter, setModelFilter] = useState<string>('all')
   const { searchQuery, setSearchQuery } = useCardSearch()
 
-  const allRows = useMemo(() => {
-    return generateLeaderboardRows(effectiveReports)
-  }, [effectiveReports])
+  const allRows = generateLeaderboardRows(effectiveReports)
 
-  const models = useMemo(() => [...new Set(allRows.map(r => r.model))], [allRows])
+  const models = [...new Set(allRows.map(r => r.model))]
 
   const sortedRows = useMemo(() => {
     let filtered = modelFilter === 'all' ? allRows : allRows.filter(r => r.model === modelFilter)
@@ -97,8 +94,7 @@ export function HardwareLeaderboard() {
     itemsPerPage,
     goToPage,
     setPerPage,
-    needsPagination,
-  } = usePagination(sortedRows, DEFAULT_PAGE_SIZE, false)
+    needsPagination } = usePagination(sortedRows, DEFAULT_PAGE_SIZE, false)
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === 'desc' ? 'asc' : 'desc')

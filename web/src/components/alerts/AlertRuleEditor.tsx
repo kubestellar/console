@@ -218,7 +218,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                 }`}
               />
               {errors.name && (
-                <p className="text-xs text-red-400 mt-1">{errors.name}</p>
+                <span className="block text-xs text-red-400 mt-1">{errors.name}</span>
               )}
             </div>
 
@@ -326,7 +326,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                   <span className="text-sm text-muted-foreground">%</span>
                 </div>
                 {errors.threshold && (
-                  <p className="text-xs text-red-400 mt-1">{errors.threshold}</p>
+                  <span className="block text-xs text-red-400 mt-1">{errors.threshold}</span>
                 )}
               </div>
             )}
@@ -391,7 +391,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                       <span className="text-sm text-muted-foreground">°F</span>
                     </div>
                     {errors.temperatureThreshold && (
-                      <p className="text-xs text-red-400 mt-1">{errors.temperatureThreshold}</p>
+                      <span className="block text-xs text-red-400 mt-1">{errors.temperatureThreshold}</span>
                     )}
                   </div>
                 )}
@@ -415,7 +415,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                       <span className="text-sm text-muted-foreground">mph</span>
                     </div>
                     {errors.windSpeedThreshold && (
-                      <p className="text-xs text-red-400 mt-1">{errors.windSpeedThreshold}</p>
+                      <span className="block text-xs text-red-400 mt-1">{errors.windSpeedThreshold}</span>
                     )}
                   </div>
                 )}

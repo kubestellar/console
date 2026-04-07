@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CheckCircle, AlertTriangle, XCircle, Clock, ChevronRight, Server, Package } from 'lucide-react'
 import { useClusters, BuildpackImage } from '../../../hooks/useMCP'
@@ -35,28 +35,22 @@ const SORT_OPTIONS = [
 const STATUS_STYLES = {
   succeeded: {
     icon: 'text-green-400',
-    badge: 'bg-green-500/20 text-green-400',
-  },
+    badge: 'bg-green-500/20 text-green-400' },
   failed: {
     icon: 'text-red-400',
-    badge: 'bg-red-500/20 text-red-400',
-  },
+    badge: 'bg-red-500/20 text-red-400' },
   building: {
     icon: 'text-blue-400',
-    badge: 'bg-blue-500/20 text-blue-400',
-  },
+    badge: 'bg-blue-500/20 text-blue-400' },
   unknown: {
     icon: 'text-orange-400',
-    badge: 'bg-orange-500/20 text-orange-400',
-  },
-}
+    badge: 'bg-orange-500/20 text-orange-400' } }
 
 const STATUS_ORDER: Record<string, number> = {
   failed: 0,
   building: 1,
   unknown: 2,
-  succeeded: 3,
-}
+  succeeded: 3 }
 
 const formatTime = (timestamp: string | number | Date): string => {
   const time = new Date(timestamp).getTime()
@@ -88,8 +82,7 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
     isFailed,
     consecutiveFailures,
     error,
-    isDemoFallback: isDemoData,
-  } = useCachedBuildpackImages(config?.cluster)
+    isDemoFallback: isDemoData } = useCachedBuildpackImages(config?.cluster)
 
   const { drillToBuildpack } = useDrillDownActions()
 
@@ -103,20 +96,16 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
     hasAnyData: allImages.length > 0,
     isFailed,
     consecutiveFailures,
-    isDemoData,
-  })
+    isDemoData })
 
   const allBuilds = allImages
 
-  const namespacedBuilds = useMemo(() => {
+  const namespacedBuilds = (() => {
     if (!selectedNamespace) return allBuilds
     return allBuilds.filter(b => b.namespace === selectedNamespace)
-  }, [allBuilds, selectedNamespace])
+  })()
 
-  const namespaces = useMemo(
-    () => Array.from(new Set(allBuilds.map(b => b.namespace))).sort(),
-    [allBuilds]
-  )
+  const namespaces = Array.from(new Set(allBuilds.map(b => b.namespace))).sort()
 
   const {
     items: builds,
@@ -136,23 +125,19 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
       availableClusters,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-    },
+      clusterFilterRef },
     sorting: {
       sortBy,
       setSortBy,
       sortDirection,
-      setSortDirection,
-    },
+      setSortDirection },
     containerRef,
-    containerStyle,
-  } = useCardData<BuildpackImage, SortByOption>(namespacedBuilds, {
+    containerStyle } = useCardData<BuildpackImage, SortByOption>(namespacedBuilds, {
     filter: {
       searchFields: ['name', 'namespace', 'builder', 'image'],
       clusterField: 'cluster',
       statusField: 'status',
-      storageKey: 'buildpacks-status',
-    },
+      storageKey: 'buildpacks-status' },
     sort: {
       defaultField: 'status',
       defaultDirection: 'asc',
@@ -162,19 +147,13 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
         builder: (a, b) => a.builder.localeCompare(b.builder),
         updated: (a, b) =>
           new Date(b.updated).getTime() -
-          new Date(a.updated).getTime(),
-      },
-    },
-    defaultLimit: 5,
-  })
+          new Date(a.updated).getTime() } },
+    defaultLimit: 5 })
 
-  const { successCount, failedCount, buildingCount } = useMemo(() => {
-    return {
+  const { successCount, failedCount, buildingCount } = {
       successCount: namespacedBuilds.filter(b => b.status === 'succeeded').length,
       failedCount: namespacedBuilds.filter(b => b.status === 'failed').length,
-      buildingCount: namespacedBuilds.filter(b => b.status === 'building').length,
-    }
-  }, [namespacedBuilds])
+      buildingCount: namespacedBuilds.filter(b => b.status === 'building').length }
 
   if (showSkeleton) {
     return (
@@ -230,8 +209,7 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
             isOpen: showClusterFilter,
             setIsOpen: setShowClusterFilter,
             containerRef: clusterFilterRef,
-            minClusters: 1,
-          }}
+            minClusters: 1 }}
           cardControls={{
             limit: itemsPerPage,
             onLimitChange: setItemsPerPage,
@@ -239,8 +217,7 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
             sortOptions: SORT_OPTIONS,
             onSortChange: (v) => setSortBy(v as SortByOption),
             sortDirection,
-            onSortDirectionChange: setSortDirection,
-          }}
+            onSortDirectionChange: setSortDirection }}
         />
       </div>
 
@@ -320,8 +297,7 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
                     builder: build.builder,
                     image: build.image,
                     status: build.status,
-                    updated: build.updated,
-                  }
+                    updated: build.updated }
                 )
               }
               className={`p-3 rounded-lg transition-colors cursor-pointer group ${
@@ -346,13 +322,11 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
                         name: build.name,
                         namespace: build.namespace,
                         cluster: build.cluster,
-                        status: build.status,
-                      }}
+                        status: build.status }}
                       issues={[
                         {
                           name: `Image ${build.status}`,
-                          message: `Buildpack image ${build.name} is ${build.status}`,
-                        },
+                          message: `Buildpack image ${build.name} is ${build.status}` },
                       ]}
                     />
                   )}
@@ -401,8 +375,7 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
 function Summary({
   label,
   value,
-  color,
-}: {
+  color }: {
   label: string
   value: number
   color: string
@@ -410,8 +383,7 @@ function Summary({
   const COLORS: Record<string, string> = {
     blue: 'bg-blue-500/10 text-blue-400',
     green: 'bg-green-500/10 text-green-400',
-    red: 'bg-red-500/10 text-red-400',
-  }
+    red: 'bg-red-500/10 text-red-400' }
 
   return (
     <div className={`flex-1 p-2 rounded-lg text-center ${COLORS[color]}`}>

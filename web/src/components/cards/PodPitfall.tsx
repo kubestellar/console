@@ -67,8 +67,7 @@ export function PodPitfall(_props: CardComponentProps) {
     onGround: true,
     swinging: false,
     swingAngle: 0,
-    swingVine: null,
-  })
+    swingVine: null })
   const [platforms, setPlatforms] = useState<Platform[]>([])
   const [obstacles, setObstacles] = useState<Obstacle[]>([])
   const [collectibles, setCollectibles] = useState<Collectible[]>([])
@@ -88,7 +87,7 @@ export function PodPitfall(_props: CardComponentProps) {
   }, [player, cameraX, platforms, obstacles, collectibles, vines])
 
   // Generate world
-  const generateWorld = useCallback(() => {
+  const generateWorld = () => {
     const newPlatforms: Platform[] = []
     const newObstacles: Obstacle[] = []
     const newCollectibles: Collectible[] = []
@@ -155,7 +154,7 @@ export function PodPitfall(_props: CardComponentProps) {
     setObstacles(newObstacles)
     setCollectibles(newCollectibles)
     setVines(newVines)
-  }, [])
+  }
 
   // Draw
   const draw = useCallback(() => {
@@ -508,11 +507,10 @@ export function PodPitfall(_props: CardComponentProps) {
 
   // Keyboard — scoped to visible game container (KeepAlive-safe)
   useGameKeyTracking(gameContainerRef, keysRef, {
-    preventDefaultKeys: ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'w', 'a', 's', 'd'],
-  })
+    preventDefaultKeys: ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'w', 'a', 's', 'd'] })
 
   // Start game
-  const startGame = useCallback(() => {
+  const startGame = () => {
     generateWorld()
     setPlayer({
       x: 50,
@@ -522,8 +520,7 @@ export function PodPitfall(_props: CardComponentProps) {
       onGround: true,
       swinging: false,
       swingAngle: 0,
-      swingVine: null,
-    })
+      swingVine: null })
     setCameraX(0)
     setScore(0)
     setLives(3)
@@ -533,7 +530,7 @@ export function PodPitfall(_props: CardComponentProps) {
     setWon(false)
     setIsPlaying(true)
     emitGameStarted('pod_pitfall')
-  }, [generateWorld])
+  }
 
   const scale = isExpanded ? 1.5 : 1
 

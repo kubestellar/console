@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { ProviderConnectionState } from '../types/agent'
 import { INITIAL_PROVIDER_CONNECTION_STATE, PROVIDER_PREREQUISITES } from '../types/agent'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
@@ -33,8 +33,7 @@ async function checkProviderReady(providerName: string): Promise<ProviderCheckRe
   try {
     const checkUrl = `${LOCAL_AGENT_HTTP_URL}/provider/check?name=${encodeURIComponent(providerName)}`
     const checkResponse = await fetch(checkUrl, {
-      signal: AbortSignal.timeout(15_000),
-    })
+      signal: AbortSignal.timeout(15_000) })
     if (checkResponse.ok) {
       const data = await checkResponse.json()
       if (data.ready) {
@@ -44,8 +43,7 @@ async function checkProviderReady(providerName: string): Promise<ProviderCheckRe
       return {
         ready: false,
         error: data.message || `Provider "${providerName}" is not ready`,
-        prerequisites: data.prerequisites,
-      }
+        prerequisites: data.prerequisites }
     }
   } catch {
     // /provider/check not available -- fall through to health check
@@ -54,8 +52,7 @@ async function checkProviderReady(providerName: string): Promise<ProviderCheckRe
   // Fallback: check the health endpoint for simple provider presence
   try {
     const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
-      signal: AbortSignal.timeout(3_000),
-    })
+      signal: AbortSignal.timeout(3_000) })
     if (!response.ok) {
       return { ready: false, error: `Agent returned HTTP ${response.status}` }
     }
@@ -96,7 +93,7 @@ export function useProviderConnection() {
     }
   }, [])
 
-  const clearTimers = useCallback(() => {
+  const clearTimers = () => {
     if (pollTimerRef.current) {
       clearTimeout(pollTimerRef.current)
       pollTimerRef.current = null
@@ -105,13 +102,13 @@ export function useProviderConnection() {
       clearTimeout(timeoutRef.current)
       timeoutRef.current = null
     }
-  }, [])
+  }
 
   /**
    * Start a connection attempt for a provider.
    * Transitions through: starting -> handshake -> connected | failed
    */
-  const startConnection = useCallback(async (providerName: string, onSuccess: () => void) => {
+  const startConnection = async (providerName: string, onSuccess: () => void) => {
     abortRef.current = false
     clearTimers()
 
@@ -125,8 +122,7 @@ export function useProviderConnection() {
       error: null,
       retryCount: 0,
       prerequisite: prerequisite?.description ?? null,
-      prerequisites: [],
-    })
+      prerequisites: [] })
 
     // Phase 2: handshake -- poll for provider readiness
     setConnectionState(prev => ({ ...prev, phase: 'handshake' }))
@@ -147,8 +143,7 @@ export function useProviderConnection() {
         setConnectionState(prev => ({
           ...prev,
           phase: 'failed',
-          error: reason,
-        }))
+          error: reason }))
         return
       }
 
@@ -160,8 +155,7 @@ export function useProviderConnection() {
           ...prev,
           phase: 'connected',
           error: null,
-          prerequisites: [],
-        }))
+          prerequisites: [] }))
         onSuccess()
         return
       }
@@ -173,69 +167,63 @@ export function useProviderConnection() {
           ...prev,
           phase: 'failed',
           error: result.error ?? null,
-          prerequisites: result.prerequisites ?? [],
-        }))
+          prerequisites: result.prerequisites ?? [] }))
         return
       }
 
       // No prerequisites -- continue polling
       setConnectionState(prev => ({
         ...prev,
-        error: result.error ?? null,
-      }))
+        error: result.error ?? null }))
       pollTimerRef.current = setTimeout(poll, HANDSHAKE_POLL_MS)
     }
 
     await poll()
-  }, [clearTimers])
+  }
 
   /**
    * Retry a failed connection with the same provider.
    */
-  const retry = useCallback((onSuccess: () => void) => {
+  const retry = (onSuccess: () => void) => {
     if (!connectionState.provider) return
     if (connectionState.retryCount >= MAX_RETRIES) {
       setConnectionState(prev => ({
         ...prev,
         phase: 'failed',
-        error: `Maximum retries (${MAX_RETRIES}) exceeded. Check that the provider is running and the local agent can reach it.`,
-      }))
+        error: `Maximum retries (${MAX_RETRIES}) exceeded. Check that the provider is running and the local agent can reach it.` }))
       return
     }
     setConnectionState(prev => ({
       ...prev,
-      retryCount: prev.retryCount + 1,
-    }))
+      retryCount: prev.retryCount + 1 }))
     startConnection(connectionState.provider, onSuccess)
-  }, [connectionState.provider, connectionState.retryCount, startConnection])
+  }
 
   /**
    * Reset connection state back to idle.
    */
-  const reset = useCallback(() => {
+  const reset = () => {
     abortRef.current = true
     clearTimers()
     setConnectionState(INITIAL_PROVIDER_CONNECTION_STATE)
-  }, [clearTimers])
+  }
 
   /**
    * Dismiss a failure without resetting provider selection.
    * Moves to idle but preserves the provider reference.
    */
-  const dismiss = useCallback(() => {
+  const dismiss = () => {
     clearTimers()
     setConnectionState(prev => ({
       ...prev,
       phase: 'idle',
-      error: null,
-    }))
-  }, [clearTimers])
+      error: null }))
+  }
 
   return {
     connectionState,
     startConnection,
     retry,
     reset,
-    dismiss,
-  }
+    dismiss }
 }

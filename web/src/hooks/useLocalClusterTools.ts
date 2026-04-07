@@ -89,7 +89,7 @@ export function useLocalClusterTools() {
   const { progress: clusterProgress, dismiss: dismissProgress } = useClusterProgress()
 
   // Fetch detected tools
-  const fetchTools = useCallback(async () => {
+  const fetchTools = async () => {
     // In demo mode (without agent connected), show demo tools
     if (isDemoMode && !isConnected) {
       setTools(DEMO_TOOLS)
@@ -104,8 +104,7 @@ export function useLocalClusterTools() {
 
     try {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/local-cluster-tools`, {
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
         const data = await response.json()
         setTools(data.tools || [])
@@ -115,7 +114,7 @@ export function useLocalClusterTools() {
       console.error('Failed to fetch local cluster tools:', err)
       setError('Failed to fetch cluster tools')
     }
-  }, [isConnected, isDemoMode])
+  }
 
   // Fetch existing clusters
   const fetchClusters = useCallback(async () => {
@@ -134,8 +133,7 @@ export function useLocalClusterTools() {
     setIsLoading(true)
     try {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/local-clusters`, {
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
         const data = await response.json()
         setClusters(data.clusters || [])
@@ -150,7 +148,7 @@ export function useLocalClusterTools() {
   }, [isConnected, isDemoMode])
 
   // Create a new cluster
-  const createCluster = useCallback(async (tool: string, name: string): Promise<CreateClusterResult> => {
+  const createCluster = async (tool: string, name: string): Promise<CreateClusterResult> => {
     // In demo mode (without agent connected), simulate cluster creation
     if (isDemoMode && !isConnected) {
       setIsCreating(true)
@@ -178,8 +176,7 @@ export function useLocalClusterTools() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tool, name }),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
       if (response.ok) {
         const data = await response.json()
@@ -195,10 +192,10 @@ export function useLocalClusterTools() {
     } finally {
       setIsCreating(false)
     }
-  }, [isConnected, isDemoMode])
+  }
 
   // Lifecycle action (start/stop/restart) on a local cluster
-  const clusterLifecycle = useCallback(async (tool: string, name: string, action: 'start' | 'stop' | 'restart'): Promise<boolean> => {
+  const clusterLifecycle = async (tool: string, name: string, action: 'start' | 'stop' | 'restart'): Promise<boolean> => {
     // In demo mode (without agent connected), simulate the action
     if (isDemoMode && !isConnected) {
       setError(null)
@@ -217,8 +214,7 @@ export function useLocalClusterTools() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tool, name, action }),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
       if (response.ok) {
         // Refresh clusters list after action starts
@@ -234,10 +230,10 @@ export function useLocalClusterTools() {
       setError(message)
       return false
     }
-  }, [isConnected, isDemoMode, fetchClusters])
+  }
 
   // Delete a cluster
-  const deleteCluster = useCallback(async (tool: string, name: string): Promise<boolean> => {
+  const deleteCluster = async (tool: string, name: string): Promise<boolean> => {
     // In demo mode (without agent connected), simulate cluster deletion
     if (isDemoMode && !isConnected) {
       setIsDeleting(name)
@@ -262,8 +258,7 @@ export function useLocalClusterTools() {
     try {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/local-clusters?tool=${tool}&name=${name}`, {
         method: 'DELETE',
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
       if (response.ok) {
         // Refresh clusters list after deletion starts
@@ -281,7 +276,7 @@ export function useLocalClusterTools() {
     } finally {
       setIsDeleting(null)
     }
-  }, [isConnected, isDemoMode, fetchClusters])
+  }
 
   // Fetch vCluster instances
   const fetchVClusters = useCallback(async () => {
@@ -299,8 +294,7 @@ export function useLocalClusterTools() {
 
     try {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/list`, {
-        signal: AbortSignal.timeout(VCLUSTER_LIST_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(VCLUSTER_LIST_TIMEOUT_MS) })
       if (response.ok) {
         const data = await response.json()
         setVclusterInstances(data.instances || [])
@@ -313,13 +307,12 @@ export function useLocalClusterTools() {
   }, [isConnected, isDemoMode])
 
   // Check if a specific cluster has vCluster installed (on-demand per cluster)
-  const checkVClusterOnCluster = useCallback(async (context: string) => {
+  const checkVClusterOnCluster = async (context: string) => {
     if (!isConnected || !context) return
 
     try {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/check?context=${encodeURIComponent(context)}`, {
-        signal: AbortSignal.timeout(VCLUSTER_LIST_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(VCLUSTER_LIST_TIMEOUT_MS) })
       if (response.ok) {
         const data = await response.json()
         setVclusterClusterStatus(prev => {
@@ -331,16 +324,16 @@ export function useLocalClusterTools() {
     } catch (err) {
       console.error(`Failed to check vCluster on ${context}:`, err)
     }
-  }, [isConnected])
+  }
 
   // Backwards-compatible: scan all healthy clusters (but one at a time, non-blocking)
-  const fetchVClusterClusterStatus = useCallback(async () => {
+  const fetchVClusterClusterStatus = async () => {
     // No-op: individual checks happen on-demand via checkVClusterOnCluster
     // This prevents the slow sequential scan of all contexts
-  }, [])
+  }
 
   // Create a new vCluster
-  const createVCluster = useCallback(async (name: string, namespace: string): Promise<CreateClusterResult> => {
+  const createVCluster = async (name: string, namespace: string): Promise<CreateClusterResult> => {
     // In demo mode (without agent connected), simulate vcluster creation
     if (isDemoMode && !isConnected) {
       setIsCreating(true)
@@ -352,8 +345,7 @@ export function useLocalClusterTools() {
       setIsCreating(false)
       return {
         status: 'creating',
-        message: `Simulation: vCluster "${name}" in namespace "${namespace}" would be created here. Connect kc-agent to create real virtual clusters.`,
-      }
+        message: `Simulation: vCluster "${name}" in namespace "${namespace}" would be created here. Connect kc-agent to create real virtual clusters.` }
     }
 
     if (!isConnected) {
@@ -368,8 +360,7 @@ export function useLocalClusterTools() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, namespace }),
-        signal: AbortSignal.timeout(VCLUSTER_CREATE_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(VCLUSTER_CREATE_TIMEOUT_MS) })
 
       if (response.ok) {
         const data = await response.json()
@@ -387,10 +378,10 @@ export function useLocalClusterTools() {
     } finally {
       setIsCreating(false)
     }
-  }, [isConnected, isDemoMode, fetchVClusters])
+  }
 
   // Connect to a vCluster
-  const connectVCluster = useCallback(async (name: string, namespace: string): Promise<boolean> => {
+  const connectVCluster = async (name: string, namespace: string): Promise<boolean> => {
     // In demo mode (without agent connected), simulate connect
     if (isDemoMode && !isConnected) {
       setIsConnecting(name)
@@ -414,8 +405,7 @@ export function useLocalClusterTools() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, namespace }),
-        signal: AbortSignal.timeout(VCLUSTER_CONNECT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(VCLUSTER_CONNECT_TIMEOUT_MS) })
 
       if (response.ok) {
         // Refresh vcluster list to update connected status
@@ -433,10 +423,10 @@ export function useLocalClusterTools() {
     } finally {
       setIsConnecting(null)
     }
-  }, [isConnected, isDemoMode, fetchVClusters])
+  }
 
   // Disconnect from a vCluster
-  const disconnectVCluster = useCallback(async (name: string, namespace: string): Promise<boolean> => {
+  const disconnectVCluster = async (name: string, namespace: string): Promise<boolean> => {
     // In demo mode (without agent connected), simulate disconnect
     if (isDemoMode && !isConnected) {
       setIsDisconnecting(name)
@@ -460,8 +450,7 @@ export function useLocalClusterTools() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, namespace }),
-        signal: AbortSignal.timeout(VCLUSTER_CONNECT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(VCLUSTER_CONNECT_TIMEOUT_MS) })
 
       if (response.ok) {
         // Refresh vcluster list to update connected status
@@ -479,10 +468,10 @@ export function useLocalClusterTools() {
     } finally {
       setIsDisconnecting(null)
     }
-  }, [isConnected, isDemoMode, fetchVClusters])
+  }
 
   // Delete a vCluster
-  const deleteVCluster = useCallback(async (name: string, namespace: string): Promise<boolean> => {
+  const deleteVCluster = async (name: string, namespace: string): Promise<boolean> => {
     // In demo mode (without agent connected), simulate deletion
     if (isDemoMode && !isConnected) {
       setIsDeleting(name)
@@ -506,8 +495,7 @@ export function useLocalClusterTools() {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, namespace }),
-        signal: AbortSignal.timeout(VCLUSTER_CONNECT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(VCLUSTER_CONNECT_TIMEOUT_MS) })
 
       if (response.ok) {
         // Refresh vcluster list after deletion
@@ -525,15 +513,15 @@ export function useLocalClusterTools() {
     } finally {
       setIsDeleting(null)
     }
-  }, [isConnected, isDemoMode, fetchVClusters])
+  }
 
   // Refresh all data
-  const refresh = useCallback(() => {
+  const refresh = () => {
     fetchTools()
     fetchClusters()
     fetchVClusters()
     fetchVClusterClusterStatus()
-  }, [fetchTools, fetchClusters, fetchVClusters, fetchVClusterClusterStatus])
+  }
 
   // Initial fetch when connected or in demo mode
   useEffect(() => {
@@ -587,6 +575,5 @@ export function useLocalClusterTools() {
     connectVCluster,
     disconnectVCluster,
     deleteVCluster,
-    fetchVClusters,
-  }
+    fetchVClusters }
 }

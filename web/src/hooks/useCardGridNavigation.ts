@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from 'react'
+import { useRef } from 'react'
 
 interface CardLike {
   id: string
@@ -38,29 +38,25 @@ function computeGridLayout(cards: CardLike[], gridColumns: number): GridPosition
 export function useCardGridNavigation({
   cards,
   onExpandCard,
-  gridColumns = 12,
-}: UseCardGridNavigationOptions) {
+  gridColumns = 12 }: UseCardGridNavigationOptions) {
   const cardRefMap = useRef<Map<string, HTMLElement>>(new Map())
 
-  const layout = useMemo(
-    () => computeGridLayout(cards, gridColumns),
-    [cards, gridColumns]
-  )
+  const layout = computeGridLayout(cards, gridColumns)
 
-  const registerCardRef = useCallback((cardId: string, el: HTMLElement | null) => {
+  const registerCardRef = (cardId: string, el: HTMLElement | null) => {
     if (el) {
       cardRefMap.current.set(cardId, el)
     } else {
       cardRefMap.current.delete(cardId)
     }
-  }, [])
+  }
 
-  const focusCard = useCallback((cardId: string) => {
+  const focusCard = (cardId: string) => {
     const el = cardRefMap.current.get(cardId)
     el?.focus()
-  }, [])
+  }
 
-  const handleGridKeyDown = useCallback((e: React.KeyboardEvent) => {
+  const handleGridKeyDown = (e: React.KeyboardEvent) => {
     // Don't handle if inside a modal or input
     if (
       e.target instanceof HTMLInputElement ||
@@ -128,7 +124,7 @@ export function useCardGridNavigation({
         break
       }
     }
-  }, [layout, onExpandCard, focusCard])
+  }
 
   return { registerCardRef, handleGridKeyDown }
 }

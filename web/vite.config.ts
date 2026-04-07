@@ -58,7 +58,13 @@ export default defineConfig(({ mode }) => ({
     } : {}),
   },
   plugins: [
-    react(),
+    react({
+      babel: {
+        plugins: [
+          ['babel-plugin-react-compiler', {}],
+        ],
+      },
+    }),
     // Inject build commit hash into the HTML <meta name="app-build-id"> tag
     // so the stale-HTML detection script can compare against the server.
     {

@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Box, Cpu, ChevronRight } from 'lucide-react'
 import { useGPUNodes, useAllPods } from '../../../hooks/useMCP'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
@@ -40,7 +39,7 @@ export function GPUNamespaceDrillDown({ data }: Props) {
   const { drillToPod, drillToGPUNode, drillToCluster } = useDrillDownActions()
 
   // Find GPU pods in this namespace
-  const gpuPods = useMemo(() => {
+  const gpuPods = (() => {
     const gpuNodeKeys = new Set(
       gpuNodes.map(node => `${normalizeClusterName(node.cluster || '')}:${node.name}`)
     )
@@ -55,23 +54,20 @@ export function GPUNamespaceDrillDown({ data }: Props) {
       }
       return false
     })
-  }, [allPods, gpuNodes, namespace])
+  })()
 
   // Compute summary stats from live data (fallback to passed data)
-  const totalGPUs = useMemo(() =>
-    gpuPods.reduce((sum, pod) =>
-      sum + (pod.containers?.reduce((s, c) => s + (c.gpuRequested ?? 0), 0) ?? 0), 0),
-    [gpuPods]
-  )
+  const totalGPUs = gpuPods.reduce((sum, pod) =>
+      sum + (pod.containers?.reduce((s, c) => s + (c.gpuRequested ?? 0), 0) ?? 0), 0)
   const podCount = gpuPods.length || passedPodCount || 0
   const gpuRequested = totalGPUs || passedGpuRequested || 0
-  const clusters = useMemo(() => {
+  const clusters = (() => {
     const set = new Set(gpuPods.map(p => p.cluster).filter(Boolean) as string[])
     return set.size > 0 ? Array.from(set) : (passedClusters || [])
-  }, [gpuPods, passedClusters])
+  })()
 
   // Group pods by node for the node breakdown
-  const podsByNode = useMemo(() => {
+  const podsByNode = (() => {
     const map = new Map<string, typeof gpuPods>()
     for (const pod of gpuPods) {
       const nodeKey = pod.node || 'unscheduled'
@@ -80,16 +76,16 @@ export function GPUNamespaceDrillDown({ data }: Props) {
       map.set(nodeKey, existing)
     }
     return Array.from(map.entries()).sort((a, b) => b[1].length - a[1].length)
-  }, [gpuPods])
+  })()
 
   // Find GPU node data for drill-down
-  const gpuNodeMap = useMemo(() => {
+  const gpuNodeMap = (() => {
     const map = new Map<string, typeof gpuNodes[0]>()
     for (const node of gpuNodes) {
       map.set(node.name, node)
     }
     return map
-  }, [gpuNodes])
+  })()
 
   return (
     <div className="space-y-6">
@@ -221,8 +217,7 @@ export function GPUNamespaceDrillDown({ data }: Props) {
                       drillToGPUNode(nodeCluster, nodeName, {
                         gpuType: gpuNodeData.gpuType,
                         gpuCount: gpuNodeData.gpuCount,
-                        gpuAllocated: gpuNodeData.gpuAllocated,
-                      })
+                        gpuAllocated: gpuNodeData.gpuAllocated })
                     }
                   }}
                   className={`p-3 rounded-lg bg-secondary/30 transition-colors ${

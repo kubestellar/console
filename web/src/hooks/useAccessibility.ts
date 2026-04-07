@@ -1,9 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import {
   AccessibilitySettings,
   loadAccessibilitySettings,
-  saveAccessibilitySettings,
-} from '../lib/accessibility'
+  saveAccessibilitySettings } from '../lib/accessibility'
 
 /**
  * Hook for managing accessibility settings
@@ -49,43 +48,42 @@ export function useAccessibility() {
     }
   }, [settings])
 
-  const setColorBlindMode = useCallback((enabled: boolean) => {
+  const setColorBlindMode = (enabled: boolean) => {
     setSettings((prev) => {
       const updated = { ...prev, colorBlindMode: enabled }
       saveAccessibilitySettings(updated)
       return updated
     })
-  }, [])
+  }
 
-  const setReduceMotion = useCallback((enabled: boolean) => {
+  const setReduceMotion = (enabled: boolean) => {
     setSettings((prev) => {
       const updated = { ...prev, reduceMotion: enabled }
       saveAccessibilitySettings(updated)
       return updated
     })
-  }, [])
+  }
 
-  const setHighContrast = useCallback((enabled: boolean) => {
+  const setHighContrast = (enabled: boolean) => {
     setSettings((prev) => {
       const updated = { ...prev, highContrast: enabled }
       saveAccessibilitySettings(updated)
       return updated
     })
-  }, [])
+  }
 
-  const updateSettings = useCallback((updates: Partial<AccessibilitySettings>) => {
+  const updateSettings = (updates: Partial<AccessibilitySettings>) => {
     setSettings((prev) => {
       const updated = { ...prev, ...updates }
       saveAccessibilitySettings(updated)
       return updated
     })
-  }, [])
+  }
 
   return {
     ...settings,
     setColorBlindMode,
     setReduceMotion,
     setHighContrast,
-    updateSettings,
-  }
+    updateSettings }
 }

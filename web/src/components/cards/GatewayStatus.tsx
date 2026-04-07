@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { CheckCircle2, Clock, XCircle, AlertCircle, ExternalLink, Globe, ArrowRight, Server } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
@@ -45,8 +44,7 @@ const DEMO_GATEWAYS: Gateway[] = [
       { name: 'https', protocol: 'HTTPS', port: 443, hostname: '*.example.com', attachedRoutes: 8 },
     ],
     attachedRoutes: 13,
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-  },
+    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() },
   {
     name: 'api-gateway',
     namespace: 'api',
@@ -58,8 +56,7 @@ const DEMO_GATEWAYS: Gateway[] = [
       { name: 'api', protocol: 'HTTP', port: 8080, attachedRoutes: 12 },
     ],
     attachedRoutes: 12,
-    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-  },
+    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString() },
   {
     name: 'internal-gateway',
     namespace: 'internal',
@@ -71,8 +68,7 @@ const DEMO_GATEWAYS: Gateway[] = [
       { name: 'grpc', protocol: 'HTTPS', port: 443, attachedRoutes: 3 },
     ],
     attachedRoutes: 3,
-    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-  },
+    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString() },
   {
     name: 'staging-gateway',
     namespace: 'staging',
@@ -84,8 +80,7 @@ const DEMO_GATEWAYS: Gateway[] = [
       { name: 'http', protocol: 'HTTP', port: 80, attachedRoutes: 0 },
     ],
     attachedRoutes: 0,
-    createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-  },
+    createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString() },
   {
     name: 'legacy-gateway',
     namespace: 'legacy',
@@ -95,8 +90,7 @@ const DEMO_GATEWAYS: Gateway[] = [
     addresses: [],
     listeners: [],
     attachedRoutes: 0,
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  },
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
 ]
 
 const DEMO_STATS = {
@@ -105,8 +99,7 @@ const DEMO_STATS = {
   pendingCount: 2,
   failedCount: 1,
   totalRoutes: 42,
-  clustersWithGatewayAPI: 4,
-}
+  clustersWithGatewayAPI: 4 }
 
 const getStatusIcon = (status: GatewayStatusType) => {
   switch (status) {
@@ -150,8 +143,7 @@ const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTran
 const GATEWAY_SORT_COMPARATORS: Record<SortByOption, (a: Gateway, b: Gateway) => number> = {
   name: commonComparators.string<Gateway>('name'),
   cluster: commonComparators.string<Gateway>('cluster'),
-  status: commonComparators.string<Gateway>('status'),
-}
+  status: commonComparators.string<Gateway>('status') }
 
 interface GatewayStatusProps {
   config?: Record<string, unknown>
@@ -159,10 +151,7 @@ interface GatewayStatusProps {
 
 export function GatewayStatus({ config: _config }: GatewayStatusProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const SORT_OPTIONS = useMemo(() =>
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
-    [t]
-  )
+  const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
   // Demo data - always available, never loading/erroring
   const isLoading = false
   const hasError = false
@@ -171,8 +160,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
   useCardLoadingState({
     isLoading,
     hasAnyData: DEMO_GATEWAYS.length > 0,
-    isDemoData: true,
-  })
+    isDemoData: true })
 
   const {
     items: paginatedGateways,
@@ -192,29 +180,23 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
       availableClusters,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-    },
+      clusterFilterRef },
     sorting: {
       sortBy,
       setSortBy,
       sortDirection,
-      setSortDirection,
-    },
+      setSortDirection },
     containerRef,
-    containerStyle,
-  } = useCardData<Gateway, SortByOption>(DEMO_GATEWAYS, {
+    containerStyle } = useCardData<Gateway, SortByOption>(DEMO_GATEWAYS, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'gatewayClass', 'status'],
       clusterField: 'cluster',
-      storageKey: 'gateway-status',
-    },
+      storageKey: 'gateway-status' },
     sort: {
       defaultField: 'name',
       defaultDirection: 'asc',
-      comparators: GATEWAY_SORT_COMPARATORS,
-    },
-    defaultLimit: 5,
-  })
+      comparators: GATEWAY_SORT_COMPARATORS },
+    defaultLimit: 5 })
 
   // Show skeleton while loading
   if (isLoading) {
@@ -282,8 +264,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
             isOpen: showClusterFilter,
             setIsOpen: setShowClusterFilter,
             containerRef: clusterFilterRef,
-            minClusters: 1,
-          }}
+            minClusters: 1 }}
           cardControls={{
             limit: itemsPerPage,
             onLimitChange: setItemsPerPage,
@@ -291,8 +272,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
             sortOptions: SORT_OPTIONS,
             onSortChange: (v) => setSortBy(v as SortByOption),
             sortDirection,
-            onSortDirectionChange: setSortDirection,
-          }}
+            onSortDirectionChange: setSortDirection }}
         />
       </div>
 

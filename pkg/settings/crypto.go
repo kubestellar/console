@@ -45,11 +45,35 @@ func ensureKeyFile(path string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to generate key: %w", err)
 	}
 
-	// Write hex-encoded key with secure permissions
+	// Atomic write: write to a temp file then rename to prevent races
+	// when multiple processes start simultaneously.
 	encoded := hex.EncodeToString(key)
-	if err := os.WriteFile(path, []byte(encoded), keyFileMode); err != nil {
-		return nil, fmt.Errorf("failed to write keyfile %s: %w", path, err)
+	tmpPath := path + ".tmp"
+	if err := os.WriteFile(tmpPath, []byte(encoded), keyFileMode); err != nil {
+		return nil, fmt.Errorf("failed to write temp keyfile %s: %w", tmpPath, err)
 	}
+
+	// Use os.Link + os.Remove for atomic creation (fails if target already exists on most filesystems).
+	// If another process already created the key file, use theirs instead of overwriting.
+	if linkErr := os.Link(tmpPath, path); linkErr != nil {
+		// Another process beat us — remove our temp file and read theirs
+		os.Remove(tmpPath)
+		data, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return nil, fmt.Errorf("failed to read keyfile after race: %w", readErr)
+		}
+		existingKey, decErr := hex.DecodeString(string(data))
+		if decErr != nil {
+			return nil, fmt.Errorf("corrupt keyfile %s after race: %w", path, decErr)
+		}
+		if len(existingKey) != keyBytes {
+			return nil, fmt.Errorf("keyfile %s has wrong length after race: got %d, want %d", path, len(existingKey), keyBytes)
+		}
+		return existingKey, nil
+	}
+
+	// Our file won the race — clean up the temp file
+	os.Remove(tmpPath)
 
 	return key, nil
 }

@@ -4,7 +4,6 @@
  * Inspired by Home Assistant HACS RAM Usage card style
  * Upright horseshoe: closed at top, open at bottom
  */
-import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 
 interface HorseshoeGaugeProps {
@@ -32,11 +31,10 @@ export function HorseshoeGauge({
   sublabel,
   secondaryLeft,
   secondaryRight,
-  size = 180,
-}: HorseshoeGaugeProps) {
+  size = 180 }: HorseshoeGaugeProps) {
   const percentage = maxValue > 0 ? Math.min((value / maxValue) * 100, 100) : 0
   const color = getColor(percentage)
-  const uniqueId = useMemo(() => `horseshoe-${Math.random().toString(36).substr(2, 9)}`, [])
+  const uniqueId = `horseshoe-${Math.random().toString(36).substr(2, 9)}`
 
   const viewSize = 100
   const cx = viewSize / 2

@@ -339,7 +339,7 @@ export function Tier2CardRuntime({ definition, config }: Tier2Props) {
   const [CardComponent, setCardComponent] = useState<CardComponent | null>(null)
   const [compiling, setCompiling] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const cleanupRef = useRef<(() => void) | undefined>()
+  const cleanupRef = useRef<(() => void) | undefined>(undefined)
 
   useEffect(() => {
     let cancelled = false

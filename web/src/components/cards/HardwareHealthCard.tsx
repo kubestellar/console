@@ -68,8 +68,7 @@ function getDeviceLabel(deviceType: string): string {
     rdma: 'RDMA',
     'mofed-driver': 'MOFED Driver',
     'gpu-driver': 'GPU Driver',
-    'spectrum-scale': 'Spectrum Scale',
-  }
+    'spectrum-scale': 'Spectrum Scale' }
   return labels[deviceType] || deviceType.toUpperCase()
 }
 
@@ -86,8 +85,7 @@ export function HardwareHealthCard() {
     consecutiveFailures,
     isDemoFallback,
     error: fetchError,
-    refetch,
-  } = useCachedHardwareHealth()
+    refetch } = useCachedHardwareHealth()
 
   const alerts = hwData.alerts
   const inventory = hwData.inventory
@@ -109,7 +107,7 @@ export function HardwareHealthCard() {
   const snoozeAllMenuRef = useRef<HTMLDivElement>(null)
 
   // Build a map of raw cluster names to deduplicated primary names (same as ClusterDetailModal)
-  const clusterNameMap = useMemo(() => {
+  const clusterNameMap = (() => {
     const map: Record<string, string> = {}
     deduplicatedClusters.forEach(c => {
       map[c.name] = c.name // Primary maps to itself
@@ -118,7 +116,7 @@ export function HardwareHealthCard() {
       })
     })
     return map
-  }, [deduplicatedClusters])
+  })()
 
   // Card controls state
   const [search, setSearch] = useState('')
@@ -139,8 +137,7 @@ export function HardwareHealthCard() {
     hasAnyData: hasData,
     isDemoData: isDemoFallback,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -185,7 +182,7 @@ export function HardwareHealthCard() {
 
   // Deduplicate alerts by canonical hostname (same node may appear with different names/cluster contexts)
   // Uses clusterNameMap to map raw cluster names to deduplicated primary names (same as ClusterDetailModal)
-  const deduplicatedAlerts = useMemo(() => {
+  const deduplicatedAlerts = (() => {
     const byHostnameAndDevice = new Map<string, DeviceAlert>()
     alerts.forEach(alert => {
       const hostname = extractHostname(alert.nodeName)
@@ -198,11 +195,11 @@ export function HardwareHealthCard() {
       }
     })
     return Array.from(byHostnameAndDevice.values())
-  }, [alerts, clusterNameMap])
+  })()
 
   // Deduplicate inventory by canonical hostname
   // Uses clusterNameMap to map raw cluster names to deduplicated primary names (same as ClusterDetailModal)
-  const deduplicatedInventory = useMemo(() => {
+  const deduplicatedInventory = (() => {
     const byHostname = new Map<string, NodeDeviceInventory>()
     inventory.forEach(node => {
       const hostname = extractHostname(node.nodeName)
@@ -213,21 +210,21 @@ export function HardwareHealthCard() {
       }
     })
     return Array.from(byHostname.values())
-  }, [inventory, clusterNameMap])
+  })()
 
   // Node count should use deduplicated inventory count for consistency
   const deduplicatedNodeCount = deduplicatedInventory.length || nodeCount
 
   // Available clusters for filtering (from deduplicated data)
-  const availableClustersForFilter = useMemo(() => {
+  const availableClustersForFilter = (() => {
     const clusterSet = new Set<string>()
     deduplicatedAlerts.forEach(alert => clusterSet.add(alert.cluster))
     deduplicatedInventory.forEach(node => clusterSet.add(node.cluster))
     return Array.from(clusterSet).sort()
-  }, [deduplicatedAlerts, deduplicatedInventory])
+  })()
 
   // Filter alerts (using deduplicated data)
-  const filteredAlerts = useMemo(() => {
+  const filteredAlerts = (() => {
     let result = deduplicatedAlerts
 
     // Filter out snoozed alerts unless showSnoozed is true
@@ -251,7 +248,7 @@ export function HardwareHealthCard() {
     }
 
     return result
-  }, [deduplicatedAlerts, search, localClusterFilter, showSnoozed, isSnoozed])
+  })()
 
   // Count of active (non-snoozed) alerts
   const activeAlertCount = useMemo(() => {
@@ -285,7 +282,7 @@ export function HardwareHealthCard() {
   }, [filteredAlerts, isSnoozed])
 
   // Sort alerts
-  const sortedAlerts = useMemo(() => {
+  const sortedAlerts = (() => {
     const severityOrder: Record<string, number> = { critical: 0, warning: 1 }
 
     return [...filteredAlerts].sort((a, b) => {
@@ -307,18 +304,18 @@ export function HardwareHealthCard() {
       }
       return sortDirection === 'asc' ? cmp : -cmp
     })
-  }, [filteredAlerts, sortField, sortDirection])
+  })()
 
   // Pagination
   const effectivePerPage = itemsPerPage === 'unlimited' ? sortedAlerts.length : itemsPerPage
   const totalPages = Math.ceil(sortedAlerts.length / effectivePerPage) || 1
   const needsPagination = itemsPerPage !== 'unlimited' && sortedAlerts.length > effectivePerPage
 
-  const paginatedAlerts = useMemo(() => {
+  const paginatedAlerts = (() => {
     if (itemsPerPage === 'unlimited') return sortedAlerts
     const start = (currentPage - 1) * effectivePerPage
     return sortedAlerts.slice(start, start + effectivePerPage)
-  }, [sortedAlerts, currentPage, effectivePerPage, itemsPerPage])
+  })()
 
   // Reset page when filters or view mode change
   useEffect(() => {
@@ -346,8 +343,7 @@ export function HardwareHealthCard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ alertId }),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!response.ok) {
         setClearAlertError(`Failed to clear alert (${response.status})`)
         return
@@ -360,7 +356,7 @@ export function HardwareHealthCard() {
   }
 
   // Filter inventory (using deduplicated data)
-  const filteredInventory = useMemo(() => {
+  const filteredInventory = (() => {
     let result = deduplicatedInventory
 
     // Apply search
@@ -378,7 +374,7 @@ export function HardwareHealthCard() {
     }
 
     return result
-  }, [deduplicatedInventory, search, localClusterFilter])
+  })()
 
   // Get total devices for a node (defined before sortedInventory which uses it)
   const getTotalDevices = (devices: DeviceCounts): number => {
@@ -415,11 +411,11 @@ export function HardwareHealthCard() {
   const inventoryTotalPages = Math.ceil(sortedInventory.length / effectivePerPage) || 1
   const inventoryNeedsPagination = itemsPerPage !== 'unlimited' && sortedInventory.length > effectivePerPage
 
-  const paginatedInventory = useMemo(() => {
+  const paginatedInventory = (() => {
     if (itemsPerPage === 'unlimited') return sortedInventory
     const start = (currentPage - 1) * effectivePerPage
     return sortedInventory.slice(start, start + effectivePerPage)
-  }, [sortedInventory, currentPage, effectivePerPage, itemsPerPage])
+  })()
 
   // Count active (non-snoozed) alerts by severity
   const criticalCount = deduplicatedAlerts.filter(a => a.severity === 'critical' && !isSnoozed(a.id)).length
@@ -614,12 +610,10 @@ export function HardwareHealthCard() {
           isOpen: showClusterFilter,
           setIsOpen: setShowClusterFilter,
           containerRef: clusterFilterRef,
-          minClusters: 1,
-        }}
+          minClusters: 1 }}
         clusterIndicator={localClusterFilter.length > 0 ? {
           selectedCount: localClusterFilter.length,
-          totalCount: availableClustersForFilter.length,
-        } : undefined}
+          totalCount: availableClustersForFilter.length } : undefined}
         cardControls={{
           limit: itemsPerPage,
           onLimitChange: setItemsPerPage,
@@ -627,8 +621,7 @@ export function HardwareHealthCard() {
           sortOptions: currentSortOptions,
           onSortChange: (s) => setSortField(s as SortField),
           sortDirection,
-          onSortDirectionChange: setSortDirection,
-        }}
+          onSortDirectionChange: setSortDirection }}
       />
 
       <CardSearchInput

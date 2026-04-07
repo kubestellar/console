@@ -7,7 +7,7 @@
  * Uses live stack data when available, demo data when in demo mode.
  * Note: kvCacheUsage refers to GPU KV-cache (AI inference), not UI data timestamp tracking.
  */
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Zap, ArrowRight, CircleDot } from 'lucide-react'
 import { Acronym } from './shared/PortalTooltip'
@@ -512,7 +512,7 @@ function EPPRoutingInternal() {
   const [metricsHistory, setMetricsHistory] = useState<Record<string, { load: number[]; rps: number[] }>>({})
   const [selectedMetricTypes, setSelectedMetricTypes] = useState<MetricType[]>(['load'])
   const [viewMode, setViewMode] = useState<ViewMode>('default')
-  const uniqueId = useMemo(() => `epp-${Math.random().toString(36).substr(2, 9)}`, [])
+  const uniqueId = `epp-${Math.random().toString(36).substr(2, 9)}`
 
   // Detect if card is in expanded/fullscreen mode
   const { isExpanded } = useCardExpanded()
@@ -566,8 +566,7 @@ function EPPRoutingInternal() {
           y,
           type: 'prefill',
           color: '#9333ea',
-          load: 50 + Math.random() * 30,
-        })
+          load: 50 + Math.random() * 30 })
       }
 
       // Decode nodes - spread from y=5 to y=95 (full vertical range)
@@ -581,8 +580,7 @@ function EPPRoutingInternal() {
           y,
           type: 'decode',
           color: '#22c55e',
-          load: 50 + Math.random() * 35,
-        })
+          load: 50 + Math.random() * 35 })
       }
     } else if (decodeCount > 0) {
       // Decode-only topology - spread from y=18 to y=82
@@ -596,8 +594,7 @@ function EPPRoutingInternal() {
           y,
           type: 'decode',
           color: '#22c55e',
-          load: 50 + Math.random() * 35,
-        })
+          load: 50 + Math.random() * 35 })
       }
     } else if (prefillCount > 0) {
       // Prefill-only topology - spread from y=18 to y=82
@@ -611,8 +608,7 @@ function EPPRoutingInternal() {
           y,
           type: 'prefill',
           color: '#9333ea',
-          load: 50 + Math.random() * 30,
-        })
+          load: 50 + Math.random() * 30 })
       }
     } else if (unifiedCount > 0) {
       // Unified topology - spread from y=18 to y=82
@@ -626,8 +622,7 @@ function EPPRoutingInternal() {
           y,
           type: 'prefill', // Use prefill color for unified
           color: '#9333ea',
-          load: 50 + Math.random() * 30,
-        })
+          load: 50 + Math.random() * 30 })
       }
     } else if (selectedStack.autoscaler) {
       // Scaled to 0 but has autoscaler - show ghost nodes
@@ -652,13 +647,12 @@ function EPPRoutingInternal() {
   }, [selectedStack, isDemoMode])
 
   // Scale node positions wider when in fullscreen to fill the wider SVG viewBox
-  const dynamicNodes = useMemo(() => {
+  const dynamicNodes = (() => {
     if (!isExpanded || rawNodes.length === 0) return rawNodes
     return rawNodes.map(node => ({
       ...node,
-      x: 10 + (node.x - 12) * (210 / 78),
-    }))
-  }, [rawNodes, isExpanded])
+      x: 10 + (node.x - 12) * (210 / 78) }))
+  })()
 
   // Toggle metric selection
   const toggleMetric = (metric: MetricType) => {
@@ -715,13 +709,11 @@ function EPPRoutingInternal() {
           if (prom) {
             newMetrics[node.id] = {
               load: Math.round(prom.kvCacheUsage * 100),
-              rps: Math.round(prom.throughputTps),
-            }
+              rps: Math.round(prom.throughputTps) }
           } else {
             newMetrics[node.id] = {
               load: Math.floor(40 + Math.random() * 50),
-              rps: Math.floor(80 + Math.random() * 150),
-            }
+              rps: Math.floor(80 + Math.random() * 150) }
           }
         }
       })
@@ -736,8 +728,7 @@ function EPPRoutingInternal() {
           }
           updated[id] = {
             load: [...updated[id].load.slice(-19), m.load],
-            rps: [...updated[id].rps.slice(-19), m.rps],
-          }
+            rps: [...updated[id].rps.slice(-19), m.rps] }
         })
         return updated
       })
@@ -749,13 +740,13 @@ function EPPRoutingInternal() {
   }, [dynamicNodes, nodePodMap, prometheusMetrics])
 
   // Get current node with live metrics (skip ghost nodes)
-  const getNodeWithMetrics = useCallback((node: FlowNode): FlowNode => {
+  const getNodeWithMetrics = (node: FlowNode): FlowNode => {
     // Don't override ghost node metrics - they stay at 0
     if (node.isGhost) return node
     const m = nodeMetrics[node.id]
     if (!m) return node
     return { ...node, load: m.load }
-  }, [nodeMetrics])
+  }
 
   // Transform routing stats to flow links based on topology
   const links = useMemo((): FlowLink[] => {
@@ -777,8 +768,7 @@ function EPPRoutingInternal() {
           target: node.id,
           value: Math.round(350 / prefillNodes.length),
           percentage: prefillPercent - (i * 2), // Slight variation
-          type: 'prefill',
-        })
+          type: 'prefill' })
       })
 
       // Direct decode connections (for cached KV)
@@ -789,8 +779,7 @@ function EPPRoutingInternal() {
           target: node.id,
           value: Math.round(100 / decodeNodes.length),
           percentage: decodePercent - i,
-          type: 'decode',
-        })
+          type: 'decode' })
       })
 
       // Prefill to decode handoff
@@ -802,8 +791,7 @@ function EPPRoutingInternal() {
               target: decodeNode.id,
               value: Math.round(50 / decodeNodes.length),
               percentage: Math.round(100 / decodeNodes.length),
-              type: 'decode',
-            })
+              type: 'decode' })
           })
         })
       }
@@ -816,8 +804,7 @@ function EPPRoutingInternal() {
           target: node.id,
           value: Math.round(450 / serverNodes.length),
           percentage: percent - (i * 3),
-          type: 'prefill',
-        })
+          type: 'prefill' })
       })
     } else if (decodeNodes.length > 0) {
       // Decode-only topology - EPP to decode nodes
@@ -828,8 +815,7 @@ function EPPRoutingInternal() {
           target: node.id,
           value: Math.round(450 / decodeNodes.length),
           percentage: percent - (i * 2),
-          type: 'decode',
-        })
+          type: 'decode' })
       })
     } else if (prefillNodes.length > 0) {
       // Prefill-only topology - EPP to prefill nodes
@@ -840,8 +826,7 @@ function EPPRoutingInternal() {
           target: node.id,
           value: Math.round(450 / prefillNodes.length),
           percentage: percent - (i * 2),
-          type: 'prefill',
-        })
+          type: 'prefill' })
       })
     } else {
       // Fallback to default links (demo mode)
@@ -875,18 +860,17 @@ function EPPRoutingInternal() {
       prefillRps: prefillTotal,
       decodeRps: decodeTotal,
       prefillPercent: Math.round((prefillTotal / 450) * 100),
-      decodePercent: Math.round((decodeTotal / 450) * 100),
-    }
+      decodePercent: Math.round((decodeTotal / 450) * 100) }
   }, [links])
 
   // Generate path between nodes - must match FlowParticle curve calculation exactly
-  const generatePath = useCallback((source: FlowNode, target: FlowNode): string => {
+  const generatePath = (source: FlowNode, target: FlowNode): string => {
     const midX = (source.x + target.x) / 2
     const midY = (source.y + target.y) / 2
     const curve = Math.abs(source.y - target.y) > 20 ? 8 : 3
     const controlY = midY - curve
     return `M ${source.x} ${source.y} Q ${midX} ${controlY} ${target.x} ${target.y}`
-  }, [])
+  }
 
   // Show empty state when no stack selected in live mode
   const showEmptyState = !selectedStack && !isDemoMode

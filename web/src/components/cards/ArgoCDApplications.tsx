@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { CheckCircle, XCircle, RefreshCw, Clock, AlertTriangle, ChevronRight, ExternalLink, AlertCircle, Play, Loader2 } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -10,8 +10,7 @@ import { useCardData, commonComparators, type SortDirection } from '../../lib/ca
 import {
   CardSearchInput,
   CardControlsRow,
-  CardPaginationFooter,
-} from '../../lib/cards/CardComponents'
+  CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useTranslation } from 'react-i18next'
 
@@ -35,16 +34,14 @@ const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTran
 const syncStatusConfig = {
   Synced: { icon: CheckCircle, color: 'text-green-400', bg: 'bg-green-500/20' },
   OutOfSync: { icon: RefreshCw, color: 'text-yellow-400', bg: 'bg-yellow-500/20' },
-  Unknown: { icon: AlertTriangle, color: 'text-muted-foreground', bg: 'bg-gray-500/20 dark:bg-gray-400/20' },
-}
+  Unknown: { icon: AlertTriangle, color: 'text-muted-foreground', bg: 'bg-gray-500/20 dark:bg-gray-400/20' } }
 
 const healthStatusConfig = {
   Healthy: { icon: CheckCircle, color: 'text-green-400' },
   Degraded: { icon: XCircle, color: 'text-red-400' },
   Progressing: { icon: Clock, color: 'text-blue-400' },
   Missing: { icon: AlertTriangle, color: 'text-orange-400' },
-  Unknown: { icon: AlertTriangle, color: 'text-muted-foreground' },
-}
+  Unknown: { icon: AlertTriangle, color: 'text-muted-foreground' } }
 
 const syncOrder: Record<string, number> = { OutOfSync: 0, Unknown: 1, Synced: 2 }
 const healthOrder: Record<string, number> = { Degraded: 0, Missing: 1, Progressing: 2, Unknown: 3, Healthy: 4 }
@@ -53,8 +50,7 @@ const ARGO_SORT_COMPARATORS = {
   syncStatus: (a: ArgoApplication, b: ArgoApplication) => (syncOrder[a.syncStatus] ?? 5) - (syncOrder[b.syncStatus] ?? 5),
   healthStatus: (a: ArgoApplication, b: ArgoApplication) => (healthOrder[a.healthStatus] ?? 5) - (healthOrder[b.healthStatus] ?? 5),
   name: commonComparators.string<ArgoApplication>('name'),
-  namespace: commonComparators.string<ArgoApplication>('namespace'),
-}
+  namespace: commonComparators.string<ArgoApplication>('namespace') }
 
 function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
   const { t } = useTranslation('cards')
@@ -64,8 +60,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
     isRefreshing,
     isFailed,
     consecutiveFailures,
-    isDemoData,
-  } = useArgoCDApplications()
+    isDemoData } = useArgoCDApplications()
   const { drillToArgoApp } = useDrillDownActions()
   const { triggerSync } = useArgoCDTriggerSync()
   // Track per-app sync state with a Set to avoid shared-boolean race conditions
@@ -81,8 +76,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
     hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
-    isDemoData,
-  })
+    isDemoData })
 
   // Translated sort options
   const sortOptions = SORT_OPTIONS_KEYS.map(o => ({ value: o.value, label: t(o.labelKey) as string }))
@@ -91,14 +85,14 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'outOfSync' | 'unhealthy'>('all')
 
   // Step 2: Pre-filter by config and status filter (card-specific)
-  const preFiltered = useMemo(() => {
+  const preFiltered = (() => {
     let filtered = allApps
     if (config?.cluster) filtered = filtered.filter(a => a.cluster === config.cluster)
     if (config?.namespace) filtered = filtered.filter(a => a.namespace === config.namespace)
     if (selectedFilter === 'outOfSync') filtered = filtered.filter(a => a.syncStatus === 'OutOfSync')
     else if (selectedFilter === 'unhealthy') filtered = filtered.filter(a => a.healthStatus !== 'Healthy')
     return filtered
-  }, [allApps, config, selectedFilter])
+  })()
 
   // Step 3: useCardData for search/cluster filter/sort/pagination
   const {
@@ -119,37 +113,30 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
       availableClusters,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-    },
+      clusterFilterRef },
     sorting: {
       sortBy,
       setSortBy,
       sortDirection,
-      setSortDirection,
-    },
+      setSortDirection },
     containerRef,
-    containerStyle,
-  } = useCardData<ArgoApplication, SortByOption>(preFiltered, {
+    containerStyle } = useCardData<ArgoApplication, SortByOption>(preFiltered, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster'],
       clusterField: 'cluster',
-      storageKey: 'argocd-applications',
-    },
+      storageKey: 'argocd-applications' },
     sort: {
       defaultField: 'syncStatus',
       defaultDirection: 'asc' as SortDirection,
-      comparators: ARGO_SORT_COMPARATORS,
-    },
-    defaultLimit: 5,
-  })
+      comparators: ARGO_SORT_COMPARATORS },
+    defaultLimit: 5 })
 
   // Stats computed from preFiltered (reflects status counts before search/pagination)
-  const stats = useMemo(() => ({
+  const stats = {
     synced: preFiltered.filter(a => a.syncStatus === 'Synced').length,
     outOfSync: preFiltered.filter(a => a.syncStatus === 'OutOfSync').length,
     healthy: preFiltered.filter(a => a.healthStatus === 'Healthy').length,
-    unhealthy: preFiltered.filter(a => a.healthStatus !== 'Healthy').length,
-  }), [preFiltered])
+    unhealthy: preFiltered.filter(a => a.healthStatus !== 'Healthy').length }
 
   if (showSkeleton) {
     return (
@@ -189,8 +176,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
           <CardControlsRow
             clusterIndicator={localClusterFilter.length > 0 ? {
               selectedCount: localClusterFilter.length,
-              totalCount: availableClusters.length,
-            } : undefined}
+              totalCount: availableClusters.length } : undefined}
             clusterFilter={{
               availableClusters,
               selectedClusters: localClusterFilter,
@@ -199,8 +185,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
               isOpen: showClusterFilter,
               setIsOpen: setShowClusterFilter,
               containerRef: clusterFilterRef,
-              minClusters: 1,
-            }}
+              minClusters: 1 }}
             cardControls={{
               limit: itemsPerPage,
               onLimitChange: setItemsPerPage,
@@ -208,8 +193,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
               sortOptions,
               onSortChange: (v) => setSortBy(v as SortByOption),
               sortDirection,
-              onSortDirectionChange: setSortDirection,
-            }}
+              onSortDirectionChange: setSortDirection }}
             extra={
               <a
                 href="https://argo-cd.readthedocs.io/"
@@ -322,8 +306,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
                   syncStatus: app.syncStatus,
                   healthStatus: app.healthStatus,
                   source: app.source,
-                  lastSynced: app.lastSynced,
-                })}
+                  lastSynced: app.lastSynced })}
                 className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors group"
                 title={t('argoCDApplications.clickToView', { name: app.name })}
               >

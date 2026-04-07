@@ -34,15 +34,13 @@ const STATUS_ORDER: Record<string, number> = {
   Pending: 3,
   Running: 4,
   Succeeded: 5,
-  Completed: 6,
-}
+  Completed: 6 }
 
 const GPU_SORT_COMPARATORS: Record<SortByOption, (a: PodInfo, b: PodInfo) => number> = {
   status: commonComparators.statusOrder<PodInfo>('status', STATUS_ORDER),
   name: commonComparators.string<PodInfo>('name'),
   namespace: commonComparators.string<PodInfo>('namespace'),
-  cluster: commonComparators.string<PodInfo>('cluster'),
-}
+  cluster: commonComparators.string<PodInfo>('cluster') }
 
 // Check if any container in the pod requests GPUs
 function hasGPUResourceRequest(containers?: { gpuRequested?: number }[]): boolean {
@@ -67,8 +65,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
     isRefreshing: gpuRefreshing,
     isDemoFallback: gpuNodesDemoFallback,
     isFailed: gpuFailed,
-    consecutiveFailures: gpuFailures,
-  } = useCachedGPUNodes()
+    consecutiveFailures: gpuFailures } = useCachedGPUNodes()
   const { pods: allPods, isLoading: podsLoading, isRefreshing: podsRefreshing, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedAllPods()
   useClusters() // Keep hook for cache warming
   const { drillToPod } = useDrillDownActions()
@@ -87,8 +84,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
     hasAnyData: hasData,
     isDemoData,
     isFailed: gpuFailed || podsFailed,
-    consecutiveFailures: Math.max(gpuFailures, podsFailures),
-  })
+    consecutiveFailures: Math.max(gpuFailures, podsFailures) })
 
   // Pre-filter pods to only GPU workloads (domain-specific logic before hook)
   // Show pods that: 1) request GPU resources, 2) are assigned to GPU nodes, or 3) have GPU workload labels
@@ -152,20 +148,16 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
     filters,
     sorting,
     containerRef,
-    containerStyle,
-  } = useCardData<PodInfo, SortByOption>(gpuWorkloadSource, {
+    containerStyle } = useCardData<PodInfo, SortByOption>(gpuWorkloadSource, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster', 'node'] as (keyof PodInfo)[],
       clusterField: 'cluster' as keyof PodInfo,
-      storageKey: 'gpu-workloads',
-    },
+      storageKey: 'gpu-workloads' },
     sort: {
       defaultField: 'status',
       defaultDirection: 'asc',
-      comparators: GPU_SORT_COMPARATORS,
-    },
-    defaultLimit: 5,
-  })
+      comparators: GPU_SORT_COMPARATORS },
+    defaultLimit: 5 })
 
   const handlePodClick = (pod: typeof allPods[0]) => {
     drillToPod(pod.cluster || '', pod.namespace || '', pod.name)
@@ -187,12 +179,12 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
   }
 
   // Count summary (uses totalItems from hook which reflects filtered count)
-  const summary = useMemo(() => {
+  const summary = (() => {
     const running = gpuWorkloadSource.filter(p => p.status === 'Running').length
     const pending = gpuWorkloadSource.filter(p => p.status === 'Pending').length
     const failed = gpuWorkloadSource.filter(p => ['CrashLoopBackOff', 'Error', 'ImagePullBackOff'].includes(p.status)).length
     return { running, pending, failed, total: gpuWorkloadSource.length }
-  }, [gpuWorkloadSource])
+  })()
 
   if (isLoading && gpuWorkloadSource.length === 0) {
     return (

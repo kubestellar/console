@@ -142,7 +142,7 @@ function setupMockExec(options: {
     clusterError = false,
   } = options
 
-  let _callIndex = 0
+  const _callIndex = 0
   mockExec.mockImplementation((args: string[]) => {
     callIndex++
     if (clusterError) return Promise.resolve(errorResponse('Unable to connect'))

@@ -1,8 +1,6 @@
-import { useMemo } from 'react'
 import {
   Activity, AlertTriangle, CheckCircle, XCircle,
-  Clock, RefreshCw, Loader2, Play, Pause,
-} from 'lucide-react'
+  Clock, RefreshCw, Loader2, Play, Pause } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
 import { CardControls } from '../../ui/CardControls'
@@ -13,7 +11,6 @@ import { useCachedProwJobs } from '../../../hooks/useCachedData'
 import { cn } from '../../../lib/cn'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
 import { WorkloadMonitorDiagnose } from './WorkloadMonitorDiagnose'
-import type { MonitorIssue, MonitoredResource } from '../../../types/workloadMonitor'
 import { useCardLoadingState, useCardDemoState } from '../../cards/CardDataContext'
 import { useTranslation } from 'react-i18next'
 
@@ -37,8 +34,7 @@ const STATE_ORDER: Record<string, number> = {
   running: 3,
   pending: 4,
   triggered: 5,
-  success: 6,
-}
+  success: 6 }
 
 const STATE_BADGE: Record<string, string> = {
   success: 'bg-green-500/20 text-green-400',
@@ -47,8 +43,7 @@ const STATE_BADGE: Record<string, string> = {
   running: 'bg-blue-500/20 text-blue-400',
   pending: 'bg-yellow-500/20 text-yellow-400',
   triggered: 'bg-purple-500/20 text-purple-400',
-  aborted: 'bg-gray-500/20 text-muted-foreground',
-}
+  aborted: 'bg-gray-500/20 text-muted-foreground' }
 
 const STATE_ICON: Record<string, typeof CheckCircle> = {
   success: CheckCircle,
@@ -57,15 +52,13 @@ const STATE_ICON: Record<string, typeof CheckCircle> = {
   running: Play,
   pending: Clock,
   triggered: Activity,
-  aborted: Pause,
-}
+  aborted: Pause }
 
 const TYPE_BADGE: Record<string, string> = {
   presubmit: 'bg-blue-500/20 text-blue-400',
   postsubmit: 'bg-green-500/20 text-green-400',
   periodic: 'bg-purple-500/20 text-purple-400',
-  batch: 'bg-cyan-500/20 text-cyan-400',
-}
+  batch: 'bg-cyan-500/20 text-cyan-400' }
 
 export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
   const { t } = useTranslation()
@@ -82,11 +75,10 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
     hasAnyData: hasData,
     isFailed,
     consecutiveFailures: consecutiveFailures ?? 0,
-    isDemoData: shouldUseDemoData,
-  })
+    isDemoData: shouldUseDemoData })
 
   // Stats
-  const stats = useMemo(() => {
+  const stats = (() => {
     const total = jobs.length
     const failed = jobs.filter(j => j.state === 'failure' || j.state === 'error').length
     const running = jobs.filter(j => j.state === 'running').length
@@ -94,7 +86,7 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
     const succeeded = jobs.filter(j => j.state === 'success').length
     const successRate = total > 0 ? Math.round((succeeded / total) * 100) : 0
     return { total, failed, running, pending, succeeded, successRate }
-  }, [jobs])
+  })()
 
   // useCardData for search, sort, pagination
   const {
@@ -109,11 +101,9 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
     filters,
     sorting,
     containerRef,
-    containerStyle,
-  } = useCardData(jobs, {
+    containerStyle } = useCardData(jobs, {
     filter: {
-      searchFields: ['name', 'state', 'type', 'cluster'] as (keyof typeof jobs[0])[],
-    },
+      searchFields: ['name', 'state', 'type', 'cluster'] as (keyof typeof jobs[0])[] },
     sort: {
       defaultField: 'state' as SortField,
       defaultDirection: 'asc' as SortDirection,
@@ -121,15 +111,11 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
         name: commonComparators.string('name'),
         state: (a, b) => (STATE_ORDER[a.state] ?? 5) - (STATE_ORDER[b.state] ?? 5),
         type: commonComparators.string('type'),
-        duration: commonComparators.string('duration'),
-      },
-    },
-    defaultLimit: 8,
-  })
+        duration: commonComparators.string('duration') } },
+    defaultLimit: 8 })
 
   // Synthesize monitor issues from failed jobs
-  const issues = useMemo<MonitorIssue[]>(() => {
-    return jobs
+  const issues = jobs
       .filter(j => j.state === 'failure' || j.state === 'error')
       .map(j => ({
         id: `prow-${j.id}`,
@@ -143,18 +129,14 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
           category: 'workload' as const,
           lastChecked: j.startTime,
           optional: false,
-          order: 0,
-        },
+          order: 0 },
         severity: j.state === 'error' ? 'critical' as const : 'warning' as const,
         title: `${j.type} job "${j.name}" ${j.state}`,
         description: `Job started ${formatTimeAgo(j.startTime)}${j.pr ? ` for PR #${j.pr}` : ''}. Duration: ${j.duration}`,
-        detectedAt: j.startTime,
-      }))
-  }, [jobs, formatTimeAgo])
+        detectedAt: j.startTime }))
 
   // Synthesize resources for diagnose
-  const monitorResources = useMemo<MonitoredResource[]>(() => {
-    return jobs.slice(0, 20).map((j, idx) => ({
+  const monitorResources = jobs.slice(0, 20).map((j, idx) => ({
       id: `ProwJob/${j.name}/${j.id}`,
       kind: 'ProwJob',
       name: j.name,
@@ -166,16 +148,14 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
       category: 'workload' as const,
       lastChecked: j.startTime,
       optional: false,
-      order: idx,
-    }))
-  }, [jobs])
+      order: idx }))
 
   // Overall health
-  const overallHealth = useMemo(() => {
+  const overallHealth = (() => {
     if (prowStatus.healthy === false) return 'unhealthy'
     if (stats.failed > 0) return 'degraded'
     return 'healthy'
-  }, [prowStatus.healthy, stats.failed])
+  })()
 
   if (isLoading && jobs.length === 0) {
     return (
@@ -338,8 +318,7 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
           failedJobs: stats.failed,
           successRate: stats.successRate,
           runningJobs: stats.running,
-          pendingJobs: stats.pending,
-        }}
+          pendingJobs: stats.pending }}
       />
     </div>
   )

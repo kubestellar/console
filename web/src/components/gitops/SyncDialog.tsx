@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, startTransition } from 'react'
+import { useState, useEffect, useRef, startTransition } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, AlertTriangle, Play, Loader2, ChevronRight, GitBranch, Box, Server, Shield, Settings, Database, Network, Layers, Container, FileText, Puzzle, X } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
@@ -89,8 +89,7 @@ export function SyncDialog({
   cluster,
   repoUrl,
   path,
-  onSyncComplete,
-}: SyncDialogProps) {
+  onSyncComplete }: SyncDialogProps) {
   const { t } = useTranslation()
   const [phase, setPhase] = useState<SyncPhase>('detection')
   const [driftedResources, setDriftedResources] = useState<DriftedResource[]>([])
@@ -110,26 +109,25 @@ export function SyncDialog({
 
   // Note: ESC key handling is now handled by BaseModal
 
-  const addLog = useCallback((message: string, status: SyncLogEntry['status'] = 'pending') => {
+  const addLog = (message: string, status: SyncLogEntry['status'] = 'pending') => {
     const entry: SyncLogEntry = {
       timestamp: new Date().toLocaleTimeString(),
       message,
-      status,
-    }
+      status }
     setSyncLogs(prev => [...prev, entry])
-  }, [])
+  }
 
-  const updateLastLog = useCallback((status: SyncLogEntry['status']) => {
+  const updateLastLog = (status: SyncLogEntry['status']) => {
     setSyncLogs(prev => {
       if (prev.length === 0) return prev
       const updated = [...prev]
       updated[updated.length - 1] = { ...updated[updated.length - 1], status }
       return updated
     })
-  }, [])
+  }
 
   // Phase 1: Detection
-  const runDetection = useCallback(async () => {
+  const runDetection = async () => {
     setIsInitializing(true)
     addLog('Connecting to cluster...', 'running')
 
@@ -140,16 +138,13 @@ export function SyncDialog({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` }),
-        },
+          ...(token && { 'Authorization': `Bearer ${token}` }) },
         body: JSON.stringify({
           repoUrl,
           path,
           cluster,
-          namespace,
-        }),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+          namespace }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
       updateLastLog('success')
       addLog('Analyzing drift...', 'running')
@@ -174,8 +169,7 @@ export function SyncDialog({
           namespace,
           field: 'configuration',
           gitValue: 'git state',
-          clusterValue: 'cluster state',
-        }]
+          clusterValue: 'cluster state' }]
         setDriftedResources(genericDrift)
         addLog('Drift detected (see raw diff)', 'success')
       } else {
@@ -198,7 +192,7 @@ export function SyncDialog({
       // Always reset initializing state
       setIsInitializing(false)
     }
-  }, [appName, namespace, cluster, repoUrl, path, addLog, updateLastLog])
+  }
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -225,14 +219,13 @@ export function SyncDialog({
       const plan: SyncPlan[] = driftedResources.map(r => ({
         action: 'update' as const,
         resource: `${r.kind}/${r.name}`,
-        details: `${r.field}: ${r.clusterValue} → ${r.gitValue}`,
-      }))
+        details: `${r.field}: ${r.clusterValue} → ${r.gitValue}` }))
       setSyncPlan(plan)
     }
   }, [phase, driftedResources])
 
   // Phase 3: Execute Sync
-  const runSync = useCallback(async () => {
+  const runSync = async () => {
     setPhase('execution')
     addLog('Starting sync...', 'running')
 
@@ -243,16 +236,13 @@ export function SyncDialog({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` }),
-        },
+          ...(token && { 'Authorization': `Bearer ${token}` }) },
         body: JSON.stringify({
           repoUrl,
           path,
           cluster,
-          namespace,
-        }),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+          namespace }),
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
       updateLastLog('success')
 
@@ -294,7 +284,7 @@ export function SyncDialog({
       addLog(`Error: ${message}`, 'error')
       setError(message)
     }
-  }, [cluster, namespace, repoUrl, path, addLog, updateLastLog])
+  }
 
   const handleClose = () => {
     if (phase === 'complete') {
@@ -307,8 +297,7 @@ export function SyncDialog({
     detection: 1,
     plan: 2,
     execution: 3,
-    complete: 4,
-  }
+    complete: 4 }
 
   return (
     <BaseModal isOpen={isOpen} onClose={handleClose} size="lg">

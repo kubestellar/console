@@ -198,8 +198,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
 
     try {
       const response = await fetch(`/api/persistence/${endpoint}`, {
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
         const data = await response.json()
         if (isMounted.current) {
@@ -222,13 +221,12 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
   }, [shouldUseCRs, endpoint, resourceType])
 
   // Get single item
-  const getItem = useCallback(async (name: string): Promise<T | null> => {
+  const getItem = async (name: string): Promise<T | null> => {
     if (!shouldUseCRs) return null
 
     try {
       const response = await fetch(`/api/persistence/${endpoint}/${name}`, {
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
         return await response.json()
       }
@@ -236,10 +234,10 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
       console.error(`[useConsoleCR] Failed to get ${resourceType} ${name}:`, err)
     }
     return null
-  }, [shouldUseCRs, endpoint, resourceType])
+  }
 
   // Create item
-  const createItem = useCallback(async (item: Omit<T, 'metadata'> & { metadata: { name: string } }): Promise<T | null> => {
+  const createItem = async (item: Omit<T, 'metadata'> & { metadata: { name: string } }): Promise<T | null> => {
     if (!shouldUseCRs) return null
 
     try {
@@ -247,8 +245,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
         const created = await response.json()
         // Optimistic update
@@ -259,10 +256,10 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
       console.error(`[useConsoleCR] Failed to create ${resourceType}:`, err)
     }
     return null
-  }, [shouldUseCRs, endpoint, resourceType])
+  }
 
   // Update item
-  const updateItem = useCallback(async (name: string, item: Partial<T>): Promise<T | null> => {
+  const updateItem = async (name: string, item: Partial<T>): Promise<T | null> => {
     if (!shouldUseCRs) return null
 
     try {
@@ -270,8 +267,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
         const updated = await response.json()
         // Optimistic update
@@ -282,17 +278,16 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
       console.error(`[useConsoleCR] Failed to update ${resourceType} ${name}:`, err)
     }
     return null
-  }, [shouldUseCRs, endpoint, resourceType])
+  }
 
   // Delete item
-  const deleteItem = useCallback(async (name: string): Promise<boolean> => {
+  const deleteItem = async (name: string): Promise<boolean> => {
     if (!shouldUseCRs) return false
 
     try {
       const response = await fetch(`/api/persistence/${endpoint}/${name}`, {
         method: 'DELETE',
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok || response.status === 204) {
         // Optimistic update
         setItems(prev => prev.filter(i => i.metadata.name !== name))
@@ -302,7 +297,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
       console.error(`[useConsoleCR] Failed to delete ${resourceType} ${name}:`, err)
     }
     return false
-  }, [shouldUseCRs, endpoint, resourceType])
+  }
 
   // WebSocket subscriptions can be added using sharedWebSocket infrastructure
   // (see src/hooks/mcp/shared.ts and clusters.ts). Currently uses fetch on mount
@@ -324,8 +319,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
     createItem,
     updateItem,
     deleteItem,
-    isEnabled: shouldUseCRs,
-  }
+    isEnabled: shouldUseCRs }
 }
 
 // =============================================================================
@@ -346,7 +340,7 @@ export function useWorkloadDeployments() {
   const shouldUseCRs = isEnabled && isActive
 
   // Additional status update method
-  const updateStatus = useCallback(async (
+  const updateStatus = async (
     name: string,
     status: WorkloadDeploymentStatus
   ): Promise<WorkloadDeployment | null> => {
@@ -357,8 +351,7 @@ export function useWorkloadDeployments() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(status),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
         return await response.json()
       }
@@ -366,12 +359,11 @@ export function useWorkloadDeployments() {
       console.error(`[useWorkloadDeployments] Failed to update status for ${name}:`, err)
     }
     return null
-  }, [shouldUseCRs])
+  }
 
   return {
     ...base,
-    updateStatus,
-  }
+    updateStatus }
 }
 
 // =============================================================================
@@ -396,6 +388,5 @@ export function useAllConsoleCRs() {
         groups.refresh(),
         deployments.refresh(),
       ])
-    },
-  }
+    } }
 }

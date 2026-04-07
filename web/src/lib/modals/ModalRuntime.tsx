@@ -51,7 +51,7 @@
  * ```
  */
 
-import { useState, useMemo, useCallback, ComponentType } from 'react'
+import { useState, ComponentType } from 'react'
 import { getIcon } from '../icons'
 import {
   ModalDefinition,
@@ -59,8 +59,7 @@ import {
   ModalSectionDefinition,
   ModalActionDefinition,
   SectionRendererProps,
-  NavigationTarget,
-} from './types'
+  NavigationTarget } from './types'
 import { BaseModal } from './BaseModal'
 import { useModalNavigation } from './useModalNavigation'
 import {
@@ -68,8 +67,7 @@ import {
   TableSection,
   BadgesSection,
   KeyValueItem,
-  TableColumn,
-} from './ModalSections'
+  TableColumn } from './ModalSections'
 
 // ============================================================================
 // Modal Registry
@@ -125,9 +123,7 @@ function renderKeyValueSection(
       kind: field.linkTo,
       name: String(data[field.key]),
       cluster: data.cluster as string,
-      namespace: data.namespace as string | undefined,
-    } : undefined,
-  }))
+      namespace: data.namespace as string | undefined } : undefined }))
 
   return (
     <KeyValueSection
@@ -158,8 +154,7 @@ function renderTableSection(
     header: col.header,
     render: col.render as TableColumn['render'],
     width: col.width,
-    align: col.align,
-  }))
+    align: col.align }))
 
   return (
     <TableSection
@@ -180,8 +175,7 @@ function renderBadgesSection(
 
   const badges = badgeKeys.map((key) => ({
     label: key.charAt(0).toUpperCase() + key.slice(1),
-    value: String(data[key] || '-'),
-  }))
+    value: String(data[key] || '-') }))
 
   return <BadgesSection badges={badges} />
 }
@@ -240,8 +234,7 @@ export function ModalRuntime({
   onNavigate,
   onAction,
   sectionRenderers,
-  children,
-}: ModalRuntimeProps) {
+  children }: ModalRuntimeProps) {
   const {
     title,
     icon,
@@ -250,17 +243,16 @@ export function ModalRuntime({
     headerSections,
     tabs,
     actions,
-    footer,
-  } = definition
+    footer } = definition
 
   // Resolve title with data placeholders
-  const resolvedTitle = useMemo(() => {
+  const resolvedTitle = (() => {
     let resolved = title
     Object.entries(data).forEach(([key, value]) => {
       resolved = resolved.replace(`{${key}}`, String(value))
     })
     return resolved
-  }, [title, data])
+  })()
 
   // Tab state
   const [activeTab, setActiveTab] = useState(tabs?.[0]?.id || '')
@@ -274,18 +266,14 @@ export function ModalRuntime({
     onClose,
     onBack: keyboard.backspace === 'back' ? onBack : undefined,
     enableEscape: keyboard.escape === 'close',
-    enableBackspace: keyboard.backspace !== 'none',
-  })
+    enableBackspace: keyboard.backspace !== 'none' })
 
   // Handle action
-  const handleAction = useCallback(
-    (action: ModalActionDefinition) => {
+  const handleAction = (action: ModalActionDefinition) => {
       if (onAction) {
         onAction(action)
       }
-    },
-    [onAction]
-  )
+    }
 
   // Get current tab
   const currentTab = tabs?.find((t) => t.id === activeTab)
@@ -295,8 +283,7 @@ export function ModalRuntime({
     id: tab.id,
     label: tab.label,
     icon: tab.icon ? getIcon(tab.icon) : undefined,
-    badge: typeof tab.badge === 'string' ? data[tab.badge] as string | number : tab.badge,
-  }))
+    badge: typeof tab.badge === 'string' ? data[tab.badge] as string | number : tab.badge }))
 
   if (!isOpen) return null
 
@@ -355,8 +342,7 @@ export function ModalRuntime({
                 default: 'bg-secondary hover:bg-secondary/80 text-foreground',
                 primary: 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-400',
                 danger: 'bg-red-500/20 hover:bg-red-500/30 text-red-400',
-                warning: 'bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400',
-              }
+                warning: 'bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400' }
 
               return (
                 <button

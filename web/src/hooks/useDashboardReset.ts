@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 
 export interface DashboardCard {
   id: string
@@ -44,8 +44,7 @@ export function useDashboardReset<T extends DashboardCard>({
   storageKey,
   defaultCards,
   setCards,
-  cards,
-}: UseDashboardResetOptions<T>): UseDashboardResetReturn {
+  cards }: UseDashboardResetOptions<T>): UseDashboardResetReturn {
   const [isCustomized, setCustomized] = useState(() =>
     localStorage.getItem(storageKey) !== null
   )
@@ -55,14 +54,14 @@ export function useDashboardReset<T extends DashboardCard>({
   cardsRef.current = cards
 
   // Reset to only default cards (replace mode)
-  const resetToDefaults = useCallback(() => {
+  const resetToDefaults = () => {
     setCards(defaultCards)
     localStorage.removeItem(storageKey)
     setCustomized(false)
-  }, [storageKey, defaultCards, setCards])
+  }
 
   // Add missing default cards while keeping existing cards
-  const addMissingDefaults = useCallback(() => {
+  const addMissingDefaults = () => {
     const currentCards = cardsRef.current
     const existingTypes = new Set(currentCards.map(c => c.card_type))
     const missingCards = defaultCards.filter(d => !existingTypes.has(d.card_type))
@@ -71,29 +70,27 @@ export function useDashboardReset<T extends DashboardCard>({
       // Generate new IDs for the missing cards to avoid conflicts
       const cardsToAdd = missingCards.map(card => ({
         ...card,
-        id: `${card.card_type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      }))
+        id: `${card.card_type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }))
       setCards([...currentCards, ...cardsToAdd] as T[])
     }
 
     return missingCards.length
-  }, [defaultCards, setCards])
+  }
 
   // Reset with mode selection
-  const reset = useCallback((mode: ResetMode) => {
+  const reset = (mode: ResetMode) => {
     if (mode === 'replace') {
       resetToDefaults()
       return defaultCards.length
     } else {
       return addMissingDefaults()
     }
-  }, [resetToDefaults, addMissingDefaults, defaultCards.length])
+  }
 
   return {
     isCustomized,
     setCustomized,
     resetToDefaults,
     addMissingDefaults,
-    reset,
-  }
+    reset }
 }

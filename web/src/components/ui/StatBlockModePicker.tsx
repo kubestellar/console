@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Settings, Hash, TrendingUp, CircleDot, BarChart3, ArrowUpDown, Layers } from 'lucide-react'
 import { Button } from './Button'
@@ -66,14 +66,14 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
   const popoverRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ top: 0, left: 0 })
 
-  const updatePosition = useCallback(() => {
+  const updatePosition = () => {
     if (!triggerRef.current) return
     const rect = triggerRef.current.getBoundingClientRect()
     setPosition({
       top: rect.bottom + POPOVER_GAP_PX,
       left: Math.max(rect.right - 160, 8), // Right-align, keep on screen
     })
-  }, [])
+  }
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation()

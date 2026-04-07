@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect } from 'react'
+import { useRef, useEffect } from 'react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -29,10 +29,10 @@ export function Logs() {
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = () => {
     refetchClusters()
     refetchEvents()
-  }, [refetchClusters, refetchEvents])
+  }
 
   // Filter clusters based on global selection
   const filteredClusters = clusters.filter(c =>
@@ -71,8 +71,7 @@ export function Logs() {
         warnings: currentWarningCount,
         normal: currentNormalCount,
         errors: currentErrorCount,
-        recent: currentRecentCount,
-      }
+        recent: currentRecentCount }
     }
   }, [currentTotalEvents, currentWarningCount, currentNormalCount, currentErrorCount, currentRecentCount])
 
@@ -83,7 +82,7 @@ export function Logs() {
   const recentCount = currentRecentCount >= 0 && currentTotalEvents > 0 ? currentRecentCount : cachedStats.current.recent
 
   // Stats value getter
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'clusters':
         return { value: reachableClusters.length, sublabel: 'clusters', onClick: () => drillToAllClusters(), isClickable: reachableClusters.length > 0 }
@@ -102,12 +101,9 @@ export function Logs() {
       default:
         return { value: 0 }
     }
-  }, [reachableClusters.length, totalEvents, warningCount, normalCount, recentCount, errorCount, drillToAllEvents, drillToAllClusters])
+  }
 
-  const getStatValue = useCallback(
-    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
-    [getDashboardStatValue, getUniversalStatValue]
-  )
+  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
   return (
     <DashboardPage
@@ -126,8 +122,7 @@ export function Logs() {
       hasData={reachableClusters.length > 0}
       emptyState={{
         title: 'Logs & Events Dashboard',
-        description: 'Add cards to monitor Kubernetes events, application logs, and system messages across your clusters.',
-      }}
+        description: 'Add cards to monitor Kubernetes events, application logs, and system messages across your clusters.' }}
     />
   )
 }

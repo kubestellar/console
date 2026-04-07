@@ -39,7 +39,7 @@
  * ```
  */
 
-import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createContext, use, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { isAgentUnavailable } from '../../hooks/useLocalAgent'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
@@ -82,7 +82,7 @@ export const ForceLiveContext = createContext<boolean>(false)
 
 /** Hook for card components to check if they should bypass demo mode */
 export function useForceLive(): boolean {
-  return useContext(ForceLiveContext)
+  return use(ForceLiveContext)
 }
 
 /**
@@ -92,7 +92,7 @@ export function useForceLive(): boolean {
  */
 export function useReportCardDataState(state: CardDataState) {
   const { isFailed, consecutiveFailures, errorMessage, isLoading, isRefreshing, hasData, isDemoData, lastUpdated } = state
-  const ctx = useContext(CardDataReportContext)
+  const ctx = use(CardDataReportContext)
   // useLayoutEffect runs synchronously before paint, ensuring cached data
   // is reported before CardWrapper decides to show skeleton
   useLayoutEffect(() => {

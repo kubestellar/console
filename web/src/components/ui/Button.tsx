@@ -1,4 +1,4 @@
-import { type ButtonHTMLAttributes, type ReactNode, forwardRef } from 'react'
+import { type ButtonHTMLAttributes, type ReactNode, type Ref } from 'react'
 import { cn } from '../../lib/cn'
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'accent'
@@ -25,25 +25,24 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   iconRight?: ReactNode
   loading?: boolean
   fullWidth?: boolean
+  ref?: Ref<HTMLButtonElement>
 }
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  {
-    variant = 'secondary',
-    size = 'md',
-    icon,
-    iconRight,
-    loading,
-    fullWidth,
-    disabled,
-    className,
-    children,
-    title,
-    'aria-label': ariaLabel,
-    ...props
-  },
+export function Button({
+  variant = 'secondary',
+  size = 'md',
+  icon,
+  iconRight,
+  loading,
+  fullWidth,
+  disabled,
+  className,
+  children,
+  title,
+  'aria-label': ariaLabel,
   ref,
-) {
+  ...props
+}: ButtonProps) {
   // When no children are provided (icon-only buttons), fall back to title for aria-label
   // so that assistive technologies can announce the button's purpose.
   const effectiveAriaLabel = ariaLabel ?? (children == null ? title : undefined)
@@ -74,6 +73,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {iconRight}
     </button>
   )
-})
+}
 
 export type { ButtonVariant, ButtonSize }

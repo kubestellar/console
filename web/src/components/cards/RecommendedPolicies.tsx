@@ -53,28 +53,24 @@ const CATEGORY_LABELS: Record<RecommendationCategory, string> = {
   'security': 'Security Hardening',
   'best-practices': 'Best Practices',
   'supply-chain': 'Supply Chain',
-  'resources': 'Resource Governance',
-}
+  'resources': 'Resource Governance' }
 
 const CATEGORY_COLORS: Record<RecommendationCategory, string> = {
   'security': 'text-red-400',
   'best-practices': 'text-blue-400',
   'supply-chain': 'text-purple-400',
-  'resources': 'text-orange-400',
-}
+  'resources': 'text-orange-400' }
 
 const CATEGORY_BG: Record<RecommendationCategory, string> = {
   'security': 'bg-red-500/10 border-red-500/20',
   'best-practices': 'bg-blue-500/10 border-blue-500/20',
   'supply-chain': 'bg-purple-500/10 border-purple-500/20',
-  'resources': 'bg-orange-500/10 border-orange-500/20',
-}
+  'resources': 'bg-orange-500/10 border-orange-500/20' }
 
 const SEVERITY_COLORS: Record<string, string> = {
   high: 'text-red-400',
   medium: 'text-yellow-400',
-  low: 'text-blue-400',
-}
+  low: 'text-blue-400' }
 
 // ─── Policy Definitions ─────────────────────────────────────────────
 
@@ -94,8 +90,7 @@ const KYVERNO_POLICY_PATTERNS: Record<string, string> = {
   'require-run-as-nonroot': 'kyverno-run-as-nonroot',
   'run-as-nonroot': 'kyverno-run-as-nonroot',
   'require-probes': 'kyverno-require-probes',
-  'require-readiness': 'kyverno-require-probes',
-}
+  'require-readiness': 'kyverno-require-probes' }
 
 interface PolicyDefinition {
   id: string
@@ -129,8 +124,7 @@ Policy requirements:
 - Category annotation: "Pod Security"
 
 Deploy to ALL clusters with Kyverno installed. After applying, check PolicyReports are generated.
-Proceed step by step for each cluster.`,
-  },
+Proceed step by step for each cluster.` },
   {
     id: 'kyverno-require-labels',
     name: 'Require Standard Labels',
@@ -149,8 +143,7 @@ Policy requirements:
 - Background: true
 - Category annotation: "Best Practices"
 
-Deploy to ALL clusters with Kyverno installed. Proceed step by step.`,
-  },
+Deploy to ALL clusters with Kyverno installed. Proceed step by step.` },
   {
     id: 'kyverno-restrict-registries',
     name: 'Restrict Image Registries',
@@ -169,8 +162,7 @@ Policy requirements:
 - Background: true
 - Category annotation: "Supply Chain Security"
 
-Deploy to ALL clusters with Kyverno installed. Proceed step by step.`,
-  },
+Deploy to ALL clusters with Kyverno installed. Proceed step by step.` },
   {
     id: 'kyverno-require-resources',
     name: 'Require Resource Limits',
@@ -189,8 +181,7 @@ Policy requirements:
 - Background: true
 - Category annotation: "Resource Management"
 
-Deploy to ALL clusters with Kyverno installed. Proceed step by step.`,
-  },
+Deploy to ALL clusters with Kyverno installed. Proceed step by step.` },
   {
     id: 'kyverno-disallow-latest',
     name: 'Disallow Latest Tag',
@@ -209,8 +200,7 @@ Policy requirements:
 - Background: true
 - Category annotation: "Supply Chain Security"
 
-Deploy to ALL clusters with Kyverno installed. Proceed step by step.`,
-  },
+Deploy to ALL clusters with Kyverno installed. Proceed step by step.` },
   {
     id: 'kyverno-run-as-nonroot',
     name: 'Run As Non-Root',
@@ -229,8 +219,7 @@ Policy requirements:
 - Background: true
 - Category annotation: "Pod Security"
 
-Deploy to ALL clusters with Kyverno installed. Proceed step by step.`,
-  },
+Deploy to ALL clusters with Kyverno installed. Proceed step by step.` },
   {
     id: 'kyverno-require-probes',
     name: 'Require Health Probes',
@@ -249,8 +238,7 @@ Policy requirements:
 - Background: true
 - Category annotation: "Best Practices"
 
-Deploy to ALL clusters with Kyverno installed. Proceed step by step.`,
-  },
+Deploy to ALL clusters with Kyverno installed. Proceed step by step.` },
 ]
 
 // ─── Component ──────────────────────────────────────────────────────
@@ -309,8 +297,7 @@ function RecommendedPoliciesInternal({ config: _config }: CardConfig) {
         ...def,
         coveredClusters,
         eligibleClusters,
-        totalClusters: Math.max(totalClusters, eligibleClusters.length),
-      })
+        totalClusters: Math.max(totalClusters, eligibleClusters.length) })
     }
 
     // Calculate fleet-wide coverage
@@ -325,7 +312,7 @@ function RecommendedPoliciesInternal({ config: _config }: CardConfig) {
   }, [kyvernoStatuses, deduplicatedClusters, selectedClusters])
 
   // Group by category
-  const grouped = useMemo(() => {
+  const grouped = (() => {
     const groups = new Map<RecommendationCategory, PolicyRecommendation[]>()
     for (const rec of recommendations) {
       const existing = groups.get(rec.category) || []
@@ -333,16 +320,16 @@ function RecommendedPoliciesInternal({ config: _config }: CardConfig) {
       groups.set(rec.category, existing)
     }
     return groups
-  }, [recommendations])
+  })()
 
   // Count category gaps
-  const categoryGaps = useMemo(() => {
+  const categoryGaps = (() => {
     const gaps = new Map<RecommendationCategory, number>()
     for (const [cat, recs] of grouped.entries()) {
       gaps.set(cat, recs.filter(r => r.coveredClusters.length < r.eligibleClusters.length).length)
     }
     return gaps
-  }, [grouped])
+  })()
 
   const hasAnyData = kyvernoInstalled || kubescapeInstalled || trivyInstalled || isDemoData
   useCardLoadingState({ isLoading: isLoading && !hasAnyData, hasAnyData, isDemoData })
@@ -377,8 +364,7 @@ Important:
 - After deploying, verify PolicyReports are being generated on each cluster
 
 Deploy each policy to every cluster where it's missing. Proceed cluster by cluster, confirming success before moving to the next.`,
-      context: { recommendations: gaps.map(g => ({ name: g.name, id: g.id, missingOn: g.eligibleClusters.filter(c => !g.coveredClusters.includes(c)) })) },
-    })
+      context: { recommendations: gaps.map(g => ({ name: g.name, id: g.id, missingOn: g.eligibleClusters.filter(c => !g.coveredClusters.includes(c)) })) } })
   }
 
   const handleDeployOne = (rec: PolicyRecommendation) => {
@@ -390,8 +376,7 @@ Deploy each policy to every cluster where it's missing. Proceed cluster by clust
       description: `Deploy ${rec.name} to ${missingClusters.length} cluster${missingClusters.length === 1 ? '' : 's'}`,
       type: 'deploy',
       initialPrompt: rec.missionPrompt + `\n\nTarget clusters: ${missingClusters.join(', ')}`,
-      context: { policy: rec.id, clusters: missingClusters },
-    })
+      context: { policy: rec.id, clusters: missingClusters } })
   }
 
   // No tools installed — prompt to get started (but only after scanning is complete)

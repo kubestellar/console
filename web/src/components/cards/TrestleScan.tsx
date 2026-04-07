@@ -45,8 +45,7 @@ Please help me diagnose and fix the issue:
 5. If c2p is installed, verify the policy engine bridge is configured
 6. If pods are crashing, check resource limits
 
-Please diagnose step by step and fix any issues found.`,
-}
+Please diagnose step by step and fix any issues found.` }
 
 export function TrestleScan({ config: _config }: CardConfig) {
   const { t } = useTranslation(['common', 'cards'])
@@ -60,7 +59,7 @@ export function TrestleScan({ config: _config }: CardConfig) {
   const allChecked = clustersChecked >= totalClusters && totalClusters > 0
 
   // Filter by selected clusters
-  const filtered = useMemo(() => {
+  const filtered = (() => {
     if (selectedClusters.length === 0) return aggregated
     const agg = { totalControls: 0, passedControls: 0, failedControls: 0, otherControls: 0, overallScore: 0 }
     for (const [name, s] of Object.entries(statuses)) {
@@ -74,17 +73,17 @@ export function TrestleScan({ config: _config }: CardConfig) {
       ? Math.round((agg.passedControls / agg.totalControls) * 100)
       : 0
     return agg
-  }, [statuses, aggregated, selectedClusters])
+  })()
 
   const hasData = installed || isDemoData
   useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData })
 
   // Detect degraded state: installed but no assessments
-  const isDegraded = useMemo(() => {
+  const isDegraded = (() => {
     if (!installed || isLoading) return false
     const installedClusters = Object.values(statuses).filter(s => s.installed)
     return installedClusters.length > 0 && installedClusters.every(s => s.totalControls === 0)
-  }, [installed, isLoading, statuses])
+  })()
 
   const handleInstall = () => {
     startMission({
@@ -112,8 +111,7 @@ Please help me:
    kubectl get assessmentresults -A
 
 Please proceed step by step. Start with verifying prerequisites (Python 3.9+, kubectl access).`,
-      context: {},
-    })
+      context: {} })
   }
 
   const handleTroubleshoot = () => {
@@ -122,8 +120,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
       description: TROUBLESHOOT_MISSION.description,
       type: 'troubleshoot',
       initialPrompt: TROUBLESHOOT_MISSION.prompt,
-      context: {},
-    })
+      context: {} })
   }
 
   // Get all profiles from all clusters

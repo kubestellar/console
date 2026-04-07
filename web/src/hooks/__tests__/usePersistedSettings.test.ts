@@ -485,6 +485,8 @@ describe('usePersistedSettings', () => {
       expect.objectContaining({ method: 'POST' }),
     )
     expect(mockClick).toHaveBeenCalled()
+    // safeRevokeObjectURL defers via setTimeout — advance timers to trigger it
+    await vi.advanceTimersByTimeAsync(200)
     expect(mockRevokeObjectURL).toHaveBeenCalled()
 
     mockAppendChild.mockRestore()

@@ -4,7 +4,7 @@
  * Generates insights based on the selected llm-d stack's real state.
  * Shows optimization suggestions, warnings, and anomaly detection.
  */
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Brain, Lightbulb, AlertTriangle, TrendingUp, Gauge, MessageSquare, ChevronRight, Sparkles, Settings2, Zap, Loader2 } from 'lucide-react'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
@@ -20,14 +20,12 @@ const INSIGHT_ICONS = {
   optimization: Lightbulb,
   anomaly: AlertTriangle,
   capacity: Gauge,
-  performance: TrendingUp,
-}
+  performance: TrendingUp }
 
 const SEVERITY_COLORS = {
   info: { bg: 'bg-blue-950', border: 'border-blue-500/30', text: 'text-blue-400', icon: 'text-blue-400' },
   warning: { bg: 'bg-yellow-950', border: 'border-yellow-500/30', text: 'text-yellow-400', icon: 'text-yellow-400' },
-  critical: { bg: 'bg-red-950', border: 'border-red-500/30', text: 'text-red-400', icon: 'text-red-400' },
-}
+  critical: { bg: 'bg-red-950', border: 'border-red-500/30', text: 'text-red-400', icon: 'text-red-400' } }
 
 interface InsightCardProps {
   insight: AIInsight
@@ -129,10 +127,8 @@ function generateStackInsights(stack: LLMdStack, t?: (key: string, options?: Rec
       metrics: {
         'Total Replicas': stack.totalReplicas,
         'Ready': stack.readyReplicas,
-        'Status': stack.status,
-      },
-      timestamp: now,
-    })
+        'Status': stack.status },
+      timestamp: now })
   } else if (stack.status === 'unhealthy') {
     insights.push({
       id: 'stack-unhealthy',
@@ -144,10 +140,8 @@ function generateStackInsights(stack: LLMdStack, t?: (key: string, options?: Rec
       metrics: {
         'Total Replicas': stack.totalReplicas,
         'Ready': stack.readyReplicas,
-        'Status': stack.status,
-      },
-      timestamp: now,
-    })
+        'Status': stack.status },
+      timestamp: now })
   }
 
   // Check for missing gateway
@@ -159,8 +153,7 @@ function generateStackInsights(stack: LLMdStack, t?: (key: string, options?: Rec
       title: t ? t('llmdAIInsights.noGatewayConfigured') : 'No Gateway Configured',
       description: t ? t('llmdAIInsights.noGatewayDesc') : 'This stack has no gateway component. External traffic routing may not be properly configured.',
       recommendation: t ? t('llmdAIInsights.noGatewayRec') : 'Deploy an Istio Gateway or Envoy ingress to handle external inference requests.',
-      timestamp: now,
-    })
+      timestamp: now })
   }
 
   // Check for no autoscaler
@@ -174,10 +167,8 @@ function generateStackInsights(stack: LLMdStack, t?: (key: string, options?: Rec
       recommendation: t ? t('llmdAIInsights.manualScalingRec') : 'Consider enabling Variant Autoscaling (WVA) or HPA for automatic scaling based on load.',
       metrics: {
         'Current Replicas': stack.totalReplicas,
-        'Autoscaler': 'None',
-      },
-      timestamp: now,
-    })
+        'Autoscaler': 'None' },
+      timestamp: now })
   } else {
     // Check autoscaler headroom
     const currentReplicas = stack.autoscaler.currentReplicas ?? 0
@@ -195,10 +186,8 @@ function generateStackInsights(stack: LLMdStack, t?: (key: string, options?: Rec
           metrics: {
             'Current': currentReplicas,
             'Max': maxReplicas,
-            'Headroom': `${headroomPercent.toFixed(0)}%`,
-          },
-          timestamp: now,
-        })
+            'Headroom': `${headroomPercent.toFixed(0)}%` },
+          timestamp: now })
       }
     }
   }
@@ -216,10 +205,8 @@ function generateStackInsights(stack: LLMdStack, t?: (key: string, options?: Rec
       metrics: {
         'Ready': stack.readyReplicas,
         'Total': stack.totalReplicas,
-        'Health': `${readyPercent.toFixed(0)}%`,
-      },
-      timestamp: now,
-    })
+        'Health': `${readyPercent.toFixed(0)}%` },
+      timestamp: now })
   }
 
   // P/D disaggregation insights
@@ -241,10 +228,8 @@ function generateStackInsights(stack: LLMdStack, t?: (key: string, options?: Rec
           metrics: {
             'Prefill': prefillCount,
             'Decode': decodeCount,
-            'Ratio': `${ratio.toFixed(1)}:1`,
-          },
-          timestamp: now,
-        })
+            'Ratio': `${ratio.toFixed(1)}:1` },
+          timestamp: now })
       } else if (ratio < 0.5) {
         insights.push({
           id: 'pd-ratio-low',
@@ -256,10 +241,8 @@ function generateStackInsights(stack: LLMdStack, t?: (key: string, options?: Rec
           metrics: {
             'Prefill': prefillCount,
             'Decode': decodeCount,
-            'Ratio': `${ratio.toFixed(1)}:1`,
-          },
-          timestamp: now,
-        })
+            'Ratio': `${ratio.toFixed(1)}:1` },
+          timestamp: now })
       } else {
         insights.push({
           id: 'pd-balanced',
@@ -271,10 +254,8 @@ function generateStackInsights(stack: LLMdStack, t?: (key: string, options?: Rec
           metrics: {
             'Prefill': prefillCount,
             'Decode': decodeCount,
-            'Ratio': `${ratio.toFixed(1)}:1`,
-          },
-          timestamp: now,
-        })
+            'Ratio': `${ratio.toFixed(1)}:1` },
+          timestamp: now })
       }
     }
   } else if (stack.components.both.length > 0) {
@@ -291,10 +272,8 @@ function generateStackInsights(stack: LLMdStack, t?: (key: string, options?: Rec
         metrics: {
           'Current Mode': 'Unified',
           'Replicas': totalReplicas,
-          'Potential TTFT': '-40%',
-        },
-        timestamp: now,
-      })
+          'Potential TTFT': '-40%' },
+        timestamp: now })
     }
   }
 
@@ -310,10 +289,8 @@ function generateStackInsights(stack: LLMdStack, t?: (key: string, options?: Rec
       metrics: {
         'Status': 'Healthy',
         'Replicas': `${stack.readyReplicas}/${stack.totalReplicas}`,
-        'Model': stack.model || 'N/A',
-      },
-      timestamp: now,
-    })
+        'Model': stack.model || 'N/A' },
+      timestamp: now })
   }
 
   return insights
@@ -335,7 +312,7 @@ export function LLMdAIInsights() {
   const [isGenerating, setIsGenerating] = useState(false)
 
   // Generate insights based on demo mode or real stack
-  const insights = useMemo(() => {
+  const insights = (() => {
     if (shouldUseDemoData) {
       return generateAIInsights()
     }
@@ -345,7 +322,7 @@ export function LLMdAIInsights() {
     }
 
     return []
-  }, [shouldUseDemoData, stackContext?.selectedStack])
+  })()
 
   // Handle chat submission
   const handleChatSubmit = async (e: React.FormEvent) => {
@@ -370,8 +347,7 @@ export function LLMdAIInsights() {
         'scale': 'Based on current load patterns, I recommend scaling up to 4 prefill replicas during peak hours (10am-2pm) and scaling down to 2 during off-peak.',
         'cache': 'KV cache utilization is averaging 72% with occasional spikes to 87%. Consider enabling prefix caching for repeated prompt patterns.',
         'performance': 'Current TTFT is 420ms. To optimize, consider enabling disaggregated serving - this could reduce TTFT to ~280ms.',
-        'default': 'I can help analyze your LLM-d stack. Try asking about scaling recommendations, cache optimization, or performance tuning.',
-      }
+        'default': 'I can help analyze your LLM-d stack. Try asking about scaling recommendations, cache optimization, or performance tuning.' }
       const keyword = Object.keys(responses).find(k => messageLower.includes(k)) || 'default'
       response = responses[keyword]
     } else if (stack) {
@@ -408,8 +384,7 @@ export function LLMdAIInsights() {
   const insightCounts = {
     total: insights.length,
     warning: insights.filter(i => i.severity === 'warning').length,
-    critical: insights.filter(i => i.severity === 'critical').length,
-  }
+    critical: insights.filter(i => i.severity === 'critical').length }
 
   const selectedStack = stackContext?.selectedStack
 

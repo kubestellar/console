@@ -80,13 +80,14 @@ func (g *GeminiProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatRespo
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	url := fmt.Sprintf("%s/%s:generateContent?key=%s", geminiAPIBaseURL, g.model, GetConfigManager().GetAPIKey("gemini"))
+	url := fmt.Sprintf("%s/%s:generateContent", geminiAPIBaseURL, g.model)
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("x-goog-api-key", GetConfigManager().GetAPIKey("gemini"))
 
 	resp, err := g.client.Do(httpReq)
 	if err != nil {
@@ -159,13 +160,14 @@ func (g *GeminiProvider) StreamChat(ctx context.Context, req *ChatRequest, onChu
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	url := fmt.Sprintf("%s/%s:streamGenerateContent?key=%s&alt=sse", geminiAPIBaseURL, g.model, GetConfigManager().GetAPIKey("gemini"))
+	url := fmt.Sprintf("%s/%s:streamGenerateContent?alt=sse", geminiAPIBaseURL, g.model)
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("x-goog-api-key", GetConfigManager().GetAPIKey("gemini"))
 
 	resp, err := g.client.Do(httpReq)
 	if err != nil {

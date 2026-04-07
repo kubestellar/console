@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { getDemoMode } from './useDemoMode'
 
@@ -210,7 +210,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
   /** Guard to prevent concurrent refetch calls from flooding the request queue */
   const fetchInProgress = useRef(false)
 
-  const refetch = useCallback(async (silent = false) => {
+  const refetch = async (silent = false) => {
     // Skip fetching in demo mode — no agent available
     if (getDemoMode()) {
       setIsLoading(false)
@@ -393,8 +393,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
               gatewayStatus: nsGateway?.status,
               gatewayType: nsGateway?.type,
               prometheusStatus: nsPrometheus,
-              ...gpuInfo,
-            })
+              ...gpuInfo })
           }
 
           // Progressive loading: update state after each cluster
@@ -435,8 +434,8 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
       setIsRefreshing(false)
       fetchInProgress.current = false
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [(clusters || []).join(',')])
+   
+  }
 
   useEffect(() => {
     refetch(false).catch(err => {
@@ -450,7 +449,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
   }, [])
 
   // Compute status from servers
-  const status = useMemo((): LLMdStatus => {
+  const status = (() => {
     const runningServers = servers.filter(s => s.status === 'running').length
     const stoppedServers = servers.filter(s => s.status === 'stopped').length
 
@@ -460,9 +459,8 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
       runningServers,
       stoppedServers,
       totalModels: new Set(servers.map(s => s.model)).size,
-      loadedModels: new Set(servers.filter(s => s.status === 'running').map(s => s.model)).size,
-    }
-  }, [servers, consecutiveFailures])
+      loadedModels: new Set(servers.filter(s => s.status === 'running').map(s => s.model)).size }
+  })()
 
   return {
     servers,
@@ -473,8 +471,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
     refetch: () => refetch(false),
     isFailed: consecutiveFailures >= 3,
     consecutiveFailures,
-    lastRefresh,
-  }
+    lastRefresh }
 }
 
 /**
@@ -491,7 +488,7 @@ export function useLLMdModels(clusters: string[] = ['vllm-d', 'platform-eval']) 
   /** Guard to prevent concurrent refetch calls from flooding the request queue */
   const fetchInProgress = useRef(false)
 
-  const refetch = useCallback(async (silent = false) => {
+  const refetch = async (silent = false) => {
     // Skip fetching in demo mode — no agent available
     if (getDemoMode()) {
       setIsLoading(false)
@@ -541,8 +538,7 @@ export function useLLMdModels(clusters: string[] = ['vllm-d', 'platform-eval']) 
               namespace: pool.metadata.namespace,
               cluster,
               instances: 1, // Would need to count actual pods
-              status: hasAccepted ? 'loaded' : 'stopped',
-            })
+              status: hasAccepted ? 'loaded' : 'stopped' })
           }
 
           // Progressive loading: update state after each cluster
@@ -578,8 +574,8 @@ export function useLLMdModels(clusters: string[] = ['vllm-d', 'platform-eval']) 
       setIsRefreshing(false)
       fetchInProgress.current = false
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [(clusters || []).join(',')])
+   
+  }
 
   useEffect(() => {
     refetch(false)
@@ -596,6 +592,5 @@ export function useLLMdModels(clusters: string[] = ['vllm-d', 'platform-eval']) 
     refetch: () => refetch(false),
     isFailed: consecutiveFailures >= 3,
     consecutiveFailures,
-    lastRefresh,
-  }
+    lastRefresh }
 }

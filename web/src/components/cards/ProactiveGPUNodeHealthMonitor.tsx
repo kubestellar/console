@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { CheckCircle, AlertTriangle, XCircle, ChevronRight, ChevronDown, Server, Clock, Play, Trash2, Loader2, Settings2, RefreshCw, Shield } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
@@ -44,15 +44,13 @@ const CHECK_LABELS: Record<string, string> = {
   'nvidia-device-plugin': 'Device Plugin',
   'dcgm-exporter': 'DCGM Exporter',
   stuck_pods: 'Stuck Pods',
-  gpu_events: 'GPU Events',
-}
+  gpu_events: 'GPU Events' }
 
 function StatusBadge({ status }: { status: string }) {
   const config = {
     healthy: { icon: CheckCircle, bg: 'bg-green-500/15', text: 'text-green-400', label: 'Healthy' },
     degraded: { icon: AlertTriangle, bg: 'bg-yellow-500/15', text: 'text-yellow-400', label: 'Degraded' },
-    unhealthy: { icon: XCircle, bg: 'bg-red-500/15', text: 'text-red-400', label: 'Unhealthy' },
-  }[status] || { icon: AlertTriangle, bg: 'bg-gray-500/15 dark:bg-gray-400/15', text: 'text-muted-foreground', label: status }
+    unhealthy: { icon: XCircle, bg: 'bg-red-500/15', text: 'text-red-400', label: 'Unhealthy' } }[status] || { icon: AlertTriangle, bg: 'bg-gray-500/15 dark:bg-gray-400/15', text: 'text-muted-foreground', label: status }
 
   const Icon = config.icon
   return (
@@ -98,20 +96,20 @@ function CronJobClusterPanel({ cluster }: { cluster: string }) {
     if (status?.tier && status.tier > 0) setTier(status.tier)
   }, [status?.tier])
 
-  const handleInstall = useCallback(async () => {
+  const handleInstall = async () => {
     await install({ namespace, schedule, tier })
     setShowInstallDialog(false)
-  }, [install, namespace, schedule, tier])
+  }
 
-  const handleUpdateTier = useCallback(async () => {
+  const handleUpdateTier = async () => {
     if (!status) return
     await install({ namespace: status.namespace, schedule: status.schedule, tier })
-  }, [install, status, tier])
+  }
 
-  const handleUninstall = useCallback(async () => {
+  const handleUninstall = async () => {
     await uninstall({ namespace: status?.namespace })
     setShowConfirmUninstall(false)
-  }, [uninstall, status?.namespace])
+  }
 
   const tierChanged = status?.installed && status.tier > 0 && tier !== status.tier
 
@@ -398,8 +396,7 @@ function ProactiveGPUNodeHealthMonitorInternal() {
     isDemoFallback,
     isFailed,
     consecutiveFailures,
-    lastRefresh,
-  } = useCachedGPUNodeHealth()
+    lastRefresh } = useCachedGPUNodeHealth()
 
   const { drillToNode } = useDrillDownActions()
 
@@ -423,8 +420,7 @@ function ProactiveGPUNodeHealthMonitorInternal() {
     isFailed,
     consecutiveFailures,
     isDemoData: isDemoFallback,
-    lastRefresh,
-  })
+    lastRefresh })
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -438,7 +434,7 @@ function ProactiveGPUNodeHealthMonitorInternal() {
   }, [])
 
   // Compute summary counts
-  const summary = useMemo(() => {
+  const summary = (() => {
     let healthy = 0, degraded = 0, unhealthy = 0
     for (const n of nodes) {
       if (n.status === 'healthy') healthy++
@@ -446,13 +442,13 @@ function ProactiveGPUNodeHealthMonitorInternal() {
       else unhealthy++
     }
     return { healthy, degraded, unhealthy }
-  }, [nodes])
+  })()
 
   // Available clusters for filter
-  const availableClusters = useMemo(() => {
+  const availableClusters = (() => {
     const set = new Set(nodes.map((n: GPUNodeHealthStatus) => n.cluster))
     return Array.from(set).sort()
-  }, [nodes])
+  })()
 
   // Filter, search, sort
   const filteredNodes = useMemo(() => {
@@ -556,8 +552,7 @@ function ProactiveGPUNodeHealthMonitorInternal() {
           onClear: () => setLocalClusterFilter([]),
           isOpen: showClusterFilter,
           setIsOpen: setShowClusterFilter,
-          containerRef: clusterFilterRef,
-        }}
+          containerRef: clusterFilterRef }}
         cardControls={{
           limit: PAGE_SIZE,
           onLimitChange: () => {},
@@ -565,8 +560,7 @@ function ProactiveGPUNodeHealthMonitorInternal() {
           sortOptions: SORT_OPTIONS,
           onSortChange: (v: string) => setSortField(v as SortField),
           sortDirection,
-          onSortDirectionChange: (d: SortDirection) => setSortDirection(d),
-        }}
+          onSortDirectionChange: (d: SortDirection) => setSortDirection(d) }}
         extra={
           <div className="flex items-center gap-1">
             {search && (
@@ -651,18 +645,15 @@ function ProactiveGPUNodeHealthMonitorInternal() {
                     kind: 'Node',
                     name: node.nodeName,
                     cluster: node.cluster,
-                    status: node.status,
-                  }}
+                    status: node.status }}
                   issues={(node.issues || []).map((issue: string, idx: number) => ({
                     name: `Issue ${idx + 1}`,
-                    message: issue,
-                  }))}
+                    message: issue }))}
                   additionalContext={{
                     gpuType: node.gpuType,
                     gpuCount: node.gpuCount,
                     stuckPods: node.stuckPods,
-                    checks: node.checks,
-                  }}
+                    checks: node.checks }}
                 />
               </div>
 

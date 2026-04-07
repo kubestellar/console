@@ -14,8 +14,7 @@ import {
   Cell,
   PieChart,
   Pie,
-  ReferenceLine,
-} from 'recharts'
+  ReferenceLine } from 'recharts'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -26,8 +25,7 @@ import {
   CHART_GRID_STROKE,
   CHART_AXIS_STROKE,
   CHART_TOOLTIP_CONTENT_STYLE,
-  CHART_TICK_COLOR,
-} from '../../lib/constants'
+  CHART_TICK_COLOR } from '../../lib/constants'
 
 interface GPUPoint {
   time: string
@@ -53,8 +51,7 @@ export function GPUUtilization() {
     isRefreshing,
     isDemoFallback,
     isFailed,
-    consecutiveFailures,
-  } = useCachedGPUNodes()
+    consecutiveFailures } = useCachedGPUNodes()
   const { deduplicatedClusters: clusters } = useClusters()
   const { isDemoMode } = useDemoMode()
 
@@ -70,26 +67,23 @@ export function GPUUtilization() {
     hasAnyData: hasData,
     isDemoData: isDemoMode || isDemoFallback,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
   const [showClusterFilter, setShowClusterFilter] = useState(false)
   const clusterFilterRef = useRef<HTMLDivElement>(null)
 
   // Get reachable clusters
-  const reachableClusters = useMemo(() => {
-    return clusters.filter(c => c.reachable !== false)
-  }, [clusters])
+  const reachableClusters = clusters.filter(c => c.reachable !== false)
 
   // Get available clusters for local filter (respects global filter)
-  const availableClustersForFilter = useMemo(() => {
+  const availableClustersForFilter = (() => {
     if (isAllClustersSelected) return reachableClusters
     return reachableClusters.filter(c => selectedClusters.includes(c.name))
-  }, [reachableClusters, selectedClusters, isAllClustersSelected])
+  })()
 
   // Filter by selected clusters AND local filter AND exclude offline/unreachable clusters
-  const filteredClusters = useMemo(() => {
+  const filteredClusters = (() => {
     let filtered = reachableClusters
     if (!isAllClustersSelected) {
       filtered = filtered.filter(c => selectedClusters.includes(c.name))
@@ -98,7 +92,7 @@ export function GPUUtilization() {
       filtered = filtered.filter(c => localClusterFilter.includes(c.name))
     }
     return filtered
-  }, [reachableClusters, selectedClusters, isAllClustersSelected, localClusterFilter])
+  })()
 
   const toggleClusterFilter = (clusterName: string) => {
     setLocalClusterFilter(prev => {
@@ -110,9 +104,7 @@ export function GPUUtilization() {
   }
 
   // Get names of reachable clusters for node filtering
-  const reachableClusterNames = useMemo(() => {
-    return new Set(clusters.filter(c => c.reachable !== false).map(c => c.name))
-  }, [clusters])
+  const reachableClusterNames = new Set(clusters.filter(c => c.reachable !== false).map(c => c.name))
 
   const hasReachableClusters = filteredClusters.some(c => c.nodeCount !== undefined && c.nodeCount > 0)
 
@@ -121,7 +113,7 @@ export function GPUUtilization() {
   const [history, setHistory] = useState<GPUPoint[]>([])
 
   // Filter by selected clusters AND local filter AND exclude nodes from offline/unreachable clusters
-  const filteredNodes = useMemo(() => {
+  const filteredNodes = (() => {
     // First filter to only nodes from reachable clusters
     let result = gpuNodes.filter(n => {
       // Match using full name or last segment (handles "namespace/cluster-name" format)
@@ -136,7 +128,7 @@ export function GPUUtilization() {
       result = result.filter(n => localClusterFilter.some(c => n.cluster.startsWith(c)))
     }
     return result
-  }, [gpuNodes, selectedClusters, isAllClustersSelected, reachableClusterNames, localClusterFilter])
+  })()
 
   // Calculate current stats
   const currentStats = useMemo(() => {
@@ -157,8 +149,7 @@ export function GPUUtilization() {
       time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       allocated: currentStats.allocated,
       available: currentStats.available,
-      total: currentStats.total,
-    }
+      total: currentStats.total }
 
     // Only add if data changed
     const lastPoint = historyRef.current[historyRef.current.length - 1]

@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from 'react'
+import { useEffect } from 'react'
 import { AlertTriangle, Info, AlertCircle, Clock, ChevronRight } from 'lucide-react'
 import { useClusters, type ClusterEvent } from '../../hooks/useMCP'
 import { useCachedWarningEvents, useCachedNamespaces } from '../../hooks/useCachedData'
@@ -36,15 +36,11 @@ const EVENT_SORT_COMPARATORS: Record<SortByOption, (a: ClusterEvent, b: ClusterE
   },
   type: commonComparators.string('type'),
   object: commonComparators.string('object'),
-  count: (a, b) => a.count - b.count,
-}
+  count: (a, b) => a.count - b.count }
 
 export function NamespaceEvents({ config }: NamespaceEventsProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const SORT_OPTIONS = useMemo(() =>
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
-    [t]
-  )
+  const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
   const { isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersFailures } = useClusters()
   const { events: allEvents, isLoading: eventsLoading, isRefreshing: eventsRefreshing, isDemoFallback: eventsDemoFallback, isFailed: eventsFailed, consecutiveFailures: eventsFailures } = useCachedWarningEvents()
   const { drillToEvents } = useDrillDownActions()
@@ -60,8 +56,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
     hasAnyData: hasData,
     isDemoData: eventsDemoFallback || isDemoMode,
     isFailed: clustersFailed || eventsFailed,
-    consecutiveFailures: Math.max(clustersFailures, eventsFailures),
-  })
+    consecutiveFailures: Math.max(clustersFailures, eventsFailures) })
 
   // Use cascading selection hook for cluster -> namespace
   const {
@@ -69,10 +64,8 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
     setSelectedFirst: setSelectedCluster,
     selectedSecond: selectedNamespace,
     setSelectedSecond: setSelectedNamespace,
-    availableFirstLevel: clusters,
-  } = useCascadingSelection({
-    storageKey: 'namespace-events',
-  })
+    availableFirstLevel: clusters } = useCascadingSelection({
+    storageKey: 'namespace-events' })
 
   // Apply config overrides (e.g., from drill-down navigation)
   useEffect(() => {
@@ -90,7 +83,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
   const { namespaces } = useCachedNamespaces(selectedCluster || undefined)
 
   // Pre-filter by selected cluster/namespace (card-specific cascading selection)
-  const preFilteredEvents = useMemo(() => {
+  const preFilteredEvents = (() => {
     let events = allEvents
     if (selectedCluster) {
       events = events.filter(e => e.cluster === selectedCluster)
@@ -99,7 +92,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
       events = events.filter(e => e.namespace === selectedNamespace)
     }
     return events
-  }, [allEvents, selectedCluster, selectedNamespace])
+  })()
 
   // useCardData for search/cluster filter/sort/pagination
   const {
@@ -120,29 +113,23 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
       availableClusters: availableClustersForFilter,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-    },
+      clusterFilterRef },
     sorting: {
       sortBy,
       setSortBy,
       sortDirection,
-      setSortDirection,
-    },
+      setSortDirection },
     containerRef,
-    containerStyle,
-  } = useCardData<ClusterEvent, SortByOption>(preFilteredEvents, {
+    containerStyle } = useCardData<ClusterEvent, SortByOption>(preFilteredEvents, {
     filter: {
       searchFields: ['message', 'object', 'namespace', 'type', 'reason'],
       clusterField: 'cluster',
-      storageKey: 'namespace-events',
-    },
+      storageKey: 'namespace-events' },
     sort: {
       defaultField: 'time',
       defaultDirection: 'desc',
-      comparators: EVENT_SORT_COMPARATORS,
-    },
-    defaultLimit: 5,
-  })
+      comparators: EVENT_SORT_COMPARATORS },
+    defaultLimit: 5 })
 
   const getEventIcon = (type: string) => {
     if (type === 'Warning') return AlertTriangle
@@ -194,8 +181,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
         <CardControlsRow
           clusterIndicator={{
             selectedCount: localClusterFilter.length,
-            totalCount: availableClustersForFilter.length,
-          }}
+            totalCount: availableClustersForFilter.length }}
           clusterFilter={{
             availableClusters: availableClustersForFilter,
             selectedClusters: localClusterFilter,
@@ -204,8 +190,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
             isOpen: showClusterFilter,
             setIsOpen: setShowClusterFilter,
             containerRef: clusterFilterRef,
-            minClusters: 1,
-          }}
+            minClusters: 1 }}
           cardControls={{
             limit: itemsPerPage,
             onLimitChange: setItemsPerPage,
@@ -213,8 +198,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
             sortOptions: SORT_OPTIONS,
             onSortChange: (v) => setSortBy(v as SortByOption),
             sortDirection,
-            onSortDirectionChange: setSortDirection,
-          }}
+            onSortDirectionChange: setSortDirection }}
         />
       </div>
 

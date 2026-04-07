@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState } from 'react'
 import { Package, RefreshCw, Loader2, AlertTriangle, Search } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
@@ -15,8 +15,7 @@ import type {
   MonitorViewMode,
   ResourceCategory,
   ResourceHealthStatus,
-  WorkloadMonitorConfig,
-} from '../../../types/workloadMonitor'
+  WorkloadMonitorConfig } from '../../../types/workloadMonitor'
 import { WorkloadMonitorToolbar } from './WorkloadMonitorToolbar'
 import { WorkloadMonitorTree } from './WorkloadMonitorTree'
 import { WorkloadMonitorList } from './WorkloadMonitorList'
@@ -55,18 +54,17 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
     hasAnyData: hasData,
     isDemoData: isDemoMode || nsDemoFallback,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
   const isPreConfigured = !!(monitorConfig?.cluster && monitorConfig?.namespace && monitorConfig?.workload)
   const activeCluster = isPreConfigured ? monitorConfig!.cluster! : selectedCluster
   const activeNamespace = isPreConfigured ? monitorConfig!.namespace! : selectedNamespace
   const activeWorkload = isPreConfigured ? monitorConfig!.workload! : selectedWorkload
   const hasSelection = !!selectedCluster && !!selectedNamespace
-  const workloadOpts = useMemo(() => {
+  const workloadOpts = (() => {
     if (!selectedCluster || !selectedNamespace) return undefined
     return { cluster: selectedCluster, namespace: selectedNamespace }
-  }, [selectedCluster, selectedNamespace])
+  })()
   const { data: workloads, isLoading: wlLoading } = useWorkloads(workloadOpts, hasSelection)
 
   // Monitor data
@@ -78,10 +76,8 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
     isLoading,
     isRefreshing,
     error,
-    refetch,
-  } = useWorkloadMonitor(activeCluster, activeNamespace, activeWorkload, {
-    autoRefreshMs: monitorConfig?.autoRefreshMs,
-  })
+    refetch } = useWorkloadMonitor(activeCluster, activeNamespace, activeWorkload, {
+    autoRefreshMs: monitorConfig?.autoRefreshMs })
 
   // View mode and filters
   const [viewMode, setViewMode] = useState<MonitorViewMode>('tree')
@@ -89,7 +85,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
   const [statusFilter, setStatusFilter] = useState<ResourceHealthStatus | 'all'>('all')
 
   // Pre-filter by category and status before useCardData
-  const preFiltered = useMemo(() => {
+  const preFiltered = (() => {
     let filtered = resources
     if (categoryFilter !== 'all') {
       filtered = filtered.filter(r => r.category === categoryFilter)
@@ -98,7 +94,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
       filtered = filtered.filter(r => r.status === statusFilter)
     }
     return filtered
-  }, [resources, categoryFilter, statusFilter])
+  })()
 
   const {
     items,
@@ -112,11 +108,9 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
     filters,
     sorting,
     containerRef,
-    containerStyle,
-  } = useCardData<MonitoredResource, SortField>(preFiltered, {
+    containerStyle } = useCardData<MonitoredResource, SortField>(preFiltered, {
     filter: {
-      searchFields: ['name', 'kind', 'status', 'category', 'message'] as (keyof MonitoredResource)[],
-    },
+      searchFields: ['name', 'kind', 'status', 'category', 'message'] as (keyof MonitoredResource)[] },
     sort: {
       defaultField: 'status',
       defaultDirection: 'asc' as SortDirection,
@@ -125,34 +119,31 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
         kind: commonComparators.string<MonitoredResource>('kind'),
         status: (a, b) => (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3),
         category: commonComparators.string<MonitoredResource>('category'),
-        order: (a, b) => a.order - b.order,
-      },
-    },
-    defaultLimit: 10,
-  })
+        order: (a, b) => a.order - b.order } },
+    defaultLimit: 10 })
 
   // Handlers for selectors
-  const handleClusterChange = useCallback((cluster: string) => {
+  const handleClusterChange = (cluster: string) => {
     setSelectedCluster(cluster)
     setSelectedNamespace('')
     setSelectedWorkload('')
-  }, [])
+  }
 
-  const handleNamespaceChange = useCallback((ns: string) => {
+  const handleNamespaceChange = (ns: string) => {
     setSelectedNamespace(ns)
     setSelectedWorkload('')
-  }, [])
+  }
 
-  const handleWorkloadChange = useCallback((name: string) => {
+  const handleWorkloadChange = (name: string) => {
     setSelectedWorkload(name)
-  }, [])
+  }
 
-  const handleResourceClick = useCallback((_resource: MonitoredResource) => {
+  const handleResourceClick = (_resource: MonitoredResource) => {
     // DrillDown integration will be added in Phase 3
     // For now, this is a placeholder for click-through navigation
-  }, [])
+  }
 
-  const clusterNames = useMemo(() => clusters.map(c => c.name).sort(), [clusters])
+  const clusterNames = clusters.map(c => c.name).sort()
 
   // Loading state
   if (isLoading && !resources.length) {
@@ -170,8 +161,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
     healthy: 'bg-green-500/20 text-green-400',
     degraded: 'bg-yellow-500/20 text-yellow-400',
     unhealthy: 'bg-red-500/20 text-red-400',
-    unknown: 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground',
-  }
+    unknown: 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground' }
 
   return (
     <div className="h-full flex flex-col min-h-card">
@@ -335,8 +325,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
               namespace: activeNamespace,
               workload: activeWorkload,
               workloadKind,
-              overallStatus,
-            }}
+              overallStatus }}
           />
         </>
       )}

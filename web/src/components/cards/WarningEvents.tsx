@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { AlertTriangle, CheckCircle2, AlertCircle } from 'lucide-react'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -43,11 +42,10 @@ export function WarningEvents() {
     refetch,
     isFailed,
     consecutiveFailures,
-    lastRefresh,
-  } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
+    lastRefresh } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
 
   // Pre-filter to only warning events before passing to useCardData
-  const warningOnly = useMemo(() => events.filter(e => e.type === 'Warning'), [events])
+  const warningOnly = events.filter(e => e.type === 'Warning')
 
   // Report data state to CardWrapper for failure badge rendering
   const hasData = events.length > 0
@@ -57,8 +55,7 @@ export function WarningEvents() {
     isDemoData: isDemoFallback,
     hasAnyData: hasData,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
   const {
     items: displayedEvents,
@@ -78,17 +75,14 @@ export function WarningEvents() {
       availableClusters,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-    },
+      clusterFilterRef },
     sorting,
     containerRef,
-    containerStyle,
-  } = useCardData<ClusterEvent, SortByOption>(warningOnly, {
+    containerStyle } = useCardData<ClusterEvent, SortByOption>(warningOnly, {
     filter: {
       searchFields: ['reason', 'message', 'object', 'namespace'],
       clusterField: 'cluster',
-      storageKey: 'warning-events',
-    },
+      storageKey: 'warning-events' },
     sort: {
       defaultField: 'time',
       defaultDirection: 'desc',
@@ -99,11 +93,8 @@ export function WarningEvents() {
           return aTime - bTime
         },
         count: commonComparators.number<ClusterEvent>('count'),
-        reason: commonComparators.string<ClusterEvent>('reason'),
-      },
-    },
-    defaultLimit: 5,
-  })
+        reason: commonComparators.string<ClusterEvent>('reason') } },
+    defaultLimit: 5 })
 
   if (showSkeleton) {
     return <CardSkeleton type="list" rows={3} showHeader showSearch />
@@ -134,8 +125,7 @@ export function WarningEvents() {
               onClear: clearClusterFilter,
               isOpen: showClusterFilter,
               setIsOpen: setShowClusterFilter,
-              containerRef: clusterFilterRef,
-            }}
+              containerRef: clusterFilterRef }}
             cardControls={{
               limit: itemsPerPage,
               onLimitChange: setItemsPerPage,
@@ -143,8 +133,7 @@ export function WarningEvents() {
               sortOptions: SORT_OPTIONS,
               onSortChange: (v) => sorting.setSortBy(v as SortByOption),
               sortDirection: sorting.sortDirection,
-              onSortDirectionChange: sorting.setSortDirection,
-            }}
+              onSortDirectionChange: sorting.setSortDirection }}
           />
           <RefreshButton
             isRefreshing={isRefreshing}

@@ -20,6 +20,10 @@ import (
 // execAuthDeadline is how long the client has to send an auth message after connecting.
 const execAuthDeadline = 5 * time.Second
 
+// execMaxStdinBytes is the maximum allowed size of a single stdin message.
+// Messages exceeding this limit are silently dropped to prevent memory exhaustion.
+const execMaxStdinBytes = 1 * 1024 * 1024 // 1 MB
+
 // ExecHandlers handles pod exec API endpoints
 type ExecHandlers struct {
 	k8sClient *k8s.MultiClusterClient
@@ -294,6 +298,10 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 
 			switch m.Type {
 			case "stdin":
+				if len(m.Data) > execMaxStdinBytes {
+					slog.Warn("[Exec] dropping oversized stdin message", "bytes", len(m.Data), "limit", execMaxStdinBytes)
+					continue
+				}
 				select {
 				case stdinCh <- []byte(m.Data):
 				default:

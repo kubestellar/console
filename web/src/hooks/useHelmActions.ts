@@ -5,7 +5,7 @@
  * via the backend API endpoints.
  */
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 // ============================================================================
@@ -61,7 +61,7 @@ export function useHelmActions(): UseHelmActionsResult {
   const [error, setError] = useState<string | null>(null)
   const [lastResult, setLastResult] = useState<HelmActionResult | null>(null)
 
-  const executeAction = useCallback(async (
+  const executeAction = async (
     endpoint: string,
     body: HelmRollbackParams | HelmUninstallParams | HelmUpgradeParams,
   ): Promise<HelmActionResult> => {
@@ -73,8 +73,7 @@ export function useHelmActions(): UseHelmActionsResult {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
       const data = await response.json()
 
@@ -82,8 +81,7 @@ export function useHelmActions(): UseHelmActionsResult {
         const result: HelmActionResult = {
           success: false,
           message: data.error || 'Operation failed',
-          detail: data.detail,
-        }
+          detail: data.detail }
         setError(result.message)
         setLastResult(result)
         return result
@@ -92,34 +90,32 @@ export function useHelmActions(): UseHelmActionsResult {
       const result: HelmActionResult = {
         success: true,
         message: data.message || 'Operation completed',
-        output: data.output,
-      }
+        output: data.output }
       setLastResult(result)
       return result
     } catch (err) {
       const result: HelmActionResult = {
         success: false,
-        message: err instanceof Error ? err.message : 'Network error',
-      }
+        message: err instanceof Error ? err.message : 'Network error' }
       setError(result.message)
       setLastResult(result)
       return result
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }
 
-  const rollback = useCallback(async (params: HelmRollbackParams) => {
+  const rollback = async (params: HelmRollbackParams) => {
     return executeAction('/api/gitops/helm-rollback', params)
-  }, [executeAction])
+  }
 
-  const uninstall = useCallback(async (params: HelmUninstallParams) => {
+  const uninstall = async (params: HelmUninstallParams) => {
     return executeAction('/api/gitops/helm-uninstall', params)
-  }, [executeAction])
+  }
 
-  const upgrade = useCallback(async (params: HelmUpgradeParams) => {
+  const upgrade = async (params: HelmUpgradeParams) => {
     return executeAction('/api/gitops/helm-upgrade', params)
-  }, [executeAction])
+  }
 
   return {
     rollback,
@@ -127,6 +123,5 @@ export function useHelmActions(): UseHelmActionsResult {
     upgrade,
     isLoading,
     error,
-    lastResult,
-  }
+    lastResult }
 }

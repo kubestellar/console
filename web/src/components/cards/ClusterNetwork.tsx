@@ -23,17 +23,15 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: allClusters.length > 0,
-    isDemoData: isDemoMode,
-  })
+    isDemoData: isDemoMode })
 
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
-    customFilter,
-  } = useGlobalFilters()
+    customFilter } = useGlobalFilters()
 
   // Apply global filters
-  const clusters = useMemo(() => {
+  const clusters = (() => {
     let result = allClusters
 
     if (!isAllClustersSelected) {
@@ -49,11 +47,9 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
     }
 
     return result
-  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
+  })()
 
-  const cluster = useMemo(() => {
-    return clusters.find(c => c.name === selectedCluster)
-  }, [clusters, selectedCluster])
+  const cluster = clusters.find(c => c.name === selectedCluster)
 
   // Parse server URL for display
   const serverInfo = useMemo(() => {
@@ -63,8 +59,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
       return {
         host: url.hostname,
         port: url.port || '443',
-        protocol: url.protocol.replace(':', ''),
-      }
+        protocol: url.protocol.replace(':', '') }
     } catch {
       return { host: cluster.server, port: '443', protocol: 'https' }
     }

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Users, Key, Lock, ChevronRight, AlertCircle } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedNamespaces, useCachedK8sRoles, useCachedK8sRoleBindings, useCachedK8sServiceAccounts } from '../../hooks/useCachedData'
@@ -39,10 +39,7 @@ const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTran
 
 function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const SORT_OPTIONS = useMemo(() =>
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
-    [t]
-  )
+  const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
   const { deduplicatedClusters: clusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, error } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToRBAC } = useDrillDownActions()
@@ -87,10 +84,10 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   }, [isDemoData, selectedCluster, namespaces, selectedNamespace])
 
   // Filter clusters based on global filter
-  const filteredClusters = useMemo(() => {
+  const filteredClusters = (() => {
     if (isAllClustersSelected) return clusters
     return clusters.filter(c => selectedClusters.includes(c.name))
-  }, [clusters, selectedClusters, isAllClustersSelected])
+  })()
 
   // Check if we're loading initial data or fetching RBAC data
   const isInitialLoading = clustersLoading
@@ -101,11 +98,10 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
     isLoading: isInitialLoading || !!isFetchingRBAC,
     isRefreshing,
     hasAnyData: clusters.length > 0 || k8sRoles.length > 0 || k8sBindings.length > 0 || k8sServiceAccounts.length > 0,
-    isDemoData,
-  })
+    isDemoData })
 
   // Transform raw RBAC data into RBACItem arrays (no filtering/sorting — that's handled by useCardData)
-  const rbacRoles: RBACItem[] = useMemo(() => {
+  const rbacRoles: RBACItem[] = (() => {
     if (!selectedCluster || !selectedNamespace) return []
     return k8sRoles
       .filter(r => !r.namespace || r.namespace === selectedNamespace)
@@ -113,11 +109,10 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
         name: r.name,
         type: 'Role' as const,
         rules: r.ruleCount,
-        cluster: r.cluster,
-      }))
-  }, [selectedCluster, selectedNamespace, k8sRoles])
+        cluster: r.cluster }))
+  })()
 
-  const rbacBindings: RBACItem[] = useMemo(() => {
+  const rbacBindings: RBACItem[] = (() => {
     if (!selectedCluster || !selectedNamespace) return []
     return k8sBindings
       .filter(b => !b.namespace || b.namespace === selectedNamespace)
@@ -125,20 +120,18 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
         name: b.name,
         type: 'RoleBinding' as const,
         subjects: b.subjects.map(s => s.name),
-        cluster: b.cluster,
-      }))
-  }, [selectedCluster, selectedNamespace, k8sBindings])
+        cluster: b.cluster }))
+  })()
 
-  const rbacServiceAccounts: RBACItem[] = useMemo(() => {
+  const rbacServiceAccounts: RBACItem[] = (() => {
     if (!selectedCluster || !selectedNamespace) return []
     return k8sServiceAccounts
       .filter(sa => sa.namespace === selectedNamespace)
       .map(sa => ({
         name: sa.name,
         type: 'ServiceAccount' as const,
-        cluster: sa.cluster,
-      }))
-  }, [selectedCluster, selectedNamespace, k8sServiceAccounts])
+        cluster: sa.cluster }))
+  })()
 
   // Select the active tab's data
   const activeTabItems = activeTab === 'roles'
@@ -160,24 +153,19 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
     filters,
     sorting,
     containerRef,
-    containerStyle,
-  } = useCardData<RBACItem, SortByOption>(activeTabItems, {
+    containerStyle } = useCardData<RBACItem, SortByOption>(activeTabItems, {
     filter: {
       searchFields: ['name'] as (keyof RBACItem)[],
       storageKey: 'namespace-rbac',
       customPredicate: (item, query) =>
-        (item.subjects || []).some(s => s.toLowerCase().includes(query)),
-    },
+        (item.subjects || []).some(s => s.toLowerCase().includes(query)) },
     sort: {
       defaultField: 'name',
       defaultDirection: 'asc',
       comparators: {
         name: commonComparators.string<RBACItem>('name'),
-        rules: commonComparators.number<RBACItem>('rules'),
-      },
-    },
-    defaultLimit: 5,
-  })
+        rules: commonComparators.number<RBACItem>('rules') } },
+    defaultLimit: 5 })
 
   const tabs = [
     { key: 'roles' as const, label: t('namespaceRBAC.roles'), icon: Key, count: rbacRoles.length },
@@ -227,8 +215,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
         <CardControlsRow
           clusterIndicator={{
             selectedCount: filters.localClusterFilter.length,
-            totalCount: filters.availableClusters.length,
-          }}
+            totalCount: filters.availableClusters.length }}
           clusterFilter={{
             availableClusters: filters.availableClusters,
             selectedClusters: filters.localClusterFilter,
@@ -236,8 +223,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
             onClear: filters.clearClusterFilter,
             isOpen: filters.showClusterFilter,
             setIsOpen: filters.setShowClusterFilter,
-            containerRef: filters.clusterFilterRef,
-          }}
+            containerRef: filters.clusterFilterRef }}
           cardControls={{
             limit: itemsPerPage,
             onLimitChange: setItemsPerPage,
@@ -245,8 +231,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
             sortOptions: SORT_OPTIONS,
             onSortChange: (v) => sorting.setSortBy(v as SortByOption),
             sortDirection: sorting.sortDirection,
-            onSortDirectionChange: sorting.setSortDirection,
-          }}
+            onSortDirectionChange: sorting.setSortDirection }}
           className="mb-0"
         />
       </div>
@@ -352,8 +337,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
                   onClick={() => drillToRBAC(selectedCluster, selectedNamespace, item.name, {
                     type: item.type,
                     rules: item.rules,
-                    subjects: item.subjects,
-                  })}
+                    subjects: item.subjects })}
                   className={`p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors group ${isFetchingRBAC ? 'opacity-50' : ''}`}
                 >
                   <div className="flex items-center justify-between">

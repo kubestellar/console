@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Box, ChevronRight, Server } from 'lucide-react'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
@@ -52,7 +51,7 @@ export function GPUNodeDrillDown({ data }: Props) {
 
   // Find GPU pods on this node
   const { pods: allPods } = useAllPods()
-  const gpuPodsOnNode = useMemo(() => {
+  const gpuPodsOnNode = (() => {
     const normalizedCluster = normalizeClusterName(cluster)
     return (allPods || []).filter(pod => {
       if (!pod.cluster || !pod.node) return false
@@ -60,7 +59,7 @@ export function GPUNodeDrillDown({ data }: Props) {
       if (pod.node !== nodeName) return false
       return hasGPUResourceRequest(pod.containers)
     })
-  }, [allPods, cluster, nodeName])
+  })()
 
   return (
     <div className="space-y-6">

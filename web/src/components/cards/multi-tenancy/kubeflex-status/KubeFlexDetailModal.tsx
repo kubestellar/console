@@ -7,7 +7,7 @@
  * Follows the TrivyDetailModal pattern using BaseModal compound components.
  */
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Layers, Search, ExternalLink, CheckCircle, XCircle, Server } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { BaseModal } from '../../../../lib/modals'
@@ -76,11 +76,11 @@ export function KubeFlexDetailModal({ isOpen, onClose, data, isDemoData }: KubeF
   const unhealthyCPs = controlPlanes.length - healthyCPs
 
   // Filter control planes by search
-  const filteredCPs = useMemo(() => {
+  const filteredCPs = (() => {
     if (!search.trim()) return controlPlanes
     const q = search.toLowerCase()
     return controlPlanes.filter((cp) => cp.name.toLowerCase().includes(q))
-  }, [controlPlanes, search])
+  })()
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false} className={isDemoData ? 'ring-2 ring-yellow-500/60 shadow-[0_0_20px_rgba(234,179,8,0.25)]' : ''}>

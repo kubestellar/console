@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { CheckCircle, WifiOff, Cpu, Loader2, ExternalLink, AlertTriangle, KeyRound } from 'lucide-react'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useClusters, ClusterInfo } from '../../hooks/useMCP'
@@ -75,8 +75,7 @@ const CLUSTER_SORT_COMPARATORS = {
   },
   name: commonComparators.string<ClusterInfo>('name'),
   nodes: (a: ClusterInfo, b: ClusterInfo) => (b.nodeCount || 0) - (a.nodeCount || 0),
-  pods: (a: ClusterInfo, b: ClusterInfo) => (b.podCount || 0) - (a.podCount || 0),
-}
+  pods: (a: ClusterInfo, b: ClusterInfo) => (b.podCount || 0) - (a.podCount || 0) }
 
 
 export function ClusterHealth() {
@@ -86,8 +85,7 @@ export function ClusterHealth() {
     isLoading: isLoadingHook,
     isRefreshing,
     error,
-    lastRefresh,
-  } = useClusters()
+    lastRefresh } = useClusters()
   const { nodes: gpuNodes, isDemoFallback, isRefreshing: gpuRefreshing } = useCachedGPUNodes()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { isMobile } = useMobile()
@@ -113,29 +111,23 @@ export function ClusterHealth() {
       availableClusters,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-    },
+      clusterFilterRef },
     sorting: {
       sortBy,
       setSortBy,
       sortDirection,
-      setSortDirection,
-    },
+      setSortDirection },
     containerRef,
-    containerStyle,
-  } = useCardData<ClusterInfo, SortByOption>(rawClusters, {
+    containerStyle } = useCardData<ClusterInfo, SortByOption>(rawClusters, {
     filter: {
       searchFields: ['name', 'context', 'server'],
       clusterField: 'name',
-      storageKey: 'cluster-health',
-    },
+      storageKey: 'cluster-health' },
     sort: {
       defaultField: 'status',
       defaultDirection: 'asc',
-      comparators: CLUSTER_SORT_COMPARATORS,
-    },
-    defaultLimit: 'unlimited',
-  })
+      comparators: CLUSTER_SORT_COMPARATORS },
+    defaultLimit: 'unlimited' })
 
   // Report state to CardWrapper for refresh animation
   // Show skeleton if loading OR if we haven't completed the initial fetch yet
@@ -147,19 +139,18 @@ export function ClusterHealth() {
     hasAnyData: hasData,
     isFailed: !!error && !hasData,
     consecutiveFailures: error ? 1 : 0,
-    isDemoData: isDemoMode || isDemoFallback,
-  })
+    isDemoData: isDemoMode || isDemoFallback })
   const isLoading = showSkeleton
 
   // Calculate GPU counts per cluster
-  const gpuByCluster = useMemo(() => {
+  const gpuByCluster = (() => {
     const map: Record<string, number> = {}
     gpuNodes.forEach(node => {
       const clusterKey = node.cluster.split('/')[0]
       map[clusterKey] = (map[clusterKey] || 0) + node.gpuCount
     })
     return map
-  }, [gpuNodes])
+  })()
 
   // Stats based on globally filtered clusters (not affected by local search/cluster filter)
   const filteredForStats = isAllClustersSelected
@@ -250,8 +241,7 @@ export function ClusterHealth() {
             isOpen: showClusterFilter,
             setIsOpen: setShowClusterFilter,
             containerRef: clusterFilterRef,
-            minClusters: 1,
-          }}
+            minClusters: 1 }}
           cardControls={{
             limit: itemsPerPage,
             onLimitChange: setItemsPerPage,
@@ -259,8 +249,7 @@ export function ClusterHealth() {
             sortOptions: SORT_OPTIONS,
             onSortChange: (v) => setSortBy(v as SortByOption),
             sortDirection,
-            onSortDirectionChange: setSortDirection,
-          }}
+            onSortDirectionChange: setSortDirection }}
           className="mb-0"
         />
       </div>
@@ -397,12 +386,10 @@ export function ClusterHealth() {
                     resource={{
                       kind: 'Cluster',
                       name: cluster.name,
-                      status: clusterTokenExpired ? 'TokenExpired' : clusterUnreachable ? 'Unreachable' : 'Unhealthy',
-                    }}
+                      status: clusterTokenExpired ? 'TokenExpired' : clusterUnreachable ? 'Unreachable' : 'Unhealthy' }}
                     issues={[{
                       name: clusterTokenExpired ? 'Auth Error' : clusterUnreachable ? 'Unreachable' : 'Unhealthy',
-                      message: cluster.errorMessage || (clusterTokenExpired ? 'Token expired' : 'Cluster health check failed'),
-                    }]}
+                      message: cluster.errorMessage || (clusterTokenExpired ? 'Token expired' : 'Cluster health check failed') }]}
                     additionalContext={{ nodeCount: cluster.nodeCount, podCount: cluster.podCount, server: cluster.server }}
                   />
                 )}

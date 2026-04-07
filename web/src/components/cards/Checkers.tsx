@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Box, Server, Crown, RotateCcw, Trophy, Play, Loader2 } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
@@ -36,8 +36,7 @@ type Difficulty = 'easy' | 'medium' | 'hard'
 const DIFFICULTY_DEPTH: Record<Difficulty, number> = {
   easy: 1,
   medium: 2,
-  hard: 3,
-}
+  hard: 3 }
 
 // Pirate jokes for the AI to say while waiting
 const PIRATE_TAUNTS = [
@@ -141,8 +140,7 @@ function getValidMoves(board: Board, pos: Position, mustJump: boolean = false): 
             from: pos,
             to: { row: jumpRow, col: jumpCol },
             captures: [{ row: midRow, col: midCol }],
-            isJump: true,
-          })
+            isJump: true })
         }
       }
     }
@@ -165,8 +163,7 @@ function getValidMoves(board: Board, pos: Position, mustJump: boolean = false): 
             from: pos,
             to: { row: newRow, col: newCol },
             captures: [],
-            isJump: false,
-          })
+            isJump: false })
         }
       }
     }
@@ -361,8 +358,7 @@ function minimax(
 function PieceComponent({
   piece,
   isSelected,
-  isSmall,
-}: {
+  isSmall }: {
   piece: Piece
   isSelected: boolean
   isSmall: boolean
@@ -487,8 +483,7 @@ export function Checkers(_props: CardComponentProps) {
         currentPlayer,
         difficulty,
         moveCount,
-        gameOver,
-      })
+        gameOver })
     }
   }, [board, currentPlayer, difficulty, moveCount, gameOver])
 
@@ -598,7 +593,7 @@ export function Checkers(_props: CardComponentProps) {
   }, [currentPlayer, gameOver]) // Only trigger on player change or game over
 
   // Handle cell click
-  const handleCellClick = useCallback((row: number, col: number) => {
+  const handleCellClick = (row: number, col: number) => {
     if (currentPlayer !== 'pods' || gameOver || isThinking) return
 
     const piece = board[row][col]
@@ -680,10 +675,10 @@ export function Checkers(_props: CardComponentProps) {
         setValidMoves([])
       }
     }
-  }, [board, currentPlayer, selectedPos, validMoves, gameOver, isThinking, mustContinueJump])
+  }
 
   // New game
-  const newGame = useCallback(() => {
+  const newGame = () => {
     setBoard(createInitialBoard())
     setCurrentPlayer('pods')
     setSelectedPos(null)
@@ -693,7 +688,7 @@ export function Checkers(_props: CardComponentProps) {
     setMoveCount(0)
     setIsThinking(false)
     emitGameStarted('checkers')
-  }, [])
+  }
 
   const isSmall = !isExpanded
   const cellSize = isSmall ? 'w-7 h-7' : 'w-12 h-12'

@@ -43,8 +43,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
     isRefreshing,
     isFailed,
     consecutiveFailures,
-    lastRefresh,
-  } = useCachedGPUNodes(cluster)
+    lastRefresh } = useCachedGPUNodes(cluster)
   const { drillToCluster } = useDrillDownActions()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
@@ -55,24 +54,23 @@ export function GPUStatus({ config }: GPUStatusProps) {
     isDemoData: isDemoMode || isDemoFallback,
     isFailed,
     consecutiveFailures,
-    lastRefresh,
-  })
+    lastRefresh })
 
   // Card-specific GPU type filter (not handled by useCardData)
   const [selectedGpuType, setSelectedGpuType] = useState<string>('all')
 
   // Get all unique GPU types for filter dropdown
-  const gpuTypes = useMemo(() => {
+  const gpuTypes = (() => {
     const types = new Set<string>()
     rawNodes.forEach(n => types.add(n.gpuType))
     return Array.from(types).sort()
-  }, [rawNodes])
+  })()
 
   // Step 1: Pre-filter nodes by GPU type (card-specific filter)
-  const preFilteredNodes = useMemo(() => {
+  const preFilteredNodes = (() => {
     if (selectedGpuType === 'all') return rawNodes
     return rawNodes.filter(n => n.gpuType.toLowerCase().includes(selectedGpuType.toLowerCase()))
-  }, [rawNodes, selectedGpuType])
+  })()
 
   // Step 2: Aggregate to cluster-level stats
   // Don't apply cluster/search filters here - useCardData handles that
@@ -92,8 +90,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
       total: stats.total,
       used: stats.used,
       types: Array.from(stats.types),
-      utilization: stats.total > 0 ? (stats.used / stats.total) * 100 : 0,
-    }))
+      utilization: stats.total > 0 ? (stats.used / stats.total) * 100 : 0 }))
   }, [preFilteredNodes])
 
   // Step 3: useCardData for search/cluster filter/sort/pagination
@@ -115,33 +112,26 @@ export function GPUStatus({ config }: GPUStatusProps) {
       availableClusters: availableClustersForFilter,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-    },
+      clusterFilterRef },
     sorting: {
       sortBy,
       setSortBy,
       sortDirection,
-      setSortDirection,
-    },
+      setSortDirection },
     containerRef,
-    containerStyle,
-  } = useCardData<ClusterGPUStats, SortByOption>(clusterStatsList, {
+    containerStyle } = useCardData<ClusterGPUStats, SortByOption>(clusterStatsList, {
     filter: {
       searchFields: ['clusterName'],
       clusterField: 'clusterName',
-      storageKey: 'gpu-status',
-    },
+      storageKey: 'gpu-status' },
     sort: {
       defaultField: 'utilization',
       defaultDirection: 'desc',
       comparators: {
         utilization: (a, b) => a.utilization - b.utilization,
         cluster: commonComparators.string('clusterName'),
-        gpuCount: (a, b) => a.total - b.total,
-      },
-    },
-    defaultLimit: 5,
-  })
+        gpuCount: (a, b) => a.total - b.total } },
+    defaultLimit: 5 })
 
   if (showSkeleton) {
     return (
@@ -194,8 +184,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
         <CardControlsRow
           clusterIndicator={{
             selectedCount: localClusterFilter.length,
-            totalCount: availableClustersForFilter.length,
-          }}
+            totalCount: availableClustersForFilter.length }}
           clusterFilter={{
             availableClusters: availableClustersForFilter,
             selectedClusters: localClusterFilter,
@@ -204,8 +193,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
             isOpen: showClusterFilter,
             setIsOpen: setShowClusterFilter,
             containerRef: clusterFilterRef,
-            minClusters: 1,
-          }}
+            minClusters: 1 }}
           cardControls={{
             limit: itemsPerPage,
             onLimitChange: setItemsPerPage,
@@ -213,8 +201,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
             sortOptions: SORT_OPTIONS,
             onSortChange: (v) => setSortBy(v as SortByOption),
             sortDirection,
-            onSortDirectionChange: setSortDirection,
-          }}
+            onSortDirectionChange: setSortDirection }}
         />
       </div>
 
@@ -249,8 +236,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
               gpuTypes: stats.types,
               totalGPUs: stats.total,
               usedGPUs: stats.used,
-              gpuUtilization: stats.utilization,
-            })}
+              gpuUtilization: stats.utilization })}
             className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
           >
             <div className="flex items-center justify-between mb-2 gap-2 min-w-0">

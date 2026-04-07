@@ -6,7 +6,7 @@
  * Replaces raw JSON with structured, copy-pasteable content.
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   ArrowLeft,
   Download,
@@ -24,8 +24,7 @@ import {
   ExternalLink,
   Shield,
   MessageSquarePlus,
-  Link,
-} from 'lucide-react'
+  Link } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { StatusBadge } from '../ui/StatusBadge'
 import type { MissionExport, MissionStep } from '../../lib/missions/types'
@@ -105,13 +104,13 @@ function CopyButton({ text }: { text: string }) {
     }
   }, [])
 
-  const handleCopy = useCallback(() => {
+  const handleCopy = () => {
     copyToClipboard(text).then(() => {
       setCopied(true)
       if (copiedTimeoutRef.current !== null) clearTimeout(copiedTimeoutRef.current)
       copiedTimeoutRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
     }).catch(() => { /* clipboard access may be denied in non-HTTPS contexts */ })
-  }, [text])
+  }
 
   return (
     <button
@@ -210,8 +209,7 @@ export function MissionDetailView({
   shareUrl,
   loading = false,
   error = null,
-  onRetry,
-}: MissionDetailViewProps) {
+  onRetry }: MissionDetailViewProps) {
   const [linkCopied, setLinkCopied] = useState(false)
   const linkCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -227,32 +225,28 @@ export function MissionDetailView({
       icon: Download,
       steps: mission.steps || [],
       emptyMessage: 'No install steps available.',
-      color: 'bg-green-500/20 text-green-400',
-    },
+      color: 'bg-green-500/20 text-green-400' },
     {
       id: 'uninstall',
       label: 'Uninstall',
       icon: Trash2,
       steps: mission.uninstall || [],
       emptyMessage: 'Uninstall steps not yet available for this mission.',
-      color: 'bg-red-500/20 text-red-400',
-    },
+      color: 'bg-red-500/20 text-red-400' },
     {
       id: 'upgrade',
       label: 'Update / Upgrade',
       icon: ArrowUpCircle,
       steps: mission.upgrade || [],
       emptyMessage: 'Upgrade steps not yet available for this mission.',
-      color: 'bg-blue-500/20 text-blue-400',
-    },
+      color: 'bg-blue-500/20 text-blue-400' },
     {
       id: 'troubleshooting',
       label: 'Troubleshooting',
       icon: Wrench,
       steps: mission.troubleshooting || [],
       emptyMessage: 'Troubleshooting steps not yet available for this mission.',
-      color: 'bg-yellow-500/20 text-yellow-400',
-    },
+      color: 'bg-yellow-500/20 text-yellow-400' },
   ]
 
   const [activeTab, setActiveTab] = useState<TabId>('install')
@@ -264,8 +258,7 @@ export function MissionDetailView({
     upgrade: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
     analyze: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
     repair: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
-    custom: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-  }
+    custom: 'bg-purple-500/10 text-purple-400 border-purple-500/20' }
 
   const qualityScore = mission.metadata?.qualityScore
   const maturity = mission.metadata?.maturity

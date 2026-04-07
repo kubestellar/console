@@ -1,9 +1,8 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   X, Plus, Code, Layers, Wand2, Eye, Save, Sparkles,
-  AlertTriangle, CheckCircle, Loader2, Trash2, LayoutTemplate,
-} from 'lucide-react'
+  AlertTriangle, CheckCircle, Loader2, Trash2, LayoutTemplate } from 'lucide-react'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { cn } from '../../lib/cn'
 import { saveDynamicCard, deleteDynamicCard, getAllDynamicCards } from '../../lib/dynamic-cards'
@@ -11,8 +10,7 @@ import { compileCardCode, createCardComponent } from '../../lib/dynamic-cards/co
 import type {
   DynamicCardDefinition,
   DynamicCardDefinition_T1,
-  DynamicCardColumn,
-} from '../../lib/dynamic-cards/types'
+  DynamicCardColumn } from '../../lib/dynamic-cards/types'
 import { registerDynamicCardType } from '../cards/cardRegistry'
 import { AiGenerationPanel } from './AiGenerationPanel'
 import { LivePreviewPanel } from './LivePreviewPanel'
@@ -87,8 +85,7 @@ const T1_TEMPLATES: T1Template[] = [
       { name: 'cache-1', namespace: 'default', status: 'Pending', restarts: 0 },
       { name: 'scheduler-3', namespace: 'kube-system', status: 'Running', restarts: 1 },
       { name: 'ingress-5', namespace: 'ingress-nginx', status: 'Failed', restarts: 8 },
-    ],
-  },
+    ] },
   {
     name: 'Deployment Health',
     title: 'Deployment Health',
@@ -106,8 +103,7 @@ const T1_TEMPLATES: T1Template[] = [
       { name: 'auth-service', replicas: 2, available: 2, status: 'Healthy' },
       { name: 'worker-pool', replicas: 5, available: 3, status: 'Degraded' },
       { name: 'cache-layer', replicas: 2, available: 0, status: 'Critical' },
-    ],
-  },
+    ] },
   {
     name: 'Node Resources',
     title: 'Node Resources',
@@ -125,8 +121,7 @@ const T1_TEMPLATES: T1Template[] = [
       { node: 'worker-2', cpu: '72%', memory: '5.8Gi / 8Gi', status: 'Ready' },
       { node: 'worker-3', cpu: '18%', memory: '1.1Gi / 4Gi', status: 'Ready' },
       { node: 'control-1', cpu: '31%', memory: '2.4Gi / 16Gi', status: 'Ready' },
-    ],
-  },
+    ] },
   {
     name: 'Service Status',
     title: 'Service Status',
@@ -143,8 +138,7 @@ const T1_TEMPLATES: T1Template[] = [
       { name: 'api-gateway', type: 'LoadBalancer', port: 443, namespace: 'default' },
       { name: 'auth-service', type: 'ClusterIP', port: 8080, namespace: 'default' },
       { name: 'monitoring', type: 'NodePort', port: 9090, namespace: 'monitoring' },
-    ],
-  },
+    ] },
   {
     name: 'Namespace Summary',
     title: 'Namespace Summary',
@@ -162,8 +156,7 @@ const T1_TEMPLATES: T1Template[] = [
       { namespace: 'production', pods: 45, deployments: 12, services: 8 },
       { namespace: 'monitoring', pods: 8, deployments: 3, services: 5 },
       { namespace: 'kube-system', pods: 15, deployments: 6, services: 4 },
-    ],
-  },
+    ] },
 ]
 
 // ============================================================================
@@ -215,8 +208,7 @@ const T2_TEMPLATES: T2Template[] = [
       <p className="text-xs text-muted-foreground">Average CPU Usage</p>
     </div>
   )
-}`,
-  },
+}` },
   {
     name: 'Status Heatmap',
     title: 'Cluster Status Heatmap',
@@ -251,8 +243,7 @@ const T2_TEMPLATES: T2Template[] = [
       </div>
     </div>
   )
-}`,
-  },
+}` },
   {
     name: 'Live Counter',
     title: 'Live Resource Counter',
@@ -278,8 +269,7 @@ const T2_TEMPLATES: T2Template[] = [
       ))}
     </div>
   )
-}`,
-  },
+}` },
   {
     name: 'Donut Chart',
     title: 'Resource Distribution',
@@ -327,8 +317,7 @@ const T2_TEMPLATES: T2Template[] = [
       </div>
     </div>
   )
-}`,
-  },
+}` },
   {
     name: 'Activity Timeline',
     title: 'Recent Events',
@@ -366,8 +355,7 @@ const T2_TEMPLATES: T2Template[] = [
       </div>
     </div>
   )
-}`,
-  },
+}` },
   {
     name: 'Auto-Refresh Timer',
     title: 'Live Refresh Demo',
@@ -391,8 +379,7 @@ const T2_TEMPLATES: T2Template[] = [
       setTick(t => t + 1)
       setItems(prev => prev.map(item => ({
         ...item,
-        latency: Math.max(1, item.latency + Math.floor(Math.random() * 21) - 10),
-      })))
+        latency: Math.max(1, item.latency + Math.floor(Math.random() * 21) - 10) })))
     }, REFRESH_MS)
     return () => clearInterval(timer)
   }, [])
@@ -428,8 +415,7 @@ const T2_TEMPLATES: T2Template[] = [
       </div>
     </div>
   )
-}`,
-  },
+}` },
   {
     name: 'Image from URL',
     title: 'Image Viewer',
@@ -524,8 +510,7 @@ const T2_TEMPLATES: T2Template[] = [
       </div>
     </div>
   )
-}`,
-  },
+}` },
   {
     name: 'Port Forward Tracker',
     title: 'Port Forwards',
@@ -554,8 +539,7 @@ const T2_TEMPLATES: T2Template[] = [
       id: Date.now(),
       ...form,
       active: true,
-      addedAt: new Date().toLocaleString(),
-    }])
+      addedAt: new Date().toLocaleString() }])
     setForm({ namespace: 'default', resource: '', localPort: '', remotePort: '', protocol: 'TCP' })
     setAdding(false)
   }
@@ -655,8 +639,7 @@ const T2_TEMPLATES: T2Template[] = [
       </div>
     </div>
   )
-}`,
-  },
+}` },
 ]
 
 // ============================================================================
@@ -666,8 +649,7 @@ const T2_TEMPLATES: T2Template[] = [
 function FieldSuggestChips({
   dataJson,
   existingFields,
-  onAddColumn,
-}: {
+  onAddColumn }: {
   dataJson: string
   existingFields: Set<string>
   onAddColumn: (col: DynamicCardColumn) => void
@@ -802,15 +784,15 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
   }, [])
 
   // Refresh existing cards list when switching to manage tab
-  const handleTabChange = useCallback((newTab: Tab) => {
+  const handleTabChange = (newTab: Tab) => {
     setTab(newTab)
     if (newTab === 'manage') {
       setExistingCards(getAllDynamicCards())
     }
-  }, [])
+  }
 
   // Compile Tier 2 code for preview
-  const handleCompile = useCallback(async () => {
+  const handleCompile = async () => {
     setCompileStatus('compiling')
     setCompileError(null)
 
@@ -829,10 +811,10 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
     }
 
     setCompileStatus('success')
-  }, [t2Source])
+  }
 
   // Save Tier 1 card
-  const handleSaveT1 = useCallback(() => {
+  const handleSaveT1 = () => {
     if (!t1Title.trim()) return
 
     let staticData: Record<string, unknown>[] = []
@@ -852,8 +834,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
       columns: t1Columns,
       layout: t1Layout,
       searchFields: t1Columns.map(c => c.field),
-      defaultLimit: 5,
-    }
+      defaultLimit: 5 }
 
     const def: DynamicCardDefinition = {
       id,
@@ -863,8 +844,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
       defaultWidth: t1Width,
       createdAt: now,
       updatedAt: now,
-      cardDefinition: cardDef,
-    }
+      cardDefinition: cardDef }
 
     saveDynamicCard(def)
     registerDynamicCardType(id, t1Width)
@@ -875,10 +855,10 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
     // Reset
     const saveMessageTimeoutId = window.setTimeout(() => setSaveMessage(null), SAVE_MESSAGE_TIMEOUT_MS)
     timeoutsRef.current.push(saveMessageTimeoutId)
-  }, [t1Title, t1Description, t1DataJson, t1Columns, t1Layout, t1Width, onCardCreated])
+  }
 
   // Save Tier 2 card
-  const handleSaveT2 = useCallback(async () => {
+  const handleSaveT2 = async () => {
     if (!t2Title.trim()) return
 
     setSaving(true)
@@ -903,8 +883,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
       createdAt: now,
       updatedAt: now,
       sourceCode: t2Source,
-      compiledCode: compileResult.code!,
-    }
+      compiledCode: compileResult.code! }
 
     saveDynamicCard(def)
     registerDynamicCardType(id, t2Width)
@@ -914,67 +893,67 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
 
     const tier2SaveTimeoutId = window.setTimeout(() => setSaveMessage(null), SAVE_MESSAGE_TIMEOUT_MS)
     timeoutsRef.current.push(tier2SaveTimeoutId)
-  }, [t2Title, t2Description, t2Source, t2Width, onCardCreated])
+  }
 
   // Delete a card
-  const handleDelete = useCallback((id: string) => {
+  const handleDelete = (id: string) => {
     deleteDynamicCard(id)
     setExistingCards(getAllDynamicCards())
-  }, [])
+  }
 
   // Add column (Tier 1)
-  const addColumn = useCallback(() => {
+  const addColumn = () => {
     setT1Columns(prev => [...prev, { field: '', label: '' }])
-  }, [])
+  }
 
-  const addColumnDef = useCallback((col: DynamicCardColumn) => {
+  const addColumnDef = (col: DynamicCardColumn) => {
     setT1Columns(prev => [...prev, col])
-  }, [])
+  }
 
-  const updateColumn = useCallback((idx: number, field: keyof DynamicCardColumn, value: string) => {
+  const updateColumn = (idx: number, field: keyof DynamicCardColumn, value: string) => {
     setT1Columns(prev => prev.map((col, i) => i === idx ? { ...col, [field]: value } : col))
-  }, [])
+  }
 
-  const removeColumn = useCallback((idx: number) => {
+  const removeColumn = (idx: number) => {
     setT1Columns(prev => prev.filter((_, i) => i !== idx))
-  }, [])
+  }
 
   // Apply T1 template
-  const applyT1Template = useCallback((tpl: T1Template) => {
+  const applyT1Template = (tpl: T1Template) => {
     setT1Title(tpl.title)
     setT1Description(tpl.description)
     setT1Layout(tpl.layout)
     setT1Width(tpl.width)
     setT1Columns(tpl.columns)
     setT1DataJson(JSON.stringify(tpl.data, null, 2))
-  }, [])
+  }
 
   // Apply T2 template
-  const applyT2Template = useCallback((tpl: T2Template) => {
+  const applyT2Template = (tpl: T2Template) => {
     setT2Title(tpl.title)
     setT2Description(tpl.description)
     setT2Width(tpl.width)
     setT2Source(tpl.source)
     setCompileStatus('idle')
-  }, [])
+  }
 
   // Handle inline AI assist result for T1
-  const handleT1AssistResult = useCallback((result: T1AssistResult) => {
+  const handleT1AssistResult = (result: T1AssistResult) => {
     if (result.title) setT1Title(result.title)
     if (result.description) setT1Description(result.description)
     if (result.layout) setT1Layout(result.layout)
     if (result.width) setT1Width(result.width)
     if (result.columns) setT1Columns(result.columns)
     if (result.data) setT1DataJson(JSON.stringify(result.data, null, 2))
-  }, [])
+  }
 
   // Handle inline AI assist result for T2
-  const handleT2AssistResult = useCallback((result: T2AssistResult) => {
+  const handleT2AssistResult = (result: T2AssistResult) => {
     if (result.title) setT2Title(result.title)
     if (result.description) setT2Description(result.description)
     if (result.width) setT2Width(result.width)
     if (result.sourceCode) { setT2Source(result.sourceCode); setCompileStatus('idle') }
-  }, [])
+  }
 
   // Compute T1 preview data (use sample data if user data is empty/invalid)
   const t1PreviewData = useMemo(() => {
@@ -986,10 +965,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
   }, [t1DataJson, t1Columns])
 
   // Existing field set for chip filtering
-  const existingFieldSet = useMemo(
-    () => new Set(t1Columns.map(c => c.field)),
-    [t1Columns]
-  )
+  const existingFieldSet = new Set(t1Columns.map(c => c.field))
 
   // Shared content for both modal and embedded modes
   const factoryContent = (
@@ -1208,8 +1184,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
                 t1Config={{
                   layout: t1Layout,
                   columns: t1Columns,
-                  staticData: t1PreviewData,
-                }}
+                  staticData: t1PreviewData }}
                 title={t1Title || t('dashboard.cardFactory.untitledCard')}
                 width={t1Width}
               />
@@ -1459,8 +1434,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
 function TemplateDropdown<T extends { name: string }>({
   templates,
   onSelect,
-  label,
-}: {
+  label }: {
   templates: T[]
   onSelect: (tpl: T) => void
   label: string
@@ -1605,7 +1579,7 @@ function T2Preview({ result }: { result: AiCardT2Result }) {
 function AiCardTab({ onCardCreated }: { onCardCreated: (id: string) => void }) {
   const [aiMode, setAiMode] = useState<AiMode>('tier1')
 
-  const handleSaveT1 = useCallback((result: AiCardT1Result) => {
+  const handleSaveT1 = (result: AiCardT1Result) => {
     const id = `dynamic_${Date.now()}`
     const now = new Date().toISOString()
 
@@ -1615,8 +1589,7 @@ function AiCardTab({ onCardCreated }: { onCardCreated: (id: string) => void }) {
       columns: result.columns,
       layout: result.layout || 'list',
       searchFields: result.searchFields || result.columns.map(c => c.field),
-      defaultLimit: result.defaultLimit || 5,
-    }
+      defaultLimit: result.defaultLimit || 5 }
 
     const def: DynamicCardDefinition = {
       id,
@@ -1626,15 +1599,14 @@ function AiCardTab({ onCardCreated }: { onCardCreated: (id: string) => void }) {
       defaultWidth: result.defaultWidth || 6,
       createdAt: now,
       updatedAt: now,
-      cardDefinition: cardDef,
-    }
+      cardDefinition: cardDef }
 
     saveDynamicCard(def)
     registerDynamicCardType(id, result.defaultWidth || 6)
     onCardCreated(id)
-  }, [onCardCreated])
+  }
 
-  const handleSaveT2 = useCallback(async (result: AiCardT2Result) => {
+  const handleSaveT2 = async (result: AiCardT2Result) => {
     const compileResult = await compileCardCode(result.sourceCode)
     if (compileResult.error) {
       throw new Error(`Compile error: ${compileResult.error}`)
@@ -1652,13 +1624,12 @@ function AiCardTab({ onCardCreated }: { onCardCreated: (id: string) => void }) {
       createdAt: now,
       updatedAt: now,
       sourceCode: result.sourceCode,
-      compiledCode: compileResult.code!,
-    }
+      compiledCode: compileResult.code! }
 
     saveDynamicCard(def)
     registerDynamicCardType(id, result.defaultWidth || 6)
     onCardCreated(id)
-  }, [onCardCreated])
+  }
 
   return (
     <div className="space-y-4">

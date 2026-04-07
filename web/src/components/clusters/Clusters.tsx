@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { AlertTriangle, ChevronRight, ChevronDown, Server, Scissors } from 'lucide-react'
 import { useClusters, useGPUNodes, useNVIDIAOperators, refreshSingleCluster } from '../../hooks/useMCP'
@@ -10,8 +10,7 @@ import {
   FilterTabs,
   ClusterGrid,
   GPUDetailModal,
-  type ClusterLayoutMode,
-} from './components'
+  type ClusterLayoutMode } from './components'
 import { useMissions } from '../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../cards/console-missions/shared'
 import { loadMissionPrompt } from '../cards/multi-tenancy/missionLoader'
@@ -68,8 +67,7 @@ export function Clusters() {
     clusterGroups,
     addClusterGroup,
     deleteClusterGroup,
-    selectClusterGroup,
-  } = useGlobalFilters()
+    selectClusterGroup } = useGlobalFilters()
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   const navigate = useNavigate()
@@ -89,7 +87,7 @@ export function Clusters() {
   }, [urlStatus, filter])
 
   // Update URL when filter changes programmatically
-  const setFilter = useCallback((newFilter: 'all' | 'healthy' | 'unhealthy' | 'unreachable') => {
+  const setFilter = (newFilter: 'all' | 'healthy' | 'unhealthy' | 'unreachable') => {
     setFilterState(newFilter)
     if (newFilter === 'all') {
       searchParams.delete('status')
@@ -97,14 +95,13 @@ export function Clusters() {
       searchParams.set('status', newFilter)
     }
     setSearchParams(searchParams, { replace: true })
-  }, [searchParams, setSearchParams])
+  }
   const [sortState, setSortState] = useState<{ by: 'name' | 'nodes' | 'pods' | 'health' | 'provider' | 'custom'; customOrder: string[] }>(() => {
     try {
       const savedOrder = safeGetItem(STORAGE_KEY_CLUSTER_ORDER)
       return {
         by: savedOrder ? 'custom' : 'name',
-        customOrder: savedOrder ? JSON.parse(savedOrder) : [],
-      }
+        customOrder: savedOrder ? JSON.parse(savedOrder) : [] }
     } catch {
       return { by: 'name', customOrder: [] }
     }
@@ -113,11 +110,8 @@ export function Clusters() {
   // Convenience aliases so downstream code stays unchanged
   const sortBy = sortState.by
   const customOrder = sortState.customOrder
-  const setSortBy = useCallback(
-    (by: 'name' | 'nodes' | 'pods' | 'health' | 'provider' | 'custom') =>
-      setSortState(prev => ({ ...prev, by })),
-    []
-  )
+  const setSortBy = (by: 'name' | 'nodes' | 'pods' | 'health' | 'provider' | 'custom') =>
+      setSortState(prev => ({ ...prev, by }))
   const [layoutMode, setLayoutMode] = useState<ClusterLayoutMode>(() => {
     const stored = safeGetItem(STORAGE_KEY_CLUSTER_LAYOUT)
     return (stored as ClusterLayoutMode) || 'grid'
@@ -140,8 +134,7 @@ export function Clusters() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ oldName, newName }),
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-    })
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
     if (!response.ok) {
       const data = await response.json().catch(() => ({})) as { message?: string }
       throw new Error(data.message || 'Failed to rename context')
@@ -149,10 +142,10 @@ export function Clusters() {
     refetch()
   }
 
-  const handleReorder = useCallback((newOrder: string[]) => {
+  const handleReorder = (newOrder: string[]) => {
     setSortState({ by: 'custom', customOrder: newOrder })
     safeSetItem(STORAGE_KEY_CLUSTER_ORDER, JSON.stringify(newOrder))
-  }, [])
+  }
 
   const { filteredClusters, globalFilteredClusters } = useClusterFiltering({
     clusters,
@@ -162,11 +155,10 @@ export function Clusters() {
     customFilter,
     sortBy,
     sortAsc,
-    customOrder,
-  })
+    customOrder })
 
   // Get GPU count per cluster
-  const gpuByCluster = useMemo(() => {
+  const gpuByCluster = (() => {
     const map: Record<string, { total: number; allocated: number }> = {}
     ;(gpuNodes || []).forEach(node => {
       const clusterKey = node.cluster.split('/')[0]
@@ -177,7 +169,7 @@ export function Clusters() {
       map[clusterKey].allocated += node.gpuAllocated || 0
     })
     return map
-  }, [gpuNodes])
+  })()
 
   const stats = useClusterStats({ globalFilteredClusters, gpuByCluster })
 
@@ -185,7 +177,7 @@ export function Clusters() {
   const showSkeletonContent = (isLoading && (clusters || []).length === 0) || forceSkeletonForOffline || isModeSwitching
 
   // Stats value getter for DashboardPage's configurable StatsOverview
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string): StatBlockValue => {
     const hasData = stats.hasResourceData || stats.total > 0
     switch (blockId) {
       case 'clusters':
@@ -193,80 +185,67 @@ export function Clusters() {
           value: stats.total,
           sublabel: 'total clusters',
           onClick: () => { emitClusterStatsDrillDown('cluster_health_status'); setFilter('all'); setShowClusterGrid(true) },
-          isClickable: stats.total > 0,
-        }
+          isClickable: stats.total > 0 }
       case 'healthy':
         return {
           value: stats.healthy,
           sublabel: 'healthy',
           onClick: () => { emitClusterStatsDrillDown('cluster_health_status'); setFilter('healthy'); setShowClusterGrid(true) },
-          isClickable: stats.healthy > 0,
-        }
+          isClickable: stats.healthy > 0 }
       case 'unhealthy':
         return {
           value: stats.unhealthy,
           sublabel: 'unhealthy',
           onClick: () => { emitClusterStatsDrillDown('cluster_health_status'); setFilter('unhealthy'); setShowClusterGrid(true) },
-          isClickable: stats.unhealthy > 0,
-        }
+          isClickable: stats.unhealthy > 0 }
       case 'unreachable':
         return {
           value: stats.unreachable,
           sublabel: 'offline',
           onClick: () => { emitClusterStatsDrillDown('cluster_health_status'); setFilter('unreachable'); setShowClusterGrid(true) },
-          isClickable: stats.unreachable > 0,
-        }
+          isClickable: stats.unreachable > 0 }
       case 'nodes':
         return {
           value: hasData ? stats.totalNodes : '-',
           sublabel: 'total nodes',
           onClick: () => { emitClusterStatsDrillDown('nodes'); navigate('/compute') },
-          isClickable: hasData,
-        }
+          isClickable: hasData }
       case 'cpus':
         return {
           value: hasData ? stats.totalCPUs : '-',
           sublabel: 'cores allocatable',
           onClick: () => { emitClusterStatsDrillDown('cpu'); navigate('/compute') },
-          isClickable: hasData,
-        }
+          isClickable: hasData }
       case 'memory':
         return {
           value: hasData ? formatMemoryStat(stats.totalMemoryGB) : '-',
           sublabel: 'allocatable',
           onClick: () => { emitClusterStatsDrillDown('memory'); navigate('/compute') },
-          isClickable: hasData,
-        }
+          isClickable: hasData }
       case 'storage':
         return {
           value: hasData ? formatMemoryStat(stats.totalStorageGB) : '-',
           sublabel: 'storage',
           onClick: () => { emitClusterStatsDrillDown('storage'); navigate('/storage') },
-          isClickable: hasData,
-        }
+          isClickable: hasData }
       case 'gpus':
         return {
           value: hasData ? stats.totalGPUs : '-',
           sublabel: 'total GPUs',
           onClick: () => { emitClusterStatsDrillDown('gpu'); openGPUModal() },
-          isClickable: hasData && stats.totalGPUs > 0,
-        }
+          isClickable: hasData && stats.totalGPUs > 0 }
       case 'pods':
         return {
           value: hasData ? stats.totalPods : '-',
           sublabel: 'running pods',
           onClick: () => { emitClusterStatsDrillDown('pods'); navigate('/workloads') },
-          isClickable: hasData,
-        }
+          isClickable: hasData }
       default:
         return { value: '-', sublabel: '' }
     }
-  }, [stats, setFilter, openGPUModal, navigate])
+  }
 
-  const getStatValue = useCallback(
-    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
-    [getDashboardStatValue, getUniversalStatValue]
-  )
+  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
   // ── beforeCards: Stale banner + Cluster Info Cards + Cluster Groups ──
 
@@ -290,8 +269,7 @@ export function Clusters() {
                   title: 'Prune Stale Kubeconfig Contexts',
                   description: 'Safely clean up kubeconfig by removing entries for clusters that no longer exist',
                   type: 'repair',
-                  initialPrompt: prompt,
-                })
+                  initialPrompt: prompt })
               })
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/20 text-yellow-300 text-xs font-medium hover:bg-yellow-500/30 transition-colors whitespace-nowrap"
@@ -395,8 +373,7 @@ export function Clusters() {
       rightExtra={<RotatingTip page="clusters" />}
       emptyState={{
         title: 'Cluster Dashboard',
-        description: 'Add cards to monitor cluster health, resource usage, and workload status.',
-      }}
+        description: 'Add cards to monitor cluster health, resource usage, and workload status.' }}
     >
       {/* Cluster Detail Modal */}
       {selectedCluster && (

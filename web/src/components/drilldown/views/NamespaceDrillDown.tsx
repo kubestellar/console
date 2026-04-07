@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { ChevronRight, Search, Box, Network, HardDrive, Layers, Server } from 'lucide-react'
 import { usePodIssues, useDeploymentIssues, useEvents, useDeployments, useServices, usePVCs, usePods } from '../../../hooks/useMCP'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
@@ -36,58 +36,49 @@ export function NamespaceDrillDown({ data }: Props) {
   const { pvcs: allPVCs } = usePVCs(clusterShort, namespace)
   const { pods: allPods } = usePods(clusterShort, namespace)
 
-  const podIssues = useMemo(() =>
-    allPodIssues.filter(p => p.namespace === namespace),
-    [allPodIssues, namespace]
-  )
+  const podIssues = allPodIssues.filter(p => p.namespace === namespace)
 
-  const deploymentIssues = useMemo(() =>
-    allDeploymentIssues.filter(d => d.namespace === namespace &&
-      (d.cluster === cluster || d.cluster?.includes(cluster.split('/')[0]))),
-    [allDeploymentIssues, namespace, cluster]
-  )
+  const deploymentIssues = allDeploymentIssues.filter(d => d.namespace === namespace &&
+      (d.cluster === cluster || d.cluster?.includes(cluster.split('/')[0])))
 
-  const nsEvents = useMemo(() =>
-    events.filter(e => e.namespace === namespace),
-    [events, namespace]
-  )
+  const nsEvents = events.filter(e => e.namespace === namespace)
 
   // Filtered resources for the Resources tab
-  const filteredDeployments = useMemo(() => {
+  const filteredDeployments = (() => {
     if (resourceFilter !== 'all' && resourceFilter !== 'deployments') return []
     let deps = allDeployments || []
     if (resourceSearch) {
       deps = deps.filter(d => d.name.toLowerCase().includes(resourceSearch.toLowerCase()))
     }
     return deps
-  }, [allDeployments, resourceFilter, resourceSearch])
+  })()
 
-  const filteredServices = useMemo(() => {
+  const filteredServices = (() => {
     if (resourceFilter !== 'all' && resourceFilter !== 'services') return []
     let svcs = allServices || []
     if (resourceSearch) {
       svcs = svcs.filter(s => s.name.toLowerCase().includes(resourceSearch.toLowerCase()))
     }
     return svcs
-  }, [allServices, resourceFilter, resourceSearch])
+  })()
 
-  const filteredPVCs = useMemo(() => {
+  const filteredPVCs = (() => {
     if (resourceFilter !== 'all' && resourceFilter !== 'pvcs') return []
     let pvcs = allPVCs || []
     if (resourceSearch) {
       pvcs = pvcs.filter(p => p.name.toLowerCase().includes(resourceSearch.toLowerCase()))
     }
     return pvcs
-  }, [allPVCs, resourceFilter, resourceSearch])
+  })()
 
-  const filteredPods = useMemo(() => {
+  const filteredPods = (() => {
     if (resourceFilter !== 'all' && resourceFilter !== 'pods') return []
     let pods = allPods || []
     if (resourceSearch) {
       pods = pods.filter(p => p.name.toLowerCase().includes(resourceSearch.toLowerCase()))
     }
     return pods
-  }, [allPods, resourceFilter, resourceSearch])
+  })()
 
   const tabs: { id: TabType; label: string; count: number }[] = [
     { id: 'issues', label: 'Issues', count: podIssues.length + deploymentIssues.length },

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { CheckCircle, AlertTriangle, XCircle, Database } from 'lucide-react'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -29,10 +29,7 @@ const statusOrder: Record<string, number> = { NotEstablished: 0, Terminating: 1,
 
 export function CRDHealth({ config: _config }: CRDHealthProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const SORT_OPTIONS = useMemo(() =>
-    SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })),
-    [t]
-  )
+  const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
   const { crds: allCRDs, isLoading, isDemoData } = useCRDs()
 
   const [filterGroup, setFilterGroup] = useState<string>('')
@@ -41,14 +38,13 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: allCRDs.length > 0,
-    isDemoData,
-  })
+    isDemoData })
 
   // Apply group filter before passing to useCardData
-  const groupFilteredCRDs = useMemo(() => {
+  const groupFilteredCRDs = (() => {
     if (!filterGroup) return allCRDs
     return allCRDs.filter(c => c.group === filterGroup)
-  }, [allCRDs, filterGroup])
+  })()
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {
@@ -69,22 +65,18 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
       availableClusters,
       showClusterFilter,
       setShowClusterFilter,
-      clusterFilterRef,
-    },
+      clusterFilterRef },
     sorting: {
       sortBy,
       setSortBy,
       sortDirection,
-      setSortDirection,
-    },
+      setSortDirection },
     containerRef,
-    containerStyle,
-  } = useCardData<CRDData, SortByOption>(groupFilteredCRDs, {
+    containerStyle } = useCardData<CRDData, SortByOption>(groupFilteredCRDs, {
     filter: {
       searchFields: ['name', 'group', 'cluster'] as (keyof CRDData)[],
       clusterField: 'cluster' as keyof CRDData,
-      storageKey: 'crd-health',
-    },
+      storageKey: 'crd-health' },
     sort: {
       defaultField: 'status',
       defaultDirection: 'asc',
@@ -92,17 +84,14 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
         status: (a, b) => statusOrder[a.status] - statusOrder[b.status],
         name: commonComparators.string('name'),
         group: commonComparators.string('group'),
-        instances: (a, b) => a.instances - b.instances,
-      },
-    },
-    defaultLimit: 5,
-  })
+        instances: (a, b) => a.instances - b.instances } },
+    defaultLimit: 5 })
 
   // Get unique groups (from all CRDs before useCardData filtering)
-  const groups = useMemo(() => {
+  const groups = (() => {
     const groupSet = new Set(allCRDs.map(c => c.group))
     return Array.from(groupSet).sort()
-  }, [allCRDs])
+  })()
 
   const getStatusIcon = (status: CRDData['status']) => {
     switch (status) {
@@ -122,7 +111,7 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
 
   // Compute stats from the filtered set (pre-pagination) by approximating
   // the same filters useCardData applies: cluster filter + search
-  const statsSource = useMemo(() => {
+  const statsSource = (() => {
     let result = groupFilteredCRDs
 
     // Apply local cluster filter
@@ -141,7 +130,7 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
     }
 
     return result
-  }, [groupFilteredCRDs, localClusterFilter, localSearch])
+  })()
 
   const healthyCount = statsSource.filter(c => c.status === 'Established').length
   const unhealthyCount = statsSource.filter(c => c.status !== 'Established').length
@@ -180,8 +169,7 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
         <CardControlsRow
           clusterIndicator={{
             selectedCount: localClusterFilter.length,
-            totalCount: availableClusters.length,
-          }}
+            totalCount: availableClusters.length }}
           clusterFilter={{
             availableClusters,
             selectedClusters: localClusterFilter,
@@ -190,8 +178,7 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
             isOpen: showClusterFilter,
             setIsOpen: setShowClusterFilter,
             containerRef: clusterFilterRef,
-            minClusters: 1,
-          }}
+            minClusters: 1 }}
           cardControls={{
             limit: itemsPerPage,
             onLimitChange: setItemsPerPage,
@@ -199,8 +186,7 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
             sortOptions: SORT_OPTIONS,
             onSortChange: (v) => setSortBy(v as SortByOption),
             sortDirection,
-            onSortDirectionChange: setSortDirection,
-          }}
+            onSortDirectionChange: setSortDirection }}
         />
       </div>
 

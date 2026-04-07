@@ -42,8 +42,7 @@ const HREF_TO_DASHBOARD_ID: Record<string, string> = {
   '/logs': 'logs', '/data-compliance': 'data-compliance', '/arcade': 'arcade',
   '/deploy': 'deploy', '/ai-agents': 'ai-agents',
   '/llm-d-benchmarks': 'llm-d-benchmarks', '/cluster-admin': 'cluster-admin',
-  '/insights': 'insights',
-}
+  '/insights': 'insights' }
 
 export function Sidebar() {
   const { config, toggleCollapsed, setCollapsed, reorderItems, updateItem, removeItem, closeMobileSidebar, setWidth } = useSidebarConfig()
@@ -78,23 +77,23 @@ export function Sidebar() {
     }
   }, [])
 
-  const handleSidebarMouseEnter = useCallback(() => {
+  const handleSidebarMouseEnter = () => {
     clearAutoHideTimer()
     if (!isPinned && config.collapsed && !isMobile) {
       setCollapsed(false)
     }
-  }, [clearAutoHideTimer, isPinned, config.collapsed, isMobile, setCollapsed])
+  }
 
-  const handleSidebarMouseLeave = useCallback(() => {
+  const handleSidebarMouseLeave = () => {
     if (!isPinned && !isMobile) {
       clearAutoHideTimer()
       autoHideTimerRef.current = setTimeout(() => {
         setCollapsed(true)
       }, SIDEBAR_AUTO_HIDE_MS)
     }
-  }, [isPinned, isMobile, clearAutoHideTimer, setCollapsed])
+  }
 
-  const toggleSidebarPin = useCallback(() => {
+  const toggleSidebarPin = () => {
     setIsPinned(prev => {
       const next = !prev
       try { localStorage.setItem('sidebar-left-pinned', String(next)) } catch { /* ignore */ }
@@ -105,7 +104,7 @@ export function Sidebar() {
       }
       return next
     })
-  }, [clearAutoHideTimer, config.collapsed, setCollapsed])
+  }
 
   useEffect(() => () => clearAutoHideTimer(), [clearAutoHideTimer])
 
@@ -117,7 +116,7 @@ export function Sidebar() {
 
   // Resize handle state
   const [isResizing, setIsResizing] = useState(false)
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+  const handleResizeStart = (e: React.MouseEvent) => {
     e.preventDefault()
     setIsResizing(true)
     const startX = e.clientX
@@ -143,7 +142,7 @@ export function Sidebar() {
     document.body.style.userSelect = 'none'
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
-  }, [config.width, setWidth])
+  }
 
   // Sidebar customizer modal state
   const [showCustomizer, setShowCustomizer] = useState(false)

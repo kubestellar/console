@@ -1,12 +1,10 @@
-import { useMemo } from 'react'
 import {
   AlertTriangle,
   Server,
   RefreshCw,
   ArrowRightLeft,
   Clock,
-  Shield,
-} from 'lucide-react'
+  Shield } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton, SkeletonStats, SkeletonList } from '../../ui/Skeleton'
 import { useFailoverTimeline } from './useFailoverTimeline'
@@ -42,19 +40,15 @@ const SEVERITY_CONFIG: Record<
   critical: {
     dotColor: 'bg-red-500',
     borderColor: 'border-red-500/40',
-    textColor: 'text-red-400',
-  },
+    textColor: 'text-red-400' },
   warning: {
     dotColor: 'bg-yellow-500',
     borderColor: 'border-yellow-500/40',
-    textColor: 'text-yellow-400',
-  },
+    textColor: 'text-yellow-400' },
   info: {
     dotColor: 'bg-blue-500',
     borderColor: 'border-blue-500/40',
-    textColor: 'text-blue-400',
-  },
-}
+    textColor: 'text-blue-400' } }
 
 const EVENT_TYPE_CONFIG: Record<
   FailoverEventType,
@@ -63,24 +57,19 @@ const EVENT_TYPE_CONFIG: Record<
   cluster_down: {
     label: 'Cluster Down',
     icon: <Server className="w-3 h-3" />,
-    badgeClass: 'bg-red-500/15 text-red-400',
-  },
+    badgeClass: 'bg-red-500/15 text-red-400' },
   binding_reschedule: {
     label: 'Reschedule',
     icon: <ArrowRightLeft className="w-3 h-3" />,
-    badgeClass: 'bg-yellow-500/15 text-yellow-400',
-  },
+    badgeClass: 'bg-yellow-500/15 text-yellow-400' },
   cluster_recovery: {
     label: 'Recovery',
     icon: <Shield className="w-3 h-3" />,
-    badgeClass: 'bg-blue-500/15 text-blue-400',
-  },
+    badgeClass: 'bg-blue-500/15 text-blue-400' },
   replica_rebalance: {
     label: 'Rebalance',
     icon: <RefreshCw className="w-3 h-3" />,
-    badgeClass: 'bg-blue-500/15 text-blue-400',
-  },
-}
+    badgeClass: 'bg-blue-500/15 text-blue-400' } }
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -184,7 +173,7 @@ export function FailoverTimeline() {
   const { data, isRefreshing, error, showSkeleton, showEmptyState } = useFailoverTimeline()
 
   // Guard arrays
-  const events = useMemo(() => data.events || [], [data.events])
+  const events = data.events || []
 
   const activeClusters = data.activeClusters ?? 0
   const totalClusters = data.totalClusters ?? 0

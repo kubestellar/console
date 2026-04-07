@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { ShieldAlert } from 'lucide-react'
 import { useCachedSecurityAudit } from '../../../hooks/useGadget'
 import { useCardLoadingState, useCardDemoState } from '../CardDataContext'
@@ -22,10 +21,9 @@ export function SecurityAuditCard({ config }: SecurityAuditCardProps) {
     isDemoData: isDemoMode || isDemoData,
     hasAnyData: hasData,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
-  const audits = useMemo(() => [...data].slice(0, 20), [data])
+  const audits = [...data].slice(0, 20)
 
   if (showSkeleton) {
     return (

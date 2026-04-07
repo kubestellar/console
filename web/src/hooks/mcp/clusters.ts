@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../../lib/api'
 import { useDemoMode } from '../useDemoMode'
 import { isDemoMode } from '../../lib/demoMode'
@@ -22,8 +22,7 @@ import {
   recordClusterFailure,
   clearClusterFailure,
   setInitialFetchStarted,
-  setHealthCheckFailures,
-} from './shared'
+  setHealthCheckFailures } from './shared'
 import type { ClusterCache } from './shared'
 import { subscribePolling } from './pollingManager'
 
@@ -153,13 +152,13 @@ export function useClusters() {
 
   // Deduplicated clusters (single cluster per server, with aliases)
   // Use this for metrics, stats, and counts to avoid double-counting
-  const deduplicatedClusters = useMemo(() => {
+  const deduplicatedClusters = (() => {
     // First share metrics between clusters with same server (so short names get metrics from long names)
     const sharedMetricsClusters = shareMetricsBetweenSameServerClusters(localState.clusters)
     const result = deduplicateClustersByServer(sharedMetricsClusters)
 
     return result
-  }, [localState.clusters])
+  })()
 
   return {
     // Raw clusters - all contexts including duplicates pointing to same server
@@ -174,8 +173,7 @@ export function useClusters() {
     refetch,
     consecutiveFailures: localState.consecutiveFailures,
     isFailed: localState.isFailed,
-    lastRefresh: localState.lastRefresh,
-  }
+    lastRefresh: localState.lastRefresh }
 }
 
 // Hook to get cluster health - uses kubectl proxy for direct cluster access
@@ -209,8 +207,7 @@ export function useClusterHealth(cluster?: string) {
         podCount: cached.podCount ?? 0,
         cpuCores: cached.cpuCores,
         memoryGB: cached.memoryGB,
-        storageGB: cached.storageGB,
-      }
+        storageGB: cached.storageGB }
     }
     return null
   }, [cluster])
@@ -271,8 +268,7 @@ export function useClusterHealth(cluster?: string) {
             nodeCount: 0,
             readyNodes: 0,
             podCount: 0,
-            errorMessage: 'Unable to connect after 5 minutes',
-          })
+            errorMessage: 'Unable to connect after 5 minutes' })
         } else {
           // Transient failure - keep showing previous good data
           if (prevHealthRef.current) {
@@ -335,8 +331,7 @@ function getDemoHealth(cluster?: string): ClusterHealth {
     'alibaba-ack-shanghai': { nodeCount: 8, podCount: 112, cpuCores: 64, memoryGB: 256, storageGB: 1200 },
     'do-nyc1-prod': { nodeCount: 3, podCount: 34, cpuCores: 12, memoryGB: 48, storageGB: 300 },
     'rancher-mgmt': { nodeCount: 3, podCount: 89, cpuCores: 24, memoryGB: 96, storageGB: 400 },
-    'vllm-gpu-cluster': { nodeCount: 8, podCount: 124, cpuCores: 256, memoryGB: 2048, storageGB: 8000 },
-  }
+    'vllm-gpu-cluster': { nodeCount: 8, podCount: 124, cpuCores: 256, memoryGB: 2048, storageGB: 8000 } }
   const metrics = clusterMetrics[cluster || ''] || { nodeCount: 3, podCount: 45, cpuCores: 24, memoryGB: 96, storageGB: 500 }
   return {
     cluster: cluster || 'default',
@@ -349,6 +344,5 @@ function getDemoHealth(cluster?: string): ClusterHealth {
     memoryBytes: metrics.memoryGB * 1024 * 1024 * 1024,
     storageGB: metrics.storageGB,
     storageBytes: metrics.storageGB * 1024 * 1024 * 1024,
-    issues: [],
-  }
+    issues: [] }
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { getDemoMode, isDemoModeForced } from './useDemoMode'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
 
@@ -40,8 +40,7 @@ function isJsonResponse(resp: Response): boolean {
 // Singleton state to share across all hook instances
 let sharedInfo: ActiveUsersInfo = {
   activeUsers: 0,
-  totalConnections: 0,
-}
+  totalConnections: 0 }
 let pollStarted = false
 let pollInterval: ReturnType<typeof setInterval> | null = null
 let consecutiveFailures = 0
@@ -105,8 +104,7 @@ async function sendHeartbeat() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sessionId: getSessionId() }),
-      signal: AbortSignal.timeout(5000),
-    })
+      signal: AbortSignal.timeout(5000) })
   } catch {
     // Best-effort — don't block on failure
   }
@@ -262,8 +260,7 @@ async function fetchActiveUsers() {
 
     const smoothedData: ActiveUsersInfo = {
       activeUsers: smoothedCount,
-      totalConnections: smoothedCount,
-    }
+      totalConnections: smoothedCount }
 
     const dataChanged = smoothedData.activeUsers !== sharedInfo.activeUsers ||
         smoothedData.totalConnections !== sharedInfo.totalConnections
@@ -374,12 +371,12 @@ export function useActiveUsers() {
     }
   }, [])
 
-  const refetch = useCallback(() => {
+  const refetch = () => {
     // Reset circuit breaker so manual refetch always works
     consecutiveFailures = 0
     if (!pollStarted) startPolling()
     else fetchActiveUsers()
-  }, [])
+  }
 
   // Demo mode: show total connections (sessions). OAuth mode: show unique users.
   const viewerCount = getDemoMode() ? info.totalConnections : info.activeUsers
@@ -390,6 +387,5 @@ export function useActiveUsers() {
     viewerCount,
     isLoading,
     hasError,
-    refetch,
-  }
+    refetch }
 }

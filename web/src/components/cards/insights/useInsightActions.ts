@@ -5,7 +5,7 @@
  * - Dismissed insights persist only in sessionStorage (current session)
  */
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState } from 'react'
 import { useToast } from '../../ui/Toast'
 
 /** localStorage key for acknowledged insight IDs */
@@ -46,9 +46,9 @@ function saveSet(storage: Storage, key: string, set: Set<string>, onError?: Erro
 export function useInsightActions() {
   const { showToast } = useToast()
 
-  const onSaveError = useCallback((message: string) => {
+  const onSaveError = (message: string) => {
     showToast(message, 'error')
-  }, [showToast])
+  }
 
   const [acknowledgedIds, setAcknowledgedIds] = useState<Set<string>>(
     () => loadSet(localStorage, INSIGHT_ACKNOWLEDGE_KEY)
@@ -57,34 +57,33 @@ export function useInsightActions() {
     () => loadSet(sessionStorage, INSIGHT_DISMISS_KEY)
   )
 
-  const acknowledgeInsight = useCallback((id: string) => {
+  const acknowledgeInsight = (id: string) => {
     setAcknowledgedIds(prev => {
       const next = new Set(prev)
       next.add(id)
       saveSet(localStorage, INSIGHT_ACKNOWLEDGE_KEY, next, onSaveError)
       return next
     })
-  }, [onSaveError])
+  }
 
-  const dismissInsight = useCallback((id: string) => {
+  const dismissInsight = (id: string) => {
     setDismissedIds(prev => {
       const next = new Set(prev)
       next.add(id)
       saveSet(sessionStorage, INSIGHT_DISMISS_KEY, next, onSaveError)
       return next
     })
-  }, [onSaveError])
+  }
 
-  const isAcknowledged = useCallback((id: string) => acknowledgedIds.has(id), [acknowledgedIds])
-  const isDismissed = useCallback((id: string) => dismissedIds.has(id), [dismissedIds])
+  const isAcknowledged = (id: string) => acknowledgedIds.has(id)
+  const isDismissed = (id: string) => dismissedIds.has(id)
 
-  const acknowledgedCount = useMemo(() => acknowledgedIds.size, [acknowledgedIds])
+  const acknowledgedCount = acknowledgedIds.size
 
   return {
     acknowledgeInsight,
     dismissInsight,
     isAcknowledged,
     isDismissed,
-    acknowledgedCount,
-  }
+    acknowledgedCount }
 }

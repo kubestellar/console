@@ -24,14 +24,13 @@ export function ClusterChangelog() {
     hasAnyData: events.length > 0,
     isDemoData: isDemoFallback,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
-  const cutoff = useMemo(() => {
+  const cutoff = (() => {
     const now = Date.now()
     const hours: Record<TimeRange, number> = { '1h': 1, '6h': 6, '24h': 24, '7d': 168 }
     return now - hours[timeRange] * 3600000
-  }, [timeRange])
+  })()
 
   const changeEvents = useMemo(() => {
     return events

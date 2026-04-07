@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useClusters } from '../../hooks/useMCP'
 
@@ -42,8 +42,7 @@ export function MaintenanceWindows() {
     description: '',
     startTime: '',
     endTime: '',
-    type: 'maintenance' as MaintenanceWindow['type'],
-  })
+    type: 'maintenance' as MaintenanceWindow['type'] })
 
   // Auto-refresh status badges so scheduled→active→completed transitions
   // are reflected even when the user is idle (#4848)
@@ -59,7 +58,7 @@ export function MaintenanceWindows() {
     [clusters]
   )
 
-  const updateStatus = useCallback(() => {
+  const updateStatus = () => {
     const now = new Date()
     return windows.map(w => {
       const start = new Date(w.startTime)
@@ -68,13 +67,11 @@ export function MaintenanceWindows() {
       if (now > end) return { ...w, status: 'completed' as const }
       return { ...w, status: 'scheduled' as const }
     })
-  }, [windows])
+  }
 
-  const displayWindows = useMemo(() => {
-    return updateStatus().sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
-  }, [updateStatus])
+  const displayWindows = updateStatus().sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
 
-  const handleAdd = useCallback(() => {
+  const handleAdd = () => {
     if (!formData.cluster || !formData.startTime || !formData.endTime) return
     if (new Date(formData.endTime) <= new Date(formData.startTime)) {
       setTimeError('End time must be after start time')
@@ -84,33 +81,30 @@ export function MaintenanceWindows() {
     const newWindow: MaintenanceWindow = {
       id: `mw-${Date.now()}`,
       ...formData,
-      status: 'scheduled',
-    }
+      status: 'scheduled' }
     const updated = [...windows, newWindow]
     setWindows(updated)
     saveWindows(updated)
     setShowForm(false)
     setFormData({ cluster: '', description: '', startTime: '', endTime: '', type: 'maintenance' })
-  }, [formData, windows])
+  }
 
-  const handleDelete = useCallback((id: string) => {
+  const handleDelete = (id: string) => {
     const updated = windows.filter(w => w.id !== id)
     setWindows(updated)
     saveWindows(updated)
-  }, [windows])
+  }
 
   const typeColors: Record<string, string> = {
     upgrade: 'bg-blue-500/10 text-blue-400',
     maintenance: 'bg-purple-500/10 text-purple-400',
     patching: 'bg-orange-500/10 text-orange-400',
-    custom: 'bg-cyan-500/10 text-cyan-400',
-  }
+    custom: 'bg-cyan-500/10 text-cyan-400' }
 
   const statusColors: Record<string, string> = {
     scheduled: 'bg-blue-500/10 text-blue-400',
     active: 'bg-green-500/10 text-green-400 animate-pulse',
-    completed: 'bg-muted/50 text-muted-foreground',
-  }
+    completed: 'bg-muted/50 text-muted-foreground' }
 
   return (
     <div className="space-y-2 p-1">

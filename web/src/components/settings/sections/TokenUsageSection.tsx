@@ -19,7 +19,7 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
   const [warningThreshold, setWarningThreshold] = useState(usage.warningThreshold * 100)
   const [criticalThreshold, setCriticalThreshold] = useState(usage.criticalThreshold * 100)
   const [saved, setSaved] = useState(false)
-  const savedTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
     return () => clearTimeout(savedTimerRef.current)

@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Terminal } from 'lucide-react'
 import { useCachedProcessTraces } from '../../../hooks/useGadget'
 import { useCardLoadingState, useCardDemoState } from '../CardDataContext'
@@ -22,10 +21,9 @@ export function ProcessTraceCard({ config }: ProcessTraceCardProps) {
     isDemoData: isDemoMode || isDemoData,
     hasAnyData: hasData,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
-  const processes = useMemo(() => [...data].slice(0, 20), [data])
+  const processes = [...data].slice(0, 20)
 
   if (showSkeleton) {
     return (

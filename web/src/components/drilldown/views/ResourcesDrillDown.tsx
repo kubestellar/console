@@ -11,15 +11,13 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core'
+  DragEndEvent } from '@dnd-kit/core'
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
+  verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { ClusterInfo } from '../../../hooks/useMCP'
 import { useTranslation } from 'react-i18next'
@@ -60,23 +58,20 @@ function SortableClusterRow({
   memoryPercent,
   memoryGB,
   accelerators,
-  onDrillDown,
-}: SortableClusterRowProps) {
+  onDrillDown }: SortableClusterRowProps) {
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
     transition,
-    isDragging,
-  } = useSortable({ id: cluster.name })
+    isDragging } = useSortable({ id: cluster.name })
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 50 : undefined,
-  }
+    zIndex: isDragging ? 50 : undefined }
 
   return (
     <div
@@ -213,7 +208,7 @@ export function ResourcesDrillDown({ data: _data }: Props) {
   }, [initialClusters, clusterOrder])
 
   // Build a map of raw cluster names to deduplicated primary names
-  const clusterNameMap = useMemo(() => {
+  const clusterNameMap = (() => {
     const map: Record<string, string> = {}
     clusters.forEach(c => {
       map[c.name] = c.name // Primary maps to itself
@@ -222,19 +217,19 @@ export function ResourcesDrillDown({ data: _data }: Props) {
       })
     })
     return map
-  }, [clusters])
+  })()
 
   // Accelerator type config (memoized to avoid recreating on every render)
-  const ACCEL_TYPES = useMemo(() => [
+  const ACCEL_TYPES = [
     { key: 'GPU', label: 'GPU', color: 'text-purple-400' },
     { key: 'TPU', label: 'TPU', color: 'text-green-400' },
     { key: 'AIU', label: 'AIU', color: 'text-cyan-400' },
     { key: 'XPU', label: 'XPU', color: 'text-orange-400' },
-  ] as const, [])
+  ] as const
 
   // Calculate per-cluster per-accelerator data (mapping aliases to primary cluster names)
   // Also deduplicate GPU nodes by name to avoid counting same physical node twice
-  const clusterAccelerators = useMemo(() => {
+  const clusterAccelerators = (() => {
     const map: Record<string, Record<string, { total: number; allocated: number }>> = {}
     const seenNodes = new Set<string>()
 
@@ -253,10 +248,10 @@ export function ResourcesDrillDown({ data: _data }: Props) {
       map[cluster][accelType].allocated += node.gpuAllocated
     })
     return map
-  }, [gpuNodes, clusterNameMap])
+  })()
 
   // Determine which accelerator types have any data globally
-  const activeAccelTypes = useMemo(() => {
+  const activeAccelTypes = (() => {
     const globalTotals: Record<string, { total: number; allocated: number }> = {}
     Object.values(clusterAccelerators).forEach(accelMap => {
       Object.entries(accelMap).forEach(([type, data]) => {
@@ -267,9 +262,8 @@ export function ResourcesDrillDown({ data: _data }: Props) {
     })
     return ACCEL_TYPES.filter(at => globalTotals[at.key]?.total > 0).map(at => ({
       ...at,
-      globalData: globalTotals[at.key],
-    }))
-  }, [clusterAccelerators, ACCEL_TYPES])
+      globalData: globalTotals[at.key] }))
+  })()
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -293,20 +287,16 @@ export function ResourcesDrillDown({ data: _data }: Props) {
       pods: totalPods,
       memoryGB: totalMemoryGB,
       memoryRequestsGB: totalMemoryRequestsGB,
-      memoryPercent,
-    }
+      memoryPercent }
   }, [clusters])
 
   // DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
-      },
-    }),
+        distance: 8 } }),
     useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+      coordinateGetter: sortableKeyboardCoordinates })
   )
 
   // Handle drag end
@@ -452,8 +442,7 @@ export function ResourcesDrillDown({ data: _data }: Props) {
                   key: at.key,
                   label: at.label,
                   color: at.color,
-                  data: clusterAccelMap[at.key] || { total: 0, allocated: 0 },
-                }))
+                  data: clusterAccelMap[at.key] || { total: 0, allocated: 0 } }))
 
                 return (
                   <SortableClusterRow
@@ -475,8 +464,7 @@ export function ResourcesDrillDown({ data: _data }: Props) {
                       memoryUsageGB: cluster.memoryUsageGB,
                       storageGB: cluster.storageGB,
                       metricsAvailable: cluster.metricsAvailable,
-                      origin: 'resources',
-                    })}
+                      origin: 'resources' })}
                   />
                 )
               })}

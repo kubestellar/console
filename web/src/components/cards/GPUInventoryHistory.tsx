@@ -1,8 +1,7 @@
-import { useMemo, useState, useRef, useCallback, useEffect } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import {
   Cpu, TrendingUp, TrendingDown, Minus, Clock, Server,
-  BarChart3, Table2, ChevronDown, ArrowUpDown,
-} from 'lucide-react'
+  BarChart3, Table2, ChevronDown, ArrowUpDown } from 'lucide-react'
 import {
   AreaChart,
   Area,
@@ -11,8 +10,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
-} from 'recharts'
+  Legend } from 'recharts'
 import { useMetricsHistory } from '../../hooks/useMetricsHistory'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -28,8 +26,7 @@ import {
   CHART_AXIS_STROKE,
   CHART_TOOLTIP_CONTENT_STYLE,
   CHART_TICK_COLOR,
-  CHART_LEGEND_WRAPPER_STYLE,
-} from '../../lib/constants'
+  CHART_LEGEND_WRAPPER_STYLE } from '../../lib/constants'
 
 // ---------------------------------------------------------------------------
 // Constants — no magic numbers
@@ -152,8 +149,7 @@ function generateDemoData(): GPUHistoryDataPoint[] {
       timestamp: ts,
       allocated,
       total: DEMO_BASE_TOTAL,
-      free: DEMO_BASE_TOTAL - allocated,
-    }
+      free: DEMO_BASE_TOTAL - allocated }
     // Distribute allocated across demo GPU types
     let remaining = allocated
     for (let t = 0; t < DEMO_GPU_TYPE_COUNT; t++) {
@@ -183,8 +179,7 @@ function generateDemoTableRows(): NodeTableRow[] {
       allocated,
       total,
       free: total - allocated,
-      utilizationPct: total > 0 ? Math.round((allocated / total) * PERCENT_MULTIPLIER) : 0,
-    })
+      utilizationPct: total > 0 ? Math.round((allocated / total) * PERCENT_MULTIPLIER) : 0 })
   }
   return rows
 }
@@ -216,8 +211,7 @@ export function GPUInventoryHistory() {
     isRefreshing,
     isDemoFallback,
     isFailed,
-    consecutiveFailures,
-  } = useCachedGPUNodes()
+    consecutiveFailures } = useCachedGPUNodes()
   const { isDemoMode } = useDemoMode()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
 
@@ -244,8 +238,7 @@ export function GPUInventoryHistory() {
     hasAnyData: hasData || (history || []).length > 0,
     isDemoData: showDemo,
     isFailed,
-    consecutiveFailures,
-  })
+    consecutiveFailures })
 
   // ── Close dropdowns on outside click or Escape ─────────────────────
   useEffect(() => {
@@ -299,17 +292,16 @@ export function GPUInventoryHistory() {
     return Array.from(nodes).sort()
   }, [gpuNodes, history])
 
-  const toggleClusterFilter = useCallback((clusterName: string) => {
+  const toggleClusterFilter = (clusterName: string) => {
     setLocalClusterFilter(prev =>
       prev.includes(clusterName)
         ? prev.filter(c => c !== clusterName)
         : [...prev, clusterName]
     )
-  }, [])
+  }
 
   // ── Filter helper applied to snapshot gpuNodes ─────────────────────
-  const filterGPUNodes = useCallback(
-    (nodes: Array<{ name: string; cluster: string; gpuType?: string; gpuAllocated: number; gpuTotal: number }>) => {
+  const filterGPUNodes = (nodes: Array<{ name: string; cluster: string; gpuType?: string; gpuAllocated: number; gpuTotal: number }>) => {
       let filtered = nodes || []
 
       // Global cluster filter
@@ -333,9 +325,7 @@ export function GPUInventoryHistory() {
         filtered = filtered.filter(g => g.name === selectedNode)
       }
       return filtered
-    },
-    [isAllClustersSelected, selectedClusters, localClusterFilter, selectedGPUType, selectedNode],
-  )
+    }
 
   // ── Chart data ─────────────────────────────────────────────────────
   const chartData = useMemo<GPUHistoryDataPoint[]>(() => {
@@ -354,8 +344,7 @@ export function GPUInventoryHistory() {
         timestamp: date.getTime(),
         allocated,
         total,
-        free: Math.max(total - allocated, 0),
-      }
+        free: Math.max(total - allocated, 0) }
 
       // Per-GPU-type breakdown for stacked chart
       if (chartMode === 'by-type') {
@@ -388,13 +377,13 @@ export function GPUInventoryHistory() {
   }, [chartData, chartMode])
 
   /** Sorted list of GPU types for chart series (overflow aggregated into "Other") */
-  const chartGPUTypes = useMemo(() => {
+  const chartGPUTypes = (() => {
     if (allGPUTypeKeys.length <= MAX_CHART_SERIES) return allGPUTypeKeys
     return [...allGPUTypeKeys.slice(0, MAX_CHART_SERIES - 1), 'Other']
-  }, [allGPUTypeKeys])
+  })()
 
   /** Chart data with overflow types aggregated into "Other" */
-  const displayChartData = useMemo(() => {
+  const displayChartData = (() => {
     if (allGPUTypeKeys.length <= MAX_CHART_SERIES) return chartData
     const overflowTypes = new Set(allGPUTypeKeys.slice(MAX_CHART_SERIES - 1))
     return (chartData || []).map(dp => {
@@ -409,18 +398,17 @@ export function GPUInventoryHistory() {
       if (otherTotal > 0) next['Other'] = otherTotal
       return next
     })
-  }, [chartData, allGPUTypeKeys])
+  })()
 
   // ── Current totals ─────────────────────────────────────────────────
-  const currentTotals = useMemo(() => {
+  const currentTotals = (() => {
     if ((chartData || []).length === 0) return { allocated: 0, total: 0, free: 0 }
     const latest = chartData[chartData.length - 1]
     return {
       allocated: latest.allocated,
       total: latest.total,
-      free: latest.free,
-    }
-  }, [chartData])
+      free: latest.free }
+  })()
 
   // ── Trend ──────────────────────────────────────────────────────────
   const trend = useMemo<'up' | 'down' | 'stable'>(() => {
@@ -491,7 +479,7 @@ export function GPUInventoryHistory() {
 
   // ── Snapshot interval (computed from history timestamps) ────────────
   /** Median interval between consecutive snapshots in minutes, used to display churn metrics in real time units */
-  const snapshotIntervalMin = useMemo(() => {
+  const snapshotIntervalMin = (() => {
     if ((history || []).length < MIN_CHURN_SNAPSHOTS) return DEFAULT_SNAPSHOT_INTERVAL_MIN
     const intervals: number[] = []
     for (let i = 1; i < (history || []).length; i++) {
@@ -502,17 +490,17 @@ export function GPUInventoryHistory() {
     intervals.sort((a, b) => a - b)
     const mid = Math.floor(intervals.length / 2)
     return Math.round(intervals.length % 2 === 0 ? (intervals[mid - 1] + intervals[mid]) / 2 : intervals[mid])
-  }, [history])
+  })()
 
   /** Format a duration given in snapshot intervals as a human-readable time string (e.g. "~30 min" or "~2.5 hrs") */
-  const formatIntervalDuration = useCallback((intervals: number): string => {
+  const formatIntervalDuration = (intervals: number): string => {
     const totalMin = intervals * snapshotIntervalMin
     if (totalMin < MINUTES_PER_HOUR) return `~${Math.round(totalMin)} min`
     return `~${(totalMin / MINUTES_PER_HOUR).toFixed(1)} hrs`
-  }, [snapshotIntervalMin])
+  }
 
   // ── Table data (per-node, per-type breakdown from latest snapshot) ──
-  const tableRows = useMemo<NodeTableRow[]>(() => {
+  const tableRows = (() => {
     if (showDemo) return generateDemoTableRows()
 
     const latestSnapshot = (history || []).length > 0 ? (history || [])[(history || []).length - 1] : null
@@ -529,20 +517,19 @@ export function GPUInventoryHistory() {
         allocated,
         total,
         free: Math.max(total - allocated, 0),
-        utilizationPct: total > 0 ? Math.round((allocated / total) * PERCENT_MULTIPLIER) : 0,
-      }
+        utilizationPct: total > 0 ? Math.round((allocated / total) * PERCENT_MULTIPLIER) : 0 }
     })
-  }, [history, showDemo, filterGPUNodes])
+  })()
 
   const totalTablePages = Math.max(1, Math.ceil((tableRows || []).length / TABLE_PAGE_SIZE))
 
   // Clamp page to valid range when filters shrink the row count
   const effectivePage = Math.min(tablePage, totalTablePages - 1)
 
-  const paginatedRows = useMemo(() => {
+  const paginatedRows = (() => {
     const start = effectivePage * TABLE_PAGE_SIZE
     return (tableRows || []).slice(start, start + TABLE_PAGE_SIZE)
-  }, [tableRows, effectivePage])
+  })()
 
   const usagePercent = currentTotals.total > 0
     ? Math.round((currentTotals.allocated / currentTotals.total) * PERCENT_MULTIPLIER)

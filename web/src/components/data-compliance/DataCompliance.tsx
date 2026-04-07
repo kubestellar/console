@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -28,7 +27,7 @@ export function DataCompliance() {
   const isRefreshing = dataRefreshing || complianceRefreshing
 
   // Stats value getter — derives values from real cluster data
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string): StatBlockValue => {
     const demo = isDemoData
     switch (blockId) {
       // Encryption
@@ -74,12 +73,9 @@ export function DataCompliance() {
       default:
         return { value: '-' }
     }
-  }, [posture, scores, isDemoData])
+  }
 
-  const getStatValue = useCallback(
-    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
-    [getDashboardStatValue, getUniversalStatValue]
-  )
+  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
   return (
     <DashboardPage
@@ -99,8 +95,7 @@ export function DataCompliance() {
       isDemoData={isDemoData}
       emptyState={{
         title: 'Data Compliance Dashboard',
-        description: 'Add cards to monitor data encryption, access controls, and compliance frameworks.',
-      }}
+        description: 'Add cards to monitor data encryption, access controls, and compliance frameworks.' }}
     >
       {/* Error State */}
       {error && (

@@ -6,7 +6,7 @@
  * Follows the ClusterOPAModal pattern using BaseModal compound components.
  */
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Shield, Search, ExternalLink } from 'lucide-react'
 import { BaseModal } from '../../../lib/modals'
 import { StatusBadge } from '../../ui/StatusBadge'
@@ -33,15 +33,14 @@ export function KubescapeDetailModal({
   clusterName,
   status,
   onRefresh,
-  isRefreshing = false,
-}: KubescapeDetailModalProps) {
+  isRefreshing = false }: KubescapeDetailModalProps) {
   const [search, setSearch] = useState('')
 
   const score = status.overallScore
   const scoreColor = score >= SCORE_GOOD_THRESHOLD ? 'text-green-400' : score >= SCORE_WARNING_THRESHOLD ? 'text-yellow-400' : 'text-red-400'
 
   // Filter controls by search
-  const filteredControls = useMemo(() => {
+  const filteredControls = (() => {
     const controls = status.controls || []
     if (!search.trim()) return controls
     const q = search.toLowerCase()
@@ -49,7 +48,7 @@ export function KubescapeDetailModal({
       c.id.toLowerCase().includes(q) ||
       c.name.toLowerCase().includes(q)
     )
-  }, [status.controls, search])
+  })()
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false}>

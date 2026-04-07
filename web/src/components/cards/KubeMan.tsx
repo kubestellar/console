@@ -94,8 +94,7 @@ function oppositeDir(dir: Direction): Direction {
     up: 'down',
     down: 'up',
     left: 'right',
-    right: 'left',
-  }
+    right: 'left' }
   return opposites[dir]
 }
 
@@ -105,8 +104,7 @@ function moveInDir(pos: Position, dir: Direction): Position {
     up: { x: pos.x, y: pos.y - 1 },
     down: { x: pos.x, y: pos.y + 1 },
     left: { x: pos.x - 1, y: pos.y },
-    right: { x: pos.x + 1, y: pos.y },
-  }
+    right: { x: pos.x + 1, y: pos.y } }
   const newPos = moves[dir]
 
   // Handle tunnel wrapping
@@ -154,8 +152,7 @@ export function KubeMan(_props: CardComponentProps) {
     ghosts,
     maze,
     powerMode,
-    deathAnimation,
-  })
+    deathAnimation })
 
   // Tick counter ref for ghost release timing
   const tickCountRef = useRef(0)
@@ -247,8 +244,7 @@ export function KubeMan(_props: CardComponentProps) {
           right: 0,
           down: Math.PI / 2,
           left: Math.PI,
-          up: -Math.PI / 2,
-        }
+          up: -Math.PI / 2 }
         const angle = angles[playerDir]
         ctx.arc(px, py, radius, angle + 0.3, angle + Math.PI * 2 - 0.3)
         ctx.lineTo(px, py)
@@ -299,8 +295,7 @@ export function KubeMan(_props: CardComponentProps) {
       // When scared, run to opposite corner from player
       return {
         x: playerPos.x < MAZE_WIDTH / 2 ? MAZE_WIDTH - 2 : 1,
-        y: playerPos.y < MAZE_HEIGHT / 2 ? MAZE_HEIGHT - 2 : 1,
-      }
+        y: playerPos.y < MAZE_HEIGHT / 2 ? MAZE_HEIGHT - 2 : 1 }
     }
 
     switch (ghost.name) {
@@ -314,8 +309,7 @@ export function KubeMan(_props: CardComponentProps) {
           up: { x: playerPos.x, y: playerPos.y - 4 },
           down: { x: playerPos.x, y: playerPos.y + 4 },
           left: { x: playerPos.x - 4, y: playerPos.y },
-          right: { x: playerPos.x + 4, y: playerPos.y },
-        }
+          right: { x: playerPos.x + 4, y: playerPos.y } }
         return ahead[playerDir]
       }
 
@@ -325,8 +319,7 @@ export function KubeMan(_props: CardComponentProps) {
           up: { x: playerPos.x, y: playerPos.y - 2 },
           down: { x: playerPos.x, y: playerPos.y + 2 },
           left: { x: playerPos.x - 2, y: playerPos.y },
-          right: { x: playerPos.x + 2, y: playerPos.y },
-        }
+          right: { x: playerPos.x + 2, y: playerPos.y } }
         const target = twoAhead[playerDir]
         // Add some chaos by sometimes targeting random spots
         if (Math.random() < 0.2) {
@@ -548,7 +541,7 @@ export function KubeMan(_props: CardComponentProps) {
 
   // Keyboard controls
   // Keyboard controls — scoped to visible game container (KeepAlive-safe)
-  const handleManKeyDown = useCallback((e: KeyboardEvent) => {
+  const handleManKeyDown = (e: KeyboardEvent) => {
     if (!isPlaying) return
 
     const keyMap: Record<string, Direction> = {
@@ -563,18 +556,17 @@ export function KubeMan(_props: CardComponentProps) {
       a: 'left',
       A: 'left',
       d: 'right',
-      D: 'right',
-    }
+      D: 'right' }
 
     if (keyMap[e.key]) {
       e.preventDefault()
       setNextDir(keyMap[e.key])
     }
-  }, [isPlaying])
+  }
   useGameKeys(gameContainerRef, { onKeyDown: handleManKeyDown })
 
   // Start game
-  const startGame = useCallback(() => {
+  const startGame = () => {
     setMaze(cloneMaze(MAZE_TEMPLATE))
     setPlayerPos({ x: 9, y: 15 })
     setPlayerDir('left')
@@ -595,7 +587,7 @@ export function KubeMan(_props: CardComponentProps) {
     setDeathAnimation({ active: false, frame: 0, maxFrames: 60 })
     setIsPlaying(true)
     emitGameStarted('kube_man')
-  }, [])
+  }
 
   const scale = isExpanded ? 1.5 : 1
   const canvasWidth = MAZE_WIDTH * CELL_SIZE * scale

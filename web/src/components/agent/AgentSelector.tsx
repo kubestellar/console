@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo, useState, useCallback } from 'react'
+import { useRef, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { ChevronDown, Check, Loader2, Sparkles, Play, BookOpen, X, RefreshCw, AlertTriangle, ExternalLink } from 'lucide-react'
@@ -21,8 +21,7 @@ import { CLUSTER_PROVIDER_KEYS, buildVisibleAgents, sectionAgents } from './agen
 /** Map agent names to their backend provider key for prerequisite lookup */
 const AGENT_TO_PROVIDER_KEY: Record<string, string> = {
   vscode: 'vscode',
-  antigravity: 'antigravity',
-}
+  antigravity: 'antigravity' }
 
 interface AgentSelectorProps {
   compact?: boolean
@@ -59,44 +58,38 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
   const [pendingInstall, setPendingInstall] = useState<{ missionId: string; displayName: string; mission: MissionExport } | null>(null)
 
   // Providers that are cluster-based (rendered in bottom section)
-  const CLUSTER_PROVIDERS: Set<AgentProvider> = useMemo(() => new Set(CLUSTER_PROVIDER_KEYS), [])
+  const CLUSTER_PROVIDERS: Set<AgentProvider> = new Set(CLUSTER_PROVIDER_KEYS)
 
   // Always-show CLI agents (appear grayed out when not detected)
-  const ALWAYS_SHOW_CLI: AgentInfo[] = useMemo(() => [
+  const ALWAYS_SHOW_CLI: AgentInfo[] = [
     {
       name: 'goose',
       displayName: 'Goose',
       description: 'Open-source AI agent by Block with MCP support',
       provider: 'block',
       available: false,
-      installUrl: 'https://github.com/block/goose',
-    },
+      installUrl: 'https://github.com/block/goose' },
     {
       name: 'copilot-cli',
       displayName: 'Copilot CLI',
       description: 'GitHub Copilot in the terminal',
       provider: 'github-cli',
       available: false,
-      installUrl: 'https://docs.github.com/en/copilot/github-copilot-in-the-cli',
-    },
-  ], [])
+      installUrl: 'https://docs.github.com/en/copilot/github-copilot-in-the-cli' },
+  ]
 
   // Merge local agents with always-show CLI agents and in-cluster backends
-  const visibleAgents = useMemo(() =>
-    buildVisibleAgents(agents, ALWAYS_SHOW_CLI, { kagentAvailable, kagentiAvailable, selectedKagentAgent, selectedKagentiAgent }),
-    [agents, ALWAYS_SHOW_CLI, kagentAvailable, kagentiAvailable, selectedKagentAgent, selectedKagentiAgent]
-  )
+  const visibleAgents = buildVisibleAgents(agents, ALWAYS_SHOW_CLI, { kagentAvailable, kagentiAvailable, selectedKagentAgent, selectedKagentiAgent })
 
   // Check if any CLI agent is available (can run install missions)
-  const hasCliAgent = useMemo(() => agents.some(a => a.available), [agents])
+  const hasCliAgent = agents.some(a => a.available)
 
   // Known KB paths for install missions (stable reference to avoid recreating callbacks)
   const INSTALL_MISSION_PATHS = useMemo<Record<string, string[]>>(() => ({
     'install-kagent': ['fixes/cncf-install/install-kagent.json'],
-    'install-kagenti': ['fixes/platform-install/install-kagenti.json'],
-  }), [])
+    'install-kagenti': ['fixes/platform-install/install-kagenti.json'] }), [])
 
-  const openInstallGuide = useCallback(async (missionId: string) => {
+  const openInstallGuide = async (missionId: string) => {
     closeDropdown()
     setInstallGuideLoading(true)
     setInstallGuideError(false)
@@ -118,8 +111,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
           upgrade: nested.upgrade || parsed.upgrade,
           troubleshooting: nested.troubleshooting || parsed.troubleshooting,
           tags: nested.tags || parsed.tags,
-          missionClass: 'install',
-        }
+          missionClass: 'install' }
         setInstallGuide({ mission, raw })
         setInstallGuideLoading(false)
         return
@@ -127,9 +119,9 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
     }
     setInstallGuideError(true)
     setInstallGuideLoading(false)
-  }, [closeDropdown, INSTALL_MISSION_PATHS])
+  }
 
-  const handleInstallMission = useCallback(async (missionId: string, displayName: string) => {
+  const handleInstallMission = async (missionId: string, displayName: string) => {
     closeDropdown()
     // Fetch the actual mission content
     const paths = INSTALL_MISSION_PATHS[missionId] || [`fixes/cncf-install/${missionId}.json`, `fixes/platform-install/${missionId}.json`]
@@ -147,8 +139,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
           description: nested.description || parsed.description || `Install ${displayName}`,
           type: 'deploy',
           tags: nested.tags || parsed.tags || [],
-          steps: nested.steps || parsed.steps || [],
-        }
+          steps: nested.steps || parsed.steps || [] }
         break
       } catch { continue }
     }
@@ -159,21 +150,18 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
     }
     // Show cluster selection dialog before running
     setPendingInstall({ missionId, displayName, mission: missionData })
-  }, [closeDropdown, startMission, INSTALL_MISSION_PATHS])
+  }
 
   // Split agents into sections: selected at top, then CLI, then Cluster
-  const { selectedAgentInfo, cliAgents, clusterAgents } = useMemo(() =>
-    sectionAgents(visibleAgents, selectedAgent, CLUSTER_PROVIDERS),
-    [visibleAgents, selectedAgent, CLUSTER_PROVIDERS]
-  )
+  const { selectedAgentInfo, cliAgents, clusterAgents } = sectionAgents(visibleAgents, selectedAgent, CLUSTER_PROVIDERS)
 
   // Flat list for keyboard navigation and length checks
-  const sortedAgents = useMemo(() => {
+  const sortedAgents = (() => {
     const list: AgentInfo[] = []
     if (selectedAgentInfo) list.push(selectedAgentInfo)
     list.push(...cliAgents, ...clusterAgents)
     return list
-  }, [selectedAgentInfo, cliAgents, clusterAgents])
+  })()
 
   const currentAgent = visibleAgents.find(a => a.name === selectedAgent) || visibleAgents[0]
   const hasAvailableAgents = visibleAgents.some(a => a.available)
@@ -213,8 +201,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
       const rect = buttonRef.current.getBoundingClientRect()
       setDropdownPos({
         top: rect.bottom + 4, // 4px gap (mt-1 equivalent)
-        right: window.innerWidth - rect.right,
-      })
+        right: window.innerWidth - rect.right })
     }
   }, [isOpen])
 
@@ -681,8 +668,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
             description: m.description,
             type: 'deploy',
             cluster: clusters.length > 0 ? clusters.join(',') : undefined,
-            initialPrompt: stepsText,
-          })
+            initialPrompt: stepsText })
           openSidebar()
           setPendingInstall(null)
         }}

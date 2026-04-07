@@ -1,12 +1,11 @@
-import { useState, useEffect, useCallback, useMemo, useRef, SetStateAction } from 'react'
+import { useState, useEffect, useRef, SetStateAction } from 'react'
 import {
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   DragEndEvent,
-  DragStartEvent,
-} from '@dnd-kit/core'
+  DragStartEvent } from '@dnd-kit/core'
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { dashboardSync } from './dashboardSync'
 import { DashboardCard, DashboardCardPlacement, NewCardInput } from './types'
@@ -47,20 +46,17 @@ export function useDashboardDnD<T extends { id: string }>(
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5,
-      },
-    }),
+        distance: 5 } }),
     useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+      coordinateGetter: sortableKeyboardCoordinates })
   )
 
-  const handleDragStart = useCallback((event: DragStartEvent) => {
+  const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string)
     setActiveDragData(event.active.data.current as Record<string, unknown> | null)
-  }, [])
+  }
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     setActiveId(null)
     setActiveDragData(null)
@@ -72,15 +68,14 @@ export function useDashboardDnD<T extends { id: string }>(
         return arrayMove(items, oldIndex, newIndex)
       })
     }
-  }, [setItems])
+  }
 
   return {
     sensors,
     activeId,
     activeDragData,
     handleDragStart,
-    handleDragEnd,
-  }
+    handleDragEnd }
 }
 
 // ============================================================================
@@ -127,16 +122,12 @@ export function useDashboardCards(
   defaultCards: DashboardCardPlacement[]
 ): UseDashboardCardsResult {
   // Convert default placements to card instances
-  const defaultCardInstances = useMemo(() =>
-    defaultCards.map((card, i) => ({
+  const defaultCardInstances = defaultCards.map((card, i) => ({
       id: `default-${card.type}-${i}`,
       card_type: card.type,
       config: card.config || {},
       title: card.title,
-      position: card.position,
-    })),
-    [defaultCards]
-  )
+      position: card.position }))
 
   // Track if we've done initial sync
   const hasSyncedRef = useRef(false)
@@ -151,8 +142,7 @@ export function useDashboardCards(
         // Ensure every card has a position object (guards against old/corrupt data)
         return parsed.map(c => ({
           ...c,
-          position: c.position || { w: 4, h: 2 },
-        }))
+          position: c.position || { w: 4, h: 2 } }))
       }
     } catch {
       // Fall through to return defaults
@@ -163,12 +153,12 @@ export function useDashboardCards(
   const [isSyncing, setIsSyncing] = useState(false)
 
   // Compute isCustomized by comparing current card types to defaults
-  const isCustomized = useMemo(() => {
+  const isCustomized = (() => {
     if (cards.length !== defaultCardInstances.length) return true
     const currentTypes = cards.map(c => c.card_type).sort()
     const defaultTypes = defaultCardInstances.map(c => c.card_type).sort()
     return currentTypes.some((t, i) => t !== defaultTypes[i])
-  }, [cards, defaultCardInstances])
+  })()
 
   // On mount, sync with backend if authenticated
   useEffect(() => {
@@ -216,25 +206,22 @@ export function useDashboardCards(
 
   // Undo/redo support
   const {
-    snapshot, undo, redo, canUndo, canRedo,
-  } = useDashboardUndoRedo<DashboardCard>(
+    snapshot, undo, redo, canUndo, canRedo } = useDashboardUndoRedo<DashboardCard>(
     (restored) => setCards(restored),
     () => cardsRef.current,
   )
 
   // Wrapper that snapshots before calling setCards
-  const setCardsWithSnapshot = useCallback((action: SetStateAction<DashboardCard[]>) => {
+  const setCardsWithSnapshot = (action: SetStateAction<DashboardCard[]>) => {
     snapshot(cardsRef.current)
     setCards(action)
-  }, [snapshot])
+  }
 
   // Generate unique ID for new cards
-  const generateId = useCallback(() =>
-    `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    []
-  )
+  const generateId = () =>
+    `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
-  const addCards = useCallback((newCards: NewCardInput[]) => {
+  const addCards = (newCards: NewCardInput[]) => {
     // Batch card additions to prevent UI freeze when adding many cards
     const BATCH_SIZE = 5 // Add 5 cards at a time
     const BATCH_DELAY = 50 // 50ms between batches
@@ -243,8 +230,7 @@ export function useDashboardCards(
       id: generateId(),
       card_type: card.type,
       config: card.config || {},
-      title: card.title,
-    }))
+      title: card.title }))
 
     snapshot(cardsRef.current)
 
@@ -268,36 +254,36 @@ export function useDashboardCards(
       }
     }
     addBatch()
-  }, [generateId, snapshot])
+  }
 
-  const removeCard = useCallback((id: string) => {
+  const removeCard = (id: string) => {
     snapshot(cardsRef.current)
     setCards(prev => prev.filter(c => c.id !== id))
-  }, [snapshot])
+  }
 
-  const configureCard = useCallback((id: string, config: Record<string, unknown>) => {
+  const configureCard = (id: string, config: Record<string, unknown>) => {
     snapshot(cardsRef.current)
     setCards(prev => prev.map(c =>
       c.id === id ? { ...c, config } : c
     ))
-  }, [snapshot])
+  }
 
-  const updateCardWidth = useCallback((id: string, width: number) => {
+  const updateCardWidth = (id: string, width: number) => {
     snapshot(cardsRef.current)
     setCards(prev => prev.map(c =>
       c.id === id
         ? { ...c, position: { ...(c.position || { w: 4, h: 2 }), w: width } }
         : c
     ))
-  }, [snapshot])
+  }
 
-  const reset = useCallback(() => {
+  const reset = () => {
     snapshot(cardsRef.current)
     setCards(defaultCardInstances)
-  }, [defaultCardInstances, snapshot])
+  }
 
   // Manual sync with backend
-  const syncWithBackend = useCallback(async () => {
+  const syncWithBackend = async () => {
     if (!dashboardSync.isAuthenticated()) return
 
     setIsSyncing(true)
@@ -311,7 +297,7 @@ export function useDashboardCards(
     } finally {
       setIsSyncing(false)
     }
-  }, [storageKey])
+  }
 
   return {
     cards,
@@ -327,8 +313,7 @@ export function useDashboardCards(
     undo,
     redo,
     canUndo,
-    canRedo,
-  }
+    canRedo }
 }
 
 // ============================================================================
@@ -396,18 +381,18 @@ export function useDashboardModals(): UseDashboardModalsResult {
   // Use a ref so openConfigureCard is stable (no cards in deps)
   const cardsRef = useRef<DashboardCard[]>([])
 
-  const _setCardsRef = useCallback((cards: DashboardCard[]) => {
+  const _setCardsRef = (cards: DashboardCard[]) => {
     cardsRef.current = cards
-  }, [])
+  }
 
-  const openConfigureCard = useCallback((cardId: string) => {
+  const openConfigureCard = (cardId: string) => {
     const card = cardsRef.current.find(c => c.id === cardId)
     if (card) setConfiguringCard(card)
-  }, [])
+  }
 
-  const closeConfigureCard = useCallback(() => {
+  const closeConfigureCard = () => {
     setConfiguringCard(null)
-  }, [])
+  }
 
   return {
     showAddCard,
@@ -418,8 +403,7 @@ export function useDashboardModals(): UseDashboardModalsResult {
     setConfiguringCard,
     openConfigureCard,
     closeConfigureCard,
-    _setCardsRef,
-  }
+    _setCardsRef }
 }
 
 // ============================================================================
@@ -451,15 +435,14 @@ export function useDashboardShowCards(storageKey: string): UseDashboardShowCards
     localStorage.setItem(`${storageKey}-cards-visible`, String(showCards))
   }, [showCards, storageKey])
 
-  const expandCards = useCallback(() => setShowCards(true), [])
-  const collapseCards = useCallback(() => setShowCards(false), [])
+  const expandCards = () => setShowCards(true)
+  const collapseCards = () => setShowCards(false)
 
   return {
     showCards,
     setShowCards,
     expandCards,
-    collapseCards,
-  }
+    collapseCards }
 }
 
 // ============================================================================
@@ -525,6 +508,5 @@ export function useDashboard(options: UseDashboardOptions): UseDashboardResult {
     ...modals,
     ...showCardsState,
     dnd,
-    ...refreshState,
-  }
+    ...refreshState }
 }

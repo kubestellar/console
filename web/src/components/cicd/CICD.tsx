@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { useClusters, useDeployments } from '../../hooks/useMCP'
 import { useCachedProwJobs } from '../../hooks/useCachedData'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
@@ -33,7 +32,7 @@ export function CICD() {
   const isDemoData = !hasRealData && !prowLoading && !deploymentsLoading
 
   // Stats value getter for the configurable StatsOverview component
-  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'clusters':
         return { value: reachableClusters.length, sublabel: 'clusters', isClickable: false }
@@ -77,12 +76,9 @@ export function CICD() {
       default:
         return { value: '-' }
     }
-  }, [reachableClusters, prowJobs, runningJobs, failedJobs, prowStatus, deploymentsToday, deployments, prowLoading, deploymentsLoading])
+  }
 
-  const getStatValue = useCallback(
-    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
-    [getDashboardStatValue, getUniversalStatValue]
-  )
+  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
 
   return (
     <DashboardPage
@@ -102,8 +98,7 @@ export function CICD() {
       isDemoData={isDemoData}
       emptyState={{
         title: 'CI/CD Dashboard',
-        description: 'Add cards to monitor pipelines, builds, and deployment status across your clusters.',
-      }}
+        description: 'Add cards to monitor pipelines, builds, and deployment status across your clusters.' }}
     >
       {error && (
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">

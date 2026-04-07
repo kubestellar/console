@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useMissions } from '../../../hooks/useMissions'
@@ -17,8 +17,7 @@ import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import {
   AIActionBar,
   useModalAI,
-  type ResourceContext,
-} from '../../modals'
+  type ResourceContext } from '../../modals'
 import { useTranslation } from 'react-i18next'
 import { copyToClipboard } from '../../../lib/clipboard'
 
@@ -128,7 +127,7 @@ export function ArgoAppDrillDown({ data }: Props) {
 
   // Stable timestamp for the declarative restart snippet — computed once per render so
   // the displayed YAML and the copy-to-clipboard content always use the same value.
-  const restartTimestamp = useMemo(() => new Date().toISOString(), [])
+  const restartTimestamp = new Date().toISOString()
 
   // Resource context for AI actions
   const resourceContext: ResourceContext = {
@@ -136,8 +135,7 @@ export function ArgoAppDrillDown({ data }: Props) {
     name: appName,
     cluster,
     namespace,
-    status: `${syncStatus} / ${healthStatus}`,
-  }
+    status: `${syncStatus} / ${healthStatus}` }
 
   // Check for issues
   const hasIssues = syncStatus.toLowerCase() !== 'synced' ||
@@ -155,9 +153,7 @@ export function ArgoAppDrillDown({ data }: Props) {
       repoURL,
       targetRevision,
       path,
-      project,
-    },
-  })
+      project } })
 
   // Helper to run kubectl commands
   const runKubectl = (args: string[]): Promise<string> => {
@@ -212,8 +208,7 @@ export function ArgoAppDrillDown({ data }: Props) {
           namespace: r.namespace || namespace,
           status: r.status,
           health: r.health?.status,
-          syncWave: r.syncWave,
-        })))
+          syncWave: r.syncWave })))
       }
     } catch {
       setAppResources([])
@@ -236,8 +231,7 @@ export function ArgoAppDrillDown({ data }: Props) {
           revision: h.revision?.substring(0, 7) || 'Unknown',
           deployedAt: h.deployedAt,
           status: h.deployStartedAt ? 'Deployed' : 'Unknown',
-          message: h.source?.repoURL,
-        })).reverse())
+          message: h.source?.repoURL })).reverse())
       }
     } catch {
       setSyncHistory([])
@@ -319,9 +313,7 @@ Please:
         namespace,
         cluster,
         syncStatus,
-        healthStatus,
-      },
-    })
+        healthStatus } })
   }
 
   const syncStyle = getSyncStatusStyle(syncStatus)
