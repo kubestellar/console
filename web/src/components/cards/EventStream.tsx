@@ -1,4 +1,4 @@
-import { AlertTriangle, Info, XCircle, ChevronRight } from 'lucide-react'
+import { AlertTriangle, Info, XCircle, ChevronRight, Radio } from 'lucide-react'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import type { ClusterEvent } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -6,7 +6,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
-import { CardSkeleton, CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { CardSkeleton, CardSearchInput, CardControlsRow, CardPaginationFooter, CardEmptyState } from '../../lib/cards/CardComponents'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -132,10 +132,11 @@ function EventStreamInternal() {
 
   if (showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No events</p>
-        <p className="text-xs mt-1">Cluster events will appear here</p>
-      </div>
+      <CardEmptyState
+        icon={Radio}
+        title="No events"
+        message="Cluster events will appear here when activity is detected."
+      />
     )
   }
 
@@ -188,7 +189,7 @@ function EventStreamInternal() {
       />
 
       {/* Event list */}
-      <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto min-h-card-content" style={containerStyle}>
+      <div ref={containerRef} className="flex-1 space-y-1.5 overflow-y-auto min-h-card-content" style={containerStyle}>
         {events.length === 0 ? (
           <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
             No recent events
@@ -201,7 +202,7 @@ function EventStreamInternal() {
             return (
               <div
                 key={`${event.object}-${idx}`}
-                className="flex items-start gap-3 p-2 rounded-lg hover:bg-secondary/30 transition-colors cursor-pointer group"
+                className={`flex items-start gap-3 p-3 rounded-lg hover:bg-secondary/40 transition-colors cursor-pointer group ${idx % 2 === 0 ? 'bg-secondary/10' : 'bg-secondary/25'}`}
                 onClick={() => handleEventClick(event)}
                 title={`Click to view details for ${event.object}`}
               >

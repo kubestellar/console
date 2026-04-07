@@ -7,7 +7,7 @@ import { Pagination } from '../ui/Pagination'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCardLoadingState } from './CardDataContext'
-import { CardClusterFilter, CardSearchInput, CardSkeleton, CardAIActions } from '../../lib/cards/CardComponents'
+import { CardClusterFilter, CardSearchInput, CardSkeleton, CardAIActions, CardEmptyState } from '../../lib/cards/CardComponents'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
@@ -149,10 +149,11 @@ function TopPodsInternal({ config }: TopPodsProps) {
 
   if (showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No pods</p>
-        <p className="text-xs mt-1">Pods will appear when running</p>
-      </div>
+      <CardEmptyState
+        icon={Cpu}
+        title="No pods"
+        message="Pods will appear when running on your clusters."
+      />
     )
   }
 

@@ -7,7 +7,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useMobile } from '../../hooks/useMobile'
 import { Skeleton, SkeletonStats, SkeletonList } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
-import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions, CardEmptyState } from '../../lib/cards/CardComponents'
 import { ClusterDetailModal } from '../clusters/ClusterDetailModal'
 import { CloudProviderIcon, detectCloudProvider, getProviderLabel, CloudProvider } from '../ui/CloudProviderIcon'
 import { isClusterUnreachable, isClusterTokenExpired, isClusterHealthy } from '../clusters/utils'
@@ -205,10 +205,11 @@ export function ClusterHealth() {
 
   if (showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">{t('clusterHealth.noClustersConfigured')}</p>
-        <p className="text-xs mt-1">{t('clusterHealth.addClustersPrompt')}</p>
-      </div>
+      <CardEmptyState
+        icon={Cpu}
+        title={t('clusterHealth.noClustersConfigured')}
+        message={t('clusterHealth.addClustersPrompt')}
+      />
     )
   }
 

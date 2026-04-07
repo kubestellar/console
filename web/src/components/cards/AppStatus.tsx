@@ -5,7 +5,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCachedDeployments } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useCardLoadingState } from './CardDataContext'
-import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardSkeleton, CardAIActions } from '../../lib/cards/CardComponents'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardSkeleton, CardAIActions, CardEmptyState } from '../../lib/cards/CardComponents'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 
@@ -170,10 +170,11 @@ export function AppStatus(_props: AppStatusProps) {
 
   if (showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No applications found</p>
-        <p className="text-xs mt-1">Deploy applications to see their status</p>
-      </div>
+      <CardEmptyState
+        icon={Box}
+        title="No applications found"
+        message="Deploy applications to see their status across clusters."
+      />
     )
   }
 
@@ -213,19 +214,19 @@ export function AppStatus(_props: AppStatusProps) {
         className="mb-3"
       />
 
-      <div ref={containerRef} className="flex-1 space-y-3 overflow-y-auto" style={containerStyle}>
+      <div ref={containerRef} className="flex-1 space-y-1.5 overflow-y-auto" style={containerStyle}>
       {apps.length === 0 ? (
         <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
           No workloads found
         </div>
-      ) : apps.map((app) => {
+      ) : apps.map((app, idx) => {
         const total = app.status.healthy + app.status.warning + app.status.pending
 
         return (
           <div
             key={`${app.name}-${app.namespace}`}
             onClick={() => handleAppClick(app, app.clusters[0])}
-            className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
+            className={`p-3 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer group ${idx % 2 === 0 ? 'bg-secondary/20' : 'bg-secondary/40'}`}
             title={`Click to view details for ${app.name}`}
           >
             <div className="flex items-center justify-between mb-2 gap-2">

@@ -10,7 +10,8 @@ import { useCardData, commonComparators, type SortDirection } from '../../lib/ca
 import {
   CardSearchInput,
   CardControlsRow,
-  CardPaginationFooter } from '../../lib/cards/CardComponents'
+  CardPaginationFooter,
+  CardEmptyState } from '../../lib/cards/CardComponents'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useTranslation } from 'react-i18next'
 
@@ -156,10 +157,11 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
 
   if (showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">{t('argoCDApplications.noApplications')}</p>
-        <p className="text-xs mt-1">{t('argoCDApplications.deployWithArgoCD')}</p>
-      </div>
+      <CardEmptyState
+        icon={Play}
+        title={t('argoCDApplications.noApplications')}
+        message={t('argoCDApplications.deployWithArgoCD')}
+      />
     )
   }
 

@@ -1,4 +1,4 @@
-import { CheckCircle, Clock, XCircle, ChevronRight, Filter, Server } from 'lucide-react'
+import { CheckCircle, Clock, XCircle, ChevronRight, Filter, Server, Layers } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCachedDeployments } from '../../hooks/useCachedData'
@@ -7,7 +7,7 @@ import { CardControls } from '../ui/CardControls'
 import { Skeleton } from '../ui/Skeleton'
 import type { Deployment } from '../../hooks/useMCP'
 import { useCardLoadingState } from './CardDataContext'
-import { CardClusterFilter, CardSearchInput, CardAIActions } from '../../lib/cards/CardComponents'
+import { CardClusterFilter, CardSearchInput, CardAIActions, CardEmptyState } from '../../lib/cards/CardComponents'
 import { useCardData, useCardFilters, useStatusFilter, commonComparators, type SortDirection } from '../../lib/cards/cardHooks'
 import { useTranslation } from 'react-i18next'
 
@@ -184,9 +184,11 @@ export function DeploymentStatus() {
 
   if (showEmptyState && globalFilteredDeployments.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-        No deployments found
-      </div>
+      <CardEmptyState
+        icon={Layers}
+        title="No deployments found"
+        message="Deploy workloads to your clusters to see their status here."
+      />
     )
   }
 
@@ -269,13 +271,13 @@ export function DeploymentStatus() {
       </div>
 
       {/* Deployments list */}
-      <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto min-h-card-content" style={containerStyle}>
+      <div ref={containerRef} className="flex-1 space-y-1.5 overflow-y-auto min-h-card-content" style={containerStyle}>
         {paginatedDeployments.length === 0 ? (
           <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
             No deployments match the current filters
           </div>
         ) : (
-          paginatedDeployments.map((deployment) => {
+          paginatedDeployments.map((deployment, idx) => {
             const config = statusConfig[deployment.status as keyof typeof statusConfig] || statusConfig.running
             const StatusIcon = config.icon
             const clusterName = deployment.cluster || 'unknown'
@@ -285,7 +287,7 @@ export function DeploymentStatus() {
               <div
                 key={`${deployment.cluster}-${deployment.namespace}-${deployment.name}`}
                 onClick={() => handleDeploymentClick(deployment)}
-                className="p-2.5 rounded-lg bg-secondary/30 border border-border/50 cursor-pointer hover:bg-secondary/50 hover:border-border transition-colors group"
+                className={`p-3 rounded-lg border border-border/50 cursor-pointer hover:bg-secondary/50 hover:border-border transition-colors group ${idx % 2 === 0 ? 'bg-secondary/20' : 'bg-secondary/40'}`}
                 title={`Click to view details for ${deployment.name}`}
               >
                 <div className="flex items-start justify-between mb-1.5 gap-2">

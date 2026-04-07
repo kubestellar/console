@@ -5,7 +5,7 @@
  * collapsing, configuration modal, and last updated timestamp.
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Activity, ChevronDown, ChevronRight, Settings, FlaskConical } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
