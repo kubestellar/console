@@ -3,8 +3,31 @@
  * GitHub avatar icon, full label, status indicator. Tooltip rendered by parent as HTML overlay.
  */
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { CNCF_CATEGORY_GRADIENTS } from '../../../lib/cncf-constants'
+
+/** Map project keys to GitHub org for avatar URLs */
+const PROJECT_TO_GITHUB_ORG: Record<string, string> = {
+  envoy: 'envoyproxy', argo: 'argoproj', argocd: 'argoproj',
+  'argo-cd': 'argoproj', harbor: 'goharbor', jaeger: 'jaegertracing',
+  fluentd: 'fluent', 'fluent-bit': 'fluent', vitess: 'vitessio',
+  thanos: 'thanos-io', cortex: 'cortexproject', falco: 'falcosecurity',
+  keda: 'kedacore', flux: 'fluxcd', trivy: 'aquasecurity',
+  'cert-manager': 'cert-manager', prometheus: 'prometheus',
+  grafana: 'grafana', istio: 'istio', linkerd: 'linkerd',
+  helm: 'helm', cilium: 'cilium', kyverno: 'kyverno',
+  crossplane: 'crossplane', dapr: 'dapr', knative: 'knative',
+  etcd: 'etcd-io', coredns: 'coredns', rook: 'rook',
+  longhorn: 'longhorn', velero: 'vmware-tanzu',
+  'external-secrets': 'external-secrets', kubevirt: 'kubevirt',
+}
+
+function getAvatarUrl(name: string): string {
+  const key = name.toLowerCase()
+  const org = PROJECT_TO_GITHUB_ORG[key] || key
+  return `https://github.com/${org}.png?size=40`
+}
 
 type NodeStatus = 'pending' | 'running' | 'completed' | 'failed'
 
@@ -92,9 +115,11 @@ export function ProjectNode({
   onDragStart: _onDragStart,
   onDragEnd: _onDragEnd,
 }: ProjectNodeProps) {
+  const [imgFailed, setImgFailed] = useState(false)
   const gradientColors = (CNCF_CATEGORY_GRADIENTS as Record<string, [string, string]>)[category]
   const primaryColor = gradientColors?.[0] ?? '#6366f1'
   const statusColor = STATUS_COLORS[status]
+  const iconSize = radius * 1.4
 
 
   const isRelevant =
@@ -163,19 +188,40 @@ export function ProjectNode({
         cursor="pointer"
       />
 
-      {/* Project icon — colored letter initial (reliable across all SVG renderers) */}
-      <text
-        x={cx}
-        y={cy + radius * 0.3}
-        textAnchor="middle"
-        fill={primaryColor}
-        fontSize={radius * 0.9}
-        fontWeight={700}
-        fontFamily="system-ui, sans-serif"
-        style={{ pointerEvents: 'none' }}
-      >
-        {name.charAt(0).toUpperCase()}
-      </text>
+      {/* Project icon — GitHub avatar via SVG <image>, letter fallback on error */}
+      {!imgFailed ? (
+        <>
+          {/* Circular clip path for this node */}
+          <defs>
+            <clipPath id={`${id}-icon-clip`}>
+              <circle cx={cx} cy={cy} r={radius - 1} />
+            </clipPath>
+          </defs>
+          <image
+            href={getAvatarUrl(name)}
+            x={cx - iconSize / 2}
+            y={cy - iconSize / 2}
+            width={iconSize}
+            height={iconSize}
+            clipPath={`url(#${id}-icon-clip)`}
+            style={{ pointerEvents: 'none' }}
+            onError={() => setImgFailed(true)}
+          />
+        </>
+      ) : (
+        <text
+          x={cx}
+          y={cy + radius * 0.3}
+          textAnchor="middle"
+          fill={primaryColor}
+          fontSize={radius * 0.9}
+          fontWeight={700}
+          fontFamily="system-ui, sans-serif"
+          style={{ pointerEvents: 'none' }}
+        >
+          {name.charAt(0).toUpperCase()}
+        </text>
+      )}
 
 
 
