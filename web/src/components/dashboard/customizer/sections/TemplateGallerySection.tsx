@@ -40,7 +40,7 @@ export function TemplateGallerySection({ onReplaceWithTemplate, onAddTemplate, d
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [searchText, setSearchText] = useState('')
   const [appliedTemplate, setAppliedTemplate] = useState<string | null>(null)
-  const appliedTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const appliedTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   useEffect(() => () => { if (appliedTimerRef.current) clearTimeout(appliedTimerRef.current) }, [])
 
   const filteredTemplates = DASHBOARD_TEMPLATES.filter(tpl => {

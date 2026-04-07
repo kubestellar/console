@@ -263,7 +263,7 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
   const [pendingChanges, setPendingChanges] = useState<{ proposed: ReturnType<typeof previewGenerateFromBehavior>['proposed']; changes: string[] } | null>(null)
 
   // Timer ref for auto-dismiss — prevents memory leak on unmount
-  const dismissTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   useEffect(() => () => { if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current) }, [])
 
   const handleGenerateFromBehavior = async () => {
