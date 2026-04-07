@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { useSyncExternalStore, useCallback } from 'react'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { setActiveProject } from '../lib/project/context'
 
@@ -426,44 +426,61 @@ export function useSidebarConfig() {
     setConfig(applyDashboardFilter(DEFAULT_CONFIG))
   }
 
-  const generateFromBehavior = (frequentlyUsedPaths: string[]) => {
-    // Reorder items based on user's frequently visited paths
-    setConfig((prev) => {
-      const allItems = [...prev.primaryNav, ...prev.secondaryNav]
+  /**
+   * Preview what generateFromBehavior would change — returns proposed
+   * config without applying it, so the UI can show a diff.
+   */
+  const previewGenerateFromBehavior = useCallback((frequentlyUsedPaths: string[]): { proposed: SidebarConfig; changes: string[] } => {
+    const allItems = [...config.primaryNav, ...config.secondaryNav]
+    const reorderedPrimary: SidebarItem[] = []
+    const usedIds = new Set<string>()
 
-      // Find matching items for frequently used paths
-      const reorderedPrimary: SidebarItem[] = []
-      const usedIds = new Set<string>()
-
-      // First, add items that match frequently used paths (in order of frequency)
-      frequentlyUsedPaths.forEach((path) => {
-        const matchingItem = allItems.find(
-          (item) => item.href === path || path.startsWith(item.href + '/') || path.startsWith(item.href + '?')
-        )
-        if (matchingItem && !usedIds.has(matchingItem.id)) {
-          reorderedPrimary.push({ ...matchingItem, order: reorderedPrimary.length })
-          usedIds.add(matchingItem.id)
-        }
-      })
-
-      // Then add remaining primary nav items
-      prev.primaryNav.forEach((item) => {
-        if (!usedIds.has(item.id)) {
-          reorderedPrimary.push({ ...item, order: reorderedPrimary.length })
-        }
-      })
-
-      // Keep secondary nav as-is but update order
-      const reorderedSecondary = prev.secondaryNav.map((item, index) => ({
-        ...item,
-        order: index }))
-
-      return {
-        ...prev,
-        primaryNav: reorderedPrimary,
-        secondaryNav: reorderedSecondary }
+    frequentlyUsedPaths.forEach((path) => {
+      const matchingItem = allItems.find(
+        (item) => item.href === path || path.startsWith(item.href + '/') || path.startsWith(item.href + '?')
+      )
+      if (matchingItem && !usedIds.has(matchingItem.id)) {
+        reorderedPrimary.push({ ...matchingItem, order: reorderedPrimary.length })
+        usedIds.add(matchingItem.id)
+      }
     })
-  }
+
+    config.primaryNav.forEach((item) => {
+      if (!usedIds.has(item.id)) {
+        reorderedPrimary.push({ ...item, order: reorderedPrimary.length })
+      }
+    })
+
+    const reorderedSecondary = config.secondaryNav.map((item, index) => ({
+      ...item,
+      order: index,
+    }))
+
+    const changes: string[] = []
+    reorderedPrimary.forEach((item, i) => {
+      const oldIdx = config.primaryNav.findIndex(p => p.id === item.id)
+      if (oldIdx === -1) {
+        changes.push(`+ Added "${item.name}"`)
+      } else if (oldIdx !== i) {
+        changes.push(`\u2195 Moved "${item.name}" from #${oldIdx + 1} to #${i + 1}`)
+      }
+    })
+    if (changes.length === 0) changes.push('No changes needed')
+
+    return {
+      proposed: { ...config, primaryNav: reorderedPrimary, secondaryNav: reorderedSecondary },
+      changes,
+    }
+  }, [config])
+
+  const applyGeneratedConfig = useCallback((proposed: SidebarConfig) => {
+    setConfig(proposed)
+  }, [])
+
+  const generateFromBehavior = useCallback((frequentlyUsedPaths: string[]) => {
+    const { proposed } = previewGenerateFromBehavior(frequentlyUsedPaths)
+    setConfig(proposed)
+  }, [previewGenerateFromBehavior])
 
   return {
     config,
@@ -481,7 +498,10 @@ export function useSidebarConfig() {
     closeMobileSidebar,
     toggleMobileSidebar,
     resetToDefault,
-    generateFromBehavior }
+    generateFromBehavior,
+    previewGenerateFromBehavior,
+    applyGeneratedConfig,
+  }
 }
 
 // Available icons for user to choose from

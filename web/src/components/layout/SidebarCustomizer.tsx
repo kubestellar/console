@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -9,13 +9,9 @@ import {
   Sparkles,
   Eye,
   EyeOff,
-  ChevronDown,
-  ChevronRight,
   Loader2,
   LayoutDashboard,
-  Square,
   Search,
-  FolderPlus,
 } from 'lucide-react'
 import {
   DndContext,
@@ -34,14 +30,18 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useSidebarConfig, SidebarItem, DISCOVERABLE_DASHBOARDS } from '../../hooks/useSidebarConfig'
-import { useDashboards, Dashboard } from '../../hooks/useDashboards'
-import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from '../dashboard/templates'
+import { useSidebarConfig, SidebarItem } from '../../hooks/useSidebarConfig'
+import { useDashboards } from '../../hooks/useDashboards'
+import { DashboardTemplate } from '../dashboard/templates'
 import { CreateDashboardModal } from '../dashboard/CreateDashboardModal'
-import { StatusBadge } from '../ui/StatusBadge'
-import { Button } from '../ui/Button'
+// StatusBadge and Button removed — no longer needed after Dashboards section cleanup
+
+/** Auto-dismiss delay for generation result messages */
+const AUTO_DISMISS_MS = 5000
+/** Shorter dismiss for "applied" confirmations */
+const AUTO_DISMISS_APPLIED_MS = 3000
 import { cn } from '../../lib/cn'
-import { formatCardTitle } from '../../lib/formatCardTitle'
+// formatCardTitle removed — no longer needed
 import { STORAGE_KEY_NAV_HISTORY } from '../../lib/constants'
 import { NAV_AFTER_ANIMATION_MS } from '../../lib/constants/network'
 import { suggestDashboardIcon, suggestIconSync } from '../../lib/iconSuggester'
@@ -87,8 +87,9 @@ function SortableItem({ item, onRemove, renderIcon }: SortableItemProps) {
     >
       <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
       {renderIcon(item.icon, 'w-4 h-4 text-muted-foreground')}
-      <span className="flex-1 text-sm text-foreground">{item.name}</span>
-      <span className="text-xs text-muted-foreground">{item.href}</span>
+      <span className="text-sm text-foreground">{item.name}</span>
+      <span className="text-xs text-muted-foreground/50">{item.href}</span>
+      <span className="flex-1" />
       {/* Allow removing any item except the main Dashboard (/) */}
       {item.href !== '/' && (
         <button
@@ -155,18 +156,18 @@ const KNOWN_ROUTES: KnownRoute[] = [
 ]
 
 // Group routes by category
-const ROUTE_CATEGORIES = [...new Set(KNOWN_ROUTES.map(r => r.category))]
+// ROUTE_CATEGORIES removed — search-to-add replaces category browsing
 
-function formatCardType(type: string): string {
-  return formatCardTitle(type)
-}
+// formatCardType removed — no longer needed after section cleanup
 
 interface SidebarCustomizerProps {
   isOpen: boolean
   onClose: () => void
+  /** When true, renders content inline without a BaseModal wrapper (used by DashboardCustomizer) */
+  embedded?: boolean
 }
 
-export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
+export function SidebarCustomizer({ isOpen, onClose, embedded = false }: SidebarCustomizerProps) {
   const { t } = useTranslation(['common', 'cards'])
   const navigate = useNavigate()
   const {
@@ -178,8 +179,10 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
     reorderItems,
     toggleClusterStatus,
     resetToDefault,
-    generateFromBehavior,
-    restoreDashboard,
+    // generateFromBehavior not used — replaced by preview/confirm flow
+    generateFromBehavior: _generateFromBehavior,
+    previewGenerateFromBehavior,
+    applyGeneratedConfig,
   } = useSidebarConfig()
 
   // DnD sensors for both mouse and keyboard
@@ -211,29 +214,17 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
     }
   }
 
-  const { getAllDashboardsWithCards, createDashboard, dashboards } = useDashboards()
+  const { createDashboard, dashboards } = useDashboards()
 
   const [isGenerating, setIsGenerating] = useState(false)
-  const { isOpen: isCreateDashboardOpen, open: openCreateDashboard, close: closeCreateDashboard } = useModalState()
+  const { isOpen: isCreateDashboardOpen, close: closeCreateDashboard } = useModalState()
   const [generationResult, setGenerationResult] = useState<string | null>(null)
   const [newItemTarget, setNewItemTarget] = useState<'primary' | 'secondary'>('primary')
   const [showAddForm, setShowAddForm] = useState(false)
   const [selectedKnownRoutes, setSelectedKnownRoutes] = useState<Set<string>>(new Set())
   const [routeSearch, setRouteSearch] = useState('')
-  const [expandedSection, setExpandedSection] = useState<string | null>('primary')
-  const [dashboardsWithCards, setDashboardsWithCards] = useState<Dashboard[]>([])
-  const [isLoadingDashboards, setIsLoadingDashboards] = useState(false)
-
-  // Load dashboards with cards when customizer opens
-  useEffect(() => {
-    if (isOpen) {
-      setIsLoadingDashboards(true)
-      getAllDashboardsWithCards()
-        .then(setDashboardsWithCards)
-        .catch(() => { /* getAllDashboardsWithCards always resolves — defensive catch */ })
-        .finally(() => setIsLoadingDashboards(false))
-    }
-  }, [isOpen, getAllDashboardsWithCards])
+  // expandedSection removed — all sections now always visible
+  // Dashboard cards section removed — cards are managed via Console Studio's Cards tab
 
   // Handle adding all selected routes
   const handleAddSelectedRoutes = () => {
@@ -266,52 +257,65 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
     setShowAddForm(false)
   }
 
-  // Toggle selection of a known route
-  const toggleKnownRoute = (routeHref: string) => {
-    const newSelected = new Set(selectedKnownRoutes)
-    if (newSelected.has(routeHref)) {
-      newSelected.delete(routeHref)
-    } else {
-      newSelected.add(routeHref)
-    }
-    setSelectedKnownRoutes(newSelected)
-  }
+  // toggleKnownRoute removed — search-to-add replaces checkbox selection
+
+  // Preview state for generate-from-behavior
+  const [pendingChanges, setPendingChanges] = useState<{ proposed: ReturnType<typeof previewGenerateFromBehavior>['proposed']; changes: string[] } | null>(null)
+
+  // Timer ref for auto-dismiss — prevents memory leak on unmount
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  useEffect(() => () => { if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current) }, [])
 
   const handleGenerateFromBehavior = async () => {
     setIsGenerating(true)
     setGenerationResult(null)
+    setPendingChanges(null)
 
-    // Simulate analyzing behavior
     await new Promise(resolve => setTimeout(resolve, NAV_AFTER_ANIMATION_MS))
 
-    // Get navigation history from localStorage
     let navHistory: string[] = []
     try {
       navHistory = JSON.parse(localStorage.getItem(STORAGE_KEY_NAV_HISTORY) || '[]')
-    } catch {
-      // Corrupted data — reset
-    }
+    } catch { /* corrupted */ }
 
-    // Count page visits
     const visitCounts: Record<string, number> = {}
     navHistory.forEach((path: string) => {
       visitCounts[path] = (visitCounts[path] || 0) + 1
     })
 
-    // Sort by frequency
     const sortedPaths = Object.entries(visitCounts)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
       .map(([path]) => path)
 
     if (sortedPaths.length > 0) {
-      generateFromBehavior(sortedPaths)
-      setGenerationResult(t('sidebar.customizer.analyzed', { count: navHistory.length }))
+      const preview = previewGenerateFromBehavior(sortedPaths)
+      if (preview.changes.length === 1 && preview.changes[0] === 'No changes needed') {
+        setGenerationResult('No changes needed — your sidebar already matches your usage.')
+        dismissTimerRef.current = setTimeout(() => setGenerationResult(null), AUTO_DISMISS_MS)
+      } else {
+        setPendingChanges(preview)
+      }
     } else {
       setGenerationResult(t('sidebar.customizer.notEnoughData'))
+      const AUTO_DISMISS_MS = 5000
+      dismissTimerRef.current = setTimeout(() => setGenerationResult(null), AUTO_DISMISS_MS)
     }
 
     setIsGenerating(false)
+  }
+
+  const handleApplyPendingChanges = () => {
+    if (pendingChanges) {
+      applyGeneratedConfig(pendingChanges.proposed)
+      setGenerationResult(`Applied ${pendingChanges.changes.length} changes`)
+      setPendingChanges(null)
+      dismissTimerRef.current = setTimeout(() => setGenerationResult(null), AUTO_DISMISS_APPLIED_MS)
+    }
+  }
+
+  const handleRejectPendingChanges = () => {
+    setPendingChanges(null)
   }
 
   // Handle creating a new custom dashboard
@@ -379,253 +383,63 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
     </DndContext>
   )
 
-  return (
+  // Shared content rendered in both modal and embedded modes
+  const sidebarContent = (
     <>
-    <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
-      <BaseModal.Header
-        title={t('sidebar.customizer.title')}
-        description={t('sidebar.customizer.description')}
-        icon={LayoutDashboard}
-        onClose={onClose}
-        showBack={false}
-      />
-
-      <BaseModal.Content className="max-h-[60vh]">
-          {/* Quick Actions */}
-          <div className="flex flex-wrap gap-2 mb-6">
-            <Button
-              variant="accent"
-              onClick={() => setShowAddForm(!showAddForm)}
-              icon={<Plus className="w-4 h-4" />}
-            >
-              {t('sidebar.customizer.addItem')}
-            </Button>
-            <button
-              onClick={openCreateDashboard}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30"
-            >
-              <FolderPlus className="w-4 h-4" />
-              {t('sidebar.customizer.newDashboard')}
-            </button>
-            <Button
-              variant="ghost"
-              onClick={resetToDefault}
-              icon={<RotateCcw className="w-4 h-4" />}
-            >
-              {t('sidebar.customizer.reset')}
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={handleGenerateFromBehavior}
-              disabled={isGenerating}
-              icon={isGenerating ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4" />
-              )}
-            >
-              {isGenerating ? t('sidebar.customizer.analyzing') : t('sidebar.customizer.generateFromBehavior')}
-            </Button>
+          {/* Search to add dashboards — always visible */}
+          <div className="mb-4">
+            <p className="text-xs text-muted-foreground mb-2">
+              Search for a dashboard to add to your sidebar
+            </p>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={routeSearch}
+                onChange={(e) => setRouteSearch(e.target.value)}
+                placeholder="Search dashboards..."
+                className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+              />
+            </div>
           </div>
 
-          {/* Generation Result */}
-          {generationResult && (
-            <div className={cn(
-              'mb-4 p-3 rounded-lg text-sm',
-              generationResult.includes('Not enough')
-                ? 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-300'
-                : 'bg-green-500/10 border border-green-500/20 text-green-300'
-            )}>
-              {generationResult}
-            </div>
-          )}
-
-          {/* Add Item Form - Inline checklist (no dropdown) */}
-          {showAddForm && (
-            <div className="mb-6 p-4 rounded-lg bg-secondary/30 border border-border/50">
-              <h3 className="text-sm font-medium text-foreground mb-3">{t('sidebar.customizer.addDashboards')}</h3>
-
-              {/* Search filter */}
-              <div className="mb-3">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input
-                    type="text"
-                    value={routeSearch}
-                    onChange={(e) => setRouteSearch(e.target.value)}
-                    placeholder={t('sidebar.customizer.filterDashboards')}
-                    className="w-full pl-8 pr-3 py-2 text-sm bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 border border-border"
-                  />
-                </div>
-              </div>
-
-              {/* Inline checklist grouped by category */}
-              <div className="space-y-1">
-                {(() => {
-                  const searchLower = routeSearch.toLowerCase()
-                  const filteredCategories = ROUTE_CATEGORIES.filter(category => {
-                    const routes = KNOWN_ROUTES.filter(r => r.category === category)
-                    if (!searchLower) return true
-                    return routes.some(r =>
-                      r.name.toLowerCase().includes(searchLower) ||
-                      r.description.toLowerCase().includes(searchLower) ||
-                      r.href.toLowerCase().includes(searchLower)
-                    )
-                  })
-
-                  if (filteredCategories.length === 0) {
-                    return (
-                      <div className="py-4 text-center text-sm text-muted-foreground">
-                        {t('sidebar.customizer.noDashboardsFound', { query: routeSearch })}
-                      </div>
-                    )
-                  }
-
-                  return filteredCategories.map(category => {
-                    const routes = KNOWN_ROUTES.filter(r => r.category === category)
-                    const filteredRoutes = searchLower
-                      ? routes.filter(r =>
-                          r.name.toLowerCase().includes(searchLower) ||
-                          r.description.toLowerCase().includes(searchLower) ||
-                          r.href.toLowerCase().includes(searchLower)
-                        )
-                      : routes
-
-                    if (filteredRoutes.length === 0) return null
-
-                    // Get available routes in category (not already added)
-                    const availableRoutes = filteredRoutes.filter(r =>
-                      !config.primaryNav.some(item => item.href === r.href) &&
-                      !config.secondaryNav.some(item => item.href === r.href)
-                    )
-                    const allCategorySelected = availableRoutes.length > 0 &&
-                      availableRoutes.every(r => selectedKnownRoutes.has(r.href))
-
-                    return (
-                      <div key={category} className="rounded-lg border border-border/50 overflow-hidden">
-                        {/* Category header */}
-                        <div className="px-3 py-2 text-xs font-medium uppercase tracking-wider bg-secondary/80 flex items-center justify-between text-muted-foreground">
-                          <span>{category}</span>
-                          {availableRoutes.length > 0 && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                const newSelected = new Set(selectedKnownRoutes)
-                                if (allCategorySelected) {
-                                  availableRoutes.forEach(r => newSelected.delete(r.href))
-                                } else {
-                                  availableRoutes.forEach(r => newSelected.add(r.href))
-                                }
-                                setSelectedKnownRoutes(newSelected)
-                              }}
-                              className={cn(
-                                'text-2xs px-1.5 py-0.5 rounded transition-colors',
-                                allCategorySelected
-                                  ? 'bg-purple-500/30 text-purple-300 hover:bg-purple-500/40'
-                                  : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'
-                              )}
-                            >
-                              {allCategorySelected ? t('sidebar.customizer.deselectAll') : t('sidebar.customizer.selectAll')}
-                            </button>
-                          )}
-                        </div>
-                        {/* Routes in this category */}
-                        <div className="divide-y divide-border/30">
-                          {filteredRoutes.map(route => {
-                            const isAlreadyAdded = config.primaryNav.some(item => item.href === route.href) ||
-                                                    config.secondaryNav.some(item => item.href === route.href)
-                            const isSelected = selectedKnownRoutes.has(route.href)
-                            return (
-                              <button
-                                key={route.href}
-                                onClick={() => !isAlreadyAdded && toggleKnownRoute(route.href)}
-                                disabled={isAlreadyAdded}
-                                className={cn(
-                                  'w-full px-3 py-2 text-left transition-colors',
-                                  isAlreadyAdded
-                                    ? 'opacity-50 cursor-not-allowed bg-secondary/20'
-                                    : 'hover:bg-secondary/50',
-                                  isSelected && !isAlreadyAdded && 'bg-purple-500/10'
-                                )}
-                              >
-                                <div className="flex items-center gap-2">
-                                  {/* Checkbox */}
-                                  <div className={cn(
-                                    'w-4 h-4 rounded border flex items-center justify-center flex-shrink-0',
-                                    isAlreadyAdded ? 'border-green-500/50 bg-green-500/20' :
-                                    isSelected ? 'border-purple-500 bg-purple-500' : 'border-border bg-secondary'
-                                  )}>
-                                    {(isSelected || isAlreadyAdded) && (
-                                      <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
-                                        <path d="M2 6l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                      </svg>
-                                    )}
-                                  </div>
-                                  {renderIcon(route.icon, 'w-4 h-4 text-muted-foreground flex-shrink-0')}
-                                  <span className={cn(
-                                    'text-sm font-medium truncate',
-                                    isSelected && !isAlreadyAdded ? 'text-purple-400' : 'text-foreground'
-                                  )}>
-                                    {route.name}
-                                  </span>
-                                  {isAlreadyAdded && (
-                                    <StatusBadge color="green" className="flex-shrink-0 ml-auto">{t('sidebar.customizer.added')}</StatusBadge>
-                                  )}
-                                </div>
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )
-                  })
-                })()}
-              </div>
-
-              {/* Selection summary */}
-              {selectedKnownRoutes.size > 0 && (
-                <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    {t('sidebar.customizer.dashboardsSelected', { count: selectedKnownRoutes.size, plural: selectedKnownRoutes.size !== 1 ? 's' : '' })}
-                  </span>
-                  <button
-                    onClick={() => setSelectedKnownRoutes(new Set())}
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    {t('sidebar.customizer.clearSelection')}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Recommended Dashboards — discoverable dashboards not yet in the sidebar */}
+          {/* Available dashboards — always visible, filtered by search */}
           {(() => {
-            const existingHrefs = new Set([
-              ...config.primaryNav.map(item => item.href),
-              ...config.secondaryNav.map(item => item.href),
-            ])
-            const available = DISCOVERABLE_DASHBOARDS.filter(d => !existingHrefs.has(d.href))
-            if (available.length === 0) return null
+            const searchLower = routeSearch.toLowerCase()
+            const availableRoutes = KNOWN_ROUTES.filter(r =>
+              !config.primaryNav.some(item => item.href === r.href) &&
+              !config.secondaryNav.some(item => item.href === r.href)
+            )
+            const matchingRoutes = searchLower
+              ? availableRoutes.filter(r =>
+                  r.name.toLowerCase().includes(searchLower) ||
+                  r.description.toLowerCase().includes(searchLower)
+                )
+              : availableRoutes
+            if (availableRoutes.length === 0) return null
+            if (matchingRoutes.length === 0) {
+              return <div className="mb-4 text-sm text-muted-foreground text-center py-2">No matching dashboards found</div>
+            }
             return (
-              <div className="mb-4 rounded-xl border border-blue-500/20 bg-blue-500/5 p-3">
-                <h4 className="text-xs font-medium text-blue-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  {t('sidebar.customizer.recommendedDashboards')}
-                </h4>
-                <p className="text-xs text-muted-foreground mb-2">
-                  {t('sidebar.customizer.addTopicDashboards')}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {available.map(dashboard => (
+              <div className="mb-4">
+                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                  Available to Add ({matchingRoutes.length})
+                </h3>
+                <div className="space-y-1 max-h-40 overflow-y-auto rounded-lg border border-border">
+                  {matchingRoutes.map(route => (
                     <button
-                      key={dashboard.id}
-                      onClick={() => restoreDashboard(dashboard)}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-secondary/50 border border-border/50 hover:border-blue-500/30 hover:bg-secondary text-foreground transition-all"
+                      key={route.href}
+                      onClick={() => {
+                        addItem({ name: route.name, icon: route.icon, href: route.href, type: 'link' }, 'primary')
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-secondary/50 transition-colors"
                     >
-                      {renderIcon(dashboard.icon, 'w-3.5 h-3.5 text-muted-foreground')}
-                      <span className="font-medium text-xs">{dashboard.name}</span>
-                      <Plus className="w-3 h-3 text-blue-400" />
+                      {renderIcon(route.icon, 'w-4 h-4 text-muted-foreground')}
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium text-foreground">{route.name}</span>
+                        <span className="text-xs text-muted-foreground/50 ml-1.5">{route.description}</span>
+                      </div>
+                      <Plus className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
                     </button>
                   ))}
                 </div>
@@ -633,180 +447,74 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
             )
           })()}
 
-          {/* Primary Navigation */}
-          <div className="mb-4">
+          {/* Action buttons */}
+          {/* Create Custom Dashboard moved to Console Studio nav */}
+          <div className="flex flex-wrap gap-2 mb-4">
             <button
-              onClick={() => setExpandedSection(expandedSection === 'primary' ? null : 'primary')}
-              className="flex items-center gap-2 w-full text-left mb-2"
+              onClick={handleGenerateFromBehavior}
+              disabled={isGenerating}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors text-sm font-medium disabled:opacity-50"
+              title="Reorders your dashboards by most visited and adds any missing ones you use frequently"
             >
-              {expandedSection === 'primary' ? (
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              )}
-              <span className="text-sm font-medium text-foreground">{t('sidebar.customizer.primaryNavigation')}</span>
-              <span className="text-xs text-muted-foreground">({t('sidebar.customizer.itemsCount', { count: config.primaryNav.length })})</span>
+              {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {isGenerating ? 'Analyzing...' : 'Auto-organize'}
             </button>
-            {expandedSection === 'primary' && renderItemList(config.primaryNav, 'primary')}
+            <button
+              onClick={resetToDefault}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              title="Restore the default sidebar navigation items"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Reset Sidebar
+            </button>
           </div>
 
-          {/* Secondary Navigation */}
-          <div className="mb-4">
-            <button
-              onClick={() => setExpandedSection(expandedSection === 'secondary' ? null : 'secondary')}
-              className="flex items-center gap-2 w-full text-left mb-2"
-            >
-              {expandedSection === 'secondary' ? (
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              )}
-              <span className="text-sm font-medium text-foreground">{t('sidebar.customizer.secondaryNavigation')}</span>
-              <span className="text-xs text-muted-foreground">({t('sidebar.customizer.itemsCount', { count: config.secondaryNav.length })})</span>
-            </button>
-            {expandedSection === 'secondary' && renderItemList(config.secondaryNav, 'secondary')}
-          </div>
-
-          {/* Dashboard Cards */}
-          <div className="mb-4">
-            <button
-              onClick={() => setExpandedSection(expandedSection === 'dashboards' ? null : 'dashboards')}
-              className="flex items-center gap-2 w-full text-left mb-2"
-            >
-              {expandedSection === 'dashboards' ? (
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              )}
-              <LayoutDashboard className="w-4 h-4 text-purple-400" />
-              <span className="text-sm font-medium text-foreground">{t('sidebar.customizer.dashboardCards')}</span>
-              <span className="text-xs text-muted-foreground">
-                ({t('sidebar.customizer.cardsCount', { count: dashboardsWithCards.reduce((sum, d) => sum + (d.cards?.length || 0), 0) })})
-              </span>
-            </button>
-            {expandedSection === 'dashboards' && (
-              <div className="space-y-3 pl-2">
-                {isLoadingDashboards ? (
-                  <div className="flex items-center gap-2 p-3 text-muted-foreground">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-sm">{t('sidebar.customizer.loadingDashboards')}</span>
-                  </div>
-                ) : dashboardsWithCards.length === 0 ? (
-                  <div className="p-3 text-sm text-muted-foreground">
-                    {t('sidebar.customizer.noDashboards')}
-                  </div>
-                ) : (
-                  dashboardsWithCards.map((dashboard) => (
-                    <div key={dashboard.id} className="space-y-1">
-                      <div className="flex items-center gap-2 text-sm text-foreground/80 font-medium">
-                        <LayoutDashboard className="w-3.5 h-3.5 text-muted-foreground" />
-                        {dashboard.name}
-                        {dashboard.is_default && (
-                          <StatusBadge color="purple">{t('sidebar.customizer.default')}</StatusBadge>
-                        )}
-                      </div>
-                      {dashboard.cards && dashboard.cards.length > 0 ? (
-                        <div className="space-y-1 pl-5">
-                          {dashboard.cards.map((card) => (
-                            <div
-                              key={card.id}
-                              className="flex items-center gap-2 p-2 rounded-lg bg-secondary/20 text-sm"
-                            >
-                              <Square className="w-3 h-3 text-muted-foreground" />
-                              <span className="text-foreground/70">
-                                {card.title || formatCardType(card.card_type)}
-                              </span>
-                              <span className="text-xs text-muted-foreground ml-auto">
-                                {formatCardType(card.card_type)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="pl-5 text-xs text-muted-foreground">
-                          {t('sidebar.customizer.noCardsInDashboard')}
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
+          {/* Pending changes preview — approve/reject before applying */}
+          {pendingChanges && (
+            <div className="mb-4 p-3 rounded-lg border border-purple-500/20 bg-purple-500/5">
+              <p className="text-xs font-medium text-purple-400 uppercase tracking-wider mb-2">Proposed Changes</p>
+              <ul className="space-y-1 mb-3">
+                {pendingChanges.changes.map((change, i) => (
+                  <li key={i} className="text-xs text-foreground">{change}</li>
+                ))}
+              </ul>
+              <div className="flex gap-2">
+                <button onClick={handleApplyPendingChanges} className="px-3 py-1.5 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg text-xs font-medium transition-colors">
+                  Apply Changes
+                </button>
+                <button onClick={handleRejectPendingChanges} className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors">
+                  Cancel
+                </button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Available Dashboard Templates */}
+          {/* Generation Result (after applying or for errors) */}
+          {generationResult && !pendingChanges && (
+            <div className={cn(
+              'mb-4 p-3 rounded-lg text-sm',
+              generationResult.includes('Not enough') || generationResult.includes('No changes')
+                ? 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-300'
+                : 'bg-green-500/10 border border-green-500/20 text-green-300'
+            )}>
+              {generationResult}
+            </div>
+          )}
+
+          {/* Your Dashboards — flat list, always visible */}
           <div className="mb-4">
-            <button
-              onClick={() => setExpandedSection(expandedSection === 'templates' ? null : 'templates')}
-              className="flex items-center gap-2 w-full text-left mb-2"
-            >
-              {expandedSection === 'templates' ? (
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              )}
-              <Sparkles className="w-4 h-4 text-purple-400" />
-              <span className="text-sm font-medium text-foreground">{t('sidebar.customizer.availableTemplates')}</span>
-              <span className="text-xs text-muted-foreground">({t('sidebar.customizer.templates', { count: DASHBOARD_TEMPLATES.length })})</span>
-            </button>
-            {expandedSection === 'templates' && (
-              <div className="space-y-2 pl-2">
-                {TEMPLATE_CATEGORIES.map((category) => {
-                  const templatesInCategory = DASHBOARD_TEMPLATES.filter(t => t.category === category.id)
-                  if (templatesInCategory.length === 0) return null
-
-                  return (
-                    <div key={category.id} className="space-y-1">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wider py-1">
-                        <span>{category.icon}</span>
-                        <span>{category.name}</span>
-                      </div>
-                      {templatesInCategory.map((template) => {
-                        const isInSidebar = config.primaryNav.some(item =>
-                          item.href === `/dashboard/${template.id}` || item.id === template.id
-                        )
-
-                        return (
-                          <div
-                            key={template.id}
-                            className="flex items-center gap-2 p-2 rounded-lg bg-secondary/20"
-                          >
-                            <span className="text-lg">{template.icon}</span>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm text-foreground truncate">{template.name}</div>
-                              <div className="text-xs text-muted-foreground truncate">{template.description}</div>
-                            </div>
-                            {isInSidebar ? (
-                              <StatusBadge color="green">{t('sidebar.customizer.added')}</StatusBadge>
-                            ) : (
-                              <Button
-                                variant="accent"
-                                size="sm"
-                                onClick={() => {
-                                  addItem({
-                                    name: template.name,
-                                    icon: 'LayoutDashboard',
-                                    href: `/dashboard/${template.id}`,
-                                    type: 'link',
-                                  }, 'primary')
-                                }}
-                                className="whitespace-nowrap rounded"
-                              >
-                                {t('sidebar.customizer.add')}
-                              </Button>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )
-                })}
-              </div>
+            <h3 className="text-sm font-medium text-foreground mb-2">Your Dashboards ({config.primaryNav.length + config.secondaryNav.length})</h3>
+            {renderItemList(config.primaryNav, 'primary')}
+            {config.secondaryNav.length > 0 && (
+              <>
+                <div className="my-2 border-t border-border/30" />
+                {renderItemList(config.secondaryNav, 'secondary')}
+              </>
             )}
           </div>
 
           {/* Cluster Status Toggle */}
-          <div className="p-4 rounded-lg bg-secondary/30 border border-border/50">
+          <div className="p-3 rounded-lg bg-secondary/30 border border-border/50">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-medium text-foreground">{t('sidebar.customizer.clusterStatusPanel')}</h3>
@@ -825,44 +533,87 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
               </button>
             </div>
           </div>
+    </>
+  )
+
+  const sidebarFooter = (
+    <>
+      {showAddForm && selectedKnownRoutes.size > 0 ? (
+        <>
+          <select
+            value={newItemTarget}
+            onChange={(e) => setNewItemTarget(e.target.value as 'primary' | 'secondary')}
+            className="px-2 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm"
+          >
+            <option value="primary">{t('sidebar.customizer.primaryNav')}</option>
+            <option value="secondary">{t('sidebar.customizer.secondaryNav')}</option>
+          </select>
+          <div className="flex-1" />
+          <button
+            onClick={handleAddSelectedRoutes}
+            className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm hover:bg-purple-600 flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            {t('sidebar.customizer.addCount', { count: selectedKnownRoutes.size, plural: selectedKnownRoutes.size !== 1 ? 's' : '' })}
+          </button>
+        </>
+      ) : !embedded ? (
+        <>
+          <div className="flex-1" />
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
+          >
+            {t('common.close')}
+          </button>
+        </>
+      ) : null}
+    </>
+  )
+
+  // Embedded mode: render content inline without BaseModal wrapper
+  if (embedded) {
+    return (
+      <>
+        <div className="overflow-y-auto flex-1 p-4">
+          {sidebarContent}
+        </div>
+        {showAddForm && selectedKnownRoutes.size > 0 && (
+          <div className="border-t border-border px-4 py-3 flex items-center bg-background">
+            {sidebarFooter}
+          </div>
+        )}
+        <CreateDashboardModal
+          isOpen={isCreateDashboardOpen}
+          onClose={closeCreateDashboard}
+          onCreate={handleCreateDashboard}
+          existingNames={dashboards.map(d => d.name)}
+        />
+      </>
+    )
+  }
+
+  // Standard modal mode
+  return (
+    <>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
+      <BaseModal.Header
+        title={t('sidebar.customizer.title')}
+        description={t('sidebar.customizer.description')}
+        icon={LayoutDashboard}
+        onClose={onClose}
+        showBack={false}
+      />
+
+      <BaseModal.Content className="max-h-[60vh]">
+        {sidebarContent}
       </BaseModal.Content>
 
       <BaseModal.Footer>
-        {/* Add controls - only show when form is open and items are selected */}
-        {showAddForm && selectedKnownRoutes.size > 0 ? (
-          <>
-            <select
-              value={newItemTarget}
-              onChange={(e) => setNewItemTarget(e.target.value as 'primary' | 'secondary')}
-              className="px-2 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm"
-            >
-              <option value="primary">{t('sidebar.customizer.primaryNav')}</option>
-              <option value="secondary">{t('sidebar.customizer.secondaryNav')}</option>
-            </select>
-            <div className="flex-1" />
-            <button
-              onClick={handleAddSelectedRoutes}
-              className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm hover:bg-purple-600 flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              {t('sidebar.customizer.addCount', { count: selectedKnownRoutes.size, plural: selectedKnownRoutes.size !== 1 ? 's' : '' })}
-            </button>
-          </>
-        ) : (
-          <>
-            <div className="flex-1" />
-            <button
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
-            >
-              {t('common.close')}
-            </button>
-          </>
-        )}
+        {sidebarFooter}
       </BaseModal.Footer>
     </BaseModal>
 
-    {/* Create Dashboard Modal */}
     <CreateDashboardModal
       isOpen={isCreateDashboardOpen}
       onClose={closeCreateDashboard}

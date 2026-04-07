@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, Layout, RotateCcw, Download, Pencil, Undo2, Redo2 } from 'lucide-react'
+import { Plus, Layout, RotateCcw, Download, Pencil, Undo2, Redo2, Palette } from 'lucide-react'
 import { useModalState } from '../../lib/modals'
 import { useMissions } from '../../hooks/useMissions'
 import { useMobile } from '../../hooks/useMobile'
@@ -12,8 +12,12 @@ import { SidebarCustomizer } from '../layout/SidebarCustomizer'
 import { DashboardHealthIndicator } from './DashboardHealthIndicator'
 
 interface FloatingDashboardActionsProps {
-  onAddCard: () => void
-  onOpenTemplates: () => void
+  /** New: open unified Dashboard Studio customizer */
+  onOpenCustomizer?: () => void
+  /** Legacy: open add card modal (used when DashboardCustomizer not wired in yet) */
+  onAddCard?: () => void
+  /** Legacy: open templates modal */
+  onOpenTemplates?: () => void
   /** Callback for reset with mode selection */
   onReset?: (mode: ResetMode) => number
   /** Legacy: callback to reset dashboard to default cards (replace mode only) */
@@ -22,7 +26,7 @@ interface FloatingDashboardActionsProps {
   isCustomized?: boolean
   /** Export current dashboard as JSON file */
   onExport?: () => void
-  /** Import a dashboard from JSON file (not shown in FAB menu, reserved for future use) */
+  /** Import a dashboard from JSON file (reserved for future use) */
   onImport?: (json: unknown) => void
   /** Undo last card mutation */
   onUndo?: () => void
@@ -35,10 +39,16 @@ interface FloatingDashboardActionsProps {
 }
 
 /**
- * Floating "+" button that expands into a menu with Add Card, Templates, and Reset.
- * Shifts left when mission sidebar is open to avoid overlap.
+ * Floating action button for dashboard customization.
+ *
+ * When `onOpenCustomizer` is provided, renders as a single FAB button
+ * that opens Dashboard Studio + inline undo/redo.
+ *
+ * When `onOpenCustomizer` is NOT provided (legacy mode), renders the
+ * old expandable menu with individual actions.
  */
 export function FloatingDashboardActions({
+  onOpenCustomizer,
   onAddCard,
   onOpenTemplates,
   onReset,
@@ -64,17 +74,37 @@ export function FloatingDashboardActions({
   const { isOpen: menuIsOpen, close: closeMenu } = menu
   const { open: openCustomizer } = customizer
 
-  // Auto-open sidebar customizer when navigated from search with ?customizeSidebar=true
+  // Use unified mode when onOpenCustomizer is provided
+  const isUnifiedMode = !!onOpenCustomizer
+
+  // Auto-open via URL params
   useEffect(() => {
+    if (isUnifiedMode) {
+      // Unified mode: URL params handled by parent DashboardPage
+      return
+    }
     if (searchParams.get('customizeSidebar') === 'true') {
       openCustomizer()
       const cleaned = new URLSearchParams(searchParams)
       cleaned.delete('customizeSidebar')
       setSearchParams(cleaned, { replace: true })
     }
-  }, [searchParams, setSearchParams, openCustomizer])
+  }, [searchParams, setSearchParams, openCustomizer, isUnifiedMode])
 
-  // Close menu when clicking outside
+  // Cmd+K shortcut — unified mode only
+  useEffect(() => {
+    if (!isUnifiedMode) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        onOpenCustomizer!()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isUnifiedMode, onOpenCustomizer])
+
+  // Close menu when clicking outside (legacy mode)
   useEffect(() => {
     if (!menuIsOpen) return
     const handleClickOutside = (e: MouseEvent) => {
@@ -83,9 +113,7 @@ export function FloatingDashboardActions({
       }
     }
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        closeMenu()
-      }
+      if (e.key === 'Escape') closeMenu()
     }
     document.addEventListener('mousedown', handleClickOutside)
     document.addEventListener('keydown', handleEscape)
@@ -95,14 +123,11 @@ export function FloatingDashboardActions({
     }
   }, [menuIsOpen, closeMenu])
 
-  // Desktop: shift button left based on mission sidebar state
-  // Mobile: always bottom left
   const getPositionClasses = () => {
     if (isMobile) return 'left-4 bottom-4'
-    // Desktop: right side, shifts when sidebar open
     if (!isSidebarOpen) return 'right-6 bottom-20'
-    if (isSidebarMinimized) return 'right-[72px] bottom-20' // 48px + 24px margin
-    return 'right-[536px] bottom-20' // 500px + 36px margin
+    if (isSidebarMinimized) return 'right-[72px] bottom-20'
+    return 'right-[536px] bottom-20'
   }
   const positionClasses = getPositionClasses()
 
@@ -116,13 +141,66 @@ export function FloatingDashboardActions({
   }
 
   const showResetOption = isCustomized && (onReset || onResetToDefaults)
-
   const menuBtnClass = "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md transition-colors whitespace-nowrap"
 
+  // =========================================================================
+  // Unified mode: single FAB + inline undo/redo
+  // =========================================================================
+  if (isUnifiedMode) {
+    const showActions = canUndo || canRedo || showResetOption
+    return (
+      <div className={`fixed ${positionClasses} z-40 flex ${isMobile ? 'items-start' : 'items-end'} gap-1.5 transition-all duration-300`}>
+        {showActions && (
+          <div className="flex gap-1 p-1 bg-card border border-border rounded-lg shadow-md animate-in fade-in duration-150 mr-1">
+            <button
+              onClick={onUndo}
+              disabled={!canUndo}
+              className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title={`${t('dashboard.actions.undo', 'Undo')} (${navigator.platform.includes('Mac') ? '\u2318' : 'Ctrl'}+Z)`}
+            >
+              <Undo2 className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={onRedo}
+              disabled={!canRedo}
+              className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title={`${t('dashboard.actions.redo', 'Redo')} (${navigator.platform.includes('Mac') ? '\u2318' : 'Ctrl'}+Shift+Z)`}
+            >
+              <Redo2 className="w-3.5 h-3.5" />
+            </button>
+            {showResetOption && (
+              <button
+                onClick={() => { if (onReset) onReset('replace'); else if (onResetToDefaults) onResetToDefaults() }}
+                className="p-1.5 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                title={t('dashboard.actions.reset', 'Reset dashboard to defaults')}
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+        <button
+          data-tour="fab-button"
+          onClick={() => { onOpenCustomizer!(); fabHint.action() }}
+          className={`flex items-center justify-center rounded-full shadow-lg transition-all duration-200 ${
+            isMobile ? 'w-8 h-8' : 'w-10 h-10'
+          } bg-gradient-ks hover:scale-110 hover:shadow-xl ${
+            fabHint.isVisible ? 'animate-fab-shimmer' : ''
+          }`}
+          title={`${t('dashboard.studio.title', 'Console Studio')} (${navigator.platform.includes('Mac') ? '\u2318' : 'Ctrl'}+K)`}
+        >
+          <Palette className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} text-foreground`} />
+        </button>
+      </div>
+    )
+  }
+
+  // =========================================================================
+  // Legacy mode: expandable FAB menu (for Dashboard.tsx, CustomDashboard.tsx, etc.)
+  // =========================================================================
   return (
     <>
       <div ref={menuRef} className={`fixed ${positionClasses} z-40 flex flex-col ${isMobile ? 'items-start' : 'items-end'} gap-1.5 transition-all duration-300`}>
-        {/* Expanded menu items */}
         {menu.isOpen && (
           <div
             role="menu"
@@ -137,89 +215,52 @@ export function FloatingDashboardActions({
               else items[Math.max(idx - 1, 0)]?.focus()
             }}
           >
-            {/* Health status indicator */}
             <div className="px-1 pb-1 border-b border-border/50 mb-0.5">
               <DashboardHealthIndicator size="sm" />
             </div>
             {onExport && (
-              <button
-                role="menuitem"
-                onClick={() => { menu.close(); onExport() }}
-                className={menuBtnClass}
-                title={t('dashboard.actions.exportTitle')}
-              >
+              <button role="menuitem" onClick={() => { menu.close(); onExport() }} className={menuBtnClass} title={t('dashboard.actions.exportTitle')}>
                 <Download className="w-3.5 h-3.5" />
                 {t('dashboard.actions.export')}
               </button>
             )}
             {(canUndo || canRedo) && (
               <div className="flex gap-1">
-                <button
-                  role="menuitem"
-                  onClick={() => { onUndo?.() }}
-                  disabled={!canUndo}
-                  className={`${menuBtnClass} ${!canUndo ? 'opacity-40 cursor-not-allowed' : ''}`}
-                  title={`${t('dashboard.actions.undo')} (${navigator.platform.includes('Mac') ? '\u2318' : 'Ctrl'}+Z)`}
-                >
+                <button role="menuitem" onClick={() => { onUndo?.() }} disabled={!canUndo} className={`${menuBtnClass} ${!canUndo ? 'opacity-40 cursor-not-allowed' : ''}`}>
                   <Undo2 className="w-3.5 h-3.5" />
                   {t('dashboard.actions.undo')}
                 </button>
-                <button
-                  role="menuitem"
-                  onClick={() => { onRedo?.() }}
-                  disabled={!canRedo}
-                  className={`${menuBtnClass} ${!canRedo ? 'opacity-40 cursor-not-allowed' : ''}`}
-                  title={`${t('dashboard.actions.redo')} (${navigator.platform.includes('Mac') ? '\u2318' : 'Ctrl'}+Shift+Z)`}
-                >
+                <button role="menuitem" onClick={() => { onRedo?.() }} disabled={!canRedo} className={`${menuBtnClass} ${!canRedo ? 'opacity-40 cursor-not-allowed' : ''}`}>
                   <Redo2 className="w-3.5 h-3.5" />
                   {t('dashboard.actions.redo')}
                 </button>
               </div>
             )}
             {showResetOption && (
-              <button
-                role="menuitem"
-                onClick={() => { menu.close(); resetDialog.open() }}
-                className={menuBtnClass}
-                title={t('dashboard.actions.resetTitle')}
-              >
+              <button role="menuitem" onClick={() => { menu.close(); resetDialog.open() }} className={menuBtnClass}>
                 <RotateCcw className="w-3.5 h-3.5" />
                 {t('dashboard.actions.reset')}
               </button>
             )}
-            <button
-                role="menuitem"
-                onClick={() => { menu.close(); customizer.open() }}
-              className={menuBtnClass}
-              title={t('dashboard.actions.customizeTitle')}
-            >
+            <button role="menuitem" onClick={() => { menu.close(); customizer.open() }} className={menuBtnClass}>
               <Pencil className="w-3.5 h-3.5" />
               {t('dashboard.actions.customize')}
             </button>
-            <button
-                role="menuitem"
-                onClick={() => { menu.close(); onOpenTemplates() }}
-              data-tour="templates"
-              className={menuBtnClass}
-              title={t('dashboard.actions.templatesTitle')}
-            >
-              <Layout className="w-3.5 h-3.5" />
-              {t('dashboard.actions.templates')}
-            </button>
-            <button
-                role="menuitem"
-                onClick={() => { menu.close(); onAddCard() }}
-              data-tour="add-card"
-              className={menuBtnClass}
-              title={t('dashboard.actions.addCardTitle')}
-            >
-              <Plus className="w-3.5 h-3.5" />
-              {t('dashboard.actions.addCard')}
-            </button>
+            {onOpenTemplates && (
+              <button role="menuitem" onClick={() => { menu.close(); onOpenTemplates() }} data-tour="templates" className={menuBtnClass}>
+                <Layout className="w-3.5 h-3.5" />
+                {t('dashboard.actions.templates')}
+              </button>
+            )}
+            {onAddCard && (
+              <button role="menuitem" onClick={() => { menu.close(); onAddCard() }} data-tour="add-card" className={menuBtnClass}>
+                <Plus className="w-3.5 h-3.5" />
+                {t('dashboard.actions.addCard')}
+              </button>
+            )}
           </div>
         )}
 
-        {/* FAB toggle - smaller on mobile */}
         <button
           data-tour="fab-button"
           onClick={() => { menu.toggle(); fabHint.action() }}
@@ -238,16 +279,8 @@ export function FloatingDashboardActions({
         </button>
       </div>
 
-      <ResetDialog
-        isOpen={resetDialog.isOpen}
-        onClose={resetDialog.close}
-        onReset={handleReset}
-      />
-
-      <SidebarCustomizer
-        isOpen={customizer.isOpen}
-        onClose={customizer.close}
-      />
+      <ResetDialog isOpen={resetDialog.isOpen} onClose={resetDialog.close} onReset={handleReset} />
+      <SidebarCustomizer isOpen={customizer.isOpen} onClose={customizer.close} />
     </>
   )
 }

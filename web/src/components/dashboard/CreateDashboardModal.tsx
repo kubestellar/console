@@ -1,17 +1,19 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { LayoutDashboard, FileText, Layout, ChevronRight, Check, ChevronDown, AlertTriangle } from 'lucide-react'
+import { LayoutDashboard, FileText, Layout, ChevronRight, Check, ChevronDown } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { Button } from '../ui/Button'
 import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from './templates'
 import { FOCUS_DELAY_MS } from '../../lib/constants/network'
-import { useDashboardHealth } from '../../hooks/useDashboardHealth'
+import { getIcon } from '../../lib/icons'
 
 interface CreateDashboardModalProps {
   isOpen: boolean
   onClose: () => void
   onCreate: (name: string, template?: DashboardTemplate, description?: string) => void | Promise<void>
   existingNames?: string[]
+  /** When true, renders content inline without BaseModal wrapper (used by Console Studio) */
+  embedded?: boolean
 }
 
 export function CreateDashboardModal({
@@ -19,6 +21,7 @@ export function CreateDashboardModal({
   onClose,
   onCreate,
   existingNames = [],
+  embedded = false,
 }: CreateDashboardModalProps) {
   // Only mount inner content (and its hooks) when the modal is open.
   // This avoids health-check API polling when the modal is closed.
@@ -30,6 +33,7 @@ export function CreateDashboardModal({
       onClose={onClose}
       onCreate={onCreate}
       existingNames={existingNames}
+      embedded={embedded}
     />
   )
 }
@@ -39,6 +43,7 @@ function CreateDashboardModalInner({
   onClose,
   onCreate,
   existingNames = [],
+  embedded = false,
 }: CreateDashboardModalProps) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -48,7 +53,7 @@ function CreateDashboardModalInner({
   const [isCreating, setIsCreating] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const { t } = useTranslation()
-  const health = useDashboardHealth()
+  // Health removed from Create Dashboard form — not relevant here
 
   // Reset state when modal opens
   useEffect(() => {
@@ -94,32 +99,9 @@ function CreateDashboardModalInner({
     }
   }
 
-  return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnBackdrop={false}>
-      <BaseModal.Header
-        title={t('dashboard.create.title')}
-        description={t('dashboard.create.description')}
-        icon={LayoutDashboard}
-        onClose={onClose}
-        showBack={false}
-      />
-
-      <BaseModal.Content>
-        {/* Health alert - shown only when system has issues */}
-        {health.status !== 'healthy' && (
-          <div
-            className={`flex items-center gap-2 mb-4 p-3 rounded-lg border text-xs ${
-              health.status === 'critical'
-                ? 'bg-red-500/10 border-red-500/30 text-red-400'
-                : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400'
-            }`}
-            role="alert"
-            aria-label={`System health: ${health.message}`}
-          >
-            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-            <span>{health.message}</span>
-          </div>
-        )}
+  const formContent = (
+    <>
+        {/* Health alert removed — not relevant in a Create Dashboard form */}
 
         {/* Dashboard name input */}
         <div className="mb-4">
@@ -195,12 +177,12 @@ function CreateDashboardModalInner({
             </div>
             <div className="flex-1">
               <h3 className="text-sm font-medium text-foreground">
-                {selectedTemplate ? selectedTemplate.name : t('dashboard.create.startWithTemplate')}
+                {selectedTemplate ? selectedTemplate.name : 'Start with a Card Collection'}
               </h3>
               <p className="text-xs text-muted-foreground">
                 {selectedTemplate
-                  ? t('dashboard.create.preConfiguredCards', { count: selectedTemplate.cards.length })
-                  : t('dashboard.create.chooseFromTemplates')
+                  ? `${selectedTemplate.cards.length} pre-configured cards`
+                  : 'Choose from pre-built card sets'
                 }
               </p>
             </div>
@@ -211,10 +193,10 @@ function CreateDashboardModalInner({
             )}
           </button>
 
-          {/* Template selection - categorized view */}
+          {/* Collection selection - categorized view */}
           {showTemplates && (
             <div className="ml-14 space-y-2 animate-fade-in max-h-64 overflow-y-auto">
-              <p className="text-xs text-muted-foreground">{t('dashboard.create.selectByCategory')}</p>
+              <p className="text-xs text-muted-foreground">Select a collection by category:</p>
 
               {TEMPLATE_CATEGORIES.map((category) => {
                 const categoryTemplates = DASHBOARD_TEMPLATES.filter(t => t.category === category.id)
@@ -229,7 +211,7 @@ function CreateDashboardModalInner({
                       onClick={() => setExpandedCategory(isExpanded ? null : category.id)}
                       className="w-full flex items-center gap-2 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
                     >
-                      <span className="text-sm">{category.icon}</span>
+                      {(() => { const CatIcon = getIcon(category.icon); return <CatIcon className="w-4 h-4" /> })()}
                       <span className="text-xs font-medium text-foreground flex-1 text-left">{category.name}</span>
                       <span className="text-2xs text-muted-foreground">{categoryTemplates.length}</span>
                       <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
@@ -243,7 +225,7 @@ function CreateDashboardModalInner({
                             key={template.id}
                             onClick={() => {
                               setSelectedTemplate(template)
-                              setShowTemplates(false)
+                              // Don't collapse — user may want to browse more
                             }}
                             className={`flex items-center gap-2 p-2 rounded-lg text-left transition-all ${
                               selectedTemplate?.id === template.id
@@ -251,10 +233,10 @@ function CreateDashboardModalInner({
                                 : 'bg-secondary/50 border border-transparent hover:border-purple-500/30'
                             }`}
                           >
-                            <span className="text-base">{template.icon}</span>
+                            {(() => { const TplIcon = getIcon(template.icon); return <TplIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" /> })()}
                             <div className="flex-1 min-w-0">
-                              <h4 className="text-[11px] font-medium text-foreground truncate">{template.name}</h4>
-                              <p className="text-[9px] text-muted-foreground">{template.cards.length} {t('dashboard.create.cards')}</p>
+                              <h4 className="text-xs font-medium text-foreground truncate">{template.name}</h4>
+                              <p className="text-xs text-muted-foreground truncate">{template.cards.map(c => c.card_type.replace(/_/g, ' ')).join(', ')}</p>
                             </div>
                           </button>
                         ))}
@@ -266,27 +248,55 @@ function CreateDashboardModalInner({
             </div>
           )}
         </div>
-      </BaseModal.Content>
+    </>
+  )
 
-      <BaseModal.Footer>
-        <Button
-          variant="ghost"
-          size="lg"
-          onClick={onClose}
-          disabled={isCreating}
-        >
+  const createButton = (
+    <Button
+      variant="accent"
+      size="lg"
+      iconRight={isCreating ? undefined : <ChevronRight className="w-4 h-4" />}
+      onClick={handleCreate}
+      loading={isCreating}
+      disabled={isCreating}
+    >
+      {isCreating ? t('dashboard.create.creating') : t('dashboard.create.title', 'Create Dashboard')}
+    </Button>
+  )
+
+  // Embedded mode: render inline within Console Studio
+  if (embedded) {
+    return (
+      <div className="h-full flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto p-4">
+          <p className="text-xs text-muted-foreground mb-4">Name your dashboard and optionally start with a card collection.</p>
+          {formContent}
+        </div>
+        <div className="border-t border-border px-4 py-3 flex items-center justify-end gap-2">
+          {createButton}
+        </div>
+      </div>
+    )
+  }
+
+  // Standard modal mode
+  return (
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false}>
+      <BaseModal.Header
+        title={t('dashboard.create.title', 'Create Dashboard')}
+        description={t('dashboard.create.descriptionCollection', 'Name your dashboard and optionally start with a card collection.')}
+        icon={LayoutDashboard}
+        onClose={onClose}
+        showBack={false}
+      />
+      <BaseModal.Content>
+        {formContent}
+      </BaseModal.Content>
+      <BaseModal.Footer showKeyboardHints={false} className="justify-end">
+        <Button variant="ghost" size="lg" onClick={onClose} disabled={isCreating}>
           {t('actions.cancel')}
         </Button>
-        <Button
-          variant="accent"
-          size="lg"
-          iconRight={isCreating ? undefined : <ChevronRight className="w-4 h-4" />}
-          onClick={handleCreate}
-          loading={isCreating}
-          disabled={isCreating}
-        >
-          {isCreating ? t('dashboard.create.creating') : t('dashboard.create.title')}
-        </Button>
+        {createButton}
       </BaseModal.Footer>
     </BaseModal>
   )

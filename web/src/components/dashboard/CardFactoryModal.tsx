@@ -25,6 +25,8 @@ interface CardFactoryModalProps {
   isOpen: boolean
   onClose: () => void
   onCardCreated?: (cardId: string) => void
+  /** When true, renders content inline without BaseModal wrapper (used by Console Studio) */
+  embedded?: boolean
 }
 
 type Tab = 'declarative' | 'code' | 'ai' | 'manage'
@@ -41,7 +43,7 @@ export default function MyCard({ config }) {
       <p className="text-2xl font-bold text-foreground">{count}</p>
       <button
         onClick={() => setCount(c => c + 1)}
-        className="px-4 py-2 rounded-md bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
+        className="px-4 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
       >
         Increment
       </button>
@@ -235,7 +237,7 @@ const T2_TEMPLATES: T2Template[] = [
         {clusters.map(c => (
           <div key={c.name} className={\`rounded-lg \${getColor(c.health)} p-3 flex flex-col items-center justify-center\`}>
             <span className={\`text-xl font-bold \${getTextColor(c.health)}\`}>{c.health}%</span>
-            <span className="text-2xs text-muted-foreground mt-1">{c.name}</span>
+            <span className="text-xs text-muted-foreground mt-1">{c.name}</span>
           </div>
         ))}
       </div>
@@ -309,7 +311,7 @@ const T2_TEMPLATES: T2Template[] = [
         {data.map(d => (
           <div key={d.label} className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full" style={{ background: d.color }} />
-            <span className="text-2xs text-muted-foreground">{d.label}</span>
+            <span className="text-xs text-muted-foreground">{d.label}</span>
           </div>
         ))}
       </div>
@@ -346,7 +348,7 @@ const T2_TEMPLATES: T2Template[] = [
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs text-foreground truncate">{e.msg}</p>
-              <p className="text-2xs text-muted-foreground">{e.time}</p>
+              <p className="text-xs text-muted-foreground">{e.time}</p>
             </div>
           </div>
         ))}
@@ -392,7 +394,7 @@ const T2_TEMPLATES: T2Template[] = [
           <Timer className="w-4 h-4 text-purple-400" />
           <span className="text-sm font-medium text-foreground">Service Latency</span>
         </div>
-        <span className="text-2xs text-muted-foreground">tick #{tick}</span>
+        <span className="text-xs text-muted-foreground">tick #{tick}</span>
       </div>
       <div className="flex-1 space-y-2">
         {items.map(item => {
@@ -458,7 +460,7 @@ const T2_TEMPLATES: T2Template[] = [
             onChange={e => setEditUrl(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSet()}
             placeholder="https://example.com/image.png"
-            className="flex-1 text-xs px-2 py-1.5 rounded bg-secondary/50 border border-border text-foreground"
+            className="flex-1 text-xs px-2 py-1.5 rounded bg-secondary text-foreground"
           />
           <button onClick={handleSet} className="text-xs px-3 py-1.5 rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/30">
             Load
@@ -567,7 +569,7 @@ const T2_TEMPLATES: T2Template[] = [
         <div className="flex items-center gap-2">
           <Cable className="w-4 h-4 text-purple-400" />
           <span className="text-sm font-medium text-foreground">Port Forwards</span>
-          <span className="text-2xs px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">
+          <span className="text-xs px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">
             {forwards.filter(f => f.active).length} active
           </span>
         </div>
@@ -582,16 +584,16 @@ const T2_TEMPLATES: T2Template[] = [
         <div className="grid grid-cols-2 gap-2 mb-3 p-2 rounded bg-secondary/20 border border-border/50">
           <input placeholder="Namespace" value={form.namespace}
             onChange={e => setForm(p => ({...p, namespace: e.target.value}))}
-            className="text-xs px-2 py-1 rounded bg-secondary/50 border border-border text-foreground" />
+            className="text-xs px-2 py-1 rounded bg-secondary text-foreground" />
           <input placeholder="pod/name or svc/name" value={form.resource}
             onChange={e => setForm(p => ({...p, resource: e.target.value}))}
-            className="text-xs px-2 py-1 rounded bg-secondary/50 border border-border text-foreground" />
+            className="text-xs px-2 py-1 rounded bg-secondary text-foreground" />
           <input placeholder="Local port" value={form.localPort} type="number"
             onChange={e => setForm(p => ({...p, localPort: e.target.value}))}
-            className="text-xs px-2 py-1 rounded bg-secondary/50 border border-border text-foreground" />
+            className="text-xs px-2 py-1 rounded bg-secondary text-foreground" />
           <input placeholder="Remote port" value={form.remotePort} type="number"
             onChange={e => setForm(p => ({...p, remotePort: e.target.value}))}
-            className="text-xs px-2 py-1 rounded bg-secondary/50 border border-border text-foreground" />
+            className="text-xs px-2 py-1 rounded bg-secondary text-foreground" />
           <button onClick={addForward}
             className="col-span-2 text-xs py-1.5 rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/30">
             Add Port Forward
@@ -604,7 +606,7 @@ const T2_TEMPLATES: T2Template[] = [
           <div className="h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
             <Cable className="w-6 h-6 opacity-30" />
             <p className="text-xs">No port forwards configured</p>
-            <p className="text-2xs">Click Add to track a kubectl port-forward session</p>
+            <p className="text-xs">Click Add to track a kubectl port-forward session</p>
           </div>
         ) : forwards.map(f => (
           <div key={f.id} className={\`flex items-center gap-2 px-2 py-1.5 rounded \${f.active ? 'bg-green-500/10 border border-green-500/20' : 'bg-secondary/20 border border-border/30'}\`}>
@@ -616,9 +618,9 @@ const T2_TEMPLATES: T2Template[] = [
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-medium text-foreground truncate">{f.resource}</span>
-                <span className="text-2xs text-muted-foreground">({f.namespace})</span>
+                <span className="text-xs text-muted-foreground">({f.namespace})</span>
               </div>
-              <span className="text-2xs text-muted-foreground font-mono">
+              <span className="text-xs text-muted-foreground font-mono">
                 :{f.localPort} → :{f.remotePort}
               </span>
             </div>
@@ -676,7 +678,7 @@ function FieldSuggestChips({
 
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
-      <span className="text-2xs text-muted-foreground/50">Fields:</span>
+      <span className="text-xs text-muted-foreground/50">Fields:</span>
       {suggestedFields.map(field => {
         const sampleValues = (() => {
           try {
@@ -693,8 +695,9 @@ function FieldSuggestChips({
               field,
               label: field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1'),
               format: detected.format,
-              badgeColors: detected.badgeColors })}
-            className="text-2xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400/70 hover:bg-purple-500/20 hover:text-purple-400 transition-colors"
+              badgeColors: detected.badgeColors,
+            })}
+            className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400/70 hover:bg-purple-500/20 hover:text-purple-400 transition-colors"
           >
             + {field}
           </button>
@@ -740,7 +743,7 @@ function validateT2AssistResult(data: unknown): { valid: true; result: T2AssistR
 // Main Component
 // ============================================================================
 
-export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactoryModalProps) {
+export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = false }: CardFactoryModalProps) {
   const { t } = useTranslation()
   const [tab, setTab] = useState<Tab>('declarative')
 
@@ -964,15 +967,8 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
   // Existing field set for chip filtering
   const existingFieldSet = new Set(t1Columns.map(c => c.field))
 
-  return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={onClose}
-      size="xl"
-      closeOnBackdrop={false}
-    >
-      <BaseModal.Header title={t('dashboard.cardFactory.title')} icon={Wand2} onClose={onClose} showBack={false} />
-      <BaseModal.Content className="max-h-[70vh]">
+  // Shared content for both modal and embedded modes
+  const factoryContent = (
       <div className="flex flex-col">
         {/* Tabs */}
         <div
@@ -998,13 +994,13 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
               tabIndex={tab === t.id ? 0 : -1}
               onClick={() => handleTabChange(t.id)}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors',
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
                 tab === t.id
                   ? 'bg-purple-500/20 text-purple-400'
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary',
               )}
             >
-              <t.icon className="w-3.5 h-3.5" />
+              {/* Icon removed for cleaner look */}
               {t.label}
             </button>
           ))}
@@ -1012,7 +1008,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
 
         {/* Save feedback */}
         {saveMessage && (
-          <div className="mb-3 flex items-center gap-2 px-3 py-2 rounded-md bg-green-500/10 border border-green-500/20">
+          <div className="mb-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
             <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
             <span className="text-sm text-green-400">{saveMessage}</span>
           </div>
@@ -1048,7 +1044,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                       value={t1Title}
                       onChange={e => setT1Title(e.target.value)}
                       placeholder={t('dashboard.cardFactory.titlePlaceholder')}
-                      className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                      className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                     />
                   </div>
                   <div>
@@ -1056,7 +1052,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                     <select
                       value={t1Width}
                       onChange={e => setT1Width(Number(e.target.value))}
-                      className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                      className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                     >
                       <option value={3}>{t('dashboard.cardFactory.widthSmall')}</option>
                       <option value={4}>{t('dashboard.cardFactory.widthMedium')}</option>
@@ -1074,7 +1070,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                     value={t1Description}
                     onChange={e => setT1Description(e.target.value)}
                     placeholder={t('dashboard.cardFactory.descPlaceholder')}
-                    className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                    className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                   />
                 </div>
 
@@ -1086,7 +1082,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                         key={l}
                         onClick={() => setT1Layout(l)}
                         className={cn(
-                          'px-3 py-1.5 rounded-md text-xs transition-colors',
+                          'px-3 py-1.5 rounded-lg text-xs transition-colors',
                           t1Layout === l
                             ? 'bg-purple-500/20 text-purple-400'
                             : 'bg-secondary text-muted-foreground hover:text-foreground',
@@ -1104,7 +1100,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                     <label className="text-xs text-muted-foreground">{t('dashboard.cardFactory.columnsLabel')}</label>
                     <button
                       onClick={addColumn}
-                      className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                      className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"
                     >
                       <Plus className="w-3 h-3" />
                       {t('dashboard.cardFactory.addColumn')}
@@ -1118,19 +1114,19 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                           value={col.field}
                           onChange={e => updateColumn(idx, 'field', e.target.value)}
                           placeholder={t('dashboard.cardFactory.fieldPlaceholder')}
-                          className="flex-1 text-xs px-2 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                          className="flex-1 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                         />
                         <input
                           type="text"
                           value={col.label}
                           onChange={e => updateColumn(idx, 'label', e.target.value)}
                           placeholder={t('dashboard.cardFactory.labelPlaceholder')}
-                          className="flex-1 text-xs px-2 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                          className="flex-1 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                         />
                         <select
                           value={col.format || 'text'}
                           onChange={e => updateColumn(idx, 'format', e.target.value)}
-                          className="w-20 text-xs px-2 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none"
+                          className="w-20 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-none"
                         >
                           <option value="text">{t('cardFactory.formatText')}</option>
                           <option value="badge">{t('cardFactory.formatBadge')}</option>
@@ -1162,7 +1158,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                     value={t1DataJson}
                     onChange={e => setT1DataJson(e.target.value)}
                     rows={6}
-                    className="w-full text-xs px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                    className="w-full text-xs px-3 py-2 rounded-lg bg-secondary text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                   />
                 </div>
 
@@ -1171,7 +1167,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                   onClick={handleSaveT1}
                   disabled={!t1Title.trim()}
                   className={cn(
-                    'w-full flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-colors',
+                    'w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors',
                     t1Title.trim()
                       ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
                       : 'bg-secondary text-muted-foreground cursor-not-allowed',
@@ -1223,7 +1219,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                       value={t2Title}
                       onChange={e => setT2Title(e.target.value)}
                       placeholder={t('dashboard.cardFactory.titlePlaceholder')}
-                      className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                      className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                     />
                   </div>
                   <div>
@@ -1231,7 +1227,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                     <select
                       value={t2Width}
                       onChange={e => setT2Width(Number(e.target.value))}
-                      className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                      className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                     >
                       <option value={3}>{t('dashboard.cardFactory.widthSmall')}</option>
                       <option value={4}>{t('dashboard.cardFactory.widthMedium')}</option>
@@ -1249,7 +1245,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                     value={t2Description}
                     onChange={e => setT2Description(e.target.value)}
                     placeholder={t('dashboard.cardFactory.codeDescPlaceholder')}
-                    className="w-full text-sm px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                    className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                   />
                 </div>
 
@@ -1259,7 +1255,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                     <label className="text-xs text-muted-foreground">{t('dashboard.cardFactory.tsxSourceCode')}</label>
                     <button
                       onClick={handleCompile}
-                      className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                      className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"
                     >
                       <Eye className="w-3 h-3" />
                       {t('dashboard.cardFactory.validate')}
@@ -1269,7 +1265,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                     value={t2Source}
                     onChange={e => { setT2Source(e.target.value); setCompileStatus('idle') }}
                     rows={14}
-                    className="w-full text-xs px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-purple-500/50 leading-relaxed"
+                    className="w-full text-xs px-3 py-2 rounded-lg bg-secondary text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-purple-500/50 leading-relaxed"
                     spellCheck={false}
                   />
 
@@ -1295,10 +1291,10 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                 </div>
 
                 {/* Available APIs info */}
-                <div className="rounded-md bg-secondary/30 border border-border/50 p-3">
+                <div className="rounded-lg bg-secondary/30 border border-border/50 p-3">
                   <p className="text-xs font-medium text-muted-foreground mb-1">{t('dashboard.cardFactory.availableInScope')}</p>
-                  <p className="text-2xs text-muted-foreground leading-relaxed">
-                    React, useState, useEffect, useMemo, useRef, useReducer,
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    React, useState, useEffect, useMemo, useCallback, useRef, useReducer,
                     cn, useCardData, commonComparators, Skeleton, Pagination,
                     and all lucide-react icons.
                   </p>
@@ -1309,7 +1305,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                   onClick={handleSaveT2}
                   disabled={!t2Title.trim() || saving}
                   className={cn(
-                    'w-full flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-colors',
+                    'w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors',
                     t2Title.trim() && !saving
                       ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
                       : 'bg-secondary text-muted-foreground cursor-not-allowed',
@@ -1355,12 +1351,12 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                 </div>
               ) : (
                 existingCards.map(card => (
-                  <div key={card.id} className="rounded-md bg-card/50 border border-border p-3 flex items-start gap-3">
+                  <div key={card.id} className="rounded-lg bg-card/50 border border-border p-3 flex items-start gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-foreground">{wrapAbbreviations(card.title)}</span>
                         <span className={cn(
-                          'text-2xs px-1.5 py-0.5 rounded',
+                          'text-xs px-1.5 py-0.5 rounded',
                           card.tier === 'tier1' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400',
                         )}>
                           {card.tier === 'tier1' ? t('dashboard.cardFactory.declarativeBadge') : t('dashboard.cardFactory.customCodeBadge')}
@@ -1369,7 +1365,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                       {card.description && (
                         <p className="text-xs text-muted-foreground mt-0.5">{wrapAbbreviations(card.description)}</p>
                       )}
-                      <p className="text-2xs text-muted-foreground/70 mt-1">
+                      <p className="text-xs text-muted-foreground/70 mt-1">
                         ID: {card.id} · Created: {new Date(card.createdAt).toLocaleDateString()}
                       </p>
                     </div>
@@ -1387,23 +1383,46 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
           )}
         </div>
       </div>
-      </BaseModal.Content>
+  )
 
-      <ConfirmDialog
-        isOpen={deleteConfirmId !== null}
-        onClose={() => setDeleteConfirmId(null)}
-        onConfirm={() => {
-          if (deleteConfirmId) {
-            handleDelete(deleteConfirmId)
-            setDeleteConfirmId(null)
-          }
-        }}
-        title={t('dashboard.cardFactory.deleteCard')}
-        message={t('dashboard.delete.warning')}
-        confirmLabel={t('actions.delete')}
-        cancelLabel={t('actions.cancel')}
-        variant="danger"
-      />
+  const confirmDialog = (
+    <ConfirmDialog
+      isOpen={deleteConfirmId !== null}
+      onClose={() => setDeleteConfirmId(null)}
+      onConfirm={() => {
+        if (deleteConfirmId) {
+          handleDelete(deleteConfirmId)
+          setDeleteConfirmId(null)
+        }
+      }}
+      title={t('dashboard.cardFactory.deleteCard')}
+      message={t('dashboard.delete.warning')}
+      confirmLabel={t('actions.delete')}
+      cancelLabel={t('actions.cancel')}
+      variant="danger"
+    />
+  )
+
+  // Embedded mode: render content inline within Console Studio
+  if (embedded) {
+    return (
+      <div className="h-full flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto p-4">
+          {factoryContent}
+        </div>
+        {confirmDialog}
+      </div>
+    )
+  }
+
+  // Standard modal mode
+  return (
+    <BaseModal isOpen={isOpen} onClose={onClose} size="xl" closeOnBackdrop={false}>
+      <BaseModal.Header title={t('dashboard.cardFactory.title')} icon={Wand2} onClose={onClose} showBack={false} />
+      <BaseModal.Content className="max-h-[70vh]">
+        {factoryContent}
+      </BaseModal.Content>
+      {confirmDialog}
     </BaseModal>
   )
 }
@@ -1426,7 +1445,7 @@ function TemplateDropdown<T extends { name: string }>({
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md bg-secondary/50 border border-border text-muted-foreground hover:text-foreground transition-colors"
+        className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"
       >
         <LayoutTemplate className="w-3 h-3" />
         {label}
@@ -1437,7 +1456,7 @@ function TemplateDropdown<T extends { name: string }>({
             <button
               key={tpl.name}
               onClick={() => { onSelect(tpl); setOpen(false) }}
-              className="w-full text-left px-3 py-1.5 rounded-md text-xs text-foreground hover:bg-secondary transition-colors"
+              className="w-full text-left px-3 py-1.5 rounded-lg text-xs text-foreground hover:bg-secondary transition-colors"
             >
               {tpl.name}
             </button>
@@ -1518,7 +1537,7 @@ function T1Preview({ result }: { result: AiCardT1Result }) {
                 if (col.format === 'badge' && col.badgeColors) {
                   const badgeClass = col.badgeColors[val] || 'bg-gray-500/20 text-muted-foreground dark:bg-gray-900/30 dark:text-muted-foreground'
                   return (
-                    <span key={col.field} className={cn('flex-1 truncate text-2xs px-1 py-0.5 rounded', badgeClass)}>
+                    <span key={col.field} className={cn('flex-1 truncate text-xs px-1 py-0.5 rounded', badgeClass)}>
                       {val}
                     </span>
                   )
@@ -1550,7 +1569,7 @@ function T2Preview({ result }: { result: AiCardT2Result }) {
       {result.description && (
         <p className="text-xs text-muted-foreground mb-2">{wrapAbbreviations(result.description)}</p>
       )}
-      <pre className="text-2xs px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground font-mono max-h-48 overflow-y-auto whitespace-pre-wrap">
+      <pre className="text-xs px-3 py-2 rounded-lg bg-secondary text-foreground font-mono max-h-48 overflow-y-auto whitespace-pre-wrap">
         {result.sourceCode}
       </pre>
     </div>
@@ -1621,7 +1640,7 @@ function AiCardTab({ onCardCreated }: { onCardCreated: (id: string) => void }) {
           <button
             onClick={() => setAiMode('tier1')}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors',
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors',
               aiMode === 'tier1'
                 ? 'bg-blue-500/20 text-blue-400'
                 : 'bg-secondary text-muted-foreground hover:text-foreground',
@@ -1633,7 +1652,7 @@ function AiCardTab({ onCardCreated }: { onCardCreated: (id: string) => void }) {
           <button
             onClick={() => setAiMode('tier2')}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors',
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors',
               aiMode === 'tier2'
                 ? 'bg-purple-500/20 text-purple-400'
                 : 'bg-secondary text-muted-foreground hover:text-foreground',

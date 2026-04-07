@@ -16,6 +16,7 @@ import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
 // isInClusterMode removed — cards render immediately without offline skeleton
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { CardDataReportContext, ForceLiveContext, type CardDataState } from './CardDataContext'
+import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
 import { ChatMessage } from './CardChat'
 import { CardSkeleton, type CardSkeletonProps } from '../../lib/cards/CardComponents'
 import { isCardExportable } from '../../lib/widgets/widgetRegistry'
@@ -550,6 +551,7 @@ export function CardWrapper({
   const [showSummary, setShowSummary] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showWidgetExport, setShowWidgetExport] = useState(false)
+  const studioContext = useDashboardContextOptional()
   const [showResizeMenu, setShowResizeMenu] = useState(false)
   const [resizeMenuOnLeft, setResizeMenuOnLeft] = useState(false)
   const [__timeRemaining, setTimeRemaining] = useState<number | null>(null)
@@ -1078,7 +1080,12 @@ export function CardWrapper({
                         <button
                           onClick={() => {
                             setShowMenu(false)
-                            setShowWidgetExport(true)
+                            // Open Console Studio at Widgets section with this card pre-selected
+                            if (studioContext?.openAddCardModal) {
+                              studioContext.openAddCardModal('widgets', cardType)
+                            } else {
+                              setShowWidgetExport(true)
+                            }
                           }}
                           className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center gap-2"
                           role="menuitem"

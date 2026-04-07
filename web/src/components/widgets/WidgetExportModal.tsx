@@ -27,11 +27,13 @@ interface WidgetExportModalProps {
   onClose: () => void
   cardType?: string
   mode?: 'card' | 'stat' | 'template' | 'picker'
+  /** When true, renders content inline without BaseModal wrapper (used by Console Studio) */
+  embedded?: boolean
 }
 
 type ExportTab = 'card' | 'stats' | 'templates'
 
-export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'picker' }: WidgetExportModalProps) {
+export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'picker', embedded = false }: WidgetExportModalProps) {
   const { t } = useTranslation('common')
   const [activeTab, setActiveTab] = useState<ExportTab>(cardType ? 'card' : 'templates')
   const [selectedCard, setSelectedCard] = useState<string | null>(cardType || null)
@@ -131,15 +133,8 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
     )
   }
 
-  return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false}>
-      <BaseModal.Header
-        title={t('widgets.exportDesktopWidget')}
-        icon={Download}
-        onClose={onClose}
-      />
-      <BaseModal.Content>
-      <div className="flex flex-col max-h-[70vh]">
+  const widgetContent = (
+      <div className="flex flex-col">
         {/* Tabs */}
         <div className="flex border-b border-border mb-4">
           <button
@@ -362,6 +357,29 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
           </div>
         </div>
       </div>
+  )
+
+  // Embedded mode: render inline within Console Studio
+  if (embedded) {
+    return (
+      <div className="h-full flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto p-4">
+          {widgetContent}
+        </div>
+      </div>
+    )
+  }
+
+  // Standard modal mode
+  return (
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false}>
+      <BaseModal.Header
+        title={t('widgets.exportDesktopWidget')}
+        icon={Download}
+        onClose={onClose}
+      />
+      <BaseModal.Content>
+        {widgetContent}
       </BaseModal.Content>
     </BaseModal>
   )
