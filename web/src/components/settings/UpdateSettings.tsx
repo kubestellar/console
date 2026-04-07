@@ -21,6 +21,7 @@ import {
   Shield,
   HardDrive,
   GitCommitHorizontal,
+  Info,
 } from 'lucide-react'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { useUpdateProgress } from '../../hooks/useUpdateProgress'
@@ -136,6 +137,7 @@ export function UpdateSettings() {
 
   const [showReleaseNotes, setShowReleaseNotes] = useState(false)
   const [showPrereqs, setShowPrereqs] = useState(false)
+  const [showScopeInfo, setShowScopeInfo] = useState(false)
   const [copiedCommand, setCopiedCommand] = useState<string | null>(null)
   const [channelDropdownOpen, setChannelDropdownOpen] = useState(false)
   const [triggerState, setTriggerState] = useState<'idle' | 'triggered' | 'error'>('idle')
@@ -298,6 +300,34 @@ export function UpdateSettings() {
             {t('settings.updates.checkNow')}
           </Button>
         </div>
+      </div>
+
+      {/* Scope info — explains what System Updates controls vs. other update types */}
+      <div className="mb-4">
+        <button
+          onClick={() => setShowScopeInfo(!showScopeInfo)}
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Info className="w-4 h-4" />
+          <span>{t('settings.updates.scopeInfoToggle')}</span>
+          {showScopeInfo ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+        </button>
+        {showScopeInfo && (
+          <div className="mt-3 rounded-lg bg-secondary/50 border border-border p-4 space-y-3 text-sm">
+            <div>
+              <span className="font-medium text-foreground">{t('settings.updates.scopeSystemTitle')}</span>
+              <span className="text-muted-foreground"> — {t('settings.updates.scopeSystemDesc')}</span>
+            </div>
+            <div>
+              <span className="font-medium text-foreground">{t('settings.updates.scopeReloadTitle')}</span>
+              <span className="text-muted-foreground"> — {t('settings.updates.scopeReloadDesc')}</span>
+            </div>
+            <div>
+              <span className="font-medium text-foreground">{t('settings.updates.scopeCardDataTitle')}</span>
+              <span className="text-muted-foreground"> — {t('settings.updates.scopeCardDataDesc')}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Channel Selector */}

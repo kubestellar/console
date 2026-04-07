@@ -615,7 +615,14 @@
       "prereqGitCleanOk": "Clean",
       "prereqGitCleanFail": "Uncommitted changes",
       "allPrereqsMet": "All prerequisites met — update notifications active",
-      "prereqsMissing": "{{count}} prerequisite(s) not met — some features unavailable"
+      "prereqsMissing": "{{count}} prerequisite(s) not met — some features unavailable",
+      "scopeInfoToggle": "What do these settings control?",
+      "scopeSystemTitle": "System Updates",
+      "scopeSystemDesc": "Updates the entire console application to a new version. Controlled by the Update Channel and Auto-Update settings on this page.",
+      "scopeReloadTitle": "Auto-Reload",
+      "scopeReloadDesc": "When a new build is deployed, your browser automatically detects the change and prompts you to reload. This happens independently of System Updates.",
+      "scopeCardDataTitle": "Card Data",
+      "scopeCardDataDesc": "Individual dashboard cards refresh their data on their own schedules. Card refreshes are not controlled by System Updates."
     },
     "theme": {
       "title": "Appearance",
