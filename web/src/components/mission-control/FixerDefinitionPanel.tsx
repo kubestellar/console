@@ -70,8 +70,7 @@ export function FixerDefinitionPanel({
   }, [])
 
   const handleSubmit = () => {
-    if (!state.description.trim()) return
-    if (!state.title) {
+    if (!state.title && state.description.trim()) {
       const firstSentence = state.description.split(/[.!?\n]/)[0].trim()
       onTitleChange(firstSentence.slice(0, 60))
     }
@@ -238,7 +237,7 @@ export function FixerDefinitionPanel({
                 variant="primary"
                 size="sm"
                 onClick={handleSubmit}
-                disabled={!state.description.trim() || aiStreaming}
+                disabled={aiStreaming}
                 className="h-7 px-3"
                 icon={
                   aiStreaming ? (
