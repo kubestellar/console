@@ -15,6 +15,8 @@ import { useGroundControlDashboard } from '../../hooks/useGroundControlDashboard
 import { getApplicableOrbitTemplates } from '../../lib/orbit/orbitTemplates'
 import { ORBIT_DEFAULT_CADENCE } from '../../lib/constants/orbit'
 import { emitOrbitMissionCreated } from '../../lib/analytics'
+import { isDemoMode } from '../../lib/demoMode'
+import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import type { OrbitCadence, OrbitType } from '../../lib/missions/types'
 
 interface OrbitSetupOfferProps {
@@ -67,6 +69,7 @@ export function OrbitSetupOffer({
   const [isCreating, setIsCreating] = useState(false)
   const [createdDashboardId, setCreatedDashboardId] = useState<string | null>(null)
   const [isDone, setIsDone] = useState(false)
+  const [showSetupDialog, setShowSetupDialog] = useState(false)
 
   const toggleOrbitType = useCallback((orbitType: OrbitType) => {
     setSelectedOrbits(prev => {
@@ -78,6 +81,12 @@ export function OrbitSetupOffer({
   }, [])
 
   const handleSetup = useCallback(async () => {
+    // In demo mode, redirect to local install setup dialog
+    if (isDemoMode()) {
+      setShowSetupDialog(true)
+      return
+    }
+
     setIsCreating(true)
     try {
       // Create orbit missions for each selected type
@@ -139,6 +148,7 @@ export function OrbitSetupOffer({
   }
 
   return (
+    <>
     <div className="mx-4 mb-4 rounded-xl border border-purple-500/30 bg-purple-500/5 overflow-hidden">
       {/* Header */}
       <button
@@ -250,5 +260,9 @@ export function OrbitSetupOffer({
         </div>
       )}
     </div>
+    {showSetupDialog && (
+      <SetupInstructionsDialog isOpen={showSetupDialog} onClose={() => setShowSetupDialog(false)} />
+    )}
+    </>
   )
 }

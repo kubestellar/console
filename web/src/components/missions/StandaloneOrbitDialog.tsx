@@ -14,6 +14,8 @@ import { useMissions } from '../../hooks/useMissions'
 import { getApplicableOrbitTemplates } from '../../lib/orbit/orbitTemplates'
 import { ORBIT_DEFAULT_CADENCE } from '../../lib/constants/orbit'
 import { emitOrbitMissionCreated } from '../../lib/analytics'
+import { isDemoMode } from '../../lib/demoMode'
+import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import type { OrbitCadence, OrbitType, OrbitConfig } from '../../lib/missions/types'
 
 interface StandaloneOrbitDialogProps {
@@ -38,6 +40,7 @@ export function StandaloneOrbitDialog({ onClose }: StandaloneOrbitDialogProps) {
   const [autoRun, setAutoRun] = useState(false)
   const [selectedClusters, setSelectedClusters] = useState<Set<string>>(new Set())
   const [showClusterPicker, setShowClusterPicker] = useState(false)
+  const [showSetupDialog, setShowSetupDialog] = useState(false)
 
   const clusters = deduplicatedClusters || []
 
@@ -60,6 +63,13 @@ export function StandaloneOrbitDialog({ onClose }: StandaloneOrbitDialogProps) {
 
   const handleCreate = useCallback(() => {
     if (!selectedOrbit) return
+
+    // In demo mode, redirect to local install setup dialog
+    if (isDemoMode()) {
+      setShowSetupDialog(true)
+      return
+    }
+
     const template = templates.find(tpl => tpl.orbitType === selectedOrbit)
     if (!template) return
 
@@ -92,6 +102,7 @@ export function StandaloneOrbitDialog({ onClose }: StandaloneOrbitDialogProps) {
   }, [selectedOrbit, cadence, autoRun, selectedClusters, templates, saveMission, onClose])
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="w-full max-w-md mx-4 rounded-xl border border-purple-500/30 bg-card shadow-2xl overflow-hidden">
         {/* Header */}
@@ -282,5 +293,9 @@ export function StandaloneOrbitDialog({ onClose }: StandaloneOrbitDialogProps) {
         </div>
       </div>
     </div>
+    {showSetupDialog && (
+      <SetupInstructionsDialog isOpen={showSetupDialog} onClose={() => setShowSetupDialog(false)} />
+    )}
+    </>
   )
 }
