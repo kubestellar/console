@@ -188,40 +188,44 @@ export function ProjectNode({
         cursor="pointer"
       />
 
-      {/* Project icon — GitHub avatar via SVG <image>, letter fallback on error */}
-      {!imgFailed ? (
-        <>
-          {/* Circular clip path for this node */}
-          <defs>
-            <clipPath id={`${id}-icon-clip`}>
-              <circle cx={cx} cy={cy} r={radius - 1} />
-            </clipPath>
-          </defs>
-          <image
-            href={getAvatarUrl(name)}
-            x={cx - iconSize / 2}
-            y={cy - iconSize / 2}
-            width={iconSize}
-            height={iconSize}
-            clipPath={`url(#${id}-icon-clip)`}
-            style={{ pointerEvents: 'none' }}
+      {/* Project icon — GitHub avatar via foreignObject, letter fallback on error */}
+      <foreignObject
+        x={cx - iconSize / 2}
+        y={cy - iconSize / 2}
+        width={iconSize}
+        height={iconSize}
+        style={{ pointerEvents: 'none', overflow: 'hidden' }}
+      >
+        {!imgFailed ? (
+          <img
+            src={getAvatarUrl(name)}
+            alt={displayName}
+            crossOrigin="anonymous"
+            style={{
+              width: iconSize,
+              height: iconSize,
+              borderRadius: '50%',
+              objectFit: 'cover',
+              display: 'block',
+            }}
             onError={() => setImgFailed(true)}
           />
-        </>
-      ) : (
-        <text
-          x={cx}
-          y={cy + radius * 0.3}
-          textAnchor="middle"
-          fill={primaryColor}
-          fontSize={radius * 0.9}
-          fontWeight={700}
-          fontFamily="system-ui, sans-serif"
-          style={{ pointerEvents: 'none' }}
-        >
-          {name.charAt(0).toUpperCase()}
-        </text>
-      )}
+        ) : (
+          <div style={{
+            width: iconSize,
+            height: iconSize,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: primaryColor,
+            fontSize: radius * 0.9,
+            fontWeight: 700,
+            fontFamily: 'system-ui, sans-serif',
+          }}>
+            {name.charAt(0).toUpperCase()}
+          </div>
+        )}
+      </foreignObject>
 
 
 
