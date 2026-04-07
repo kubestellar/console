@@ -752,16 +752,39 @@ export function CardWrapper({
     }
   }, [showMenu])
 
-  // Keep menu anchored to button on scroll/resize
+  // Keep menu anchored to button on scroll/resize.
+  // Includes boundary detection to prevent the menu from rendering off-screen (#5253).
   useEffect(() => {
     if (!showMenu || !menuButtonRef.current) return
+
+    /** Approximate height of the card action menu (px) */
+    const MENU_APPROX_HEIGHT = 300
+    /** Width of the card action menu (w-48 = 192px) */
+    const MENU_WIDTH_PX = 192
+    /** Viewport edge padding (px) */
+    const VIEWPORT_PADDING = 8
 
     const updatePosition = () => {
       if (menuButtonRef.current) {
         const rect = menuButtonRef.current.getBoundingClientRect()
-        setMenuPosition({
-          top: rect.bottom + 4,
-          right: window.innerWidth - rect.right })
+        let top = rect.bottom + 4
+        let right = window.innerWidth - rect.right
+
+        // If the menu would extend below the viewport, position it above the button
+        if (top + MENU_APPROX_HEIGHT > window.innerHeight - VIEWPORT_PADDING) {
+          top = Math.max(VIEWPORT_PADDING, rect.top - MENU_APPROX_HEIGHT - 4)
+        }
+        // If the menu would extend beyond the right edge, clamp it
+        if (right < VIEWPORT_PADDING) {
+          right = VIEWPORT_PADDING
+        }
+        // If the menu would extend beyond the left edge, clamp it
+        const leftEdge = window.innerWidth - right - MENU_WIDTH_PX
+        if (leftEdge < VIEWPORT_PADDING) {
+          right = window.innerWidth - MENU_WIDTH_PX - VIEWPORT_PADDING
+        }
+
+        setMenuPosition({ top, right })
       }
     }
 
@@ -982,9 +1005,29 @@ export function CardWrapper({
                     onClick={() => {
                       if (!showMenu && menuButtonRef.current) {
                         const rect = menuButtonRef.current.getBoundingClientRect()
-                        setMenuPosition({
-                          top: rect.bottom + 4,
-                          right: window.innerWidth - rect.right })
+                        /** Approximate height of the card action menu (px) */
+                        const MENU_APPROX_HEIGHT = 300
+                        /** Width of the card action menu (w-48 = 192px) */
+                        const MENU_WIDTH_PX = 192
+                        /** Viewport edge padding (px) */
+                        const VIEWPORT_PADDING = 8
+
+                        let top = rect.bottom + 4
+                        let right = window.innerWidth - rect.right
+
+                        // Prevent menu from rendering off-screen (#5253)
+                        if (top + MENU_APPROX_HEIGHT > window.innerHeight - VIEWPORT_PADDING) {
+                          top = Math.max(VIEWPORT_PADDING, rect.top - MENU_APPROX_HEIGHT - 4)
+                        }
+                        if (right < VIEWPORT_PADDING) {
+                          right = VIEWPORT_PADDING
+                        }
+                        const leftEdge = window.innerWidth - right - MENU_WIDTH_PX
+                        if (leftEdge < VIEWPORT_PADDING) {
+                          right = window.innerWidth - MENU_WIDTH_PX - VIEWPORT_PADDING
+                        }
+
+                        setMenuPosition({ top, right })
                       }
                       setShowMenu(!showMenu)
                     }}

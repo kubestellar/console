@@ -31,9 +31,11 @@ export function useStablePageHeight(pageSize: number | string, totalItems: numbe
   // when a taller page is observed. The guard prevents calling setState
   // when the height hasn't actually changed (avoiding re-render loops).
   //
-  // IMPORTANT: We temporarily remove minHeight before measuring to avoid a
-  // feedback loop where setting minHeight increases scrollHeight, which
-  // triggers another setState, ad infinitum ("Maximum update depth exceeded").
+  // CLS fix (#5255): Only temporarily remove minHeight for measurement when
+  // no max height has been tracked yet. Once we have a max height from a full
+  // page, we compare scrollHeight directly — if the content grew beyond our
+  // tracked max, we update. Otherwise we skip the measurement entirely to
+  // avoid the brief layout flicker caused by clearing and restoring minHeight.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
     const el = containerRef.current
@@ -41,8 +43,21 @@ export function useStablePageHeight(pageSize: number | string, totalItems: numbe
     const effectivePageSize = typeof pageSize === 'number' ? pageSize : Infinity
     if (totalItems <= effectivePageSize) return // no pagination active
 
-    // Temporarily clear minHeight so we measure the natural content height,
-    // not the inflated height from a previous minHeight setting.
+    if (maxHeightRef.current > 0) {
+      // We already have a tracked max height. Check if content grew beyond it
+      // WITHOUT clearing minHeight (avoids CLS flicker on partial pages).
+      const height = el.scrollHeight
+      if (height > maxHeightRef.current) {
+        maxHeightRef.current = height
+        if (height !== stableMinHeight) {
+          setStableMinHeight(height)
+        }
+      }
+      return
+    }
+
+    // First measurement: temporarily clear minHeight so we measure the
+    // natural content height, not an inflated height from a prior setting.
     const prevMinHeight = el.style.minHeight
     el.style.minHeight = ''
     const height = el.scrollHeight

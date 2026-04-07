@@ -380,7 +380,7 @@ export function ClusterMetrics() {
           <div>
             <p className="text-xs text-muted-foreground">{t('cards:clusterMetrics.min')}</p>
             <p className="text-sm font-medium text-foreground">
-              {Math.round(Math.min(...data.map((d) => d.value)))}{config.unit}
+              {(() => { const vals = data.map((d) => d.value); return Math.round(vals.length > 0 ? Math.min(...vals) : 0) })()}{config.unit}
             </p>
           </div>
           <div>
@@ -392,7 +392,7 @@ export function ClusterMetrics() {
           <div>
             <p className="text-xs text-muted-foreground">{t('cards:clusterMetrics.max')}</p>
             <p className="text-sm font-medium text-foreground">
-              {Math.round(Math.max(...data.map((d) => d.value)))}{config.unit}
+              {(() => { const vals = data.map((d) => d.value); return Math.round(vals.length > 0 ? Math.max(...vals) : 0) })()}{config.unit}
             </p>
           </div>
         </div>
