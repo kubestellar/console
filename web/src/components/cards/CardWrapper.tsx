@@ -34,7 +34,7 @@ const WidgetExportModal = lazy(() =>
 const FeatureRequestModal = lazy(() =>
   import('../feedback/FeatureRequestModal').then(m => ({ default: m.FeatureRequestModal }))
 )
-import { LOADING_TIMEOUT_MS, SKELETON_DELAY_MS, INITIAL_RENDER_TIMEOUT_MS, TICK_INTERVAL_MS, CARD_LOADING_TIMEOUT_MS } from '../../lib/constants/network'
+import { LOADING_TIMEOUT_MS, SKELETON_DELAY_MS, INITIAL_RENDER_TIMEOUT_MS, TICK_INTERVAL_MS, CARD_LOADING_TIMEOUT_MS, MIN_SKELETON_DISPLAY_MS } from '../../lib/constants/network'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { copyToClipboard } from '../../lib/clipboard'
 
@@ -453,6 +453,17 @@ export function CardWrapper({
     return () => clearTimeout(timer)
   }, []) // Empty deps - only run on mount
 
+  // Minimum skeleton display duration guard (#5206): once the skeleton starts showing,
+  // keep it visible for at least MIN_SKELETON_DISPLAY_MS. This prevents the flicker
+  // where childDataState starts null (skeleton), then child reports state via
+  // useLayoutEffect causing a re-render that briefly shows content before the
+  // skeleton timeout completes (skeleton → content → skeleton → content).
+  const [minSkeletonElapsed, setMinSkeletonElapsed] = useState(checkIsDemoMode)
+  useEffect(() => {
+    const timer = setTimeout(() => setMinSkeletonElapsed(true), MIN_SKELETON_DISPLAY_MS)
+    return () => clearTimeout(timer)
+  }, []) // Empty deps - only run on mount
+
   // Stuck loading guard: if a card reports isLoading:true but never updates,
   // force it to exit loading state after CARD_LOADING_TIMEOUT_MS (30 seconds).
   // This prevents cards from being permanently stuck in loading state due to
@@ -601,21 +612,24 @@ export function CardWrapper({
   // Show loading when:
   // - Card explicitly reports isLoading: true (AND stuck-loading timeout hasn't fired), OR
   // - Card hasn't reported yet AND quick timeout hasn't passed (brief skeleton for reporting cards)
+  // - Minimum skeleton display time hasn't elapsed yet (#5206) — prevents flicker from
+  //   child useLayoutEffect reports causing skeleton → content → skeleton → content
   // Static/demo cards that never report will stop showing as loading after 150ms
   // NOTE: isRefreshing is NOT included — background refreshes should be invisible to avoid flicker
   // cardLoadingTimedOut acts as a safety valve: if a card stays in isLoading:true for
   // CARD_LOADING_TIMEOUT_MS (30s), force it out of loading state to prevent permanent spinner.
-  const effectiveIsLoading = (childDataState?.isLoading && !cardLoadingTimedOut) || (childDataState === null && !initialRenderTimedOut && !skeletonTimedOut)
+  const effectiveIsLoading = (childDataState?.isLoading && !cardLoadingTimedOut) || (childDataState === null && !initialRenderTimedOut && !skeletonTimedOut) || (!minSkeletonElapsed && childDataState === null)
   // hasData logic:
   // - If card explicitly reports hasData, use it
   // - If card hasn't reported AND quick timeout passed, assume has data (static/demo card)
   // - If card hasn't reported AND skeleton timed out, assume has data (show content)
   // - If card reports isLoading:true but not hasData, assume no data (show skeleton)
   // - If stuck loading timed out, force hasData to true so content area is shown
+  // - Minimum skeleton display hasn't elapsed — don't claim hasData yet (#5206)
   // - Otherwise default to true (show content)
   const effectiveHasData = cardLoadingTimedOut ? true : (childDataState?.hasData ?? (
     childDataState === null
-      ? (initialRenderTimedOut || skeletonTimedOut)  // After quick timeout, assume static card has content
+      ? ((initialRenderTimedOut || skeletonTimedOut) && minSkeletonElapsed)  // After quick timeout AND min skeleton elapsed, assume static card has content
       : (childDataState?.isLoading ? false : true)
   ))
 

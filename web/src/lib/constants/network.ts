@@ -181,6 +181,11 @@ export const SKELETON_DELAY_MS = 100
 /** Timeout for initial render measurement (150ms) */
 export const INITIAL_RENDER_TIMEOUT_MS = 150
 
+/** Minimum duration to show skeleton on initial mount before transitioning to content (200ms).
+ * Prevents flicker when child reports state via useLayoutEffect causing a re-render
+ * that briefly shows content before the skeleton timeout completes (#5206). */
+export const MIN_SKELETON_DISPLAY_MS = 200
+
 /** Maximum time a card can remain in loading state before forced fallback (30 seconds).
  * If a card reports isLoading:true but never transitions out (e.g., interrupted render,
  * hook cancellation, or error during data fetching), this timeout forces it to exit
