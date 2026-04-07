@@ -188,43 +188,49 @@ export function ProjectNode({
         cursor="pointer"
       />
 
-      {/* Project icon — GitHub avatar via foreignObject, letter fallback on error */}
+      {/* Project icon via foreignObject — GitHub avatar or fallback letter */}
       <foreignObject
         x={cx - iconSize / 2}
         y={cy - iconSize / 2}
         width={iconSize}
         height={iconSize}
-        style={{ pointerEvents: 'none', overflow: 'hidden' }}
       >
-        {!imgFailed ? (
-          <img
-            src={getAvatarUrl(name)}
-            alt={displayName}
-            crossOrigin="anonymous"
-            style={{
-              width: iconSize,
-              height: iconSize,
-              borderRadius: '50%',
-              objectFit: 'cover',
-              display: 'block',
-            }}
-            onError={() => setImgFailed(true)}
-          />
-        ) : (
-          <div style={{
+        <div
+          style={{
             width: iconSize,
             height: iconSize,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: primaryColor,
-            fontSize: radius * 0.9,
-            fontWeight: 700,
-            fontFamily: 'system-ui, sans-serif',
-          }}>
-            {name.charAt(0).toUpperCase()}
-          </div>
-        )}
+            borderRadius: '50%',
+            overflow: 'hidden',
+            cursor: 'pointer',
+          }}
+        >
+          {!imgFailed ? (
+            <img
+              src={getAvatarUrl(name)}
+              alt={displayName}
+              style={{
+                width: iconSize,
+                height: iconSize,
+                borderRadius: '50%',
+                objectFit: 'cover',
+              }}
+              onError={() => setImgFailed(true)}
+            />
+          ) : (
+            <span style={{
+              color: primaryColor,
+              fontSize: radius * 0.8,
+              fontWeight: 700,
+              fontFamily: 'system-ui, sans-serif',
+              cursor: 'pointer',
+            }}>
+              {name.charAt(0).toUpperCase()}
+            </span>
+          )}
+        </div>
       </foreignObject>
 
 
