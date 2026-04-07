@@ -162,3 +162,358 @@ All data fetching in cards MUST go through the cache layer (`useCache` or a `use
 
 `useCardLoadingState` / `useReportCardDataState` must be called AFTER the hooks that provide `isDemoData`. React hooks run in order — if the loading state hook runs before data hooks, it won't have the correct values.
 
+---
+
+## Critical Rules (ALWAYS FOLLOW)
+
+### Array Safety
+NEVER call `.join()`, `.map()`, `.filter()`, `.forEach()`, or `for...of` on values that might be `undefined`. Hooks and API responses can return `undefined` when endpoints fail.
+```tsx
+// WRONG
+data.join(', ')
+for (const x of data) { ... }
+
+// CORRECT
+(data || []).join(', ')
+for (const x of (data || [])) { ... }
+```
+
+### Cluster Deduplication
+ALWAYS use `DeduplicatedClusters()` when iterating clusters. Multiple kubeconfig contexts can point to the same physical cluster — without dedup, resources get listed/counted twice.
+
+### No Magic Numbers
+EVERY numeric literal must be a named constant:
+```tsx
+// WRONG
+setTimeout(fn, 5000)
+
+// CORRECT
+const WS_RECONNECT_MS = 5000
+setTimeout(fn, WS_RECONNECT_MS)
+```
+This applies to timeouts, intervals, percentages, retries, pixel values — everything.
+
+### No Secrets in Code
+NEVER hardcode API keys, tokens, or credentials. Use environment variables only (`os.Getenv()` in Go, `import.meta.env.VITE_*` in frontend). Secrets come from `.env` (gitignored) or runtime env vars.
+
+### Netlify Functions
+The production site (console.kubestellar.io) uses Netlify Functions, NOT the Go backend. API routes are proxied to `web/netlify/functions/*.mts`. When adding Go API handlers, update Netlify Functions separately. See `netlify.toml` for redirect mapping.
+
+### MSW Passthrough
+New Netlify Functions MUST have MSW (Mock Service Worker) passthrough rules so demo mode works correctly.
+
+---
+
+## Non-Card Component Patterns
+
+### Modals / Drill-Downs
+Use the `DrillDownProvider` context. Open drill-downs via `useDrillDown()` hook:
+```tsx
+const { openDrillDown } = useDrillDown()
+openDrillDown({ view: 'logs', props: { podName, cluster } })
+```
+Drill-down views live in `web/src/components/drilldown/views/`. Each is a standalone component receiving props from the drill-down stack.
+
+### UI Primitives
+Reuse existing primitives from `web/src/components/ui/` before creating new ones:
+- `Button.tsx` — variant/size maps (`primary | secondary | danger | ghost | accent`, `sm | md | lg`)
+- `ClusterStatusBadge.tsx` — state config objects mapping status → color/icon/label
+- `Tooltip.tsx`, `Modal.tsx`, `Badge.tsx`, `Tabs.tsx`
+
+**Pattern:** Use variant/size config objects (not inline conditionals):
+```tsx
+const VARIANT_MAP: Record<ButtonVariant, string> = {
+  primary: 'bg-blue-600 hover:bg-blue-700 text-white',
+  ghost: 'hover:bg-secondary/50 text-muted-foreground',
+}
+```
+
+### Forms
+No form library — use controlled components with `useState`. Validate at submit time.
+
+### Tables / Lists
+Use existing table components in `components/ui/`. For sortable/filterable lists, follow the pattern in drill-down views.
+
+---
+
+## Hook Naming & Conventions
+
+### Naming Taxonomy
+| Prefix | Purpose | Example |
+|--------|---------|---------|
+| `useCached*` | Data fetching with unified cache (SQLite + SWR) | `useCachedPods`, `useCachedProw` |
+| `useCard*` | Card-specific behavior (navigation, history) | `useCardLoadingState`, `useCardHistory` |
+| `useCluster*` | Cluster data and filtering | `useClusterData`, `useClusterGroups` |
+| `useDashboard*` | Dashboard state and management | `useDashboards`, `useDashboardHealth` |
+| `useSnoozed*` | Snooze/dismiss state for alerts, cards, missions | `useSnoozedAlerts`, `useSnoozedCards` |
+| `use{Entity}` | Domain-specific logic | `useArgoCD`, `useKyverno`, `useTrestle` |
+| `use{Utility}` | UI utilities | `useHoverState`, `useMobile`, `useFlashOnChange` |
+
+### Caching Contract
+All card data hooks MUST use `useCache()` from `lib/cache/index.ts`. This provides:
+- SQLite WASM storage (off-main-thread) with IndexedDB fallback
+- Stale-while-revalidate pattern
+- Automatic demo fallback
+- Failure tracking with exponential backoff
+
+**Required return shape from cached hooks:**
+```tsx
+{
+  data: T,
+  isLoading: boolean,
+  isRefreshing: boolean,
+  isDemoData: boolean,       // MUST be passed to useCardLoadingState
+  isFailed: boolean,
+  consecutiveFailures: number,
+  lastRefresh: number | null,
+  refetch: () => Promise<void>,
+}
+```
+
+### When to Create a New Hook vs Extend
+- **New hook:** New data source, new API endpoint, or new domain concept
+- **Extend existing:** Adding a field to an existing API response or a filter to existing data
+- **Never:** Don't create a hook that wraps a single `useState` — just use `useState` directly
+
+---
+
+## Styling System
+
+### Stack
+- **Tailwind CSS** with PostCSS — all styles via utility classes
+- **`cn()` utility** (`lib/cn.ts`) — always use for merging classNames (wraps clsx + tailwind-merge)
+- **CSS Variables** in `web/src/index.css` — HSL-based semantic tokens
+- **15+ themes** defined in `lib/themes.ts` — switchable at runtime
+
+### Color Rules
+**NEVER use raw hex colors in components.** Use semantic Tailwind classes:
+
+| Use This | Not This |
+|----------|----------|
+| `text-foreground` | `text-white` or `text-[#ffffff]` |
+| `bg-primary` | `bg-[#9333ea]` |
+| `text-destructive` | `text-red-500` or `text-[#ef4444]` |
+| `bg-card` | `bg-[#1a1a2e]` |
+| `border-border` | `border-gray-700` |
+
+**Status colors** (these are OK as Tailwind classes):
+- Success: `text-green-400`, `bg-green-500/10`
+- Warning: `text-yellow-400`, `bg-yellow-500/10`
+- Error: `text-red-400`, `bg-red-500/10`
+- Info: `text-cyan-400`, `bg-cyan-500/10`
+
+### Dark/Light Mode
+- Class-based: `darkMode: 'class'` in tailwind config
+- The `:root` CSS vars default to dark theme; `.light` class overrides them
+- Components should NOT use `dark:` prefix utilities — the CSS variable system handles theming automatically
+
+### Glass Effect
+Use the `.glass` CSS class for frosted-glass card backgrounds. Don't recreate with inline styles.
+
+### Responsive Design
+Mobile-first with Tailwind breakpoints: `sm:` (640px), `md:` (768px), `lg:` (1024px), `xl:` (1280px).
+Common grid pattern:
+```tsx
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+```
+
+### Animations
+- Respect `prefers-reduced-motion` — use `.reduce-motion` guard class
+- GPU-accelerated animations use `translate3d(0,0,0)` for compositing
+- Custom animations defined in `tailwind.config.js` (`roll-up`, `spin-slow`, `pulse-once`, etc.)
+
+---
+
+## Go Backend Patterns
+
+### Framework
+**Fiber v2** (Express-like). All handlers follow `func(c *fiber.Ctx) error`.
+
+### Adding a New API Endpoint
+
+1. **Create handler struct** in `pkg/api/`:
+```go
+type MyHandler struct {
+    store store.Store
+}
+func NewMyHandler(s store.Store) *MyHandler {
+    return &MyHandler{store: s}
+}
+```
+
+2. **Implement handler methods:**
+```go
+func (h *MyHandler) GetThing(c *fiber.Ctx) error {
+    userID := middleware.GetUserID(c)
+
+    thing, err := h.store.GetThing(userID)
+    if err != nil {
+        return fiber.NewError(fiber.StatusInternalServerError, "Failed to get thing")
+    }
+    if thing == nil {
+        return fiber.NewError(fiber.StatusNotFound, "Thing not found")
+    }
+    return c.JSON(thing)
+}
+```
+
+3. **Register route** in `pkg/api/server.go` → `setupRoutes()`:
+```go
+api.Get("/things", myHandler.GetThing)
+```
+
+### Error Handling
+Use `fiber.NewError(statusCode, message)` — the global error handler formats the JSON response:
+```json
+{ "error": "message here" }
+```
+
+### Response Format
+- Success: `c.JSON(data)` or `c.Status(fiber.StatusCreated).JSON(data)`
+- Map responses: `c.JSON(fiber.Map{"items": items, "source": "k8s"})`
+- No content: `c.SendStatus(fiber.StatusNoContent)`
+
+### Multi-Cluster Queries
+Use goroutines + `sync.WaitGroup` for parallel cluster requests:
+```go
+var wg sync.WaitGroup
+var mu sync.Mutex
+results := make([]T, 0)
+
+for _, cl := range clusters {
+    wg.Add(1)
+    go func(name string) {
+        defer wg.Done()
+        ctx, cancel := context.WithTimeout(parentCtx, timeout)
+        defer cancel()
+        // fetch and append under mu.Lock()
+    }(cl.Name)
+}
+wg.Wait()
+```
+
+### SSE Streaming
+For streaming endpoints, use `c.Context().SetBodyStreamWriter()` with SSE events.
+
+### Demo Mode
+Every endpoint that returns data MUST check demo mode first:
+```go
+if isDemoMode(c) {
+    return demoResponse(c, "things", getDemoThings())
+}
+```
+
+### Go Slice Initialization
+Always use `make([]T, 0)` not `var x []T` — nil slices serialize to `null` in JSON, empty slices to `[]`.
+
+### Logging
+Use `log/slog` (structured logging). JSON format in production, text in dev.
+
+---
+
+## State Management
+
+**No external state libraries** (no Redux, Zustand, Jotai). Pure React.
+
+### When to Use What
+
+| Mechanism | When to Use | Example |
+|-----------|-------------|---------|
+| `useState` | Component-local state | Form inputs, toggles |
+| React Context | Shared state across component tree | Auth, theme, global filters |
+| `useCache` / `useCached*` | Server data with persistence | Pod lists, cluster health |
+| `localStorage` | User preferences that persist across sessions | Theme choice, demo mode, snoozed items |
+| URL params | Deep-linkable state (rare) | `?mission=:id`, `?browse=missions` |
+| Event bus | Cross-component notifications (fire-and-forget) | Deploy progress, demo mode changes |
+
+### Context Providers
+Providers are wrapped in `App.tsx`. Key providers:
+- `AuthProvider` — JWT tokens, user session
+- `ThemeProvider` — theme selection
+- `GlobalFiltersProvider` — cluster/severity filtering
+- `DashboardProvider` — modal states, card history
+- `DrillDownProvider` — drill-down navigation stack
+- `AlertsProvider` — system alerts and rules
+- `StackProvider` — LLM-d stack selection (AI/ML cards)
+- `MissionProvider` — agent mission state
+
+### Demo Mode
+Global singleton with pub/sub (`lib/demoMode.ts`), not Context. Cross-tab sync via `storage` event.
+
+---
+
+## Internationalization (i18n)
+
+### Library
+`i18next` + `react-i18next`. Configured in `lib/i18n.ts`.
+
+### Using Translations
+```tsx
+import { useTranslation } from 'react-i18next'
+
+function MyComponent() {
+  const { t } = useTranslation()
+  return <h1>{t('mySection.title')}</h1>
+}
+```
+
+### Key Naming
+Dot-separated hierarchy: `section.subsection.key`
+- `navigation.dashboard` → "Dashboard"
+- `actions.save` → "Save"
+- `clusterHealth.healthyTooltip` → tooltip text
+
+### Namespaces
+| Namespace | File | Purpose |
+|-----------|------|---------|
+| `common` | `locales/en/common.json` | Navigation, actions, labels, general UI |
+| `cards` | `locales/en/cards.json` | Card titles and content |
+| `errors` | `locales/en/errors.json` | Error messages |
+| `status` | `locales/en/status.json` | Status values |
+
+Default namespace is `common`. For others: `const { t } = useTranslation('cards')`.
+
+### Plurals
+Use `{{count}}` with `_one` / `_other` suffixed keys:
+```json
+{
+  "items_one": "{{count}} item",
+  "items_other": "{{count}} items"
+}
+```
+```tsx
+t('items', { count: 5 })  // "5 items"
+```
+
+### Interpolation
+```json
+{ "greeting": "Hello {{name}}" }
+```
+```tsx
+t('greeting', { name: 'Alice' })
+```
+
+### Adding a New Key
+1. Add to `web/src/locales/en/<namespace>.json`
+2. Use `t('your.key')` in the component
+3. NEVER use raw strings for user-facing text
+
+---
+
+## Architecture Decisions
+
+### Why Netlify Functions AND a Go Backend?
+The Go backend serves the console when self-hosted (local, container, Kubernetes). Netlify Functions serve the hosted version at console.kubestellar.io. Both must implement the same API contract.
+
+### Why SQLite WASM in a Web Worker?
+Persistent cache (IndexedDB is slower for structured queries). Web Worker keeps I/O off the main thread to prevent UI jank. SessionStorage provides fast sync hydration on page reload.
+
+### Why No State Management Library?
+React Context + hooks covers all use cases. The app has 12 focused contexts rather than one global store. This avoids unnecessary dependencies and keeps bundle size small.
+
+### Why Demo Mode Everywhere?
+The console must work without any cluster connection for demos, docs, and the hosted site. Every data hook has a demo fallback path. The `isDemoData` flag drives visual indicators (yellow badge/outline) so users know what's live vs simulated.
+
+### Why i18next?
+10 locales supported. English is the only complete translation set — others fall back to English. All user-facing strings must use `t()` from `useTranslation()`.
+
