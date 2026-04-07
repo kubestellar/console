@@ -23,7 +23,7 @@ export interface KubevirtPodInfo {
 }
 
 /** Possible VM states derived from virt-launcher pod status */
-export type VmState = 'running' | 'stopped' | 'migrating' | 'pending' | 'failed' | 'unknown'
+export type VmState = 'running' | 'stopped' | 'paused' | 'migrating' | 'pending' | 'failed' | 'unknown'
 
 // ============================================================================
 // Constants
@@ -95,6 +95,7 @@ export function isPodHealthy(pod: KubevirtPodInfo): boolean {
  *
  * - Running + ready => 'running'
  * - Status contains 'migrat' => 'migrating'
+ * - Paused => 'paused' (VM suspended / hibernated)
  * - Pending => 'pending'
  * - Succeeded/Completed => 'stopped' (VM powered off gracefully)
  * - Failed/CrashLoopBackOff => 'failed'
@@ -105,6 +106,9 @@ export function getVmStatus(pod: KubevirtPodInfo): VmState {
 
   // Check for migration-related status first
   if (status.includes('migrat')) return 'migrating'
+
+  // Check for paused/suspended VMs
+  if (status === 'paused' || status === 'suspended') return 'paused'
 
   if (status === 'running') {
     const { ready, total } = parseReadyCount(pod.ready)
@@ -152,6 +156,7 @@ export function countVmsByState(vmPods: KubevirtPodInfo[]): Record<VmState, numb
   const counts: Record<VmState, number> = {
     running: 0,
     stopped: 0,
+    paused: 0,
     migrating: 0,
     pending: 0,
     failed: 0,

@@ -8,7 +8,7 @@
  */
 
 import { useState } from 'react'
-import { Monitor, Search, ExternalLink, CheckCircle, XCircle, Server, Users, RefreshCw } from 'lucide-react'
+import { Monitor, Search, ExternalLink, CheckCircle, XCircle, Server, Users, RefreshCw, Cpu, HardDrive, Clock, Pause } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { BaseModal } from '../../../../lib/modals'
 import { StatusBadge } from '../../../ui/StatusBadge'
@@ -26,6 +26,7 @@ const SUMMARY_GRID_COLS = 3
 const VM_STATE_BADGE_COLORS: Record<string, string> = {
   running: 'text-green-400 bg-green-500/15',
   stopped: 'text-zinc-400 bg-zinc-500/15',
+  paused: 'text-amber-400 bg-amber-500/15',
   migrating: 'text-blue-400 bg-blue-500/15',
   pending: 'text-yellow-400 bg-yellow-500/15',
   failed: 'text-red-400 bg-red-500/15',
@@ -35,6 +36,7 @@ const VM_STATE_BADGE_COLORS: Record<string, string> = {
 const VM_STATE_BAR_COLORS: Record<string, string> = {
   running: 'bg-green-500',
   stopped: 'bg-zinc-500',
+  paused: 'bg-amber-500',
   migrating: 'bg-blue-500',
   pending: 'bg-yellow-500',
   failed: 'bg-red-500',
@@ -44,6 +46,7 @@ const VM_STATE_BAR_COLORS: Record<string, string> = {
 const VM_STATE_TEXT_COLORS: Record<string, string> = {
   running: 'text-green-400',
   stopped: 'text-zinc-400',
+  paused: 'text-amber-400',
   migrating: 'text-blue-400',
   pending: 'text-yellow-400',
   failed: 'text-red-400',
@@ -64,8 +67,23 @@ interface KubevirtDetailModalProps {
 // Sub-components
 // ============================================================================
 
+/** Format an ISO date string to a short relative or absolute display */
+function formatVmAge(isoString?: string): string {
+  if (!isoString) return ''
+  const diff = Date.now() - new Date(isoString).getTime()
+  if (isNaN(diff) || diff < 0) return ''
+  /** Milliseconds per hour */
+  const HOUR_MS = 3_600_000
+  /** Milliseconds per day */
+  const DAY_MS = 86_400_000
+  if (diff < HOUR_MS) return '<1h'
+  if (diff < DAY_MS) return `${Math.floor(diff / HOUR_MS)}h`
+  return `${Math.floor(diff / DAY_MS)}d`
+}
+
 function VmRow({ vm }: { vm: VmInfo }) {
   const stateColor = VM_STATE_BADGE_COLORS[vm.state] || VM_STATE_BADGE_COLORS.unknown
+  const age = formatVmAge(vm.creationTime)
 
   return (
     <div className="flex items-center justify-between text-sm gap-3 px-3 py-2.5 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
@@ -75,14 +93,34 @@ function VmRow({ vm }: { vm: VmInfo }) {
           <span className="text-foreground truncate font-medium block" title={vm.name}>
             {vm.name}
           </span>
-          <span className="text-[10px] text-muted-foreground truncate block" title={vm.namespace}>
-            {vm.namespace}
+          <span className="text-[10px] text-muted-foreground truncate block" title={`${vm.namespace} @ ${vm.cluster}`}>
+            {vm.namespace} @ {vm.cluster}
           </span>
         </div>
       </div>
-      <span className={`px-2 py-0.5 rounded text-xs font-medium capitalize shrink-0 ${stateColor}`}>
-        {vm.state}
-      </span>
+      <div className="flex items-center gap-2 shrink-0">
+        {vm.cpu && (
+          <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground" title={`${vm.cpu} CPU cores`}>
+            <Cpu className="w-3 h-3" />
+            {vm.cpu}
+          </span>
+        )}
+        {vm.memory && (
+          <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground" title={vm.memory}>
+            <HardDrive className="w-3 h-3" />
+            {vm.memory}
+          </span>
+        )}
+        {age && (
+          <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground" title={vm.creationTime}>
+            <Clock className="w-3 h-3" />
+            {age}
+          </span>
+        )}
+        <span className={`px-2 py-0.5 rounded text-xs font-medium capitalize shrink-0 ${stateColor}`}>
+          {vm.state}
+        </span>
+      </div>
     </div>
   )
 }
@@ -96,6 +134,7 @@ export function KubevirtDetailModal({ isOpen, onClose, data, isDemoData }: Kubev
   const [search, setSearch] = useState('')
 
   const vms = data.vms || []
+  const clusters = data.clusters || []
   const isHealthy = data.health === 'healthy'
 
   // Count VMs by state
@@ -193,7 +232,7 @@ export function KubevirtDetailModal({ isOpen, onClose, data, isDemoData }: Kubev
               <p className="text-xs font-medium text-muted-foreground">
                 {t('kubevirtStatus.stateBreakdown', 'VM State Breakdown')}
               </p>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-5 gap-2">
                 <div className="p-2 rounded bg-green-500/10 text-center">
                   <div className="flex items-center justify-center gap-1 mb-0.5">
                     <CheckCircle className="w-3 h-3 text-green-400" />
@@ -207,6 +246,13 @@ export function KubevirtDetailModal({ isOpen, onClose, data, isDemoData }: Kubev
                   </div>
                   <p className="text-sm font-bold text-zinc-400">{stateCounts['stopped'] || 0}</p>
                   <p className="text-[10px] text-muted-foreground">{t('kubevirtStatus.stoppedVMs', 'Stopped')}</p>
+                </div>
+                <div className="p-2 rounded bg-amber-500/10 text-center">
+                  <div className="flex items-center justify-center gap-1 mb-0.5">
+                    <Pause className="w-3 h-3 text-amber-400" />
+                  </div>
+                  <p className="text-sm font-bold text-amber-400">{stateCounts['paused'] || 0}</p>
+                  <p className="text-[10px] text-muted-foreground">{t('kubevirtStatus.pausedVMs', 'Paused')}</p>
                 </div>
                 <div className="p-2 rounded bg-blue-500/10 text-center">
                   <div className="flex items-center justify-center gap-1 mb-0.5">
@@ -260,6 +306,30 @@ export function KubevirtDetailModal({ isOpen, onClose, data, isDemoData }: Kubev
                     <p className="text-[10px] text-muted-foreground truncate" title={td.namespace}>
                       {td.namespace}
                     </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Per-cluster breakdown */}
+          {clusters.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">
+                {t('kubevirtStatus.clusterBreakdown', 'Per-Cluster Breakdown')}
+              </p>
+              <div className="space-y-1.5">
+                {clusters.map((ci) => (
+                  <div key={ci.cluster} className="flex items-center justify-between text-sm gap-3 px-3 py-2 rounded-lg bg-secondary/30">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Server className="w-4 h-4 text-cyan-400 shrink-0" />
+                      <span className="text-foreground font-medium truncate" title={ci.cluster}>{ci.cluster}</span>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0 text-xs text-muted-foreground">
+                      <span>{ci.infraPods} {t('kubevirtStatus.infraPods', 'pods')}</span>
+                      <span className="text-foreground font-medium">{ci.runningCount}/{ci.vmCount} {t('kubevirtStatus.vmsRunning', 'VMs running')}</span>
+                      <span className={`w-2 h-2 rounded-full ${ci.health === 'healthy' ? 'bg-green-400' : 'bg-orange-400'}`} />
+                    </div>
                   </div>
                 ))}
               </div>

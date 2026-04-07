@@ -20,7 +20,7 @@ import {
   countVmTenants,
 } from './helpers'
 import type { KubevirtPodInfo } from './helpers'
-import { KUBEVIRT_DEMO_DATA, type VmInfo, type KubevirtStatusDemoData } from './demoData'
+import { KUBEVIRT_DEMO_DATA, type VmInfo, type ClusterKubevirtInfo, type KubevirtStatusDemoData } from './demoData'
 
 // ============================================================================
 // Data Interface
@@ -35,6 +35,8 @@ export interface KubevirtStatus {
   vms: VmInfo[]
   tenantCount: number
   lastCheckTime: string
+  /** Per-cluster KubeVirt breakdown */
+  clusters: ClusterKubevirtInfo[]
 }
 
 // ============================================================================
@@ -50,6 +52,7 @@ const INITIAL_DATA: KubevirtStatus = {
   vms: [],
   tenantCount: 0,
   lastCheckTime: new Date().toISOString(),
+  clusters: [],
 }
 
 // ============================================================================
@@ -62,6 +65,15 @@ interface BackendPodInfo {
   status?: string
   ready?: string
   labels?: Record<string, string>
+  /** Cluster context this pod belongs to */
+  cluster?: string
+  /** Resource requests/limits (used to extract CPU/memory for VMs) */
+  resources?: {
+    requests?: Record<string, string>
+    limits?: Record<string, string>
+  }
+  /** Pod creation timestamp */
+  creationTimestamp?: string
 }
 
 // ============================================================================
@@ -125,6 +137,10 @@ async function fetchKubevirtStatus(): Promise<KubevirtStatus> {
       name: pod.name ?? 'unknown',
       namespace: pod.namespace ?? 'unknown',
       state: getVmStatus(podInfo),
+      cluster: pod.cluster ?? 'unknown',
+      cpu: pod.resources?.requests?.cpu || pod.resources?.limits?.cpu,
+      memory: pod.resources?.requests?.memory || pod.resources?.limits?.memory,
+      creationTime: pod.creationTimestamp,
     }
   })
 
@@ -140,6 +156,38 @@ async function fetchKubevirtStatus(): Promise<KubevirtStatus> {
 
   const health: ComponentHealth = unhealthy > 0 ? 'degraded' : 'healthy'
 
+  // Build per-cluster breakdown
+  const clusterMap = new Map<string, ClusterKubevirtInfo>()
+  for (const pod of kubevirtPods) {
+    const clusterName = pod.cluster ?? 'unknown'
+    if (!clusterMap.has(clusterName)) {
+      clusterMap.set(clusterName, {
+        cluster: clusterName,
+        installed: true,
+        vmCount: 0,
+        runningCount: 0,
+        infraPods: 0,
+        health: 'healthy',
+      })
+    }
+    const entry = clusterMap.get(clusterName)!
+    entry.infraPods += 1
+    const podInfo: KubevirtPodInfo = { status: pod.status, ready: pod.ready }
+    if (!isPodHealthy(podInfo)) {
+      entry.health = 'degraded'
+    }
+  }
+  for (const vm of vms) {
+    const entry = clusterMap.get(vm.cluster)
+    if (entry) {
+      entry.vmCount += 1
+      if (vm.state === 'running') {
+        entry.runningCount += 1
+      }
+    }
+  }
+  const clusters = Array.from(clusterMap.values())
+
   return {
     detected: true,
     health,
@@ -149,6 +197,7 @@ async function fetchKubevirtStatus(): Promise<KubevirtStatus> {
     vms,
     tenantCount,
     lastCheckTime: new Date().toISOString(),
+    clusters,
   }
 }
 
@@ -166,6 +215,7 @@ function toDemoStatus(demo: KubevirtStatusDemoData): KubevirtStatus {
     vms: demo.vms,
     tenantCount: demo.tenantCount,
     lastCheckTime: demo.lastCheckTime,
+    clusters: demo.clusters || [],
   }
 }
 

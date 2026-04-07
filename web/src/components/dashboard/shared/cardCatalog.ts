@@ -313,7 +313,7 @@ export const CARD_CATALOG = {
     { type: 'ovn_status', title: 'OVN-Kubernetes', description: 'OVN network and UDN status', visualization: 'status' },
     { type: 'kubeflex_status', title: 'KubeFlex', description: 'Control plane management', visualization: 'status' },
     { type: 'k3s_status', title: 'K3s', description: 'Lightweight Kubernetes clusters', visualization: 'status' },
-    { type: 'kubevirt_status', title: 'KubeVirt', description: 'Virtual machine management', visualization: 'status' },
+    { type: 'kubevirt_status', title: 'KubeVirt Status', description: 'VM status across clusters with per-cluster breakdown, CPU/memory, and health', visualization: 'status' },
   ],
   'Orchestration': [
     { type: 'keda_status', title: 'KEDA', description: 'KEDA autoscaler status, scaled object metrics, and trigger queue depths', visualization: 'status' },

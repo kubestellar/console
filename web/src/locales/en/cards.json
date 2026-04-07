@@ -2995,7 +2995,21 @@
     "statusAriaLabel": "KubeVirt status: {{status}}. Click to view details.",
     "viewInfraMetrics": "View KubeVirt infrastructure metrics",
     "viewVmBreakdown": "View virtual machine state breakdown",
-    "viewVm": "View VM {{name}} in {{namespace}}"
+    "viewVm": "View VM {{name}} in {{namespace}}",
+    "clusters": "Clusters",
+    "clusterBreakdown": "Per-Cluster Breakdown",
+    "viewCluster": "View KubeVirt on {{cluster}}",
+    "vmsRunning": "running",
+    "pausedVMs": "Paused",
+    "errorVMs": "Error",
+    "cpuCores": "CPU",
+    "detailTitle": "KubeVirt Details",
+    "stateBreakdown": "VM State Breakdown",
+    "tenantDistribution": "Tenant Distribution",
+    "searchVMs": "Search VMs...",
+    "noVMs": "No virtual machines found.",
+    "noVMMatch": "No VMs match your search.",
+    "failedPending": "Failed/Pending"
   },
   "kyvernoPolicies": {
     "scanningClusters": "Scanning clusters...",

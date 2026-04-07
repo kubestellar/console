@@ -36,7 +36,7 @@ import { KubevirtDetailModal } from '../KubevirtDetailModal'
 
 describe('KubevirtDetailModal', () => {
   it('renders without crashing', () => {
-    const { container } = render(<KubevirtDetailModal isOpen={false} onClose={() => {}} data={{} as Record<string, unknown>} isDemoData={false} />)
+    const { container } = render(<KubevirtDetailModal isOpen={false} onClose={() => {}} data={{ vms: [], clusters: [] } as Record<string, unknown>} isDemoData={false} />)
     expect(container).toBeTruthy()
   })
 })

@@ -565,7 +565,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   ovn_status: 'OVN-Kubernetes network status, User Defined Networks, and tenant isolation.',
   kubeflex_status: 'KubeFlex controller status, control planes per tenant, and CP health.',
   k3s_status: 'K3s lightweight Kubernetes server pods, agent connections, and cluster health.',
-  kubevirt_status: 'KubeVirt VM status, running/stopped/migrating VMs, and data-plane isolation.',
+  kubevirt_status: 'KubeVirt VM status across clusters — running, stopped, paused, migrating, and error states with per-cluster breakdown, CPU/memory allocation, and data-plane isolation.',
   multi_tenancy_overview: 'Aggregated view of tenant isolation across OVN, KubeFlex, K3s, and KubeVirt.',
   tenant_isolation_setup: 'AI-powered multi-tenancy setup wizard with component detection and one-click configuration.',
   tenant_topology: 'Interactive SVG topology of the KubeCon multi-tenancy architecture: KubeVirt VMs, K3s control planes, Layer-2/3 UDN networks, and KubeFlex controller with live status indicators.',

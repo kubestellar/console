@@ -105,6 +105,14 @@ describe('kubevirt-status helpers', () => {
       expect(getVmStatus({ status: 'Running', ready: '0/1' })).toBe('pending')
     })
 
+    it('returns paused for paused VMs', () => {
+      expect(getVmStatus({ status: 'Paused' })).toBe('paused')
+    })
+
+    it('returns paused for suspended VMs', () => {
+      expect(getVmStatus({ status: 'Suspended' })).toBe('paused')
+    })
+
     it('returns unknown for unrecognized status', () => {
       expect(getVmStatus({ status: 'SomeWeirdStatus' })).toBe('unknown')
     })

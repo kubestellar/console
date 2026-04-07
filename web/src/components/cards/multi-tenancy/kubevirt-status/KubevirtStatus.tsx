@@ -6,7 +6,7 @@
  * installation mission.
  */
 
-import { AlertTriangle, CheckCircle, Monitor, RefreshCw, Server, Users, XCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle, Monitor, Pause, RefreshCw, Server, XCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../../ui/Skeleton'
 import { MetricTile } from '../../../../lib/cards/CardComponents'
@@ -61,6 +61,7 @@ function vmStateColorClass(state: string): string {
   switch (state) {
     case 'running': return 'text-green-400 bg-green-500/15'
     case 'stopped': return 'text-zinc-400 bg-zinc-500/15'
+    case 'paused': return 'text-amber-400 bg-amber-500/15'
     case 'migrating': return 'text-blue-400 bg-blue-500/15'
     case 'pending': return 'text-yellow-400 bg-yellow-500/15'
     case 'failed': return 'text-red-400 bg-red-500/15'
@@ -143,9 +144,12 @@ export function KubevirtStatus() {
   // ------ Detected ------
   const isHealthy = data.health === 'healthy'
   const vms = data.vms || []
+  const clusters = data.clusters || []
   const runningVMs = vms.filter((vm) => vm.state === 'running').length
   const stoppedVMs = vms.filter((vm) => vm.state === 'stopped').length
+  const pausedVMs = vms.filter((vm) => vm.state === 'paused').length
   const migratingVMs = vms.filter((vm) => vm.state === 'migrating').length
+  const errorVMs = vms.filter((vm) => vm.state === 'failed').length
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded gap-4">
@@ -192,10 +196,10 @@ export function KubevirtStatus() {
           icon={<Monitor className="w-4 h-4 text-purple-400" />}
         />
         <MetricTile
-          label={t('kubevirtStatus.tenants')}
-          value={data.tenantCount}
+          label={t('kubevirtStatus.clusters')}
+          value={clusters.length}
           colorClass="text-cyan-400"
-          icon={<Users className="w-4 h-4 text-cyan-400" />}
+          icon={<Server className="w-4 h-4 text-cyan-400" />}
         />
       </div>
 
@@ -213,6 +217,14 @@ export function KubevirtStatus() {
           colorClass={stoppedVMs > 0 ? 'text-zinc-400' : 'text-muted-foreground'}
           icon={<XCircle className="w-4 h-4 text-zinc-400" />}
         />
+        {pausedVMs > 0 && (
+          <MetricTile
+            label={t('kubevirtStatus.pausedVMs')}
+            value={pausedVMs}
+            colorClass="text-amber-400"
+            icon={<Pause className="w-4 h-4 text-amber-400" />}
+          />
+        )}
         {migratingVMs > 0 && (
           <MetricTile
             label={t('kubevirtStatus.migratingVMs')}
@@ -221,7 +233,36 @@ export function KubevirtStatus() {
             icon={<RefreshCw className="w-4 h-4 text-blue-400" />}
           />
         )}
+        {errorVMs > 0 && (
+          <MetricTile
+            label={t('kubevirtStatus.errorVMs')}
+            value={errorVMs}
+            colorClass="text-red-400"
+            icon={<AlertTriangle className="w-4 h-4 text-red-400" />}
+          />
+        )}
       </div>
+
+      {/* Per-cluster breakdown */}
+      {clusters.length > 0 && (
+        <div className="flex flex-col gap-2 pt-2 border-t border-border/50">
+          <p className="text-xs font-medium text-muted-foreground">{t('kubevirtStatus.clusterBreakdown')}</p>
+          <div className="space-y-1.5">
+            {clusters.map((ci) => (
+              <div key={ci.cluster} className="flex items-center justify-between text-xs gap-2 px-2 py-1.5 rounded bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors" role="button" tabIndex={0} aria-label={t('kubevirtStatus.viewCluster', { cluster: ci.cluster })} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <Server className="w-3 h-3 text-cyan-400 shrink-0" />
+                  <span className="text-foreground truncate" title={ci.cluster}>{ci.cluster}</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-muted-foreground">{ci.runningCount}/{ci.vmCount} {t('kubevirtStatus.vmsRunning')}</span>
+                  <span className={`w-2 h-2 rounded-full ${ci.health === 'healthy' ? 'bg-green-400' : 'bg-orange-400'}`} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* VM list */}
       {vms.length > 0 && (
@@ -229,15 +270,20 @@ export function KubevirtStatus() {
           <p className="text-xs font-medium text-muted-foreground">{t('kubevirtStatus.vmList')}</p>
           <div className="space-y-1.5 max-h-40 overflow-y-auto scrollbar-thin">
             {vms.map((vm) => (
-              <div key={`${vm.namespace}/${vm.name}`} className="flex items-center justify-between text-xs gap-2 px-2 py-1.5 rounded bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors" role="button" tabIndex={0} aria-label={t('kubevirtStatus.viewVm', { name: vm.name, namespace: vm.namespace })} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
+              <div key={`${vm.cluster}/${vm.namespace}/${vm.name}`} className="flex items-center justify-between text-xs gap-2 px-2 py-1.5 rounded bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors" role="button" tabIndex={0} aria-label={t('kubevirtStatus.viewVm', { name: vm.name, namespace: vm.namespace })} onClick={openDetailModal} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetailModal() } }}>
                 <div className="flex flex-col min-w-0 flex-1">
                   <span className="text-foreground truncate" title={vm.name}>
                     {vm.name}
                   </span>
-                  <span className="text-muted-foreground/70 text-[10px] truncate" title={vm.namespace}>
-                    {vm.namespace}
+                  <span className="text-muted-foreground/70 text-[10px] truncate" title={`${vm.namespace} @ ${vm.cluster}`}>
+                    {vm.namespace} @ {vm.cluster}
                   </span>
                 </div>
+                {vm.cpu && vm.memory && (
+                  <span className="text-muted-foreground/70 text-[10px] shrink-0">
+                    {vm.cpu} {t('kubevirtStatus.cpuCores')} / {vm.memory}
+                  </span>
+                )}
                 <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 ${vmStateColorClass(vm.state)}`}>
                   {vm.state}
                 </span>

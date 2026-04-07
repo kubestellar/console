@@ -89,6 +89,7 @@ import { kubecostOverviewConfig } from './kubecost-overview'
 import { kubectlConfig } from './kubectl'
 import { kubedleConfig } from './kubedle'
 import { kubescapeScanConfig } from './kubescape-scan'
+import { kubevirtStatusConfig } from './kubevirt-status'
 import { kustomizationStatusConfig } from './kustomization-status'
 import { kyvernoPoliciesConfig } from './kyverno-policies'
 import { limitRangeStatusConfig } from './limit-range-status'
@@ -251,6 +252,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   kubectl: kubectlConfig,
   kubedle: kubedleConfig,
   kubescape_scan: kubescapeScanConfig,
+  kubevirt_status: kubevirtStatusConfig,
   kustomization_status: kustomizationStatusConfig,
   kyverno_policies: kyvernoPoliciesConfig,
   limit_range_status: limitRangeStatusConfig,
@@ -501,6 +503,7 @@ export {
   kubectlConfig,
   kubedleConfig,
   kubescapeScanConfig,
+  kubevirtStatusConfig,
   kustomizationStatusConfig,
   kyvernoPoliciesConfig,
   limitRangeStatusConfig,
