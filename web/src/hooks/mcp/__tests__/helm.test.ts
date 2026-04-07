@@ -704,7 +704,7 @@ describe('useHelmValues', () => {
 
     const { result } = renderHook(() => useHelmValues('c1', 'prometheus', 'monitoring'))
 
-    await waitFor(() => expect(result.current.values).toBeDefined())
+    await waitFor(() => expect(result.current.values).not.toBeNull())
     expect(result.current.values).toEqual(fakeValues)
     expect(result.current.format).toBe('json')
     expect(result.current.error).toBeNull()
@@ -738,7 +738,7 @@ describe('useHelmValues', () => {
 
     const { result } = renderHook(() => useHelmValues('c1', 'prometheus', 'monitoring'))
 
-    await waitFor(() => expect(result.current.values).toBeDefined())
+    await waitFor(() => expect(result.current.values).not.toBeNull())
     expect(typeof result.current.refetch).toBe('function')
   })
 
@@ -752,7 +752,7 @@ describe('useHelmValues', () => {
     const cluster = uniqueCluster('val-shape')
     const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
 
-    await waitFor(() => expect(result.current.values).toBeDefined())
+    await waitFor(() => expect(result.current.values).not.toBeNull())
 
     expect(result.current).toHaveProperty('values')
     expect(result.current).toHaveProperty('format')
@@ -808,7 +808,7 @@ describe('useHelmValues', () => {
     const cluster = uniqueCluster('val-yaml')
     const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
 
-    await waitFor(() => expect(result.current.values).toBeDefined())
+    await waitFor(() => expect(result.current.values).not.toBeNull())
     expect(result.current.values).toBe(yamlString)
     expect(result.current.format).toBe('yaml')
   })
@@ -822,7 +822,7 @@ describe('useHelmValues', () => {
     const cluster = uniqueCluster('val-no-format')
     const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
 
-    await waitFor(() => expect(result.current.values).toBeDefined())
+    await waitFor(() => expect(result.current.values).not.toBeNull())
     expect(result.current.format).toBe('json')
   })
 
@@ -913,7 +913,7 @@ describe('useHelmValues', () => {
     const cluster = uniqueCluster('val-auth')
     const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
 
-    await waitFor(() => expect(result.current.values).toBeDefined())
+    await waitFor(() => expect(result.current.values).not.toBeNull())
 
     expect(mockFetch).toHaveBeenCalledWith(
       expect.any(String),
@@ -933,7 +933,7 @@ describe('useHelmValues', () => {
     })
 
     const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
-    await waitFor(() => expect(result.current.values).toBeDefined())
+    await waitFor(() => expect(result.current.values).not.toBeNull())
 
     expect(result.current.lastRefresh).toBeTypeOf('number')
     expect(result.current.lastRefresh).toBeGreaterThan(0)
@@ -1165,7 +1165,7 @@ describe('useHelmValues — additional branches', () => {
     const cluster = uniqueCluster('val-body-err')
     const { result } = renderHook(() => useHelmValues(cluster, 'my-rel', 'default'))
 
-    await waitFor(() => expect(result.current.values).toBeDefined())
+    await waitFor(() => expect(result.current.values).not.toBeNull())
     expect(result.current.error).toBe('helm: release not found')
   })
 

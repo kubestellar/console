@@ -116,9 +116,11 @@ beforeEach(() => {
   mockRegisterRefetch.mockReturnValue(vi.fn())
   mockClusterCacheRef.clusters = []
   mockFetchSSE.mockResolvedValue([])
-  // Reset GPU subscribers (nodes may persist due to cache protection; that is acceptable)
+  // Reset GPU subscribers and force-clear cached nodes to prevent cross-test contamination.
+  // Direct assignment bypasses updateGPUNodeCache's cache protection (which blocks clearing
+  // nodes when data exists). Each test must start with a clean slate.
   gpuNodeSubscribers.clear()
-  // Set lastUpdated to null so isStale=true and fetch is always attempted
+  gpuNodeCache.nodes = []
   updateGPUNodeCache({
     lastUpdated: null,
     isLoading: false,
@@ -293,7 +295,7 @@ describe('useGPUNodes', () => {
 
     const { result } = renderHook(() => useGPUNodes())
 
-    await waitFor(() => result.current.nodes.some(n => n.name === 'gpu-dup'), { timeout: 3000 })
+    await waitFor(() => expect(result.current.nodes.some(n => n.name === 'gpu-dup')).toBe(true), { timeout: 3000 })
 
     // After deduplication there should be exactly one entry for 'gpu-dup'
     const dedupNames = result.current.nodes.filter(n => n.name === 'gpu-dup')
@@ -309,7 +311,7 @@ describe('useGPUNodes', () => {
 
     const { result } = renderHook(() => useGPUNodes('cluster-a'))
 
-    await waitFor(() => result.current.nodes.length > 0, { timeout: 3000 })
+    await waitFor(() => expect(result.current.nodes.length).toBeGreaterThan(0), { timeout: 3000 })
     expect(result.current.nodes.every(n => n.cluster.startsWith('cluster-a'))).toBe(true)
     expect(result.current.nodes.find(n => n.name === 'gpu-b')).toBeUndefined()
   })
@@ -357,7 +359,7 @@ describe('useGPUNodes', () => {
     const { result } = renderHook(() => useGPUNodes())
 
     // Hook renders; demo fallback happens inside fetchGPUNodes catch when isDemoMode()
-    await waitFor(() => !result.current.isLoading, { timeout: 3000 })
+    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 3000 })
     // Nodes may be demo data or whatever was cached — just verify no crash
     expect(Array.isArray(result.current.nodes)).toBe(true)
   })
@@ -498,8 +500,14 @@ describe('updateGPUNodeCache', () => {
   })
 
   it('allows updating non-node fields even when node clearing is blocked', () => {
-    // The previous test left protected-gpu in cache; attempting to clear nodes
-    // while setting other fields should still apply the non-node updates
+    // Set up cache with existing data so the protection logic activates
+    const existingNode = {
+      name: 'protected-gpu', cluster: 'c1',
+      gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 4, acceleratorType: 'GPU' as const,
+    }
+    updateGPUNodeCache({ nodes: [existingNode], lastUpdated: new Date() })
+
+    // Attempting to clear nodes while setting other fields should still apply the non-node updates
     updateGPUNodeCache({ nodes: [], isLoading: true, error: 'test-error' })
 
     // Nodes remain protected (not cleared)
@@ -595,7 +603,7 @@ describe('useGPUNodes — GPU allocation clamping', () => {
 
     const { result } = renderHook(() => useGPUNodes())
 
-    await waitFor(() => result.current.nodes.length > 0, { timeout: 3000 })
+    await waitFor(() => expect(result.current.nodes.length).toBeGreaterThan(0), { timeout: 3000 })
     const node = result.current.nodes.find(n => n.name === 'over-alloc')
     expect(node).toBeDefined()
     // gpuAllocated must be clamped to gpuCount (4), not the raw value (10)
@@ -613,7 +621,7 @@ describe('useGPUNodes — GPU allocation clamping', () => {
 
     const { result } = renderHook(() => useGPUNodes())
 
-    await waitFor(() => result.current.nodes.length > 0, { timeout: 3000 })
+    await waitFor(() => expect(result.current.nodes.length).toBeGreaterThan(0), { timeout: 3000 })
     const node = result.current.nodes.find(n => n.name === 'zero-gpu')
     expect(node).toBeDefined()
     expect(node!.gpuCount).toBe(0)
@@ -635,7 +643,7 @@ describe('useGPUNodes — GPU allocation clamping', () => {
 
     const { result } = renderHook(() => useGPUNodes())
 
-    await waitFor(() => result.current.nodes.length > 0, { timeout: 3000 })
+    await waitFor(() => expect(result.current.nodes.length).toBeGreaterThan(0), { timeout: 3000 })
     const node = result.current.nodes.find(n => n.name === 'incomplete-gpu')
     expect(node).toBeDefined()
     // Should default to 0, not NaN or undefined
@@ -659,7 +667,7 @@ describe('useGPUNodes — deduplication tie-breaking', () => {
 
     const { result } = renderHook(() => useGPUNodes())
 
-    await waitFor(() => result.current.nodes.some(n => n.name === 'dup-node'), { timeout: 3000 })
+    await waitFor(() => expect(result.current.nodes.some(n => n.name === 'dup-node')).toBe(true), { timeout: 3000 })
     const deduped = result.current.nodes.filter(n => n.name === 'dup-node')
     expect(deduped.length).toBe(1)
     // Should prefer the short cluster name
@@ -680,7 +688,7 @@ describe('useGPUNodes — deduplication tie-breaking', () => {
 
     const { result } = renderHook(() => useGPUNodes())
 
-    await waitFor(() => result.current.nodes.some(n => n.name === 'dup-node-2'), { timeout: 3000 })
+    await waitFor(() => expect(result.current.nodes.some(n => n.name === 'dup-node-2')).toBe(true), { timeout: 3000 })
     const deduped = result.current.nodes.filter(n => n.name === 'dup-node-2')
     expect(deduped.length).toBe(1)
     expect(deduped[0].cluster).toBe('short')
@@ -700,7 +708,7 @@ describe('useGPUNodes — deduplication tie-breaking', () => {
 
     const { result } = renderHook(() => useGPUNodes())
 
-    await waitFor(() => result.current.nodes.some(n => n.name === 'tiebreak-node'), { timeout: 3000 })
+    await waitFor(() => expect(result.current.nodes.some(n => n.name === 'tiebreak-node')).toBe(true), { timeout: 3000 })
     const deduped = result.current.nodes.filter(n => n.name === 'tiebreak-node')
     expect(deduped.length).toBe(1)
     // The first node was inserted and clamped (allocated=4, count=4)
@@ -732,7 +740,7 @@ describe('useGPUNodes — cluster filtering', () => {
 
     const { result } = renderHook(() => useGPUNodes('prod-east'))
 
-    await waitFor(() => result.current.nodes.length > 0, { timeout: 3000 })
+    await waitFor(() => expect(result.current.nodes.length).toBeGreaterThan(0), { timeout: 3000 })
     // Should include 'prod-east' (exact) and 'prod-east/context-1' (startsWith)
     // but NOT 'staging'
     expect(result.current.nodes.every(n =>
@@ -750,7 +758,7 @@ describe('useGPUNodes — cluster filtering', () => {
 
     const { result } = renderHook(() => useGPUNodes())
 
-    await waitFor(() => result.current.nodes.length === 2, { timeout: 3000 })
+    await waitFor(() => expect(result.current.nodes.length).toBe(2), { timeout: 3000 })
     expect(result.current.nodes.map(n => n.name).sort()).toEqual(['gpu-x', 'gpu-y'])
   })
 })
@@ -1098,7 +1106,7 @@ describe('useGPUNodes — additional branches', () => {
 
     const { result } = renderHook(() => useGPUNodes())
 
-    await waitFor(() => result.current.nodes.length > 0, { timeout: 3000 })
+    await waitFor(() => expect(result.current.nodes.length).toBeGreaterThan(0), { timeout: 3000 })
     const deduped = result.current.nodes.filter(n => n.name === 'conflict-gpu')
     expect(deduped).toHaveLength(1)
     // Should prefer the valid one
@@ -1114,7 +1122,7 @@ describe('useGPUNodes — additional branches', () => {
 
     const { result } = renderHook(() => useGPUNodes('cluster-a'))
 
-    await waitFor(() => result.current.nodes.length > 0, { timeout: 3000 })
+    await waitFor(() => expect(result.current.nodes.length).toBeGreaterThan(0), { timeout: 3000 })
     expect(result.current.nodes.every(n => n.cluster.startsWith('cluster-a'))).toBe(true)
     expect(result.current.nodes.find(n => n.name === 'gpu-other')).toBeUndefined()
   })
@@ -1391,7 +1399,7 @@ describe('fetchGPUNodes — agent success path', () => {
 
     const { result } = renderHook(() => useGPUNodes())
 
-    await waitFor(() => result.current.nodes.length > 0, { timeout: 3000 })
+    await waitFor(() => expect(result.current.nodes.length).toBeGreaterThan(0), { timeout: 3000 })
     expect(result.current.nodes.some(n => n.name === 'agent-gpu-1')).toBe(true)
     expect(mockReportAgentDataSuccess).toHaveBeenCalled()
   })
@@ -1412,7 +1420,7 @@ describe('fetchGPUNodes — agent success path', () => {
 
     const { result } = renderHook(() => useGPUNodes())
 
-    await waitFor(() => result.current.nodes.length > 0, { timeout: 3000 })
+    await waitFor(() => expect(result.current.nodes.length).toBeGreaterThan(0), { timeout: 3000 })
     expect(result.current.nodes.some(n => n.name === 'sse-gpu')).toBe(true)
   })
 
@@ -1430,7 +1438,7 @@ describe('fetchGPUNodes — agent success path', () => {
 
     const { result } = renderHook(() => useGPUNodes())
 
-    await waitFor(() => result.current.nodes.length > 0, { timeout: 3000 })
+    await waitFor(() => expect(result.current.nodes.length).toBeGreaterThan(0), { timeout: 3000 })
     expect(result.current.nodes.some(n => n.name === 'sse-fallback-gpu')).toBe(true)
   })
 })
@@ -1455,7 +1463,7 @@ describe('fetchGPUNodes — SSE progressive rendering', () => {
 
     const { result } = renderHook(() => useGPUNodes())
 
-    await waitFor(() => result.current.nodes.length >= 2, { timeout: 3000 })
+    await waitFor(() => expect(result.current.nodes.length).toBeGreaterThanOrEqual(2), { timeout: 3000 })
     expect(result.current.nodes.some(n => n.name === 'stream-gpu-1')).toBe(true)
     expect(result.current.nodes.some(n => n.name === 'stream-gpu-2')).toBe(true)
   })
@@ -1478,7 +1486,7 @@ describe('fetchGPUNodes — REST fallback', () => {
 
     const { result } = renderHook(() => useGPUNodes())
 
-    await waitFor(() => result.current.nodes.length > 0, { timeout: 3000 })
+    await waitFor(() => expect(result.current.nodes.length).toBeGreaterThan(0), { timeout: 3000 })
     expect(result.current.nodes.some(n => n.name === 'rest-gpu')).toBe(true)
   })
 
@@ -1499,7 +1507,7 @@ describe('fetchGPUNodes — REST fallback', () => {
 
     const { result } = renderHook(() => useGPUNodes())
 
-    await waitFor(() => !result.current.isRefreshing, { timeout: 3000 })
+    await waitFor(() => expect(result.current.isRefreshing).toBe(false), { timeout: 3000 })
     // Cache protection should preserve existing data
     expect(result.current.nodes.some(n => n.name === 'preserved-gpu')).toBe(true)
   })
@@ -1529,7 +1537,7 @@ describe('fetchGPUNodes — error recovery from localStorage', () => {
 
     const { result } = renderHook(() => useGPUNodes())
 
-    await waitFor(() => !result.current.isLoading, { timeout: 3000 })
+    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 3000 })
     // The error handler should have restored from localStorage
     expect(gpuNodeCache.nodes.length).toBeGreaterThanOrEqual(0)
   })
@@ -1546,7 +1554,7 @@ describe('fetchGPUNodes — error recovery from localStorage', () => {
 
     const { result } = renderHook(() => useGPUNodes())
 
-    await waitFor(() => !result.current.isLoading, { timeout: 3000 })
+    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 3000 })
     // Demo GPU nodes should be loaded
     expect(gpuNodeCache.nodes.length).toBeGreaterThan(0)
   })
@@ -1561,8 +1569,7 @@ describe('fetchGPUNodes — error recovery from localStorage', () => {
 
     renderHook(() => useGPUNodes())
 
-    await waitFor(() => gpuNodeCache.consecutiveFailures > 0, { timeout: 3000 })
-    expect(gpuNodeCache.consecutiveFailures).toBeGreaterThan(0)
+    await waitFor(() => expect(gpuNodeCache.consecutiveFailures).toBeGreaterThan(0), { timeout: 3000 })
   })
 })
 

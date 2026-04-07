@@ -124,6 +124,10 @@ beforeEach(() => {
   mockApiGet.mockResolvedValue({ data: { pvcs: [], pvs: [] } })
   mockApiPost.mockResolvedValue({ data: { resourceQuota: {} } })
   mockApiDelete.mockResolvedValue({})
+  // Reset module-level caches to prevent cross-test contamination.
+  // The registerCacheReset callback sets pvcsCache = null internally.
+  const resetStorage = capturedCacheResets.get('storage')
+  if (resetStorage) resetStorage()
 })
 
 afterEach(() => {
