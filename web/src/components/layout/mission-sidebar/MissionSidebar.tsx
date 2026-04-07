@@ -1064,7 +1064,7 @@ export function MissionSidebar() {
                     // Always show the mission's chat first (#4549)
                     setActiveMission(mission.id)
                     // Also open Mission Control dialog for planning missions
-                    if (mission.title === 'Mission Control Planning') {
+                    if (mission.title === 'Mission Control Planning' || mission.context?.missionControl) {
                       setShowMissionControl(true)
                     }
                   }}
@@ -1073,7 +1073,7 @@ export function MissionSidebar() {
                   onExpand={() => {
                     setActiveMission(mission.id)
                     setFullScreen(true)
-                    if (mission.title === 'Mission Control Planning') {
+                    if (mission.title === 'Mission Control Planning' || mission.context?.missionControl) {
                       setShowMissionControl(true)
                     }
                   }}
@@ -1125,15 +1125,17 @@ export function MissionSidebar() {
             "relative bg-card border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col",
             isMobile ? "inset-2 fixed" : "w-[900px] max-h-[85vh]"
           )}>
-            {/* Close button */}
-            <button
-              onClick={() => setViewingMission(null)}
-              className="absolute top-3 right-3 z-10 p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            {/* Close button — positioned above the content area to avoid overlapping Run/View Raw */}
+            <div className="flex justify-end p-3 pb-0 shrink-0">
+              <button
+                onClick={() => setViewingMission(null)}
+                className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
             {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto scroll-enhanced p-6">
+            <div className="flex-1 overflow-y-auto scroll-enhanced px-6 pb-6">
               <MissionDetailView
                 mission={viewingMission}
                 rawContent={JSON.stringify(viewingMission, null, 2)}
