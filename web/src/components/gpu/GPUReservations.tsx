@@ -299,13 +299,22 @@ export function GPUReservations() {
 
   const { daysInMonth, startingDay } = getDaysInMonth(currentMonth)
 
-  // Get the start/end day index (0-based from month start) for a reservation within the visible month
+  // Get the start/end day index (0-based from month start) for a reservation within the visible month.
+  // Duration is added to the ORIGINAL start time first, then day boundaries are derived.
   const getReservationDayRange = (r: GPUReservation) => {
     if (!r.start_date) return null
-    const start = new Date(r.start_date)
+    const MS_PER_HOUR = 3_600_000
+    const DEFAULT_DURATION_HOURS = 24
+
+    const originalStart = new Date(r.start_date)
+    const durationHours = r.duration_hours || DEFAULT_DURATION_HOURS
+    // Compute end from the exact original timestamp, not a midnight-normalized one
+    const exactEnd = new Date(originalStart.getTime() + durationHours * MS_PER_HOUR)
+
+    // Normalize to day boundaries for calendar range display
+    const start = new Date(originalStart)
     start.setHours(0, 0, 0, 0)
-    const durationHours = r.duration_hours || 24
-    const end = new Date(start.getTime() + durationHours * 60 * 60 * 1000)
+    const end = new Date(exactEnd)
     end.setHours(23, 59, 59, 999)
 
     const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
@@ -399,15 +408,20 @@ export function GPUReservations() {
 
   // Get GPU count reserved on a specific day
   const getGPUCountForDay = (day: number) => {
+    const MS_PER_HOUR = 3_600_000
+    const DEFAULT_DURATION_HOURS = 24
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
     date.setHours(0, 0, 0, 0)
     let total = 0
     for (const r of filteredReservations) {
       if (!r.start_date) continue
-      const start = new Date(r.start_date)
+      const originalStart = new Date(r.start_date)
+      const durationHours = r.duration_hours || DEFAULT_DURATION_HOURS
+      // Compute end from the exact original timestamp, then normalize to day boundaries
+      const exactEnd = new Date(originalStart.getTime() + durationHours * MS_PER_HOUR)
+      const start = new Date(originalStart)
       start.setHours(0, 0, 0, 0)
-      const durationHours = r.duration_hours || 24
-      const end = new Date(start.getTime() + durationHours * 60 * 60 * 1000)
+      const end = new Date(exactEnd)
       end.setHours(23, 59, 59, 999)
       if (date >= start && date <= end) {
         total += r.gpu_count

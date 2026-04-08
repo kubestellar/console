@@ -265,31 +265,31 @@ export function ClusterHealth() {
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-2 mb-4">
-        <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20" title={t('clusterHealth.healthyTooltip', { count: healthyClusters })}>
-          <div className="flex items-center gap-2 mb-1">
-            <CheckCircle className="w-4 h-4 text-green-400" />
-            <span className="text-xs text-green-400">{t('common:common.healthy')}</span>
+        <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 min-w-0 overflow-hidden" title={t('clusterHealth.healthyTooltip', { count: healthyClusters })}>
+          <div className="flex items-center gap-1.5 mb-1 min-w-0">
+            <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
+            <span className="text-xs text-green-400 truncate">{t('common:common.healthy')}</span>
           </div>
           <span className="text-2xl font-bold text-foreground">{healthyClusters}</span>
         </div>
-        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20" title={t('clusterHealth.unhealthyTooltip', { count: unhealthyClusters })}>
-          <div className="flex items-center gap-2 mb-1">
-            <AlertTriangle className="w-4 h-4 text-red-400" />
-            <span className="text-xs text-red-400">{t('common:common.unhealthy')}</span>
+        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 min-w-0 overflow-hidden" title={t('clusterHealth.unhealthyTooltip', { count: unhealthyClusters })}>
+          <div className="flex items-center gap-1.5 mb-1 min-w-0">
+            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+            <span className="text-xs text-red-400 truncate">{t('common:common.unhealthy')}</span>
           </div>
           <span className="text-2xl font-bold text-foreground">{unhealthyClusters}</span>
         </div>
-        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20" title={t('clusterHealth.authErrorTooltip', { count: tokenExpiredClusters })}>
-          <div className="flex items-center gap-2 mb-1">
-            <KeyRound className="w-4 h-4 text-red-400" />
-            <span className="text-xs text-red-400">{t('clusterHealth.authErrorLabel')}</span>
+        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 min-w-0 overflow-hidden" title={t('clusterHealth.authErrorTooltip', { count: tokenExpiredClusters })}>
+          <div className="flex items-center gap-1.5 mb-1 min-w-0">
+            <KeyRound className="w-4 h-4 text-red-400 shrink-0" />
+            <span className="text-xs text-red-400 truncate">{t('clusterHealth.authErrorLabel')}</span>
           </div>
           <span className="text-2xl font-bold text-foreground">{tokenExpiredClusters}</span>
         </div>
-        <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20" title={t('clusterHealth.offlineTooltip', { count: networkOfflineClusters })}>
-          <div className="flex items-center gap-2 mb-1">
-            <WifiOff className="w-4 h-4 text-yellow-400" />
-            <span className="text-xs text-yellow-400">{t('common:common.offline')}</span>
+        <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 min-w-0 overflow-hidden" title={t('clusterHealth.offlineTooltip', { count: networkOfflineClusters })}>
+          <div className="flex items-center gap-1.5 mb-1 min-w-0">
+            <WifiOff className="w-4 h-4 text-yellow-400 shrink-0" />
+            <span className="text-xs text-yellow-400 truncate">{t('common:common.offline')}</span>
           </div>
           <span className="text-2xl font-bold text-foreground">{networkOfflineClusters}</span>
         </div>
@@ -321,7 +321,7 @@ export function ClusterHealth() {
             <div
               key={cluster.name}
               data-tour={idx === 0 ? 'drilldown' : undefined}
-              className={`group ${isMobile ? 'flex flex-col gap-1.5' : 'flex items-center justify-between'} p-2 rounded-lg border border-border/30 bg-secondary/30 transition-all cursor-pointer hover:bg-secondary/50 hover:border-border/50`}
+              className={`group ${isMobile ? 'flex flex-col gap-1.5' : 'flex items-center justify-between'} p-2 rounded-lg border border-border/30 bg-secondary/30 transition-all cursor-pointer hover:bg-secondary/50 hover:border-border/50 min-w-0 overflow-hidden`}
               onClick={() => setSelectedCluster(cluster.name)}
               title={t('clusterHealth.clickViewDetails', { name: cluster.name })}
             >
@@ -365,19 +365,19 @@ export function ClusterHealth() {
                   </a>
                 )}
               </div>
-              <div className={`flex items-center ${isMobile ? 'gap-2 pl-6 flex-wrap' : 'gap-3 shrink-0'} text-xs text-muted-foreground`}>
-                <span title={clusterLoading ? t('common:common.checking') : !clusterUnreachable ? t('clusterHealth.nodesInCluster', { count: cluster.nodeCount || 0 }) : t('clusterHealth.offlineCheckNetwork')}>
+              <div className={`flex items-center ${isMobile ? 'gap-2 pl-6 flex-wrap' : 'gap-3 shrink-0'} text-xs text-muted-foreground min-w-0 overflow-hidden`}>
+                <span className="whitespace-nowrap" title={clusterLoading ? t('common:common.checking') : !clusterUnreachable ? t('clusterHealth.nodesInCluster', { count: cluster.nodeCount || 0 }) : t('clusterHealth.offlineCheckNetwork')}>
                   {clusterLoading ? <Loader2 className="w-3 h-3 animate-spin inline" /> : !clusterUnreachable ? (cluster.nodeCount || 0) : '-'} {t('common:common.nodes').toLowerCase()}
                 </span>
                 {!clusterLoading && !clusterUnreachable && (cluster.cpuCores || 0) > 0 && (
-                  <span title={t('clusterHealth.totalCpuCores', { count: cluster.cpuCores })}>{cluster.cpuCores} {t('common:common.cpus')}</span>
+                  <span className="whitespace-nowrap" title={t('clusterHealth.totalCpuCores', { count: cluster.cpuCores })}>{cluster.cpuCores} {t('common:common.cpus')}</span>
                 )}
-                <span title={clusterLoading ? t('common:common.checking') : !clusterUnreachable ? t('clusterHealth.podsRunning', { count: cluster.podCount || 0 }) : t('clusterHealth.offlineCheckNetwork')}>
+                <span className="whitespace-nowrap" title={clusterLoading ? t('common:common.checking') : !clusterUnreachable ? t('clusterHealth.podsRunning', { count: cluster.podCount || 0 }) : t('clusterHealth.offlineCheckNetwork')}>
                   {clusterLoading ? <Loader2 className="w-3 h-3 animate-spin inline" /> : !clusterUnreachable ? (cluster.podCount || 0) : '-'} {t('common:common.pods').toLowerCase()}
                 </span>
                 {!clusterLoading && !clusterUnreachable && (gpuByCluster[cluster.name] || 0) > 0 && (
-                  <span className="flex items-center gap-1 text-purple-400" title={t('clusterHealth.gpusAvailable', { count: gpuByCluster[cluster.name] })}>
-                    <Cpu className="w-3 h-3" />
+                  <span className="flex items-center gap-1 text-purple-400 whitespace-nowrap" title={t('clusterHealth.gpusAvailable', { count: gpuByCluster[cluster.name] })}>
+                    <Cpu className="w-3 h-3 shrink-0" />
                     {gpuByCluster[cluster.name]} {t('common:common.gpus')}
                   </span>
                 )}
@@ -411,16 +411,16 @@ export function ClusterHealth() {
       />
 
       {/* Footer totals */}
-      <div className="mt-4 pt-3 border-t border-border/50 flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
-        <span title={t('clusterHealth.totalNodesTitle')}>{totalNodes} {t('clusterHealth.totalNodes')}</span>
-        {totalCPUs > 0 && <span title={t('clusterHealth.totalCpusTitle')}>{totalCPUs} {t('common:common.cpus')}</span>}
+      <div className="mt-4 pt-3 border-t border-border/50 flex flex-wrap justify-between gap-2 text-xs text-muted-foreground min-w-0 overflow-hidden">
+        <span className="whitespace-nowrap truncate" title={t('clusterHealth.totalNodesTitle')}>{totalNodes} {t('clusterHealth.totalNodes')}</span>
+        {totalCPUs > 0 && <span className="whitespace-nowrap truncate" title={t('clusterHealth.totalCpusTitle')}>{totalCPUs} {t('common:common.cpus')}</span>}
         {totalGPUs > 0 && (
-          <span className="flex items-center gap-1 text-purple-400" title={t('clusterHealth.totalGpusTitle', { assigned: assignedGPUs, total: totalGPUs })}>
-            <Cpu className="w-3 h-3" />
+          <span className="flex items-center gap-1 text-purple-400 whitespace-nowrap" title={t('clusterHealth.totalGpusTitle', { assigned: assignedGPUs, total: totalGPUs })}>
+            <Cpu className="w-3 h-3 shrink-0" />
             {assignedGPUs}/{totalGPUs} {t('common:common.gpus')}
           </span>
         )}
-        <span title={t('clusterHealth.totalPodsTitle')}>{totalPods} {t('clusterHealth.totalPods')}</span>
+        <span className="whitespace-nowrap truncate" title={t('clusterHealth.totalPodsTitle')}>{totalPods} {t('clusterHealth.totalPods')}</span>
       </div>
 
       {error && (
