@@ -128,6 +128,9 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
 
   const handleNewMission = () => {
     mc.reset()
+    // Reset the stepper's "highest reached" state so only Phase 1 is
+    // reachable in the new mission (#5504)
+    setHighestReached(0)
   }
 
   /** Inset (in px) from viewport edges so the backdrop peeks through */

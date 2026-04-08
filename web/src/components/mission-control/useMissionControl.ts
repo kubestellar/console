@@ -126,16 +126,80 @@ export function extractJSON<T>(text: string, requiredKey?: string): T | null {
   }
   if (candidates.length > 0) return candidates[0]
 
-  // Try raw JSON (starts with { or [)
-  const rawMatch = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/)
-  if (rawMatch) {
+  // Try raw JSON — find all top-level { ... } or [ ... ] blocks by scanning
+  // for balanced braces, then return the last valid (and largest) parse.
+  // This avoids the old greedy regex which grabbed from the first { to the
+  // last } and failed when prose contained intermediate braces.  (#5505)
+  const blocks = extractBalancedBlocks(text)
+  let best: T | null = null
+  let bestLen = 0
+  for (const block of blocks) {
     try {
-      return JSON.parse(rawMatch[1]) as T
+      const parsed = JSON.parse(block) as T
+      if (requiredKey && typeof parsed === 'object' && parsed !== null && requiredKey in parsed) {
+        return parsed
+      }
+      if (block.length > bestLen) {
+        best = parsed
+        bestLen = block.length
+      }
     } catch {
-      // fall through
+      // skip unparseable blocks
     }
   }
-  return null
+  return best
+}
+
+/**
+ * Scan `text` for top-level balanced `{ ... }` and `[ ... ]` blocks.
+ * Returns them in order of appearance.  Handles nested braces correctly so
+ * `{ "a": { "b": 1 } }` is returned as one block, not two.
+ */
+function extractBalancedBlocks(text: string): string[] {
+  const results: string[] = []
+  const openers = new Set(['{', '['])
+  const closerFor: Record<string, string> = { '{': '}', '[': ']' }
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (!openers.has(ch)) continue
+
+    const expected = closerFor[ch]
+    let depth = 1
+    let j = i + 1
+    let inString = false
+    let escape = false
+
+    while (j < text.length && depth > 0) {
+      const c = text[j]
+      if (escape) {
+        escape = false
+        j++
+        continue
+      }
+      if (c === '\\' && inString) {
+        escape = true
+        j++
+        continue
+      }
+      if (c === '"') {
+        inString = !inString
+        j++
+        continue
+      }
+      if (!inString) {
+        if (c === ch) depth++
+        else if (c === expected) depth--
+      }
+      j++
+    }
+
+    if (depth === 0) {
+      results.push(text.substring(i, j))
+      i = j - 1 // skip past this block
+    }
+  }
+  return results
 }
 
 // ---------------------------------------------------------------------------
@@ -411,7 +475,7 @@ Include real CNCF projects only. Consider dependencies between projects.`
   // ---------------------------------------------------------------------------
 
   const askAIForAssignments = (projects: PayloadProject[], clustersJson: string) => {
-      if (!state.planningMissionId) return
+      let missionId = stateRef.current.planningMissionId
 
       const prompt = `The user selected these projects for deployment:
 ${JSON.stringify(projects.map((p) => ({ name: p.name, displayName: p.displayName, category: p.category, dependencies: p.dependencies, priority: p.priority })), null, 2)}
@@ -462,8 +526,22 @@ Return a JSON block:
 
 Order phases by dependency — prerequisites first. Each phase completes before the next starts.`
 
-      sendMessage(state.planningMissionId, prompt)
-      setState((prev) => ({ ...prev, aiStreaming: true }))
+      // If no planning mission exists (user went manual on Phase 1), start one
+      // so the AI assign button is not silently a no-op (#5502)
+      if (!missionId) {
+        missionId = startMission({
+          title: 'Mission Control Planning',
+          description: 'AI-assisted cluster assignment',
+          type: 'custom',
+          initialPrompt: prompt })
+        setState((prev) => ({
+          ...prev,
+          planningMissionId: missionId,
+          aiStreaming: true }))
+      } else {
+        sendMessage(missionId, prompt)
+        setState((prev) => ({ ...prev, aiStreaming: true }))
+      }
     }
 
   /** Move a project from one cluster to another (for drag-and-drop in blueprint) */
@@ -493,7 +571,10 @@ Order phases by dependency — prerequisites first. Each phase completes before 
           assignments[idx] = {
             ...existing,
             projectNames: assigned
-              ? [...existing.projectNames, projectName]
+              // Deduplicate: only add if not already present (#5503)
+              ? existing.projectNames.includes(projectName)
+                ? existing.projectNames
+                : [...existing.projectNames, projectName]
               : existing.projectNames.filter((n) => n !== projectName) }
         } else if (assigned) {
           assignments.push({
