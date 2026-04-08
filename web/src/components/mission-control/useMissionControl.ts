@@ -704,7 +704,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
     }
 
     return { installedProjects: installed, installedOnCluster: perCluster }
-  }, [helmReleases, clusters, state.projects])
+  }, [helmReleases, clusters, state.projects, state.assignments])
 
   // ---------------------------------------------------------------------------
   // Auto-assign: deterministic local algorithm (no AI)
