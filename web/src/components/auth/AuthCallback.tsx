@@ -81,7 +81,7 @@ export function AuthCallback() {
         showToast(t('authCallback.failedToFetchUser'), 'warning')
         setStatus(t('authCallback.completingSignIn'))
         setTimeout(() => {
-          navigate(destination)
+          navigate(getLoginWithError('token_exchange_failed'))
         }, NAVIGATE_AFTER_ERROR_DELAY_MS)
       })
   }, [searchParams, setToken, refreshUser, navigate, showToast, t])

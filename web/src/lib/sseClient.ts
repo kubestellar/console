@@ -45,6 +45,13 @@ const SSE_MAX_RECONNECT_ATTEMPTS = 5
 // Dedup: prevent duplicate concurrent SSE requests to the same URL
 const inflightRequests = new Map<string, Promise<unknown[]>>()
 
+/** Subscribers waiting for callbacks on an in-flight SSE stream */
+interface SSESubscriber<T = unknown> {
+  onClusterData: (clusterName: string, items: T[]) => void
+  onDone?: (summary: Record<string, unknown>) => void
+}
+const inflightSubscribers = new Map<string, SSESubscriber[]>()
+
 // Result cache: serve cached data on re-navigation within 10s
 const resultCache = new Map<string, { data: unknown[]; at: number }>()
 /** Cache TTL: 10 seconds */
@@ -57,6 +64,7 @@ const RESULT_CACHE_TTL_MS = 10_000
 export function clearSSECache(): void {
   resultCache.clear()
   inflightRequests.clear()
+  inflightSubscribers.clear()
 }
 
 /**
@@ -139,11 +147,18 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
     return Promise.resolve(items)
   }
 
-  // Dedup: if same URL is already in-flight, return the existing promise
+  // Dedup: if same URL is already in-flight, register as a subscriber and
+  // return the existing promise so all consumers get progressive callbacks.
   const inflight = inflightRequests.get(cacheKey)
   if (inflight) {
+    const subscribers = inflightSubscribers.get(cacheKey) || []
+    subscribers.push({ onClusterData: onClusterData as SSESubscriber['onClusterData'], onDone })
+    inflightSubscribers.set(cacheKey, subscribers)
     return inflight as Promise<T[]>
   }
+
+  // Register the first caller as a subscriber too
+  inflightSubscribers.set(cacheKey, [])
 
   const promise = new Promise<T[]>((resolve, reject) => {
     const accumulated: T[] = []
@@ -160,6 +175,7 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
 
     const cleanup = (wasAborted = false) => {
       inflightRequests.delete(cacheKey)
+      inflightSubscribers.delete(cacheKey)
       if (reconnectTimerId !== null) {
         clearTimeout(reconnectTimerId)
         reconnectTimerId = null
@@ -259,6 +275,11 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
                 accumulated.push(...tagged)
                 clusterItemCounts.set(clusterName, tagged.length)
                 onClusterData(clusterName, tagged)
+                // Fan out to additional subscribers that joined via dedup
+                const subs = inflightSubscribers.get(cacheKey) || []
+                for (const sub of subs) {
+                  try { sub.onClusterData(clusterName, tagged) } catch { /* subscriber error */ }
+                }
               } catch (e) {
                 console.error('[SSE] Failed to parse cluster_data:', e)
               }
@@ -269,9 +290,15 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
               try {
                 const summary = JSON.parse(data) as Record<string, unknown>
                 onDone?.(summary)
+                // Fan out onDone to additional subscribers
+                const doneSubs = inflightSubscribers.get(cacheKey) || []
+                for (const sub of doneSubs) {
+                  try { sub.onDone?.(summary) } catch { /* subscriber error */ }
+                }
               } catch {
                 /* ignore parse errors on summary */
               }
+              inflightSubscribers.delete(cacheKey)
               resolve(accumulated)
             }
           }

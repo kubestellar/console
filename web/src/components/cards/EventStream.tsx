@@ -94,7 +94,7 @@ function EventStreamInternal() {
     defaultLimit: 5,
   })
 
-  const { drillToEvents, drillToPod, drillToDeployment } = useDrillDownActions()
+  const { drillToEvents, drillToPod, drillToDeployment, drillToReplicaSet } = useDrillDownActions()
 
   const handleEventClick = (event: ClusterEvent) => {
     // Parse object to get resource type and name
@@ -108,7 +108,9 @@ function EventStreamInternal() {
 
     if (resourceType.toLowerCase() === 'pod') {
       drillToPod(cluster, event.namespace, resourceName, { fromEvent: true })
-    } else if (resourceType.toLowerCase() === 'deployment' || resourceType.toLowerCase() === 'replicaset') {
+    } else if (resourceType.toLowerCase() === 'replicaset') {
+      drillToReplicaSet(cluster, event.namespace, resourceName, { fromEvent: true })
+    } else if (resourceType.toLowerCase() === 'deployment') {
       drillToDeployment(cluster, event.namespace, resourceName, { fromEvent: true })
     } else {
       // Generic events view for other resources
