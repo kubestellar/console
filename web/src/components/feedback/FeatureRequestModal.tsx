@@ -459,8 +459,8 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
     <BaseModal isOpen={isOpen} onClose={handleClose} size="lg" closeOnBackdrop={false} closeOnEscape={true} className="!h-[80vh]">
       {/* Discard/Save Draft confirmation — 3-way choice: Save Draft, Discard, Keep Editing */}
       {showDiscardConfirm && (
-        <div className="fixed inset-0 z-[10002] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-background border border-border rounded-lg shadow-xl p-6 max-w-sm w-full mx-4" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[10002] flex items-center justify-center bg-black/60 backdrop-blur-sm" role="presentation">
+          <div className="bg-background border border-border rounded-lg shadow-xl p-6 max-w-sm w-full mx-4" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
                 <AlertTriangle className="w-5 h-5 text-yellow-400" />

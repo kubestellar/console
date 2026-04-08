@@ -2082,7 +2082,29 @@
       "gitopsBestPractices": "GitOps Best Practices",
       "defaultDeploymentName": "<deployment-name>",
       "syncSuccessMessage": "Sync triggered for application \"{{appName}}\" in namespace \"{{namespace}}\". Argo CD will reconcile the desired state from Git.",
-      "syncFailedMessage": "Failed to trigger sync: {{error}}"
+      "syncFailedMessage": "Failed to trigger sync: {{error}}",
+      "noResourcesFound": "No resources found",
+      "noSyncHistory": "No sync history available",
+      "noManifest": "No manifest available",
+      "clickAnalyze": "Click \"Analyze Application\" to get AI-powered GitOps analysis",
+      "analyzeHint": "AI will analyze sync status, health, and suggest improvements"
+    },
+    "crd": {
+      "noVersionInfo": "No version information available",
+      "noInstancesFound": "No instances found",
+      "schemaNotAvailable": "Schema not available",
+      "clickAnalyze": "Click \"Analyze CRD\" to get AI-powered analysis",
+      "analyzeHint": "AI will analyze the CRD and suggest improvements"
+    },
+    "compliance": {
+      "allStatuses": "All Statuses",
+      "allSeverities": "All Severities",
+      "allClusters": "All Clusters",
+      "allProfiles": "All Profiles",
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
     },
     "kustomization": {
       "noResources": "No resources found",
@@ -3165,7 +3187,8 @@
   "clusters": {
     "groups": {
       "deleteTitle": "Delete Cluster Group",
-      "deleteMessage": "Are you sure you want to delete this cluster group? This action cannot be undone."
+      "deleteMessage": "Are you sure you want to delete this cluster group? This action cannot be undone.",
+      "title": "Cluster Groups ({{count}})"
     }
   },
   "discardUnsavedChanges": "Discard unsaved changes?",

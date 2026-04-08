@@ -7,6 +7,7 @@
  */
 
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Shield, CheckCircle, XCircle, AlertCircle, Info,
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
@@ -64,6 +65,7 @@ interface ControlRow extends OscalControlResult {
 }
 
 export function ComplianceDrillDown({ data }: Props) {
+  const { t } = useTranslation()
   const filterStatus = (data.filterStatus as string) || ''
   const { statuses } = useTrestle()
   const { selectedClusters } = useGlobalFilters()
@@ -282,7 +284,7 @@ export function ComplianceDrillDown({ data }: Props) {
               onChange={e => { setStatusFilter(e.target.value); resetPage() }}
               className="px-3 py-2 rounded-lg border border-border bg-card/50 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             >
-              <option value="">All Statuses</option>
+              <option value="">{t('drilldown.compliance.allStatuses')}</option>
               {uniqueStatuses.map(s => (
                 <option key={s} value={s}>{statusLabel(s)}</option>
               ))}
@@ -292,18 +294,18 @@ export function ComplianceDrillDown({ data }: Props) {
               onChange={e => { setSeverityFilter(e.target.value); resetPage() }}
               className="px-3 py-2 rounded-lg border border-border bg-card/50 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             >
-              <option value="">All Severities</option>
-              <option value="critical">Critical</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
+              <option value="">{t('drilldown.compliance.allSeverities')}</option>
+              <option value="critical">{t('drilldown.compliance.critical')}</option>
+              <option value="high">{t('drilldown.compliance.high')}</option>
+              <option value="medium">{t('drilldown.compliance.medium')}</option>
+              <option value="low">{t('drilldown.compliance.low')}</option>
             </select>
             <select
               value={clusterFilter}
               onChange={e => { setClusterFilter(e.target.value); resetPage() }}
               className="px-3 py-2 rounded-lg border border-border bg-card/50 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             >
-              <option value="">All Clusters</option>
+              <option value="">{t('drilldown.compliance.allClusters')}</option>
               {uniqueClusters.map(c => (
                 <option key={c} value={c}>{c}</option>
               ))}
@@ -313,7 +315,7 @@ export function ComplianceDrillDown({ data }: Props) {
               onChange={e => { setProfileFilter(e.target.value); resetPage() }}
               className="px-3 py-2 rounded-lg border border-border bg-card/50 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             >
-              <option value="">All Profiles</option>
+              <option value="">{t('drilldown.compliance.allProfiles')}</option>
               {uniqueProfiles.map(p => (
                 <option key={p} value={p}>{p}</option>
               ))}

@@ -500,7 +500,7 @@ Please:
                           <StatusBadge color="blue" size="xs">{t('common.storage')}</StatusBadge>
                         )}
                         {version.deprecated && (
-                          <StatusBadge color="yellow" size="xs">Deprecated</StatusBadge>
+                          <StatusBadge color="yellow" size="xs">{t('common.deprecated')}</StatusBadge>
                         )}
                       </div>
                       <span className={cn(
@@ -519,7 +519,7 @@ Please:
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <List className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No version information available</p>
+                <p>{t('drilldown.crd.noVersionInfo')}</p>
               </div>
             )}
           </div>
@@ -570,7 +570,7 @@ Please:
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <Database className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No instances found</p>
+                <p>{t('drilldown.crd.noInstancesFound')}</p>
               </div>
             )}
           </div>
@@ -592,7 +592,7 @@ Please:
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <Code className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>Schema not available</p>
+                <p>{t('drilldown.crd.schemaNotAvailable')}</p>
               </div>
             )}
           </div>
@@ -632,8 +632,8 @@ Please:
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <Stethoscope className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>Click "Analyze CRD" to get AI-powered analysis</p>
-                <p className="text-xs mt-1">AI will analyze the CRD and suggest improvements</p>
+                <p>{t('drilldown.crd.clickAnalyze')}</p>
+                <p className="text-xs mt-1">{t('drilldown.crd.analyzeHint')}</p>
               </div>
             )}
           </div>

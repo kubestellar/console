@@ -43,7 +43,7 @@ export function ClusterGroupsSection({
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <FolderOpen className="w-4 h-4" />
-            <span>Cluster Groups (0)</span>
+            <span>{t('clusters.groups.title', { count: 0 })}</span>
           </div>
           <button
             onClick={() => {
@@ -68,7 +68,7 @@ export function ClusterGroupsSection({
           className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           <FolderOpen className="w-4 h-4" />
-          <span>Cluster Groups ({clusterGroups.length})</span>
+          <span>{t('clusters.groups.title', { count: clusterGroups.length })}</span>
           {showGroups ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
         <button

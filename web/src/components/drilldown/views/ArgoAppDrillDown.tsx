@@ -559,7 +559,7 @@ Please:
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <Box className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No resources found</p>
+                <p>{t('drilldown.argoApp.noResourcesFound')}</p>
               </div>
             )}
           </div>
@@ -599,7 +599,7 @@ Please:
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <History className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No sync history available</p>
+                <p>{t('drilldown.argoApp.noSyncHistory')}</p>
               </div>
             )}
           </div>
@@ -634,7 +634,7 @@ Please:
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <GitCommit className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No manifest available</p>
+                <p>{t('drilldown.argoApp.noManifest')}</p>
               </div>
             )}
           </div>
@@ -834,8 +834,8 @@ spec:
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <Stethoscope className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>Click "Analyze Application" to get AI-powered GitOps analysis</p>
-                <p className="text-xs mt-1">AI will analyze sync status, health, and suggest improvements</p>
+                <p>{t('drilldown.argoApp.clickAnalyze')}</p>
+                <p className="text-xs mt-1">{t('drilldown.argoApp.analyzeHint')}</p>
               </div>
             )}
           </div>
