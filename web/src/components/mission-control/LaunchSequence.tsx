@@ -55,7 +55,7 @@ function computePhaseSignature(phases: MissionControlState['phases']): string {
  * Used by both the mission-monitor effect and the error catch path (#5507).
  */
 function derivePhaseStatus(phase: PhaseProgress): PhaseStatus {
-  const allDone = phase.projects.every(
+  const allDone = phase.projects.length > 0 && phase.projects.every(
     (p) => TERMINAL_STATUSES.includes(p.status)
   )
   if (!allDone) return phase.status
@@ -209,7 +209,7 @@ export function LaunchSequence({
       onUpdateProgress(updated)
 
       // Check if all phases complete
-      if (updated.every((p) => TERMINAL_STATUSES.includes(p.status))) {
+      if (updated.length > 0 && updated.every((p) => TERMINAL_STATUSES.includes(p.status))) {
         onComplete()
       }
     }
@@ -283,10 +283,10 @@ export function LaunchSequence({
   }, [phaseSignature])
 
   const progress = state.launchProgress.length > 0 ? state.launchProgress : progressRef.current
-  const allComplete = progress.every(
+  const allComplete = progress.length > 0 && progress.every(
     (p) => p.status === 'completed' || p.status === 'failed' || p.status === 'skipped'
   )
-  const allSuccess = progress.every((p) => p.status === 'completed')
+  const allSuccess = progress.length > 0 && progress.every((p) => p.status === 'completed')
 
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-6">
