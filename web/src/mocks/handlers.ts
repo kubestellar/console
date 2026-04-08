@@ -669,6 +669,7 @@ export const handlers = [
   http.get('/api/medium/blog', () => passthrough()),
   http.get('/api/missions/file', () => passthrough()),
   http.get('/api/missions/browse', () => passthrough()),
+  http.get('/api/rewards/github', () => passthrough()),
 
   // ── Kubara Platform Catalog (demo) ──────────────────────────────
   http.get('/api/github/repos/kubara-io/kubara/contents/*', () => {

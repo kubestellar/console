@@ -1,9 +1,9 @@
 /**
  * Tests for the useGitHubRewards hook.
  *
- * Validates demo-user skip, unauthenticated skip, localStorage caching,
- * successful fetch, error handling with stale cache retention, and
- * periodic refresh via interval.
+ * Validates demo-user skip, unauthenticated skip, per-user localStorage
+ * caching with TTL, successful fetch, error handling with expired cache
+ * clearing, and periodic refresh via interval.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -19,7 +19,14 @@ vi.mock('../../lib/auth', () => ({ useAuth: () => mockUseAuth() }))
 
 // Constants are simple values -- we mirror them here for localStorage setup.
 const STORAGE_KEY_TOKEN = 'token'
-const CACHE_KEY = 'github-rewards-cache'
+/** Per-user cache key format matching the hook's userCacheKey() */
+function userCacheKey(login: string): string {
+  return `github-rewards-cache:${login}`
+}
+/** Legacy global cache key — the hook should clean this up */
+const LEGACY_CACHE_KEY = 'github-rewards-cache'
+/** Client-side cache TTL in milliseconds (must match hook) */
+const CLIENT_CACHE_TTL_MS = 15 * 60 * 1000
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -34,6 +41,11 @@ function makeSampleResponse(overrides: Partial<GitHubRewardsResponse> = {}): Git
     from_cache: false,
     ...overrides,
   }
+}
+
+/** Store a cache entry in the new per-user format */
+function seedCache(login: string, data: GitHubRewardsResponse, storedAt = Date.now()): void {
+  localStorage.setItem(userCacheKey(login), JSON.stringify({ data, storedAt }))
 }
 
 // ---------------------------------------------------------------------------
@@ -78,10 +90,10 @@ describe('useGitHubRewards', () => {
     expect(global.fetch).not.toHaveBeenCalled()
   })
 
-  // 3. Cached data loaded from localStorage on mount
-  it('returns cached data from localStorage on mount', async () => {
+  // 3. Cached data loaded from localStorage on mount (per-user, within TTL)
+  it('returns cached data from localStorage on mount when within TTL', async () => {
     const cached = makeSampleResponse({ total_points: 999 })
-    localStorage.setItem(CACHE_KEY, JSON.stringify(cached))
+    seedCache('octocat', cached, Date.now()) // fresh cache
 
     // Prevent actual fetch from resolving during this test
     vi.mocked(global.fetch).mockReturnValue(new Promise(() => {}))
@@ -89,12 +101,45 @@ describe('useGitHubRewards', () => {
     const { useGitHubRewards } = await import('../useGitHubRewards')
     const { result } = renderHook(() => useGitHubRewards())
 
-    // Cached value available synchronously (useState initialiser)
-    expect(result.current.githubRewards).not.toBeNull()
-    expect(result.current.githubRewards!.total_points).toBe(999)
+    // Cached value loaded via useEffect (not useState initialiser)
+    await waitFor(() => {
+      expect(result.current.githubRewards).not.toBeNull()
+      expect(result.current.githubRewards!.total_points).toBe(999)
+    })
   })
 
-  // 4. Successful fetch updates state and writes cache
+  // 3b. Expired cache is discarded
+  it('discards expired cache and returns null', async () => {
+    const expired = makeSampleResponse({ total_points: 999 })
+    const twentyMinutesAgo = Date.now() - (CLIENT_CACHE_TTL_MS + 60_000)
+    seedCache('octocat', expired, twentyMinutesAgo)
+
+    // Prevent actual fetch from resolving
+    vi.mocked(global.fetch).mockReturnValue(new Promise(() => {}))
+
+    const { useGitHubRewards } = await import('../useGitHubRewards')
+    const { result } = renderHook(() => useGitHubRewards())
+
+    // Expired cache should be ignored — data stays null until fetch resolves
+    await act(async () => { /* flush effects */ })
+    expect(result.current.githubRewards).toBeNull()
+  })
+
+  // 3c. Legacy global cache key is cleaned up
+  it('removes legacy global cache key on load', async () => {
+    localStorage.setItem(LEGACY_CACHE_KEY, JSON.stringify(makeSampleResponse()))
+
+    vi.mocked(global.fetch).mockReturnValue(new Promise(() => {}))
+
+    const { useGitHubRewards } = await import('../useGitHubRewards')
+    renderHook(() => useGitHubRewards())
+
+    await act(async () => { /* flush effects */ })
+
+    expect(localStorage.getItem(LEGACY_CACHE_KEY)).toBeNull()
+  })
+
+  // 4. Successful fetch updates state and writes per-user cache
   it('updates state and caches result on successful fetch', async () => {
     const apiResponse = makeSampleResponse({ total_points: 1500 })
     vi.mocked(global.fetch).mockResolvedValue({
@@ -113,16 +158,20 @@ describe('useGitHubRewards', () => {
     expect(result.current.isLoading).toBe(false)
     expect(result.current.error).toBeNull()
 
-    // Cache should have been written
-    const raw = localStorage.getItem(CACHE_KEY)
+    // Per-user cache should have been written with storedAt timestamp
+    const raw = localStorage.getItem(userCacheKey('octocat'))
     expect(raw).not.toBeNull()
-    expect(JSON.parse(raw!).total_points).toBe(1500)
+    const entry = JSON.parse(raw!)
+    expect(entry.data.total_points).toBe(1500)
+    expect(entry.storedAt).toBeDefined()
   })
 
-  // 5. Failed fetch sets error and retains stale cache
-  it('sets error but keeps stale cached data on fetch failure', async () => {
+  // 5. Failed fetch clears data when cache has expired
+  it('clears data on fetch failure when cache has also expired', async () => {
+    // Seed an expired cache
     const stale = makeSampleResponse({ total_points: 800 })
-    localStorage.setItem(CACHE_KEY, JSON.stringify(stale))
+    const twentyMinutesAgo = Date.now() - (CLIENT_CACHE_TTL_MS + 60_000)
+    seedCache('octocat', stale, twentyMinutesAgo)
 
     vi.mocked(global.fetch).mockRejectedValue(new Error('Network down'))
 
@@ -134,8 +183,25 @@ describe('useGitHubRewards', () => {
     })
 
     expect(result.current.isLoading).toBe(false)
+    // Stale data should be cleared because cache has expired
+    expect(result.current.githubRewards).toBeNull()
+  })
 
-    // Stale data retained
+  // 5b. Failed fetch retains data when cache is still within TTL
+  it('retains data on fetch failure when cache is still valid', async () => {
+    const cached = makeSampleResponse({ total_points: 800 })
+    seedCache('octocat', cached, Date.now()) // fresh cache
+
+    vi.mocked(global.fetch).mockRejectedValue(new Error('Network down'))
+
+    const { useGitHubRewards } = await import('../useGitHubRewards')
+    const { result } = renderHook(() => useGitHubRewards())
+
+    await waitFor(() => {
+      expect(result.current.error).toBe('Network down')
+    })
+
+    // Data retained because cache is still valid
     expect(result.current.githubRewards).not.toBeNull()
     expect(result.current.githubRewards!.total_points).toBe(800)
   })
@@ -195,5 +261,24 @@ describe('useGitHubRewards', () => {
     expect(global.fetch).not.toHaveBeenCalled()
     // Data stays null since no cache and no fetch
     expect(result.current.githubRewards).toBeNull()
+  })
+
+  // 8. Fetch URL includes login query param
+  it('includes login query param in fetch URL', async () => {
+    const apiResponse = makeSampleResponse()
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(apiResponse),
+    } as Response)
+
+    const { useGitHubRewards } = await import('../useGitHubRewards')
+    renderHook(() => useGitHubRewards())
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalled()
+    })
+
+    const fetchUrl = vi.mocked(global.fetch).mock.calls[0][0] as string
+    expect(fetchUrl).toContain('login=octocat')
   })
 })
