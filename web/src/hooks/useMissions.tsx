@@ -662,9 +662,9 @@ export function MissionProvider({ children }: { children: ReactNode }) {
 
           // Fail any pending missions that were waiting for a response
           if (pendingRequests.current.size > 0) {
-            const errorContent = `**Local Agent Not Connected**
+            const errorContent = `**Agent Disconnected**
 
-Install the console locally with the KubeStellar Console agent to use AI missions.`
+The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost. Please verify the agent is running and reachable.`
 
             const pendingMissionIds = new Set(pendingRequests.current.values())
             setMissions(prev => prev.map(m => {
@@ -958,11 +958,11 @@ Install the console locally with the KubeStellar Console agent to use AI mission
             }
           }
 
-          // Clear active token tracking
+          // Clear active token tracking.
+          // NOTE: Do NOT emit analytics completion here — stream-done is not
+          // authoritative. The backend sends a separate 'result' message with
+          // the final answer; emitMissionCompleted fires there (#5510).
           setActiveTokenCategory(null)
-          if (m.status === 'running') {
-            emitMissionCompleted(m.type, Math.round((Date.now() - m.createdAt.getTime()) / 1000))
-          }
           return {
             ...m,
             status: 'waiting_input' as MissionStatus,
