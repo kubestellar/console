@@ -2,7 +2,7 @@
 
 ![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/clubanderson/b9a9ae8469f1897a22d5a40629bc1e82/raw/coverage-badge.json)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/kubestellar/console/badge)](https://securityscorecards.dev/viewer/?uri=github.com/kubestellar/console)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12343/badge)](https://www.bestpractices.dev/projects/12343)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12343/badge?v=2)](https://www.bestpractices.dev/projects/12343)
 
 AI-powered multi-cluster Kubernetes dashboard with guided install missions for 250+ CNCF projects.
 
