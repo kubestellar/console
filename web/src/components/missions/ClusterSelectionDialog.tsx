@@ -55,7 +55,7 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
   // Close on Escape
   useEffect(() => {
     if (!open) return
-    const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel() }
+    const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopImmediatePropagation(); onCancel() } }
     document.addEventListener('keydown', handleEsc)
     return () => document.removeEventListener('keydown', handleEsc)
   }, [open, onCancel])

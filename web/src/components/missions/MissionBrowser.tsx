@@ -1128,6 +1128,8 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        // Stop the event from reaching the sidebar's Escape handler
+        e.stopImmediatePropagation()
         if (selectedMission) {
           setSelectedMission(null)
           setRawContent(null)

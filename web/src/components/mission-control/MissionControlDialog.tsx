@@ -75,7 +75,7 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
   // Escape to close
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') { e.stopImmediatePropagation(); onClose() }
     },
     [onClose]
   )

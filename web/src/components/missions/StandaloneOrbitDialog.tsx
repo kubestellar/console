@@ -103,7 +103,12 @@ export function StandaloneOrbitDialog({ onClose }: StandaloneOrbitDialogProps) {
 
   return (
     <>
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); onClose() } }}
+      tabIndex={-1}
+      ref={(el) => el?.focus()}
+    >
       <div className="w-full max-w-md mx-4 rounded-xl border border-purple-500/30 bg-card shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
