@@ -191,8 +191,7 @@ export function useMissionControl() {
         lastParsedContentRef.current = latest.content
         setState((prev) => ({
           ...prev,
-          projects: mergeProjects(prev.projects, normalized),
-          aiStreaming: false }))
+          projects: mergeProjects(prev.projects, normalized) }))
       }
     } else if (state.phase === 'assign') {
       const parsed = extractJSON<{
@@ -211,8 +210,7 @@ export function useMissionControl() {
           return {
             ...prev,
             assignments: [...aiAssignments, ...preserved],
-            phases: parsed.phases ?? prev.phases,
-            aiStreaming: false }
+            phases: parsed.phases ?? prev.phases }
         })
       }
     }
@@ -225,7 +223,7 @@ export function useMissionControl() {
     if (isStreaming !== state.aiStreaming) {
       setState((prev) => ({ ...prev, aiStreaming: isStreaming }))
     }
-  }, [planningMission?.status])
+  }, [planningMission?.status, state.aiStreaming])
 
   // ---------------------------------------------------------------------------
   // Reconcile assignments when projects change (cascade Phase 1 → 2 → 3)
