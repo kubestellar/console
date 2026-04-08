@@ -291,7 +291,7 @@ jobs:
             dist/checksums.txt
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@3454372be43ec08971210d50303c40907e0a3acf # v3.8.2
+        uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3.8.2
 
       - name: Sign release artifacts with cosign
         env:
