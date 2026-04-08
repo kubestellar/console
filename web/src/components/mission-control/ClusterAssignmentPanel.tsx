@@ -194,7 +194,16 @@ export function ClusterAssignmentPanel({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setExcludedClusters((prev) => new Set([...prev, c.name]))}
+                        onClick={() => {
+                          setExcludedClusters((prev) => new Set([...prev, c.name]))
+                          // Clear any existing assignments for the excluded cluster (#5534)
+                          const existing = state.assignments.find((a) => a.clusterName === c.name)
+                          if (existing) {
+                            for (const pName of existing.projectNames) {
+                              onSetAssignment(c.name, pName, false)
+                            }
+                          }
+                        }}
                         className="!p-0.5 text-muted-foreground hover:text-destructive"
                         title="Remove from mission"
                         icon={<X className="w-3 h-3" />}
