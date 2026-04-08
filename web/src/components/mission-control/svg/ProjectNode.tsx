@@ -8,30 +8,24 @@ import { motion } from 'framer-motion'
 import { CNCF_CATEGORY_GRADIENTS } from '../../../lib/cncf-constants'
 
 /**
- * Direct avatar URLs — uses avatars.githubusercontent.com to avoid the
- * github.com/{org}.png 302 redirect which breaks <img> inside foreignObject.
+ * Static project icons served from /icons/cncf/ — avoids all CORS/CSP/proxy
+ * issues by bundling avatars as static assets in web/public/.
  */
-const PROJECT_AVATAR_IDS: Record<string, number> = {
-  prometheus: 3380462, grafana: 7195757, falco: 42391047, falcosecurity: 42391047,
-  kyverno: 68448710, 'cert-manager': 39950598, keda: 49917779, kedacore: 49917779,
-  flux: 52158677, fluxcd: 52158677, istio: 23534644, linkerd: 25301026,
-  helm: 15859888, cilium: 21054566, envoy: 30125649, envoyproxy: 30125649,
-  argocd: 30269780, 'argo-cd': 30269780, argo: 30269780, argoproj: 30269780,
-  trivy: 12783832, aquasecurity: 12783832, kubevirt: 18700703,
-  crossplane: 45158470, dapr: 51932459, knative: 35583233,
-  etcd: 41972792, 'etcd-io': 41972792, coredns: 21110084,
-  rook: 22860722, longhorn: 51335366,
-}
+const STATIC_ICON_PROJECTS = new Set([
+  'prometheus', 'grafana', 'falco', 'kyverno', 'cert-manager',
+  'istio', 'helm', 'cilium', 'argocd', 'trivy', 'linkerd', 'flux',
+])
 
-/**
- * Get project icon URL via first-party proxy to avoid CORS/CSP issues
- * with avatars.githubusercontent.com inside SVG foreignObject.
- */
 function getAvatarUrl(name: string): string {
   const key = name.toLowerCase()
-  const id = PROJECT_AVATAR_IDS[key]
-  if (id) return `/api/avatar/${id}`
-  return `/api/avatar/${key}`
+  if (STATIC_ICON_PROJECTS.has(key)) return `/icons/cncf/${key}.png`
+  // Aliases
+  if (key === 'argo-cd' || key === 'argo') return '/icons/cncf/argocd.png'
+  if (key === 'falcosecurity') return '/icons/cncf/falco.png'
+  if (key === 'fluxcd') return '/icons/cncf/flux.png'
+  if (key === 'aquasecurity') return '/icons/cncf/trivy.png'
+  // Fallback — will trigger letter fallback via onError
+  return `/icons/cncf/${key}.png`
 }
 
 type NodeStatus = 'pending' | 'running' | 'completed' | 'failed'

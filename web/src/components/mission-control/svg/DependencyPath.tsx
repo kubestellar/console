@@ -92,8 +92,8 @@ export function DependencyPath({
         d={pathD}
         fill="none"
         stroke={gradientRef}
-        strokeWidth={highlight ? 1.5 : crossCluster ? 0.4 : 0.2}
-        strokeOpacity={highlight ? 1 : undefined}
+        strokeWidth={highlight ? 2 : crossCluster ? 1.2 : 0.6}
+        strokeOpacity={highlight ? 1 : crossCluster ? 0.8 : 0.5}
         filter={highlight ? 'url(#glow)' : undefined}
         strokeDasharray={crossCluster ? 'none' : '3 2'}
         initial={{ pathLength: 0 }}
@@ -103,7 +103,7 @@ export function DependencyPath({
 
       {/* Flowing particle */}
       {showParticle && (
-        <circle r={1.2} fill={particleColor} opacity={0.8}>
+        <circle r={crossCluster ? 2 : 1.2} fill={particleColor} opacity={0.8}>
           <animateMotion
             dur={`${3 + index * 0.5}s`}
             repeatCount="indefinite"
