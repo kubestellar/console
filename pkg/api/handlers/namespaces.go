@@ -132,8 +132,23 @@ func (h *NamespaceHandler) DeleteNamespace(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"success": true})
 }
 
-// GetNamespaceAccess returns role bindings for a namespace
+// GetNamespaceAccess returns role bindings for a namespace.
+// SECURITY: Restricted to admin users to prevent non-admin users from
+// enumerating namespace access and binding subjects (#5466).
 func (h *NamespaceHandler) GetNamespaceAccess(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
+	currentUser, err := h.store.GetUser(userID)
+	if err != nil || currentUser == nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
+	}
+
+	if currentUser.Role != models.UserRoleAdmin {
+		slog.Warn("[rbac] SECURITY: non-admin attempted to read namespace access",
+			"user_id", currentUser.ID,
+			"github_login", currentUser.GitHubLogin)
+		return fiber.NewError(fiber.StatusForbidden, "Admin access required")
+	}
+
 	if h.k8sClient == nil {
 		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
 	}

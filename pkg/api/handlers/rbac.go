@@ -136,8 +136,23 @@ func (h *RBACHandler) DeleteConsoleUser(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"success": true})
 }
 
-// GetUserManagementSummary returns an overview of users
+// GetUserManagementSummary returns an overview of users.
+// SECURITY: Restricted to admin users to prevent non-admin users from
+// reading user counts and permission summaries (#5459).
 func (h *RBACHandler) GetUserManagementSummary(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
+	currentUser, err := h.store.GetUser(userID)
+	if err != nil || currentUser == nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
+	}
+
+	if currentUser.Role != models.UserRoleAdmin {
+		slog.Warn("[rbac] SECURITY: non-admin attempted to read user-management summary",
+			"user_id", currentUser.ID,
+			"github_login", currentUser.GitHubLogin)
+		return fiber.NewError(fiber.StatusForbidden, "Admin access required")
+	}
+
 	summary := models.UserManagementSummary{}
 
 	// Count console users by role
@@ -219,8 +234,23 @@ func (h *RBACHandler) ListK8sServiceAccounts(c *fiber.Ctx) error {
 	return c.JSON(allSAs)
 }
 
-// ListK8sRoles returns roles from clusters
+// ListK8sRoles returns roles from clusters.
+// SECURITY: Restricted to admin users to prevent non-admin users from
+// enumerating Kubernetes roles (#5460).
 func (h *RBACHandler) ListK8sRoles(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
+	currentUser, err := h.store.GetUser(userID)
+	if err != nil || currentUser == nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
+	}
+
+	if currentUser.Role != models.UserRoleAdmin {
+		slog.Warn("[rbac] SECURITY: non-admin attempted to list Kubernetes roles",
+			"user_id", currentUser.ID,
+			"github_login", currentUser.GitHubLogin)
+		return fiber.NewError(fiber.StatusForbidden, "Admin access required")
+	}
+
 	if h.k8sClient == nil {
 		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
 	}
@@ -254,8 +284,23 @@ func (h *RBACHandler) ListK8sRoles(c *fiber.Ctx) error {
 	return fiber.NewError(fiber.StatusBadRequest, "Cluster parameter required")
 }
 
-// ListK8sRoleBindings returns role bindings from clusters
+// ListK8sRoleBindings returns role bindings from clusters.
+// SECURITY: Restricted to admin users to prevent non-admin users from
+// enumerating role bindings (#5461).
 func (h *RBACHandler) ListK8sRoleBindings(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
+	currentUser, err := h.store.GetUser(userID)
+	if err != nil || currentUser == nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
+	}
+
+	if currentUser.Role != models.UserRoleAdmin {
+		slog.Warn("[rbac] SECURITY: non-admin attempted to list role bindings",
+			"user_id", currentUser.ID,
+			"github_login", currentUser.GitHubLogin)
+		return fiber.NewError(fiber.StatusForbidden, "Admin access required")
+	}
+
 	if h.k8sClient == nil {
 		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
 	}
@@ -382,8 +427,23 @@ func (h *RBACHandler) CreateRoleBinding(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"success": true})
 }
 
-// ListK8sUsers returns all unique users/subjects from role bindings
+// ListK8sUsers returns all unique users/subjects from role bindings.
+// SECURITY: Restricted to admin users to prevent non-admin users from
+// enumerating Kubernetes subjects (#5462).
 func (h *RBACHandler) ListK8sUsers(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
+	currentUser, err := h.store.GetUser(userID)
+	if err != nil || currentUser == nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
+	}
+
+	if currentUser.Role != models.UserRoleAdmin {
+		slog.Warn("[rbac] SECURITY: non-admin attempted to list Kubernetes subjects",
+			"user_id", currentUser.ID,
+			"github_login", currentUser.GitHubLogin)
+		return fiber.NewError(fiber.StatusForbidden, "Admin access required")
+	}
+
 	if h.k8sClient == nil {
 		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
 	}
@@ -404,8 +464,23 @@ func (h *RBACHandler) ListK8sUsers(c *fiber.Ctx) error {
 	return c.JSON(users)
 }
 
-// ListOpenShiftUsers returns all OpenShift users (users.user.openshift.io) from a cluster
+// ListOpenShiftUsers returns all OpenShift users (users.user.openshift.io) from a cluster.
+// SECURITY: Restricted to admin users to prevent non-admin users from
+// enumerating OpenShift users (#5463).
 func (h *RBACHandler) ListOpenShiftUsers(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
+	currentUser, err := h.store.GetUser(userID)
+	if err != nil || currentUser == nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
+	}
+
+	if currentUser.Role != models.UserRoleAdmin {
+		slog.Warn("[rbac] SECURITY: non-admin attempted to list OpenShift users",
+			"user_id", currentUser.ID,
+			"github_login", currentUser.GitHubLogin)
+		return fiber.NewError(fiber.StatusForbidden, "Admin access required")
+	}
+
 	if h.k8sClient == nil {
 		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
 	}
@@ -428,8 +503,23 @@ func (h *RBACHandler) ListOpenShiftUsers(c *fiber.Ctx) error {
 	return c.JSON(users)
 }
 
-// GetPermissionsSummary returns permission summaries for all clusters
+// GetPermissionsSummary returns permission summaries for all clusters.
+// SECURITY: Restricted to admin users to prevent non-admin users from
+// reading per-cluster permission summaries (#5465).
 func (h *RBACHandler) GetPermissionsSummary(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
+	currentUser, err := h.store.GetUser(userID)
+	if err != nil || currentUser == nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
+	}
+
+	if currentUser.Role != models.UserRoleAdmin {
+		slog.Warn("[rbac] SECURITY: non-admin attempted to read permissions summary",
+			"user_id", currentUser.ID,
+			"github_login", currentUser.GitHubLogin)
+		return fiber.NewError(fiber.StatusForbidden, "Admin access required")
+	}
+
 	if h.k8sClient == nil {
 		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
 	}
