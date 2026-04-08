@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   Plus,
   Bell,
@@ -113,10 +113,27 @@ export function AlertRulesCard() {
     toggleRule(ruleId)
   }
 
+  // Two-click delete: first click shows "Confirm?", second click deletes (#5591)
+  const DELETE_CONFIRM_TIMEOUT_MS = 3000
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const deleteTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  useEffect(() => () => clearTimeout(deleteTimerRef.current), [])
+
   const handleDelete = (e: React.MouseEvent, ruleId: string) => {
     e.stopPropagation()
-    if (confirm(t('alertRules.confirmDelete'))) {
+    if (pendingDeleteId === ruleId) {
+      // Second click — confirmed
+      clearTimeout(deleteTimerRef.current)
+      setPendingDeleteId(null)
       deleteRule(ruleId)
+    } else {
+      // First click — enter confirm state with auto-reset
+      setPendingDeleteId(ruleId)
+      clearTimeout(deleteTimerRef.current)
+      deleteTimerRef.current = setTimeout(
+        () => setPendingDeleteId(prev => prev === ruleId ? null : prev),
+        DELETE_CONFIRM_TIMEOUT_MS
+      )
     }
   }
 
@@ -279,10 +296,16 @@ export function AlertRulesCard() {
                   </button>
                   <button
                     onClick={e => handleDelete(e, rule.id)}
-                    className="p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
-                    title={t('alertRules.deleteRule')}
+                    className={`p-1 rounded transition-colors ${
+                      pendingDeleteId === rule.id
+                        ? 'bg-red-500/20 text-red-400'
+                        : 'hover:bg-red-500/20 text-muted-foreground hover:text-red-400'
+                    }`}
+                    title={pendingDeleteId === rule.id ? t('alertRules.confirmDelete') : t('alertRules.deleteRule')}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    {pendingDeleteId === rule.id
+                      ? <span className="text-[10px] font-medium px-0.5">{t('alertRules.confirmDelete')}</span>
+                      : <Trash2 className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
