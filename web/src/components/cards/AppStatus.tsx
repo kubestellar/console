@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Box, CheckCircle, AlertTriangle, Clock, ChevronRight } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -44,6 +45,7 @@ interface AppData {
 }
 
 export function AppStatus(_props: AppStatusProps) {
+  const { t } = useTranslation()
   const { drillToDeployment } = useDrillDownActions()
   const { deployments, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, lastRefresh } = useCachedDeployments()
 
@@ -172,8 +174,8 @@ export function AppStatus(_props: AppStatusProps) {
     return (
       <CardEmptyState
         icon={Box}
-        title="No applications found"
-        message="Deploy applications to see their status across clusters."
+        title={t('appStatus.noApps', 'No applications found')}
+        message={t('appStatus.deployApps', 'Deploy applications to see their status across clusters.')}
       />
     )
   }

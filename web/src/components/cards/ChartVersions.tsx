@@ -119,8 +119,8 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No Helm charts</p>
-        <p className="text-xs mt-1">Install Helm charts to track versions</p>
+        <p className="text-sm">{t('chartVersions.noCharts', 'No Helm charts')}</p>
+        <p className="text-xs mt-1">{t('chartVersions.installCharts', 'Install Helm charts to track versions')}</p>
       </div>
     )
   }
@@ -226,7 +226,9 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
 
           {/* Footer */}
           <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-            {totalItems} releases{localClusterFilter.length > 0 ? ` in ${localClusterFilter.length} cluster${localClusterFilter.length > 1 ? 's' : ''}` : ' across all clusters'}
+            {localClusterFilter.length > 0
+              ? t('chartVersions.releasesInClusters', '{{count}} releases in {{clusters}} cluster(s)', { count: totalItems, clusters: localClusterFilter.length })
+              : t('chartVersions.releasesAllClusters', '{{count}} releases across all clusters', { count: totalItems })}
           </div>
         </>
       )}
