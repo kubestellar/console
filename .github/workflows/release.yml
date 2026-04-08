@@ -286,7 +286,49 @@ jobs:
       - name: Attest GoReleaser binary artifacts
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
-          subject-path: dist/*.tar.gz
+          subject-path: |
+            dist/*.tar.gz
+            dist/checksums.txt
+
+      - name: Generate and upload provenance to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.determine-version.outputs.version }}
+        run: |
+          # Download attestation bundles for each tar.gz and upload as release assets
+          # The scorecard Signed-Releases check looks for .intoto.jsonl or .sigstore
+          # files attached to the GitHub release
+          for artifact in dist/*.tar.gz; do
+            basename=$(basename "$artifact")
+            echo "Downloading attestation for $basename..."
+            gh attestation download "$artifact" \
+              --repo "${{ github.repository }}" \
+              --format json \
+              --output "${basename}.intoto.jsonl" 2>/dev/null || true
+
+            if [ -f "${basename}.intoto.jsonl" ]; then
+              echo "Uploading ${basename}.intoto.jsonl to release ${VERSION}..."
+              gh release upload "${VERSION}" "${basename}.intoto.jsonl" \
+                --repo "${{ github.repository }}" \
+                --clobber
+            else
+              echo "Warning: No attestation found for $basename"
+            fi
+          done
+
+          # Also upload checksums attestation
+          if [ -f dist/checksums.txt ]; then
+            gh attestation download dist/checksums.txt \
+              --repo "${{ github.repository }}" \
+              --format json \
+              --output "checksums.txt.intoto.jsonl" 2>/dev/null || true
+
+            if [ -f "checksums.txt.intoto.jsonl" ]; then
+              gh release upload "${VERSION}" "checksums.txt.intoto.jsonl" \
+                --repo "${{ github.repository }}" \
+                --clobber
+            fi
+          fi
 
   helm-release:
     needs: [determine-version, release, helm-test]
