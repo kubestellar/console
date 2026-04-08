@@ -7,6 +7,7 @@ import { useDemoMode } from '../../../hooks/useDemoMode'
 import { Skeleton } from '../../ui/Skeleton'
 import { useModalState } from '../../../lib/modals'
 import { wrapAbbreviations } from '../../shared/TechnicalAcronym'
+import { getSeverityColors } from '../../../lib/cards/statusColors'
 
 export interface ClusterStats {
   total: number
@@ -178,10 +179,10 @@ function StatBlock({ blockId, stats, hasData, onClick, color, icon }: StatBlockP
       break
   }
 
-  // Value color - some blocks have colored values
-  const valueColor = ['healthy'].includes(blockId) ? 'text-green-400' :
-    ['unhealthy'].includes(blockId) ? 'text-red-400' :
-    ['unreachable'].includes(blockId) ? 'text-yellow-400' : 'text-foreground'
+  // Value color - use canonical status colors for semantic stat blocks
+  const valueColor = ['healthy'].includes(blockId) ? getSeverityColors('success').text :
+    ['unhealthy'].includes(blockId) ? getSeverityColors('error').text :
+    ['unreachable'].includes(blockId) ? getSeverityColors('warning').text : 'text-foreground'
 
   return (
     <div

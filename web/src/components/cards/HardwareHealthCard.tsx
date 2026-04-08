@@ -456,8 +456,8 @@ export function HardwareHealthCard() {
         <div className={cn(
           'p-2 rounded-lg border',
           criticalCount > 0
-            ? 'bg-red-500/20 border-red-500/30'
-            : 'bg-green-500/20 border-green-500/30'
+            ? 'bg-red-500/20 border-red-500/20'
+            : 'bg-green-500/20 border-green-500/20'
         )}>
           <div className="text-xl font-bold text-foreground">{criticalCount}</div>
           <div className={cn('text-2xs', criticalCount > 0 ? 'text-red-400' : 'text-green-400')}>
@@ -467,8 +467,8 @@ export function HardwareHealthCard() {
         <div className={cn(
           'p-2 rounded-lg border',
           warningCount > 0
-            ? 'bg-yellow-500/20 border-yellow-500/30'
-            : 'bg-green-500/20 border-green-500/30'
+            ? 'bg-yellow-500/20 border-yellow-500/20'
+            : 'bg-green-500/20 border-green-500/20'
         )}>
           <div className="text-xl font-bold text-foreground">{warningCount}</div>
           <div className={cn('text-2xs', warningCount > 0 ? 'text-yellow-400' : 'text-green-400')}>

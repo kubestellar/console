@@ -99,7 +99,7 @@ export function SlackNotificationSettings({
       {testResult && testResult.type === 'slack' && (
         <div
           className={`flex items-start gap-2 p-3 rounded-lg ${
-            testResult.success ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'
+            testResult.success ? 'bg-green-500/20 border border-green-500/20' : 'bg-red-500/20 border border-red-500/20'
           }`}
         >
           {testResult.success ? (
