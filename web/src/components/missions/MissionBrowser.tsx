@@ -805,6 +805,13 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
         setRawContent(raw)
         setUnstructuredContent(null)
 
+        // External repo files (e.g., Kubara Helm charts) are not missions —
+        // show as raw YAML/content instead of trying to parse as a mission
+        if (node.repoOwner) {
+          const format = node.name.endsWith('.yaml') || node.name.endsWith('.yml') ? 'yaml' as const : 'markdown' as const
+          setUnstructuredContent({ content: raw, format, preview: { detectedTitle: node.name, detectedSections: [], detectedCommands: [], detectedYamlBlocks: 1, detectedApiGroups: [], totalLines: raw.split('\n').length }, detectedProjects: [] })
+          setSelectedMission(null)
+        } else {
         try {
           const parseResult = parseFileContent(raw, node.name)
           if (parseResult.type === 'structured') {
@@ -829,6 +836,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           } catch {
             setSelectedMission(null)
           }
+        }
         }
       } catch {
         setRawContent(null)
