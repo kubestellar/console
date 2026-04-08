@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: ghcr.io/kubestellar/console
   pullPolicy: IfNotPresent
-  tag: ""  # Defaults to chart appVersion
+  tag: ""  # Defaults to chart appVersion ("latest"); overridden at release time
 
 imagePullSecrets: []
 nameOverride: ""
