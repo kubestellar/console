@@ -274,15 +274,15 @@ describe('startMission', () => {
     expect(result.current.missions[0].status).toBe('waiting_input')
   })
 
-  it('calls emitMissionCompleted when stream done:true is received', async () => {
+  it('calls emitMissionCompleted when result message is received', async () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
     const { requestId } = await startMissionWithConnection(result)
 
     act(() => {
       MockWebSocket.lastInstance?.simulateMessage({
         id: requestId,
-        type: 'stream',
-        payload: { content: '', done: true },
+        type: 'result',
+        payload: { content: 'Task completed.' },
       })
     })
 
@@ -2502,7 +2502,7 @@ describe('WS close fails pending running missions', () => {
     const mission = result.current.missions.find(m => m.id === missionId)
     expect(mission?.status).toBe('failed')
     const systemMsg = mission?.messages.find(m => m.role === 'system')
-    expect(systemMsg?.content).toContain('Local Agent Not Connected')
+    expect(systemMsg?.content).toContain('Agent Disconnected')
   })
 })
 
@@ -3796,7 +3796,7 @@ describe('status step transitions during mission execution', () => {
 // ── emitMissionCompleted on stream done vs result ───────────────────────────
 
 describe('analytics: emitMissionCompleted timing', () => {
-  it('emits completion analytics on stream done when mission is running', async () => {
+  it('emits completion analytics on result message when mission is running', async () => {
     vi.mocked(emitMissionCompleted).mockClear()
 
     const { result } = renderHook(() => useMissions(), { wrapper })
@@ -3805,8 +3805,8 @@ describe('analytics: emitMissionCompleted timing', () => {
     act(() => {
       MockWebSocket.lastInstance?.simulateMessage({
         id: requestId,
-        type: 'stream',
-        payload: { content: '', done: true },
+        type: 'result',
+        payload: { content: 'All done' },
       })
     })
 
