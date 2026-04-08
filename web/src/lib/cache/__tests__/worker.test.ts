@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 /**
  * Tests for the SQLite cache worker message handler logic.
@@ -1178,6 +1178,483 @@ describe('Cache Worker handlers', () => {
 
       processMessage(null, { id: 27, type: 'setPreference', key: 'k', value: 'v' }, postMessage)
       expect(postMessage.mock.calls[7][0].type).toBe('result')
+    })
+  })
+})
+
+// ============================================================================
+// Integration tests — actually import worker.ts with mocked SQLite WASM
+// ============================================================================
+//
+// These tests import the real worker module (which calls initDatabase() at the
+// top level and wires self.onmessage). We mock @sqlite.org/sqlite-wasm and
+// self.postMessage to observe behavior.
+// ============================================================================
+
+describe('worker.ts module integration', () => {
+  /** Captured postMessage calls */
+  let posted: Array<Record<string, unknown>> = []
+  let mockDbInstance: ReturnType<typeof createMockDb> | null = null
+
+  /** Controls OPFS constructor availability */
+  let integrationOpfsMode: 'SAHPool' | 'OpfsDb' | 'none' | 'throws' = 'SAHPool'
+  /** Controls whether sqlite init rejects */
+  let integrationInitFails = false
+  /** Controls whether WAL pragma throws */
+  let integrationWalFails = false
+
+  function setupIntegrationSqliteMock() {
+    vi.doMock('@sqlite.org/sqlite-wasm', () => ({
+      default: vi.fn().mockImplementation(async () => {
+        if (integrationInitFails) {
+          throw new Error('SQLite WASM init failed')
+        }
+
+        mockDbInstance = createMockDb()
+
+        const oo1: Record<string, unknown> = {}
+        if (integrationOpfsMode === 'SAHPool') {
+          oo1['OpfsSAHPoolDb'] = function MockSAHPool() { return mockDbInstance }
+        } else if (integrationOpfsMode === 'OpfsDb') {
+          oo1['OpfsDb'] = function MockOpfsDb() { return mockDbInstance }
+        } else if (integrationOpfsMode === 'throws') {
+          oo1['OpfsSAHPoolDb'] = function Throwing() { throw new Error('OPFS pool exhausted') }
+        }
+        // 'none' => no constructors at all
+
+        return { oo1 }
+      }),
+    }))
+  }
+
+  async function importWorkerFresh(): Promise<void> {
+    await import('../worker')
+    // Let the init promise chain settle
+    await new Promise(resolve => setTimeout(resolve, 50))
+  }
+
+  function getOnmessage(): (e: MessageEvent) => void {
+    return (self as unknown as { onmessage: (e: MessageEvent) => void }).onmessage
+  }
+
+  function sendMsg(msg: Record<string, unknown>) {
+    getOnmessage()(new MessageEvent('message', { data: msg }))
+  }
+
+  beforeEach(() => {
+    vi.resetModules()
+    posted = []
+    mockDbInstance = null
+    integrationOpfsMode = 'SAHPool'
+    integrationInitFails = false
+    integrationWalFails = false
+
+    // Stub self as a worker-like global with postMessage and onmessage
+    const selfStub: Record<string, unknown> = {
+      postMessage: vi.fn((...args: unknown[]) => {
+        posted.push(args[0] as Record<string, unknown>)
+      }),
+      onmessage: null,
+    }
+    vi.stubGlobal('self', selfStub)
+    // Also stub top-level postMessage for the respond/respondError helpers
+    vi.stubGlobal('postMessage', selfStub.postMessage)
+
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  describe('initDatabase via module import', () => {
+    it('posts ready when OpfsSAHPoolDb is available', async () => {
+      setupIntegrationSqliteMock()
+      await importWorkerFresh()
+
+      const ready = posted.find(m => m.type === 'ready')
+      expect(ready).toEqual({ id: -1, type: 'ready' })
+    })
+
+    it('posts ready when falling back to OpfsDb', async () => {
+      integrationOpfsMode = 'OpfsDb'
+      setupIntegrationSqliteMock()
+      await importWorkerFresh()
+
+      const ready = posted.find(m => m.type === 'ready')
+      expect(ready).toEqual({ id: -1, type: 'ready' })
+    })
+
+    it('posts init-error when no OPFS support', async () => {
+      integrationOpfsMode = 'none'
+      setupIntegrationSqliteMock()
+      await importWorkerFresh()
+
+      const err = posted.find(m => m.type === 'init-error')
+      expect(err).toBeDefined()
+      expect(err!.message).toContain('OPFS')
+    })
+
+    it('posts init-error when OPFS constructor throws', async () => {
+      integrationOpfsMode = 'throws'
+      setupIntegrationSqliteMock()
+      await importWorkerFresh()
+
+      const err = posted.find(m => m.type === 'init-error')
+      expect(err).toBeDefined()
+    })
+
+    it('posts init-error when sqlite3InitModule rejects', async () => {
+      integrationInitFails = true
+      setupIntegrationSqliteMock()
+      await importWorkerFresh()
+
+      const err = posted.find(m => m.type === 'init-error')
+      expect(err).toBeDefined()
+      expect(err!.message).toContain('SQLite WASM init failed')
+    })
+
+    it('succeeds even when WAL pragma fails', async () => {
+      // Override the mock db to throw on WAL
+      vi.doMock('@sqlite.org/sqlite-wasm', () => ({
+        default: vi.fn().mockImplementation(async () => {
+          const dbInst = createMockDb()
+          const origExec = dbInst.exec
+          dbInst.exec = vi.fn((sql: string, opts?: Record<string, unknown>) => {
+            if (typeof sql === 'string' && sql.includes('PRAGMA journal_mode=WAL')) {
+              throw new Error('WAL not supported')
+            }
+            return origExec(sql, opts as Parameters<typeof origExec>[1])
+          }) as typeof dbInst.exec
+          mockDbInstance = dbInst
+          return {
+            oo1: {
+              OpfsSAHPoolDb: function MockSAHPool() { return dbInst },
+            },
+          }
+        }),
+      }))
+      await importWorkerFresh()
+
+      const ready = posted.find(m => m.type === 'ready')
+      expect(ready).toEqual({ id: -1, type: 'ready' })
+    })
+  })
+
+  describe('self.onmessage — post-init message processing', () => {
+    beforeEach(async () => {
+      setupIntegrationSqliteMock()
+      await importWorkerFresh()
+      posted = [] // clear the 'ready' message
+    })
+
+    it('handles get for missing key', () => {
+      sendMsg({ id: 1, type: 'get', key: 'nope' })
+      expect(posted).toContainEqual({ id: 1, type: 'result', value: null })
+    })
+
+    it('handles set then get round-trip', () => {
+      sendMsg({
+        id: 2,
+        type: 'set',
+        key: 'roundtrip',
+        entry: { data: { items: [1] }, timestamp: 42, version: 3 },
+      })
+      expect(posted).toContainEqual({ id: 2, type: 'result', value: undefined })
+
+      // Mock the query rows for the get
+      mockDbInstance!.store.set('roundtrip', JSON.stringify({
+        data: JSON.stringify({ items: [1] }),
+        timestamp: 42,
+        version: 3,
+      }))
+
+      sendMsg({ id: 3, type: 'get', key: 'roundtrip' })
+      const getResp = posted.find(m => m.id === 3)
+      expect(getResp).toBeDefined()
+      expect(getResp!.type).toBe('result')
+    })
+
+    it('handles delete', () => {
+      sendMsg({ id: 4, type: 'delete', key: 'del' })
+      expect(posted).toContainEqual({ id: 4, type: 'result', value: undefined })
+    })
+
+    it('handles clear', () => {
+      sendMsg({ id: 5, type: 'clear' })
+      expect(posted).toContainEqual({ id: 5, type: 'result', value: undefined })
+    })
+
+    it('handles getStats', () => {
+      sendMsg({ id: 6, type: 'getStats' })
+      const resp = posted.find(m => m.id === 6)
+      expect(resp).toBeDefined()
+      expect(resp!.type).toBe('result')
+      const stats = resp!.value as { keys: string[]; count: number }
+      expect(stats.keys).toEqual([])
+      expect(stats.count).toBe(0)
+    })
+
+    it('handles getMeta for missing key', () => {
+      sendMsg({ id: 7, type: 'getMeta', key: 'nope' })
+      expect(posted).toContainEqual({ id: 7, type: 'result', value: null })
+    })
+
+    it('handles setMeta', () => {
+      sendMsg({
+        id: 8,
+        type: 'setMeta',
+        key: 'mk',
+        meta: { consecutiveFailures: 5, lastError: 'timeout' },
+      })
+      expect(posted).toContainEqual({ id: 8, type: 'result', value: undefined })
+    })
+
+    it('handles preloadAll', () => {
+      sendMsg({ id: 9, type: 'preloadAll' })
+      const resp = posted.find(m => m.id === 9)
+      expect(resp!.type).toBe('result')
+    })
+
+    it('handles migrate', () => {
+      sendMsg({
+        id: 10,
+        type: 'migrate',
+        data: {
+          cacheEntries: [{ key: 'c1', entry: { data: 'v', timestamp: 1, version: 1 } }],
+          metaEntries: [{ key: 'm1', meta: { consecutiveFailures: 0 } }],
+        },
+      })
+      expect(posted).toContainEqual({ id: 10, type: 'result', value: undefined })
+    })
+
+    it('handles seedCache', () => {
+      sendMsg({
+        id: 11,
+        type: 'seedCache',
+        entries: [{ key: 's1', entry: { data: 'seed', timestamp: 1, version: 1 } }],
+      })
+      expect(posted).toContainEqual({ id: 11, type: 'result', value: undefined })
+    })
+
+    it('handles getPreference for missing key', () => {
+      sendMsg({ id: 12, type: 'getPreference', key: 'missing' })
+      expect(posted).toContainEqual({ id: 12, type: 'result', value: null })
+    })
+
+    it('handles setPreference', () => {
+      sendMsg({ id: 13, type: 'setPreference', key: 'theme', value: 'dark' })
+      expect(posted).toContainEqual({ id: 13, type: 'result', value: undefined })
+    })
+
+    it('returns error for unknown message type', () => {
+      sendMsg({ id: 99, type: 'bogusType' })
+      const err = posted.find(m => m.id === 99)
+      expect(err).toBeDefined()
+      expect(err!.type).toBe('error')
+      expect(err!.message).toContain('Unknown message type')
+      expect(err!.message).toContain('bogusType')
+    })
+
+    it('returns error when handler throws', () => {
+      // Force exec to throw on the next call
+      mockDbInstance!.exec = vi.fn(() => { throw new Error('disk full') })
+      sendMsg({ id: 100, type: 'get', key: 'err' })
+      const err = posted.find(m => m.id === 100)
+      expect(err!.type).toBe('error')
+      expect(err!.message).toBe('disk full')
+    })
+
+    it('converts non-Error thrown values to string', () => {
+      mockDbInstance!.exec = vi.fn(() => { throw 42 })
+      sendMsg({ id: 101, type: 'clear' })
+      const err = posted.find(m => m.id === 101)
+      expect(err!.type).toBe('error')
+      expect(err!.message).toBe('42')
+    })
+  })
+
+  describe('self.onmessage — queuing before init', () => {
+    it('queues messages and drains after init completes', async () => {
+      let resolveInit: (() => void) | null = null
+      vi.doMock('@sqlite.org/sqlite-wasm', () => ({
+        default: vi.fn().mockImplementation(() => new Promise<Record<string, unknown>>(resolve => {
+          resolveInit = () => {
+            mockDbInstance = createMockDb()
+            resolve({
+              oo1: { OpfsSAHPoolDb: function M() { return mockDbInstance } },
+            })
+          }
+        })),
+      }))
+
+      // resetModules was already called in beforeEach; import the worker fresh
+      vi.resetModules()
+      await import('../worker')
+
+      // Wait a tick for the dynamic import inside worker to fire
+      await new Promise(resolve => setTimeout(resolve, 10))
+
+      // Send messages during init (before resolution)
+      sendMsg({ id: 1, type: 'getStats' })
+      sendMsg({ id: 2, type: 'get', key: 'test' })
+
+      // No results yet
+      const resultsBefore = posted.filter(m => m.type === 'result')
+      expect(resultsBefore).toHaveLength(0)
+
+      // Resolve init
+      expect(resolveInit).not.toBeNull()
+      resolveInit!()
+      await new Promise(resolve => setTimeout(resolve, 50))
+
+      // Should have ready + 2 results from drained queue
+      const ready = posted.find(m => m.type === 'ready')
+      expect(ready).toBeDefined()
+
+      const results = posted.filter(m => m.type === 'result')
+      expect(results.length).toBe(2)
+    })
+
+    it('rejects queued messages when init fails', async () => {
+      integrationInitFails = true
+      vi.doMock('@sqlite.org/sqlite-wasm', () => ({
+        default: vi.fn().mockImplementation(async () => {
+          // Yield to let messages queue, then fail
+          await new Promise(resolve => setTimeout(resolve, 10))
+          throw new Error('init boom')
+        }),
+      }))
+
+      await import('../worker')
+
+      // Queue a message during init
+      sendMsg({ id: 50, type: 'get', key: 'early' })
+
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // The queued message should have been rejected
+      const rejected = posted.find(
+        m => m.type === 'error' && m.id === 50 && (m.message as string).includes('Worker init failed'),
+      )
+      expect(rejected).toBeDefined()
+
+      // init-error should have been sent
+      const initErr = posted.find(m => m.type === 'init-error')
+      expect(initErr).toBeDefined()
+    })
+
+    it('drops messages when MAX_PENDING_MESSAGES is exceeded', async () => {
+      const MAX_MESSAGES = 1000
+
+      // Never-resolving init so queue stays bounded
+      vi.doMock('@sqlite.org/sqlite-wasm', () => ({
+        default: vi.fn().mockImplementation(() => new Promise(() => { /* never resolves */ })),
+      }))
+
+      await import('../worker')
+
+      // Fill the queue
+      for (let i = 0; i < MAX_MESSAGES; i++) {
+        sendMsg({ id: i, type: 'getStats' })
+      }
+
+      // No errors yet (all queued)
+      expect(posted.filter(m => m.type === 'error')).toHaveLength(0)
+
+      // Overflow message
+      sendMsg({ id: MAX_MESSAGES, type: 'get', key: 'overflow' })
+
+      const overflow = posted.find(
+        m => m.type === 'error' && m.id === MAX_MESSAGES,
+      )
+      expect(overflow).toBeDefined()
+      expect(overflow!.message).toContain('queue is full')
+    })
+
+    it('processes messages directly once initComplete is set after failure', async () => {
+      integrationInitFails = true
+      setupIntegrationSqliteMock()
+      await importWorkerFresh()
+      posted = []
+
+      // After init failure, initComplete = true but db = null
+      // Messages should be processed directly (not queued)
+      sendMsg({ id: 200, type: 'get', key: 'test' })
+      expect(posted).toContainEqual({ id: 200, type: 'result', value: null })
+
+      sendMsg({ id: 201, type: 'getStats' })
+      expect(posted).toContainEqual({
+        id: 201,
+        type: 'result',
+        value: { keys: [], count: 0 },
+      })
+    })
+  })
+
+  describe('migrate / seedCache rollback via real module', () => {
+    beforeEach(async () => {
+      setupIntegrationSqliteMock()
+      await importWorkerFresh()
+      posted = []
+    })
+
+    it('migrate responds with error and rolls back on insert failure', () => {
+      // Make the db throw on INSERT INTO cache_data
+      const origExec = mockDbInstance!.exec
+      const mockExec = vi.fn((sql: string, opts?: Record<string, unknown>) => {
+        if (typeof sql === 'string' && sql.includes('INSERT OR REPLACE INTO cache_data')) {
+          throw new Error('disk full')
+        }
+        return origExec(sql, opts as Parameters<typeof origExec>[1])
+      })
+      mockDbInstance!.exec = mockExec
+
+      sendMsg({
+        id: 300,
+        type: 'migrate',
+        data: {
+          cacheEntries: [{ key: 'k', entry: { data: 1, timestamp: 1, version: 1 } }],
+          metaEntries: [],
+        },
+      })
+
+      const err = posted.find(m => m.id === 300)
+      expect(err!.type).toBe('error')
+      expect(err!.message).toBe('disk full')
+
+      // Verify ROLLBACK was called
+      const rollbackCall = mockExec.mock.calls.find(
+        (c: unknown[]) => c[0] === 'ROLLBACK',
+      )
+      expect(rollbackCall).toBeDefined()
+    })
+
+    it('seedCache responds with error and rolls back on insert failure', () => {
+      const origExec2 = mockDbInstance!.exec
+      const mockExec2 = vi.fn((sql: string, opts?: Record<string, unknown>) => {
+        if (typeof sql === 'string' && sql.includes('INSERT OR REPLACE INTO cache_data')) {
+          throw new Error('io error')
+        }
+        return origExec2(sql, opts as Parameters<typeof origExec2>[1])
+      })
+      mockDbInstance!.exec = mockExec2
+
+      sendMsg({
+        id: 301,
+        type: 'seedCache',
+        entries: [{ key: 'k', entry: { data: 1, timestamp: 1, version: 1 } }],
+      })
+
+      const err = posted.find(m => m.id === 301)
+      expect(err!.type).toBe('error')
+      expect(err!.message).toBe('io error')
+
+      const rollbackCall = mockExec2.mock.calls.find(
+        (c: unknown[]) => c[0] === 'ROLLBACK',
+      )
+      expect(rollbackCall).toBeDefined()
     })
   })
 })
