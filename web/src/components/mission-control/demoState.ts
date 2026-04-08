@@ -103,7 +103,7 @@ const DEMO_ASSIGNMENTS: ClusterAssignment[] = [
     clusterName: 'openshift-prod',
     clusterContext: 'openshift-prod',
     provider: 'openshift',
-    projectNames: ['falco', 'kyverno'],
+    projectNames: ['falco', 'kyverno', 'grafana'],
     warnings: [],
     readiness: {
       cpuHeadroomPercent: 78,

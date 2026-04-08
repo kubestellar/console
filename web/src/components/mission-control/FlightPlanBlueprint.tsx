@@ -183,18 +183,29 @@ function computeLayout(state: MissionControlState): BlueprintLayout {
     projectPosByName.set(pos.projectName, list)
   }
 
-  // Find best position pair for two projects (prefer same-cluster)
-  // Find all same-cluster pairs for two projects, plus one cross-cluster fallback
+  // Find all position pairs for two projects — both intra-cluster (same cluster)
+  // and cross-cluster (different clusters) so edges are visible across the fleet
   function findEdgePairs(a: string, b: string): { from: ProjectPosition; to: ProjectPosition; cross: boolean }[] {
     const posA = projectPosByName.get(a)
     const posB = projectPosByName.get(b)
     if (!posA?.length || !posB?.length) return []
     const pairs: { from: ProjectPosition; to: ProjectPosition; cross: boolean }[] = []
+    // Intra-cluster pairs (same cluster)
     for (const fa of posA) {
       for (const fb of posB) {
         if (fa.clusterName === fb.clusterName) pairs.push({ from: fa, to: fb, cross: false })
       }
     }
+    // Cross-cluster pairs — for each instance of project A that has no intra-cluster
+    // partner, connect to the nearest instance of project B on another cluster
+    for (const fa of posA) {
+      const hasIntraCluster = pairs.some(p => !p.cross && p.from.clusterName === fa.clusterName)
+      if (!hasIntraCluster) {
+        const crossTarget = posB.find(fb => fb.clusterName !== fa.clusterName)
+        if (crossTarget) pairs.push({ from: fa, to: crossTarget, cross: true })
+      }
+    }
+    // If no pairs at all, fall back to one cross-cluster edge
     if (pairs.length === 0) pairs.push({ from: posA[0], to: posB[0], cross: true })
     return pairs
   }
