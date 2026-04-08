@@ -8,6 +8,7 @@ import (
 	"net/http"
 	neturl "net/url"
 	"os"
+	"bytes"
 	"strings"
 	"time"
 )
@@ -86,8 +87,7 @@ func (c *KagentClient) ListAgents() ([]AgentInfo, error) {
 
 	var agents []AgentInfo
 	if err := json.NewDecoder(resp.Body).Decode(&agents); err != nil {
-		// The controller may return a wrapper object — try unwrapping
-		return []AgentInfo{}, nil
+		return nil, fmt.Errorf("failed to decode agent list: %w", err)
 	}
 	return agents, nil
 }
@@ -152,7 +152,7 @@ func (c *KagentClient) Invoke(ctx context.Context, namespace, agentName, message
 
 	url := fmt.Sprintf("%s/api/a2a/%s/%s",
 		c.baseURL, neturl.PathEscape(namespace), neturl.PathEscape(agentName))
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(string(payload)))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}

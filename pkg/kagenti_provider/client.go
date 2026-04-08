@@ -86,8 +86,7 @@ func (c *KagentiClient) ListAgents() ([]AgentInfo, error) {
 
 	var agents []AgentInfo
 	if err := json.NewDecoder(resp.Body).Decode(&agents); err != nil {
-		// The controller may return a wrapper object — try unwrapping
-		return []AgentInfo{}, nil
+		return nil, fmt.Errorf("failed to decode agent list: %w", err)
 	}
 	return agents, nil
 }
