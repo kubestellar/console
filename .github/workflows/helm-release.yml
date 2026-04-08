@@ -14,6 +14,7 @@ jobs:
     permissions:
       contents: write
       pages: write
+      packages: write
       id-token: write
     
     steps:
@@ -84,15 +85,29 @@ jobs:
           git commit -m "Release Helm chart ${{ steps.version.outputs.version }}" || echo "No changes"
           git push origin gh-pages --force
 
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Push chart to OCI registry
+        run: |
+          # Push to ghcr.io/kubestellar/charts so users can:
+          #   helm pull oci://ghcr.io/kubestellar/charts/kubestellar-console
+          helm push .helm-releases/*.tgz oci://ghcr.io/kubestellar/charts
+
       - name: Summary
         run: |
           echo "## Helm Chart Released" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Version**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Installation" >> $GITHUB_STEP_SUMMARY
+          echo "### Installation (Helm repo)" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "helm repo add kubestellar-console https://kubestellar.github.io/console" >> $GITHUB_STEP_SUMMARY
           echo "helm repo update" >> $GITHUB_STEP_SUMMARY
           echo "helm install kc kubestellar-console/kubestellar-console" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Installation (OCI)" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "helm install kc oci://ghcr.io/kubestellar/charts/kubestellar-console" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

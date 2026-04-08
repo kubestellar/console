@@ -92,12 +92,20 @@ brew install kc-agent
 
 ### Helm Charts
 
-Helm charts are published to GitHub Pages and can be added as a repository:
+Helm charts are published to both GitHub Pages and the GHCR OCI registry on every release.
+
+**Option 1: Helm repository (GitHub Pages)**
 
 ```bash
-helm repo add kubestellar https://kubestellar.github.io/console
+helm repo add kubestellar-console https://kubestellar.github.io/console
 helm repo update
-helm install kubestellar-console kubestellar/kubestellar-console
+helm install kc kubestellar-console/kubestellar-console
+```
+
+**Option 2: OCI registry (GHCR)**
+
+```bash
+helm install kc oci://ghcr.io/kubestellar/charts/kubestellar-console
 ```
 
 ## Workflow Configuration
