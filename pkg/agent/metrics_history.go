@@ -246,7 +246,7 @@ func (mh *MetricsHistory) captureSnapshot() error {
 	trimmed := make([]MetricsSnapshot, 0, len(mh.snapshots))
 	for _, s := range mh.snapshots {
 		ts, err := time.Parse(time.RFC3339, s.Timestamp)
-		if err != nil || ts.After(cutoff) {
+		if err == nil && ts.After(cutoff) {
 			trimmed = append(trimmed, s)
 		}
 	}
@@ -313,7 +313,7 @@ func (mh *MetricsHistory) loadFromDisk() {
 	filtered := make([]MetricsSnapshot, 0)
 	for _, s := range snapshots {
 		ts, err := time.Parse(time.RFC3339, s.Timestamp)
-		if err != nil || ts.After(cutoff) {
+		if err == nil && ts.After(cutoff) {
 			filtered = append(filtered, s)
 		}
 	}
