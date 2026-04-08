@@ -274,9 +274,6 @@ export function ClusterZone({
         <g>
           <StatBlock x={x + width - 120} y={y + height - 35} label="PODS" value={undefined} max={podCount} unit="" color={SVG_COLORS.network} noAlert />
           <StatBlock x={x + width - 60} y={y + height - 35} label="NODES" value={undefined} max={nodeCount} unit="" color={SVG_COLORS.network} noAlert />
-          <text x={x + width / 2} y={y + height - 20} textAnchor="middle" fill={SVG_COLORS.network} fontSize={6.5} fontFamily="system-ui, sans-serif" opacity={0.7}>
-            Network policies · Service mesh ready
-          </text>
         </g>
       )}
 
@@ -285,9 +282,6 @@ export function ClusterZone({
         <g>
           <StatBlock x={x + width - 120} y={y + height - 35} label="NODES" value={undefined} max={nodeCount} unit="" color={SVG_COLORS.muted} noAlert />
           <StatBlock x={x + width - 60} y={y + height - 35} label="PODS" value={undefined} max={podCount} unit="" color={SVG_COLORS.muted} noAlert />
-          <text x={x + width / 2} y={y + height - 20} textAnchor="middle" fill={SVG_COLORS.muted} fontSize={6.5} fontFamily="system-ui, sans-serif" opacity={0.7}>
-            RBAC · Pod Security Standards · Secrets encrypted
-          </text>
         </g>
       )}
 
