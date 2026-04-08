@@ -7,26 +7,31 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { CNCF_CATEGORY_GRADIENTS } from '../../../lib/cncf-constants'
 
-/** Map project keys to GitHub org for avatar URLs */
-const PROJECT_TO_GITHUB_ORG: Record<string, string> = {
-  envoy: 'envoyproxy', argo: 'argoproj', argocd: 'argoproj',
-  'argo-cd': 'argoproj', harbor: 'goharbor', jaeger: 'jaegertracing',
-  fluentd: 'fluent', 'fluent-bit': 'fluent', vitess: 'vitessio',
-  thanos: 'thanos-io', cortex: 'cortexproject', falco: 'falcosecurity',
-  keda: 'kedacore', flux: 'fluxcd', trivy: 'aquasecurity',
-  'cert-manager': 'cert-manager', prometheus: 'prometheus',
-  grafana: 'grafana', istio: 'istio', linkerd: 'linkerd',
-  helm: 'helm', cilium: 'cilium', kyverno: 'kyverno',
-  crossplane: 'crossplane', dapr: 'dapr', knative: 'knative',
-  etcd: 'etcd-io', coredns: 'coredns', rook: 'rook',
-  longhorn: 'longhorn', velero: 'vmware-tanzu',
-  'external-secrets': 'external-secrets', kubevirt: 'kubevirt',
+/**
+ * Direct avatar URLs — uses avatars.githubusercontent.com to avoid the
+ * github.com/{org}.png 302 redirect which breaks <img> inside foreignObject.
+ */
+const PROJECT_AVATAR_IDS: Record<string, number> = {
+  prometheus: 3380462, grafana: 7195757, falco: 42391047, falcosecurity: 42391047,
+  kyverno: 68448710, 'cert-manager': 39950598, keda: 49917779, kedacore: 49917779,
+  flux: 52158677, fluxcd: 52158677, istio: 23534644, linkerd: 25301026,
+  helm: 15859888, cilium: 21054566, envoy: 30125649, envoyproxy: 30125649,
+  argocd: 30269780, 'argo-cd': 30269780, argo: 30269780, argoproj: 30269780,
+  trivy: 12783832, aquasecurity: 12783832, kubevirt: 18700703,
+  crossplane: 45158470, dapr: 51932459, knative: 35583233,
+  etcd: 41972792, 'etcd-io': 41972792, coredns: 21110084,
+  rook: 22860722, longhorn: 51335366,
 }
+
+/** Icon size for avatar display */
+const AVATAR_SIZE = 40
 
 function getAvatarUrl(name: string): string {
   const key = name.toLowerCase()
-  const org = PROJECT_TO_GITHUB_ORG[key] || key
-  return `https://github.com/${org}.png?size=40`
+  const id = PROJECT_AVATAR_IDS[key]
+  if (id) return `https://avatars.githubusercontent.com/u/${id}?s=${AVATAR_SIZE}&v=4`
+  // Fallback: try github.com redirect (works for orgs not in the map)
+  return `https://avatars.githubusercontent.com/${key}?s=${AVATAR_SIZE}&v=4`
 }
 
 type NodeStatus = 'pending' | 'running' | 'completed' | 'failed'
