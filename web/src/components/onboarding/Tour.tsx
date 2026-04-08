@@ -281,14 +281,17 @@ export function TourOverlay() {
       }
     }, 100))
 
-    // Reposition on window resize
-    const handleResize = () => positionTooltip()
-    window.addEventListener('resize', handleResize)
+    // Reposition on window resize and scroll so the tooltip stays
+    // anchored to its target element (#5411).
+    const handleReposition = () => positionTooltip()
+    window.addEventListener('resize', handleReposition)
+    window.addEventListener('scroll', handleReposition, true) // capture phase catches nested scrollable containers
 
     return () => {
       isCancelled = true
       timeoutIds.forEach(id => clearTimeout(id))
-      window.removeEventListener('resize', handleResize)
+      window.removeEventListener('resize', handleReposition)
+      window.removeEventListener('scroll', handleReposition, true)
     }
   }, [isActive, currentStep, currentStepIndex])
 

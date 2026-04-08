@@ -4,6 +4,8 @@ import (
 	"log/slog"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/notifications"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -34,9 +36,26 @@ type SendAlertNotificationRequest struct {
 	Channels []notifications.NotificationChannel `json:"channels"`
 }
 
+// requireAdmin checks that the caller has the admin role.
+// Returns a 403 Forbidden response if not, or nil on success.
+func (h *NotificationHandler) requireAdmin(c *fiber.Ctx) error {
+	currentUserID := middleware.GetUserID(c)
+	currentUser, err := h.store.GetUser(currentUserID)
+	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
+		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	}
+	return nil
+}
+
 // TestNotification tests a notification channel configuration
 // POST /api/notifications/test
 func (h *NotificationHandler) TestNotification(c *fiber.Ctx) error {
+	// Only admins may trigger test notifications — they open outbound
+	// connections to Slack/SMTP/PagerDuty/OpsGenie (#5410).
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
+
 	var req TestNotificationRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -68,6 +87,12 @@ func (h *NotificationHandler) TestNotification(c *fiber.Ctx) error {
 // SendAlertNotification sends an alert notification to configured channels
 // POST /api/notifications/send
 func (h *NotificationHandler) SendAlertNotification(c *fiber.Ctx) error {
+	// Only admins may send real alert notifications — they trigger outbound
+	// messages to Slack/email/PagerDuty channels (#5413).
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
+
 	var req SendAlertNotificationRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
