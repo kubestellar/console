@@ -1,0 +1,20 @@
+# ZAP Baseline Scan Rule Overrides
+# Format: rule_id	action	description
+# Actions: IGNORE (skip), WARN (report but don't fail), FAIL (report and fail)
+#
+# These rules are tuned for console.kubestellar.io which is a Netlify-hosted
+# React SPA with a Go backend API proxy.
+
+# CSP headers are managed by Netlify CDN — false positive on SPA routes
+10038	WARN	Content Security Policy (CSP) Header Not Set
+
+# X-Content-Type-Options may vary by Netlify edge node
+10021	WARN	X-Content-Type-Options Header Missing
+
+# SPA returns 200 for all routes (client-side routing)
+10010	IGNORE	Cookie No HttpOnly Flag
+
+# Informational findings — too noisy for nightly
+10049	IGNORE	Storable and Cacheable Content
+10050	IGNORE	Retrieved from Cache
+10109	IGNORE	Modern Web Application

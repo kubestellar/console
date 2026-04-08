@@ -1,0 +1,372 @@
+name: Nightly DAST Security Scan
+# Dynamic Application Security Testing (DAST) against console.kubestellar.io.
+# Runs OWASP ZAP baseline scan (passive, safe for production) and Nuclei
+# template-based vulnerability scanning. Creates GitHub issues for findings.
+#
+# Tools:
+#   1. OWASP ZAP - baseline scan (XSS, SQLi, CSRF, header issues, etc.)
+#   2. Nuclei    - known CVE and misconfiguration templates
+
+on:
+  schedule:
+    - cron: '0 7 * * *' # 7:00 UTC daily (after CodeQL at 5:30, test suite at 6:00)
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Target URL to scan'
+        required: false
+        default: 'https://console.kubestellar.io'
+        type: string
+      skip_issue_creation:
+        description: 'Skip creating issues for findings'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  TARGET_URL: ${{ inputs.target_url || 'https://console.kubestellar.io' }}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  zap-baseline:
+    if: github.repository == 'kubestellar/console'
+    name: OWASP ZAP Baseline Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: ${{ env.TARGET_URL }}
+          rules_file_name: '.github/zap-rules.tsv'
+          cmd_options: '-a -j'
+          allow_issue_writing: false
+        continue-on-error: true
+
+      - name: Upload ZAP Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-baseline-report
+          path: report_html.html
+          retention-days: 30
+
+      - name: Parse ZAP Results
+        if: always()
+        id: zap-results
+        run: |
+          # ZAP baseline outputs a summary to stdout; check for alerts
+          ALERT_COUNT=0
+          HIGH_COUNT=0
+          MEDIUM_COUNT=0
+          LOW_COUNT=0
+
+          if [ -f report_json.json ]; then
+            ALERT_COUNT=$(jq '[.site[].alerts[]] | length' report_json.json 2>/dev/null || echo 0)
+            HIGH_COUNT=$(jq '[.site[].alerts[] | select(.riskcode == "3")] | length' report_json.json 2>/dev/null || echo 0)
+            MEDIUM_COUNT=$(jq '[.site[].alerts[] | select(.riskcode == "2")] | length' report_json.json 2>/dev/null || echo 0)
+            LOW_COUNT=$(jq '[.site[].alerts[] | select(.riskcode == "1")] | length' report_json.json 2>/dev/null || echo 0)
+          fi
+
+          echo "alert_count=$ALERT_COUNT" >> "$GITHUB_OUTPUT"
+          echo "high_count=$HIGH_COUNT" >> "$GITHUB_OUTPUT"
+          echo "medium_count=$MEDIUM_COUNT" >> "$GITHUB_OUTPUT"
+          echo "low_count=$LOW_COUNT" >> "$GITHUB_OUTPUT"
+
+          HAS_FINDINGS="false"
+          if [ "$HIGH_COUNT" -gt 0 ] || [ "$MEDIUM_COUNT" -gt 0 ]; then
+            HAS_FINDINGS="true"
+          fi
+          echo "has_findings=$HAS_FINDINGS" >> "$GITHUB_OUTPUT"
+
+      - name: Generate Alert Summary
+        if: always() && steps.zap-results.outputs.has_findings == 'true'
+        id: zap-summary
+        run: |
+          SUMMARY=""
+          if [ -f report_json.json ]; then
+            SUMMARY=$(jq -r '
+              [.site[].alerts[]
+               | select(.riskcode == "2" or .riskcode == "3")
+               | "- **\(.riskdesc)**: \(.name) (\(.count) instance(s))"]
+              | join("\n")
+            ' report_json.json 2>/dev/null || echo "Could not parse alerts")
+          fi
+          # Write to file to preserve newlines
+          echo "$SUMMARY" > /tmp/zap-summary.txt
+
+      - name: Create or Close ZAP Issue
+        if: always() && inputs.skip_issue_creation != true
+        uses: actions/github-script@v7
+        env:
+          HAS_FINDINGS: ${{ steps.zap-results.outputs.has_findings }}
+          HIGH_COUNT: ${{ steps.zap-results.outputs.high_count }}
+          MEDIUM_COUNT: ${{ steps.zap-results.outputs.medium_count }}
+          LOW_COUNT: ${{ steps.zap-results.outputs.low_count }}
+          ALERT_COUNT: ${{ steps.zap-results.outputs.alert_count }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const tag = '[nightly:dast-zap]';
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'nightly-dast,security',
+              per_page: 100,
+            });
+            const existing = issues.find(i => i.title.includes(tag));
+
+            if (process.env.HAS_FINDINGS === 'true') {
+              const fs = require('fs');
+              let summary = '';
+              try {
+                summary = fs.readFileSync('/tmp/zap-summary.txt', 'utf8');
+              } catch { summary = 'See workflow artifacts for details.'; }
+
+              const body = [
+                `## OWASP ZAP Baseline Scan — Findings`,
+                '',
+                `**Target:** \`${process.env.TARGET_URL}\``,
+                `**Date:** ${new Date().toISOString().slice(0, 10)}`,
+                `**Run:** [${context.runId}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+                '',
+                `| Severity | Count |`,
+                `|----------|-------|`,
+                `| 🔴 High | ${process.env.HIGH_COUNT} |`,
+                `| 🟠 Medium | ${process.env.MEDIUM_COUNT} |`,
+                `| 🟡 Low | ${process.env.LOW_COUNT} |`,
+                `| **Total** | **${process.env.ALERT_COUNT}** |`,
+                '',
+                `### Medium/High Findings`,
+                '',
+                summary,
+                '',
+                `### Reproduce Locally`,
+                '```bash',
+                'docker run -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \\',
+                `  -t ${process.env.TARGET_URL} -r report.html`,
+                '```',
+                '',
+                `> Auto-generated by nightly DAST pipeline. This issue will auto-close when findings are resolved.`,
+              ].join('\n');
+
+              if (existing) {
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  body,
+                });
+                console.log(`Updated existing issue #${existing.number}`);
+              } else {
+                const labels = ['nightly-dast', 'security', 'bug'];
+                // Ensure labels exist
+                for (const label of labels) {
+                  try {
+                    await github.rest.issues.getLabel({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      name: label,
+                    });
+                  } catch {
+                    await github.rest.issues.createLabel({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      name: label,
+                      color: label === 'security' ? 'e11d48' : label === 'nightly-dast' ? '7c3aed' : 'd73a4a',
+                    });
+                  }
+                }
+                const { data: issue } = await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: `${tag} Security findings on console.kubestellar.io`,
+                  body,
+                  labels,
+                });
+                console.log(`Created issue #${issue.number}`);
+              }
+            } else if (existing) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                state: 'closed',
+                state_reason: 'completed',
+              });
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: `✅ ZAP baseline scan passed with no medium/high findings on ${new Date().toISOString().slice(0, 10)}. Auto-closing.`,
+              });
+              console.log(`Closed resolved issue #${existing.number}`);
+            }
+
+  nuclei-scan:
+    if: github.repository == 'kubestellar/console'
+    name: Nuclei Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Nuclei Scan
+        uses: projectdiscovery/nuclei-action@v2
+        with:
+          target: ${{ env.TARGET_URL }}
+          templates: 'cves/,vulnerabilities/,misconfiguration/,exposures/'
+          severity: 'medium,high,critical'
+          output: nuclei-results.json
+          json: true
+        continue-on-error: true
+
+      - name: Upload Nuclei Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuclei-report
+          path: nuclei-results.json
+          retention-days: 30
+
+      - name: Parse Nuclei Results
+        if: always()
+        id: nuclei-results
+        run: |
+          FINDING_COUNT=0
+          CRITICAL_COUNT=0
+          HIGH_COUNT=0
+          MEDIUM_COUNT=0
+
+          if [ -f nuclei-results.json ] && [ -s nuclei-results.json ]; then
+            FINDING_COUNT=$(wc -l < nuclei-results.json | tr -d ' ')
+            CRITICAL_COUNT=$(grep -c '"severity":"critical"' nuclei-results.json 2>/dev/null || echo 0)
+            HIGH_COUNT=$(grep -c '"severity":"high"' nuclei-results.json 2>/dev/null || echo 0)
+            MEDIUM_COUNT=$(grep -c '"severity":"medium"' nuclei-results.json 2>/dev/null || echo 0)
+          fi
+
+          echo "finding_count=$FINDING_COUNT" >> "$GITHUB_OUTPUT"
+          echo "critical_count=$CRITICAL_COUNT" >> "$GITHUB_OUTPUT"
+          echo "high_count=$HIGH_COUNT" >> "$GITHUB_OUTPUT"
+          echo "medium_count=$MEDIUM_COUNT" >> "$GITHUB_OUTPUT"
+
+          HAS_FINDINGS="false"
+          if [ "$FINDING_COUNT" -gt 0 ]; then
+            HAS_FINDINGS="true"
+          fi
+          echo "has_findings=$HAS_FINDINGS" >> "$GITHUB_OUTPUT"
+
+      - name: Generate Nuclei Summary
+        if: always() && steps.nuclei-results.outputs.has_findings == 'true'
+        run: |
+          if [ -f nuclei-results.json ] && [ -s nuclei-results.json ]; then
+            jq -r '"- **[\(.info.severity)]** \(.info.name) — \(.\"matched-at\" // .host)"' nuclei-results.json > /tmp/nuclei-summary.txt 2>/dev/null || echo "Could not parse results" > /tmp/nuclei-summary.txt
+          fi
+
+      - name: Create or Close Nuclei Issue
+        if: always() && inputs.skip_issue_creation != true
+        uses: actions/github-script@v7
+        env:
+          HAS_FINDINGS: ${{ steps.nuclei-results.outputs.has_findings }}
+          FINDING_COUNT: ${{ steps.nuclei-results.outputs.finding_count }}
+          CRITICAL_COUNT: ${{ steps.nuclei-results.outputs.critical_count }}
+          HIGH_COUNT: ${{ steps.nuclei-results.outputs.high_count }}
+          MEDIUM_COUNT: ${{ steps.nuclei-results.outputs.medium_count }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const tag = '[nightly:dast-nuclei]';
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'nightly-dast,security',
+              per_page: 100,
+            });
+            const existing = issues.find(i => i.title.includes(tag));
+
+            if (process.env.HAS_FINDINGS === 'true') {
+              const fs = require('fs');
+              let summary = '';
+              try {
+                summary = fs.readFileSync('/tmp/nuclei-summary.txt', 'utf8');
+              } catch { summary = 'See workflow artifacts for details.'; }
+
+              const body = [
+                `## Nuclei Vulnerability Scan — Findings`,
+                '',
+                `**Target:** \`${process.env.TARGET_URL}\``,
+                `**Date:** ${new Date().toISOString().slice(0, 10)}`,
+                `**Run:** [${context.runId}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+                '',
+                `| Severity | Count |`,
+                `|----------|-------|`,
+                `| 🔴 Critical | ${process.env.CRITICAL_COUNT} |`,
+                `| 🟠 High | ${process.env.HIGH_COUNT} |`,
+                `| 🟡 Medium | ${process.env.MEDIUM_COUNT} |`,
+                `| **Total** | **${process.env.FINDING_COUNT}** |`,
+                '',
+                `### Findings`,
+                '',
+                summary,
+                '',
+                `### Reproduce Locally`,
+                '```bash',
+                `nuclei -u ${process.env.TARGET_URL} -severity medium,high,critical -json`,
+                '```',
+                '',
+                `> Auto-generated by nightly DAST pipeline. This issue will auto-close when findings are resolved.`,
+              ].join('\n');
+
+              if (existing) {
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  body,
+                });
+              } else {
+                const labels = ['nightly-dast', 'security', 'bug'];
+                for (const label of labels) {
+                  try {
+                    await github.rest.issues.getLabel({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      name: label,
+                    });
+                  } catch {
+                    await github.rest.issues.createLabel({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      name: label,
+                      color: label === 'security' ? 'e11d48' : label === 'nightly-dast' ? '7c3aed' : 'd73a4a',
+                    });
+                  }
+                }
+                await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: `${tag} Vulnerability findings on console.kubestellar.io`,
+                  body,
+                  labels,
+                });
+              }
+            } else if (existing) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                state: 'closed',
+                state_reason: 'completed',
+              });
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: `✅ Nuclei scan passed with no medium+ findings on ${new Date().toISOString().slice(0, 10)}. Auto-closing.`,
+              });
+            }
