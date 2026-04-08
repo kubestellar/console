@@ -7,14 +7,15 @@ on:
     branches:
       - 'copilot/**'
 
-permissions:
-  contents: read
-  pull-requests: write
-  issues: write
-  statuses: write
+permissions: read-all
 
 jobs:
   build-lint:
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      statuses: write
     if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
 

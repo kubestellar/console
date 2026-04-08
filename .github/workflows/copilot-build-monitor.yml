@@ -4,14 +4,15 @@ on:
   check_run:
     types: [completed]
 
-permissions:
-  contents: read
-  pull-requests: write
-  issues: write
-  statuses: write
+permissions: read-all
 
 jobs:
   handle-build-failure:
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      statuses: write
     if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
     steps:

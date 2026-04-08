@@ -10,11 +10,7 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
-permissions:
-  security-events: write
-  contents: read
-  actions: read
-  packages: read
+permissions: read-all
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,6 +19,11 @@ concurrency:
 jobs:
   analyze-go:
     name: Analyze Go
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+      packages: read
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -52,6 +53,11 @@ jobs:
 
   analyze-javascript:
     name: Analyze JavaScript/TypeScript
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+      packages: read
     runs-on: ubuntu-latest
     timeout-minutes: 30
 

@@ -11,14 +11,15 @@ on:
         required: false
         type: string
 
-permissions:
-  contents: read
-  pull-requests: write
-  issues: write
-  statuses: write
+permissions: read-all
 
 jobs:
   monitor-copilot-prs:
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      statuses: write
     if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
     steps:

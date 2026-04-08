@@ -12,13 +12,14 @@ on:
   pull_request_target:
     types: [opened]
 
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
+permissions: read-all
 
 jobs:
   ai-fix:
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     if: false # Copilot disabled — issues handled by Claude Code scanner
     uses: kubestellar/infra/.github/workflows/reusable-ai-fix.yml@main
     with:

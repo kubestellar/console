@@ -21,10 +21,7 @@ on:
         default: 'all'
         type: string
 
-permissions:
-  contents: write
-  issues: write
-  pull-requests: read
+permissions: read-all
 
 concurrency:
   group: auto-qa-tuner
@@ -41,6 +38,10 @@ jobs:
   # Job A: Daily Feedback — track copilot PR acceptance per category
   # ============================================================
   daily-feedback:
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: read
     if: >
       github.event.schedule == '0 3 * * *' ||
       (github.event_name == 'workflow_dispatch' &&
@@ -252,6 +253,10 @@ jobs:
   # Job B: Weekly Analysis — broader patterns, create report issue
   # ============================================================
   weekly-analysis:
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: read
     needs: daily-feedback
     if: >
       !failure() && !cancelled() &&
@@ -499,6 +504,10 @@ jobs:
   # Job C: CNCF Intelligence — scan landscape repos for patterns
   # ============================================================
   cncf-intelligence:
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: read
     needs: weekly-analysis
     if: >
       !failure() && !cancelled() &&
@@ -789,6 +798,10 @@ jobs:
   # Job D: Copilot Stall Detection — find assigned issues with no activity
   # ============================================================
   copilot-stall-check:
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: read
     if: >
       github.event.schedule == '*/30 * * * *' ||
       (github.event_name == 'workflow_dispatch' &&

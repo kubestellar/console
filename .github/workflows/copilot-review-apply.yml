@@ -7,13 +7,14 @@ on:
   pull_request_review:
     types: [submitted]
 
-permissions:
-  contents: write
-  pull-requests: write
-  issues: write
+permissions: read-all
 
 jobs:
   apply-copilot-review:
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
     if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
     steps:

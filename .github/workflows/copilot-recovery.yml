@@ -24,11 +24,7 @@ on:
         default: true
         type: boolean
 
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
-  statuses: write
+permissions: read-all
 
 concurrency:
   group: copilot-recovery-${{ github.event.check_run.pull_requests[0].number || github.event.pull_request.number || github.event.workflow_run.head_sha || github.sha }}
@@ -39,6 +35,11 @@ jobs:
   # preventing GitHub from reporting "No jobs were run" as a failure
   # and sending noisy email notifications.
   gate:
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      statuses: write
     if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
     steps:
@@ -46,6 +47,11 @@ jobs:
 
   # Override DCO for bot PRs automatically
   override-dco-for-bots:
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      statuses: write
     if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
     steps:
@@ -95,6 +101,11 @@ jobs:
   # Handle build failures on Copilot PRs
   # Only trigger on "Deploy Preview" check to avoid duplicate comments from Netlify sub-checks
   handle-build-failure:
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      statuses: write
     if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
     steps:
@@ -195,6 +206,11 @@ jobs:
   # Handle successful builds - trigger preview testing
   # Netlify check runs are named like "Header rules - kubestellarconsole"
   handle-build-success:
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      statuses: write
     if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
     steps:
@@ -378,6 +394,11 @@ jobs:
 
   # Handle workflow run completion (for more complex build pipelines)
   handle-workflow-completion:
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      statuses: write
     if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
     steps:
@@ -430,6 +451,11 @@ jobs:
 
   # Handle code review feedback on Copilot PRs
   handle-review-feedback:
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      statuses: write
     if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
     steps:
@@ -491,6 +517,11 @@ jobs:
 
   # Manual preview test (triggered via workflow_dispatch)
   manual-preview-test:
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      statuses: write
     if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
     steps:
@@ -578,6 +609,11 @@ jobs:
 
   # Auto-request Copilot to test preview when commits are pushed
   request-copilot-preview-test:
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      statuses: write
     if: false # Copilot disabled — issues handled by Claude Code scanner
     runs-on: ubuntu-latest
     steps:

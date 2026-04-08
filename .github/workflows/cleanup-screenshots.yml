@@ -15,12 +15,13 @@ on:
     - cron: '0 2 * * *'
   workflow_dispatch:
 
-permissions:
-  contents: write
-  issues: write
+permissions: read-all
 
 jobs:
   cleanup-screenshots:
+    permissions:
+      contents: write
+      issues: write
     if: github.repository == 'kubestellar/console'
     runs-on: ubuntu-latest
     steps:

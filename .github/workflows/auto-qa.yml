@@ -45,14 +45,15 @@ env:
   NODE_VERSION: "22"
   GO_VERSION: "1.23"
 
-permissions:
-  contents: write      # Copilot needs write access to create branches
-  issues: write
-  pull-requests: write # Copilot needs to create PRs
-  actions: read        # Copilot needs to view workflow status
+permissions: read-all
 
 jobs:
   auto-qa:
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      actions: read
     runs-on: ubuntu-latest
     timeout-minutes: 20
 

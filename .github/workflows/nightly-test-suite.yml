@@ -6,9 +6,7 @@ on:
     - cron: '0 6 * * *'
   workflow_dispatch: {} # Allow manual trigger
 
-permissions:
-  contents: write
-  issues: write
+permissions: read-all
 
 concurrency:
   group: nightly-test-suite
@@ -21,6 +19,9 @@ env:
 
 jobs:
   test:
+    permissions:
+      contents: write
+      issues: write
     if: github.repository == 'kubestellar/console'
     runs-on: ubuntu-latest
     timeout-minutes: 90

@@ -10,11 +10,7 @@ on:
   pull_request_target:
     types: [opened, synchronize, ready_for_review]
 
-permissions:
-  contents: write
-  pull-requests: write
-  issues: write
-  statuses: write
+permissions: read-all
 
 concurrency:
   group: copilot-automation-${{ github.event.pull_request.number || github.event.inputs.pr_number || github.sha }}
@@ -22,6 +18,11 @@ concurrency:
 
 jobs:
   copilot-automation:
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      statuses: write
     if: false # Copilot disabled — issues handled by Claude Code scanner
     uses: kubestellar/infra/.github/workflows/reusable-copilot-automation.yml@main
     with:
