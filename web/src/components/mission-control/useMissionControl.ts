@@ -677,9 +677,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
     for (const project of state.projects) {
       const pName = project.name.toLowerCase()
       for (const [clusterName, names] of clusterNames) {
-        const found = Array.from(names).some(n =>
-          n === pName || n.includes(pName) || pName.includes(n)
-        )
+        const found = names.has(pName)
         if (found) {
           installed.add(project.name)
           if (!perCluster.has(project.name)) perCluster.set(project.name, new Set())
