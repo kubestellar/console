@@ -970,8 +970,23 @@ func (s *Server) setupRoutes() {
 	api.Get("/nightly-e2e/runs", nightlyE2E.GetRuns)
 	api.Get("/nightly-e2e/run-logs", nightlyE2E.GetRunLogs)
 
-	// GPU reservation routes
-	gpuHandler := handlers.NewGPUHandler(s.store)
+	// GPU reservation routes — capacity provider uses live k8s node data
+	// so the server never trusts client-supplied GPU limits (#5421).
+	gpuCapacity := handlers.ClusterCapacityProvider(func(ctx context.Context, cluster string) int {
+		if s.k8sClient == nil {
+			return 0
+		}
+		nodes, err := s.k8sClient.GetNodes(ctx, cluster)
+		if err != nil {
+			return 0
+		}
+		total := 0
+		for _, n := range nodes {
+			total += n.GPUCount
+		}
+		return total
+	})
+	gpuHandler := handlers.NewGPUHandler(s.store, gpuCapacity)
 	api.Post("/gpu/reservations", gpuHandler.CreateReservation)
 	api.Get("/gpu/reservations", gpuHandler.ListReservations)
 	api.Get("/gpu/reservations/:id", gpuHandler.GetReservation)

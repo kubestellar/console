@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -67,22 +68,29 @@ func (s *gpuTestStore) ListUserGPUReservations(userID uuid.UUID) ([]models.GPURe
 	return s.listMine, nil
 }
 
+// stubCapacity returns a ClusterCapacityProvider that always returns the given value.
+func stubCapacity(gpus int) ClusterCapacityProvider {
+	return func(_ context.Context, _ string) int { return gpus }
+}
+
 func TestGPUCreateReservation_OverAllocationReturnsConflict(t *testing.T) {
 	env := setupTestEnv(t)
+	// Server-side capacity says cluster has 4 GPUs; 3 are already reserved.
+	// Requesting 3 more should exceed capacity (3 + 3 > 4).
+	const clusterCapacity = 4
 	store := &gpuTestStore{
 		user:            &models.User{ID: testAdminUserID, GitHubLogin: "alice"},
 		clusterReserved: 3,
 	}
-	handler := NewGPUHandler(store)
+	handler := NewGPUHandler(store, stubCapacity(clusterCapacity))
 	env.App.Post("/api/gpu/reservations", handler.CreateReservation)
 
 	body, err := json.Marshal(map[string]any{
-		"title":            "Train model",
-		"cluster":          "cluster-a",
-		"namespace":        "ml",
-		"gpu_count":        3,
-		"start_date":       "2026-03-16T00:00:00Z",
-		"max_cluster_gpus": 4,
+		"title":      "Train model",
+		"cluster":    "cluster-a",
+		"namespace":  "ml",
+		"gpu_count":  3,
+		"start_date": "2026-03-16T00:00:00Z",
 	})
 	require.NoError(t, err)
 
@@ -97,20 +105,21 @@ func TestGPUCreateReservation_OverAllocationReturnsConflict(t *testing.T) {
 
 func TestGPUCreateReservation_SetsDefaultDurationAndUserName(t *testing.T) {
 	env := setupTestEnv(t)
+	// 8 GPU capacity, 0 reserved — should succeed
+	const clusterCapacity = 8
 	store := &gpuTestStore{
 		user:            &models.User{ID: testAdminUserID, GitHubLogin: "alice"},
 		clusterReserved: 0,
 	}
-	handler := NewGPUHandler(store)
+	handler := NewGPUHandler(store, stubCapacity(clusterCapacity))
 	env.App.Post("/api/gpu/reservations", handler.CreateReservation)
 
 	body, err := json.Marshal(map[string]any{
-		"title":            "Inference batch",
-		"cluster":          "cluster-a",
-		"namespace":        "ml",
-		"gpu_count":        1,
-		"start_date":       "2026-03-16T00:00:00Z",
-		"max_cluster_gpus": 8,
+		"title":      "Inference batch",
+		"cluster":    "cluster-a",
+		"namespace":  "ml",
+		"gpu_count":  1,
+		"start_date": "2026-03-16T00:00:00Z",
 	})
 	require.NoError(t, err)
 
@@ -129,8 +138,11 @@ func TestGPUCreateReservation_SetsDefaultDurationAndUserName(t *testing.T) {
 
 func TestGPUListReservations_MineNilReturnsEmptyArray(t *testing.T) {
 	env := setupTestEnv(t)
-	store := &gpuTestStore{listMine: nil}
-	handler := NewGPUHandler(store)
+	store := &gpuTestStore{
+		user:     &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleAdmin},
+		listMine: nil,
+	}
+	handler := NewGPUHandler(store, nil)
 	env.App.Get("/api/gpu/reservations", handler.ListReservations)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gpu/reservations?mine=true", nil)

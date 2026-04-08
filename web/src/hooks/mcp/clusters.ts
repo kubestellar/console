@@ -288,8 +288,16 @@ export function useClusterHealth(cluster?: string) {
       recordClusterFailure(cluster)
 
       if (shouldMarkOffline(cluster)) {
+        // Prolonged failures — show explicit unreachable state, never demo data (#5424).
         setError('Failed to fetch cluster health')
-        setHealth(getDemoHealth(cluster))
+        setHealth({
+          cluster,
+          healthy: false,
+          reachable: false,
+          nodeCount: 0,
+          readyNodes: 0,
+          podCount: 0,
+          errorMessage: 'Unable to connect — cluster appears offline' })
       } else {
         // Keep previous data on transient error
         if (prevHealthRef.current) {

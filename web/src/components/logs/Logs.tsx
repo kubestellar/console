@@ -119,7 +119,7 @@ export function Logs() {
       isLoading={isLoading}
       isRefreshing={isRefreshing}
       lastUpdated={lastUpdated}
-      hasData={reachableClusters.length > 0}
+      hasData={reachableClusters.length > 0 || filteredEvents.length > 0}
       emptyState={{
         title: 'Logs & Events Dashboard',
         description: 'Add cards to monitor Kubernetes events, application logs, and system messages across your clusters.' }}

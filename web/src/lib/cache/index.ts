@@ -1257,8 +1257,27 @@ export function useCache<T>({
   // Combined with useLayoutEffect state reports this caused React error #185
   // (Maximum update depth exceeded).  Capturing via ref keeps the identity
   // stable across renders while still picking up the first provided value.
+  //
+  // Update the refs when the caller provides meaningfully different data (#5425).
+  // JSON.stringify comparison is used to detect structural changes without
+  // triggering on every render when the caller creates new-but-equal objects.
   const demoDataRef = useRef(demoData)
   const initialDataRef = useRef(initialData)
+
+  const demoDataJSON = JSON.stringify(demoData)
+  const initialDataJSON = JSON.stringify(initialData)
+  const prevDemoJSON = useRef(demoDataJSON)
+  const prevInitialJSON = useRef(initialDataJSON)
+
+  if (demoDataJSON !== prevDemoJSON.current) {
+    prevDemoJSON.current = demoDataJSON
+    demoDataRef.current = demoData
+  }
+  if (initialDataJSON !== prevInitialJSON.current) {
+    prevInitialJSON.current = initialDataJSON
+    initialDataRef.current = initialData
+  }
+
   const stableDemoData = demoDataRef.current
   const stableInitialData = initialDataRef.current
 

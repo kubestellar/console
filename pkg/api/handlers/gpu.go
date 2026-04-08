@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -14,14 +15,22 @@ import (
 	"github.com/kubestellar/console/pkg/store"
 )
 
+// ClusterCapacityProvider returns the total GPU capacity for a cluster
+// by querying authoritative server-side data (e.g. k8s node resources).
+// Returns 0 if the cluster has no GPUs or cannot be reached.
+type ClusterCapacityProvider func(ctx context.Context, cluster string) int
+
 // GPUHandler handles GPU reservation CRUD operations
 type GPUHandler struct {
-	store store.Store
+	store           store.Store
+	clusterCapacity ClusterCapacityProvider
 }
 
-// NewGPUHandler creates a new GPU handler
-func NewGPUHandler(s store.Store) *GPUHandler {
-	return &GPUHandler{store: s}
+// NewGPUHandler creates a new GPU handler.
+// capacityProvider supplies server-side cluster GPU capacity; if nil,
+// over-allocation checks are skipped (safe default for tests).
+func NewGPUHandler(s store.Store, capacityProvider ClusterCapacityProvider) *GPUHandler {
+	return &GPUHandler{store: s, clusterCapacity: capacityProvider}
 }
 
 // CreateReservation creates a new GPU reservation
@@ -52,21 +61,10 @@ func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Start date must be RFC 3339 format (e.g. 2024-01-15T09:00:00Z)")
 	}
 
-	// Check over-allocation: sum of active/pending reservations + this request must not exceed cluster capacity
-	if input.MaxClusterGPUs > 0 {
-		reserved, err := h.store.GetClusterReservedGPUCount(input.Cluster, nil)
-		if err != nil {
-			return fiber.NewError(fiber.StatusInternalServerError, "Failed to check cluster GPU usage")
-		}
-		if reserved+input.GPUCount > input.MaxClusterGPUs {
-			available := input.MaxClusterGPUs - reserved
-			if available < 0 {
-				available = 0
-			}
-			return fiber.NewError(fiber.StatusConflict,
-				fmt.Sprintf("Over-allocation: cluster %q has %d GPUs available (%d reserved of %d total), but %d requested",
-					input.Cluster, available, reserved, input.MaxClusterGPUs, input.GPUCount))
-		}
+	// Check over-allocation using server-side cluster capacity (never trust client input).
+	// The client-supplied MaxClusterGPUs is intentionally ignored.
+	if err := h.checkOverAllocation(c.Context(), input.Cluster, input.GPUCount, nil); err != nil {
+		return err
 	}
 
 	// Get user info for user_name
@@ -268,20 +266,14 @@ func (h *GPUHandler) UpdateReservation(c *fiber.Ctx) error {
 		existing.QuotaEnforced = *input.QuotaEnforced
 	}
 
-	// Check over-allocation on update if GPU count changed and capacity is provided
-	if input.GPUCount != nil && input.MaxClusterGPUs != nil && *input.MaxClusterGPUs > 0 {
-		reserved, err := h.store.GetClusterReservedGPUCount(existing.Cluster, &existing.ID)
-		if err != nil {
-			return fiber.NewError(fiber.StatusInternalServerError, "Failed to check cluster GPU usage")
-		}
-		if reserved+existing.GPUCount > *input.MaxClusterGPUs {
-			available := *input.MaxClusterGPUs - reserved
-			if available < 0 {
-				available = 0
-			}
-			return fiber.NewError(fiber.StatusConflict,
-				fmt.Sprintf("Over-allocation: cluster %q has %d GPUs available (%d reserved of %d total), but %d requested",
-					existing.Cluster, available, reserved, *input.MaxClusterGPUs, existing.GPUCount))
+	// Re-validate capacity whenever the cluster, GPU count, or status changes —
+	// not just when GPUCount is provided (#5423). Uses server-side capacity (#5421).
+	clusterChanged := input.Cluster != nil
+	countChanged := input.GPUCount != nil
+	statusChanged := input.Status != nil
+	if clusterChanged || countChanged || statusChanged {
+		if err := h.checkOverAllocation(c.Context(), existing.Cluster, existing.GPUCount, &existing.ID); err != nil {
+			return err
 		}
 	}
 
@@ -406,4 +398,39 @@ func (h *GPUHandler) GetBulkUtilizations(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(result)
+}
+
+// checkOverAllocation verifies that the requested GPU count does not exceed the
+// cluster's server-side capacity. excludeID is used on updates to exclude the
+// current reservation from the "already reserved" tally.
+func (h *GPUHandler) checkOverAllocation(ctx context.Context, cluster string, gpuCount int, excludeID *uuid.UUID) error {
+	if h.clusterCapacity == nil {
+		// No capacity provider configured — skip check (e.g. unit tests).
+		return nil
+	}
+
+	capacity := h.clusterCapacity(ctx, cluster)
+	if capacity <= 0 {
+		// Cluster has no GPUs or is unreachable — allow the reservation
+		// (the admin can cancel it later). Blocking here would prevent all
+		// reservations when the cluster is temporarily offline.
+		return nil
+	}
+
+	reserved, err := h.store.GetClusterReservedGPUCount(cluster, excludeID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to check cluster GPU usage")
+	}
+
+	if reserved+gpuCount > capacity {
+		available := capacity - reserved
+		if available < 0 {
+			available = 0
+		}
+		return fiber.NewError(fiber.StatusConflict,
+			fmt.Sprintf("Over-allocation: cluster %q has %d GPUs available (%d reserved of %d total), but %d requested",
+				cluster, available, reserved, capacity, gpuCount))
+	}
+
+	return nil
 }

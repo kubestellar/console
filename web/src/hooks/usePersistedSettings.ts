@@ -159,16 +159,23 @@ export function usePersistedSettings() {
         const data = await settingsFetch<AllSettings>('/settings')
         if (!mountedRef.current) return
 
-        if (isLocalStorageEmpty() && data) {
+        // Determine whether the backend file has meaningful content
+        const backendHasData = data && (
+          data.theme || data.aiMode || data.feedbackGithubToken ||
+          Object.keys(data.apiKeys || {}).length > 0)
+
+        if (isLocalStorageEmpty() && backendHasData) {
           // Cache was cleared — restore from backend file
-          const hasData = data.theme || data.aiMode || data.feedbackGithubToken ||
-            Object.keys(data.apiKeys || {}).length > 0
-          if (hasData) {
-            restoreToLocalStorage(data)
-            setRestoredFromFile(true)
-          }
+          restoreToLocalStorage(data)
+          setRestoredFromFile(true)
+        } else if (backendHasData) {
+          // Both sides have data — backend is authoritative (#5426).
+          // Merge: backend wins for any key it has, then push the merged
+          // result back so the two stay in sync.
+          restoreToLocalStorage(data)
+          saveToBackend()
         } else {
-          // localStorage has data — sync it to backend (initial sync)
+          // Backend is empty but localStorage has data — seed the backend
           saveToBackend()
         }
         setSyncStatus('saved')
