@@ -290,45 +290,28 @@ jobs:
             dist/*.tar.gz
             dist/checksums.txt
 
-      - name: Generate and upload provenance to release
+      - name: Install cosign
+        uses: sigstore/cosign-installer@3454372be43ec08971210d50303c40907e0a3acf # v3.8.2
+
+      - name: Sign release artifacts with cosign
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.determine-version.outputs.version }}
         run: |
-          # Download attestation bundles for each tar.gz and upload as release assets
-          # The scorecard Signed-Releases check looks for .intoto.jsonl or .sigstore
-          # files attached to the GitHub release
-          for artifact in dist/*.tar.gz; do
-            basename=$(basename "$artifact")
-            echo "Downloading attestation for $basename..."
-            gh attestation download "$artifact" \
-              --repo "${{ github.repository }}" \
-              --format json \
-              --output "${basename}.intoto.jsonl" 2>/dev/null || true
+          # Sign checksums file with keyless cosign (Sigstore OIDC)
+          # The scorecard Signed-Releases check looks for .sig files
+          # attached to GitHub release assets
+          cosign sign-blob --yes \
+            --output-signature dist/checksums.txt.sig \
+            --output-certificate dist/checksums.txt.pem \
+            dist/checksums.txt
 
-            if [ -f "${basename}.intoto.jsonl" ]; then
-              echo "Uploading ${basename}.intoto.jsonl to release ${VERSION}..."
-              gh release upload "${VERSION}" "${basename}.intoto.jsonl" \
-                --repo "${{ github.repository }}" \
-                --clobber
-            else
-              echo "Warning: No attestation found for $basename"
-            fi
-          done
-
-          # Also upload checksums attestation
-          if [ -f dist/checksums.txt ]; then
-            gh attestation download dist/checksums.txt \
-              --repo "${{ github.repository }}" \
-              --format json \
-              --output "checksums.txt.intoto.jsonl" 2>/dev/null || true
-
-            if [ -f "checksums.txt.intoto.jsonl" ]; then
-              gh release upload "${VERSION}" "checksums.txt.intoto.jsonl" \
-                --repo "${{ github.repository }}" \
-                --clobber
-            fi
-          fi
+          # Upload signatures to the release
+          gh release upload "${VERSION}" \
+            dist/checksums.txt.sig \
+            dist/checksums.txt.pem \
+            --repo "${{ github.repository }}" \
+            --clobber
 
   helm-release:
     needs: [determine-version, release, helm-test]
