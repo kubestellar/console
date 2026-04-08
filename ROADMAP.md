@@ -2,13 +2,50 @@
 
 This document outlines the planned direction for KubeStellar Console. It is a living document and will be updated as priorities evolve based on community feedback, user needs, and ecosystem changes.
 
-## Near-Term (Q2 2026)
+## Completed Milestones
 
-- **Benchmark streaming dashboard** — Real-time performance data from vLLM/llm-d benchmarks via Google Drive integration, with hardware leaderboards and latency breakdowns
-- **GPU namespace drill-down** — Per-GPU-type, per-node allocation views with usage duration metrics for GPU-intensive workloads
-- **llm-d integration** — First-class support for llm-d inference serving: deployment status, autoscaler monitoring, model endpoint health
+### v0.1 — Foundation (Q3 2025)
+- Multi-cluster dashboard with real-time health monitoring
+- Helm release tracking across clusters
+- Pod, deployment, and event monitoring cards
+- Demo mode with MSW mock data for offline usage
+- GitHub OAuth authentication
+- Dark/light theme support
+
+### v0.2 — Intelligence Layer (Q4 2025)
+- AI-powered missions system with Claude and kagent integration
+- Community missions browser with console-kb knowledge base
+- Contributor rewards system with leaderboard and coin economy
+- 80+ dashboard cards covering CNCF ecosystem
+- GPU monitoring cards (overview, inventory, utilization, reservations)
+- OPA, Kyverno, Falco, and Trivy security cards
+- ArgoCD application monitoring
+- Drag-and-drop dashboard customization with card catalog
+
+### v0.3 — Scale & Operations (Q1–Q2 2026)
+- **Console Studio** — Visual dashboard builder with AI card generation
+- **Mission Control** — Guided CNCF project deployment with Flight Plan blueprint, phased launch, and AI-assisted cluster assignment
+- **Orbital Maintenance** — Automated cluster maintenance missions with scheduling
+- **Benchmark streaming** — Real-time vLLM/llm-d performance data via Google Drive with hardware leaderboards
+- **GPU namespace drill-down** — Per-GPU-type, per-node allocation views
+- **Workload import dialog** — YAML, Helm, GitHub, and Kustomize import support
+- **NPS survey system** — In-app Net Promoter Score feedback collection
+- **VCluster and KubeVirt** cards for virtualized workloads
+- **Marketplace** — Community card preset marketplace with 45+ CNCF project templates
+- **OpenSSF Scorecard improvements** — Signed releases, SLSA provenance, scoped workflow permissions
+- 160+ total dashboard cards
+- Nightly and weekly automated releases with Helm OCI chart publishing
+- Comprehensive Auto-QA workflows for code quality, governance, and UI consistency
+- Contributor leaderboard with GitHub-synced rewards
+
+## Near-Term (Q2–Q3 2026)
+
+- **llm-d stack monitoring** — First-class support for llm-d inference serving: EPP routing, model endpoint health, autoscaler status, disaggregated serving topology
 - **Nightly E2E expansion** — Automated end-to-end testing across all 8 llm-d deployment guides on OpenShift
-- **Marketplace growth** — Expand guided install missions beyond 250 CNCF projects with community-contributed missions
+- **Marketplace v2** — Require live data hooks, unified controls, demo data, and install links for all card presets; community review process
+- **kagent/kagenti integration** — Full agent lifecycle management through MCP-compatible interfaces
+- **i18n completeness** — Eliminate all hardcoded English strings; prepare for localization
+- **Accessibility audit** — Replace remaining `window.confirm()` dialogs, add ARIA labels, keyboard navigation for all interactive elements
 
 ## Mid-Term (Q3–Q4 2026)
 
@@ -17,6 +54,7 @@ This document outlines the planned direction for KubeStellar Console. It is a li
 - **Helm operator** — Kubernetes operator for fleet-wide Console deployment and lifecycle management
 - **Enhanced AI missions** — AI-assisted troubleshooting missions that diagnose cluster issues and suggest remediation steps
 - **Offline/air-gapped mode** — Full Console functionality without internet connectivity for restricted environments
+- **CNCF incubation preparation** — Governance documentation, adopters program, security audit, and community growth metrics
 
 ## Long-Term (2027+)
 
@@ -34,6 +72,7 @@ KubeStellar Console intentionally does **not** aim to:
 - **Be a general-purpose IDE** — While Console includes AI-powered features, it is not a code editor or development environment.
 - **Manage non-Kubernetes workloads** — Console focuses exclusively on Kubernetes clusters and cloud-native workloads.
 - **Provide its own container runtime** — Console observes and manages existing clusters; it does not provision infrastructure.
+- **Compete with commercial APM tools** — Console provides operational visibility, not deep application performance monitoring. Use Datadog, New Relic, or Grafana for APM.
 
 ## How to Influence the Roadmap
 
