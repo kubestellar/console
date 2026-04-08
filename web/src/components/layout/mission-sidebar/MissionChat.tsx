@@ -41,7 +41,7 @@ import { MemoizedMessage } from './MemoizedMessage'
 
 export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontSize, onToggleFullScreen }: { mission: Mission; isFullScreen?: boolean; fontSize?: FontSize; onToggleFullScreen?: () => void }) {
   const { t } = useTranslation('common')
-  const { sendMessage, retryPreflight, cancelMission, rateMission, setActiveMission, dismissMission, renameMission, runSavedMission, updateSavedMission, selectedAgent } = useMissions()
+  const { sendMessage, retryPreflight, cancelMission, rateMission, setActiveMission, dismissMission, renameMission, runSavedMission, updateSavedMission } = useMissions()
   const { user } = useAuth()
   const { isDemoMode } = useDemoMode()
   const { findSimilarResolutions, recordUsage } = useResolutions()
@@ -754,19 +754,19 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
           </div>
         )}
 
-        {/* Typing indicator when agent is working - uses currently selected agent */}
+        {/* Typing indicator when agent is working — always shows the agent
+            the mission was started with, not the current global selection (#5480) */}
         {mission.status === 'running' && (
           <div className="flex gap-3">
             <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-purple-500/20">
               <AgentIcon
                 provider={
-                  // Use selectedAgent (currently processing) instead of mission.agent (original)
-                  (selectedAgent || mission.agent) === 'claude' ? 'anthropic' :
-                  (selectedAgent || mission.agent) === 'openai' ? 'openai' :
-                  (selectedAgent || mission.agent) === 'gemini' ? 'google' :
-                  (selectedAgent || mission.agent) === 'bob' ? 'bob' :
-                  (selectedAgent || mission.agent) === 'claude-code' ? 'anthropic-local' :
-                  (selectedAgent || mission.agent || 'anthropic')
+                  (mission.agent || 'anthropic') === 'claude' ? 'anthropic' :
+                  (mission.agent || 'anthropic') === 'openai' ? 'openai' :
+                  (mission.agent || 'anthropic') === 'gemini' ? 'google' :
+                  (mission.agent || 'anthropic') === 'bob' ? 'bob' :
+                  (mission.agent || 'anthropic') === 'claude-code' ? 'anthropic-local' :
+                  (mission.agent || 'anthropic')
                 }
                 className="w-4 h-4"
               />
@@ -799,20 +799,18 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
           </div>
         ) : mission.status === 'running' ? (
           <div className="flex flex-col gap-2">
+            {/* Input is disabled while mission is running to prevent interleaved
+                responses from concurrent requests (#5478). Only cancel is allowed. */}
             <div className="flex gap-2 min-w-0">
               <input
-                ref={inputRef}
                 type="text"
-                value={input}
-                onChange={(e) => { setInput(e.target.value); setInputError(null) }}
-                onKeyDown={handleKeyDown}
-                placeholder={t('missionChat.typeNextMessage')}
-                className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                disabled
+                placeholder={t('missionChat.waitingForAgent', { defaultValue: 'Waiting for agent to finish...' })}
+                className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/30 border border-border rounded-lg text-muted-foreground placeholder:text-muted-foreground/60 cursor-not-allowed"
               />
               <button
-                onClick={handleSend}
-                disabled={!input.trim()}
-                className="flex-shrink-0 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled
+                className="flex-shrink-0 px-3 py-2 bg-primary text-primary-foreground rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 title={t('missionChat.sendWillQueue')}
               >
                 <Send className="w-4 h-4" />

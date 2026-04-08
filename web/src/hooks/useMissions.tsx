@@ -190,6 +190,27 @@ const MISSION_INACTIVITY_TIMEOUT_MS = 90_000 // 90 seconds of stream silence
  */
 const CANCEL_ACK_TIMEOUT_MS = 10_000 // 10 seconds
 
+/**
+ * Strip interactive terminal prompt artifacts from agent metadata strings (#5482).
+ * Interactive agents (e.g. copilot-cli) sometimes leak prompt text, ANSI escape
+ * codes, or selection indicators into their description or displayName fields.
+ */
+function stripInteractiveArtifacts(text: string): string {
+  if (!text) return text
+  return text
+    // Remove ANSI escape codes (colors, cursor movement, etc.)
+    // eslint-disable-next-line no-control-regex
+    .replace(/\x1B\[[0-9;]*[A-Za-z]/g, '')
+    // Remove interactive prompt indicators (? prompt, > selection, etc.)
+    .replace(/^[?>]\s+/gm, '')
+    // Remove lines that look like interactive menu items
+    .replace(/^\s*[-*]\s+\[.\]\s+/gm, '')
+    // Remove carriage returns and excess whitespace
+    .replace(/\r/g, '')
+    .replace(/\n{2,}/g, '\n')
+    .trim()
+}
+
 /** Pre-converted demo missions for demo mode — showcases all mission types */
 const DEMO_MISSIONS_AS_MISSIONS: Mission[] = DEMO_MISSIONS.map(m => ({
   ...m,
@@ -743,7 +764,14 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     // Handle agent-related messages (no mission ID needed)
     if (message.type === 'agents_list') {
       const payload = message.payload as AgentsListPayload
-      setAgents(payload.agents)
+      // Sanitize agent metadata — strip interactive prompt artifacts that leak
+      // from terminal-based agents (e.g. copilot-cli) into description fields (#5482).
+      const sanitizedAgents = payload.agents.map(agent => ({
+        ...agent,
+        description: stripInteractiveArtifacts(agent.description),
+        displayName: stripInteractiveArtifacts(agent.displayName),
+      }))
+      setAgents(sanitizedAgents)
       setDefaultAgent(payload.defaultAgent)
       // Prefer persisted selection if the agent is still available.
       // If persisted is 'none' but an agent IS available, auto-select it
@@ -753,16 +781,21 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       const persistedAvailable = persisted && persisted !== 'none' && payload.agents.some(a => a.name === persisted && a.available)
 
       // When auto-selecting, prefer agents that execute commands directly over
-      // agents that only suggest commands (e.g. copilot-cli). This prevents
-      // missions from returning kubectl commands as text instead of running them (#3609).
-      const SUGGEST_ONLY_AGENTS = new Set(['copilot-cli', 'gh-copilot'])
+      // agents that only suggest commands (e.g. copilot-cli). Interactive/suggest-only
+      // agents produce terminal prompts instead of executing missions (#3609, #5481).
+      const INTERACTIVE_AGENTS = new Set(['copilot-cli', 'gh-copilot'])
       const bestAvailable = hasAvailableAgent
-        ? (payload.agents.find(a => a.available && ((a.capabilities ?? 0) & AgentCapabilityToolExec) !== 0 && !SUGGEST_ONLY_AGENTS.has(a.name))?.name
-          || payload.agents.find(a => a.available && !SUGGEST_ONLY_AGENTS.has(a.name))?.name
+        ? (payload.agents.find(a => a.available && ((a.capabilities ?? 0) & AgentCapabilityToolExec) !== 0 && !INTERACTIVE_AGENTS.has(a.name))?.name
+          || payload.agents.find(a => a.available && !INTERACTIVE_AGENTS.has(a.name))?.name
           || payload.agents.find(a => a.available)?.name
           || null)
         : null
-      const resolved = persistedAvailable ? persisted : (payload.selected || payload.defaultAgent || bestAvailable)
+      // Filter the backend's defaultAgent if it is interactive — fall through to
+      // bestAvailable which already excludes interactive agents (#5481).
+      const safeDefaultAgent = payload.defaultAgent && !INTERACTIVE_AGENTS.has(payload.defaultAgent)
+        ? payload.defaultAgent
+        : null
+      const resolved = persistedAvailable ? persisted : (payload.selected || safeDefaultAgent || bestAvailable)
       setSelectedAgent(resolved)
       // If we restored a persisted agent that differs from the server's selection, tell the server
       if (persistedAvailable && persisted !== payload.selected && wsRef.current?.readyState === WebSocket.OPEN) {
@@ -978,9 +1011,14 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           resultContent.length > 0 &&
           streamedSinceUser.startsWith(resultContent.slice(0, Math.min(resultContent.length, streamedSinceUser.length)))
 
+        // Transition to 'completed' when a result message arrives — this is the
+        // backend's final answer for the current turn. The 'waiting_input' state
+        // is only used while streaming is in progress (stream done w/o result).
+        // The UI shows a completion panel with feedback buttons when status is
+        // 'completed', so reaching this state is the correct lifecycle end (#5479).
         return {
           ...m,
-          status: 'waiting_input' as MissionStatus,
+          status: 'completed' as MissionStatus,
           currentStep: undefined,
           updatedAt: new Date(),
           agent: chatPayload.agent || m.agent,
@@ -1548,12 +1586,11 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     // Guard against double-cancel: if already cancelling, don't schedule another timeout
     if (cancelTimeouts.current.has(missionId)) return
 
-    // Immediately purge ALL pending request IDs for this mission so that late
-    // responses (from earlier failed or in-flight requests) are dropped before
-    // finalizeCancellation runs (#4499).
-    for (const [reqId, mId] of pendingRequests.current.entries()) {
-      if (mId === missionId) pendingRequests.current.delete(reqId)
-    }
+    // Keep pendingRequests intact so that terminal messages (result, stream-done)
+    // from the backend can still be matched to the mission. The handler for
+    // 'cancelling' missions (below) treats any terminal message as implicit
+    // cancel confirmation, so clearing these prematurely caused the mission to
+    // stay in 'cancelling' until the client-side timeout (#5476).
     lastStreamTimestamp.current.delete(missionId)
 
     // Try WebSocket first (fastest path when connected)
@@ -1564,12 +1601,24 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         payload: { sessionId: missionId } }))
     } else {
       // HTTP fallback — WS may be disconnected during long agent runs.
-      // Use the response to determine if cancellation succeeded.
+      // Use the response body to determine if cancellation succeeded (#5477).
       fetch(`${LOCAL_AGENT_HTTP_URL}/cancel-chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: missionId }) }).then(response => {
+        body: JSON.stringify({ sessionId: missionId }) }).then(async response => {
         if (response.ok) {
+          // Check the `cancelled` flag in the response body — HTTP 200 alone
+          // does not guarantee the session was actually cancelled (e.g. if the
+          // session was already finished or the ID was invalid).
+          try {
+            const body = await response.json() as { cancelled?: boolean; message?: string }
+            if (body.cancelled === false) {
+              finalizeCancellation(missionId, body.message || 'Mission cancellation failed — backend indicated the session was not cancelled.')
+              return
+            }
+          } catch {
+            // Body parsing failed — treat HTTP 200 as success (best effort)
+          }
           finalizeCancellation(missionId, 'Mission cancelled by user.')
         } else {
           finalizeCancellation(missionId, 'Mission cancellation failed — backend returned an error. The mission may still be running.')
@@ -1618,6 +1667,13 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     const isStopCommand = STOP_KEYWORDS.some(kw => content.trim().toLowerCase() === kw)
     if (isStopCommand) {
       cancelMission(missionId)
+      return
+    }
+
+    // Prevent sending while mission is already running or cancelling (#5478).
+    // Only stop commands (handled above) are allowed during active execution.
+    const currentMission = missionsRef.current.find(m => m.id === missionId)
+    if (currentMission && (currentMission.status === 'running' || currentMission.status === 'cancelling')) {
       return
     }
 

@@ -46,22 +46,24 @@ export function AiGenerationPanel<T>({
   // Track the active mission
   const trackedMission = missionId ? missions.find(m => m.id === missionId) : null
 
-  // Update streaming text from mission messages
+  // Update streaming text from mission messages.
+  // Concatenate ALL assistant messages (not just the last one) because tool-use
+  // gaps can split a single response across multiple message bubbles (#5483).
   useEffect(() => {
     if (!trackedMission || phase !== 'generating') return
 
     const assistantMessages = trackedMission.messages.filter(m => m.role === 'assistant')
-    const lastMsg = assistantMessages[assistantMessages.length - 1]
-    if (lastMsg) {
-      setStreamingText(lastMsg.content)
+    const combinedContent = assistantMessages.map(m => m.content).join('')
+    if (combinedContent) {
+      setStreamingText(combinedContent)
     }
 
     // Check for completion
     if (
       (trackedMission.status === 'waiting_input' || trackedMission.status === 'completed') &&
-      lastMsg
+      combinedContent
     ) {
-      const { data, error } = extractJsonFromMarkdown<unknown>(lastMsg.content)
+      const { data, error } = extractJsonFromMarkdown<unknown>(combinedContent)
       if (data) {
         const validation = validateResult(data)
         if (validation.valid) {
