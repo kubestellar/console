@@ -31,6 +31,21 @@
   VITE_DEMO_MODE = "true"
   NODE_VERSION = "20"
 
+# GitHub avatar proxy — avatars.githubusercontent.com is blocked by browser
+# when loaded inside SVG foreignObject. Proxy through our domain to avoid CORS.
+[[redirects]]
+  from = "/api/avatar/:id"
+  to = "https://avatars.githubusercontent.com/u/:id?s=40&v=4"
+  status = 200
+  force = true
+
+# CNCF artwork proxy — official project icons from the cncf/artwork repo
+[[redirects]]
+  from = "/api/cncf-icon/:project"
+  to = "https://raw.githubusercontent.com/cncf/artwork/master/projects/:project/icon/color/:project-icon-color.png"
+  status = 200
+  force = true
+
 # Nightly E2E status API — proxy to Netlify Function
 # Serves live GitHub Actions data (GITHUB_TOKEN set in Netlify dashboard)
 [[redirects]]

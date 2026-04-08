@@ -23,15 +23,15 @@ const PROJECT_AVATAR_IDS: Record<string, number> = {
   rook: 22860722, longhorn: 51335366,
 }
 
-/** Icon size for avatar display */
-const AVATAR_SIZE = 40
-
+/**
+ * Get project icon URL via first-party proxy to avoid CORS/CSP issues
+ * with avatars.githubusercontent.com inside SVG foreignObject.
+ */
 function getAvatarUrl(name: string): string {
   const key = name.toLowerCase()
   const id = PROJECT_AVATAR_IDS[key]
-  if (id) return `https://avatars.githubusercontent.com/u/${id}?s=${AVATAR_SIZE}&v=4`
-  // Fallback: try github.com redirect (works for orgs not in the map)
-  return `https://avatars.githubusercontent.com/${key}?s=${AVATAR_SIZE}&v=4`
+  if (id) return `/api/avatar/${id}`
+  return `/api/avatar/${key}`
 }
 
 type NodeStatus = 'pending' | 'running' | 'completed' | 'failed'
