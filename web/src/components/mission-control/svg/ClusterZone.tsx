@@ -234,7 +234,7 @@ export function ClusterZone({
         y={y + 17}
         textAnchor="start"
         fill="white"
-        fontSize={11}
+        fontSize={8}
         fontWeight="600"
         fontFamily="system-ui, sans-serif"
         opacity={0.9}
