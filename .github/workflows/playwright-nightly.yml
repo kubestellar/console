@@ -5,6 +5,9 @@ on:
     - cron: '30 6 * * *'  # 6:30 AM UTC daily
   workflow_dispatch: {}
 
+# Least-privilege: read-only by default; jobs declare write scopes individually
+permissions: read-all
+
 concurrency:
   group: playwright-nightly-${{ github.run_id }}
   cancel-in-progress: false

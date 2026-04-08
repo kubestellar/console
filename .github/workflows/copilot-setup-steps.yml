@@ -5,6 +5,9 @@ name: Copilot Setup Steps
 
 on: workflow_dispatch
 
+# Least-privilege: read-only by default; jobs declare write scopes individually
+permissions: read-all
+
 jobs:
   copilot-setup-steps:
     runs-on: ubuntu-latest

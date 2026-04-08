@@ -11,6 +11,9 @@ on:
       - 'web/e2e/visual/**'
   workflow_dispatch:
 
+# Least-privilege: read-only by default; jobs declare write scopes individually
+permissions: read-all
+
 jobs:
   visual-regression:
     if: github.repository == 'kubestellar/console'

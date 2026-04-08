@@ -12,6 +12,9 @@ on:
       - 'web/package-lock.json'
   workflow_dispatch:
 
+# Least-privilege: read-only by default; jobs declare write scopes individually
+permissions: read-all
+
 jobs:
   ui-ux-standard:
     if: github.repository == 'kubestellar/console'

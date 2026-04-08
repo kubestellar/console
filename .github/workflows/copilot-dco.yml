@@ -4,6 +4,9 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+# Least-privilege: read-only by default; jobs declare write scopes individually
+permissions: read-all
+
 jobs:
   copilot-dco:
     if: false # Copilot disabled — issues handled by Claude Code scanner

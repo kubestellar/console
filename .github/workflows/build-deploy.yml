@@ -35,6 +35,10 @@ on:
           - none
 
 # Only one deploy at a time — newer commits cancel in-progress deploys
+
+# Least-privilege: read-only by default; jobs declare write scopes individually
+permissions: read-all
+
 concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: true

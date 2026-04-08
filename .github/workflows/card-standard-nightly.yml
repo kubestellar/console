@@ -12,6 +12,9 @@ on:
       - 'web/package-lock.json'
   workflow_dispatch:
 
+# Least-privilege: read-only by default; jobs declare write scopes individually
+permissions: read-all
+
 jobs:
   card-standard:
     runs-on: ubuntu-latest

@@ -8,6 +8,9 @@ on:
         required: true
         default: '0.1.0'
 
+# Least-privilege: read-only by default; jobs declare write scopes individually
+permissions: read-all
+
 jobs:
   release-helm:
     runs-on: ubuntu-latest

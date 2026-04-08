@@ -413,16 +413,19 @@ jobs:
             RUN_URL="${{ github.event.workflow_run.html_url }}"
             WF_NAME="${{ github.event.workflow_run.name }}"
 
-            # Post failure comment
-            gh pr comment "$PR_NUM" --repo "${{ github.repository }}" --body "## 🔴 Workflow Failed
+            # Post failure comment (use heredoc to avoid YAML alias parse errors from **)
+            gh pr comment "$PR_NUM" --repo "${{ github.repository }}" --body "$(cat <<EOF
+            ## 🔴 Workflow Failed
 
-**Workflow:** $WF_NAME
-**Status:** Failed
-**Details:** [View Workflow Run]($RUN_URL)
+            **Workflow:** $WF_NAME
+            **Status:** Failed
+            **Details:** [View Workflow Run]($RUN_URL)
 
-@copilot Please investigate the workflow failure and push fixes.
+            @copilot Please investigate the workflow failure and push fixes.
 
-*This comment was automatically generated.*"
+            *This comment was automatically generated.*
+            EOF
+            )"
           fi
 
   # Handle code review feedback on Copilot PRs

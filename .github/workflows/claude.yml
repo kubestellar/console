@@ -10,6 +10,9 @@ on:
   pull_request_review:
     types: [submitted]
 
+# Least-privilege: read-only by default; jobs declare write scopes individually
+permissions: read-all
+
 jobs:
   claude:
     if: |

@@ -9,6 +9,9 @@ on:
       - '.github/workflows/perf-ttfi.yml'
   workflow_dispatch:
 
+# Least-privilege: read-only by default; jobs declare write scopes individually
+permissions: read-all
+
 env:
   CI: true
 
