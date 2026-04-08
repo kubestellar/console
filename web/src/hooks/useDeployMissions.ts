@@ -6,6 +6,15 @@ import type { DeployStartedPayload, DeployResultPayload, DeployedDep } from '../
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN, STORAGE_KEY_MISSIONS_ACTIVE, STORAGE_KEY_MISSIONS_HISTORY } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, DEPLOY_ABORT_TIMEOUT_MS } from '../lib/constants/network'
 
+/** HTTP status codes that indicate authentication/authorization failure */
+const HTTP_UNAUTHORIZED = 401
+const HTTP_FORBIDDEN = 403
+
+/** Check whether a mission status is terminal (no longer needs active polling) */
+function isTerminalStatus(s: DeployMissionStatus): boolean {
+  return s === 'orbit' || s === 'abort' || s === 'partial'
+}
+
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   return token ? { Authorization: `Bearer ${token}` } : {}
@@ -39,10 +48,19 @@ async function fetchDeployEventsViaProxy(
   } catch {
     return []
   }
-  const prefix = workload + '-'
+  // Match the deployment itself and its Kubernetes-generated children.
+  // ReplicaSet names follow the pattern <deployment>-<hash> where the hash
+  // is a 7-10 char alphanumeric string containing at least one digit.
+  // Pod names follow <deployment>-<rs-hash>-<5-char-pod-hash>.
+  // Requiring a digit in the first hash segment distinguishes K8s-generated
+  // suffixes from human-readable names (e.g. "api-gateway" won't match "api").
+  const escapedWorkload = workload.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const k8sChildPattern = new RegExp(
+    `^${escapedWorkload}-(?=[a-z0-9]*[0-9])[a-z0-9]{1,10}(-[a-z0-9]{1,5})?$`
+  )
   const relevant = (data.items || []).filter((e: KubeEvent) => {
     const name = e.involvedObject?.name || ''
-    return name === workload || name.startsWith(prefix)
+    return name === workload || k8sChildPattern.test(name)
   })
   return relevant
     .slice(-tail)
@@ -123,12 +141,11 @@ function loadMissions(): DeployMission[] {
 function saveMissions(missions: DeployMission[]) {
   // Keep logs for completed missions (they won't be re-fetched after the poll cutoff).
   // Strip logs for active missions (transient data, re-fetched on each poll cycle).
-  const isTerminal = (s: DeployMissionStatus) => s === 'orbit' || s === 'abort'
   const clean = missions.slice(0, MAX_MISSIONS).map(m => ({
     ...m,
     clusterStatuses: m.clusterStatuses.map(cs => ({
       ...cs,
-      logs: isTerminal(m.status) ? cs.logs : undefined })) }))
+      logs: isTerminalStatus(m.status) ? cs.logs : undefined })) }))
   localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(clean))
 }
 
@@ -198,7 +215,7 @@ export function useDeployMissions() {
 
       const updated = await Promise.all(
         current.map(async (mission) => {
-          const isCompleted = mission.status === 'orbit' || mission.status === 'abort'
+          const isCompleted = isTerminalStatus(mission.status)
           // Stop polling completed missions after cutoff — unless logs were
           // never loaded (e.g. restored from localStorage after page reload).
           if (isCompleted && mission.completedAt &&
@@ -237,39 +254,43 @@ export function useDeployMissions() {
                   params.append('namespace', mission.namespace)
                   const ctrl = new AbortController()
                   const tid = setTimeout(() => ctrl.abort(), DEPLOY_ABORT_TIMEOUT_MS)
-                  const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
-                    signal: ctrl.signal,
-                    headers: { Accept: 'application/json' } })
-                  clearTimeout(tid)
-                  if (res.ok) {
-                    const data = await res.json()
-                    const deployments = (data.deployments || []) as Array<Record<string, unknown>>
-                    const match = deployments.find(
-                      (d) => String(d.name) === mission.workload
-                    )
-                    if (match) {
-                      const replicas = Number(match.replicas ?? 0)
-                      const readyReplicas = Number(match.readyReplicas ?? 0)
-                      let status: DeployClusterStatus['status'] = 'applying'
-                      // Zero-replica workloads are valid (e.g. scale-to-zero) — treat
-                      // readyReplicas >= replicas as success even when both are zero.
-                      if (readyReplicas >= replicas) {
-                        status = 'running'
-                      } else if (String(match.status) === 'failed') {
-                        status = 'failed'
+                  try {
+                    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
+                      signal: ctrl.signal,
+                      headers: { Accept: 'application/json' } })
+                    if (res.ok) {
+                      const data = await res.json()
+                      const deployments = (data.deployments || []) as Array<Record<string, unknown>>
+                      const match = deployments.find(
+                        (d) => String(d.name) === mission.workload
+                      )
+                      if (match) {
+                        const replicas = Number(match.replicas ?? 0)
+                        const readyReplicas = Number(match.readyReplicas ?? 0)
+                        let status: DeployClusterStatus['status'] = 'applying'
+                        // Zero-replica workloads are valid (e.g. scale-to-zero) — treat
+                        // readyReplicas >= replicas as success even when both are zero.
+                        if (readyReplicas >= replicas) {
+                          status = 'running'
+                        } else if (String(match.status) === 'failed') {
+                          status = 'failed'
+                        }
+                        // Fetch K8s events via kubectlProxy
+                        let logs: string[] | undefined
+                        try {
+                          logs = await fetchDeployEventsViaProxy(
+                            clusterInfo.context || cluster, mission.namespace, mission.workload,
+                          )
+                          if (logs.length === 0) logs = undefined
+                        } catch { /* non-critical */ }
+                        return { cluster, status, replicas, readyReplicas, logs }
                       }
-                      // Fetch K8s events via kubectlProxy
-                      let logs: string[] | undefined
-                      try {
-                        logs = await fetchDeployEventsViaProxy(
-                          clusterInfo.context || cluster, mission.namespace, mission.workload,
-                        )
-                        if (logs.length === 0) logs = undefined
-                      } catch { /* non-critical */ }
-                      return { cluster, status, replicas, readyReplicas, logs }
+                      // Workload not found on this cluster yet — still pending (or failed after threshold)
+                      return pendingOrFailed()
                     }
-                    // Workload not found on this cluster yet — still pending (or failed after threshold)
-                    return pendingOrFailed()
+                  } finally {
+                    // Always clear the abort timer to prevent leak on fetch failure (#5498)
+                    clearTimeout(tid)
                   }
                 }
               } catch {
@@ -283,6 +304,14 @@ export function useDeployMissions() {
                   { headers: authHeaders(), signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) }
                 )
                 if (!res.ok) {
+                  // Surface auth failures explicitly instead of masking as "unreachable" (#5499)
+                  if (res.status === HTTP_UNAUTHORIZED || res.status === HTTP_FORBIDDEN) {
+                    return {
+                      cluster, status: 'failed' as const, replicas: 0, readyReplicas: 0,
+                      consecutiveFailures: prevFailures + 1,
+                      logs: [`Authentication failed (HTTP ${res.status}) — token may be expired or revoked`],
+                    }
+                  }
                   return pendingOrFailed()
                 }
                 const data = await res.json()
@@ -343,7 +372,7 @@ export function useDeployMissions() {
           // Grace period: keep mission in deploying state for at least 10s
           const elapsed = Date.now() - mission.startedAt
           const MIN_ACTIVE_MS = 10000
-          if ((missionStatus === 'orbit' || missionStatus === 'abort') && elapsed < MIN_ACTIVE_MS) {
+          if (isTerminalStatus(missionStatus) && elapsed < MIN_ACTIVE_MS) {
             missionStatus = 'deploying'
           }
 
@@ -352,15 +381,15 @@ export function useDeployMissions() {
             clusterStatuses: statuses,
             status: missionStatus,
             pollCount,
-            completedAt: (missionStatus === 'orbit' || missionStatus === 'abort')
+            completedAt: isTerminalStatus(missionStatus)
               ? (mission.completedAt ?? Date.now())
               : undefined }
         })
       )
 
       // Sort: active missions first (newest first), completed missions below (newest first)
-      const active = updated.filter(m => m.status !== 'orbit' && m.status !== 'abort')
-      const completed = updated.filter(m => m.status === 'orbit' || m.status === 'abort')
+      const active = updated.filter(m => !isTerminalStatus(m.status))
+      const completed = updated.filter(m => isTerminalStatus(m.status))
       active.sort((a, b) => b.startedAt - a.startedAt)
       completed.sort((a, b) => (b.completedAt ?? b.startedAt) - (a.completedAt ?? a.startedAt))
 
@@ -379,11 +408,11 @@ export function useDeployMissions() {
     }
   }, []) // No dependencies - uses ref for current missions
 
-  const activeMissions = missions.filter(m => m.status !== 'orbit' && m.status !== 'abort')
-  const completedMissions = missions.filter(m => m.status === 'orbit' || m.status === 'abort')
+  const activeMissions = missions.filter(m => !isTerminalStatus(m.status))
+  const completedMissions = missions.filter(m => isTerminalStatus(m.status))
 
   const clearCompleted = () => {
-    setMissions(prev => prev.filter(m => m.status !== 'orbit' && m.status !== 'abort'))
+    setMissions(prev => prev.filter(m => !isTerminalStatus(m.status)))
   }
 
   return {

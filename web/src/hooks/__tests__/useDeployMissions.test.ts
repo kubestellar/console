@@ -336,43 +336,43 @@ describe('useDeployMissions', () => {
   })
 
   // =========================================================================
-  // 10. clearCompleted removes orbit and abort missions
+  // 10. clearCompleted removes orbit, abort, and partial missions
   // =========================================================================
-  it('clearCompleted removes only completed missions', () => {
+  it('clearCompleted removes only completed missions (orbit, abort, partial)', () => {
     const missions = [
       makeMission({ id: 'active-1', status: 'deploying' }),
       makeMission({ id: 'done-1', status: 'orbit', completedAt: Date.now() }),
       makeMission({ id: 'failed-1', status: 'abort', completedAt: Date.now() }),
-      makeMission({ id: 'partial-1', status: 'partial' }),
+      makeMission({ id: 'partial-1', status: 'partial', completedAt: Date.now() }),
     ]
     localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
 
     const { result } = renderHook(() => useDeployMissions())
-    expect(result.current.completedMissions).toHaveLength(2)
+    expect(result.current.completedMissions).toHaveLength(3)
 
     act(() => { result.current.clearCompleted() })
 
-    expect(result.current.missions).toHaveLength(2)
+    expect(result.current.missions).toHaveLength(1)
     expect(result.current.completedMissions).toHaveLength(0)
-    expect(result.current.missions.map(m => m.id)).toEqual(['active-1', 'partial-1'])
+    expect(result.current.missions.map(m => m.id)).toEqual(['active-1'])
   })
 
   // =========================================================================
-  // 11. activeMissions and completedMissions filtering
+  // 11. activeMissions and completedMissions filtering (partial is terminal)
   // =========================================================================
   it('correctly separates active and completed missions', () => {
     const missions = [
       makeMission({ id: 'launch', status: 'launching' }),
       makeMission({ id: 'deploy', status: 'deploying' }),
-      makeMission({ id: 'partial', status: 'partial' }),
+      makeMission({ id: 'partial', status: 'partial', completedAt: Date.now() }),
       makeMission({ id: 'orbit', status: 'orbit', completedAt: Date.now() }),
       makeMission({ id: 'abort', status: 'abort', completedAt: Date.now() }),
     ]
     localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
 
     const { result } = renderHook(() => useDeployMissions())
-    expect(result.current.activeMissions).toHaveLength(3)
-    expect(result.current.completedMissions).toHaveLength(2)
+    expect(result.current.activeMissions).toHaveLength(2)
+    expect(result.current.completedMissions).toHaveLength(3)
     expect(result.current.hasActive).toBe(true)
   })
 
@@ -1233,5 +1233,281 @@ describe('useDeployMissions', () => {
     await advancePastInitialPoll()
 
     expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  // =========================================================================
+  // 41. #5501: partial mission reaches terminal state with completedAt
+  // =========================================================================
+  it('treats partial as terminal and sets completedAt', async () => {
+    const startedAt = Date.now() - MIN_ACTIVE_MS - 1
+    const missions = [makeMission({
+      id: 'partial-terminal', status: 'deploying', startedAt,
+      targetClusters: ['c1', 'c2'],
+      clusterStatuses: [
+        { cluster: 'c1', status: 'pending', replicas: 0, readyReplicas: 0 },
+        { cluster: 'c2', status: 'pending', replicas: 0, readyReplicas: 0 },
+      ],
+    })]
+    localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
+
+    mockClusterCacheRef.clusters = [
+      { name: 'c1', context: 'ctx-c1' },
+      { name: 'c2', context: 'ctx-c2' },
+    ]
+
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('cluster=ctx-c1')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            deployments: [{ name: 'nginx', replicas: 1, readyReplicas: 1 }],
+          }),
+        })
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          deployments: [{ name: 'nginx', replicas: 1, readyReplicas: 0, status: 'failed' }],
+        }),
+      })
+    })
+    mockKubectlExec.mockResolvedValue({ exitCode: 1, output: '' })
+
+    const { result } = renderHook(() => useDeployMissions())
+
+    await advancePastInitialPoll()
+
+    expect(result.current.missions[0].status).toBe('partial')
+    expect(result.current.missions[0].completedAt).toBeDefined()
+    // partial is terminal — should appear in completedMissions
+    expect(result.current.completedMissions).toHaveLength(1)
+    expect(result.current.activeMissions).toHaveLength(0)
+  })
+
+  // =========================================================================
+  // 42. #5501: partial mission stops polling after CACHE_TTL when logs exist
+  // =========================================================================
+  it('stops polling partial missions past TTL with existing logs', async () => {
+    const completedAt = Date.now() - CACHE_TTL_MS - 1
+    const missions = [makeMission({
+      id: 'partial-ttl', status: 'partial',
+      startedAt: completedAt - MIN_ACTIVE_MS, completedAt,
+      targetClusters: ['c1', 'c2'],
+      clusterStatuses: [
+        { cluster: 'c1', status: 'running', replicas: 1, readyReplicas: 1, logs: ['ok'] },
+        { cluster: 'c2', status: 'failed', replicas: 1, readyReplicas: 0, logs: ['fail'] },
+      ],
+    })]
+    localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
+
+    const fetchSpy = vi.fn()
+    global.fetch = fetchSpy
+
+    renderHook(() => useDeployMissions())
+
+    await advancePastInitialPoll()
+
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  // =========================================================================
+  // 43. #5500: event log does not mix workloads with shared prefix
+  // =========================================================================
+  it('excludes events from workloads sharing a prefix (e.g. api vs api-gateway)', async () => {
+    const startedAt = Date.now() - MIN_ACTIVE_MS - 1
+    const missions = [makeMission({
+      id: 'prefix-test', workload: 'api', status: 'deploying', startedAt,
+      targetClusters: ['c1'],
+    })]
+    localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
+
+    mockClusterCacheRef.clusters = [{ name: 'c1', context: 'ctx-c1' }]
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        deployments: [{ name: 'api', replicas: 1, readyReplicas: 1 }],
+      }),
+    })
+
+    mockKubectlExec.mockResolvedValue({
+      exitCode: 0,
+      output: JSON.stringify({
+        items: [
+          {
+            lastTimestamp: '2024-01-15T10:30:00Z',
+            reason: 'Scaled',
+            message: 'Scaled up api ReplicaSet',
+            involvedObject: { name: 'api' },
+          },
+          {
+            lastTimestamp: '2024-01-15T10:30:01Z',
+            reason: 'Pulled',
+            message: 'Container image pulled',
+            involvedObject: { name: 'api-7f8d9c' },
+          },
+          {
+            lastTimestamp: '2024-01-15T10:30:02Z',
+            reason: 'Started',
+            message: 'Started api-gateway container',
+            involvedObject: { name: 'api-gateway' },
+          },
+          {
+            lastTimestamp: '2024-01-15T10:30:03Z',
+            reason: 'Pulled',
+            message: 'Pulled gateway image',
+            involvedObject: { name: 'api-gateway-5f4d3c' },
+          },
+          {
+            lastTimestamp: '2024-01-15T10:30:04Z',
+            reason: 'Started',
+            message: 'Started gateway pod',
+            involvedObject: { name: 'api-gateway-5f4d3c-ab12c' },
+          },
+        ],
+      }),
+    })
+
+    const { result } = renderHook(() => useDeployMissions())
+
+    await advancePastInitialPoll()
+
+    const logs = result.current.missions[0].clusterStatuses[0].logs
+    expect(logs).toBeDefined()
+    // Only api (exact) and api-7f8d9c (K8s child) — not api-gateway or its children
+    expect(logs!.length).toBe(2)
+    expect(logs!.some(l => l.includes('Scaled up api ReplicaSet'))).toBe(true)
+    expect(logs!.some(l => l.includes('Container image pulled'))).toBe(true)
+    expect(logs!.some(l => l.includes('gateway'))).toBe(false)
+  })
+
+  // =========================================================================
+  // 44. #5499: 401 during deploy is reported as auth error, not unreachable
+  // =========================================================================
+  it('reports auth error for 401 instead of status unreachable', async () => {
+    const startedAt = Date.now() - MIN_ACTIVE_MS - 1
+    const missions = [makeMission({
+      id: 'auth-401', status: 'deploying', startedAt,
+      targetClusters: ['c1'],
+    })]
+    localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
+
+    mockClusterCacheRef.clusters = []
+    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 401 })
+
+    const { result } = renderHook(() => useDeployMissions())
+
+    await advancePastInitialPoll()
+
+    const cs = result.current.missions[0].clusterStatuses[0]
+    expect(cs.status).toBe('failed')
+    expect(cs.logs).toBeDefined()
+    expect(cs.logs![0]).toContain('Authentication failed')
+    expect(cs.logs![0]).toContain('401')
+  })
+
+  // =========================================================================
+  // 45. #5499: 403 during deploy is reported as auth error
+  // =========================================================================
+  it('reports auth error for 403 instead of status unreachable', async () => {
+    const startedAt = Date.now() - MIN_ACTIVE_MS - 1
+    const missions = [makeMission({
+      id: 'auth-403', status: 'deploying', startedAt,
+      targetClusters: ['c1'],
+    })]
+    localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
+
+    mockClusterCacheRef.clusters = []
+    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 403 })
+
+    const { result } = renderHook(() => useDeployMissions())
+
+    await advancePastInitialPoll()
+
+    const cs = result.current.missions[0].clusterStatuses[0]
+    expect(cs.status).toBe('failed')
+    expect(cs.logs).toBeDefined()
+    expect(cs.logs![0]).toContain('Authentication failed')
+    expect(cs.logs![0]).toContain('403')
+  })
+
+  // =========================================================================
+  // 46. #5499: 500 still goes through pendingOrFailed (not auth error)
+  // =========================================================================
+  it('treats 500 as pending (not auth error)', async () => {
+    const startedAt = Date.now() - MIN_ACTIVE_MS - 1
+    const missions = [makeMission({
+      id: 'rest-500', status: 'deploying', startedAt,
+      targetClusters: ['c1'],
+    })]
+    localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
+
+    mockClusterCacheRef.clusters = []
+    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 })
+
+    const { result } = renderHook(() => useDeployMissions())
+
+    await advancePastInitialPoll()
+
+    const cs = result.current.missions[0].clusterStatuses[0]
+    expect(cs.status).toBe('pending')
+    // Should NOT have auth error message
+    expect(cs.logs).toBeUndefined()
+  })
+
+  // =========================================================================
+  // 47. #5498: abort timer is cleared on agent fetch failure
+  // =========================================================================
+  it('clears abort timer even when agent fetch throws', async () => {
+    const missions = [makeMission({
+      id: 'timer-leak', status: 'deploying',
+      startedAt: Date.now(), targetClusters: ['c1'],
+    })]
+    localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
+
+    mockClusterCacheRef.clusters = [{ name: 'c1', context: 'ctx-c1' }]
+
+    const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout')
+
+    // Agent fetch throws — the finally block should still clear the timer
+    global.fetch = vi.fn().mockRejectedValue(new Error('Agent network failure'))
+
+    renderHook(() => useDeployMissions())
+
+    await advancePastInitialPoll()
+
+    // clearTimeout should have been called for the abort timer (among others)
+    // The abort timer clearTimeout is called in the finally block
+    expect(clearTimeoutSpy).toHaveBeenCalled()
+  })
+
+  // =========================================================================
+  // 48. #5501: saveMissions preserves logs for partial missions
+  // =========================================================================
+  it('preserves logs for partial missions when persisting to localStorage', () => {
+    const missions = [
+      makeMission({
+        id: 'partial-logs', status: 'partial', completedAt: Date.now(),
+        clusterStatuses: [
+          {
+            cluster: 'c1', status: 'running', replicas: 1, readyReplicas: 1,
+            logs: ['success log'],
+          },
+          {
+            cluster: 'c2', status: 'failed', replicas: 1, readyReplicas: 0,
+            logs: ['failure log'],
+          },
+        ],
+      }),
+    ]
+    localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
+
+    renderHook(() => useDeployMissions())
+
+    const stored = JSON.parse(localStorage.getItem(MISSIONS_STORAGE_KEY) || '[]')
+    const partialMission = stored.find((m: DeployMission) => m.id === 'partial-logs')
+    // partial is terminal — logs should be preserved, not stripped
+    expect(partialMission.clusterStatuses[0].logs).toEqual(['success log'])
+    expect(partialMission.clusterStatuses[1].logs).toEqual(['failure log'])
   })
 })

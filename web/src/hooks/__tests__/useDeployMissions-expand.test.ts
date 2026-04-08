@@ -226,19 +226,19 @@ describe('useDeployMissions — expanded edge cases', () => {
     expect(result.current.hasActive).toBe(true)
   })
 
-  // 6. activeMissions and completedMissions are correctly categorized
+  // 6. activeMissions and completedMissions are correctly categorized (partial is terminal)
   it('correctly categorizes active vs completed missions', () => {
     const missions = [
       makeMission({ id: 'a', status: 'deploying' }),
       makeMission({ id: 'b', status: 'launching' }),
       makeMission({ id: 'c', status: 'orbit', completedAt: Date.now() }),
       makeMission({ id: 'd', status: 'abort', completedAt: Date.now() }),
-      makeMission({ id: 'e', status: 'partial' }),
+      makeMission({ id: 'e', status: 'partial', completedAt: Date.now() }),
     ]
     localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
     const { result } = renderHook(() => useDeployMissions())
-    expect(result.current.activeMissions.map(m => m.id)).toEqual(expect.arrayContaining(['a', 'b', 'e']))
-    expect(result.current.completedMissions.map(m => m.id)).toEqual(expect.arrayContaining(['c', 'd']))
+    expect(result.current.activeMissions.map(m => m.id)).toEqual(expect.arrayContaining(['a', 'b']))
+    expect(result.current.completedMissions.map(m => m.id)).toEqual(expect.arrayContaining(['c', 'd', 'e']))
   })
 
   // 7. Poll fetches deployment status via agent
