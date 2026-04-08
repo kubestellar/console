@@ -713,6 +713,12 @@ export function connectSharedWebSocket() {
     const ws = new WebSocket(wsUrl)
 
     ws.onopen = () => {
+      // Guard against race condition where onclose fires before onopen
+      // (observed in Safari and during rapid reconnection cycles).
+      // ws.readyState may no longer be OPEN by the time this handler runs.
+      if (ws.readyState !== WebSocket.OPEN) {
+        return
+      }
       // Send authentication message - backend requires this within 5 seconds
       const token = localStorage.getItem(STORAGE_KEY_TOKEN)
       if (token) {
