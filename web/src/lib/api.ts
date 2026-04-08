@@ -215,7 +215,10 @@ export async function checkOAuthConfigured(): Promise<{ backendUp: boolean; oaut
     const data = await response.json().catch(() => null)
     if (!data) return { backendUp: false, oauthConfigured: false }
     return {
-      backendUp: data.status === 'ok',
+      // Any successful /health response means the backend is reachable.
+      // A "degraded" status (e.g. all clusters unreachable) should NOT
+      // flip the app into demo mode — only a network failure should (#5401).
+      backendUp: true,
       oauthConfigured: !!data.oauth_configured,
     }
   } catch {

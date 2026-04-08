@@ -247,6 +247,13 @@ describe('api.ts', () => {
       const result = await checkOAuthConfigured()
       expect(result).toEqual({ backendUp: false, oauthConfigured: false })
     })
+
+    it('treats degraded backend as up so demo mode is not triggered (#5401)', async () => {
+      vi.mocked(fetch).mockResolvedValue(makeResponse({ status: 'degraded', oauth_configured: true }))
+      const { checkOAuthConfigured } = await importFresh()
+      const result = await checkOAuthConfigured()
+      expect(result).toEqual({ backendUp: true, oauthConfigured: true })
+    })
   })
 
   // ── isBackendUnavailable ───────────────────────────────────────────────

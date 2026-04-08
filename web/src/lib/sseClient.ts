@@ -147,6 +147,11 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
 
   const promise = new Promise<T[]>((resolve, reject) => {
     const accumulated: T[] = []
+    /**
+     * Track items already received per-cluster so that reconnect retries
+     * replace stale data instead of appending duplicates (#5403).
+     */
+    const clusterItemCounts = new Map<string, number>()
     let aborted = false
     /** Whether we received a proper "done" event from the server */
     let receivedDone = false
@@ -173,7 +178,9 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
     const timeoutController = new AbortController()
     const timeoutId = setTimeout(() => {
       timeoutController.abort()
-      cleanup()
+      // Timeout with partial data — do NOT cache incomplete results (#5402).
+      // Pass wasAborted=true so the partial accumulation is not stored.
+      cleanup(/* wasAborted */ true)
       resolve(accumulated)
     }, SSE_TIMEOUT_MS)
 
@@ -233,7 +240,24 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
                   return rec.cluster ? item : ({ ...item, cluster: clusterName } as T)
                 })
 
+                // Deduplicate: if this cluster was already received (e.g. on a
+                // reconnect retry), remove the previous items before appending
+                // the fresh set so rows are not duplicated (#5403).
+                const prevCount = clusterItemCounts.get(clusterName)
+                if (prevCount !== undefined && prevCount > 0) {
+                  // Remove old items for this cluster from accumulated
+                  let removed = 0
+                  for (let i = accumulated.length - 1; i >= 0 && removed < prevCount; i--) {
+                    const rec = accumulated[i] as Record<string, unknown>
+                    if (rec.cluster === clusterName) {
+                      accumulated.splice(i, 1)
+                      removed++
+                    }
+                  }
+                }
+
                 accumulated.push(...tagged)
+                clusterItemCounts.set(clusterName, tagged.length)
                 onClusterData(clusterName, tagged)
               } catch (e) {
                 console.error('[SSE] Failed to parse cluster_data:', e)
@@ -260,12 +284,16 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
                 if (sseBuffer.trim()) {
                   parseSSEChunk(sseBuffer + '\n\n', handleEvent)
                 }
-                if (!receivedDone && accumulated.length > 0) {
+                // Only cache results if we received a proper "done" event.
+                // Without it, the data is incomplete and should not be
+                // served from cache on re-navigation (#5402).
+                const isPartial = !receivedDone
+                if (isPartial && accumulated.length > 0) {
                   console.warn(
-                    `[SSE] Stream ended without "done" event — returning ${accumulated.length} partial items`,
+                    `[SSE] Stream ended without "done" event — returning ${accumulated.length} partial items (not cached)`,
                   )
                 }
-                cleanup()
+                cleanup(/* wasAborted */ isPartial)
                 clearTimeout(timeoutId)
                 resolve(accumulated)
                 return

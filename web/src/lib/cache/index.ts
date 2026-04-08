@@ -1100,6 +1100,19 @@ export function useCache<T>({
   // liveInDemoMode bypasses the demo check for cards backed by serverless functions
   const effectiveEnabled = enabled && (!demoMode || liveInDemoMode)
 
+  // Track mount state to distinguish initial mount from mode-switch re-fires.
+  // On initial mount / page navigation: fetch immediately (needed for data).
+  // On mode transition (enabled false→true after mount): skip immediate refetch,
+  // let triggerAllRefetches() handle it after the 500ms skeleton timer.
+  const hasMountedRef = useRef(false)
+  const prevEnabledRef = useRef(effectiveEnabled)
+  const initialFetchDoneRef = useRef(false)
+
+  // Track the auto-refresh timer in a ref to avoid thrashing (#5252).
+  // Without this, changing consecutiveFailures recreates the interval on every
+  // render, defeating the exponential backoff.
+  const autoRefreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
   // Get or create cache store.
   // Track the key so we can reset the ref when the cache key changes
   // (e.g., switching clusters). Without this, storeRef points to stale data (#5259).
@@ -1107,6 +1120,15 @@ export function useCache<T>({
   const storeKeyRef = useRef(key)
 
   if (!storeRef.current || storeKeyRef.current !== key) {
+    // Key changed — clear the old auto-refresh timer so it doesn't keep
+    // polling the previous key (#5399), and reset the initial-fetch guard
+    // so the new key triggers an immediate fetch (#5400).
+    if (autoRefreshTimerRef.current) {
+      clearInterval(autoRefreshTimerRef.current)
+      autoRefreshTimerRef.current = null
+    }
+    initialFetchDoneRef.current = false
+
     storeKeyRef.current = key
     storeRef.current = shared
       ? getOrCreateCache(key, initialData, persist)
@@ -1146,19 +1168,6 @@ export function useCache<T>({
   // Calculate effective interval with failure backoff
   const baseInterval = refreshInterval ?? REFRESH_RATES[category]
   const effectiveInterval = getEffectiveInterval(baseInterval, state.consecutiveFailures)
-
-  // Track mount state to distinguish initial mount from mode-switch re-fires.
-  // On initial mount / page navigation: fetch immediately (needed for data).
-  // On mode transition (enabled false→true after mount): skip immediate refetch,
-  // let triggerAllRefetches() handle it after the 500ms skeleton timer.
-  const hasMountedRef = useRef(false)
-  const prevEnabledRef = useRef(effectiveEnabled)
-  const initialFetchDoneRef = useRef(false)
-
-  // Track the auto-refresh timer in a ref to avoid thrashing (#5252).
-  // Without this, changing consecutiveFailures recreates the interval on every
-  // render, defeating the exponential backoff.
-  const autoRefreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     if (!effectiveEnabled) {
