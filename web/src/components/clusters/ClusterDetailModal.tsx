@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { X, CheckCircle, AlertTriangle, WifiOff, Pencil, ChevronRight, ChevronDown, Layers, Server, Network, HardDrive, Box, FolderOpen, Loader2, Cpu, MemoryStick, Database, Wand2, Stethoscope, Wrench, Bot, ExternalLink } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNodes, useNamespaceStats, useDeployments, useClusters } from '../../hooks/useMCP'
+import { isClusterUnreachable, isClusterHealthy } from './utils'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
 import { emitClusterAction } from '../../lib/analytics'
@@ -233,14 +234,10 @@ After I approve, help me execute the repairs step by step.`,
     onClose()
   }
 
-  // Determine cluster status - use same logic as utils.ts
-  // Only mark as unreachable when we have confirmed unreachable status, not when loading
-  const isUnreachable = health ? (
-    health.reachable === false ||
-    (health.errorType && ['timeout', 'network', 'certificate'].includes(health.errorType)) ||
-    health.nodeCount === 0
-  ) : false
-  const isHealthy = !isLoading && !isUnreachable && health?.healthy !== false
+  // Determine cluster status using the SAME shared helpers as the list view
+  // so that health badges are always consistent (#5487).
+  const isUnreachable = clusterInfo ? isClusterUnreachable(clusterInfo) : false
+  const isHealthy = clusterInfo ? isClusterHealthy(clusterInfo) : (!isLoading && health?.healthy !== false)
 
   // Group GPUs by type for summary
   const gpuByType = (() => {

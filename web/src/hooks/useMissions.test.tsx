@@ -393,7 +393,16 @@ describe('startMission', () => {
 describe('sendMessage', () => {
   it('appends a user message to the correct mission', async () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
-    const { missionId } = await startMissionWithConnection(result)
+    const { missionId, requestId } = await startMissionWithConnection(result)
+
+    // Transition to waiting_input so sendMessage is not blocked (#5478 guard)
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: requestId,
+        type: 'stream',
+        payload: { content: '', done: true },
+      })
+    })
 
     act(() => {
       result.current.sendMessage(missionId, 'follow-up question')
@@ -407,7 +416,17 @@ describe('sendMessage', () => {
 
   it('sends the message payload over the WebSocket', async () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
-    const { missionId } = await startMissionWithConnection(result)
+    const { missionId, requestId } = await startMissionWithConnection(result)
+
+    // Transition to waiting_input so sendMessage is not blocked (#5478 guard)
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: requestId,
+        type: 'stream',
+        payload: { content: '', done: true },
+      })
+    })
+
     const beforeCallCount = MockWebSocket.lastInstance!.send.mock.calls.length
 
     await act(async () => {
