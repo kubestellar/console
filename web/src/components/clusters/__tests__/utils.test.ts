@@ -63,8 +63,9 @@ describe('isClusterHealthy', () => {
     expect(isClusterHealthy(makeCluster({ healthy: true }) as never)).toBe(true)
   })
 
-  it('returns true when nodeCount > 0', () => {
-    expect(isClusterHealthy(makeCluster({ healthy: false, nodeCount: 1 }) as never)).toBe(true)
+  it('returns false when healthy is explicitly false even with nodes', () => {
+    // PR #5449: healthy===false is authoritative — node presence does NOT override
+    expect(isClusterHealthy(makeCluster({ healthy: false, nodeCount: 1 }) as never)).toBe(false)
   })
 
   it('returns false when unhealthy with no nodes', () => {

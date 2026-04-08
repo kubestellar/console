@@ -404,17 +404,19 @@ describe('cluster selection', () => {
     expect(result.current.isClustersFiltered).toBe(false)
   })
 
-  it('deselectAllClusters sets __none__ sentinel', () => {
+  it('deselectAllClusters is reconciled back to all-selected mode', () => {
+    // PR #5449: reconciliation drops __none__ (not in availableClusters),
+    // reverting to all-selected mode
     const { result } = renderHook(() => useGlobalFilters(), { wrapper })
 
     act(() => {
       result.current.deselectAllClusters()
     })
 
-    expect(result.current.isClustersFiltered).toBe(true)
-    // Filter should return empty because __none__ doesn't match any cluster
+    // Reconciliation resets to all-selected because __none__ is not a real cluster
+    expect(result.current.isAllClustersSelected).toBe(true)
     const filtered = result.current.filterByCluster(SAMPLE_ITEMS)
-    expect(filtered).toEqual([])
+    expect(filtered).toEqual(SAMPLE_ITEMS)
   })
 
   describe('toggleCluster', () => {
@@ -958,14 +960,15 @@ describe('filterByCluster', () => {
     expect(filtered.every(item => item.cluster === 'cluster-a')).toBe(true)
   })
 
-  it('returns empty when __none__ sentinel is set', () => {
+  it('deselectAllClusters is reconciled to all-selected (returns all items)', () => {
+    // PR #5449: reconciliation drops __none__ sentinel, reverting to all mode
     const { result } = renderHook(() => useGlobalFilters(), { wrapper })
 
     act(() => {
       result.current.deselectAllClusters()
     })
 
-    expect(result.current.filterByCluster(SAMPLE_ITEMS)).toEqual([])
+    expect(result.current.filterByCluster(SAMPLE_ITEMS)).toEqual(SAMPLE_ITEMS)
   })
 
   it('excludes items without a cluster field', () => {
@@ -2005,13 +2008,16 @@ describe('edge cases', () => {
     expect(filtered[0].name).toBe('running-item')
   })
 
-  it('deselectAllClusters then selectAllClusters restores all mode', () => {
+  it('deselectAllClusters then selectAllClusters both resolve to all mode', () => {
+    // PR #5449: reconciliation drops __none__ immediately, so deselectAll
+    // already reverts to all-selected; selectAll is a no-op after that
     const { result } = renderHook(() => useGlobalFilters(), { wrapper })
 
     act(() => {
       result.current.deselectAllClusters()
     })
-    expect(result.current.filterByCluster(SAMPLE_ITEMS)).toEqual([])
+    // Reconciliation already restored all mode
+    expect(result.current.filterByCluster(SAMPLE_ITEMS)).toEqual(SAMPLE_ITEMS)
 
     act(() => {
       result.current.selectAllClusters()
@@ -2468,7 +2474,8 @@ describe('combined isFiltered flag with edge combinations', () => {
 })
 
 describe('filterByCluster with __none__ sentinel edge cases', () => {
-  it('__none__ sentinel returns empty even with items that have undefined cluster', () => {
+  it('deselectAllClusters is reconciled to all mode — returns all items', () => {
+    // PR #5449: reconciliation drops __none__ sentinel, reverting to all mode
     const { result } = renderHook(() => useGlobalFilters(), { wrapper })
 
     act(() => {
@@ -2479,7 +2486,8 @@ describe('filterByCluster with __none__ sentinel edge cases', () => {
       { name: 'no-cluster' },
       { name: 'has-cluster', cluster: 'cluster-a' },
     ]
-    expect(result.current.filterByCluster(items)).toEqual([])
+    // All items returned because reconciliation restored all-selected mode
+    expect(result.current.filterByCluster(items)).toEqual(items)
   })
 })
 

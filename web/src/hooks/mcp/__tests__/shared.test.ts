@@ -595,11 +595,13 @@ describe('updateSingleClusterInCache', () => {
     expect(c.healthy).toBe(true) // preserved original
   })
 
-  it('preserves positive metric values when new value is 0', () => {
+  it('accepts zero metric value (no longer falls back to cache)', () => {
+    // PR #5449: pickMetric no longer preserves cached values — a real zero
+    // (e.g. scaled-to-zero) must be respected (see #5443)
     updateSingleClusterInCache('c1', { cpuCores: 0 })
     vi.advanceTimersByTime(CLUSTER_NOTIFY_DEBOUNCE_MS)
     const c = clusterCache.clusters.find(c => c.name === 'c1')!
-    expect(c.cpuCores).toBe(8) // kept original positive value
+    expect(c.cpuCores).toBe(0)
   })
 
   it('applies zero metric when no prior positive value exists for that cluster', () => {
@@ -617,12 +619,13 @@ describe('updateSingleClusterInCache', () => {
     expect(c.cpuCores === 0 || c.cpuCores === undefined).toBe(true)
   })
 
-  it('does not set reachable=false when cluster has valid nodeCount', () => {
+  it('applies reachable=false even when cluster has valid nodeCount', () => {
+    // PR #5449: reachability is no longer blocked by node count — the useMCP
+    // hook gates reachable=false behind 5 min of failures, so it's authoritative (#5444)
     updateSingleClusterInCache('c1', { reachable: false })
     vi.advanceTimersByTime(CLUSTER_NOTIFY_DEBOUNCE_MS)
     const c = clusterCache.clusters.find(c => c.name === 'c1')!
-    // nodeCount=3 means we have valid cached data, reachable should stay true
-    expect(c.reachable).not.toBe(false)
+    expect(c.reachable).toBe(false)
   })
 
   it('allows reachable=false when cluster has no valid cached node data', () => {
@@ -2105,39 +2108,40 @@ describe('updateSingleClusterInCache — multiple metrics keys protection', () =
     vi.useRealTimers()
   })
 
-  it('protects memoryGB from being overwritten with zero', () => {
+  it('allows memoryGB to be overwritten with zero', () => {
+    // PR #5449: zero is a valid metric value (scaled-to-zero) — no longer preserved
     updateSingleClusterInCache('metrics-protect', { memoryGB: 0 })
     vi.advanceTimersByTime(CLUSTER_NOTIFY_DEBOUNCE_MS)
     const c = clusterCache.clusters.find(c => c.name === 'metrics-protect')!
-    expect(c.memoryGB).toBe(64)
+    expect(c.memoryGB).toBe(0)
   })
 
-  it('protects storageGB from being overwritten with zero', () => {
+  it('allows storageGB to be overwritten with zero', () => {
     updateSingleClusterInCache('metrics-protect', { storageGB: 0 })
     vi.advanceTimersByTime(CLUSTER_NOTIFY_DEBOUNCE_MS)
     const c = clusterCache.clusters.find(c => c.name === 'metrics-protect')!
-    expect(c.storageGB).toBe(200)
+    expect(c.storageGB).toBe(0)
   })
 
-  it('protects cpuRequestsMillicores from being overwritten with zero', () => {
+  it('allows cpuRequestsMillicores to be overwritten with zero', () => {
     updateSingleClusterInCache('metrics-protect', { cpuRequestsMillicores: 0 })
     vi.advanceTimersByTime(CLUSTER_NOTIFY_DEBOUNCE_MS)
     const c = clusterCache.clusters.find(c => c.name === 'metrics-protect')!
-    expect(c.cpuRequestsMillicores).toBe(4000)
+    expect(c.cpuRequestsMillicores).toBe(0)
   })
 
-  it('protects memoryRequestsBytes from being overwritten with zero', () => {
+  it('allows memoryRequestsBytes to be overwritten with zero', () => {
     updateSingleClusterInCache('metrics-protect', { memoryRequestsBytes: 0 })
     vi.advanceTimersByTime(CLUSTER_NOTIFY_DEBOUNCE_MS)
     const c = clusterCache.clusters.find(c => c.name === 'metrics-protect')!
-    expect(c.memoryRequestsBytes).toBe(1024)
+    expect(c.memoryRequestsBytes).toBe(0)
   })
 
-  it('protects memoryRequestsGB from being overwritten with zero', () => {
+  it('allows memoryRequestsGB to be overwritten with zero', () => {
     updateSingleClusterInCache('metrics-protect', { memoryRequestsGB: 0 })
     vi.advanceTimersByTime(CLUSTER_NOTIFY_DEBOUNCE_MS)
     const c = clusterCache.clusters.find(c => c.name === 'metrics-protect')!
-    expect(c.memoryRequestsGB).toBe(32)
+    expect(c.memoryRequestsGB).toBe(0)
   })
 
   it('allows updating metrics with positive new values', () => {
