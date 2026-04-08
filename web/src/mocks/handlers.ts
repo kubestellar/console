@@ -670,6 +670,20 @@ export const handlers = [
   http.get('/api/missions/file', () => passthrough()),
   http.get('/api/missions/browse', () => passthrough()),
 
+  // ── Kubara Platform Catalog (demo) ──────────────────────────────
+  http.get('/api/github/repos/kubara-io/kubara/contents/*', () => {
+    return HttpResponse.json([
+      { name: 'prometheus-stack', path: 'helm/prometheus-stack', type: 'directory', description: 'Production Prometheus + Grafana + Alertmanager' },
+      { name: 'cert-manager', path: 'helm/cert-manager', type: 'directory', description: 'Automated TLS certificate management' },
+      { name: 'falco-runtime-security', path: 'helm/falco-runtime-security', type: 'directory', description: 'Runtime threat detection and response' },
+      { name: 'kyverno-policies', path: 'helm/kyverno-policies', type: 'directory', description: 'Kubernetes policy engine for security' },
+      { name: 'argocd-gitops', path: 'helm/argocd-gitops', type: 'directory', description: 'Declarative GitOps continuous delivery' },
+      { name: 'istio-service-mesh', path: 'helm/istio-service-mesh', type: 'directory', description: 'Service mesh for traffic management and security' },
+      { name: 'velero-backups', path: 'helm/velero-backups', type: 'directory', description: 'Cluster backup and disaster recovery' },
+      { name: 'external-secrets', path: 'helm/external-secrets', type: 'directory', description: 'Sync secrets from external providers' },
+    ])
+  }),
+
   // ── Catch-all for unmocked API routes ────────────────────────────
   // On Netlify, unhandled /api/* and /health requests fall through to the SPA
   // catch-all which returns index.html (200 OK, text/html). Code calling

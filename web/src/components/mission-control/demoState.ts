@@ -152,5 +152,6 @@ export function getDemoMissionControlState(): Partial<MissionControlState> {
     targetClusters: [],
     aiStreaming: false,
     groundControlDashboardId: undefined,
+    planningMissionId: 'demo-planning-mission',
   }
 }

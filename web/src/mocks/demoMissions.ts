@@ -123,6 +123,58 @@ export const DEMO_MISSIONS: DemoMission[] = [
     ],
   },
 
+  // ── Planning Mission (hidden AI conversation for Mission Control) ──
+  {
+    id: 'demo-planning-mission',
+    title: 'Mission Control Planning',
+    description: 'AI-assisted deployment planning',
+    type: 'custom' as const,
+    status: 'completed' as const,
+    createdAt: hoursAgo(13),
+    updatedAt: hoursAgo(12),
+    messages: [
+      {
+        id: 'plan-user-1',
+        role: 'user' as const,
+        content: 'Deploy comprehensive security monitoring and observability across production clusters with automated certificate management.',
+        timestamp: hoursAgo(13),
+      },
+      {
+        id: 'plan-ai-1',
+        role: 'assistant' as const,
+        content: `Based on your requirements, I recommend a layered security and observability stack using 5 CNCF graduated projects:
+
+**Observability Layer**
+- **Prometheus** (required) — Industry-standard metrics collection with multi-dimensional data model and built-in alerting. Foundation for all observability.
+- **Grafana** (recommended) — Rich visualization and dashboarding platform. Depends on Prometheus for metrics data.
+
+**Security Layer**
+- **Falco** (required) — Runtime threat detection engine monitoring syscalls for container escapes, privilege escalation, and anomalous behavior. Sends alerts to Prometheus.
+- **Kyverno** (recommended) — Kubernetes-native policy engine. Enforces security policies as CRDs — image signing, resource limits, network restrictions. Depends on cert-manager for webhook TLS.
+
+**Infrastructure Layer**
+- **cert-manager** (required) — Automated TLS certificate lifecycle management. Required by Kyverno for secure webhook communication.
+
+**Deployment Strategy**: 2 phases
+1. Core Infrastructure: cert-manager + Prometheus (no dependencies)
+2. Security & Observability: Falco + Kyverno + Grafana (depend on Phase 1)
+
+\`\`\`json
+{
+  "projects": [
+    {"name":"prometheus","displayName":"Prometheus","reason":"Metrics collection and alerting — foundation for cluster observability.","category":"Observability","priority":"required","dependencies":[],"maturity":"graduated","difficulty":"beginner","githubOrg":"prometheus"},
+    {"name":"grafana","displayName":"Grafana","reason":"Visualization dashboards for Prometheus metrics.","category":"Observability","priority":"recommended","dependencies":["prometheus"],"maturity":"graduated","difficulty":"beginner","githubOrg":"grafana"},
+    {"name":"falco","displayName":"Falco Runtime Security","reason":"Runtime threat detection — monitors syscalls for malicious activity.","category":"Security","priority":"required","dependencies":["prometheus"],"maturity":"graduated","difficulty":"intermediate","githubOrg":"falcosecurity"},
+    {"name":"kyverno","displayName":"Kyverno","reason":"Policy engine — enforce security policies as Kubernetes resources.","category":"Security","priority":"recommended","dependencies":["cert-manager"],"maturity":"graduated","difficulty":"intermediate","githubOrg":"kyverno"},
+    {"name":"cert-manager","displayName":"cert-manager","reason":"TLS certificate lifecycle management — auto-renew certificates.","category":"Security","priority":"required","dependencies":[],"maturity":"graduated","difficulty":"beginner","githubOrg":"cert-manager"}
+  ]
+}
+\`\`\``,
+        timestamp: hoursAgo(12),
+      },
+    ],
+  },
+
   // ── Orbit Missions ────────────────────────────────────────────────
   {
     id: 'demo-orbit-prometheus-health',
