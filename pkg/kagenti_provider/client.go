@@ -199,10 +199,20 @@ func buildDetectCandidates() []string {
 
 // Detect tries common in-cluster kagenti service URLs and returns the first
 // reachable one. Returns an empty string if none are reachable.
+// Detect tries common in-cluster kagenti service URLs and returns the first reachable one.
 func (c *KagentiClient) Detect() string {
+	return c.DetectWithContext(context.Background())
+}
+
+// DetectWithContext tries common in-cluster kagenti service URLs with context support (#5566).
+func (c *KagentiClient) DetectWithContext(ctx context.Context) string {
 	candidates := buildDetectCandidates()
 	for _, url := range candidates {
-		resp, err := c.httpClient.Get(url + "/health")
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url+"/health", nil)
+		if err != nil {
+			continue
+		}
+		resp, err := c.httpClient.Do(req)
 		if err == nil {
 			resp.Body.Close()
 			return url
