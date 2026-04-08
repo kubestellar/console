@@ -236,7 +236,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
         type: 'directory',
         source: 'github',
         loaded: false,
-        description: 'Production-tested Helm values from kubara-io/kubara',
+        description: isDemoMode() ? 'Demo catalog — install console locally for live data' : 'Production-tested Helm values from kubara-io/kubara',
         repoOwner: 'kubara-io',
         repoName: 'kubara' },
     ]
@@ -629,20 +629,34 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
               source: 'github' as const,
               loaded: false,
               description: r.full_name }))
-          } else if (isDemoMode() && nodeId === 'kubara') {
-            // Demo mode: static Kubara catalog entries (api.get throws BackendUnavailableError)
-            children = [
-              'prometheus-stack', 'cert-manager', 'falco-runtime-security',
-              'kyverno-policies', 'argocd-gitops', 'istio-service-mesh',
-              'velero-backups', 'external-secrets',
-            ].map(name => ({
-              id: `kubara/${name}`,
-              name,
-              path: `helm/${name}`,
-              type: 'directory' as const,
-              source: 'github' as const,
-              loaded: true,
-            }))
+          } else if (isDemoMode() && (nodeId === 'kubara' || nodeId.startsWith('kubara/'))) {
+            // Demo mode: static Kubara catalog (cached, no API calls)
+            if (nodeId === 'kubara') {
+              children = [
+                'kube-prometheus-stack', 'cert-manager', 'kyverno', 'kyverno-policies',
+                'argo-cd', 'external-secrets', 'loki', 'longhorn', 'metallb', 'traefik',
+              ].map(name => ({
+                id: `kubara/${name}`,
+                name,
+                path: `go-binary/templates/embedded/managed-service-catalog/helm/${name}`,
+                type: 'directory' as const,
+                source: 'github' as const,
+                repoOwner: 'kubara-io',
+                repoName: 'kubara',
+                loaded: false,
+              }))
+            } else {
+              children = ['Chart.yaml', 'values.yaml', 'templates'].map(fname => ({
+                id: `${nodeId}/${fname}`,
+                name: fname,
+                path: `${node.path}/${fname}`,
+                type: (fname === 'templates' ? 'directory' : 'file') as TreeNode['type'],
+                source: 'github' as const,
+                repoOwner: 'kubara-io',
+                repoName: 'kubara',
+                loaded: fname !== 'templates',
+              }))
+            }
           } else {
             // Specific repo node — list repo contents via GitHub Contents API
             const repoPath = node.path
@@ -718,19 +732,6 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             )
           )
         } else if (node.source === 'github') {
-          // In demo mode, api.get() throws BackendUnavailableError — use static demo data
-          if (isDemoMode() && node.id === 'kubara') {
-            setDirectoryEntries([
-              { name: 'prometheus-stack', path: 'helm/prometheus-stack', type: 'directory' },
-              { name: 'cert-manager', path: 'helm/cert-manager', type: 'directory' },
-              { name: 'falco-runtime-security', path: 'helm/falco-runtime-security', type: 'directory' },
-              { name: 'kyverno-policies', path: 'helm/kyverno-policies', type: 'directory' },
-              { name: 'argocd-gitops', path: 'helm/argocd-gitops', type: 'directory' },
-              { name: 'istio-service-mesh', path: 'helm/istio-service-mesh', type: 'directory' },
-              { name: 'velero-backups', path: 'helm/velero-backups', type: 'directory' },
-              { name: 'external-secrets', path: 'helm/external-secrets', type: 'directory' },
-            ])
-          } else {
           // Fetch repo contents via GitHub Contents API proxy
           const owner = node.repoOwner || node.path.split('/')[0]
           const repo = node.repoName || node.path.split('/')[1]
@@ -747,7 +748,6 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
               type: e.type === 'dir' ? 'directory' as const : 'file' as const,
               size: e.size }))
           setDirectoryEntries(entries)
-          }
         } else {
           setDirectoryEntries([])
         }
