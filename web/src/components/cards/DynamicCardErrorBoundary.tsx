@@ -1,5 +1,6 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react'
 import { AlertTriangle, RotateCcw } from 'lucide-react'
+import { Button } from '../ui/Button'
 import { emitError, markErrorReported } from '../../lib/analytics'
 import { isChunkLoadError } from '../../lib/chunkErrors'
 
@@ -80,13 +81,14 @@ export class DynamicCardErrorBoundary extends Component<Props, State> {
           {retriesExhausted ? (
             <p className="text-xs text-muted-foreground">Reload the page to try again.</p>
           ) : (
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={this.handleRetry}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-secondary hover:bg-secondary/80 text-foreground transition-colors"
+              icon={<RotateCcw className="w-3 h-3" />}
             >
-              <RotateCcw className="w-3 h-3" />
               Retry ({retriesLeft} left)
-            </button>
+            </Button>
           )}
         </div>
       )
