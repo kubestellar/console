@@ -80,6 +80,7 @@ type Store interface {
 	GetUserNotifications(userID uuid.UUID, limit int) ([]models.Notification, error)
 	GetUnreadNotificationCount(userID uuid.UUID) (int, error)
 	MarkNotificationRead(id uuid.UUID) error
+	MarkNotificationReadByUser(id uuid.UUID, userID uuid.UUID) error
 	MarkAllNotificationsRead(userID uuid.UUID) error
 
 	// GPU Reservations

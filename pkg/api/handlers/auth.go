@@ -112,6 +112,22 @@ func validateAndConsumeOAuthState(state string) bool {
 	return false
 }
 
+// isLocalhostURL returns true if the given URL points to a loopback address
+// (localhost, 127.x.x.x, or [::1]). Used to decide whether the localhost
+// OAuth callback fallback is appropriate.
+func isLocalhostURL(rawURL string) bool {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+	host := u.Hostname()
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+
 // AuthConfig holds authentication configuration
 type AuthConfig struct {
 	GitHubClientID string
@@ -158,8 +174,14 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 	if cfg.BackendURL != "" {
 		redirectURL = cfg.BackendURL + "/auth/github/callback"
 	} else if cfg.FrontendURL != "" {
-		// Fallback: derive backend URL from frontend URL (replace port)
-		// Frontend: http://localhost:5174 -> Backend: http://localhost:8080
+		// BACKEND_URL is not set but FRONTEND_URL is — this is likely a non-local
+		// deployment where the localhost fallback will break OAuth.
+		if !isLocalhostURL(cfg.FrontendURL) {
+			slog.Warn("[Auth] BACKEND_URL is not set but FRONTEND_URL points to a non-local host. "+
+				"OAuth callback will fall back to localhost:8080 which will fail. "+
+				"Set BACKEND_URL to the public backend address.",
+				"frontendURL", cfg.FrontendURL)
+		}
 		redirectURL = defaultOAuthCallbackURL
 	}
 

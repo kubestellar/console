@@ -1075,24 +1075,13 @@ func (h *FeedbackHandler) MarkNotificationRead(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid notification ID")
 	}
 
-	// Get notification to verify ownership
-	notifications, err := h.store.GetUserNotifications(userID, 100)
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify notification")
-	}
-
-	found := false
-	for _, n := range notifications {
-		if n.ID == notificationID {
-			found = true
-			break
+	// Mark the notification as read, verifying ownership in a single query.
+	// The store returns an error containing "not found" when the notification
+	// does not exist or is not owned by the caller.
+	if err := h.store.MarkNotificationReadByUser(notificationID, userID); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return fiber.NewError(fiber.StatusNotFound, "Notification not found")
 		}
-	}
-	if !found {
-		return fiber.NewError(fiber.StatusNotFound, "Notification not found")
-	}
-
-	if err := h.store.MarkNotificationRead(notificationID); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to mark notification read")
 	}
 

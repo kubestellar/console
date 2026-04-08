@@ -1306,6 +1306,24 @@ func (s *SQLiteStore) MarkNotificationRead(id uuid.UUID) error {
 	return err
 }
 
+// MarkNotificationReadByUser marks a single notification as read, but only if it
+// belongs to the given user. Returns an error wrapping "not found" when the
+// notification does not exist or is not owned by the caller.
+func (s *SQLiteStore) MarkNotificationReadByUser(id uuid.UUID, userID uuid.UUID) error {
+	res, err := s.db.Exec(`UPDATE notifications SET read = 1 WHERE id = ? AND user_id = ?`, id.String(), userID.String())
+	if err != nil {
+		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("notification not found or not owned by user")
+	}
+	return nil
+}
+
 func (s *SQLiteStore) MarkAllNotificationsRead(userID uuid.UUID) error {
 	_, err := s.db.Exec(`UPDATE notifications SET read = 1 WHERE user_id = ?`, userID.String())
 	return err

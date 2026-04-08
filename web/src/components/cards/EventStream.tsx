@@ -86,7 +86,11 @@ function EventStreamInternal() {
       defaultField: 'time',
       defaultDirection: 'desc',
       comparators: {
-        time: () => 0, // Keep original order (already sorted by time desc)
+        time: (a, b) => {
+          const timeA = a.lastSeen || a.firstSeen || ''
+          const timeB = b.lastSeen || b.firstSeen || ''
+          return timeA.localeCompare(timeB)
+        },
         count: commonComparators.number('count'),
         type: commonComparators.string('type'),
       },
@@ -203,7 +207,7 @@ function EventStreamInternal() {
 
             return (
               <div
-                key={`${event.object}-${idx}`}
+                key={`${event.cluster || 'unknown'}-${event.object}-${event.lastSeen || event.firstSeen || ''}-${event.reason}`}
                 className={`flex items-start gap-3 p-3 rounded-lg hover:bg-secondary/40 transition-colors cursor-pointer group ${idx % 2 === 0 ? 'bg-secondary/10' : 'bg-secondary/25'}`}
                 onClick={() => handleEventClick(event)}
                 title={`Click to view details for ${event.object}`}
