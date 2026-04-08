@@ -42,7 +42,7 @@ env:
   ASSIGN_COPILOT: 'false'  # Set to 'true' to auto-assign Copilot to created issues
   COPILOT_ASSIGNMENT_DELAY_S: 120  # Seconds between Copilot assignments to avoid rate limiting
   ISSUE_PREFIX: "[Auto-QA]"
-  NODE_VERSION: "20"
+  NODE_VERSION: "22"
   GO_VERSION: "1.23"
 
 permissions:

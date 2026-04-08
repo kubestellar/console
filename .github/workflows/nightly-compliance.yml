@@ -22,7 +22,7 @@ on:
 
 env:
   CI: true
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
   PREVIEW_PORT: 4174
 
 permissions:

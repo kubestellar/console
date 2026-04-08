@@ -10,14 +10,15 @@ RUN go mod download
 # Copy source
 COPY . .
 
-# Build args for version
+# Build args for version and target architecture
 ARG APP_VERSION=dev
+ARG TARGETARCH
 
-# Build
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -X github.com/kubestellar/console/pkg/api.Version=${APP_VERSION}" -o console ./cmd/console
+# Build for the target platform (TARGETARCH is set automatically by buildx)
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -ldflags="-s -w -X github.com/kubestellar/console/pkg/api.Version=${APP_VERSION}" -o console ./cmd/console
 
 # Build stage - Frontend
-FROM node:20-alpine AS frontend-builder
+FROM node:22-alpine AS frontend-builder
 
 WORKDIR /app
 
