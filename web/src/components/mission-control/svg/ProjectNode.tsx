@@ -3,7 +3,7 @@
  * GitHub avatar icon, full label, status indicator. Tooltip rendered by parent as HTML overlay.
  */
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { CNCF_CATEGORY_GRADIENTS } from '../../../lib/cncf-constants'
 
@@ -127,10 +127,31 @@ export function ProjectNode({
     false
   const overlayDim = overlay === 'architecture' ? 1 : isRelevant ? 1 : 0.25
 
-  void _onDragStart; void _onDragEnd // Props preserved for API compatibility
+  // Wire up native HTML5 drag events via ref — framer-motion's drag API
+  // conflicts with React DragEvent types, so we attach listeners directly (#5531)
+  const dragRef = useRef<SVGGElement>(null)
+  useEffect(() => {
+    const el = dragRef.current
+    if (!el || !_onDragStart) return
+    el.setAttribute('draggable', 'true')
+    el.style.cursor = 'grab'
+    const handleDragStart = (e: DragEvent) => {
+      e.dataTransfer?.setData('text/plain', name)
+      if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'
+      _onDragStart(name)
+    }
+    const handleDragEnd = () => _onDragEnd?.()
+    el.addEventListener('dragstart', handleDragStart)
+    el.addEventListener('dragend', handleDragEnd)
+    return () => {
+      el.removeEventListener('dragstart', handleDragStart)
+      el.removeEventListener('dragend', handleDragEnd)
+    }
+  }, [name, _onDragStart, _onDragEnd])
 
   return (
     <motion.g
+      ref={dragRef}
       initial={{ scale: 0, opacity: 0 }}
       animate={{ scale: 1, opacity: dimmed ? 0.15 : glow ? 1 : overlayDim }}
       transition={{
