@@ -125,7 +125,7 @@ export function DashboardHeader({
         </div>
         {/* Reserve fixed width to prevent layout shift */}
         <span
-          className={`flex items-center gap-1 text-xs w-[72px] ${isFetching ? 'text-yellow-400 animate-pulse' : 'invisible'}`}
+          className={`flex items-center gap-1 text-xs w-18 ${isFetching ? 'text-yellow-400 animate-pulse' : 'invisible'}`}
           title={t('common.updating')}
           aria-busy={isLoading}
         >
