@@ -99,6 +99,7 @@ const ComplianceDrift = safeLazy(() => import('./ComplianceDrift'), 'ComplianceD
 const CrossClusterPolicyComparison = safeLazy(() => import('./CrossClusterPolicyComparison'), 'CrossClusterPolicyComparison')
 const RecommendedPolicies = safeLazy(() => import('./RecommendedPolicies'), 'RecommendedPolicies')
 const KyvernoPolicies = safeLazy(() => import('./KyvernoPolicies'), 'KyvernoPolicies')
+const IntotoSupplyChain = safeLazy(() => import('./IntotoSupplyChain'), 'IntotoSupplyChain')
 // Eagerly import demo-only compliance cards — they're tiny (~255 lines total),
 // contain only hardcoded demo data, and lazy loading them causes blank cards
 // while heavier modules (OPA) saturate the dev server's transform pipeline.
@@ -404,6 +405,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   // Policy management cards
   opa_policies: OPAPolicies,
   kyverno_policies: KyvernoPolicies,
+  intoto_supply_chain: IntotoSupplyChain,
   // Compliance tool cards
   falco_alerts: FalcoAlerts,
   trestle_scan: TrestleScan,
@@ -855,6 +857,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   // Policy & compliance (shared modules)
   opa_policies: () => import('./OPAPolicies'),
   kyverno_policies: () => import('./KyvernoPolicies'),
+  intoto_supply_chain: () => import('./IntotoSupplyChain'),
   falco_alerts: () => import('./ComplianceCards'),
   iso27001_audit: () => import('./ISO27001Audit'),
   trestle_scan: () => import('./TrestleScan'),
@@ -1382,6 +1385,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   gpu_namespace_allocations: 6,
   opa_policies: 6,
   kyverno_policies: 6,
+  intoto_supply_chain: 6,
   falco_alerts: 4,
   iso27001_audit: 6,
   trestle_scan: 6,

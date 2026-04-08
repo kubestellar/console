@@ -99,6 +99,8 @@ export const STORAGE_KEY_TRESTLE_CACHE_TIME = 'kc-trestle-cache-time'
 export const STORAGE_KEY_KUBECTL_HISTORY = 'kubectl-history'
 export const STORAGE_KEY_RBAC_CACHE = 'kc-rbac-cache'
 export const STORAGE_KEY_RBAC_CACHE_TIME = 'kc-rbac-cache-time'
+export const STORAGE_KEY_INTOTO_CACHE = 'kc-intoto-cache'
+export const STORAGE_KEY_INTOTO_CACHE_TIME = 'kc-intoto-cache-time'
 export const STORAGE_KEY_NS_OVERVIEW_CLUSTER = 'kc-ns-overview-cluster'
 export const STORAGE_KEY_NS_OVERVIEW_NAMESPACE = 'kc-ns-overview-namespace'
 

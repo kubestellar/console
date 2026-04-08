@@ -3079,6 +3079,10 @@
     "scanningClusters": "Scanning clusters...",
     "documentation": "Kyverno Documentation"
   },
+  "intotoSupplyChain": {
+    "scanningClusters": "Scanning clusters...",
+    "documentation": "in-toto Documentation"
+  },
   "recommendedPolicies": {
     "scanningClusters": "Scanning clusters..."
   },

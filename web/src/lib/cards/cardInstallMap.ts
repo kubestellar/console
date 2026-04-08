@@ -101,6 +101,9 @@ export const CARD_INSTALL_MAP: Record<string, CardInstallInfo> = {
   // Knative
   knative_services: { project: 'Knative', missionKey: 'install-knative', kbPaths: ['fixes/cncf-install/install-knative.json'] },
 
+  // in-toto
+  intoto_supply_chain: { project: 'in-toto', missionKey: 'install-in-toto', kbPaths: ['fixes/cncf-install/install-in-toto.json'] },
+
   // OpenKruise
   openkruise_status: { project: 'OpenKruise', missionKey: 'install-openkruise', kbPaths: ['fixes/cncf-install/install-openkruise.json'] },
   // Keycloak
