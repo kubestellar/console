@@ -104,6 +104,8 @@ export function PredictionSettingsSection({
             </div>
           </div>
           <button
+            role="switch"
+            aria-checked={settings.aiEnabled}
             onClick={handleToggleAI}
             className={`relative w-12 h-6 rounded-full transition-colors ${
               settings.aiEnabled ? 'bg-blue-500' : 'bg-secondary'
@@ -202,6 +204,8 @@ export function PredictionSettingsSection({
                 </div>
               </div>
               <button
+                role="switch"
+                aria-checked={settings.consensusMode}
                 onClick={handleToggleConsensus}
                 className={`relative w-10 h-5 rounded-full transition-colors ${
                   settings.consensusMode ? 'bg-purple-500' : 'bg-secondary'

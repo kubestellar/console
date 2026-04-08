@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Moon, Sun, Check, Palette, ChevronDown, Trash2 } from 'lucide-react'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
@@ -20,6 +20,20 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false)
   const [customThemes, setCustomThemes] = useState<Theme[]>(() => getCustomThemes())
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  /** Close the theme dropdown on Escape key or clicks outside */
+  const handleDropdownKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setThemeDropdownOpen(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!themeDropdownOpen) return
+    document.addEventListener('keydown', handleDropdownKeyDown)
+    return () => document.removeEventListener('keydown', handleDropdownKeyDown)
+  }, [themeDropdownOpen, handleDropdownKeyDown])
 
   useEffect(() => {
     const handler = () => setCustomThemes(getCustomThemes())
@@ -86,10 +100,19 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
         </div>
 
         {/* Theme Selector Dropdown */}
-        <div className="relative z-20">
-          <label className="block text-sm text-muted-foreground mb-2">{t('settings.theme.selectTheme')}</label>
+        <div className="relative z-20" ref={dropdownRef}>
+          <label id="theme-dropdown-label" className="block text-sm text-muted-foreground mb-2">{t('settings.theme.selectTheme')}</label>
           <button
             onClick={() => setThemeDropdownOpen(!themeDropdownOpen)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' && themeDropdownOpen) {
+                e.stopPropagation()
+                setThemeDropdownOpen(false)
+              }
+            }}
+            aria-haspopup="listbox"
+            aria-expanded={themeDropdownOpen}
+            aria-labelledby="theme-dropdown-label"
             className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-secondary border border-border text-foreground hover:bg-secondary/80 transition-colors"
           >
             <div className="flex items-center gap-3">
@@ -113,7 +136,7 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
 
           {/* Dropdown Menu */}
           {themeDropdownOpen && (
-            <div className="absolute z-[9999] mt-2 w-full max-h-[400px] overflow-y-auto rounded-lg bg-card border border-border shadow-xl" style={{ transform: 'translateZ(0)' }}>
+            <div role="listbox" aria-labelledby="theme-dropdown-label" className="absolute z-[9999] mt-2 w-full max-h-[400px] overflow-y-auto rounded-lg bg-card border border-border shadow-xl" style={{ transform: 'translateZ(0)' }}>
               {themeGroups.map((group) => (
                 <div key={group.name}>
                   <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-secondary/50 sticky top-0">
@@ -126,9 +149,17 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
                     return (
                       <button
                         key={tid}
+                        role="option"
+                        aria-selected={isSelected}
                         onClick={() => {
                           setTheme(tid)
                           setThemeDropdownOpen(false)
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') {
+                            e.stopPropagation()
+                            setThemeDropdownOpen(false)
+                          }
                         }}
                         className={`w-full flex items-center justify-between px-4 py-3 hover:bg-secondary/50 transition-colors ${
                           isSelected ? 'bg-primary/10' : ''
@@ -179,9 +210,17 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
                     return (
                       <button
                         key={ct.id}
+                        role="option"
+                        aria-selected={isSelected}
                         onClick={() => {
                           setTheme(ct.id)
                           setThemeDropdownOpen(false)
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') {
+                            e.stopPropagation()
+                            setThemeDropdownOpen(false)
+                          }
                         }}
                         className={`w-full flex items-center justify-between px-4 py-3 hover:bg-secondary/50 transition-colors ${
                           isSelected ? 'bg-primary/10' : ''

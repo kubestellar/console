@@ -100,7 +100,8 @@ export function GPUReservationsTab({
           </p>
           {!showOnlyMine && (
             <button onClick={onCreateReservation}
-              className="px-4 py-2 rounded-lg bg-purple-500 text-white text-sm font-medium hover:bg-purple-600">
+              disabled={deleteConfirmId !== null || showReservationForm}
+              className="px-4 py-2 rounded-lg bg-purple-500 text-white text-sm font-medium hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-purple-500">
               {t('gpuReservations.createReservation')}
             </button>
           )}

@@ -269,6 +269,30 @@ describe('CreateDashboardModal', () => {
     })
   })
 
+  // ── Loading / disabled state ─────────────────────────────────────────
+
+  it('disables the create button and shows loading while creating', async () => {
+    const user = userEvent.setup()
+    let resolveCreate: () => void = () => {}
+    const onCreate = vi.fn().mockImplementation(() => new Promise<void>((r) => { resolveCreate = r }))
+    render(<CreateDashboardModal {...defaultProps} onCreate={onCreate} />)
+
+    const createBtn = screen.getByText('Create Dashboard', { selector: 'button' })
+    await user.click(createBtn)
+
+    // Button should be disabled and show loading during async creation
+    await waitFor(() => {
+      expect(createBtn).toBeDisabled()
+      expect(createBtn).toHaveAttribute('data-loading', 'true')
+    })
+
+    // Resolve the promise to finish creation
+    resolveCreate()
+    await waitFor(() => {
+      expect(onCreate).toHaveBeenCalledTimes(1)
+    })
+  })
+
   // ── Cancel ──────────────────────────────────────────────────────────
 
   it('calls onClose when Cancel is clicked', async () => {
