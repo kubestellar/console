@@ -63,6 +63,8 @@ export interface DeployClusterStatus {
   replicas: number
   readyReplicas: number
   logs?: string[]
+  /** Consecutive status-fetch failures — transitions to 'failed' after threshold */
+  consecutiveFailures?: number
 }
 
 export interface DeployMission {
@@ -91,6 +93,8 @@ const POLL_INTERVAL_MS = 5000
 const MAX_MISSIONS = 50
 /** Cache TTL: 5 minutes — stop polling completed missions after this duration */
 const CACHE_TTL_MS = 5 * 60 * 1000
+/** After this many consecutive status-fetch failures a cluster is marked failed */
+const MAX_STATUS_FAILURES = 6
 
 function loadMissions(): DeployMission[] {
   try {
@@ -208,6 +212,22 @@ export function useDeployMissions() {
 
           const statuses = await Promise.all(
             mission.targetClusters.map(async (cluster): Promise<DeployClusterStatus> => {
+              // Track consecutive failures from previous poll cycle
+              const prevStatus = mission.clusterStatuses.find(cs => cs.cluster === cluster)
+              const prevFailures = prevStatus?.consecutiveFailures ?? 0
+
+              // Helper: build a "pending-or-failed" response depending on failure count
+              const pendingOrFailed = (): DeployClusterStatus => {
+                const failures = prevFailures + 1
+                if (failures >= MAX_STATUS_FAILURES) {
+                  return { cluster, status: 'failed', replicas: 0, readyReplicas: 0,
+                    consecutiveFailures: failures,
+                    logs: [`Status unreachable after ${failures} consecutive attempts`] }
+                }
+                return { cluster, status: 'pending', replicas: 0, readyReplicas: 0,
+                  consecutiveFailures: failures }
+              }
+
               // Try agent first (works when backend is down)
               try {
                 const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
@@ -228,10 +248,12 @@ export function useDeployMissions() {
                       (d) => String(d.name) === mission.workload
                     )
                     if (match) {
-                      const replicas = Number(match.replicas || 0)
-                      const readyReplicas = Number(match.readyReplicas || 0)
+                      const replicas = Number(match.replicas ?? 0)
+                      const readyReplicas = Number(match.readyReplicas ?? 0)
                       let status: DeployClusterStatus['status'] = 'applying'
-                      if (readyReplicas > 0 && readyReplicas >= replicas) {
+                      // Zero-replica workloads are valid (e.g. scale-to-zero) — treat
+                      // readyReplicas >= replicas as success even when both are zero.
+                      if (readyReplicas >= replicas) {
                         status = 'running'
                       } else if (String(match.status) === 'failed') {
                         status = 'failed'
@@ -246,8 +268,8 @@ export function useDeployMissions() {
                       } catch { /* non-critical */ }
                       return { cluster, status, replicas, readyReplicas, logs }
                     }
-                    // Workload not found on this cluster yet — still pending
-                    return { cluster, status: 'pending', replicas: 0, readyReplicas: 0 }
+                    // Workload not found on this cluster yet — still pending (or failed after threshold)
+                    return pendingOrFailed()
                   }
                 }
               } catch {
@@ -261,15 +283,19 @@ export function useDeployMissions() {
                   { headers: authHeaders(), signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) }
                 )
                 if (!res.ok) {
-                  return { cluster, status: 'pending', replicas: 0, readyReplicas: 0 }
+                  return pendingOrFailed()
                 }
                 const data = await res.json()
                 let status: DeployClusterStatus['status'] = 'applying'
-                if (data.status === 'Running' && data.readyReplicas > 0 && data.readyReplicas >= data.replicas) {
+                const restReplicas = Number(data.replicas ?? 0)
+                const restReady = Number(data.readyReplicas ?? 0)
+                // Zero-replica workloads are valid — treat readyReplicas >= replicas
+                // as success even when both are zero.
+                if (data.status === 'Running' && restReady >= restReplicas) {
                   status = 'running'
                 } else if (data.status === 'Failed') {
                   status = 'failed'
-                } else if (data.readyReplicas > 0) {
+                } else if (restReady > 0) {
                   status = 'applying'
                 }
                 // Fetch deploy events/logs
@@ -295,7 +321,7 @@ export function useDeployMissions() {
                   readyReplicas: data.readyReplicas ?? 0,
                   logs }
               } catch {
-                return { cluster, status: 'pending', replicas: 0, readyReplicas: 0 }
+                return pendingOrFailed()
               }
             })
           )

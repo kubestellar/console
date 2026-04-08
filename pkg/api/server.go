@@ -588,6 +588,8 @@ func (s *Server) setupRoutes() {
 	})
 
 	// Active users heartbeat endpoint (for demo mode session counting)
+	// This is unauthenticated telemetry — session IDs are validated for length
+	// and the total number of unique sessions is capped to prevent inflation.
 	s.app.Post("/api/active-users", func(c *fiber.Ctx) error {
 		var body struct {
 			SessionID string `json:"sessionId"`
@@ -595,7 +597,9 @@ func (s *Server) setupRoutes() {
 		if err := c.BodyParser(&body); err != nil || body.SessionID == "" {
 			return c.Status(400).JSON(fiber.Map{"error": "sessionId required"})
 		}
-		s.hub.RecordDemoSession(body.SessionID)
+		if !s.hub.RecordDemoSession(body.SessionID) {
+			return c.Status(429).JSON(fiber.Map{"error": "session limit reached"})
+		}
 		demoCount := s.hub.GetDemoSessionCount()
 		return c.JSON(fiber.Map{
 			"activeUsers":      demoCount,

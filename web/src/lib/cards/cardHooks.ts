@@ -377,9 +377,11 @@ export function useCardData<T, S extends string = string>(
   const needsPagination = itemsPerPage !== 'unlimited' && sorted.length > effectivePerPage
 
   // Reset page when filters change (but not on sort — sorting preserves page position)
+  // Watch the filtered result reference — it changes on any filter input including
+  // global cluster/status/severity/custom text filters, not just local search.
   useEffect(() => {
     setCurrentPage(1)
-  }, [filterResult.search, filterResult.localClusterFilter])
+  }, [filterResult.search, filterResult.localClusterFilter, filtered])
 
   // Ensure current page is valid
   useEffect(() => {

@@ -68,6 +68,8 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
     storageKey: 'namespace-events' })
 
   // Apply config overrides (e.g., from drill-down navigation)
+  // Re-apply when config props change so that navigating to a different
+  // drilldown target actually updates the selection.
   useEffect(() => {
     if (config?.cluster && config.cluster !== selectedCluster) {
       setSelectedCluster(config.cluster)
@@ -75,9 +77,8 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
     if (config?.namespace && config.namespace !== selectedNamespace) {
       setSelectedNamespace(config.namespace)
     }
-    // Only run on mount - config changes shouldn't override user selections
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [config?.cluster, config?.namespace])
 
   // Fetch namespaces for the selected cluster
   const { namespaces } = useCachedNamespaces(selectedCluster || undefined)

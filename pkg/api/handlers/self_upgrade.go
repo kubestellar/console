@@ -300,14 +300,27 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 		currentImage = dep.Spec.Template.Spec.Containers[0].Image
 	}
 
-	// Extract repository from current image (e.g., "ghcr.io/kubestellar/console:v0.3.11" → "ghcr.io/kubestellar/console")
+	// Extract repository from current image.
+	// Must handle registries with ports (e.g. "registry.internal:5000/console")
+	// where the colon is NOT a tag separator.  A tag colon always appears
+	// after the last slash, so we only strip a ":tag" suffix from the segment
+	// after the final "/".
 	repo := currentImage
-	if idx := strings.LastIndex(repo, ":"); idx > 0 {
-		repo = repo[:idx]
-	}
-	// Handle @sha256 digests
+	// Handle @sha256 digests first (e.g. "ghcr.io/console@sha256:abc123")
 	if idx := strings.LastIndex(repo, "@"); idx > 0 {
 		repo = repo[:idx]
+	}
+	// Strip tag — only look for ":" after the last "/"
+	if lastSlash := strings.LastIndex(repo, "/"); lastSlash >= 0 {
+		tail := repo[lastSlash:]
+		if colonIdx := strings.LastIndex(tail, ":"); colonIdx > 0 {
+			repo = repo[:lastSlash+colonIdx]
+		}
+	} else {
+		// No slash at all (e.g. "console:v1.0") — simple strip
+		if colonIdx := strings.LastIndex(repo, ":"); colonIdx > 0 {
+			repo = repo[:colonIdx]
+		}
 	}
 	newImage := repo + ":" + req.ImageTag
 

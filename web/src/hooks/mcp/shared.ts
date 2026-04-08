@@ -198,11 +198,12 @@ function mergeWithStoredClusters(newClusters: ClusterInfo[]): ClusterInfo[] {
   return newClusters.map(cluster => {
     const cached = storedMap.get(cluster.name)
     if (cached) {
-      // Helper: use new value only if it's a positive number, else use cached
+      // Helper: prefer new value when defined (including zero); only fall back
+      // to cached when the new value is truly missing (undefined).
+      // A legitimate zero (e.g. cluster scaled to 0 pods) must be respected.
       const pickMetric = (newVal: number | undefined, cachedVal: number | undefined) => {
-        if (newVal !== undefined && newVal > 0) return newVal
-        if (cachedVal !== undefined && cachedVal > 0) return cachedVal
-        return newVal // fallback to new value (could be 0 or undefined)
+        if (newVal !== undefined) return newVal
+        return cachedVal
       }
 
       // Merge: use new data but preserve cached metrics if new data is missing/zero
@@ -608,24 +609,11 @@ export function updateSingleClusterInCache(clusterName: string, updates: Partial
         return
       }
 
-      // For numeric metrics, preserve positive cached values when new value is 0
-      const metricsKeys = ['cpuCores', 'memoryBytes', 'memoryGB', 'storageBytes', 'storageGB', 'cpuRequestsMillicores', 'cpuRequestsCores', 'memoryRequestsBytes', 'memoryRequestsGB', 'cpuUsageMillicores', 'cpuUsageCores', 'memoryUsageBytes', 'memoryUsageGB']
-      if (metricsKeys.includes(key) && typeof value === 'number' && value === 0) {
-        // Keep existing positive value if available
-        const existingValue = c[key as keyof ClusterInfo]
-        if (typeof existingValue === 'number' && existingValue > 0) {
-          return // Skip, keep existing positive value
-        }
-      }
-
-      // Don't set reachable to false if we have valid cached node data
-      // This prevents transient health check failures from immediately marking clusters as offline
-      if (key === 'reachable' && value === false) {
-        const hasValidCachedData = typeof c.nodeCount === 'number' && c.nodeCount > 0
-        if (hasValidCachedData) {
-          return // Skip, keep cluster reachable since we have valid data
-        }
-      }
+      // For numeric metrics, only fall back to cached when new value is undefined.
+      // A real zero (e.g. scaled-to-zero) must be respected — see #5443.
+      // NOTE: reachability (key === 'reachable') is no longer blocked by cached
+      // node data — the useMCP hook already gates reachable=false behind 5 minutes
+      // of consecutive failures, so the value is authoritative — see #5444.
 
       // Apply the update
       (merged as Record<string, unknown>)[key] = value

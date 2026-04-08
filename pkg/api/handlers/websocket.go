@@ -23,6 +23,11 @@ const (
 	// wsMaxBroadcastBytes is the maximum serialized size of a single broadcast message.
 	// Messages exceeding this limit are dropped to prevent memory spikes.
 	wsMaxBroadcastBytes = 1 * 1024 * 1024 // 1 MB
+	// maxDemoSessions caps unique demo session IDs to prevent inflation attacks.
+	// This is unauthenticated telemetry — the cap is a reasonable upper bound.
+	maxDemoSessions = 500
+	// maxSessionIDLen is the maximum allowed length for a demo session ID.
+	maxSessionIDLen = 128
 )
 
 // Message represents a WebSocket message
@@ -199,11 +204,29 @@ func (h *Hub) DisconnectUser(userID uuid.UUID) {
 	slog.Info("[WebSocket] disconnected all connections for user", "user", userID, "count", len(clients))
 }
 
-// RecordDemoSession records a heartbeat from a demo mode session
-func (h *Hub) RecordDemoSession(sessionID string) {
+// RecordDemoSession records a heartbeat from a demo mode session.
+// The endpoint is unauthenticated (demo mode only) so we cap the number of
+// unique sessions and reject oversized IDs to limit abuse potential.
+func (h *Hub) RecordDemoSession(sessionID string) bool {
+	if len(sessionID) > maxSessionIDLen {
+		return false
+	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
+
+	// Allow updates to existing sessions unconditionally
+	if _, exists := h.demoSessions[sessionID]; exists {
+		h.demoSessions[sessionID] = time.Now()
+		return true
+	}
+
+	// Reject new sessions if at capacity
+	if len(h.demoSessions) >= maxDemoSessions {
+		return false
+	}
+
 	h.demoSessions[sessionID] = time.Now()
+	return true
 }
 
 // GetDemoSessionCount returns the number of active demo sessions (seen in last 60 seconds)
