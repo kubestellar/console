@@ -629,6 +629,20 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
               source: 'github' as const,
               loaded: false,
               description: r.full_name }))
+          } else if (isDemoMode() && nodeId === 'kubara') {
+            // Demo mode: static Kubara catalog entries (api.get throws BackendUnavailableError)
+            children = [
+              'prometheus-stack', 'cert-manager', 'falco-runtime-security',
+              'kyverno-policies', 'argocd-gitops', 'istio-service-mesh',
+              'velero-backups', 'external-secrets',
+            ].map(name => ({
+              id: `kubara/${name}`,
+              name,
+              path: `helm/${name}`,
+              type: 'directory' as const,
+              source: 'github' as const,
+              loaded: true,
+            }))
           } else {
             // Specific repo node — list repo contents via GitHub Contents API
             const repoPath = node.path
