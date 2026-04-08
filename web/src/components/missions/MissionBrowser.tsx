@@ -11,6 +11,7 @@ import {
   Loader2, ExternalLink, RefreshCw } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { api } from '../../lib/api'
+import { isDemoMode } from '../../lib/demoMode'
 import { useAuth } from '../../lib/auth'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../lib/constants/network'
 import { matchMissionsToCluster } from '../../lib/missions/matcher'
@@ -703,9 +704,20 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             )
           )
         } else if (node.source === 'github') {
+          // In demo mode, api.get() throws BackendUnavailableError — use static demo data
+          if (isDemoMode() && node.id === 'kubara') {
+            setDirectoryEntries([
+              { name: 'prometheus-stack', path: 'helm/prometheus-stack', type: 'directory' },
+              { name: 'cert-manager', path: 'helm/cert-manager', type: 'directory' },
+              { name: 'falco-runtime-security', path: 'helm/falco-runtime-security', type: 'directory' },
+              { name: 'kyverno-policies', path: 'helm/kyverno-policies', type: 'directory' },
+              { name: 'argocd-gitops', path: 'helm/argocd-gitops', type: 'directory' },
+              { name: 'istio-service-mesh', path: 'helm/istio-service-mesh', type: 'directory' },
+              { name: 'velero-backups', path: 'helm/velero-backups', type: 'directory' },
+              { name: 'external-secrets', path: 'helm/external-secrets', type: 'directory' },
+            ])
+          } else {
           // Fetch repo contents via GitHub Contents API proxy
-          // If repoOwner/repoName are set (external sources like Kubara), use them
-          // Otherwise node.path is "owner/repo" or "owner/repo/subpath"
           const owner = node.repoOwner || node.path.split('/')[0]
           const repo = node.repoName || node.path.split('/')[1]
           const subPath = node.repoOwner ? node.path : node.path.split('/').slice(2).join('/')
@@ -721,6 +733,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
               type: e.type === 'dir' ? 'directory' as const : 'file' as const,
               size: e.size }))
           setDirectoryEntries(entries)
+          }
         } else {
           setDirectoryEntries([])
         }
