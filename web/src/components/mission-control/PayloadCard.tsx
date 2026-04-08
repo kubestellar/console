@@ -120,7 +120,10 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onRemove}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onRemove()
+                }}
                 className="opacity-0 group-hover:opacity-100 !p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
                 title="Remove"
                 icon={<X className="w-3 h-3" />}
