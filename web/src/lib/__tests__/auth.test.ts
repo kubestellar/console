@@ -48,6 +48,26 @@ vi.mock('../analytics', () => ({
 vi.mock('../demoMode', () => ({
   setDemoMode: vi.fn(),
   setGlobalDemoMode: vi.fn(),
+  isDemoMode: vi.fn().mockReturnValue(false),
+  isNetlifyDeployment: false,
+  isDemoToken: vi.fn().mockReturnValue(false),
+  subscribeDemoMode: vi.fn(),
+}))
+
+vi.mock('../../hooks/usePermissions', () => ({
+  clearPermissionsCache: vi.fn(),
+}))
+
+vi.mock('../../hooks/useActiveUsers', () => ({
+  disconnectPresence: vi.fn(),
+}))
+
+vi.mock('../sseClient', () => ({
+  clearSSECache: vi.fn(),
+}))
+
+vi.mock('../../hooks/mcp/shared', () => ({
+  clearClusterCacheOnLogout: vi.fn(),
 }))
 
 // ---------------------------------------------------------------------------
