@@ -781,16 +781,16 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     const filteredOfflineItems = isFiltered
       ? sortedItems.filter(i => i.category === 'offline')
       : unifiedItems.filter(i => i.category === 'offline')
-    const filteredOfflineNodes = filteredOfflineItems.map(i => i.nodeData!).filter(Boolean)
+    const filteredOfflineNodes = filteredOfflineItems.map(i => i.nodeData).filter((n): n is NonNullable<typeof n> => !!n)
     const filteredGpuIssuesList = isFiltered
-      ? sortedItems.filter(i => i.category === 'gpu' && i.gpuData).map(i => i.gpuData!)
+      ? sortedItems.filter(i => i.category === 'gpu' && i.gpuData).map(i => i.gpuData) as typeof gpuIssues
       : gpuIssues
     const filteredPredictedRisks = isFiltered
-      ? sortedItems.filter(i => i.category === 'prediction' && i.predictionData).map(i => i.predictionData!)
+      ? sortedItems.filter(i => i.category === 'prediction' && i.predictionData).map(i => i.predictionData) as typeof predictedRisks
       : predictedRisks
 
     // Include root cause analysis in the summary
-    const nodesSummary = filteredOfflineItems.map(item => {
+    const nodesSummary = filteredOfflineItems.filter(item => item.nodeData).map(item => {
       const n = item.nodeData!
       const rootCause = item.rootCause
       let line = `- Node ${n.name} (${n.cluster || 'unknown'}): Status=${n.unschedulable ? 'Cordoned' : n.status}`
