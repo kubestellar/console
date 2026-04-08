@@ -158,35 +158,35 @@ The following diagram shows the full system architecture including all integrati
 
 ```mermaid
 graph TB
- User["User<br />(terminal / VS Code / JetBrains / GitHub Action)"]
- GitHub["GitHub OAuth"]
- Backend["Console Backend :8080"]
- Browser["User Browser"]
- MCP["MCP Bridge<br />(kubestellar-ops MCP server +<br />kubestellar-deploy MCP server)"]
- K8s["Kubernetes Clusters"]
- Agent["kc-agent :8585"]
- CLI["AI Coding Agent<br />(Claude Code, Copilot, Cursor,<br />Gemini CLI, etc.)"]
- OpsStdio["kubestellar-ops<br />MCP server (stdio)"]
- DeployStdio["kubestellar-deploy<br />MCP server (stdio)"]
- AI["AI Provider API<br />(OpenAI-compatible endpoint:<br />Claude / OpenAI / Gemini)"]
+    User["User"]
+    GitHub["GitHub OAuth"]
+    Backend["Console Backend\n:8080"]
+    Browser["Browser"]
+    MCP["MCP Bridge"]
+    K8s["Kubernetes\nClusters"]
+    Agent["kc-agent\n:8585"]
+    CLI["AI Coding Agent"]
+    OpsStdio["kubestellar-ops\nMCP (stdio)"]
+    DeployStdio["kubestellar-deploy\nMCP (stdio)"]
+    AI["AI Provider API"]
 
- User -- "invokes" --> CLI
- Browser -- "OAuth flow" --> Backend
- Browser -- "authorize" --> GitHub
- GitHub -- "access token" --> Backend
- Backend -- "session JWT" --> Browser
- Backend -- "REST / WebSocket" --> Browser
- Browser -- "WebSocket" --> Agent
- Backend -- "MCP/HTTP tool calls" --> MCP
- MCP -- "Kubernetes API<br />(auth via kubeconfig)" --> K8s
- Agent -- "kubectl<br />(auth via kubeconfig)" --> K8s
- OpsStdio -- "Kubernetes API<br />(auth via kubeconfig)" --> K8s
- DeployStdio -- "Kubernetes API<br />(auth via kubeconfig)" --> K8s
- CLI -- "MCP (stdio)" --> OpsStdio
- CLI -- "MCP (stdio)" --> DeployStdio
- CLI -- "MCP protocol" --> Agent
- Backend -- "AI chat completions" --> AI
- CLI -- "AI prompts" --> AI
+    User -- invokes --> CLI
+    Browser -- OAuth flow --> Backend
+    Browser -- authorize --> GitHub
+    GitHub -- access token --> Backend
+    Backend -- session JWT --> Browser
+    Backend -- REST / WS --> Browser
+    Browser -- WebSocket --> Agent
+    Backend -- MCP/HTTP --> MCP
+    MCP -- K8s API --> K8s
+    Agent -- kubectl --> K8s
+    OpsStdio -- K8s API --> K8s
+    DeployStdio -- K8s API --> K8s
+    CLI -- MCP stdio --> OpsStdio
+    CLI -- MCP stdio --> DeployStdio
+    CLI -- MCP protocol --> Agent
+    Backend -- AI completions --> AI
+    CLI -- AI prompts --> AI
 ```
 
 KubeStellar Console supports two deployment modes with different security boundaries:
