@@ -4,6 +4,7 @@ import { dashboardSync } from './dashboards/dashboardSync'
 import { clearPermissionsCache } from '../hooks/usePermissions'
 import { disconnectPresence } from '../hooks/useActiveUsers'
 import { clearSSECache } from './sseClient'
+import { clearClusterCacheOnLogout } from '../hooks/mcp/shared'
 import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE, FETCH_DEFAULT_TIMEOUT_MS } from './constants'
 import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession } from './analytics'
 import { setDemoMode as setGlobalDemoMode } from './demoMode'
@@ -179,6 +180,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearPermissionsCache()
     // Clear SSE result cache to prevent stale data from previous session (#4712)
     clearSSECache()
+    // Clear cluster caches (localStorage + in-memory) so the next user
+    // doesn't see stale cluster names, metrics, or distributions (#5405)
+    clearClusterCacheOnLogout()
     // Disconnect presence WebSocket to stop transmitting stale auth tokens (#4936)
     disconnectPresence()
   }

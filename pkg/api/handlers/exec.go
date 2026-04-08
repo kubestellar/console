@@ -171,7 +171,17 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 		return
 	}
 
-	slog.Info("[Exec] authenticated user for pod exec", "user", claims.GitHubLogin)
+	// SECURITY WARNING (#5406): This handler validates authentication (JWT) but
+	// does NOT perform authorization. Any authenticated user can open a shell to
+	// any pod in any cluster. Full RBAC scoping requires checking the user's
+	// Kubernetes RBAC permissions (SubjectAccessReview with "create" verb on
+	// "pods/exec" in the target namespace/cluster) before establishing the exec
+	// session. This is a known limitation tracked in issue #5406.
+	slog.Warn("[Exec] SECURITY: pod exec session opened — no authorization check performed",
+		"user", claims.GitHubLogin,
+		"user_id", claims.UserID,
+		"remote_addr", c.RemoteAddr().String(),
+	)
 
 	// Clear read deadline after successful auth
 	c.SetReadDeadline(time.Time{})
@@ -203,6 +213,17 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 		writeError(c, "Missing cluster, namespace, or pod")
 		return
 	}
+
+	// SECURITY: Log exec target details for audit trail (#5406)
+	slog.Warn("[Exec] SECURITY: exec session targeting pod",
+		"user", claims.GitHubLogin,
+		"user_id", claims.UserID,
+		"cluster", init.Cluster,
+		"namespace", init.Namespace,
+		"pod", init.Pod,
+		"container", init.Container,
+		"command", init.Command,
+	)
 
 	// Default command
 	if len(init.Command) == 0 {

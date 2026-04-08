@@ -316,6 +316,11 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
           const isNonRetryable = err.message?.includes('401') || err.message?.includes('503')
           if (isNonRetryable) {
             console.debug('[SSE] Non-retryable error — skipping retries (demo mode)')
+            // Clear the in-flight entry and timers so future requests for the
+            // same URL start a fresh stream instead of reusing this stale
+            // resolved promise (#5404).
+            clearTimeout(timeoutId)
+            cleanup(/* wasAborted */ true)
             resolve(accumulated)
             return
           }

@@ -19,6 +19,9 @@ import (
 	"k8s.io/client-go/rest"
 
 	k8sclient "github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/store"
 )
 
 // imageTagMaxLen is the maximum allowed length for an image tag to prevent abuse.
@@ -36,13 +39,15 @@ const selfUpgradeTimeout = 30 * time.Second
 type SelfUpgradeHandler struct {
 	k8sClient *k8sclient.MultiClusterClient
 	hub       *Hub
+	store     store.Store
 }
 
 // NewSelfUpgradeHandler creates a new SelfUpgradeHandler.
-func NewSelfUpgradeHandler(k8sClient *k8sclient.MultiClusterClient, hub *Hub) *SelfUpgradeHandler {
+func NewSelfUpgradeHandler(k8sClient *k8sclient.MultiClusterClient, hub *Hub, store store.Store) *SelfUpgradeHandler {
 	return &SelfUpgradeHandler{
 		k8sClient: k8sClient,
 		hub:       hub,
+		store:     store,
 	}
 }
 
@@ -203,6 +208,33 @@ func (h *SelfUpgradeHandler) GetStatus(c *fiber.Ctx) error {
 // TriggerUpgrade patches the Deployment image tag to trigger a rolling update.
 // POST /api/self-upgrade/trigger
 func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
+	// SECURITY (#5409): Only admin users may trigger a self-upgrade. Without
+	// this check any authenticated user could roll the console to an arbitrary
+	// image tag using the in-cluster service account's RBAC permissions.
+	userID := middleware.GetUserID(c)
+	if h.store != nil {
+		user, err := h.store.GetUser(userID)
+		if err != nil {
+			slog.Warn("[self-upgrade] SECURITY: failed to look up user for role check",
+				"user_id", userID, "error", err)
+			return c.Status(fiber.StatusForbidden).JSON(SelfUpgradeTriggerResponse{
+				Error: "unable to verify user role — access denied",
+			})
+		}
+		if user.Role != models.UserRoleAdmin {
+			slog.Warn("[self-upgrade] SECURITY: non-admin user attempted self-upgrade",
+				"user_id", userID,
+				"github_login", middleware.GetGitHubLogin(c),
+				"role", user.Role)
+			return c.Status(fiber.StatusForbidden).JSON(SelfUpgradeTriggerResponse{
+				Error: "self-upgrade requires admin role",
+			})
+		}
+	}
+	slog.Info("[self-upgrade] admin user triggering upgrade",
+		"user_id", userID,
+		"github_login", middleware.GetGitHubLogin(c))
+
 	var req SelfUpgradeTriggerRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(SelfUpgradeTriggerResponse{

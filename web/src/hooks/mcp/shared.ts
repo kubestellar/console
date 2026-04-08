@@ -256,6 +256,33 @@ export function notifyClusterSubscribers() {
   clusterSubscribers.forEach(subscriber => subscriber(clusterCache))
 }
 
+/**
+ * Clear all cluster caches on logout so data from a previous user session
+ * does not leak to the next login (#5405). Clears both localStorage keys
+ * and the module-level in-memory cache, then notifies subscribers so the
+ * UI resets to a loading/empty state.
+ */
+export function clearClusterCacheOnLogout(): void {
+  try {
+    localStorage.removeItem(CLUSTER_CACHE_KEY)
+    localStorage.removeItem(CLUSTER_DIST_CACHE_KEY)
+  } catch {
+    // Ignore storage errors
+  }
+
+  clusterCache = {
+    clusters: [],
+    lastUpdated: null,
+    isLoading: true,
+    isRefreshing: false,
+    error: null,
+    consecutiveFailures: 0,
+    isFailed: false,
+    lastRefresh: null,
+  }
+  notifyClusterSubscribers()
+}
+
 // ============================================================================
 // Demo Mode Integration - Clear cluster cache when demo mode toggles ON
 // ============================================================================

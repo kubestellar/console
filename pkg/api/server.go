@@ -866,7 +866,7 @@ func (s *Server) setupRoutes() {
 	api.Post("/gitops/helm-uninstall", gitopsHandlers.UninstallHelmRelease)
 	api.Post("/gitops/helm-upgrade", gitopsHandlers.UpgradeHelmRelease)
 	// Helm self-upgrade (in-cluster Deployment patch)
-	selfUpgradeHandler := handlers.NewSelfUpgradeHandler(s.k8sClient, s.hub)
+	selfUpgradeHandler := handlers.NewSelfUpgradeHandler(s.k8sClient, s.hub, s.store)
 	api.Get("/self-upgrade/status", selfUpgradeHandler.GetStatus)
 	api.Post("/self-upgrade/trigger", selfUpgradeHandler.TriggerUpgrade)
 	// ArgoCD routes (Application CRD discovery and sync)
