@@ -767,8 +767,18 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
           )
           content = data
         } else if (node.source === 'github') {
+          // In demo mode for Kubara files, return demo content
+          if (isDemoMode() && node.id.startsWith('kubara/')) {
+            const chartName = node.id.split('/')[1] || 'chart'
+            if (node.name === 'Chart.yaml') {
+              content = `apiVersion: v2\nname: ${chartName}\ndescription: Production-tested ${chartName} Helm chart from Kubara\nversion: 1.0.0\ntype: application\nappVersion: "latest"\nmaintainers:\n  - name: kubara-io\n    url: https://github.com/kubara-io/kubara`
+            } else if (node.name === 'values.yaml') {
+              content = `# ${chartName} — Kubara production values\n# These values are tested in production environments\n# See https://github.com/kubara-io/kubara for details\n\nreplicaCount: 2\n\nresources:\n  requests:\n    cpu: 100m\n    memory: 128Mi\n  limits:\n    cpu: 500m\n    memory: 512Mi\n\nserviceAccount:\n  create: true\n\npodSecurityContext:\n  runAsNonRoot: true\n  fsGroup: 65534\n\nmonitoring:\n  enabled: true\n  serviceMonitor:\n    enabled: true`
+            } else {
+              content = `# ${node.name}\n# Kubara template file`
+            }
+          } else {
           // Fetch raw file content via GitHub Contents API proxy
-          // node.path is "owner/repo/filepath" — extract parts for the API call
           const parts = node.path.split('/')
           const owner = parts[0]
           const repo = parts[1]
@@ -785,6 +795,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
             content = await rawResp.text()
           } else {
             content = JSON.stringify(ghFile)
+          }
           }
         } else {
           return
