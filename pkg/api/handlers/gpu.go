@@ -239,6 +239,9 @@ func (h *GPUHandler) UpdateReservation(c *fiber.Ctx) error {
 		existing.Namespace = *input.Namespace
 	}
 	if input.GPUCount != nil {
+		if *input.GPUCount < 1 {
+			return fiber.NewError(fiber.StatusBadRequest, "GPU count must be at least 1")
+		}
 		existing.GPUCount = *input.GPUCount
 	}
 	if input.GPUType != nil {
@@ -251,6 +254,9 @@ func (h *GPUHandler) UpdateReservation(c *fiber.Ctx) error {
 		existing.StartDate = *input.StartDate
 	}
 	if input.DurationHours != nil {
+		if *input.DurationHours <= 0 {
+			return fiber.NewError(fiber.StatusBadRequest, "Duration must be greater than 0")
+		}
 		existing.DurationHours = *input.DurationHours
 	}
 	if input.Notes != nil {

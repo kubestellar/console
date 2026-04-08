@@ -25,6 +25,11 @@ type gpuTestStore struct {
 	listAll            []models.GPUReservation
 	listMine           []models.GPUReservation
 	listErr            error
+	reservations       map[uuid.UUID]*models.GPUReservation
+	updateErr          error
+	updated            *models.GPUReservation
+	bulkSnapshots      map[string][]models.GPUUtilizationSnapshot
+	bulkSnapshotsErr   error
 }
 
 func (s *gpuTestStore) GetUser(id uuid.UUID) (*models.User, error) {
@@ -66,6 +71,33 @@ func (s *gpuTestStore) ListUserGPUReservations(userID uuid.UUID) ([]models.GPURe
 		return nil, s.listErr
 	}
 	return s.listMine, nil
+}
+
+func (s *gpuTestStore) GetGPUReservation(id uuid.UUID) (*models.GPUReservation, error) {
+	if s.reservations != nil {
+		r, ok := s.reservations[id]
+		if !ok {
+			return nil, nil
+		}
+		return r, nil
+	}
+	return nil, nil
+}
+
+func (s *gpuTestStore) UpdateGPUReservation(reservation *models.GPUReservation) error {
+	if s.updateErr != nil {
+		return s.updateErr
+	}
+	copy := *reservation
+	s.updated = &copy
+	return nil
+}
+
+func (s *gpuTestStore) GetBulkUtilizationSnapshots(ids []string) (map[string][]models.GPUUtilizationSnapshot, error) {
+	if s.bulkSnapshotsErr != nil {
+		return nil, s.bulkSnapshotsErr
+	}
+	return s.bulkSnapshots, nil
 }
 
 // stubCapacity returns a ClusterCapacityProvider that always returns the given value.
@@ -155,4 +187,128 @@ func TestGPUListReservations_MineNilReturnsEmptyArray(t *testing.T) {
 	var reservations []models.GPUReservation
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&reservations))
 	assert.Len(t, reservations, 0)
+}
+
+func TestGPUUpdateReservation_RejectsZeroGPUCount(t *testing.T) {
+	env := setupTestEnv(t)
+	resID := uuid.New()
+	store := &gpuTestStore{
+		user: &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleAdmin},
+		reservations: map[uuid.UUID]*models.GPUReservation{
+			resID: {ID: resID, UserID: testAdminUserID, GPUCount: 2, DurationHours: 24, Cluster: "c1"},
+		},
+	}
+	handler := NewGPUHandler(store, nil)
+	env.App.Put("/api/gpu/reservations/:id", handler.UpdateReservation)
+
+	zero := 0
+	body, err := json.Marshal(map[string]any{"gpu_count": zero})
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPut, "/api/gpu/reservations/"+resID.String(), bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.Nil(t, store.updated, "store should not have been updated")
+}
+
+func TestGPUUpdateReservation_RejectsNegativeGPUCount(t *testing.T) {
+	env := setupTestEnv(t)
+	resID := uuid.New()
+	store := &gpuTestStore{
+		user: &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleAdmin},
+		reservations: map[uuid.UUID]*models.GPUReservation{
+			resID: {ID: resID, UserID: testAdminUserID, GPUCount: 2, DurationHours: 24, Cluster: "c1"},
+		},
+	}
+	handler := NewGPUHandler(store, nil)
+	env.App.Put("/api/gpu/reservations/:id", handler.UpdateReservation)
+
+	body, err := json.Marshal(map[string]any{"gpu_count": -1})
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPut, "/api/gpu/reservations/"+resID.String(), bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestGPUUpdateReservation_RejectsNegativeDuration(t *testing.T) {
+	env := setupTestEnv(t)
+	resID := uuid.New()
+	store := &gpuTestStore{
+		user: &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleAdmin},
+		reservations: map[uuid.UUID]*models.GPUReservation{
+			resID: {ID: resID, UserID: testAdminUserID, GPUCount: 2, DurationHours: 24, Cluster: "c1"},
+		},
+	}
+	handler := NewGPUHandler(store, nil)
+	env.App.Put("/api/gpu/reservations/:id", handler.UpdateReservation)
+
+	body, err := json.Marshal(map[string]any{"duration_hours": -5})
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPut, "/api/gpu/reservations/"+resID.String(), bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestGPUUpdateReservation_RejectsZeroDuration(t *testing.T) {
+	env := setupTestEnv(t)
+	resID := uuid.New()
+	store := &gpuTestStore{
+		user: &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleAdmin},
+		reservations: map[uuid.UUID]*models.GPUReservation{
+			resID: {ID: resID, UserID: testAdminUserID, GPUCount: 2, DurationHours: 24, Cluster: "c1"},
+		},
+	}
+	handler := NewGPUHandler(store, nil)
+	env.App.Put("/api/gpu/reservations/:id", handler.UpdateReservation)
+
+	body, err := json.Marshal(map[string]any{"duration_hours": 0})
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPut, "/api/gpu/reservations/"+resID.String(), bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestGPUBulkUtilizations_ForbiddenForNonOwner(t *testing.T) {
+	env := setupTestEnv(t)
+	otherUserID := uuid.New()
+	resID := uuid.New()
+	store := &gpuTestStore{
+		user: &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleViewer},
+		reservations: map[uuid.UUID]*models.GPUReservation{
+			resID: {ID: resID, UserID: otherUserID, GPUCount: 1, Cluster: "c1"},
+		},
+	}
+	handler := NewGPUHandler(store, nil)
+	env.App.Get("/api/gpu/utilizations", handler.GetBulkUtilizations)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/gpu/utilizations?ids="+resID.String(), nil)
+	require.NoError(t, err)
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 }

@@ -39,13 +39,21 @@ func NewRBACHandler(s store.Store, k8sClient *k8s.MultiClusterClient) *RBACHandl
 	return &RBACHandler{store: s, k8sClient: k8sClient}
 }
 
-// ListConsoleUsers returns all console users (frontend handles visibility/blurring)
+// ListConsoleUsers returns all console users.
+// SECURITY: Restricted to admin users to prevent non-admin users from
+// enumerating all user records (#5458).
 func (h *RBACHandler) ListConsoleUsers(c *fiber.Ctx) error {
-	// Check if current user is authenticated
 	userID := middleware.GetUserID(c)
 	currentUser, err := h.store.GetUser(userID)
 	if err != nil || currentUser == nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
+	}
+
+	if currentUser.Role != models.UserRoleAdmin {
+		slog.Warn("[rbac] SECURITY: non-admin attempted to list all users",
+			"user_id", currentUser.ID,
+			"github_login", currentUser.GitHubLogin)
+		return fiber.NewError(fiber.StatusForbidden, "Admin access required")
 	}
 
 	users, err := h.store.ListUsers()

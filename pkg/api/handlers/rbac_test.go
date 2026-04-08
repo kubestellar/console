@@ -108,6 +108,31 @@ func TestRBACUpdateUserRole_Success(t *testing.T) {
 	assert.Equal(t, string(models.UserRoleEditor), store.updatedRole)
 }
 
+func TestRBACListConsoleUsers_ForbiddenForNonAdmin(t *testing.T) {
+	env := setupTestEnv(t)
+	viewerUser := &models.User{
+		ID:   testAdminUserID,
+		Role: models.UserRoleViewer,
+	}
+
+	store := &rbacTestStore{
+		users: map[uuid.UUID]*models.User{
+			testAdminUserID: viewerUser,
+		},
+	}
+
+	handler := NewRBACHandler(store, nil)
+	env.App.Get("/api/rbac/users", handler.ListConsoleUsers)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/rbac/users", nil)
+	require.NoError(t, err)
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
 func TestRBACListConsoleUsers_Success(t *testing.T) {
 	env := setupTestEnv(t)
 	adminUser := &models.User{
