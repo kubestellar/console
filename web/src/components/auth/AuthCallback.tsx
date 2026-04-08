@@ -22,6 +22,7 @@ export function AuthCallback() {
   const { showToast } = useToast()
   const [status, setStatus] = useState(t('authCallback.signingIn'))
   const hasProcessed = useRef(false)
+  const errorTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
     // Prevent running multiple times
@@ -80,10 +81,12 @@ export function AuthCallback() {
         clearTimeout(timeoutId)
         showToast(t('authCallback.failedToFetchUser'), 'warning')
         setStatus(t('authCallback.completingSignIn'))
-        setTimeout(() => {
+        errorTimerRef.current = setTimeout(() => {
           navigate(getLoginWithError('token_exchange_failed'))
         }, NAVIGATE_AFTER_ERROR_DELAY_MS)
       })
+
+    return () => clearTimeout(errorTimerRef.current)
   }, [searchParams, setToken, refreshUser, navigate, showToast, t])
 
   return (

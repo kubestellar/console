@@ -62,11 +62,15 @@ export function ActiveAlerts() {
   const { selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
   const { isDemoMode } = useDemoMode()
 
-  // Report state to CardWrapper for refresh animation
+  // Report state to CardWrapper for refresh animation and demo badge
   useCardLoadingState({
     isLoading: false,
-    hasAnyData: true,
-    isDemoData: isDemoMode })
+    isRefreshing: false,
+    hasAnyData: activeAlerts.length > 0 || acknowledgedAlerts.length > 0,
+    isDemoData: isDemoMode,
+    isFailed: false,
+    consecutiveFailures: 0,
+  })
   const { drillToAlert } = useDrillDownActions()
   const { missions, setActiveMission, openSidebar } = useMissions()
 
