@@ -1136,6 +1136,12 @@ func (h *FeedbackHandler) HandleGitHubWebhook(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusServiceUnavailable, "Webhook signature verification not configured")
 	}
 
+	// Reject oversized payloads early (defense-in-depth beyond Fiber's default limit)
+	const webhookMaxBodyBytes = 1 << 20 // 1 MB
+	if len(c.Body()) > webhookMaxBodyBytes {
+		return fiber.NewError(fiber.StatusRequestEntityTooLarge, "Webhook payload too large")
+	}
+
 	signature := c.Get("X-Hub-Signature-256")
 	if !h.verifyWebhookSignature(c.Body(), signature) {
 		return fiber.NewError(fiber.StatusUnauthorized, "Invalid webhook signature")

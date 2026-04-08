@@ -540,6 +540,12 @@ func (h *WorkloadHandlers) SyncClusterGroups(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
 	}
 
+	// Reject oversized payloads (defense-in-depth beyond Fiber's default limit)
+	const syncMaxBodyBytes = 1 << 20 // 1 MB
+	if len(c.Body()) > syncMaxBodyBytes {
+		return fiber.NewError(fiber.StatusRequestEntityTooLarge, "Request body too large")
+	}
+
 	var groups []ClusterGroup
 	if err := json.Unmarshal(c.Body(), &groups); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
