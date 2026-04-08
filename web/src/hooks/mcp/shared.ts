@@ -50,7 +50,9 @@ export function agentFetch(input: RequestInfo | URL, init?: RequestInit): Promis
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`)
   }
-  return fetch(input, { ...init, headers })
+  // Use caller-provided signal, or fall back to a default timeout
+  const signal = init?.signal ?? AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS)
+  return fetch(input, { ...init, headers, signal })
 }
 
 // ============================================================================

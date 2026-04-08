@@ -266,8 +266,8 @@ export function PDDisaggregation() {
   const prefillIds = useMemo(() => servers.filter(s => s.type === 'prefill').map(s => s.id), [servers])
   const decodeIds = useMemo(() => servers.filter(s => s.type === 'decode').map(s => s.id), [servers])
   // Stable key for deps — only re-run effect when the actual IDs change
-  const prefillKey = prefillIds.join(',')
-  const decodeKey = decodeIds.join(',')
+  const prefillKey = (prefillIds || []).join(',')
+  const decodeKey = (decodeIds || []).join(',')
 
   // Generate transfer packets (only when disaggregated)
   useEffect(() => {
