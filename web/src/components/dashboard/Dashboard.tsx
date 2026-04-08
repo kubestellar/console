@@ -49,6 +49,9 @@ import type { Card, DashboardData } from './dashboardUtils'
 import { isLocalOnlyCard, mapVisualizationToCardType, getDefaultCardSize, getDemoCards } from './dashboardUtils'
 import { useDashboardReset } from '../../hooks/useDashboardReset'
 import { useDashboardUndoRedo } from '../../hooks/useUndoRedo'
+
+/** Auto-refresh interval (ms) for dashboard data polling */
+const AUTO_REFRESH_INTERVAL_MS = 30_000
 import { WelcomeCard } from './WelcomeCard'
 
 import { PostConnectBanner } from './PostConnectBanner'
@@ -262,7 +265,7 @@ export function Dashboard() {
     if (autoRefresh && !isLoading) {
       autoRefreshIntervalRef.current = setInterval(() => {
         refetch()
-      }, 30000) // 30 seconds
+      }, AUTO_REFRESH_INTERVAL_MS)
     }
     return () => {
       if (autoRefreshIntervalRef.current) {

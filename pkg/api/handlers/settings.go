@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -26,7 +27,7 @@ func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
 	// Settings contain decrypted secrets — require console admin role
 	currentUserID := middleware.GetUserID(c)
 	currentUser, err := h.store.GetUser(currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != "admin" {
+	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
 	}
 
@@ -46,7 +47,7 @@ func (h *SettingsHandler) SaveSettings(c *fiber.Ctx) error {
 	// Settings modification requires console admin role
 	currentUserID := middleware.GetUserID(c)
 	currentUser, err := h.store.GetUser(currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != "admin" {
+	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
 	}
 
@@ -76,7 +77,7 @@ func (h *SettingsHandler) ExportSettings(c *fiber.Ctx) error {
 	// Settings export contains secrets — require console admin role
 	currentUserID := middleware.GetUserID(c)
 	currentUser, err := h.store.GetUser(currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != "admin" {
+	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
 	}
 
@@ -99,7 +100,7 @@ func (h *SettingsHandler) ImportSettings(c *fiber.Ctx) error {
 	// Settings import can overwrite secrets — require console admin role
 	currentUserID := middleware.GetUserID(c)
 	currentUser, err := h.store.GetUser(currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != "admin" {
+	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
 	}
 

@@ -8,6 +8,9 @@ import { useKagentBackend } from '../../hooks/useKagentBackend'
 import { useProviderConnection } from '../../hooks/useProviderConnection'
 import { AgentIcon } from './AgentIcon'
 import type { AgentInfo, AgentProvider } from '../../types/agent'
+
+/** Timeout (ms) for fetching mission install guide files from the API */
+const MISSION_FILE_FETCH_TIMEOUT_MS = 5_000
 import { PROVIDER_PREREQUISITES } from '../../types/agent'
 import type { MissionExport } from '../../lib/missions/types'
 import { cn } from '../../lib/cn'
@@ -96,7 +99,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
     const paths = INSTALL_MISSION_PATHS[missionId] || [`fixes/cncf-install/${missionId}.json`, `fixes/platform-install/${missionId}.json`]
     for (const path of paths) {
       try {
-        const res = await fetch(`/api/missions/file?path=${encodeURIComponent(path)}`, { signal: AbortSignal.timeout(5000) })
+        const res = await fetch(`/api/missions/file?path=${encodeURIComponent(path)}`, { signal: AbortSignal.timeout(MISSION_FILE_FETCH_TIMEOUT_MS) })
         if (!res.ok) continue
         const raw = await res.text()
         const parsed = JSON.parse(raw)
@@ -128,7 +131,7 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
     let missionData: MissionExport | null = null
     for (const path of paths) {
       try {
-        const res = await fetch(`/api/missions/file?path=${encodeURIComponent(path)}`, { signal: AbortSignal.timeout(5000) })
+        const res = await fetch(`/api/missions/file?path=${encodeURIComponent(path)}`, { signal: AbortSignal.timeout(MISSION_FILE_FETCH_TIMEOUT_MS) })
         if (!res.ok) continue
         const raw = await res.text()
         const parsed = JSON.parse(raw)
