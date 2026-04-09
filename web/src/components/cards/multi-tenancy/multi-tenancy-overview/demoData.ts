@@ -28,6 +28,8 @@ export const DEMO_MULTI_TENANCY_OVERVIEW: MultiTenancyOverviewData = {
   overallScore: DEMO_ISOLATION_SCORE,
   totalLevels: DEMO_TOTAL_LEVELS,
   isLoading: false,
+  isRefreshing: false,
+  consecutiveFailures: 0,
   isDemoData: true,
   isFailed: false,
 }

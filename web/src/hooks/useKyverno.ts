@@ -348,6 +348,8 @@ export function useKyverno() {
   )
   /** Number of clusters that have completed checking (for progressive UI) */
   const [clustersChecked, setClustersChecked] = useState(0)
+  /** Tracks consecutive full-refresh failures for useCardLoadingState */
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const initialLoadDone = useRef(!!cachedSnapshot)
   /** Guard to prevent concurrent refetch calls from flooding the request queue */
   const fetchInProgress = useRef(false)
@@ -390,6 +392,13 @@ export function useKyverno() {
     await settledWithConcurrency(tasks)
 
     // Final: save complete cache and clear refresh state
+    const allErrored = Object.keys(allStatuses).length > 0 &&
+      Object.values(allStatuses).every(s => !!s.error)
+    if (allErrored) {
+      setConsecutiveFailures(prev => prev + 1)
+    } else {
+      setConsecutiveFailures(0)
+    }
     saveToCache(allStatuses)
     setLastRefresh(new Date())
     initialLoadDone.current = true
@@ -473,6 +482,8 @@ export function useKyverno() {
     /** True when at least one cluster had a fetch error */
     hasErrors,
     isDemoData,
+    /** Number of consecutive full-refresh failures (all clusters errored) */
+    consecutiveFailures,
     /** Number of clusters checked so far (for progressive UI) */
     clustersChecked,
     /** Total number of clusters being checked */

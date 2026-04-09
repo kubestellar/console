@@ -38,6 +38,8 @@ export interface MultiTenancyOverviewData {
   overallScore: number
   totalLevels: number
   isLoading: boolean
+  isRefreshing: boolean
+  consecutiveFailures: number
   isDemoData: boolean
   isFailed: boolean
 }
@@ -56,6 +58,15 @@ export function useMultiTenancyOverview(): MultiTenancyOverviewData {
   const kubevirt = kubevirtResult.data
 
   const isLoading = ovnResult.loading || kubeflexResult.loading || k3sResult.loading || kubevirtResult.loading
+  // Refreshing when ANY hook is refreshing (background re-fetch after initial load)
+  const isRefreshing = ovnResult.isRefreshing || kubeflexResult.isRefreshing || k3sResult.isRefreshing || kubevirtResult.isRefreshing
+  // Use the max consecutive failures from any sub-hook
+  const consecutiveFailures = Math.max(
+    ovnResult.consecutiveFailures,
+    kubeflexResult.consecutiveFailures,
+    k3sResult.consecutiveFailures,
+    kubevirtResult.consecutiveFailures,
+  )
   // Demo when ALL hooks are returning demo fallback data (useCache in demo mode)
   const isDemoData = ovnResult.isDemoData && kubeflexResult.isDemoData && k3sResult.isDemoData && kubevirtResult.isDemoData
   // Failed when ANY underlying hook has failed without recoverable data
@@ -101,6 +112,8 @@ export function useMultiTenancyOverview(): MultiTenancyOverviewData {
     overallScore,
     totalLevels: TOTAL_ISOLATION_LEVELS,
     isLoading,
+    isRefreshing,
+    consecutiveFailures,
     isDemoData,
     isFailed }
 }

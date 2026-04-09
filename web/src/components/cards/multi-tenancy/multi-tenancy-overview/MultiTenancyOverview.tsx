@@ -107,9 +107,11 @@ export function MultiTenancyOverview() {
   const hasData = (data.components || []).length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: data.isLoading && !hasData,
+    isRefreshing: data.isRefreshing,
     hasAnyData: hasData,
     isDemoData: data.isDemoData,
-    isFailed: !!data.isFailed })
+    isFailed: !!data.isFailed,
+    consecutiveFailures: data.consecutiveFailures })
 
   if (showSkeleton) {
     return (

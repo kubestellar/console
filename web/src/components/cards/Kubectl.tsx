@@ -747,12 +747,12 @@ data:
       >
         {output.length === 0 ? (
           <div className="text-muted-foreground/50 whitespace-pre">
-            <p>kubectl terminal ready. Type commands or use AI assistant.</p>
-            <p className="mt-2">Examples:</p>
-            <p className="ml-4">  get pods</p>
-            <p className="ml-4">  get deployments</p>
-            <p className="ml-4">  describe pod &lt;name&gt;</p>
-            <p className="ml-4">  logs &lt;pod-name&gt;</p>
+            <p>{t('cards:kubectl.terminalReady')}</p>
+            <p className="mt-2">{t('cards:kubectl.examples')}</p>
+            <p className="ml-4">  {t('cards:kubectl.exampleGetPods')}</p>
+            <p className="ml-4">  {t('cards:kubectl.exampleGetDeployments')}</p>
+            <p className="ml-4">  {t('cards:kubectl.exampleDescribePod')}</p>
+            <p className="ml-4">  {t('cards:kubectl.exampleLogs')}</p>
           </div>
         ) : (
           output.map((line, idx) => {

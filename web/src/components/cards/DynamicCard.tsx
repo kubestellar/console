@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next'
  * config.dynamicCardId determines which definition to render.
  */
 export function DynamicCard({ config }: CardComponentProps) {
+  const { t } = useTranslation('cards')
   // Guard against undefined/null config to prevent crashes (#4910)
   const safeConfig = config ?? {}
   const dynamicCardId = (typeof safeConfig.dynamicCardId === 'string' ? safeConfig.dynamicCardId : '') || ''
@@ -37,10 +38,10 @@ export function DynamicCard({ config }: CardComponentProps) {
       <div className="h-full flex flex-col items-center justify-center p-4 text-center">
         <AlertTriangle className="w-8 h-8 text-yellow-400 mb-2" />
         <p className="text-sm text-muted-foreground">
-          Missing card configuration.
+          {t('dynamicCard.missingConfig')}
         </p>
         <p className="text-xs text-muted-foreground/70 mt-1">
-          No dynamicCardId was provided in the card config.
+          {t('dynamicCard.noDynamicCardId')}
         </p>
       </div>
     )
@@ -51,10 +52,10 @@ export function DynamicCard({ config }: CardComponentProps) {
       <div className="h-full flex flex-col items-center justify-center p-4 text-center">
         <AlertTriangle className="w-8 h-8 text-yellow-400 mb-2" />
         <p className="text-sm text-muted-foreground">
-          Dynamic card &quot;{dynamicCardId}&quot; not found.
+          {t('dynamicCard.notFound', { id: dynamicCardId })}
         </p>
         <p className="text-xs text-muted-foreground/70 mt-1">
-          The card definition may have been deleted or not loaded yet.
+          {t('dynamicCard.notFoundHint')}
         </p>
       </div>
     )
@@ -70,7 +71,7 @@ export function DynamicCard({ config }: CardComponentProps) {
         <div className="h-full flex flex-col items-center justify-center p-4 text-center">
           <AlertTriangle className="w-8 h-8 text-yellow-400 mb-2" />
           <p className="text-sm text-muted-foreground">
-            Invalid card definition: missing {definition.tier === 'tier1' ? 'card definition' : 'source code'}.
+            {t('dynamicCard.invalidDefinition', { missing: definition.tier === 'tier1' ? t('dynamicCard.cardDefinition') : t('dynamicCard.sourceCode') })}
           </p>
         </div>
       )}
@@ -88,7 +89,7 @@ export interface Tier1Props {
 }
 
 export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const [apiData, setApiData] = useState<Record<string, unknown>[]>([])
   const [apiLoading, setApiLoading] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
@@ -176,8 +177,8 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-4 text-center">
         <AlertTriangle className="w-6 h-6 text-yellow-400 mb-2" />
-        <p className="text-sm text-yellow-400">Invalid card configuration</p>
-        <p className="text-xs text-muted-foreground mt-1">The card definition is missing or malformed.</p>
+        <p className="text-sm text-yellow-400">{t('dynamicCard.invalidCardConfig')}</p>
+        <p className="text-xs text-muted-foreground mt-1">{t('dynamicCard.invalidCardConfigHint')}</p>
       </div>
     )
   }
@@ -186,9 +187,9 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-4 text-center">
         <AlertTriangle className="w-6 h-6 text-yellow-400 mb-2" />
-        <p className="text-sm text-yellow-400">Missing API endpoint</p>
+        <p className="text-sm text-yellow-400">{t('dynamicCard.missingEndpoint')}</p>
         <p className="text-xs text-muted-foreground mt-1">
-          This card is configured to use API data but no apiEndpoint is specified.
+          {t('dynamicCard.missingEndpointHint')}
         </p>
       </div>
     )
@@ -208,7 +209,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-4 text-center">
         <AlertTriangle className="w-6 h-6 text-yellow-400 mb-2" />
-        <p className="text-sm text-yellow-400">Failed to fetch data</p>
+        <p className="text-sm text-yellow-400">{t('dynamicCard.fetchFailed')}</p>
         <p className="text-xs text-muted-foreground mt-1">{apiError}</p>
       </div>
     )
@@ -254,7 +255,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
             type="text"
             value={filters.search}
             onChange={(e) => filters.setSearch(e.target.value)}
-            placeholder={t('common.search')}
+            placeholder={t('common:common.search')}
             className="w-full text-xs px-2.5 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
           />
         </div>
@@ -267,7 +268,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
             <div className="flex flex-col items-center justify-center py-6 text-center">
               <Database className="w-6 h-6 text-muted-foreground/40 mb-2" />
               <p className="text-sm text-muted-foreground">
-                {cardDefinition.emptyMessage || 'No data available.'}
+                {cardDefinition.emptyMessage || t('dynamicCard.noDataAvailable')}
               </p>
             </div>
           ) : (
@@ -346,6 +347,7 @@ export interface Tier2Props {
 }
 
 export function Tier2CardRuntime({ definition, config }: Tier2Props) {
+  const { t } = useTranslation('cards')
   // Guard against undefined config (#4910)
   const safeConfig = config ?? {}
   const [CardComponent, setCardComponent] = useState<CardComponent | null>(null)
@@ -425,7 +427,7 @@ export function Tier2CardRuntime({ definition, config }: Tier2Props) {
     return (
       <div className="h-full flex items-center justify-center">
         <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
-        <span className="ml-2 text-sm text-muted-foreground">Compiling card...</span>
+        <span className="ml-2 text-sm text-muted-foreground">{t('dynamicCard.compiling')}</span>
       </div>
     )
   }
@@ -434,7 +436,7 @@ export function Tier2CardRuntime({ definition, config }: Tier2Props) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-4 text-center">
         <AlertTriangle className="w-6 h-6 text-red-400 mb-2" />
-        <p className="text-sm text-red-400 font-medium">Compilation Error</p>
+        <p className="text-sm text-red-400 font-medium">{t('dynamicCard.compilationError')}</p>
         <p className="text-xs text-muted-foreground mt-1 max-w-sm font-mono break-words">
           {error}
         </p>
@@ -445,7 +447,7 @@ export function Tier2CardRuntime({ definition, config }: Tier2Props) {
   if (!CardComponent) {
     return (
       <div className="h-full flex items-center justify-center">
-        <p className="text-sm text-muted-foreground">No component produced.</p>
+        <p className="text-sm text-muted-foreground">{t('dynamicCard.noComponent')}</p>
       </div>
     )
   }

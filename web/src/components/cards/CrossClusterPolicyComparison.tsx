@@ -41,7 +41,7 @@ interface PolicyRow {
 
 function CrossClusterPolicyComparisonInternal({ config: _config }: CardConfig) {
   const { t } = useTranslation('cards')
-  const { statuses: kyvernoStatuses, isLoading, isRefreshing, lastRefresh, isDemoData, refetch, clustersChecked, totalClusters } = useKyverno()
+  const { statuses: kyvernoStatuses, isLoading, isRefreshing, lastRefresh, isDemoData, refetch, clustersChecked, totalClusters, consecutiveFailures } = useKyverno()
   const { deduplicatedClusters: rawClusters } = useClusters()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const [localSelected, setLocalSelected] = useState<string[]>([])
@@ -52,9 +52,8 @@ function CrossClusterPolicyComparisonInternal({ config: _config }: CardConfig) {
     Object.keys(kyvernoStatuses || {}).length > 0 &&
     Object.values(kyvernoStatuses || {}).every(s => !!s.error)
 
-  // TODO: useKyverno doesn't track consecutive failures natively.
-  // hasError = all clusters errored, so using 1 as a conservative proxy.
-  useCardLoadingState({ isLoading: isLoading && !isDemoData, isRefreshing, hasAnyData: true, isDemoData, isFailed: hasError, consecutiveFailures: hasError ? 1 : 0 })
+  const hasAnyData = Object.values(kyvernoStatuses || {}).some(s => s.installed)
+  useCardLoadingState({ isLoading: isLoading && !isDemoData, isRefreshing, hasAnyData, isDemoData, isFailed: hasError, consecutiveFailures })
 
   // Filter clusters by global filters + custom filter
   const allClusters = useMemo(() => {

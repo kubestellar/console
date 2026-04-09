@@ -680,7 +680,13 @@
     "dry": "DRY",
     "run": "Run",
     "running": "Running...",
-    "listPods": "List Pods"
+    "listPods": "List Pods",
+    "terminalReady": "kubectl terminal ready. Type commands or use AI assistant.",
+    "examples": "Examples:",
+    "exampleGetPods": "get pods",
+    "exampleGetDeployments": "get deployments",
+    "exampleDescribePod": "describe pod <name>",
+    "exampleLogs": "logs <pod-name>"
   },
   "clusterGroups": {
     "createGroup": "Create Group",
@@ -3338,5 +3344,23 @@
     "previewName": "Name",
     "previewNamespace": "Namespace",
     "previewImage": "Image"
+  },
+  "dynamicCard": {
+    "missingConfig": "Missing card configuration.",
+    "noDynamicCardId": "No dynamicCardId was provided in the card config.",
+    "notFound": "Dynamic card \"{{id}}\" not found.",
+    "notFoundHint": "The card definition may have been deleted or not loaded yet.",
+    "invalidDefinition": "Invalid card definition: missing {{missing}}.",
+    "cardDefinition": "card definition",
+    "sourceCode": "source code",
+    "noDataAvailable": "No data available.",
+    "invalidCardConfig": "Invalid card configuration",
+    "invalidCardConfigHint": "The card definition is missing or malformed.",
+    "missingEndpoint": "Missing API endpoint",
+    "missingEndpointHint": "This card is configured to use API data but no apiEndpoint is specified.",
+    "fetchFailed": "Failed to fetch data",
+    "compiling": "Compiling card...",
+    "compilationError": "Compilation Error",
+    "noComponent": "No component produced."
   }
 }
