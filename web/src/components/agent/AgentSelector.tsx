@@ -612,8 +612,15 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
         const target = pendingAgentRef.current
         pendingAgentRef.current = null
         if (target) {
-          selectAgent(target)
-          closeDropdown()
+          // Run the same readiness lifecycle as handleSelect (#5677)
+          const providerKey = AGENT_TO_PROVIDER_KEY[target]
+          if (providerKey && PROVIDER_PREREQUISITES[providerKey]) {
+            selectAgent(target)
+            startConnection(target, () => closeDropdown())
+          } else {
+            selectAgent(target)
+            closeDropdown()
+          }
         }
       }}
       onCancel={() => {
