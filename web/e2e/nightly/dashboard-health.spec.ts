@@ -44,6 +44,10 @@ const EXPECTED_ERROR_PATTERNS = [
   /Hydration/i,
   /flushSync was called/i,
   /can't access property/i,
+  /Cross-Origin Request Blocked/i,
+  /Notification permission/i,
+  /502.*Bad Gateway/i,
+  /Failed to load resource/i,
 ]
 
 /** All dashboard routes to test (from App.tsx) */

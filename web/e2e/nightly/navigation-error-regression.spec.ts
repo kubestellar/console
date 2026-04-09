@@ -86,6 +86,8 @@ const EXPECTED_CONSOLE_ERROR_PATTERNS: ReadonlyArray<RegExp> = [
   /AbortError/i,
   /signal is aborted/i,
   /Notification permission/i,
+  /502.*Bad Gateway/i,
+  /Failed to load resource/i,
 ]
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

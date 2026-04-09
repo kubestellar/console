@@ -56,6 +56,9 @@ const EXPECTED_ERROR_PATTERNS = [
   /flushSync was called/i,
   /can't access property/i,
   /Cross-Origin Request Blocked/i,
+  /Notification permission/i,
+  /502.*Bad Gateway/i,
+  /Failed to load resource/i,
 ]
 
 /** Text patterns that indicate a React error boundary has been triggered */

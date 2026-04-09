@@ -1,4 +1,5 @@
-import { test, expect, Page, ConsoleMessage } from '@playwright/test'
+import { test, expect, Page } from '@playwright/test'
+import { setupErrorCollector, EXPECTED_ERROR_PATTERNS } from './helpers/setup'
 
 /**
  * Smoke Tests for KubeStellar Console
@@ -8,48 +9,6 @@ import { test, expect, Page, ConsoleMessage } from '@playwright/test'
  *
  * Run with: npx playwright test e2e/smoke.spec.ts
  */
-
-// Expected console errors that should be ignored (demo mode, expected warnings, etc.)
-const EXPECTED_ERROR_PATTERNS = [
-  /Failed to fetch/i, // Network errors in demo mode
-  /WebSocket/i, // WebSocket not available in tests
-  /can't establish a connection/i, // Firefox WebSocket connection errors
-  /ResizeObserver/i, // ResizeObserver loop warnings
-  /validateDOMNesting/i, // Already tracked by Auto-QA DOM errors check
-  /act\(\)/i, // React testing warnings
-  /Cannot read.*undefined/i, // May occur during lazy loading
-  /ChunkLoadError/i, // Expected during code splitting
-  /Loading chunk/i, // Expected during lazy loading
-  /demo-token/i, // Demo mode messages
-  /localhost:8585/i, // Agent connection attempts in demo mode
-  /127\.0\.0\.1:8585/i, // Agent connection attempts (IP form)
-  /Cross-Origin Request Blocked/i, // CORS errors when backend/agent not running
-  /Notification permission/i, // Firefox blocks notification requests outside user gestures
-]
-
-function isExpectedError(message: string): boolean {
-  return EXPECTED_ERROR_PATTERNS.some(pattern => pattern.test(message))
-}
-
-/**
- * Collects console errors during page navigation
- */
-function setupErrorCollector(page: Page): { errors: string[]; warnings: string[] } {
-  const errors: string[] = []
-  const warnings: string[] = []
-
-  page.on('console', (msg: ConsoleMessage) => {
-    const text = msg.text()
-    if (msg.type() === 'error' && !isExpectedError(text)) {
-      errors.push(text)
-    }
-    if (msg.type() === 'warning' && !isExpectedError(text)) {
-      warnings.push(text)
-    }
-  })
-
-  return { errors, warnings }
-}
 
 /**
  * Sets up demo mode for testing

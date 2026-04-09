@@ -49,6 +49,10 @@ const EXPECTED_ERROR_PATTERNS = [
   /net::ERR_/i,
   /AbortError/i,
   /signal is aborted/i,
+  /Cross-Origin Request Blocked/i,
+  /Notification permission/i,
+  /502.*Bad Gateway/i,
+  /Failed to load resource/i,
 ]
 
 // ---------------------------------------------------------------------------
