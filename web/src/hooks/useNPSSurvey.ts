@@ -102,6 +102,23 @@ export function useNPSSurvey(): NPSSurveyState {
     const category = NPS_CATEGORIES[score - 1]
     emitNPSResponse(score, category, feedback ? feedback.length : undefined)
 
+    // Send to our own NPS backend — independent of analytics opt-out.
+    // NPS is voluntary product feedback, not passive tracking.
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE_URL || ''
+      await fetch(`${apiBase}/api/nps`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          score,
+          feedback: feedback?.trim() || undefined,
+        }),
+        signal: AbortSignal.timeout(5000),
+      })
+    } catch {
+      // Best-effort — don't block the UI if this fails
+    }
+
     // Create GitHub issue for detractors (score 1 = "Not great")
     // Backend requires description >= MIN_FEEDBACK_LENGTH chars
     const trimmed = feedback?.trim() || ''

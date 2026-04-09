@@ -1168,6 +1168,15 @@
 
         renderDashboard(data);
 
+        // Fetch NPS data (separate endpoint, independent of GA4)
+        try {
+          const npsResp = await fetch('/api/nps');
+          if (npsResp.ok) {
+            const npsData = await npsResp.json();
+            renderNPSSection(npsData);
+          }
+        } catch { /* NPS is optional — don't break the dashboard */ }
+
         const cached = data.fromCache ? 'Cached' : 'Fresh';
         const time = new Date(data.cachedAt).toLocaleTimeString();
         const modeLabel = filter === 'all' ? ' (all traffic)' : ' (production only)';
@@ -1194,6 +1203,93 @@
     // Auto-refresh every 15 minutes
     const AUTO_REFRESH_MS = 15 * 60 * 1000;
     setInterval(() => loadData(true), AUTO_REFRESH_MS);
+
+    // ── NPS Section ──────────────────────────────────────────────────
+    function renderNPSSection(nps) {
+      if (!nps || nps.totalResponses === 0) return;
+
+      const content = document.getElementById('content');
+      if (!content) return;
+
+      // NPS score color
+      const scoreColor = nps.npsScore >= 50 ? 'var(--green)' : nps.npsScore >= 0 ? 'var(--yellow)' : 'var(--red)';
+      const scoreLabel = nps.npsScore >= 50 ? 'Excellent' : nps.npsScore >= 0 ? 'Good' : 'Needs Improvement';
+
+      let html = '<div class="section-title">Net Promoter Score</div>';
+      html += '<div class="kpi-grid">';
+      html += `<div class="kpi-card"><div class="kpi-label">NPS Score</div><div class="kpi-value" style="color:${scoreColor}">${nps.npsScore}</div><div class="kpi-change" style="color:${scoreColor}">${scoreLabel}</div></div>`;
+      html += `<div class="kpi-card"><div class="kpi-label">Responses</div><div class="kpi-value">${nps.totalResponses}</div></div>`;
+      html += `<div class="kpi-card"><div class="kpi-label">Avg Score</div><div class="kpi-value">${nps.averageScore}</div><div class="kpi-change flat">out of 10</div></div>`;
+      html += `<div class="kpi-card"><div class="kpi-label">Breakdown</div><div class="kpi-value" style="font-size:14px"><span style="color:var(--green)">${nps.promoterPct}% P</span> · <span style="color:var(--yellow)">${nps.passivePct}% N</span> · <span style="color:var(--red)">${nps.detractorPct}% D</span></div></div>`;
+      html += '</div>';
+
+      // Trend chart
+      if (nps.trend && nps.trend.length > 1) {
+        html += '<div class="chart-card"><h3>NPS Trend</h3><div class="chart-wrapper"><canvas id="npsChart"></canvas></div></div>';
+      }
+
+      // Recent responses
+      if (nps.recent && nps.recent.length > 0) {
+        html += '<div class="table-card"><h3>Recent Responses</h3><table><thead><tr><th>Score</th><th>Category</th><th>Feedback</th><th>Date</th></tr></thead><tbody>';
+        for (const r of nps.recent) {
+          const catColor = r.category === 'promoter' ? 'var(--green)' : r.category === 'passive' ? 'var(--yellow)' : 'var(--red)';
+          const date = new Date(r.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          html += `<tr><td class="num">${r.score}</td><td style="color:${catColor}">${r.category}</td><td>${r.feedback || '—'}</td><td class="num">${date}</td></tr>`;
+        }
+        html += '</tbody></table></div>';
+      }
+
+      // Disclosure
+      html += '<div style="margin-top:8px;font-size:11px;color:var(--text-muted);text-align:center">NPS data is collected separately from analytics. Responses are voluntary and contain no identifying information.</div>';
+
+      content.insertAdjacentHTML('beforeend', html);
+
+      // Render trend chart
+      if (nps.trend && nps.trend.length > 1) {
+        const ctx = document.getElementById('npsChart');
+        if (ctx) {
+          new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: nps.trend.map(t => t.month),
+              datasets: [
+                {
+                  label: 'NPS Score',
+                  data: nps.trend.map(t => t.npsScore),
+                  borderColor: '#6366f1',
+                  backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                  fill: true,
+                  tension: 0.3,
+                  pointRadius: 4,
+                  yAxisID: 'y',
+                },
+                {
+                  label: 'Responses',
+                  data: nps.trend.map(t => t.count),
+                  borderColor: '#06b6d4',
+                  backgroundColor: 'rgba(6, 182, 212, 0.05)',
+                  fill: false,
+                  tension: 0.3,
+                  pointRadius: 3,
+                  yAxisID: 'y1',
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: 'index', intersect: false },
+              scales: {
+                x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af' } },
+                y: { position: 'left', min: -100, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af' }, title: { display: true, text: 'NPS Score', color: '#9ca3af' } },
+                y1: { position: 'right', min: 0, grid: { display: false }, ticks: { color: '#06b6d4' }, title: { display: true, text: 'Responses', color: '#06b6d4' } },
+              },
+              plugins: { legend: { labels: { color: '#e4e4e7' } } },
+            },
+          });
+        }
+      }
+    }
 
     // Initial load
     loadData();
