@@ -202,14 +202,26 @@ export function useSlackNotification() {
       }
 
       try {
-        // Route through backend to avoid CORS (#5713)
+        // Route through backend notification service (#5713, Copilot followup)
         const response = await fetch('/api/notifications/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            type: 'slack',
-            webhookUrl: webhook.webhookUrl,
-            payload,
+            alert: {
+              id: alert.id,
+              ruleId: alert.ruleId || '',
+              ruleName: alert.ruleName,
+              severity: alert.severity,
+              status: alert.status,
+              message: alert.message,
+              cluster: alert.cluster,
+              resource: alert.resource,
+            },
+            channels: [{
+              type: 'slack',
+              enabled: true,
+              config: { webhookUrl: webhook.webhookUrl },
+            }],
           }),
         })
         if (!response.ok) {

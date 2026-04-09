@@ -85,20 +85,25 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
     onClose?.()
   }
 
+  // Track the diagnosis snapshot when "Analyze" was clicked so we can detect NEW results
+  const diagnosisAtStartRef = useRef(alert.aiDiagnosis)
+  const diagnosisTimerRef = useRef<number>(0)
+
   const handleRunDiagnosis = async () => {
+    diagnosisAtStartRef.current = alert.aiDiagnosis // snapshot before starting
     setIsRunningDiagnosis(true)
     runAIDiagnosis(alert.id)
-    // Safety-net timeout: clear loading state after 60s even if diagnosis never completes (#5714)
+    // Safety-net timeout: clear loading after 60s even if diagnosis never completes (#5714)
     const AI_DIAGNOSIS_SAFETY_TIMEOUT_MS = 60_000
-    const timeoutId = window.setTimeout(() => setIsRunningDiagnosis(false), AI_DIAGNOSIS_SAFETY_TIMEOUT_MS)
-    timeoutsRef.current.push(timeoutId)
+    clearTimeout(diagnosisTimerRef.current) // clear any previous timer (Copilot followup)
+    diagnosisTimerRef.current = window.setTimeout(() => setIsRunningDiagnosis(false), AI_DIAGNOSIS_SAFETY_TIMEOUT_MS)
   }
 
-  // Clear loading state when diagnosis result arrives (#5714)
-  // Only depend on alert.aiDiagnosis — not isRunningDiagnosis (avoids render loop)
+  // Clear loading state when a NEW diagnosis result arrives (#5714, Copilot followup)
   useEffect(() => {
-    if (alert.aiDiagnosis) {
+    if (alert.aiDiagnosis && alert.aiDiagnosis !== diagnosisAtStartRef.current) {
       setIsRunningDiagnosis(false)
+      clearTimeout(diagnosisTimerRef.current)
     }
   }, [alert.aiDiagnosis])
 
