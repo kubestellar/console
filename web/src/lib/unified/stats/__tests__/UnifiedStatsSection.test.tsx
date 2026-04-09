@@ -222,8 +222,8 @@ describe('UnifiedStatsSection', () => {
     render(<UnifiedStatsSection config={config} />)
 
     fireEvent.click(screen.getByTitle('Configure stats'))
-    // Click the backdrop (the semi-transparent overlay — bg-black/60 after UX cohesion PR)
-    const backdrop = document.querySelector('.bg-black\\/60') || document.querySelector('.bg-black\\/50')
+    // Click the backdrop (bg-black/60 — standardized in UX cohesion PR #5286)
+    const backdrop = document.querySelector('.bg-black\\/60')
     expect(backdrop).not.toBeNull()
     fireEvent.click(backdrop!)
 
