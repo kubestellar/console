@@ -34,8 +34,8 @@ export default defineConfig({
   // Fail the build on CI if test.only is left in
   forbidOnly: !!process.env.CI,
 
-  // Retry failed tests (more in CI)
-  retries: process.env.CI ? 2 : 0,
+  // Retry failed tests once in CI (balances flake detection vs run time)
+  retries: process.env.CI ? 1 : 0,
 
   // Workers — CI gets 4 workers per shard, local uses half of available cores
   workers: process.env.CI ? 4 : '50%',

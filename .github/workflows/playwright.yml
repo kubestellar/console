@@ -52,17 +52,17 @@ jobs:
           path: web/dist
           retention-days: 1
 
-  # Test job — chromium + firefox with 2 shards each for parallelism
+  # Test job — chromium with 4 shards for parallelism
+  # Firefox runs in nightly (playwright-nightly.yml) to avoid doubling CI time
   test:
-    name: Test (${{ matrix.browser }}, shard ${{ matrix.shard }})
+    name: Test (chromium, shard ${{ matrix.shard }})
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        browser: [chromium, firefox]
-        shard: [1, 2]
+        shard: [1, 2, 3, 4]
     defaults:
       run:
         working-directory: web
@@ -86,7 +86,7 @@ jobs:
           path: web/dist
 
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps ${{ matrix.browser }}
+        run: npx playwright install --with-deps chromium
 
       - name: Start preview server
         run: |
@@ -94,7 +94,7 @@ jobs:
           npx wait-on http://localhost:4173 --timeout 60000
 
       - name: Run Playwright tests
-        run: npx playwright test --project=${{ matrix.browser }} --shard=${{ matrix.shard }}/2
+        run: npx playwright test --project=chromium --shard=${{ matrix.shard }}/4
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:4173
 
@@ -102,7 +102,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: blob-report-${{ matrix.browser }}-${{ matrix.shard }}
+          name: blob-report-chromium-${{ matrix.shard }}
           path: web/blob-report/
           retention-days: 1
 
