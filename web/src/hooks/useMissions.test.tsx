@@ -2143,20 +2143,21 @@ describe('preflight check', () => {
     expect(emitMissionError).toHaveBeenCalledWith('deploy', 'MISSING_CREDENTIALS')
   })
 
-  it('proceeds when preflight throws unexpectedly', async () => {
+  it('blocks mission when preflight throws unexpectedly (#5846)', async () => {
     const { runPreflightCheck } = await import('../lib/missions/preflightCheck')
     vi.mocked(runPreflightCheck).mockRejectedValueOnce(new Error('Preflight crash'))
 
     const { result } = renderHook(() => useMissions(), { wrapper })
+    let missionId = ''
     act(() => {
-      result.current.startMission({ ...defaultParams, cluster: 'my-cluster', type: 'repair' })
+      missionId = result.current.startMission({ ...defaultParams, cluster: 'my-cluster', type: 'repair' })
     })
     await act(async () => { await Promise.resolve() })
     await act(async () => { await Promise.resolve() })
 
-    // Should proceed to ensureConnection (not blocked)
-    // WS will be created
-    expect(MockWebSocket.lastInstance).not.toBeNull()
+    // Should be blocked (fail-closed) — not proceed to WS connection (#5846)
+    const mission = result.current.missions.find(m => m.id === missionId)
+    expect(mission?.status).toBe('blocked')
   })
 
   it('retryPreflight transitions blocked mission back to pending', async () => {

@@ -712,11 +712,13 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost. Ple
             ws.close()
             wsRef.current = null
           }
-          // Fail any missions stuck in "running" state so the UI doesn't
-          // stay frozen forever after a WS error (#5845)
+          // Fail only missions that have pending requests — don't sweep
+          // all running missions, as some may belong to a different WS session (#5851)
           if (pendingRequests.current.size > 0) {
+            const affectedMissionIds = new Set(pendingRequests.current.values())
             const errorContent = `**Agent Disconnected**\n\nThe WebSocket connection failed. Please verify the agent is running and try again.`
             setMissions(prev => prev.map(m => {
+              if (!affectedMissionIds.has(m.id)) return m
               if (m.status !== 'running' && m.status !== 'waiting_input') return m
               return { ...m, status: 'failed' as MissionStatus, currentStep: 'Connection failed',
                 messages: [...m.messages, { id: `msg-${Date.now()}-ws-error`, role: 'system' as const, content: errorContent, timestamp: new Date() }] }
@@ -1299,6 +1301,11 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost. Ple
           ...m,
           status: 'blocked' as MissionStatus,
           currentStep: 'Preflight check error',
+          preflightError: {
+            code: 'UNKNOWN_EXECUTION_FAILURE',
+            message: err instanceof Error ? err.message : 'Unknown error',
+            details: { hint: 'The preflight check threw an unexpected error. Retry or check cluster connectivity.' },
+          },
           messages: [
             ...m.messages,
             {
@@ -1505,11 +1512,20 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       ))
 
       executeMission(missionId, prompt, { context: mission.context, type: mission.type })
-    }).catch(() => {
-      // Preflight threw unexpectedly — allow mission to proceed
-      const lastUserMsg = mission.messages.find(m => m.role === 'user')
-      const prompt = lastUserMsg?.content || mission.description
-      executeMission(missionId, prompt, { context: mission.context, type: mission.type })
+    }).catch((err) => {
+      // Preflight threw unexpectedly — re-block instead of fail-open (#5851)
+      setMissions(prev => prev.map(m =>
+        m.id === missionId ? {
+          ...m,
+          status: 'blocked' as MissionStatus,
+          currentStep: 'Preflight check error',
+          preflightError: {
+            code: 'UNKNOWN_EXECUTION_FAILURE',
+            message: err instanceof Error ? err.message : 'Unknown error',
+            details: { hint: 'The preflight check threw an unexpected error. Retry or check cluster connectivity.' },
+          },
+        } : m
+      ))
     })
   }
 
