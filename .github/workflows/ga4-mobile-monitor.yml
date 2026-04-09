@@ -1,0 +1,271 @@
+name: GA4 Mobile Traffic Monitor
+# Checks GA4 daily for mobile traffic health. Creates a GitHub issue if
+# mobile sessions drop below a percentage threshold for 3+ consecutive days,
+# which may indicate a mobile-specific crash (e.g., React render loop).
+#
+# Context: On March 20, 2026, a render loop in Sidebar.tsx killed mobile
+# completely — mobile dropped from ~20% to <3% of traffic. This wasn't
+# detected for 19 days because the crash prevented analytics from loading.
+# This monitor catches that pattern early.
+#
+# Secrets required:
+#   GA4_SERVICE_ACCOUNT_KEY  — Google service account JSON with GA4 Data API access
+#   GA4_PROPERTY_ID          — GA4 property ID
+
+on:
+  schedule:
+    - cron: '15 8 * * *' # 8:15 UTC daily (after nightly tests complete)
+  workflow_dispatch:
+    inputs:
+      lookback_days:
+        description: 'Days to analyze (default: 7)'
+        required: false
+        default: '7'
+        type: string
+      min_mobile_pct:
+        description: 'Minimum expected mobile % (default: 5)'
+        required: false
+        default: '5'
+        type: string
+
+env:
+  ISSUE_TAG: "[GA4-Mobile]"
+  # Minimum mobile traffic percentage expected (below this = potential crash)
+  MIN_MOBILE_PCT: 5
+  # Number of consecutive low-mobile days before alerting
+  CONSECUTIVE_DAYS_THRESHOLD: 3
+  # Minimum total sessions/day to consider (skip very low-traffic days)
+  MIN_DAILY_SESSIONS: 10
+  LOOKBACK_DAYS: 7
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  monitor:
+    if: github.repository == 'kubestellar/console'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install googleapis
+        run: npm install googleapis@144
+
+      - name: Check mobile traffic health
+        uses: actions/github-script@v7
+        env:
+          GA4_SERVICE_ACCOUNT_KEY: ${{ secrets.GA4_SERVICE_ACCOUNT_KEY }}
+          GA4_PROPERTY_ID: ${{ secrets.GA4_PROPERTY_ID }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { google } = require('googleapis');
+
+            // ── Config ──
+            const lookbackDays = parseInt('${{ inputs.lookback_days }}' || process.env.LOOKBACK_DAYS);
+            const minMobilePct = parseFloat('${{ inputs.min_mobile_pct }}' || process.env.MIN_MOBILE_PCT);
+            const consecutiveThreshold = parseInt(process.env.CONSECUTIVE_DAYS_THRESHOLD);
+            const minDailySessions = parseInt(process.env.MIN_DAILY_SESSIONS);
+            const tag = process.env.ISSUE_TAG;
+            const propertyId = process.env.GA4_PROPERTY_ID;
+
+            if (!process.env.GA4_SERVICE_ACCOUNT_KEY || !propertyId) {
+              core.warning('GA4_SERVICE_ACCOUNT_KEY or GA4_PROPERTY_ID not set — skipping');
+              return;
+            }
+
+            // ── Auth ──
+            const credentials = JSON.parse(process.env.GA4_SERVICE_ACCOUNT_KEY);
+            const auth = new google.auth.GoogleAuth({
+              credentials,
+              scopes: ['https://www.googleapis.com/auth/analytics.readonly'],
+            });
+            const analyticsData = google.analyticsdata({ version: 'v1beta', auth });
+
+            // ── Query GA4 for sessions by device category ──
+            const endDate = new Date();
+            const startDate = new Date(endDate.getTime() - lookbackDays * 86400000);
+            const fmt = (d) => d.toISOString().slice(0, 10);
+
+            const res = await analyticsData.properties.runReport({
+              property: `properties/${propertyId}`,
+              requestBody: {
+                dateRanges: [{ startDate: fmt(startDate), endDate: fmt(endDate) }],
+                dimensions: [{ name: 'date' }, { name: 'deviceCategory' }],
+                metrics: [{ name: 'sessions' }],
+                orderBys: [{ dimension: { dimensionName: 'date' } }],
+                limit: 500,
+              },
+            });
+
+            // ── Aggregate by date ──
+            const dailyData = new Map(); // date -> { desktop, mobile, tablet, total }
+            for (const row of res.data.rows || []) {
+              const date = row.dimensionValues[0].value;
+              const device = row.dimensionValues[1].value;
+              const sessions = parseInt(row.metricValues[0].value) || 0;
+
+              if (!dailyData.has(date)) {
+                dailyData.set(date, { desktop: 0, mobile: 0, tablet: 0, total: 0 });
+              }
+              const day = dailyData.get(date);
+              if (device === 'mobile') day.mobile += sessions;
+              else if (device === 'tablet') day.tablet += sessions;
+              else if (device === 'desktop') day.desktop += sessions;
+              day.total += sessions;
+            }
+
+            // ── Analyze mobile percentage trend ──
+            const sortedDates = [...dailyData.keys()].sort();
+            let consecutiveLowDays = 0;
+            let maxConsecutiveLow = 0;
+            const dailyReport = [];
+
+            for (const date of sortedDates) {
+              const day = dailyData.get(date);
+              if (day.total < minDailySessions) {
+                // Skip low-traffic days (weekends, etc.)
+                dailyReport.push({ date, mobilePct: null, sessions: day.total, skipped: true });
+                continue;
+              }
+
+              const mobilePct = (day.mobile / day.total) * 100;
+              const isLow = mobilePct < minMobilePct;
+
+              if (isLow) {
+                consecutiveLowDays++;
+                maxConsecutiveLow = Math.max(maxConsecutiveLow, consecutiveLowDays);
+              } else {
+                consecutiveLowDays = 0;
+              }
+
+              dailyReport.push({
+                date,
+                mobilePct: mobilePct.toFixed(1),
+                mobile: day.mobile,
+                desktop: day.desktop,
+                sessions: day.total,
+                isLow,
+              });
+            }
+
+            // ── Log summary ──
+            console.log('\n📱 Mobile Traffic Report');
+            console.log('─'.repeat(60));
+            for (const d of dailyReport) {
+              if (d.skipped) {
+                console.log(`  ${d.date}: skipped (${d.sessions} sessions < ${minDailySessions} threshold)`);
+              } else {
+                const flag = d.isLow ? ' ⚠️' : ' ✓';
+                console.log(`  ${d.date}: ${d.mobilePct}% mobile (${d.mobile}/${d.sessions})${flag}`);
+              }
+            }
+            console.log('─'.repeat(60));
+            console.log(`Max consecutive low-mobile days: ${maxConsecutiveLow} (threshold: ${consecutiveThreshold})`);
+
+            // ── Create or close issue ──
+            const { data: existingIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'ga4-monitor,mobile-traffic',
+              per_page: 10,
+            });
+            const existing = existingIssues.find(i => i.title.includes(tag));
+
+            if (maxConsecutiveLow >= consecutiveThreshold) {
+              // Alert: mobile traffic is suspiciously low
+              const tableRows = dailyReport
+                .filter(d => !d.skipped)
+                .map(d => `| ${d.date} | ${d.mobilePct}% | ${d.mobile} | ${d.desktop} | ${d.sessions} | ${d.isLow ? '⚠️' : '✓'} |`)
+                .join('\n');
+
+              const body = [
+                `## ⚠️ Mobile traffic below ${minMobilePct}% for ${maxConsecutiveLow} consecutive days`,
+                '',
+                `This may indicate a mobile-specific crash (e.g., React render loop) that prevents`,
+                `analytics from loading on mobile devices.`,
+                '',
+                `### Daily Breakdown`,
+                '',
+                `| Date | Mobile % | Mobile | Desktop | Total | Status |`,
+                `|------|----------|--------|---------|-------|--------|`,
+                tableRows,
+                '',
+                `### Investigate`,
+                '',
+                `1. Open \`console.kubestellar.io\` on a mobile device or emulator`,
+                `2. Check for React error boundary ("This page encountered an error")`,
+                `3. Run mobile Playwright test: \`npx playwright test e2e/smoke.spec.ts --grep "mobile"\``,
+                `4. Check nightly react-render-errors report for mobile viewport failures`,
+                '',
+                `### Context`,
+                '',
+                `On March 20, 2026, a render loop in Sidebar.tsx crashed mobile browsers silently.`,
+                `Mobile traffic dropped from ~20% to <3% for 19 days before detection.`,
+                `This monitor exists to catch that pattern early.`,
+                '',
+                `> Auto-generated by GA4 Mobile Traffic Monitor. Auto-closes when mobile traffic recovers.`,
+              ].join('\n');
+
+              if (existing) {
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  body,
+                });
+                console.log(`\n⚠️ Updated existing issue #${existing.number}`);
+              } else {
+                // Ensure labels exist
+                for (const label of ['ga4-monitor', 'mobile-traffic', 'bug']) {
+                  try {
+                    await github.rest.issues.getLabel({ owner: context.repo.owner, repo: context.repo.repo, name: label });
+                  } catch {
+                    await github.rest.issues.createLabel({
+                      owner: context.repo.owner, repo: context.repo.repo, name: label,
+                      color: label === 'ga4-monitor' ? '0969da' : label === 'mobile-traffic' ? 'a333c8' : 'd73a4a',
+                    });
+                  }
+                }
+
+                const { data: issue } = await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: `${tag} Mobile traffic critically low — possible mobile crash`,
+                  body,
+                  labels: ['ga4-monitor', 'mobile-traffic', 'bug'],
+                });
+                console.log(`\n⚠️ Created issue #${issue.number}`);
+              }
+            } else if (existing) {
+              // Mobile traffic recovered — close the issue
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                state: 'closed',
+                state_reason: 'completed',
+              });
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: `✅ Mobile traffic recovered above ${minMobilePct}% threshold on ${fmt(endDate)}. Auto-closing.`,
+              });
+              console.log(`\n✅ Mobile traffic recovered — closed issue #${existing.number}`);
+            } else {
+              console.log(`\n✅ Mobile traffic healthy — no action needed`);
+            }
