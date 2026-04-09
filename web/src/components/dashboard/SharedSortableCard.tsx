@@ -69,10 +69,10 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
   useEffect(() => {
     const mq = window.matchMedia(`(max-width: ${NARROW_BREAKPOINT - 1}px)`)
     const handler = (e: MediaQueryListEvent) => setIsNarrow(e.matches)
-    setIsNarrow(mq.matches)
+    if (mq.matches !== isNarrow) setIsNarrow(mq.matches)
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const posW = card.position?.w || 4
   const posH = card.position?.h || 2

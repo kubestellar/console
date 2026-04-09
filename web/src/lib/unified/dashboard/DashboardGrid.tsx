@@ -200,10 +200,12 @@ function DashboardCardWrapper({
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 1023px)')
     const handler = (e: MediaQueryListEvent) => setIsNarrow(e.matches)
-    setIsNarrow(mq.matches)
+    // Sync initial state only if it differs to avoid cascading re-renders
+    // across dozens of card instances on mobile (React error #185)
+    if (mq.matches !== isNarrow) setIsNarrow(mq.matches)
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const rawW = Math.min(12, Math.max(3, placement.position?.w || 4))
   const effectiveW = isNarrow && rawW < 6 ? 6 : rawW

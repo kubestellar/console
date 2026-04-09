@@ -93,10 +93,10 @@ function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, 
   useEffect(() => {
     const mq = window.matchMedia(`(min-width: ${NARROW_MIN}px) and (max-width: ${NARROW_MAX}px)`)
     const handler = (e: MediaQueryListEvent) => setIsNarrowRange(e.matches)
-    setIsNarrowRange(mq.matches)
+    if (mq.matches !== isNarrowRange) setIsNarrowRange(mq.matches)
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const effectiveW = isNarrowRange && (card.position?.w || 4) < MIN_NARROW_COLS ? MIN_NARROW_COLS : (card.position?.w || 4)
 
