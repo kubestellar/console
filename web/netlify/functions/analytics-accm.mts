@@ -31,6 +31,8 @@ const MAX_PAGES = 3;
 const API_TIMEOUT_MS = 15_000;
 /** AI-generated label used to classify AI contributions */
 const AI_LABEL = "ai-generated";
+/** Authors whose PRs/issues are always AI-generated (Claude Code sessions) */
+const AI_AUTHORS = new Set(["clubanderson"]);
 
 /** Workflow filenames to track for CI pass rates */
 const CI_WORKFLOWS: Record<string, string> = {
@@ -273,8 +275,8 @@ async function fetchWorkflowRuns(
 // Aggregation
 // ---------------------------------------------------------------------------
 
-function hasAILabel(labels: { name: string }[]): boolean {
-  return (labels || []).some((l) => l.name === AI_LABEL);
+function isAIContribution(labels: { name: string }[], author: string): boolean {
+  return AI_AUTHORS.has(author) || (labels || []).some((l) => l.name === AI_LABEL);
 }
 
 function aggregateWeeklyActivity(
@@ -311,7 +313,7 @@ function aggregateWeeklyActivity(
     const bucket = buckets.get(createdWeek);
     if (bucket) {
       bucket.prsOpened++;
-      if (hasAILabel(pr.labels)) {
+      if (isAIContribution(pr.labels, pr.user.login)) {
         bucket.aiPrs++;
       } else {
         bucket.humanPrs++;
@@ -332,7 +334,7 @@ function aggregateWeeklyActivity(
     const bucket = buckets.get(createdWeek);
     if (bucket) {
       bucket.issuesOpened++;
-      if (hasAILabel(issue.labels)) {
+      if (isAIContribution(issue.labels, issue.user.login)) {
         bucket.aiIssues++;
       } else {
         bucket.humanIssues++;
