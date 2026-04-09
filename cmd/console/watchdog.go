@@ -225,7 +225,10 @@ func pollBackendHealth(ctx context.Context, backendBase string, healthy *int32, 
 		wasHealthy := atomic.LoadInt32(healthy) == 1
 		status := checkBackendHealth(client, healthURL)
 		backendStatus.Store(status)
-		isHealthy := status == "ok"
+		// Accept both "ok" and "degraded" — degraded means the backend is
+		// running but no clusters are reachable. The UI should still load
+		// and show "no clusters connected" instead of blocking forever (#5804).
+		isHealthy := status == "ok" || status == "degraded"
 
 		if isHealthy {
 			if !wasHealthy {
