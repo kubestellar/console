@@ -48,8 +48,11 @@ export function AgentSetupDialog() {
     // Only show after initial connection check completes
     if (status === 'connecting') return
 
-    // Don't show if already connected
-    if (isConnected) return
+    // Auto-close if connection succeeded while dialog was open (#5674)
+    if (isConnected) {
+      setShow(false)
+      return
+    }
 
     // If the agent was ever connected, this is a transient disconnect — don't
     // show the install modal. It's for first-time users who haven't installed.

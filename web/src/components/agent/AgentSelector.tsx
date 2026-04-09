@@ -435,6 +435,9 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
                     const restored = prev ? sortedAgents.find(a => a.name === prev && a.available) : undefined
                     const targetAgent = restored?.name || sortedAgents.find(a => a.available)?.name || ''
 
+                    // Guard: don't select an empty agent ID (#5673)
+                    if (!targetAgent) return
+
                     if (!hasApprovedAgents()) {
                       // Show approval dialog before enabling
                       pendingAgentRef.current = targetAgent
