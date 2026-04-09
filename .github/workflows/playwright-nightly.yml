@@ -100,7 +100,8 @@ jobs:
             e2e/Events.spec.ts \
             e2e/Tour.spec.ts \
             e2e/navbar-responsive.spec.ts \
-            e2e/custom-dashboard.spec.ts
+            e2e/custom-dashboard.spec.ts \
+            e2e/nightly/rce-vector-scan.spec.ts
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:4173
 
