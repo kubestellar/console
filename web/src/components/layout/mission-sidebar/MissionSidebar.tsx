@@ -1218,7 +1218,8 @@ export function MissionSidebarToggle() {
   ).length
 
   const runningCount = missions.filter(m => m.status === 'running').length
-
+  /** Active (non-saved) mission count — computed once to avoid duplicate filter (#5745) */
+  const activeCount = missions.filter(m => m.status !== 'saved').length
 
   // Always show toggle when sidebar is closed (even with no missions)
   if (isSidebarOpen) {
@@ -1245,8 +1246,8 @@ export function MissionSidebarToggle() {
       )}
       {needsAttention > 0 ? (
         <span className={isMobile ? 'text-xs font-medium' : 'text-sm font-medium'}>{t('missionSidebar.needsAttention', { count: needsAttention })}</span>
-      ) : missions.filter(m => m.status !== 'saved').length > 0 ? (
-        <span className={isMobile ? 'text-xs' : 'text-sm'}>{t('missionSidebar.missionCount', { count: missions.filter(m => m.status !== 'saved').length })}</span>
+      ) : activeCount > 0 ? (
+        <span className={isMobile ? 'text-xs' : 'text-sm'}>{t('missionSidebar.missionCount', { count: activeCount })}</span>
       ) : (
         <span className={isMobile ? 'text-xs' : 'text-sm'}>{t('missionSidebar.aiMissions')}</span>
       )}
