@@ -258,7 +258,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
               title={t('cards:trestleScan.viewPassingControls')}
             >
               <CheckCircle className="w-3 h-3 text-green-400" />
-              <span>{filtered.passedControls} {t('cards:trestleScan.passed')}</span>
+              <span>{filtered.passedControls} {t('cards:trestleScan.controlsPassed', 'controls passed')}</span>
             </button>
             <button
               onClick={() => drillToCompliance('fail', {})}
@@ -266,7 +266,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
               title={t('cards:trestleScan.viewFailingControls')}
             >
               <XCircle className="w-3 h-3 text-red-400" />
-              <span>{filtered.failedControls} {t('cards:trestleScan.failed')}</span>
+              <span>{filtered.failedControls} {t('cards:trestleScan.controlsFailed', 'controls failed')}</span>
             </button>
             {filtered.otherControls > 0 && (
               <button
@@ -312,11 +312,11 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
           return (
             <div
               key={profile.name}
-              className="w-full text-left p-2.5 rounded-lg border border-border/50 hover:border-border transition-colors bg-secondary/20"
+              className="w-full text-left p-2.5 rounded-lg border border-border/50 hover:border-border transition-colors bg-secondary/20 cursor-pointer"
+              onClick={() => setExpandedProfile(isExpanded ? null : profile.name)}
             >
               <div className="flex items-center justify-between gap-2">
-                <button
-                  onClick={() => setExpandedProfile(isExpanded ? null : profile.name)}
+                <div
                   className="flex-1 text-left"
                   title={t('cards:trestleScan.toggleProfileDetails', { name: profile.name })}
                 >
@@ -335,10 +335,10 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
                       <ChevronRight className={`w-3 h-3 text-muted-foreground transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                     </div>
                   </div>
-                </button>
+                </div>
 
                 <button
-                  onClick={() => drillToCompliance('', { profile: profile.name })}
+                  onClick={(e) => { e.stopPropagation(); drillToCompliance('', { profile: profile.name }) }}
                   className="cursor-pointer"
                   title={t('cards:trestleScan.viewProfileControls', { name: profile.name })}
                 >
