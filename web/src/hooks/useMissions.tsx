@@ -261,7 +261,7 @@ function loadMissions(): Mission[] {
             messages: [
               ...mission.messages,
               {
-                id: `msg-${Date.now()}`,
+                id: `msg-cancel-${mission.id}-${Date.now()}`,
                 role: 'system' as const,
                 content: 'Mission cancelled by user (page was reloaded during cancellation).',
                 timestamp: new Date() }
