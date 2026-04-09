@@ -13,7 +13,7 @@ jobs:
     if: github.event.assignee.login == 'Copilot' || contains(github.event.assignee.login, 'copilot')
     steps:
       - name: Add triage labels
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const issue = context.payload.issue;

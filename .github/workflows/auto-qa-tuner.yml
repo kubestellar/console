@@ -813,7 +813,7 @@ jobs:
       COPILOT_STALL_ESCALATION_MINUTES: 60
     steps:
       - name: Detect stalled Copilot assignments
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.CONSOLE_AUTO || secrets.GITHUB_TOKEN }}
           script: |

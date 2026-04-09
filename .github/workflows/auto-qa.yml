@@ -3438,7 +3438,7 @@ jobs:
       # ── Issue Creation ──────────────────────────────────────────────
 
       - name: Create issues for failures
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           BUILD_OUTCOME: ${{ steps.build_check.outcome }}
           LINT_OUTCOME: ${{ steps.lint_check.outcome }}

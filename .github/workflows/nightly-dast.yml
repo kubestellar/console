@@ -101,7 +101,7 @@ jobs:
 
       - name: Create or Close ZAP Issue
         if: always() && inputs.skip_issue_creation != true
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           HAS_FINDINGS: ${{ steps.zap-results.outputs.has_findings }}
           HIGH_COUNT: ${{ steps.zap-results.outputs.high_count }}
@@ -269,7 +269,7 @@ jobs:
 
       - name: Create or Close Nuclei Issue
         if: always() && inputs.skip_issue_creation != true
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           HAS_FINDINGS: ${{ steps.nuclei-results.outputs.has_findings }}
           FINDING_COUNT: ${{ steps.nuclei-results.outputs.finding_count }}

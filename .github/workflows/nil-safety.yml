@@ -195,7 +195,7 @@ jobs:
 
       - name: Create issues for findings
         if: steps.scan.outputs.total != '0' && inputs.skip_issue_creation != true
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           TOTAL_FINDINGS: ${{ steps.scan.outputs.total }}
           COMMIT_SHA: ${{ github.sha }}

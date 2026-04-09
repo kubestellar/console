@@ -389,7 +389,7 @@ jobs:
 
       - name: Create per-suite issues for failures & auto-close passing
         if: github.event.inputs.skip_issue_creation != 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const fs = require('fs');

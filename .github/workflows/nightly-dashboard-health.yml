@@ -106,7 +106,7 @@ jobs:
 
       - name: Create issue for failures
         if: failure() && inputs.skip_issue_creation != true
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.CONSOLE_AUTO || secrets.GITHUB_TOKEN }}
           script: |
