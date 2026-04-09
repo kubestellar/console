@@ -1,0 +1,81 @@
+name: Startup Smoke Test
+
+on:
+  pull_request:
+    paths:
+      - 'cmd/**'
+      - 'pkg/**'
+      - 'startup-oauth.sh'
+      - 'start-dev.sh'
+      - 'go.mod'
+      - 'go.sum'
+      - 'web/package.json'
+      - 'web/package-lock.json'
+      - 'web/vite.config.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  startup-check:
+    name: Verify console starts successfully
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install frontend dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: web
+        run: npm run build
+
+      - name: Build backend
+        run: go build -o console-bin ./cmd/console
+
+      - name: Start backend and verify health
+        run: |
+          # Start the console backend on port 8081 (simulating watchdog mode)
+          BACKEND_PORT=8081 ./console-bin &
+          BACKEND_PID=$!
+
+          # Wait up to 30 seconds for the backend to respond
+          MAX_WAIT=30
+          INTERVAL=2
+          ELAPSED=0
+          HEALTHY=false
+
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            STATUS=$(curl -sf http://localhost:8081/health 2>/dev/null | jq -r '.status' 2>/dev/null || echo "")
+            echo "[$ELAPSED s] /health status: '$STATUS'"
+
+            if [ "$STATUS" = "ok" ] || [ "$STATUS" = "degraded" ]; then
+              HEALTHY=true
+              echo "Backend is healthy (status=$STATUS)"
+              break
+            fi
+
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+          done
+
+          # Clean up
+          kill $BACKEND_PID 2>/dev/null || true
+
+          if [ "$HEALTHY" != "true" ]; then
+            echo "::error::Backend did not become healthy within ${MAX_WAIT}s"
+            exit 1
+          fi
+
+          echo "Startup smoke test passed"
