@@ -214,7 +214,7 @@ test.describe('AI Agents Deep Tests (/ai-agents)', () => {
 
     // The Install link should point to a GitHub repo
     const href = await installLink.first().getAttribute('href')
-    expect(href).toMatch(/github\.com/)
+    expect(href).toMatch(/^https:\/\/github\.com\//)
   })
 
   test('error state on API failure', async ({ page }) => {
