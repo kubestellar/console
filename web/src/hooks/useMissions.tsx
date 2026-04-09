@@ -885,22 +885,26 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost. Ple
         // Reset inactivity timer — progress events prove the agent is alive,
         // even during long-running tool calls like `drasi init` (#5360).
         lastStreamTimestamp.current.set(missionId, Date.now())
-        // Track token delta for category usage
-        if (payload.tokens?.total) {
+        // Track token delta for category usage — guard against NaN from
+        // malformed WebSocket payloads to prevent corrupted state (#5838)
+        const safeTotal = Number(payload.tokens?.total)
+        if (!Number.isNaN(safeTotal) && safeTotal > 0) {
           const previousTotal = m.tokenUsage?.total ?? 0
-          const delta = payload.tokens.total - previousTotal
+          const delta = safeTotal - previousTotal
           if (delta > 0) {
             addCategoryTokens(delta, 'missions')
           }
         }
+        const safeInput = Number(payload.tokens?.input)
+        const safeOutput = Number(payload.tokens?.output)
         return {
           ...m,
           currentStep: payload.step || m.currentStep,
           progress: payload.progress ?? m.progress,
           tokenUsage: payload.tokens ? {
-            input: payload.tokens.input ?? m.tokenUsage?.input ?? 0,
-            output: payload.tokens.output ?? m.tokenUsage?.output ?? 0,
-            total: payload.tokens.total ?? m.tokenUsage?.total ?? 0 } : m.tokenUsage,
+            input: !Number.isNaN(safeInput) ? safeInput : (m.tokenUsage?.input ?? 0),
+            output: !Number.isNaN(safeOutput) ? safeOutput : (m.tokenUsage?.output ?? 0),
+            total: !Number.isNaN(safeTotal) ? safeTotal : (m.tokenUsage?.total ?? 0) } : m.tokenUsage,
           updatedAt: new Date() }
       } else if (message.type === 'stream') {
         // Streaming response from agent
@@ -1769,6 +1773,12 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     // Cancel backend execution before removing from UI to prevent
     // invisible continued operations after dismiss (#5816)
     cancelMission(missionId)
+    // Clean up pending requests to prevent WS events from triggering
+    // setMissions re-renders for a mission that no longer exists (#5835)
+    for (const [reqId, mId] of pendingRequests.current.entries()) {
+      if (mId === missionId) pendingRequests.current.delete(reqId)
+    }
+    lastStreamTimestamp.current.delete(missionId)
     setMissions(prev => prev.filter(m => m.id !== missionId))
     if (activeMissionId === missionId) {
       setActiveMissionId(null)
