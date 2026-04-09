@@ -119,12 +119,15 @@ export function ServiceStatus() {
     defaultLimit: 10,
   })
 
-  // Stats - use totalItems from the hook (filtered count before pagination)
+  // Stats — apply cluster filter to type counts so they match the total (#5769)
+  const filteredForStats = localClusterFilter.length > 0
+    ? services.filter(s => localClusterFilter.includes(s.cluster || ''))
+    : services
   const stats = {
     total: totalItems,
-    loadBalancer: services.filter(s => s.type === 'LoadBalancer').length,
-    nodePort: services.filter(s => s.type === 'NodePort').length,
-    clusterIP: services.filter(s => s.type === 'ClusterIP').length,
+    loadBalancer: filteredForStats.filter(s => s.type === 'LoadBalancer').length,
+    nodePort: filteredForStats.filter(s => s.type === 'NodePort').length,
+    clusterIP: filteredForStats.filter(s => s.type === 'ClusterIP').length,
   }
 
   if (showSkeleton) {

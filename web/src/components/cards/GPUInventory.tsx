@@ -49,12 +49,10 @@ export function GPUInventory({ config }: GPUInventoryProps) {
   } = useCachedGPUNodes(cluster)
   const { drillToGPUNode } = useDrillDownActions()
 
-  // Only show skeleton when no cached data exists
   const hasData = rawNodes.length > 0
-  const isLoading = hookLoading && !hasData
 
-  // Report state to CardWrapper for refresh animation
-  useCardLoadingState({
+  // Report state to CardWrapper and get coordinated loading states (#5770)
+  const { showSkeleton } = useCardLoadingState({
     isLoading: hookLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
@@ -116,7 +114,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
     return { totalGPUs, allocatedGPUs, availableGPUs }
   }, [rawNodes])
 
-  if (isLoading) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-3">
