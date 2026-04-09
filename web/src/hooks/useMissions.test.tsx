@@ -2735,7 +2735,7 @@ describe('sendMessage connection failure path', () => {
 // ── retryPreflight unexpected throw proceeds to execute ──────────────────────
 
 describe('retryPreflight unexpected failure', () => {
-  it('proceeds to executeMission when retryPreflight throws unexpectedly', async () => {
+  it('re-blocks mission when retryPreflight throws unexpectedly (#5851)', async () => {
     const { runPreflightCheck } = await import('../lib/missions/preflightCheck')
     // First call: fail normally to create a blocked mission
     vi.mocked(runPreflightCheck).mockResolvedValueOnce({
@@ -2760,8 +2760,8 @@ describe('retryPreflight unexpected failure', () => {
     await act(async () => { await Promise.resolve() })
     await act(async () => { await Promise.resolve() })
 
-    // Should have tried to execute (creates a WebSocket)
-    expect(MockWebSocket.lastInstance).not.toBeNull()
+    // Should be re-blocked (fail-closed), not proceed to execution (#5851)
+    expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('blocked')
   })
 })
 
