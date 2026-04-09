@@ -186,7 +186,7 @@ export function PolicyDrillDown({ data }: Props) {
                   timestamp: typeof result.timestamp === 'string'
                     ? result.timestamp
                     : result.timestamp && typeof result.timestamp === 'object' && 'seconds' in result.timestamp
-                      ? new Date(Number(result.timestamp.seconds) * 1000).toISOString()
+                      ? (() => { const d = new Date(Number(result.timestamp.seconds) * 1000); return isNaN(d.getTime()) ? undefined : d.toISOString() })()
                       : undefined,
                 })
               }

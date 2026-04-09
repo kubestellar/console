@@ -1539,6 +1539,7 @@ type kubeconfigAddResponse struct {
 // handleKubeconfigRemoveHTTP removes a cluster context from the kubeconfig (#5658).
 func (s *Server) handleKubeconfigRemoveHTTP(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS") // Copilot: setCORSHeaders defaults to GET
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
@@ -1547,12 +1548,14 @@ func (s *Server) handleKubeconfigRemoveHTTP(w http.ResponseWriter, r *http.Reque
 	}
 
 	if !s.validateToken(r) {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		w.WriteHeader(http.StatusUnauthorized)
+		writeJSON(w, map[string]string{"error": "Unauthorized"})
 		return
 	}
 
 	if r.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		writeJSON(w, map[string]string{"error": "Method not allowed"})
 		return
 	}
 
@@ -1560,18 +1563,21 @@ func (s *Server) handleKubeconfigRemoveHTTP(w http.ResponseWriter, r *http.Reque
 		Context string `json:"context"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Context == "" {
-		http.Error(w, "Missing 'context' field", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]string{"error": "Missing 'context' field"})
 		return
 	}
 
 	if s.k8sClient == nil {
-		http.Error(w, "k8s client not initialized", http.StatusServiceUnavailable)
+		w.WriteHeader(http.StatusServiceUnavailable)
+		writeJSON(w, map[string]string{"error": "k8s client not initialized"})
 		return
 	}
 
 	if err := s.k8sClient.RemoveContext(req.Context); err != nil {
 		slog.Error("[kubeconfig] failed to remove context", "context", req.Context, "error", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]string{"error": err.Error()})
 		return
 	}
 
