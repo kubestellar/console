@@ -4,7 +4,7 @@
  * Returns intern affiliate click counts from GA4, keyed by GitHub login.
  * Used by the docs leaderboard to show a "Social" column for mapped interns.
  *
- * Requires secrets: GA4_SERVICE_ACCOUNT_KEY, GA4_PROPERTY_ID
+ * Requires Netlify env vars: GA4_SERVICE_ACCOUNT_JSON (base64), GA4_PROPERTY_ID
  */
 
 import { google } from "googleapis";
@@ -60,15 +60,21 @@ function corsOrigin(origin: string | null): string {
 }
 
 async function fetchAffiliateClicks(): Promise<Record<string, AffiliateData>> {
-  const serviceAccountKey = process.env.GA4_SERVICE_ACCOUNT_KEY;
-  const propertyId = process.env.GA4_PROPERTY_ID;
+  // Netlify env vars use GA4_SERVICE_ACCOUNT_JSON (base64-encoded) + GA4_PROPERTY_ID
+  const serviceAccountB64 =
+    process.env.GA4_SERVICE_ACCOUNT_JSON;
+  const propertyId =
+    process.env.GA4_PROPERTY_ID;
 
-  if (!serviceAccountKey || !propertyId) {
-    console.warn("GA4_SERVICE_ACCOUNT_KEY or GA4_PROPERTY_ID not set");
+  if (!serviceAccountB64 || !propertyId) {
+    console.warn("GA4_SERVICE_ACCOUNT_JSON or GA4_PROPERTY_ID not set in Netlify env vars");
     return {};
   }
 
-  const credentials = JSON.parse(serviceAccountKey);
+  // Decode base64 service account JSON
+  const credentials = JSON.parse(
+    Buffer.from(serviceAccountB64, "base64").toString("utf-8")
+  );
   const auth = new google.auth.GoogleAuth({
     credentials,
     scopes: ["https://www.googleapis.com/auth/analytics.readonly"],
