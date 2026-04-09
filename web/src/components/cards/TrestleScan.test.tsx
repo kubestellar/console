@@ -32,6 +32,8 @@ vi.mock('react-i18next', () => ({
         'cards:trestleScan.viewOtherControls': 'View other controls',
         'cards:trestleScan.passed': 'passed',
         'cards:trestleScan.failed': 'failed',
+        'cards:trestleScan.controlsPassed': 'controls passed',
+        'cards:trestleScan.controlsFailed': 'controls failed',
         'cards:trestleScan.other': 'other',
         'cards:trestleScan.controls': '{{count}} controls',
         'cards:trestleScan.oscalCompliance': 'OSCAL Compliance',
@@ -298,8 +300,8 @@ describe('TrestleScan', () => {
       const mainScore = scoreElements.find(el => el.className.includes('text-3xl'))
       expect(mainScore).toBeTruthy()
       expect(screen.getByText('Good')).toBeInTheDocument()
-      expect(screen.getByText('85 passed')).toBeInTheDocument()
-      expect(screen.getByText('10 failed')).toBeInTheDocument()
+      expect(screen.getByText('85 controls passed')).toBeInTheDocument()
+      expect(screen.getByText('10 controls failed')).toBeInTheDocument()
       expect(screen.getByText('5 other')).toBeInTheDocument()
     })
 

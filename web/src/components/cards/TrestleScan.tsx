@@ -366,7 +366,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
               {isExpanded && (
                 <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
                   <button
-                    onClick={() => drillToCompliance('pass', { profile: profile.name })}
+                    onClick={(e) => { e.stopPropagation(); drillToCompliance('pass', { profile: profile.name }) }}
                     className="flex items-center gap-1 text-green-400 hover:opacity-80 transition-opacity cursor-pointer"
                     title={t('cards:trestleScan.viewPassingProfileControls', { name: profile.name })}
                   >
@@ -374,7 +374,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
                     <span>{profile.controlsPassed} {t('cards:trestleScan.pass')}</span>
                   </button>
                   <button
-                    onClick={() => drillToCompliance('fail', { profile: profile.name })}
+                    onClick={(e) => { e.stopPropagation(); drillToCompliance('fail', { profile: profile.name }) }}
                     className="flex items-center gap-1 text-red-400 hover:opacity-80 transition-opacity cursor-pointer"
                     title={t('cards:trestleScan.viewFailingProfileControls', { name: profile.name })}
                   >
@@ -382,7 +382,7 @@ Please proceed step by step. Start with verifying prerequisites (Python 3.9+, ku
                     <span>{profile.controlsFailed} {t('cards:trestleScan.fail')}</span>
                   </button>
                   <button
-                    onClick={() => drillToCompliance('other', { profile: profile.name })}
+                    onClick={(e) => { e.stopPropagation(); drillToCompliance('other', { profile: profile.name }) }}
                     className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                     title={t('cards:trestleScan.viewOtherProfileControls', { name: profile.name })}
                   >
