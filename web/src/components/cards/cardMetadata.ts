@@ -181,6 +181,7 @@ export const CARD_TITLES: Record<string, string> = {
   upgrade_status: 'Cluster Upgrade Status',
   user_management: 'User Management',
   github_activity: 'GitHub Activity',
+  issue_activity_chart: 'Daily Issues & PRs',
   kubectl: 'Kubectl Terminal',
   // weather — registered via unified descriptor system
   rss_feed: 'RSS Feed',
@@ -458,6 +459,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   upgrade_status: 'Kubernetes version upgrade status and available upgrades.',
   user_management: 'Manage console users and their roles.',
   github_activity: 'Recent GitHub activity: commits, PRs, and issues.',
+  issue_activity_chart: 'Daily chart of issues opened vs closed and PRs merged, with configurable lookback period.',
   kubectl: 'Interactive kubectl terminal for running commands.',
   // weather — registered via unified descriptor system
   rss_feed: 'RSS feed reader for Kubernetes news and blogs.',

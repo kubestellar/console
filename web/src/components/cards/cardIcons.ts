@@ -5,7 +5,7 @@ import {
   FileCode, Gauge, AlertCircle, Layers, HardDrive, Globe, Users, Terminal, TrendingUp,
   Gamepad2, Puzzle, Target, Zap, Crown, Ghost, Bird, Rocket, Wand2, Stethoscope,
   MonitorCheck, Monitor, Workflow, Split, Router, BookOpen, Cloudy, Rss, Frame, Wrench, Phone,
-  Clock, Settings,
+  Clock, Settings, BarChart3,
 } from 'lucide-react'
 
 export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, color: string }> = {
@@ -122,6 +122,7 @@ export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: stri
   upgrade_status: { icon: TrendingUp, color: 'text-blue-400' },
   user_management: { icon: Users, color: 'text-purple-400' },
   github_activity: { icon: Activity, color: 'text-purple-400' },
+  issue_activity_chart: { icon: BarChart3, color: 'text-blue-400' },
   kubectl: { icon: Terminal, color: 'text-green-400' },
   weather: { icon: Cloudy, color: 'text-blue-400' },
   stock_market_ticker: { icon: TrendingUp, color: 'text-green-400' },

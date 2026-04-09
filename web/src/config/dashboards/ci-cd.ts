@@ -17,7 +17,9 @@ export const ciCdDashboardConfig: UnifiedDashboardConfig = {
     { id: 'prow-status-1', cardType: 'prow_status', title: 'Prow Status', position: { w: 4, h: 3 } },
     { id: 'prow-jobs-1', cardType: 'prow_jobs', title: 'Prow Jobs', position: { w: 5, h: 4 } },
     { id: 'prow-ci-monitor-1', cardType: 'prow_ci_monitor', title: 'Prow CI Monitor', position: { w: 6, h: 4 } },
-    // Third row: History
+    // Third row: Issue Activity Chart (full width)
+    { id: 'issue-activity-chart-1', cardType: 'issue_activity_chart', title: 'Daily Issues & PRs', position: { w: 12, h: 5 } },
+    // Fourth row: History
     { id: 'prow-history-1', cardType: 'prow_history', title: 'Prow History', position: { w: 4, h: 3 } },
   ],
   features: {

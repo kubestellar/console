@@ -3362,5 +3362,17 @@
     "compiling": "Compiling card...",
     "compilationError": "Compilation Error",
     "noComponent": "No component produced."
+  },
+  "issueActivityChart": {
+    "title": "Daily Issues & PRs",
+    "description": "Issues opened vs closed and PRs merged per day",
+    "opened": "Opened",
+    "closed": "Closed",
+    "prsMerged": "PRs Merged",
+    "merged": "Merged",
+    "issues": "Issues",
+    "prs": "PRs",
+    "refresh": "Refresh",
+    "showingDemo": "showing demo data"
   }
 }

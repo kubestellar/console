@@ -117,6 +117,7 @@ const MLJobs = safeLazy(() => _workloadDetectionBundle, 'MLJobs')
 const MLNotebooks = safeLazy(() => _workloadDetectionBundle, 'MLNotebooks')
 // Weather — migrated to cardDescriptors.registry.ts (unified descriptor system)
 const GitHubActivity = safeLazy(() => import('./GitHubActivity'), 'GitHubActivity')
+const IssueActivityChart = safeLazy(() => import('./IssueActivityChart'), 'IssueActivityChart')
 const RSSFeed = safeLazy(() => import('./rss'), 'RSSFeed')
 const Kubectl = safeLazy(() => import('./Kubectl'), 'Kubectl')
 // Arcade/game cards — share one chunk via barrel import.
@@ -423,6 +424,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   // Weather card — registered via unified descriptor system
   // GitHub Activity Monitoring card
   github_activity: GitHubActivity,
+  // Issue Activity Chart — daily issues opened/closed + PRs merged
+  issue_activity_chart: IssueActivityChart,
   // RSS Feed card
   rss_feed: RSSFeed,
   // Kubectl card
@@ -861,6 +864,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   ml_notebooks: () => import('./workload-detection'),
   // GitHub & misc
   github_activity: () => import('./GitHubActivity'),
+  issue_activity_chart: () => import('./IssueActivityChart'),
   hardware_health: () => import('./HardwareHealthCard'),
   gpu_node_health: () => import('./ProactiveGPUNodeHealthMonitor'),
   console_ai_offline_detection: () => import('./console-missions/ConsoleOfflineDetectionCard'),
@@ -1382,6 +1386,8 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   // weather — width registered via unified descriptor system
   // GitHub Activity Monitoring card
   github_activity: 8,
+  // Issue Activity Chart — full-width for time-series readability
+  issue_activity_chart: 12,
   // RSS Feed card
   rss_feed: 6,
   // Kubectl card - interactive terminal
