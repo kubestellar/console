@@ -915,9 +915,11 @@ Please:
         <div
           className={cn(
             'p-2 rounded-lg border',
-            totalPredicted > 0
+            totalPredicted > 0 && aiEnabled && !isAnalyzing
               ? 'bg-blue-500/10 border-blue-500/20 cursor-pointer hover:bg-blue-500/20 transition-colors'
-              : 'bg-green-500/10 border-green-500/20 cursor-default'
+              : totalPredicted > 0
+                ? 'bg-blue-500/10 border-blue-500/20 cursor-default'
+                : 'bg-green-500/10 border-green-500/20 cursor-default'
           )}
           onClick={aiEnabled && !isAnalyzing ? () => triggerAIAnalysis() : undefined}
           title={`Predictive Failure Detection:
