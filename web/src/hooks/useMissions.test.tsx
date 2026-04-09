@@ -1111,8 +1111,7 @@ describe('localStorage quota handling', () => {
 
     // Should log the inner retry error (not silently swallow it)
     expect(errorSpy).toHaveBeenCalledWith(
-      '[Missions] localStorage still full after pruning, clearing missions',
-      expect.any(DOMException),
+      '[Missions] localStorage still full after stripping messages, clearing missions',
     )
 
     // Storage should have been cleared as a last resort
