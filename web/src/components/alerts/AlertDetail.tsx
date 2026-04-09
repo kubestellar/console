@@ -20,7 +20,7 @@ import { useToast } from '../ui/Toast'
 import { Button } from '../ui/Button'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { RETRY_DELAY_MS, TOAST_DISMISS_MS } from '../../lib/constants/network'
+import { TOAST_DISMISS_MS } from '../../lib/constants/network'
 
 // Time thresholds for relative time formatting
 const MINUTES_PER_HOUR = 60 // Minutes in an hour
@@ -88,10 +88,18 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
   const handleRunDiagnosis = async () => {
     setIsRunningDiagnosis(true)
     runAIDiagnosis(alert.id)
-    // The diagnosis runs async via missions
-    const timeoutId = window.setTimeout(() => setIsRunningDiagnosis(false), RETRY_DELAY_MS)
+    // Safety-net timeout: clear loading state after 60s even if diagnosis never completes (#5714)
+    const AI_DIAGNOSIS_SAFETY_TIMEOUT_MS = 60_000
+    const timeoutId = window.setTimeout(() => setIsRunningDiagnosis(false), AI_DIAGNOSIS_SAFETY_TIMEOUT_MS)
     timeoutsRef.current.push(timeoutId)
   }
+
+  // Clear loading state when diagnosis result arrives (#5714)
+  useEffect(() => {
+    if (isRunningDiagnosis && alert.aiDiagnosis) {
+      setIsRunningDiagnosis(false)
+    }
+  }, [alert.aiDiagnosis, isRunningDiagnosis])
 
   const handleSendSlack = async (webhookId: string) => {
     setIsSendingSlack(true)
