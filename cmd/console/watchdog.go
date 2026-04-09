@@ -198,7 +198,7 @@ func runWatchdog(cfg WatchdogConfig) error {
 }
 
 // checkBackendHealth performs a single health check against the backend.
-// Returns the status string ("ok", "starting", "shutting_down") or "" if unreachable.
+// Returns the status string ("ok", "degraded", "starting", "shutting_down") or "" if unreachable.
 func checkBackendHealth(client *http.Client, healthURL string) string {
 	resp, err := client.Get(healthURL)
 	if err != nil {
@@ -216,7 +216,7 @@ func checkBackendHealth(client *http.Client, healthURL string) string {
 }
 
 // pollBackendHealth polls the backend's /health endpoint and updates the atomic flags.
-// Only status "ok" counts as healthy — "starting" and "shutting_down" are treated as unhealthy.
+// Both "ok" and "degraded" count as healthy — "starting" and "shutting_down" are treated as unhealthy.
 func pollBackendHealth(ctx context.Context, backendBase string, healthy *int32, backendStatus *atomic.Value) {
 	client := &http.Client{Timeout: watchdogHealthTimeout}
 	healthURL := backendBase + "/health"

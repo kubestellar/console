@@ -534,6 +534,12 @@ describe('useMetricsHistory', () => {
       const { useMetricsHistory } = await importFresh()
       const { result } = renderHook(() => useMetricsHistory())
 
+      // The hook uses a 5000ms setTimeout before the initial capture (#5797)
+      const INITIAL_CAPTURE_DELAY_MS = 5000
+      act(() => {
+        vi.advanceTimersByTime(INITIAL_CAPTURE_DELAY_MS)
+      })
+
       // The hook should have auto-captured an initial snapshot
       expect(result.current.snapshotCount).toBeGreaterThanOrEqual(1)
       expect(result.current.history[0].clusters[0].name).toBe('auto-cluster')
@@ -554,15 +560,24 @@ describe('useMetricsHistory', () => {
       const { useMetricsHistory } = await importFresh()
       const { result } = renderHook(() => useMetricsHistory())
 
-      const countAfterMount = result.current.snapshotCount
+      // Advance past the 5000ms initial capture delay (#5797)
+      const INITIAL_CAPTURE_DELAY_MS = 5000
+      const startTime = Date.now()
+      act(() => {
+        vi.advanceTimersByTime(INITIAL_CAPTURE_DELAY_MS)
+      })
 
-      // Advance time by 10 minutes (the configured interval)
+      const countAfterInitial = result.current.snapshotCount
+
+      // Advance both system clock and timers by 10 minutes so the
+      // Date.now() guard in captureSnapshot sees enough elapsed time
       const TEN_MINUTES_MS = 10 * 60 * 1000
       act(() => {
+        vi.setSystemTime(startTime + INITIAL_CAPTURE_DELAY_MS + TEN_MINUTES_MS)
         vi.advanceTimersByTime(TEN_MINUTES_MS)
       })
 
-      expect(result.current.snapshotCount).toBeGreaterThan(countAfterMount)
+      expect(result.current.snapshotCount).toBeGreaterThan(countAfterInitial)
     })
 
     it('skips capture when interval has not elapsed', async () => {
@@ -579,7 +594,13 @@ describe('useMetricsHistory', () => {
       const { useMetricsHistory } = await importFresh()
       const { result } = renderHook(() => useMetricsHistory())
 
-      const countAfterMount = result.current.snapshotCount
+      // Advance past the 5000ms initial capture delay so the initial snapshot fires (#5797)
+      const INITIAL_CAPTURE_DELAY_MS = 5000
+      act(() => {
+        vi.advanceTimersByTime(INITIAL_CAPTURE_DELAY_MS)
+      })
+
+      const countAfterInitial = result.current.snapshotCount
 
       // Advance only 1 minute — should NOT trigger another capture
       const ONE_MINUTE_MS = 1 * 60 * 1000
@@ -587,7 +608,7 @@ describe('useMetricsHistory', () => {
         vi.advanceTimersByTime(ONE_MINUTE_MS)
       })
 
-      expect(result.current.snapshotCount).toBe(countAfterMount)
+      expect(result.current.snapshotCount).toBe(countAfterInitial)
     })
 
     it('does not auto-capture when clusters array is empty', async () => {

@@ -33,6 +33,7 @@ const VERSION_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 // Load persisted cache from localStorage on module init
 const versionCache: Record<string, { version: string; timestamp: number }> = (() => {
+  if (typeof window === 'undefined') return {}
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     return stored ? JSON.parse(stored) : {}

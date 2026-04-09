@@ -530,8 +530,12 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   const [showStockDropdown, setShowStockDropdown] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
   const [savedStocks, setSavedStocks] = useState<SavedStock[]>(() => {
-    const saved = localStorage.getItem('stock-ticker-saved-stocks')
-    return saved ? JSON.parse(saved) : []
+    try {
+      const saved = localStorage.getItem('stock-ticker-saved-stocks')
+      return saved ? JSON.parse(saved) : []
+    } catch {
+      return []
+    }
   })
   const [activeSymbols, setActiveSymbols] = useState<string[]>(symbols)
 
