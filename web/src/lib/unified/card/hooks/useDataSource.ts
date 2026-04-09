@@ -8,7 +8,7 @@
  * - context: Read from React context
  */
 
-import { useState, useEffect, useCallback, useSyncExternalStore } from 'react'
+import { useState, useEffect, useCallback, useRef, useSyncExternalStore } from 'react'
 import type { CardDataSource } from '../../types'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../constants'
 import { useKeepAliveActive } from '../../../../hooks/useKeepAliveActive'
@@ -234,12 +234,15 @@ function useApiDataSourceInternal(
 
   // Pause polling when this component is on an inactive KeepAlive route (#5856)
   const keepAliveActive = useKeepAliveActive()
+  // Track active state in a ref so in-flight fetches can check before setState (#5891)
+  const keepAliveActiveRef = useRef(keepAliveActive)
+  keepAliveActiveRef.current = keepAliveActive
 
   // Stringify params for stable dependency comparison
   const paramsKey = params ? JSON.stringify(params) : ''
 
   const fetchData = useCallback(async () => {
-    if (!endpoint || !keepAliveActive) return
+    if (!endpoint || !keepAliveActiveRef.current) return
 
     try {
       setIsLoading(true)
@@ -272,13 +275,16 @@ function useApiDataSourceInternal(
       if (!json) throw new Error('Invalid JSON response from API')
       // Assume response is array or has data array property
       const resultData = Array.isArray(json) ? json : json.data ?? json.items ?? []
+      // Skip state update if route became inactive while fetch was in flight (#5891)
+      if (!keepAliveActiveRef.current) return
       setData(resultData)
     } catch (err) {
+      if (!keepAliveActiveRef.current) return
       setError(err instanceof Error ? err : new Error(String(err)))
     } finally {
-      setIsLoading(false)
+      if (keepAliveActiveRef.current) setIsLoading(false)
     }
-  }, [endpoint, method, paramsKey, keepAliveActive]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [endpoint, method, paramsKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initial fetch (only if endpoint is provided)
   useEffect(() => {

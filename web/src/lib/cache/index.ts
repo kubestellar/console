@@ -1196,8 +1196,9 @@ export function useCache<T>({
 
     // Only fetch immediately on initial mount or page navigation, NOT when
     // the effect re-fires due to consecutiveFailures/backoff interval changes.
-    if (!isModeTransition && !initialFetchDoneRef.current) {
-      // Initial mount or page navigation remount — fetch immediately
+    if (!isModeTransition && !initialFetchDoneRef.current && keepAliveActive) {
+      // Initial mount or page navigation remount — fetch immediately.
+      // Only mark done when we actually started a fetch (#5891).
       initialFetchDoneRef.current = true
       refetch().catch(() => { /* errors handled inside CacheStore.fetch */ })
     }
