@@ -24,6 +24,7 @@
  */
 
 import { useEffect, useCallback, useRef, useSyncExternalStore } from 'react'
+import { useKeepAliveActive } from '../../hooks/useKeepAliveActive'
 import { isDemoMode, subscribeDemoMode } from '../demoMode'
 import { registerCacheReset, registerRefetch } from '../modeTransition'
 import { STORAGE_KEY_KUBECTL_HISTORY } from '../constants'
@@ -1096,6 +1097,10 @@ export function useCache<T>({
     subscribeAutoRefreshPaused, isAutoRefreshPaused, isAutoRefreshPaused
   )
 
+  // Pause polling when this component is on an inactive KeepAlive route (#5856).
+  // Hidden routes should not fetch or trigger state updates that block rendering.
+  const keepAliveActive = useKeepAliveActive()
+
   // Effective enabled: both the passed prop AND not in demo mode
   // liveInDemoMode bypasses the demo check for cards backed by serverless functions
   const effectiveEnabled = enabled && (!demoMode || liveInDemoMode)
@@ -1155,9 +1160,9 @@ export function useCache<T>({
   progressiveFetcherRef.current = progressiveFetcher
 
   const refetch = useCallback(async () => {
-    if (!effectiveEnabled) return
+    if (!effectiveEnabled || !keepAliveActive) return
     await store.fetch(() => fetcherRef.current(), mergeRef.current, progressiveFetcherRef.current)
-  }, [effectiveEnabled, store])
+  }, [effectiveEnabled, keepAliveActive, store])
 
   const clearAndRefetch = async () => {
     await store.clear()
@@ -1204,7 +1209,9 @@ export function useCache<T>({
 
     // Auto-refresh interval — uses a ref-tracked timer to prevent thrashing.
     // Only create a new timer if none is already pending (#5252).
-    if (autoRefresh && !autoRefreshGloballyPaused) {
+    // Pause when the route is inactive in KeepAlive to stop hidden dashboards
+    // from polling and blocking the active route (#5856).
+    if (autoRefresh && !autoRefreshGloballyPaused && keepAliveActive) {
       if (!autoRefreshTimerRef.current) {
         autoRefreshTimerRef.current = setInterval(() => {
           refetch().catch(() => { /* errors handled inside CacheStore.fetch */ })
@@ -1218,18 +1225,18 @@ export function useCache<T>({
     return () => {
       unregisterRefetch()
     }
-  }, [effectiveEnabled, autoRefresh, autoRefreshGloballyPaused, refetch, store, key])
+  }, [effectiveEnabled, autoRefresh, autoRefreshGloballyPaused, keepAliveActive, refetch, store, key])
 
   // Restart the auto-refresh timer when the backoff interval changes.
   // Separated from the main effect to avoid re-running mount/mode-transition logic (#5252).
   useEffect(() => {
-    if (!autoRefreshTimerRef.current || !autoRefresh || autoRefreshGloballyPaused) return
+    if (!autoRefreshTimerRef.current || !autoRefresh || autoRefreshGloballyPaused || !keepAliveActive) return
     // Clear old timer and create a new one with updated interval
     clearInterval(autoRefreshTimerRef.current)
     autoRefreshTimerRef.current = setInterval(() => {
       refetch().catch(() => { /* errors handled inside CacheStore.fetch */ })
     }, effectiveInterval)
-  }, [effectiveInterval, autoRefresh, autoRefreshGloballyPaused, refetch])
+  }, [effectiveInterval, autoRefresh, autoRefreshGloballyPaused, keepAliveActive, refetch])
 
   // Clean up auto-refresh timer on unmount
   useEffect(() => {

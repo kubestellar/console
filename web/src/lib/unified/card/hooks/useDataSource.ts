@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback, useSyncExternalStore } from 'react'
 import type { CardDataSource } from '../../types'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../constants'
+import { useKeepAliveActive } from '../../../../hooks/useKeepAliveActive'
 
 // Hook registry - populated by registerDataHook
 const dataHookRegistry: Record<
@@ -231,11 +232,14 @@ function useApiDataSourceInternal(
   const [isLoading, setIsLoading] = useState(!!endpoint)
   const [error, setError] = useState<Error | null>(null)
 
+  // Pause polling when this component is on an inactive KeepAlive route (#5856)
+  const keepAliveActive = useKeepAliveActive()
+
   // Stringify params for stable dependency comparison
   const paramsKey = params ? JSON.stringify(params) : ''
 
   const fetchData = useCallback(async () => {
-    if (!endpoint) return
+    if (!endpoint || !keepAliveActive) return
 
     try {
       setIsLoading(true)
@@ -274,22 +278,22 @@ function useApiDataSourceInternal(
     } finally {
       setIsLoading(false)
     }
-  }, [endpoint, method, paramsKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [endpoint, method, paramsKey, keepAliveActive]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initial fetch (only if endpoint is provided)
   useEffect(() => {
-    if (endpoint) {
+    if (endpoint && keepAliveActive) {
       fetchData()
     }
-  }, [endpoint, fetchData])
+  }, [endpoint, fetchData, keepAliveActive])
 
-  // Polling (only if endpoint and pollInterval are provided)
+  // Polling (only if endpoint and pollInterval are provided, and route is active)
   useEffect(() => {
-    if (!endpoint || !pollInterval || pollInterval <= 0) return
+    if (!endpoint || !pollInterval || pollInterval <= 0 || !keepAliveActive) return
 
     const interval = setInterval(fetchData, pollInterval)
     return () => clearInterval(interval)
-  }, [endpoint, fetchData, pollInterval])
+  }, [endpoint, fetchData, pollInterval, keepAliveActive])
 
   // Return empty result if no endpoint
   if (!endpoint) {

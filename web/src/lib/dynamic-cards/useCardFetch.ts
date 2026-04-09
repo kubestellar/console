@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { STORAGE_KEY_TOKEN } from '../constants'
+import { useKeepAliveActive } from '../../hooks/useKeepAliveActive'
 
 /**
  * Result returned by useCardFetch — mirrors common data-fetching hook patterns.
@@ -71,6 +72,9 @@ export function createCardFetchScope() {
     const fetchIdRef = useRef(0)
     const abortRef = useRef<AbortController | null>(null)
 
+    // Pause polling when on an inactive KeepAlive route (#5856)
+    const keepAliveActive = useKeepAliveActive()
+
     const doFetch = useCallback(() => {
       if (!url) {
         setData(null)
@@ -78,6 +82,9 @@ export function createCardFetchScope() {
         setError(null)
         return
       }
+
+      // Skip fetch when on an inactive KeepAlive route (#5856)
+      if (!keepAliveActive) return
 
       // Per-card concurrency guard
       if (activeFetchCount >= MAX_CONCURRENT_FETCHES) {
@@ -131,19 +138,19 @@ export function createCardFetchScope() {
         .finally(() => {
           activeFetchCount = Math.max(0, activeFetchCount - 1)
         })
-    }, [url])
+    }, [url, keepAliveActive])
 
     // Initial fetch + auto-refresh
     useEffect(() => {
       mountedRef.current = true
 
-      if (!options?.skip) {
+      if (!options?.skip && keepAliveActive) {
         doFetch()
       }
 
-      // Set up auto-refresh if requested
+      // Set up auto-refresh if requested (paused when KeepAlive route is inactive)
       let intervalId: ReturnType<typeof setInterval> | undefined
-      if (options?.refreshInterval && options.refreshInterval > 0 && !options?.skip) {
+      if (options?.refreshInterval && options.refreshInterval > 0 && !options?.skip && keepAliveActive) {
         const clamped = Math.max(options.refreshInterval, MIN_REFRESH_INTERVAL_MS)
         intervalId = setInterval(doFetch, clamped)
       }
@@ -153,7 +160,7 @@ export function createCardFetchScope() {
         abortRef.current?.abort()
         if (intervalId) clearInterval(intervalId)
       }
-    }, [url, options?.refreshInterval, options?.skip, doFetch])
+    }, [url, options?.refreshInterval, options?.skip, doFetch, keepAliveActive])
 
     return { data, loading, error, refetch: doFetch }
   }

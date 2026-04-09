@@ -14,6 +14,7 @@ import { useLocation, useOutlet } from 'react-router-dom'
 import { ContentLoadingSkeleton } from './Layout'
 import { ChunkErrorBoundary } from '../ChunkErrorBoundary'
 import { PageErrorBoundary } from '../PageErrorBoundary'
+import { KeepAliveActiveContext } from '../../hooks/useKeepAliveActive'
 
 const MAX_CACHED = 8
 
@@ -87,13 +88,15 @@ export function KeepAliveOutlet() {
           data-keepalive-active={active ? 'true' : 'false'}
           style={{ display: active ? 'contents' : 'none' }}
         >
-          <ChunkErrorBoundary>
-            <PageErrorBoundary>
-              <Suspense fallback={<ContentLoadingSkeleton />}>
-                {element}
-              </Suspense>
-            </PageErrorBoundary>
-          </ChunkErrorBoundary>
+          <KeepAliveActiveContext.Provider value={active}>
+            <ChunkErrorBoundary>
+              <PageErrorBoundary>
+                <Suspense fallback={<ContentLoadingSkeleton />}>
+                  {element}
+                </Suspense>
+              </PageErrorBoundary>
+            </ChunkErrorBoundary>
+          </KeepAliveActiveContext.Provider>
         </div>
       ))}
     </>
