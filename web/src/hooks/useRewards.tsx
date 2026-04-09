@@ -14,6 +14,7 @@ import {
   Achievement } from '../types/rewards'
 import type { GitHubRewardsResponse } from '../types/rewards'
 import { useGitHubRewards } from './useGitHubRewards'
+import { useBonusPoints } from './useBonusPoints'
 
 const REWARDS_STORAGE_KEY = 'kubestellar-rewards'
 /** Maximum reward events to keep in history */
@@ -34,6 +35,8 @@ interface RewardsContextType {
   githubPoints: number
   /** Coins from in-app activity (missions, games, sharing) stored in localStorage */
   localCoins: number
+  /** Bonus points awarded via [bonus] issues by maintainer */
+  bonusPoints: number
   refreshGitHubRewards: () => Promise<void>
 }
 
@@ -82,6 +85,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
   const [rewards, setRewards] = useState<UserRewards | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const { githubRewards, githubPoints, refresh: refreshGitHubRewards } = useGitHubRewards()
+  const { bonusPoints } = useBonusPoints()
 
   // Load rewards when user changes
   useEffect(() => {
@@ -222,13 +226,13 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     return (bugOverlap * REWARD_ACTIONS.bug_report.coins) + (featureOverlap * REWARD_ACTIONS.feature_suggestion.coins)
   })()
 
-  // Merged total: localStorage coins - dedup offset + GitHub coins.
+  // Merged total: localStorage coins - dedup offset + GitHub coins + bonus.
   // The dedup offset removes only the overlapping bug/feature coins from
   // localStorage to avoid double-counting with the GitHub-sourced total.
   const mergedTotalCoins = (() => {
     const localCoins = rewards?.totalCoins ?? 0
-    if (!githubRewards) return localCoins
-    return Math.max(0, localCoins - consoleSubmittedOffset) + githubPoints
+    if (!githubRewards) return localCoins + bonusPoints
+    return Math.max(0, localCoins - consoleSubmittedOffset) + githubPoints + bonusPoints
   })()
 
   const localCoins = Math.max(0, (rewards?.totalCoins ?? 0) - consoleSubmittedOffset)
@@ -245,6 +249,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     githubRewards,
     githubPoints,
     localCoins,
+    bonusPoints,
     refreshGitHubRewards }
 
   return (
