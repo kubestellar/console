@@ -276,6 +276,7 @@ const REWARDS_FALLBACK: RewardsContextType = {
   githubRewards: null,
   githubPoints: 0,
   localCoins: 0,
+  bonusPoints: 0,
   refreshGitHubRewards: async () => {} }
 
 export function useRewards() {
