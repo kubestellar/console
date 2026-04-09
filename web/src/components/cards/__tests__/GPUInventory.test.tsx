@@ -34,12 +34,13 @@ vi.mock('../../../hooks/useDrillDown', () => ({
 }))
 
 vi.mock('../CardDataContext', () => ({
-  useCardLoadingState: vi.fn(() => ({})),
+  useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
 }))
 
 vi.mock('../../../lib/cards/cardHooks', () => ({
   useCardData: (items: unknown[], _opts: unknown) => ({
     items,
+    allFilteredItems: items,
     totalItems: (items as unknown[]).length,
     currentPage: 1,
     totalPages: 1,
@@ -123,6 +124,8 @@ describe('GPUInventory', () => {
       vi.mocked(useCachedGPUNodes).mockReturnValue({
         nodes: [], isLoading: true, isRefreshing: false, error: null, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
       } as never)
+      const { useCardLoadingState } = await import('../CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValueOnce({ showSkeleton: true, showEmptyState: false } as never)
       render(<GPUInventory />)
       expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0)
     })

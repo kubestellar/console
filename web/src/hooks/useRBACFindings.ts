@@ -283,6 +283,8 @@ export function useRBACFindings() {
     cachedSnapshot?.findings || []
   )
   const [isLoading, setIsLoading] = useState(!cachedSnapshot)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const fetchInProgress = useRef(false)
   const initialLoadDone = useRef(!!cachedSnapshot)
@@ -298,7 +300,11 @@ export function useRBACFindings() {
     fetchInProgress.current = true
 
     try {
-      if (!initialLoadDone.current) setIsLoading(true)
+      if (!initialLoadDone.current) {
+        setIsLoading(true)
+      } else {
+        setIsRefreshing(true)
+      }
       setError(null)
 
       const allFindings: RBACFinding[] = []
@@ -323,9 +329,13 @@ export function useRBACFindings() {
       saveToCache(allFindings)
       initialLoadDone.current = true
       setIsLoading(false)
+      setIsRefreshing(false)
+      setConsecutiveFailures(0)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch RBAC data')
       setIsLoading(false)
+      setIsRefreshing(false)
+      setConsecutiveFailures(prev => prev + 1)
     } finally {
       fetchInProgress.current = false
     }
@@ -378,6 +388,8 @@ export function useRBACFindings() {
   return {
     findings,
     isLoading,
+    isRefreshing,
+    consecutiveFailures,
     error,
     isDemoData: isDemoMode,
     refetch }

@@ -329,6 +329,8 @@ export function useCardSort<T, S extends string>(
 export interface UseCardDataResult<T, S extends string> {
   /** Final processed items (filtered, sorted, paginated) */
   items: T[]
+  /** All items after filtering and sorting, before pagination */
+  allFilteredItems: T[]
   /** Total items before pagination */
   totalItems: number
   /** Current page */
@@ -413,6 +415,8 @@ export function useCardData<T, S extends string = string>(
 
   return {
     items: paginatedItems,
+    /** All items after filtering and sorting, before pagination */
+    allFilteredItems: sorted,
     totalItems: sorted.length,
     currentPage,
     totalPages,

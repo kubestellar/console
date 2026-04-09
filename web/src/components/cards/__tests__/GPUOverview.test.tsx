@@ -57,6 +57,7 @@ vi.mock('../../../hooks/useDemoMode', () => ({
 vi.mock('../../../lib/cards/cardHooks', () => ({
   useCardData: (items: unknown[], _opts: unknown) => ({
     items,
+    allFilteredItems: items,
     filters: {
       search: '',
       setSearch: vi.fn(),

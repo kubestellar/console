@@ -58,11 +58,13 @@ const RISK_LEVELS: readonly RiskLevel[] = ['critical', 'high', 'medium', 'low'] 
 export function RBACExplorer() {
   const { t } = useTranslation(['common', 'cards'])
   // ---- Live data via hook -------------------------------------------------
-  const { findings, isLoading, error, isDemoData, refetch } = useRBACFindings()
+  const { findings, isLoading, isRefreshing, consecutiveFailures, error, isDemoData, refetch } = useRBACFindings()
 
   // ---- Loading / error state reporting ------------------------------------
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
+    isRefreshing,
+    consecutiveFailures,
     hasAnyData: (findings || []).length > 0,
     isDemoData,
     isFailed: !!error,

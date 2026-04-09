@@ -48,6 +48,7 @@ vi.mock('../../../hooks/useDemoMode', () => ({
 vi.mock('../../../lib/cards/cardHooks', () => ({
   useCardData: (items: unknown[], _opts: unknown) => ({
     items,
+    allFilteredItems: items,
     totalItems: (items as unknown[]).length,
     currentPage: 1,
     totalPages: 1,

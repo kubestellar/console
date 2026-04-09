@@ -100,6 +100,7 @@ export function ServiceStatus() {
     },
     containerRef,
     containerStyle,
+    allFilteredItems,
   } = useCardData<Service, SortByOption>(services, {
     filter: {
       searchFields: ['name', 'namespace', 'type'],
@@ -119,15 +120,13 @@ export function ServiceStatus() {
     defaultLimit: 10,
   })
 
-  // Stats — apply cluster filter to type counts so they match the total (#5769)
-  const filteredForStats = localClusterFilter.length > 0
-    ? services.filter(s => localClusterFilter.includes(s.cluster || ''))
-    : services
+  // Stats — compute from allFilteredItems so type counts reflect all active
+  // filters (global cluster, local cluster, search) and match totalItems (#5775)
   const stats = {
     total: totalItems,
-    loadBalancer: filteredForStats.filter(s => s.type === 'LoadBalancer').length,
-    nodePort: filteredForStats.filter(s => s.type === 'NodePort').length,
-    clusterIP: filteredForStats.filter(s => s.type === 'ClusterIP').length,
+    loadBalancer: allFilteredItems.filter(s => s.type === 'LoadBalancer').length,
+    nodePort: allFilteredItems.filter(s => s.type === 'NodePort').length,
+    clusterIP: allFilteredItems.filter(s => s.type === 'ClusterIP').length,
   }
 
   if (showSkeleton) {
