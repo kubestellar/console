@@ -57,12 +57,13 @@ export function usePagination<T>(items: T[], defaultPerPage: number = 5, resetOn
   // Derive safe page without setState during render (avoids React anti-pattern)
   const safePage = Math.min(currentPage, totalPages)
 
-  // Sync currentPage back when out of bounds, but via effect not during render
+  // Sync currentPage back when out of bounds (#5762).
+  // Only depend on totalPages — including currentPage risks infinite loop.
   useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
+    if (totalPages > 0 && currentPage > totalPages) {
       dispatch({ type: 'SET_PAGE', page: totalPages })
     }
-  }, [currentPage, totalPages])
+  }, [totalPages]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const paginatedItems = (() => {
     const start = (safePage - 1) * itemsPerPage

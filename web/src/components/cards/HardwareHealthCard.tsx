@@ -427,12 +427,13 @@ export function HardwareHealthCard() {
   const currentNeedsPagination = viewMode === 'alerts' ? needsPagination : inventoryNeedsPagination
   const currentTotalItems = viewMode === 'alerts' ? sortedAlerts.length : sortedInventory.length
 
-  // Ensure current page is valid for current view
+  // Ensure current page is valid for current view (#5762).
+  // Only depend on currentTotalPages — including currentPage risks infinite loop.
   useEffect(() => {
-    if (currentPage > currentTotalPages) {
-      setCurrentPage(Math.max(1, currentTotalPages))
+    if (currentTotalPages > 0 && currentPage > currentTotalPages) {
+      setCurrentPage(currentTotalPages)
     }
-  }, [currentPage, currentTotalPages])
+  }, [currentTotalPages]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Auto-dismiss delay for alert clear error messages */
   const CLEAR_ERROR_DISMISS_MS = 5000

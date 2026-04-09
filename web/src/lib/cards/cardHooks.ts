@@ -383,12 +383,14 @@ export function useCardData<T, S extends string = string>(
     setCurrentPage(1)
   }, [filterResult.search, filterResult.localClusterFilter])
 
-  // Ensure current page is valid
+  // Ensure current page is valid when total pages shrinks (e.g., data errors).
+  // Only depend on totalPages — including currentPage causes an infinite loop
+  // when totalPages=0 because Math.max(1,0)=1 and 1>0 is always true (#5762).
   useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(Math.max(1, totalPages))
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(totalPages)
     }
-  }, [currentPage, totalPages])
+  }, [totalPages]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Paginate
   const paginatedItems = (() => {

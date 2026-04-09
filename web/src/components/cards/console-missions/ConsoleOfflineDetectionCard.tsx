@@ -662,12 +662,13 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     setCurrentPage(1)
   }, [search, localClusterFilter, sortField])
 
-  // Ensure current page is valid
+  // Ensure current page is valid (#5762).
+  // Only depend on totalPages — including currentPage risks infinite loop.
   useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(Math.max(1, totalPages))
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(totalPages)
     }
-  }, [currentPage, totalPages])
+  }, [totalPages]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleClusterFilter = (cluster: string) => {
     setLocalClusterFilter(prev =>
