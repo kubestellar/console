@@ -114,7 +114,7 @@ export function BaseModal({
   return createPortal(
     <div
       ref={backdropRef}
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-modal p-4 overflow-y-auto overscroll-contain"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-modal isolate p-4 overflow-y-auto overscroll-contain"
       onClick={handleBackdropClick}
     >
       <div
