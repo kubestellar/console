@@ -1145,7 +1145,7 @@ Please provide:
           if (!stillFiringKeys.has(key)) {
             const acc = mutationAccRef.current
             if (acc) {
-              acc.mutations.push({ type: 'resolve', ruleId: rule.id, cluster: a.cluster })
+              acc.mutations.push({ type: 'resolve', ruleId: rule.id, cluster: a.cluster, resource: a.resource })
             }
           }
         }
