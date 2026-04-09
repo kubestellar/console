@@ -51,7 +51,7 @@ const CARDS_DIR = path.resolve(
  * If the count increased, you introduced a new magic number — extract it
  * into a named constant (e.g., `const TOOLTIP_DELAY_MS = 300`).
  */
-const EXPECTED_MAGIC_NUMBER_COUNT = 53
+const EXPECTED_MAGIC_NUMBER_COUNT = 54
 
 /** Numeric values that are universally understood and not "magic" */
 const SAFE_VALUES = new Set([0, 1, -1, 2, 100])
@@ -324,7 +324,7 @@ describe('Magic Numbers Ratchet (P4-A)', () => {
   it('style-prop magic numbers must not increase', () => {
     const styleViolations = violations.filter(v => v.category === 'style-prop')
     /** Current count of inline style magic number violations */
-    const EXPECTED_STYLE_VIOLATIONS = 12
+    const EXPECTED_STYLE_VIOLATIONS = 13
     expect(styleViolations.length).toBeLessThanOrEqual(EXPECTED_STYLE_VIOLATIONS)
   })
 

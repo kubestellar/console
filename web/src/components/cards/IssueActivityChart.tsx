@@ -240,7 +240,8 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useCardLoadingState({ isLoading, hasAnyData: stats.length > 0, isDemoData: isDemoMode })
+  const hasData = stats.length > 0
+  useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoMode })
 
   const loadData = useCallback(async (lookbackDays: number, signal?: AbortSignal) => {
     if (isDemoMode) {

@@ -48,7 +48,7 @@ jobs:
         run: |
           # Start the console backend on port 8081 (simulating watchdog mode)
           # DEV_MODE=true skips JWT_SECRET requirement; JWT_SECRET set as fallback (#5884)
-          DEV_MODE=true JWT_SECRET=ci-smoke-test BACKEND_PORT=8081 ./console-bin &
+          DEV_MODE=true JWT_SECRET=ci-smoke-test-ephemeral-not-for-production-$(openssl rand -hex 16) BACKEND_PORT=8081 ./console-bin &
           BACKEND_PID=$!
 
           # Wait up to 30 seconds for the backend to respond
