@@ -712,6 +712,17 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost. Ple
             ws.close()
             wsRef.current = null
           }
+          // Fail any missions stuck in "running" state so the UI doesn't
+          // stay frozen forever after a WS error (#5845)
+          if (pendingRequests.current.size > 0) {
+            const errorContent = `**Agent Disconnected**\n\nThe WebSocket connection failed. Please verify the agent is running and try again.`
+            setMissions(prev => prev.map(m => {
+              if (m.status !== 'running' && m.status !== 'waiting_input') return m
+              return { ...m, status: 'failed' as MissionStatus, currentStep: 'Connection failed',
+                messages: [...m.messages, { id: `msg-${Date.now()}-ws-error`, role: 'system' as const, content: errorContent, timestamp: new Date() }] }
+            }))
+            pendingRequests.current.clear()
+          }
           setAgentsLoading(false)
           reject(new Error('CONNECTION_FAILED'))
         }
@@ -1280,10 +1291,24 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost. Ple
 
       // Preflight passed — proceed to send to agent
       executeMission(missionId, enhancedPrompt, params)
-    }).catch(() => {
-      // Preflight itself threw unexpectedly — still allow mission to proceed
-      // (don't block on preflight infrastructure failures)
-      executeMission(missionId, enhancedPrompt, params)
+    }).catch((err) => {
+      // Preflight itself threw unexpectedly — block the mission instead of
+      // fail-open to prevent executing without validation (#5846)
+      setMissions(prev => prev.map(m =>
+        m.id === missionId ? {
+          ...m,
+          status: 'blocked' as MissionStatus,
+          currentStep: 'Preflight check error',
+          messages: [
+            ...m.messages,
+            {
+              id: `msg-${Date.now()}-preflight-error`,
+              role: 'system' as const,
+              content: `**Preflight Check Error**\n\nThe preflight check encountered an unexpected error. The mission has been blocked to prevent unvalidated execution.\n\nError: ${err instanceof Error ? err.message : 'Unknown error'}`,
+              timestamp: new Date() }
+          ]
+        } : m
+      ))
     })
    
   }
