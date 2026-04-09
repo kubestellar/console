@@ -122,8 +122,8 @@ test.describe('Sidebar Navigation', () => {
       // Click to collapse
       await collapseToggle.click()
 
-      // Wait for animation
-      await page.waitForTimeout(300)
+      // Wait for sidebar to finish collapsing — Add Card button hides when collapsed
+      await expect(page.getByTestId('sidebar-add-card')).not.toBeVisible({ timeout: 5000 })
 
       // Sidebar should be narrower when collapsed
       const collapsedWidth = await page.getByTestId('sidebar').evaluate(el => el.offsetWidth)
@@ -137,14 +137,13 @@ test.describe('Sidebar Navigation', () => {
 
       // Collapse first
       await collapseToggle.click()
-      await page.waitForTimeout(300)
+      await expect(page.getByTestId('sidebar-add-card')).not.toBeVisible({ timeout: 5000 })
 
       // Click again to expand
       await collapseToggle.click()
-      await page.waitForTimeout(300)
 
       // Add Card button should be visible when expanded
-      await expect(page.getByTestId('sidebar-add-card')).toBeVisible()
+      await expect(page.getByTestId('sidebar-add-card')).toBeVisible({ timeout: 5000 })
     })
 
     test('collapsed sidebar hides Add Card button', async ({ page }) => {
@@ -155,10 +154,9 @@ test.describe('Sidebar Navigation', () => {
 
       // Collapse sidebar
       await page.getByTestId('sidebar-collapse-toggle').click()
-      await page.waitForTimeout(300)
 
       // Add Card should be hidden when collapsed
-      await expect(page.getByTestId('sidebar-add-card')).not.toBeVisible()
+      await expect(page.getByTestId('sidebar-add-card')).not.toBeVisible({ timeout: 5000 })
     })
   })
 
@@ -276,9 +274,8 @@ test.describe('Sidebar Navigation', () => {
       // Press Enter to toggle
       await page.keyboard.press('Enter')
 
-      // Sidebar should collapse
-      await page.waitForTimeout(300)
-      await expect(page.getByTestId('sidebar-add-card')).not.toBeVisible()
+      // Sidebar should collapse — Add Card hides when collapsed
+      await expect(page.getByTestId('sidebar-add-card')).not.toBeVisible({ timeout: 5000 })
     })
   })
 
@@ -288,7 +285,7 @@ test.describe('Sidebar Navigation', () => {
 
       // Collapse sidebar
       await page.getByTestId('sidebar-collapse-toggle').click()
-      await page.waitForTimeout(300)
+      await expect(page.getByTestId('sidebar-add-card')).not.toBeVisible({ timeout: 5000 })
 
       // Navigate to clusters
       await page.goto('/clusters')

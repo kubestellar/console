@@ -52,15 +52,17 @@ jobs:
           path: web/dist
           retention-days: 1
 
-  # Test job - simplified to chromium-only until tests are stable
-  # TODO: Re-enable firefox, webkit, and sharding after test stabilization
+  # Test job — chromium + firefox with 2 shards each for parallelism
   test:
-    name: Test (chromium)
+    name: Test (${{ matrix.browser }}, shard ${{ matrix.shard }})
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # Reduced matrix: chromium only, no sharding until tests are stable
-    # Original matrix: browser: [chromium, firefox, webkit], shard: [1, 2]
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox]
+        shard: [1, 2]
     defaults:
       run:
         working-directory: web
@@ -84,7 +86,7 @@ jobs:
           path: web/dist
 
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps ${{ matrix.browser }}
 
       - name: Start preview server
         run: |
@@ -92,7 +94,7 @@ jobs:
           npx wait-on http://localhost:4173 --timeout 60000
 
       - name: Run Playwright tests
-        run: npx playwright test --project=chromium
+        run: npx playwright test --project=${{ matrix.browser }} --shard=${{ matrix.shard }}/2
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:4173
 
@@ -100,7 +102,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: blob-report-chromium
+          name: blob-report-${{ matrix.browser }}-${{ matrix.shard }}
           path: web/blob-report/
           retention-days: 1
 
@@ -236,11 +238,9 @@ jobs:
 
   # Cross-browser tests moved to playwright-nightly.yml to avoid cancellation by push/PR runs
 
-  # Mobile tests - DISABLED until tests are stable
-  # TODO: Re-enable after test stabilization
+  # Mobile tests — run core tests on mobile viewports
   mobile-tests:
     name: Mobile Browser Tests
-    if: false  # Disabled until tests are stable
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20

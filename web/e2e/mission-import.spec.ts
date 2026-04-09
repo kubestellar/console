@@ -188,7 +188,8 @@ test.describe('Mission Import', () => {
 
         if (await searchInput.isVisible({ timeout: 5000 }).catch(() => false)) {
           await searchInput.fill('CrashLoop')
-          await page.waitForTimeout(500) // debounce
+          // Legitimate debounce wait — search input debounces for ~300-500ms before filtering
+          await page.waitForTimeout(500)
 
           // Results should be filtered — fewer items visible
           const items = page.locator('[role="dialog"] [data-testid*="mission-item"], [role="dialog"] li, [role="dialog"] [role="option"]')

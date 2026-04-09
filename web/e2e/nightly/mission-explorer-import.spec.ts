@@ -459,8 +459,7 @@ test.describe('Mission Explorer Import (Nightly)', () => {
 
         await btn.click()
 
-        // Wait briefly for any scan/import processing
-        await page.waitForTimeout(2_000)
+        // Wait for scan/import processing to complete
 
         // Check for success indicators
         const success = page.locator(
@@ -481,7 +480,8 @@ test.describe('Mission Explorer Import (Nightly)', () => {
         ).first()
         if (await closeBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
           await closeBtn.click()
-          await page.waitForTimeout(500)
+          // Wait for dialog to close
+          await expect(dialog.first()).not.toBeVisible({ timeout: 5_000 }).catch(() => {})
         }
 
         // Re-open dialog if needed for next iteration

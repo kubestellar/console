@@ -27,7 +27,9 @@ export const mockUser = {
 export const MOCK_DATA: Record<string, Record<string, unknown[]>> = {
   clusters: {
     clusters: [
-      { name: MOCK_CLUSTER, reachable: true, status: 'Ready', provider: 'kind', version: '1.28.0', nodes: 3, pods: 12, namespaces: 4 },
+      { name: MOCK_CLUSTER, reachable: true, status: 'Ready', provider: 'kind', version: '1.28.0', nodes: 3, pods: 12, namespaces: 4, cpuCores: 12, memoryGB: 24, nodeCount: 3, podCount: 12, storageGB: 100 },
+      { name: 'eks-prod', reachable: true, status: 'Ready', provider: 'aws', version: '1.28.0', nodes: 5, pods: 45, namespaces: 8, cpuCores: 20, memoryGB: 64, nodeCount: 5, podCount: 45, storageGB: 200 },
+      { name: 'gke-staging', reachable: true, status: 'Ready', provider: 'gcp', version: '1.28.0', nodes: 3, pods: 32, namespaces: 5, cpuCores: 12, memoryGB: 48, nodeCount: 3, podCount: 32, storageGB: 100 },
     ],
   },
   pods: {
@@ -58,6 +60,7 @@ export const MOCK_DATA: Record<string, Record<string, unknown[]>> = {
     services: [
       { name: 'kubernetes', namespace: 'default', cluster: MOCK_CLUSTER, type: 'ClusterIP', clusterIP: '10.96.0.1', ports: ['443/TCP'], age: '30d' },
       { name: 'nginx-svc', namespace: 'default', cluster: MOCK_CLUSTER, type: 'LoadBalancer', clusterIP: '10.96.1.10', ports: ['80/TCP'], age: '10d' },
+      { name: 'metrics-svc', namespace: 'monitoring', cluster: MOCK_CLUSTER, type: 'NodePort', clusterIP: '10.96.2.5', ports: ['9090:30090/TCP'], age: '15d' },
     ],
   },
   nodes: {
@@ -90,6 +93,20 @@ export const MOCK_DATA: Record<string, Record<string, unknown[]>> = {
   'resource-limits': {
     limits: [
       { namespace: 'default', cluster: MOCK_CLUSTER, cpuRequest: '500m', cpuLimit: '1', memoryRequest: '256Mi', memoryLimit: '512Mi' },
+    ],
+  },
+  pvcs: {
+    pvcs: [
+      { name: 'data-pvc', namespace: 'default', cluster: MOCK_CLUSTER, status: 'Bound', capacity: '10Gi', storageClass: 'standard', accessModes: ['ReadWriteOnce'] },
+      { name: 'logs-pvc', namespace: 'monitoring', cluster: MOCK_CLUSTER, status: 'Bound', capacity: '50Gi', storageClass: 'ssd', accessModes: ['ReadWriteOnce'] },
+      { name: 'pending-pvc', namespace: 'default', cluster: MOCK_CLUSTER, status: 'Pending', capacity: '100Gi', storageClass: 'premium', accessModes: ['ReadWriteMany'] },
+    ],
+  },
+  'prow-jobs': {
+    jobs: [
+      { id: '1', job: 'e2e-test', state: 'success', type: 'periodic', cluster: MOCK_CLUSTER, started: new Date().toISOString(), duration: 1800 },
+      { id: '2', job: 'lint', state: 'running', type: 'presubmit', cluster: MOCK_CLUSTER, started: new Date().toISOString(), duration: 0 },
+      { id: '3', job: 'build', state: 'failure', type: 'postsubmit', cluster: MOCK_CLUSTER, started: new Date().toISOString(), duration: 900 },
     ],
   },
 }

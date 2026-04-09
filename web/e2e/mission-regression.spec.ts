@@ -146,8 +146,12 @@ test.describe('Mission System Regression Tests', () => {
         if (await completedMission.first().isVisible({ timeout: 5000 }).catch(() => false)) {
           await completedMission.first().click()
 
-          // Verify output is shown (not empty, not stuck in loading)
-          await page.waitForTimeout(1000)
+          // Wait for mission content to load in the sidebar
+          const missionSidebar = page.locator('[data-testid="mission-sidebar"]')
+            .or(page.locator('[class*="mission"][class*="sidebar"]'))
+            .first()
+          await expect(missionSidebar).toBeVisible({ timeout: 5000 })
+
           const sidebarContent = await page.locator('[data-testid="mission-sidebar"]')
             .or(page.locator('[class*="mission"][class*="sidebar"]'))
             .first()
@@ -173,10 +177,12 @@ test.describe('Mission System Regression Tests', () => {
 
       if (await browseButton.first().isVisible({ timeout: 5000 }).catch(() => false)) {
         await browseButton.first().click()
-        await page.waitForTimeout(500)
+
+        // Wait for the browse dialog/panel to appear
+        const folderElements = page.locator('[data-testid*="folder"], [class*="tree-node"][class*="folder"]')
+        await expect(folderElements.first()).toBeVisible({ timeout: 5000 }).catch(() => {})
 
         // Count folder entries with the same name
-        const folderElements = page.locator('[data-testid*="folder"], [class*="tree-node"][class*="folder"]')
         const count = await folderElements.count()
 
         // Collect folder names

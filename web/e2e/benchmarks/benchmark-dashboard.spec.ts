@@ -32,8 +32,6 @@ const PAGE_LOAD_TIMEOUT_MS = 60_000
 const STREAM_DATA_TIMEOUT_MS = 15_000
 /** Timeout for card content to render after data arrives */
 const CARD_CONTENT_TIMEOUT_MS = 15_000
-/** Short stabilization delay */
-const SETTLE_MS = 1_000
 /** Timeout for Netlify function fetch on console.kubestellar.io */
 const NETLIFY_FETCH_TIMEOUT_MS = 30_000
 
@@ -56,7 +54,7 @@ const EXPECTED_PLATFORMS = ['ocp', 'gke', 'cks']
  */
 async function setupAndNavigate(page: Page, route: string) {
   await page.goto('/', { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
-  await page.waitForTimeout(SETTLE_MS)
+  await page.waitForLoadState('networkidle')
 
   // Set auth token + cached user so the app bypasses backend validation.
   // The cached user prevents /api/me calls; the token satisfies ProtectedRoute.
@@ -76,7 +74,7 @@ async function setupAndNavigate(page: Page, route: string) {
   })
 
   await page.goto(route, { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
-  await page.waitForTimeout(SETTLE_MS)
+  await page.waitForLoadState('networkidle')
 }
 
 // ---------------------------------------------------------------------------
@@ -128,7 +126,13 @@ test.describe('LLM-d Benchmarks Dashboard — live data', () => {
     })
 
     await setupAndNavigate(page, BENCHMARKS_ROUTE)
-    await page.waitForTimeout(STREAM_DATA_TIMEOUT_MS)
+    await page.waitForFunction(
+      () => {
+        const body = document.body.innerText.toLowerCase()
+        return body.includes('tok/s') || body.includes('latency') || body.includes('throughput') || body.includes('ttft')
+      },
+      { timeout: STREAM_DATA_TIMEOUT_MS },
+    ).catch(() => { /* data may not load — assertions below will check */ })
 
     const hasStreamCall = benchmarkCalls.some(u => u.includes('/reports/stream'))
     const hasRestCall = benchmarkCalls.some(u => u.includes('/reports') && !u.includes('/stream'))
@@ -150,7 +154,10 @@ test.describe('LLM-d Benchmarks Dashboard — live data', () => {
 
   test('benchmark cards show non-demo data when backend is available', async ({ page }) => {
     await setupAndNavigate(page, BENCHMARKS_ROUTE)
-    await page.waitForTimeout(STREAM_DATA_TIMEOUT_MS)
+    await page.waitForFunction(
+      () => document.body.innerText.length > 100,
+      { timeout: STREAM_DATA_TIMEOUT_MS },
+    ).catch(() => { /* fallback — assertion below will check */ })
 
     const hasDemoBadge = await page.evaluate(() => {
       const badges = document.querySelectorAll('[class*="demo"], [data-demo="true"]')
@@ -171,7 +178,15 @@ test.describe('LLM-d Benchmarks Dashboard — live data', () => {
 
   test('Performance Explorer (Pareto) renders interactive chart', async ({ page }) => {
     await setupAndNavigate(page, BENCHMARKS_ROUTE)
-    await page.waitForTimeout(STREAM_DATA_TIMEOUT_MS)
+    await page.waitForFunction(
+      () => {
+        const svgs = document.querySelectorAll('svg.recharts-surface, svg[class*="chart"], svg[viewBox]')
+        const canvases = document.querySelectorAll('canvas')
+        const recharts = document.querySelectorAll('[class*="recharts"], [class*="ResponsiveContainer"]')
+        return svgs.length + canvases.length + recharts.length > 0
+      },
+      { timeout: STREAM_DATA_TIMEOUT_MS },
+    ).catch(() => { /* chart may not render — assertion below will check */ })
 
     const hasChart = await page.evaluate(() => {
       const body = document.body
@@ -186,7 +201,13 @@ test.describe('LLM-d Benchmarks Dashboard — live data', () => {
 
   test('Hardware Leaderboard shows configuration rankings', async ({ page }) => {
     await setupAndNavigate(page, BENCHMARKS_ROUTE)
-    await page.waitForTimeout(STREAM_DATA_TIMEOUT_MS)
+    await page.waitForFunction(
+      () => {
+        const body = document.body.innerText.toLowerCase()
+        return body.includes('gpu') || body.includes('hardware') || body.includes('leaderboard') || body.includes('rank')
+      },
+      { timeout: STREAM_DATA_TIMEOUT_MS },
+    ).catch(() => { /* fallback — assertion below will check */ })
 
     const hasLeaderboardContent = await page.evaluate(() => {
       const body = document.body.innerText.toLowerCase()
@@ -199,7 +220,13 @@ test.describe('LLM-d Benchmarks Dashboard — live data', () => {
 
   test('Latency Breakdown shows TTFT and TPOT metrics', async ({ page }) => {
     await setupAndNavigate(page, BENCHMARKS_ROUTE)
-    await page.waitForTimeout(STREAM_DATA_TIMEOUT_MS)
+    await page.waitForFunction(
+      () => {
+        const body = document.body.innerText
+        return body.includes('TTFT') || body.includes('TPOT') || body.toLowerCase().includes('latency')
+      },
+      { timeout: STREAM_DATA_TIMEOUT_MS },
+    ).catch(() => { /* fallback — assertion below will check */ })
 
     const hasLatencyMetrics = await page.evaluate(() => {
       const body = document.body.innerText
@@ -214,7 +241,13 @@ test.describe('LLM-d Benchmarks Dashboard — live data', () => {
 
   test('Throughput Comparison shows tokens-per-second data', async ({ page }) => {
     await setupAndNavigate(page, BENCHMARKS_ROUTE)
-    await page.waitForTimeout(STREAM_DATA_TIMEOUT_MS)
+    await page.waitForFunction(
+      () => {
+        const body = document.body.innerText.toLowerCase()
+        return body.includes('throughput') || body.includes('tok/s') || body.includes('tokens/s') || body.includes('tps')
+      },
+      { timeout: STREAM_DATA_TIMEOUT_MS },
+    ).catch(() => { /* fallback — assertion below will check */ })
 
     const hasThroughputContent = await page.evaluate(() => {
       const body = document.body.innerText.toLowerCase()
@@ -242,7 +275,10 @@ test.describe('Nightly E2E Status — localhost live data', () => {
     })
 
     await setupAndNavigate(page, BENCHMARKS_ROUTE)
-    await page.waitForTimeout(CARD_CONTENT_TIMEOUT_MS)
+    await page.waitForFunction(
+      () => document.body.innerText.length > 200,
+      { timeout: CARD_CONTENT_TIMEOUT_MS },
+    ).catch(() => { /* content may be minimal — assertions below will check */ })
 
     // The SPA always attempts the nightly E2E API call regardless of backend
     const hasNightlyCall = nightlyCalls.some(u =>
@@ -267,7 +303,13 @@ test.describe('Nightly E2E Status — localhost live data', () => {
     }
 
     await setupAndNavigate(page, BENCHMARKS_ROUTE)
-    await page.waitForTimeout(CARD_CONTENT_TIMEOUT_MS)
+    await page.waitForFunction(
+      () => {
+        const body = document.body.innerText.toLowerCase()
+        return body.includes('ocp') || body.includes('gke') || body.includes('cks') || body.includes('nightly')
+      },
+      { timeout: CARD_CONTENT_TIMEOUT_MS },
+    ).catch(() => { /* nightly data may not render — assertions below will check */ })
 
     const nightlyContent = await page.evaluate(() => {
       const body = document.body.innerText.toLowerCase()

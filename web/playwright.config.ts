@@ -37,8 +37,8 @@ export default defineConfig({
   // Retry failed tests (more in CI)
   retries: process.env.CI ? 2 : 0,
 
-  // Workers - limit in CI for stability
-  workers: process.env.CI ? 2 : '50%',
+  // Workers — CI gets 4 workers per shard, local uses half of available cores
+  workers: process.env.CI ? 4 : '50%',
 
   // Reporter configuration
   reporter: process.env.CI

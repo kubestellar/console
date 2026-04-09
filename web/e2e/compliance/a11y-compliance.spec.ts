@@ -121,7 +121,7 @@ test('a11y compliance — WCAG 2.1 AA multi-route audit', async ({ page }, testI
       } catch {
         // Some routes may not have these elements
       }
-      await page.waitForTimeout(ROUTE_SETTLE_MS)
+      await page.waitForLoadState('networkidle', { timeout: ROUTE_SETTLE_MS }).catch(() => { /* settle timeout is best-effort */ })
 
       // Run axe-core
       const results = await new AxeBuilder({ page })
@@ -223,7 +223,7 @@ test('a11y compliance — WCAG 2.1 AA multi-route audit', async ({ page }, testI
   try {
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: 8_000 })
   } catch { /* continue */ }
-  await page.waitForTimeout(1_500)
+  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { /* best-effort */ })
 
   // Tab through page and check for visible focus indicators
   const focusResults = await page.evaluate(() => {
@@ -294,13 +294,15 @@ test('a11y compliance — WCAG 2.1 AA multi-route audit', async ({ page }, testI
     try {
       // Try Cmd+K to open search
       await page.keyboard.press('Meta+k')
-      await page.waitForTimeout(500)
+      // Wait for dialog/command palette to appear after keyboard shortcut
+      await page.locator('[role="dialog"], [role="combobox"], [data-testid*="search"]').first().waitFor({ state: 'visible', timeout: 2_000 }).catch(() => { /* may not open */ })
 
       const dialogOpen = await page.locator('[role="dialog"], [role="combobox"], [data-testid*="search"]').count() > 0
       if (dialogOpen) {
         // Press Escape
         await page.keyboard.press('Escape')
-        await page.waitForTimeout(500)
+        // Wait for dialog to close after Escape
+        await expect(page.locator('[role="dialog"]')).toHaveCount(0, { timeout: 2_000 }).catch(() => { /* may not close */ })
         const dialogClosed = await page.locator('[role="dialog"]').count() === 0
 
         addCheck({

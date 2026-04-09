@@ -13,9 +13,6 @@ import { test, expect, type Page } from '@playwright/test'
  *   cd web && npm run build-storybook && npx playwright test --config e2e/visual/visual.config.ts --update-snapshots
  */
 
-/** Wait for story to fully render (fonts, animations disabled by config) */
-const RENDER_WAIT_MS = 500
-
 /** Max time to wait for story content to render */
 const STORY_RENDER_TIMEOUT_MS = 15_000
 
@@ -23,10 +20,9 @@ async function navigateToStory(page: Page, storyId: string) {
   await page.goto(`/iframe.html?id=${storyId}&viewMode=story`, { waitUntil: 'networkidle' })
   // Wait for the story to render — look for any child content inside #storybook-root
   await page.locator('#storybook-root > *').first().waitFor({
-    state: 'attached',
+    state: 'visible',
     timeout: STORY_RENDER_TIMEOUT_MS,
   })
-  await page.waitForTimeout(RENDER_WAIT_MS)
 }
 
 // ── Button ─────────────────────────────────────────────────────────────────

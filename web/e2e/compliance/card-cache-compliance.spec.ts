@@ -321,9 +321,7 @@ async function softNavigateToBatch(
       },
       { b: batch, s: batchSize }
     )
-    // Wait for React to re-render with new batch
-    await page.waitForTimeout(1000)
-    // Wait for cards to appear
+    // Wait for cards to appear after React re-render
     try {
       await page.waitForSelector('[data-card-id]', { timeout: 10000 })
     } catch {
@@ -332,7 +330,12 @@ async function softNavigateToBatch(
   } else {
     console.log(`[CacheTest] softNavigateToBatch: __COMPLIANCE_SET_BATCH__ not available, falling back to page.goto`)
     await page.goto(`/compliance-perf-test?batch=${batch + 1}&size=${batchSize}`, { waitUntil: 'networkidle' })
-    await page.waitForTimeout(2000)
+    // Wait for cards to appear after full page navigation
+    try {
+      await page.waitForSelector('[data-card-id]', { timeout: 10000 })
+    } catch {
+      console.log(`[CacheTest] softNavigateToBatch: no cards appeared for batch ${batch} after page.goto`)
+    }
   }
 
   // Read manifest
@@ -532,7 +535,8 @@ test('card cache compliance — storage and retrieval', async ({ page }) => {
   totalCards = warmupManifest.totalCards
   const totalBatches = Math.ceil(totalCards / BATCH_SIZE)
   console.log(`[CacheTest] Total cards: ${totalCards}, batches: ${totalBatches}`)
-  await page.waitForTimeout(3_000)
+  // Wait for warmup batch to fully load
+  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { /* best-effort */ })
 
   // ── Phase 3: Cold load all batches ─────────────────────────────────────
   console.log('[CacheTest] Phase 3: Cold load — loading all batches with network')
@@ -563,8 +567,8 @@ test('card cache compliance — storage and retrieval', async ({ page }) => {
     await waitForCardsToLoad(page, cardIds, BATCH_LOAD_TIMEOUT_MS)
     // Allow lazy (code-split) components to mount and report state.
     // StackContext cards dynamically report isDemoData via useReportCardDataState —
-    // without this wait the cold snapshot may capture before the child reports.
-    await page.waitForTimeout(500)
+    // wait for cards to settle before capturing cold snapshot.
+    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => { /* best-effort */ })
 
     // Capture cold load state
     const snapshots = await captureColdSnapshots(page, cardIds)
@@ -611,7 +615,8 @@ test('card cache compliance — storage and retrieval', async ({ page }) => {
   } catch {
     console.log('[CacheTest] Phase 5: Soft nav failed, cache may be partially lost')
   }
-  await page.waitForTimeout(500)
+  // Wait for soft navigation to settle
+  await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => { /* best-effort */ })
 
   // ── Phase 5.5: Informational only ─────────────────────────────────────
   // page.reload() kills React Query in-memory cache. We log this but skip

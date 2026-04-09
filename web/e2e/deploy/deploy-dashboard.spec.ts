@@ -25,8 +25,7 @@ const PAGE_LOAD_TIMEOUT_MS = 60_000
 const CARD_CONTENT_TIMEOUT_MS = 15_000
 /** How long to wait for polling updates */
 const _POLL_WAIT_MS = 8_000
-/** Short stabilization delay after page.evaluate */
-const SETTLE_MS = 500
+/** _SETTLE_MS removed — replaced with proper Playwright wait patterns */
 
 // ---------------------------------------------------------------------------
 // Mock data — comprehensive deploy-related fixtures
@@ -333,7 +332,7 @@ async function setupAuthAndNavigate(page: Page, route: string, opts?: {
 }) {
   // Navigate to a same-origin page first to unlock localStorage
   await page.goto('/', { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
-  await page.waitForTimeout(SETTLE_MS)
+  await page.waitForLoadState('networkidle')
 
   // Set auth state
   await page.evaluate(() => {
@@ -376,7 +375,7 @@ async function setupAuthAndNavigate(page: Page, route: string, opts?: {
 
   // Navigate to the target route
   await page.goto(route, { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
-  await page.waitForTimeout(SETTLE_MS)
+  await page.waitForLoadState('networkidle')
 }
 
 // ---------------------------------------------------------------------------

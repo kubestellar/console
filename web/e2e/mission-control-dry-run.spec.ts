@@ -146,7 +146,7 @@ async function seedAndOpenMC(page: Page, overrides: Record<string, unknown>) {
 
   await page.goto('http://localhost:8080')
   await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS })
-  await page.waitForTimeout(4000)
+  await expect(page.locator('body')).not.toBeEmpty({ timeout: DIALOG_TIMEOUT_MS })
 
   // Open MC dialog via JS click (button is in fixed sidebar)
   await page.evaluate(() => {
@@ -156,7 +156,6 @@ async function seedAndOpenMC(page: Page, overrides: Record<string, unknown>) {
     const mcBtn = buttons.find(b => b.textContent?.includes('Mission Control'))
     if (mcBtn) (mcBtn as HTMLElement).click()
   })
-  await page.waitForTimeout(2000)
 
   await expect(
     page.getByText(/Define Mission|Chart Course|Flight Plan|Define Your|Chart Your|Launch|Dry Run/i).first()
@@ -179,7 +178,7 @@ async function navigateTo(page: Page) {
   })
   await page.goto('http://localhost:8080')
   await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS })
-  await page.waitForTimeout(4000)
+  await expect(page.locator('body')).not.toBeEmpty({ timeout: DIALOG_TIMEOUT_MS })
 }
 
 // ---------------------------------------------------------------------------

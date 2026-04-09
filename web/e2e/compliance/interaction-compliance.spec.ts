@@ -75,7 +75,7 @@ async function navigateAndSettle(page: Page, route: string) {
   try {
     await page.waitForSelector('[data-testid="sidebar"], main, [data-card-type]', { timeout: 8_000 })
   } catch { /* some routes may not have these */ }
-  await page.waitForTimeout(SETTLE_MS)
+  await page.waitForLoadState('networkidle', { timeout: SETTLE_MS }).catch(() => { /* settle timeout is best-effort */ })
 }
 
 // ---------------------------------------------------------------------------
@@ -117,7 +117,8 @@ test.describe('Interaction Compliance', () => {
     try {
       // Open search with Cmd+K
       await page.keyboard.press('Meta+k')
-      await page.waitForTimeout(800)
+      // Wait for dialog/command palette to appear
+      await page.locator('[role="dialog"], [role="combobox"], [data-testid*="search"], [data-testid*="command"]').first().waitFor({ state: 'visible', timeout: 2_000 }).catch(() => { /* may not open */ })
 
       const dialogOpen = await page.locator('[role="dialog"], [role="combobox"], [data-testid*="search"], [data-testid*="command"]').count() > 0
 
@@ -134,14 +135,16 @@ test.describe('Interaction Compliance', () => {
 
       // Type a search query
       await page.keyboard.type('cluster', { delay: 50 })
-      await page.waitForTimeout(1_000)
+      // Wait for search results to appear
+      await page.locator('[role="option"], [role="listbox"] li, [data-testid*="result"], [data-testid*="item"]').first().waitFor({ state: 'visible', timeout: 3_000 }).catch(() => { /* results may not appear */ })
 
       // Check for search results
       const resultItems = await page.locator('[role="option"], [role="listbox"] li, [data-testid*="result"], [data-testid*="item"]').count()
 
       // Press Escape to close
       await page.keyboard.press('Escape')
-      await page.waitForTimeout(500)
+      // Wait for dialog to close
+      await expect(page.locator('[role="dialog"]')).toHaveCount(0, { timeout: 2_000 }).catch(() => { /* may not close */ })
 
       const dialogClosed = await page.locator('[role="dialog"]').count() === 0
 
@@ -198,7 +201,12 @@ test.describe('Interaction Compliance', () => {
 
       // Click theme toggle
       await themeToggle.click()
-      await page.waitForTimeout(500)
+      // Wait for theme class to change on <html>
+      await page.waitForFunction(
+        (wasDark) => document.documentElement.classList.contains('dark') !== wasDark,
+        initialDark,
+        { timeout: 2_000 }
+      ).catch(() => { /* theme may not toggle */ })
 
       const afterToggle = await page.evaluate(() => document.documentElement.classList.contains('dark'))
 
@@ -208,7 +216,8 @@ test.describe('Interaction Compliance', () => {
       if (themeChanged) {
         // Verify persistence: reload and check
         await page.reload({ waitUntil: 'domcontentloaded' })
-        await page.waitForTimeout(1_500)
+        // Wait for page to settle after reload
+        await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { /* best-effort */ })
 
         const afterReload = await page.evaluate(() => document.documentElement.classList.contains('dark'))
         const persisted = afterReload === afterToggle
@@ -276,7 +285,8 @@ test.describe('Interaction Compliance', () => {
 
       // Click expand
       await targetButton.click()
-      await page.waitForTimeout(800)
+      // Wait for modal/dialog to appear after expand click
+      await page.locator('[role="dialog"], [data-testid*="modal"], [data-testid*="expanded"], .fixed.inset-0, [class*="modal"]').first().waitFor({ state: 'visible', timeout: 3_000 }).catch(() => { /* may not open */ })
 
       // Check for modal/dialog/expanded state
       const modalOpen = await page.locator(
@@ -286,7 +296,8 @@ test.describe('Interaction Compliance', () => {
       if (modalOpen) {
         // Close modal (Escape or close button)
         await page.keyboard.press('Escape')
-        await page.waitForTimeout(500)
+        // Wait for modal to close
+        await expect(page.locator('[role="dialog"], [data-testid*="modal"]')).toHaveCount(0, { timeout: 2_000 }).catch(() => { /* may not close */ })
 
         const modalClosed = await page.locator('[role="dialog"], [data-testid*="modal"]').count() === 0
 
@@ -347,13 +358,12 @@ test.describe('Interaction Compliance', () => {
 
       // Click refresh
       await refreshButton.click()
-      await page.waitForTimeout(300)
 
       // Check for loading indicator (spinner, skeleton, etc.)
-      const hasLoadingIndicator = await card.locator('.animate-spin, [data-loading="true"], .skeleton, [class*="loading"]').count() > 0
+      const hasLoadingIndicator = await card.locator('.animate-spin, [data-loading="true"], .skeleton, [class*="loading"]').first().waitFor({ state: 'visible', timeout: 2_000 }).then(() => true).catch(() => false)
 
       // Wait for content to reload
-      await page.waitForTimeout(3_000)
+      await card.locator('[data-loading="false"], .text-sm, p, table, li').first().waitFor({ state: 'visible', timeout: 10_000 }).catch(() => { /* content may not appear */ })
 
       const hasContent = await card.locator('[data-loading="false"], .text-sm, p, table, li').count() > 0
 
@@ -428,7 +438,17 @@ test.describe('Interaction Compliance', () => {
 
       // Click collapse
       await collapseButton.click()
-      await page.waitForTimeout(800)
+      // Wait for sidebar width animation to complete
+      await page.waitForFunction(
+        ({ selector, origWidth }) => {
+          const el = document.querySelector(selector)
+          if (!el) return false
+          const rect = el.getBoundingClientRect()
+          return Math.abs(rect.width - origWidth) > 20
+        },
+        { selector: '[data-testid="sidebar"], nav, aside', origWidth: initialBox.width },
+        { timeout: 3_000 }
+      ).catch(() => { /* animation may not complete */ })
 
       const collapsedBox = await sidebar.boundingBox()
       const widthChanged = collapsedBox && Math.abs(collapsedBox.width - initialBox.width) > 20
@@ -436,7 +456,17 @@ test.describe('Interaction Compliance', () => {
       if (widthChanged) {
         // Click expand (same button)
         await collapseButton.click()
-        await page.waitForTimeout(800)
+        // Wait for sidebar to expand back to original width
+        await page.waitForFunction(
+          ({ selector, origWidth }) => {
+            const el = document.querySelector(selector)
+            if (!el) return false
+            const rect = el.getBoundingClientRect()
+            return Math.abs(rect.width - origWidth) < 20
+          },
+          { selector: '[data-testid="sidebar"], nav, aside', origWidth: initialBox.width },
+          { timeout: 3_000 }
+        ).catch(() => { /* animation may not complete */ })
 
         const expandedBox = await sidebar.boundingBox()
         const restored = expandedBox && Math.abs(expandedBox.width - initialBox.width) < 20
@@ -497,13 +527,12 @@ test.describe('Interaction Compliance', () => {
 
       // Click refresh
       await dashRefresh.click()
-      await page.waitForTimeout(500)
 
-      // Check for loading states
+      // Check for loading states (brief window — cards may start loading)
       const loadingCards = await page.locator('[data-card-type][data-loading="true"], [data-card-type] .skeleton, [data-card-type] .animate-pulse').count()
 
-      // Wait for content to reload
-      await page.waitForTimeout(4_000)
+      // Wait for content to reload — wait for at least one card to finish loading
+      await page.locator('[data-card-type][data-loading="false"]').first().waitFor({ state: 'visible', timeout: 10_000 }).catch(() => { /* content may not appear */ })
 
       const cardsAfter = await page.locator('[data-card-type]').count()
       const contentLoaded = await page.locator('[data-card-type][data-loading="false"]').count()

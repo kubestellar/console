@@ -206,6 +206,7 @@ test.describe('Navigation Error Toast Regression (#4011)', () => {
     } catch {
       // networkidle may not fire with SSE — continue
     }
+    // intentional delay: allow async effects to resolve before checking for error toasts
     await page.waitForTimeout(POST_IDLE_SETTLE_MS)
 
     // -- Navigate through each route --
@@ -257,10 +258,10 @@ test.describe('Navigation Error Toast Regression (#4011)', () => {
       } catch {
         // SSE streams may keep the connection open — continue
       }
+      // intentional delay: allow async effects to resolve before checking for error toasts
       await page.waitForTimeout(POST_IDLE_SETTLE_MS)
 
-      // Wait an additional period to ensure toasts (which auto-dismiss after 3s)
-      // have had time to appear if they were going to
+      // intentional delay: toasts auto-dismiss after 3s — wait for them to appear if they were going to
       await page.waitForTimeout(TOAST_VISIBLE_WINDOW_MS)
 
       // -- Check for error toasts --
@@ -330,6 +331,7 @@ test.describe('Navigation Error Toast Regression (#4011)', () => {
     } catch {
       // continue
     }
+    // intentional delay: allow async effects to resolve before starting rapid navigation
     await page.waitForTimeout(POST_IDLE_SETTLE_MS)
 
     // -- Rapidly click through routes without waiting for each to fully load --
@@ -354,7 +356,7 @@ test.describe('Navigation Error Toast Regression (#4011)', () => {
         await page.goto(route.path, { waitUntil: 'domcontentloaded' })
       }
 
-      // Only a brief pause between clicks — the point is rapid navigation
+      // intentional delay: simulate rapid user clicks — brief pause between navigations
       await page.waitForTimeout(RAPID_CLICK_DELAY_MS)
     }
 
@@ -364,7 +366,7 @@ test.describe('Navigation Error Toast Regression (#4011)', () => {
     } catch {
       // continue
     }
-    // Wait long enough for any toast to appear (toasts auto-dismiss after 3s)
+    // intentional delay: toasts auto-dismiss after 3s — wait for them to appear if they were going to
     await page.waitForTimeout(TOAST_VISIBLE_WINDOW_MS + POST_IDLE_SETTLE_MS)
 
     // -- Check for error toasts on the final settled page --

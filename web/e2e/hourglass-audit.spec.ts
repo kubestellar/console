@@ -60,14 +60,13 @@ test.describe('Hourglass & Refresh Controls Audit', () => {
       localStorage.setItem('token', 'test-token')
       localStorage.setItem('demo-user-onboarded', 'true')
     })
-    await page.waitForTimeout(300)
+    await page.waitForLoadState('domcontentloaded')
   })
 
   for (const dashboard of DASHBOARDS_WITH_REFRESH) {
     test(`${dashboard.name} (${dashboard.route}) has refresh button`, async ({ page }) => {
       await page.goto(dashboard.route)
-      await page.waitForLoadState('domcontentloaded')
-      await page.waitForTimeout(1000)
+      await page.waitForLoadState('networkidle')
 
       // Check for refresh button — look for title="Refresh data" or title="Refresh"
       const refreshButton = page.locator('button[title="Refresh data"], button[title="Refresh"]')
@@ -76,8 +75,7 @@ test.describe('Hourglass & Refresh Controls Audit', () => {
 
     test(`${dashboard.name} (${dashboard.route}) has auto-refresh checkbox`, async ({ page }) => {
       await page.goto(dashboard.route)
-      await page.waitForLoadState('domcontentloaded')
-      await page.waitForTimeout(1000)
+      await page.waitForLoadState('networkidle')
 
       // Check for auto-refresh checkbox
       const autoCheckbox = page.locator('label:has-text("Auto") input[type="checkbox"]')
@@ -95,8 +93,7 @@ test.describe('Hourglass & Refresh Controls Audit', () => {
       })
 
       await page.goto(dashboard.route)
-      await page.waitForLoadState('domcontentloaded')
-      await page.waitForTimeout(1500)
+      await page.waitForLoadState('networkidle')
 
       // Click refresh
       const refreshButton = page.locator('button[title="Refresh data"], button[title="Refresh"]')

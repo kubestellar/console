@@ -287,7 +287,9 @@ test.describe('Resolution Memory System', () => {
       const fullscreenBtn = page.locator('button[title="Full screen"], button[title="Expand to full screen"]').first()
       if (await fullscreenBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
         await fullscreenBtn.click()
-        await page.waitForTimeout(500)
+
+        // Wait for fullscreen transition to complete
+        await expect(page.locator('[data-tour="ai-missions"]').first()).toBeVisible({ timeout: 5000 })
 
         // In fullscreen, look for the Related Knowledge panel
         const knowledgePanel = page.locator('text=Related Knowledge')

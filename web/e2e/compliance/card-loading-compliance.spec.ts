@@ -755,8 +755,8 @@ test('card loading compliance — cold + warm', async ({ page }, testInfo) => {
   const totalBatches = Math.ceil(totalCards / BATCH_SIZE)
   console.log(`[Compliance] Total cards: ${totalCards}, batches: ${totalBatches}`)
 
-  // Let modules finish loading
-  await page.waitForTimeout(3_000)
+  // Wait for warmup modules to finish loading
+  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { /* best-effort */ })
 
   // ── Phase 3: Live-Cold — test each batch ──────────────────────────────
   console.log('[Compliance] Phase 2: Live-Cold — testing card loading behavior')
@@ -833,7 +833,8 @@ test('card loading compliance — cold + warm', async ({ page }, testInfo) => {
   // ── Phase 4: Navigate away ────────────────────────────────────────────
   console.log('[Compliance] Phase 3: Navigate away')
   await page.goto('/', { waitUntil: 'domcontentloaded' })
-  await page.waitForTimeout(500)
+  // Wait for navigation away to settle
+  await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => { /* best-effort */ })
 
   // ── Phase 5: Live-Warm return — test cache behavior ───────────────────
   console.log('[Compliance] Phase 4: Live-Warm return — testing cache behavior')
@@ -849,8 +850,8 @@ test('card loading compliance — cold + warm', async ({ page }, testInfo) => {
     // Start monitor for warm return
     await startComplianceMonitor(page, cardIds)
 
-    // Wait shorter — cached data should appear fast
-    await page.waitForTimeout(WARM_RETURN_WAIT_MS)
+    // Wait for cached data to appear — monitor records snapshots during this period
+    await page.waitForLoadState('networkidle', { timeout: WARM_RETURN_WAIT_MS }).catch(() => { /* monitoring window */ })
 
     const warmHistory = await stopComplianceMonitor(page)
 

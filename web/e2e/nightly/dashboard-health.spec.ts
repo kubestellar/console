@@ -180,8 +180,12 @@ test.describe('Nightly Dashboard Health', () => {
         // networkidle may not fire if SSE streams are open — continue anyway
       }
 
-      // Wait for cards to settle
-      await page.waitForTimeout(CARD_SETTLE_MS)
+      // Wait for cards to settle — look for card elements to appear
+      try {
+        await page.waitForSelector('[data-card-id]', { timeout: CARD_SETTLE_MS })
+      } catch {
+        // Some pages may not have cards — continue to metrics collection
+      }
 
       // Collect metrics
       const metrics = await getDashboardMetrics(page)

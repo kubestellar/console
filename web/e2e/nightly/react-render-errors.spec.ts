@@ -152,6 +152,7 @@ async function exercisePagination(page: Page): Promise<void> {
     await btn.click().catch(() => {
       /* ignore click failures — button may have disappeared */
     })
+    // intentional delay: allow useLayoutEffect cascades from pagination to settle before checking for errors
     await page.waitForTimeout(PAGINATION_EXTRA_SETTLE_MS)
   }
 }
@@ -202,7 +203,11 @@ test.describe('React Render Error Detection', () => {
       })
 
       // Wait for cards to render and effects to settle
-      await page.waitForTimeout(CARD_SETTLE_MS)
+      try {
+        await page.waitForSelector('[data-card-type]', { timeout: CARD_SETTLE_MS })
+      } catch {
+        // Some routes may not have cards — continue to check for errors
+      }
 
       // Exercise pagination to trigger useLayoutEffect cascades
       if (route.hasPagination) {
@@ -272,7 +277,12 @@ test.describe('React Render Error Detection', () => {
 
       await setupDemoMode(page)
       await page.goto(route.path, { waitUntil: 'domcontentloaded', timeout: NAV_TIMEOUT_MS })
-      await page.waitForTimeout(CARD_SETTLE_MS)
+      // Wait for cards to render and effects to settle
+      try {
+        await page.waitForSelector('[data-card-type]', { timeout: CARD_SETTLE_MS })
+      } catch {
+        // Some routes may not have cards at mobile viewport — continue
+      }
 
       // Also check for error boundary rendering
       const errorBoundary = await page.locator('text=This page encountered an error').count()

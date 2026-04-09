@@ -59,7 +59,13 @@ test.describe('Theme Toggle', () => {
     if (!hasBtn) test.skip()
 
     await themeBtn.first().click()
-    await page.waitForTimeout(300) // allow CSS transition
+
+    // Wait for theme transition to complete — check that the class or data-theme changes
+    await expect(async () => {
+      const cls = await html.getAttribute('class') || ''
+      const dt = await html.getAttribute('data-theme') || ''
+      expect(cls !== initialClass || dt !== initialDataTheme).toBeTruthy()
+    }).toPass({ timeout: 5000 })
 
     const newClass = await html.getAttribute('class') || ''
     const newDataTheme = await html.getAttribute('data-theme') || ''
@@ -80,10 +86,19 @@ test.describe('Theme Toggle', () => {
     const hasBtn = await themeBtn.first().isVisible().catch(() => false)
     if (!hasBtn) test.skip()
 
-    await themeBtn.first().click()
-    await page.waitForTimeout(300)
-
     const html = page.locator('html')
+    const classBefore = await html.getAttribute('class') || ''
+    const dataThemeBefore = await html.getAttribute('data-theme') || ''
+
+    await themeBtn.first().click()
+
+    // Wait for theme transition to complete
+    await expect(async () => {
+      const cls = await html.getAttribute('class') || ''
+      const dt = await html.getAttribute('data-theme') || ''
+      expect(cls !== classBefore || dt !== dataThemeBefore).toBeTruthy()
+    }).toPass({ timeout: 5000 })
+
     const classAfterToggle = await html.getAttribute('class') || ''
     const dataThemeAfterToggle = await html.getAttribute('data-theme') || ''
 
@@ -141,9 +156,13 @@ test.describe('Settings Persistence', () => {
     const hasCollapse = await collapseBtn.isVisible().catch(() => false)
     if (!hasCollapse) test.skip()
 
-    // Collapse the sidebar
+    // Collapse the sidebar and wait for animation to finish
     await collapseBtn.click()
-    await page.waitForTimeout(300)
+    await expect(async () => {
+      const attr = await sidebar.getAttribute('data-collapsed')
+      const cls = await sidebar.getAttribute('class') || ''
+      expect(attr === 'true' || cls.includes('collapsed')).toBeTruthy()
+    }).toPass({ timeout: 5000 })
 
     const collapsedAttr = await sidebar.getAttribute('data-collapsed')
     const collapsedClass = await sidebar.getAttribute('class') || ''
@@ -252,7 +271,12 @@ test.describe('Responsive Layout', () => {
     const desktopGridWidth = await grid.evaluate((el) => el.getBoundingClientRect().width)
 
     await page.setViewportSize({ width: 375, height: 667 })
-    await page.waitForTimeout(300) // allow reflow
+
+    // Wait for grid to reflow at the new viewport size
+    await expect(async () => {
+      const width = await grid.evaluate((el) => el.getBoundingClientRect().width)
+      expect(width).toBeLessThan(desktopGridWidth)
+    }).toPass({ timeout: 5000 })
 
     const mobileGridWidth = await grid.evaluate((el) => el.getBoundingClientRect().width)
 

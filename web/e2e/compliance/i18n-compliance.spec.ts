@@ -367,7 +367,8 @@ test('i18n compliance — internationalization audit', async ({ page }) => {
   await setupAuth(page)
   await setupMockServer(page)
   await page.goto('/', { waitUntil: 'domcontentloaded', timeout: IS_CI ? 60_000 : 30_000 })
-  await page.waitForTimeout(3_000)
+  // Wait for page content to fully render
+  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { /* best-effort */ })
 
   // Check 3.1: No raw translation keys visible in DOM
   // Raw keys look like "namespace:key.path" or "key.path.subpath" patterns
@@ -616,7 +617,8 @@ test('i18n compliance — internationalization audit', async ({ page }) => {
   for (const { route, checks: expectedTexts } of spotCheckRoutes) {
     try {
       await page.goto(route, { waitUntil: 'domcontentloaded', timeout: IS_CI ? 20_000 : 10_000 })
-      await page.waitForTimeout(1_500)
+      // Wait for page content to render before spot-checking translations
+      await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { /* best-effort */ })
 
       const bodyText = await page.evaluate(() => document.body.innerText || '')
 
@@ -649,7 +651,8 @@ test('i18n compliance — internationalization audit', async ({ page }) => {
 
   for (const pagePath of pages) {
     await page.goto(pagePath, { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
-    await page.waitForTimeout(1_500)
+    // Wait for page to settle before scanning for raw i18n keys
+    await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { /* best-effort */ })
 
     const rawKeys = await page.evaluate(() => {
       const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)

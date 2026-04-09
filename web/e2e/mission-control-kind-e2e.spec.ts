@@ -252,7 +252,7 @@ async function seedAndOpenMC(page: Page, overrides: Record<string, unknown>) {
 
   await page.goto('http://localhost:8080')
   await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS })
-  await page.waitForTimeout(4000)
+  await expect(page.locator('body')).not.toBeEmpty({ timeout: DIALOG_TIMEOUT_MS })
 
   // Open MC dialog — retry up to 3 times (button may be scrolled in sidebar)
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -265,7 +265,6 @@ async function seedAndOpenMC(page: Page, overrides: Record<string, unknown>) {
       const mcBtn = buttons.find(b => b.textContent?.includes('Mission Control'))
       if (mcBtn) (mcBtn as HTMLElement).click()
     })
-    await page.waitForTimeout(2000)
 
     const visible = await page.getByText(/Define Mission|Chart Course|Flight Plan|Define Your|Chart Your|Launch/i)
       .first().isVisible({ timeout: 5000 }).catch(() => false)
@@ -276,7 +275,6 @@ async function seedAndOpenMC(page: Page, overrides: Record<string, unknown>) {
       const sidebar = document.querySelector('[class*="sidebar"], nav, aside')
       if (sidebar) sidebar.scrollTop = sidebar.scrollHeight
     })
-    await page.waitForTimeout(1000)
   }
 
   await expect(
@@ -374,6 +372,7 @@ test.describe('Mission Control Kind Cluster E2E', () => {
       })
 
       // Wait for launch sequence — look for completion indicators
+      // intentional wait: AI agent deploys asynchronously — allow time for completion
       await page.waitForTimeout(DEPLOY_TIMEOUT_MS / 2) // Allow up to half the timeout
 
       // Take screenshot of the launch progress
@@ -433,6 +432,7 @@ test.describe('Mission Control Kind Cluster E2E', () => {
         if (btn) (btn as HTMLElement).click()
       })
 
+      // intentional wait: AI agent deploys asynchronously — allow time for completion
       await page.waitForTimeout(DEPLOY_TIMEOUT_MS / 2)
       await page.screenshot({ path: 'test-results/kind-e2e-sec-deploy.png', fullPage: true })
     })
@@ -494,6 +494,7 @@ test.describe('Mission Control Kind Cluster E2E', () => {
         if (btn) (btn as HTMLElement).click()
       })
 
+      // intentional wait: AI agent deploys asynchronously — allow time for completion
       await page.waitForTimeout(DEPLOY_TIMEOUT_MS / 2)
       await page.screenshot({ path: 'test-results/kind-e2e-gitops-deploy.png', fullPage: true })
 
@@ -553,6 +554,7 @@ test.describe('Mission Control Kind Cluster E2E', () => {
       })
 
       // Allow generous time for 6 projects across 2 clusters
+      // intentional wait: AI agent deploys asynchronously — allow time for completion
       await page.waitForTimeout(DEPLOY_TIMEOUT_MS / 2)
       await page.screenshot({ path: 'test-results/kind-e2e-multi-stress.png', fullPage: true })
 

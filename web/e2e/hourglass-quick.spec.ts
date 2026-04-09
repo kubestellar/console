@@ -32,14 +32,13 @@ test.describe('Hourglass Visibility', () => {
       localStorage.setItem('token', 'test-token')
       localStorage.setItem('demo-user-onboarded', 'true')
     })
-    await page.waitForTimeout(300)
+    await page.waitForLoadState('domcontentloaded')
   })
 
   for (const pg of PAGES) {
     test(`${pg.name} has refresh button and shows updating`, async ({ page }) => {
       await page.goto(pg.route)
-      await page.waitForLoadState('domcontentloaded')
-      await page.waitForTimeout(2000)
+      await page.waitForLoadState('networkidle')
 
       // Verify we're NOT on login page
       const url = page.url()

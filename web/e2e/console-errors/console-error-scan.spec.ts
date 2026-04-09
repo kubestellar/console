@@ -266,7 +266,10 @@ test('console error scan — all routes', async ({ page }) => {
   // Prime the app — initial load
   console.log('[ConsoleErrorScan] Priming app with initial load...')
   await page.goto('/', { waitUntil: 'networkidle', timeout: NAV_TIMEOUT_MS })
-  await page.waitForTimeout(3000)
+  await page.waitForFunction(
+    () => document.body.innerText.length > 0,
+    { timeout: NAV_TIMEOUT_MS },
+  )
 
   // Set auth token in localStorage (ProtectedRoute checks this)
   await page.evaluate(() => {

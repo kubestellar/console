@@ -427,7 +427,8 @@ test('cold-nav — first visit to each dashboard via sidebar', async ({ page }, 
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
     // Wait for home dashboard cards to settle
     await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
-    await page.waitForTimeout(1_000) // let data flow settle
+    // perf measurement: intentional delay to establish stable data flow baseline before navigation measurements
+    await page.waitForTimeout(1_000)
   } catch { /* continue */ }
 
   let currentRoute = '/'
@@ -475,6 +476,7 @@ test('warm-nav — revisit dashboards (chunks already cached)', async ({ page },
     const dashboard = DASHBOARDS[i]
     if (i > 0 && i % 5 === 0) {
       await page.goto('about:blank', { waitUntil: 'domcontentloaded' })
+      // perf measurement: intentional delay for timing baseline between warmup navigations
       await page.waitForTimeout(200)
     }
     await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
@@ -488,6 +490,7 @@ test('warm-nav — revisit dashboards (chunks already cached)', async ({ page },
   try {
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
     await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
+    // perf measurement: intentional delay to let dashboard fully settle before measuring warm navigations
     await page.waitForTimeout(500)
   } catch { /* continue */ }
 
@@ -549,7 +552,8 @@ test('from-main — navigate away from Main Dashboard to various dashboards', as
       try {
         await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
         await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
-        await page.waitForTimeout(500) // let Main Dashboard fully settle
+        // perf measurement: intentional delay to let Main Dashboard fully settle before measuring navigation
+        await page.waitForTimeout(500)
       } catch { /* continue */ }
 
       // Now measure the navigation FROM / TO the target
@@ -610,7 +614,8 @@ test('from-clusters — navigate away from My Clusters to various dashboards', a
       try {
         await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
         await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
-        await page.waitForTimeout(500) // let My Clusters fully settle
+        // perf measurement: intentional delay to let My Clusters fully settle before measuring navigation
+        await page.waitForTimeout(500)
       } catch { /* continue */ }
 
       // Now measure the navigation FROM /clusters TO the target
@@ -661,6 +666,7 @@ test('rapid-nav — quick clicks through dashboards', async ({ page }, testInfo)
   try {
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
     await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
+    // perf measurement: intentional delay to let dashboard settle before rapid navigation test
     await page.waitForTimeout(500)
   } catch { /* continue */ }
 
@@ -684,7 +690,8 @@ test('rapid-nav — quick clicks through dashboards', async ({ page }, testInfo)
 
     const clickTime = Date.now()
     await link.click()
-    await page.waitForTimeout(200) // rapid-fire gap
+    // perf measurement: intentional delay simulating rapid user clicks between dashboards
+    await page.waitForTimeout(200)
 
     // After clicking, quickly record where we are
     const urlAfterClick = new URL(page.url()).pathname
@@ -742,7 +749,8 @@ test('back-button navigation through 10 dashboards', async ({ page }) => {
   const forwardTargets = DASHBOARDS.slice(0, 10)
   for (const dashboard of forwardTargets) {
     await page.goto(dashboard.route, { waitUntil: 'domcontentloaded', timeout: 15_000 })
-    await page.waitForTimeout(500) // ensure history entry
+    // perf measurement: intentional delay to ensure browser history entry is created before back-nav test
+    await page.waitForTimeout(500)
   }
 
   console.log(`[NAV] Navigated forward through ${forwardTargets.length} dashboards, now going back`)

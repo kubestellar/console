@@ -470,10 +470,8 @@ test.describe('Cluster Admin Cards — EtcdStatus, DNSHealth, AdmissionWebhooks'
       const card = page.locator('[data-card-type="etcd_status"]')
       await expect(card).toBeVisible({ timeout: 15000 })
 
-      // When no etcd pods are found, card shows the managed-by-provider empty state
-      // with a storage emoji and explanatory text
-      // Allow time for data to settle (error -> empty state)
-      await page.waitForTimeout(2000)
+      // Wait for data to settle (error -> empty state) by checking for card text content
+      await expect(card).not.toHaveText('', { timeout: 10000 })
 
       // The card should either show the empty state or demo fallback data
       // Both are valid — the card does not crash
@@ -487,8 +485,8 @@ test.describe('Cluster Admin Cards — EtcdStatus, DNSHealth, AdmissionWebhooks'
       const card = page.locator('[data-card-type="dns_health"]')
       await expect(card).toBeVisible({ timeout: 15000 })
 
-      // Allow time for error handling
-      await page.waitForTimeout(2000)
+      // Wait for error handling to settle — card should have non-empty content
+      await expect(card).not.toHaveText('', { timeout: 10000 })
 
       // Card should render without crashing — either empty state or demo data
       const cardContent = await card.textContent()
@@ -502,7 +500,8 @@ test.describe('Cluster Admin Cards — EtcdStatus, DNSHealth, AdmissionWebhooks'
       await expect(card).toBeVisible({ timeout: 15000 })
 
       // The hook falls back to demo data on 503, so card should still render
-      await page.waitForTimeout(2000)
+      // Wait for tab buttons to appear (indicates card has rendered its content)
+      await expect(card.locator('button.rounded-full').first()).toBeVisible({ timeout: 10000 })
 
       // Should still show tabs and webhook entries (demo fallback)
       const tabs = card.locator('button.rounded-full')

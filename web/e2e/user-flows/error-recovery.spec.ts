@@ -187,7 +187,8 @@ test.describe('Network Resilience', () => {
 
     // Go offline then back online
     await page.context().setOffline(true)
-    await page.waitForTimeout(500)
+    // Brief offline period — dashboard should remain rendered
+    await expect(page.getByTestId('dashboard-page')).toBeVisible()
     await page.context().setOffline(false)
 
     // Reload — should work fine
@@ -221,8 +222,10 @@ test.describe('JavaScript Error Resilience', () => {
     await page.waitForLoadState('domcontentloaded')
     await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 15000 })
 
-    // Give async components a moment to settle
-    await page.waitForTimeout(2000)
+    // Wait for async components to settle — ensure cards grid is rendered
+    await expect(page.getByTestId('dashboard-cards-grid')).toBeVisible({ timeout: 10000 }).catch(() => {})
+    // Also wait for network activity to complete
+    await page.waitForLoadState('networkidle')
 
     expect(jsErrors, `Unexpected JS errors: ${jsErrors.join(', ')}`).toHaveLength(0)
   })

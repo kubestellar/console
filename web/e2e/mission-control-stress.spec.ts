@@ -410,7 +410,7 @@ async function navigateTo(page: Page) {
   })
   await page.goto('http://localhost:8080')
   await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS })
-  await page.waitForTimeout(4000)
+  await expect(page.locator('body')).not.toBeEmpty({ timeout: DIALOG_TIMEOUT_MS })
 }
 
 async function seedMCState(page: Page, overrides: Record<string, unknown> = {}) {
@@ -477,7 +477,7 @@ async function seedAndOpenMC(page: Page, overrides: Record<string, unknown>) {
   // Navigate to dashboard — React mounts and reads seeded state
   await page.goto('http://localhost:8080')
   await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS })
-  await page.waitForTimeout(4000)
+  await expect(page.locator('body')).not.toBeEmpty({ timeout: DIALOG_TIMEOUT_MS })
 
   await ensureDashboard(page)
   await openMC(page)
@@ -499,7 +499,7 @@ async function ensureDashboard(page: Page) {
   })
     await page.goto('http://localhost:8080')
     await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS })
-    await page.waitForTimeout(4000)
+    await expect(page.locator('body')).not.toBeEmpty({ timeout: DIALOG_TIMEOUT_MS })
   }
 }
 
@@ -524,8 +524,6 @@ async function openMC(page: Page) {
     const btn = page.locator('button', { hasText: 'Mission Control' }).first()
     await btn.click({ force: true, timeout: 5000 }).catch(() => {})
   }
-
-  await page.waitForTimeout(2000)
 
   // Wait for the wizard dialog to render — look for phase stepper text
   // Phase labels: "Define Mission", "Chart Course", "Flight Plan"
@@ -601,7 +599,8 @@ test.describe('Mission Control STRESS Tests', () => {
       // Navigate to Phase 2 (assign)
       const assignTab = page.getByText(/assign|chart|course/i).first()
       if (await assignTab.isVisible({ timeout: 3000 }).catch(() => false)) await assignTab.click()
-      await page.waitForTimeout(1000)
+      // Wait for assignment content to render
+      await expect(page.getByText(/istio/i).first()).toBeVisible({ timeout: DIALOG_TIMEOUT_MS })
 
       // Verify both meshes are visible
       const bodyText = await page.textContent('body')
@@ -643,7 +642,6 @@ test.describe('Mission Control STRESS Tests', () => {
       // Navigate to blueprint phase
       const bpTab = page.getByText(/blueprint|flight/i).first()
       if (await bpTab.isVisible({ timeout: 3000 }).catch(() => false)) await bpTab.click()
-      await page.waitForTimeout(2000)
 
       // Verify SVG blueprint renders with dependency edges
       const svg = page.locator('svg:not([class*="lucide"]):not([width="24"])').first()
@@ -697,7 +695,8 @@ test.describe('Mission Control STRESS Tests', () => {
       // Navigate to assignment phase
       const assignTab = page.getByText(/assign|chart|course/i).first()
       if (await assignTab.isVisible({ timeout: 3000 }).catch(() => false)) await assignTab.click()
-      await page.waitForTimeout(1500)
+      // Wait for cluster assignments to render
+      await expect(page.getByText(/prod-us-east/i).first()).toBeVisible({ timeout: DIALOG_TIMEOUT_MS })
 
       // Verify all 5 clusters are present
       const bodyText = await page.textContent('body')
@@ -729,7 +728,8 @@ test.describe('Mission Control STRESS Tests', () => {
       // Navigate to blueprint
       const bpTab = page.getByText(/blueprint|flight/i).first()
       if (await bpTab.isVisible({ timeout: 3000 }).catch(() => false)) await bpTab.click()
-      await page.waitForTimeout(1500)
+      // Wait for blueprint content to render
+      await expect(page.locator('svg:not([class*="lucide"]):not([width="24"])').first()).toBeVisible({ timeout: DIALOG_TIMEOUT_MS })
 
       // Verify YOLO mode is selected
       const bodyText = await page.textContent('body')
@@ -773,7 +773,6 @@ test.describe('Mission Control STRESS Tests', () => {
 
       const bpTab = page.getByText(/blueprint|flight/i).first()
       if (await bpTab.isVisible({ timeout: 3000 }).catch(() => false)) await bpTab.click()
-      await page.waitForTimeout(2000)
 
       // Verify SVG renders with at least 2 cluster zones
       const svg = page.locator('svg:not([class*="lucide"]):not([width="24"])').first()
@@ -1073,7 +1072,7 @@ and Prometheus monitoring to track memory usage over time.
 
       // Reload the page
       await page.reload({ waitUntil: 'domcontentloaded' })
-      await page.waitForTimeout(3000)
+      await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS })
 
       // Verify state survived the reload
       const recovered = await page.evaluate((key) => {
@@ -1279,14 +1278,16 @@ and Prometheus monitoring to track memory usage over time.
 
       const bpTab = page.getByText(/blueprint|flight/i).first()
       if (await bpTab.isVisible({ timeout: 3000 }).catch(() => false)) await bpTab.click()
-      await page.waitForTimeout(2000)
+      // Wait for blueprint SVG to render
+      await expect(page.locator('svg:not([class*="lucide"]):not([width="24"])').first()).toBeVisible({ timeout: DIALOG_TIMEOUT_MS })
 
       const overlays = ['architecture', 'compute', 'storage', 'network', 'security']
       for (const overlay of overlays) {
         const btn = page.getByText(new RegExp(overlay, 'i')).first()
         if (await btn.isVisible({ timeout: 2000 }).catch(() => false)) {
           await btn.click()
-          await page.waitForTimeout(500)
+          // Wait for SVG to re-render after overlay toggle
+          await expect(page.locator('svg:not([class*="lucide"]):not([width="24"])').first()).toBeVisible({ timeout: DIALOG_TIMEOUT_MS })
         }
       }
 

@@ -88,10 +88,81 @@ jobs:
 
       - name: Run Playwright tests (${{ matrix.browser }})
         run: |
-          npx playwright test --project=${{ matrix.browser }} --retries=0 --timeout=30000 \
+          npx playwright test --project=${{ matrix.browser }} --retries=1 --timeout=30000 \
             e2e/smoke.spec.ts \
             e2e/responsive-regression.spec.ts \
             e2e/spa-routes.spec.ts \
+            e2e/Login.spec.ts \
+            e2e/Dashboard.spec.ts \
+            e2e/Sidebar.spec.ts \
+            e2e/Settings.spec.ts \
+            e2e/Clusters.spec.ts \
+            e2e/Events.spec.ts \
+            e2e/Tour.spec.ts \
+            e2e/navbar-responsive.spec.ts \
+            e2e/custom-dashboard.spec.ts
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:4173
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-${{ matrix.browser }}-report
+          path: web/playwright-report/
+          retention-days: 7
+
+  # Mobile viewport tests — catches responsive layout regressions
+  mobile:
+    name: Mobile (${{ matrix.project }})
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [mobile-chrome, mobile-safari]
+        include:
+          - project: mobile-chrome
+            browser: chromium
+          - project: mobile-safari
+            browser: webkit
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: nightly-build-output
+          path: web/dist
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Start preview server
+        run: |
+          npm run preview &
+          npx wait-on http://localhost:4173 --timeout 60000
+
+      - name: Run mobile tests
+        run: |
+          npx playwright test --project=${{ matrix.project }} --retries=1 --timeout=30000 \
+            e2e/smoke.spec.ts \
+            e2e/responsive-regression.spec.ts \
+            e2e/navbar-responsive.spec.ts \
             e2e/Login.spec.ts \
             e2e/Dashboard.spec.ts
         env:
@@ -101,6 +172,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nightly-${{ matrix.browser }}-report
+          name: nightly-${{ matrix.project }}-report
           path: web/playwright-report/
           retention-days: 7

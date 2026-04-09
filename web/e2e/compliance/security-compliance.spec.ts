@@ -162,7 +162,8 @@ test('security compliance — frontend security audit', async ({ page }, testInf
   // ── Phase 2: Load the app ──────────────────────────────────────────────
   console.log('[Security] Phase 2: Loading app')
   await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 30_000 })
-  await page.waitForTimeout(2_000)
+  // Wait for page content to render
+  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { /* best-effort */ })
 
   // ══════════════════════════════════════════════════════════════════════
   // Category 1: DOM Security
@@ -362,7 +363,8 @@ test('security compliance — frontend security audit', async ({ page }, testInf
 
   // Trigger some API calls to catch logged tokens
   await page.goto('/', { waitUntil: 'domcontentloaded' })
-  await page.waitForTimeout(2_000)
+  // Wait for API calls to fire so console logs are captured
+  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { /* best-effort */ })
 
   if (consoleLogs.length === 0) {
     addCheck('Data Exposure', 'No secrets in console.log', 'pass',
@@ -388,7 +390,8 @@ test('security compliance — frontend security audit', async ({ page }, testInf
   })
 
   await page.goto('/', { waitUntil: 'domcontentloaded' })
-  await page.waitForTimeout(3_000)
+  // Wait for API requests to fire so auth headers are captured
+  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { /* best-effort */ })
 
   const authedRequests = apiRequests.filter((r) => r.hasAuth).length
   const unauthedRequests = apiRequests.filter((r) => !r.hasAuth)
@@ -704,7 +707,8 @@ test('security compliance — frontend security audit', async ({ page }, testInf
   const additionalPages = ['/clusters', '/settings']
   for (const pagePath of additionalPages) {
     await page.goto(`${BASE_URL}${pagePath}`, { waitUntil: 'domcontentloaded' })
-    await page.waitForTimeout(2000)
+    // Wait for page to render before DOM security scan
+    await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { /* best-effort */ })
 
     const pageSecurityCheck = await page.evaluate((route: string) => {
       const issues: string[] = []
@@ -748,7 +752,8 @@ test('security compliance — frontend security audit', async ({ page }, testInf
 
   // Navigate back to main dashboard for remaining checks
   await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' })
-  await page.waitForTimeout(1000)
+  // Wait for page to settle before auth bypass check
+  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { /* best-effort */ })
 
   // ══════════════════════════════════════════════════════════════════════
   // Category 12: Auth Bypass Check
@@ -765,7 +770,8 @@ test('security compliance — frontend security audit', async ({ page }, testInf
 
   try {
     await noAuthPage.goto(`${BASE_URL}/clusters`, { waitUntil: 'domcontentloaded', timeout: IS_CI ? 20_000 : 10_000 })
-    await noAuthPage.waitForTimeout(2000)
+    // Wait for page to render without auth
+    await noAuthPage.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { /* best-effort */ })
 
     // Check if protected content is visible.
     // The app intentionally falls back to demo data when APIs return errors,

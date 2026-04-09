@@ -69,7 +69,7 @@ async function navigateAndSettle(page: Page, route: string) {
   try {
     await page.waitForSelector('[data-testid="sidebar"], main, [data-card-type]', { timeout: 8_000 })
   } catch { /* some routes may not have these */ }
-  await page.waitForTimeout(SETTLE_MS)
+  await page.waitForLoadState('networkidle', { timeout: SETTLE_MS }).catch(() => { /* settle timeout is best-effort */ })
 }
 
 // ---------------------------------------------------------------------------
@@ -93,8 +93,8 @@ test.describe('Error Resilience', () => {
 
       await navigateAndSettle(page, '/')
 
-      // Wait for cards to attempt loading and fail
-      await page.waitForTimeout(5_000)
+      // Wait for cards to attempt loading and fail — wait for at least one card to appear or timeout
+      await page.locator('[data-card-type]').first().waitFor({ state: 'visible', timeout: 10_000 }).catch(() => { /* cards may not render under error mode */ })
 
       // Check card states
       const cards = page.locator('[data-card-type]')
@@ -180,8 +180,8 @@ test.describe('Error Resilience', () => {
 
       await navigateAndSettle(page, '/')
 
-      // After 5 seconds, cards should show loading state (not blank)
-      await page.waitForTimeout(3_000)
+      // Wait for cards to appear and show loading state (not blank)
+      await page.locator('[data-card-type]').first().waitFor({ state: 'visible', timeout: 10_000 }).catch(() => { /* cards may not render under timeout mode */ })
 
       const cards = page.locator('[data-card-type]')
       const cardCount = await cards.count()
@@ -257,7 +257,8 @@ test.describe('Error Resilience', () => {
       await setLiveColdMode(page)
 
       await navigateAndSettle(page, '/')
-      await page.waitForTimeout(5_000)
+      // Wait for cards to load under partial failure mode
+      await page.locator('[data-card-type]').first().waitFor({ state: 'visible', timeout: 10_000 }).catch(() => { /* cards may not render */ })
 
       const cards = page.locator('[data-card-type]')
       const cardCount = await cards.count()
@@ -326,7 +327,8 @@ test.describe('Error Resilience', () => {
       await setLiveColdMode(page)
 
       await navigateAndSettle(page, '/')
-      await page.waitForTimeout(3_000)
+      // Wait for cards to load with content
+      await page.locator('[data-card-type]').first().waitFor({ state: 'visible', timeout: 10_000 }).catch(() => { /* may not render */ })
 
       // Count cards with content
       const cardsBefore = await page.locator('[data-card-type]').count()
@@ -348,7 +350,8 @@ test.describe('Error Resilience', () => {
 
       // Navigate to a different page to trigger new SSE requests
       await page.goto('/clusters', { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
-      await page.waitForTimeout(5_000)
+      // Wait for page to settle after SSE disconnect
+      await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { /* best-effort */ })
 
       const cardsAfter = await page.locator('[data-card-type]').count()
 
@@ -386,7 +389,8 @@ test.describe('Error Resilience', () => {
       await setLiveColdMode(page)
 
       await navigateAndSettle(page, '/')
-      await page.waitForTimeout(2_000)
+      // Wait for initial content to load before simulating expiry
+      await page.locator('[data-card-type]').first().waitFor({ state: 'visible', timeout: 10_000 }).catch(() => { /* best-effort */ })
 
       // Clear auth token to simulate expiry
       await page.evaluate(() => {
@@ -406,7 +410,8 @@ test.describe('Error Resilience', () => {
 
       // Try navigating to a new page — should trigger auth check
       await page.goto('/clusters', { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
-      await page.waitForTimeout(3_000)
+      // Wait for auth redirect or page content to settle
+      await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { /* best-effort */ })
 
       // Check what happened
       const currentUrl = page.url()

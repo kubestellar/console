@@ -342,6 +342,7 @@ async function prewarmIfNeeded(page: Page, mode: PerfMode, totalCards: number) {
   const batches = Math.ceil(totalCards / BATCH_SIZE)
   for (let batch = 0; batch < batches; batch++) {
     await getManifestForBatch(page, batch, BATCH_SIZE)
+    // perf measurement: intentional delay for timing baseline between prewarm batches
     await page.waitForTimeout(350)
   }
 }
@@ -384,6 +385,7 @@ async function runMode(page: Page, mode: PerfMode): Promise<CardTTFIMetric[]> {
   for (let batch = 0; batch < batches; batch++) {
     if (batch > 0) {
       await page.goto('about:blank', { waitUntil: 'domcontentloaded' })
+      // perf measurement: intentional delay for timing baseline between batches
       await page.waitForTimeout(200)
     }
     const manifest = await getManifestForBatch(page, batch, BATCH_SIZE)

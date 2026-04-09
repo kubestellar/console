@@ -359,7 +359,8 @@ async function navigateToConsole(page: Page) {
   await page.goto('http://localhost:8080')
   await page.waitForLoadState('domcontentloaded', { timeout: DIALOG_RENDER_TIMEOUT_MS })
   // Wait for React to hydrate and dashboard to render
-  await page.waitForTimeout(3000)
+  await page.waitForLoadState('networkidle', { timeout: DIALOG_RENDER_TIMEOUT_MS })
+  await expect(page.locator('body')).not.toBeEmpty({ timeout: DIALOG_RENDER_TIMEOUT_MS })
 }
 
 async function openMissionControl(page: Page) {
@@ -385,27 +386,26 @@ async function expandSampleRunbooks(page: Page) {
     localStorage.setItem('kc_mission_watched_repos', JSON.stringify([repo]))
   }, SAMPLE_REPO)
   await page.reload({ waitUntil: 'domcontentloaded' })
-  await page.waitForTimeout(2000) // Wait for React hydration
+  await page.waitForLoadState('networkidle', { timeout: DIALOG_RENDER_TIMEOUT_MS })
   await openMissionBrowser(page)
 
   // Expand My Repositories — click the button containing that text
   const myReposButton = page.locator('button', { hasText: 'My Repositories' }).first()
   await expect(myReposButton).toBeVisible({ timeout: DIALOG_RENDER_TIMEOUT_MS })
   await myReposButton.click()
-  await page.waitForTimeout(1000) // Wait for tree expansion
+  // Wait for tree expansion — look for the repo node to appear
+  await expect(page.locator('button', { hasText: 'sample-runbooks' }).first()).toBeVisible({ timeout: DIALOG_RENDER_TIMEOUT_MS })
 
   // Click sample-runbooks to expand it and load contents
   const repoNode = page.locator('button', { hasText: 'sample-runbooks' }).first()
   await expect(repoNode).toBeVisible({ timeout: DIALOG_RENDER_TIMEOUT_MS })
   await repoNode.click()
-  await page.waitForTimeout(2000) // Wait for GitHub API fetch
 
   // If files aren't visible yet, click again (first click may have only toggled expand)
-  const fileVisible = await page.getByText('argocd-application', { exact: false }).isVisible({ timeout: 5000 }).catch(() => false)
+  const fileVisible = await page.getByText('argocd-application', { exact: false }).isVisible({ timeout: GITHUB_FETCH_TIMEOUT_MS }).catch(() => false)
   if (!fileVisible) {
     // Click again to trigger selectNode (first click was toggleNode)
     await repoNode.click()
-    await page.waitForTimeout(2000)
   }
 
   // Wait for files to appear in either the tree or the directory listing

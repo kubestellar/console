@@ -184,7 +184,7 @@ export async function login(page: ReturnType<typeof base.extend>['page']) {
 export async function waitForDashboard(page: ReturnType<typeof base.extend>['page']) {
   await page.waitForURL('/', { timeout: 10000 })
   await page.waitForLoadState('domcontentloaded')
-  await page.waitForTimeout(1000)
+  await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
 }
 
 export async function openCardMenu(page: ReturnType<typeof base.extend>['page'], cardIndex = 0) {

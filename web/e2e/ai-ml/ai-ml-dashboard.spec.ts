@@ -32,8 +32,6 @@ const STACK_DISCOVERY_TIMEOUT_MS = 30_000
 const PROMETHEUS_POLL_TIMEOUT_MS = 15_000
 /** Timeout for card content to render */
 const CARD_CONTENT_TIMEOUT_MS = 10_000
-/** Short stabilization delay */
-const SETTLE_MS = 1_500
 /** Polling interval for stack discovery checks */
 const STACK_POLL_INTERVAL_MS = 2_000
 
@@ -49,7 +47,7 @@ const EXPECTED_CARD_COUNT = 13
  */
 async function setupAndNavigate(page: Page, route: string) {
   await page.goto('/', { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
-  await page.waitForTimeout(SETTLE_MS)
+  await page.waitForLoadState('networkidle')
 
   // Set auth token + cached user so the app bypasses backend validation.
   // The cached user prevents /api/me calls; the token satisfies ProtectedRoute.
@@ -72,7 +70,7 @@ async function setupAndNavigate(page: Page, route: string) {
   })
 
   await page.goto(route, { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
-  await page.waitForTimeout(SETTLE_MS)
+  await page.waitForLoadState('networkidle')
 }
 
 /**
@@ -141,7 +139,10 @@ test.describe('AI/ML Dashboard — page structure', () => {
 
   test('hero row has LLM-d visualization cards', async ({ page }) => {
     await setupAndNavigate(page, AI_ML_ROUTE)
-    await page.waitForTimeout(CARD_CONTENT_TIMEOUT_MS)
+    await page.waitForFunction(
+      () => document.body.innerText.length > 200,
+      { timeout: CARD_CONTENT_TIMEOUT_MS },
+    )
 
     const heroCardLabels = await page.evaluate(() => {
       const body = document.body.innerText.toLowerCase()
@@ -415,7 +416,13 @@ test.describe('AI/ML Dashboard — live Prometheus data', () => {
 
     await setupAndNavigate(page, AI_ML_ROUTE)
     await waitForStackDiscovery(page)
-    await page.waitForTimeout(PROMETHEUS_POLL_TIMEOUT_MS)
+    await page.waitForFunction(
+      () => {
+        const body = document.body.innerText.toLowerCase()
+        return body.includes('cache') || body.includes('throughput') || body.includes('tok') || body.includes('latency')
+      },
+      { timeout: PROMETHEUS_POLL_TIMEOUT_MS },
+    ).catch(() => { /* metrics may not load — assertions below will catch */ })
 
     console.log(`  Prometheus API calls: ${promCalls.length}`)
 
@@ -441,7 +448,10 @@ test.describe('AI/ML Dashboard — live Prometheus data', () => {
   test('KV Cache Monitor shows real cache utilization', async ({ page }) => {
     await setupAndNavigate(page, AI_ML_ROUTE)
     await waitForStackDiscovery(page)
-    await page.waitForTimeout(PROMETHEUS_POLL_TIMEOUT_MS)
+    await page.waitForFunction(
+      () => document.body.innerText.toLowerCase().includes('cache'),
+      { timeout: PROMETHEUS_POLL_TIMEOUT_MS },
+    ).catch(() => { /* fallback — assertion below will check */ })
 
     const kvCacheData = await page.evaluate(() => {
       const body = document.body.innerText
@@ -462,7 +472,13 @@ test.describe('AI/ML Dashboard — live Prometheus data', () => {
   test('EPP Routing card shows endpoint picker activity', async ({ page }) => {
     await setupAndNavigate(page, AI_ML_ROUTE)
     await waitForStackDiscovery(page)
-    await page.waitForTimeout(PROMETHEUS_POLL_TIMEOUT_MS)
+    await page.waitForFunction(
+      () => {
+        const body = document.body.innerText.toLowerCase()
+        return body.includes('epp') || body.includes('endpoint picker') || body.includes('routing')
+      },
+      { timeout: PROMETHEUS_POLL_TIMEOUT_MS },
+    ).catch(() => { /* fallback — assertion below will check */ })
 
     const eppContent = await page.evaluate(() => {
       const body = document.body.innerText.toLowerCase()
@@ -478,7 +494,13 @@ test.describe('AI/ML Dashboard — live Prometheus data', () => {
   test('P/D Disaggregation card shows architecture visualization', async ({ page }) => {
     await setupAndNavigate(page, AI_ML_ROUTE)
     await waitForStackDiscovery(page)
-    await page.waitForTimeout(CARD_CONTENT_TIMEOUT_MS)
+    await page.waitForFunction(
+      () => {
+        const body = document.body.innerText.toLowerCase()
+        return body.includes('disaggregat') || body.includes('p/d') || body.includes('prefill') || body.includes('decode')
+      },
+      { timeout: CARD_CONTENT_TIMEOUT_MS },
+    ).catch(() => { /* fallback — assertion below will check */ })
 
     const pdContent = await page.evaluate(() => {
       const body = document.body.innerText.toLowerCase()
@@ -506,7 +528,13 @@ test.describe('AI/ML Dashboard — component health', () => {
   test('Stack Monitor shows component health status', async ({ page }) => {
     await setupAndNavigate(page, AI_ML_ROUTE)
     await waitForStackDiscovery(page)
-    await page.waitForTimeout(CARD_CONTENT_TIMEOUT_MS)
+    await page.waitForFunction(
+      () => {
+        const body = document.body.innerText.toLowerCase()
+        return body.includes('stack') || body.includes('llm-d') || body.includes('healthy') || body.includes('running')
+      },
+      { timeout: CARD_CONTENT_TIMEOUT_MS },
+    ).catch(() => { /* fallback — assertion below will check */ })
 
     const stackMonitorContent = await page.evaluate(() => {
       const body = document.body.innerText.toLowerCase()
@@ -529,7 +557,10 @@ test.describe('AI/ML Dashboard — component health', () => {
 
   test('GPU Overview shows GPU utilization data', async ({ page }) => {
     await setupAndNavigate(page, AI_ML_ROUTE)
-    await page.waitForTimeout(CARD_CONTENT_TIMEOUT_MS)
+    await page.waitForFunction(
+      () => document.body.innerText.toLowerCase().includes('gpu'),
+      { timeout: CARD_CONTENT_TIMEOUT_MS },
+    ).catch(() => { /* fallback — assertion below will check */ })
 
     const gpuContent = await page.evaluate(() => {
       const body = document.body.innerText.toLowerCase()
@@ -551,7 +582,10 @@ test.describe('AI/ML Dashboard — component health', () => {
   test('no cards show demo badge when live data is available', async ({ page }) => {
     await setupAndNavigate(page, AI_ML_ROUTE)
     await waitForStackDiscovery(page)
-    await page.waitForTimeout(PROMETHEUS_POLL_TIMEOUT_MS)
+    await page.waitForFunction(
+      () => document.body.innerText.length > 500,
+      { timeout: PROMETHEUS_POLL_TIMEOUT_MS },
+    ).catch(() => { /* page content may be minimal — assertions below will check */ })
 
     const demoBadgeCount = await page.evaluate(() => {
       let count = 0
