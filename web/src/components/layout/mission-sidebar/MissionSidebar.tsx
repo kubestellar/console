@@ -480,8 +480,8 @@ export function MissionSidebar() {
 
         <div className="flex flex-col items-center gap-2">
           <LogoWithStar className="w-5 h-5" />
-          {missions.length > 0 && (
-            <span className="text-xs font-medium text-foreground">{missions.length}</span>
+          {activeMissions.length > 0 && (
+            <span className="text-xs font-medium text-foreground">{activeMissions.length}</span>
           )}
           {runningCount > 0 && (
             <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
@@ -1245,8 +1245,8 @@ export function MissionSidebarToggle() {
       )}
       {needsAttention > 0 ? (
         <span className={isMobile ? 'text-xs font-medium' : 'text-sm font-medium'}>{t('missionSidebar.needsAttention', { count: needsAttention })}</span>
-      ) : missions.length > 0 ? (
-        <span className={isMobile ? 'text-xs' : 'text-sm'}>{t('missionSidebar.missionCount', { count: missions.length })}</span>
+      ) : missions.filter(m => m.status !== 'saved').length > 0 ? (
+        <span className={isMobile ? 'text-xs' : 'text-sm'}>{t('missionSidebar.missionCount', { count: missions.filter(m => m.status !== 'saved').length })}</span>
       ) : (
         <span className={isMobile ? 'text-xs' : 'text-sm'}>{t('missionSidebar.aiMissions')}</span>
       )}
