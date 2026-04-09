@@ -106,12 +106,14 @@ export function TourProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(SETTINGS_RESTORED_EVENT, readFromStorage)
   }, [])
 
-  // Auto-skip tour on mobile - tour is desktop-only
+  // Auto-skip tour on mobile - tour is desktop-only.
+  // Only depend on isMobile — including isActive in deps causes an infinite
+  // render loop on mobile (setState in effect body + value in deps = cycle).
   useEffect(() => {
-    if (isMobile && isActive) {
+    if (isMobile) {
       setIsActive(false)
     }
-  }, [isMobile, isActive])
+  }, [isMobile])
 
   const currentStep = isActive ? TOUR_STEPS[currentStepIndex] : null
 
