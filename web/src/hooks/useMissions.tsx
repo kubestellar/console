@@ -1766,6 +1766,9 @@ Install the console locally with the KubeStellar Console agent to use AI mission
 
   // Dismiss/remove a mission from the list
   const dismissMission = (missionId: string) => {
+    // Cancel backend execution before removing from UI to prevent
+    // invisible continued operations after dismiss (#5816)
+    cancelMission(missionId)
     setMissions(prev => prev.filter(m => m.id !== missionId))
     if (activeMissionId === missionId) {
       setActiveMissionId(null)
