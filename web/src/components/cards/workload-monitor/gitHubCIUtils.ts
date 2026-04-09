@@ -15,6 +15,7 @@ export function formatTimeAgo(iso: string): string {
 
 /** Loads the configured repo list from localStorage, falling back to DEFAULT_REPOS. */
 export function loadRepos(): string[] {
+  if (typeof window === 'undefined') return DEFAULT_REPOS
   try {
     const stored = localStorage.getItem(REPOS_STORAGE_KEY)
     if (stored) {
@@ -31,6 +32,7 @@ export function loadRepos(): string[] {
 
 /** Persists the repo list to localStorage. */
 export function saveRepos(repos: string[]) {
+  if (typeof window === 'undefined') return
   try {
     localStorage.setItem(REPOS_STORAGE_KEY, JSON.stringify(repos))
   } catch {

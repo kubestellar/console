@@ -444,6 +444,7 @@ const COLLAPSED_STORAGE_KEY = 'kubestellar-collapsed-cards'
  * Get all collapsed card IDs from localStorage
  */
 function getCollapsedCards(): Set<string> {
+  if (typeof window === 'undefined') return new Set()
   try {
     const stored = localStorage.getItem(COLLAPSED_STORAGE_KEY)
     return stored ? new Set(JSON.parse(stored)) : new Set()
@@ -456,7 +457,11 @@ function getCollapsedCards(): Set<string> {
  * Save collapsed card IDs to localStorage
  */
 function saveCollapsedCards(collapsed: Set<string>) {
-  localStorage.setItem(COLLAPSED_STORAGE_KEY, JSON.stringify([...collapsed]))
+  try {
+    localStorage.setItem(COLLAPSED_STORAGE_KEY, JSON.stringify([...collapsed]))
+  } catch {
+    // Silently ignore quota errors or private browsing restrictions
+  }
 }
 
 export interface UseCardCollapseResult {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { api } from '../lib/api'
 import { addCustomTheme, removeCustomTheme } from '../lib/themes'
 import { emitMarketplaceInstall, emitMarketplaceRemove, emitMarketplaceInstallFailed } from '../lib/analytics'
@@ -118,6 +118,7 @@ interface InstalledEntry {
 type InstalledMap = Record<string, InstalledEntry>
 
 function loadInstalled(): InstalledMap {
+  if (typeof window === 'undefined') return {}
   try {
     return JSON.parse(localStorage.getItem(INSTALLED_KEY) || '{}')
   } catch {
@@ -306,31 +307,37 @@ export function useMarketplace() {
   }
 
   // Collect all unique tags (exclude internal tags when not in help-wanted mode)
-  const allTags = Array.from(new Set(items.flatMap(i => i.tags))).sort()
+  const allTags = useMemo(() =>
+    Array.from(new Set(items.flatMap(i => i.tags))).sort(),
+    [items])
+
+  // CNCF items derived from the full item list
+  const cncfItems = useMemo(() => items.filter(i => i.cncfProject), [items])
 
   // CNCF stats
-  const cncfItems = items.filter(i => i.cncfProject)
-  const cncfStats: CNCFStats = {
+  const cncfStats: CNCFStats = useMemo(() => ({
     total: cncfItems.length,
-    completed: cncfItems.filter(i => (i.status || 'available') === 'available').length,
-    helpWanted: cncfItems.filter(i => i.status === 'help-wanted').length,
-    graduatedTotal: cncfItems.filter(i => i.cncfProject?.maturity === 'graduated').length,
-    incubatingTotal: cncfItems.filter(i => i.cncfProject?.maturity === 'incubating').length }
+    completed: cncfItems.filter((i: MarketplaceItem) => (i.status || 'available') === 'available').length,
+    helpWanted: cncfItems.filter((i: MarketplaceItem) => i.status === 'help-wanted').length,
+    graduatedTotal: cncfItems.filter((i: MarketplaceItem) => i.cncfProject?.maturity === 'graduated').length,
+    incubatingTotal: cncfItems.filter((i: MarketplaceItem) => i.cncfProject?.maturity === 'incubating').length }),
+    [cncfItems])
 
   // CNCF categories (for grouping in help-wanted view)
-  const cncfCategories = Array.from(new Set(
-    cncfItems.map(i => i.cncfProject!.category)
-  )).sort()
+  const cncfCategories = useMemo(() => Array.from(new Set(
+    cncfItems.map((i: MarketplaceItem) => i.cncfProject!.category)
+  )).sort(), [cncfItems])
 
   // Type counts (for filter badges)
-  const typeCounts: Record<string, number> = {
+  const typeCounts: Record<string, number> = useMemo(() => ({
     all: items.length,
     dashboard: items.filter(i => i.type === 'dashboard').length,
     'card-preset': items.filter(i => i.type === 'card-preset').length,
-    theme: items.filter(i => i.type === 'theme').length }
+    theme: items.filter(i => i.type === 'theme').length }),
+    [items])
 
   // Filter items
-  const filteredItems = items.filter(item => {
+  const filteredItems = useMemo(() => items.filter(item => {
     const matchesSearch = !searchQuery ||
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.description.toLowerCase().includes(searchQuery.toLowerCase())
@@ -338,7 +345,7 @@ export function useMarketplace() {
     const matchesType = !selectedType || item.type === selectedType
     const matchesStatus = !showHelpWanted || item.status === 'help-wanted'
     return matchesSearch && matchesTag && matchesType && matchesStatus
-  })
+  }), [items, searchQuery, selectedTag, selectedType, showHelpWanted])
 
   return {
     items: filteredItems,

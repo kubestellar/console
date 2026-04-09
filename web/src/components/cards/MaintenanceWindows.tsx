@@ -18,6 +18,7 @@ const STORAGE_KEY = 'kubestellar-maintenance-windows'
 const STATUS_REFRESH_INTERVAL_MS = 30_000
 
 function loadWindows(): MaintenanceWindow[] {
+  if (typeof window === 'undefined') return []
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
   } catch {
@@ -26,7 +27,11 @@ function loadWindows(): MaintenanceWindow[] {
 }
 
 function saveWindows(windows: MaintenanceWindow[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(windows))
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(windows))
+  } catch {
+    // Silently ignore quota errors or private browsing restrictions
+  }
 }
 
 export function MaintenanceWindows() {

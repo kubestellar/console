@@ -33,6 +33,7 @@ const PROVIDER_OVERRIDES_KEY = 'kubestellar-cluster-provider-overrides'
 
 // Load persisted overrides from localStorage (moved outside component)
 const loadPersistedOverrides = (configOverrides?: Record<string, CloudProvider>): Record<string, CloudProvider> => {
+  if (typeof window === 'undefined') return configOverrides || {}
   try {
     const saved = localStorage.getItem(PROVIDER_OVERRIDES_KEY)
     if (saved) {
@@ -210,10 +211,14 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
 
   // Persist provider overrides to localStorage
   useEffect(() => {
-    if (Object.keys(clusterProviderOverrides).length > 0) {
-      localStorage.setItem(PROVIDER_OVERRIDES_KEY, JSON.stringify(clusterProviderOverrides))
-    } else {
-      localStorage.removeItem(PROVIDER_OVERRIDES_KEY)
+    try {
+      if (Object.keys(clusterProviderOverrides).length > 0) {
+        localStorage.setItem(PROVIDER_OVERRIDES_KEY, JSON.stringify(clusterProviderOverrides))
+      } else {
+        localStorage.removeItem(PROVIDER_OVERRIDES_KEY)
+      }
+    } catch {
+      // Silently ignore quota errors or private browsing restrictions
     }
   }, [clusterProviderOverrides])
 

@@ -149,6 +149,7 @@ interface CachedGitHubData {
 
 // Get cached data for a repo
 function getCachedData(repo: string): CachedGitHubData | null {
+  if (typeof window === 'undefined') return null
   try {
     const cached = localStorage.getItem(CACHE_KEY_PREFIX + repo.replace('/', '_'))
     if (!cached) return null
@@ -179,6 +180,7 @@ function setCachedData(repo: string, data: Omit<CachedGitHubData, 'timestamp'>) 
 
 // Get saved repos from localStorage
 function getSavedRepos(): string[] {
+  if (typeof window === 'undefined') return [DEFAULT_REPO]
   try {
     const saved = localStorage.getItem(SAVED_REPOS_KEY)
     return saved ? JSON.parse(saved) : [DEFAULT_REPO]
@@ -189,7 +191,11 @@ function getSavedRepos(): string[] {
 
 // Save repos to localStorage
 function saveRepos(repos: string[]) {
-  localStorage.setItem(SAVED_REPOS_KEY, JSON.stringify(repos))
+  try {
+    localStorage.setItem(SAVED_REPOS_KEY, JSON.stringify(repos))
+  } catch {
+    // Silently ignore quota errors or private browsing restrictions
+  }
 }
 
 // Demo data for GitHub Activity card
@@ -526,7 +532,11 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
   // Multi-repo state - inline CRUD pattern (matching GitHubCIMonitor)
   const [savedRepos, setSavedRepos] = useState<string[]>(() => getSavedRepos())
   const [currentRepo, setCurrentRepo] = useState<string>(() => {
-    return localStorage.getItem(CURRENT_REPO_KEY) || savedRepos[0] || DEFAULT_REPO
+    try {
+      return (typeof window !== 'undefined' && localStorage.getItem(CURRENT_REPO_KEY)) || savedRepos[0] || DEFAULT_REPO
+    } catch {
+      return savedRepos[0] || DEFAULT_REPO
+    }
   })
   const [repoInput, setRepoInput] = useState('')
   const [isEditingRepos, setIsEditingRepos] = useState(false)
@@ -556,7 +566,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
   // Select a repo from the list
   const handleSelectRepo = (repo: string) => {
     setCurrentRepo(repo)
-    localStorage.setItem(CURRENT_REPO_KEY, repo)
+    try { localStorage.setItem(CURRENT_REPO_KEY, repo) } catch { /* ignore quota errors */ }
   }
 
   // Add a new repo to saved list (inline CRUD)
@@ -573,7 +583,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
     setSavedRepos(newRepos)
     saveRepos(newRepos)
     setCurrentRepo(repo)
-    localStorage.setItem(CURRENT_REPO_KEY, repo)
+    try { localStorage.setItem(CURRENT_REPO_KEY, repo) } catch { /* ignore quota errors */ }
     setRepoInput('')
   }
 
@@ -585,7 +595,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
     saveRepos(newRepos)
     if (currentRepo === repo) {
       setCurrentRepo(newRepos[0])
-      localStorage.setItem(CURRENT_REPO_KEY, newRepos[0])
+      try { localStorage.setItem(CURRENT_REPO_KEY, newRepos[0]) } catch { /* ignore quota errors */ }
     }
   }
 

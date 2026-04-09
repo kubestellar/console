@@ -33,6 +33,7 @@ const KUSTOMIZATION_CACHE_KEY = 'kc-kustomization-status-cache'
 
 // Load from localStorage
 function loadKustomizationsFromStorage(): { data: Kustomization[], timestamp: number } {
+  if (typeof window === 'undefined') return { data: [], timestamp: 0 }
   try {
     const stored = localStorage.getItem(KUSTOMIZATION_CACHE_KEY)
     if (stored) {
