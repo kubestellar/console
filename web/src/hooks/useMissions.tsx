@@ -314,10 +314,22 @@ function saveMissions(missions: Mission[]) {
       try {
         localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(pruned))
         return
-      } catch (retryError) {
-        // Still too large — clear missions storage as last resort
-        console.error('[Missions] localStorage still full after pruning, clearing missions', retryError)
-        localStorage.removeItem(MISSIONS_STORAGE_KEY)
+      } catch {
+        // Still too large — strip chat messages from completed missions (#5695)
+        console.warn('[Missions] still full after count-pruning, stripping chat messages')
+        const stripped = pruned.map(m =>
+          (m.status === 'completed' || m.status === 'failed')
+            ? { ...m, messages: m.messages.slice(-3) } // keep only last 3 messages
+            : m
+        )
+        try {
+          localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(stripped))
+          return
+        } catch {
+          // Absolute last resort — clear missions storage
+          console.error('[Missions] localStorage still full after stripping messages, clearing missions')
+          localStorage.removeItem(MISSIONS_STORAGE_KEY)
+        }
       }
     } else {
       console.error('Failed to save missions to localStorage:', e)
