@@ -18,6 +18,7 @@ import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { emitClusterStatsDrillDown } from '../../lib/analytics'
+import { ROUTES } from '../../config/routes'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -223,25 +224,25 @@ export function Clusters() {
         return {
           value: hasData ? stats.totalNodes : '-',
           sublabel: 'total nodes',
-          onClick: () => { emitClusterStatsDrillDown('nodes'); navigate('/compute') },
+          onClick: () => { emitClusterStatsDrillDown('nodes'); navigate(ROUTES.COMPUTE) },
           isClickable: hasData }
       case 'cpus':
         return {
           value: hasData ? stats.totalCPUs : '-',
           sublabel: 'cores allocatable',
-          onClick: () => { emitClusterStatsDrillDown('cpu'); navigate('/compute') },
+          onClick: () => { emitClusterStatsDrillDown('cpu'); navigate(ROUTES.COMPUTE) },
           isClickable: hasData }
       case 'memory':
         return {
           value: hasData ? formatMemoryStat(stats.totalMemoryGB) : '-',
           sublabel: 'allocatable',
-          onClick: () => { emitClusterStatsDrillDown('memory'); navigate('/compute') },
+          onClick: () => { emitClusterStatsDrillDown('memory'); navigate(ROUTES.COMPUTE) },
           isClickable: hasData }
       case 'storage':
         return {
           value: hasData ? formatMemoryStat(stats.totalStorageGB) : '-',
           sublabel: 'storage',
-          onClick: () => { emitClusterStatsDrillDown('storage'); navigate('/storage') },
+          onClick: () => { emitClusterStatsDrillDown('storage'); navigate(ROUTES.STORAGE) },
           isClickable: hasData }
       case 'gpus':
         return {
@@ -253,7 +254,7 @@ export function Clusters() {
         return {
           value: hasData ? stats.totalPods : '-',
           sublabel: 'running pods',
-          onClick: () => { emitClusterStatsDrillDown('pods'); navigate('/workloads') },
+          onClick: () => { emitClusterStatsDrillDown('pods'); navigate(ROUTES.WORKLOADS) },
           isClickable: hasData }
       default:
         return { value: '-', sublabel: '' }
