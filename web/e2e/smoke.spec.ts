@@ -216,6 +216,44 @@ test.describe('Smoke Tests', () => {
     })
   })
 
+  test.describe('Mobile Viewport', () => {
+    const MOBILE_VIEWPORT = { width: 393, height: 852 }
+
+    test('dashboard loads without error on mobile', async ({ page }) => {
+      await page.setViewportSize(MOBILE_VIEWPORT)
+      await setupDemoMode(page)
+      const { errors } = setupErrorCollector(page)
+
+      await page.goto('/')
+      await page.waitForLoadState('networkidle', { timeout: 15000 })
+
+      // Check no error boundary rendered (React #185 crash)
+      const errorBoundary = page.locator('text=This page encountered an error')
+      await expect(errorBoundary).not.toBeVisible({ timeout: 5000 })
+
+      // Page should have real content, not just an error
+      await expect(page.locator('body')).toBeVisible()
+      const bodyText = await page.textContent('body')
+      expect(bodyText?.length).toBeGreaterThan(100)
+
+      if (errors.length > 0) {
+        console.log('Mobile console errors:', errors)
+      }
+      expect(errors, 'Unexpected console errors on mobile dashboard').toHaveLength(0)
+    })
+
+    test('clusters page loads without error on mobile', async ({ page }) => {
+      await page.setViewportSize(MOBILE_VIEWPORT)
+      await setupDemoMode(page)
+
+      await page.goto('/clusters')
+      await page.waitForLoadState('networkidle', { timeout: 15000 })
+
+      const errorBoundary = page.locator('text=This page encountered an error')
+      await expect(errorBoundary).not.toBeVisible({ timeout: 5000 })
+    })
+  })
+
   test.describe('Demo Mode', () => {
     test('demo mode indicator is visible', async ({ page }) => {
       await setupDemoMode(page)
