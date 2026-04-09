@@ -15,7 +15,7 @@ import type { GitHubContribution } from '../../types/rewards'
 export function RewardsPanel() {
   const [showGitHubInvite, setShowGitHubInvite] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const { totalCoins, earnedAchievements, recentEvents, hasEarnedAction, getActionCount, githubRewards, githubPoints, refreshGitHubRewards } = useRewards()
+  const { totalCoins, earnedAchievements, recentEvents, hasEarnedAction, getActionCount, githubRewards, githubPoints, localCoins, refreshGitHubRewards } = useRewards()
 
   const handleRefreshGitHub = async () => {
     setIsRefreshing(true)
@@ -43,6 +43,19 @@ export function RewardsPanel() {
             <p className="text-sm text-yellow-400">Earn more below!</p>
           </div>
         </div>
+        {(githubPoints > 0 || localCoins > 0) && (
+          <div className="mt-3 pt-3 border-t border-yellow-500/10 flex items-center gap-4 text-xs text-muted-foreground">
+            <span title="Points from GitHub contributions (PRs, issues) — shown on the public leaderboard">
+              GitHub: <span className="text-green-400 font-medium">{githubPoints.toLocaleString()}</span>
+            </span>
+            <span className="text-muted-foreground/40">+</span>
+            <span title="Coins from in-app activity (missions, games, sharing) — stored in your browser only">
+              Console: <span className="text-purple-400 font-medium">{localCoins.toLocaleString()}</span>
+            </span>
+            <span className="text-muted-foreground/40">=</span>
+            <span className="text-yellow-400 font-medium">{totalCoins.toLocaleString()}</span>
+          </div>
+        )}
       </div>
 
       {/* Ways to Earn */}

@@ -32,6 +32,8 @@ interface RewardsContextType {
   recentEvents: RewardEvent[]
   githubRewards: GitHubRewardsResponse | null
   githubPoints: number
+  /** Coins from in-app activity (missions, games, sharing) stored in localStorage */
+  localCoins: number
   refreshGitHubRewards: () => Promise<void>
 }
 
@@ -229,6 +231,8 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     return Math.max(0, localCoins - consoleSubmittedOffset) + githubPoints
   })()
 
+  const localCoins = Math.max(0, (rewards?.totalCoins ?? 0) - consoleSubmittedOffset)
+
   const value: RewardsContextType = {
     rewards,
     totalCoins: mergedTotalCoins,
@@ -240,6 +244,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     recentEvents,
     githubRewards,
     githubPoints,
+    localCoins,
     refreshGitHubRewards }
 
   return (
