@@ -95,11 +95,12 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
   }
 
   // Clear loading state when diagnosis result arrives (#5714)
+  // Only depend on alert.aiDiagnosis — not isRunningDiagnosis (avoids render loop)
   useEffect(() => {
-    if (isRunningDiagnosis && alert.aiDiagnosis) {
+    if (alert.aiDiagnosis) {
       setIsRunningDiagnosis(false)
     }
-  }, [alert.aiDiagnosis, isRunningDiagnosis])
+  }, [alert.aiDiagnosis])
 
   const handleSendSlack = async (webhookId: string) => {
     setIsSendingSlack(true)
