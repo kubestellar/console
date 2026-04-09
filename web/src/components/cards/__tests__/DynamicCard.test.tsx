@@ -132,19 +132,18 @@ describe('DynamicCard', () => {
   it('shows missing-config error when config is undefined', () => {
     // @ts-expect-error intentional
     render(<DynamicCard config={undefined} />)
-    expect(screen.getByText(/Missing card configuration/i)).toBeInTheDocument()
+    expect(screen.getByText('dynamicCard.missingConfig')).toBeInTheDocument()
   })
 
   it('shows missing-config error when dynamicCardId is empty string', () => {
     render(<DynamicCard config={{ dynamicCardId: '' }} />)
-    expect(screen.getByText(/Missing card configuration/i)).toBeInTheDocument()
+    expect(screen.getByText('dynamicCard.missingConfig')).toBeInTheDocument()
   })
 
   it('shows not-found error when getDynamicCard returns undefined', () => {
     mockGetDynamicCard.mockReturnValue(undefined)
     render(<DynamicCard config={{ dynamicCardId: 'ghost-card' }} />)
-    expect(screen.getByText(/not found/i)).toBeInTheDocument()
-    expect(screen.getByText(/ghost-card/)).toBeInTheDocument()
+    expect(screen.getByText('dynamicCard.notFound')).toBeInTheDocument()
   })
 
   it('renders Tier1CardRuntime inside error boundary for tier1 definition', () => {
@@ -157,13 +156,13 @@ describe('DynamicCard', () => {
   it('shows invalid-definition error when tier1 card has no cardDefinition', () => {
     mockGetDynamicCard.mockReturnValue(makeT1Definition({ cardDefinition: undefined }))
     render(<DynamicCard config={{ dynamicCardId: 'card-t1' }} />)
-    expect(screen.getByText(/Invalid card definition/i)).toBeInTheDocument()
+    expect(screen.getByText('dynamicCard.invalidDefinition')).toBeInTheDocument()
   })
 
   it('shows invalid-definition error when tier2 card has no sourceCode', () => {
     mockGetDynamicCard.mockReturnValue(makeT2Definition({ sourceCode: undefined }))
     render(<DynamicCard config={{ dynamicCardId: 'card-t2' }} />)
-    expect(screen.getByText(/Invalid card definition/i)).toBeInTheDocument()
+    expect(screen.getByText('dynamicCard.invalidDefinition')).toBeInTheDocument()
   })
 
   it('passes safeConfig to Tier2CardRuntime', async () => {
@@ -198,7 +197,7 @@ describe('Tier1CardRuntime', () => {
     it('shows invalid-config when cardDefinition is null', () => {
       // @ts-expect-error intentional
       render(<Tier1CardRuntime definition={definition} cardDefinition={null} />)
-      expect(screen.getByText(/Invalid card configuration/i)).toBeInTheDocument()
+      expect(screen.getByText('dynamicCard.invalidCardConfig')).toBeInTheDocument()
     })
 
     it('shows missing-endpoint error when dataSource=api and apiEndpoint is absent', () => {
@@ -208,7 +207,7 @@ describe('Tier1CardRuntime', () => {
         apiEndpoint: undefined,
       }
       render(<Tier1CardRuntime definition={definition} cardDefinition={def} />)
-      expect(screen.getByText(/Missing API endpoint/i)).toBeInTheDocument()
+      expect(screen.getByText('dynamicCard.missingEndpoint')).toBeInTheDocument()
     })
   })
 
@@ -238,7 +237,7 @@ describe('Tier1CardRuntime', () => {
       mockUseCardData.mockReturnValue(makeUseCardDataReturn([]))
       const def = { ...BASE_T1_DEF, emptyMessage: undefined }
       render(<Tier1CardRuntime definition={definition} cardDefinition={def} />)
-      expect(screen.getByText(/No data available/i)).toBeInTheDocument()
+      expect(screen.getByText('dynamicCard.noDataAvailable')).toBeInTheDocument()
     })
   })
 
@@ -390,7 +389,7 @@ describe('Tier1CardRuntime', () => {
         render(<Tier1CardRuntime definition={definition} cardDefinition={def} />)
       })
       await waitFor(() =>
-        expect(screen.getByText(/Failed to fetch data/i)).toBeInTheDocument()
+        expect(screen.getByText('dynamicCard.fetchFailed')).toBeInTheDocument()
       )
     })
 
@@ -491,7 +490,7 @@ describe('Tier2CardRuntime', () => {
     // Never resolves — stays in compiling state
     mockCompileCardCode.mockReturnValue(new Promise(() => { }))
     render(<Tier2CardRuntime definition={definition} />)
-    expect(screen.getByText(/Compiling card/i)).toBeInTheDocument()
+    expect(screen.getByText('dynamicCard.compiling')).toBeInTheDocument()
   })
 
   it('renders compiled component on success', async () => {
@@ -514,7 +513,7 @@ describe('Tier2CardRuntime', () => {
     await act(async () => {
       render(<Tier2CardRuntime definition={definition} />)
     })
-    await waitFor(() => expect(screen.getByText(/Compilation Error/i)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('dynamicCard.compilationError')).toBeInTheDocument())
     expect(screen.getByText('Syntax error on line 3')).toBeInTheDocument()
   })
 
@@ -570,7 +569,7 @@ describe('Tier2CardRuntime', () => {
       render(<Tier2CardRuntime definition={definition} />)
     })
     await waitFor(() =>
-      expect(screen.getByText(/No component produced/i)).toBeInTheDocument()
+      expect(screen.getByText('dynamicCard.noComponent')).toBeInTheDocument()
     )
   })
 
@@ -723,7 +722,7 @@ describe('Tier2CardRuntime', () => {
         render(<Tier2CardRuntime definition={definition} />)
       })
       await waitFor(() =>
-        expect(screen.getByText(/No component produced/i)).toBeInTheDocument()
+        expect(screen.getByText('dynamicCard.noComponent')).toBeInTheDocument()
       )
     })
 
