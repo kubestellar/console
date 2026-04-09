@@ -1170,12 +1170,23 @@
 
         // Fetch NPS data (separate endpoint, independent of GA4)
         try {
-          const npsResp = await fetch('/api/nps');
+          const npsResp = await fetch('/api/nps?t=' + Date.now(), { cache: 'no-store' });
           if (npsResp.ok) {
             const npsData = await npsResp.json();
-            renderNPSSection(npsData);
+            if (npsData && npsData.totalResponses > 0) {
+              renderNPSSection(npsData);
+            }
           }
         } catch { /* NPS is optional — don't break the dashboard */ }
+
+        // Fetch ACCM metrics (GitHub API — independent of GA4)
+        try {
+          const accmResp = await fetch('/api/analytics-accm?t=' + Date.now(), { cache: 'no-store' });
+          if (accmResp.ok) {
+            const accmData = await accmResp.json();
+            renderACCMSection(accmData);
+          }
+        } catch { /* ACCM is optional */ }
 
         const cached = data.fromCache ? 'Cached' : 'Fresh';
         const time = new Date(data.cachedAt).toLocaleTimeString();
@@ -1285,6 +1296,148 @@
                 y1: { position: 'right', min: 0, grid: { display: false }, ticks: { color: '#06b6d4' }, title: { display: true, text: 'Responses', color: '#06b6d4' } },
               },
               plugins: { legend: { labels: { color: '#e4e4e7' } } },
+            },
+          });
+        }
+      }
+    }
+
+    // ── ACCM Metrics Section ─────────────────────────────────────────
+    function renderACCMSection(accm) {
+      const content = document.getElementById('content');
+      if (!content) return;
+
+      let html = '<div class="section-title">ACCM Metrics — AI Codebase Maturity Model</div>';
+
+      // ── 2a. Weekly Activity (Level 2-3: Instructed → Measured) ──
+      if (accm.weeklyActivity && accm.weeklyActivity.length > 0) {
+        html += '<div class="chart-card"><h3>Weekly PR &amp; Issue Activity</h3><div class="chart-wrapper"><canvas id="accmActivityChart"></canvas></div></div>';
+      }
+
+      // ── 2b. AI vs Human Contributions (Level 5: Self-Sustaining) ──
+      if (accm.weeklyActivity && accm.weeklyActivity.length > 0) {
+        const totalAi = accm.weeklyActivity.reduce((s, w) => s + (w.aiPrs || 0) + (w.aiIssues || 0), 0);
+        const totalHuman = accm.weeklyActivity.reduce((s, w) => s + (w.humanPrs || 0) + (w.humanIssues || 0), 0);
+        const total = totalAi + totalHuman;
+        const aiPct = total > 0 ? Math.round((totalAi / total) * 100) : 0;
+
+        html += '<div class="kpi-grid">';
+        html += `<div class="kpi-card"><div class="kpi-label">AI Contributions</div><div class="kpi-value" style="color:var(--purple)">${aiPct}%</div><div class="kpi-change flat">${totalAi} of ${total} total</div></div>`;
+        html += `<div class="kpi-card"><div class="kpi-label">Human Contributions</div><div class="kpi-value" style="color:var(--cyan)">${100 - aiPct}%</div><div class="kpi-change flat">${totalHuman} of ${total} total</div></div>`;
+
+        if (accm.contributorGrowth) {
+          html += `<div class="kpi-card"><div class="kpi-label">Total Contributors</div><div class="kpi-value">${accm.contributorGrowth.total}</div></div>`;
+        }
+        html += '</div>';
+
+        html += '<div class="chart-card"><h3>AI vs Human Contributions</h3><div class="chart-wrapper"><canvas id="accmAiChart"></canvas></div></div>';
+      }
+
+      // ── 2c. CI Pass Rates (Level 4: Adaptive) ──
+      if (accm.ciPassRates && accm.ciPassRates.length > 0) {
+        html += '<div class="chart-card"><h3>CI Workflow Pass Rates</h3><div class="chart-wrapper"><canvas id="accmCIChart"></canvas></div></div>';
+      }
+
+      // ── 2d. Contributor Growth (Level 2-3) ──
+      if (accm.contributorGrowth && accm.contributorGrowth.weekly && accm.contributorGrowth.weekly.length > 0) {
+        html += '<div class="chart-card"><h3>Contributor Growth</h3><div class="chart-wrapper"><canvas id="accmContribChart"></canvas></div></div>';
+      }
+
+      html += '<div style="margin-top:8px;font-size:11px;color:var(--text-muted);text-align:center">ACCM data sourced from GitHub API. Supports the <a href="https://kubestellar.io/blog/accm" style="color:var(--accent-light)">AI Codebase Maturity Model</a> paper.</div>';
+
+      content.insertAdjacentHTML('beforeend', html);
+
+      // ── Render charts ──
+      const chartOpts = {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { labels: { color: '#e4e4e7', usePointStyle: true, pointStyle: 'circle' } } },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af', maxRotation: 45 } },
+          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af' } },
+        },
+      };
+
+      // Activity chart — stacked bar
+      if (accm.weeklyActivity && accm.weeklyActivity.length > 0) {
+        const ctx = document.getElementById('accmActivityChart');
+        if (ctx) {
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: accm.weeklyActivity.map(w => w.week),
+              datasets: [
+                { label: 'PRs Merged', data: accm.weeklyActivity.map(w => w.prsMerged || 0), backgroundColor: '#22c55e', stack: 'prs' },
+                { label: 'PRs Opened', data: accm.weeklyActivity.map(w => (w.prsOpened || 0) - (w.prsMerged || 0)), backgroundColor: '#3b82f6', stack: 'prs' },
+                { label: 'Issues Closed', data: accm.weeklyActivity.map(w => w.issuesClosed || 0), backgroundColor: '#a855f7', stack: 'issues' },
+                { label: 'Issues Opened', data: accm.weeklyActivity.map(w => (w.issuesOpened || 0) - (w.issuesClosed || 0)), backgroundColor: '#f97316', stack: 'issues' },
+              ],
+            },
+            options: { ...chartOpts, scales: { ...chartOpts.scales, x: { ...chartOpts.scales.x, stacked: true }, y: { ...chartOpts.scales.y, stacked: true, title: { display: true, text: 'Count', color: '#9ca3af' } } } },
+          });
+        }
+      }
+
+      // AI vs Human — stacked area
+      if (accm.weeklyActivity && accm.weeklyActivity.length > 0) {
+        const ctx = document.getElementById('accmAiChart');
+        if (ctx) {
+          new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: accm.weeklyActivity.map(w => w.week),
+              datasets: [
+                { label: 'AI (PRs + Issues)', data: accm.weeklyActivity.map(w => (w.aiPrs || 0) + (w.aiIssues || 0)), borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.2)', fill: true, tension: 0.3 },
+                { label: 'Human (PRs + Issues)', data: accm.weeklyActivity.map(w => (w.humanPrs || 0) + (w.humanIssues || 0)), borderColor: '#06b6d4', backgroundColor: 'rgba(6, 182, 212, 0.2)', fill: true, tension: 0.3 },
+              ],
+            },
+            options: { ...chartOpts, scales: { ...chartOpts.scales, y: { ...chartOpts.scales.y, stacked: true, title: { display: true, text: 'Contributions', color: '#9ca3af' } } } },
+          });
+        }
+      }
+
+      // CI Pass Rates — line
+      if (accm.ciPassRates && accm.ciPassRates.length > 0) {
+        const ctx = document.getElementById('accmCIChart');
+        if (ctx) {
+          const datasets = [];
+          if (accm.ciPassRates.some(w => w.coverage && w.coverage.total > 0)) {
+            datasets.push({ label: 'Coverage Suite', data: accm.ciPassRates.map(w => w.coverage?.rate ?? null), borderColor: '#22c55e', tension: 0.3, pointRadius: 4, spanGaps: true });
+          }
+          if (accm.ciPassRates.some(w => w.nightly && w.nightly.total > 0)) {
+            datasets.push({ label: 'Nightly Compliance', data: accm.ciPassRates.map(w => w.nightly?.rate ?? null), borderColor: '#f97316', tension: 0.3, pointRadius: 4, spanGaps: true });
+          }
+          if (datasets.length > 0) {
+            new Chart(ctx, {
+              type: 'line',
+              data: { labels: accm.ciPassRates.map(w => w.week), datasets },
+              options: { ...chartOpts, scales: { ...chartOpts.scales, y: { ...chartOpts.scales.y, min: 0, max: 100, title: { display: true, text: 'Pass Rate %', color: '#9ca3af' } } } },
+            });
+          }
+        }
+      }
+
+      // Contributor Growth — line + bar combo
+      if (accm.contributorGrowth && accm.contributorGrowth.weekly && accm.contributorGrowth.weekly.length > 0) {
+        const ctx = document.getElementById('accmContribChart');
+        if (ctx) {
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: accm.contributorGrowth.weekly.map(w => w.week),
+              datasets: [
+                { label: 'New Contributors', data: accm.contributorGrowth.weekly.map(w => w.newContributors), backgroundColor: '#a855f7', type: 'bar', yAxisID: 'y' },
+                { label: 'Total Contributors', data: accm.contributorGrowth.weekly.map(w => w.totalToDate), borderColor: '#06b6d4', type: 'line', tension: 0.3, pointRadius: 3, yAxisID: 'y1', fill: false },
+              ],
+            },
+            options: {
+              ...chartOpts,
+              scales: {
+                x: chartOpts.scales.x,
+                y: { ...chartOpts.scales.y, position: 'left', title: { display: true, text: 'New/Week', color: '#9ca3af' } },
+                y1: { position: 'right', grid: { display: false }, ticks: { color: '#06b6d4' }, title: { display: true, text: 'Cumulative', color: '#06b6d4' } },
+              },
             },
           });
         }
