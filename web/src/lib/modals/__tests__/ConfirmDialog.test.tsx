@@ -17,10 +17,11 @@ vi.mock('../BaseModal', () => ({
   },
 }))
 
-// Mock Button component
+// Mock Button component — must handle `loading` prop to render spinner (#5757)
 vi.mock('../../../components/ui/Button', () => ({
-  Button: ({ children, onClick, disabled, ...props }: Record<string, unknown>) => (
+  Button: ({ children, onClick, disabled, loading, ...props }: Record<string, unknown>) => (
     <button onClick={onClick as () => void} disabled={disabled as boolean} {...props}>
+      {loading ? <span className="animate-spin" data-testid="loading-spinner" /> : null}
       {children as React.ReactNode}
     </button>
   ),
