@@ -398,17 +398,18 @@ export function useSidebarConfig() {
     setConfig((prev) => ({ ...prev, collapsed }))
   }
 
-  const openMobileSidebar = () => {
-    setConfig((prev) => ({ ...prev, isMobileOpen: true }))
-  }
+  const openMobileSidebar = useCallback(() => {
+    updateSharedConfig({ ...(sharedConfig || DEFAULT_CONFIG), isMobileOpen: true })
+  }, [])
 
-  const closeMobileSidebar = () => {
-    setConfig((prev) => ({ ...prev, isMobileOpen: false }))
-  }
+  const closeMobileSidebar = useCallback(() => {
+    updateSharedConfig({ ...(sharedConfig || DEFAULT_CONFIG), isMobileOpen: false })
+  }, [])
 
-  const toggleMobileSidebar = () => {
-    setConfig((prev) => ({ ...prev, isMobileOpen: !prev.isMobileOpen }))
-  }
+  const toggleMobileSidebar = useCallback(() => {
+    const prev = sharedConfig || DEFAULT_CONFIG
+    updateSharedConfig({ ...prev, isMobileOpen: !prev.isMobileOpen })
+  }, [])
 
   // Add a discoverable dashboard to the sidebar with its original ID (not a generated custom ID)
   const restoreDashboard = (dashboard: SidebarItem) => {

@@ -69,16 +69,12 @@ export function Sidebar() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Close mobile sidebar on route change.
-  // closeMobileSidebar is excluded from deps because it's a new reference
-  // each render (not wrapped in useCallback), which would cause an infinite
-  // re-render loop on mobile — the effect fires, calls closeMobileSidebar,
-  // which triggers notifyListeners → re-render → new function ref → effect fires again.
+  // Close mobile sidebar on route change
   useEffect(() => {
     if (isMobile) {
       closeMobileSidebar()
     }
-  }, [location.pathname, isMobile]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [location.pathname, isMobile, closeMobileSidebar])
 
   // Auto-hide: collapse sidebar when mouse leaves, expand on hover
   const SIDEBAR_AUTO_HIDE_MS = 2000
