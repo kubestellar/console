@@ -20,7 +20,7 @@ const (
 	playlistID = "PL1ALKGr_qZKc-xehA_8iUCdiKsCo6p6nD"
 
 	// playlistCacheTTL controls how long playlist results are cached.
-	playlistCacheTTL = 1 * time.Hour
+	playlistCacheTTL = 5 * time.Minute
 
 	// playlistFetchTimeout is the HTTP timeout for fetching the RSS feed.
 	playlistFetchTimeout = 10 * time.Second

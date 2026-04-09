@@ -14,7 +14,7 @@ interface PlaylistResponse {
 }
 
 const CACHE_KEY = 'ks-playlist-cache'
-const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
+const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
 /** Fetch timeout for playlist API call (10 seconds) */
 const PLAYLIST_FETCH_TIMEOUT_MS = 10_000
 
