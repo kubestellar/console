@@ -91,7 +91,7 @@ export function NetworkUtils() {
   })
   const [hostInput, setHostInput] = useState('')
   const [portInput, setPortInput] = useState('443')
-  const [networkInfo, setNetworkInfo] = useState<NetworkInfo>({ online: navigator.onLine })
+  const [networkInfo, setNetworkInfo] = useState<NetworkInfo>({ online: typeof navigator !== 'undefined' ? navigator.onLine : true })
 
   const pingIntervalRef = useRef<number | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -611,11 +611,11 @@ export function NetworkUtils() {
                   <span className="text-muted-foreground">{t('networkUtils.userAgent')}</span>
                 </div>
                 <p className="text-xs text-muted-foreground break-all">
-                  {navigator.userAgent}
+                  {typeof navigator !== 'undefined' ? navigator.userAgent : ''}
                 </p>
                 <div className="flex justify-between mt-2">
                   <span className="text-muted-foreground">{t('networkUtils.language')}</span>
-                  <span>{navigator.language}</span>
+                  <span>{typeof navigator !== 'undefined' ? navigator.language : ''}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t('networkUtils.platform')}</span>
