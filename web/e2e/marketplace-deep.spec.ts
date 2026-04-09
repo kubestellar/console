@@ -173,7 +173,7 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
       const banner = page.locator('text=CNCF Project Coverage').first()
       if (await banner.isVisible().catch(() => false)) {
         // Look for percentage text (e.g. "42%")
-        const pctText = page.locator('text=/%$/').first()
+        const pctText = page.getByText(/\d+%/).first()
         const isVisible = await pctText.isVisible().catch(() => false)
         // Percentage is shown near the banner header
         if (isVisible) {
@@ -214,8 +214,8 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
       // Look for any card with a name (h3 inside card)
       const cards = page.locator('.bg-card').filter({ has: page.locator('h3') })
       const count = await cards.count()
-      // Demo mode should have some marketplace items
-      expect(count).toBeGreaterThanOrEqual(0)
+      // Demo mode should have at least one marketplace item
+      expect(count).toBeGreaterThanOrEqual(1)
     })
 
     test('items show name and type badge', async ({ page }) => {

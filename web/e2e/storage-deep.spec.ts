@@ -66,9 +66,8 @@ test.describe('Storage Deep Tests (/storage)', () => {
 
       // Stats sublabels like "persistent volume claims", "PVCs bound", etc.
       const pvcLabel = page.getByText('persistent volume claims')
-      const isVisible = await pvcLabel.first().isVisible().catch(() => false)
-      // Stats section should be present; check for any sublabel existence
-      expect(typeof isVisible).toBe('boolean')
+      // Stats section should be present with sublabels visible
+      await expect(pvcLabel.first()).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     })
   })
 

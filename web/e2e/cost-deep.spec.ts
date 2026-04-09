@@ -123,8 +123,8 @@ test.describe('Cost Deep Tests (/cost)', () => {
       // Look for multiple dollar-prefixed values on the page
       const dollarValues = page.locator('text=/^\\$\\d/')
       const count = await dollarValues.count()
-      // In demo mode with clusters, there should be at least a few cost values
-      expect(count).toBeGreaterThanOrEqual(0)
+      // In demo mode with clusters, there should be at least one cost value
+      expect(count).toBeGreaterThanOrEqual(1)
     })
   })
 

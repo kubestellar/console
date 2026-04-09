@@ -65,9 +65,8 @@ test.describe('Compute Deep Tests (/compute)', () => {
 
       // Stats overview renders sublabels like "total nodes", "cores allocatable", etc.
       const nodesLabel = page.getByText('total nodes')
-      const isVisible = await nodesLabel.first().isVisible().catch(() => false)
-      // In demo mode stats should be visible; if no data, sublabels may still render
-      expect(typeof isVisible).toBe('boolean')
+      // In demo mode stats should be visible
+      await expect(nodesLabel.first()).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     })
   })
 

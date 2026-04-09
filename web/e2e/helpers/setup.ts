@@ -89,7 +89,7 @@ export async function setupDemoMode(page: Page) {
 export async function setupDemoAndNavigate(page: Page, path: string) {
   await setupDemoMode(page)
   await page.goto(path)
-  await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS })
+  await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
 }
 
 // ---------------------------------------------------------------------------

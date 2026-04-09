@@ -38,7 +38,7 @@ test.describe('Hourglass Visibility', () => {
   for (const pg of PAGES) {
     test(`${pg.name} has refresh button and clicking it does not crash`, async ({ page }) => {
       await page.goto(pg.route)
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('networkidle').catch(() => {})
 
       // Verify we're NOT on login page
       const url = page.url()

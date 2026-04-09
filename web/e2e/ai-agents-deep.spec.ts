@@ -175,8 +175,8 @@ test.describe('AI Agents Deep Tests (/ai-agents)', () => {
       // An empty state message may be displayed instead of a grid
       const emptyState = page.getByText(/no cards|empty|get started|add card/i)
       const hasEmpty = await emptyState.first().isVisible().catch(() => false)
-      // Page rendered without crashing, which is acceptable
-      expect(true).toBe(true)
+      // An empty state message should be displayed when no grid is found
+      expect(hasEmpty).toBe(true)
     }
   })
 

@@ -104,9 +104,9 @@ export const MOCK_DATA: Record<string, Record<string, unknown[]>> = {
   },
   'prow-jobs': {
     jobs: [
-      { id: '1', job: 'e2e-test', state: 'success', type: 'periodic', cluster: MOCK_CLUSTER, started: new Date().toISOString(), duration: 1800 },
-      { id: '2', job: 'lint', state: 'running', type: 'presubmit', cluster: MOCK_CLUSTER, started: new Date().toISOString(), duration: 0 },
-      { id: '3', job: 'build', state: 'failure', type: 'postsubmit', cluster: MOCK_CLUSTER, started: new Date().toISOString(), duration: 900 },
+      { id: '1', job: 'e2e-test', state: 'success', type: 'periodic', cluster: MOCK_CLUSTER, started: '2026-01-15T10:00:00Z', duration: 1800 },
+      { id: '2', job: 'lint', state: 'running', type: 'presubmit', cluster: MOCK_CLUSTER, started: '2026-01-15T10:00:00Z', duration: 0 },
+      { id: '3', job: 'build', state: 'failure', type: 'postsubmit', cluster: MOCK_CLUSTER, started: '2026-01-15T10:00:00Z', duration: 900 },
     ],
   },
 }
@@ -271,7 +271,7 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
   // 2. Specific MCP REST endpoints with richer data
   const specificMCPEndpoints = [
     { pattern: '**/api/mcp/gpu-nodes**', data: { nodes: [{ name: 'gpu-node-1', cluster: MOCK_CLUSTER, gpus: [{ model: 'A100', memory: '80Gi', index: 0 }], labels: {}, allocatable: {}, capacity: {} }] } },
-    { pattern: '**/api/mcp/helm-releases**', data: { releases: [{ name: 'ingress-nginx', namespace: 'default', cluster: MOCK_CLUSTER, chart: 'nginx-1.0.0', status: 'deployed', revision: 1, updated: new Date().toISOString() }] } },
+    { pattern: '**/api/mcp/helm-releases**', data: { releases: [{ name: 'ingress-nginx', namespace: 'default', cluster: MOCK_CLUSTER, chart: 'nginx-1.0.0', status: 'deployed', revision: 1, updated: '2026-01-15T10:00:00Z' }] } },
     { pattern: '**/api/mcp/operators**', data: { operators: [{ name: 'test-operator', namespace: 'openshift-operators', cluster: MOCK_CLUSTER, status: 'Succeeded', version: '1.0.0' }] } },
     { pattern: '**/api/mcp/operator-subscriptions**', data: { subscriptions: [{ name: 'test-sub', namespace: 'openshift-operators', cluster: MOCK_CLUSTER, package: 'test-operator', channel: 'stable', currentCSV: 'test-operator.v1.0.0', installedCSV: 'test-operator.v1.0.0' }] } },
     { pattern: '**/api/mcp/resource-quotas**', data: { quotas: [{ name: 'default-quota', namespace: 'default', cluster: MOCK_CLUSTER, hard: { cpu: '4', memory: '8Gi' }, used: { cpu: '1', memory: '2Gi' } }] } },
@@ -402,7 +402,7 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
           feature_issues: 0,
           other_issues: 0,
         },
-        cached_at: new Date().toISOString(),
+        cached_at: '2026-01-15T10:00:00Z',
         from_cache: false,
       }),
     })
@@ -437,9 +437,9 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
       body: JSON.stringify({
         status: 'ok',
         items: [
-          { title: 'Kubernetes 1.32 Released', link: 'https://example.com/1', description: 'Major release with new features', pubDate: new Date().toISOString(), author: 'CNCF' },
-          { title: 'Cloud Native Best Practices', link: 'https://example.com/2', description: 'Guide to cloud native development', pubDate: new Date().toISOString(), author: 'Tech Blog' },
-          { title: 'Container Security in 2026', link: 'https://example.com/3', description: 'Latest security trends', pubDate: new Date().toISOString(), author: 'Security Weekly' },
+          { title: 'Kubernetes 1.32 Released', link: 'https://example.com/1', description: 'Major release with new features', pubDate: '2026-01-15T10:00:00Z', author: 'CNCF' },
+          { title: 'Cloud Native Best Practices', link: 'https://example.com/2', description: 'Guide to cloud native development', pubDate: '2026-01-15T10:00:00Z', author: 'Tech Blog' },
+          { title: 'Container Security in 2026', link: 'https://example.com/3', description: 'Latest security trends', pubDate: '2026-01-15T10:00:00Z', author: 'Security Weekly' },
         ],
       }),
     })

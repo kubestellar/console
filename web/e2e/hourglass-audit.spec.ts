@@ -66,7 +66,7 @@ test.describe('Hourglass & Refresh Controls Audit', () => {
   for (const dashboard of DASHBOARDS_WITH_REFRESH) {
     test(`${dashboard.name} (${dashboard.route}) has refresh button`, async ({ page }) => {
       await page.goto(dashboard.route)
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('networkidle').catch(() => {})
 
       // Check for refresh button — look for title="Refresh data" or title="Refresh"
       const refreshButton = page.locator('button[title="Refresh data"], button[title="Refresh"]')
@@ -75,7 +75,7 @@ test.describe('Hourglass & Refresh Controls Audit', () => {
 
     test(`${dashboard.name} (${dashboard.route}) has auto-refresh checkbox`, async ({ page }) => {
       await page.goto(dashboard.route)
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('networkidle').catch(() => {})
 
       // Check for auto-refresh checkbox
       const autoCheckbox = page.locator('label:has-text("Auto") input[type="checkbox"]')
@@ -84,7 +84,7 @@ test.describe('Hourglass & Refresh Controls Audit', () => {
 
     test(`${dashboard.name} (${dashboard.route}) refresh button is functional`, async ({ page }) => {
       await page.goto(dashboard.route)
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('networkidle').catch(() => {})
 
       // Find and click refresh button — verify it doesn't crash the page
       const refreshButton = page.locator('button[title="Refresh data"], button[title="Refresh"]')
