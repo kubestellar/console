@@ -376,12 +376,12 @@ export function useCardData<T, S extends string = string>(
   const totalPages = Math.ceil(sorted.length / effectivePerPage) || 1
   const needsPagination = itemsPerPage !== 'unlimited' && sorted.length > effectivePerPage
 
-  // Reset page when filters change (but not on sort — sorting preserves page position)
-  // Watch the filtered result reference — it changes on any filter input including
-  // global cluster/status/severity/custom text filters, not just local search.
+  // Reset page when filter inputs change (but not on data updates or sort changes).
+  // Previously included `filtered` in deps, which caused page resets on progressive
+  // data loading (e.g., per-cluster OPA checks updating statuses) (#5664).
   useEffect(() => {
     setCurrentPage(1)
-  }, [filterResult.search, filterResult.localClusterFilter, filtered])
+  }, [filterResult.search, filterResult.localClusterFilter])
 
   // Ensure current page is valid
   useEffect(() => {
