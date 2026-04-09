@@ -160,14 +160,14 @@ The following diagram shows the full system architecture including all integrati
 graph TB
     User["User"]
     GitHub["GitHub OAuth"]
-    Backend["Console Backend\n:8080"]
+    Backend["Console Backend<br/>:8080"]
     Browser["Browser"]
     MCP["MCP Bridge"]
-    K8s["Kubernetes\nClusters"]
-    Agent["kc-agent\n:8585"]
+    K8s["Kubernetes<br/>Clusters"]
+    Agent["kc-agent<br/>:8585"]
     CLI["AI Coding Agent"]
-    OpsStdio["kubestellar-ops\nMCP (stdio)"]
-    DeployStdio["kubestellar-deploy\nMCP (stdio)"]
+    OpsStdio["kubestellar-ops<br/>MCP (stdio)"]
+    DeployStdio["kubestellar-deploy<br/>MCP (stdio)"]
     AI["AI Provider API"]
 
     User -- invokes --> CLI

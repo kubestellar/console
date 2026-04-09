@@ -61,7 +61,7 @@ export default async (req: Request) => {
   const headers: Record<string, string> = {
     "Access-Control-Allow-Origin": corsOrigin(origin),
     "Content-Type": "application/json",
-    "Cache-Control": "public, max-age=3600",
+    "Cache-Control": "public, max-age=300",
   };
 
   if (req.method === "OPTIONS") {
