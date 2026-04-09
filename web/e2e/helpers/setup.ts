@@ -38,6 +38,10 @@ export const EXPECTED_ERROR_PATTERNS = [
   /127\.0\.0\.1:8585/i, // Agent connection attempts (IP form)
   /Cross-Origin Request Blocked/i, // CORS errors when backend/agent not running
   /Notification permission/i, // Firefox blocks notification requests outside user gestures
+  /ERR_CONNECTION_REFUSED/i, // Backend/agent not running in CI
+  /net::ERR_/i, // Any network-level Chrome error in demo mode
+  /502.*Bad Gateway/i, // Reverse proxy errors when backend not running
+  /Failed to load resource/i, // Generic resource load failures in demo mode
 ]
 
 function isExpectedError(message: string): boolean {

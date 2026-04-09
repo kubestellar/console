@@ -44,6 +44,10 @@ const EXPECTED_ERROR_PATTERNS = [
   /127\.0\.0\.1:8585/i,
   /Cross-Origin Request Blocked/i,
   /Notification permission/i,
+  /ERR_CONNECTION_REFUSED/i,
+  /net::ERR_/i,
+  /502.*Bad Gateway/i,
+  /Failed to load resource/i,
 ]
 
 function isExpectedError(message: string): boolean {
