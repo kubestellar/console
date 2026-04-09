@@ -915,6 +915,26 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               />
             )}
 
+            {/* Follow-up input — allow continuing the conversation after completion (#5735) */}
+            <div className="flex gap-2 min-w-0">
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => { setInput(e.target.value); setInputError(null) }}
+                onKeyDown={handleKeyDown}
+                placeholder={t('missionChat.askFollowUp', { defaultValue: 'Ask a follow-up question...' })}
+                className="flex-1 min-w-0 px-3 py-2 text-sm rounded-lg border border-border bg-secondary/50 focus:bg-secondary focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <button
+                onClick={handleSend}
+                disabled={!input.trim()}
+                className="px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 transition-colors"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+
             <button
               onClick={() => setActiveMission(null)}
               className="flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"
