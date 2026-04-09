@@ -218,7 +218,7 @@ export function ServiceStatus() {
       <div ref={containerRef} className="flex-1 space-y-1.5 overflow-y-auto" style={containerStyle}>
         {displayServices.length === 0 ? (
           <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-            {error ? 'Failed to load services' : searchQuery ? 'No matching services' : 'No services found'}
+            {error ? t('serviceStatus.loadError', 'Failed to load services') : searchQuery ? t('serviceStatus.noMatch', 'No matching services') : t('serviceStatus.noServices', 'No services found')}
           </div>
         ) : (
           displayServices.map(service => (

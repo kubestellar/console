@@ -33,7 +33,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('../../../../hooks/useMCP', () => ({
-  useKagentiBuilds: () => ({ data: [], isLoading: false, isDemoFallback: null, consecutiveFailures: [] }),
+  useKagentiBuilds: () => ({ data: [], isLoading: false, isDemoFallback: null, consecutiveFailures: 0 }),
 }))
 
 vi.mock('../../CardDataContext', () => ({

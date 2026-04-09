@@ -28,7 +28,7 @@ vi.mock('../../../../hooks/useTokenUsage', () => ({
 }))
 
 vi.mock('../../../../hooks/useGadget', () => ({
-  useCachedSecurityAudit: () => ({ data: [], isLoading: false, isRefreshing: false, isDemoData: false, isFailed: false, consecutiveFailures: [] }),
+  useCachedSecurityAudit: () => ({ data: [], isLoading: false, isRefreshing: false, isDemoData: false, isFailed: false, consecutiveFailures: 0 }),
 }))
 
 vi.mock('../../CardDataContext', () => ({

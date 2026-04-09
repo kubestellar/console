@@ -28,7 +28,7 @@ vi.mock('../../../../hooks/useTokenUsage', () => ({
 }))
 
 vi.mock('../../../../hooks/useGadget', () => ({
-  useCachedProcessTraces: () => ({ data: [], isLoading: false, isRefreshing: false, isDemoData: false, isFailed: false, consecutiveFailures: [] }),
+  useCachedProcessTraces: () => ({ data: [], isLoading: false, isRefreshing: false, isDemoData: false, isFailed: false, consecutiveFailures: 0 }),
 }))
 
 vi.mock('../../CardDataContext', () => ({

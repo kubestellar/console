@@ -37,7 +37,7 @@ vi.mock('../../../../hooks/useMCP', () => ({
 }))
 
 vi.mock('../../../../hooks/useCachedData', () => ({
-  useCachedBuildpackImages: () => ({ images: [], isLoading: false, isFailed: false, consecutiveFailures: [], error: null, isDemoFallback: null }),
+  useCachedBuildpackImages: () => ({ images: [], isLoading: false, isFailed: false, consecutiveFailures: 0, error: null, isDemoFallback: null }),
 }))
 
 vi.mock('../../../../lib/cards/cardHooks', () => ({

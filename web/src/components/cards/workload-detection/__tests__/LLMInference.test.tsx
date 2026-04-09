@@ -69,7 +69,7 @@ vi.mock('../../../../lib/cards/cardHooks', () => ({
 }))
 
 vi.mock('../../../../hooks/useCachedData', () => ({
-  useCachedLLMdServers: () => ({ servers: [], isLoading: false, isRefreshing: false, lastRefresh: Date.now(), refetch: vi.fn(), isFailed: false, consecutiveFailures: [], isDemoFallback: null, error: null }),
+  useCachedLLMdServers: () => ({ servers: [], isLoading: false, isRefreshing: false, lastRefresh: Date.now(), refetch: vi.fn(), isFailed: false, consecutiveFailures: 0, isDemoFallback: null, error: null }),
   useCachedGPUNodes: () => ({ nodes: [] }),
 }))
 

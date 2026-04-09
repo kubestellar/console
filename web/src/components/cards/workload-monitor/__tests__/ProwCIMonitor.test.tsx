@@ -69,7 +69,7 @@ vi.mock('../../../../lib/cards/cardHooks', () => ({
 }))
 
 vi.mock('../../../../hooks/useCachedData', () => ({
-  useCachedProwJobs: () => ({ jobs: [], status: '', isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: [], refetch: vi.fn(), formatTimeAgo: null }),
+  useCachedProwJobs: () => ({ jobs: [], status: '', isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, refetch: vi.fn(), formatTimeAgo: null }),
 }))
 
 vi.mock('../../../../lib/cn', () => ({

@@ -33,7 +33,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('../../../../hooks/mcp/kagent_crds', () => ({
-  useKagentCRDTools: () => ({ data: [], isLoading: false, isDemoFallback: null, consecutiveFailures: [] }),
+  useKagentCRDTools: () => ({ data: [], isLoading: false, isDemoFallback: null, consecutiveFailures: 0 }),
 }))
 
 vi.mock('../../CardDataContext', () => ({

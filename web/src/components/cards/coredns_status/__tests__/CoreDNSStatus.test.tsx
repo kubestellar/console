@@ -33,7 +33,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('../../../../hooks/useCachedData', () => ({
-  useCachedCoreDNSStatus: () => ({ clusters: [], isLoading: false, isRefreshing: false, isDemoFallback: null, isFailed: false, consecutiveFailures: [] }),
+  useCachedCoreDNSStatus: () => ({ clusters: [], isLoading: false, isRefreshing: false, isDemoFallback: null, isFailed: false, consecutiveFailures: 0 }),
 }))
 
 vi.mock('../../CardDataContext', () => ({

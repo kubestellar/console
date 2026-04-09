@@ -31,20 +31,18 @@ export function ComputeOverview() {
     clusterFilterRef } = useChartFilters({
     storageKey: 'compute-overview' })
 
-  // Filter clusters by global selection first
-  const globalFilteredClusters = (() => {
+  // Memoize filtered arrays to avoid new references on every render (#5774)
+  const globalFilteredClusters = useMemo(() => {
     if (isAllClustersSelected) return clusters
     return clusters.filter(c => selectedClusters.includes(c.name))
-  })()
+  }, [clusters, isAllClustersSelected, selectedClusters])
 
-  // Apply local cluster filter
-  const filteredClusters = (() => {
+  const filteredClusters = useMemo(() => {
     if (localClusterFilter.length === 0) return globalFilteredClusters
     return globalFilteredClusters.filter(c => localClusterFilter.includes(c.name))
-  })()
+  }, [globalFilteredClusters, localClusterFilter])
 
-  // Filter GPU nodes by selection
-  const filteredGPUNodes = (() => {
+  const filteredGPUNodes = useMemo(() => {
     let result = gpuNodes
     if (!isAllClustersSelected) {
       result = result.filter(n => selectedClusters.some(c => (n.cluster ?? '').startsWith(c)))
@@ -53,7 +51,7 @@ export function ComputeOverview() {
       result = result.filter(n => localClusterFilter.some(c => (n.cluster ?? '').startsWith(c)))
     }
     return result
-  })()
+  }, [gpuNodes, isAllClustersSelected, selectedClusters, localClusterFilter])
 
   // Calculate compute stats
   const stats = useMemo(() => {

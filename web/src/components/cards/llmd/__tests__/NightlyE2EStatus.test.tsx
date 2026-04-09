@@ -38,7 +38,7 @@ vi.mock('../../CardDataContext', () => ({
 }))
 
 vi.mock('../../../../hooks/useNightlyE2EData', () => ({
-  useNightlyE2EData: () => ({ guides: [], isDemoFallback: null, isFailed: false, consecutiveFailures: [], isLoading: false }),
+  useNightlyE2EData: () => ({ guides: [], isDemoFallback: null, isFailed: false, consecutiveFailures: 0, isLoading: false }),
 }))
 
 vi.mock('../../../../hooks/useAIMode', () => ({

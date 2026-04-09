@@ -38,7 +38,7 @@ vi.mock('../../CardDataContext', () => ({
 }))
 
 vi.mock('../../../../hooks/useBenchmarkData', () => ({
-  useCachedBenchmarkReports: () => ({ data: [], isDemoFallback: null, isFailed: false, consecutiveFailures: [], isLoading: false, isRefreshing: false, currentSince: null }),
+  useCachedBenchmarkReports: () => ({ data: [], isDemoFallback: null, isFailed: false, consecutiveFailures: 0, isLoading: false, isRefreshing: false, currentSince: null }),
   resetBenchmarkStream: vi.fn(),
 }))
 

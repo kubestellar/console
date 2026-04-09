@@ -74,7 +74,7 @@ vi.mock('../../CardDataContext', () => ({
 }))
 
 vi.mock('../../../../hooks/mcp/crossplane', () => ({
-  useCrossplaneManagedResources: () => ({ resources: [], isLoading: false, isRefreshing: false, error: null, consecutiveFailures: [], isFailed: false, isDemoData: false }),
+  useCrossplaneManagedResources: () => ({ resources: [], isLoading: false, isRefreshing: false, error: null, consecutiveFailures: 0, isFailed: false, isDemoData: false }),
 }))
 
 import { CrossplaneManagedResources } from '../CrossplaneManagedResources'

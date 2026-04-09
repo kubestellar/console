@@ -33,7 +33,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('../../../../hooks/useMCP', () => ({
-  useClusters: () => ({ deduplicatedClusters: [], isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: [] }),
+  useClusters: () => ({ deduplicatedClusters: [], isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0 }),
 }))
 
 vi.mock('../../../../hooks/useCachedData', () => ({

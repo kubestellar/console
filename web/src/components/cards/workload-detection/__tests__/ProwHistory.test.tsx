@@ -33,7 +33,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('../../../../hooks/useCachedData', () => ({
-  useCachedProwJobs: () => ({ jobs: [], isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: [], formatTimeAgo: null }),
+  useCachedProwJobs: () => ({ jobs: [], isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, formatTimeAgo: null }),
 }))
 
 vi.mock('../../../../lib/cards/cardHooks', () => ({
