@@ -288,13 +288,16 @@ async function fetchSingleCluster(cluster: string): Promise<IntotoClusterStatus>
 
         step.linksFound += 1
         const isVerified = link.status?.verified !== false
-        if (isVerified) {
-          step.status = 'verified'
-          layout.verifiedSteps += 1
-        } else {
-          step.status = 'failed'
-          layout.failedSteps += 1
-        }
+        const newStatus = isVerified ? 'verified' : 'failed'
+
+        // Undo the previous counter contribution from this step before
+        // re-evaluating — a step with multiple links must not be counted twice.
+        if (step.status === 'verified') layout.verifiedSteps -= 1
+        else if (step.status === 'failed') layout.failedSteps -= 1
+
+        step.status = newStatus
+        if (newStatus === 'verified') layout.verifiedSteps += 1
+        else layout.failedSteps += 1
       }
     }
 
@@ -353,6 +356,12 @@ export function useIntoto() {
   )
   /** Number of clusters that have completed checking (for progressive UI) */
   const [clustersChecked, setClustersChecked] = useState(0)
+  /**
+   * Number of consecutive fetch cycles where every cluster returned an error
+   * (connection failed — not merely "not installed", which is a valid state).
+   * Reset to 0 on any cycle where at least one cluster responds cleanly.
+   */
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const initialLoadDone = useRef(!!cachedSnapshot)
   /** Guard to prevent concurrent refetch calls from flooding the request queue */
   const fetchInProgress = useRef(false)
@@ -393,6 +402,15 @@ export function useIntoto() {
       })
 
       await settledWithConcurrency(tasks)
+
+      // A cycle "fails" only when every cluster returned a connection error —
+      // "not installed" is a clean result and should reset the counter.
+      const anyCleanResult = Object.values(allStatuses).some(s => !s.error)
+      if (anyCleanResult) {
+        setConsecutiveFailures(0)
+      } else {
+        setConsecutiveFailures(prev => prev + 1)
+      }
 
       // Final: save complete cache and clear refresh state
       saveToCache(allStatuses)
@@ -441,6 +459,7 @@ export function useIntoto() {
       setIsLoading(true)
       setLastRefresh(null)
       setClustersChecked(0)
+      setConsecutiveFailures(0)
       initialLoadDone.current = false
     })
 
@@ -468,6 +487,10 @@ export function useIntoto() {
   /** True when at least one cluster had a fetch error (distinct from "not installed") */
   const hasErrors = Object.values(statuses).some(s => !!s.error)
 
+  /** Three or more consecutive all-error cycles → card is in failed state */
+  const FAILURE_THRESHOLD = 3
+  const isFailed = consecutiveFailures >= FAILURE_THRESHOLD
+
   return {
     statuses,
     isLoading,
@@ -477,6 +500,10 @@ export function useIntoto() {
     /** True when at least one cluster had a fetch error */
     hasErrors,
     isDemoData,
+    /** True when 3+ consecutive fetch cycles all produced only connection errors */
+    isFailed,
+    /** Number of consecutive all-error fetch cycles */
+    consecutiveFailures,
     /** Number of clusters checked so far (for progressive UI) */
     clustersChecked,
     /** Total number of clusters being checked */

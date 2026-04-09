@@ -25,10 +25,23 @@ import { useTranslation } from 'react-i18next'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useIntoto } from '../../hooks/useIntoto'
 import { useMissions } from '../../hooks/useMissions'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { StatusBadge } from '../ui/StatusBadge'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
+import { CardControls } from '../ui/CardControls'
+import { Pagination } from '../ui/Pagination'
+import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import type { IntotoLayout, IntotoStep } from '../../hooks/useIntoto'
+
+/** Default page size for the layouts list */
+const DEFAULT_PAGE_SIZE = 5
+
+type SortField = 'name' | 'failedSteps' | 'verifiedSteps'
+
+const SORT_OPTIONS: { value: SortField; label: string }[] = [
+  { value: 'name', label: 'Name' },
+  { value: 'failedSteps', label: 'Failed' },
+  { value: 'verifiedSteps', label: 'Verified' },
+]
 
 interface IntotoSupplyChainProps {
   config?: Record<string, unknown>
@@ -55,51 +68,75 @@ function IntotoSupplyChainInternal({ config: _config }: IntotoSupplyChainProps) 
     installed,
     hasErrors,
     isDemoData,
+    isFailed,
+    consecutiveFailures,
     refetch,
     clustersChecked,
     totalClusters,
   } = useIntoto()
   const { startMission } = useMissions()
-  const { selectedClusters } = useGlobalFilters()
-  const [localSearch, setLocalSearch] = useState('')
   const [expandedLayout, setExpandedLayout] = useState<string | null>(null)
 
-  // Aggregate all layouts across clusters, filtered by global cluster filter
+  // Flat list of all layouts across all installed clusters (unfiltered — useCardData
+  // applies global + local cluster filter internally via the 'cluster' field)
   const allLayouts = useMemo<IntotoLayout[]>(() => {
     const layouts: IntotoLayout[] = []
-    for (const [clusterName, status] of Object.entries(statuses)) {
+    for (const status of Object.values(statuses)) {
       if (!status.installed) continue
-      if (selectedClusters.length > 0 && !selectedClusters.includes(clusterName)) continue
       layouts.push(...(status.layouts || []))
     }
     return layouts
-  }, [statuses, selectedClusters])
+  }, [statuses])
 
-  // Aggregate stats across filtered clusters
+  // Stats computed from all layouts (pre-filter/pre-page) so the counters reflect
+  // the full dataset — same pattern as ActiveAlerts stats row
   const stats = useMemo(() => {
     let totalLayouts = 0
     let verifiedSteps = 0
     let failedSteps = 0
-    for (const [clusterName, status] of Object.entries(statuses)) {
+    for (const status of Object.values(statuses)) {
       if (!status.installed) continue
-      if (selectedClusters.length > 0 && !selectedClusters.includes(clusterName)) continue
       totalLayouts += status.totalLayouts
       verifiedSteps += status.verifiedSteps
       failedSteps += status.failedSteps
     }
     return { totalLayouts, verifiedSteps, failedSteps }
-  }, [statuses, selectedClusters])
+  }, [statuses])
 
-  // Filter layouts by local search
-  const filteredLayouts = useMemo(() => {
-    if (!localSearch.trim()) return allLayouts
-    const query = localSearch.toLowerCase()
-    return allLayouts.filter(layout =>
-      (layout.name ?? '').toLowerCase().includes(query) ||
-      (layout.cluster ?? '').toLowerCase().includes(query) ||
-      (layout.steps || []).some(s => (s.name ?? '').toLowerCase().includes(query))
-    )
-  }, [allLayouts, localSearch])
+  // Shared card data hook: filter (global + local cluster, search), sort, paginate
+  const {
+    items: displayedLayouts,
+    totalItems,
+    currentPage,
+    totalPages,
+    itemsPerPage,
+    goToPage,
+    needsPagination,
+    setItemsPerPage,
+    filters: {
+      search: localSearch,
+      setSearch: setLocalSearch,
+    },
+    sorting: { sortBy, setSortBy },
+    containerRef,
+    containerStyle,
+  } = useCardData<IntotoLayout, SortField>(allLayouts, {
+    filter: {
+      searchFields: ['name', 'cluster'] as (keyof IntotoLayout)[],
+      clusterField: 'cluster' as keyof IntotoLayout,
+      storageKey: 'intoto-supply-chain',
+    },
+    sort: {
+      defaultField: 'name',
+      defaultDirection: 'asc',
+      comparators: {
+        name: commonComparators.string<IntotoLayout>('name'),
+        failedSteps: commonComparators.number<IntotoLayout>('failedSteps'),
+        verifiedSteps: commonComparators.number<IntotoLayout>('verifiedSteps'),
+      },
+    },
+    defaultLimit: DEFAULT_PAGE_SIZE,
+  })
 
   const hasData = installed || isDemoData
   useCardLoadingState({
@@ -107,6 +144,8 @@ function IntotoSupplyChainInternal({ config: _config }: IntotoSupplyChainProps) 
     isRefreshing,
     hasAnyData: hasData,
     isDemoData,
+    isFailed,
+    consecutiveFailures,
   })
 
   const handleInstall = () => {
@@ -172,17 +211,27 @@ Please proceed step by step.`,
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Controls */}
-      <div className="flex items-center justify-end gap-1 mb-3">
-        <RefreshIndicator isRefreshing={isRefreshing} lastUpdated={lastRefresh} size="xs" />
-        <a
-          href="https://in-toto.io/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-cyan-400"
-          title={t('cards:intotoSupplyChain.documentation')}
-        >
-          <ExternalLink className="w-4 h-4" />
-        </a>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-1">
+          <RefreshIndicator isRefreshing={isRefreshing} lastUpdated={lastRefresh} size="xs" />
+          <a
+            href="https://in-toto.io/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-cyan-400"
+            title={t('cards:intotoSupplyChain.documentation')}
+          >
+            <ExternalLink className="w-4 h-4" />
+          </a>
+        </div>
+        <CardControls
+          limit={itemsPerPage}
+          onLimitChange={setItemsPerPage}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+          sortOptions={SORT_OPTIONS}
+          showSort={allLayouts.length > 1}
+        />
       </div>
 
       {/* Inline progress ring while scanning */}
@@ -229,7 +278,7 @@ Please proceed step by step.`,
         </div>
       )}
 
-      {/* Per-cluster badges — click to expand cluster detail */}
+      {/* Per-cluster badges */}
       {installed && Object.values(statuses).some(s => s.installed) && (
         <div className="flex flex-wrap gap-1 mb-3">
           {Object.values(statuses).filter(s => s.installed).map(s => (
@@ -288,13 +337,13 @@ Please proceed step by step.`,
       />
 
       {/* Layouts list */}
-      <div className="flex-1 overflow-y-auto space-y-2">
+      <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2" style={containerStyle}>
         <p className="text-xs text-muted-foreground font-medium flex items-center gap-1 mb-2">
           <ShieldCheck className="w-3 h-3" />
-          {isDemoData ? 'Sample Layouts' : `${filteredLayouts.length} Layouts`}
+          {isDemoData ? 'Sample Layouts' : `${totalItems} Layouts`}
         </p>
 
-        {(filteredLayouts || []).map((layout, i) => {
+        {(displayedLayouts || []).map((layout, i) => {
           const isExpanded = expandedLayout === `${layout.cluster}-${layout.name}`
           const healthColor = getLayoutHealthColor(layout)
 
@@ -362,6 +411,19 @@ Please proceed step by step.`,
           )
         })}
       </div>
+
+      {/* Pagination */}
+      {needsPagination && (
+        <div className="pt-2 mt-2 border-t border-border/50">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : DEFAULT_PAGE_SIZE}
+            onPageChange={goToPage}
+          />
+        </div>
+      )}
 
       {/* Features highlight */}
       <div className="mt-3 pt-3 border-t border-border/50">
