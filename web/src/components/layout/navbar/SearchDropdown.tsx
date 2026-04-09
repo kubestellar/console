@@ -318,6 +318,10 @@ export function SearchDropdown() {
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Skip if this instance's container is not visible — prevents duplicate
+      // handlers when SearchDropdown is mounted in both desktop and mobile slots (#5711)
+      if (searchRef.current && searchRef.current.offsetParent === null) return
+
       // Open search with Cmd+K
       if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
         event.preventDefault()
