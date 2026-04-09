@@ -112,7 +112,7 @@ describe('ServiceStatus', () => {
   describe('Empty state', () => {
     it('shows no services found when empty and no error', () => {
       render(<ServiceStatus />)
-      expect(screen.getByText('No services found')).toBeTruthy()
+      expect(screen.getByText('serviceStatus.noServices')).toBeTruthy()
     })
 
     it('shows failed message on error', async () => {
@@ -127,7 +127,7 @@ describe('ServiceStatus', () => {
         error: 'network error',
       } as never)
       render(<ServiceStatus />)
-      expect(screen.getByText('Failed to load services')).toBeTruthy()
+      expect(screen.getByText('serviceStatus.loadError')).toBeTruthy()
     })
   })
 

@@ -6,6 +6,7 @@ import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { REFRESH_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, agentFetch, clusterCacheRef } from './shared'
 import { subscribePolling } from './pollingManager'
+import { settledWithConcurrency } from '../../lib/utils/concurrency'
 import { MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
 import type { PVC, PV, ResourceQuota, LimitRange, ResourceQuotaSpec } from './types'
 
@@ -152,7 +153,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
           let anySuccess = false
 
           // Fetch PVCs from each cluster (in parallel for speed)
-          const fetchPromises = clustersToFetch.map(async (c) => {
+          const fetchTasks = clustersToFetch.map((c) => async () => {
             try {
               const params = new URLSearchParams()
               params.append('cluster', c.context || c.name)
@@ -175,11 +176,11 @@ export function usePVCs(cluster?: string, namespace?: string) {
             return { success: false, pvcs: [] }
           })
 
-          const results = await Promise.all(fetchPromises)
-          for (const result of (results || [])) {
-            if (result.success) {
+          const settled = await settledWithConcurrency(fetchTasks)
+          for (const entry of (settled || [])) {
+            if (entry.status === 'fulfilled' && entry.value.success) {
               anySuccess = true
-              allPVCs.push(...result.pvcs)
+              allPVCs.push(...entry.value.pvcs)
             }
           }
 

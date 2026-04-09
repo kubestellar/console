@@ -346,6 +346,8 @@ export function useRBACFindings() {
     if (isDemoMode) {
       setFindings(DEMO_FINDINGS)
       setIsLoading(false)
+      setIsRefreshing(false)
+      setConsecutiveFailures(0)
       setError(null)
       initialLoadDone.current = true
       return
@@ -364,6 +366,8 @@ export function useRBACFindings() {
       clearCache()
       setFindings([])
       setIsLoading(true)
+      setIsRefreshing(false)
+      setConsecutiveFailures(0)
       setError(null)
       initialLoadDone.current = false
     })
