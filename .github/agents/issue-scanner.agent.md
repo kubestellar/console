@@ -92,11 +92,24 @@ Cards need **2–4 review rounds** before merge. Check:
 ## Merge Rules
 
 - All AI-generated PRs must have the `ai-generated` label
-- Always use: `unset GITHUB_TOKEN && gh pr merge <number> --admin --squash`
+- **ALWAYS wait for CI to pass before merging** — check with `unset GITHUB_TOKEN && gh pr checks <number> --repo <repo>`. Wait for build/lint/preview to pass. Ignore Playwright failures. Never merge immediately after PR creation.
+- Run `npm run build` locally as a first gate before pushing
+- Merge with: `unset GITHUB_TOKEN && gh pr merge <number> --admin --squash`
 - Always sign commits with DCO: `git commit -s`
 - Never include `Co-Authored-By` lines for Claude/Anthropic
 - Always use git worktrees — never work on main directly
 - After merge: delete worktree, delete local branch, pull main
+
+## Copilot Review Comments
+
+Each scan cycle, check for merged PRs with unaddressed Copilot review comments:
+
+```bash
+unset GITHUB_TOKEN && gh issue list --repo kubestellar/console --state open \
+  --label "kind/enhancement" --search "[Copilot Review]" --json number,title
+```
+
+These auto-generated issues flag Copilot comments on merged PRs. Fix the underlying code concern and close the issue.
 
 ## Security Screening
 
