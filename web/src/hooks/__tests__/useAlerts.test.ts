@@ -519,6 +519,8 @@ describe('useSlackWebhooks', () => {
 describe('useSlackNotification', () => {
   beforeEach(() => {
     localStorage.clear()
+    // Mock fetch for the backend notification proxy (#5725)
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{"ok":true}', { status: 200 }))
   })
 
   it('throws "Webhook not found" when webhook id does not match any saved webhook', async () => {
