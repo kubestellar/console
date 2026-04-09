@@ -737,12 +737,16 @@ async function fetchDashboardData(
   const allDates = dailyRows.map((r) => dimVal(r, 0)).sort();
   const SPARKLINE_DAYS = allDates.length;
 
-  // Build daily counts per error key (event + detail combo)
+  // Normalize empty/not-set dimension values to a single sentinel
+  const normalizeDetail = (d: string) =>
+    !d || d === "(not set)" || d === "(data deleted)" ? "—" : d;
+
+  // Build daily counts per error key (event + normalized detail)
   const errorDailyMap = new Map<string, Map<string, number>>();
   for (const row of errorDailyRows) {
     const date = dimVal(row, 0);
     const event = dimVal(row, 1).replace("ksc_", "").replace(/_/g, " ");
-    const detail = dimVal(row, 2);
+    const detail = normalizeDetail(dimVal(row, 2));
     const count = metVal(row, 0);
     const key = `${event}|||${detail}`;
     if (!errorDailyMap.has(key)) errorDailyMap.set(key, new Map());
@@ -750,15 +754,29 @@ async function fetchDashboardData(
     dayMap.set(date, (dayMap.get(date) || 0) + count);
   }
 
-  const errors = errorRows
-    .filter((r) => dimVal(r, 0) !== "(not set)")
-    .map((r) => {
-      const event = dimVal(r, 0).replace("ksc_", "").replace(/_/g, " ");
-      const detail = dimVal(r, 1);
-      const key = `${event}|||${detail}`;
+  // Deduplicate error rows: GA4 returns separate rows for "" and "(not set)"
+  // on the same event when error_category is unset. Merge them.
+  const errorMerged = new Map<string, { event: string; count: number; detail: string }>();
+  for (const r of errorRows) {
+    if (dimVal(r, 0) === "(not set)") continue;
+    const event = dimVal(r, 0).replace("ksc_", "").replace(/_/g, " ");
+    const detail = normalizeDetail(dimVal(r, 1));
+    const key = `${event}|||${detail}`;
+    const existing = errorMerged.get(key);
+    if (existing) {
+      existing.count += metVal(r, 0);
+    } else {
+      errorMerged.set(key, { event, count: metVal(r, 0), detail });
+    }
+  }
+
+  const errors = [...errorMerged.values()]
+    .sort((a, b) => b.count - a.count)
+    .map((e) => {
+      const key = `${e.event}|||${e.detail}`;
       const dayMap = errorDailyMap.get(key);
       const daily = allDates.map((d) => dayMap?.get(d) || 0);
-      return { event, count: metVal(r, 0), detail, daily };
+      return { event: e.event, count: e.count, detail: e.detail, daily };
     });
 
 
