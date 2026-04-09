@@ -261,14 +261,9 @@ export default defineConfig(({ mode }) => ({
     // CI runners (2-core, 7GB) OOM with 600+ test files at full concurrency
     maxWorkers: process.env.CI ? 2 : undefined,
     minWorkers: process.env.CI ? 1 : undefined,
-    poolOptions: {
-      forks: {
-        // Prevent "Timeout terminating forks worker" on slow CI runners
-        terminateTimeout: process.env.CI ? 60_000 : 10_000,
-        maxForks: process.env.CI ? 2 : undefined,
-        minForks: process.env.CI ? 1 : undefined,
-      },
-    },
+    // poolOptions.forks removed — deprecated in Vitest 4 (#5860).
+    // maxWorkers/minWorkers above handle fork limits; teardownTimeout
+    // above handles worker termination timeout.
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'json-summary', 'html'],
