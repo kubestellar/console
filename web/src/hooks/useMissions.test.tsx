@@ -2732,7 +2732,7 @@ describe('sendMessage connection failure path', () => {
   })
 })
 
-// ── retryPreflight unexpected throw proceeds to execute ──────────────────────
+// ── retryPreflight unexpected throw re-blocks (fail-closed) ─────────────────
 
 describe('retryPreflight unexpected failure', () => {
   it('re-blocks mission when retryPreflight throws unexpectedly (#5851)', async () => {
@@ -2762,6 +2762,8 @@ describe('retryPreflight unexpected failure', () => {
 
     // Should be re-blocked (fail-closed), not proceed to execution (#5851)
     expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('blocked')
+    // No WebSocket should have been created — execution was blocked (#5865)
+    expect(MockWebSocket.lastInstance).toBeNull()
   })
 })
 
