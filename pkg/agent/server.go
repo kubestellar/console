@@ -373,6 +373,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/kubeconfig/import", s.handleKubeconfigImportHTTP)
 	mux.HandleFunc("/kubeconfig/add", s.handleKubeconfigAddHTTP)
 	mux.HandleFunc("/kubeconfig/test", s.handleKubeconfigTestHTTP)
+	mux.HandleFunc("/kubeconfig/remove", s.handleKubeconfigRemoveHTTP)
 
 	// Settings endpoints for API key management
 	mux.HandleFunc("/settings/keys", s.handleSettingsKeys)

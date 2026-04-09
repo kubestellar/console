@@ -1536,6 +1536,48 @@ type kubeconfigAddResponse struct {
 	Error   string `json:"error,omitempty"`
 }
 
+// handleKubeconfigRemoveHTTP removes a cluster context from the kubeconfig (#5658).
+func (s *Server) handleKubeconfigRemoveHTTP(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Context string `json:"context"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Context == "" {
+		http.Error(w, "Missing 'context' field", http.StatusBadRequest)
+		return
+	}
+
+	if s.k8sClient == nil {
+		http.Error(w, "k8s client not initialized", http.StatusServiceUnavailable)
+		return
+	}
+
+	if err := s.k8sClient.RemoveContext(req.Context); err != nil {
+		slog.Error("[kubeconfig] failed to remove context", "context", req.Context, "error", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	writeJSON(w, map[string]interface{}{"ok": true, "removed": req.Context})
+}
+
 // handleKubeconfigAddHTTP adds a cluster from structured form fields
 func (s *Server) handleKubeconfigAddHTTP(w http.ResponseWriter, r *http.Request) {
 	origin := r.Header.Get("Origin")
