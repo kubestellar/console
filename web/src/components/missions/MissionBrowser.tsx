@@ -481,31 +481,36 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
       return matched / slugWordSet.size
     }
 
+    /** Minimum score to permanently consume the deep-link ref (#5654) */
+    const HIGH_CONFIDENCE_THRESHOLD = 0.9
+
     /** Find best-scoring mission at or above threshold in a list */
-    const findBest = (list: MissionExport[], isInstaller: boolean): MissionExport | undefined => {
+    const findBest = (list: MissionExport[], isInstaller: boolean): { match?: MissionExport; score: number } => {
       let best: MissionExport | undefined
       let bestScore = MIN_WORD_OVERLAP_RATIO
       for (const m of list) {
         const score = scoreMission(m, isInstaller)
         if (score >= bestScore) { best = m; bestScore = score }
       }
-      return best
+      return { match: best, score: bestScore }
     }
 
     // Search installers first, then fixers
-    const installerMatch = findBest(installerMissions, true)
-    if (installerMatch) {
+    const installer = findBest(installerMissions, true)
+    if (installer.match) {
       setActiveTab('installers')
-      selectCardMission(installerMatch)
-      deepLinkSlugRef.current = null // consumed
+      selectCardMission(installer.match)
+      // Only consume ref for high-confidence matches — low-confidence matches
+      // may be superseded when more missions finish loading (#5654)
+      if (installer.score >= HIGH_CONFIDENCE_THRESHOLD) deepLinkSlugRef.current = null
       return
     }
 
-    const fixerMatch = findBest(fixerMissions, false)
-    if (fixerMatch) {
+    const fixer = findBest(fixerMissions, false)
+    if (fixer.match) {
       setActiveTab('fixes')
-      selectCardMission(fixerMatch)
-      deepLinkSlugRef.current = null // consumed
+      selectCardMission(fixer.match)
+      if (fixer.score >= HIGH_CONFIDENCE_THRESHOLD) deepLinkSlugRef.current = null
       return
     }
 
