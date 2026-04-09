@@ -138,6 +138,18 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
     return Info
   }
 
+  /** Static Tailwind class maps — dynamic interpolation doesn't work with JIT (#5715) */
+  const EVENT_CARD_CLASSES: Record<string, string> = {
+    orange: 'bg-orange-500/10 border-orange-500/20 hover:bg-orange-500/20',
+    red: 'bg-red-500/10 border-red-500/20 hover:bg-red-500/20',
+    blue: 'bg-blue-500/10 border-blue-500/20 hover:bg-blue-500/20',
+  }
+  const EVENT_ICON_CLASSES: Record<string, string> = {
+    orange: 'text-orange-400',
+    red: 'text-red-400',
+    blue: 'text-blue-400',
+  }
+
   const getEventColor = (type: string) => {
     if (type === 'Warning') return 'orange'
     if (type === 'Error') return 'red'
@@ -269,10 +281,10 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
               <div
                 key={`${event.cluster}-${event.namespace}-${event.object}-${idx}`}
                 onClick={() => drillToEvents(event.cluster || '', event.namespace, event.object)}
-                className={`p-3 rounded-lg bg-${color}-500/10 border border-${color}-500/20 cursor-pointer hover:bg-${color}-500/20 transition-colors group overflow-hidden`}
+                className={`p-3 rounded-lg border cursor-pointer transition-colors group overflow-hidden ${EVENT_CARD_CLASSES[color]}`}
               >
                 <div className="flex items-start gap-2 min-w-0">
-                  <Icon className={`w-4 h-4 text-${color}-400 mt-0.5 flex-shrink-0`} />
+                  <Icon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${EVENT_ICON_CLASSES[color]}`} />
                   <div className="flex-1 min-w-0 overflow-hidden">
                     <div className="flex items-center gap-2 mb-1 min-w-0">
                       {event.cluster && (

@@ -150,6 +150,21 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
     }
   }
 
+  /** Static Tailwind class maps — dynamic interpolation like `text-${color}-400`
+   * doesn't work with Tailwind JIT content scanning (#5715). */
+  const STATUS_TEXT_CLASSES: Record<string, string> = {
+    green: 'text-green-400',
+    red: 'text-red-400',
+    blue: 'text-blue-400',
+    orange: 'text-orange-400',
+  }
+  const STATUS_BADGE_CLASSES: Record<string, string> = {
+    green: 'bg-green-500/20 text-green-400',
+    red: 'bg-red-500/20 text-red-400',
+    blue: 'bg-blue-500/20 text-blue-400',
+    orange: 'bg-orange-500/20 text-orange-400',
+  }
+
   const getStatusColor = (status: HelmReleaseDisplay['status']) => {
     switch (status) {
       case 'deployed': return 'green'
@@ -318,7 +333,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
                 >
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
-                      <span title={`Status: ${release.status}`}><StatusIcon className={`w-4 h-4 text-${color}-400`} /></span>
+                      <span title={`Status: ${release.status}`}><StatusIcon className={`w-4 h-4 ${STATUS_TEXT_CLASSES[color]}`} /></span>
                       <span className="text-sm text-foreground font-medium group-hover:text-purple-400" title={release.name}>{release.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -328,7 +343,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
                           issues={[{ name: `Release ${release.status}`, message: `Helm release ${release.name} (chart: ${release.chart}@${release.version}) is in ${release.status} state` }]}
                         />
                       )}
-                      <span className={`text-xs px-1.5 py-0.5 rounded bg-${color}-500/20 text-${color}-400`} title={`Release status: ${release.status}`}>
+                      <span className={`text-xs px-1.5 py-0.5 rounded ${STATUS_BADGE_CLASSES[color]}`} title={`Release status: ${release.status}`}>
                         {release.status}
                       </span>
                       <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />

@@ -528,6 +528,14 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
     { key: 'limits' as const, label: 'Limits', count: totalLimits },
   ]
 
+  /** Static Tailwind class maps — dynamic interpolation doesn't work with JIT (#5715) */
+  const USAGE_TEXT_CLASSES: Record<string, string> = {
+    red: 'text-red-400', orange: 'text-orange-400', green: 'text-green-400',
+  }
+  const USAGE_BAR_CLASSES: Record<string, string> = {
+    red: 'bg-red-500', orange: 'bg-orange-500', green: 'bg-green-500',
+  }
+
   const getColor = (percent: number) => {
     if (percent >= 90) return 'red'
     if (percent >= 70) return 'orange'
@@ -754,7 +762,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
                     )}
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <Icon className={`w-4 h-4 text-${color}-400`} />
+                        <Icon className={`w-4 h-4 ${USAGE_TEXT_CLASSES[color]}`} />
                         <span className="text-sm text-foreground">{quota.resource}</span>
                         {quota.rawResource.includes('gpu') && (
                           <Zap className="w-3 h-3 text-purple-400" />
@@ -766,12 +774,12 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
                     </div>
                     <div className="h-2 bg-secondary rounded-full overflow-hidden">
                       <div
-                        className={`h-full bg-${color}-500 rounded-full transition-all duration-300`}
+                        className={`h-full rounded-full transition-all duration-300 ${USAGE_BAR_CLASSES[color]}`}
                         style={{ width: `${Math.min(quota.percent, 100)}%` }}
                       />
                     </div>
                     <div className="flex justify-end mt-1">
-                      <span className={`text-xs text-${color}-400`}>{quota.percent.toFixed(0)}%</span>
+                      <span className={`text-xs ${USAGE_TEXT_CLASSES[color]}`}>{quota.percent.toFixed(0)}%</span>
                     </div>
                   </div>
                 )
