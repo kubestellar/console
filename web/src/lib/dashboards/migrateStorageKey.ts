@@ -34,16 +34,46 @@ export function migrateStorageKey(oldKey: string, newKey: string): void {
  *
  * Idempotent — no-op if card already exists, no saved layout, or migration
  * already ran.
+ *
+ * NOTE: Saved dashboards use the `card_type` field (snake_case) to match the
+ * `DashboardCard` interface. Callers may pass the injected card using either
+ * `card_type` or the legacy `cardType` field — both are normalized so any
+ * previously-written stale entries also get repaired on the next read. See
+ * issue #5902 where the wrong field name caused `card_type` to be undefined,
+ * crashing formatCardTitle() on /compute.
  */
+interface StoredDashboardCard {
+  id: string
+  card_type?: string
+  /** Legacy field name kept for back-compat with previously-persisted layouts. */
+  cardType?: string
+  position?: { w: number; h: number; x: number; y: number }
+}
+
 export function ensureCardInDashboard(
   storageKey: string,
   cardType: string,
-  card: { id: string; cardType: string; position: { w: number; h: number; x: number; y: number } },
+  card: {
+    id: string
+    /** Preferred field name. */
+    card_type?: string
+    /** Legacy field name — still accepted for back-compat. */
+    cardType?: string
+    position: { w: number; h: number; x: number; y: number }
+  },
 ): void {
   if (typeof window === 'undefined' || typeof localStorage === 'undefined') return
 
   const migrationFlag = `${storageKey}:migrated:${cardType}`
   if (localStorage.getItem(migrationFlag)) return
+
+  // Normalize the injected card to use `card_type` (the canonical field name).
+  const injectedCardType = card.card_type || card.cardType
+  const normalizedInjected: StoredDashboardCard = {
+    id: card.id,
+    card_type: injectedCardType,
+    position: card.position,
+  }
 
   const stored = localStorage.getItem(storageKey)
   if (!stored) {
@@ -53,11 +83,26 @@ export function ensureCardInDashboard(
   }
 
   try {
-    const cards = JSON.parse(stored) as Array<{ id: string; cardType: string; position: { w: number; h: number; x: number; y: number } }>
+    const cards = JSON.parse(stored) as StoredDashboardCard[]
     if (!Array.isArray(cards)) return
 
-    // Already has the card — nothing to do
-    if (cards.some(c => c.cardType === cardType)) {
+    // Normalize any pre-existing stale entries that used the legacy
+    // `cardType` field (or had neither field). This repairs broken layouts
+    // written before the #5902 fix without requiring users to clear storage.
+    const normalizedCards: StoredDashboardCard[] = cards.map(c => {
+      const type = c.card_type || c.cardType
+      return {
+        ...c,
+        card_type: type,
+        // Strip the legacy field to keep storage clean going forward.
+        cardType: undefined,
+      }
+    })
+
+    // Already has the card — nothing to do, but still persist any
+    // repairs we made above so stale keys don't bite us later.
+    if (normalizedCards.some(c => c.card_type === cardType)) {
+      localStorage.setItem(storageKey, JSON.stringify(normalizedCards))
       localStorage.setItem(migrationFlag, '1')
       return
     }
@@ -65,8 +110,8 @@ export function ensureCardInDashboard(
     // Shift existing cards down by the height of the new card
     const shiftY = card.position?.h || 2
     const migrated = [
-      card,
-      ...cards.map(c => ({
+      normalizedInjected,
+      ...normalizedCards.map(c => ({
         ...c,
         position: { ...(c.position || { w: 4, h: 2, x: 0, y: 0 }), y: (c.position?.y || 0) + shiftY },
       })),

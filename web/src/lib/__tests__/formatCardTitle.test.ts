@@ -36,6 +36,18 @@ describe('formatCardTitle', () => {
     expect(formatCardTitle('')).toBe('')
   })
 
+  // Regression test for issue #5902: defensive guard against undefined
+  // card_type. Stale dashboard layouts could contain entries without a
+  // card_type field, which used to crash with
+  // "can't access property 'replace', cardType is undefined".
+  it('returns a fallback title when cardType is undefined', () => {
+    expect(formatCardTitle(undefined)).toBe('Unknown Card')
+  })
+
+  it('returns a fallback title when cardType is null', () => {
+    expect(formatCardTitle(null)).toBe('Unknown Card')
+  })
+
   it('handles all-acronym type', () => {
     expect(formatCardTitle('gpu_cpu_ai')).toBe('GPU CPU AI')
   })

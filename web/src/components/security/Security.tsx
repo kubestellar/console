@@ -29,10 +29,12 @@ import { ensureCardInDashboard } from '../../lib/dashboards/migrateStorageKey'
 
 const SECURITY_CARDS_KEY = 'kubestellar-security-cards'
 
-// Ensure ISO 27001 audit card is present in existing saved layouts
+// Ensure ISO 27001 audit card is present in existing saved layouts.
+// Uses `card_type` (snake_case) to match the DashboardCard interface — see
+// issue #5902 where the legacy `cardType` field caused runtime crashes.
 ensureCardInDashboard(SECURITY_CARDS_KEY, 'iso27001_audit', {
   id: 'security-0',
-  cardType: 'iso27001_audit',
+  card_type: 'iso27001_audit',
   position: { w: 6, h: 3, x: 0, y: 0 } })
 
 // Default cards for the security dashboard

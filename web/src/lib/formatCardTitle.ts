@@ -51,12 +51,32 @@ const ACRONYMS = new Set([
   'argocd',
 ])
 
+/** Fallback title used when a card_type is missing or not a string. */
+const UNKNOWN_CARD_TITLE = 'Unknown Card'
+
 /**
  * Formats a card_type string into a proper title
  * Handles acronyms properly (e.g., "opa_policies" -> "OPA Policies")
  * Uses custom title overrides for specific card types
+ *
+ * Returns a safe fallback when `cardType` is null/undefined or not a string
+ * so callers don't crash on corrupt/legacy dashboard layouts. See issue #5902
+ * where a legacy field-name mismatch caused card.card_type to be undefined
+ * and triggered "can't access property 'replace', cardType is undefined".
  */
-export function formatCardTitle(cardType: string): string {
+export function formatCardTitle(cardType: string | null | undefined): string {
+  // Defensive guard — stale localStorage or bad API payloads can produce
+  // cards without a card_type. Never crash the whole dashboard over it.
+  if (cardType === null || cardType === undefined || typeof cardType !== 'string') {
+    return UNKNOWN_CARD_TITLE
+  }
+
+  // Preserve the historical behavior of returning an empty string for
+  // an empty input — only `null`/`undefined` fall back to "Unknown Card".
+  if (cardType === '') {
+    return ''
+  }
+
   // Check for custom title override first
   if (CUSTOM_TITLES[cardType]) {
     return CUSTOM_TITLES[cardType]

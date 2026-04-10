@@ -16,14 +16,18 @@ import { useTranslation } from 'react-i18next'
 
 const COMPUTE_CARDS_KEY = 'kubestellar-compute-cards'
 
-// Ensure new virtualization cards are present in existing saved layouts
+// Ensure new virtualization cards are present in existing saved layouts.
+// IMPORTANT: Use `card_type` (snake_case) to match the DashboardCard interface.
+// Previously this used `cardType` which caused card.card_type to be undefined,
+// crashing formatCardTitle() with "cardType is undefined" when clicking the
+// "nodes" stat block from the My Clusters dashboard (issue #5902).
 ensureCardInDashboard(COMPUTE_CARDS_KEY, 'vcluster_status', {
   id: 'compute-6',
-  cardType: 'vcluster_status',
+  card_type: 'vcluster_status',
   position: { w: 6, h: 3, x: 0, y: 6 } })
 ensureCardInDashboard(COMPUTE_CARDS_KEY, 'kubevirt_status', {
   id: 'compute-7',
-  cardType: 'kubevirt_status',
+  card_type: 'kubevirt_status',
   position: { w: 6, h: 3, x: 6, y: 6 } })
 
 // Default cards for the compute dashboard
