@@ -446,6 +446,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/auto-update/config", s.handleAutoUpdateConfig)
 	mux.HandleFunc("/auto-update/status", s.handleAutoUpdateStatus)
 	mux.HandleFunc("/auto-update/trigger", s.handleAutoUpdateTrigger)
+	mux.HandleFunc("/auto-update/cancel", s.handleAutoUpdateCancel)
 
 	// Prometheus query proxy - queries Prometheus in user clusters via K8s API server proxy
 	mux.HandleFunc("/prometheus/query", s.handlePrometheusQuery)

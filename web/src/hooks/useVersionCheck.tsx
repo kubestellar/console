@@ -31,6 +31,10 @@ const HEALTH_FETCH_TIMEOUT_MS = 3000
 const HEALTH_FETCH_MAX_RETRIES = 2
 /** Delay between /health retries (ms) — gives the backend time to finish warmup */
 const HEALTH_FETCH_RETRY_DELAY_MS = 3000
+/** Timeout for the POST /auto-update/trigger request (ms) */
+const TRIGGER_UPDATE_TIMEOUT_MS = 30_000
+/** Timeout for the POST /auto-update/cancel request (ms) — cancellation should be fast */
+const CANCEL_UPDATE_TIMEOUT_MS = 5_000
 
 /**
  * Parse a release tag to determine its type and extract date.
@@ -496,7 +500,7 @@ function useVersionCheckCore() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ channel }),
-        signal: AbortSignal.timeout(30000) })
+        signal: AbortSignal.timeout(TRIGGER_UPDATE_TIMEOUT_MS) })
       if (resp.ok) {
         console.debug('[version-check] Update triggered successfully')
         return { success: true }
@@ -509,6 +513,36 @@ function useVersionCheckCore() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'kc-agent not reachable'
       console.debug('[version-check] Update trigger error:', msg)
+      return { success: false, error: msg }
+    }
+  }
+
+  /**
+   * Cancel an in-progress update via kc-agent. Cancellation is best-effort —
+   * the current step may finish before the abort is honored, and the restart
+   * step cannot be cancelled once startup-oauth.sh has been spawned.
+   * Returns { success, error } so the UI can show feedback.
+   */
+  const cancelUpdate = async (): Promise<{ success: boolean; error?: string }> => {
+    console.debug('[version-check] Cancelling in-progress update via kc-agent')
+    try {
+      const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(CANCEL_UPDATE_TIMEOUT_MS) })
+      if (resp.ok) {
+        console.debug('[version-check] Cancel request accepted')
+        return { success: true }
+      }
+      if (resp.status === 409) {
+        return { success: false, error: 'No update in progress' }
+      }
+      const errText = resp.status === 404
+        ? 'kc-agent does not support cancel yet — restart with latest code'
+        : `kc-agent returned ${resp.status}`
+      return { success: false, error: errText }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'kc-agent not reachable'
       return { success: false, error: msg }
     }
   }
@@ -828,6 +862,7 @@ function useVersionCheckCore() {
     clearSkippedVersions,
     setAutoUpdateEnabled,
     triggerUpdate,
+    cancelUpdate,
     setUpdateProgress }
 }
 

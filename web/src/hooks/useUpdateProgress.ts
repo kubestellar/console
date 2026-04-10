@@ -218,8 +218,8 @@ export function useUpdateProgress() {
               setProgress(p)
               updateStepHistory(p)
 
-              // Stop stale detection when update is done or failed
-              if (p.status === 'done' || p.status === 'failed') {
+              // Stop stale detection when update is done, failed, or cancelled
+              if (p.status === 'done' || p.status === 'failed' || p.status === 'cancelled') {
                 if (staleTimerRef.current) {
                   clearInterval(staleTimerRef.current)
                   staleTimerRef.current = null

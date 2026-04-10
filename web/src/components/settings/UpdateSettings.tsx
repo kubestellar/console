@@ -90,6 +90,7 @@ export function UpdateSettings() {
     recentCommits,
     setAutoUpdateEnabled,
     triggerUpdate,
+    cancelUpdate,
   } = useVersionCheck()
 
   // WebSocket-driven update progress from kc-agent
@@ -142,6 +143,11 @@ export function UpdateSettings() {
   const [channelDropdownOpen, setChannelDropdownOpen] = useState(false)
   const [triggerState, setTriggerState] = useState<'idle' | 'triggered' | 'error'>('idle')
   const [triggerError, setTriggerError] = useState<string | null>(null)
+  // Tracks a user-requested cancellation so we can show a pending state on the
+  // Cancel button while kc-agent finishes the in-flight step. Cleared when
+  // updateProgress transitions to "cancelled", "done", or "failed".
+  const [cancelState, setCancelState] = useState<'idle' | 'pending' | 'error'>('idle')
+  const [cancelError, setCancelError] = useState<string | null>(null)
   const [countdown, setCountdown] = useState(ESTIMATED_UPDATE_SECS)
   const triggerGuardRef = useRef(false) // prevents rapid double-clicks from firing multiple triggers
   const triggerTimestampRef = useRef(0) // when "Update Now" was clicked (for duration tracking)
@@ -186,13 +192,23 @@ export function UpdateSettings() {
     // so the user can retry without refreshing
     if (updateProgress && updateProgress.status === 'done') {
       triggerGuardRef.current = false
+      setCancelState('idle')
+      setCancelError(null)
       const durationMs = triggerTimestampRef.current
         ? Date.now() - triggerTimestampRef.current
         : 0
       emitUpdateCompleted(durationMs)
     } else if (updateProgress && updateProgress.status === 'failed') {
       triggerGuardRef.current = false
+      setCancelState('idle')
+      setCancelError(null)
       emitUpdateFailed(updateProgress.error ?? updateProgress.message ?? 'unknown')
+    } else if (updateProgress && updateProgress.status === 'cancelled') {
+      // User-initiated cancel completed — reset all trigger state so the
+      // "Update Now" button reappears and the user can retry if they want.
+      triggerGuardRef.current = false
+      setCancelState('idle')
+      setCancelError(null)
     }
   }, [updateProgress, triggerState])
 
@@ -244,8 +260,17 @@ export function UpdateSettings() {
 
   const isDeveloperChannel = channel === 'developer'
   const isHelmInstall = installMethod === 'helm'
-  const isWsUpdating = updateProgress && !['idle', 'done', 'failed'].includes(updateProgress.status)
+  const isWsUpdating = updateProgress && !['idle', 'done', 'failed', 'cancelled'].includes(updateProgress.status)
   const isUpdating = isWsUpdating || triggerState === 'triggered'
+
+  // Cancellation is only allowed for steps that run before the restart step.
+  // Once kc-agent has reached "restarting", startup-oauth.sh is already spawned
+  // and cannot be cancelled. Disable the Cancel button in that case.
+  const RESTART_STEP_NUMBER = 6
+  const canCancel = isUpdating
+    && updateProgress
+    && updateProgress.status !== 'restarting'
+    && (updateProgress.step === undefined || updateProgress.step < RESTART_STEP_NUMBER)
 
   // Countdown timer during updates — reset on start, tick every second
   useEffect(() => {
@@ -579,6 +604,74 @@ export function UpdateSettings() {
                 ? t('settings.updates.estimatedRemaining', { seconds: countdown })
                 : t('settings.updates.almostDone')}
             </p>
+          </div>
+
+          {/* Cancel button — aborts the in-flight update at the next step boundary.
+              Disabled once the restart step has begun because startup-oauth.sh
+              is already detached and cannot be stopped. */}
+          <div className="mt-3 pt-3 border-t border-blue-500/20 flex items-center justify-between gap-3">
+            <p className="text-xs text-blue-400/60 flex-1 min-w-0">
+              {canCancel
+                ? t('settings.updates.cancelHint')
+                : t('settings.updates.cancelUnavailable')}
+            </p>
+            <button
+              data-testid="update-cancel-button"
+              type="button"
+              onClick={async () => {
+                if (cancelState === 'pending') return
+                setCancelState('pending')
+                setCancelError(null)
+                const result = await cancelUpdate()
+                if (!result.success) {
+                  setCancelState('error')
+                  setCancelError(result.error ?? t('settings.updates.cancelFailed'))
+                }
+              }}
+              disabled={!canCancel || cancelState === 'pending'}
+              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 border border-red-500/40 text-xs font-medium hover:bg-red-500/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {cancelState === 'pending' ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  {t('settings.updates.cancelling')}
+                </>
+              ) : (
+                <>
+                  <X className="w-3.5 h-3.5" />
+                  {t('settings.updates.cancelUpdate')}
+                </>
+              )}
+            </button>
+          </div>
+          {cancelState === 'error' && cancelError && (
+            <div className="mt-2 p-2 rounded-md bg-red-500/10 border border-red-500/20">
+              <p className="text-xs text-red-400">{cancelError}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Update Cancelled banner — shown after the user cancels an in-progress update */}
+      {updateProgress?.status === 'cancelled' && (
+        <div data-testid="update-cancelled-banner" className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0" />
+              <div>
+                <p className="text-sm text-yellow-400">{updateProgress.message}</p>
+                <p className="text-xs text-yellow-400/70 mt-1">
+                  {t('settings.updates.cancelledHint')}
+                </p>
+              </div>
+            </div>
+            <button
+              data-testid="update-cancelled-dismiss"
+              onClick={dismissProgress}
+              className="text-yellow-400/60 hover:text-yellow-400 shrink-0 ml-2"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}

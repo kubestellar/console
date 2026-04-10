@@ -70,9 +70,14 @@ export interface AutoUpdateConfig {
 
 /**
  * Progress of an in-flight auto-update, broadcast via WebSocket.
+ *
+ * Status transitions:
+ *   idle -> checking -> pulling -> building -> restarting -> done
+ *   any -> failed (on error)
+ *   any (before restarting) -> cancelled (on user-requested cancel)
  */
 export interface UpdateProgress {
-  status: 'idle' | 'checking' | 'pulling' | 'building' | 'restarting' | 'done' | 'failed'
+  status: 'idle' | 'checking' | 'pulling' | 'building' | 'restarting' | 'done' | 'failed' | 'cancelled'
   message: string
   progress: number // 0-100
   error?: string

@@ -77,6 +77,19 @@ type UpdateChecker struct {
 	cancel          context.CancelFunc
 	updating        int32 // atomic: 1 = update in progress, 0 = idle
 
+	// updateCtx/updateCancel allow the currently-running update goroutine
+	// to be cancelled by the user via the /auto-update/cancel endpoint.
+	// Cancellation is honored at step boundaries and by exec.CommandContext
+	// calls that use updateCtx — partial commands may still complete but the
+	// update will abort before the next step runs. If the update has already
+	// passed the restart step, cancellation has no effect (the restart script
+	// is already detached).
+	updateCtx    context.Context
+	updateCancel context.CancelFunc
+	// updateCancelled is set to 1 (atomic) when the user requests cancellation.
+	// Step boundaries check this to exit early with a "cancelled" status.
+	updateCancelled int32
+
 	// exitFunc terminates the process after spawning the restart script.
 	// Defaults to os.Exit. Overridden in tests to prevent the test runner from exiting.
 	exitFunc func(code int)
@@ -232,9 +245,29 @@ func (uc *UpdateChecker) TriggerNow(channelOverride string) bool {
 		return false
 	}
 
+	// Create a fresh cancellation context for this update run. The cancel
+	// function is stored on the struct so CancelUpdate() can call it.
+	uc.mu.Lock()
+	ctx, cancel := context.WithCancel(context.Background())
+	uc.updateCtx = ctx
+	uc.updateCancel = cancel
+	uc.mu.Unlock()
+	atomic.StoreInt32(&uc.updateCancelled, 0)
+
+	cleanup := func() {
+		atomic.StoreInt32(&uc.updating, 0)
+		uc.mu.Lock()
+		if uc.updateCancel != nil {
+			uc.updateCancel()
+		}
+		uc.updateCtx = nil
+		uc.updateCancel = nil
+		uc.mu.Unlock()
+	}
+
 	if channelOverride != "" {
 		go func() {
-			defer atomic.StoreInt32(&uc.updating, 0)
+			defer cleanup()
 			defer func() {
 				if r := recover(); r != nil {
 					slog.Error("[AutoUpdate] PANIC recovered in update goroutine", "panic", r)
@@ -254,7 +287,7 @@ func (uc *UpdateChecker) TriggerNow(channelOverride string) bool {
 		}()
 	} else {
 		go func() {
-			defer atomic.StoreInt32(&uc.updating, 0)
+			defer cleanup()
 			defer func() {
 				if r := recover(); r != nil {
 					slog.Error("[AutoUpdate] PANIC recovered in update goroutine", "panic", r)
@@ -264,6 +297,40 @@ func (uc *UpdateChecker) TriggerNow(channelOverride string) bool {
 		}()
 	}
 	return true
+}
+
+// CancelUpdate marks the currently-running update for cancellation and cancels
+// its context. Commands running via exec.CommandContext will receive SIGKILL;
+// step boundaries check the cancelled flag and abort early with a "cancelled"
+// status broadcast. Returns true if an update was in progress and has been
+// asked to cancel, false if no update was running.
+//
+// NOTE: Cancellation is best-effort. The in-flight step may complete before
+// the abort is honored (e.g. a git pull that has already succeeded). Once the
+// restart step begins, cancellation has no effect because startup-oauth.sh has
+// already been spawned as a detached process.
+func (uc *UpdateChecker) CancelUpdate() bool {
+	if !uc.IsUpdating() {
+		return false
+	}
+	atomic.StoreInt32(&uc.updateCancelled, 1)
+	uc.mu.Lock()
+	cancel := uc.updateCancel
+	uc.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+	slog.Info("[AutoUpdate] cancellation requested by user")
+	uc.broadcast("update_progress", UpdateProgressPayload{
+		Status:  "cancelled",
+		Message: "Update cancelled by user — rolling back if needed...",
+	})
+	return true
+}
+
+// isCancelled returns true if the current update has been asked to cancel.
+func (uc *UpdateChecker) isCancelled() bool {
+	return atomic.LoadInt32(&uc.updateCancelled) == 1
 }
 
 // IsUpdating returns true if an update is currently in progress.
@@ -361,6 +428,27 @@ func (uc *UpdateChecker) checkDeveloperChannel() {
 	uc.executeDeveloperUpdate(latestSHA)
 }
 
+// checkCancelled returns true if the user has requested cancellation. It
+// broadcasts a "cancelled" status with the current progress percentage and
+// logs the abort. Callers should return immediately after a true result.
+// previousSHA is used to roll back any partial git changes.
+func (uc *UpdateChecker) checkCancelled(stepName, repoPath, previousSHA string, progress int) bool {
+	if !uc.isCancelled() {
+		return false
+	}
+	slog.Info("[AutoUpdate] cancelled before step", "step", stepName, "elapsed", "aborting")
+	// Attempt to roll back git if we've already pulled
+	if previousSHA != "" && repoPath != "" {
+		rollbackGit(repoPath, previousSHA)
+	}
+	uc.broadcast("update_progress", UpdateProgressPayload{
+		Status:   "cancelled",
+		Message:  "Update cancelled by user",
+		Progress: progress,
+	})
+	return true
+}
+
 func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	uc.mu.Lock()
 	repoPath := uc.repoPath
@@ -370,6 +458,11 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	start := time.Now()
 	total := devUpdateTotalSteps
 	slog.Info("[AutoUpdate] starting update", "from", short(previousSHA), "to", short(newSHA))
+
+	// Check for cancellation before step 1 (git pull has not yet run, no rollback needed)
+	if uc.checkCancelled("step1-git-pull", "", "", 0) {
+		return
+	}
 
 	// Step 1/7: Git pull
 	slog.Info("[AutoUpdate] step progress", "step", 1, "total", total, "description", "git pull --rebase origin main")
@@ -392,6 +485,11 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 		return
 	}
 	slog.Info("[AutoUpdate] step complete", "step", 1, "total", total, "description", "git pull", "elapsed", time.Since(start))
+
+	// Cancellation check after git pull — safe to roll back at this point
+	if uc.checkCancelled("step2-npm-install", repoPath, previousSHA, 8) {
+		return
+	}
 
 	// Step 2/7: npm install (with automatic cache recovery)
 	webDir := repoPath + "/web"
@@ -421,6 +519,11 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	}
 	slog.Info("[AutoUpdate] step complete", "step", 2, "total", total, "description", "npm install", "elapsed", time.Since(stepStart))
 
+	// Cancellation check after npm install
+	if uc.checkCancelled("step3-frontend-build", repoPath, previousSHA, 18) {
+		return
+	}
+
 	// Step 3/7: Frontend build (Vite)
 	slog.Info("[AutoUpdate] step progress", "step", 3, "total", total, "description", "npm run build")
 	uc.broadcast("update_progress", UpdateProgressPayload{
@@ -449,6 +552,15 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 		return
 	}
 	slog.Info("[AutoUpdate] step complete", "step", 3, "total", total, "description", "frontend build", "elapsed", time.Since(stepStart))
+
+	// Cancellation check after frontend build
+	if uc.checkCancelled("step4-console-build", repoPath, previousSHA, 30) {
+		// Rebuild frontend from previous SHA since we rolled back
+		if rbErr := rebuildFrontend(repoPath); rbErr != nil {
+			slog.Error("[AutoUpdate] cancel rebuildFrontend failed", "error", rbErr)
+		}
+		return
+	}
 
 	// Step 4/7: Build console binary
 	slog.Info("[AutoUpdate] step progress", "step", 4, "total", total, "description", "go build ./cmd/console")
@@ -494,6 +606,17 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	}
 	slog.Info("[AutoUpdate] step complete", "step", 4, "total", total, "description", "console binary", "elapsed", time.Since(stepStart))
 
+	// Cancellation check after console binary build
+	if uc.checkCancelled("step5-agent-build", repoPath, previousSHA, 45) {
+		if rbErr := rebuildFrontend(repoPath); rbErr != nil {
+			slog.Error("[AutoUpdate] cancel rebuildFrontend failed", "error", rbErr)
+		}
+		if rbErr := rebuildGoBinaries(repoPath); rbErr != nil {
+			slog.Error("[AutoUpdate] cancel rebuildGoBinaries failed", "error", rbErr)
+		}
+		return
+	}
+
 	// Step 5/7: Build kc-agent binary
 	slog.Info("[AutoUpdate] step progress", "step", 5, "total", total, "description", "go build ./cmd/kc-agent")
 	uc.broadcast("update_progress", UpdateProgressPayload{
@@ -536,6 +659,18 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 		os.Remove(agentTmp)
 	}
 	slog.Info("[AutoUpdate] step complete", "step", 5, "total", total, "description", "kc-agent binary", "elapsed", time.Since(stepStart))
+
+	// Last chance to cancel — after this point we commit the new SHA and restart.
+	// Once restartViaStartupScript runs, the script is detached and cannot be stopped.
+	if uc.checkCancelled("step6-restart", repoPath, previousSHA, 58) {
+		if rbErr := rebuildFrontend(repoPath); rbErr != nil {
+			slog.Error("[AutoUpdate] cancel rebuildFrontend failed", "error", rbErr)
+		}
+		if rbErr := rebuildGoBinaries(repoPath); rbErr != nil {
+			slog.Error("[AutoUpdate] cancel rebuildGoBinaries failed", "error", rbErr)
+		}
+		return
+	}
 
 	// Step 6/7: Stopping services
 	slog.Info("[AutoUpdate] step progress", "step", 6, "total", total, "description", "preparing restart")

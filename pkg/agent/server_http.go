@@ -1357,6 +1357,45 @@ func (s *Server) handleAutoUpdateTrigger(w http.ResponseWriter, r *http.Request)
 	writeJSON(w,map[string]interface{}{"success": true, "message": "update check triggered"})
 }
 
+// handleAutoUpdateCancel cancels an in-progress update. Cancellation is
+// best-effort: the currently-running step may complete before the abort is
+// honored, and the update cannot be cancelled once the restart step has begun
+// (startup-oauth.sh is spawned as a detached process).
+func (s *Server) handleAutoUpdateCancel(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	if !s.validateToken(r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		writeJSON(w, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	if s.updateChecker == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		writeJSON(w, map[string]string{"error": "update checker not initialized"})
+		return
+	}
+
+	if !s.updateChecker.CancelUpdate() {
+		w.WriteHeader(http.StatusConflict)
+		writeJSON(w, map[string]interface{}{"success": false, "error": "no update in progress"})
+		return
+	}
+	writeJSON(w, map[string]interface{}{"success": true, "message": "cancellation requested"})
+}
+
 // handleRenameContextHTTP renames a kubeconfig context
 func (s *Server) handleRenameContextHTTP(w http.ResponseWriter, r *http.Request) {
 	origin := r.Header.Get("Origin")
