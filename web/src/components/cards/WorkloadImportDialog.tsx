@@ -26,7 +26,7 @@ import {
   X,
 } from 'lucide-react'
 import { Github } from '@/lib/icons'
-import * as yaml from 'js-yaml'
+import { load as yamlLoad, loadAll as yamlLoadAll } from 'js-yaml'
 import { BaseModal } from '../../lib/modals'
 import { Button } from '../ui/Button'
 import { cn } from '../../lib/cn'
@@ -76,7 +76,7 @@ function parseYamlDocuments(text: string): { resources: ParsedResource[]; errors
   }
 
   try {
-    const docs = yaml.loadAll(text)
+    const docs = yamlLoadAll(text)
     for (const doc of docs) {
       if (!doc || typeof doc !== 'object') continue
       const obj = doc as Record<string, unknown>
@@ -233,7 +233,7 @@ export function WorkloadImportDialog({ isOpen, onClose, onImport }: WorkloadImpo
 
     if (helmValues.trim()) {
       try {
-        yaml.load(helmValues)
+        yamlLoad(helmValues)
       } catch {
         errors.push(t('workloadImport.helmValuesInvalid'))
       }
