@@ -963,10 +963,14 @@ export function MissionSidebar() {
             </div>
           )}
           <div className="flex-1 flex flex-col min-h-0 min-w-0">
-            {/* Back to list if multiple missions.
-             * Count and visibility must match the list view's filter
-             * (saved + active) so list and chat headers agree (#6137). */}
-            {listTotalMissions > 1 && (
+            {/* Back to missions list.
+             * Always visible when an activeMission is set — this is the only
+             * UI path that clears activeMission. Previously this was gated on
+             * listTotalMissions > 1 (#6137), but that trapped users who
+             * filtered via missionSearchQuery down to a single result with
+             * no way to return to the full list (#6145). Safest fix: always
+             * show the button when activeMission != null. */}
+            {activeMission != null && (
               <button
                 onClick={() => setActiveMission(null)}
                 className="flex items-center gap-1 px-4 py-2 text-xs text-muted-foreground hover:text-foreground border-b border-border flex-shrink-0"

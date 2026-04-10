@@ -637,8 +637,13 @@ describe('AuthProvider', () => {
 
     const { result } = await renderWithAuthProvider()
 
+    // #6144 — When a token AND cached user both exist in localStorage,
+    // AuthProvider starts with isLoading=false (stale-while-revalidate), so
+    // waiting on isLoading resolves BEFORE refreshUser's async catch block
+    // has a chance to clear the token. Wait directly for the token to be
+    // cleared by the stale-cache drop path instead.
     await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
+      expect(result.current.token).toBeNull()
     })
 
     // Stale cache → session dropped (token cleared, user null)
