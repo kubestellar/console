@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
 )
 
@@ -90,6 +92,91 @@ const sseCacheTTL = 15 * time.Second
 // sseCacheEvictInterval is how often the background goroutine sweeps the cache
 // to remove expired entries and prevent unbounded memory growth.
 const sseCacheEvictInterval = 30 * time.Second
+
+// sseSessionRegistry tracks active SSE streams per user so that
+// CancelUserSSEStreams can tear them down on logout (#6029).
+//
+// SSE streams run inside c.Context().SetBodyStreamWriter callbacks that block
+// until either the client disconnects or sseOverallDeadline fires. Without a
+// per-user registry, a logged-out user's in-flight streams continue emitting
+// "cluster_data" events for up to ~30s because nothing actively cancels the
+// stream context. This registry mirrors the exec session registry in exec.go:
+// when a stream's context is created, its cancel func is recorded keyed by
+// userID; on logout, CancelUserSSEStreams runs every recorded cancel for that
+// user, which causes the SetBodyStreamWriter callback to exit promptly.
+//
+// A regular sync.Mutex is used (not RWMutex) because writes (add/remove on
+// stream start/end) and reads (CancelUserSSEStreams on logout) are both
+// infrequent and always short; an RWMutex would add complexity for no gain.
+var (
+	sseSessionsMu  sync.Mutex
+	sseSessions    = make(map[uuid.UUID]map[int64]context.CancelFunc)
+	sseSessionSeq  int64 // monotonic id generator, guarded by sseSessionsMu
+)
+
+// registerSSESession records cancel under userID and returns the assigned
+// session id. The session id is used by unregisterSSESession to remove the
+// specific entry when the stream ends normally, so the map does not grow
+// unbounded across many streams by the same user.
+func registerSSESession(userID uuid.UUID, cancel context.CancelFunc) int64 {
+	sseSessionsMu.Lock()
+	defer sseSessionsMu.Unlock()
+	sseSessionSeq++
+	id := sseSessionSeq
+	sessions, ok := sseSessions[userID]
+	if !ok {
+		sessions = make(map[int64]context.CancelFunc)
+		sseSessions[userID] = sessions
+	}
+	sessions[id] = cancel
+	return id
+}
+
+// unregisterSSESession removes a single stream entry. Called from the SSE
+// handler's deferred cleanup on normal stream end so the registry stays
+// bounded by the number of concurrently live streams, not the total lifetime
+// count.
+func unregisterSSESession(userID uuid.UUID, id int64) {
+	sseSessionsMu.Lock()
+	defer sseSessionsMu.Unlock()
+	sessions, ok := sseSessions[userID]
+	if !ok {
+		return
+	}
+	delete(sessions, id)
+	if len(sessions) == 0 {
+		delete(sseSessions, userID)
+	}
+}
+
+// CancelUserSSEStreams cancels every active SSE stream belonging to the given
+// user and clears the entries from the registry. Called from the auth Logout
+// handler after revoking the JWT so that any streaming endpoint the user had
+// open stops emitting events promptly (#6029). Safe to call with a userID
+// that has no live streams.
+func CancelUserSSEStreams(userID uuid.UUID) {
+	sseSessionsMu.Lock()
+	sessions, ok := sseSessions[userID]
+	if !ok {
+		sseSessionsMu.Unlock()
+		return
+	}
+	// Take ownership of the cancel funcs under the lock, then release the
+	// lock before invoking them. Calling cancel() itself is cheap but the
+	// goroutines it unblocks may contend for other locks; holding
+	// sseSessionsMu across those is unnecessary and risks deadlock.
+	cancels := make([]context.CancelFunc, 0, len(sessions))
+	for _, c := range sessions {
+		cancels = append(cancels, c)
+	}
+	delete(sseSessions, userID)
+	sseSessionsMu.Unlock()
+
+	for _, cancel := range cancels {
+		cancel()
+	}
+	slog.Info("[SSE] cancelled SSE streams for user", "user", userID, "count", len(cancels))
+}
 
 // SSE response cache — avoids re-fetching when the user navigates away and back.
 var (
@@ -207,6 +294,11 @@ func streamClusters(
 		offline = filteredOffline
 	}
 
+	// Capture the authenticated user ID before entering the deferred
+	// SetBodyStreamWriter callback. The fiber.Ctx may be reused by the time
+	// the callback runs, so c.Locals is not safe to read inside it (#6029).
+	userID := middleware.GetUserID(c)
+
 	c.Set("Content-Type", "text/event-stream")
 	c.Set("Cache-Control", "no-cache")
 	c.Set("Connection", "keep-alive")
@@ -219,6 +311,16 @@ func streamClusters(
 		// caused goroutine leaks on client disconnect (see #3291).
 		streamCtx, streamCancel := context.WithTimeout(context.Background(), sseOverallDeadline)
 		defer streamCancel()
+
+		// Register this stream's cancel with the per-user SSE session
+		// registry so a later Logout call can tear the stream down promptly
+		// instead of waiting for sseOverallDeadline (#6029). Only register
+		// when we have a real userID — in dev/demo without a valid UserID
+		// claim there is nothing to key on.
+		if userID != uuid.Nil {
+			sessionID := registerSSESession(userID, streamCancel)
+			defer unregisterSSESession(userID, sessionID)
+		}
 
 		var mu sync.Mutex
 		totalClusters := len(healthy) + len(offline)

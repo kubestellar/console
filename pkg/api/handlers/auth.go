@@ -587,6 +587,13 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	// unblocks the stream and tears the connection down promptly.
 	if claims.UserID != uuid.Nil {
 		CancelUserExecSessions(claims.UserID)
+		// Cancel any active SSE streams for this user (#6029). SSE streams
+		// run inside SetBodyStreamWriter callbacks that block for up to
+		// sseOverallDeadline (~30s); without this, a logged-out user would
+		// continue to receive cluster_data events until the deadline fires.
+		// streamClusters registers each stream's cancel func in a per-user
+		// registry on start; cancelling those funcs here ends the stream.
+		CancelUserSSEStreams(claims.UserID)
 	}
 
 	slog.Info("[Auth] token revoked, WS sessions closed", "user", claims.GitHubLogin, "jti", claims.ID)
