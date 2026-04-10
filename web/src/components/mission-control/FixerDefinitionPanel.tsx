@@ -946,7 +946,6 @@ function AISuggestErrorBanner({
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       role="alert"
-      aria-live="polite"
       className="rounded-lg border border-destructive/40 bg-destructive/10 overflow-hidden"
     >
       <div className="flex items-start gap-3 px-4 py-3">
