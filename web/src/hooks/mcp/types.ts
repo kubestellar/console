@@ -175,6 +175,39 @@ export interface Deployment {
   annotations?: Record<string, string>
 }
 
+/**
+ * Tri-state metric value (issue #6113).
+ *
+ * Frontend code has historically conflated three very different situations into
+ * a single numeric 0: (a) the upstream returned "zero", (b) the upstream hasn't
+ * returned yet, and (c) the upstream doesn't know / isn't exposing this metric.
+ * This enum lets callers disambiguate explicitly.
+ *
+ * v1 use-site: see `AggregatedMetricCompleteness` below and
+ * `useClusters().metricsCompleteness`. A fuller migration of every card to
+ * tri-state values is tracked as follow-up work.
+ */
+export type MetricState = 'loading' | 'unknown' | 'value'
+
+export interface TriStateMetric<T = number> {
+  state: MetricState
+  value?: T
+}
+
+/**
+ * Metadata describing the completeness of an aggregated metric computed across
+ * multiple clusters (issue #6114). `contributingClusters` is the list of
+ * cluster names whose data was included in the aggregate, and `missingClusters`
+ * lists cluster names that should have contributed but didn't (unreachable,
+ * metrics-server unavailable, fetch error, etc.). `isComplete` is true only
+ * when `missingClusters` is empty.
+ */
+export interface AggregatedMetricCompleteness {
+  contributingClusters: string[]
+  missingClusters: string[]
+  isComplete: boolean
+}
+
 // AcceleratorType represents the category of accelerator
 export type AcceleratorType = 'GPU' | 'TPU' | 'AIU' | 'XPU'
 

@@ -351,6 +351,42 @@ describe('useGPUNodes', () => {
     expect(result.current.nodes.find(n => n.name === 'cached-gpu')).toBeDefined()
   })
 
+  it('clears cached GPU nodes when a successful fetch returns an empty list (#6111)', async () => {
+    // Pre-load the cache with nodes that no longer exist upstream. Mark the
+    // cache lastUpdated as stale so the hook triggers a refetch on mount.
+    const stalenode = {
+      name: 'removed-gpu', cluster: 'c1',
+      gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 4, acceleratorType: 'GPU' as const,
+    }
+    // CACHE_TTL_MS is 30_000 — go beyond it to force a stale refetch.
+    const STALE_OFFSET_MS = 120_000
+    updateGPUNodeCache({
+      nodes: [stalenode],
+      lastUpdated: new Date(Date.now() - STALE_OFFSET_MS),
+      isLoading: false,
+      isRefreshing: false,
+      error: null,
+      consecutiveFailures: 0,
+      lastRefresh: new Date(Date.now() - STALE_OFFSET_MS),
+    })
+    notifyGPUNodeSubscribers()
+
+    // Upstream now returns a successful empty response — the nodes were removed.
+    // Previously the cache protection logic refused to clear on empty, leaving
+    // stale nodes forever. The fix: distinguish "fetch succeeded but empty" from
+    // "fetch failed" and apply the empty result when the fetch succeeded.
+    mockFetchSSE.mockResolvedValue([])
+    // REST fallback also returns empty, in case SSE path isn't exercised
+    mockApiGet.mockResolvedValue({ data: { nodes: [] } })
+
+    const { result } = renderHook(() => useGPUNodes())
+
+    await waitFor(() => expect(mockFetchSSE).toHaveBeenCalled(), { timeout: 3000 })
+    await waitFor(() => expect(result.current.nodes.length).toBe(0), { timeout: 3000 })
+    expect(gpuNodeCache.nodes.length).toBe(0)
+    expect(result.current.error).toBeNull()
+  })
+
   it('uses demo GPU nodes when demo mode is enabled and no cached data exists', async () => {
     mockIsDemoMode.mockReturnValue(true)
     mockUseDemoMode.mockReturnValue({ isDemoMode: true })
@@ -475,9 +511,15 @@ describe('useNVIDIAOperators', () => {
 // ===========================================================================
 
 describe('updateGPUNodeCache', () => {
-  it('prevents clearing nodes when cache already has data', () => {
+  // NOTE: We used to have a "never allow clearing nodes if we have good data"
+  // guard inside updateGPUNodeCache. That guard was the root cause of #6111
+  // (stale GPU nodes persist forever after upstream removal). Cache-preservation
+  // across transient failures is now handled at the fetch site (fetchGPUNodes).
+  // These tests verify the new, corrected behavior.
+
+  it('applies empty nodes update when cache already has data (#6111)', () => {
     const existingNode = {
-      name: 'protected-gpu', cluster: 'c1',
+      name: 'to-remove-gpu', cluster: 'c1',
       gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 4, acceleratorType: 'GPU' as const,
     }
     updateGPUNodeCache({
@@ -490,51 +532,39 @@ describe('updateGPUNodeCache', () => {
       lastRefresh: new Date(),
     })
 
-    // Attempt to set nodes to empty array — should be blocked
+    // Authoritative empty update — must actually clear the cache.
     updateGPUNodeCache({ nodes: [], error: 'some error' })
 
-    // Nodes must be preserved
-    expect(gpuNodeCache.nodes.length).toBe(1)
-    expect(gpuNodeCache.nodes[0].name).toBe('protected-gpu')
-    // Other fields from the update should still apply
+    expect(gpuNodeCache.nodes.length).toBe(0)
     expect(gpuNodeCache.error).toBe('some error')
   })
 
-  it('allows updating non-node fields even when node clearing is blocked', () => {
-    // Set up cache with existing data so the protection logic activates
+  it('applies non-node field updates alongside node updates', () => {
     const existingNode = {
-      name: 'protected-gpu', cluster: 'c1',
+      name: 'existing-gpu', cluster: 'c1',
       gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 4, acceleratorType: 'GPU' as const,
     }
     updateGPUNodeCache({ nodes: [existingNode], lastUpdated: new Date() })
 
-    // Attempting to clear nodes while setting other fields should still apply the non-node updates
+    // Non-node fields (isLoading, error) should apply regardless of whether
+    // the node update is empty.
     updateGPUNodeCache({ nodes: [], isLoading: true, error: 'test-error' })
 
-    // Nodes remain protected (not cleared)
-    expect(gpuNodeCache.nodes.length).toBeGreaterThan(0)
-    // But other fields are updated
+    expect(gpuNodeCache.nodes.length).toBe(0)
     expect(gpuNodeCache.isLoading).toBe(true)
     expect(gpuNodeCache.error).toBe('test-error')
   })
 
-  it('allows setting empty nodes when cache has no existing data', () => {
-    // First, replace with known data, then replace with different data to empty
-    // We need the cache to be truly empty first. The only way is via the
-    // registerCacheReset callback which force-resets the cache.
-    // Instead, let's test with a fresh node that we can replace.
+  it('allows setting empty nodes from a populated cache', () => {
     const node = {
       name: 'temp-node', cluster: 'c1',
       gpuType: 'NVIDIA T4', gpuCount: 2, gpuAllocated: 1, acceleratorType: 'GPU' as const,
     }
-    // Replace existing nodes with temp-node
     updateGPUNodeCache({ nodes: [node] })
     expect(gpuNodeCache.nodes[0].name).toBe('temp-node')
 
-    // Now try setting empty — protection should block this since we have data
     updateGPUNodeCache({ nodes: [] })
-    expect(gpuNodeCache.nodes.length).toBeGreaterThan(0)
-    // This confirms the cache protection works regardless of what node was there
+    expect(gpuNodeCache.nodes.length).toBe(0)
   })
 
   it('allows replacing nodes with new non-empty data', () => {
@@ -1184,7 +1214,10 @@ describe('updateGPUNodeCache — protection logic', () => {
     gpuNodeCache.lastUpdated = null
   })
 
-  it('prevents clearing nodes when cache has data', () => {
+  it('applies empty nodes update when cache has data (#6111)', () => {
+    // Previously this tested the now-removed "never clear" guard inside
+    // updateGPUNodeCache. After the #6111 fix, the guard lives at the fetch
+    // site: updateGPUNodeCache applies whatever updates it receives.
     const existingNodes = [
       { name: 'n1', cluster: 'c1', gpuType: 'A100', gpuCount: 8, gpuAllocated: 4, acceleratorType: 'GPU' as const },
     ]
@@ -1192,8 +1225,7 @@ describe('updateGPUNodeCache — protection logic', () => {
 
     updateGPUNodeCache({ nodes: [], error: 'fetch failed' })
 
-    // Nodes should be preserved, error should be updated
-    expect(gpuNodeCache.nodes).toEqual(existingNodes)
+    expect(gpuNodeCache.nodes).toEqual([])
     expect(gpuNodeCache.error).toBe('fetch failed')
   })
 

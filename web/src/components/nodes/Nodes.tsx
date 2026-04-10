@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -51,15 +51,33 @@ export function Nodes() {
     return totalMemoryGB > 0 ? Math.round((requestedMemory / totalMemoryGB) * 100) : 0
   })()
 
-  // Cache utilization values to prevent showing 0 during refresh
-  const cachedCpuUtil = useRef(currentCpuUtil)
-  const cachedMemoryUtil = useRef(currentMemoryUtil)
+  // Cache utilization values to avoid showing a transient 0 during refresh, but
+  // still propagate a genuine 0 once real data has been seen at least once
+  // (issue #6107). Previously the fallback used `value > 0 ? value : cached`
+  // which caused a node whose utilization legitimately dropped to 0 to keep
+  // displaying the previous non-zero value forever.
+  //
+  // We only treat a value as "real" when there is at least one reachable
+  // cluster that has actually reported capacity (totalCPU / totalMemoryGB > 0).
+  // Until then, any 0 we see is a placeholder, not a measurement.
+  const hasCpuCapacity = totalCPU > 0
+  const hasMemoryCapacity = totalMemoryGB > 0
+  const [cachedCpuUtil, setCachedCpuUtil] = useState<number | null>(null)
+  const [cachedMemoryUtil, setCachedMemoryUtil] = useState<number | null>(null)
+  // This effect intentionally calls setState to snapshot the last real value.
+  // react-hooks/set-state-in-effect flags this as a cascading-render pattern,
+  // but in this case the effect only fires when the capacity guards flip,
+  // so the cascade is bounded and the pattern is the simplest one compatible
+  // with the react-hooks/refs rule (which forbids reading `.current` during
+  // render).
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (currentCpuUtil > 0) cachedCpuUtil.current = currentCpuUtil
-    if (currentMemoryUtil > 0) cachedMemoryUtil.current = currentMemoryUtil
-  }, [currentCpuUtil, currentMemoryUtil])
-  const cpuUtilization = currentCpuUtil > 0 ? currentCpuUtil : cachedCpuUtil.current
-  const memoryUtilization = currentMemoryUtil > 0 ? currentMemoryUtil : cachedMemoryUtil.current
+    if (hasCpuCapacity) setCachedCpuUtil(currentCpuUtil)
+    if (hasMemoryCapacity) setCachedMemoryUtil(currentMemoryUtil)
+  }, [currentCpuUtil, currentMemoryUtil, hasCpuCapacity, hasMemoryCapacity])
+  /* eslint-enable react-hooks/set-state-in-effect */
+  const cpuUtilization = hasCpuCapacity ? currentCpuUtil : (cachedCpuUtil ?? 0)
+  const memoryUtilization = hasMemoryCapacity ? currentMemoryUtil : (cachedMemoryUtil ?? 0)
 
   // Stats value getter
   const getDashboardStatValue = (blockId: string): StatBlockValue => {

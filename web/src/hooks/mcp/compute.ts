@@ -96,18 +96,18 @@ if (typeof window !== 'undefined') {
 }
 
 export function updateGPUNodeCache(updates: Partial<GPUNodeCache>) {
-  const prevCount = gpuNodeCache.nodes.length
-
-  // CRITICAL: Never allow clearing nodes if we have good data
-  // This prevents any code path from accidentally wiping the cache
-  if (updates.nodes !== undefined && updates.nodes.length === 0 && prevCount > 0) {
-    // Blocked: attempt to clear existing GPU node data — preserve it
-    // Remove nodes from updates to preserve existing data
-    const { nodes: _ignored, ...safeUpdates } = updates
-    gpuNodeCache = { ...gpuNodeCache, ...safeUpdates }
-  } else {
-    gpuNodeCache = { ...gpuNodeCache, ...updates }
-  }
+  // NOTE: We used to have a "CRITICAL: Never allow clearing nodes if we have
+  // good data" guard here that silently dropped any `nodes: []` update. That
+  // guard was the root cause of issue #6111 — when all GPU nodes were removed
+  // from a cluster, the cache would never update to reflect the new reality
+  // and the UI would keep showing stale nodes indefinitely.
+  //
+  // Cache-preservation across transient failures is now handled at the fetch
+  // site (`fetchGPUNodes`): only a successful empty response is applied; a
+  // failure keeps the existing cache untouched. Callers that intentionally
+  // clear the cache (e.g. resetGPUNodeCache) or that wish to apply an
+  // authoritative empty result are no longer silently ignored.
+  gpuNodeCache = { ...gpuNodeCache, ...updates }
 
   // Persist to localStorage when nodes are updated (and we have data)
   if (updates.nodes !== undefined && gpuNodeCache.nodes.length > 0) {
@@ -142,6 +142,12 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
 
     let newNodes: GPUNode[] = []
     let agentSucceeded = false
+    // Tracks whether at least one upstream source successfully returned a
+    // response for this fetch cycle — regardless of whether it contained any
+    // nodes. This is the signal we use to decide whether an empty result is a
+    // legitimate "no GPUs here any more" (clear the cache) or a transient
+    // failure (keep the stale cache). See issue #6111.
+    let fetchSucceeded = false
 
     // Try local agent first (works without backend running)
     if (!isAgentUnavailable()) {
@@ -157,6 +163,7 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
           const data = await response.json()
           newNodes = data.nodes || []
           agentSucceeded = true // Agent worked, even if it returned 0 nodes
+          fetchSucceeded = true
           reportAgentDataSuccess()
         } else {
           throw new Error('Local agent returned error')
@@ -186,11 +193,13 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
           },
         })
         newNodes = sseResult
+        fetchSucceeded = true
       } catch {
         // SSE failed, try REST fallback
         try {
           const { data } = await api.get<{ nodes: GPUNode[] }>(`/api/mcp/gpu-nodes?${params}`)
           newNodes = data.nodes || []
+          fetchSucceeded = true
         } catch {
           if (gpuNodeCache.nodes.length === 0) {
             throw new Error('Both SSE and REST failed')
@@ -199,18 +208,20 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
       }
     }
 
-    // Update with new data, but protect against replacing good data with empty results
-    // This prevents a failed refresh from wiping out valid cached GPU info
-    const currentCacheHasData = gpuNodeCache.nodes.length > 0
-    const newDataHasContent = newNodes.length > 0
-
-    // Only update cache if:
-    // 1. We got new data (newNodes.length > 0), OR
-    // 2. Cache was already empty (nothing to preserve)
-    // Never replace good cached data with empty results
-    const shouldUpdateCache = newDataHasContent || !currentCacheHasData
-
-    if (shouldUpdateCache && newDataHasContent) {
+    // Update with new data. Previously this code would refuse to overwrite a
+    // populated cache with an empty result, which caused the cache to retain
+    // stale GPU nodes long after they had been removed from the cluster
+    // (issue #6111). We now distinguish two cases:
+    //
+    //   a) `fetchSucceeded === true` — at least one upstream returned a valid
+    //      response (even an empty list). This is an authoritative "truth" and
+    //      we MUST apply it, including the empty-array case, so removed nodes
+    //      disappear.
+    //
+    //   b) `fetchSucceeded === false` — every upstream errored out. Keep the
+    //      stale cache so the UI doesn't flicker to empty on a transient
+    //      network failure.
+    if (fetchSucceeded) {
       updateGPUNodeCache({
         nodes: newNodes,
         lastUpdated: new Date(),

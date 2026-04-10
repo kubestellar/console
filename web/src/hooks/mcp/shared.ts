@@ -535,7 +535,15 @@ export function deduplicateClustersByServer(clusters: ClusterInfo[]): ClusterInf
     const primary = sorted[0]
     const aliases = sorted.slice(1).map(c => c.name)
 
-    // Merge the best metrics from all duplicates
+    // Merge the best metrics from all duplicates.
+    //
+    // nodeCount and podCount are counts of live resources — NOT "max across all
+    // observations". Previously we took Math.max, which over-counted after a
+    // scale-down because the larger stale value from a previous sample kept
+    // winning (issue #6112). Instead, prefer the primary cluster's current
+    // values and only fall back to an alias value when the primary hasn't
+    // reported yet (nodeCount/podCount undefined). This gives us the freshest
+    // authoritative count without resurrecting stale numbers.
     let bestMetrics: Partial<ClusterInfo> = {}
     for (const cluster of (group || [])) {
       if (cluster.cpuCores && !bestMetrics.cpuCores) {
@@ -555,13 +563,23 @@ export function deduplicateClustersByServer(clusters: ClusterInfo[]): ClusterInf
           pvcBoundCount: cluster.pvcBoundCount,
         }
       }
-      // Take the best individual metrics
-      if ((cluster.nodeCount || 0) > (bestMetrics.nodeCount || 0)) {
-        bestMetrics.nodeCount = cluster.nodeCount
-      }
-      if ((cluster.podCount || 0) > (bestMetrics.podCount || 0)) {
-        bestMetrics.podCount = cluster.podCount
-      }
+    }
+    // Authoritative counts: use the primary cluster's values; only fall back to
+    // an alias when the primary has no value reported at all.
+    if (primary.nodeCount !== undefined) {
+      bestMetrics.nodeCount = primary.nodeCount
+    } else {
+      const alias = group.find(c => c !== primary && c.nodeCount !== undefined)
+      if (alias) bestMetrics.nodeCount = alias.nodeCount
+    }
+    if (primary.podCount !== undefined) {
+      bestMetrics.podCount = primary.podCount
+    } else {
+      const alias = group.find(c => c !== primary && c.podCount !== undefined)
+      if (alias) bestMetrics.podCount = alias.podCount
+    }
+    // Legacy merge loop preserved only for request metrics (below).
+    for (const cluster of (group || [])) {
       // Merge request metrics - these may come from a different cluster than capacity
       if (cluster.cpuRequestsCores && !bestMetrics.cpuRequestsCores) {
         bestMetrics.cpuRequestsMillicores = cluster.cpuRequestsMillicores

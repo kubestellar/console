@@ -160,12 +160,38 @@ export function useClusters() {
     return result
   })()
 
+  // Completeness metadata for aggregated metrics (issue #6114). A cluster is
+  // "contributing" when it is reachable and has reported capacity data
+  // (cpuCores). Everything else is "missing" — either unreachable, still
+  // loading, or returning no metrics — so callers can decide whether an
+  // aggregate like "totalCPUs" is authoritative or partial. This is the v1
+  // seed for per-card completeness badges; a fuller rollout is tracked as
+  // follow-up work.
+  const metricsCompleteness = (() => {
+    const contributingClusters: string[] = []
+    const missingClusters: string[] = []
+    for (const c of deduplicatedClusters) {
+      const hasMetrics = typeof c.cpuCores === 'number' && c.cpuCores >= 0
+      if (c.reachable !== false && hasMetrics) {
+        contributingClusters.push(c.name)
+      } else {
+        missingClusters.push(c.name)
+      }
+    }
+    return {
+      contributingClusters,
+      missingClusters,
+      isComplete: missingClusters.length === 0 && contributingClusters.length > 0 }
+  })()
+
   return {
     // Raw clusters - all contexts including duplicates pointing to same server
     clusters: localState.clusters,
     // Deduplicated clusters - single cluster per server with aliases
     // Use this for metrics, stats, and aggregations to avoid double-counting
     deduplicatedClusters,
+    // Completeness metadata for aggregated metrics (issue #6114)
+    metricsCompleteness,
     isLoading: localState.isLoading,
     isRefreshing: localState.isRefreshing,
     lastUpdated: localState.lastUpdated,

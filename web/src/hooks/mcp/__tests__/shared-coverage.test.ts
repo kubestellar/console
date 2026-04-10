@@ -608,17 +608,20 @@ describe('shareMetricsBetweenSameServerClusters — storage and memory metrics',
 // deduplicateClustersByServer — request metrics cross-merge
 // ============================================================================
 describe('deduplicateClustersByServer — cross-merge scenarios', () => {
-  it('takes best individual nodeCount and podCount from group', () => {
+  it('uses primary cluster nodeCount/podCount — does not take max (#6112)', () => {
+    // Regression for #6112: previous behavior used Math.max which caused
+    // scale-downs to show stale over-counts. The primary is now authoritative.
     const NODE_A = 3
     const NODE_B = 10
     const POD_A = 50
     const POD_B = 20
+    // a has cpuCores so it sorts first (prefer cluster with metrics) and becomes primary.
     const a = makeCluster({ name: 'a', server: 'https://cross', nodeCount: NODE_A, podCount: POD_A, cpuCores: 8 })
     const b = makeCluster({ name: 'b', server: 'https://cross', nodeCount: NODE_B, podCount: POD_B, cpuCores: undefined })
 
     const result = deduplicateClustersByServer([a, b])
     expect(result).toHaveLength(1)
-    expect(result[0].nodeCount).toBe(NODE_B)
+    expect(result[0].nodeCount).toBe(NODE_A)
     expect(result[0].podCount).toBe(POD_A)
   })
 

@@ -917,7 +917,9 @@ export interface UseChartFiltersResult {
   /** Available clusters for filtering (respects global filter, includes health info) */
   availableClusters: ClusterWithHealth[]
   /** Filtered cluster list based on global + local filters */
-  filteredClusters: { name: string; reachable?: boolean; cpuCores?: number; cpuRequestsCores?: number; memoryGB?: number; memoryRequestsGB?: number; podCount?: number; nodeCount?: number }[]
+  // cpuUsageCores/memoryUsageGB/metricsAvailable are needed so cards can
+  // distinguish actual metrics-server usage from allocated requests (#6105).
+  filteredClusters: { name: string; reachable?: boolean; cpuCores?: number; cpuRequestsCores?: number; memoryGB?: number; memoryRequestsGB?: number; podCount?: number; nodeCount?: number; cpuUsageCores?: number; memoryUsageGB?: number; metricsAvailable?: boolean }[]
   /** Whether cluster filter dropdown is showing */
   showClusterFilter: boolean
   /** Set cluster filter dropdown visibility */

@@ -73,6 +73,10 @@ type ClusterStub = {
   memoryGB?: number
   cpuRequestsCores?: number
   memoryRequestsGB?: number
+  // Actual metrics-server usage (#6105)
+  cpuUsageCores?: number
+  memoryUsageGB?: number
+  metricsAvailable?: boolean
 }
 
 type GPUNodeStub = {
@@ -184,6 +188,47 @@ describe('ResourceUsage', () => {
       setupDefaults({ clusters: [{ name: 'c1', memoryGB: 0, memoryRequestsGB: 0 }] })
       render(<ResourceUsage />)
       expect(screen.getAllByTestId('gauge')[1]).toHaveAttribute('data-value', '0')
+    })
+
+    it('prefers actual metrics-server usage over requests when available (#6105)', () => {
+      // Requests say 8 cores / 80GB, but metrics-server says actual usage is
+      // 2 cores / 20GB. The card is labeled "Resource Usage" so it must
+      // display the actual usage, not the allocation.
+      setupDefaults({
+        clusters: [{
+          name: 'c1',
+          cpuCores: 10,
+          memoryGB: 100,
+          cpuRequestsCores: 8,
+          memoryRequestsGB: 80,
+          cpuUsageCores: 2,
+          memoryUsageGB: 20,
+          metricsAvailable: true }],
+      })
+      render(<ResourceUsage />)
+      const gauges = screen.getAllByTestId('gauge')
+      // 2 / 10 = 20%
+      expect(gauges[0]).toHaveAttribute('data-value', '20')
+      // 20 / 100 = 20%
+      expect(gauges[1]).toHaveAttribute('data-value', '20')
+    })
+
+    it('falls back to requests when metrics-server data is unavailable (#6105)', () => {
+      setupDefaults({
+        clusters: [{
+          name: 'c1',
+          cpuCores: 10,
+          memoryGB: 100,
+          cpuRequestsCores: 5,
+          memoryRequestsGB: 50,
+          // metricsAvailable omitted — simulating metrics-server not installed
+          cpuUsageCores: undefined,
+          memoryUsageGB: undefined }],
+      })
+      render(<ResourceUsage />)
+      const gauges = screen.getAllByTestId('gauge')
+      expect(gauges[0]).toHaveAttribute('data-value', '50')
+      expect(gauges[1]).toHaveAttribute('data-value', '50')
     })
   })
 

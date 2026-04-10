@@ -35,15 +35,28 @@ export function ResourceUsage() {
     return allGPUNodes.filter(n => clusterNames.has((n.cluster ?? '').split('/')[0]))
   })()
 
-  // Calculate totals from real cluster data
+  // Calculate totals from real cluster data.
+  // For the "used" numerator we prefer metrics-server actual usage (cpuUsageCores /
+  // memoryUsageGB) when it's available for the cluster, and only fall back to
+  // requests (cpuRequestsCores / memoryRequestsGB) when the metrics API hasn't
+  // reported yet. Previously this card was labeled "Resource Usage" but summed
+  // request values — which represents allocation, not usage (issue #6105).
   const totals = useMemo(() => {
     // Sum capacity from all clusters
     const totalCPUs = clusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
     const totalMemoryGB = clusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0)
 
-    // Sum requests (allocated resources) from all clusters
-    const usedCPUs = clusters.reduce((sum, c) => sum + (c.cpuRequestsCores || 0), 0)
-    const usedMemoryGB = clusters.reduce((sum, c) => sum + (c.memoryRequestsGB || 0), 0)
+    // Prefer actual usage from metrics-server; fall back to requests per-cluster.
+    const usedCPUs = clusters.reduce((sum, c) => {
+      const actual = c.cpuUsageCores
+      if (typeof actual === 'number' && c.metricsAvailable) return sum + actual
+      return sum + (c.cpuRequestsCores || 0)
+    }, 0)
+    const usedMemoryGB = clusters.reduce((sum, c) => {
+      const actual = c.memoryUsageGB
+      if (typeof actual === 'number' && c.metricsAvailable) return sum + actual
+      return sum + (c.memoryRequestsGB || 0)
+    }, 0)
 
     // Accelerator data by type
     const gpuOnly = gpuNodes.filter(n => !n.acceleratorType || n.acceleratorType === 'GPU')

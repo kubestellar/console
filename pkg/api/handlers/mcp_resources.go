@@ -198,9 +198,12 @@ func (h *MCPHandlers) InstallGPUHealthCronJob(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid cron schedule format — expected 5-field cron expression (e.g. '*/15 * * * *')"})
 	}
 
-	// Validate tier range
+	// Validate tier range.
+	// Tier 1 — Critical, Tier 2 — Standard, Tier 3 — Full, Tier 4 — Deep (privileged).
+	// Must stay in sync with the frontend TIER_OPTIONS in ProactiveGPUNodeHealthMonitor.tsx
+	// and with InstallGPUHealthCronJob in pkg/k8s/client_gpu.go (issue #6110).
 	const minTier = 1
-	const maxTier = 3
+	const maxTier = 4
 	if body.Tier < minTier || body.Tier > maxTier {
 		return c.Status(400).JSON(fiber.Map{"error": fmt.Sprintf("tier must be between %d and %d", minTier, maxTier)})
 	}

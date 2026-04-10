@@ -360,7 +360,10 @@ describe('deduplicateClustersByServer', () => {
     }
   })
 
-  it('merges best nodeCount and podCount from duplicates', () => {
+  it('uses the primary cluster nodeCount and podCount (does not take max) — #6112', () => {
+    // Regression for #6112: previously this code used Math.max(primary, alias)
+    // which caused scale-downs to show stale over-counts. Now the primary
+    // cluster is authoritative and aliases only fill in undefined fields.
     const NODE_COUNT_5 = 5
     const POD_COUNT_20 = 20
     const NODE_COUNT_8 = 8
@@ -368,8 +371,33 @@ describe('deduplicateClustersByServer', () => {
     const c1 = makeCluster({ name: 'c1', server: 'https://s1', nodeCount: NODE_COUNT_5, podCount: POD_COUNT_20 })
     const c2 = makeCluster({ name: 'c2', server: 'https://s1', nodeCount: NODE_COUNT_8, podCount: POD_COUNT_50 })
     const result = deduplicateClustersByServer([c1, c2])
+    // c1 sorts first (same length, stable) so it becomes primary; its counts win
+    expect(result[0].nodeCount).toBe(NODE_COUNT_5)
+    expect(result[0].podCount).toBe(POD_COUNT_20)
+  })
+
+  it('falls back to alias nodeCount/podCount when primary has none — #6112', () => {
+    const NODE_COUNT_8 = 8
+    const POD_COUNT_50 = 50
+    // Primary is chosen by sort; c1 is primary and has no nodeCount/podCount
+    // (makeCluster() defaults to 3 so we override explicitly).
+    const c1 = makeCluster({ name: 'c1', server: 'https://s1', nodeCount: undefined, podCount: undefined })
+    const c2 = makeCluster({ name: 'c2', server: 'https://s1', nodeCount: NODE_COUNT_8, podCount: POD_COUNT_50 })
+    const result = deduplicateClustersByServer([c1, c2])
     expect(result[0].nodeCount).toBe(NODE_COUNT_8)
     expect(result[0].podCount).toBe(POD_COUNT_50)
+  })
+
+  it('does not over-count after scale-down — #6112', () => {
+    // Scenario: upstream reports 3 nodes after a scale-down; a recent alias
+    // still has a cached 10. Old behavior returned 10 (Math.max). New behavior
+    // must return the primary's 3.
+    const NODES_AFTER_SCALE_DOWN = 3
+    const STALE_NODES_ON_ALIAS = 10
+    const primary = makeCluster({ name: 'prod', server: 'https://s1', nodeCount: NODES_AFTER_SCALE_DOWN })
+    const alias = makeCluster({ name: 'prod-long-context', server: 'https://s1', nodeCount: STALE_NODES_ON_ALIAS })
+    const result = deduplicateClustersByServer([primary, alias])
+    expect(result[0].nodeCount).toBe(NODES_AFTER_SCALE_DOWN)
   })
 
   it('marks healthy if any duplicate is healthy', () => {

@@ -880,8 +880,9 @@ describe('deduplicateClustersByServer — advanced', () => {
     expect(result).toHaveLength(1)
     // Should pick 'context-a' as primary (shorter, user-friendly)
     expect(result[0].name).toBe('context-a')
-    // Should merge best metrics: podCount=50 is higher than 20
-    expect(result[0].podCount).toBe(50)
+    // Primary's podCount wins (#6112): we no longer take Math.max, because
+    // that caused scale-downs to show stale over-counts.
+    expect(result[0].podCount).toBe(20)
     // Should keep cpuCores from the cluster that had them
     expect(result[0].cpuCores).toBe(16)
     // Should pick up cpuRequestsCores from the other cluster

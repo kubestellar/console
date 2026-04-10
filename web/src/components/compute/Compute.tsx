@@ -85,9 +85,14 @@ export function Compute() {
       .filter(node => isAllClustersSelected || globalSelectedClusters.includes(node.cluster.split('/')[0]))
       .reduce((sum, node) => sum + node.gpuCount, 0) }
 
-  // Check if we have any reachable clusters with actual data (not refreshing)
+  // Check if we have any reachable clusters with actual data (not refreshing).
+  // A cluster counts as "has data" as soon as nodeCount has been reported —
+  // even if the reported value is 0. Previously, valid zero-node clusters were
+  // treated as "no data" and rendered as '-' (issue #6106). Zero nodes is a
+  // meaningful value (e.g. a newly-provisioned cluster before any worker is
+  // attached), not a missing one.
   const hasActualData = filteredClusters.some(c =>
-    c.reachable !== false && c.nodeCount !== undefined && c.nodeCount > 0
+    c.reachable !== false && c.nodeCount !== undefined
   )
 
   // Cache the last known good stats to show during refresh
