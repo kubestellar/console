@@ -11,7 +11,7 @@ import { ClusterStatusDot } from '../ui/ClusterStatusBadge'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 
 export function NetworkOverview() {
-  const { deduplicatedClusters: clusters, isLoading } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing: clustersRefreshing, lastRefresh: clustersLastRefresh } = useClusters()
   const { services, isLoading: servicesLoading, isRefreshing, isDemoFallback, consecutiveFailures, isFailed, lastRefresh: servicesLastRefresh } = useCachedServices()
 
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
@@ -142,10 +142,24 @@ export function NetworkOverview() {
 
       {/* Controls */}
       <div className="flex items-center justify-between mb-4">
-        {/* part 5: freshness indicator. */}
+        {/* part 5: freshness indicator.
+            #6265: this card uses BOTH useClusters() and useCachedServices(),
+            so the indicator must reflect the OLDER of the two timestamps
+            (otherwise stale cluster health could appear fresh). Hide the
+            timestamp entirely in demo mode — useCache may preserve a
+            lastRefresh from a prior live session that doesn't reflect the
+            demo data being shown. */}
         <RefreshIndicator
-          isRefreshing={isRefreshing}
-          lastUpdated={typeof servicesLastRefresh === 'number' ? new Date(servicesLastRefresh) : null}
+          isRefreshing={isRefreshing || clustersRefreshing}
+          lastUpdated={(() => {
+            if (isDemoFallback) return null
+            const cl = typeof clustersLastRefresh === 'number' ? clustersLastRefresh : null
+            const sv = typeof servicesLastRefresh === 'number' ? servicesLastRefresh : null
+            if (cl !== null && sv !== null) return new Date(Math.min(cl, sv))
+            if (cl !== null) return new Date(cl)
+            if (sv !== null) return new Date(sv)
+            return null
+          })()}
           size="sm"
           showLabel={true}
           staleThresholdMinutes={5}

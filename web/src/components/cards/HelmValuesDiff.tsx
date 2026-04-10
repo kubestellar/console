@@ -55,7 +55,7 @@ const SORT_OPTIONS = [
 
 export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   const { t } = useTranslation()
-  const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersFailures } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersFailures, lastRefresh: clustersLastRefresh } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
   const { drillToHelm } = useDrillDownActions()
@@ -159,7 +159,8 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   const {
     values,
     isLoading: valuesLoading,
-    isRefreshing: valuesRefreshing } = useCachedHelmValues(
+    isRefreshing: valuesRefreshing,
+    lastRefresh: valuesLastRefresh } = useCachedHelmValues(
     selectedCluster || undefined,
     selectedRelease || undefined,
     selectedReleaseNamespace
@@ -291,10 +292,19 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
           <span className="text-sm font-medium text-muted-foreground">
             {totalItems} values
           </span>
-          {/* part 5: freshness indicator. */}
+          {/* part 5: freshness indicator.
+              #6265: card composes data from THREE caches (clusters,
+              releases, values), so the indicator must reflect the OLDEST
+              of the three timestamps — not just releases. Hide entirely
+              in demo mode (useCache may preserve stale lastRefresh from
+              a prior live session). */}
           <RefreshIndicator
             isRefreshing={clustersRefreshing || releasesRefreshing || valuesRefreshing}
-            lastUpdated={typeof releasesLastRefresh === 'number' ? new Date(releasesLastRefresh) : null}
+            lastUpdated={(() => {
+              if (isDemoData) return null
+              const ts = [clustersLastRefresh, releasesLastRefresh, valuesLastRefresh].filter((t): t is number => typeof t === 'number')
+              return ts.length > 0 ? new Date(Math.min(...ts)) : null
+            })()}
             size="sm"
             showLabel={true}
             staleThresholdMinutes={5}
