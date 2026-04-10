@@ -15,6 +15,88 @@ interface Props {
 
 type TabType = 'overview' | 'data' | 'describe' | 'yaml'
 
+/** Sentinel string used in place of secret values when the YAML tab is
+ * masked. Same width as the per-key reveal placeholder on the Data tab so
+ * masked YAML and masked Data look consistent. */
+const YAML_MASK_PLACEHOLDER = '••••••••••••••••'
+
+/**
+ * Mask the `data:` block of `kubectl get secret -o yaml` output (#6209).
+ *
+ * `kubectl get secret -o yaml` always emits the data block as:
+ *
+ *   data:
+ *     password: cGFzczEyMw==
+ *     username: dXNlcg==
+ *   kind: Secret
+ *
+ * That is — the `data:` line at indent 0, child entries at a deeper indent,
+ * and the block ends as soon as a sibling/parent key appears at the same or
+ * shallower indent than `data:`. We replace each child value with the
+ * placeholder while preserving the key name (so users can still see WHAT
+ * keys exist) and the surrounding YAML structure (so the document remains
+ * parseable for the eye).
+ *
+ * Also masks `stringData:` (kubectl emits this for secrets created with
+ * stringData) by the same rule.
+ *
+ * Regex-based intentionally — pulling in a YAML parser just for this would
+ * bloat the bundle and introduce parser ambiguity around the multi-document
+ * separator. The format from kubectl is stable and the test in
+ * SecretDrillDown.test.tsx pins it.
+ */
+export function maskSecretYaml(yaml: string): string {
+  if (!yaml) return yaml
+  const lines = yaml.split('\n')
+  const out: string[] = []
+  let inSensitiveBlock = false
+  let blockIndent = -1
+  for (const line of lines) {
+    // Detect the start of a sensitive block. The block header itself is
+    // emitted unchanged.
+    const blockHeaderMatch = line.match(/^(\s*)(data|stringData):\s*$/)
+    if (blockHeaderMatch) {
+      out.push(line)
+      inSensitiveBlock = true
+      blockIndent = blockHeaderMatch[1].length
+      continue
+    }
+    if (inSensitiveBlock) {
+      // Empty line — pass through, stay inside the block.
+      if (line.trim().length === 0) {
+        out.push(line)
+        continue
+      }
+      // Compute the indent of this line. If it's <= blockIndent and not
+      // empty, we've left the data block.
+      const indentMatch = line.match(/^(\s*)/)
+      const lineIndent = indentMatch ? indentMatch[1].length : 0
+      if (lineIndent <= blockIndent) {
+        inSensitiveBlock = false
+        blockIndent = -1
+        out.push(line)
+        continue
+      }
+      // Inside the block — mask the value, preserve the key. Match
+      //   <indent><key>: <value>
+      // The value can be a simple scalar, a quoted string, or absent (for
+      // a multiline `|` or `>` indicator on the next line). We only mask
+      // single-line scalar form, which is what kubectl emits.
+      const kvMatch = line.match(/^(\s*)([^:]+):\s*(.+)$/)
+      if (kvMatch) {
+        out.push(`${kvMatch[1]}${kvMatch[2]}: ${YAML_MASK_PLACEHOLDER}`)
+      } else {
+        // Defensive: line doesn't look like a key-value (could be a `|`
+        // continuation). Mask the entire content side to be safe.
+        out.push(`${' '.repeat(blockIndent + 2)}${YAML_MASK_PLACEHOLDER}`)
+      }
+      continue
+    }
+    out.push(line)
+  }
+  return out.join('\n')
+}
+
 export function SecretDrillDown({ data }: Props) {
   const { t } = useTranslation()
   const cluster = data.cluster as string
@@ -34,6 +116,11 @@ export function SecretDrillDown({ data }: Props) {
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [showAllData, setShowAllData] = useState(false)
   const [revealedKeys, setRevealedKeys] = useState<Set<string>>(new Set())
+  // YAML tab reveal state — defaults to MASKED so the `data:` block doesn't
+  // leak base64-encoded secrets the moment a user clicks the YAML tab
+  // (#6209). Mirrors the per-key reveal pattern on the Data tab — explicit
+  // user action required to see secrets.
+  const [yamlRevealed, setYamlRevealed] = useState(false)
 
   // Helper to run kubectl commands
   const runKubectl = (args: string[]): Promise<string> => {
@@ -369,7 +456,15 @@ export function SecretDrillDown({ data }: Props) {
         )}
 
         {activeTab === 'yaml' && (
-          <div>
+          <div className="space-y-3">
+            {/* #6209: same warning the Data tab uses, so the YAML tab is no
+                longer the easy bypass for the per-key reveal model. */}
+            <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-sm text-yellow-400 flex items-center gap-2">
+              <Lock className="w-4 h-4" />
+              {yamlRevealed
+                ? 'Secret values are visible. Click the eye icon to mask.'
+                : 'Secret values are hidden by default. Click the eye icon to reveal.'}
+            </div>
             {yamlLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -377,15 +472,35 @@ export function SecretDrillDown({ data }: Props) {
               </div>
             ) : yamlOutput ? (
               <div className="relative">
-                <button
-                  onClick={() => handleCopy('yaml', yamlOutput)}
-                  className="absolute top-2 right-2 px-2 py-1 rounded bg-secondary/50 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                >
-                  {copiedField === 'yaml' ? <><Check className="w-3 h-3 text-green-400" /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
-                </button>
-                <pre className="p-4 rounded-lg bg-black/50 border border-border overflow-auto max-h-[60vh] text-xs text-foreground font-mono whitespace-pre-wrap">
-                  {yamlOutput}
-                </pre>
+                {(() => {
+                  // Compute once per render so the Copy button puts the
+                  // SAME bytes onto the clipboard that the user is looking
+                  // at — masked when masked, raw when revealed (#6209).
+                  const displayedYaml = yamlRevealed ? yamlOutput : maskSecretYaml(yamlOutput)
+                  return (
+                    <>
+                      <div className="absolute top-2 right-2 flex items-center gap-1">
+                        <button
+                          onClick={() => setYamlRevealed(v => !v)}
+                          className="p-1 rounded bg-secondary/50 text-muted-foreground hover:text-foreground"
+                          aria-label={yamlRevealed ? 'Mask secret values' : 'Reveal secret values'}
+                          title={yamlRevealed ? 'Mask secret values' : 'Reveal secret values'}
+                        >
+                          {yamlRevealed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                        <button
+                          onClick={() => handleCopy('yaml', displayedYaml)}
+                          className="px-2 py-1 rounded bg-secondary/50 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                        >
+                          {copiedField === 'yaml' ? <><Check className="w-3 h-3 text-green-400" /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
+                        </button>
+                      </div>
+                      <pre className="p-4 rounded-lg bg-black/50 border border-border overflow-auto max-h-[60vh] text-xs text-foreground font-mono whitespace-pre-wrap">
+                        {displayedYaml}
+                      </pre>
+                    </>
+                  )
+                })()}
               </div>
             ) : (
               <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
