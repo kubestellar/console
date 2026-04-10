@@ -49,13 +49,13 @@ const COMPONENTS_DIR = path.resolve(
  *
  * Set to generous initial values; calibrated after first run.
  */
-// 278 = 273 prior baseline + 5 issue-number references in JSX block comments
-// added by the services health bundle (#6162, #6164, #6165, #6167 — one
-// comment cites #6164/#6165 together, hence 5 occurrences across 4 lines).
-// The ratchet regex matches `#NNNN` as a hex literal, but these are GitHub
-// issue references, not colors. Bumping the baseline rather than rewriting
-// the regex to keep this PR scoped.
-const EXPECTED_RAW_HEX_COUNT = 278
+// 281 = 278 prior baseline + 3 issue-number references in JSX block comments
+// added by the secret/configmap masking bundle (#6209 cited 2x in
+// SecretDrillDown.tsx + ConfigMapDrillDown.tsx, #6211 cited 1x). The ratchet
+// regex matches `#NNNN` as a hex literal, but these are GitHub issue
+// references in code comments, not color literals. Same scoped-bump rationale
+// as the prior 273→278 increment.
+const EXPECTED_RAW_HEX_COUNT = 281
 const EXPECTED_RAW_RGBA_COUNT = 104
 const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 22
 const EXPECTED_INLINE_STYLE_COLOR_COUNT = 213
