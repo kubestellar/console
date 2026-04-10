@@ -732,14 +732,23 @@ func (m *MultiClusterClient) GetServices(ctx context.Context, contextName, names
 
 	var result []Service
 	for _, svc := range services.Items {
-		// Build ports list
+		// Build ports list. We populate both the legacy flat []string
+		// form (existing consumers) and the structured PortDetails form
+		// which preserves the port Name (issue #6163).
 		var ports []string
+		var portDetails []ServicePortDetail
 		for _, p := range svc.Spec.Ports {
 			portStr := fmt.Sprintf("%d/%s", p.Port, p.Protocol)
 			if p.NodePort != 0 {
 				portStr = fmt.Sprintf("%d:%d/%s", p.Port, p.NodePort, p.Protocol)
 			}
 			ports = append(ports, portStr)
+			portDetails = append(portDetails, ServicePortDetail{
+				Name:     p.Name,
+				Port:     p.Port,
+				Protocol: string(p.Protocol),
+				NodePort: p.NodePort,
+			})
 		}
 
 		// Resolve external IP and LoadBalancer provisioning status.
@@ -779,8 +788,10 @@ func (m *MultiClusterClient) GetServices(ctx context.Context, contextName, names
 			ClusterIP:   svc.Spec.ClusterIP,
 			ExternalIP:  externalIP,
 			Ports:       ports,
+			PortDetails: portDetails,
 			Endpoints:   endpointReadyCounts[svc.Namespace+"/"+svc.Name],
 			LBStatus:    lbStatus,
+			Selector:    svc.Spec.Selector,
 			Age:         age,
 			Labels:      svc.Labels,
 			Annotations: svc.Annotations,

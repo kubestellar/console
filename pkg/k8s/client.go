@@ -405,6 +405,23 @@ type Deployment struct {
 	Annotations       map[string]string `json:"annotations,omitempty"`
 }
 
+// ServicePortDetail is a structured view of a ServicePort that preserves
+// the optional port name (issue #6163). The legacy Ports []string field is
+// retained for backwards compatibility; new code should prefer this.
+type ServicePortDetail struct {
+	// Name of the port as defined on the k8s ServicePort (may be empty).
+	// When present it is a well-known name like "http" or "metrics" that
+	// operators configure to identify a port across the cluster.
+	Name     string `json:"name,omitempty"`
+	// Port is the service-level port (spec.ports[].port).
+	Port     int32  `json:"port"`
+	// Protocol is TCP / UDP / SCTP.
+	Protocol string `json:"protocol,omitempty"`
+	// NodePort is the externally-exposed port for NodePort / LoadBalancer
+	// services. Zero for ClusterIP services.
+	NodePort int32  `json:"nodePort,omitempty"`
+}
+
 // Service represents a Kubernetes service
 type Service struct {
 	Name        string            `json:"name"`
@@ -413,7 +430,14 @@ type Service struct {
 	Type        string            `json:"type"` // ClusterIP, NodePort, LoadBalancer, ExternalName
 	ClusterIP   string            `json:"clusterIP,omitempty"`
 	ExternalIP  string            `json:"externalIP,omitempty"`
+	// Ports is the legacy flat string representation of the ports, kept
+	// for existing consumers. Format: "80/TCP" or "80:30080/TCP" when a
+	// NodePort is allocated. Prefer PortDetails for new code.
 	Ports       []string          `json:"ports,omitempty"`
+	// PortDetails is the structured representation of the ServicePorts
+	// including the optional name field (issue #6163). Same length and
+	// ordering as Ports.
+	PortDetails []ServicePortDetail `json:"portDetails,omitempty"`
 	// Endpoints is the number of ready backend addresses summed across all
 	// subsets of the matching core/v1 Endpoints object (i.e. actual pod
 	// endpoints backing the service, NOT the number of services themselves).
@@ -426,6 +450,12 @@ type Service struct {
 	// has been assigned) or LBStatusProvisioning (cloud provider has not yet
 	// provisioned an address). Issue #6153.
 	LBStatus    string            `json:"lbStatus,omitempty"`
+	// Selector is the label selector used by the service to match backing
+	// pods (corev1.ServiceSpec.Selector). Surfaced so the frontend can
+	// detect orphaned services (selector present but no matching pods,
+	// issue #6164) and services with an empty selector that are not
+	// ExternalName (config bug, issue #6166). nil for ExternalName.
+	Selector    map[string]string `json:"selector,omitempty"`
 	Age         string            `json:"age,omitempty"`
 	Labels      map[string]string `json:"labels,omitempty"`
 	Annotations map[string]string `json:"annotations,omitempty"`
