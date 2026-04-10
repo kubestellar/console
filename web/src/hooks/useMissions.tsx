@@ -536,7 +536,13 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           }
           lastStreamTimestamp.current.delete(m.id)
 
-          emitMissionError(m.type, isInactive ? 'mission_inactivity' : 'mission_timeout')
+          emitMissionError(
+            m.type,
+            isInactive ? 'mission_inactivity' : 'mission_timeout',
+            isInactive
+              ? `stalled_after_${Math.round((now - (lastStreamTs ?? now)) / 1000)}s`
+              : `elapsed_${Math.round(elapsed / 1000)}s`
+          )
 
           const errorContent = isInactive
             ? `**Agent Not Responding**\n\nThe AI agent started responding but stopped for over ${Math.round(MISSION_INACTIVITY_TIMEOUT_MS / 60_000)} minutes. This usually means the agent is stuck waiting for a tool call to return (e.g., a Kubernetes API call or APISIX gateway request that is not responding).\n\nYou can:\n- **Retry** the mission — the issue may be transient\n- **Check cluster connectivity** — ensure the target cluster API server is reachable\n- **Cancel** and try a simpler or more specific request`
@@ -901,7 +907,11 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       lastStreamTimestamp.current.delete(missionId)
       setMissions(prev => prev.map(m => {
         if (m.id !== missionId || m.status !== 'waiting_input') return m
-        emitMissionError(m.type, 'waiting_input_timeout')
+        emitMissionError(
+          m.type,
+          'waiting_input_timeout',
+          `timeout_after_${Math.round(WAITING_INPUT_TIMEOUT_MS / 1000)}s`
+        )
         return {
           ...m,
           status: 'failed' as MissionStatus,
@@ -1272,7 +1282,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         const payload = message.payload as { code?: string; message?: string }
         pendingRequests.current.delete(message.id)
         clearWaitingInputTimeout(missionId) // #5936 — terminal error, cancel watchdog
-        emitMissionError(m.type, payload.code || 'unknown')
+        emitMissionError(m.type, payload.code || 'unknown', payload.message)
 
         // Create helpful error message based on error code
         let errorContent = payload.message || 'Unknown error'
@@ -1494,7 +1504,11 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             ]
           } : m
         ))
-        emitMissionError(params.type || 'custom', preflight.error?.code || 'preflight_unknown')
+        emitMissionError(
+          params.type || 'custom',
+          preflight.error?.code || 'preflight_unknown',
+          preflight.error?.message
+        )
         return
       }
 

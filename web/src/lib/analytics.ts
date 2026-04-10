@@ -892,8 +892,23 @@ export function emitMissionCompleted(missionType: string, durationSec: number) {
   send('ksc_mission_completed', { mission_type: missionType, duration_sec: durationSec })
 }
 
-export function emitMissionError(missionType: string, errorCode: string) {
-  send('ksc_mission_error', { mission_type: missionType, error_code: errorCode })
+// Max characters to send in the error_detail dimension. GA4 caps event
+// parameter values at 100 chars, so anything longer is truncated to stay
+// within the limit while still surfacing the leading diagnostic text.
+const MISSION_ERROR_DETAIL_MAX_LEN = 100
+
+export function emitMissionError(
+  missionType: string,
+  errorCode: string,
+  errorDetail?: string
+) {
+  const trimmedDetail = errorDetail?.trim()
+  send('ksc_mission_error', {
+    mission_type: missionType,
+    error_code: errorCode,
+    error_detail: trimmedDetail
+      ? trimmedDetail.slice(0, MISSION_ERROR_DETAIL_MAX_LEN)
+      : '' })
 }
 
 export function emitMissionRated(missionType: string, rating: string) {
