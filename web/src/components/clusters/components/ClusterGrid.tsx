@@ -1,5 +1,5 @@
 import { memo, useState, useEffect, useRef } from 'react'
-import { Pencil, Globe, User, ShieldAlert, ChevronRight, Star, WifiOff, RefreshCw, ExternalLink, AlertCircle, Cpu, Box, Server, KeyRound, Copy, Check, GripVertical, Play, Square, RotateCcw } from 'lucide-react'
+import { Pencil, Globe, User, ShieldAlert, ChevronRight, Star, WifiOff, RefreshCw, ExternalLink, AlertCircle, Cpu, Box, Server, KeyRound, Copy, Check, GripVertical, Play, Square, RotateCcw, Trash2 } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -233,6 +233,8 @@ interface ClusterGridProps {
   onSelectCluster: (clusterName: string) => void
   onRenameCluster: (clusterName: string) => void
   onRefreshCluster?: (clusterName: string) => void
+  /** Invoked when the user clicks "Remove cluster" on an offline cluster card (#5901) */
+  onRemoveCluster?: (clusterName: string) => void
   onReorder?: (clusterNames: string[]) => void
   layoutMode?: ClusterLayoutMode
 }
@@ -247,9 +249,37 @@ interface ClusterCardProps {
   onSelectCluster: () => void
   onRenameCluster: () => void
   onRefreshCluster?: () => void
+  /** Invoked when the user clicks "Remove cluster" — only rendered when `unreachable` (#5901) */
+  onRemoveCluster?: () => void
   dragHandle?: React.ReactNode
   layoutMode: ClusterLayoutMode
 }
+
+/**
+ * Inline "Remove cluster" button shown only on offline/unreachable cluster cards (#5901).
+ * Delegates confirmation + API call to the parent via `onRemoveCluster`.
+ */
+const RemoveClusterButton = memo(function RemoveClusterButton({
+  onRemove,
+  size = 'sm' }: {
+  onRemove: () => void
+  size?: 'sm' | 'xs'
+}) {
+  const { t } = useTranslation()
+  const iconClass = size === 'xs' ? 'w-3 h-3' : 'w-3.5 h-3.5'
+  const btnClass = size === 'xs' ? 'p-1' : 'p-1.5'
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onRemove() }}
+      className={`${btnClass} rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/20 transition-colors`}
+      title={t('cluster.removeCluster')}
+      aria-label={t('cluster.removeCluster')}
+      data-testid="remove-cluster-button"
+    >
+      <Trash2 className={iconClass} aria-hidden="true" />
+    </button>
+  )
+})
 
 // Keyboard handler for clickable card divs: activates on Enter or Space
 function handleCardKeyDown(callback: () => void) {
@@ -271,6 +301,7 @@ const FullClusterCard = memo(function FullClusterCard({
   onSelectCluster,
   onRenameCluster,
   onRefreshCluster,
+  onRemoveCluster,
   dragHandle }: Omit<ClusterCardProps, 'layoutMode'>) {
   const { t } = useTranslation()
   const loading = isClusterLoading(cluster)
@@ -391,6 +422,10 @@ const FullClusterCard = memo(function FullClusterCard({
                     <Pencil className="w-3 h-3" aria-hidden="true" />
                   </button>
                 )}
+                {/* Remove cluster button — only for unreachable clusters (#5901) */}
+                {isConnected && unreachable && onRemoveCluster && (cluster.source === 'kubeconfig' || !cluster.source) && (
+                  <RemoveClusterButton onRemove={onRemoveCluster} size="xs" />
+                )}
               </div>
               <div className="flex flex-col gap-1 mt-1">
                 {cluster.server && (
@@ -509,9 +544,11 @@ const ListClusterCard = memo(function ListClusterCard({
   gpuInfo,
   permissionsLoading,
   isClusterAdmin,
+  isConnected,
   onSelectCluster,
   onRefreshCluster,
-  dragHandle }: Omit<ClusterCardProps, 'layoutMode' | 'isConnected' | 'onRenameCluster'>) {
+  onRemoveCluster,
+  dragHandle }: Omit<ClusterCardProps, 'layoutMode' | 'onRenameCluster'>) {
   const { t } = useTranslation()
   const loading = isClusterLoading(cluster)
   const unreachable = isClusterUnreachable(cluster)
@@ -680,6 +717,10 @@ const ListClusterCard = memo(function ListClusterCard({
                 <RefreshCw className={`w-3.5 h-3.5 ${spinning ? 'animate-spin' : ''}`} aria-hidden="true" />
               </button>
             )}
+            {/* Remove cluster button — only for unreachable clusters (#5901) */}
+            {isConnected && unreachable && onRemoveCluster && (cluster.source === 'kubeconfig' || !cluster.source) && (
+              <RemoveClusterButton onRemove={onRemoveCluster} />
+            )}
             {!permissionsLoading && !isClusterAdmin && !unreachable && (
               <span title="Limited permissions">
                 <ShieldAlert className="w-3.5 h-3.5 text-yellow-400" />
@@ -697,8 +738,10 @@ const ListClusterCard = memo(function ListClusterCard({
 const CompactClusterCard = memo(function CompactClusterCard({
   cluster,
   gpuInfo,
+  isConnected,
   onSelectCluster,
-  dragHandle }: Omit<ClusterCardProps, 'layoutMode' | 'isConnected' | 'permissionsLoading' | 'isClusterAdmin' | 'onRenameCluster' | 'onRefreshCluster'>) {
+  onRemoveCluster,
+  dragHandle }: Omit<ClusterCardProps, 'layoutMode' | 'permissionsLoading' | 'isClusterAdmin' | 'onRenameCluster' | 'onRefreshCluster'>) {
   const { t } = useTranslation()
   const unreachable = isClusterUnreachable(cluster)
   const hasCachedData = cluster.nodeCount !== undefined && cluster.nodeCount > 0
@@ -753,6 +796,10 @@ const CompactClusterCard = memo(function CompactClusterCard({
           )}
           {cluster.isCurrent && (
             <Star className="w-3 h-3 text-primary fill-current flex-shrink-0" />
+          )}
+          {/* Remove cluster button — only for unreachable clusters (#5901) */}
+          {isConnected && unreachable && onRemoveCluster && (cluster.source === 'kubeconfig' || !cluster.source) && (
+            <RemoveClusterButton onRemove={onRemoveCluster} size="xs" />
           )}
         </div>
 
@@ -832,6 +879,7 @@ export const ClusterGrid = memo(function ClusterGrid({
   onSelectCluster,
   onRenameCluster,
   onRefreshCluster,
+  onRemoveCluster,
   onReorder,
   layoutMode = 'grid' }: ClusterGridProps) {
   const { t } = useTranslation()
@@ -881,15 +929,18 @@ export const ClusterGrid = memo(function ClusterGrid({
             return (
               <SortableClusterItem key={cluster.name} id={cluster.name} onReorder={onReorder}>
                 {(dragHandle) => {
+                  const removeHandler = onRemoveCluster ? () => onRemoveCluster(cluster.name) : undefined
                   if (layoutMode === 'list') {
                     return (
                       <ListClusterCard
                         cluster={cluster}
                         gpuInfo={gpuInfo}
+                        isConnected={isConnected}
                         permissionsLoading={permissionsLoading}
                         isClusterAdmin={clusterIsAdmin}
                         onSelectCluster={() => onSelectCluster(cluster.name)}
                         onRefreshCluster={onRefreshCluster ? () => onRefreshCluster(cluster.name) : undefined}
+                        onRemoveCluster={removeHandler}
                         dragHandle={dragHandle}
                       />
                     )
@@ -900,7 +951,9 @@ export const ClusterGrid = memo(function ClusterGrid({
                       <CompactClusterCard
                         cluster={cluster}
                         gpuInfo={gpuInfo}
+                        isConnected={isConnected}
                         onSelectCluster={() => onSelectCluster(cluster.name)}
+                        onRemoveCluster={removeHandler}
                         dragHandle={dragHandle}
                       />
                     )
@@ -917,6 +970,7 @@ export const ClusterGrid = memo(function ClusterGrid({
                       onSelectCluster={() => onSelectCluster(cluster.name)}
                       onRenameCluster={() => onRenameCluster(cluster.name)}
                       onRefreshCluster={onRefreshCluster ? () => onRefreshCluster(cluster.name) : undefined}
+                      onRemoveCluster={removeHandler}
                       dragHandle={dragHandle}
                     />
                   )

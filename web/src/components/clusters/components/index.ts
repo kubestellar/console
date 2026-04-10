@@ -1,4 +1,5 @@
 export { RenameModal } from './RenameModal'
+export { RemoveClusterDialog } from './RemoveClusterDialog'
 export { StatsOverview, type ClusterStats } from './StatsOverview'
 export { FilterTabs, type FilterType, type SortByType } from './FilterTabs'
 export { ClusterGrid, type ClusterLayoutMode } from './ClusterGrid'

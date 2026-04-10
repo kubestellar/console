@@ -7,6 +7,7 @@ import { AddClusterDialog } from './AddClusterDialog'
 import { EmptyClusterState } from './EmptyClusterState'
 import {
   RenameModal,
+  RemoveClusterDialog,
   FilterTabs,
   ClusterGrid,
   GPUDetailModal,
@@ -133,6 +134,7 @@ export function Clusters() {
     return (stored as ClusterLayoutMode) || 'grid'
   })
   const [renamingCluster, setRenamingCluster] = useState<string | null>(null)
+  const [removingCluster, setRemovingCluster] = useState<string | null>(null)
 
   // Additional UI state
   const [showClusterGrid, setShowClusterGrid] = useState(true) // Cluster cards visible by default
@@ -155,6 +157,26 @@ export function Clusters() {
       const data = await response.json().catch(() => ({})) as { message?: string }
       throw new Error(data.message || 'Failed to rename context')
     }
+    refetch()
+  }
+
+  /**
+   * Remove an offline cluster's kubeconfig context (#5901).
+   * Backend: `RemoveContext` in pkg/k8s/client.go (added in #5658). The agent
+   * exposes it at POST /kubeconfig/remove on the localhost-only HTTP server.
+   */
+  const handleRemoveCluster = async (contextName: string) => {
+    if (!isConnected) throw new Error(t('cluster.removeClusterNoAgent'))
+    const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/remove`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ context: contextName }),
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({})) as { error?: string; message?: string }
+      throw new Error(data.error || data.message || t('cluster.removeClusterError'))
+    }
+    showToast(t('cluster.removeClusterSuccess', { name: contextName }), 'success')
     refetch()
   }
 
@@ -352,6 +374,7 @@ export function Clusters() {
                   onSelectCluster={setSelectedCluster}
                   onRenameCluster={setRenamingCluster}
                   onRefreshCluster={refreshSingleCluster}
+                  onRemoveCluster={setRemovingCluster}
                   onReorder={handleReorder}
                 />
               )}
@@ -413,6 +436,22 @@ export function Clusters() {
           onRename={handleRenameContext}
         />
       )}
+
+      {/* Remove Offline Cluster Modal (#5901) */}
+      {removingCluster && (() => {
+        const target = clusters.find(c => c.name === removingCluster)
+        // Prefer the kubeconfig context string (what the backend expects); fall back to name
+        const ctxName = target?.context || removingCluster
+        const displayName = target?.context || target?.name || removingCluster
+        return (
+          <RemoveClusterDialog
+            contextName={ctxName}
+            displayName={displayName}
+            onClose={() => setRemovingCluster(null)}
+            onConfirm={handleRemoveCluster}
+          />
+        )
+      })()}
 
       {/* GPU Detail Modal */}
       {showGPUModal && (

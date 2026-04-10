@@ -2585,7 +2585,17 @@
     "connectAdding": "Adding...",
     "connectSuccess": "Cluster added successfully",
     "connectNext": "Next",
-    "connectBack": "Back"
+    "connectBack": "Back",
+    "removeCluster": "Remove cluster from kubeconfig",
+    "removeClusterTitle": "Remove Offline Cluster",
+    "removeClusterWarning": "This will permanently delete the cluster's context from your kubeconfig. The cluster itself will not be affected.",
+    "removeClusterContext": "Kubeconfig context to remove:",
+    "removeClusterDesc": "This updates your kubeconfig via the local agent. Only unreachable (offline) clusters can be removed from the cluster list.",
+    "removeClusterConfirm": "Remove cluster",
+    "removeClusterRemoving": "Removing...",
+    "removeClusterSuccess": "Removed cluster \"{{name}}\" from kubeconfig",
+    "removeClusterError": "Failed to remove cluster from kubeconfig",
+    "removeClusterNoAgent": "Local agent not connected"
   },
   "remediation": {
     "title": "AI Remediation Console",
