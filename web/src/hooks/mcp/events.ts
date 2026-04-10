@@ -269,6 +269,9 @@ let warningEventsCache: WarningEventsCache | null = null
 
 export function useWarningEvents(cluster?: string, namespace?: string, limit = 20) {
   const cacheKey = `warningEvents:${cluster || 'all'}:${namespace || 'all'}:${limit}`
+  // Track AbortController for cleanup on unmount
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const isMountedRef = useRef(true)
   const { isDemoMode: demoMode } = useDemoMode()
   const initialMountRef = useRef(true)
 
@@ -317,6 +320,13 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
       return
     }
 
+    // Abort any previous in-flight request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    abortControllerRef.current = new AbortController()
+    const signal = abortControllerRef.current.signal
+
     // Use SSE streaming for progressive multi-cluster data
     try {
       const sseParams: Record<string, string> = {}
@@ -328,30 +338,51 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
         url: '/api/mcp/events/warnings/stream',
         params: sseParams,
         itemsKey: 'events',
+        signal,
         onClusterData: (_clusterName, items) => {
+          if (signal.aborted || !isMountedRef.current) return
           setEvents(prev => [...prev, ...items].slice(0, limit))
           setIsLoading(false)
         },
       })
 
+      if (signal.aborted || !isMountedRef.current) return
       const now = new Date()
       warningEventsCache = { data: allEvents.slice(0, limit), timestamp: now, key: cacheKey }
       setEvents(allEvents.slice(0, limit))
       setError(null)
       setLastUpdated(now)
-    } catch {
+    } catch (err) {
+      // Use name check instead of instanceof to handle both Error and DOMException
+      // across all browser versions (DOMException may not extend Error in older Safari).
+      if ((err as { name?: string })?.name === 'AbortError') return
+      if (!isMountedRef.current) return
       if (!silent && !warningEventsCache) {
         setError('Failed to fetch warning events')
       }
     } finally {
-      setIsLoading(false)
-      if (!silent) {
-        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
-      } else {
-        setIsRefreshing(false)
+      if (isMountedRef.current && !signal.aborted) {
+        setIsLoading(false)
+        if (!silent) {
+          setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
+        } else {
+          setIsRefreshing(false)
+        }
       }
     }
   }, [cluster, namespace, limit, cacheKey])
+
+  // Track mounted state for cleanup
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+      // Abort any in-flight request on unmount
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const hasCachedData = warningEventsCache && warningEventsCache.key === cacheKey

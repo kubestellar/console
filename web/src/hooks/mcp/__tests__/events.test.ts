@@ -757,4 +757,66 @@ describe('useWarningEvents', () => {
 
     expect(result.current.lastUpdated).toBeInstanceOf(Date)
   })
+
+  it('cancels in-flight fetches on refetch', async () => {
+    // Capture signals from each fetchSSE call so we can check abortion
+    const capturedSignals: AbortSignal[] = []
+    mockFetchSSE.mockImplementation((opts: { signal?: AbortSignal }) => {
+      if (opts.signal) capturedSignals.push(opts.signal)
+      return new Promise(() => {}) // never resolves, simulating in-flight
+    })
+
+    const { result } = renderHook(() => useWarningEvents())
+
+    // Wait for the first fetch to register its signal
+    await waitFor(() => expect(capturedSignals.length).toBeGreaterThanOrEqual(1))
+    const firstSignal = capturedSignals[0]
+    expect(firstSignal.aborted).toBe(false)
+
+    // Trigger a second refetch while the first is still in-flight
+    await act(async () => { result.current.refetch() })
+
+    // Wait for the second signal to be registered
+    await waitFor(() => expect(capturedSignals.length).toBeGreaterThanOrEqual(2))
+    const secondSignal = capturedSignals[capturedSignals.length - 1]
+
+    // The older fetch's signal must be aborted; the newer one is still active
+    expect(firstSignal.aborted).toBe(true)
+    expect(secondSignal.aborted).toBe(false)
+  })
+
+  it('does not setState after unmount', async () => {
+    // Hold the fetchSSE promise so we can resolve it after unmounting
+    let resolveFetch: (value: unknown[]) => void = () => {}
+    mockFetchSSE.mockImplementation((opts: { signal?: AbortSignal }) => {
+      return new Promise<unknown[]>((resolve) => {
+        resolveFetch = resolve
+        // If the signal fires abort, reject with AbortError like a real fetch
+        opts.signal?.addEventListener('abort', () => {
+          resolve([]) // treat as cancelled — no state update expected
+        })
+      })
+    })
+
+    const warnSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { unmount } = renderHook(() => useWarningEvents())
+
+    // Unmount mid-fetch
+    unmount()
+
+    // Resolve the fetch after unmount — any setEvents calls afterward would warn
+    await act(async () => {
+      resolveFetch([
+        { type: 'Warning', reason: 'Late', message: 'late', object: 'Pod/l', namespace: 'ns', cluster: 'c', count: 1 },
+      ])
+      await new Promise(r => setTimeout(r, 0))
+    })
+
+    // React logs a warning on state updates after unmount — there should be none
+    const unmountWarnings = warnSpy.mock.calls.filter(call =>
+      typeof call[0] === 'string' && call[0].includes('unmounted')
+    )
+    expect(unmountWarnings).toHaveLength(0)
+    warnSpy.mockRestore()
+  })
 })
