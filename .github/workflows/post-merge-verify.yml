@@ -261,13 +261,16 @@ jobs:
           # Comment on PR
           gh pr comment "$PR" --repo "${{ github.repository }}" --body "$BODY" || true
 
-          # On failure: reopen original issue + create regression issue + assign Copilot
+          # On failure: comment on (but do NOT reopen) the original issue,
+          # then create a regression issue + assign Copilot for follow-up.
+          # Playwright is non-blocking on this repo (per the merge gate),
+          # so reopening would create noise that drowns out real fixes.
           if [ "$STATUS" = "failed" ]; then
-            # Reopen the original issue if it was closed by this PR
+            # Comment on the original issue without reopening it
             if [ -n "$ISSUE" ]; then
-              echo "Reopening original issue #$ISSUE..."
-              gh issue reopen "$ISSUE" --repo "${{ github.repository }}" \
-                --comment "⚠️ Reopening: post-merge Playwright verification **failed** after PR #$PR merged. The fix may not be working as expected. [See test report]($RUN_URL)" \
+              echo "Commenting on original issue #$ISSUE (no reopen)..."
+              gh issue comment "$ISSUE" --repo "${{ github.repository }}" \
+                --body "⚠️ Post-merge Playwright verification **failed** after PR #$PR merged. The fix shipped, but Playwright flagged an issue — see [test report]($RUN_URL). A regression issue will be filed for follow-up." \
                 || true
             fi
 
