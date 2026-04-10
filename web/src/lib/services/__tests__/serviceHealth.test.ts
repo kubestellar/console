@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest'
 import {
   deriveServiceHealth,
   isOrphaned,
-  hasInvalidSelector,
   hasSelector,
   formatServicePort,
   formatServicePorts,
@@ -97,23 +96,6 @@ describe('hasSelector', () => {
   })
   it('returns true when selector has at least one key', () => {
     expect(hasSelector({ selector: { app: 'web' } })).toBe(true)
-  })
-})
-
-describe('hasInvalidSelector (#6166)', () => {
-  it('flags a ClusterIP service with no selector', () => {
-    expect(hasInvalidSelector({ type: 'ClusterIP' })).toBe(true)
-  })
-  it('does not flag ExternalName services without a selector', () => {
-    expect(hasInvalidSelector({ type: 'ExternalName' })).toBe(false)
-  })
-  it('does not flag services with a populated selector', () => {
-    expect(
-      hasInvalidSelector({
-        type: 'ClusterIP',
-        selector: { app: 'web' },
-      }),
-    ).toBe(false)
   })
 })
 

@@ -154,7 +154,7 @@ jobs:
           fi
 
   notify:
-    name: Notify on scheduled regression
+    name: Notify on regression (scheduled or manual dispatch)
     needs: all-cards-ttfi
     # File auto-issues on scheduled runs and manual dispatches (so we can
     # dry-run the full notifier pipeline without waiting for a cron tick).

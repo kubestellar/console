@@ -22,12 +22,6 @@ export type ServiceHealthStatus =
   | 'provisioning'   // LoadBalancer without an ingress address yet (#6153/#6167)
   | 'unknown'        // backend did not supply enough data to decide
 
-/** Service types that are allowed to have an empty selector. ExternalName
- * services intentionally forward DNS and never select pods. */
-const SELECTORLESS_SERVICE_TYPES: ReadonlySet<string> = new Set([
-  'ExternalName',
-])
-
 /** Zero endpoints sentinel — extracted so the comparison is named and
  * not a bare `=== 0` magic number. */
 const ZERO_ENDPOINTS = 0
@@ -51,14 +45,14 @@ export function isOrphaned(
   return svc.endpoints === ZERO_ENDPOINTS && hasSelector(svc)
 }
 
-/** `true` when a non-ExternalName service has an empty selector. This is
- * a configuration bug surfaced per #6166. */
-export function hasInvalidSelector(
-  svc: Pick<Service, 'selector' | 'type'>,
-): boolean {
-  if (SELECTORLESS_SERVICE_TYPES.has(svc.type)) return false
-  return !hasSelector(svc)
-}
+// Note: a previous iteration exported `hasInvalidSelector` which flagged
+// any non-ExternalName service with an empty selector as a configuration
+// bug. Kubernetes legitimately allows selector-less Services backed by
+// manually managed Endpoints/EndpointSlices (and headless services), so
+// the heuristic produced false positives. The function had no production
+// callers and was removed in PR #6181 follow-up — `deriveServiceHealth`
+// already handles the "no selector + zero endpoints" case correctly by
+// returning `unknown` rather than `orphaned`.
 
 /** Derive the health status for a service. The order of the checks is
  * significant — provisioning wins over orphaned so a LoadBalancer that

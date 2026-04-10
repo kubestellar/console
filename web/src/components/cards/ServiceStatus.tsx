@@ -1,5 +1,5 @@
 import { Globe, Server, ExternalLink, ChevronRight } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Service } from '../../hooks/useMCP'
 import { useCachedServices } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -20,7 +20,6 @@ import {
   SERVICES_CACHE_TTL_MS,
   SERVICES_CACHE_STALE_MS,
   MS_PER_SECOND,
-  TICK_INTERVAL_MS,
 } from '../../lib/constants/network'
 
 type SortByOption = 'type' | 'name' | 'namespace' | 'ports'
@@ -58,16 +57,46 @@ function getTypeColor(type: string) {
   }
 }
 
-/** Ticks to the current wall-clock `Date.now()` every TICK_INTERVAL_MS
- * while `enabled`. Computing `Date.now()` inside an effect (rather than
- * during render) keeps the component pure per React rules-of-hooks. */
-function useNowTick(enabled: boolean): number {
+/**
+ * Schedules at most two timeouts off `lastRefresh` — one for the
+ * stale-threshold transition and one for the TTL/expired transition —
+ * and re-renders the card only at those moments. Replaces the previous
+ * 1-second interval that re-rendered indefinitely while `lastRefresh`
+ * was truthy, even when the freshness badge was hidden (#6181).
+ *
+ * Returns the current wall-clock `Date.now()` snapshot, captured inside
+ * the effect so the component stays pure per react-hooks rules.
+ *
+ * Note: `lastRefresh` is checked with `!= null` (NOT a truthy check) so
+ * a `0` epoch timestamp would still be honored — the previous truthy
+ * guard would have wrongly treated `0` as "no refresh" (#6181).
+ */
+function useFreshnessClock(lastRefresh: number | null | undefined): number {
   const [now, setNow] = useState(() => Date.now())
+  // Re-render the card immediately when `lastRefresh` changes so the
+  // memoized cacheAgeMs reflects the new origin without waiting for a
+  // scheduled timeout.
+  const lastRefreshRef = useRef(lastRefresh)
   useEffect(() => {
-    if (!enabled) return
-    const id = window.setInterval(() => setNow(Date.now()), TICK_INTERVAL_MS)
-    return () => window.clearInterval(id)
-  }, [enabled])
+    if (lastRefreshRef.current !== lastRefresh) {
+      lastRefreshRef.current = lastRefresh
+      setNow(Date.now())
+    }
+    if (lastRefresh == null) return
+    const elapsed = Date.now() - lastRefresh
+    const msUntilStale = SERVICES_CACHE_STALE_MS - elapsed
+    const msUntilExpired = SERVICES_CACHE_TTL_MS - elapsed
+    const timers: number[] = []
+    if (msUntilStale > 0) {
+      timers.push(window.setTimeout(() => setNow(Date.now()), msUntilStale))
+    }
+    if (msUntilExpired > 0) {
+      timers.push(window.setTimeout(() => setNow(Date.now()), msUntilExpired))
+    }
+    return () => {
+      for (const id of timers) window.clearTimeout(id)
+    }
+  }, [lastRefresh])
   return now
 }
 
@@ -81,19 +110,25 @@ export function ServiceStatus() {
     isFailed,
     consecutiveFailures,
     lastRefresh,
-    error
+    error,
+    refetch,
   } = useCachedServices()
 
   const { drillToService } = useDrillDownActions()
 
-  // Issue #6162: enforce a hard TTL on the cached payload. If the data
-  // is older than SERVICES_CACHE_TTL_MS, treat it as empty so downstream
-  // logic triggers a refetch via the normal hook flow rather than
-  // rendering indefinitely-stale data. `now` is pulled from a ticking
-  // hook so we never call Date.now() during render (react-hooks purity).
-  const now = useNowTick(!!lastRefresh)
+  // Issue #6162: enforce a hard TTL on the cached payload. If the data is
+  // older than SERVICES_CACHE_TTL_MS, treat it as empty so the UI does not
+  // render indefinitely-stale data, AND proactively call refetch() so the
+  // card recovers even if the auto-refresh tick is paused or delayed
+  // (#6181). `now` is pulled from a freshness clock that schedules at most
+  // two timeouts (stale + expired) instead of ticking every second, so the
+  // card no longer re-renders forever while a fresh cache sits idle.
+  const now = useFreshnessClock(lastRefresh)
+  // `lastRefresh != null` instead of a truthy check so a `0` epoch
+  // timestamp is honored — a truthy guard would have produced a `null`
+  // age and silently disabled the freshness badge (#6181).
   const cacheAgeMs = useMemo(
-    () => (lastRefresh ? now - lastRefresh : null),
+    () => (lastRefresh != null ? now - lastRefresh : null),
     [now, lastRefresh],
   )
   const isExpired = cacheAgeMs !== null && cacheAgeMs > SERVICES_CACHE_TTL_MS
@@ -105,6 +140,20 @@ export function ServiceStatus() {
     () => (isExpired ? [] : rawServices),
     [isExpired, rawServices],
   )
+
+  // When the cache crosses the TTL, kick off a refetch so the card
+  // recovers even if the next scheduled auto-refresh is delayed (#6181).
+  // Guarded so we only refetch on the rising edge of expiry — not on
+  // every render while expired.
+  const wasExpiredRef = useRef(false)
+  useEffect(() => {
+    if (isExpired && !wasExpiredRef.current) {
+      wasExpiredRef.current = true
+      refetch?.()
+    } else if (!isExpired) {
+      wasExpiredRef.current = false
+    }
+  }, [isExpired, refetch])
 
   // Report data state to CardWrapper for failure badge rendering
   const hasData = services.length > 0
@@ -283,6 +332,11 @@ export function ServiceStatus() {
             // Centralized health derivation (#6164, #6165, #6166, #6167)
             const health: ServiceHealthStatus = deriveServiceHealth(service)
             const formattedPorts = formatServicePorts(service)
+            // When the backend did not report endpoint counts the card
+            // should say so explicitly rather than rendering a misleading
+            // "0 endpoints" that contradicts the unknown-status dot
+            // (#6181). `endpointsKnown` gates the count vs. unknown label.
+            const endpointsKnown = service.endpoints !== undefined
             const endpointCount = service.endpoints ?? 0
             return (
             <div
@@ -308,12 +362,21 @@ export function ServiceStatus() {
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <span className="truncate">{service.namespace}</span>
                     <ClusterBadge cluster={service.cluster || ''} size="sm" />
-                    <span className="truncate" title={t('serviceStatus.endpointsTooltip', '{{count}} ready endpoint(s)', { count: endpointCount })}>
-                      {t('serviceStatus.endpointsCount', {
-                        defaultValue: '{{count}} endpoints',
-                        count: endpointCount,
-                      })}
-                    </span>
+                    {endpointsKnown ? (
+                      <span className="truncate" title={t('serviceStatus.endpointsTooltip', '{{count}} ready endpoint(s)', { count: endpointCount })}>
+                        {t('serviceStatus.endpointsCount', {
+                          defaultValue: '{{count}} endpoints',
+                          count: endpointCount,
+                        })}
+                      </span>
+                    ) : (
+                      <span
+                        className="truncate text-muted-foreground/70"
+                        title={t('serviceStatus.endpointsUnknownTooltip', 'Endpoint count unavailable')}
+                      >
+                        {t('serviceStatus.endpointsUnknown', 'Endpoints unknown')}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
