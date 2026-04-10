@@ -7,11 +7,14 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import { useChartFilters } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { Skeleton } from '../ui/Skeleton'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
 
-export function ResourceUsage() {
+// #6216: wrapped at the bottom of the file in DynamicCardErrorBoundary so
+// a runtime error in the 252-line component doesn't crash the dashboard.
+function ResourceUsageInternal() {
   const { t } = useTranslation(['cards', 'common'])
   const { isLoading: clustersLoading, isRefreshing: clustersRefreshing } = useClusters()
   const { nodes: allGPUNodes, isDemoFallback, isRefreshing: gpuRefreshing } = useCachedGPUNodes()
@@ -248,5 +251,13 @@ export function ResourceUsage() {
         ))}
       </div>
     </div>
+  )
+}
+
+export function ResourceUsage() {
+  return (
+    <DynamicCardErrorBoundary cardId="ResourceUsage">
+      <ResourceUsageInternal />
+    </DynamicCardErrorBoundary>
   )
 }

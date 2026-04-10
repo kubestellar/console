@@ -10,6 +10,7 @@ import { Pagination } from '../ui/Pagination'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useTranslation } from 'react-i18next'
 
 interface GPUNamespaceAllocationsProps {
@@ -49,7 +50,9 @@ const NAMESPACE_SORT_COMPARATORS: Record<SortByOption, (a: NamespaceGPUAllocatio
   namespace: commonComparators.string<NamespaceGPUAllocation>('namespace'),
   podCount: (a, b) => a.podCount - b.podCount }
 
-export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocationsProps) {
+// #6216: wrapped at the bottom of the file in DynamicCardErrorBoundary so
+// a runtime error in the 274-line component doesn't crash the dashboard.
+function GPUNamespaceAllocationsInternal({ config: _config }: GPUNamespaceAllocationsProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { nodes: gpuNodes, isLoading: gpuLoading, isRefreshing: gpuRefreshing, isDemoFallback: gpuNodesDemoFallback, isFailed: gpuFailed, consecutiveFailures: gpuFailures } = useCachedGPUNodes()
   const { pods: allPods, isLoading: podsLoading, isRefreshing: podsRefreshing, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedAllPods()
@@ -270,5 +273,13 @@ export function GPUNamespaceAllocations({ config: _config }: GPUNamespaceAllocat
         </div>
       )}
     </div>
+  )
+}
+
+export function GPUNamespaceAllocations(props: GPUNamespaceAllocationsProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="GPUNamespaceAllocations">
+      <GPUNamespaceAllocationsInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }

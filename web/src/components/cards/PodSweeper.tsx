@@ -3,6 +3,7 @@ import { RotateCcw, Flag, Skull, Trophy, Timer, Bomb } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useTranslation } from 'react-i18next'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
@@ -143,7 +144,9 @@ const NUMBER_COLORS = [
   'text-white',
 ]
 
-export function PodSweeper(_props: CardComponentProps) {
+// #6216: wrapped in DynamicCardErrorBoundary so a runtime error in the
+// 350-line game loop doesn't crash the whole dashboard.
+function PodSweeperInternal(_props: CardComponentProps) {
   const { t } = useTranslation('cards')
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const { isExpanded } = useCardExpanded()
@@ -349,5 +352,13 @@ export function PodSweeper(_props: CardComponentProps) {
         Click to reveal • Right-click to flag corrupted pods
       </div>
     </div>
+  )
+}
+
+export function PodSweeper(props: CardComponentProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="PodSweeper">
+      <PodSweeperInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }

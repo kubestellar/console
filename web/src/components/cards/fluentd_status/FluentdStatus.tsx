@@ -2,6 +2,7 @@ import { CheckCircle, AlertTriangle, RefreshCw, Layers, Activity, RotateCcw, Ser
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../ui/Skeleton'
 import { MetricTile } from '../../../lib/cards/CardComponents'
+import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import { useFluentdStatus } from './useFluentdStatus'
 import type { FluentdOutputPlugin } from './demoData'
 
@@ -58,7 +59,9 @@ function BufferBar({ utilization }: { utilization: number }) {
   )
 }
 
-export function FluentdStatus() {
+// #6216: wrapped at the bottom of the file in DynamicCardErrorBoundary so
+// a runtime error in the 205-line component doesn't crash the dashboard.
+function FluentdStatusInternal() {
   const { t } = useTranslation('cards')
   const formatRelativeTime = useFluentdRelativeTime()
   const { data, error, showSkeleton, showEmptyState, isRefreshing } = useFluentdStatus()
@@ -201,5 +204,13 @@ export function FluentdStatus() {
         </div>
       )}
     </div>
+  )
+}
+
+export function FluentdStatus() {
+  return (
+    <DynamicCardErrorBoundary cardId="FluentdStatus">
+      <FluentdStatusInternal />
+    </DynamicCardErrorBoundary>
   )
 }

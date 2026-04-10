@@ -9,6 +9,7 @@ import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 
 interface ClusterComparisonProps {
   config?: {
@@ -16,7 +17,9 @@ interface ClusterComparisonProps {
   }
 }
 
-export function ClusterComparison({ config }: ClusterComparisonProps) {
+// #6216: wrapped at the bottom of the file in DynamicCardErrorBoundary so
+// a runtime error in the 254-line component doesn't crash the dashboard.
+function ClusterComparisonInternal({ config }: ClusterComparisonProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: rawClusters, isLoading: clustersLoading } = useClusters()
   const { nodes: gpuNodes, isDemoFallback, isRefreshing, lastRefresh } = useCachedGPUNodes()
@@ -250,5 +253,13 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
         ))}
       </div>
     </div>
+  )
+}
+
+export function ClusterComparison(props: ClusterComparisonProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="ClusterComparison">
+      <ClusterComparisonInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }
