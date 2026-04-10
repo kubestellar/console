@@ -16,45 +16,51 @@ The fastest way to evaluate the console is the **hosted version** — no Kuberne
 
 > 👉 **[console.kubestellar.io](https://console.kubestellar.io)**
 
-Use the hosted demo to explore the UI, browse missions, and test cards without touching your machine. You only need to install anything below if you want to **connect your own clusters** or **self-host** the console (#6188).
+The hosted demo is a self-contained showcase: it serves canned demo data and intentionally **does not** talk to a local agent (`LOCAL_AGENT_HTTP_URL` is disabled in the Netlify build, so the browser cannot reach a kc-agent on your laptop). Use it to explore the UI, browse missions, and test cards without touching your machine. To work against your **own** clusters or use AI features with your own keys, you need to self-host the console — see the next section.
 
 ## Which path do I need?
 
 | I want to… | What to do | Need a cluster? | Need to install anything? |
 |---|---|---|---|
 | Explore the UI / evaluate the product | [console.kubestellar.io](https://console.kubestellar.io) | no | no |
-| See the hosted console talk to **my own** clusters | Install [**kc-agent**](#kc-agent-connect-the-hosted-console-to-your-clusters) | yes | kc-agent only |
-| Self-host the console (air-gapped, custom OAuth, etc.) | [**Local install**](#local-install-self-host) | optional | yes (Go + bash) |
+| Connect the console to **my own** clusters | [**Self-host**](#local-install-self-host) the console **and** install [**kc-agent**](#kc-agent-bridge-self-hosted-console-to-your-clusters) on the same machine | yes | yes (curl + kc-agent) |
+| Self-host the console (air-gapped, custom OAuth, etc.) | [**Local install**](#local-install-self-host) | optional | yes |
 | Run the console **inside** a cluster | [`deploy.sh`](deploy.sh) | yes | Helm-style script |
 
-## kc-agent (connect the hosted console to your clusters)
+> **Note**: `kc-agent` is **not** consumed by the hosted demo at [console.kubestellar.io](https://console.kubestellar.io). It bridges your **self-hosted** console (running at `localhost:8080`) to your kubeconfig contexts and to AI providers. If you want the convenience of the hosted UI plus your real cluster data, you currently have to run the console locally.
 
-`kc-agent` is a small local bridge — it forwards [console.kubestellar.io](https://console.kubestellar.io) requests to the kubeconfig contexts on your laptop. It is **only** required if you want the hosted console to read live data from clusters you control (#6189).
+## Local install (self-host)
 
-**You do not need kc-agent** if you only want to browse the UI / demo data — just use the hosted demo above.
+The quickest path to a working console with your own data. `start.sh` downloads the pre-built console binary and a pre-built `kc-agent`, starts both, and opens [http://localhost:8080](http://localhost:8080):
+
+```bash
+curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash
+```
+
+Deploy into a cluster instead with [`deploy.sh`](deploy.sh) (`--openshift`, `--ingress <host>`, `--github-oauth`, `--uninstall`).
+
+## kc-agent (bridge self-hosted console to your clusters)
+
+`kc-agent` is a small local HTTP/WS daemon that the **self-hosted** console talks to (default `http://127.0.0.1:8585`). It forwards requests from the browser to your kubeconfig contexts and to AI providers. The hosted demo at [console.kubestellar.io](https://console.kubestellar.io) cannot reach it (#6195) — kc-agent is only useful when you self-host.
+
+**You do not need kc-agent** if you only want to browse the UI / demo data — just use the hosted demo. **`start.sh` already installs and launches a pre-built kc-agent for you**, so most users never need to install it manually. The instructions below are for development builds or platforms without a Homebrew formula:
 
 **Prerequisites for kc-agent:**
 - A kubeconfig that points at one or more reachable clusters (`kubectl get nodes` works locally)
 - macOS, Linux, or Windows with WSL2 (see [Windows section](#windows-wsl2))
 
 ```bash
-brew tap kubestellar/tap && brew install kc-agent   # macOS
-go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent  # Linux (Go 1.24+)
+# macOS — Homebrew formula (pre-built)
+brew tap kubestellar/tap && brew install kc-agent
+
+# Linux / from source — requires Go 1.25+ (matches go.mod)
+mkdir -p bin
+go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent
 ```
 
-When `kc-agent` is running, open [console.kubestellar.io](https://console.kubestellar.io) and your local clusters appear in the cluster picker.
+When both the self-hosted console and `kc-agent` are running, open [http://localhost:8080](http://localhost:8080) and your local clusters appear in the cluster picker.
 
-## Local install (self-host)
-
-Only needed if you want to run the console on your own machine (air-gapped environments, custom OAuth, contributing to development). Most users can skip this and use the hosted demo + kc-agent above.
-
-```bash
-curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash
-```
-
-Opens at [localhost:8080](http://localhost:8080). Deploy into a cluster with [`deploy.sh`](deploy.sh) (`--openshift`, `--ingress <host>`, `--github-oauth`, `--uninstall`).
-
-### Windows (WSL2)
+## Windows (WSL2)
 
 The console install scripts and `kc-agent` are POSIX shell + Go, so they run unchanged inside WSL2. Native Windows (PowerShell / CMD) is not supported — install [WSL2 with Ubuntu](https://learn.microsoft.com/windows/wsl/install) and run everything from the WSL shell:
 
@@ -80,6 +86,7 @@ sudo add-apt-repository ppa:longsleep/golang-backports
 sudo apt-get update && sudo apt-get install -y golang-1.25 git
 git clone https://github.com/kubestellar/console.git
 cd console
+mkdir -p bin
 go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent
 ```
 
@@ -92,7 +99,7 @@ The console references three different GitHub credentials and they are **not int
 | Credential | What it does | Where it lives | When you need it |
 |---|---|---|---|
 | **GitHub OAuth App** (`GITHUB_CLIENT_ID` + `GITHUB_CLIENT_SECRET`) | Sign-in for the **self-hosted** console at `localhost:8080` | `.env` file at the repo root | Only if you self-host the console AND want user sign-in. Skip for the hosted demo. |
-| **GitHub PAT in Settings UI** | Powers nightly E2E status, community activity, leaderboard widgets | Settings page → "GitHub Token" field (browser only, not on disk) | Optional. Adds GitHub-powered widgets to your dashboard. |
+| **GitHub PAT in Settings UI** | Powers nightly E2E status, community activity, leaderboard widgets | Saved by the local `kc-agent` to its on-disk settings file (not browser-only). Only reachable when self-hosting — the hosted Netlify build disables `LOCAL_AGENT_HTTP_URL`, so the Settings page cannot persist a token there. | Optional. Adds GitHub-powered widgets to your **self-hosted** dashboard. |
 | **`FEEDBACK_GITHUB_TOKEN`** | Lets the `/issue` page open GitHub issues for you | `.env` file at the repo root | Optional. Only needed if you want users to file issues from inside the console. Without it, `/issue` returns `503 Issue submission is not available`. |
 
 **Minimum to get started**: nothing — hit [console.kubestellar.io](https://console.kubestellar.io). Everything above is opt-in.
@@ -132,19 +139,26 @@ Add a [Personal Access Token](https://github.com/settings/tokens) to `.env`:
 FEEDBACK_GITHUB_TOKEN=your-github-personal-access-token
 ```
 
-The token needs a classic `repo` scope **or** a fine-grained token with **Issues: Read & Write**.
+The token needs **either**:
+- A **classic** PAT with the `repo` scope, **or**
+- A **fine-grained** PAT with both **Issues: Read & Write** *and* **Contents: Read & Write** (verified against `pkg/api/handlers/feedback.go` — Contents is required, not just Issues).
 
 ## AI configuration
 
 The console can use AI for adaptive card suggestions and mission help. AI is **optional** — the UI, missions, and dashboards all work without any AI keys configured (#6191).
 
-**How to add API keys:**
+**Important**: AI BYOK only works on the **self-hosted** console. The hosted demo at [console.kubestellar.io](https://console.kubestellar.io) explicitly disables `LOCAL_AGENT_HTTP_URL` (verified in `web/src/lib/constants/network.ts`), so the Settings → API Keys flow has no local agent to talk to and does nothing there. To use your own AI keys, self-host the console first.
 
-1. Make sure `kc-agent` is running locally (see [kc-agent](#kc-agent-connect-the-hosted-console-to-your-clusters))
-2. Open the console → **Settings** → **API Keys** → **Manage Keys**
-3. Paste a key from one of: [OpenAI](https://platform.openai.com/api-keys), [Anthropic Claude](https://console.anthropic.com/settings/keys), or [Google Gemini](https://aistudio.google.com/apikey)
+**How to add API keys (self-hosted):**
 
-Keys are sent only to your **local** `kc-agent` process and stored in its config file — they never reach the hosted backend, so BYOK is safe to use with [console.kubestellar.io](https://console.kubestellar.io). You can also pre-set keys via environment variables before launching `kc-agent`:
+1. Self-host the console (see [Local install](#local-install-self-host))
+2. Make sure `kc-agent` is running locally (the same `start.sh` already starts one for you)
+3. Open the local console → **Settings** → **API Keys** → **Manage Keys**
+4. Paste a key from one of: [OpenAI](https://platform.openai.com/api-keys), [Anthropic Claude](https://console.anthropic.com/settings/keys), or [Google Gemini](https://aistudio.google.com/apikey)
+
+Keys are POSTed from the browser to your **local** `kc-agent` process (`http://127.0.0.1:8585/settings/keys`) and stored in its on-disk settings file. They never reach any hosted backend.
+
+You can also pre-set keys via environment variables before launching `kc-agent`:
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...   # Claude
