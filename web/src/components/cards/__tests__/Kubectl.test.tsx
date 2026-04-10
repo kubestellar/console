@@ -49,6 +49,14 @@ vi.mock('../../../hooks/useKubectl', () => ({ useKubectl: () => ({ execute: vi.f
 
 vi.mock('../../../lib/clipboard', () => ({ copyToClipboard: vi.fn() }))
 
+// #6252: Kubectl now calls useToast() (added by #6246 for download
+// error feedback). Mock the Toast module so tests don't need a
+// ToastProvider wrapper.
+vi.mock('../../ui/Toast', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+  ToastProvider: ({ children }: { children: React.ReactNode }) => children,
+}))
+
 import { Kubectl } from '../Kubectl'
 
 describe('Kubectl', () => {
