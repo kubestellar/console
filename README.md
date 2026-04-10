@@ -6,24 +6,53 @@
 
 AI-powered multi-cluster Kubernetes dashboard with guided install missions for 250+ CNCF projects.
 
-[**Live Demo**](https://console.kubestellar.io) | [Contributing](CONTRIBUTING.md)
+[Contributing](CONTRIBUTING.md)
 
 ![KubeStellar Console](docs/images/console-screenshot.png)
 
-## Install
+## Try it now (no install)
+
+The fastest way to evaluate the console is the **hosted version** — no Kubernetes cluster, no install, no configuration. Demo data is built in:
+
+> 👉 **[console.kubestellar.io](https://console.kubestellar.io)**
+
+Use the hosted demo to explore the UI, browse missions, and test cards without touching your machine. You only need to install anything below if you want to **connect your own clusters** or **self-host** the console (#6188).
+
+## Which path do I need?
+
+| I want to… | What to do | Need a cluster? | Need to install anything? |
+|---|---|---|---|
+| Explore the UI / evaluate the product | [console.kubestellar.io](https://console.kubestellar.io) | no | no |
+| See the hosted console talk to **my own** clusters | Install [**kc-agent**](#kc-agent-connect-the-hosted-console-to-your-clusters) | yes | kc-agent only |
+| Self-host the console (air-gapped, custom OAuth, etc.) | [**Local install**](#local-install-self-host) | optional | yes (Go + bash) |
+| Run the console **inside** a cluster | [`deploy.sh`](deploy.sh) | yes | Helm-style script |
+
+## kc-agent (connect the hosted console to your clusters)
+
+`kc-agent` is a small local bridge — it forwards [console.kubestellar.io](https://console.kubestellar.io) requests to the kubeconfig contexts on your laptop. It is **only** required if you want the hosted console to read live data from clusters you control (#6189).
+
+**You do not need kc-agent** if you only want to browse the UI / demo data — just use the hosted demo above.
+
+**Prerequisites for kc-agent:**
+- A kubeconfig that points at one or more reachable clusters (`kubectl get nodes` works locally)
+- macOS, Linux, or Windows with WSL2 (see [Windows section](#windows-wsl2))
+
+```bash
+brew tap kubestellar/tap && brew install kc-agent   # macOS
+go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent  # Linux (Go 1.24+)
+```
+
+When `kc-agent` is running, open [console.kubestellar.io](https://console.kubestellar.io) and your local clusters appear in the cluster picker.
+
+## Local install (self-host)
+
+Only needed if you want to run the console on your own machine (air-gapped environments, custom OAuth, contributing to development). Most users can skip this and use the hosted demo + kc-agent above.
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash
 ```
 
 Opens at [localhost:8080](http://localhost:8080). Deploy into a cluster with [`deploy.sh`](deploy.sh) (`--openshift`, `--ingress <host>`, `--github-oauth`, `--uninstall`).
-
-**kc-agent** connects [console.kubestellar.io](https://console.kubestellar.io) to your local clusters:
-
-```bash
-brew tap kubestellar/tap && brew install kc-agent   # macOS
-go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent  # Linux (Go 1.24+)
-```
 
 ### Windows (WSL2)
 
@@ -51,7 +80,21 @@ go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent
 
 Open http://localhost:8080 in your **Windows** browser — WSL2 forwards `localhost` automatically. Tracked by [#6185](https://github.com/kubestellar/console/issues/6185).
 
-## GitHub OAuth
+## GitHub authentication
+
+The console references three different GitHub credentials and they are **not interchangeable** (#6190). Most users need **none** of them — the hosted demo works without any GitHub auth at all. Use this table to pick what (if anything) applies to you:
+
+| Credential | What it does | Where it lives | When you need it |
+|---|---|---|---|
+| **GitHub OAuth App** (`GITHUB_CLIENT_ID` + `GITHUB_CLIENT_SECRET`) | Sign-in for the **self-hosted** console at `localhost:8080` | `.env` file at the repo root | Only if you self-host the console AND want user sign-in. Skip for the hosted demo. |
+| **GitHub PAT in Settings UI** | Powers nightly E2E status, community activity, leaderboard widgets | Settings page → "GitHub Token" field (browser only, not on disk) | Optional. Adds GitHub-powered widgets to your dashboard. |
+| **`FEEDBACK_GITHUB_TOKEN`** | Lets the `/issue` page open GitHub issues for you | `.env` file at the repo root | Optional. Only needed if you want users to file issues from inside the console. Without it, `/issue` returns `503 Issue submission is not available`. |
+
+**Minimum to get started**: nothing — hit [console.kubestellar.io](https://console.kubestellar.io). Everything above is opt-in.
+
+### Setting up GitHub OAuth (self-hosted only)
+
+If you self-host the console and want sign-in:
 
 1. **Create a [GitHub OAuth App](https://github.com/settings/developers)**
    - Homepage URL: `http://localhost:8080`
@@ -76,15 +119,36 @@ Open http://localhost:8080 in your **Windows** browser — WSL2 forwards `localh
 
 Open http://localhost:8080 and sign in with GitHub. For Kubernetes deployments, pass `--github-oauth` to `deploy.sh` instead.
 
-To enable feedback and GitHub-powered features (nightly E2E status, community activity), go to **Settings** in the console sidebar and add a GitHub personal access token under **GitHub Token**.
+### `FEEDBACK_GITHUB_TOKEN` scopes
 
-The console can also create GitHub issues programmatically via the `/issue` page. To enable this, add a [Personal Access Token](https://github.com/settings/tokens) to `.env`:
+Add a [Personal Access Token](https://github.com/settings/tokens) to `.env`:
 
 ```
 FEEDBACK_GITHUB_TOKEN=your-github-personal-access-token
 ```
 
-The token needs a classic `repo` scope **or** a fine-grained token with **Issues: Read & Write**. Without it, issue submission returns `503 Issue submission is not available`.
+The token needs a classic `repo` scope **or** a fine-grained token with **Issues: Read & Write**.
+
+## AI configuration
+
+The console can use AI for adaptive card suggestions and mission help. AI is **optional** — the UI, missions, and dashboards all work without any AI keys configured (#6191).
+
+**How to add API keys:**
+
+1. Make sure `kc-agent` is running locally (see [kc-agent](#kc-agent-connect-the-hosted-console-to-your-clusters))
+2. Open the console → **Settings** → **API Keys** → **Manage Keys**
+3. Paste a key from one of: [OpenAI](https://platform.openai.com/api-keys), [Anthropic Claude](https://console.anthropic.com/settings/keys), or [Google Gemini](https://aistudio.google.com/apikey)
+
+Keys are sent only to your **local** `kc-agent` process and stored in its config file — they never reach the hosted backend, so BYOK is safe to use with [console.kubestellar.io](https://console.kubestellar.io). You can also pre-set keys via environment variables before launching `kc-agent`:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...   # Claude
+export OPENAI_API_KEY=sk-...          # OpenAI
+export GOOGLE_API_KEY=...             # Gemini
+./bin/kc-agent
+```
+
+**If no key is configured**, AI-powered features fall back to deterministic / rule-based behavior. The card suggestions, missions, and dashboards remain fully usable.
 
 ## How It Works
 
