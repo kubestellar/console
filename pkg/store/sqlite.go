@@ -81,7 +81,7 @@ type SQLiteStore struct {
 
 // NewSQLiteStore creates a new SQLite store
 func NewSQLiteStore(dbPath string) (*SQLiteStore, error) {
-	// DSN notes (modernc.org/sqlite accepts PRAGMAs via _pragma=key=value):
+	// DSN notes (modernc.org/sqlite accepts PRAGMAs via _pragma=key(value)):
 	//  - journal_mode=WAL enables Write-Ahead Logging so readers don't
 	//    block writers.
 	//  - synchronous=NORMAL is the recommended pairing with WAL for good

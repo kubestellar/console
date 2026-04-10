@@ -417,12 +417,13 @@ func TestCreateCardWithLimit(t *testing.T) {
 		const concurrentInserters = 16
 
 		var (
-			wg            sync.WaitGroup
-			successes     int64
-			rejections    int64
-			otherErrs     int64
-			firstOtherErr atomic.Value
-			start         = make(chan struct{})
+			wg              sync.WaitGroup
+			successes       int64
+			rejections      int64
+			otherErrs       int64
+			firstOtherErrMu sync.Mutex
+			firstOtherErr   string
+			start           = make(chan struct{})
 		)
 
 		wg.Add(concurrentInserters)
@@ -443,16 +444,22 @@ func TestCreateCardWithLimit(t *testing.T) {
 					atomic.AddInt64(&rejections, 1)
 				default:
 					atomic.AddInt64(&otherErrs, 1)
-					firstOtherErr.CompareAndSwap(nil, err.Error())
+					firstOtherErrMu.Lock()
+					if firstOtherErr == "" {
+						firstOtherErr = err.Error()
+					}
+					firstOtherErrMu.Unlock()
 				}
 			}()
 		}
 		close(start)
 		wg.Wait()
 
-		if v := firstOtherErr.Load(); v != nil {
-			t.Logf("first unexpected error: %v", v)
+		firstOtherErrMu.Lock()
+		if firstOtherErr != "" {
+			t.Logf("first unexpected error: %s", firstOtherErr)
 		}
+		firstOtherErrMu.Unlock()
 		require.Zero(t, atomic.LoadInt64(&otherErrs), "no unexpected errors")
 		require.Equal(t, int64(cardLimitTest), atomic.LoadInt64(&successes),
 			"exactly cardLimitTest inserts should succeed under concurrency")
