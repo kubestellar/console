@@ -124,6 +124,8 @@ type AuthHandler struct {
 	devMode        bool
 	skipOnboarding bool
 	wsHub          SessionDisconnecter // optional — set via SetHub to disconnect WS sessions on logout
+	cleanupCtx     context.Context     // cancelled by Stop to terminate the OAuth state cleanup goroutine
+	cleanupCancel  context.CancelFunc  // call to stop the OAuth state cleanup goroutine
 }
 
 // NewAuthHandler creates a new auth handler
@@ -167,6 +169,7 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 		slog.Info("[Auth] GitHub Enterprise configured", "oauthURL", ghURL, "apiBase", apiBase)
 	}
 
+	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
 	h := &AuthHandler{
 		store: s,
 		oauthConfig: &oauth2.Config{
@@ -185,6 +188,8 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 		githubToken:    cfg.GitHubToken,
 		devMode:        cfg.DevMode,
 		skipOnboarding: cfg.SkipOnboarding,
+		cleanupCtx:     cleanupCtx,
+		cleanupCancel:  cleanupCancel,
 	}
 
 	// Periodically purge expired OAuth states from the persistent store so the
@@ -192,21 +197,42 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 	// ConsumeOAuthState deletes individual rows on the happy path, but
 	// abandoned flows (user never returns to the callback) would otherwise
 	// linger until their expires_at passed with no cleanup.
-	go h.runOAuthStateCleanup()
+	//
+	// Skipped in DevMode (no real OAuth client configured) so unit tests
+	// that use DevMode handlers do not leak a background goroutine for
+	// the lifetime of the test process (#6125).
+	if cfg.GitHubClientID != "" {
+		go h.runOAuthStateCleanup()
+	}
 
 	return h
 }
 
+// Stop tears down any background goroutines started by the AuthHandler
+// (currently just the OAuth state cleanup ticker). Tests should call this
+// via t.Cleanup so each test exits without leaking the cleanup goroutine.
+// Production code does not need to call Stop — the goroutine intentionally
+// runs for the lifetime of the process.
+func (h *AuthHandler) Stop() {
+	if h.cleanupCancel != nil {
+		h.cleanupCancel()
+	}
+}
+
 // runOAuthStateCleanup ticks every oauthStateCleanupInterval and removes
-// expired OAuth state rows. It runs for the lifetime of the process — the
-// AuthHandler has no explicit Close hook, matching the existing pattern in
-// the old in-memory init() goroutine.
+// expired OAuth state rows. It exits when the cleanup context is cancelled
+// (via Stop) so tests do not leak the goroutine across t.Run boundaries.
 func (h *AuthHandler) runOAuthStateCleanup() {
 	ticker := time.NewTicker(oauthStateCleanupInterval)
 	defer ticker.Stop()
-	for range ticker.C {
-		if _, err := h.store.CleanupExpiredOAuthStates(); err != nil {
-			slog.Warn("[Auth] OAuth state cleanup failed", "error", err)
+	for {
+		select {
+		case <-h.cleanupCtx.Done():
+			return
+		case <-ticker.C:
+			if _, err := h.store.CleanupExpiredOAuthStates(); err != nil {
+				slog.Warn("[Auth] OAuth state cleanup failed", "error", err)
+			}
 		}
 	}
 }

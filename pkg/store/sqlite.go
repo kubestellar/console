@@ -337,10 +337,12 @@ func (s *SQLiteStore) migrate() error {
 
 	-- OAuth state tokens (persisted so in-flight OAuth flows survive a
 	-- backend restart between /auth/login and /auth/callback — see issue #6028).
+	-- Time columns use DATETIME to match the rest of the schema
+	-- (revoked_tokens, user_rewards, etc.) and avoid driver-quirk surprises.
 	CREATE TABLE IF NOT EXISTS oauth_states (
 		state TEXT PRIMARY KEY,
-		created_at TIMESTAMP NOT NULL,
-		expires_at TIMESTAMP NOT NULL
+		created_at DATETIME NOT NULL,
+		expires_at DATETIME NOT NULL
 	);
 	CREATE INDEX IF NOT EXISTS idx_oauth_states_expires_at ON oauth_states(expires_at);
 	`
@@ -2239,16 +2241,35 @@ func (s *SQLiteStore) StoreOAuthState(state string, ttl time.Duration) error {
 //
 // Expired states are also deleted to keep the table lean, but the call still
 // returns false for them so the caller treats the flow as invalid.
+//
+// Concurrency: WAL-mode SQLite default-deferred transactions allow two
+// readers to both pass the SELECT before either DELETE runs, which without
+// the rows-affected check below would let both calls report success on the
+// same single-use token. We use a pinned connection with BEGIN IMMEDIATE
+// (same pattern as AddUserTokenDelta / IncrementUserCoins) so the
+// read-modify-write happens under a single write lock, AND we cross-check
+// `RowsAffected()` so a duplicate consume is reported as not-found rather
+// than success.
 func (s *SQLiteStore) ConsumeOAuthState(state string) (bool, error) {
-	tx, err := s.db.Begin()
+	ctx := context.Background()
+	conn, err := s.db.Conn(ctx)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("acquire conn: %w", err)
 	}
-	// Rollback is a no-op after a successful Commit.
-	defer tx.Rollback()
+	defer conn.Close() //nolint:errcheck // best-effort release back to pool
+
+	if _, err := conn.ExecContext(ctx, "BEGIN IMMEDIATE"); err != nil {
+		return false, fmt.Errorf("begin immediate: %w", err)
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_, _ = conn.ExecContext(ctx, "ROLLBACK")
+		}
+	}()
 
 	var expiresAt time.Time
-	err = tx.QueryRow(
+	err = conn.QueryRowContext(ctx,
 		`SELECT expires_at FROM oauth_states WHERE state = ?`, state,
 	).Scan(&expiresAt)
 	if err != nil {
@@ -2258,15 +2279,29 @@ func (s *SQLiteStore) ConsumeOAuthState(state string) (bool, error) {
 		return false, err
 	}
 
-	// Delete unconditionally — whether the state is valid or expired, it should
-	// not be reusable after this call.
-	if _, err := tx.Exec(`DELETE FROM oauth_states WHERE state = ?`, state); err != nil {
+	// Delete unconditionally — whether the state is valid or expired, it
+	// should not be reusable after this call. RowsAffected guards against
+	// the race where another caller already consumed the same state in the
+	// window between our SELECT and DELETE: that caller will have removed
+	// the row, our DELETE affects 0 rows, and we report not-found.
+	res, err := conn.ExecContext(ctx, `DELETE FROM oauth_states WHERE state = ?`, state)
+	if err != nil {
 		return false, err
 	}
-	if err := tx.Commit(); err != nil {
+	affected, err := res.RowsAffected()
+	if err != nil {
 		return false, err
 	}
 
+	if _, err := conn.ExecContext(ctx, "COMMIT"); err != nil {
+		return false, fmt.Errorf("commit immediate tx: %w", err)
+	}
+	committed = true
+
+	if affected == 0 {
+		// Lost the race to a concurrent consumer of the same state.
+		return false, nil
+	}
 	return time.Now().Before(expiresAt), nil
 }
 

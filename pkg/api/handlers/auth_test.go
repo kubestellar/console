@@ -20,12 +20,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// setupAuthTest creates a fresh Fiber app and an AuthHandler with a mock store
+// setupAuthTest creates a fresh Fiber app and an AuthHandler with a mock store.
+//
+// The handler runs in DevMode (GitHubClientID == "") so NewAuthHandler skips
+// the OAuth state cleanup goroutine entirely (#6125) — there is no goroutine
+// to leak. Tests that need a real-OAuth handler should instantiate it
+// directly and call t.Cleanup(handler.Stop).
 func setupAuthTest() (*fiber.App, *test.MockStore, *AuthHandler) {
 	app := fiber.New()
 	mockStore := new(test.MockStore)
 	cfg := AuthConfig{
-		GitHubClientID: "", // Trigger DevMode
+		GitHubClientID: "", // Trigger DevMode (also skips cleanup goroutine)
 		JWTSecret:      "test-secret",
 		FrontendURL:    "http://frontend",
 		DevMode:        true,
@@ -168,20 +173,27 @@ func TestRefreshToken(t *testing.T) {
 }
 
 func TestGitHubLogin_Redirects(t *testing.T) {
-	app, _, _ := setupAuthTest()
+	// Use a fresh fiber.App directly — setupAuthTest() creates a DevMode
+	// handler we don't need here, and discarding it would either leak the
+	// cleanup goroutine (if we forgot to Stop it) or noise the test (#6125).
+	app := fiber.New()
 	// Use a real SQLiteStore so the handler can persist the OAuth state
 	// (the in-memory map was replaced by a store-backed write in #6028).
 	dbPath := filepath.Join(t.TempDir(), "github-login.db")
 	s, err := store.NewSQLiteStore(dbPath)
 	require.NoError(t, err)
 	defer s.Close()
-	// Override config to simulate existing OAuth credentials
+	// Override config to simulate existing OAuth credentials. Because
+	// GitHubClientID is non-empty NewAuthHandler will start the cleanup
+	// goroutine — t.Cleanup(handler.Stop) terminates it before the test
+	// returns so each test exits cleanly.
 	cfg := AuthConfig{
 		GitHubClientID: "client-id",
 		GitHubSecret:   "secret",
 		BackendURL:     "http://backend",
 	}
 	handler := NewAuthHandler(s, cfg)
+	t.Cleanup(handler.Stop)
 	app.Get("/auth/github", handler.GitHubLogin)
 
 	req, _ := http.NewRequest("GET", "/auth/github", nil)
