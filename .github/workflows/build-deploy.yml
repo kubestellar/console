@@ -271,6 +271,7 @@ jobs:
             --set clusterName=vllm-d \
             --set-string enabledDashboards="dashboard\,clusters\,gpu-reservations\,llm-d-benchmarks\,ai-ml\,arcade" \
             --set persistence.storageClass=ocs-storagecluster-cephfs \
+            --set rbac.namespaceCreationEnabled=true \
             --atomic \
             --wait \
             --timeout 5m
@@ -351,6 +352,7 @@ jobs:
             --set route.host=kc-kubestellar-console-kubestellar-console.apps.pokprod001.ete14.res.ibm.com \
             --set clusterName=pok-prod-001 \
             --set-string enabledDashboards="dashboard\,clusters\,gpu-reservations\,llm-d-benchmarks\,ai-ml\,arcade" \
+            --set rbac.namespaceCreationEnabled=true \
             --atomic \
             --wait \
             --timeout 5m

@@ -19,8 +19,16 @@ rules:
       - persistentvolumeclaims
       - persistentvolumes
       - limitranges
-      - namespaces
     verbs: ["get", "list", "watch"]
+
+  # Namespaces — read-only by default; add "create" when
+  # rbac.namespaceCreationEnabled is true so the GPU reservation form's
+  # "New namespace..." option can auto-provision a namespace via
+  # POST /api/mcp/resourcequotas with ensure_namespace: true.
+  - apiGroups: [""]
+    resources:
+      - namespaces
+    verbs: ["get", "list", "watch"{{- if .Values.rbac.namespaceCreationEnabled }}, "create"{{- end }}]
 
   # ResourceQuotas — full CRUD for GPU reservation enforcement,
   # or read-only when rbac.resourceQuotasReadOnly is true.

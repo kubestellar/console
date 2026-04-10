@@ -20,9 +20,14 @@ serviceAccount:
 # its ServiceAccount for read-only cluster access + ResourceQuota CRUD.
 # Set resourceQuotasReadOnly to true to restrict ResourceQuota permissions
 # to read-only (disables GPU reservation enforcement).
+# Set namespaceCreationEnabled to true to grant the SA cluster-scoped
+# "create namespaces" — required when the GPU reservation form's
+# "New namespace..." option is used (otherwise that call 500s with
+# "namespaces is forbidden ... cannot create resource namespaces").
 rbac:
   create: true
   resourceQuotasReadOnly: false
+  namespaceCreationEnabled: false
 
 podAnnotations: {}
 podLabels: {}
