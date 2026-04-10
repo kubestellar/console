@@ -1,7 +1,6 @@
 import { api, isBackendUnavailable } from '../../lib/api'
 import { reportAgentDataError, reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode, isNetlifyDeployment, isDemoToken, subscribeDemoMode } from '../../lib/demoMode'
-import { isInClusterMode } from '../useBackendHealth'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { registerCacheReset, triggerAllRefetches } from '../../lib/modeTransition'
 import { resetFailuresForCluster, resetAllCacheFailures } from '../../lib/cache'
@@ -1325,33 +1324,26 @@ export async function fullFetchClusters() {
     return
   }
 
-  // DEMO MODE: When user has explicitly enabled demo mode, use demo data immediately.
-  // Don't try to fetch from agent - user wants to see demo data, not live data.
-  // This respects the user's explicit choice to enable demo mode.
+  // Historical note: this function used to short-circuit to getDemoClusters()
+  // whenever isDemoMode() returned true. That broke in-cluster deployments in
+  // two ways:
+  //   1) PR #6215 gated the short-circuit on `!isInClusterMode() || !hasRealToken()`,
+  //      but hasRealToken() is false for any session running under a demo token,
+  //      so Create Namespace still listed demo clusters when demo mode was
+  //      toggled on (which is the exact bug report).
+  //   2) PR #6233 relaxed it to `!isInClusterMode()` only, but that still fires
+  //      on the FIRST call at page load because `isInClusterMode()` reads from
+  //      backendHealthManager, whose initial state is `{status: 'connecting',
+  //      inCluster: false}` — the real value is only known after /health
+  //      responds. The early return therefore races the health check and
+  //      persists demo clusters into the shared cache.
   //
-  // EXCEPTION: When the console is deployed in-cluster (the backend reports
-  // `in_cluster: true`), always try to fetch live cluster data — including when
-  // demo mode is toggled on and/or the user only has a demo token. Otherwise UI
-  // elements like the Create Namespace cluster dropdown would list demo clusters
-  // (eks-prod-us-east-1, gke-staging, etc.) instead of the actual cluster the
-  // console is running in (e.g. vllm-d). If the live fetch fails (unauthenticated
-  // visitor, agent down, etc.) the downstream fallback logic will still show
-  // demo data. Localhost dev is unaffected because the Go backend only sets
-  // `in_cluster: true` when running as a pod.
-  if (isDemoMode() && !isInClusterMode()) {
-    updateClusterCache({
-      clusters: getDemoClusters(),
-      isLoading: false,
-      isRefreshing: false,
-      error: null,
-      lastUpdated: new Date(),
-      consecutiveFailures: 0,
-      isFailed: false,
-      lastRefresh: new Date(),
-    })
-    return
-  }
-
+  // Fix: drop the early-return entirely. The downstream fallback at
+  // `isDemoMode() && isDemoToken()` (after fetchClusterListFromAgent fails)
+  // already handles the "demo mode with demo token" case correctly, and real
+  // backends will happily return live clusters even when the demo-mode toggle
+  // is set. Netlify-forced demo mode is handled by the isNetlifyDeployment
+  // block below, so forced-demo deploys still skip the live fetch entirely.
   // On forced demo mode deployments (Netlify), skip fetching entirely to avoid flicker.
   // Demo data is already in the initial cache state, so no loading indicators needed.
   if (isNetlifyDeployment) {
