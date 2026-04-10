@@ -249,6 +249,8 @@ const TrinoGateway = safeLazy(() => import('./trino_gateway'), 'TrinoGateway')
 const ThanosStatus = safeLazy(() => import('./thanos_status'), 'ThanosStatus')
 // OpenFeature feature-flag management card
 const OpenFeatureStatus = safeLazy(() => import('./openfeature_status'), 'OpenFeatureStatus')
+// OpenYurt edge computing card
+const OpenYurtStatus = safeLazy(() => import('./openyurt_status'), 'OpenYurtStatus')
 
 // Inspektor Gadget cards
 const NetworkTraceCard = safeLazy(() => import('./gadget/NetworkTraceCard'), 'NetworkTraceCard')
@@ -552,6 +554,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   kubevela_status: KubeVelaStatus,
   // Karmada multi-cluster orchestration
   karmada_status: KarmadaStatus,
+  // OpenYurt edge computing
+  openyurt_status: OpenYurtStatus,
   // KubeRay fleet monitoring
   kuberay_fleet: KubeRayFleet,
   // SLO compliance tracking
@@ -953,6 +957,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   kubevela_status: () => import('./kubevela_status'),
   // Karmada multi-cluster orchestration
   karmada_status: () => import('./karmada_status'),
+  // OpenYurt edge computing
+  openyurt_status: () => import('./openyurt_status'),
   kuberay_fleet: () => import('./kuberay_fleet'),
   slo_compliance: () => import('./slo_compliance'),
   failover_timeline: () => import('./failover_timeline'),
@@ -1136,6 +1142,7 @@ export const LIVE_DATA_CARDS = new Set([
   'crio_status',
   'strimzi_status',
   'kubevela_status',
+  'openyurt_status',
   // KubeRay, SLO, Failover, Trino - demo until detected
   'kuberay_fleet',
   'slo_compliance',
@@ -1275,6 +1282,8 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   quota_heatmap: 8,
   // KubeVela application delivery
   kubevela_status: 6,
+  // OpenYurt edge computing
+  openyurt_status: 6,
   // Flatcar Container Linux
   flatcar_status: 6,
   // Fluentd log collector

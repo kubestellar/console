@@ -317,6 +317,7 @@ export const CARD_CATALOG = {
   ],
   'Orchestration': [
     { type: 'keda_status', title: 'KEDA', description: 'KEDA autoscaler status, scaled object metrics, and trigger queue depths', visualization: 'status' },
+    { type: 'openyurt_status', title: 'OpenYurt', description: 'OpenYurt edge node pools, autonomy status, and edge-cloud connectivity', visualization: 'status' },
     { type: 'kubevela_status', title: 'KubeVela', description: 'KubeVela application delivery, component status, and workflow progress', visualization: 'status' },
     { type: 'karmada_status', title: 'Karmada', description: 'Karmada multi-cluster resource propagation status, member clusters, and policy health', visualization: 'status' },
     { type: 'kuberay_fleet', title: 'KubeRay Fleet', description: 'KubeRay fleet monitoring — RayCluster, RayService, and RayJob status across all clusters with GPU allocation tracking', visualization: 'status' },
