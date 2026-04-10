@@ -63,16 +63,21 @@ The console install scripts and `kc-agent` are POSIX shell + Go, so they run unc
 wsl --install -d Ubuntu
 ```
 
-Then from inside the Ubuntu/WSL shell:
+Then from inside the Ubuntu/WSL shell. **`start.sh` only needs `curl`** — it downloads pre-built binaries, no Go toolchain required:
 
 ```bash
-# Prerequisites (Go 1.24+, curl, git)
-sudo apt-get update && sudo apt-get install -y golang-go curl git
+# Prerequisite: just curl
+sudo apt-get update && sudo apt-get install -y curl
 
 # Same install command as macOS / Linux
 curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash
+```
 
-# kc-agent built from source (no Homebrew formula on WSL)
+**Building `kc-agent` from source is a separate path** — only needed if you want a development build of the agent rather than the prebuilt binary that `start.sh` already installs. It requires Go **1.25+** (the version pinned in `go.mod`) and `git`. Ubuntu's `golang-go` package usually lags the current release; use the [official Go install](https://go.dev/doc/install) or the `longsleep/golang-backports` PPA to get a recent version:
+
+```bash
+sudo add-apt-repository ppa:longsleep/golang-backports
+sudo apt-get update && sudo apt-get install -y golang-1.25 git
 git clone https://github.com/kubestellar/console.git
 cd console
 go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent
