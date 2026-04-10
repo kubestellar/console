@@ -88,6 +88,20 @@ const ChangeAnimations: Record<Exclude<ChangeType, null>, string> = {
   deleted: 'animate-pulse bg-red-500/20 border-red-500/50 opacity-50',
   error: 'animate-pulse bg-red-500/30 border-red-500/60' }
 
+/**
+ * Hard cap on the number of namespace rows rendered per cluster (#6208).
+ *
+ * Each namespace row triggers 7 separate `.filter()` passes over the full
+ * pods/deployments/services/configmaps/secrets/PVCs/jobs lists. With 80+
+ * namespaces and 500 pods, every state update was triggering an
+ * O(namespaces × resources) recomputation across all of them at once and
+ * dropping frames. Capping at 30 keeps the worst case to 30 × 7 × N
+ * filters per refresh, while still showing all the namespaces for
+ * realistically-sized clusters. The "more namespaces filtered out" hint
+ * below the list tells the user to use the search box to narrow down.
+ */
+const MAX_NAMESPACES_RENDERED_PER_CLUSTER = 30
+
 export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   const { isDemoMode } = useDemoMode()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
@@ -614,9 +628,13 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
           {filteredClusters.map(cluster => {
             const isExpanded = expandedClusters.has(cluster.name)
             const namespaceData = isExpanded ? getNamespaceData(cluster.name) : new Map<string, NamespaceData>()
-            const namespaceList = Array.from(namespaceData.keys())
+            const allNamespaces = Array.from(namespaceData.keys())
               .filter(ns => !ns.startsWith('kube-') && ns !== 'openshift' && !ns.startsWith('openshift-'))
               .sort()
+            // #6208: cap rows rendered to keep render cost bounded. The
+            // truncated count drives the "n more namespaces" hint below.
+            const namespaceList = allNamespaces.slice(0, MAX_NAMESPACES_RENDERED_PER_CLUSTER)
+            const truncatedCount = allNamespaces.length - namespaceList.length
 
             return (
               <div key={cluster.name} className="mb-1">
@@ -811,6 +829,13 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
                           </div>
                         )
                       })
+                    )}
+                    {/* #6208: surface the truncation hint so users know there
+                        are more namespaces beyond what was rendered. */}
+                    {truncatedCount > 0 && (
+                      <div className="py-2 px-4 text-xs text-muted-foreground italic">
+                        +{truncatedCount} more namespace{truncatedCount === 1 ? '' : 's'} not shown — use the search box to narrow down.
+                      </div>
                     )}
                   </div>
                 )}

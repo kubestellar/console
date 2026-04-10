@@ -3,6 +3,7 @@ import { Globe, Server, Cloud, ZoomIn, ZoomOut, Maximize2, Filter, X } from 'luc
 import { useClusters, type ClusterInfo } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { Skeleton } from '../ui/Skeleton'
 import { detectCloudProvider, CloudProviderIcon, type CloudProvider } from '../ui/CloudProviderIcon'
 import DOMPurify from 'dompurify'
@@ -10,6 +11,9 @@ import WorldMapSvgUrl from '../../assets/world-map.svg'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
+
+/** Search input debounce delay (#6213). */
+const SEARCH_DEBOUNCE_MS = 250
 
 interface ClusterLocationsProps {
   config?: Record<string, unknown>
@@ -274,6 +278,11 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [showFilters, setShowFilters] = useState(false)
   const [searchFilter, setSearchFilter] = useState('')
+  // #6213: debounce the heavy filter so the cluster filter pipeline
+  // (which feeds region grouping + map markers) doesn't re-run on
+  // every keystroke. The <input value={searchFilter}/> still updates
+  // at typing speed.
+  const debouncedSearchFilter = useDebouncedValue(searchFilter, SEARCH_DEBOUNCE_MS)
 
   // Hover state
   const [hoveredCluster, setHoveredCluster] = useState<string | null>(null)
@@ -301,8 +310,8 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
       result = result.filter(c => !c.healthy)
     }
 
-    if (searchFilter.trim()) {
-      const query = searchFilter.toLowerCase()
+    if (debouncedSearchFilter.trim()) {
+      const query = debouncedSearchFilter.toLowerCase()
       result = result.filter(c =>
         c.name.toLowerCase().includes(query) ||
         c.context?.toLowerCase().includes(query)
@@ -310,7 +319,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
     }
 
     return result
-  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter, statusFilter, searchFilter])
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter, statusFilter, debouncedSearchFilter])
 
   // Group clusters by region
   const regionGroups = (() => {

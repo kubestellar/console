@@ -8,14 +8,18 @@
  * Follows the ClusterOPAModal pattern using BaseModal compound components.
  */
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Shield, FileCheck, BarChart3, Search, ExternalLink, Sparkles, AlertTriangle, ChevronRight } from 'lucide-react'
 import { BaseModal } from '../../../lib/modals'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { RefreshButton } from '../../ui/RefreshIndicator'
 import { useMissions } from '../../../hooks/useMissions'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import type { KyvernoClusterStatus, KyvernoPolicy, KyvernoPolicyReport } from '../../../hooks/useKyverno'
+
+/** Search input debounce delay (#6213). */
+const SEARCH_DEBOUNCE_MS = 250
 
 type KyvernoTab = 'policies' | 'reports'
 
@@ -40,6 +44,8 @@ export function KyvernoDetailModal({
   isRefreshing = false }: KyvernoDetailModalProps) {
   const [activeTab, setActiveTab] = useState<KyvernoTab>('policies')
   const [search, setSearch] = useState('')
+  // #6213: debounce the heavy filter for policy lists with 100+ entries.
+  const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS)
   const { startMission } = useMissions()
   const { drillToPolicy } = useDrillDownActions()
 
@@ -60,18 +66,18 @@ export function KyvernoDetailModal({
     { id: 'reports' as const, label: 'Reports', icon: BarChart3, badge: (status.reports || []).length },
   ]
 
-  // Filter policies by search
-  const filteredPolicies = (() => {
+  // Filter policies by debounced search (#6213).
+  const filteredPolicies = useMemo(() => {
     const policies = status.policies || []
-    if (!search.trim()) return policies
-    const q = search.toLowerCase()
+    if (!debouncedSearch.trim()) return policies
+    const q = debouncedSearch.toLowerCase()
     return policies.filter(p =>
       p.name?.toLowerCase().includes(q) ||
       p.category?.toLowerCase().includes(q) ||
       p.description?.toLowerCase().includes(q) ||
       p.status?.toLowerCase().includes(q)
     )
-  })()
+  }, [status.policies, debouncedSearch])
 
   // Sort reports by failures descending
   const sortedReports = [...(status.reports || [])].sort((a, b) => b.fail - a.fail)

@@ -8,14 +8,18 @@
  * Follows the ClusterOPAModal pattern using BaseModal compound components.
  */
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Shield, Search, ExternalLink, Rocket } from 'lucide-react'
 import { BaseModal } from '../../../lib/modals'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { RefreshButton } from '../../ui/RefreshIndicator'
 import { useMissions } from '../../../hooks/useMissions'
 import { emitActionClicked } from '../../../lib/analytics'
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import type { TrivyClusterStatus } from '../../../hooks/useTrivy'
+
+/** Search input debounce delay (#6213). */
+const SEARCH_DEBOUNCE_MS = 250
 
 interface TrivyDetailModalProps {
   isOpen: boolean
@@ -37,21 +41,23 @@ export function TrivyDetailModal({
   onRefresh,
   isRefreshing = false }: TrivyDetailModalProps) {
   const [search, setSearch] = useState('')
+  // #6213: debounce the heavy filter for image lists with 100+ entries.
+  const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS)
   const { startMission, openSidebar } = useMissions()
 
   const { critical, high, medium, low } = status.vulnerabilities
 
-  // Filter images by search
-  const filteredImages = (() => {
+  // Filter images by debounced search (#6213).
+  const filteredImages = useMemo(() => {
     const images = status.images || []
-    if (!search.trim()) return images
-    const q = search.toLowerCase()
+    if (!debouncedSearch.trim()) return images
+    const q = debouncedSearch.toLowerCase()
     return images.filter(img =>
       (img.image || '').toLowerCase().includes(q) ||
       (img.tag || '').toLowerCase().includes(q) ||
       (img.namespace || '').toLowerCase().includes(q)
     )
-  })()
+  }, [status.images, debouncedSearch])
 
   // Severity bar widths
   const total = critical + high + medium + low

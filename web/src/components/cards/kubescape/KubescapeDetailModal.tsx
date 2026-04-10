@@ -6,12 +6,18 @@
  * Follows the ClusterOPAModal pattern using BaseModal compound components.
  */
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Shield, Search, ExternalLink } from 'lucide-react'
 import { BaseModal } from '../../../lib/modals'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { RefreshButton } from '../../ui/RefreshIndicator'
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import type { KubescapeClusterStatus, KubescapeControl } from '../../../hooks/useKubescape'
+
+/** Debounce delay for the search input filter pipeline (#6213). 250ms is
+ * the same value `CardSearchInput` uses by default; long enough to absorb
+ * a fast typist's keystrokes, short enough to feel instant. */
+const SEARCH_DEBOUNCE_MS = 250
 
 /** Score threshold for "good" status */
 const SCORE_GOOD_THRESHOLD = 80
@@ -35,20 +41,24 @@ export function KubescapeDetailModal({
   onRefresh,
   isRefreshing = false }: KubescapeDetailModalProps) {
   const [search, setSearch] = useState('')
+  // #6213: debounce the heavy filter so the input stays responsive on
+  // 100+ control lists. The <input value={search}/> still updates at
+  // typing speed; only the .filter() pipeline waits.
+  const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS)
 
   const score = status.overallScore
   const scoreColor = score >= SCORE_GOOD_THRESHOLD ? 'text-green-400' : score >= SCORE_WARNING_THRESHOLD ? 'text-yellow-400' : 'text-red-400'
 
-  // Filter controls by search
-  const filteredControls = (() => {
+  // Filter controls by debounced search (#6213).
+  const filteredControls = useMemo(() => {
     const controls = status.controls || []
-    if (!search.trim()) return controls
-    const q = search.toLowerCase()
+    if (!debouncedSearch.trim()) return controls
+    const q = debouncedSearch.toLowerCase()
     return controls.filter(c =>
       c.id.toLowerCase().includes(q) ||
       c.name.toLowerCase().includes(q)
     )
-  })()
+  }, [status.controls, debouncedSearch])
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false}>
