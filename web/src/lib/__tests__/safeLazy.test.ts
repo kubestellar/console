@@ -42,4 +42,28 @@ describe('safeLazy', () => {
       expect((e as Error).message).toContain('chunk may be stale')
     }
   })
+
+  // Regression for #6098: a hung dynamic import (e.g. during a backend
+  // restart) must not leave the Suspense fallback stuck on a spinner.
+  // Each attempt must race against a timeout so the loader eventually
+  // rejects and feeds into the retry + error-boundary recovery.
+  it('rejects when the dynamic import hangs past the per-attempt timeout', async () => {
+    const LazyComp = safeLazy(
+      () => new Promise<{ HangingComp: () => null }>(() => {
+        /* never resolves — simulates a hung chunk fetch */
+      }),
+      'HangingComp',
+    )
+
+    const loader = (LazyComp as unknown as { _init: unknown; _payload: { _result: () => Promise<unknown> } })._payload._result
+    try {
+      await loader()
+      expect.fail('should have rejected due to timeout')
+    } catch (e: unknown) {
+      expect((e as Error).message).toContain('HangingComp')
+      expect((e as Error).message).toMatch(/timed out|unreachable|restarting/i)
+    }
+  // Retries add delay between attempts on top of the per-attempt timeout,
+  // so give the test plenty of headroom before vitest's default 5s cap.
+  }, 60_000)
 })

@@ -4,6 +4,15 @@ import { lazy, type ComponentType } from 'react'
 const LAZY_IMPORT_MAX_RETRIES = 2
 /** Base delay in ms between retry attempts (doubles each retry via exponential backoff) */
 const LAZY_IMPORT_RETRY_BASE_MS = 1_000
+/**
+ * Per-attempt timeout for a dynamic import. If the backend that serves the
+ * chunk is restarting (#6098), the native `import()` has no built-in timeout
+ * and can hang indefinitely, leaving the Suspense fallback stuck on a
+ * "loading" spinner until the user manually closes and reopens the view.
+ * Racing the import against this timeout turns a hang into a recoverable
+ * rejection that feeds into the existing retry + error-boundary recovery.
+ */
+const LAZY_IMPORT_ATTEMPT_TIMEOUT_MS = 8_000
 
 /**
  * Safe wrapper around React.lazy() for named exports.
@@ -18,14 +27,34 @@ const LAZY_IMPORT_RETRY_BASE_MS = 1_000
  *    auto-reload recovery instead of silently crashing.
  * 2. Retries the import with exponential backoff on network/chunk errors (#4933)
  *    so transient failures don't crash the app.
+ * 3. Races each import attempt against a timeout (#6098) so a hung dynamic
+ *    import (e.g. during a backend restart) becomes a recoverable rejection
+ *    instead of leaving the Suspense fallback stuck on a loading spinner.
  */
 export function safeLazy<T extends Record<string, unknown>>(
   importFn: () => Promise<T>,
   exportName: keyof T & string,
 ): ReturnType<typeof lazy> {
   return lazy(() => {
+    const importWithTimeout = (): Promise<T> => {
+      let timeoutId: ReturnType<typeof setTimeout> | undefined
+      const timeoutPromise = new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(
+            new Error(
+              `Dynamic import for "${exportName}" timed out after ${LAZY_IMPORT_ATTEMPT_TIMEOUT_MS}ms — ` +
+              'the chunk server may be unreachable or restarting.',
+            ),
+          )
+        }, LAZY_IMPORT_ATTEMPT_TIMEOUT_MS)
+      })
+      return Promise.race([importFn(), timeoutPromise]).finally(() => {
+        if (timeoutId !== undefined) clearTimeout(timeoutId)
+      })
+    }
+
     const attemptImport = (retriesLeft: number): Promise<{ default: ComponentType<Record<string, unknown>> }> =>
-      importFn()
+      importWithTimeout()
         .then((m) => {
           // When an eagerly-loaded bundle uses .catch(() => undefined) to suppress
           // unhandled rejections, a stale-chunk failure resolves the promise to
