@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { CheckCircle, Clock, XCircle, ChevronRight, Filter, Server, Layers } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -61,6 +62,27 @@ const FILTER_CONFIG = {
   statusField: 'status' as keyof Deployment,
   storageKey: 'deployment-status' }
 
+// Hoisted to module scope so the object reference is stable across renders.
+// Passing an inline object into useCardData invalidates its internal useMemo
+// deps every render and caused "Maximum update depth exceeded" on the home
+// dashboard default-6 card.
+const CARD_DATA_FILTER_CONFIG = {
+  searchFields: ['name', 'namespace', 'cluster'] as (keyof Deployment)[],
+  clusterField: 'cluster' as keyof Deployment,
+  statusField: 'status' as keyof Deployment,
+  storageKey: 'deployment-status' } as const
+
+const CARD_DATA_SORT_CONFIG = {
+  defaultField: 'status' as const,
+  defaultDirection: 'asc' as SortDirection,
+  comparators: {
+    status: commonComparators.statusOrder<Deployment>('status', statusOrder),
+    name: commonComparators.string<Deployment>('name'),
+    cluster: commonComparators.string<Deployment>('cluster') } } as const
+
+// Default rows per page before pagination kicks in
+const DEFAULT_PAGE_LIMIT = 5
+
 export function DeploymentStatus() {
   const { t } = useTranslation()
   const { drillToDeployment } = useDrillDownActions()
@@ -98,11 +120,22 @@ export function DeploymentStatus() {
     deploying: globalFilteredDeployments.filter((d) => d.status === 'deploying').length,
     failed: globalFilteredDeployments.filter((d) => d.status === 'failed').length }
 
-  // Pre-filter by status chip before passing to useCardData
-  const statusPreFiltered = (() => {
+  // Pre-filter by status chip before passing to useCardData.
+  // Memoized so the array reference stays stable across renders when the
+  // source data and status filter are unchanged — otherwise downstream
+  // useMemo dependencies in useCardData invalidate every render.
+  const statusPreFiltered = useMemo(() => {
     if (statusFilter === 'all') return allDeployments
     return allDeployments.filter((d) => d.status === statusFilter)
-  })()
+  }, [allDeployments, statusFilter])
+
+  const cardDataConfig = useMemo(
+    () => ({
+      filter: CARD_DATA_FILTER_CONFIG,
+      sort: CARD_DATA_SORT_CONFIG,
+      defaultLimit: DEFAULT_PAGE_LIMIT }),
+    []
+  )
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {
@@ -130,20 +163,7 @@ export function DeploymentStatus() {
       sortDirection,
       setSortDirection },
     containerRef,
-    containerStyle } = useCardData<Deployment, SortByOption>(statusPreFiltered, {
-    filter: {
-      searchFields: ['name', 'namespace', 'cluster'] as (keyof Deployment)[],
-      clusterField: 'cluster',
-      statusField: 'status',
-      storageKey: 'deployment-status' },
-    sort: {
-      defaultField: 'status',
-      defaultDirection: 'asc' as SortDirection,
-      comparators: {
-        status: commonComparators.statusOrder<Deployment>('status', statusOrder),
-        name: commonComparators.string<Deployment>('name'),
-        cluster: commonComparators.string<Deployment>('cluster') } },
-    defaultLimit: 5 })
+    containerStyle } = useCardData<Deployment, SortByOption>(statusPreFiltered, cardDataConfig)
 
   // Handle filter changes (reset page)
   const handleFilterChange = (newFilter: StatusFilter) => {
