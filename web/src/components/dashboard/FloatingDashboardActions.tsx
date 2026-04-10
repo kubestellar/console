@@ -63,7 +63,7 @@ export function FloatingDashboardActions({
   canRedo = false,
 }: FloatingDashboardActionsProps) {
   const { t } = useTranslation()
-  const { isSidebarOpen, isSidebarMinimized } = useMissions()
+  const { isSidebarOpen, isSidebarMinimized, isFullScreen: isMissionFullScreen } = useMissions()
   const { isMobile } = useMobile()
   const [searchParams, setSearchParams] = useSearchParams()
   const fabHint = useFeatureHints('fab-add')
@@ -139,6 +139,11 @@ export function FloatingDashboardActions({
       onResetToDefaults()
     }
   }
+
+  // Hide the Console Studio FAB when the AI Mission sidebar is expanded to
+  // full-screen (#6130). In full-screen mode the mission list and chat UI
+  // cover the whole viewport, and the FAB would overlap them.
+  if (isMissionFullScreen) return null
 
   const showResetOption = isCustomized && (onReset || onResetToDefaults)
   const menuBtnClass = "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md transition-colors whitespace-nowrap"

@@ -585,7 +585,10 @@ export function MissionSidebar() {
                 }
               }}
               className={cn(
-                "p-1.5 rounded transition-colors flex-shrink-0 ring-1",
+                // mr-2 gives the accented "+ New mission" button breathing room
+                // from the adjacent toolbar group (#6132) so it doesn't visually
+                // merge with the Globe/Rocket icons next to it.
+                "p-1.5 mr-2 rounded transition-colors flex-shrink-0 ring-1",
                 showNewMission
                   ? "bg-primary text-primary-foreground ring-primary"
                   : "bg-purple-500/10 text-purple-400 ring-purple-500/30 hover:bg-purple-500/20 hover:text-purple-300"
