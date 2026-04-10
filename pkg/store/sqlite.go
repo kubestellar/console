@@ -334,6 +334,15 @@ func (s *SQLiteStore) migrate() error {
 		updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 	);
 	CREATE INDEX IF NOT EXISTS idx_user_token_usage_updated ON user_token_usage(updated_at);
+
+	-- OAuth state tokens (persisted so in-flight OAuth flows survive a
+	-- backend restart between /auth/login and /auth/callback — see issue #6028).
+	CREATE TABLE IF NOT EXISTS oauth_states (
+		state TEXT PRIMARY KEY,
+		created_at TIMESTAMP NOT NULL,
+		expires_at TIMESTAMP NOT NULL
+	);
+	CREATE INDEX IF NOT EXISTS idx_oauth_states_expires_at ON oauth_states(expires_at);
 	`
 	_, err := s.db.Exec(schema)
 	if err != nil {
@@ -2206,4 +2215,69 @@ func (s *SQLiteStore) AddUserTokenDelta(userID string, category string, delta in
 	}
 	committed = true
 	return current, nil
+}
+
+// OAuth State methods — persist OAuth state tokens so in-flight logins survive
+// a backend restart between /auth/login and /auth/callback (issue #6028).
+
+// StoreOAuthState persists an OAuth state token with the given time-to-live.
+// The state is a single-use CSRF token; ConsumeOAuthState must be called once
+// to validate and delete it on the callback.
+func (s *SQLiteStore) StoreOAuthState(state string, ttl time.Duration) error {
+	now := time.Now()
+	expiresAt := now.Add(ttl)
+	_, err := s.db.Exec(
+		`INSERT INTO oauth_states (state, created_at, expires_at) VALUES (?, ?, ?)`,
+		state, now, expiresAt,
+	)
+	return err
+}
+
+// ConsumeOAuthState atomically looks up and deletes an OAuth state token in a
+// single transaction. It returns true only when the state exists, has not
+// expired, and was successfully deleted — ensuring single-use semantics.
+//
+// Expired states are also deleted to keep the table lean, but the call still
+// returns false for them so the caller treats the flow as invalid.
+func (s *SQLiteStore) ConsumeOAuthState(state string) (bool, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return false, err
+	}
+	// Rollback is a no-op after a successful Commit.
+	defer tx.Rollback()
+
+	var expiresAt time.Time
+	err = tx.QueryRow(
+		`SELECT expires_at FROM oauth_states WHERE state = ?`, state,
+	).Scan(&expiresAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	// Delete unconditionally — whether the state is valid or expired, it should
+	// not be reusable after this call.
+	if _, err := tx.Exec(`DELETE FROM oauth_states WHERE state = ?`, state); err != nil {
+		return false, err
+	}
+	if err := tx.Commit(); err != nil {
+		return false, err
+	}
+
+	return time.Now().Before(expiresAt), nil
+}
+
+// CleanupExpiredOAuthStates removes OAuth state rows whose expires_at has
+// passed. Returns the number of rows deleted.
+func (s *SQLiteStore) CleanupExpiredOAuthStates() (int64, error) {
+	result, err := s.db.Exec(
+		`DELETE FROM oauth_states WHERE expires_at < ?`, time.Now(),
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

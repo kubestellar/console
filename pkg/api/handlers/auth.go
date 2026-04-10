@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -35,7 +34,7 @@ const (
 	// oauthStateExpiration is how long an OAuth state token remains valid.
 	oauthStateExpiration = 10 * time.Minute
 	// oauthStateCleanupInterval is how often the background goroutine sweeps
-	// for expired OAuth state entries.
+	// for expired OAuth state entries in the persistent store.
 	oauthStateCleanupInterval = 5 * time.Minute
 	// jwtExpiration is the lifetime of issued JWT tokens.
 	// Set to 7 days — the auth middleware signals clients to silently refresh
@@ -48,68 +47,29 @@ const (
 	defaultOAuthCallbackURL = "http://localhost:8080/auth/github/callback"
 )
 
-// oauthStateStore stores OAuth state tokens server-side (Safari blocks cookies in OAuth flows)
-var oauthStateStore = struct {
-	sync.RWMutex
-	states map[string]time.Time
-}{states: make(map[string]time.Time)}
-
-// init starts a background goroutine that periodically purges expired
-// OAuth state entries.  This ensures the map stays bounded even when no
-// new OAuth flows are initiated (the inline cleanup in storeOAuthState
-// only runs when a new state is added).
-func init() {
-	go func() {
-		ticker := time.NewTicker(oauthStateCleanupInterval)
-		defer ticker.Stop()
-		for range ticker.C {
-			purgeExpiredOAuthStates()
-		}
-	}()
+// storeOAuthState persists an OAuth CSRF state token in the backing store.
+//
+// Previously this lived in an in-process map, which meant a backend restart
+// between /auth/login and /auth/callback would drop every in-flight OAuth
+// flow and surface as `csrf_validation_failed` to users (issue #6028). The
+// persistent store makes OAuth flows resilient across restarts, as long as
+// the user completes the flow within oauthStateExpiration.
+func (h *AuthHandler) storeOAuthState(state string) error {
+	return h.store.StoreOAuthState(state, oauthStateExpiration)
 }
 
-// purgeExpiredOAuthStates removes all state entries older than oauthStateExpiration.
-func purgeExpiredOAuthStates() {
-	oauthStateStore.Lock()
-	defer oauthStateStore.Unlock()
-	now := time.Now()
-	for s, t := range oauthStateStore.states {
-		if now.Sub(t) > oauthStateExpiration {
-			delete(oauthStateStore.states, s)
-		}
+// validateAndConsumeOAuthState atomically looks up and deletes an OAuth state
+// token. Returns true only when the state was found, had not expired, and was
+// successfully consumed (single-use). Returns false on any error or miss so
+// callers can respond with a generic csrf_validation_failed without leaking
+// details.
+func (h *AuthHandler) validateAndConsumeOAuthState(state string) bool {
+	ok, err := h.store.ConsumeOAuthState(state)
+	if err != nil {
+		slog.Error("[Auth] failed to consume OAuth state", "error", err)
+		return false
 	}
-}
-
-// inlineCleanupThreshold is the map size above which storeOAuthState performs
-// an inline sweep of expired entries. Below this threshold, the background
-// goroutine handles cleanup, avoiding an O(n) scan on every insert.
-const inlineCleanupThreshold = 100
-
-func storeOAuthState(state string) {
-	oauthStateStore.Lock()
-	defer oauthStateStore.Unlock()
-	// Inline cleanup only when the map has grown large enough to warrant it.
-	// Under normal load (a few concurrent OAuth flows), the background sweep
-	// in purgeExpiredOAuthStates handles cleanup on its own.
-	if len(oauthStateStore.states) >= inlineCleanupThreshold {
-		now := time.Now()
-		for s, t := range oauthStateStore.states {
-			if now.Sub(t) > oauthStateExpiration {
-				delete(oauthStateStore.states, s)
-			}
-		}
-	}
-	oauthStateStore.states[state] = time.Now()
-}
-
-func validateAndConsumeOAuthState(state string) bool {
-	oauthStateStore.Lock()
-	defer oauthStateStore.Unlock()
-	if t, ok := oauthStateStore.states[state]; ok {
-		delete(oauthStateStore.states, state)
-		return time.Since(t) < oauthStateExpiration
-	}
-	return false
+	return ok
 }
 
 // isLocalhostURL returns true if the given URL points to a loopback address
@@ -207,7 +167,7 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 		slog.Info("[Auth] GitHub Enterprise configured", "oauthURL", ghURL, "apiBase", apiBase)
 	}
 
-	return &AuthHandler{
+	h := &AuthHandler{
 		store: s,
 		oauthConfig: &oauth2.Config{
 			ClientID:     cfg.GitHubClientID,
@@ -225,6 +185,29 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 		githubToken:    cfg.GitHubToken,
 		devMode:        cfg.DevMode,
 		skipOnboarding: cfg.SkipOnboarding,
+	}
+
+	// Periodically purge expired OAuth states from the persistent store so the
+	// oauth_states table does not grow unbounded in long-running processes.
+	// ConsumeOAuthState deletes individual rows on the happy path, but
+	// abandoned flows (user never returns to the callback) would otherwise
+	// linger until their expires_at passed with no cleanup.
+	go h.runOAuthStateCleanup()
+
+	return h
+}
+
+// runOAuthStateCleanup ticks every oauthStateCleanupInterval and removes
+// expired OAuth state rows. It runs for the lifetime of the process — the
+// AuthHandler has no explicit Close hook, matching the existing pattern in
+// the old in-memory init() goroutine.
+func (h *AuthHandler) runOAuthStateCleanup() {
+	ticker := time.NewTicker(oauthStateCleanupInterval)
+	defer ticker.Stop()
+	for range ticker.C {
+		if _, err := h.store.CleanupExpiredOAuthStates(); err != nil {
+			slog.Warn("[Auth] OAuth state cleanup failed", "error", err)
+		}
 	}
 }
 
@@ -255,8 +238,12 @@ func (h *AuthHandler) GitHubLogin(c *fiber.Ctx) error {
 	// Generate cryptographically secure state for CSRF protection
 	state := uuid.New().String()
 
-	// Store state server-side (Safari blocks cookies in OAuth redirect flows)
-	storeOAuthState(state)
+	// Persist state in the backing store (Safari blocks cookies in OAuth
+	// redirect flows, and an in-memory map would be lost on restart — #6028).
+	if err := h.storeOAuthState(state); err != nil {
+		slog.Error("[Auth] failed to store OAuth state", "error", err)
+		return h.oauthErrorRedirect(c, "oauth_state_store_failed", "")
+	}
 
 	url := h.oauthConfig.AuthCodeURL(state)
 	// Prevent Safari from caching the 307 redirect (which contains a unique CSRF state).
@@ -447,17 +434,18 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	// CSRF validation: verify state parameter matches server-side store
 	// (Safari blocks cookies in OAuth redirect flows, so we use server-side state)
 	state := c.Query("state")
-	if state == "" || !validateAndConsumeOAuthState(state) {
+	if state == "" || !h.validateAndConsumeOAuthState(state) {
 		// #6064 — State validation can fail for reasons that are entirely
 		// benign from the user's perspective: a stale OAuth tab left open
 		// from a previous session, a server restart that cleared the
-		// in-memory state store (#6034 addresses the root cause), or a
-		// duplicate back-button submission. In all of these cases, if the
-		// browser is already carrying a valid kc_auth cookie, the user is
-		// effectively still signed in — bouncing them to an error page
-		// forces a pointless re-login. Instead, when the incoming request
-		// carries a non-expired, non-revoked JWT cookie, short-circuit to
-		// the frontend root so the existing session is preserved.
+		// in-memory state store (#6028 addresses the root cause by
+		// persisting state across restarts), or a duplicate back-button
+		// submission. In all of these cases, if the browser is already
+		// carrying a valid kc_auth cookie, the user is effectively still
+		// signed in — bouncing them to an error page forces a pointless
+		// re-login. Instead, when the incoming request carries a non-
+		// expired, non-revoked JWT cookie, short-circuit to the frontend
+		// root so the existing session is preserved.
 		if h.hasValidAuthCookie(c) {
 			slog.Info("[Auth] CSRF state invalid but user already has valid cookie, recovering to /")
 			c.Set("Cache-Control", "no-store")

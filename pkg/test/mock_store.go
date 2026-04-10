@@ -297,4 +297,34 @@ func (m *MockStore) AddUserTokenDelta(userID string, category string, delta int6
 	}, nil
 }
 
+// OAuth state — overridable via testify/mock expectations so tests can
+// exercise restart-resilience of the OAuth flow (#6028).
+func (m *MockStore) StoreOAuthState(state string, ttl time.Duration) error {
+	if len(m.ExpectedCalls) == 0 {
+		return nil
+	}
+	for _, call := range m.ExpectedCalls {
+		if call.Method == "StoreOAuthState" {
+			args := m.Called(state, ttl)
+			return args.Error(0)
+		}
+	}
+	return nil
+}
+
+func (m *MockStore) ConsumeOAuthState(state string) (bool, error) {
+	if len(m.ExpectedCalls) == 0 {
+		return false, nil
+	}
+	for _, call := range m.ExpectedCalls {
+		if call.Method == "ConsumeOAuthState" {
+			args := m.Called(state)
+			return args.Bool(0), args.Error(1)
+		}
+	}
+	return false, nil
+}
+
+func (m *MockStore) CleanupExpiredOAuthStates() (int64, error) { return 0, nil }
+
 func (m *MockStore) Close() error { return nil }

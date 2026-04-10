@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -12,9 +13,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/store"
 	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 // setupAuthTest creates a fresh Fiber app and an AuthHandler with a mock store
@@ -166,13 +169,19 @@ func TestRefreshToken(t *testing.T) {
 
 func TestGitHubLogin_Redirects(t *testing.T) {
 	app, _, _ := setupAuthTest()
+	// Use a real SQLiteStore so the handler can persist the OAuth state
+	// (the in-memory map was replaced by a store-backed write in #6028).
+	dbPath := filepath.Join(t.TempDir(), "github-login.db")
+	s, err := store.NewSQLiteStore(dbPath)
+	require.NoError(t, err)
+	defer s.Close()
 	// Override config to simulate existing OAuth credentials
 	cfg := AuthConfig{
 		GitHubClientID: "client-id",
 		GitHubSecret:   "secret",
 		BackendURL:     "http://backend",
 	}
-	handler := NewAuthHandler(nil, cfg)
+	handler := NewAuthHandler(s, cfg)
 	app.Get("/auth/github", handler.GitHubLogin)
 
 	req, _ := http.NewRequest("GET", "/auth/github", nil)
@@ -412,3 +421,85 @@ func TestGitHubCallback_RecoversFromValidCookieOnStateFailure(t *testing.T) {
 
 // We cannot easily test successful GitHubCallback flow without mocking oauth lib
 // or doing extensive interface extraction, but we covered the error paths above.
+
+// newRealStoreAuthHandler creates an AuthHandler backed by a real SQLiteStore
+// so tests can exercise persistence behavior (#6028). Using a real store
+// instead of the mock lets us verify the end-to-end OAuth state round-trip
+// without wiring up testify expectations for every internal call.
+func newRealStoreAuthHandler(t *testing.T) (*AuthHandler, store.Store) {
+	t.Helper()
+	dbPath := filepath.Join(t.TempDir(), "auth-test.db")
+	s, err := store.NewSQLiteStore(dbPath)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = s.Close() })
+
+	cfg := AuthConfig{
+		GitHubClientID: "client-id",
+		GitHubSecret:   "secret",
+		JWTSecret:      "test-secret",
+		FrontendURL:    "http://frontend",
+		BackendURL:     "http://backend",
+	}
+	return NewAuthHandler(s, cfg), s
+}
+
+// TestOAuthStatePersistence_RoundTrip verifies that a state stored via the
+// handler helper can be consumed via the handler helper on the happy path.
+func TestOAuthStatePersistence_RoundTrip(t *testing.T) {
+	h, _ := newRealStoreAuthHandler(t)
+
+	const state = "round-trip-state"
+	require.NoError(t, h.storeOAuthState(state))
+
+	ok := h.validateAndConsumeOAuthState(state)
+	assert.True(t, ok, "freshly stored state should validate")
+
+	// Single-use: a second call must fail.
+	ok = h.validateAndConsumeOAuthState(state)
+	assert.False(t, ok, "consumed state should not validate twice")
+}
+
+// TestOAuthStatePersistence_SurvivesRestart simulates the #6028 scenario:
+// the backend restarts between /auth/login and /auth/callback. The user's
+// state was written to the persistent store on /login, and after a restart
+// the callback can still consume it successfully. With the old in-memory
+// map this test would fail with csrf_validation_failed.
+func TestOAuthStatePersistence_SurvivesRestart(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "restart.db")
+
+	// First "process" — /auth/login stores the state.
+	s1, err := store.NewSQLiteStore(dbPath)
+	require.NoError(t, err)
+	h1 := NewAuthHandler(s1, AuthConfig{
+		GitHubClientID: "client-id",
+		GitHubSecret:   "secret",
+		JWTSecret:      "test-secret",
+		FrontendURL:    "http://frontend",
+		BackendURL:     "http://backend",
+	})
+	const state = "state-across-restart"
+	require.NoError(t, h1.storeOAuthState(state))
+	require.NoError(t, s1.Close())
+
+	// Second "process" — /auth/callback consumes the state after restart.
+	s2, err := store.NewSQLiteStore(dbPath)
+	require.NoError(t, err)
+	defer s2.Close()
+	h2 := NewAuthHandler(s2, AuthConfig{
+		GitHubClientID: "client-id",
+		GitHubSecret:   "secret",
+		JWTSecret:      "test-secret",
+		FrontendURL:    "http://frontend",
+		BackendURL:     "http://backend",
+	})
+
+	ok := h2.validateAndConsumeOAuthState(state)
+	assert.True(t, ok, "OAuth state must survive backend restart (#6028)")
+}
+
+// TestOAuthStatePersistence_InvalidStateRejected ensures unknown states
+// continue to fail CSRF validation — no regression in the rejection path.
+func TestOAuthStatePersistence_InvalidStateRejected(t *testing.T) {
+	h, _ := newRealStoreAuthHandler(t)
+	assert.False(t, h.validateAndConsumeOAuthState("never-issued"))
+}
