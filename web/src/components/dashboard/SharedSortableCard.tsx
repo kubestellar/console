@@ -4,8 +4,25 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS, LIVE_DATA_CARDS } from '../cards/cardRegistry'
+import { useCardCollapse } from '../../lib/cards/cardHooks'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import type { Card } from './dashboardUtils'
+
+/**
+ * Number of grid rows a collapsed card occupies (#6072). Collapsed cards
+ * only show their header, so they shrink to a single row regardless of the
+ * card's stored `position.h`. The original `position.h` is preserved on the
+ * card model and reapplied when the card is expanded again.
+ */
+const COLLAPSED_CARD_ROW_SPAN = 1
+
+/**
+ * Minimum pixel height a non-collapsed sortable card cell should occupy.
+ * Mirrors the legacy `auto-rows-[minmax(180px,auto)]` baseline so expanded
+ * cards keep their previous look when the grid container itself uses
+ * `auto-rows-min` (which is required so collapsed cards can shrink).
+ */
+const EXPANDED_CARD_MIN_HEIGHT_PX = 180
 
 interface SortableCardProps {
   card: Card
@@ -78,11 +95,21 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
   const posH = card.position?.h || 2
   const effectiveW = isNarrow && posW < MIN_NARROW_COLS ? MIN_NARROW_COLS : posW
 
+  // Read the card's collapse state so the grid cell shrinks to a single row
+  // when the card is collapsed (#6072). The original `posH` stays untouched
+  // on the card model — expanding restores the full row span.
+  const { isCollapsed } = useCardCollapse(card.id)
+  const effectiveRowSpan = isCollapsed ? COLLAPSED_CARD_ROW_SPAN : posH
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     gridColumn: `span ${effectiveW}`,
-    gridRow: `span ${posH}`,
+    gridRow: `span ${effectiveRowSpan}`,
+    // Only enforce the legacy minimum height when expanded; collapsed cards
+    // must be free to shrink to their header height so neighbouring rows can
+    // pack upward instead of leaving dead space.
+    minHeight: isCollapsed ? undefined : `${EXPANDED_CARD_MIN_HEIGHT_PX}px`,
     opacity: isDragging ? 0.5 : 1,
   }
 
