@@ -7,6 +7,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { useCardLoadingState } from './CardDataContext'
@@ -127,7 +128,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   }, [globalSelectedClusters, isAllClustersSelected])
 
   // Fetch ALL Helm releases from all clusters once (not per-cluster)
-  const { releases: allHelmReleases, isLoading: releasesLoading, isRefreshing: releasesRefreshing, isDemoFallback: isDemoData } = useCachedHelmReleases()
+  const { releases: allHelmReleases, isLoading: releasesLoading, isRefreshing: releasesRefreshing, isDemoFallback: isDemoData, lastRefresh: releasesLastRefresh } = useCachedHelmReleases()
 
   // Auto-select first cluster and release in demo mode
   useEffect(() => {
@@ -290,6 +291,14 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
           <span className="text-sm font-medium text-muted-foreground">
             {totalItems} values
           </span>
+          {/* part 5: freshness indicator. */}
+          <RefreshIndicator
+            isRefreshing={clustersRefreshing || releasesRefreshing || valuesRefreshing}
+            lastUpdated={typeof releasesLastRefresh === 'number' ? new Date(releasesLastRefresh) : null}
+            size="sm"
+            showLabel={true}
+            staleThresholdMinutes={5}
+          />
         </div>
         <div className="flex items-center gap-2">
           {/* Cluster count indicator */}

@@ -8,10 +8,11 @@ import { useCardLoadingState } from './CardDataContext'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import { useChartFilters } from '../../lib/cards/cardHooks'
 import { ClusterStatusDot } from '../ui/ClusterStatusBadge'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 
 export function NetworkOverview() {
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
-  const { services, isLoading: servicesLoading, isRefreshing, isDemoFallback, consecutiveFailures, isFailed } = useCachedServices()
+  const { services, isLoading: servicesLoading, isRefreshing, isDemoFallback, consecutiveFailures, isFailed, lastRefresh: servicesLastRefresh } = useCachedServices()
 
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToService } = useDrillDownActions()
@@ -141,7 +142,14 @@ export function NetworkOverview() {
 
       {/* Controls */}
       <div className="flex items-center justify-between mb-4">
-        <div />
+        {/* part 5: freshness indicator. */}
+        <RefreshIndicator
+          isRefreshing={isRefreshing}
+          lastUpdated={typeof servicesLastRefresh === 'number' ? new Date(servicesLastRefresh) : null}
+          size="sm"
+          showLabel={true}
+          staleThresholdMinutes={5}
+        />
         <div className="flex items-center gap-2">
           {/* Cluster count indicator */}
           {localClusterFilter.length > 0 && (
