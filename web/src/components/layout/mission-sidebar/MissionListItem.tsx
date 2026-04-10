@@ -80,7 +80,7 @@ export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpan
             <Loader2 className="w-3.5 h-3.5 text-orange-400 animate-spin" />
           </span>
         )}
-        {mission.status === 'running' && onTerminate && (
+        {(mission.status === 'running' || mission.status === 'pending' || mission.status === 'blocked') && onTerminate && (
           <button
             onClick={(e) => { e.stopPropagation(); onTerminate() }}
             className="p-0.5 hover:bg-red-500/20 rounded transition-colors flex-shrink-0"

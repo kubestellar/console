@@ -195,6 +195,17 @@ export function MissionSidebar() {
 
   const handleApplyResolution = (resolution: { title: string; resolution: { summary: string; steps: string[]; yaml?: string } }) => {
     if (!activeMission) return
+    // Enforce lifecycle validation (#5934): resolution should never be
+    // applied to a mission that is in a non-interactive state. Blocked
+    // missions are awaiting preflight fixes, pending missions have never
+    // left the queue, and cancelling/cancelled missions should not be
+    // restarted through the resolution flow. Running missions already
+    // have input disabled so sendMessage would no-op, but we surface a
+    // clearer guard here anyway.
+    const NON_APPLIABLE_STATUSES = new Set(['blocked', 'pending', 'cancelling', 'running'])
+    if (NON_APPLIABLE_STATUSES.has(activeMission.status)) {
+      return
+    }
     const applyMessage = `Please apply this saved resolution:\n\n**${resolution.title}**\n\n${resolution.resolution.summary}\n\nSteps:\n${resolution.resolution.steps.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}${resolution.resolution.yaml ? `\n\nYAML:\n\`\`\`yaml\n${resolution.resolution.yaml}\n\`\`\`` : ''}`
     sendMessage(activeMission.id, applyMessage)
   }
@@ -442,8 +453,11 @@ export function MissionSidebar() {
   }, [isSidebarOpen, isFullScreen, setFullScreen, closeSidebar])
 
   // Count missions needing attention
+  // Blocked missions are stuck waiting on user action (preflight failure,
+  // missing credentials, RBAC denial). Surfacing them in the attention
+  // indicator ensures the user sees the required action (#5933).
   const needsAttention = missions.filter(m =>
-    m.status === 'waiting_input' || m.status === 'failed'
+    m.status === 'waiting_input' || m.status === 'failed' || m.status === 'blocked'
   ).length
 
   const runningCount = missions.filter(m => m.status === 'running').length
@@ -1213,8 +1227,11 @@ export function MissionSidebarToggle() {
   const { missions, isSidebarOpen, openSidebar } = useMissions()
   const { isMobile } = useMobile()
 
+  // Blocked missions are stuck waiting on user action (preflight failure,
+  // missing credentials, RBAC denial). Surfacing them in the attention
+  // indicator ensures the user sees the required action (#5933).
   const needsAttention = missions.filter(m =>
-    m.status === 'waiting_input' || m.status === 'failed'
+    m.status === 'waiting_input' || m.status === 'failed' || m.status === 'blocked'
   ).length
 
   const runningCount = missions.filter(m => m.status === 'running').length

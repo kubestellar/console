@@ -252,6 +252,28 @@ function loadMissions(): Mission[] {
             context: { ...mission.context, needsReconnect: true }
           }
         }
+        // Missions stuck in 'pending' state after a page reload cannot be resumed —
+        // the backend never received the chat request (we only transition to
+        // 'running' after ensureConnection resolves and wsSend is called), so
+        // replaying it now would risk a duplicate execution on agents that are
+        // not idempotent. Fail the mission with a clear message prompting the
+        // user to retry manually (#5931).
+        if (mission.status === 'pending') {
+          return {
+            ...mission,
+            status: 'failed',
+            currentStep: undefined,
+            updatedAt: new Date(),
+            messages: [
+              ...mission.messages,
+              {
+                id: `msg-pending-reload-${mission.id}-${Date.now()}`,
+                role: 'system' as const,
+                content: 'Page was reloaded before this mission could start. Please retry the mission.',
+                timestamp: new Date() }
+            ]
+          }
+        }
         // Missions stuck in 'cancelling' after a page reload should be finalized
         if (mission.status === 'cancelling') {
           return {
@@ -562,6 +584,9 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           // React StrictMode may invoke state updaters twice, which would
           // cause duplicate reconnection requests if the send lived inside.
           const missionsToReconnect: Mission[] = []
+          // Missions that have already had one reconnect attempt — don't
+          // replay the prompt again; fail them instead (#5930).
+          const missionsToFailDuplicate: string[] = []
 
           setMissions(prev => {
             const candidates = prev.filter(m =>
@@ -569,19 +594,44 @@ export function MissionProvider({ children }: { children: ReactNode }) {
             )
 
             if (candidates.length > 0) {
-              // Snapshot missions for the side effect scheduled below
-              missionsToReconnect.push(...candidates)
+              // Split candidates into first-attempt (safe to replay) vs
+              // already-attempted (unsafe — would duplicate execution on
+              // non-idempotent agents, see #5930).
+              for (const m of candidates) {
+                if (m.context?.reconnectAttempted) {
+                  missionsToFailDuplicate.push(m.id)
+                } else {
+                  missionsToReconnect.push(m)
+                }
+              }
 
-              // Clear the needsReconnect flag and update step (pure state update)
-              return prev.map(m =>
-                m.context?.needsReconnect
-                  ? {
-                      ...m,
-                      currentStep: 'Resuming...',
-                      context: { ...m.context, needsReconnect: false }
-                    }
-                  : m
-              )
+              // Clear the needsReconnect flag and mark reconnectAttempted
+              // so a subsequent reconnect won't replay the prompt again.
+              return prev.map(m => {
+                if (!m.context?.needsReconnect) return m
+                if (missionsToFailDuplicate.includes(m.id)) {
+                  return {
+                    ...m,
+                    status: 'failed' as MissionStatus,
+                    currentStep: undefined,
+                    updatedAt: new Date(),
+                    context: { ...m.context, needsReconnect: false },
+                    messages: [
+                      ...m.messages,
+                      {
+                        id: `msg-reconnect-abort-${m.id}-${Date.now()}`,
+                        role: 'system' as const,
+                        content: 'Connection was lost twice during this mission. To avoid duplicating an in-flight action, the mission was stopped. Please retry it manually.',
+                        timestamp: new Date() }
+                    ]
+                  }
+                }
+                return {
+                  ...m,
+                  currentStep: 'Resuming...',
+                  context: { ...m.context, needsReconnect: false, reconnectAttempted: true }
+                }
+              })
             }
             return prev
           })
@@ -598,6 +648,11 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                   // Determine which agent to use - prefer claude-code for tool execution
                   const agentToUse = mission.agent || 'claude-code'
 
+                  // Tag the reconnect with a deterministic resumeKey per
+                  // mission — backends that support resume-by-key can
+                  // de-duplicate on this key and avoid replaying actions
+                  // that were already (partially) processed (#5930).
+                  const resumeKey = `resume-${mission.id}`
                   const requestId = `claude-reconnect-${Date.now()}-${mission.id}`
                   pendingRequests.current.set(requestId, mission.id)
 
@@ -616,7 +671,9 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                       prompt: lastUserMessage.content,
                       sessionId: mId,
                       agent: agentToUse,
-                      history: history }
+                      history: history,
+                      resumeKey: resumeKey,
+                      isResume: true }
                   }), () => {
                     setMissions(prev => prev.map(m =>
                       m.id === mId ? { ...m, status: 'failed', currentStep: 'WebSocket reconnect failed' } : m
@@ -672,31 +729,54 @@ export function MissionProvider({ children }: { children: ReactNode }) {
             )
           }
 
-          // Fail any pending missions that were waiting for a response
+          // Transient disconnect handling (#5929): instead of failing running
+          // missions immediately, mark them with needsReconnect so that the
+          // auto-reconnect loop (above) can resume them once the WebSocket
+          // re-opens. We only fail missions permanently when the reconnect
+          // retries have been exhausted (handled in the `else if` branch
+          // below). The pending request IDs are cleared because a new request
+          // ID will be issued on reconnect — keeping them would cause late
+          // responses from the dead socket to be misattributed (#4499).
+          const isGivingUp = getDemoMode() || wsReconnectAttempts.current >= WS_RECONNECT_MAX_RETRIES
           if (pendingRequests.current.size > 0) {
-            const errorContent = `**Agent Disconnected**
-
-The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost. Please verify the agent is running and reachable.`
-
             const pendingMissionIds = new Set(pendingRequests.current.values())
-            setMissions(prev => prev.map(m => {
-              if (pendingMissionIds.has(m.id) && m.status === 'running') {
-                return {
-                  ...m,
-                  status: 'failed',
-                  currentStep: undefined,
-                  messages: [
-                    ...m.messages,
-                    {
-                      id: `msg-${Date.now()}-${m.id}`,
-                      role: 'system',
-                      content: errorContent,
-                      timestamp: new Date() }
-                  ]
+
+            if (isGivingUp) {
+              const errorContent = `**Agent Disconnected**
+
+The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and reconnection attempts were exhausted. Please verify the agent is running and reachable, then retry the mission.`
+              setMissions(prev => prev.map(m => {
+                if (pendingMissionIds.has(m.id) && m.status === 'running') {
+                  return {
+                    ...m,
+                    status: 'failed',
+                    currentStep: undefined,
+                    messages: [
+                      ...m.messages,
+                      {
+                        id: `msg-${Date.now()}-${m.id}`,
+                        role: 'system',
+                        content: errorContent,
+                        timestamp: new Date() }
+                    ]
+                  }
                 }
-              }
-              return m
-            }))
+                return m
+              }))
+            } else {
+              // Transient disconnect — keep mission in 'running' but mark it
+              // as needing reconnect. The UI will show "Reconnecting..." and
+              // the onopen handler will resume the mission automatically.
+              setMissions(prev => prev.map(m => {
+                if (pendingMissionIds.has(m.id) && m.status === 'running') {
+                  return {
+                    ...m,
+                    currentStep: 'Reconnecting...',
+                    context: { ...m.context, needsReconnect: true } }
+                }
+                return m
+              }))
+            }
             pendingRequests.current.clear()
           }
         }
@@ -712,17 +792,29 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost. Ple
             ws.close()
             wsRef.current = null
           }
-          // Fail only missions that have pending requests — don't sweep
-          // all running missions, as some may belong to a different WS session (#5851)
+          // Transient disconnect handling (#5929): only fail missions
+          // permanently when reconnection attempts are exhausted. Otherwise
+          // mark them as needing reconnect so onopen can resume them.
+          // Don't sweep all running missions — only those tied to pending
+          // requests, as others may belong to a different WS session (#5851).
+          const isGivingUp = getDemoMode() || wsReconnectAttempts.current >= WS_RECONNECT_MAX_RETRIES
           if (pendingRequests.current.size > 0) {
             const affectedMissionIds = new Set(pendingRequests.current.values())
-            const errorContent = `**Agent Disconnected**\n\nThe WebSocket connection failed. Please verify the agent is running and try again.`
-            setMissions(prev => prev.map(m => {
-              if (!affectedMissionIds.has(m.id)) return m
-              if (m.status !== 'running' && m.status !== 'waiting_input') return m
-              return { ...m, status: 'failed' as MissionStatus, currentStep: 'Connection failed',
-                messages: [...m.messages, { id: `msg-${Date.now()}-ws-error`, role: 'system' as const, content: errorContent, timestamp: new Date() }] }
-            }))
+            if (isGivingUp) {
+              const errorContent = `**Agent Disconnected**\n\nThe WebSocket connection failed and reconnection attempts were exhausted. Please verify the agent is running and try again.`
+              setMissions(prev => prev.map(m => {
+                if (!affectedMissionIds.has(m.id)) return m
+                if (m.status !== 'running' && m.status !== 'waiting_input') return m
+                return { ...m, status: 'failed' as MissionStatus, currentStep: 'Connection failed',
+                  messages: [...m.messages, { id: `msg-${Date.now()}-ws-error`, role: 'system' as const, content: errorContent, timestamp: new Date() }] }
+              }))
+            } else {
+              setMissions(prev => prev.map(m => {
+                if (!affectedMissionIds.has(m.id)) return m
+                if (m.status !== 'running' && m.status !== 'waiting_input') return m
+                return { ...m, currentStep: 'Reconnecting...', context: { ...m.context, needsReconnect: true } }
+              }))
+            }
             pendingRequests.current.clear()
           }
           setAgentsLoading(false)
@@ -1643,6 +1735,38 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     // Guard against double-cancel: if already cancelling, don't schedule another timeout
     if (cancelTimeouts.current.has(missionId)) return
 
+    // Pending missions have never been sent to the backend yet (preflight
+    // check is still running, or ensureConnection has not resolved). We can
+    // short-circuit here and finalize the mission as cancelled without
+    // contacting the backend at all (#5932). This also applies to the
+    // 'blocked' state where the mission is waiting on preflight resolution.
+    const currentMission = missionsRef.current.find(m => m.id === missionId)
+    if (currentMission && (currentMission.status === 'pending' || currentMission.status === 'blocked')) {
+      // Clean up any tracking just in case
+      for (const [reqId, mId] of pendingRequests.current.entries()) {
+        if (mId === missionId) pendingRequests.current.delete(reqId)
+      }
+      lastStreamTimestamp.current.delete(missionId)
+
+      setMissions(prev => prev.map(m =>
+        m.id === missionId ? {
+          ...m,
+          status: 'failed' as MissionStatus,
+          currentStep: undefined,
+          updatedAt: new Date(),
+          messages: [
+            ...m.messages,
+            {
+              id: `msg-cancel-pending-${Date.now()}`,
+              role: 'system' as const,
+              content: 'Mission cancelled by user before it started.',
+              timestamp: new Date() }
+          ]
+        } : m
+      ))
+      return
+    }
+
     // Keep pendingRequests intact so that terminal messages (result, stream-done)
     // from the backend can still be matched to the mission. The handler for
     // 'cancelling' missions (below) treats any terminal message as implicit
@@ -1731,6 +1855,15 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     // Only stop commands (handled above) are allowed during active execution.
     const currentMission = missionsRef.current.find(m => m.id === missionId)
     if (currentMission && (currentMission.status === 'running' || currentMission.status === 'cancelling')) {
+      return
+    }
+    // Blocked missions are waiting on preflight resolution (missing
+    // credentials, RBAC failures, etc.). New input must not bypass that
+    // validation — the user has to call retryPreflight after fixing the
+    // underlying issue, which will move the mission to 'running' first
+    // (#5934). Silently dropping the send here is safe because the UI
+    // already disables the input in the blocked state.
+    if (currentMission && currentMission.status === 'blocked') {
       return
     }
 

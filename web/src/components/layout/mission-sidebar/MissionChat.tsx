@@ -433,7 +433,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               <Maximize2 className="w-4 h-4 text-muted-foreground" />
             </button>
           )}
-          {mission.status === 'running' && (
+          {(mission.status === 'running' || mission.status === 'pending' || mission.status === 'blocked') && (
             <button
               onClick={() => cancelMission(mission.id)}
               className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 rounded-lg transition-colors"
@@ -441,7 +441,9 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               data-testid="terminate-session-btn"
             >
               <StopCircle className="w-3.5 h-3.5" />
-              {t('missionChat.terminateSession', { defaultValue: 'Terminate Session' })}
+              {mission.status === 'pending'
+                ? t('missionChat.cancelPending', { defaultValue: 'Cancel' })
+                : t('missionChat.terminateSession', { defaultValue: 'Terminate Session' })}
             </button>
           )}
           <div className={cn('flex items-center gap-1', config.color)}>

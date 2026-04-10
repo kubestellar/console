@@ -2491,18 +2491,20 @@ describe('ensureConnection timeout', () => {
 // ── WebSocket close fails pending missions ───────────────────────────────────
 
 describe('WS close fails pending running missions', () => {
-  it('fails all pending running missions when WS closes with error content', async () => {
+  it('keeps missions running with needsReconnect flag on transient WS close (#5929)', async () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
     const { missionId } = await startMissionWithConnection(result)
     expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('running')
 
-    // Simulate WebSocket closing
+    // Simulate WebSocket closing — transient disconnect, reconnect attempts still available
     act(() => { MockWebSocket.lastInstance?.simulateClose() })
 
     const mission = result.current.missions.find(m => m.id === missionId)
-    expect(mission?.status).toBe('failed')
-    const systemMsg = mission?.messages.find(m => m.role === 'system')
-    expect(systemMsg?.content).toContain('Agent Disconnected')
+    // Mission should remain running with needsReconnect flag set,
+    // not be failed (#5929 — transient disconnect shouldn't fail missions)
+    expect(mission?.status).toBe('running')
+    expect(mission?.context?.needsReconnect).toBe(true)
+    expect(mission?.currentStep).toBe('Reconnecting...')
   })
 })
 
@@ -4479,7 +4481,7 @@ describe('loadMissions: status preservation', () => {
     expect(mission?.currentStep).toBeUndefined()
   })
 
-  it('preserves pending missions without modification', () => {
+  it('fails pending missions on reload with recovery message (#5931)', () => {
     const pendingMission = {
       id: 'pending-1',
       title: 'Pending',
@@ -4494,7 +4496,11 @@ describe('loadMissions: status preservation', () => {
 
     const { result } = renderHook(() => useMissions(), { wrapper })
     const mission = result.current.missions.find(m => m.id === 'pending-1')
-    expect(mission?.status).toBe('pending')
+    // Pending missions cannot be resumed (backend never received the request),
+    // so they're failed on reload with a clear message (#5931).
+    expect(mission?.status).toBe('failed')
+    const systemMsg = mission?.messages.find(m => m.role === 'system')
+    expect(systemMsg?.content).toContain('Page was reloaded')
   })
 
   it('preserves saved (library) missions without modification', () => {
@@ -5373,17 +5379,18 @@ describe('unread tracking: active mission not marked unread', () => {
 // ── WebSocket close: fails pending missions, clears pendingRequests ─────────
 
 describe('WS close: pending request cleanup', () => {
-  it('clears all pending requests when WS closes', async () => {
+  it('clears all pending requests when WS closes and marks mission for reconnect (#5929)', async () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
     const { missionId } = await startMissionWithConnection(result)
     expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('running')
 
-    // Close WS
+    // Close WS — transient disconnect, should not fail the mission
     act(() => { MockWebSocket.lastInstance?.simulateClose() })
 
-    // Mission should have been failed
+    // Mission should still be running with needsReconnect flag (#5929)
     const mission = result.current.missions.find(m => m.id === missionId)
-    expect(mission?.status).toBe('failed')
+    expect(mission?.status).toBe('running')
+    expect(mission?.context?.needsReconnect).toBe(true)
 
     // New messages to the old request ID should be ignored (pending was cleared)
     // (This verifies pendingRequests.current.clear() was called)
@@ -5393,17 +5400,21 @@ describe('WS close: pending request cleanup', () => {
 // ── Timeout interval: does not change non-running missions ──────────────────
 
 describe('timeout interval: preserves non-running missions', () => {
-  it('does not fail pending missions when timeout fires', async () => {
+  it('does not fail waiting_input missions when timeout fires', async () => {
+    // Previously this test used `pending`, but pending missions are now
+    // auto-failed on hydration (#5931) since they cannot be resumed. The
+    // intent of this test is to verify the timeout interval only targets
+    // running missions — waiting_input is the equivalent non-running state.
     vi.useFakeTimers()
     try {
-      seedMission({ id: 'pending-safe', status: 'pending' })
+      seedMission({ id: 'waiting-safe-2', status: 'waiting_input' })
       const { result } = renderHook(() => useMissions(), { wrapper })
 
       // Advance past timeout + check interval
       act(() => { vi.advanceTimersByTime(315_000) })
 
-      const mission = result.current.missions.find(m => m.id === 'pending-safe')
-      expect(mission?.status).toBe('pending')
+      const mission = result.current.missions.find(m => m.id === 'waiting-safe-2')
+      expect(mission?.status).toBe('waiting_input')
     } finally {
       vi.useRealTimers()
     }
