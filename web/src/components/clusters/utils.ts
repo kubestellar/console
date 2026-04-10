@@ -4,15 +4,23 @@ import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 /**
  * Canonical cluster health states surfaced by the shared helper.
  *
+ * Priority (first match wins):
+ * 1. `neverConnected` → `unknown`  (never produced a successful probe)
+ * 2. `healthUnknown`  → `unknown`  (no probe has returned yet)
+ * 3. unreachable      → `unreachable`
+ * 4. `healthy === true`  → `healthy`
+ * 5. `healthy === false` → `unhealthy`
+ * 6. fallback         → `loading` or `unknown`
+ *
  * - `healthy`    — backend reports healthy=true
  * - `unhealthy`  — backend reports healthy=false (authoritative)
  * - `unreachable`— reachable=false or an unreachable errorType
  * - `loading`    — a refresh is currently in progress and we have no
  *                  cached node data yet
- * - `unknown`    — no authoritative health signal (healthy is undefined
- *                  and no node data is available)
+ * - `unknown`    — no authoritative health signal (no successful probe
+ *                  yet or `healthUnknown`/`neverConnected` from backend)
  *
- * See #5923, #5924, #5928 for the history behind these states.
+ * See #5923, #5924, #5928, #5942 for the history behind these states.
  */
 export type ClusterHealthState =
   | 'healthy'
@@ -43,6 +51,13 @@ export const isClusterUnreachable = (c: ClusterInfo): boolean => {
  * counts, and status indicators never disagree (#5920).
  */
 export const getClusterHealthState = (c: ClusterInfo): ClusterHealthState => {
+  // Priority order matters here — see #5942. The backend sets
+  // `healthy: false` together with `healthUnknown: true` / `neverConnected: true`
+  // for clusters that have never successfully reported health. We must
+  // surface those as `unknown`, not as `unhealthy`, so the UI doesn't
+  // alarm on clusters we've simply never heard from.
+  if (c.neverConnected === true) return 'unknown'
+  if (c.healthUnknown === true) return 'unknown'
   if (isClusterUnreachable(c)) return 'unreachable'
   if (c.healthy === true) return 'healthy'
   if (c.healthy === false) return 'unhealthy'

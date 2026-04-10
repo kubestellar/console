@@ -135,6 +135,46 @@ describe('getClusterHealthState', () => {
       ),
     ).toBe('unknown')
   })
+
+  it('returns "unknown" when healthUnknown is true even if healthy is false (#5942)', () => {
+    // Backend `ListClusters` returns `{ healthUnknown: true, healthy: false }`
+    // for clusters with no probe data yet. The UI must surface these as
+    // unknown, not unhealthy.
+    expect(
+      getClusterHealthState(
+        makeCluster({
+          healthy: false,
+          healthUnknown: true,
+        }) as never,
+      ),
+    ).toBe('unknown')
+  })
+
+  it('returns "unknown" when neverConnected is true even if healthy is false (#5942)', () => {
+    expect(
+      getClusterHealthState(
+        makeCluster({
+          healthy: false,
+          neverConnected: true,
+        }) as never,
+      ),
+    ).toBe('unknown')
+  })
+
+  it('prefers neverConnected/healthUnknown over reachable=false (#5942)', () => {
+    // Stale kubeconfig contexts that have never connected should show
+    // unknown rather than unreachable, so the UI can prompt the user to
+    // remove them rather than alarming.
+    expect(
+      getClusterHealthState(
+        makeCluster({
+          healthy: false,
+          reachable: false,
+          neverConnected: true,
+        }) as never,
+      ),
+    ).toBe('unknown')
+  })
 })
 
 describe('isClusterTokenExpired', () => {

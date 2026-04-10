@@ -87,10 +87,13 @@ export function ClusterSelect({
   }, [isOpen, close])
 
   const selectedCluster = clusters.find(c => c.name === value)
+  // Pass `healthy` through as-is (don't default to true) so clusters with
+  // no health signal surface as `unknown` rather than silently appearing
+  // healthy (#5923, #5942).
   const selectedState: ClusterState | null = selectedCluster
     ? (selectedCluster.healthy !== undefined || selectedCluster.reachable !== undefined
-        ? getClusterState(selectedCluster.healthy ?? true, selectedCluster.reachable, selectedCluster.nodeCount, undefined, selectedCluster.errorType)
-        : 'healthy')
+        ? getClusterState(selectedCluster.healthy, selectedCluster.reachable, selectedCluster.nodeCount, undefined, selectedCluster.errorType)
+        : 'unknown')
     : null
 
   return (
@@ -148,9 +151,12 @@ export function ClusterSelect({
               {placeholder}
             </Button>
             {clusters.map(cluster => {
+              // Pass `cluster.healthy` through as-is (don't default to true)
+              // so clusters with no health signal surface as `unknown`
+              // rather than silently appearing healthy (#5923, #5942).
               const clusterState: ClusterState = cluster.healthy !== undefined || cluster.reachable !== undefined
-                ? getClusterState(cluster.healthy ?? true, cluster.reachable, cluster.nodeCount, undefined, cluster.errorType)
-                : 'healthy'
+                ? getClusterState(cluster.healthy, cluster.reachable, cluster.nodeCount, undefined, cluster.errorType)
+                : 'unknown'
 
               const isUnreachable = cluster.reachable === false
               const stateLabel = clusterState === 'healthy' ? '' :
