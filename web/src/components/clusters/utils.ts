@@ -13,10 +13,11 @@ import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
  * 6. fallback         → `loading` or `unknown`
  *
  * - `healthy`    — backend reports healthy=true
- * - `unhealthy`  — backend reports healthy=false (authoritative)
+ * - `unhealthy`  — backend reports healthy=false AND no higher-priority
+ *                  signal (healthUnknown/neverConnected) is set
  * - `unreachable`— reachable=false or an unreachable errorType
- * - `loading`    — a refresh is currently in progress and we have no
- *                  cached node data yet
+ * - `loading`    — initial load with no data yet (nodeCount and reachable
+ *                  both undefined) OR an explicit refresh is in progress
  * - `unknown`    — no authoritative health signal (no successful probe
  *                  yet or `healthUnknown`/`neverConnected` from backend)
  *
