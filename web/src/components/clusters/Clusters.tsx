@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { AlertTriangle, ChevronRight, ChevronDown, Server, Scissors } from 'lucide-react'
 import { useClusters, useGPUNodes, useNVIDIAOperators, refreshSingleCluster } from '../../hooks/useMCP'
+import { agentFetch } from '../../hooks/mcp/shared'
 import { ClusterDetailModal } from './ClusterDetailModal'
 import { AddClusterDialog } from './AddClusterDialog'
 import { EmptyClusterState } from './EmptyClusterState'
@@ -148,14 +149,20 @@ export function Clusters() {
 
   const handleRenameContext = async (oldName: string, newName: string) => {
     if (!isConnected) throw new Error('Local agent not connected')
-    const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/rename-context`, {
+    // Use agentFetch so the Authorization: Bearer <KC_AGENT_TOKEN> header
+    // is injected — plain fetch() is rejected with 401 when the agent has
+    // a token configured (#6133).
+    const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/rename-context`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ oldName, newName }),
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
     if (!response.ok) {
-      const data = await response.json().catch(() => ({})) as { message?: string }
-      throw new Error(data.message || 'Failed to rename context')
+      const data = await response.json().catch(() => ({})) as { error?: string; message?: string }
+      // Fall back to HTTP status so users see e.g. "HTTP 401: Unauthorized"
+      // instead of a silent generic error when the body has no message.
+      const fallback = `HTTP ${response.status}: ${response.statusText || 'Failed to rename context'}`
+      throw new Error(data.error || data.message || fallback)
     }
     refetch()
   }
@@ -164,17 +171,26 @@ export function Clusters() {
    * Remove an offline cluster's kubeconfig context (#5901).
    * Backend: `RemoveContext` in pkg/k8s/client.go (added in #5658). The agent
    * exposes it at POST /kubeconfig/remove on the localhost-only HTTP server.
+   *
+   * Uses agentFetch() to inject the KC_AGENT_TOKEN Authorization header;
+   * without this the kc-agent rejects the request with 401 Unauthorized
+   * whenever a token is configured, which manifested as a silent "Failed
+   * to remove cluster from kubeconfig" in the UI (#6133).
    */
   const handleRemoveCluster = async (contextName: string) => {
     if (!isConnected) throw new Error(t('cluster.removeClusterNoAgent'))
-    const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/remove`, {
+    const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/kubeconfig/remove`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ context: contextName }),
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
     if (!response.ok) {
       const data = await response.json().catch(() => ({})) as { error?: string; message?: string }
-      throw new Error(data.error || data.message || t('cluster.removeClusterError'))
+      // Always surface the HTTP status if the body has no structured error,
+      // so the user sees "HTTP 401: Unauthorized" instead of the generic
+      // fallback — this was the root cause of #6133 being unactionable.
+      const fallback = `HTTP ${response.status}: ${response.statusText || t('cluster.removeClusterError')}`
+      throw new Error(data.error || data.message || fallback)
     }
     showToast(t('cluster.removeClusterSuccess', { name: contextName }), 'success')
     refetch()
