@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo, ReactNode } from 'react'
 import { X, Check, AlertTriangle, Info } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Button } from './Button'
@@ -30,7 +30,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const timeoutsRef = useRef<Map<string, number>>(new Map())
 
   const toastCounter = useRef(0)
-  const showToast = (message: string, type: ToastType = 'success') => {
+  // Auto-dismiss duration for transient toast notifications
+  const TOAST_AUTO_DISMISS_MS = 3_000
+  const showToast = useCallback((message: string, type: ToastType = 'success') => {
     const id = `toast-${Date.now()}-${++toastCounter.current}`
     setToasts((prev) => {
       // Deduplicate: skip if an identical message+type is already visible
@@ -38,17 +40,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       return [...prev, { id, message, type }]
     })
 
-    // Auto-remove after 3 seconds (timeout is harmless if toast was deduplicated)
+    // Auto-remove after TOAST_AUTO_DISMISS_MS (timeout is harmless if toast was deduplicated)
     const timeoutId = window.setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id))
       if (timeoutsRef.current.has(id)) {
         timeoutsRef.current.delete(id)
       }
-    }, 3000)
+    }, TOAST_AUTO_DISMISS_MS)
     timeoutsRef.current.set(id, timeoutId)
-  }
+  }, [])
 
-  const removeToast = (id: string) => {
+  const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id))
     // Clear timeout if manually removed
     const timeoutId = timeoutsRef.current.get(id)
@@ -56,7 +58,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       clearTimeout(timeoutId)
       timeoutsRef.current.delete(id)
     }
-  }
+  }, [])
 
   // Cleanup all timeouts on unmount
   useEffect(() => {
@@ -67,8 +69,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // #6149 — Stable context value so ToastProvider rendering (e.g. when
+  // toasts change) does not force a re-render of every useToast() consumer.
+  const contextValue = useMemo(() => ({ showToast }), [showToast])
+
   return (
-    <ToastContext.Provider value={{ showToast }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </ToastContext.Provider>

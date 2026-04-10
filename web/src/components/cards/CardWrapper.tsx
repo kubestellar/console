@@ -852,10 +852,19 @@ export function CardWrapper({
   void title
   void setLocalMessages
 
+  // #6149 — Memoize inline provider values so every CardWrapper re-render
+  // (there are dozens on every dashboard) does not invalidate the
+  // CardExpandedContext / ForceLiveContext consumers inside the card.
+  const cardExpandedValue = useMemo(
+    () => ({ isExpanded, containerSize }),
+    [isExpanded, containerSize]
+  )
+  const forceLiveValue = useMemo(() => !!forceLive, [forceLive])
+
   return (
     <CardTypeContext.Provider value={cardType}>
-    <CardExpandedContext.Provider value={{ isExpanded, containerSize }}>
-      <ForceLiveContext.Provider value={!!forceLive}>
+    <CardExpandedContext.Provider value={cardExpandedValue}>
+      <ForceLiveContext.Provider value={forceLiveValue}>
       <CardDataReportContext.Provider value={reportCtx}>
         <>
           {/* Outer wrapper for demo corner brackets (outside card border) */}

@@ -1,4 +1,4 @@
-import { createContext, use, useState, useEffect, useCallback, useRef, ReactNode } from 'react'
+import { createContext, use, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react'
 import { checkOAuthConfigured, checkOAuthConfiguredWithRetry } from './api'
 import { dashboardSync } from './dashboards/dashboardSync'
 import { clearPermissionsCache } from '../hooks/usePermissions'
@@ -177,7 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return !hasToken || (hasToken && !hasCachedUser)
   })
 
-  const logout = () => {
+  const logout = useCallback(() => {
     emitLogout()
 
     // Invalidate the server-side session before clearing client state (#4751).
@@ -223,7 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearClusterCacheOnLogout()
     // Disconnect presence WebSocket to stop transmitting stale auth tokens (#4936)
     disconnectPresence()
-  }
+  }, [])
 
   const setDemoMode = useCallback(() => {
     // If user explicitly disabled demo mode, respect their choice.
@@ -253,7 +253,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // reflect demo state immediately — without this, the in-cluster banner won't
     // render because Layout's auto-demo-enable effect skips when isInClusterMode.
     setGlobalDemoMode(true)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const refreshUser = useCallback(async (overrideToken?: string) => {
@@ -355,7 +354,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!meResponse.ok) throw new Error(`/api/me returned ${meResponse.status}`)
       const userData = await meResponse.json().catch(() => null) as User | null
       if (!userData) throw new Error('Invalid JSON from /api/me')
-      setUser(userData)
+      // #6149 — Avoid triggering an AuthProvider re-render cascade when the
+      // background /api/me poll returns an identical user. Shallow-compare
+      // the fields that actually matter for downstream consumers.
+      setUser(prev => {
+        if (
+          prev &&
+          prev.id === userData.id &&
+          prev.github_id === userData.github_id &&
+          prev.github_login === userData.github_login &&
+          prev.email === userData.email &&
+          prev.avatar_url === userData.avatar_url &&
+          prev.role === userData.role &&
+          prev.onboarded === userData.onboarded &&
+          prev.slack_id === userData.slack_id
+        ) {
+          return prev
+        }
+        return userData
+      })
       cacheUser(userData)
       // #6067 — record when the cache was last validated so we can bound
       // how long it's trusted if the backend later becomes unreachable.
@@ -381,7 +398,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const cacheAge = validatedAt ? Date.now() - validatedAt : Number.POSITIVE_INFINITY
       if (cachedUser && cacheAge <= MAX_CACHED_USER_AGE_MS) {
         console.warn('Backend unreachable, using cached user data (age ms):', cacheAge)
-        setUser(cachedUser)
+        // #6149 — Only call setUser when the cached user differs from
+        // current state. setUser with a brand-new object reference would
+        // otherwise trigger a provider-wide re-render on every background
+        // revalidate tick even when nothing changed.
+        setUser(prev => {
+          if (prev && prev.id === cachedUser.id && prev.github_login === cachedUser.github_login) {
+            return prev
+          }
+          return cachedUser
+        })
         setAnalyticsUserId(cachedUser.id)
         setAnalyticsUserProperties({ auth_mode: 'github-oauth' })
         return
@@ -397,7 +423,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [setDemoMode])
 
-  const login = async () => {
+  const login = useCallback(async () => {
     // Demo mode enabled via:
     // 1. Explicit environment variable VITE_DEMO_MODE=true
     // 2. Netlify deploy previews (deploy-preview-* hostnames) - safe because these are ephemeral test environments
@@ -430,9 +456,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     emitLogin('github-oauth')
     emitConversionStep(2, 'login', { method: 'github-oauth' })
     window.location.href = '/auth/github'
-  }
+  }, [setDemoMode])
 
-  const setToken = (newToken: string, onboarded: boolean) => {
+  const setToken = useCallback((newToken: string, onboarded: boolean) => {
     localStorage.setItem(STORAGE_KEY_TOKEN, newToken)
     setTokenState(newToken)
     // Clear stale cached user — refreshUser() will fetch and cache real data.
@@ -440,7 +466,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // user persists in localStorage and the profile shows "No email set".
     cacheUser(null)
     setUser({ id: '', github_id: '', github_login: '', onboarded } as User)
-  }
+  }, [])
 
   // Periodically check if the JWT is nearing expiry and show a warning banner.
   // When the user clicks "Refresh Now", silently call /auth/refresh for a new token.
@@ -495,11 +521,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
     }
 
-    // Check once immediately, then every 60 seconds
+    // Check once immediately, then every EXPIRY_CHECK_INTERVAL_MS
     checkExpiry()
     const intervalId = setInterval(checkExpiry, EXPIRY_CHECK_INTERVAL_MS)
     return () => clearInterval(intervalId)
-  }, [token])
+  }, [token, logout])
 
   // Listen for token updates from silentRefresh() (dispatched via StorageEvent)
   // so the AuthProvider state stays in sync without a full page reload.
@@ -586,18 +612,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return !isJWTExpired(token)
   })()
 
+  // #6149 — Memoize the context value so the AuthProvider doesn't cascade
+  // a re-render across EVERY consumer (dashboard, cards, layout, etc.) on
+  // every render of AuthProvider itself. Without this, the background
+  // BACKEND_REVALIDATE_INTERVAL_MS / EXPIRY_CHECK_INTERVAL_MS timers produce
+  // hundreds of spurious React commits during normal dashboard navigation.
+  const contextValue = useMemo<AuthContextType>(
+    () => ({
+      user,
+      token,
+      isAuthenticated,
+      isLoading,
+      login,
+      logout,
+      setToken,
+      refreshUser }),
+    [user, token, isAuthenticated, isLoading, login, logout, setToken, refreshUser]
+  )
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        token,
-        isAuthenticated,
-        isLoading,
-        login,
-        logout,
-        setToken,
-        refreshUser }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   )

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react'
 import { emitDrillDownOpened, emitDrillDownClosed } from '../lib/analytics'
 
 // Types for drill-down navigation
@@ -96,22 +96,22 @@ export function DrillDownProvider({ children }: { children: ReactNode }) {
     stack: [],
     currentView: null })
 
-  const open = (view: DrillDownView) => {
+  const open = useCallback((view: DrillDownView) => {
     setState({
       isOpen: true,
       stack: [view],
       currentView: view })
     emitDrillDownOpened(view.type)
-  }
+  }, [])
 
-  const push = (view: DrillDownView) => {
+  const push = useCallback((view: DrillDownView) => {
     setState(prev => ({
       ...prev,
       stack: [...prev.stack, view],
       currentView: view }))
-  }
+  }, [])
 
-  const pop = () => {
+  const pop = useCallback(() => {
     setState(prev => {
       if (prev.stack.length <= 1) {
         return { isOpen: false, stack: [], currentView: null }
@@ -122,9 +122,9 @@ export function DrillDownProvider({ children }: { children: ReactNode }) {
         stack: newStack,
         currentView: newStack[newStack.length - 1] }
     })
-  }
+  }, [])
 
-  const goTo = (index: number) => {
+  const goTo = useCallback((index: number) => {
     setState(prev => {
       if (index < 0 || index >= prev.stack.length) return prev
       const newStack = prev.stack.slice(0, index + 1)
@@ -133,18 +133,18 @@ export function DrillDownProvider({ children }: { children: ReactNode }) {
         stack: newStack,
         currentView: newStack[newStack.length - 1] }
     })
-  }
+  }, [])
 
-  const close = () => {
+  const close = useCallback(() => {
     setState(prev => {
       if (prev.currentView) {
         emitDrillDownClosed(prev.currentView.type, prev.stack.length)
       }
       return { isOpen: false, stack: [], currentView: null }
     })
-  }
+  }, [])
 
-  const replace = (view: DrillDownView) => {
+  const replace = useCallback((view: DrillDownView) => {
     setState(prev => {
       const newStack = [...prev.stack.slice(0, -1), view]
       return {
@@ -152,10 +152,17 @@ export function DrillDownProvider({ children }: { children: ReactNode }) {
         stack: newStack,
         currentView: view }
     })
-  }
+  }, [])
+
+  // #6149 — Memoize the provider value so consumers don't re-render every
+  // time DrillDownProvider itself re-renders for an unrelated reason.
+  const contextValue = useMemo(
+    () => ({ state, open, push, pop, goTo, close, replace }),
+    [state, open, push, pop, goTo, close, replace]
+  )
 
   return (
-    <DrillDownContext.Provider value={{ state, open, push, pop, goTo, close, replace }}>
+    <DrillDownContext.Provider value={contextValue}>
       {children}
     </DrillDownContext.Provider>
   )

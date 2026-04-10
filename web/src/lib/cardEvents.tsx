@@ -1,4 +1,4 @@
-import { createContext, useContext, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useRef, useCallback, useMemo, type ReactNode } from 'react'
 
 // ============================================================================
 // Card Event Types
@@ -73,7 +73,7 @@ const CardEventContext = createContext<CardEventBus | null>(null)
 export function CardEventProvider({ children }: { children: ReactNode }) {
   const subscribersRef = useRef<Map<string, Set<EventCallback<CardEventType>>>>(new Map())
 
-  const publish = (event: CardEvent) => {
+  const publish = useCallback((event: CardEvent) => {
     const callbacks = subscribersRef.current.get(event.type)
     if (!callbacks) return
     for (const cb of callbacks) {
@@ -83,9 +83,9 @@ export function CardEventProvider({ children }: { children: ReactNode }) {
         console.error(`[CardEvents] Error in ${event.type} handler:`, err)
       }
     }
-  }
+  }, [])
 
-  const subscribe = <T extends CardEventType>(
+  const subscribe = useCallback(<T extends CardEventType>(
     type: T,
     callback: EventCallback<T>,
   ): (() => void) => {
@@ -101,10 +101,15 @@ export function CardEventProvider({ children }: { children: ReactNode }) {
         subscribersRef.current.delete(type)
       }
     }
-  }
+  }, [])
+
+  // #6149 — Stable context value — both publish and subscribe are now
+  // stable refs, so downstream useCardEvents() consumers no longer re-render
+  // on every CardEventProvider render.
+  const contextValue = useMemo(() => ({ publish, subscribe }), [publish, subscribe])
 
   return (
-    <CardEventContext.Provider value={{ publish, subscribe }}>
+    <CardEventContext.Provider value={contextValue}>
       {children}
     </CardEventContext.Provider>
   )
