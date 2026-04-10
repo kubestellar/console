@@ -25,7 +25,7 @@ import {
   Search,
   Satellite } from 'lucide-react'
 import { useSearchParams, useLocation } from 'react-router-dom'
-import { useMissions } from '../../../hooks/useMissions'
+import { useMissions, isActiveMission } from '../../../hooks/useMissions'
 import { useMobile } from '../../../hooks/useMobile'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { cn } from '../../../lib/cn'
@@ -338,8 +338,12 @@ export function MissionSidebar() {
     return m.title.toLowerCase().includes(q) || m.description.toLowerCase().includes(q)
   }
   const savedMissions = missions.filter(m => m.status === 'saved' && matchesSearch(m))
+  // #5946 — "Active" missions must exclude completed, failed, and cancelled
+  // missions. Previously this filter only excluded 'saved', which caused
+  // terminal missions to still appear under the active list and inflate the
+  // count.
   const activeMissions = missions
-    .filter(m => m.status !== 'saved' && matchesSearch(m))
+    .filter(m => isActiveMission(m) && matchesSearch(m))
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
 
   /** Paginated slice of active missions for rendering (#4778) */
@@ -1235,8 +1239,12 @@ export function MissionSidebarToggle() {
   ).length
 
   const runningCount = missions.filter(m => m.status === 'running').length
-  /** Active (non-saved) mission count — computed once to avoid duplicate filter (#5745) */
-  const activeCount = missions.filter(m => m.status !== 'saved').length
+  /**
+   * Active mission count — excludes saved/completed/failed/cancelled (#5947).
+   * Previously this only filtered out 'saved' missions, which caused the
+   * toggle-button badge to include terminal missions and overstate activity.
+   */
+  const activeCount = missions.filter(isActiveMission).length
 
   // Always show toggle when sidebar is closed (even with no missions)
   if (isSidebarOpen) {

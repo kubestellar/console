@@ -13,6 +13,28 @@ import { kubectlProxy } from '../lib/kubectlProxy'
 
 export type MissionStatus = 'pending' | 'running' | 'waiting_input' | 'completed' | 'failed' | 'saved' | 'blocked' | 'cancelling' | 'cancelled'
 
+/**
+ * Mission statuses that are NOT considered "active" in the sidebar list,
+ * the active counter, or the toggle button badge (#5946, #5947).
+ *
+ * - `saved`  : library entries the user hasn't run yet
+ * - `completed` / `failed` / `cancelled` : terminal states — the mission is done
+ *
+ * Everything else (`pending`, `running`, `waiting_input`, `blocked`, `cancelling`)
+ * is treated as active because the user may still need to take action on it.
+ */
+export const INACTIVE_MISSION_STATUSES: ReadonlySet<MissionStatus> = new Set([
+  'saved',
+  'completed',
+  'failed',
+  'cancelled',
+])
+
+/** True if the mission is currently active (i.e. not saved/terminal). */
+export function isActiveMission(mission: Pick<Mission, 'status'>): boolean {
+  return !INACTIVE_MISSION_STATUSES.has(mission.status)
+}
+
 export interface MissionMessage {
   id: string
   role: 'user' | 'assistant' | 'system'
@@ -1193,10 +1215,33 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           .filter(msg => msg.role === 'assistant')
           .map(msg => msg.content)
           .join('')
-        // Skip adding result message if content was already received via streaming
-        const alreadyStreamed = streamedSinceUser.length > 0 &&
-          resultContent.length > 0 &&
-          streamedSinceUser.startsWith(resultContent.slice(0, Math.min(resultContent.length, streamedSinceUser.length)))
+
+        // #5948 — Dedupe streamed vs final response.
+        //
+        // Previously this check used `streamedSinceUser.startsWith(resultContent.slice(...))`
+        // which only matched when the streamed content EXACTLY started with the
+        // final result. Small differences (trailing whitespace, newline chunks,
+        // punctuation added in the final pass, or the result arriving as a
+        // suffix of the stream) caused the dedupe to miss and the same
+        // assistant response was appended a second time.
+        //
+        // The new check normalizes whitespace and matches in BOTH directions
+        // (streamed contains result OR result contains streamed). This catches
+        // the common cases where the two differ only in trivial formatting.
+        /** Collapse whitespace + trim so trivial formatting differences don't defeat dedupe. */
+        const normalize = (s: string): string => s.replace(/\s+/g, ' ').trim()
+        const normalizedStreamed = normalize(streamedSinceUser)
+        const normalizedResult = normalize(resultContent)
+        /** Minimum content length required before we consider an overlap a real dedupe match. */
+        const DEDUPE_MIN_CONTENT_LEN = 1
+        const alreadyStreamed =
+          normalizedStreamed.length >= DEDUPE_MIN_CONTENT_LEN &&
+          normalizedResult.length >= DEDUPE_MIN_CONTENT_LEN &&
+          (
+            normalizedStreamed === normalizedResult ||
+            normalizedStreamed.includes(normalizedResult) ||
+            normalizedResult.includes(normalizedStreamed)
+          )
 
         // Transition to 'completed' when a result message arrives — this is the
         // backend's final answer for the current turn. The 'waiting_input' state
