@@ -936,22 +936,33 @@
       }
 
       // ── 2b. AI vs Human Contributions (Level 5: Self-Sustaining) ──
+      // Split into PRs (AI-authored code) and Issues (typically user-filed
+      // bug reports). Lumping them together hides the fact that nearly all
+      // code is AI-written while most issues are human-filed.
       if (accm.weeklyActivity && accm.weeklyActivity.length > 0) {
-        const totalAi = accm.weeklyActivity.reduce((s, w) => s + (w.aiPrs || 0) + (w.aiIssues || 0), 0);
-        const totalHuman = accm.weeklyActivity.reduce((s, w) => s + (w.humanPrs || 0) + (w.humanIssues || 0), 0);
-        const total = totalAi + totalHuman;
-        const aiPct = total > 0 ? Math.round((totalAi / total) * 100) : 0;
+        const aiPrs = accm.weeklyActivity.reduce((s, w) => s + (w.aiPrs || 0), 0);
+        const humanPrs = accm.weeklyActivity.reduce((s, w) => s + (w.humanPrs || 0), 0);
+        const totalPrs = aiPrs + humanPrs;
+        const aiPrPct = totalPrs > 0 ? Math.round((aiPrs / totalPrs) * 100) : 0;
+
+        const aiIssues = accm.weeklyActivity.reduce((s, w) => s + (w.aiIssues || 0), 0);
+        const humanIssues = accm.weeklyActivity.reduce((s, w) => s + (w.humanIssues || 0), 0);
+        const totalIssues = aiIssues + humanIssues;
+        const aiIssuePct = totalIssues > 0 ? Math.round((aiIssues / totalIssues) * 100) : 0;
 
         html += '<div class="kpi-grid">';
-        html += `<div class="kpi-card"><div class="kpi-label">AI Contributions</div><div class="kpi-value" style="color:var(--purple)">${aiPct}%</div><div class="kpi-change flat">${totalAi} of ${total} total</div></div>`;
-        html += `<div class="kpi-card"><div class="kpi-label">Human Contributions</div><div class="kpi-value" style="color:var(--cyan)">${100 - aiPct}%</div><div class="kpi-change flat">${totalHuman} of ${total} total</div></div>`;
+        html += `<div class="kpi-card"><div class="kpi-label">AI-Authored PRs</div><div class="kpi-value" style="color:var(--purple)">${aiPrPct}%</div><div class="kpi-change flat">${aiPrs} of ${totalPrs} PRs</div></div>`;
+        html += `<div class="kpi-card"><div class="kpi-label">Human-Authored PRs</div><div class="kpi-value" style="color:var(--cyan)">${100 - aiPrPct}%</div><div class="kpi-change flat">${humanPrs} of ${totalPrs} PRs</div></div>`;
+        html += `<div class="kpi-card"><div class="kpi-label">AI-Filed Issues</div><div class="kpi-value" style="color:var(--purple)">${aiIssuePct}%</div><div class="kpi-change flat">${aiIssues} of ${totalIssues} issues</div></div>`;
+        html += `<div class="kpi-card"><div class="kpi-label">Human-Filed Issues</div><div class="kpi-value" style="color:var(--cyan)">${100 - aiIssuePct}%</div><div class="kpi-change flat">${humanIssues} of ${totalIssues} issues</div></div>`;
 
         if (accm.contributorGrowth) {
           html += `<div class="kpi-card"><div class="kpi-label">Total Contributors</div><div class="kpi-value">${accm.contributorGrowth.total}</div></div>`;
         }
         html += '</div>';
 
-        html += '<div class="chart-card"><h3>AI vs Human Contributions</h3><div class="chart-wrapper"><canvas id="accmAiChart"></canvas></div></div>';
+        html += '<div class="chart-card"><h3>AI vs Human PRs</h3><div class="chart-wrapper"><canvas id="accmAiPrChart"></canvas></div></div>';
+        html += '<div class="chart-card"><h3>AI vs Human Issues</h3><div class="chart-wrapper"><canvas id="accmAiIssueChart"></canvas></div></div>';
       }
 
       // ── 2c. CI Pass Rates (Level 4: Adaptive) ──
@@ -1000,20 +1011,38 @@
         }
       }
 
-      // AI vs Human — stacked area
+      // AI vs Human PRs — stacked area
       if (accm.weeklyActivity && accm.weeklyActivity.length > 0) {
-        const ctx = document.getElementById('accmAiChart');
+        const ctx = document.getElementById('accmAiPrChart');
         if (ctx) {
           new Chart(ctx, {
             type: 'line',
             data: {
               labels: accm.weeklyActivity.map(w => w.week),
               datasets: [
-                { label: 'AI (PRs + Issues)', data: accm.weeklyActivity.map(w => (w.aiPrs || 0) + (w.aiIssues || 0)), borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.2)', fill: true, tension: 0.3 },
-                { label: 'Human (PRs + Issues)', data: accm.weeklyActivity.map(w => (w.humanPrs || 0) + (w.humanIssues || 0)), borderColor: '#06b6d4', backgroundColor: 'rgba(6, 182, 212, 0.2)', fill: true, tension: 0.3 },
+                { label: 'AI PRs', data: accm.weeklyActivity.map(w => w.aiPrs || 0), borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.2)', fill: true, tension: 0.3 },
+                { label: 'Human PRs', data: accm.weeklyActivity.map(w => w.humanPrs || 0), borderColor: '#06b6d4', backgroundColor: 'rgba(6, 182, 212, 0.2)', fill: true, tension: 0.3 },
               ],
             },
-            options: { ...chartOpts, scales: { ...chartOpts.scales, y: { ...chartOpts.scales.y, stacked: true, title: { display: true, text: 'Contributions', color: '#9ca3af' } } } },
+            options: { ...chartOpts, scales: { ...chartOpts.scales, y: { ...chartOpts.scales.y, stacked: true, title: { display: true, text: 'PRs', color: '#9ca3af' } } } },
+          });
+        }
+      }
+
+      // AI vs Human Issues — stacked area
+      if (accm.weeklyActivity && accm.weeklyActivity.length > 0) {
+        const ctx = document.getElementById('accmAiIssueChart');
+        if (ctx) {
+          new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: accm.weeklyActivity.map(w => w.week),
+              datasets: [
+                { label: 'AI Issues', data: accm.weeklyActivity.map(w => w.aiIssues || 0), borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.2)', fill: true, tension: 0.3 },
+                { label: 'Human Issues', data: accm.weeklyActivity.map(w => w.humanIssues || 0), borderColor: '#06b6d4', backgroundColor: 'rgba(6, 182, 212, 0.2)', fill: true, tension: 0.3 },
+              ],
+            },
+            options: { ...chartOpts, scales: { ...chartOpts.scales, y: { ...chartOpts.scales.y, stacked: true, title: { display: true, text: 'Issues', color: '#9ca3af' } } } },
           });
         }
       }

@@ -18,6 +18,13 @@ const CACHE_KEY = 'ks-medium-blog-cache'
 const CACHE_TTL_MS = 60 * 60 * 1000
 /** Fetch timeout for Medium blog API call (10 seconds) */
 const BLOG_FETCH_TIMEOUT_MS = 10_000
+/** Local relative endpoint — Go backend / Netlify Function */
+const LOCAL_BLOG_ENDPOINT = '/api/medium/blog'
+/** Public fallback used when the local endpoint is unreachable
+ *  (e.g. Vite dev server with no Go backend, or a self-hosted install
+ *  whose backend hasn't been started yet). The endpoint is public and
+ *  CORS-enabled. */
+const PUBLIC_BLOG_FALLBACK_URL = 'https://console.kubestellar.io/api/medium/blog'
 
 interface CacheEntry {
   posts: BlogPost[]
@@ -65,37 +72,50 @@ function writeCache(posts: BlogPost[], channelUrl: string): void {
  * Results are cached in sessionStorage for 1 hour.
  */
 export function useMediumBlog() {
-  const [posts, setPosts] = useState<BlogPost[]>([])
-  const [channelUrl, setChannelUrl] = useState('https://medium.com/@kubestellar')
-  const [loading, setLoading] = useState(true)
+  // Read the cache synchronously during initial render via lazy useState
+  // initializers. This avoids calling setState inside the effect for the
+  // cache-hit path (react-hooks/set-state-in-effect).
+  const [posts, setPosts] = useState<BlogPost[]>(() => readCache()?.posts ?? [])
+  const [channelUrl, setChannelUrl] = useState<string>(
+    () => readCache()?.channelUrl ?? 'https://medium.com/@kubestellar'
+  )
+  const [loading, setLoading] = useState(() => readCache() === null)
 
   useEffect(() => {
-    const cached = readCache()
-    if (cached) {
-      setPosts(cached.posts)
-      setChannelUrl(cached.channelUrl)
-      setLoading(false)
-      return
-    }
+    // If we already populated state from a fresh cache entry, nothing to do.
+    if (readCache() !== null) return
 
     let cancelled = false
 
+    async function fetchFrom(url: string): Promise<BlogResponse> {
+      const resp = await fetch(url, {
+        signal: AbortSignal.timeout(BLOG_FETCH_TIMEOUT_MS),
+      })
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      return resp.json()
+    }
+
     async function fetchBlog() {
+      let data: BlogResponse | null = null
       try {
-        const resp = await fetch('/api/medium/blog', {
-          signal: AbortSignal.timeout(BLOG_FETCH_TIMEOUT_MS),
-        })
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-        const data: BlogResponse = await resp.json()
-        if (cancelled) return
+        data = await fetchFrom(LOCAL_BLOG_ENDPOINT)
+      } catch {
+        // Local endpoint unreachable (no backend / Vite-only dev / self-hosted
+        // without the Go server). Fall back to the public production endpoint
+        // so the blog section still renders.
+        try {
+          data = await fetchFrom(PUBLIC_BLOG_FALLBACK_URL)
+        } catch {
+          // Both failed — silently leave the section empty.
+        }
+      }
+      if (cancelled) return
+      if (data) {
         setPosts(data.posts || [])
         setChannelUrl(data.channelUrl)
         writeCache(data.posts || [], data.channelUrl)
-      } catch {
-        // Silently fail — the blog section just won't render
-      } finally {
-        if (!cancelled) setLoading(false)
       }
+      setLoading(false)
     }
 
     fetchBlog()

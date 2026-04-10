@@ -21,17 +21,21 @@ const CACHE_STORE = "analytics-accm";
 const CACHE_KEY = "accm-data";
 /** Cache TTL: 1 hour */
 const CACHE_TTL_MS = 60 * 60 * 1000;
-/** Number of weeks of history to return */
-const WEEKS_OF_HISTORY = 12;
+/** Project start date — first commit / first PR landed on this date.
+ *  History windows are computed from this date so the charts always
+ *  show the full project history rather than a sliding window. */
+const PROJECT_START_DATE = "2025-12-15";
+/** Hard ceiling on history length, in case PROJECT_START_DATE drifts.
+ *  At ~5 years this is generous but bounded. */
+const MAX_WEEKS_OF_HISTORY = 260;
 /** GitHub API results per page (max 100) */
 const PER_PAGE = 100;
 /**
- * Max pages to fetch per endpoint. Bumped from 3 → 15 (1500 items) because
- * recent activity can exceed 300 PRs in a single week, which caused every
- * older week to show 0 activity in the chart — the 3-page window never
- * escaped the most recent week.
+ * Max pages to fetch per endpoint. With the full project history window
+ * (~18+ weeks at the time of writing) and recent weeks exceeding 300 PRs,
+ * we need a generous page cap to avoid older weeks rendering as 0.
  */
-const MAX_PAGES = 15;
+const MAX_PAGES = 30;
 /** Request timeout for GitHub API calls */
 const API_TIMEOUT_MS = 15_000;
 /** AI-generated label used to classify AI contributions */
@@ -143,6 +147,27 @@ function lastNWeeks(n: number): string[] {
   return weeks;
 }
 
+/** Number of milliseconds in one week */
+const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+
+/** Number of weeks between PROJECT_START_DATE and today, capped at
+ *  MAX_WEEKS_OF_HISTORY. Always returns at least 1. */
+function weeksSinceProjectStart(): number {
+  const start = new Date(PROJECT_START_DATE);
+  const elapsedMs = Date.now() - start.getTime();
+  const weeks = Math.ceil(elapsedMs / MS_PER_WEEK) + 1;
+  return Math.max(1, Math.min(MAX_WEEKS_OF_HISTORY, weeks));
+}
+
+/** Days between PROJECT_START_DATE and today, used as the GitHub
+ *  search `since` window. Always returns at least 1. */
+function daysSinceProjectStart(): number {
+  const start = new Date(PROJECT_START_DATE);
+  const elapsedMs = Date.now() - start.getTime();
+  const days = Math.ceil(elapsedMs / (24 * 60 * 60 * 1000));
+  return Math.max(1, days);
+}
+
 /** Fetch paginated results from GitHub REST API */
 async function fetchPaginated<T>(
   url: string,
@@ -207,10 +232,10 @@ interface WorkflowRunItem {
   status: string;
 }
 
-/** Fetch recently created PRs (last ~90 days to cover 12 weeks) */
+/** Fetch PRs created since the project start date */
 async function fetchRecentPRs(token: string): Promise<PRItem[]> {
   const since = new Date();
-  since.setDate(since.getDate() - 90);
+  since.setDate(since.getDate() - daysSinceProjectStart());
   const sinceStr = since.toISOString().split("T")[0];
 
   // Use search API to get PRs with label info
@@ -231,10 +256,10 @@ async function fetchRecentPRs(token: string): Promise<PRItem[]> {
   });
 }
 
-/** Fetch recently created/closed issues (last ~90 days) */
+/** Fetch issues created since the project start date */
 async function fetchRecentIssues(token: string): Promise<IssueItem[]> {
   const since = new Date();
-  since.setDate(since.getDate() - 90);
+  since.setDate(since.getDate() - daysSinceProjectStart());
   const sinceStr = since.toISOString().split("T")[0];
 
   // Search for issues (excluding PRs)
@@ -275,7 +300,7 @@ async function fetchWorkflowRuns(
 
   // Fetch runs for this workflow
   const since = new Date();
-  since.setDate(since.getDate() - 90);
+  since.setDate(since.getDate() - daysSinceProjectStart());
   const sinceStr = since.toISOString().split("T")[0];
 
   const runsUrl = `${GITHUB_API}/repos/${REPO}/actions/workflows/${workflow.id}/runs?created=>${sinceStr}&status=completed`;
@@ -457,7 +482,7 @@ function aggregateContributorGrowth(
 // ---------------------------------------------------------------------------
 
 async function fetchACCMData(token: string): Promise<ACCMData> {
-  const weeks = lastNWeeks(WEEKS_OF_HISTORY);
+  const weeks = lastNWeeks(weeksSinceProjectStart());
 
   // Fetch all data in parallel
   const [prs, issues, coverageRuns, nightlyRuns] = await Promise.all([
