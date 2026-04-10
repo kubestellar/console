@@ -21,14 +21,33 @@ func NewSettingsHandler(manager *settings.SettingsManager, s store.Store) *Setti
 	return &SettingsHandler{manager: manager, store: s}
 }
 
-// GetSettings returns all settings with sensitive fields decrypted
-// GET /api/settings
-func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
-	// Settings contain decrypted secrets — require console admin role
+// requireAdmin verifies the current user has the admin role. It MUST be the
+// first call in every settings handler — no configuration, secrets, or
+// request body may be loaded until this check passes (#6000). Without this
+// invariant, an attacker can trigger side effects (decryption, disk I/O,
+// manager lookups) before being told they are forbidden.
+func (h *SettingsHandler) requireAdmin(c *fiber.Ctx) error {
+	if h.store == nil {
+		// No user store configured (dev/demo mode). In this mode settings
+		// are not persisted to a real backing store either, so we allow the
+		// request through rather than locking the developer out.
+		return nil
+	}
 	currentUserID := middleware.GetUserID(c)
 	currentUser, err := h.store.GetUser(currentUserID)
 	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	}
+	return nil
+}
+
+// GetSettings returns all settings with sensitive fields decrypted
+// GET /api/settings
+func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
+	// RBAC MUST be the very first operation — do not read any settings
+	// until the caller has been authorized (#6000).
+	if err := h.requireAdmin(c); err != nil {
+		return err
 	}
 
 	all, err := h.manager.GetAll()
@@ -44,11 +63,11 @@ func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
 // SaveSettings persists all settings, encrypting sensitive fields
 // PUT /api/settings
 func (h *SettingsHandler) SaveSettings(c *fiber.Ctx) error {
-	// Settings modification requires console admin role
-	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
-		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	// RBAC MUST be the very first operation — do not parse the body or
+	// touch the settings manager until the caller has been authorized
+	// (#6000).
+	if err := h.requireAdmin(c); err != nil {
+		return err
 	}
 
 	var all settings.AllSettings
@@ -74,11 +93,11 @@ func (h *SettingsHandler) SaveSettings(c *fiber.Ctx) error {
 // ExportSettings returns the encrypted settings file for backup
 // POST /api/settings/export
 func (h *SettingsHandler) ExportSettings(c *fiber.Ctx) error {
-	// Settings export contains secrets — require console admin role
-	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
-		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	// RBAC MUST be the very first operation — the encrypted export
+	// contains secrets and must never be produced for unauthorized callers
+	// (#6000).
+	if err := h.requireAdmin(c); err != nil {
+		return err
 	}
 
 	data, err := h.manager.ExportEncrypted()
@@ -97,11 +116,11 @@ func (h *SettingsHandler) ExportSettings(c *fiber.Ctx) error {
 // ImportSettings imports a settings backup file
 // POST /api/settings/import
 func (h *SettingsHandler) ImportSettings(c *fiber.Ctx) error {
-	// Settings import can overwrite secrets — require console admin role
-	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
-		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	// RBAC MUST be the very first operation — do not read the request
+	// body or hand it to the settings manager until the caller has been
+	// authorized (#6000).
+	if err := h.requireAdmin(c); err != nil {
+		return err
 	}
 
 	body := c.Body()

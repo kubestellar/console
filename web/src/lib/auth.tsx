@@ -170,8 +170,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
     }
 
+    // Clear every place a token or cached user could live. The token is
+    // written to localStorage today, but defensively wipe sessionStorage as
+    // well so that any past or future code path that parks a token there
+    // can't leak into the next session (#6004).
     localStorage.removeItem(STORAGE_KEY_TOKEN)
+    localStorage.removeItem(AUTH_USER_CACHE_KEY)
+    try {
+      sessionStorage.removeItem(STORAGE_KEY_TOKEN)
+      sessionStorage.removeItem(AUTH_USER_CACHE_KEY)
+      // Rotate the presence session ID so the next login is tracked as a
+      // brand-new session instead of inheriting the logged-out user's.
+      sessionStorage.removeItem('kc-session-id')
+    } catch {
+      // sessionStorage may be unavailable in some embedded contexts — ignore.
+    }
     cacheUser(null)
+    // Flush in-memory auth context state so no stale references survive
+    // the logout call (#6004).
     setTokenState(null)
     setUser(null)
     // Clear dashboard sync cache

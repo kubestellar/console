@@ -17,9 +17,18 @@ import (
 
 // setupCardTest creates a Fiber app with a CardHandler backed by a MockStore and Hub.
 // A middleware injects the given userID into Fiber locals so middleware.GetUserID works.
+// The default user is registered with admin role so requireEditorOrAdmin (#5999)
+// passes. Individual tests that exercise role denial should override the
+// expectation before calling the handler.
 func setupCardTest(t *testing.T, userID uuid.UUID) (*fiber.App, *test.MockStore, *CardHandler) {
 	app := fiber.New()
 	mockStore := new(test.MockStore)
+
+	// Default: admin user so role-based checks allow mutations through.
+	mockStore.On("GetUser", userID).Return(&models.User{
+		ID:   userID,
+		Role: models.UserRoleAdmin,
+	}, nil).Maybe()
 
 	hub := NewHub()
 	go hub.Run()
