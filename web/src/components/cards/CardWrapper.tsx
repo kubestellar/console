@@ -43,6 +43,40 @@ import { copyToClipboard } from '../../lib/clipboard'
 // Minimum duration to show spin animation (ensures at least one full rotation)
 const MIN_SPIN_DURATION = 500
 
+// #6227: shared Escape-key coordinator. Multiple InfoTooltips (one per
+// CardWrapper) used to each register their own document-level keydown
+// listener; pressing Escape would fire ALL of them and close every open
+// tooltip on the dashboard at once. Now each tooltip pushes its close
+// callback onto a shared LIFO stack and only the topmost (most recently
+// opened) callback runs. A single document listener is registered on the
+// first push and removed on the last pop.
+const escapeStack: Array<() => void> = []
+let escapeListenerAttached = false
+function handleGlobalEscape(e: KeyboardEvent) {
+  if (e.key !== 'Escape' || escapeStack.length === 0) return
+  const top = escapeStack[escapeStack.length - 1]
+  // stopImmediatePropagation prevents any other peer keydown listeners
+  // (e.g. DrillDownModal) from firing on the same event when an
+  // InfoTooltip is the topmost element.
+  e.stopImmediatePropagation()
+  top()
+}
+function pushEscapeHandler(close: () => void): () => void {
+  escapeStack.push(close)
+  if (!escapeListenerAttached) {
+    document.addEventListener('keydown', handleGlobalEscape, true)
+    escapeListenerAttached = true
+  }
+  return () => {
+    const idx = escapeStack.lastIndexOf(close)
+    if (idx >= 0) escapeStack.splice(idx, 1)
+    if (escapeStack.length === 0 && escapeListenerAttached) {
+      document.removeEventListener('keydown', handleGlobalEscape, true)
+      escapeListenerAttached = false
+    }
+  }
+}
+
 /** One hour in milliseconds — default snooze duration for card swaps */
 const ONE_HOUR_MS = 60 * 60 * 1000
 
@@ -274,6 +308,8 @@ function InfoTooltip({ text }: { text: string }) {
   }, [isVisible, updatePosition])
 
   // Close tooltip when clicking outside or pressing Escape
+  // #6227: Escape is routed through the shared escapeStack so only the
+  // topmost open tooltip closes — used to fire on every mounted tooltip.
   useEffect(() => {
     if (!isVisible) return
 
@@ -284,17 +320,11 @@ function InfoTooltip({ text }: { text: string }) {
       }
     }
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsVisible(false)
-      }
-    }
-
     document.addEventListener('mousedown', handleClickOutside)
-    document.addEventListener('keydown', handleKeyDown)
+    const popEscape = pushEscapeHandler(() => setIsVisible(false))
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
-      document.removeEventListener('keydown', handleKeyDown)
+      popEscape()
     }
   }, [isVisible])
 
