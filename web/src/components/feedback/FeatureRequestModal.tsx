@@ -316,13 +316,21 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
     }
   }
 
-  /** Save current form content as a draft (new or update existing) */
+  /** Save current form content as a draft (new or update existing).
+   * Screenshots are persisted as base64 data URIs (the preview field
+   * produced by FileReader.readAsDataURL) so they survive a full
+   * reload. The File object itself cannot be serialized. #6102
+   */
   const handleSaveDraft = () => {
     if (description.trim().length < 5) {
       showToast('Draft is too short to save', 'error')
       return
     }
-    const id = saveDraft({ requestType, targetRepo, description }, editingDraftId || undefined)
+    const screenshotDataURIs = screenshots.map(s => s.preview)
+    const id = saveDraft(
+      { requestType, targetRepo, description, screenshots: screenshotDataURIs },
+      editingDraftId || undefined,
+    )
     if (id) {
       setEditingDraftId(id)
       showToast(editingDraftId ? 'Draft updated' : 'Draft saved', 'success')
@@ -335,6 +343,14 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
     setTargetRepo(draft.targetRepo)
     setDescription(draft.description)
     setEditingDraftId(draft.id)
+    // Restore screenshots from the draft. We recreate a minimal File
+    // stub (the upload pipeline only needs `preview`; the `file` field
+    // is used for displaying size/name in the uploader UI). #6102
+    const restoredScreenshots = (draft.screenshots || []).map((preview, idx) => ({
+      file: new File([], `draft-screenshot-${idx + 1}.png`, { type: 'image/png' }),
+      preview,
+    }))
+    setScreenshots(restoredScreenshots)
     setActiveTab('submit')
     showToast('Draft loaded into editor', 'success')
   }

@@ -35,6 +35,13 @@ export interface FeedbackDraft {
   savedAt: string
   /** ISO timestamp of when the draft was last updated */
   updatedAt: string
+  /**
+   * Attached screenshots as base64 data URIs so they survive a full
+   * reload. We can't put `File`/`Blob` objects in localStorage, but the
+   * paste/drop/file-picker flow already yields data URIs via FileReader,
+   * so we persist those directly. (#6102)
+   */
+  screenshots?: string[]
 }
 
 /** Read drafts from localStorage, returning an empty array on failure */
@@ -84,7 +91,12 @@ export function useFeedbackDrafts() {
 
   /** Save a new draft or update an existing one. Returns the draft id. */
   const saveDraft = (
-    draft: { requestType: RequestType; targetRepo: TargetRepo; description: string },
+    draft: {
+      requestType: RequestType
+      targetRepo: TargetRepo
+      description: string
+      screenshots?: string[]
+    },
     existingId?: string,
   ): string | null => {
     if (draft.description.trim().length < MIN_DRAFT_LENGTH) return null

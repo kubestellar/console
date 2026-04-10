@@ -20,7 +20,7 @@ export function Alerts() {
   const { stats, evaluateConditions } = useAlerts()
   const { rules } = useAlertRules()
   const { isRefreshing: dataRefreshing, refetch, error } = useClusters()
-  const { drillToAlert } = useDrillDownActions()
+  const { drillToAllAlerts } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // Local state for last updated time
@@ -42,11 +42,17 @@ export function Alerts() {
   // Stats value getter
   const getDashboardStatValue = (blockId: string): StatBlockValue => {
     const disabledRulesCount = rules.filter(r => !r.enabled).length
+    // The stat blocks below represent *counts* of alerts, so they should
+    // open the multi-alert list drill-down (`all-alerts`) rather than the
+    // single-alert detail view. The single-alert view (#6116) was rendering
+    // an empty modal because it expected alert-specific fields that don't
+    // exist on an aggregate. Using drillToAllAlerts with a status filter
+    // shows a proper filtered list.
     const drillToFiringAlert = () => {
-      drillToAlert('all', undefined, 'Active Alerts', { status: 'firing', count: stats.firing })
+      drillToAllAlerts('firing', { count: stats.firing })
     }
     const drillToResolvedAlert = () => {
-      drillToAlert('all', undefined, 'Resolved Alerts', { status: 'resolved', count: stats.resolved })
+      drillToAllAlerts('resolved', { count: stats.resolved })
     }
 
     switch (blockId) {

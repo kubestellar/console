@@ -8,11 +8,14 @@
  * in consumers that call .map(), .filter(), .flatMap(), .join(), etc.
  */
 
-import { useClusters, usePods, useDeployments, useNamespaces, useEvents, useHelmReleases, useOperatorSubscriptions, useSecurityIssues } from './useMCP'
+import { useClusters, useAllPods, useDeployments, useNamespaces, useEvents, useHelmReleases, useOperatorSubscriptions, useSecurityIssues } from './useMCP'
 
 export function useClusterData() {
   const { clusters, deduplicatedClusters } = useClusters()
-  const { pods } = usePods()
+  // Use useAllPods (no pagination limit) so the multi-cluster drill-down
+  // sees every pod. usePods() defaults to limit=10 and was causing the
+  // stat block (total pod count) and drill-down list to disagree. #6100
+  const { pods } = useAllPods()
   const { deployments } = useDeployments()
   const { namespaces } = useNamespaces()
   const { events } = useEvents()

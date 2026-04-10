@@ -82,10 +82,14 @@ export function Gauge({
             }}
           />
         </svg>
-        {/* Value display */}
+        {/* Value display.
+         * When the unit is a percent sign, display the computed percentage
+         * (value/max*100). Otherwise display the raw value (e.g. "3" GPUs).
+         * Fixes #6117/#6119 where a 1/1 Healthy ReplicaSet rendered "1%"
+         * instead of "100%" because the raw value was shown with a "%" unit. */}
         <div className="absolute inset-0 flex items-end justify-center pb-1">
           <span className={`font-bold ${s.fontSize} ${color.text}`}>
-            {Math.round(safeValue)}
+            {unit === '%' ? Math.round(percentage) : Math.round(safeValue)}
             <span className="text-sm text-muted-foreground">{unit}</span>
           </span>
         </div>

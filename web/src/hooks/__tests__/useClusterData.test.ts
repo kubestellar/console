@@ -14,7 +14,7 @@ import { renderHook } from '@testing-library/react'
 // ---------------------------------------------------------------------------
 
 const mockUseClusters = vi.fn()
-const mockUsePods = vi.fn()
+const mockUseAllPods = vi.fn()
 const mockUseDeployments = vi.fn()
 const mockUseNamespaces = vi.fn()
 const mockUseEvents = vi.fn()
@@ -24,7 +24,7 @@ const mockUseSecurityIssues = vi.fn()
 
 vi.mock('../useMCP', () => ({
   useClusters: () => mockUseClusters(),
-  usePods: () => mockUsePods(),
+  useAllPods: () => mockUseAllPods(),
   useDeployments: () => mockUseDeployments(),
   useNamespaces: () => mockUseNamespaces(),
   useEvents: () => mockUseEvents(),
@@ -43,7 +43,7 @@ function setDefaults(overrides: Record<string, unknown> = {}) {
     clusters: overrides.clusters ?? [{ name: 'c1' }],
     deduplicatedClusters: overrides.deduplicatedClusters ?? [{ name: 'c1' }],
   })
-  mockUsePods.mockReturnValue({ pods: overrides.pods ?? [{ name: 'p1' }] })
+  mockUseAllPods.mockReturnValue({ pods: overrides.pods ?? [{ name: 'p1' }] })
   mockUseDeployments.mockReturnValue({ deployments: overrides.deployments ?? [{ name: 'd1' }] })
   mockUseNamespaces.mockReturnValue({ namespaces: overrides.namespaces ?? [{ name: 'ns1' }] })
   mockUseEvents.mockReturnValue({ events: overrides.events ?? [{ reason: 'Scheduled' }] })
@@ -81,7 +81,7 @@ describe('useClusterData', () => {
   // 2. Coalesces undefined upstream values to empty arrays
   it('coalesces undefined upstream values to empty arrays', async () => {
     mockUseClusters.mockReturnValue({ clusters: undefined, deduplicatedClusters: undefined })
-    mockUsePods.mockReturnValue({ pods: undefined })
+    mockUseAllPods.mockReturnValue({ pods: undefined })
     mockUseDeployments.mockReturnValue({ deployments: undefined })
     mockUseNamespaces.mockReturnValue({ namespaces: undefined })
     mockUseEvents.mockReturnValue({ events: undefined })
@@ -120,7 +120,7 @@ describe('useClusterData', () => {
 
   // 4. Mixed defined and undefined inputs
   it('handles mixed defined and undefined upstream values', async () => {
-    mockUsePods.mockReturnValue({ pods: undefined })
+    mockUseAllPods.mockReturnValue({ pods: undefined })
     mockUseEvents.mockReturnValue({ events: undefined })
     // Rest keep their defaults from setDefaults()
 

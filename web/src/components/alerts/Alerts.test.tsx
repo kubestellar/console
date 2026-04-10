@@ -32,6 +32,7 @@ vi.mock('../../hooks/useMCP', () => ({
 vi.mock('../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({
     drillToAlert: vi.fn(),
+    drillToAllAlerts: vi.fn(),
   }),
 }))
 
