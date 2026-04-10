@@ -19,7 +19,7 @@ interface ClusterFocusProps {
 export function ClusterFocus({ config }: ClusterFocusProps) {
   const { t } = useTranslation(['cards', 'common'])
   const selectedCluster = config?.cluster
-  const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed, consecutiveFailures } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed, consecutiveFailures, lastRefresh: clustersLastRefresh } = useClusters()
   // #6217: destructure lastRefresh from each underlying hook so the card
   // can render a freshness indicator using the OLDEST timestamp (= the
   // staler half of the data the user is looking at).
@@ -130,12 +130,15 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <span className="text-sm font-medium text-foreground truncate">{clusterName}</span>
           <div className={`w-2 h-2 rounded-full shrink-0 ${cluster?.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
-          {/* #6217: freshness indicator using the OLDEST of the 3 cache
-              timestamps so users see the staler half of the data. */}
+          {/* #6217: freshness indicator using the OLDEST of the 4 cache
+              timestamps so users see the staler half of the data.
+              #6244: include cluster cache timestamp — ClusterFocus reads
+              health/metrics from useClusters(), so excluding it could
+              misrepresent overall card freshness. */}
           <RefreshIndicator
-            isRefreshing={gpuRefreshing || podsRefreshing || deploymentsRefreshing}
+            isRefreshing={clustersRefreshing || gpuRefreshing || podsRefreshing || deploymentsRefreshing}
             lastUpdated={(() => {
-              const ts = [gpuLastRefresh, podsLastRefresh, deployLastRefresh].filter((t): t is number => t != null)
+              const ts = [clustersLastRefresh, gpuLastRefresh, podsLastRefresh, deployLastRefresh].filter((t): t is number => typeof t === 'number')
               return ts.length > 0 ? new Date(Math.min(...ts)) : null
             })()}
             size="sm"

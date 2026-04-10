@@ -177,14 +177,19 @@ function GPUNamespaceAllocationsInternal({ config: _config }: GPUNamespaceAlloca
             {t('gpuNamespaceAllocations.gpusAcrossNamespaces', { gpus: totalGPUs, count: namespaceAllocations.length })}
           </StatusBadge>
           {/* #6217: freshness indicator. Use the OLDER of the two cache
-              timestamps so the user sees the staler half of the data. */}
+              timestamps so the user sees the staler half of the data.
+              #6244: explicit `typeof === 'number'` checks (truthy comparisons
+              would treat a `0` epoch timestamp as missing). */}
           <RefreshIndicator
             isRefreshing={gpuRefreshing || podsRefreshing}
-            lastUpdated={
-              gpuLastRefresh && podsLastRefresh
-                ? new Date(Math.min(gpuLastRefresh, podsLastRefresh))
-                : (gpuLastRefresh ? new Date(gpuLastRefresh) : (podsLastRefresh ? new Date(podsLastRefresh) : null))
-            }
+            lastUpdated={(() => {
+              const gp = typeof gpuLastRefresh === 'number' ? gpuLastRefresh : null
+              const po = typeof podsLastRefresh === 'number' ? podsLastRefresh : null
+              if (gp !== null && po !== null) return new Date(Math.min(gp, po))
+              if (gp !== null) return new Date(gp)
+              if (po !== null) return new Date(po)
+              return null
+            })()}
             size="sm"
             showLabel={true}
             staleThresholdMinutes={5}

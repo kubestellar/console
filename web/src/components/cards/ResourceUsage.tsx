@@ -19,7 +19,7 @@ function ResourceUsageInternal() {
   const { t } = useTranslation(['cards', 'common'])
   // #6217: destructure lastRefresh so the card can render a freshness
   // indicator instead of leaving users guessing how stale the data is.
-  const { isLoading: clustersLoading, isRefreshing: clustersRefreshing } = useClusters()
+  const { isLoading: clustersLoading, isRefreshing: clustersRefreshing, lastRefresh: clustersLastRefresh } = useClusters()
   const { nodes: allGPUNodes, isDemoFallback, isRefreshing: gpuRefreshing, lastRefresh: gpuLastRefresh } = useCachedGPUNodes()
   const { drillToResources } = useDrillDownActions()
   const { isDemoMode } = useDemoMode()
@@ -164,10 +164,18 @@ function ResourceUsageInternal() {
               {t('common:common.nClusters', { count: clusters.length })}
             </span>
           )}
-          {/* #6217: freshness indicator. */}
+          {/* #6217: freshness indicator. #6244: use the OLDER of cluster
+              and GPU timestamps so the indicator reflects the staler source. */}
           <RefreshIndicator
             isRefreshing={clustersRefreshing || gpuRefreshing}
-            lastUpdated={gpuLastRefresh ? new Date(gpuLastRefresh) : null}
+            lastUpdated={(() => {
+              const cl = typeof clustersLastRefresh === 'number' ? clustersLastRefresh : null
+              const gp = typeof gpuLastRefresh === 'number' ? gpuLastRefresh : null
+              if (cl !== null && gp !== null) return new Date(Math.min(cl, gp))
+              if (cl !== null) return new Date(cl)
+              if (gp !== null) return new Date(gp)
+              return null
+            })()}
             size="sm"
             showLabel={true}
             staleThresholdMinutes={5}
