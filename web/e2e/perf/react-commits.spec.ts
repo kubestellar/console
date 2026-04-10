@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs'
 import { test, expect, type Page } from '@playwright/test'
 
 /**
@@ -35,6 +36,20 @@ const COMMIT_COUNT_SENTINEL_MISSING = -1
 // normally assigns this; a fixed value of 1 is fine because nothing else
 // in the page consumes the map.
 const STUB_RENDERER_ID = 1
+
+// Route used for the navigation-under-test. Kept as a named constant so
+// it's also written into perf-result.json for the failure reporter.
+const NAVIGATION_TARGET_ROUTE = '/clusters'
+
+// Path (relative to Playwright's cwd, which is `web/`) where we write the
+// run result so the GH Actions report-failure job can read it from an
+// artifact. Written in afterEach so it's captured on both pass and fail.
+const PERF_RESULT_PATH = 'perf-result.json'
+
+// Shared mutable state between the test body and afterEach so the
+// afterEach hook can always write perf-result.json regardless of whether
+// the assertion passed or failed.
+let lastCommitCount: number | null = null
 
 declare global {
   interface Window {
@@ -76,6 +91,33 @@ async function installCommitCounter(page: Page) {
 }
 
 test.describe('React commit budget', () => {
+  test.afterEach(() => {
+    // Always persist the result — the GH Actions workflow uploads this as
+    // an artifact and the report-failure job reads it to build the
+    // regression issue body. Writing in afterEach (instead of inside the
+    // test) means a failing expect() doesn't short-circuit the write.
+    try {
+      writeFileSync(
+        PERF_RESULT_PATH,
+        JSON.stringify(
+          {
+            commits: lastCommitCount,
+            budget: PERF_BUDGET_NAVIGATION_COMMITS,
+            navigatedTo: NAVIGATION_TARGET_ROUTE,
+            timestamp: new Date().toISOString(),
+            runId: process.env.GITHUB_RUN_ID ?? null,
+          },
+          null,
+          2,
+        ),
+      )
+    } catch (err) {
+      // Don't fail the test on artifact-write errors — this is diagnostic.
+      // eslint-disable-next-line no-console
+      console.warn('failed to write perf-result.json:', err)
+    }
+  })
+
   test('dashboard-to-dashboard navigation stays under budget', async ({ page }) => {
     await installCommitCounter(page)
 
@@ -91,7 +133,7 @@ test.describe('React commit budget', () => {
 
     // Navigate to a different dashboard. Pick a stable one — adjust if
     // the route doesn't exist yet.
-    await page.goto('/clusters')
+    await page.goto(NAVIGATION_TARGET_ROUTE)
     await page.waitForLoadState('networkidle')
     await page.waitForTimeout(NAVIGATION_SETTLE_MS)
 
@@ -99,6 +141,8 @@ test.describe('React commit budget', () => {
       (missing) => window.__reactCommitCount ?? missing,
       COMMIT_COUNT_SENTINEL_MISSING,
     )
+    // Stash for the afterEach hook to serialize into perf-result.json.
+    lastCommitCount = commits
 
     expect(
       commits,
