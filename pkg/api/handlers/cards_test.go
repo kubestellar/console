@@ -10,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/store"
 	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -245,4 +246,283 @@ func TestGetHistory_ReturnsOK(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+// ---------- RBAC / limit / type validation (#6010) ----------
+
+// cardMutationStore is a store wrapper that stubs the dashboard/card lookups
+// used by the CardHandler mutation handlers so tests can drive the RBAC,
+// limit-reached, type-validation, and config-update paths without a real DB.
+type cardMutationStore struct {
+	*test.MockStore
+	dashboard    *models.Dashboard
+	card         *models.Card
+	createErr    error
+	createCalled bool
+	lastCreate   *models.Card
+	lastMaxCards int
+	updateErr    error
+	updateCalled bool
+	lastUpdate   *models.Card
+}
+
+func (s *cardMutationStore) GetDashboard(id uuid.UUID) (*models.Dashboard, error) {
+	return s.dashboard, nil
+}
+
+func (s *cardMutationStore) GetCard(id uuid.UUID) (*models.Card, error) {
+	return s.card, nil
+}
+
+func (s *cardMutationStore) CreateCardWithLimit(card *models.Card, maxCards int) error {
+	s.createCalled = true
+	s.lastCreate = card
+	s.lastMaxCards = maxCards
+	return s.createErr
+}
+
+func (s *cardMutationStore) UpdateCard(card *models.Card) error {
+	s.updateCalled = true
+	s.lastUpdate = card
+	return s.updateErr
+}
+
+// newCardMutationApp wires a CardHandler backed by cardMutationStore, with
+// the given user role registered via the MockStore. Returns the app, the
+// store wrapper, and the user's UUID.
+func newCardMutationApp(
+	t *testing.T,
+	role models.UserRole,
+	dashboardID, cardID uuid.UUID,
+) (*fiber.App, *cardMutationStore, uuid.UUID) {
+	t.Helper()
+	userID := uuid.New()
+
+	mockStore := new(test.MockStore)
+	mockStore.On("GetUser", userID).Return(&models.User{
+		ID:   userID,
+		Role: role,
+	}, nil).Maybe()
+
+	wrapper := &cardMutationStore{
+		MockStore: mockStore,
+		dashboard: &models.Dashboard{ID: dashboardID, UserID: userID},
+		card: &models.Card{
+			ID:          cardID,
+			DashboardID: dashboardID,
+			CardType:    models.CardTypeClusterHealth,
+		},
+	}
+
+	hub := NewHub()
+	go hub.Run()
+	t.Cleanup(func() { hub.Close() })
+
+	handler := NewCardHandler(wrapper, hub)
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", userID)
+		return c.Next()
+	})
+	app.Post("/api/dashboards/:id/cards", handler.CreateCard)
+	app.Put("/api/cards/:id", handler.UpdateCard)
+	app.Delete("/api/cards/:id", handler.DeleteCard)
+	return app, wrapper, userID
+}
+
+// --- Viewer denial ---
+
+func TestCreateCard_ViewerForbidden(t *testing.T) {
+	dashID := uuid.New()
+	cardID := uuid.New()
+	app, wrapper, _ := newCardMutationApp(t, models.UserRoleViewer, dashID, cardID)
+
+	body := `{"card_type":"cluster_health","position":{"x":0,"y":0,"w":4,"h":3}}`
+	req, err := http.NewRequest("POST", "/api/dashboards/"+dashID.String()+"/cards",
+		strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	assert.False(t, wrapper.createCalled, "store must not be touched for a forbidden request")
+}
+
+func TestUpdateCard_ViewerForbidden(t *testing.T) {
+	dashID := uuid.New()
+	cardID := uuid.New()
+	app, wrapper, _ := newCardMutationApp(t, models.UserRoleViewer, dashID, cardID)
+
+	body := `{"position":{"x":1,"y":1,"w":4,"h":3}}`
+	req, err := http.NewRequest("PUT", "/api/cards/"+cardID.String(), strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	assert.False(t, wrapper.updateCalled)
+}
+
+func TestDeleteCard_ViewerForbidden(t *testing.T) {
+	dashID := uuid.New()
+	cardID := uuid.New()
+	app, _, _ := newCardMutationApp(t, models.UserRoleViewer, dashID, cardID)
+
+	req, err := http.NewRequest("DELETE", "/api/cards/"+cardID.String(), nil)
+	require.NoError(t, err)
+
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
+// --- Admin allowed ---
+
+func TestCreateCard_AdminAllowed(t *testing.T) {
+	dashID := uuid.New()
+	cardID := uuid.New()
+	app, wrapper, _ := newCardMutationApp(t, models.UserRoleAdmin, dashID, cardID)
+
+	body := `{"card_type":"cluster_health","config":{"cluster":"prod"},"position":{"x":0,"y":0,"w":4,"h":3}}`
+	req, err := http.NewRequest("POST", "/api/dashboards/"+dashID.String()+"/cards",
+		strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+	assert.True(t, wrapper.createCalled)
+	assert.Equal(t, MaxCardsPerDashboard, wrapper.lastMaxCards)
+	require.NotNil(t, wrapper.lastCreate)
+	assert.Equal(t, models.CardTypeClusterHealth, wrapper.lastCreate.CardType)
+	assert.JSONEq(t, `{"cluster":"prod"}`, string(wrapper.lastCreate.Config))
+}
+
+func TestUpdateCard_AdminAllowedWithConfig(t *testing.T) {
+	dashID := uuid.New()
+	cardID := uuid.New()
+	app, wrapper, _ := newCardMutationApp(t, models.UserRoleAdmin, dashID, cardID)
+
+	body := `{"card_type":"pod_issues","config":{"ns":"default"},"position":{"x":1,"y":1,"w":4,"h":3}}`
+	req, err := http.NewRequest("PUT", "/api/cards/"+cardID.String(), strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	require.NotNil(t, wrapper.lastUpdate)
+	assert.Equal(t, models.CardTypePodIssues, wrapper.lastUpdate.CardType)
+	assert.JSONEq(t, `{"ns":"default"}`, string(wrapper.lastUpdate.Config))
+	assert.Equal(t, 1, wrapper.lastUpdate.Position.X)
+}
+
+// --- Per-dashboard card limit (429) ---
+
+func TestCreateCard_LimitReached_Returns429(t *testing.T) {
+	dashID := uuid.New()
+	cardID := uuid.New()
+	app, wrapper, _ := newCardMutationApp(t, models.UserRoleEditor, dashID, cardID)
+	wrapper.createErr = store.ErrDashboardCardLimitReached
+
+	body := `{"card_type":"cluster_health","position":{"x":0,"y":0,"w":4,"h":3}}`
+	req, err := http.NewRequest("POST", "/api/dashboards/"+dashID.String()+"/cards",
+		strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusTooManyRequests, resp.StatusCode)
+	assert.True(t, wrapper.createCalled)
+}
+
+// --- Unknown card_type (400) ---
+
+func TestCreateCard_UnknownCardType_Returns400(t *testing.T) {
+	dashID := uuid.New()
+	cardID := uuid.New()
+	app, wrapper, _ := newCardMutationApp(t, models.UserRoleEditor, dashID, cardID)
+
+	body := `{"card_type":"not_a_real_card","position":{"x":0,"y":0,"w":4,"h":3}}`
+	req, err := http.NewRequest("POST", "/api/dashboards/"+dashID.String()+"/cards",
+		strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.False(t, wrapper.createCalled, "store must not be reached for invalid card_type")
+}
+
+func TestUpdateCard_UnknownCardType_Returns400(t *testing.T) {
+	dashID := uuid.New()
+	cardID := uuid.New()
+	app, wrapper, _ := newCardMutationApp(t, models.UserRoleEditor, dashID, cardID)
+
+	body := `{"card_type":"not_a_real_card"}`
+	req, err := http.NewRequest("PUT", "/api/cards/"+cardID.String(), strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.False(t, wrapper.updateCalled, "store must not be reached for invalid card_type")
+}
+
+// --- Store error in RBAC check → 500, not 403 ---
+
+// failingUserStore wraps cardMutationStore and returns an error from GetUser
+// so we can verify the #6010 fix where store errors map to 500 instead of
+// being masked as 403.
+type failingUserStore struct {
+	*cardMutationStore
+}
+
+func (s *failingUserStore) GetUser(id uuid.UUID) (*models.User, error) {
+	return nil, assert.AnError
+}
+
+func TestCreateCard_UserStoreError_Returns500(t *testing.T) {
+	dashID := uuid.New()
+	cardID := uuid.New()
+
+	inner := &cardMutationStore{
+		MockStore: new(test.MockStore),
+		dashboard: &models.Dashboard{ID: dashID, UserID: uuid.New()},
+		card: &models.Card{
+			ID:          cardID,
+			DashboardID: dashID,
+			CardType:    models.CardTypeClusterHealth,
+		},
+	}
+	failing := &failingUserStore{cardMutationStore: inner}
+
+	hub := NewHub()
+	go hub.Run()
+	t.Cleanup(func() { hub.Close() })
+
+	handler := NewCardHandler(failing, hub)
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", uuid.New())
+		return c.Next()
+	})
+	app.Post("/api/dashboards/:id/cards", handler.CreateCard)
+
+	body := `{"card_type":"cluster_health","position":{"x":0,"y":0,"w":4,"h":3}}`
+	req, err := http.NewRequest("POST", "/api/dashboards/"+dashID.String()+"/cards",
+		strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	assert.False(t, inner.createCalled)
 }

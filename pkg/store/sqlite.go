@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -14,6 +15,11 @@ import (
 
 	"github.com/kubestellar/console/pkg/models"
 )
+
+// ErrDashboardCardLimitReached is returned by CreateCardWithLimit when the
+// dashboard already contains the maximum number of cards. Handlers should
+// map this error to HTTP 429 Too Many Requests.
+var ErrDashboardCardLimitReached = errors.New("dashboard card limit reached")
 
 // SQLite connection pool defaults
 const (
@@ -633,6 +639,19 @@ func (s *SQLiteStore) GetDashboardCards(dashboardID uuid.UUID) ([]models.Card, e
 	return cards, rows.Err()
 }
 
+// CountDashboardCards returns the number of cards belonging to a dashboard
+// without materializing the full row set. This is used by the card-create
+// limit check (#6010) to avoid the overhead of GetDashboardCards just to
+// call len() on the result.
+func (s *SQLiteStore) CountDashboardCards(dashboardID uuid.UUID) (int, error) {
+	var count int
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM cards WHERE dashboard_id = ?`, dashboardID.String()).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func (s *SQLiteStore) scanCard(row *sql.Row) (*models.Card, error) {
 	var c models.Card
 	var idStr, dashboardIDStr, positionStr string
@@ -717,6 +736,57 @@ func (s *SQLiteStore) CreateCard(card *models.Card) error {
 	_, err = s.db.Exec(`INSERT INTO cards (id, dashboard_id, card_type, config, position, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
 		card.ID.String(), card.DashboardID.String(), string(card.CardType), configStr, string(positionJSON), card.CreatedAt)
 	return err
+}
+
+// CreateCardWithLimit atomically enforces a per-dashboard card limit and
+// inserts the card in a single transaction. This closes the TOCTOU race
+// where two concurrent CreateCard handlers could both read a count of
+// maxCards-1 and both succeed inserting, pushing the dashboard above the
+// limit (#6010). Returns ErrDashboardCardLimitReached when the dashboard
+// is already at or above maxCards.
+func (s *SQLiteStore) CreateCardWithLimit(card *models.Card, maxCards int) error {
+	if card.ID == uuid.Nil {
+		card.ID = uuid.New()
+	}
+	card.CreatedAt = time.Now()
+
+	positionJSON, err := json.Marshal(card.Position)
+	if err != nil {
+		return fmt.Errorf("failed to marshal card position: %w", err)
+	}
+	var configStr *string
+	if card.Config != nil {
+		str := string(card.Config)
+		configStr = &str
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		// Safe to call Rollback after Commit — it becomes a no-op that
+		// returns sql.ErrTxDone which we intentionally ignore.
+		_ = tx.Rollback()
+	}()
+
+	var count int
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM cards WHERE dashboard_id = ?`, card.DashboardID.String()).Scan(&count); err != nil {
+		return fmt.Errorf("failed to count cards: %w", err)
+	}
+	if count >= maxCards {
+		return ErrDashboardCardLimitReached
+	}
+
+	if _, err := tx.Exec(`INSERT INTO cards (id, dashboard_id, card_type, config, position, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+		card.ID.String(), card.DashboardID.String(), string(card.CardType), configStr, string(positionJSON), card.CreatedAt); err != nil {
+		return fmt.Errorf("failed to insert card: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit: %w", err)
+	}
+	return nil
 }
 
 func (s *SQLiteStore) UpdateCard(card *models.Card) error {

@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"encoding/json"
+	"errors"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
@@ -30,19 +33,41 @@ func NewCardHandler(s store.Store, hub *Hub) *CardHandler {
 // role. Viewers must not be able to create, update, or delete dashboard cards
 // via the API (#5999). If no user store is configured (dev/demo mode) the
 // check is skipped.
+//
+// Error mapping (#6010): a store lookup failure returns 500 — the caller is
+// not necessarily unauthorized, the backend is broken. Only a successful
+// lookup that returns no user (or a user with insufficient role) yields 403.
 func (h *CardHandler) requireEditorOrAdmin(c *fiber.Ctx) error {
 	if h.store == nil {
 		return nil
 	}
 	userID := middleware.GetUserID(c)
 	user, err := h.store.GetUser(userID)
-	if err != nil || user == nil {
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify user role")
+	}
+	if user == nil {
 		return fiber.NewError(fiber.StatusForbidden, "User not found")
 	}
 	if user.Role != models.UserRoleAdmin && user.Role != models.UserRoleEditor {
 		return fiber.NewError(fiber.StatusForbidden, "Editor or admin role required to modify cards")
 	}
 	return nil
+}
+
+// isValidCardType reports whether the supplied card type is in the set of
+// types registered by models.GetCardTypes. Used by both CreateCard and
+// UpdateCard (#6010) to reject garbage input before touching the store.
+func isValidCardType(t models.CardType) bool {
+	if t == "" {
+		return false
+	}
+	for _, known := range models.GetCardTypes() {
+		if known.Type == t {
+			return true
+		}
+	}
+	return false
 }
 
 // ListCards returns all cards for a dashboard
@@ -92,21 +117,10 @@ func (h *CardHandler) CreateCard(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusForbidden, "Access denied")
 	}
 
-	// Enforce a hard per-dashboard card limit to prevent runaway API abuse
-	// from exhausting the database (#5999).
-	existing, err := h.store.GetDashboardCards(dashboardID)
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to count cards")
-	}
-	if len(existing) >= MaxCardsPerDashboard {
-		return fiber.NewError(fiber.StatusTooManyRequests,
-			"Dashboard card limit reached")
-	}
-
 	var input struct {
-		CardType models.CardType      `json:"card_type"`
-		Config   map[string]any       `json:"config"`
-		Position models.CardPosition  `json:"position"`
+		CardType models.CardType     `json:"card_type"`
+		Config   json.RawMessage     `json:"config"`
+		Position models.CardPosition `json:"position"`
 	}
 	if err := c.BodyParser(&input); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
@@ -117,25 +131,26 @@ func (h *CardHandler) CreateCard(c *fiber.Ctx) error {
 	if input.CardType == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "card_type is required")
 	}
-	validTypes := models.GetCardTypes()
-	typeIsValid := false
-	for _, t := range validTypes {
-		if t.Type == input.CardType {
-			typeIsValid = true
-			break
-		}
-	}
-	if !typeIsValid {
+	if !isValidCardType(input.CardType) {
 		return fiber.NewError(fiber.StatusBadRequest, "Unknown card_type")
 	}
 
 	card := &models.Card{
 		DashboardID: dashboardID,
 		CardType:    input.CardType,
+		Config:      input.Config,
 		Position:    input.Position,
 	}
 
-	if err := h.store.CreateCard(card); err != nil {
+	// Enforce the per-dashboard card limit (#5999) and the insert atomically
+	// via CreateCardWithLimit to close the TOCTOU race where concurrent
+	// creates could both observe count == MaxCardsPerDashboard-1 and both
+	// succeed (#6010).
+	if err := h.store.CreateCardWithLimit(card, MaxCardsPerDashboard); err != nil {
+		if errors.Is(err, store.ErrDashboardCardLimitReached) {
+			return fiber.NewError(fiber.StatusTooManyRequests,
+				"Dashboard card limit reached")
+		}
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create card")
 	}
 
@@ -176,14 +191,28 @@ func (h *CardHandler) UpdateCard(c *fiber.Ctx) error {
 
 	var input struct {
 		CardType *models.CardType     `json:"card_type"`
+		Config   *json.RawMessage     `json:"config"`
 		Position *models.CardPosition `json:"position"`
 	}
 	if err := c.BodyParser(&input); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
+	// Validate card_type if the caller supplied one — reject unknown types
+	// so the store never sees garbage input (#6010). Matches the CreateCard
+	// validation to prevent viewers or buggy clients from writing bogus
+	// types via the update path.
 	if input.CardType != nil {
+		if !isValidCardType(*input.CardType) {
+			return fiber.NewError(fiber.StatusBadRequest, "Unknown card_type")
+		}
 		card.CardType = *input.CardType
+	}
+	// Accept config updates — the SQLite UpdateCard already persists
+	// card.Config, but the handler previously ignored the field on the
+	// wire and only card_type/position would ever be written (#6010).
+	if input.Config != nil {
+		card.Config = *input.Config
 	}
 	if input.Position != nil {
 		card.Position = *input.Position

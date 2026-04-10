@@ -36,7 +36,9 @@ type Store interface {
 	// Cards
 	GetCard(id uuid.UUID) (*models.Card, error)
 	GetDashboardCards(dashboardID uuid.UUID) ([]models.Card, error)
+	CountDashboardCards(dashboardID uuid.UUID) (int, error)
 	CreateCard(card *models.Card) error
+	CreateCardWithLimit(card *models.Card, maxCards int) error
 	UpdateCard(card *models.Card) error
 	DeleteCard(id uuid.UUID) error
 	UpdateCardFocus(cardID uuid.UUID, summary string) error

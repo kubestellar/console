@@ -6,9 +6,14 @@ import (
 	"io"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/settings"
+	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -149,6 +154,96 @@ func TestExportImportSettings(t *testing.T) {
 	respEmpty, err := env2.App.Test(reqEmpty, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, 400, respEmpty.StatusCode)
+}
+
+// setupNonAdminSettingsEnv builds a settings test environment where the
+// injected user has the viewer role instead of admin, so requireAdmin (#6000)
+// rejects mutating and reading calls with 403. Returns the env plus the
+// settings handler wired against it.
+func setupNonAdminSettingsEnv(t *testing.T) (*testEnv, *SettingsHandler) {
+	t.Helper()
+	tempDir := t.TempDir()
+	settingsPath := filepath.Join(tempDir, "settings.json")
+	keyPath := filepath.Join(tempDir, ".keyfile")
+
+	manager := settings.GetSettingsManager()
+	manager.SetSettingsPath(settingsPath)
+	manager.SetKeyPath(keyPath)
+	_ = manager.Load()
+
+	viewerID := uuid.New()
+	mockStore := new(test.MockStore)
+	mockStore.On("GetUser", viewerID).Return(&models.User{
+		ID:   viewerID,
+		Role: models.UserRoleViewer,
+	}, nil).Maybe()
+
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", viewerID)
+		return c.Next()
+	})
+
+	env := &testEnv{
+		App:      app,
+		TempDir:  tempDir,
+		Settings: manager,
+		Store:    mockStore,
+	}
+	handler := NewSettingsHandler(manager, mockStore)
+	return env, handler
+}
+
+// TestSettings_NonAdmin_Forbidden verifies that every settings handler rejects
+// a non-admin caller with HTTP 403 before touching the manager. This locks in
+// the #6000 invariant — requireAdmin must be the very first operation in each
+// handler so no decryption / disk I/O / body parsing happens for unauthorized
+// users (#6010 follow-up).
+func TestSettings_NonAdmin_Forbidden(t *testing.T) {
+	t.Run("GetSettings", func(t *testing.T) {
+		env, handler := setupNonAdminSettingsEnv(t)
+		env.App.Get("/api/settings", handler.GetSettings)
+
+		req := httptest.NewRequest("GET", "/api/settings", nil)
+		resp, err := env.App.Test(req, fiberTestTimeout)
+		require.NoError(t, err)
+		assert.Equal(t, 403, resp.StatusCode)
+	})
+
+	t.Run("SaveSettings", func(t *testing.T) {
+		env, handler := setupNonAdminSettingsEnv(t)
+		env.App.Put("/api/settings", handler.SaveSettings)
+
+		payload := settings.AllSettings{Theme: "light"}
+		data, _ := json.Marshal(payload)
+		req := httptest.NewRequest("PUT", "/api/settings", bytes.NewReader(data))
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := env.App.Test(req, fiberTestTimeout)
+		require.NoError(t, err)
+		assert.Equal(t, 403, resp.StatusCode)
+	})
+
+	t.Run("ExportSettings", func(t *testing.T) {
+		env, handler := setupNonAdminSettingsEnv(t)
+		env.App.Post("/api/settings/export", handler.ExportSettings)
+
+		req := httptest.NewRequest("POST", "/api/settings/export", nil)
+		resp, err := env.App.Test(req, fiberTestTimeout)
+		require.NoError(t, err)
+		assert.Equal(t, 403, resp.StatusCode)
+	})
+
+	t.Run("ImportSettings", func(t *testing.T) {
+		env, handler := setupNonAdminSettingsEnv(t)
+		env.App.Post("/api/settings/import", handler.ImportSettings)
+
+		req := httptest.NewRequest("POST", "/api/settings/import",
+			bytes.NewReader([]byte(`{"theme":"light"}`)))
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := env.App.Test(req, fiberTestTimeout)
+		require.NoError(t, err)
+		assert.Equal(t, 403, resp.StatusCode)
+	})
 }
 
 func TestSettingsFileError(t *testing.T) {

@@ -224,6 +224,52 @@ describe('logout with real token', () => {
     // Should NOT have called /auth/logout for demo token
     expect(mockFetch).not.toHaveBeenCalledWith('/auth/logout', expect.anything())
   })
+
+  // #6010: logout() must scrub every location a token or cached user could
+  // live, including sessionStorage, so that a past or future code path that
+  // parks credentials there can't leak into the next session. The presence
+  // session ID must also be rotated so the next login isn't tracked as a
+  // continuation of the logged-out user's session.
+  it('clears sessionStorage token, cached user, and presence session ID', async () => {
+    const realToken = 'real-jwt-token-xyz'
+    const cachedUser = { id: 'u1', github_id: '1', github_login: 'test', onboarded: true }
+    localStorage.setItem(STORAGE_KEY_TOKEN, realToken)
+    localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(cachedUser))
+
+    // Pre-populate sessionStorage with the auth keys the logout handler
+    // must clear. The presence session ID is also set because logout must
+    // rotate it (#6004).
+    const PRESENCE_SESSION_KEY = 'kc-session-id'
+    sessionStorage.setItem(STORAGE_KEY_TOKEN, realToken)
+    sessionStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(cachedUser))
+    sessionStorage.setItem(PRESENCE_SESSION_KEY, 'stale-presence-id')
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue(cachedUser),
+    })
+    vi.stubGlobal('fetch', mockFetch)
+
+    const { result } = await renderWithAuthProvider()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    act(() => {
+      result.current.logout()
+    })
+
+    // localStorage cleared
+    expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBeNull()
+    expect(localStorage.getItem(AUTH_USER_CACHE_KEY)).toBeNull()
+    // sessionStorage fully scrubbed
+    expect(sessionStorage.getItem(STORAGE_KEY_TOKEN)).toBeNull()
+    expect(sessionStorage.getItem(AUTH_USER_CACHE_KEY)).toBeNull()
+    expect(sessionStorage.getItem(PRESENCE_SESSION_KEY)).toBeNull()
+    // In-memory state also flushed so no stale reference survives
+    expect(result.current.token).toBeNull()
+    expect(result.current.user).toBeNull()
+
+    sessionStorage.clear()
+  })
 })
 
 // ============================================================================
