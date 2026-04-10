@@ -22,13 +22,21 @@ vi.mock('../useDemoMode', () => ({
   getDemoMode: mockGetDemoMode,
 }))
 
-vi.mock('../../lib/constants', () => ({
-  LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
-}))
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../lib/constants')>()
+  return {
+    ...actual,
+    LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
+  }
+})
 
-vi.mock('../../lib/constants/network', () => ({
-  QUICK_ABORT_TIMEOUT_MS: 2000,
-}))
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../lib/constants/network')>()
+  return {
+    ...actual,
+    QUICK_ABORT_TIMEOUT_MS: 2000,
+  }
+})
 
 import { useTokenUsage, setActiveTokenCategory, clearActiveTokenCategory, getActiveTokenCategories, addCategoryTokens } from '../useTokenUsage'
 import type { TokenCategory } from '../useTokenUsage'
