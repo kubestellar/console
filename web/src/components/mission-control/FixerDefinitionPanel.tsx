@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, Loader2, Plus, Search, Info, Shield, Eye, Network, Box, Lock, Layers, Server, X as XIcon } from 'lucide-react'
+import { Sparkles, Loader2, Plus, Search, Info, Shield, Eye, Network, Box, Lock, Layers, Server, X as XIcon, AlertTriangle, RotateCcw } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { PayloadGrid } from './PayloadGrid'
 import type { MissionControlState, PayloadProject } from './types'
@@ -97,6 +97,18 @@ export function FixerDefinitionPanel({
   const latestAIMessage = planningMission?.messages
     .filter((m) => m.role === 'assistant')
     .slice(-1)[0]
+
+  // Surface AI provider failures (#5907 / #5911). When the planning mission
+  // transitions to 'failed', useMissions appends a system message describing
+  // the underlying error (auth failure, rate limit, agent unavailable, etc.).
+  // Mission Control previously rendered nothing in this state, leaving users
+  // staring at a stalled UI. Mirror the AI Missions sidebar pattern: display
+  // the latest system message inline so the user knows what went wrong and
+  // how to recover.
+  const planningFailed = planningMission?.status === 'failed'
+  const latestSystemError = planningFailed
+    ? planningMission?.messages.filter((m) => m.role === 'system').slice(-1)[0]
+    : undefined
 
   // Summary stats for left sidebar
   const categoryCounts = (() => {
@@ -262,6 +274,15 @@ export function FixerDefinitionPanel({
         {/* AI streaming indicator — shows live AI text as it arrives */}
         {aiStreaming && (
           <AIStreamingPreview planningMission={planningMission} />
+        )}
+
+        {/* AI provider failure banner (#5907 / #5911) */}
+        {planningFailed && !aiStreaming && (
+          <AISuggestErrorBanner
+            errorContent={latestSystemError?.content ?? ''}
+            onRetry={() => onAskAI(state.description, state.projects)}
+            disabled={!state.description.trim()}
+          />
         )}
 
         {/* AI Executive Analysis */}
@@ -901,6 +922,61 @@ function AIStreamingPreview({ planningMission }: { planningMission: Mission | nu
 }
 
 // ---------------------------------------------------------------------------
+// AI Suggest Error Banner — surfaces failures from the planning mission so
+// users can see auth, rate-limit, or agent connectivity errors that would
+// otherwise leave the Suggest button silently broken (#5907 / #5911).
+// ---------------------------------------------------------------------------
+
+function AISuggestErrorBanner({
+  errorContent,
+  onRetry,
+  disabled }: {
+  errorContent: string
+  onRetry: () => void
+  disabled: boolean
+}) {
+  // Fall back to a generic message when the failed mission has no system
+  // message attached (e.g. silent WebSocket failure).
+  const message = errorContent.trim() ||
+    'AI Suggest failed. The AI provider returned an error or the agent is not reachable. ' +
+    'Check your provider configuration in Settings, make sure your local agent is running, and try again.'
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      role="alert"
+      aria-live="polite"
+      className="rounded-lg border border-destructive/40 bg-destructive/10 overflow-hidden"
+    >
+      <div className="flex items-start gap-3 px-4 py-3">
+        <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <div className="text-xs font-semibold text-destructive mb-1">
+            AI Suggest failed
+          </div>
+          <div className="text-xs text-foreground/85 leading-relaxed prose prose-invert prose-xs max-w-none [&_p]:my-1 [&_strong]:text-foreground [&_code]:bg-secondary/60 [&_code]:px-1 [&_code]:rounded [&_a]:text-primary [&_a]:underline">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {message}
+            </ReactMarkdown>
+          </div>
+        </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onRetry}
+          disabled={disabled}
+          className="shrink-0 h-7 px-3"
+          icon={<RotateCcw className="w-3 h-3" />}
+        >
+          Retry
+        </Button>
+      </div>
+    </motion.div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Target Cluster Selector — lets users scope which clusters AI analyzes
 // ---------------------------------------------------------------------------
 
@@ -940,7 +1016,11 @@ function TargetClusterSelector({
   const isAllSelected = selected.length === 0 || selected.length === clusters.length
 
   return (
-    <div ref={ref} className="relative z-20">
+    // z-dropdown (100) keeps the open dropdown above the Payload Grid below.
+    // The Payload Grid uses motion.div with transforms which create their own
+    // stacking contexts and were causing the dropdown to render behind cards
+    // (#5906).
+    <div ref={ref} className="relative z-dropdown">
       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
         Target Clusters
       </label>
@@ -996,9 +1076,10 @@ function TargetClusterSelector({
         )}
       </div>
 
-      {/* Dropdown */}
+      {/* Dropdown — bg-card (opaque) instead of the undefined bg-popover token
+          which previously rendered the panel transparent (#5906). */}
       {isOpen && (
-        <div className="absolute z-dropdown mt-1 w-64 max-h-48 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg">
+        <div className="absolute z-dropdown mt-1 w-64 max-h-48 overflow-y-auto rounded-lg border border-border bg-card shadow-lg">
           {/* All clusters toggle */}
           <button
             type="button"
