@@ -350,6 +350,16 @@ export function MissionSidebar() {
   const visibleActiveMissions = activeMissions.slice(0, visibleMissionCount)
   const hasMoreMissions = activeMissions.length > visibleMissionCount
 
+  /**
+   * Total missions actually rendered in the list view (saved + active).
+   * Used so the list header count and the chat view's "Back to missions"
+   * label agree on the same source of truth (#6134, #6135, #6136, #6137).
+   * Previously the chat button used `missions.length` (which included
+   * terminal completed/failed/cancelled missions that the list filters
+   * out via isActiveMission), producing a mismatch like "21 vs 24".
+   */
+  const listTotalMissions = savedMissions.length + activeMissions.length
+
   const handleImportMission = (mission: MissionExport) => {
     const missionType = mission.missionClass === 'install' ? 'deploy' as const
       : mission.type === 'troubleshoot' ? 'troubleshoot' as const
@@ -950,14 +960,16 @@ export function MissionSidebar() {
             </div>
           )}
           <div className="flex-1 flex flex-col min-h-0 min-w-0">
-            {/* Back to list if multiple missions */}
-            {missions.length > 1 && (
+            {/* Back to list if multiple missions.
+             * Count and visibility must match the list view's filter
+             * (saved + active) so list and chat headers agree (#6137). */}
+            {listTotalMissions > 1 && (
               <button
                 onClick={() => setActiveMission(null)}
                 className="flex items-center gap-1 px-4 py-2 text-xs text-muted-foreground hover:text-foreground border-b border-border flex-shrink-0"
               >
                 <ChevronLeft className="w-3 h-3" />
-                {t('missionSidebar.backToMissions', { count: missions.length })}
+                {t('missionSidebar.backToMissions', { count: listTotalMissions })}
               </button>
             )}
             <MissionChat mission={activeMission} isFullScreen={isFullScreen} fontSize={fontSize} onToggleFullScreen={() => setFullScreen(true)} />
