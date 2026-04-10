@@ -48,15 +48,6 @@ function saveCache(login: string, data: BonusPointsResponse): void {
   }
 }
 
-/**
- * Module-level flag indicating the bonus endpoint is unavailable in this
- * environment (e.g. local dev with the Go backend, which does not implement
- * /api/rewards/bonus — that route only exists as a Netlify function in
- * production). Once set, subsequent fetch attempts are skipped for the life
- * of the tab so we don't spam the console with 404s (issue #6013).
- */
-let bonusEndpointUnavailable = false
-
 export function useBonusPoints() {
   const { user, isAuthenticated } = useAuth()
   const [data, setData] = useState<BonusPointsResponse | null>(null)
@@ -77,10 +68,14 @@ export function useBonusPoints() {
     if (cached) setData(cached)
   }, [githubLogin, isDemoUser])
 
+  // Issue #6011 removed the module-level `bonusEndpointUnavailable` flag:
+  // the Go backend now persists bonus points alongside coins via
+  // `/api/rewards/me`, and the legacy `/api/rewards/bonus?login=` route
+  // still exists as a Netlify function in production. If either call fails
+  // we simply fall through to the cached value rather than permanently
+  // disabling the fetcher for the tab.
   const fetchBonus = useCallback(async () => {
     if (!isAuthenticated || isDemoUser || !githubLogin) return
-    // Endpoint previously 404'd — don't retry in this session (issue #6013).
-    if (bonusEndpointUnavailable) return
 
     setIsLoading(true)
     try {
@@ -89,12 +84,10 @@ export function useBonusPoints() {
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (res.status === 404) {
-        // Bonus endpoint not implemented on this backend (e.g. Go backend in
-        // dev — this route only exists as a Netlify function in production).
-        // Treat bonus points as zero and stop polling for the rest of the
-        // session. No error is surfaced to the user because bonus points are
-        // purely additive and their absence is not a failure mode.
-        bonusEndpointUnavailable = true
+        // Route unavailable on this backend (e.g. dev Go server without the
+        // scraping endpoint). Bonus points default to zero — this is not an
+        // error path because the user's persistent bonus balance lives on
+        // the backend `/api/rewards/me` row which is read by `useRewards`.
         if (loginRef.current === githubLogin) {
           setData({ login: githubLogin, total_bonus_points: 0, entries: [] })
         }

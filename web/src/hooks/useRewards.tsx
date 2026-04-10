@@ -2,14 +2,14 @@
  * Reward system hook for gamification
  * Tracks user coins, achievements, and reward events
  *
- * Known limitation (issue #6011): locally-earned coins are persisted only
- * in `localStorage`. Clearing the browser cache, using a private window, or
- * switching browsers/devices will reset the local coin balance. GitHub-sourced
- * points (`useGitHubRewards`) and bonus points (`useBonusPoints`) are already
- * backed by server state, so the merged total rehydrates from those sources —
- * only in-app earnings (mission completions, games, sharing) are affected.
- * A backend `/api/rewards/sync` endpoint that persists events to SQLite is
- * tracked in #6011 and is the proper long-term fix.
+ * Issue #6011 fix: the canonical source of truth for coin/point/level/bonus
+ * balances is now the backend (`/api/rewards/me` + `/api/rewards/coins` +
+ * `/api/rewards/daily-bonus`). `localStorage` is still read on mount as a
+ * loading-bridge cache so the UI never blinks on reload, and it is still
+ * used as the sole storage for demo/dev mode (where there is no JWT to
+ * authenticate the API calls). Real authenticated sessions persist every
+ * mutation to SQLite so clearing the browser cache, switching devices, or
+ * using a private window no longer wipes the balance.
  */
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react'
@@ -25,6 +25,10 @@ import {
 import type { GitHubRewardsResponse } from '../types/rewards'
 import { useGitHubRewards } from './useGitHubRewards'
 import { useBonusPoints } from './useBonusPoints'
+import {
+  getUserRewards as apiGetUserRewards,
+  incrementCoins as apiIncrementCoins,
+  RewardsUnauthenticatedError } from '../lib/rewardsApi'
 
 const REWARDS_STORAGE_KEY = 'kubestellar-rewards'
 /** Maximum reward events to keep in history */
@@ -127,22 +131,68 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     effectiveUserIdRef.current = effectiveUserId
   }, [effectiveUserId])
 
-  // Load rewards when user changes
+  // Load rewards when the user changes.
+  //
+  // In authenticated mode (real oauth session) the backend is the source
+  // of truth — we read localStorage first as a loading bridge so the UI
+  // hydrates instantly, then fetch `/api/rewards/me` and merge the
+  // server-authoritative coin/point/level/bonus values on top. Events and
+  // achievements remain client-only (#6011 scope covers numeric balances,
+  // not the event history).
+  //
+  // In demo/dev mode (no JWT), we keep the legacy localStorage-only path
+  // so developers can still use the app without running kc-agent.
   useEffect(() => {
-    if (effectiveUserId) {
-      const loaded = loadRewards(effectiveUserId)
-      if (loaded) {
-        setRewards(loaded)
-      } else {
-        // Initialize new user rewards
-        const initial = createInitialRewards(effectiveUserId)
+    let cancelled = false
+
+    async function hydrate() {
+      if (!effectiveUserId) {
+        setRewards(null)
+        setIsLoading(false)
+        return
+      }
+
+      // Step 1: always load the local cache first so the UI can paint
+      // immediately even if the backend is slow or unreachable.
+      const cached = loadRewards(effectiveUserId)
+      const initial = cached ?? createInitialRewards(effectiveUserId)
+      if (!cancelled) {
         setRewards(initial)
+        setIsLoading(false)
+      }
+      if (!cached) {
         saveRewards(effectiveUserId, initial)
       }
-      setIsLoading(false)
-    } else {
-      setRewards(null)
-      setIsLoading(false)
+
+      // Step 2: if this is a real authenticated session (not demo mode),
+      // pull the canonical server state and overwrite coin/point totals.
+      if (getDemoMode() || effectiveUserId === DEMO_REWARDS_USER_ID) return
+
+      try {
+        const server = await apiGetUserRewards()
+        if (cancelled) return
+        setRewards(prev => {
+          const base = prev ?? createInitialRewards(effectiveUserId)
+          const merged: UserRewards = {
+            ...base,
+            totalCoins: server.coins,
+            lifetimeCoins: Math.max(server.points, base.lifetimeCoins),
+            lastUpdated: server.updated_at,
+          }
+          saveRewards(effectiveUserId, merged)
+          return merged
+        })
+      } catch (err) {
+        // 401 simply means the user is logged out — silently fall back to
+        // the cached local state (which is what we already painted).
+        if (err instanceof RewardsUnauthenticatedError) return
+        console.warn('[useRewards] failed to fetch server rewards:', err)
+      }
+    }
+
+    hydrate()
+    return () => {
+      cancelled = true
     }
   }, [effectiveUserId])
 
@@ -151,6 +201,11 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
   // recent events, and achievements stay in sync everywhere. The `storage`
   // event only fires in OTHER tabs, never the one that wrote the value, so
   // this cannot loop.
+  //
+  // In authenticated mode we additionally re-fetch from the backend on
+  // every storage event so that the cross-tab view always lands on the
+  // server-authoritative numbers rather than whatever value the peer tab
+  // happened to write locally (issue #6011 follow-up).
   useEffect(() => {
     function handleStorage(e: StorageEvent) {
       if (e.key !== REWARDS_STORAGE_KEY) return
@@ -171,6 +226,28 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         console.error('[useRewards] Failed to parse cross-tab rewards update:', err)
       }
+
+      // Authenticated cross-tab bridge: pull the canonical server state.
+      if (getDemoMode() || id === DEMO_REWARDS_USER_ID) return
+      apiGetUserRewards()
+        .then(server => {
+          setRewards(prev => {
+            if (!prev) return prev
+            if (prev.totalCoins === server.coins && prev.lifetimeCoins === server.points) return prev
+            const merged: UserRewards = {
+              ...prev,
+              totalCoins: server.coins,
+              lifetimeCoins: Math.max(server.points, prev.lifetimeCoins),
+              lastUpdated: server.updated_at,
+            }
+            saveRewards(id, merged)
+            return merged
+          })
+        })
+        .catch(refreshErr => {
+          if (refreshErr instanceof RewardsUnauthenticatedError) return
+          console.warn('[useRewards] cross-tab server refresh failed:', refreshErr)
+        })
     }
     window.addEventListener('storage', handleStorage)
     return () => window.removeEventListener('storage', handleStorage)
@@ -188,7 +265,13 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     return rewards.events.filter(e => e.action === action).length
   }, [rewards])
 
-  // Award coins for an action
+  // Award coins for an action.
+  //
+  // Updates local state + localStorage optimistically (so the UI is
+  // instantly responsive) and also mirrors the delta to the backend
+  // persistence endpoint when the user is authenticated. Network errors
+  // are logged but do NOT roll back the optimistic state — the next load
+  // will reconcile against the server row.
   const awardCoins = (action: RewardActionType, metadata?: Record<string, unknown>): boolean => {
     if (!rewards || !effectiveUserId) return false
 
@@ -228,6 +311,17 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
 
     setRewards(updated)
     saveRewards(effectiveUserId, updated)
+
+    // Mirror to backend for authenticated sessions. Demo mode and the
+    // shared "demo-user" bucket are intentionally excluded — they have no
+    // JWT so the request would always 401.
+    const isDemoSession = getDemoMode() || effectiveUserId === DEMO_REWARDS_USER_ID
+    if (!isDemoSession) {
+      apiIncrementCoins(rewardConfig.coins).catch(err => {
+        if (err instanceof RewardsUnauthenticatedError) return
+        console.warn('[useRewards] failed to persist coin delta to backend:', err)
+      })
+    }
 
     return true
   }

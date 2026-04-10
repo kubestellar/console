@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/store"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -171,5 +172,71 @@ func (m *MockStore) ListActiveGPUReservations() ([]models.GPUReservation, error)
 func (m *MockStore) RevokeToken(jti string, expiresAt time.Time) error { return nil }
 func (m *MockStore) IsTokenRevoked(jti string) (bool, error)           { return false, nil }
 func (m *MockStore) CleanupExpiredTokens() (int64, error)              { return 0, nil }
+
+// GetUserRewards is overridable via testify/mock expectations so reward
+// handler tests can inject per-user state without touching SQLite.
+func (m *MockStore) GetUserRewards(userID string) (*store.UserRewards, error) {
+	if len(m.ExpectedCalls) == 0 {
+		return &store.UserRewards{UserID: userID, Level: store.DefaultUserLevel}, nil
+	}
+	for _, call := range m.ExpectedCalls {
+		if call.Method == "GetUserRewards" {
+			args := m.Called(userID)
+			if args.Get(0) == nil {
+				return nil, args.Error(1)
+			}
+			return args.Get(0).(*store.UserRewards), args.Error(1)
+		}
+	}
+	return &store.UserRewards{UserID: userID, Level: store.DefaultUserLevel}, nil
+}
+
+// UpdateUserRewards is overridable via testify/mock expectations.
+func (m *MockStore) UpdateUserRewards(rewards *store.UserRewards) error {
+	if len(m.ExpectedCalls) == 0 {
+		return nil
+	}
+	for _, call := range m.ExpectedCalls {
+		if call.Method == "UpdateUserRewards" {
+			args := m.Called(rewards)
+			return args.Error(0)
+		}
+	}
+	return nil
+}
+
+// IncrementUserCoins is overridable via testify/mock expectations.
+func (m *MockStore) IncrementUserCoins(userID string, delta int) (*store.UserRewards, error) {
+	if len(m.ExpectedCalls) == 0 {
+		return &store.UserRewards{UserID: userID, Level: store.DefaultUserLevel, Coins: delta}, nil
+	}
+	for _, call := range m.ExpectedCalls {
+		if call.Method == "IncrementUserCoins" {
+			args := m.Called(userID, delta)
+			if args.Get(0) == nil {
+				return nil, args.Error(1)
+			}
+			return args.Get(0).(*store.UserRewards), args.Error(1)
+		}
+	}
+	return &store.UserRewards{UserID: userID, Level: store.DefaultUserLevel, Coins: delta}, nil
+}
+
+// ClaimDailyBonus is overridable via testify/mock expectations.
+func (m *MockStore) ClaimDailyBonus(userID string, bonusAmount int, minInterval time.Duration, now time.Time) (*store.UserRewards, error) {
+	if len(m.ExpectedCalls) == 0 {
+		return &store.UserRewards{UserID: userID, Level: store.DefaultUserLevel, BonusPoints: bonusAmount, LastDailyBonusAt: &now}, nil
+	}
+	for _, call := range m.ExpectedCalls {
+		if call.Method == "ClaimDailyBonus" {
+			args := m.Called(userID, bonusAmount, minInterval, now)
+			if args.Get(0) == nil {
+				return nil, args.Error(1)
+			}
+			return args.Get(0).(*store.UserRewards), args.Error(1)
+		}
+	}
+	return &store.UserRewards{UserID: userID, Level: store.DefaultUserLevel, BonusPoints: bonusAmount, LastDailyBonusAt: &now}, nil
+}
 
 func (m *MockStore) Close() error { return nil }

@@ -21,6 +21,21 @@ import (
 // map this error to HTTP 429 Too Many Requests.
 var ErrDashboardCardLimitReached = errors.New("dashboard card limit reached")
 
+// ErrDailyBonusUnavailable is returned by ClaimDailyBonus when the user's
+// last claim is within the daily-bonus cooldown window (issue #6011).
+// Handlers should map this error to HTTP 429 Too Many Requests.
+var ErrDailyBonusUnavailable = errors.New("daily bonus already claimed within cooldown window")
+
+// MinCoinBalance is the floor for user coin balances. Negative increments
+// are clamped to this value so buggy clients cannot drive balances below
+// zero. Exported so handlers and tests can reference the same constant.
+const MinCoinBalance = 0
+
+// DefaultUserLevel is the level assigned to brand-new reward rows. Rewards
+// rows are created on-demand the first time a user mutates their balance,
+// so every user effectively starts at level 1.
+const DefaultUserLevel = 1
+
 // SQLite connection pool defaults
 const (
 	// sqliteDefaultMaxOpenConns limits concurrent database connections
@@ -283,6 +298,21 @@ func (s *SQLiteStore) migrate() error {
 		expires_at DATETIME NOT NULL
 	);
 	CREATE INDEX IF NOT EXISTS idx_revoked_tokens_expires ON revoked_tokens(expires_at);
+
+	-- User rewards persistence (issue #6011): coin/point/level/bonus balances
+	-- survive browser cache clears, private windows and device switches. The
+	-- canonical store is server-side; the frontend treats localStorage as a
+	-- loading-bridge cache only.
+	CREATE TABLE IF NOT EXISTS user_rewards (
+		user_id TEXT PRIMARY KEY,
+		coins INTEGER NOT NULL DEFAULT 0,
+		points INTEGER NOT NULL DEFAULT 0,
+		level INTEGER NOT NULL DEFAULT 1,
+		bonus_points INTEGER NOT NULL DEFAULT 0,
+		last_daily_bonus_at DATETIME,
+		updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE INDEX IF NOT EXISTS idx_user_rewards_updated ON user_rewards(updated_at);
 	`
 	_, err := s.db.Exec(schema)
 	if err != nil {
@@ -1713,4 +1743,240 @@ func (s *SQLiteStore) CleanupExpiredTokens() (int64, error) {
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+// User Rewards methods (issue #6011)
+
+// scanUserRewardsRow decodes a single user_rewards row into a *UserRewards.
+// last_daily_bonus_at is nullable in the schema; a NULL value maps to a nil
+// pointer so callers can distinguish "never claimed" from "claimed at zero".
+func scanUserRewardsRow(row interface {
+	Scan(dest ...any) error
+}) (*UserRewards, error) {
+	var r UserRewards
+	var lastBonus sql.NullTime
+	if err := row.Scan(&r.UserID, &r.Coins, &r.Points, &r.Level, &r.BonusPoints, &lastBonus, &r.UpdatedAt); err != nil {
+		return nil, err
+	}
+	if lastBonus.Valid {
+		t := lastBonus.Time
+		r.LastDailyBonusAt = &t
+	}
+	return &r, nil
+}
+
+// GetUserRewards returns the persisted rewards row for userID, or a zero-value
+// struct (UserID set, Level=DefaultUserLevel, counters 0, LastDailyBonusAt nil)
+// if no row exists yet. A missing row is NOT an error — every authenticated
+// user is implicitly at the default starting balance until they earn their
+// first coin.
+func (s *SQLiteStore) GetUserRewards(userID string) (*UserRewards, error) {
+	if userID == "" {
+		return nil, errors.New("user_id is required")
+	}
+	row := s.db.QueryRow(
+		`SELECT user_id, coins, points, level, bonus_points, last_daily_bonus_at, updated_at
+		 FROM user_rewards WHERE user_id = ?`, userID,
+	)
+	r, err := scanUserRewardsRow(row)
+	if err == sql.ErrNoRows {
+		return &UserRewards{
+			UserID:    userID,
+			Level:     DefaultUserLevel,
+			UpdatedAt: time.Now(),
+		}, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get user rewards: %w", err)
+	}
+	return r, nil
+}
+
+// UpdateUserRewards upserts the full rewards row. Callers pass the desired
+// end-state; the stored updated_at timestamp is always rewritten to now.
+// Coin/point/level values below their allowed floor are clamped.
+func (s *SQLiteStore) UpdateUserRewards(rewards *UserRewards) error {
+	if rewards == nil || rewards.UserID == "" {
+		return errors.New("rewards.UserID is required")
+	}
+	if rewards.Coins < MinCoinBalance {
+		rewards.Coins = MinCoinBalance
+	}
+	if rewards.Points < 0 {
+		rewards.Points = 0
+	}
+	if rewards.Level < DefaultUserLevel {
+		rewards.Level = DefaultUserLevel
+	}
+	if rewards.BonusPoints < 0 {
+		rewards.BonusPoints = 0
+	}
+	now := time.Now()
+	rewards.UpdatedAt = now
+
+	var lastBonus sql.NullTime
+	if rewards.LastDailyBonusAt != nil {
+		lastBonus = sql.NullTime{Time: *rewards.LastDailyBonusAt, Valid: true}
+	}
+
+	_, err := s.db.Exec(
+		`INSERT INTO user_rewards (user_id, coins, points, level, bonus_points, last_daily_bonus_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(user_id) DO UPDATE SET
+		   coins = excluded.coins,
+		   points = excluded.points,
+		   level = excluded.level,
+		   bonus_points = excluded.bonus_points,
+		   last_daily_bonus_at = excluded.last_daily_bonus_at,
+		   updated_at = excluded.updated_at`,
+		rewards.UserID, rewards.Coins, rewards.Points, rewards.Level,
+		rewards.BonusPoints, lastBonus, now,
+	)
+	if err != nil {
+		return fmt.Errorf("upsert user rewards: %w", err)
+	}
+	return nil
+}
+
+// IncrementUserCoins atomically adds delta to the user's coin balance inside
+// a single transaction so concurrent writers cannot produce torn updates.
+// A row is created on the fly if the user has never earned a coin before.
+// Negative deltas are permitted but the resulting balance is clamped to
+// MinCoinBalance; the returned *UserRewards reflects the clamped value.
+func (s *SQLiteStore) IncrementUserCoins(userID string, delta int) (*UserRewards, error) {
+	if userID == "" {
+		return nil, errors.New("user_id is required")
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck // best-effort rollback on error paths
+
+	row := tx.QueryRow(
+		`SELECT user_id, coins, points, level, bonus_points, last_daily_bonus_at, updated_at
+		 FROM user_rewards WHERE user_id = ?`, userID,
+	)
+	current, scanErr := scanUserRewardsRow(row)
+	if scanErr == sql.ErrNoRows {
+		current = &UserRewards{
+			UserID: userID,
+			Level:  DefaultUserLevel,
+		}
+	} else if scanErr != nil {
+		return nil, fmt.Errorf("read current rewards: %w", scanErr)
+	}
+
+	newCoins := current.Coins + delta
+	if newCoins < MinCoinBalance {
+		newCoins = MinCoinBalance
+	}
+	// Positive deltas also accumulate into the lifetime "points" column so
+	// callers that use POST /api/rewards/coins for everyday earn events get
+	// a free lifetime-total bump. Negative deltas do NOT reduce lifetime.
+	newPoints := current.Points
+	if delta > 0 {
+		newPoints += delta
+	}
+	current.Coins = newCoins
+	current.Points = newPoints
+	now := time.Now()
+	current.UpdatedAt = now
+
+	var lastBonus sql.NullTime
+	if current.LastDailyBonusAt != nil {
+		lastBonus = sql.NullTime{Time: *current.LastDailyBonusAt, Valid: true}
+	}
+
+	if _, err := tx.Exec(
+		`INSERT INTO user_rewards (user_id, coins, points, level, bonus_points, last_daily_bonus_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(user_id) DO UPDATE SET
+		   coins = excluded.coins,
+		   points = excluded.points,
+		   level = excluded.level,
+		   bonus_points = excluded.bonus_points,
+		   last_daily_bonus_at = excluded.last_daily_bonus_at,
+		   updated_at = excluded.updated_at`,
+		current.UserID, current.Coins, current.Points, current.Level,
+		current.BonusPoints, lastBonus, now,
+	); err != nil {
+		return nil, fmt.Errorf("increment user coins: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit tx: %w", err)
+	}
+	return current, nil
+}
+
+// ClaimDailyBonus atomically awards bonusAmount to the user only if at least
+// minInterval has elapsed since LastDailyBonusAt. When the cooldown has not
+// expired, returns (nil, ErrDailyBonusUnavailable). The caller-provided now
+// allows tests to exercise the cooldown deterministically without sleeping.
+func (s *SQLiteStore) ClaimDailyBonus(userID string, bonusAmount int, minInterval time.Duration, now time.Time) (*UserRewards, error) {
+	if userID == "" {
+		return nil, errors.New("user_id is required")
+	}
+	if bonusAmount < 0 {
+		return nil, errors.New("bonusAmount must be non-negative")
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck // best-effort rollback on error paths
+
+	row := tx.QueryRow(
+		`SELECT user_id, coins, points, level, bonus_points, last_daily_bonus_at, updated_at
+		 FROM user_rewards WHERE user_id = ?`, userID,
+	)
+	current, scanErr := scanUserRewardsRow(row)
+	if scanErr == sql.ErrNoRows {
+		current = &UserRewards{
+			UserID: userID,
+			Level:  DefaultUserLevel,
+		}
+	} else if scanErr != nil {
+		return nil, fmt.Errorf("read current rewards: %w", scanErr)
+	}
+
+	// Cooldown check — the first claim always goes through because
+	// LastDailyBonusAt is nil for brand-new users.
+	if current.LastDailyBonusAt != nil {
+		elapsed := now.Sub(*current.LastDailyBonusAt)
+		if elapsed < minInterval {
+			return nil, ErrDailyBonusUnavailable
+		}
+	}
+
+	current.BonusPoints += bonusAmount
+	current.Points += bonusAmount
+	claimedAt := now
+	current.LastDailyBonusAt = &claimedAt
+	current.UpdatedAt = now
+
+	lastBonus := sql.NullTime{Time: claimedAt, Valid: true}
+	if _, err := tx.Exec(
+		`INSERT INTO user_rewards (user_id, coins, points, level, bonus_points, last_daily_bonus_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(user_id) DO UPDATE SET
+		   coins = excluded.coins,
+		   points = excluded.points,
+		   level = excluded.level,
+		   bonus_points = excluded.bonus_points,
+		   last_daily_bonus_at = excluded.last_daily_bonus_at,
+		   updated_at = excluded.updated_at`,
+		current.UserID, current.Coins, current.Points, current.Level,
+		current.BonusPoints, lastBonus, now,
+	); err != nil {
+		return nil, fmt.Errorf("claim daily bonus: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit tx: %w", err)
+	}
+	return current, nil
 }

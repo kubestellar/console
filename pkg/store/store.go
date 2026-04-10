@@ -7,6 +7,21 @@ import (
 	"github.com/kubestellar/console/pkg/models"
 )
 
+// UserRewards captures the persisted gamification state for a single user
+// (issue #6011). Prior to this table the balance lived only in localStorage
+// and was lost whenever the browser cache was cleared. user_id is a free-form
+// string so both real user UUIDs and the shared "demo-user" dev-mode bucket
+// can be used interchangeably.
+type UserRewards struct {
+	UserID           string
+	Coins            int
+	Points           int
+	Level            int
+	BonusPoints      int
+	LastDailyBonusAt *time.Time
+	UpdatedAt        time.Time
+}
+
 // Store defines the interface for data persistence
 type Store interface {
 	// Users
@@ -104,6 +119,24 @@ type Store interface {
 	RevokeToken(jti string, expiresAt time.Time) error
 	IsTokenRevoked(jti string) (bool, error)
 	CleanupExpiredTokens() (int64, error)
+
+	// User Rewards (issue #6011) — persistent coin/point/level balances.
+	// GetUserRewards returns a zero-value *UserRewards (Level=1, UserID set,
+	// all counters 0) when no row exists; it is NOT an error to read a
+	// never-persisted user.
+	GetUserRewards(userID string) (*UserRewards, error)
+	// UpdateUserRewards upserts the full reward state for the user.
+	UpdateUserRewards(rewards *UserRewards) error
+	// IncrementUserCoins atomically adds delta to the user's coin balance and
+	// returns the new state. Negative deltas are allowed but the resulting
+	// balance is clamped to MinCoinBalance (0) — callers receive the clamped
+	// row so they can display the effective balance.
+	IncrementUserCoins(userID string, delta int) (*UserRewards, error)
+	// ClaimDailyBonus atomically awards bonusAmount to the user if their
+	// LastDailyBonusAt is older than minInterval relative to now. Returns
+	// (nil, ErrDailyBonusUnavailable) when the cooldown has not elapsed so
+	// handlers can return a 429 without a second round-trip.
+	ClaimDailyBonus(userID string, bonusAmount int, minInterval time.Duration, now time.Time) (*UserRewards, error)
 
 	// Lifecycle
 	Close() error

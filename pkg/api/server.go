@@ -969,6 +969,15 @@ func (s *Server) setupRoutes() {
 	})
 	api.Get("/rewards/github", rewardsHandler.GetGitHubRewards)
 
+	// Persistent per-user reward balances (issue #6011). Every authenticated
+	// user can read and mutate their own row — no RBAC gate needed because
+	// the handler scopes every query by the JWT-derived user id.
+	rewardsPersistence := handlers.NewRewardsPersistenceHandler(s.store)
+	api.Get("/rewards/me", rewardsPersistence.GetUserRewards)
+	api.Put("/rewards/me", rewardsPersistence.UpdateUserRewards)
+	api.Post("/rewards/coins", rewardsPersistence.IncrementCoins)
+	api.Post("/rewards/daily-bonus", rewardsPersistence.ClaimDailyBonus)
+
 	// Nightly E2E status (GitHub Actions proxy with server-side token + cache)
 	nightlyE2E := handlers.NewNightlyE2EHandler(s.config.GitHubToken)
 	api.Get("/nightly-e2e/runs", nightlyE2E.GetRuns)
