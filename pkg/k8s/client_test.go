@@ -845,6 +845,58 @@ func TestGetServices_EndpointsAndLoadBalancer(t *testing.T) {
 	}
 }
 
+// TestGetServices_PortDetailsAndSelector verifies issues #6163
+// (port names surfaced via PortDetails) and #6164/#6166 (selector
+// exposed so the frontend can detect orphaned / misconfigured services).
+func TestGetServices_PortDetailsAndSelector(t *testing.T) {
+	m, _ := NewMultiClusterClient("")
+
+	const (
+		httpPort       = int32(80)
+		metricsPort    = int32(9090)
+		expectedSelKey = "app"
+		expectedSelVal = "web"
+	)
+
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "with-names", Namespace: "default"},
+		Spec: corev1.ServiceSpec{
+			Type:     corev1.ServiceTypeClusterIP,
+			Selector: map[string]string{expectedSelKey: expectedSelVal},
+			Ports: []corev1.ServicePort{
+				{Name: "http", Port: httpPort, Protocol: corev1.ProtocolTCP},
+				{Name: "metrics", Port: metricsPort, Protocol: corev1.ProtocolTCP},
+			},
+		},
+	}
+
+	fakeCS := k8sfake.NewSimpleClientset(svc)
+	m.clients["c1"] = fakeCS
+
+	svcs, err := m.GetServices(context.Background(), "c1", "default")
+	if err != nil {
+		t.Fatalf("GetServices failed: %v", err)
+	}
+	if len(svcs) != 1 {
+		t.Fatalf("expected 1 service, got %d", len(svcs))
+	}
+	got := svcs[0]
+
+	const expectedPortCount = 2
+	if len(got.PortDetails) != expectedPortCount {
+		t.Fatalf("expected %d port details, got %d", expectedPortCount, len(got.PortDetails))
+	}
+	if got.PortDetails[0].Name != "http" || got.PortDetails[0].Port != httpPort {
+		t.Errorf("port[0]: expected http/%d, got %s/%d", httpPort, got.PortDetails[0].Name, got.PortDetails[0].Port)
+	}
+	if got.PortDetails[1].Name != "metrics" || got.PortDetails[1].Port != metricsPort {
+		t.Errorf("port[1]: expected metrics/%d, got %s/%d", metricsPort, got.PortDetails[1].Name, got.PortDetails[1].Port)
+	}
+	if got.Selector[expectedSelKey] != expectedSelVal {
+		t.Errorf("selector: expected %s=%s, got %v", expectedSelKey, expectedSelVal, got.Selector)
+	}
+}
+
 func TestGetJobs(t *testing.T) {
 	m, _ := NewMultiClusterClient("")
 
