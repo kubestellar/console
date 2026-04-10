@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gofiber/contrib/websocket"
+	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
 	corev1 "k8s.io/api/core/v1"
@@ -23,6 +24,91 @@ const execAuthDeadline = 5 * time.Second
 // execMaxStdinBytes is the maximum allowed size of a single stdin message.
 // Messages exceeding this limit are silently dropped to prevent memory exhaustion.
 const execMaxStdinBytes = 1 * 1024 * 1024 // 1 MB
+
+// execSessionRegistry tracks active exec sessions per user so that
+// CancelUserExecSessions can tear them down on logout (#6024).
+//
+// The /ws/exec handler does not register with the WebSocket Hub (it runs its
+// own read loop and does not exchange JSON frames with the hub), so the
+// Hub.DisconnectUser path used by Logout cannot see exec sessions. This
+// registry bridges that gap: when a new exec session's stream context is
+// created, the cancel function is recorded here keyed by userID. On logout,
+// CancelUserExecSessions runs every recorded cancel for that user, which
+// unblocks executor.StreamWithContext and causes the WebSocket handler to
+// exit its goroutines and close the connection.
+//
+// A regular sync.Mutex is used (not RWMutex) because writes (add/remove on
+// session start/end) and reads (CancelUserExecSessions on logout) are both
+// infrequent and always short; an RWMutex would add complexity for no gain.
+var (
+	execSessionsMu sync.Mutex
+	execSessions   = make(map[uuid.UUID]map[int64]context.CancelFunc)
+	execSessionSeq int64 // monotonic id generator, guarded by execSessionsMu
+)
+
+// registerExecSession records cancel under userID and returns the assigned
+// session id. The session id is used by unregisterExecSession to remove the
+// specific entry when the session ends normally, so the map does not grow
+// unbounded across many sessions by the same user.
+func registerExecSession(userID uuid.UUID, cancel context.CancelFunc) int64 {
+	execSessionsMu.Lock()
+	defer execSessionsMu.Unlock()
+	execSessionSeq++
+	id := execSessionSeq
+	sessions, ok := execSessions[userID]
+	if !ok {
+		sessions = make(map[int64]context.CancelFunc)
+		execSessions[userID] = sessions
+	}
+	sessions[id] = cancel
+	return id
+}
+
+// unregisterExecSession removes a single session entry. Called from the exec
+// handler's deferred cleanup on normal session end so the registry stays
+// bounded by the number of concurrently live exec sessions, not the total
+// lifetime count.
+func unregisterExecSession(userID uuid.UUID, id int64) {
+	execSessionsMu.Lock()
+	defer execSessionsMu.Unlock()
+	sessions, ok := execSessions[userID]
+	if !ok {
+		return
+	}
+	delete(sessions, id)
+	if len(sessions) == 0 {
+		delete(execSessions, userID)
+	}
+}
+
+// CancelUserExecSessions cancels every active exec session belonging to the
+// given user and clears the entries from the registry. Called from the auth
+// Logout handler after revoking the JWT so that any pod shell the user had
+// open stops accepting input and unblocks the StreamWithContext goroutine
+// (#6024). Safe to call with a userID that has no live sessions.
+func CancelUserExecSessions(userID uuid.UUID) {
+	execSessionsMu.Lock()
+	sessions, ok := execSessions[userID]
+	if !ok {
+		execSessionsMu.Unlock()
+		return
+	}
+	// Take ownership of the cancel funcs under the lock, then release the
+	// lock before invoking them. Calling cancel() itself is cheap but the
+	// goroutines it unblocks may contend for other locks; holding
+	// execSessionsMu across those is unnecessary and risks deadlock.
+	cancels := make([]context.CancelFunc, 0, len(sessions))
+	for _, c := range sessions {
+		cancels = append(cancels, c)
+	}
+	delete(execSessions, userID)
+	execSessionsMu.Unlock()
+
+	for _, cancel := range cancels {
+		cancel()
+	}
+	slog.Info("[Exec] cancelled exec sessions for user", "user", userID, "count", len(cancels))
+}
 
 // ExecHandlers handles pod exec API endpoints
 type ExecHandlers struct {
@@ -299,6 +385,16 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 	// the exec stream is cancelled promptly — preventing goroutine and SPDY leaks.
 	execCtx, execCancel := context.WithCancel(context.Background())
 	defer execCancel()
+
+	// Register this cancel with the per-user exec session registry so a later
+	// Logout call can tear the stream down even though /ws/exec is not tracked
+	// by the WebSocket Hub (#6024). Only register when we have a real userID —
+	// in dev/demo without a valid UserID claim there is nothing to key on.
+	var execRegistrationID int64
+	if claims.UserID != uuid.Nil {
+		execRegistrationID = registerExecSession(claims.UserID, execCancel)
+		defer unregisterExecSession(claims.UserID, execRegistrationID)
+	}
 
 	// Start a goroutine to read WebSocket messages and route them
 	done := make(chan struct{})

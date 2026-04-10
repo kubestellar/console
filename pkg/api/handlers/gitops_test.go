@@ -106,7 +106,8 @@ var gitopsRBACUserID = uuid.MustParse("00000000-0000-0000-0000-000000000abc")
 
 // newGitOpsRBACApp builds a Fiber app + GitOpsHandlers wired to a MockStore
 // that returns the given role for the test user. Use this to verify that
-// mutating GitOps endpoints enforce the console-admin role (#5972, #5973).
+// mutating GitOps endpoints enforce editor-or-admin and drift detection
+// enforces viewer-or-above (#6022).
 func newGitOpsRBACApp(t *testing.T, role models.UserRole) (*fiber.App, *GitOpsHandlers) {
 	t.Helper()
 	mockStore := new(test.MockStore)
@@ -124,55 +125,137 @@ func newGitOpsRBACApp(t *testing.T, role models.UserRole) (*fiber.App, *GitOpsHa
 	return app, handler
 }
 
-func TestGitOps_Sync_RequiresAdmin_ViewerForbidden(t *testing.T) {
-	app, handler := newGitOpsRBACApp(t, models.UserRoleViewer)
-	app.Post("/api/gitops/sync", handler.Sync)
+// statusPastRBAC is the HTTP status a mutation handler returns after passing
+// the RBAC gate but failing input validation on an empty body (missing
+// repoUrl / missing release name). Tests use it as a sentinel to prove the
+// caller was authorized — any 403 instead of this would mean RBAC rejected
+// the caller.
+const statusPastRBAC = http.StatusBadRequest
 
-	body := strings.NewReader(`{"repoUrl":"https://example.com/repo.git","path":"."}`)
-	req, err := http.NewRequest(http.MethodPost, "/api/gitops/sync", body)
-	require.NoError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req, fiberTestTimeout)
-	require.NoError(t, err)
-	assert.Equal(t, http.StatusForbidden, resp.StatusCode,
-		"viewer-role users must not be able to trigger GitOps sync (#5972)")
+// mutationCase describes a single editor-or-admin gitops endpoint that
+// should accept editors and admins but reject viewers (#6022).
+type mutationCase struct {
+	name   string
+	path   string
+	body   string
+	wire   func(app *fiber.App, h *GitOpsHandlers, path string)
 }
 
-func TestGitOps_Sync_RequiresAdmin_AdminAllowed(t *testing.T) {
-	app, handler := newGitOpsRBACApp(t, models.UserRoleAdmin)
-	app.Post("/api/gitops/sync", handler.Sync)
-
-	// Empty body so we don't actually shell out to kubectl — just past the
-	// admin check. The handler then fails validation for missing repoUrl.
-	req, err := http.NewRequest(http.MethodPost, "/api/gitops/sync", strings.NewReader(`{}`))
-	require.NoError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req, fiberTestTimeout)
-	require.NoError(t, err)
-	// Past the admin check, the handler rejects with 400 ("repoUrl is required").
-	// That's proof the admin was authorized and reached the validation step.
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode,
-		"admin should pass RBAC and reach repoUrl validation")
+func gitopsMutationCases() []mutationCase {
+	return []mutationCase{
+		{
+			name: "sync",
+			path: "/api/gitops/sync",
+			body: `{}`,
+			wire: func(app *fiber.App, h *GitOpsHandlers, p string) { app.Post(p, h.Sync) },
+		},
+		{
+			name: "helm-upgrade",
+			path: "/api/gitops/helm-upgrade",
+			body: `{}`,
+			wire: func(app *fiber.App, h *GitOpsHandlers, p string) { app.Post(p, h.UpgradeHelmRelease) },
+		},
+		{
+			name: "helm-uninstall",
+			path: "/api/gitops/helm-uninstall",
+			body: `{}`,
+			wire: func(app *fiber.App, h *GitOpsHandlers, p string) { app.Post(p, h.UninstallHelmRelease) },
+		},
+		{
+			name: "helm-rollback",
+			path: "/api/gitops/helm-rollback",
+			body: `{}`,
+			wire: func(app *fiber.App, h *GitOpsHandlers, p string) { app.Post(p, h.RollbackHelmRelease) },
+		},
+	}
 }
 
-func TestGitOps_DetectDrift_RequiresAdmin_ViewerForbidden(t *testing.T) {
+func TestGitOps_Mutations_ViewerForbidden(t *testing.T) {
+	for _, tc := range gitopsMutationCases() {
+		t.Run(tc.name, func(t *testing.T) {
+			app, handler := newGitOpsRBACApp(t, models.UserRoleViewer)
+			tc.wire(app, handler, tc.path)
+
+			req, err := http.NewRequest(http.MethodPost, tc.path, strings.NewReader(tc.body))
+			require.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+
+			resp, err := app.Test(req, fiberTestTimeout)
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusForbidden, resp.StatusCode,
+				"viewer-role users must not be able to trigger mutating gitops endpoints (#6022)")
+		})
+	}
+}
+
+func TestGitOps_Mutations_EditorAllowed(t *testing.T) {
+	for _, tc := range gitopsMutationCases() {
+		t.Run(tc.name, func(t *testing.T) {
+			app, handler := newGitOpsRBACApp(t, models.UserRoleEditor)
+			tc.wire(app, handler, tc.path)
+
+			req, err := http.NewRequest(http.MethodPost, tc.path, strings.NewReader(tc.body))
+			require.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+
+			resp, err := app.Test(req, fiberTestTimeout)
+			require.NoError(t, err)
+			assert.Equal(t, statusPastRBAC, resp.StatusCode,
+				"editor should pass RBAC and reach body validation (#6022)")
+		})
+	}
+}
+
+func TestGitOps_Mutations_AdminAllowed(t *testing.T) {
+	for _, tc := range gitopsMutationCases() {
+		t.Run(tc.name, func(t *testing.T) {
+			app, handler := newGitOpsRBACApp(t, models.UserRoleAdmin)
+			tc.wire(app, handler, tc.path)
+
+			req, err := http.NewRequest(http.MethodPost, tc.path, strings.NewReader(tc.body))
+			require.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+
+			resp, err := app.Test(req, fiberTestTimeout)
+			require.NoError(t, err)
+			assert.Equal(t, statusPastRBAC, resp.StatusCode,
+				"admin should pass RBAC and reach body validation (#6022)")
+		})
+	}
+}
+
+// TestGitOps_DetectDrift_ViewerAllowed verifies that drift detection is
+// gated as viewer-or-above — viewers can run drift reports because the
+// operation is read-oriented, even though it was historically admin-only.
+// Post-#6022 policy: viewers can detect drift but not act on it.
+func TestGitOps_DetectDrift_ViewerAllowed(t *testing.T) {
 	app, handler := newGitOpsRBACApp(t, models.UserRoleViewer)
 	app.Post("/api/gitops/detect-drift", handler.DetectDrift)
 
-	body := strings.NewReader(`{"repoUrl":"https://example.com/repo.git","path":"."}`)
-	req, err := http.NewRequest(http.MethodPost, "/api/gitops/detect-drift", body)
+	req, err := http.NewRequest(http.MethodPost, "/api/gitops/detect-drift", strings.NewReader(`{}`))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusForbidden, resp.StatusCode,
-		"viewer-role users must not be able to trigger drift detection (#5973)")
+	assert.Equal(t, statusPastRBAC, resp.StatusCode,
+		"viewer should pass RBAC and reach repoUrl validation (#6022)")
 }
 
-func TestGitOps_DetectDrift_RequiresAdmin_AdminAllowed(t *testing.T) {
+func TestGitOps_DetectDrift_EditorAllowed(t *testing.T) {
+	app, handler := newGitOpsRBACApp(t, models.UserRoleEditor)
+	app.Post("/api/gitops/detect-drift", handler.DetectDrift)
+
+	req, err := http.NewRequest(http.MethodPost, "/api/gitops/detect-drift", strings.NewReader(`{}`))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	assert.Equal(t, statusPastRBAC, resp.StatusCode)
+}
+
+func TestGitOps_DetectDrift_AdminAllowed(t *testing.T) {
 	app, handler := newGitOpsRBACApp(t, models.UserRoleAdmin)
 	app.Post("/api/gitops/detect-drift", handler.DetectDrift)
 
@@ -182,13 +265,11 @@ func TestGitOps_DetectDrift_RequiresAdmin_AdminAllowed(t *testing.T) {
 
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
-	// Past the admin check, rejects with 400 ("repoUrl is required").
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode,
-		"admin should pass RBAC and reach repoUrl validation")
+	assert.Equal(t, statusPastRBAC, resp.StatusCode)
 }
 
 func TestGitOps_Sync_NilStore_SkipsRBAC(t *testing.T) {
-	// Dev/demo mode: no user store configured → requireAdmin is a no-op.
+	// Dev/demo mode: no user store configured → RBAC helpers are a no-op.
 	// This preserves existing test ergonomics and local dev behavior.
 	app, handler := setupGitOpsTest()
 	app.Post("/api/gitops/sync", handler.Sync)

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -210,6 +211,80 @@ func generateTestToken(secret string, expiry time.Time) (string, error) {
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(secret))
+}
+
+// TestJWTAuth_StaleHeaderFallsBackToCookie covers #6026: when a request
+// presents BOTH an Authorization bearer header AND a kc_auth cookie, and
+// the header token fails to parse (stale/invalid), the middleware should
+// fall back to the cookie instead of returning 401. The scenario happens
+// after a silent token refresh — the browser updates the cookie, but an
+// in-flight request (or a cached fetch wrapper) may still send the old
+// bearer value. Without the fallback users see spurious 401s and get
+// bounced to login even though their session is still valid.
+func TestJWTAuth_StaleHeaderFallsBackToCookie(t *testing.T) {
+	secret := "test-secret"
+	app := fiber.New()
+	app.Get("/protected", JWTAuth(secret), func(c *fiber.Ctx) error {
+		return c.SendString("success")
+	})
+
+	t.Run("Stale Bearer + Valid Cookie Falls Back (#6026)", func(t *testing.T) {
+		// Header token signed with the wrong secret — simulates a stale or
+		// otherwise invalid bearer. Cookie token is validly signed.
+		staleHeaderToken, _ := generateTestToken("WRONG-SECRET", time.Now().Add(time.Hour))
+		validCookieToken, _ := generateTestToken(secret, time.Now().Add(time.Hour))
+
+		req := httptest.NewRequest("GET", "/protected", nil)
+		req.Header.Set("Authorization", "Bearer "+staleHeaderToken)
+		req.AddCookie(&http.Cookie{Name: jwtCookieName, Value: validCookieToken})
+
+		resp, err := app.Test(req, 5000)
+		assert.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode, "fallback to valid cookie should succeed")
+	})
+
+	t.Run("Stale Bearer + Missing Cookie Still 401", func(t *testing.T) {
+		// No cookie present — fallback can't engage, request must still fail.
+		staleHeaderToken, _ := generateTestToken("WRONG-SECRET", time.Now().Add(time.Hour))
+
+		req := httptest.NewRequest("GET", "/protected", nil)
+		req.Header.Set("Authorization", "Bearer "+staleHeaderToken)
+
+		resp, err := app.Test(req, 5000)
+		assert.NoError(t, err)
+		assert.Equal(t, 401, resp.StatusCode)
+	})
+
+	t.Run("Stale Bearer + Stale Cookie Still 401", func(t *testing.T) {
+		// Both tokens invalid — fallback must not silently accept the
+		// cookie just because it's present; the cookie still has to parse.
+		staleHeaderToken, _ := generateTestToken("WRONG-SECRET", time.Now().Add(time.Hour))
+		staleCookieToken, _ := generateTestToken("ALSO-WRONG", time.Now().Add(time.Hour))
+
+		req := httptest.NewRequest("GET", "/protected", nil)
+		req.Header.Set("Authorization", "Bearer "+staleHeaderToken)
+		req.AddCookie(&http.Cookie{Name: jwtCookieName, Value: staleCookieToken})
+
+		resp, err := app.Test(req, 5000)
+		assert.NoError(t, err)
+		assert.Equal(t, 401, resp.StatusCode)
+	})
+
+	t.Run("Valid Bearer Cookie Ignored", func(t *testing.T) {
+		// Header is valid — fallback path is not engaged, so even a broken
+		// cookie should not matter. This guards against regressions where
+		// someone accidentally starts consulting the cookie on the happy path.
+		validHeaderToken, _ := generateTestToken(secret, time.Now().Add(time.Hour))
+		brokenCookieToken, _ := generateTestToken("WRONG-SECRET", time.Now().Add(time.Hour))
+
+		req := httptest.NewRequest("GET", "/protected", nil)
+		req.Header.Set("Authorization", "Bearer "+validHeaderToken)
+		req.AddCookie(&http.Cookie{Name: jwtCookieName, Value: brokenCookieToken})
+
+		resp, err := app.Test(req, 5000)
+		assert.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+	})
 }
 
 func TestValidateJWT(t *testing.T) {

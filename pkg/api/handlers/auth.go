@@ -536,6 +536,16 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 		h.wsHub.DisconnectUser(claims.UserID)
 	}
 
+	// Cancel any active /ws/exec sessions for this user (#6024). Exec
+	// sessions are not tracked by the WebSocket Hub — they run their own
+	// read loop against executor.StreamWithContext — so Hub.DisconnectUser
+	// cannot reach them. The exec handler registers its stream cancel func
+	// in a per-user registry on session start; cancelling those funcs here
+	// unblocks the stream and tears the connection down promptly.
+	if claims.UserID != uuid.Nil {
+		CancelUserExecSessions(claims.UserID)
+	}
+
 	slog.Info("[Auth] token revoked, WS sessions closed", "user", claims.GitHubLogin, "jti", claims.ID)
 	return c.JSON(fiber.Map{"success": true, "message": "Token revoked"})
 }

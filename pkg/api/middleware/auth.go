@@ -303,6 +303,31 @@ func JWTAuth(secret string) fiber.Handler {
 
 		token, err := ParseJWT(tokenString, secret)
 
+		// #6026 — When the Authorization header carries a stale or otherwise
+		// invalid token AND the client also presents a valid kc_auth cookie,
+		// fall back to the cookie instead of returning 401. This situation
+		// arises after a silent token refresh: the browser updates the cookie
+		// but an in-flight request (or a client that cached the old header
+		// value) may still send the old bearer token. Without the fallback
+		// the user sees spurious 401s and is bounced to login even though
+		// their session is still valid. The fallback is only engaged when
+		// the header was present (authHeader != "") and we didn't already
+		// pick up the cookie as the primary token — otherwise this collapses
+		// to the normal header or cookie path and we return the original
+		// error.
+		if err != nil && authHeader != "" {
+			cookieToken := c.Cookies(jwtCookieName)
+			if cookieToken != "" && cookieToken != tokenString {
+				cookieParsed, cookieErr := ParseJWT(cookieToken, secret)
+				if cookieErr == nil && cookieParsed.Valid {
+					slog.Info("[Auth] stale bearer header, falling back to cookie", "path", c.Path())
+					token = cookieParsed
+					err = nil
+					tokenString = cookieToken
+				}
+			}
+		}
+
 		if err != nil {
 			slog.Error("[Auth] token parse error", "path", c.Path(), "error", err)
 			return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
