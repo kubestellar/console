@@ -276,10 +276,11 @@ export function useOpenYurtStatus(): UseOpenYurtStatusResult {
 
   const effectiveIsDemoData = isDemoFallback && !isLoading
 
-  const hasAnyData = (data.controllerPods?.total ?? 0) > 0 || (data.nodePools || []).length > 0
+  const hasData = (data.nodePools?.length ?? 0) > 0 || (data.gateways?.length ?? 0) > 0
+  const hasAnyData = hasData || (data.controllerPods?.total ?? 0) > 0
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData, // gate on !hasData so skeleton doesn't flash on refetch
     hasAnyData,
     isFailed,
     consecutiveFailures,
