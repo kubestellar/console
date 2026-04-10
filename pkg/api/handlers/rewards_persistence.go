@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/store"
@@ -82,7 +83,7 @@ func toResponse(r *store.UserRewards) userRewardsResponse {
 // An empty return means the request is unauthenticated and the handler
 // should respond with 401.
 func resolveRewardsUserID(c *fiber.Ctx) string {
-	if id := middleware.GetUserID(c); id.String() != "00000000-0000-0000-0000-000000000000" {
+	if id := middleware.GetUserID(c); id != uuid.Nil {
 		return id.String()
 	}
 	if login := middleware.GetGitHubLogin(c); login != "" {
@@ -110,9 +111,11 @@ func (h *RewardsPersistenceHandler) GetUserRewards(c *fiber.Ctx) error {
 	return c.JSON(toResponse(rewards))
 }
 
-// putUserRewardsRequest is the request body for PUT /api/rewards/me. All
-// fields are optional; missing fields default to zero so clients can use
-// this endpoint to replace partial state without re-sending the whole row.
+// putUserRewardsRequest is the request body for PUT /api/rewards/me. PUT is
+// a FULL replace (idempotent upsert): callers must send the entire desired
+// row. Because the fields are non-pointer ints, the handler cannot tell
+// "field omitted" from "field explicitly 0", so there is no partial-update
+// semantics — any missing field becomes 0 in the stored row.
 type putUserRewardsRequest struct {
 	Coins       int `json:"coins"`
 	Points      int `json:"points"`

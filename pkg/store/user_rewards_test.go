@@ -2,9 +2,12 @@ package store
 
 import (
 	"errors"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,6 +23,14 @@ const testDailyBonusInterval = 24 * time.Hour
 // testDailyBonusAmount is an arbitrary non-zero bonus used by the cooldown
 // tests to distinguish "awarded" from "skipped" branches.
 const testDailyBonusAmount = 50
+
+// Concurrency test constants — no magic numbers. 16 goroutines mirrors the
+// pattern from TestAddUserTokenDelta_ConcurrentIncrementsAreAtomic so the
+// two atomicity tests exercise the same level of contention.
+const (
+	testRewardsConcurrentWorkers = 16
+	testRewardsConcurrentDelta   = 3
+)
 
 func TestGetUserRewards_ReturnsZeroForNewUser(t *testing.T) {
 	store := newTestStore(t)
@@ -174,4 +185,77 @@ func TestClaimDailyBonus_AfterCooldownSucceedsAgain(t *testing.T) {
 	require.Equal(t, testDailyBonusAmount*2, got.BonusPoints)
 	require.NotNil(t, got.LastDailyBonusAt)
 	require.True(t, got.LastDailyBonusAt.Equal(laterEnough))
+}
+
+// TestIncrementUserCoins_ConcurrentIncrementsAreAtomic exercises the
+// BEGIN IMMEDIATE transaction envelope around IncrementUserCoins. Without
+// the write-locked transaction, concurrent read-modify-write sequences
+// would produce torn updates and a final balance less than
+// testRewardsConcurrentWorkers * testRewardsConcurrentDelta.
+func TestIncrementUserCoins_ConcurrentIncrementsAreAtomic(t *testing.T) {
+	store := newTestStore(t)
+
+	var wg sync.WaitGroup
+	wg.Add(testRewardsConcurrentWorkers)
+	for i := 0; i < testRewardsConcurrentWorkers; i++ {
+		go func() {
+			defer wg.Done()
+			_, err := store.IncrementUserCoins(testUserRewardsID, testRewardsConcurrentDelta)
+			assert.NoError(t, err)
+		}()
+	}
+	wg.Wait()
+
+	got, err := store.GetUserRewards(testUserRewardsID)
+	require.NoError(t, err)
+	wantTotal := testRewardsConcurrentWorkers * testRewardsConcurrentDelta
+	require.Equal(t, wantTotal, got.Coins, "concurrent deltas must sum without lost updates")
+	require.Equal(t, wantTotal, got.Points, "lifetime points must accumulate atomically too")
+}
+
+// TestClaimDailyBonus_ConcurrentClaimsOnlyOneWins verifies that when many
+// goroutines race to claim the daily bonus at the same instant, the
+// cooldown check is atomic with the upsert — exactly one goroutine must
+// succeed and the rest must see ErrDailyBonusUnavailable. Before the
+// BEGIN IMMEDIATE fix, multiple racing goroutines could all pass the
+// cooldown check and each award the bonus.
+func TestClaimDailyBonus_ConcurrentClaimsOnlyOneWins(t *testing.T) {
+	store := newTestStore(t)
+	now := time.Date(2026, 4, 10, 12, 0, 0, 0, time.UTC)
+
+	var successCount int64
+	var cooldownCount int64
+	var wg sync.WaitGroup
+	// start gate — release all goroutines at the same instant so the
+	// cooldown race is as tight as possible
+	start := make(chan struct{})
+	wg.Add(testRewardsConcurrentWorkers)
+	for i := 0; i < testRewardsConcurrentWorkers; i++ {
+		go func() {
+			defer wg.Done()
+			<-start
+			_, err := store.ClaimDailyBonus(testUserRewardsID, testDailyBonusAmount, testDailyBonusInterval, now)
+			if err == nil {
+				atomic.AddInt64(&successCount, 1)
+				return
+			}
+			if errors.Is(err, ErrDailyBonusUnavailable) {
+				atomic.AddInt64(&cooldownCount, 1)
+				return
+			}
+			assert.NoError(t, err, "unexpected error from ClaimDailyBonus")
+		}()
+	}
+	close(start)
+	wg.Wait()
+
+	require.Equal(t, int64(1), atomic.LoadInt64(&successCount), "exactly one claim must win")
+	require.Equal(t, int64(testRewardsConcurrentWorkers-1), atomic.LoadInt64(&cooldownCount), "all other claims must see ErrDailyBonusUnavailable")
+
+	// Final state — bonus awarded exactly once
+	got, err := store.GetUserRewards(testUserRewardsID)
+	require.NoError(t, err)
+	require.Equal(t, testDailyBonusAmount, got.BonusPoints, "bonus must be awarded exactly once")
+	require.NotNil(t, got.LastDailyBonusAt)
+	require.True(t, got.LastDailyBonusAt.Equal(now))
 }

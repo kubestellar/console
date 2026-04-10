@@ -20,7 +20,7 @@ export interface UserRewardsRecord {
   points: number
   level: number
   bonus_points: number
-  /** RFC3339 timestamp; empty string when the daily bonus has never been claimed. */
+  /** RFC3339 timestamp; `undefined` when the daily bonus has never been claimed (server omits the field via `omitempty`). */
   last_daily_bonus_at?: string
   updated_at: string
 }

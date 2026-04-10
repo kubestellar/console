@@ -1878,13 +1878,30 @@ func (s *SQLiteStore) IncrementUserCoins(userID string, delta int) (*UserRewards
 		return nil, errors.New("user_id is required")
 	}
 
-	tx, err := s.db.Begin()
+	// Same BEGIN IMMEDIATE pattern as AddUserTokenDelta — the default
+	// deferred transaction under WAL mode only grabs the write lock at the
+	// first INSERT, letting two concurrent goroutines both read the same
+	// stale balance and produce a torn update. Pin a connection and issue
+	// BEGIN IMMEDIATE manually so the write lock is held from the SELECT
+	// through the upsert.
+	ctx := context.Background()
+	conn, err := s.db.Conn(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("begin tx: %w", err)
+		return nil, fmt.Errorf("acquire conn: %w", err)
 	}
-	defer tx.Rollback() //nolint:errcheck // best-effort rollback on error paths
+	defer conn.Close() //nolint:errcheck // best-effort release back to pool
 
-	row := tx.QueryRow(
+	if _, err := conn.ExecContext(ctx, "BEGIN IMMEDIATE"); err != nil {
+		return nil, fmt.Errorf("begin immediate: %w", err)
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_, _ = conn.ExecContext(ctx, "ROLLBACK")
+		}
+	}()
+
+	row := conn.QueryRowContext(ctx,
 		`SELECT user_id, coins, points, level, bonus_points, last_daily_bonus_at, updated_at
 		 FROM user_rewards WHERE user_id = ?`, userID,
 	)
@@ -1919,7 +1936,7 @@ func (s *SQLiteStore) IncrementUserCoins(userID string, delta int) (*UserRewards
 		lastBonus = sql.NullTime{Time: *current.LastDailyBonusAt, Valid: true}
 	}
 
-	if _, err := tx.Exec(
+	if _, err := conn.ExecContext(ctx,
 		`INSERT INTO user_rewards (user_id, coins, points, level, bonus_points, last_daily_bonus_at, updated_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(user_id) DO UPDATE SET
@@ -1935,9 +1952,10 @@ func (s *SQLiteStore) IncrementUserCoins(userID string, delta int) (*UserRewards
 		return nil, fmt.Errorf("increment user coins: %w", err)
 	}
 
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("commit tx: %w", err)
+	if _, err := conn.ExecContext(ctx, "COMMIT"); err != nil {
+		return nil, fmt.Errorf("commit immediate tx: %w", err)
 	}
+	committed = true
 	return current, nil
 }
 
@@ -1953,13 +1971,27 @@ func (s *SQLiteStore) ClaimDailyBonus(userID string, bonusAmount int, minInterva
 		return nil, errors.New("bonusAmount must be non-negative")
 	}
 
-	tx, err := s.db.Begin()
+	// Same BEGIN IMMEDIATE pattern as AddUserTokenDelta — without it, two
+	// concurrent requests can both pass the cooldown check and each award
+	// the bonus before either commits, producing a double claim.
+	ctx := context.Background()
+	conn, err := s.db.Conn(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("begin tx: %w", err)
+		return nil, fmt.Errorf("acquire conn: %w", err)
 	}
-	defer tx.Rollback() //nolint:errcheck // best-effort rollback on error paths
+	defer conn.Close() //nolint:errcheck // best-effort release back to pool
 
-	row := tx.QueryRow(
+	if _, err := conn.ExecContext(ctx, "BEGIN IMMEDIATE"); err != nil {
+		return nil, fmt.Errorf("begin immediate: %w", err)
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_, _ = conn.ExecContext(ctx, "ROLLBACK")
+		}
+	}()
+
+	row := conn.QueryRowContext(ctx,
 		`SELECT user_id, coins, points, level, bonus_points, last_daily_bonus_at, updated_at
 		 FROM user_rewards WHERE user_id = ?`, userID,
 	)
@@ -1989,7 +2021,7 @@ func (s *SQLiteStore) ClaimDailyBonus(userID string, bonusAmount int, minInterva
 	current.UpdatedAt = now
 
 	lastBonus := sql.NullTime{Time: claimedAt, Valid: true}
-	if _, err := tx.Exec(
+	if _, err := conn.ExecContext(ctx,
 		`INSERT INTO user_rewards (user_id, coins, points, level, bonus_points, last_daily_bonus_at, updated_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(user_id) DO UPDATE SET
@@ -2005,9 +2037,10 @@ func (s *SQLiteStore) ClaimDailyBonus(userID string, bonusAmount int, minInterva
 		return nil, fmt.Errorf("claim daily bonus: %w", err)
 	}
 
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("commit tx: %w", err)
+	if _, err := conn.ExecContext(ctx, "COMMIT"); err != nil {
+		return nil, fmt.Errorf("commit immediate tx: %w", err)
 	}
+	committed = true
 	return current, nil
 }
 
