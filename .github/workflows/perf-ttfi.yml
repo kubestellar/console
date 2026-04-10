@@ -8,12 +8,18 @@ on:
       - 'scripts/perf-test.sh'
       - '.github/workflows/perf-ttfi.yml'
   workflow_dispatch:
+  schedule:
+    # Every 2 hours at :15 — same cadence as perf-react-commits and
+    # perf-bundle-size. On scheduled runs ONLY, a failure files a
+    # `[perf-regression] ttfi-all-cards` issue via the reusable workflow.
+    - cron: '15 */2 * * *'
 
 # Least-privilege: read-only by default; jobs declare write scopes individually
 permissions: read-all
 
 env:
   CI: true
+  PERF_SIGNAL: ttfi-all-cards
 
 jobs:
   all-cards-ttfi:
@@ -68,6 +74,50 @@ jobs:
           CI_TOLERANCE_PCT: '15'
         run: node e2e/perf/compare-ttfi.mjs
 
+      - name: Write perf-result.json (scheduled runs only)
+        # Only scheduled runs drive the auto-issue notifier. PR-time failures
+        # already surface on the PR via the check status — no need to file
+        # extra issues there.
+        if: github.event_name == 'schedule'
+        working-directory: .
+        env:
+          LAST_SUCCESSFUL_SHA: ''
+        run: |
+          set -euo pipefail
+          REPORT="web/e2e/test-results/ttfi-report.json"
+          if [ ! -f "$REPORT" ]; then
+            echo "::warning::$REPORT missing; skipping perf-result.json"
+            exit 0
+          fi
+          # TTFI report schema: { summary: { worstCardTtfi, budgetMs } }
+          VALUE=$(node -e "const r=require('./${REPORT}');process.stdout.write(String((r.summary&&r.summary.worstCardTtfi)||0))")
+          BUDGET=$(node -e "const r=require('./${REPORT}');process.stdout.write(String((r.summary&&r.summary.budgetMs)||0))")
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          cat > web/perf-result.json <<EOF
+          {
+            "signal": "ttfi-all-cards",
+            "displayName": "Worst-case card TTFI",
+            "value": ${VALUE},
+            "budget": ${BUDGET},
+            "unit": "ms",
+            "context": {
+              "runId": "${GITHUB_RUN_ID}",
+              "runUrl": "${RUN_URL}",
+              "headSha": "${GITHUB_SHA}",
+              "lastSuccessfulSha": "${LAST_SUCCESSFUL_SHA}"
+            }
+          }
+          EOF
+
+      - name: Upload perf result artifact (scheduled runs only)
+        if: always() && github.event_name == 'schedule'
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-result-ttfi-all-cards
+          path: web/perf-result.json
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Upload TTFI artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -92,3 +142,14 @@ jobs:
           if [ -f "e2e/test-results/ttfi-regression.md" ]; then
             cat e2e/test-results/ttfi-regression.md >> $GITHUB_STEP_SUMMARY
           fi
+
+  notify:
+    name: Notify on scheduled regression
+    needs: all-cards-ttfi
+    # Only file auto-issues on scheduled runs. PR failures already surface
+    # as red checks on the PR — no need to open a bug there.
+    if: failure() && github.event_name == 'schedule'
+    uses: ./.github/workflows/_perf-regression-issue.yml
+    with:
+      result-path: web/perf-result.json
+      signal: ttfi-all-cards

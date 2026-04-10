@@ -1,0 +1,120 @@
+name: Perf — Bundle size
+
+# Every 2 hours we build the prod bundle and measure the total gzipped size
+# of the JS chunks in dist/assets. If it blows the budget, the reusable
+# auto-issue workflow files/updates an issue.
+#
+# Budget derivation:
+#   At branch point (2026-04-10) the total gzipped JS size was ~2,930,697
+#   bytes (~2.80 MB). PERF_BUDGET_BUNDLE_GZIP_BYTES is set ~10% above that
+#   (3,225,000 bytes ≈ 3.08 MB) so normal feature work has headroom but a
+#   genuine bloat regression (new heavy dep, missed code-split) trips it.
+#   Re-baseline by updating the env var below after a deliberate bump.
+
+on:
+  schedule:
+    - cron: '15 */2 * * *'
+  workflow_dispatch: {}
+
+permissions: read-all
+
+concurrency:
+  group: perf-bundle-size
+  cancel-in-progress: true
+
+env:
+  PERF_SIGNAL: bundle-gzip-bytes
+  # ~10% headroom over the 2026-04-10 baseline of 2,930,697 bytes.
+  PERF_BUDGET_BUNDLE_GZIP_BYTES: '3225000'
+
+jobs:
+  bundle-size:
+    name: JS bundle gzipped size
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Build
+        working-directory: web
+        run: npm run build
+
+      - name: Resolve last successful SHA
+        id: last-success
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LAST=$(gh run list \
+            --workflow="perf-bundle-size.yml" \
+            --branch=main \
+            --status=success \
+            --limit=1 \
+            --json headSha \
+            --jq '.[0].headSha // ""' || echo '')
+          echo "sha=${LAST}" >> "$GITHUB_OUTPUT"
+
+      - name: Measure and gate bundle size
+        id: measure
+        env:
+          LAST_SUCCESSFUL_SHA: ${{ steps.last-success.outputs.sha }}
+        run: |
+          set -euo pipefail
+          TOTAL=$(find web/dist/assets -name '*.js' -exec gzip -c {} + | wc -c)
+          # wc -c emits leading whitespace on macOS / some BSDs — strip it.
+          TOTAL=$(echo "$TOTAL" | tr -d '[:space:]')
+          BUDGET="${PERF_BUDGET_BUNDLE_GZIP_BYTES}"
+          echo "Total gzipped JS: ${TOTAL} bytes (budget ${BUDGET})"
+
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          cat > web/perf-result.json <<EOF
+          {
+            "signal": "bundle-gzip-bytes",
+            "displayName": "Total gzipped JS bundle size",
+            "value": ${TOTAL},
+            "budget": ${BUDGET},
+            "unit": "bytes",
+            "context": {
+              "runId": "${GITHUB_RUN_ID}",
+              "runUrl": "${RUN_URL}",
+              "headSha": "${GITHUB_SHA}",
+              "lastSuccessfulSha": "${LAST_SUCCESSFUL_SHA}"
+            }
+          }
+          EOF
+
+          if [ "$TOTAL" -gt "$BUDGET" ]; then
+            echo "::error::Bundle size ${TOTAL} exceeds budget ${BUDGET}"
+            exit 1
+          fi
+
+      - name: Upload perf result artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-result-bundle-gzip-bytes
+          path: web/perf-result.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  notify:
+    name: Notify on regression
+    needs: bundle-size
+    if: failure()
+    uses: ./.github/workflows/_perf-regression-issue.yml
+    with:
+      result-path: web/perf-result.json
+      signal: bundle-gzip-bytes

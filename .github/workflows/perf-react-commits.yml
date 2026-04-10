@@ -1,0 +1,99 @@
+name: Perf — React commits per navigation
+
+# Every 2 hours we measure React commits during a dashboard navigation.
+# If the count blows the PERF_BUDGET_NAVIGATION_COMMITS budget, the test
+# fails and the _perf-regression-issue reusable workflow files/updates an
+# issue tagged `[perf-regression] react-commits-navigation`.
+#
+# This was carved off #6149 — one reusable auto-issue scaffold for all perf
+# signals, not duplicated logic in every workflow.
+
+on:
+  schedule:
+    # Every 2 hours at :15 past the hour. Offset from :00 to avoid the
+    # 0 * * * * thundering herd on the scheduler.
+    - cron: '15 */2 * * *'
+  workflow_dispatch: {}
+
+permissions: read-all
+
+concurrency:
+  group: perf-react-commits
+  cancel-in-progress: true
+
+# Signal slug must match the value in web/e2e/perf/constants.ts and is used
+# as the artifact name suffix the reusable notify workflow reads.
+env:
+  PERF_SIGNAL: react-commits-navigation
+
+jobs:
+  react-commits:
+    name: React commits per navigation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Resolve last successful SHA
+        id: last-success
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Look up the most recent successful run of this workflow on main
+          # so the auto-issue script can build a merge window. Best-effort;
+          # falls back to empty if the API call fails or there's no prior
+          # green run yet.
+          LAST=$(gh run list \
+            --workflow="perf-react-commits.yml" \
+            --branch=main \
+            --status=success \
+            --limit=1 \
+            --json headSha \
+            --jq '.[0].headSha // ""' || echo '')
+          echo "sha=${LAST}" >> "$GITHUB_OUTPUT"
+
+      - name: Run react-commits perf spec (dev server, hook enabled)
+        # PERF_DEV=1 flips e2e/perf/perf.config.ts to `npm run dev`, which is
+        # the only mode where React DevTools global hooks get honored.
+        env:
+          PERF_DEV: '1'
+          LAST_SUCCESSFUL_SHA: ${{ steps.last-success.outputs.sha }}
+        run: npx playwright test --config e2e/perf/perf.config.ts e2e/perf/react-commits.spec.ts
+
+      - name: Upload perf result artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-result-react-commits-navigation
+          path: web/perf-result.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  notify:
+    name: Notify on regression
+    needs: react-commits
+    if: failure()
+    uses: ./.github/workflows/_perf-regression-issue.yml
+    with:
+      result-path: web/perf-result.json
+      signal: react-commits-navigation

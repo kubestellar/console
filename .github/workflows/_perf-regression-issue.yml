@@ -1,0 +1,75 @@
+name: _perf regression issue (reusable)
+
+# Reusable "file/update a perf-regression issue" workflow. Any perf job can
+# call this after writing a perf-result.json — the script handles dedupe via
+# the issue title prefix `[perf-regression] <signal>`.
+#
+# The caller MUST upload the perf-result.json as an artifact named
+# `perf-result-<signal>` before invoking this workflow. This workflow
+# downloads the artifact, then runs scripts/perf-regression-issue.mjs.
+#
+# Usage:
+#   jobs:
+#     perf:
+#       runs-on: ubuntu-latest
+#       steps:
+#         - run: ./run-the-perf-test.sh  # writes web/perf-result.json
+#         - uses: actions/upload-artifact@v4
+#           if: always()
+#           with:
+#             name: perf-result-react-commits-navigation
+#             path: web/perf-result.json
+#     notify:
+#       if: failure()
+#       needs: perf
+#       uses: ./.github/workflows/_perf-regression-issue.yml
+#       with:
+#         result-path: web/perf-result.json
+#         signal: react-commits-navigation
+
+on:
+  workflow_call:
+    inputs:
+      result-path:
+        description: Path (relative to repo root) where the script should find the result JSON after artifact download.
+        required: true
+        type: string
+      signal:
+        description: Signal slug — used to locate the uploaded artifact (perf-result-<signal>) and for logging.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  notify:
+    name: File/update perf regression issue
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Need history so the script can `git log lastSuccessful..HEAD`
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Download perf result artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: perf-result-${{ inputs.signal }}
+          # Land the file at its original path relative to repo root.
+          path: ${{ github.workspace }}
+
+      - name: File or update perf regression issue
+        env:
+          PERF_RESULT_JSON: ${{ inputs.result-path }}
+          PERF_SIGNAL: ${{ inputs.signal }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/perf-regression-issue.mjs
