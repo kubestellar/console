@@ -978,6 +978,15 @@ func (s *Server) setupRoutes() {
 	api.Post("/rewards/coins", rewardsPersistence.IncrementCoins)
 	api.Post("/rewards/daily-bonus", rewardsPersistence.ClaimDailyBonus)
 
+	// Persistent per-user token-usage state (folded into #6011 PR — same
+	// motivation: clearing the browser cache should not wipe the running
+	// totals shown in the token-budget widget). Every user reads and writes
+	// only their own row; the handler resolves the user via JWT.
+	tokenUsage := handlers.NewTokenUsageHandler(s.store)
+	api.Get("/token-usage/me", tokenUsage.GetUserTokenUsage)
+	api.Post("/token-usage/me", tokenUsage.UpdateUserTokenUsage)
+	api.Post("/token-usage/delta", tokenUsage.AddTokenDelta)
+
 	// Nightly E2E status (GitHub Actions proxy with server-side token + cache)
 	nightlyE2E := handlers.NewNightlyE2EHandler(s.config.GitHubToken)
 	api.Get("/nightly-e2e/runs", nightlyE2E.GetRuns)

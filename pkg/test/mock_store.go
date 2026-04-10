@@ -239,4 +239,62 @@ func (m *MockStore) ClaimDailyBonus(userID string, bonusAmount int, minInterval 
 	return &store.UserRewards{UserID: userID, Level: store.DefaultUserLevel, BonusPoints: bonusAmount, LastDailyBonusAt: &now}, nil
 }
 
+// GetUserTokenUsage is overridable via testify/mock expectations.
+func (m *MockStore) GetUserTokenUsage(userID string) (*store.UserTokenUsage, error) {
+	if len(m.ExpectedCalls) == 0 {
+		return &store.UserTokenUsage{UserID: userID, TokensByCategory: map[string]int64{}}, nil
+	}
+	for _, call := range m.ExpectedCalls {
+		if call.Method == "GetUserTokenUsage" {
+			args := m.Called(userID)
+			if args.Get(0) == nil {
+				return nil, args.Error(1)
+			}
+			return args.Get(0).(*store.UserTokenUsage), args.Error(1)
+		}
+	}
+	return &store.UserTokenUsage{UserID: userID, TokensByCategory: map[string]int64{}}, nil
+}
+
+// UpdateUserTokenUsage is overridable via testify/mock expectations.
+func (m *MockStore) UpdateUserTokenUsage(usage *store.UserTokenUsage) error {
+	if len(m.ExpectedCalls) == 0 {
+		return nil
+	}
+	for _, call := range m.ExpectedCalls {
+		if call.Method == "UpdateUserTokenUsage" {
+			args := m.Called(usage)
+			return args.Error(0)
+		}
+	}
+	return nil
+}
+
+// AddUserTokenDelta is overridable via testify/mock expectations.
+func (m *MockStore) AddUserTokenDelta(userID string, category string, delta int64, agentSessionID string) (*store.UserTokenUsage, error) {
+	if len(m.ExpectedCalls) == 0 {
+		return &store.UserTokenUsage{
+			UserID:             userID,
+			TotalTokens:        delta,
+			TokensByCategory:   map[string]int64{category: delta},
+			LastAgentSessionID: agentSessionID,
+		}, nil
+	}
+	for _, call := range m.ExpectedCalls {
+		if call.Method == "AddUserTokenDelta" {
+			args := m.Called(userID, category, delta, agentSessionID)
+			if args.Get(0) == nil {
+				return nil, args.Error(1)
+			}
+			return args.Get(0).(*store.UserTokenUsage), args.Error(1)
+		}
+	}
+	return &store.UserTokenUsage{
+		UserID:             userID,
+		TotalTokens:        delta,
+		TokensByCategory:   map[string]int64{category: delta},
+		LastAgentSessionID: agentSessionID,
+	}, nil
+}
+
 func (m *MockStore) Close() error { return nil }

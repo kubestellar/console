@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -50,6 +51,9 @@ const (
 	// wait for the SQLite write lock before returning SQLITE_BUSY. Under
 	// WAL mode only one writer holds the lock at a time; this timeout
 	// lets concurrent writers queue instead of failing immediately.
+	// Also required for AddUserTokenDelta which uses BEGIN IMMEDIATE on a
+	// pinned connection so concurrent goroutines can wait for the lock
+	// rather than fail.
 	sqliteBusyTimeoutMs = 5000
 )
 
@@ -96,7 +100,7 @@ type SQLiteStore struct {
 
 // NewSQLiteStore creates a new SQLite store
 func NewSQLiteStore(dbPath string) (*SQLiteStore, error) {
-	// DSN notes (modernc.org/sqlite accepts PRAGMAs via _pragma=key=value):
+	// DSN notes (modernc.org/sqlite accepts PRAGMAs via _pragma=key(value)):
 	//  - journal_mode=WAL enables Write-Ahead Logging so readers don't
 	//    block writers.
 	//  - synchronous=NORMAL is the recommended pairing with WAL for good
@@ -313,6 +317,23 @@ func (s *SQLiteStore) migrate() error {
 		updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 	);
 	CREATE INDEX IF NOT EXISTS idx_user_rewards_updated ON user_rewards(updated_at);
+
+	-- User token-usage persistence (follow-up to issue #6011, folds the
+	-- #6020 token-usage state into the same PR). Mirrors the rewards table
+	-- layout: the server is authoritative, localStorage is a fast cache
+	-- only. tokens_by_category holds the per-category breakdown as JSON so
+	-- new categories do not require a schema migration. last_agent_session
+	-- is the most recent kc-agent session marker the server has observed
+	-- for this user — a change signals an agent restart and the server
+	-- rebases totals instead of accumulating the stale delta.
+	CREATE TABLE IF NOT EXISTS user_token_usage (
+		user_id TEXT PRIMARY KEY,
+		total_tokens INTEGER NOT NULL DEFAULT 0,
+		tokens_by_category TEXT NOT NULL DEFAULT '{}',
+		last_agent_session_id TEXT NOT NULL DEFAULT '',
+		updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE INDEX IF NOT EXISTS idx_user_token_usage_updated ON user_token_usage(updated_at);
 	`
 	_, err := s.db.Exec(schema)
 	if err != nil {
@@ -1978,5 +1999,211 @@ func (s *SQLiteStore) ClaimDailyBonus(userID string, bonusAmount int, minInterva
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("commit tx: %w", err)
 	}
+	return current, nil
+}
+
+// --- User Token Usage methods (follow-up to issue #6011) --------------------
+//
+// These mirror the UserRewards methods (GetUserRewards / UpdateUserRewards /
+// IncrementUserCoins) but for the token-usage widget state. The table stores
+// an aggregate TotalTokens plus a JSON-encoded per-category breakdown so the
+// frontend can hydrate its byCategory Map on mount without a separate call.
+
+// scanUserTokenUsageRow decodes a single user_token_usage row into a
+// *UserTokenUsage. A JSON decode failure on tokens_by_category is treated as
+// a corrupted row and returned as an error so callers surface it rather than
+// silently dropping the breakdown.
+func scanUserTokenUsageRow(row interface {
+	Scan(dest ...any) error
+}) (*UserTokenUsage, error) {
+	var u UserTokenUsage
+	var categoriesJSON string
+	if err := row.Scan(&u.UserID, &u.TotalTokens, &categoriesJSON, &u.LastAgentSessionID, &u.UpdatedAt); err != nil {
+		return nil, err
+	}
+	if categoriesJSON == "" {
+		u.TokensByCategory = map[string]int64{}
+	} else {
+		if err := json.Unmarshal([]byte(categoriesJSON), &u.TokensByCategory); err != nil {
+			return nil, fmt.Errorf("decode tokens_by_category: %w", err)
+		}
+		if u.TokensByCategory == nil {
+			u.TokensByCategory = map[string]int64{}
+		}
+	}
+	return &u, nil
+}
+
+// GetUserTokenUsage returns the persisted token-usage row for userID, or a
+// zero-value struct (UserID set, TotalTokens=0, empty category map, empty
+// session marker) when no row exists yet. A missing row is NOT an error —
+// every authenticated user is implicitly at 0/0 until they accumulate
+// their first delta.
+func (s *SQLiteStore) GetUserTokenUsage(userID string) (*UserTokenUsage, error) {
+	if userID == "" {
+		return nil, errors.New("user_id is required")
+	}
+	row := s.db.QueryRow(
+		`SELECT user_id, total_tokens, tokens_by_category, last_agent_session_id, updated_at
+		 FROM user_token_usage WHERE user_id = ?`, userID,
+	)
+	u, err := scanUserTokenUsageRow(row)
+	if err == sql.ErrNoRows {
+		return &UserTokenUsage{
+			UserID:           userID,
+			TokensByCategory: map[string]int64{},
+			UpdatedAt:        time.Now(),
+		}, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get user token usage: %w", err)
+	}
+	return u, nil
+}
+
+// UpdateUserTokenUsage upserts the full token-usage row. Callers pass the
+// desired end-state; the stored updated_at timestamp is always rewritten to
+// now. Negative totals are clamped to zero (no magic-number literal — 0 is
+// the floor for both TotalTokens and every per-category counter).
+func (s *SQLiteStore) UpdateUserTokenUsage(usage *UserTokenUsage) error {
+	if usage == nil || usage.UserID == "" {
+		return errors.New("usage.UserID is required")
+	}
+	if usage.TotalTokens < 0 {
+		usage.TotalTokens = 0
+	}
+	// Defensive copy + clamp per-category counters. We never mutate the
+	// caller's map in place because the hook shares a singleton reference.
+	cleanCategories := make(map[string]int64, len(usage.TokensByCategory))
+	for k, v := range usage.TokensByCategory {
+		if v < 0 {
+			v = 0
+		}
+		cleanCategories[k] = v
+	}
+	categoriesJSON, err := json.Marshal(cleanCategories)
+	if err != nil {
+		return fmt.Errorf("encode tokens_by_category: %w", err)
+	}
+	now := time.Now()
+	usage.TokensByCategory = cleanCategories
+	usage.UpdatedAt = now
+
+	_, err = s.db.Exec(
+		`INSERT INTO user_token_usage (user_id, total_tokens, tokens_by_category, last_agent_session_id, updated_at)
+		 VALUES (?, ?, ?, ?, ?)
+		 ON CONFLICT(user_id) DO UPDATE SET
+		   total_tokens = excluded.total_tokens,
+		   tokens_by_category = excluded.tokens_by_category,
+		   last_agent_session_id = excluded.last_agent_session_id,
+		   updated_at = excluded.updated_at`,
+		usage.UserID, usage.TotalTokens, string(categoriesJSON), usage.LastAgentSessionID, now,
+	)
+	if err != nil {
+		return fmt.Errorf("upsert user token usage: %w", err)
+	}
+	return nil
+}
+
+// AddUserTokenDelta atomically adds delta to the user's TotalTokens and to
+// the named category bucket inside a single transaction so concurrent writers
+// cannot produce torn updates. Restart handling: when agentSessionID is
+// non-empty AND differs from the stored LastAgentSessionID, the server
+// treats this call as the first delta of a new session — it rewrites the
+// stored session marker but does NOT add the delta (the client already
+// rebased its baseline for the same reason). The returned *UserTokenUsage
+// reflects the post-write state in both branches.
+func (s *SQLiteStore) AddUserTokenDelta(userID string, category string, delta int64, agentSessionID string) (*UserTokenUsage, error) {
+	if userID == "" {
+		return nil, errors.New("user_id is required")
+	}
+	if category == "" {
+		return nil, errors.New("category is required")
+	}
+	if delta < 0 {
+		return nil, errors.New("delta must be non-negative")
+	}
+
+	// We need a write-locked transaction so the read-merge-write sequence
+	// is atomic. modernc/sqlite does NOT translate sql.LevelSerializable
+	// to BEGIN IMMEDIATE; under WAL mode the default deferred transaction
+	// only acquires the write lock at the first INSERT, which lets two
+	// concurrent goroutines both read a stale count and produce torn
+	// updates. Workaround: pin a single connection from the pool and
+	// issue BEGIN IMMEDIATE / COMMIT manually so the lock is held from
+	// the start of the SELECT through the upsert.
+	ctx := context.Background()
+	conn, err := s.db.Conn(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("acquire conn: %w", err)
+	}
+	defer conn.Close() //nolint:errcheck // best-effort release back to pool
+
+	if _, err := conn.ExecContext(ctx, "BEGIN IMMEDIATE"); err != nil {
+		return nil, fmt.Errorf("begin immediate: %w", err)
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_, _ = conn.ExecContext(ctx, "ROLLBACK")
+		}
+	}()
+
+	row := conn.QueryRowContext(ctx,
+		`SELECT user_id, total_tokens, tokens_by_category, last_agent_session_id, updated_at
+		 FROM user_token_usage WHERE user_id = ?`, userID,
+	)
+	current, scanErr := scanUserTokenUsageRow(row)
+	if scanErr == sql.ErrNoRows {
+		current = &UserTokenUsage{
+			UserID:           userID,
+			TokensByCategory: map[string]int64{},
+		}
+	} else if scanErr != nil {
+		return nil, fmt.Errorf("read current token usage: %w", scanErr)
+	}
+
+	// Restart detection (mirrors #6020 frontend): if the incoming session
+	// marker differs from the one we last stored, treat the current totals
+	// as a fresh baseline for the new session and skip the delta add.
+	sessionChanged := agentSessionID != "" && current.LastAgentSessionID != "" && agentSessionID != current.LastAgentSessionID
+	if !sessionChanged {
+		current.TotalTokens += delta
+		if current.TokensByCategory == nil {
+			current.TokensByCategory = map[string]int64{}
+		}
+		current.TokensByCategory[category] += delta
+	}
+	// Always update the stored session marker to whatever the caller sent
+	// (empty incoming value is retained as-is on purpose — demo and unauth
+	// flows never carry a session id).
+	if agentSessionID != "" {
+		current.LastAgentSessionID = agentSessionID
+	}
+
+	categoriesJSON, err := json.Marshal(current.TokensByCategory)
+	if err != nil {
+		return nil, fmt.Errorf("encode tokens_by_category: %w", err)
+	}
+	now := time.Now()
+	current.UpdatedAt = now
+
+	if _, err := conn.ExecContext(ctx,
+		`INSERT INTO user_token_usage (user_id, total_tokens, tokens_by_category, last_agent_session_id, updated_at)
+		 VALUES (?, ?, ?, ?, ?)
+		 ON CONFLICT(user_id) DO UPDATE SET
+		   total_tokens = excluded.total_tokens,
+		   tokens_by_category = excluded.tokens_by_category,
+		   last_agent_session_id = excluded.last_agent_session_id,
+		   updated_at = excluded.updated_at`,
+		current.UserID, current.TotalTokens, string(categoriesJSON), current.LastAgentSessionID, now,
+	); err != nil {
+		return nil, fmt.Errorf("upsert user token usage delta: %w", err)
+	}
+
+	if _, err := conn.ExecContext(ctx, "COMMIT"); err != nil {
+		return nil, fmt.Errorf("commit immediate tx: %w", err)
+	}
+	committed = true
 	return current, nil
 }
