@@ -100,7 +100,18 @@ var TIPS=[
 var TIP_ROTATE_MS=8000;
 var tipTextEl=document.getElementById('tip-text');
 var tipIdx=Math.floor(Math.random()*TIPS.length);
-function showTip(){if(tipTextEl){tipTextEl.style.opacity='0';setTimeout(function(){tipTextEl.textContent=TIPS[tipIdx];tipTextEl.style.opacity='1';tipIdx=(tipIdx+1)%TIPS.length;},400);}}
+// Skip the fade transition entirely when the user prefers reduced motion (#5910)
+var prefersReducedMotion=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function showTip(){
+  if(!tipTextEl)return;
+  if(prefersReducedMotion){
+    tipTextEl.textContent=TIPS[tipIdx];
+    tipIdx=(tipIdx+1)%TIPS.length;
+    return;
+  }
+  tipTextEl.style.opacity='0';
+  setTimeout(function(){tipTextEl.textContent=TIPS[tipIdx];tipTextEl.style.opacity='1';tipIdx=(tipIdx+1)%TIPS.length;},400);
+}
 showTip();
 setInterval(showTip,TIP_ROTATE_MS);
 
