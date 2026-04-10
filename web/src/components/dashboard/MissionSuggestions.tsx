@@ -49,6 +49,12 @@ export function MissionSuggestions() {
   const [countdown, setCountdown] = useState(AUTO_COLLAPSE_SECONDS)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const analyticsEmittedRef = useRef(false)
+  // Refs to each chip trigger button, keyed by suggestion id.
+  // Used so the outside-click listener can ignore clicks on the trigger itself
+  // (the trigger's own onClick handles toggling). Without this, clicking the
+  // chevron to close races the listener, which sets expandedId=null first,
+  // then the onClick sees isExpanded=false and reopens the dropdown (#6050).
+  const triggerRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map())
 
   // Check agent status for offline skeleton display
   const { status: agentStatus } = useLocalAgent()
@@ -119,6 +125,11 @@ export function MissionSuggestions() {
     const handleClickOutside = (e: MouseEvent) => {
       // Use the currently expanded ID to find the correct dropdown element
       const activeDropdown = document.getElementById(`mission-dropdown-${expandedId}`)
+      // Ignore clicks on the trigger button itself — its onClick handles
+      // toggling. Otherwise, clicking the chevron to close races this
+      // listener and the dropdown reopens (#6050).
+      const activeTrigger = triggerRefs.current.get(expandedId)
+      if (activeTrigger && activeTrigger.contains(e.target as Node)) return
       if (activeDropdown && !activeDropdown.contains(e.target as Node)) {
         setExpandedId(null)
       }
@@ -249,6 +260,10 @@ export function MissionSuggestions() {
             return (
               <div key={suggestion.id} className="relative">
                 <button
+                  ref={(el) => {
+                    if (el) triggerRefs.current.set(suggestion.id, el)
+                    else triggerRefs.current.delete(suggestion.id)
+                  }}
                   onClick={() => setExpandedId(isExpanded ? null : suggestion.id)}
                   aria-expanded={isExpanded}
                   aria-haspopup="menu"
@@ -404,6 +419,10 @@ export function MissionSuggestions() {
             <div key={suggestion.id} className="relative">
               {/* Compact chip */}
               <button
+                ref={(el) => {
+                  if (el) triggerRefs.current.set(suggestion.id, el)
+                  else triggerRefs.current.delete(suggestion.id)
+                }}
                 onClick={() => setExpandedId(isExpanded ? null : suggestion.id)}
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all hover:brightness-110 ${CHIP_STYLE.border} ${CHIP_STYLE.bg} ${CHIP_STYLE.text}`}
               >
