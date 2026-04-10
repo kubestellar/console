@@ -1,6 +1,6 @@
 import { api, isBackendUnavailable } from '../../lib/api'
 import { reportAgentDataError, reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
-import { isDemoMode, isNetlifyDeployment, isDemoToken, hasRealToken, subscribeDemoMode } from '../../lib/demoMode'
+import { isDemoMode, isNetlifyDeployment, isDemoToken, subscribeDemoMode } from '../../lib/demoMode'
 import { isInClusterMode } from '../useBackendHealth'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { registerCacheReset, triggerAllRefetches } from '../../lib/modeTransition'
@@ -1329,14 +1329,16 @@ export async function fullFetchClusters() {
   // Don't try to fetch from agent - user wants to see demo data, not live data.
   // This respects the user's explicit choice to enable demo mode.
   //
-  // EXCEPTION: When the console is deployed in-cluster AND the user has a real
-  // auth token, always fetch live cluster data. Otherwise UI elements like the
-  // Create Namespace cluster dropdown would list demo clusters (eks-prod-us-east-1,
-  // gke-staging, etc.) instead of the actual cluster the console is running in
-  // (e.g. vllm-d). This matches the GPU-reservations live-mode bypass pattern in
-  // GPUReservations.tsx.
-  const inClusterLive = isInClusterMode() && hasRealToken()
-  if (isDemoMode() && !inClusterLive) {
+  // EXCEPTION: When the console is deployed in-cluster (the backend reports
+  // `in_cluster: true`), always try to fetch live cluster data — including when
+  // demo mode is toggled on and/or the user only has a demo token. Otherwise UI
+  // elements like the Create Namespace cluster dropdown would list demo clusters
+  // (eks-prod-us-east-1, gke-staging, etc.) instead of the actual cluster the
+  // console is running in (e.g. vllm-d). If the live fetch fails (unauthenticated
+  // visitor, agent down, etc.) the downstream fallback logic will still show
+  // demo data. Localhost dev is unaffected because the Go backend only sets
+  // `in_cluster: true` when running as a pod.
+  if (isDemoMode() && !isInClusterMode()) {
     updateClusterCache({
       clusters: getDemoClusters(),
       isLoading: false,
