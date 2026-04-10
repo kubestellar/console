@@ -90,6 +90,47 @@ export interface UseCardFiltersResult<T> {
 
 const LOCAL_FILTER_STORAGE_PREFIX = 'kubestellar-card-filter:'
 
+/**
+ * localStorage prefix for the per-card "show N items" dropdown selection.
+ * Persisting this fixes #6070 — without it, the user picks "show 5" but on
+ * remount the value resets to whatever `defaultLimit` the card passed in,
+ * which (combined with cards that ignore their config prop entirely) made
+ * cards render with way more rows than the user asked for.
+ */
+const LOCAL_LIMIT_STORAGE_PREFIX = 'kubestellar-card-limit:'
+
+/** Read a persisted itemsPerPage value for a card. Returns null if missing,
+ * unparseable, or no storageKey provided. Accepts the literal string
+ * 'unlimited' as a valid value. */
+function readPersistedItemsPerPage(
+  storageKey: string | undefined,
+): number | 'unlimited' | null {
+  if (!storageKey) return null
+  try {
+    const raw = localStorage.getItem(`${LOCAL_LIMIT_STORAGE_PREFIX}${storageKey}`)
+    if (raw == null) return null
+    if (raw === 'unlimited') return 'unlimited'
+    const n = Number(raw)
+    return Number.isFinite(n) && n > 0 ? n : null
+  } catch {
+    return null
+  }
+}
+
+/** Persist an itemsPerPage value. No-op when storageKey is missing or
+ * localStorage throws (private mode, quota, SSR). */
+function writePersistedItemsPerPage(
+  storageKey: string | undefined,
+  value: number | 'unlimited',
+): void {
+  if (!storageKey) return
+  try {
+    localStorage.setItem(`${LOCAL_LIMIT_STORAGE_PREFIX}${storageKey}`, String(value))
+  } catch {
+    // Ignore — non-fatal.
+  }
+}
+
 export function useCardFilters<T>(
   items: T[],
   config: FilterConfig<T>
@@ -392,7 +433,20 @@ export function useCardData<T, S extends string = string>(
   // Guard against undefined config — dynamic/custom cards may pass undefined at runtime
   const safeConfig = config ?? ({} as CardDataConfig<T, S>)
   const { filter: filterConfig, sort: sortConfig, defaultLimit = 5 } = safeConfig
-  const [itemsPerPage, setItemsPerPage] = useState<number | 'unlimited'>(defaultLimit)
+  // Persist the "show N" dropdown selection per card so it survives remounts
+  // (#6070). The storageKey is the same identifier used by the cluster filter
+  // persistence above, so each card type gets its own slot.
+  const limitStorageKey = filterConfig?.storageKey
+  const [itemsPerPage, setItemsPerPageState] = useState<number | 'unlimited'>(
+    () => readPersistedItemsPerPage(limitStorageKey) ?? defaultLimit,
+  )
+  const setItemsPerPage = useCallback(
+    (limit: number | 'unlimited') => {
+      setItemsPerPageState(limit)
+      writePersistedItemsPerPage(limitStorageKey, limit)
+    },
+    [limitStorageKey],
+  )
   const [currentPage, setCurrentPage] = useState(1)
 
   // Apply filters
