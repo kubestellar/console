@@ -642,9 +642,18 @@ describe('AuthProvider', () => {
     // waiting on isLoading resolves BEFORE refreshUser's async catch block
     // has a chance to clear the token. Wait directly for the token to be
     // cleared by the stale-cache drop path instead.
-    await waitFor(() => {
-      expect(result.current.token).toBeNull()
-    })
+    //
+    // #6175 — bump the waitFor timeout from the default 1000ms to 5000ms.
+    // The default is enough locally but flakes in the coverage suite where
+    // istanbul instrumentation slows the async unwind (refreshUser →
+    // catch → setTokenState(null) → React commit) past 1s. 5s is generous
+    // and still completes in <100ms on a healthy run.
+    await waitFor(
+      () => {
+        expect(result.current.token).toBeNull()
+      },
+      { timeout: 5_000 },
+    )
 
     // Stale cache → session dropped (token cleared, user null)
     expect(result.current.token).toBeNull()

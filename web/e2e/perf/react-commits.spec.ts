@@ -33,12 +33,23 @@ const NAV_TARGET_URL_GLOB = '**/clusters'
 // rendered "Clusters" link in the KubeStellar sidebar without locking us to
 // a brittle CSS selector.
 const NAV_TARGET_LINK_NAME = /clusters/i
-// localStorage key that forces demo mode. The CI runner has no backend, so
-// without demo mode the app bounces to the login screen and the commit
-// counter never sees a real SPA navigation. This is the same toggle the
-// Settings page flips. See src/lib/constants/storage.ts STORAGE_KEY_DEMO_MODE.
+// localStorage keys+values that force demo mode AND seed the demo token. The
+// CI runner has no backend, so without BOTH set:
+//   - missing kc-demo-mode → app falls through to the login screen
+//   - missing token         → AuthProvider.refreshUser() runs
+//                             checkOAuthConfiguredWithRetry() (5 retries × 2s
+//                             = up to 10s of background re-renders) and the
+//                             commit counter measures auth-revalidate noise
+//                             instead of the SPA navigation cost (#6176).
+//
+// These mirror src/lib/constants/storage.ts:
+//   STORAGE_KEY_DEMO_MODE = 'kc-demo-mode'
+//   STORAGE_KEY_TOKEN     = 'token'
+//   DEMO_TOKEN_VALUE      = 'demo-token'
 const DEMO_MODE_STORAGE_KEY = 'kc-demo-mode'
 const DEMO_MODE_STORAGE_VALUE = 'true'
+const TOKEN_STORAGE_KEY = 'token'
+const DEMO_TOKEN_VALUE = 'demo-token'
 
 // The init script uses a named global so we can read it later from the page.
 const COMMIT_COUNTER_KEY = '__perfCommitCount'
@@ -95,15 +106,21 @@ test('react commits per navigation stays under budget', async ({ page }) => {
   // auth and serves canned data — exactly the same thing the Settings page
   // toggle does. See #6170.
   await page.addInitScript(
-    ({ storageKey, storageValue }) => {
+    ({ demoKey, demoValue, tokenKey, tokenValue }) => {
       try {
-        window.localStorage.setItem(storageKey, storageValue)
+        window.localStorage.setItem(demoKey, demoValue)
+        window.localStorage.setItem(tokenKey, tokenValue)
       } catch {
         // Ignore: happens when the test storage partition is not yet
         // available. The next page load will still see the attempt.
       }
     },
-    { storageKey: DEMO_MODE_STORAGE_KEY, storageValue: DEMO_MODE_STORAGE_VALUE },
+    {
+      demoKey: DEMO_MODE_STORAGE_KEY,
+      demoValue: DEMO_MODE_STORAGE_VALUE,
+      tokenKey: TOKEN_STORAGE_KEY,
+      tokenValue: DEMO_TOKEN_VALUE,
+    },
   )
 
   // Install the fake DevTools hook BEFORE any app script runs. React 19
