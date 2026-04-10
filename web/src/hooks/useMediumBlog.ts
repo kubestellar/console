@@ -75,11 +75,18 @@ export function useMediumBlog() {
   // Read the cache synchronously during initial render via lazy useState
   // initializers. This avoids calling setState inside the effect for the
   // cache-hit path (react-hooks/set-state-in-effect).
-  const [posts, setPosts] = useState<BlogPost[]>(() => readCache()?.posts ?? [])
+  //
+  // #6220: previously each useState initializer called readCache() — three
+  // round-trips through sessionStorage.getItem + JSON.parse on every mount,
+  // and a tiny race window if the cache changed between calls. Read once
+  // into a useRef-like stable holder that all three lazy initializers
+  // capture from the same closure.
+  const [initialCache] = useState<CacheEntry | null>(() => readCache())
+  const [posts, setPosts] = useState<BlogPost[]>(() => initialCache?.posts ?? [])
   const [channelUrl, setChannelUrl] = useState<string>(
-    () => readCache()?.channelUrl ?? 'https://medium.com/@kubestellar'
+    () => initialCache?.channelUrl ?? 'https://medium.com/@kubestellar'
   )
-  const [loading, setLoading] = useState(() => readCache() === null)
+  const [loading, setLoading] = useState(() => initialCache === null)
 
   useEffect(() => {
     // If we already populated state from a fresh cache entry, nothing to do.

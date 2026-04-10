@@ -97,15 +97,27 @@ Open http://localhost:8080 in your **Windows** browser — WSL2 forwards `localh
 
 ## GitHub authentication
 
-The console references three different GitHub credentials and they are **not interchangeable** (#6190). Most users need **none** of them — the hosted demo works without any GitHub auth at all. Use this table to pick what (if anything) applies to you:
+The console uses **two** GitHub credentials (#6190). Most users need **neither** — the hosted demo works without any GitHub auth at all.
 
-| Credential | What it does | Where it lives | When you need it |
-|---|---|---|---|
-| **GitHub OAuth App** (`GITHUB_CLIENT_ID` + `GITHUB_CLIENT_SECRET`) | Sign-in for the **self-hosted** console at `localhost:8080` | `.env` file at the repo root | Only if you self-host the console AND want user sign-in. Skip for the hosted demo. |
-| **GitHub PAT in Settings UI** | Powers nightly E2E status, community activity, leaderboard widgets | Persisted by the **console backend** via `POST /api/github/token` (`pkg/api/handlers/github_proxy.go`) to the encrypted local settings file at `~/.kc/settings.json`. Not browser-only and not stored on the kc-agent. Only works when self-hosting — the hosted Netlify demo has no writable local backend, so the Settings page cannot persist a token there. | Optional. Adds GitHub-powered widgets to your **self-hosted** dashboard. |
-| **`FEEDBACK_GITHUB_TOKEN`** | Lets the `/issue` page open GitHub issues for you | `.env` file at the repo root | Optional. Only needed if you want users to file issues from inside the console. Without it, `/issue` returns `503 Issue submission is not available`. |
+| Credential | What it does | When you need it |
+|---|---|---|
+| **GitHub OAuth App** (`GITHUB_CLIENT_ID` + `GITHUB_CLIENT_SECRET`) | Sign-in for the **self-hosted** console at `localhost:8080` | Only if you self-host the console AND want user sign-in. Skip for the hosted demo. |
+| **Consolidated GitHub PAT** (a.k.a. `FeedbackGitHubToken`) | Same single PAT powers everything: nightly E2E status, community activity, leaderboard widgets, and the `/issue` page that opens GitHub issues | Optional. Without it, `/issue` returns `503 Issue submission is not available` and the GitHub-powered dashboard widgets fall back to demo data. |
 
 **Minimum to get started**: nothing — hit [console.kubestellar.io](https://console.kubestellar.io). Everything above is opt-in.
+
+### Setting the consolidated PAT
+
+There are two equivalent ways to supply this PAT — pick one. Both write to the same field (`FeedbackGitHubToken` in `pkg/api/handlers/feedback.go` and `pkg/api/handlers/github_proxy.go`), so you don't need to set both:
+
+1. **`.env` file at the repo root** — set on startup, no UI step needed:
+   ```
+   FEEDBACK_GITHUB_TOKEN=ghp_…
+   ```
+
+2. **Settings UI** (self-hosted only, **admin role required**) — visit Settings → GitHub Token → paste. The UI POSTs to `/api/github/token` which is gated on the console `admin` role and returns `403 Console admin access required` for non-admin users (verified in `pkg/api/handlers/github_proxy.go:214`). Persisted to `~/.kc/settings.json` by the backend.
+
+The hosted Netlify demo cannot persist a PAT — it has no writable local backend — so Settings UI saves don't work there. Use the env-var path for self-hosting.
 
 ### Setting up GitHub OAuth (self-hosted only)
 
@@ -134,17 +146,11 @@ If you self-host the console and want sign-in:
 
 Open http://localhost:8080 and sign in with GitHub. For Kubernetes deployments, pass `--github-oauth` to `deploy.sh` instead.
 
-### `FEEDBACK_GITHUB_TOKEN` scopes
+### Consolidated PAT scopes
 
-Add a [Personal Access Token](https://github.com/settings/tokens) to `.env`:
-
-```
-FEEDBACK_GITHUB_TOKEN=your-github-personal-access-token
-```
-
-The token needs **either**:
+Whichever path you used above (env var or Settings UI), the [Personal Access Token](https://github.com/settings/tokens) needs **either**:
 - A **classic** PAT with the `repo` scope, **or**
-- A **fine-grained** PAT with both **Issues: Read & Write** *and* **Contents: Read & Write** (verified against `pkg/api/handlers/feedback.go` — Contents is required, not just Issues).
+- A **fine-grained** PAT with both **Issues: Read & Write** *and* **Contents: Read & Write** (verified against `pkg/api/handlers/feedback.go:71` — Contents is required, not just Issues).
 
 ## AI configuration
 

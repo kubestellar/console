@@ -943,18 +943,23 @@
         const aiPrs = accm.weeklyActivity.reduce((s, w) => s + (w.aiPrs || 0), 0);
         const humanPrs = accm.weeklyActivity.reduce((s, w) => s + (w.humanPrs || 0), 0);
         const totalPrs = aiPrs + humanPrs;
+        // #6220: with the previous `100 - aiPrPct` math, totalPrs===0 made
+        // the Human KPI render as "100%" with "0 of 0 PRs" — both forced to
+        // 0% in the empty case avoids that confusing display.
         const aiPrPct = totalPrs > 0 ? Math.round((aiPrs / totalPrs) * 100) : 0;
+        const humanPrPct = totalPrs > 0 ? 100 - aiPrPct : 0;
 
         const aiIssues = accm.weeklyActivity.reduce((s, w) => s + (w.aiIssues || 0), 0);
         const humanIssues = accm.weeklyActivity.reduce((s, w) => s + (w.humanIssues || 0), 0);
         const totalIssues = aiIssues + humanIssues;
         const aiIssuePct = totalIssues > 0 ? Math.round((aiIssues / totalIssues) * 100) : 0;
+        const humanIssuePct = totalIssues > 0 ? 100 - aiIssuePct : 0;
 
         html += '<div class="kpi-grid">';
         html += `<div class="kpi-card"><div class="kpi-label">AI-Authored PRs</div><div class="kpi-value" style="color:var(--purple)">${aiPrPct}%</div><div class="kpi-change flat">${aiPrs} of ${totalPrs} PRs</div></div>`;
-        html += `<div class="kpi-card"><div class="kpi-label">Human-Authored PRs</div><div class="kpi-value" style="color:var(--cyan)">${100 - aiPrPct}%</div><div class="kpi-change flat">${humanPrs} of ${totalPrs} PRs</div></div>`;
+        html += `<div class="kpi-card"><div class="kpi-label">Human-Authored PRs</div><div class="kpi-value" style="color:var(--cyan)">${humanPrPct}%</div><div class="kpi-change flat">${humanPrs} of ${totalPrs} PRs</div></div>`;
         html += `<div class="kpi-card"><div class="kpi-label">AI-Filed Issues</div><div class="kpi-value" style="color:var(--purple)">${aiIssuePct}%</div><div class="kpi-change flat">${aiIssues} of ${totalIssues} issues</div></div>`;
-        html += `<div class="kpi-card"><div class="kpi-label">Human-Filed Issues</div><div class="kpi-value" style="color:var(--cyan)">${100 - aiIssuePct}%</div><div class="kpi-change flat">${humanIssues} of ${totalIssues} issues</div></div>`;
+        html += `<div class="kpi-card"><div class="kpi-label">Human-Filed Issues</div><div class="kpi-value" style="color:var(--cyan)">${humanIssuePct}%</div><div class="kpi-change flat">${humanIssues} of ${totalIssues} issues</div></div>`;
 
         if (accm.contributorGrowth) {
           html += `<div class="kpi-card"><div class="kpi-label">Total Contributors</div><div class="kpi-value">${accm.contributorGrowth.total}</div></div>`;
