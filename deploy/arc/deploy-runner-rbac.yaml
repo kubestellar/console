@@ -79,3 +79,52 @@ subjects:
   - kind: ServiceAccount
     name: kc-deploy-runner
     namespace: arc-systems
+
+---
+# cluster-admin: prevent recurring deploy failures from RBAC permission drift.
+#
+# Background: every time the kubestellar-console Helm chart adds a new RBAC
+# rule (e.g. a new CRD apiGroup, a new resource verb), the deploy fails on
+# the target cluster with `is forbidden: ... is attempting to grant RBAC
+# permissions not currently held` because Kubernetes RBAC requires that the
+# granter already hold every permission they're granting. The detailed
+# kc-deploy-runner ClusterRole above lists what the chart needed at the
+# time the runner was bootstrapped — but every chart change risks drift,
+# and re-applying this file via `kubectl apply` would silently RESET the
+# role to the static rule set, breaking the next deploy.
+#
+# Why cluster-admin is the right answer here:
+#   1. The runner already has full CRUD on `clusterroles` and
+#      `clusterrolebindings` (see the role above), so it can already
+#      escalate itself to cluster-admin. Making the binding explicit
+#      removes the trap and the audit confusion.
+#   2. The runner already has the privileged SCC. It deploys the entire
+#      kubestellar-console workload with whatever permissions the chart
+#      asks for. There is no meaningful security boundary between
+#      "enumerated permissions" and "cluster-admin" for a deploy bot
+#      that can `kubectl apply` arbitrary RBAC.
+#   3. Every standard CI deploy bot (Argo CD, Flux, Helm operator,
+#      ARC itself) is bound to cluster-admin or equivalent.
+#
+# This binding stops the chart-vs-runner-RBAC drift class of failures
+# permanently. The detailed ClusterRole above is kept as documentation
+# of the minimum permissions the chart historically needed.
+#
+# Tracking: this addresses the recurring "Workflow failure: Build and
+# Deploy KC" issues caused by RBAC drift on managed clusters
+# (see #6021, #6099, #6118 for prior occurrences).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kc-deploy-runner-cluster-admin
+  labels:
+    app.kubernetes.io/part-of: kubestellar-console
+    app.kubernetes.io/component: deploy-runner
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: kc-deploy-runner
+    namespace: arc-systems
