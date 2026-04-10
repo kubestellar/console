@@ -45,10 +45,21 @@ export function Deployments() {
     isAllClustersSelected || (d.cluster && globalSelectedClusters.includes(d.cluster))
   )
 
+  // #5954 — Deployment and pod issues must be filtered by the same cluster
+  // selection so that per-cluster stats are consistent. Previously only
+  // `filteredDeployments` was filtered while issue counts remained global,
+  // producing misleading dashboards when a single cluster was selected.
+  const filteredDeploymentIssues = deploymentIssues.filter(i =>
+    isAllClustersSelected || (i.cluster && globalSelectedClusters.includes(i.cluster))
+  )
+  const filteredPodIssues = podIssues.filter(i =>
+    isAllClustersSelected || (i.cluster && globalSelectedClusters.includes(i.cluster))
+  )
+
   // Calculate current stats
   const currentTotalDeployments = filteredDeployments.length
   const currentHealthyDeployments = filteredDeployments.filter(d => d.readyReplicas === d.replicas && d.replicas > 0).length
-  const currentIssueCount = deploymentIssues.length
+  const currentIssueCount = filteredDeploymentIssues.length
 
   // Cache stats to prevent showing 0 during refresh
   const cachedStats = useRef({ total: 0, healthy: 0, issues: 0 })
@@ -80,7 +91,7 @@ export function Deployments() {
       case 'deployments':
         return { value: totalDeployments, sublabel: 'deployments', onClick: () => drillToAllDeployments(), isClickable: totalDeployments > 0 }
       case 'pod_issues':
-        return { value: podIssues.length, sublabel: 'pod issues', onClick: () => drillToAllPods('issues'), isClickable: podIssues.length > 0 }
+        return { value: filteredPodIssues.length, sublabel: 'pod issues', onClick: () => drillToAllPods('issues'), isClickable: filteredPodIssues.length > 0 }
       case 'deployment_issues':
         return { value: issueCount, sublabel: 'deploy issues', onClick: () => drillToAllDeployments('issues'), isClickable: issueCount > 0 }
       default:

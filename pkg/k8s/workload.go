@@ -213,20 +213,95 @@ func (m *MultiClusterClient) parseDeploymentsAsWorkloads(list interface{}, conte
 			}
 		}
 
-		// Parse status
+		// Parse status — #5955/#5956: include updatedReplicas, observedGeneration,
+		// and the ProgressDeadlineExceeded condition so partial rollouts show as
+		// pending and failed rollouts surface as Failed with a reason/message.
 		if status, ok := content["status"].(map[string]interface{}); ok {
-			if readyReplicas, ok := status["readyReplicas"].(int64); ok {
-				w.ReadyReplicas = safeInt32(readyReplicas)
+			var readyReplicas, availableReplicas, updatedReplicas int64
+			var haveAvailable bool
+			if v, ok := status["readyReplicas"].(int64); ok {
+				readyReplicas = v
+				w.ReadyReplicas = safeInt32(v)
 			}
-			if availableReplicas, ok := status["availableReplicas"].(int64); ok {
-				if safeInt32(availableReplicas) == w.Replicas {
-					w.Status = v1alpha1.WorkloadStatusRunning
-				} else if availableReplicas > 0 {
-					w.Status = v1alpha1.WorkloadStatusDegraded
-				} else {
-					w.Status = v1alpha1.WorkloadStatusPending
+			if v, ok := status["availableReplicas"].(int64); ok {
+				availableReplicas = v
+				haveAvailable = true
+			}
+			if v, ok := status["updatedReplicas"].(int64); ok {
+				updatedReplicas = v
+				w.UpdatedReplicas = safeInt32(v)
+			}
+
+			// Observed generation lag indicates the controller hasn't seen the
+			// latest spec yet — treat as still progressing.
+			var generation, observedGeneration int64
+			if meta, ok := content["metadata"].(map[string]interface{}); ok {
+				if v, ok := meta["generation"].(int64); ok {
+					generation = v
 				}
-			} else {
+			}
+			if v, ok := status["observedGeneration"].(int64); ok {
+				observedGeneration = v
+			}
+
+			// Check deployment conditions for ProgressDeadlineExceeded / ReplicaFailure.
+			var failureReason, failureMessage string
+			var progressing bool
+			if conds, ok := status["conditions"].([]interface{}); ok {
+				for _, cRaw := range conds {
+					cond, ok := cRaw.(map[string]interface{})
+					if !ok {
+						continue
+					}
+					condType, _ := cond["type"].(string)
+					condStatus, _ := cond["status"].(string)
+					reason, _ := cond["reason"].(string)
+					message, _ := cond["message"].(string)
+					switch condType {
+					case "Progressing":
+						// status=False means rollout has failed (ProgressDeadlineExceeded)
+						if condStatus == "False" {
+							failureReason = reason
+							failureMessage = message
+						} else if condStatus == "True" && reason != "NewReplicaSetAvailable" {
+							progressing = true
+						}
+					case "ReplicaFailure":
+						if condStatus == "True" {
+							failureReason = reason
+							failureMessage = message
+						}
+					}
+				}
+			}
+
+			switch {
+			case failureReason != "":
+				// Rollout explicitly failed — don't mask as Degraded/Pending.
+				w.Status = v1alpha1.WorkloadStatusFailed
+				w.Reason = failureReason
+				w.Message = failureMessage
+			case generation > 0 && observedGeneration < generation:
+				// Controller hasn't observed the latest spec yet.
+				w.Status = v1alpha1.WorkloadStatusPending
+			case progressing:
+				// Rolling update in progress — show as Pending (progressing)
+				// even if some replicas are available.
+				w.Status = v1alpha1.WorkloadStatusPending
+			case w.Replicas == 0:
+				// Scaled to zero — treat as Running (intentional idle state).
+				w.Status = v1alpha1.WorkloadStatusRunning
+			case haveAvailable &&
+				safeInt32(availableReplicas) == w.Replicas &&
+				safeInt32(updatedReplicas) == w.Replicas &&
+				safeInt32(readyReplicas) == w.Replicas:
+				// Only Running when updated == available == ready == desired.
+				// Without this, a partial rollout where available>0 but
+				// updatedReplicas<desired was incorrectly marked Running (#5955).
+				w.Status = v1alpha1.WorkloadStatusRunning
+			case haveAvailable && availableReplicas > 0:
+				w.Status = v1alpha1.WorkloadStatusDegraded
+			default:
 				w.Status = v1alpha1.WorkloadStatusPending
 			}
 		}
@@ -237,6 +312,7 @@ func (m *MultiClusterClient) parseDeploymentsAsWorkloads(list interface{}, conte
 			Status:        w.Status,
 			Replicas:      w.Replicas,
 			ReadyReplicas: w.ReadyReplicas,
+			Message:       w.Message,
 			LastUpdated:   time.Now(),
 		}}
 

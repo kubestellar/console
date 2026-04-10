@@ -315,14 +315,32 @@ export function useDeployMissions() {
                   return pendingOrFailed()
                 }
                 const data = await res.json()
+                // #5958 — If the workload no longer exists on the target cluster,
+                // treat it as a terminal failure immediately instead of letting
+                // the mission remain "pending" for multiple poll cycles.
+                if (data.notFound === true || data.status === 'NotFound' || data.status === 'not_found') {
+                  return {
+                    cluster, status: 'failed' as const, replicas: 0, readyReplicas: 0,
+                    logs: [String(data.message || 'Workload deleted during deployment — marking mission as failed')],
+                  }
+                }
                 let status: DeployClusterStatus['status'] = 'applying'
                 const restReplicas = Number(data.replicas ?? 0)
                 const restReady = Number(data.readyReplicas ?? 0)
+                // #5955 — Require updatedReplicas >= replicas so a partial rollout
+                // is not marked "running" just because availableReplicas reached desired.
+                // When the backend doesn't include updatedReplicas (older servers
+                // or tests), fall back to restReplicas so existing callers keep
+                // working. `undefined` means "don't enforce the check".
+                const restUpdatedRaw = data.updatedReplicas
+                const restUpdated = restUpdatedRaw === undefined ? restReplicas : Number(restUpdatedRaw)
                 // Zero-replica workloads are valid — treat readyReplicas >= replicas
                 // as success even when both are zero.
-                if (data.status === 'Running' && restReady >= restReplicas) {
+                if (data.status === 'Running' && restReady >= restReplicas && restUpdated >= restReplicas) {
                   status = 'running'
                 } else if (data.status === 'Failed') {
+                  // #5956 — Surface the failure reason in the mission logs
+                  // instead of leaving the mission in a generic degraded state.
                   status = 'failed'
                 } else if (restReady > 0) {
                   status = 'applying'
@@ -342,6 +360,12 @@ export function useDeployMissions() {
                   }
                 } catch {
                   // Non-critical: skip logs on error
+                }
+                // #5956 — If the deployment has a failure reason/message,
+                // prepend it to the logs so the UI surfaces it prominently.
+                if (status === 'failed' && (data.reason || data.message)) {
+                  const header = `Rollout failed: ${data.reason || 'Unknown'}${data.message ? ` — ${data.message}` : ''}`
+                  logs = logs && logs.length > 0 ? [header, ...logs] : [header]
                 }
                 return {
                   cluster,

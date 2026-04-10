@@ -47,18 +47,88 @@ type GitOpsDrift struct {
 	Severity   string `json:"severity"` // low, medium, high
 }
 
+// driftCacheTTL bounds how long a DetectDrift result stays in the shared
+// cache feeding ListDrifts. Long enough to be useful across a dashboard
+// render cycle, short enough that manual refreshes (#5952) actually see
+// fresh data rather than a stale repeat.
+const driftCacheTTL = 30 * time.Second
+
+// driftCacheEntry is a single cached drift-detection result keyed by
+// repo/path/cluster/namespace.
+type driftCacheEntry struct {
+	drifts   []GitOpsDrift
+	detected time.Time
+}
+
 // GitOpsHandlers handles GitOps-related API endpoints
 type GitOpsHandlers struct {
 	bridge    *mcp.Bridge
 	k8sClient *k8s.MultiClusterClient
+
+	// driftCache memoises recent drift results so ListDrifts can return
+	// something meaningful (#5950). Populated by DetectDrift.
+	driftCacheMu sync.RWMutex
+	driftCache   map[string]driftCacheEntry
 }
 
 // NewGitOpsHandlers creates a new GitOps handlers instance
 func NewGitOpsHandlers(bridge *mcp.Bridge, k8sClient *k8s.MultiClusterClient) *GitOpsHandlers {
 	return &GitOpsHandlers{
-		bridge:    bridge,
-		k8sClient: k8sClient,
+		bridge:     bridge,
+		k8sClient:  k8sClient,
+		driftCache: make(map[string]driftCacheEntry),
 	}
+}
+
+// rememberDrift stores a drift-detection result in the in-memory cache keyed
+// by repo URL / path / cluster / namespace. Safe for concurrent use.
+func (h *GitOpsHandlers) rememberDrift(req DetectDriftRequest, result *DetectDriftResponse) {
+	if result == nil {
+		return
+	}
+	key := fmt.Sprintf("%s|%s|%s|%s", req.RepoURL, req.Path, req.Cluster, req.Namespace)
+	drifts := make([]GitOpsDrift, 0, len(result.Resources))
+	if result.Drifted {
+		for _, r := range result.Resources {
+			drifts = append(drifts, GitOpsDrift{
+				Resource:  r.Name,
+				Namespace: r.Namespace,
+				Cluster:   req.Cluster,
+				Kind:      r.Kind,
+				DriftType: "modified",
+				Details:   fmt.Sprintf("%s: %s", r.Field, r.DiffOutput),
+				Severity:  "medium",
+			})
+		}
+	}
+	h.driftCacheMu.Lock()
+	defer h.driftCacheMu.Unlock()
+	h.driftCache[key] = driftCacheEntry{drifts: drifts, detected: time.Now()}
+}
+
+// snapshotDrifts returns all cached drifts matching the optional
+// cluster/namespace filter, dropping entries older than driftCacheTTL.
+func (h *GitOpsHandlers) snapshotDrifts(cluster, namespace string) []GitOpsDrift {
+	now := time.Now()
+	h.driftCacheMu.Lock()
+	defer h.driftCacheMu.Unlock()
+	out := make([]GitOpsDrift, 0)
+	for k, entry := range h.driftCache {
+		if now.Sub(entry.detected) > driftCacheTTL {
+			delete(h.driftCache, k)
+			continue
+		}
+		for _, d := range entry.drifts {
+			if cluster != "" && d.Cluster != cluster {
+				continue
+			}
+			if namespace != "" && d.Namespace != namespace {
+				continue
+			}
+			out = append(out, d)
+		}
+	}
+	return out
 }
 
 // DriftedResource represents a resource that has drifted from git
@@ -157,16 +227,19 @@ type Operator struct {
 	Cluster     string `json:"cluster,omitempty"`
 }
 
-// ListDrifts returns a list of detected drifts (for GET endpoint)
+// ListDrifts returns a list of detected drifts (for GET endpoint).
+//
+// #5950 — Previously this always returned an empty slice, so the UI drift
+// card never showed anything. We now expose drift results cached from recent
+// DetectDrift calls (see rememberDrift) filtered by the optional query
+// params. Entries older than driftCacheTTL are evicted on read.
 func (h *GitOpsHandlers) ListDrifts(c *fiber.Ctx) error {
-	// Optional query params for filtering
-	// cluster := c.Query("cluster")
-	// namespace := c.Query("namespace")
+	cluster := c.Query("cluster")
+	namespace := c.Query("namespace")
 
-	// Return empty list - actual drift detection requires specific repo/path
-	// which should be done via POST /api/gitops/detect-drift
+	drifts := h.snapshotDrifts(cluster, namespace)
 	return c.JSON(fiber.Map{
-		"drifts": []GitOpsDrift{},
+		"drifts": drifts,
 	})
 }
 
@@ -1003,6 +1076,7 @@ func (h *GitOpsHandlers) DetectDrift(c *fiber.Ctx) error {
 	if h.bridge != nil {
 		result, err := h.detectDriftViaMCP(ctx, req)
 		if err == nil {
+			h.rememberDrift(req, result)
 			return c.JSON(result)
 		}
 		slog.Error("[GitOps] MCP detect_drift failed, falling back to kubectl", "error", err)
@@ -1011,10 +1085,50 @@ func (h *GitOpsHandlers) DetectDrift(c *fiber.Ctx) error {
 	// Fall back to kubectl diff
 	result, err := h.detectDriftViaKubectl(ctx, req)
 	if err != nil {
+		// #5959 — Invalid YAML in the GitOps repo was previously masked as a
+		// generic "internal error". Surface a structured parse error with the
+		// raw kubectl stderr so users can fix their manifests.
+		if yamlErr := extractYAMLParseError(err); yamlErr != "" {
+			return c.Status(422).JSON(fiber.Map{
+				"error":     "invalid YAML in GitOps source",
+				"errorType": "yaml_parse",
+				"details":   yamlErr,
+			})
+		}
 		return handleK8sError(c, err)
 	}
 
+	h.rememberDrift(req, result)
 	return c.JSON(result)
+}
+
+// extractYAMLParseError pattern-matches kubectl/yaml parser error messages
+// and returns a cleaned-up description, or "" if the error does not look
+// like a YAML parse problem. Keeps detail enough to be actionable (file,
+// line, reason) without leaking paths outside the manifest set.
+func extractYAMLParseError(err error) string {
+	if err == nil {
+		return ""
+	}
+	msg := err.Error()
+	lower := strings.ToLower(msg)
+	yamlMarkers := []string{
+		"error parsing",
+		"yaml: line",
+		"yaml: unmarshal",
+		"error converting yaml",
+		"error validating data",
+		"mapping values are not allowed",
+		"did not find expected",
+		"could not find expected",
+		"found character that cannot start any token",
+	}
+	for _, m := range yamlMarkers {
+		if strings.Contains(lower, m) {
+			return msg
+		}
+	}
+	return ""
 }
 
 // detectDriftViaMCP uses the kubestellar-ops detect_drift tool

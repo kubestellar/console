@@ -102,8 +102,31 @@ export function GitOps() {
     setLastUpdated(new Date())
   }, [])
 
+  // Health-check timeout for skipping drift detection when the backend is
+  // unreachable — long enough to survive a slow initial auth round-trip,
+  // short enough that users don't stare at "checking" for seconds (#3609).
+  const DRIFT_HEALTHCHECK_TIMEOUT_MS = 3000
+
+  // #5953 — Apps no longer hardcode an empty cluster. Resolve a concrete
+  // cluster (first available healthy cluster) so the cluster filter actually
+  // matches. `selectedCluster` compares against `cluster.context ||
+  // cluster.name.split('/').pop()` in the <select> below, so we use the same
+  // shape here for consistency.
+  const resolveAppCluster = (preferred: string): string => {
+    if (preferred) return preferred
+    const first = clusters[0]
+    if (!first) return ''
+    return first.context || first.name.split('/').pop() || ''
+  }
+
+  // #5952 — detectAllDrift is now a callable ref so the refresh button can
+  // re-run drift detection instead of only updating lastUpdated.
+  const detectAllDriftRef = useRef<() => Promise<void>>(async () => {})
+
   const handleRefresh = () => {
     refetch()
+    // Re-run drift detection so the UI actually reflects fresh state.
+    void detectAllDriftRef.current()
     setLastUpdated(new Date())
   }
 
@@ -118,7 +141,7 @@ export function GitOps() {
     async function detectAllDrift() {
       // Quick health check — skip drift detection entirely if backend is down
       try {
-        const health = await fetch('/api/health', { signal: AbortSignal.timeout(3000) })
+        const health = await fetch('/api/health', { signal: AbortSignal.timeout(DRIFT_HEALTHCHECK_TIMEOUT_MS) })
         if (!health.ok) {
           setIsDetecting(false)
           return
@@ -132,7 +155,7 @@ export function GitOps() {
 
       setIsDetecting(true)
       const results = new Map<string, DriftResult>()
-      const configs = getGitOpsAppConfigs()
+      const configs = getGitOpsAppConfigs().map(c => ({ ...c, cluster: resolveAppCluster(c.cluster) }))
 
       // Run drift checks in parallel with individual timeouts instead of
       // sequential requests, reducing total latency significantly.
@@ -164,9 +187,12 @@ export function GitOps() {
       setIsDetecting(false)
     }
 
+    detectAllDriftRef.current = detectAllDrift
     detectAllDrift()
     return () => { cancelled = true }
-  }, [])
+    // resolveAppCluster depends on `clusters`, which is the effective dep here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clusters])
 
   // Handle sync action - open the sync dialog
   const handleSync = (app: GitOpsApp) => {
@@ -189,7 +215,10 @@ export function GitOps() {
 
   // Build apps list with real drift status
   const apps = useMemo(() => {
-    const configs = getGitOpsAppConfigs()
+    // #5953 — Fill in a real cluster so the cluster filter below actually
+    // matches. Without this, `app.cluster` was always "" and every app was
+    // filtered out the moment a user selected a cluster.
+    const configs = getGitOpsAppConfigs().map(c => ({ ...c, cluster: resolveAppCluster(c.cluster) }))
     return configs.map((config): GitOpsApp => {
       if (syncedApps.has(config.name)) {
         return { ...config, syncStatus: 'synced', healthStatus: 'healthy', lastSyncTime: new Date().toISOString(), driftDetails: undefined }
@@ -206,7 +235,8 @@ export function GitOps() {
       }
       return { ...config, syncStatus: 'unknown', healthStatus: 'missing', lastSyncTime: undefined, driftDetails: undefined }
     })
-  }, [driftResults, isDetecting, syncedApps])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [driftResults, isDetecting, syncedApps, clusters])
 
   const filteredApps = apps.map(app => syncedApps.has(app.name) ? { ...app, syncStatus: 'synced' as const, healthStatus: 'healthy' as const, driftDetails: undefined, lastSyncTime: new Date().toISOString() } : app)
       .filter(app => {

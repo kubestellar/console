@@ -137,8 +137,32 @@ func (h *WorkloadHandlers) DeployWorkload(c *fiber.Ctx) error {
 	if req.Namespace == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "namespace is required"})
 	}
+	if req.SourceCluster == "" {
+		// #5957 — reject missing sourceCluster with a clear 400 rather than
+		// letting it fall through and surface as a confusing downstream error.
+		return c.Status(400).JSON(fiber.Map{"error": "sourceCluster is required"})
+	}
+	if err := validateK8sName(req.SourceCluster, "sourceCluster"); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
 	if len(req.TargetClusters) == 0 {
 		return c.Status(400).JSON(fiber.Map{"error": "at least one targetCluster is required"})
+	}
+	// Verify sourceCluster is actually known to the multi-cluster client (#5957).
+	// Catches typos and stale UI state before we attempt to read from the source.
+	if h.k8sClient != nil {
+		known := false
+		if clusters, _, cerr := h.k8sClient.HealthyClusters(c.Context()); cerr == nil {
+			for _, cl := range clusters {
+				if cl.Name == req.SourceCluster || cl.Context == req.SourceCluster {
+					known = true
+					break
+				}
+			}
+		}
+		if !known {
+			return c.Status(400).JSON(fiber.Map{"error": fmt.Sprintf("sourceCluster %q is not a known cluster", req.SourceCluster)})
+		}
 	}
 
 	// Extract authenticated user
@@ -266,25 +290,35 @@ func (h *WorkloadHandlers) GetDeployStatus(c *fiber.Ctx) error {
 	}
 
 	if workload == nil {
+		// #5958 — The status field was previously "not_found" (snake_case) which
+		// the frontend's DeployMissions poll loop did not recognise, leaving the
+		// mission stuck in a "pending" state for many poll cycles. Return a
+		// stable shape that the frontend checks for explicitly.
 		return c.JSON(fiber.Map{
 			"cluster":       cluster,
 			"namespace":     namespace,
 			"name":          name,
-			"status":        "not_found",
+			"status":        "NotFound",
+			"notFound":      true,
 			"replicas":      0,
 			"readyReplicas": 0,
+			"reason":        "WorkloadDeleted",
+			"message":       "workload no longer exists on target cluster",
 		})
 	}
 
 	return c.JSON(fiber.Map{
-		"cluster":       cluster,
-		"namespace":     namespace,
-		"name":          name,
-		"status":        workload.Status,
-		"replicas":      workload.Replicas,
-		"readyReplicas": workload.ReadyReplicas,
-		"type":          workload.Type,
-		"image":         workload.Image,
+		"cluster":         cluster,
+		"namespace":       namespace,
+		"name":            name,
+		"status":          workload.Status,
+		"replicas":        workload.Replicas,
+		"readyReplicas":   workload.ReadyReplicas,
+		"updatedReplicas": workload.UpdatedReplicas,
+		"reason":          workload.Reason,
+		"message":         workload.Message,
+		"type":            workload.Type,
+		"image":           workload.Image,
 	})
 }
 

@@ -50,18 +50,24 @@ const (
 
 // Workload represents a workload that can be deployed across clusters
 type Workload struct {
-	Name           string            `json:"name"`
-	Namespace      string            `json:"namespace"`
-	Type           WorkloadType      `json:"type"`
-	Status         WorkloadStatus    `json:"status"`
-	Replicas       int32             `json:"replicas,omitempty"`
-	ReadyReplicas  int32             `json:"readyReplicas,omitempty"`
-	Image          string            `json:"image,omitempty"`
-	Labels         map[string]string `json:"labels,omitempty"`
-	TargetClusters []string          `json:"targetClusters,omitempty"`
-	Deployments    []ClusterDeployment `json:"deployments,omitempty"`
-	CreatedAt      time.Time         `json:"createdAt"`
-	UpdatedAt      time.Time         `json:"updatedAt,omitempty"`
+	Name            string              `json:"name"`
+	Namespace       string              `json:"namespace"`
+	Type            WorkloadType        `json:"type"`
+	Status          WorkloadStatus      `json:"status"`
+	Replicas        int32               `json:"replicas,omitempty"`
+	ReadyReplicas   int32               `json:"readyReplicas,omitempty"`
+	UpdatedReplicas int32               `json:"updatedReplicas,omitempty"`
+	Image           string              `json:"image,omitempty"`
+	Labels          map[string]string   `json:"labels,omitempty"`
+	TargetClusters  []string            `json:"targetClusters,omitempty"`
+	Deployments     []ClusterDeployment `json:"deployments,omitempty"`
+	// Reason is a short machine-readable failure reason copied from the
+	// deployment condition (e.g. ProgressDeadlineExceeded). Only set when
+	// the workload is in a failure state (#5956).
+	Reason    string    `json:"reason,omitempty"`
+	Message   string    `json:"message,omitempty"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt,omitempty"`
 }
 
 // ClusterDeployment represents the deployment status of a workload in a specific cluster
