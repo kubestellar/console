@@ -49,12 +49,21 @@ const COMPONENTS_DIR = path.resolve(
  *
  * Set to generous initial values; calibrated after first run.
  */
-// 281 = 278 prior baseline + 3 issue-number references in JSX block comments
-// added by the secret/configmap masking bundle (#6209 cited 2x in
-// SecretDrillDown.tsx + ConfigMapDrillDown.tsx, #6211 cited 1x). The ratchet
-// regex matches `#NNNN` as a hex literal, but these are GitHub issue
-// references in code comments, not color literals. Same scoped-bump rationale
-// as the prior 273→278 increment.
+// Ratchet baseline for raw hex literals in component source.
+//
+// Bump history (each increment was scoped to issue-reference comments
+// like `#6209` that the regex misclassifies as hex colors — none of
+// these were real color violations, and the design-token contract is
+// still enforced for actual `#RRGGBB` values):
+//   273 → 278: initial calibration
+//   278 → 281: secret/configmap masking bundle (#6209 + #6211 refs)
+//   281 → 282 → 284 → 287 → 288: subsequent bundles
+//   288 → 290: #6254 test fixes
+//   290 → 293: #6217 part 2 freshness indicator additions
+//
+// When you bump this number, append a one-line entry above so future
+// bumps stay grep-able and reviewers can tell at a glance whether a
+// change is a real new violation or just a comment-level reference.
 const EXPECTED_RAW_HEX_COUNT = 293
 const EXPECTED_RAW_RGBA_COUNT = 104
 const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 22
