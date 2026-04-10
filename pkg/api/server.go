@@ -419,6 +419,18 @@ setInterval(async function(){try{var r=await fetch('/healthz');if(r.ok){var d=aw
 </body>
 </html>`
 
+// oauthConfigured reports whether the server has a usable GitHub OAuth
+// configuration. Both the client ID AND the client secret must be present
+// — a partial config (one without the other) is unusable because the
+// token-exchange step cannot authenticate to GitHub without the secret,
+// and the health probe must not report such an install as OAuth-ready
+// (#6056). Prior to the fix this returned true as soon as the client ID
+// was set, which caused downstream UIs to show a "GitHub login" button
+// that was guaranteed to fail on click.
+func (s *Server) oauthConfigured() bool {
+	return s.config.GitHubClientID != "" && s.config.GitHubSecret != ""
+}
+
 func (s *Server) setupRoutes() {
 	// Minimal probe endpoint for load balancers and k8s liveness checks.
 	// Returns only status — no configuration metadata.
@@ -461,7 +473,7 @@ func (s *Server) setupRoutes() {
 		resp := fiber.Map{
 			"status":           healthStatus,
 			"version":          Version,
-			"oauth_configured": s.config.GitHubClientID != "",
+			"oauth_configured": s.oauthConfigured(),
 			"in_cluster":       inCluster,
 			"install_method":   detectInstallMethod(inCluster),
 			"project":          s.config.ConsoleProject,

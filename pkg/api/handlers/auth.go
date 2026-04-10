@@ -357,6 +357,34 @@ func (h *AuthHandler) devModeLogin(c *fiber.Ctx) error {
 	return c.Redirect(redirectURL, fiber.StatusTemporaryRedirect)
 }
 
+// hasValidAuthCookie reports whether the incoming request carries a kc_auth
+// cookie that parses as a non-expired, non-revoked JWT under the handler's
+// signing secret. It is used by GitHubCallback (#6064) to recover from CSRF
+// state-validation failures when the user is already authenticated: a stale
+// OAuth tab, a browser back-button replay, or a server restart that cleared
+// the in-memory state store should not force a user with a live session
+// back through the login flow. Any parse error, validity failure, missing
+// claims, or revocation check failure causes this helper to return false so
+// the caller falls through to the normal error path.
+func (h *AuthHandler) hasValidAuthCookie(c *fiber.Ctx) bool {
+	cookieToken := c.Cookies(jwtCookieName)
+	if cookieToken == "" {
+		return false
+	}
+	parsed, err := middleware.ParseJWT(cookieToken, h.jwtSecret)
+	if err != nil || parsed == nil || !parsed.Valid {
+		return false
+	}
+	claims, ok := parsed.Claims.(*middleware.UserClaims)
+	if !ok {
+		return false
+	}
+	if claims.ID != "" && middleware.IsTokenRevoked(claims.ID) {
+		return false
+	}
+	return true
+}
+
 // oauthErrorRedirect builds a redirect URL to the login page with a structured error.
 // The error code is always present; detail is optional human-readable context.
 func (h *AuthHandler) oauthErrorRedirect(c *fiber.Ctx, errorCode, detail string) error {
@@ -420,6 +448,21 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	// (Safari blocks cookies in OAuth redirect flows, so we use server-side state)
 	state := c.Query("state")
 	if state == "" || !validateAndConsumeOAuthState(state) {
+		// #6064 — State validation can fail for reasons that are entirely
+		// benign from the user's perspective: a stale OAuth tab left open
+		// from a previous session, a server restart that cleared the
+		// in-memory state store (#6034 addresses the root cause), or a
+		// duplicate back-button submission. In all of these cases, if the
+		// browser is already carrying a valid kc_auth cookie, the user is
+		// effectively still signed in — bouncing them to an error page
+		// forces a pointless re-login. Instead, when the incoming request
+		// carries a non-expired, non-revoked JWT cookie, short-circuit to
+		// the frontend root so the existing session is preserved.
+		if h.hasValidAuthCookie(c) {
+			slog.Info("[Auth] CSRF state invalid but user already has valid cookie, recovering to /")
+			c.Set("Cache-Control", "no-store")
+			return c.Redirect(h.frontendURL+"/", fiber.StatusTemporaryRedirect)
+		}
 		slog.Error("[Auth] CSRF validation failed: invalid or expired state token")
 		return h.oauthErrorRedirect(c, "csrf_validation_failed", "")
 	}

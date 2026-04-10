@@ -287,6 +287,63 @@ func TestJWTAuth_StaleHeaderFallsBackToCookie(t *testing.T) {
 	})
 }
 
+// TestJWTAuth_MalformedHeaderFallsBackToCookie covers #6063: a structurally
+// invalid Authorization header (no Bearer prefix, "Bearer" with no token,
+// whitespace-only, etc.) must be treated the same as an empty header — the
+// middleware should fall through to the kc_auth cookie path instead of
+// immediately returning 401. Previously a client that had a perfectly valid
+// cookie session would be bounced to login if any misbehaving layer stamped
+// a garbage Authorization header onto its fetch, which is the exact bug
+// being fixed.
+func TestJWTAuth_MalformedHeaderFallsBackToCookie(t *testing.T) {
+	secret := "test-secret"
+	app := fiber.New()
+	app.Get("/protected", JWTAuth(secret), func(c *fiber.Ctx) error {
+		return c.SendString("success")
+	})
+
+	// All of these header values are structurally malformed. With a valid
+	// cookie attached, each request should succeed (200) because the
+	// malformed header is ignored and the cookie is consumed instead.
+	malformedHeaders := []struct {
+		name  string
+		value string
+	}{
+		{"no bearer prefix", "garbage"},
+		{"basic auth instead", "Basic dXNlcjpwYXNz"},
+		{"bearer keyword only no space", "Bearer"},
+		{"bearer keyword with space no token", "Bearer "},
+		{"bearer with only whitespace token", "Bearer    "},
+		{"whitespace only header", "   "},
+		{"lowercase bearer prefix", "bearer sometoken"},
+	}
+
+	for _, tc := range malformedHeaders {
+		tc := tc
+		t.Run(tc.name+" with valid cookie succeeds", func(t *testing.T) {
+			validCookieToken, _ := generateTestToken(secret, time.Now().Add(time.Hour))
+			req := httptest.NewRequest("GET", "/protected", nil)
+			req.Header.Set("Authorization", tc.value)
+			req.AddCookie(&http.Cookie{Name: jwtCookieName, Value: validCookieToken})
+
+			resp, err := app.Test(req, 5000)
+			assert.NoError(t, err)
+			assert.Equal(t, 200, resp.StatusCode,
+				"malformed header %q must fall through to cookie path (#6063)", tc.value)
+		})
+
+		t.Run(tc.name+" with no cookie still 401", func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/protected", nil)
+			req.Header.Set("Authorization", tc.value)
+
+			resp, err := app.Test(req, 5000)
+			assert.NoError(t, err)
+			assert.Equal(t, 401, resp.StatusCode,
+				"malformed header %q with no cookie must still fail", tc.value)
+		})
+	}
+}
+
 func TestValidateJWT(t *testing.T) {
 	secret := "test-secret"
 

@@ -296,5 +296,119 @@ func TestClassifyExchangeError(t *testing.T) {
 	})
 }
 
+// TestGitHubCallback_RecoversFromValidCookieOnStateFailure covers #6064:
+// when CSRF state validation fails (stale OAuth tab, server restart that
+// cleared the in-memory state store, etc.) the callback must check whether
+// the request already carries a valid kc_auth cookie. If so, it should
+// redirect to "/" and preserve the live session instead of bouncing the
+// user to the error page and forcing a pointless re-login. If the cookie
+// is missing, expired, or signed with a different secret, the classic
+// error redirect still applies.
+func TestGitHubCallback_RecoversFromValidCookieOnStateFailure(t *testing.T) {
+	app, _, handler := setupAuthTest()
+	app.Get("/auth/callback", handler.GitHubCallback)
+
+	const (
+		validCookieLifetime = time.Hour
+		expiredCookieAge    = -1 * time.Hour
+	)
+
+	t.Run("valid cookie + invalid state redirects to /", func(t *testing.T) {
+		user := &models.User{ID: uuid.New(), GitHubLogin: "already-signed-in"}
+		cookieToken, err := handler.generateJWT(user)
+		assert.NoError(t, err)
+
+		req, _ := http.NewRequest("GET", "/auth/callback?code=123&state=bogus", nil)
+		req.AddCookie(&http.Cookie{Name: jwtCookieName, Value: cookieToken})
+
+		resp, err := app.Test(req, 5000)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusTemporaryRedirect, resp.StatusCode)
+
+		loc, _ := resp.Location()
+		assert.Equal(t, "/", loc.Path,
+			"valid cookie should recover to frontend root, not error page")
+		assert.NotContains(t, loc.String(), "error=csrf_validation_failed",
+			"error page must not be used when a valid session cookie is present")
+	})
+
+	t.Run("missing cookie + invalid state redirects to error page", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/auth/callback?code=123&state=bogus", nil)
+
+		resp, err := app.Test(req, 5000)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusTemporaryRedirect, resp.StatusCode)
+
+		loc, _ := resp.Location()
+		assert.Contains(t, loc.String(), "error=csrf_validation_failed")
+	})
+
+	t.Run("expired cookie + invalid state redirects to error page", func(t *testing.T) {
+		// Cookie parses but is expired — the recovery path must NOT engage.
+		expiredClaims := middleware.UserClaims{
+			UserID:      uuid.New(),
+			GitHubLogin: "stale",
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiredCookieAge)),
+			},
+		}
+		expiredJWT := jwt.NewWithClaims(jwt.SigningMethodHS256, expiredClaims)
+		expiredSigned, _ := expiredJWT.SignedString([]byte("test-secret"))
+
+		req, _ := http.NewRequest("GET", "/auth/callback?code=123&state=bogus", nil)
+		req.AddCookie(&http.Cookie{Name: jwtCookieName, Value: expiredSigned})
+
+		resp, err := app.Test(req, 5000)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusTemporaryRedirect, resp.StatusCode)
+
+		loc, _ := resp.Location()
+		assert.Contains(t, loc.String(), "error=csrf_validation_failed",
+			"expired cookie must not trigger the #6064 recovery path")
+	})
+
+	t.Run("cookie signed with wrong secret + invalid state redirects to error page", func(t *testing.T) {
+		// Cookie is non-expired but signed with a different secret — ParseJWT
+		// must reject it, so the recovery path must NOT engage.
+		forgedClaims := middleware.UserClaims{
+			UserID:      uuid.New(),
+			GitHubLogin: "forged",
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(validCookieLifetime)),
+			},
+		}
+		forgedJWT := jwt.NewWithClaims(jwt.SigningMethodHS256, forgedClaims)
+		forgedSigned, _ := forgedJWT.SignedString([]byte("not-the-real-secret"))
+
+		req, _ := http.NewRequest("GET", "/auth/callback?code=123&state=bogus", nil)
+		req.AddCookie(&http.Cookie{Name: jwtCookieName, Value: forgedSigned})
+
+		resp, err := app.Test(req, 5000)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusTemporaryRedirect, resp.StatusCode)
+
+		loc, _ := resp.Location()
+		assert.Contains(t, loc.String(), "error=csrf_validation_failed",
+			"wrong-secret cookie must not trigger the #6064 recovery path")
+	})
+
+	t.Run("empty state + valid cookie still recovers to /", func(t *testing.T) {
+		// state missing entirely (not just invalid) should also recover.
+		user := &models.User{ID: uuid.New(), GitHubLogin: "empty-state"}
+		cookieToken, err := handler.generateJWT(user)
+		assert.NoError(t, err)
+
+		req, _ := http.NewRequest("GET", "/auth/callback?code=123", nil)
+		req.AddCookie(&http.Cookie{Name: jwtCookieName, Value: cookieToken})
+
+		resp, err := app.Test(req, 5000)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusTemporaryRedirect, resp.StatusCode)
+
+		loc, _ := resp.Location()
+		assert.Equal(t, "/", loc.Path)
+	})
+}
+
 // We cannot easily test successful GitHubCallback flow without mocking oauth lib
 // or doing extensive interface extraction, but we covered the error paths above.

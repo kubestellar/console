@@ -235,6 +235,11 @@ func IsTokenRevoked(jti string) bool {
 // Must match the name used in handlers/auth.go.
 const jwtCookieName = "kc_auth"
 
+// bearerScheme is the RFC 6750 authentication scheme prefix (with trailing
+// space) for the Authorization header. Extracted as a constant so the
+// middleware and any helpers agree on the exact prefix to strip.
+const bearerScheme = "Bearer "
+
 // JWTAuth creates JWT authentication middleware.
 // Token resolution order: Authorization header -> HttpOnly cookie -> _token query param (SSE only).
 func JWTAuth(secret string) fiber.Handler {
@@ -242,11 +247,31 @@ func JWTAuth(secret string) fiber.Handler {
 		authHeader := c.Get("Authorization")
 		var tokenString string
 
-		if authHeader != "" {
-			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
-			if tokenString == authHeader {
-				slog.Info("[Auth] invalid authorization format", "path", c.Path())
-				return fiber.NewError(fiber.StatusUnauthorized, "Invalid authorization format")
+		// Parse the Authorization header. Any of the following structurally
+		// malformed inputs are treated the same as an empty header and fall
+		// through to the cookie path (#6063):
+		//   - non-empty header without the "Bearer " prefix (e.g. "garbage")
+		//   - "Bearer" with no trailing space or token
+		//   - "Bearer " with only whitespace after the scheme
+		//   - a header consisting entirely of whitespace
+		// Previously any of these returned 401 immediately, which stranded
+		// clients that had a perfectly valid kc_auth cookie (the session was
+		// live, but a broken/legacy fetch wrapper was stamping nonsense into
+		// the header). The companion #6026 path handles the different case
+		// of a structurally valid header that fails to parse.
+		trimmedHeader := strings.TrimSpace(authHeader)
+		if trimmedHeader != "" {
+			if strings.HasPrefix(trimmedHeader, bearerScheme) {
+				candidate := strings.TrimSpace(strings.TrimPrefix(trimmedHeader, bearerScheme))
+				if candidate != "" {
+					tokenString = candidate
+				}
+			}
+			// If we got here with tokenString still empty, the header was
+			// structurally malformed — keep going and let the cookie path
+			// (and the downstream "missing authorization" check) decide.
+			if tokenString == "" {
+				slog.Info("[Auth] malformed authorization header, trying cookie", "path", c.Path())
 			}
 		}
 
