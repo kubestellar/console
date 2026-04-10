@@ -272,6 +272,23 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 	// Clear read deadline after successful auth
 	c.SetReadDeadline(time.Time{})
 
+	// Create the cancellable context and register it BEFORE any of the long-
+	// running setup (init message read, k8s client lookup, executor build).
+	// Without this, there is a race window: the user authenticates, then
+	// logs out before the registration call below, and CancelUserExecSessions
+	// has nothing to cancel — the about-to-start exec session leaks past
+	// logout. Registering up-front shrinks the window to roughly zero
+	// because the context is already in the per-user registry when the
+	// long-running operations begin (#6075).
+	execCtx, execCancel := context.WithCancel(context.Background())
+	defer execCancel()
+
+	var execRegistrationID int64
+	if claims.UserID != uuid.Nil {
+		execRegistrationID = registerExecSession(claims.UserID, execCancel)
+		defer unregisterExecSession(claims.UserID, execRegistrationID)
+	}
+
 	if h.k8sClient == nil {
 		writeError(c, "No Kubernetes client available")
 		return
@@ -381,20 +398,9 @@ func (h *ExecHandlers) HandleExec(c *websocket.Conn) {
 	// Send initial terminal size
 	sizeQueue.ch <- remotecommand.TerminalSize{Width: init.Cols, Height: init.Rows}
 
-	// Create a cancellable context so that when the WebSocket client disconnects,
-	// the exec stream is cancelled promptly — preventing goroutine and SPDY leaks.
-	execCtx, execCancel := context.WithCancel(context.Background())
-	defer execCancel()
-
-	// Register this cancel with the per-user exec session registry so a later
-	// Logout call can tear the stream down even though /ws/exec is not tracked
-	// by the WebSocket Hub (#6024). Only register when we have a real userID —
-	// in dev/demo without a valid UserID claim there is nothing to key on.
-	var execRegistrationID int64
-	if claims.UserID != uuid.Nil {
-		execRegistrationID = registerExecSession(claims.UserID, execCancel)
-		defer unregisterExecSession(claims.UserID, execRegistrationID)
-	}
+	// execCtx / execCancel were created up-front (right after JWT validation)
+	// so the registry is populated before any long-running setup. See the
+	// comment above for the race-window rationale (#6075).
 
 	// Start a goroutine to read WebSocket messages and route them
 	done := make(chan struct{})

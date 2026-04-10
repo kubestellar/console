@@ -167,6 +167,12 @@ func gitopsMutationCases() []mutationCase {
 			body: `{}`,
 			wire: func(app *fiber.App, h *GitOpsHandlers, p string) { app.Post(p, h.RollbackHelmRelease) },
 		},
+		{
+			name: "argocd-sync",
+			path: "/api/gitops/argocd/sync",
+			body: `{}`,
+			wire: func(app *fiber.App, h *GitOpsHandlers, p string) { app.Post(p, h.TriggerArgoSync) },
+		},
 	}
 }
 

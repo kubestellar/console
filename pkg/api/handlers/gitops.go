@@ -2339,12 +2339,6 @@ func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
 	if err := requireEditorOrAdmin(c, h.userStore); err != nil {
 		return err
 	}
-	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{
-			"error":   "Kubernetes client not configured",
-			"success": false,
-		})
-	}
 
 	var req struct {
 		AppName   string `json:"appName"`
@@ -2358,6 +2352,10 @@ func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
 		})
 	}
 
+	// Body-shape validation runs BEFORE the k8s client availability check
+	// so RBAC + body-shape errors surface to the caller even when the
+	// cluster connection is unavailable. Mirrors the Sync /
+	// UpgradeHelmRelease ordering and is what the #6022 RBAC tests assume.
 	if req.AppName == "" || req.Cluster == "" {
 		return c.Status(400).JSON(fiber.Map{
 			"error":   "appName and cluster are required",
@@ -2370,6 +2368,13 @@ func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
 	}
 	if err := validateK8sName(req.Cluster, "cluster"); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": err.Error(), "success": false})
+	}
+
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{
+			"error":   "Kubernetes client not configured",
+			"success": false,
+		})
 	}
 
 	// Default namespace for ArgoCD applications
