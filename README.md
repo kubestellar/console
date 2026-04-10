@@ -82,7 +82,10 @@ curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | 
 **Building `kc-agent` from source is a separate path** — only needed if you want a development build of the agent rather than the prebuilt binary that `start.sh` already installs. It requires Go **1.25+** (the version pinned in `go.mod`) and `git`. Ubuntu's `golang-go` package usually lags the current release; use the [official Go install](https://go.dev/doc/install) or the `longsleep/golang-backports` PPA to get a recent version:
 
 ```bash
-sudo add-apt-repository ppa:longsleep/golang-backports
+# add-apt-repository lives in software-properties-common — install it
+# first on minimal Ubuntu/WSL images that don't ship with it.
+sudo apt-get update && sudo apt-get install -y software-properties-common
+sudo add-apt-repository -y ppa:longsleep/golang-backports
 sudo apt-get update && sudo apt-get install -y golang-1.25 git
 git clone https://github.com/kubestellar/console.git
 cd console
@@ -99,7 +102,7 @@ The console references three different GitHub credentials and they are **not int
 | Credential | What it does | Where it lives | When you need it |
 |---|---|---|---|
 | **GitHub OAuth App** (`GITHUB_CLIENT_ID` + `GITHUB_CLIENT_SECRET`) | Sign-in for the **self-hosted** console at `localhost:8080` | `.env` file at the repo root | Only if you self-host the console AND want user sign-in. Skip for the hosted demo. |
-| **GitHub PAT in Settings UI** | Powers nightly E2E status, community activity, leaderboard widgets | Saved by the local `kc-agent` to its on-disk settings file (not browser-only). Only reachable when self-hosting — the hosted Netlify build disables `LOCAL_AGENT_HTTP_URL`, so the Settings page cannot persist a token there. | Optional. Adds GitHub-powered widgets to your **self-hosted** dashboard. |
+| **GitHub PAT in Settings UI** | Powers nightly E2E status, community activity, leaderboard widgets | Persisted by the **console backend** via `POST /api/github/token` (`pkg/api/handlers/github_proxy.go`) to the encrypted local settings file at `~/.kc/settings.json`. Not browser-only and not stored on the kc-agent. Only works when self-hosting — the hosted Netlify demo has no writable local backend, so the Settings page cannot persist a token there. | Optional. Adds GitHub-powered widgets to your **self-hosted** dashboard. |
 | **`FEEDBACK_GITHUB_TOKEN`** | Lets the `/issue` page open GitHub issues for you | `.env` file at the repo root | Optional. Only needed if you want users to file issues from inside the console. Without it, `/issue` returns `503 Issue submission is not available`. |
 
 **Minimum to get started**: nothing — hit [console.kubestellar.io](https://console.kubestellar.io). Everything above is opt-in.
@@ -147,25 +150,18 @@ The token needs **either**:
 
 The console can use AI for adaptive card suggestions and mission help. AI is **optional** — the UI, missions, and dashboards all work without any AI keys configured (#6191).
 
-**Important**: AI BYOK only works on the **self-hosted** console. The hosted demo at [console.kubestellar.io](https://console.kubestellar.io) explicitly disables `LOCAL_AGENT_HTTP_URL` (verified in `web/src/lib/constants/network.ts`), so the Settings → API Keys flow has no local agent to talk to and does nothing there. To use your own AI keys, self-host the console first.
+**Important**: AI BYOK only works on the **self-hosted** console. The hosted demo at [console.kubestellar.io](https://console.kubestellar.io) explicitly disables `LOCAL_AGENT_HTTP_URL` (verified in `web/src/lib/constants/network.ts`), so the browser cannot reach a local agent there. To use your own AI keys, self-host the console first.
 
-**How to add API keys (self-hosted):**
-
-1. Self-host the console (see [Local install](#local-install-self-host))
-2. Make sure `kc-agent` is running locally (the same `start.sh` already starts one for you)
-3. Open the local console → **Settings** → **API Keys** → **Manage Keys**
-4. Paste a key from one of: [OpenAI](https://platform.openai.com/api-keys), [Anthropic Claude](https://console.anthropic.com/settings/keys), or [Google Gemini](https://aistudio.google.com/apikey)
-
-Keys are POSTed from the browser to your **local** `kc-agent` process (`http://127.0.0.1:8585/settings/keys`) and stored in its on-disk settings file. They never reach any hosted backend.
-
-You can also pre-set keys via environment variables before launching `kc-agent`:
+**How to add API keys (self-hosted):** the supported path today is **environment variables** read by `kc-agent` at startup. Export the keys you want, then launch the agent:
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...   # Claude
 export OPENAI_API_KEY=sk-...          # OpenAI
-export GOOGLE_API_KEY=...             # Gemini
+export GOOGLE_API_KEY=...             # Gemini  (note: GOOGLE_API_KEY, not GEMINI_API_KEY)
 ./bin/kc-agent
 ```
+
+> **A note on the Settings → API Keys modal**: the console UI exposes a "Manage Keys" button under **Settings → API Keys**. This modal is wired to the agent's `/settings/keys` endpoint, but in the current build that endpoint returns an empty providers list (`providers := []providerDef{}` in `pkg/agent/server_operations.go:288`) — the comment in the source explains that "API-key-driven agents are hidden because they cannot execute commands to diagnose/repair clusters." So the modal will render no providers and you can't enter keys through it. **Use the environment-variable path above.** This README will be updated if/when the providers list is re-enabled.
 
 **If no key is configured**, AI-powered features fall back to deterministic / rule-based behavior. The card suggestions, missions, and dashboards remain fully usable.
 
