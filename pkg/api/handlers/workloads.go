@@ -52,6 +52,23 @@ func NewWorkloadHandlers(k8sClient *k8s.MultiClusterClient, hub *Hub, s store.St
 	}
 }
 
+// requireAdmin enforces the console-admin role on mutating workload endpoints
+// (#5974). All modify endpoints — deploy, scale, delete, cluster-group CRUD —
+// go through this single helper so the check can never drift between
+// handlers. When no user store is configured (dev/demo/tests) the check is
+// skipped; production wiring always passes a real store in.
+func (h *WorkloadHandlers) requireAdmin(c *fiber.Ctx) error {
+	if h.store == nil {
+		return nil
+	}
+	currentUserID := middleware.GetUserID(c)
+	currentUser, err := h.store.GetUser(currentUserID)
+	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
+		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	}
+	return nil
+}
+
 // ListWorkloads returns all workloads across clusters
 // GET /api/workloads
 func (h *WorkloadHandlers) ListWorkloads(c *fiber.Ctx) error {
@@ -104,11 +121,9 @@ func (h *WorkloadHandlers) GetWorkload(c *fiber.Ctx) error {
 // DeployWorkload deploys a workload to specified clusters
 // POST /api/workloads/deploy
 func (h *WorkloadHandlers) DeployWorkload(c *fiber.Ctx) error {
-	// Require console admin role for workload mutations
-	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
-		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	// Workload mutations require console admin (#5974).
+	if err := h.requireAdmin(c); err != nil {
+		return err
 	}
 
 	if h.k8sClient == nil {
@@ -398,11 +413,9 @@ func (h *WorkloadHandlers) ListClusterGroups(c *fiber.Ctx) error {
 // CreateClusterGroup creates a new cluster group and labels the member clusters
 // POST /api/cluster-groups
 func (h *WorkloadHandlers) CreateClusterGroup(c *fiber.Ctx) error {
-	// Require console admin role for cluster group mutations
-	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
-		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	// Cluster group mutations require console admin (#5974).
+	if err := h.requireAdmin(c); err != nil {
+		return err
 	}
 
 	var group ClusterGroup
@@ -453,11 +466,9 @@ func (h *WorkloadHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 // UpdateClusterGroup updates a cluster group
 // PUT /api/cluster-groups/:name
 func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
-	// Require console admin role for cluster group mutations
-	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
-		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	// Cluster group mutations require console admin (#5974).
+	if err := h.requireAdmin(c); err != nil {
+		return err
 	}
 
 	name := c.Params("name")
@@ -523,11 +534,9 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 // DeleteClusterGroup deletes a cluster group and removes labels
 // DELETE /api/cluster-groups/:name
 func (h *WorkloadHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
-	// Require console admin role for cluster group mutations
-	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
-		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	// Cluster group mutations require console admin (#5974).
+	if err := h.requireAdmin(c); err != nil {
+		return err
 	}
 
 	name := c.Params("name")
@@ -567,11 +576,9 @@ func (h *WorkloadHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
 // SyncClusterGroups bulk-syncs cluster groups from frontend localStorage
 // POST /api/cluster-groups/sync
 func (h *WorkloadHandlers) SyncClusterGroups(c *fiber.Ctx) error {
-	// Bulk sync overwrites all cluster groups — require console admin role
-	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
-		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	// Bulk sync overwrites all cluster groups — require console admin (#5974).
+	if err := h.requireAdmin(c); err != nil {
+		return err
 	}
 
 	// Reject oversized payloads (defense-in-depth beyond Fiber's default limit)
@@ -968,11 +975,9 @@ func buildClusterContextForAI(healthData []k8s.ClusterHealth) string {
 // ScaleWorkload scales a workload in specified clusters
 // POST /api/workloads/scale
 func (h *WorkloadHandlers) ScaleWorkload(c *fiber.Ctx) error {
-	// Require console admin role for workload mutations
-	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
-		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	// Workload mutations require console admin (#5974).
+	if err := h.requireAdmin(c); err != nil {
+		return err
 	}
 
 	if h.k8sClient == nil {
@@ -1014,11 +1019,9 @@ func (h *WorkloadHandlers) ScaleWorkload(c *fiber.Ctx) error {
 // DeleteWorkload deletes a workload from specified clusters
 // DELETE /api/workloads/:cluster/:namespace/:name
 func (h *WorkloadHandlers) DeleteWorkload(c *fiber.Ctx) error {
-	// Require console admin role for workload mutations
-	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
-		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	// Workload mutations require console admin (#5974).
+	if err := h.requireAdmin(c); err != nil {
+		return err
 	}
 
 	if h.k8sClient == nil {

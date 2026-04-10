@@ -19,9 +19,12 @@ import (
 	"github.com/gofiber/fiber/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/mcp"
+	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/store"
 )
 
 // Maximum number of concurrent helm/kubectl subprocesses across all handlers.
@@ -64,6 +67,11 @@ type driftCacheEntry struct {
 type GitOpsHandlers struct {
 	bridge    *mcp.Bridge
 	k8sClient *k8s.MultiClusterClient
+	// userStore is consulted by requireAdmin to enforce console-admin role on
+	// mutating GitOps endpoints (#5972, #5973). May be nil in dev/demo mode
+	// or in unit tests that don't need RBAC; in that case the check is a
+	// no-op to preserve existing test ergonomics.
+	userStore store.Store
 
 	// driftCache memoises recent drift results so ListDrifts can return
 	// something meaningful (#5950). Populated by DetectDrift.
@@ -71,13 +79,35 @@ type GitOpsHandlers struct {
 	driftCache   map[string]driftCacheEntry
 }
 
-// NewGitOpsHandlers creates a new GitOps handlers instance
-func NewGitOpsHandlers(bridge *mcp.Bridge, k8sClient *k8s.MultiClusterClient) *GitOpsHandlers {
+// NewGitOpsHandlers creates a new GitOps handlers instance.
+//
+// userStore is used to enforce the console-admin role on mutating GitOps
+// endpoints (sync, detect-drift, helm mutations, argocd sync). Pass nil to
+// skip role checks — this is intended for dev/demo mode and unit tests that
+// are not exercising RBAC.
+func NewGitOpsHandlers(bridge *mcp.Bridge, k8sClient *k8s.MultiClusterClient, userStore store.Store) *GitOpsHandlers {
 	return &GitOpsHandlers{
 		bridge:     bridge,
 		k8sClient:  k8sClient,
+		userStore:  userStore,
 		driftCache: make(map[string]driftCacheEntry),
 	}
+}
+
+// requireAdmin verifies the caller is a console admin. Returns a 403 Fiber
+// error if not. When no user store is configured (dev/demo/tests) the check
+// is skipped to preserve existing behavior — production wiring always passes
+// a real store through NewGitOpsHandlers (#5972, #5973).
+func (h *GitOpsHandlers) requireAdmin(c *fiber.Ctx) error {
+	if h.userStore == nil {
+		return nil
+	}
+	currentUserID := middleware.GetUserID(c)
+	currentUser, err := h.userStore.GetUser(currentUserID)
+	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
+		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	}
+	return nil
 }
 
 // rememberDrift stores a drift-detection result in the in-memory cache keyed
@@ -1060,6 +1090,13 @@ func getDemoHelmReleasesForStreaming() []HelmRelease {
 
 // DetectDrift detects drift between git and cluster state
 func (h *GitOpsHandlers) DetectDrift(c *fiber.Ctx) error {
+	// #5973 — drift detection shells out to kubectl diff against the live
+	// cluster, which mounts a kubeconfig and reveals cluster state that
+	// viewer-role users should not be able to trigger. Require console admin.
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
+
 	var req DetectDriftRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request body"})
@@ -1272,6 +1309,13 @@ func (h *GitOpsHandlers) detectDriftViaKubectl(ctx context.Context, req DetectDr
 
 // Sync applies manifests from git to the cluster
 func (h *GitOpsHandlers) Sync(c *fiber.Ctx) error {
+	// #5972 — GitOps sync mutates cluster state via kubectl apply (or MCP
+	// deploy). Viewer-role users must not be able to trigger these, so
+	// require the console admin role before doing any further parsing.
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
+
 	var req SyncRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request body"})
@@ -1951,6 +1995,10 @@ type HelmUpgradeRequest struct {
 
 // RollbackHelmRelease rolls back a Helm release to a specific revision
 func (h *GitOpsHandlers) RollbackHelmRelease(c *fiber.Ctx) error {
+	// Helm rollback mutates cluster state; restrict to console admins (#5972).
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
 	var req HelmRollbackRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request body"})
@@ -2003,6 +2051,10 @@ func (h *GitOpsHandlers) RollbackHelmRelease(c *fiber.Ctx) error {
 
 // UninstallHelmRelease uninstalls a Helm release
 func (h *GitOpsHandlers) UninstallHelmRelease(c *fiber.Ctx) error {
+	// Helm uninstall destroys cluster resources; restrict to console admins (#5972).
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
 	var req HelmUninstallRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request body"})
@@ -2052,6 +2104,10 @@ func (h *GitOpsHandlers) UninstallHelmRelease(c *fiber.Ctx) error {
 
 // UpgradeHelmRelease upgrades a Helm release
 func (h *GitOpsHandlers) UpgradeHelmRelease(c *fiber.Ctx) error {
+	// Helm upgrade mutates cluster state; restrict to console admins (#5972).
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
 	var req HelmUpgradeRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request body"})
@@ -2284,6 +2340,11 @@ func (h *GitOpsHandlers) GetArgoSyncSummary(c *fiber.Ctx) error {
 // Tries ArgoCD REST API first (if ARGOCD_AUTH_TOKEN is set), then CLI, then annotation patching.
 // POST /api/gitops/argocd/sync
 func (h *GitOpsHandlers) TriggerArgoSync(c *fiber.Ctx) error {
+	// #5972 — ArgoCD sync forces reconciliation against the target cluster
+	// and is equivalent to any other mutating sync operation. Require admin.
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
 	if h.k8sClient == nil {
 		return c.Status(503).JSON(fiber.Map{
 			"error":   "Kubernetes client not configured",

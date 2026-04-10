@@ -852,7 +852,7 @@ func (s *Server) setupRoutes() {
 
 	// GitOps routes (drift detection and sync)
 	// SECURITY: All GitOps routes require authentication in both dev and production modes
-	gitopsHandlers := handlers.NewGitOpsHandlers(s.bridge, s.k8sClient)
+	gitopsHandlers := handlers.NewGitOpsHandlers(s.bridge, s.k8sClient, s.store)
 	api.Get("/gitops/drifts", gitopsHandlers.ListDrifts)
 	api.Get("/gitops/helm-releases", gitopsHandlers.ListHelmReleases)
 	api.Get("/gitops/helm-history", gitopsHandlers.ListHelmHistory)
