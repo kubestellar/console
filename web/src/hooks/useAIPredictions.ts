@@ -92,6 +92,14 @@ async function fetchAIPredictions(): Promise<void> {
   }
 
   if (isAgentUnavailable()) {
+    // Agent is known to be unavailable — mark existing predictions as stale so
+    // the UI stops presenting them as fresh (#5937). Also notify subscribers so
+    // the UI re-renders immediately instead of waiting for the next poll cycle
+    // (#5938).
+    if (!isStale) {
+      isStale = true
+      notifySubscribers()
+    }
     return
   }
 
@@ -122,14 +130,21 @@ async function fetchAIPredictions(): Promise<void> {
       isStale = true
       notifySubscribers()
     } else {
+      // Non-OK response (5xx, 401, etc.) — report failure, mark stale, and
+      // notify subscribers so the UI reflects the error state (#5937, #5938).
       reportAgentDataError('/predictions/ai', `HTTP ${response.status}`)
+      isStale = true
+      notifySubscribers()
     }
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      // Timeout, agent likely unavailable
-    }
-    // Don't clear predictions on error, keep stale data
+    // Network error, timeout, or AbortError — backend is unreachable. Mark
+    // predictions stale and notify subscribers so the UI updates immediately
+    // rather than continuing to show data as if it were fresh (#5937, #5938).
+    // Existing prediction data is intentionally preserved (not cleared) so
+    // users can still see the last known state, clearly labeled as stale.
+    reportAgentDataError('/predictions/ai', error instanceof Error ? error.message : 'fetch_failed')
     isStale = true
+    notifySubscribers()
   }
 }
 

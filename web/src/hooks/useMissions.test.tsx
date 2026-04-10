@@ -274,6 +274,73 @@ describe('startMission', () => {
     expect(result.current.missions[0].status).toBe('waiting_input')
   })
 
+  // #5936 — mission stuck in waiting_input must auto-fail after a watchdog
+  // timeout if the backend never delivers a final result message.
+  it('auto-fails mission stuck in waiting_input after watchdog timeout (#5936)', async () => {
+    vi.useFakeTimers()
+    try {
+      const { result } = renderHook(() => useMissions(), { wrapper })
+      const { requestId, missionId } = await startMissionWithConnection(result)
+
+      // Stream done but no result — mission enters waiting_input
+      act(() => {
+        MockWebSocket.lastInstance?.simulateMessage({
+          id: requestId,
+          type: 'stream',
+          payload: { content: '', done: true },
+        })
+      })
+      expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('waiting_input')
+
+      // Advance past the 10-minute watchdog (WAITING_INPUT_TIMEOUT_MS = 600_000)
+      act(() => {
+        vi.advanceTimersByTime(600_000 + 1_000)
+      })
+
+      const mission = result.current.missions.find(m => m.id === missionId)
+      expect(mission?.status).toBe('failed')
+      const systemMessages = mission?.messages.filter(m => m.role === 'system') ?? []
+      expect(systemMessages.some(m => m.content.includes('No response from agent'))).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('clears waiting_input watchdog when result message arrives (#5936)', async () => {
+    vi.useFakeTimers()
+    try {
+      const { result } = renderHook(() => useMissions(), { wrapper })
+      const { requestId, missionId } = await startMissionWithConnection(result)
+
+      act(() => {
+        MockWebSocket.lastInstance?.simulateMessage({
+          id: requestId,
+          type: 'stream',
+          payload: { content: '', done: true },
+        })
+      })
+      expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('waiting_input')
+
+      // Backend sends final result before the watchdog fires
+      act(() => {
+        MockWebSocket.lastInstance?.simulateMessage({
+          id: requestId,
+          type: 'result',
+          payload: { content: 'All done.' },
+        })
+      })
+      expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('completed')
+
+      // Advancing past the watchdog must NOT flip the completed mission to failed
+      act(() => {
+        vi.advanceTimersByTime(600_000 + 1_000)
+      })
+      expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('completed')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('calls emitMissionCompleted when result message is received', async () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
     const { requestId } = await startMissionWithConnection(result)
@@ -487,7 +554,7 @@ describe('cancelMission', () => {
     expect(lastMsg?.content).toContain('Cancellation requested')
   })
 
-  it('transitions to failed after backend cancel_ack', async () => {
+  it('transitions to cancelled after backend cancel_ack', async () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
     const { missionId } = await startMissionWithConnection(result)
 
@@ -506,12 +573,12 @@ describe('cancelMission', () => {
     })
 
     const mission = result.current.missions.find(m => m.id === missionId)
-    expect(mission?.status).toBe('failed')
+    expect(mission?.status).toBe('cancelled')
     const systemMessages = mission?.messages.filter(m => m.role === 'system') ?? []
     expect(systemMessages.some(m => m.content.includes('Mission cancelled by user.'))).toBe(true)
   })
 
-  it('transitions to failed after cancel ack timeout', async () => {
+  it('transitions to cancelled after cancel ack timeout', async () => {
     vi.useFakeTimers()
     try {
       const { result } = renderHook(() => useMissions(), { wrapper })
@@ -528,7 +595,7 @@ describe('cancelMission', () => {
       })
 
       const mission = result.current.missions.find(m => m.id === missionId)
-      expect(mission?.status).toBe('failed')
+      expect(mission?.status).toBe('cancelled')
       const systemMessages = mission?.messages.filter(m => m.role === 'system') ?? []
       expect(systemMessages.some(m => m.content.includes('backend did not confirm'))).toBe(true)
     } finally {
@@ -581,7 +648,7 @@ describe('cancelMission', () => {
     // Let the fetch promise resolve to finalize
     await act(async () => { await Promise.resolve() })
     const missionAfter = result.current.missions.find(m => m.id === missionId)
-    expect(missionAfter?.status).toBe('failed')
+    expect(missionAfter?.status).toBe('cancelled')
   })
 })
 
@@ -1669,7 +1736,7 @@ describe('cancelling mission receives terminal messages', () => {
     })
 
     const mission = result.current.missions.find(m => m.id === missionId)
-    expect(mission?.status).toBe('failed')
+    expect(mission?.status).toBe('cancelled')
     expect(mission?.messages.some(m => m.content.includes('cancelled by user'))).toBe(true)
   })
 
@@ -1688,7 +1755,7 @@ describe('cancelling mission receives terminal messages', () => {
       })
     })
 
-    expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('failed')
+    expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('cancelled')
   })
 
   it('finalizes cancellation on cancel_confirmed while cancelling', async () => {
@@ -1706,7 +1773,7 @@ describe('cancelling mission receives terminal messages', () => {
       })
     })
 
-    expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('failed')
+    expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('cancelled')
   })
 
   it('ignores non-terminal messages while cancelling (e.g., progress)', async () => {
@@ -1742,7 +1809,7 @@ describe('cancelling mission receives terminal messages', () => {
     })
 
     const mission = result.current.missions.find(m => m.id === missionId)
-    expect(mission?.status).toBe('failed')
+    expect(mission?.status).toBe('cancelled')
     expect(mission?.messages.some(m => m.content.includes('Cancel failed on backend'))).toBe(true)
   })
 
@@ -1760,7 +1827,7 @@ describe('cancelling mission receives terminal messages', () => {
       })
     })
 
-    expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('failed')
+    expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('cancelled')
   })
 
   it('prevents double-cancel (no duplicate timeout)', async () => {
@@ -1783,7 +1850,7 @@ describe('cancelling mission receives terminal messages', () => {
 
     await act(async () => { await Promise.resolve() })
     const mission = result.current.missions.find(m => m.id === missionId)
-    expect(mission?.status).toBe('failed')
+    expect(mission?.status).toBe('cancelled')
     expect(mission?.messages.some(m => m.content.includes('cancellation failed'))).toBe(true)
   })
 
@@ -1796,7 +1863,7 @@ describe('cancelling mission receives terminal messages', () => {
 
     await act(async () => { await Promise.resolve() })
     const mission = result.current.missions.find(m => m.id === missionId)
-    expect(mission?.status).toBe('failed')
+    expect(mission?.status).toBe('cancelled')
     expect(mission?.messages.some(m => m.content.includes('backend unreachable'))).toBe(true)
   })
 })
@@ -4367,7 +4434,7 @@ describe('cancel_ack failure path', () => {
     })
 
     const mission = result.current.missions.find(m => m.id === missionId)
-    expect(mission?.status).toBe('failed')
+    expect(mission?.status).toBe('cancelled')
     expect(mission?.messages.some(m => m.content.includes('Could not cancel'))).toBe(true)
   })
 })

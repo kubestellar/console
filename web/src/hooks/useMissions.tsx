@@ -11,7 +11,7 @@ import { scanForMaliciousContent } from '../lib/missions/scanner/malicious'
 import { runPreflightCheck, type PreflightError } from '../lib/missions/preflightCheck'
 import { kubectlProxy } from '../lib/kubectlProxy'
 
-export type MissionStatus = 'pending' | 'running' | 'waiting_input' | 'completed' | 'failed' | 'saved' | 'blocked' | 'cancelling'
+export type MissionStatus = 'pending' | 'running' | 'waiting_input' | 'completed' | 'failed' | 'saved' | 'blocked' | 'cancelling' | 'cancelled'
 
 export interface MissionMessage {
   id: string
@@ -189,6 +189,15 @@ const MISSION_INACTIVITY_TIMEOUT_MS = 90_000 // 90 seconds of stream silence
  * frontend transitions the mission from 'cancelling' to 'failed' as a safety net.
  */
 const CANCEL_ACK_TIMEOUT_MS = 10_000 // 10 seconds
+/**
+ * Maximum time (ms) a mission may sit in 'waiting_input' with no new
+ * assistant/result message before the frontend treats it as stuck and
+ * transitions it to 'failed' (#5936). This state is entered when a streaming
+ * turn ends without a final 'result' message; if the backend never sends
+ * one (lost event, disconnected agent, etc.) the mission would otherwise
+ * hang indefinitely.
+ */
+const WAITING_INPUT_TIMEOUT_MS = 600_000 // 10 minutes
 
 /**
  * Strip interactive terminal prompt artifacts from agent metadata strings (#5482).
@@ -327,9 +336,9 @@ function saveMissions(missions: Mission[]) {
       )
       // Keep saved/library missions unconditionally — they are small (no chat history)
       const saved = missions.filter(m => m.status === 'saved')
-      // Only prune completed/failed missions by age
+      // Only prune completed/failed/cancelled missions by age (#5935)
       const completedOrFailed = missions
-        .filter(m => m.status === 'completed' || m.status === 'failed')
+        .filter(m => m.status === 'completed' || m.status === 'failed' || m.status === 'cancelled')
         .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
         .slice(0, MAX_COMPLETED_MISSIONS)
       const pruned = [...active, ...saved, ...completedOrFailed]
@@ -340,7 +349,7 @@ function saveMissions(missions: Mission[]) {
         // Still too large — strip chat messages from completed missions (#5695)
         console.warn('[Missions] still full after count-pruning, stripping chat messages')
         const stripped = pruned.map(m =>
-          (m.status === 'completed' || m.status === 'failed')
+          (m.status === 'completed' || m.status === 'failed' || m.status === 'cancelled')
             ? { ...m, messages: m.messages.slice(-3) } // keep only last 3 messages
             : m
         )
@@ -401,6 +410,10 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const lastStreamTimestamp = useRef<Map<string, number>>(new Map()) // missionId -> timestamp
   // Track cancel acknowledgment timeouts — missionId -> timeout handle
   const cancelTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  // Track waiting_input watchdog timers — missionId -> timeout handle (#5936).
+  // Prevents missions from getting stuck in 'waiting_input' indefinitely if
+  // the backend never delivers a final result message.
+  const waitingInputTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   // Ref to always hold the latest missions state — avoids stale closure in sendMessage (#3322)
   const missionsRef = useRef<Mission[]>(missions)
   missionsRef.current = missions
@@ -840,8 +853,55 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
     }
   }
 
-  // Finalize a cancelling mission — transitions from 'cancelling' to 'failed'
-  // and clears any pending cancel timeout.
+  // Clear the waiting_input watchdog timer for a mission, if one is set (#5936).
+  const clearWaitingInputTimeout = (missionId: string) => {
+    const t = waitingInputTimeouts.current.get(missionId)
+    if (t) {
+      clearTimeout(t)
+      waitingInputTimeouts.current.delete(missionId)
+    }
+  }
+
+  // Start (or restart) the waiting_input watchdog for a mission (#5936).
+  // If the mission is still in 'waiting_input' after WAITING_INPUT_TIMEOUT_MS,
+  // it is transitioned to 'failed' with an actionable error message. This
+  // prevents the UI from hanging forever when a backend 'result' message is
+  // lost or the agent disconnects silently after streaming ends.
+  const startWaitingInputTimeout = (missionId: string) => {
+    clearWaitingInputTimeout(missionId)
+    const handle = setTimeout(() => {
+      waitingInputTimeouts.current.delete(missionId)
+      // Purge pending request IDs for this mission — late responses must not
+      // overwrite the failed state.
+      for (const [reqId, mId] of pendingRequests.current.entries()) {
+        if (mId === missionId) pendingRequests.current.delete(reqId)
+      }
+      lastStreamTimestamp.current.delete(missionId)
+      setMissions(prev => prev.map(m => {
+        if (m.id !== missionId || m.status !== 'waiting_input') return m
+        emitMissionError(m.type, 'waiting_input_timeout')
+        return {
+          ...m,
+          status: 'failed' as MissionStatus,
+          currentStep: undefined,
+          updatedAt: new Date(),
+          messages: [
+            ...m.messages,
+            {
+              id: `msg-waiting-timeout-${Date.now()}-${m.id}`,
+              role: 'system' as const,
+              content: `**No response from agent — mission timed out waiting for input.**\n\nThe agent finished streaming but never delivered a final result within ${Math.round(WAITING_INPUT_TIMEOUT_MS / 60_000)} minutes. This usually means the final result message was lost or the agent disconnected silently.\n\nYou can:\n- **Retry** the mission — the issue may be transient\n- **Check your agent** — make sure it is still running and reachable\n- **Send a new message** to continue the conversation`,
+              timestamp: new Date() }
+          ]
+        }
+      }))
+    }, WAITING_INPUT_TIMEOUT_MS)
+    waitingInputTimeouts.current.set(missionId, handle)
+  }
+
+  // Finalize a cancelling mission — transitions from 'cancelling' to 'cancelled'
+  // (a distinct terminal state from 'failed', #5935) and clears any pending
+  // cancel timeout.
   const finalizeCancellation = (missionId: string, message: string) => {
     // Clear the timeout if one is pending
     const timeout = cancelTimeouts.current.get(missionId)
@@ -857,11 +917,12 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       if (mId === missionId) pendingRequests.current.delete(reqId)
     }
     lastStreamTimestamp.current.delete(missionId)
+    clearWaitingInputTimeout(missionId) // #5936
 
     setMissions(prev => prev.map(m =>
       m.id === missionId && m.status === 'cancelling' ? {
         ...m,
-        status: 'failed',
+        status: 'cancelled',
         currentStep: undefined,
         updatedAt: new Date(),
         messages: [
@@ -956,9 +1017,10 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       if (m.id !== missionId) return m
 
       // Discard messages for missions that have already reached a terminal state
-      // (failed, completed). This prevents stale responses from a previously
-      // failed request from overwriting state after cancellation (#4499).
-      if (m.status === 'failed' || m.status === 'completed') {
+      // (failed, completed, cancelled). This prevents stale responses from a
+      // previously failed request from overwriting state after cancellation
+      // (#4499, #5935).
+      if (m.status === 'failed' || m.status === 'completed' || m.status === 'cancelled') {
         pendingRequests.current.delete(message.id)
         return m
       }
@@ -1084,6 +1146,9 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           // authoritative. The backend sends a separate 'result' message with
           // the final answer; emitMissionCompleted fires there (#5510).
           setActiveTokenCategory(null)
+          // Start the watchdog that auto-fails the mission if no final result
+          // message arrives within WAITING_INPUT_TIMEOUT_MS (#5936).
+          startWaitingInputTimeout(missionId)
           return {
             ...m,
             status: 'waiting_input' as MissionStatus,
@@ -1094,6 +1159,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         // Complete response - mark as unread
         const payload = message.payload as ChatStreamPayload | { content?: string; output?: string }
         pendingRequests.current.delete(message.id)
+        clearWaitingInputTimeout(missionId) // #5936 — result received, cancel watchdog
         markMissionAsUnread(missionId)
 
         // Extract token usage if available
@@ -1157,6 +1223,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       } else if (message.type === 'error') {
         const payload = message.payload as { code?: string; message?: string }
         pendingRequests.current.delete(message.id)
+        clearWaitingInputTimeout(missionId) // #5936 — terminal error, cancel watchdog
         emitMissionError(m.type, payload.code || 'unknown')
 
         // Create helpful error message based on error code
