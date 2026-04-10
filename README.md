@@ -25,6 +25,32 @@ brew tap kubestellar/tap && brew install kc-agent   # macOS
 go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent  # Linux (Go 1.24+)
 ```
 
+### Windows (WSL2)
+
+The console install scripts and `kc-agent` are POSIX shell + Go, so they run unchanged inside WSL2. Native Windows (PowerShell / CMD) is not supported — install [WSL2 with Ubuntu](https://learn.microsoft.com/windows/wsl/install) and run everything from the WSL shell:
+
+```powershell
+# In PowerShell — one-time setup
+wsl --install -d Ubuntu
+```
+
+Then from inside the Ubuntu/WSL shell:
+
+```bash
+# Prerequisites (Go 1.24+, curl, git)
+sudo apt-get update && sudo apt-get install -y golang-go curl git
+
+# Same install command as macOS / Linux
+curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash
+
+# kc-agent built from source (no Homebrew formula on WSL)
+git clone https://github.com/kubestellar/console.git
+cd console
+go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent
+```
+
+Open http://localhost:8080 in your **Windows** browser — WSL2 forwards `localhost` automatically. Tracked by [#6185](https://github.com/kubestellar/console/issues/6185).
+
 ## GitHub OAuth
 
 1. **Create a [GitHub OAuth App](https://github.com/settings/developers)**
