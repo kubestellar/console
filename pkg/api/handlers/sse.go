@@ -6,11 +6,40 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/k8s"
 )
+
+// defaultWarningEventsLimit is the fallback row limit used by
+// GetWarningEventsStream when the client omits or sends an invalid `limit`
+// query parameter.
+const defaultWarningEventsLimit = 50
+
+// maxWarningEventsLimit is the upper bound the warning-events stream clamps
+// the `limit` query parameter to, preventing unbounded result sets from
+// starving the per-cluster fetch timeout.
+const maxWarningEventsLimit = 500
+
+// sseEventClusterData is the SSE event name used for per-cluster success payloads.
+const sseEventClusterData = "cluster_data"
+
+// sseEventClusterSkipped is the SSE event name used for clusters known to be
+// offline and therefore skipped before a fetch is attempted.
+const sseEventClusterSkipped = "cluster_skipped"
+
+// sseEventClusterError is the SSE event name used to surface per-cluster
+// fetch failures to the client (#6041). The payload is
+// {"cluster": "...", "error": "..."} and lets the UI mark individual
+// clusters as errored instead of silently dropping them.
+const sseEventClusterError = "cluster_error"
+
+// sseEventDone is the terminal SSE event fired once all per-cluster work has
+// completed (or the overall deadline has been reached).
+const sseEventDone = "done"
 
 // sseClusterStreamConfig describes a single streaming endpoint configuration.
 type sseClusterStreamConfig struct {
@@ -23,6 +52,10 @@ type sseClusterStreamConfig struct {
 	namespace string
 	// clusterTimeout is the per-cluster fetch timeout.
 	clusterTimeout time.Duration
+	// clusterFilter, when non-empty, restricts streaming to a single cluster
+	// (matched against ClusterInfo.Name). If the named cluster is not present
+	// in the dedupe set the handler responds with 404 (#6039).
+	clusterFilter string
 }
 
 // writeSSEEvent writes one SSE event to the buffered writer and flushes.
@@ -139,6 +172,41 @@ func streamClusters(
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
 
+	// Apply optional per-request cluster filter (#6039). If the caller asks
+	// for a specific cluster we only stream from that one — either from the
+	// healthy set or, if it's known offline, emit a single skipped event.
+	// Unknown cluster names return 404 so the client can distinguish "empty
+	// result" from "typo/stale reference".
+	if cfg.clusterFilter != "" {
+		filteredHealthy := make([]k8s.ClusterInfo, 0, 1)
+		filteredOffline := make([]k8s.ClusterInfo, 0, 1)
+		found := false
+		for _, cl := range healthy {
+			if cl.Name == cfg.clusterFilter {
+				filteredHealthy = append(filteredHealthy, cl)
+				found = true
+				break
+			}
+		}
+		if !found {
+			for _, cl := range offline {
+				if cl.Name == cfg.clusterFilter {
+					filteredOffline = append(filteredOffline, cl)
+					found = true
+					break
+				}
+			}
+		}
+		if !found {
+			return c.Status(404).JSON(fiber.Map{
+				"error":   "cluster not found",
+				"cluster": cfg.clusterFilter,
+			})
+		}
+		healthy = filteredHealthy
+		offline = filteredOffline
+	}
+
 	c.Set("Content-Type", "text/event-stream")
 	c.Set("Cache-Control", "no-cache")
 	c.Set("Connection", "keep-alive")
@@ -158,7 +226,7 @@ func streamClusters(
 
 		// Instantly emit skipped events for offline clusters
 		for _, cl := range offline {
-			writeSSEEvent(w, "cluster_skipped", fiber.Map{
+			writeSSEEvent(w, sseEventClusterSkipped, fiber.Map{
 				"cluster": cl.Name,
 				"reason":  "offline",
 			})
@@ -177,7 +245,7 @@ func streamClusters(
 			if cached := sseCacheGet(cacheKey); cached != nil {
 				mu.Lock()
 				completedClusters++
-				writeSSEEvent(w, "cluster_data", fiber.Map{
+				writeSSEEvent(w, sseEventClusterData, fiber.Map{
 					"cluster":   cl.Name,
 					cfg.demoKey: cached,
 					"source":    "cache",
@@ -210,8 +278,18 @@ func streamClusters(
 					if elapsed > 5*time.Second {
 						h.k8sClient.MarkSlow(clusterName)
 					}
+					// Surface the per-cluster failure to the client as an SSE
+					// event so the UI can mark the cluster as errored instead
+					// of silently dropping it (#6041). The existing
+					// `cluster_data` / `cluster_skipped` events are
+					// intentionally left unchanged — this is an additive
+					// event type.
 					mu.Lock()
 					completedClusters++
+					writeSSEEvent(w, sseEventClusterError, fiber.Map{
+						"cluster": clusterName,
+						"error":   fetchErr.Error(),
+					})
 					mu.Unlock()
 					return
 				}
@@ -225,7 +303,7 @@ func streamClusters(
 
 				mu.Lock()
 				completedClusters++
-				writeSSEEvent(w, "cluster_data", fiber.Map{
+				writeSSEEvent(w, sseEventClusterData, fiber.Map{
 					"cluster":   clusterName,
 					cfg.demoKey: data,
 					"source":    "k8s",
@@ -251,7 +329,7 @@ func streamClusters(
 		}
 
 		mu.Lock()
-		writeSSEEvent(w, "done", fiber.Map{
+		writeSSEEvent(w, sseEventDone, fiber.Map{
 			"totalClusters":     totalClusters,
 			"completedClusters": completedClusters,
 			"skippedOffline":    len(offline),
@@ -269,12 +347,12 @@ func streamDemoSSE(c *fiber.Ctx, dataKey string, demoData interface{}) error {
 	c.Set("Connection", "keep-alive")
 
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
-		writeSSEEvent(w, "cluster_data", fiber.Map{
+		writeSSEEvent(w, sseEventClusterData, fiber.Map{
 			"cluster": "demo",
 			dataKey:   demoData,
 			"source":  "demo",
 		})
-		writeSSEEvent(w, "done", fiber.Map{
+		writeSSEEvent(w, sseEventDone, fiber.Map{
 			"totalClusters":     1,
 			"completedClusters": 1,
 		})
@@ -502,6 +580,14 @@ func (h *MCPHandlers) GetGPUNodeHealthStream(c *fiber.Ctx) error {
 }
 
 // GetWarningEventsStream streams warning events per cluster via SSE.
+//
+// Query parameters:
+//   - namespace: optional namespace filter (empty = all namespaces)
+//   - cluster:   optional cluster filter (#6039). When set, only that cluster
+//     is streamed; a 404 is returned if it is not present in the dedupe set.
+//   - limit:     optional per-cluster row cap (#6040). Falls back to
+//     defaultWarningEventsLimit on missing/invalid input and is clamped to
+//     maxWarningEventsLimit.
 func (h *MCPHandlers) GetWarningEventsStream(c *fiber.Ctx) error {
 	if isDemoMode(c) {
 		return streamDemoSSE(c, "events", getDemoWarningEvents())
@@ -511,13 +597,34 @@ func (h *MCPHandlers) GetWarningEventsStream(c *fiber.Ctx) error {
 	}
 
 	namespace := c.Query("namespace")
+	clusterFilter := c.Query("cluster")
+	limit := parseWarningEventsLimit(c.Query("limit"))
+
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "events",
 		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
+		clusterFilter:  clusterFilter,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
-		return h.k8sClient.GetWarningEvents(ctx, cluster, namespace, 50)
+		return h.k8sClient.GetWarningEvents(ctx, cluster, namespace, limit)
 	})
+}
+
+// parseWarningEventsLimit converts the `limit` query parameter to an int,
+// falling back to defaultWarningEventsLimit on missing/invalid input and
+// clamping the result to [1, maxWarningEventsLimit].
+func parseWarningEventsLimit(raw string) int {
+	if raw == "" {
+		return defaultWarningEventsLimit
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil || n <= 0 {
+		return defaultWarningEventsLimit
+	}
+	if n > maxWarningEventsLimit {
+		return maxWarningEventsLimit
+	}
+	return n
 }
 
 // GetJobsStream streams jobs per cluster via SSE.
