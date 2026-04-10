@@ -505,15 +505,25 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
 }
 
 function getDemoServices(): Service[] {
+  // Demo services populate `endpoints` (ready backend address count) and
+  // `lbStatus` so the Endpoints stat and LoadBalancer provisioning UI
+  // have realistic demo data for issues #6150 and #6153.
   return [
-    { name: 'kubernetes', namespace: 'default', cluster: 'prod-east', type: 'ClusterIP', clusterIP: '10.96.0.1', ports: ['443/TCP'], age: '45d' },
-    { name: 'api-gateway', namespace: 'production', cluster: 'prod-east', type: 'LoadBalancer', clusterIP: '10.96.10.50', externalIP: '52.14.123.45', ports: ['80/TCP', '443/TCP'], age: '30d' },
-    { name: 'frontend', namespace: 'web', cluster: 'prod-east', type: 'ClusterIP', clusterIP: '10.96.20.100', ports: ['3000/TCP'], age: '25d' },
-    { name: 'postgres', namespace: 'data', cluster: 'prod-east', type: 'ClusterIP', clusterIP: '10.96.30.10', ports: ['5432/TCP'], age: '40d' },
-    { name: 'redis', namespace: 'data', cluster: 'prod-east', type: 'ClusterIP', clusterIP: '10.96.30.20', ports: ['6379/TCP'], age: '40d' },
-    { name: 'prometheus', namespace: 'monitoring', cluster: 'staging', type: 'ClusterIP', clusterIP: '10.96.40.10', ports: ['9090/TCP'], age: '20d' },
-    { name: 'grafana', namespace: 'monitoring', cluster: 'staging', type: 'NodePort', clusterIP: '10.96.40.20', ports: ['3000:30300/TCP'], age: '20d' },
-    { name: 'ml-inference', namespace: 'ml', cluster: 'vllm-d', type: 'LoadBalancer', clusterIP: '10.96.50.10', externalIP: '34.56.78.90', ports: ['8080/TCP'], age: '15d' },
+    { name: 'kubernetes', namespace: 'default', cluster: 'prod-east', type: 'ClusterIP', clusterIP: '10.96.0.1', ports: ['443/TCP'], endpoints: 3, age: '45d' },
+    { name: 'api-gateway', namespace: 'production', cluster: 'prod-east', type: 'LoadBalancer', clusterIP: '10.96.10.50', externalIP: '52.14.123.45', ports: ['80/TCP', '443/TCP'], endpoints: 4, lbStatus: 'Ready', age: '30d' },
+    { name: 'frontend', namespace: 'web', cluster: 'prod-east', type: 'ClusterIP', clusterIP: '10.96.20.100', ports: ['3000/TCP'], endpoints: 6, age: '25d' },
+    { name: 'postgres', namespace: 'data', cluster: 'prod-east', type: 'ClusterIP', clusterIP: '10.96.30.10', ports: ['5432/TCP'], endpoints: 1, age: '40d' },
+    { name: 'redis', namespace: 'data', cluster: 'prod-east', type: 'ClusterIP', clusterIP: '10.96.30.20', ports: ['6379/TCP'], endpoints: 3, age: '40d' },
+    { name: 'prometheus', namespace: 'monitoring', cluster: 'staging', type: 'ClusterIP', clusterIP: '10.96.40.10', ports: ['9090/TCP'], endpoints: 2, age: '20d' },
+    { name: 'grafana', namespace: 'monitoring', cluster: 'staging', type: 'NodePort', clusterIP: '10.96.40.20', ports: ['3000:30300/TCP'], endpoints: 1, age: '20d' },
+    { name: 'ml-inference', namespace: 'ml', cluster: 'vllm-d', type: 'LoadBalancer', clusterIP: '10.96.50.10', externalIP: '34.56.78.90', ports: ['8080/TCP'], endpoints: 8, lbStatus: 'Ready', age: '15d' },
+    // A LoadBalancer service that is still provisioning — shows the
+    // "Provisioning" label in the Services drawer instead of a blank
+    // external IP (issue #6153).
+    { name: 'new-edge-gw', namespace: 'production', cluster: 'prod-east', type: 'LoadBalancer', clusterIP: '10.96.10.60', ports: ['80/TCP', '443/TCP'], endpoints: 0, lbStatus: 'Provisioning', age: '2m' },
+    // A service whose pods are not yet ready — 0 endpoints even though
+    // the service itself exists (issue #6150).
+    { name: 'orphaned-svc', namespace: 'data', cluster: 'staging', type: 'ClusterIP', clusterIP: '10.96.30.99', ports: ['8080/TCP'], endpoints: 0, age: '5m' },
   ]
 }
 

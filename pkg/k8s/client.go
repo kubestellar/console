@@ -414,10 +414,34 @@ type Service struct {
 	ClusterIP   string            `json:"clusterIP,omitempty"`
 	ExternalIP  string            `json:"externalIP,omitempty"`
 	Ports       []string          `json:"ports,omitempty"`
+	// Endpoints is the number of ready backend addresses summed across all
+	// subsets of the matching core/v1 Endpoints object (i.e. actual pod
+	// endpoints backing the service, NOT the number of services themselves).
+	// Issue #6150: the Services dashboard stat should sum this value across
+	// services instead of counting services.
+	Endpoints int `json:"endpoints"`
+	// LBStatus describes the provisioning state of a LoadBalancer service.
+	// For non-LoadBalancer services this is the empty string. For a
+	// LoadBalancer service this is either LBStatusReady (ingress IP/hostname
+	// has been assigned) or LBStatusProvisioning (cloud provider has not yet
+	// provisioned an address). Issue #6153.
+	LBStatus    string            `json:"lbStatus,omitempty"`
 	Age         string            `json:"age,omitempty"`
 	Labels      map[string]string `json:"labels,omitempty"`
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
+
+// LoadBalancer provisioning status values. Defined as exported constants so
+// the frontend/backend agree on the wire format and there are no magic
+// strings sprinkled through the code.
+const (
+	// LBStatusProvisioning means the service is type=LoadBalancer but the
+	// cloud provider has not yet populated status.loadBalancer.ingress.
+	LBStatusProvisioning = "Provisioning"
+	// LBStatusReady means status.loadBalancer.ingress has at least one
+	// IP or hostname populated.
+	LBStatusReady = "Ready"
+)
 
 // Job represents a Kubernetes job
 type Job struct {

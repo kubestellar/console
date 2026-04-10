@@ -714,6 +714,22 @@ func (m *MultiClusterClient) GetServices(ctx context.Context, contextName, names
 		return nil, err
 	}
 
+	// Fetch the corresponding core/v1 Endpoints objects so we can report the
+	// real number of ready addresses backing each service. We list in the
+	// same namespace scope as the Services list call so the result set is
+	// comparable. If this call fails we still return services with
+	// Endpoints=0 rather than failing the whole request (issue #6150).
+	endpointReadyCounts := make(map[string]int) // key: "<namespace>/<name>"
+	if epList, epErr := client.CoreV1().Endpoints(namespace).List(ctx, metav1.ListOptions{}); epErr == nil {
+		for _, ep := range epList.Items {
+			ready := 0
+			for _, subset := range ep.Subsets {
+				ready += len(subset.Addresses)
+			}
+			endpointReadyCounts[ep.Namespace+"/"+ep.Name] = ready
+		}
+	}
+
 	var result []Service
 	for _, svc := range services.Items {
 		// Build ports list
@@ -726,8 +742,14 @@ func (m *MultiClusterClient) GetServices(ctx context.Context, contextName, names
 			ports = append(ports, portStr)
 		}
 
-		// Get external IP
+		// Resolve external IP and LoadBalancer provisioning status.
+		// For LoadBalancer services, if status.loadBalancer.ingress is
+		// empty we mark the service as Provisioning and leave ExternalIP
+		// blank (issue #6153). status.loadBalancer.ingress.ip takes
+		// precedence over hostname, and spec.externalIPs (statically
+		// assigned) overrides both.
 		externalIP := ""
+		lbStatus := ""
 		if len(svc.Status.LoadBalancer.Ingress) > 0 {
 			if svc.Status.LoadBalancer.Ingress[0].IP != "" {
 				externalIP = svc.Status.LoadBalancer.Ingress[0].IP
@@ -737,6 +759,13 @@ func (m *MultiClusterClient) GetServices(ctx context.Context, contextName, names
 		}
 		if len(svc.Spec.ExternalIPs) > 0 {
 			externalIP = svc.Spec.ExternalIPs[0]
+		}
+		if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
+			if externalIP == "" {
+				lbStatus = LBStatusProvisioning
+			} else {
+				lbStatus = LBStatusReady
+			}
 		}
 
 		// Calculate age
@@ -750,6 +779,8 @@ func (m *MultiClusterClient) GetServices(ctx context.Context, contextName, names
 			ClusterIP:   svc.Spec.ClusterIP,
 			ExternalIP:  externalIP,
 			Ports:       ports,
+			Endpoints:   endpointReadyCounts[svc.Namespace+"/"+svc.Name],
+			LBStatus:    lbStatus,
 			Age:         age,
 			Labels:      svc.Labels,
 			Annotations: svc.Annotations,

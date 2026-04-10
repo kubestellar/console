@@ -38,6 +38,15 @@ export function Services() {
   const loadBalancers = filteredServices.filter(s => s.type === 'LoadBalancer').length
   const nodePortServices = filteredServices.filter(s => s.type === 'NodePort').length
   const clusterIPServices = filteredServices.filter(s => s.type === 'ClusterIP').length
+  // Issue #6150: "Endpoints" stat must reflect the actual number of
+  // ready backend addresses (pods) across all services, not the number
+  // of services. Each service's `endpoints` field is the sum of ready
+  // addresses from its core/v1 Endpoints object as populated by the
+  // backend. Services with no matching pods contribute 0.
+  const totalEndpoints = filteredServices.reduce(
+    (sum, svc) => sum + (svc.endpoints ?? 0),
+    0,
+  )
 
   // Stats value getter
   const getDashboardStatValue = (blockId: string): StatBlockValue => {
@@ -57,7 +66,7 @@ export function Services() {
       case 'ingresses':
         return { value: 0, sublabel: 'ingresses', isClickable: false }
       case 'endpoints':
-        return { value: totalServices, sublabel: 'endpoints', onClick: () => drillToAllServices(), isClickable: totalServices > 0 }
+        return { value: totalEndpoints, sublabel: 'endpoints', onClick: () => drillToAllServices(), isClickable: totalEndpoints > 0 }
       default:
         return { value: 0 }
     }

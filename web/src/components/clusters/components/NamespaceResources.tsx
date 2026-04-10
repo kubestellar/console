@@ -4,6 +4,14 @@ import { usePods, useDeployments, useServices, useJobs, useHPAs, useConfigMaps, 
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
+import {
+  LB_PROVISIONING_LABEL,
+  LB_STATUS_PROVISIONING,
+} from '../../../lib/constants/network'
+
+/** Service type string emitted by the backend for LoadBalancer services.
+ * Defined as a constant to avoid magic strings. */
+const SERVICE_TYPE_LOAD_BALANCER = 'LoadBalancer'
 
 type ResourceKind = 'Pod' | 'Deployment' | 'Service' | 'Job' | 'HPA' | 'ConfigMap' | 'Secret' | 'ServiceAccount' | 'PVC'
 
@@ -121,15 +129,36 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
       data: { status: pod.status, ready: pod.ready, restarts: pod.restarts, node: pod.node, age: pod.age }
     }))
 
-    services.forEach(svc => resources.push({
-      kind: 'Service',
-      name: svc.name,
-      namespace: svc.namespace,
-      status: svc.type,
-      statusColor: 'cyan',
-      detail: (svc.ports ?? []).slice(0, 2).join(', '),
-      data: { type: svc.type, clusterIP: svc.clusterIP, externalIP: svc.externalIP, ports: svc.ports, age: svc.age }
-    }))
+    services.forEach(svc => {
+      // Issue #6153: for LoadBalancer services with no ingress IP/
+      // hostname assigned yet, display 'Provisioning' instead of an
+      // empty string. We treat either the explicit lbStatus flag from
+      // the backend OR a LoadBalancer type with a missing externalIP
+      // (for older backends that do not set lbStatus) as provisioning.
+      const isPendingLB =
+        svc.type === SERVICE_TYPE_LOAD_BALANCER &&
+        (svc.lbStatus === LB_STATUS_PROVISIONING || !svc.externalIP)
+      const externalIPDisplay = isPendingLB
+        ? LB_PROVISIONING_LABEL
+        : svc.externalIP
+      resources.push({
+        kind: 'Service',
+        name: svc.name,
+        namespace: svc.namespace,
+        status: svc.type,
+        statusColor: 'cyan',
+        detail: (svc.ports ?? []).slice(0, 2).join(', '),
+        data: {
+          type: svc.type,
+          clusterIP: svc.clusterIP,
+          externalIP: externalIPDisplay,
+          endpoints: svc.endpoints,
+          lbStatus: svc.lbStatus,
+          ports: svc.ports,
+          age: svc.age,
+        },
+      })
+    })
 
     jobs.forEach(job => resources.push({
       kind: 'Job',

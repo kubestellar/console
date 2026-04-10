@@ -343,6 +343,14 @@ export interface Service {
   clusterIP?: string
   externalIP?: string
   ports?: string[]
+  // Number of ready backend addresses (pods) currently associated with this
+  // service via its core/v1 Endpoints object. Issue #6150: the Endpoints
+  // dashboard stat sums this across services rather than counting services.
+  endpoints?: number
+  // LoadBalancer provisioning state. Empty string for non-LoadBalancer
+  // services. 'Provisioning' when a LoadBalancer service has no ingress
+  // IP/hostname yet, 'Ready' when it does. Issue #6153.
+  lbStatus?: string
   age?: string
   labels?: Record<string, string>
   annotations?: Record<string, string>

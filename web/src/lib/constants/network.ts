@@ -253,3 +253,21 @@ export const TOOLTIP_HIDE_DELAY_MS = 50
 
 /** Maximum number of characters allowed in a single mission chat message */
 export const MAX_MESSAGE_SIZE_CHARS = 10_000
+
+// ============================================================================
+// Service / LoadBalancer labels
+// ============================================================================
+
+/** Display label for a LoadBalancer service whose cloud provider has not yet
+ * assigned an external IP or hostname. Issue #6153 — previously the UI
+ * showed a blank / dash value which was indistinguishable from a provisioned
+ * service with no ingress. */
+export const LB_PROVISIONING_LABEL = 'Provisioning'
+
+/** Wire value returned by the backend for a LoadBalancer service that is
+ * still being provisioned (matches k8s.LBStatusProvisioning in Go). */
+export const LB_STATUS_PROVISIONING = 'Provisioning'
+
+/** Wire value returned by the backend for a LoadBalancer service that has
+ * an ingress IP/hostname assigned (matches k8s.LBStatusReady in Go). */
+export const LB_STATUS_READY = 'Ready'

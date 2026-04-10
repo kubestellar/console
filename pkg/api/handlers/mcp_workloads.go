@@ -331,6 +331,17 @@ func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			allServices := make([]k8s.Service, 0)
+			// clusterCounts represents every cluster we contacted, even
+			// those that returned zero services. Issue #6154: clusters
+			// with zero services used to be completely omitted from the
+			// aggregation response, which caused the frontend to think
+			// the cluster did not exist rather than displaying "0
+			// services". We now always include the cluster with its
+			// service count.
+			clusterCounts := make(map[string]int, len(clusters))
+			for _, cl := range clusters {
+				clusterCounts[cl.Name] = 0
+			}
 			clusterTimeout := mcpDefaultTimeout
 
 			clusterCtx, clusterCancel := context.WithCancel(c.Context())
@@ -344,16 +355,41 @@ func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
 					defer cancel()
 
 					services, err := h.k8sClient.GetServices(ctx, clusterName, namespace)
-					if err == nil && len(services) > 0 {
-						mu.Lock()
-						allServices = append(allServices, services...)
-						mu.Unlock()
+					if err != nil {
+						return
 					}
+					mu.Lock()
+					// Record the per-cluster count even when zero so
+					// the response always represents every cluster.
+					clusterCounts[clusterName] = len(services)
+					if len(services) > 0 {
+						allServices = append(allServices, services...)
+					}
+					mu.Unlock()
 				}(cl.Name)
 			}
 
 			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
-			return c.JSON(fiber.Map{"services": allServices, "source": "k8s"})
+
+			// Serialize per-cluster counts as a stable slice so the
+			// frontend can iterate it without worrying about map
+			// ordering.
+			type clusterServiceCount struct {
+				Cluster  string `json:"cluster"`
+				Services int    `json:"services"`
+			}
+			counts := make([]clusterServiceCount, 0, len(clusters))
+			for _, cl := range clusters {
+				counts = append(counts, clusterServiceCount{
+					Cluster:  cl.Name,
+					Services: clusterCounts[cl.Name],
+				})
+			}
+			return c.JSON(fiber.Map{
+				"services":      allServices,
+				"clusterCounts": counts,
+				"source":        "k8s",
+			})
 		}
 
 		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
