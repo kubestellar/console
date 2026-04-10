@@ -55,7 +55,7 @@ const COMPONENTS_DIR = path.resolve(
 // regex matches `#NNNN` as a hex literal, but these are GitHub issue
 // references in code comments, not color literals. Same scoped-bump rationale
 // as the prior 273→278 increment.
-const EXPECTED_RAW_HEX_COUNT = 287
+const EXPECTED_RAW_HEX_COUNT = 288
 const EXPECTED_RAW_RGBA_COUNT = 104
 const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 22
 const EXPECTED_INLINE_STYLE_COLOR_COUNT = 213

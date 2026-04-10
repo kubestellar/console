@@ -15,87 +15,15 @@ interface Props {
 
 type TabType = 'overview' | 'data' | 'describe' | 'yaml'
 
-/** Sentinel string used in place of secret values when the YAML tab is
- * masked. Same width as the per-key reveal placeholder on the Data tab so
- * masked YAML and masked Data look consistent. */
-const YAML_MASK_PLACEHOLDER = '••••••••••••••••'
-
-/**
- * Mask the `data:` block of `kubectl get secret -o yaml` output (#6209).
- *
- * `kubectl get secret -o yaml` always emits the data block as:
- *
- *   data:
- *     password: cGFzczEyMw==
- *     username: dXNlcg==
- *   kind: Secret
- *
- * That is — the `data:` line at indent 0, child entries at a deeper indent,
- * and the block ends as soon as a sibling/parent key appears at the same or
- * shallower indent than `data:`. We replace each child value with the
- * placeholder while preserving the key name (so users can still see WHAT
- * keys exist) and the surrounding YAML structure (so the document remains
- * parseable for the eye).
- *
- * Also masks `stringData:` (kubectl emits this for secrets created with
- * stringData) by the same rule.
- *
- * Regex-based intentionally — pulling in a YAML parser just for this would
- * bloat the bundle and introduce parser ambiguity around the multi-document
- * separator. The format from kubectl is stable and the test in
- * SecretDrillDown.test.tsx pins it.
- */
-export function maskSecretYaml(yaml: string): string {
-  if (!yaml) return yaml
-  const lines = yaml.split('\n')
-  const out: string[] = []
-  let inSensitiveBlock = false
-  let blockIndent = -1
-  for (const line of lines) {
-    // Detect the start of a sensitive block. The block header itself is
-    // emitted unchanged.
-    const blockHeaderMatch = line.match(/^(\s*)(data|stringData):\s*$/)
-    if (blockHeaderMatch) {
-      out.push(line)
-      inSensitiveBlock = true
-      blockIndent = blockHeaderMatch[1].length
-      continue
-    }
-    if (inSensitiveBlock) {
-      // Empty line — pass through, stay inside the block.
-      if (line.trim().length === 0) {
-        out.push(line)
-        continue
-      }
-      // Compute the indent of this line. If it's <= blockIndent and not
-      // empty, we've left the data block.
-      const indentMatch = line.match(/^(\s*)/)
-      const lineIndent = indentMatch ? indentMatch[1].length : 0
-      if (lineIndent <= blockIndent) {
-        inSensitiveBlock = false
-        blockIndent = -1
-        out.push(line)
-        continue
-      }
-      // Inside the block — mask the value, preserve the key. Match
-      //   <indent><key>: <value>
-      // The value can be a simple scalar, a quoted string, or absent (for
-      // a multiline `|` or `>` indicator on the next line). We only mask
-      // single-line scalar form, which is what kubectl emits.
-      const kvMatch = line.match(/^(\s*)([^:]+):\s*(.+)$/)
-      if (kvMatch) {
-        out.push(`${kvMatch[1]}${kvMatch[2]}: ${YAML_MASK_PLACEHOLDER}`)
-      } else {
-        // Defensive: line doesn't look like a key-value (could be a `|`
-        // continuation). Mask the entire content side to be safe.
-        out.push(`${' '.repeat(blockIndent + 2)}${YAML_MASK_PLACEHOLDER}`)
-      }
-      continue
-    }
-    out.push(line)
-  }
-  return out.join('\n')
-}
+// #6231: the regex-based maskSecretYaml that used to live here had two
+// real bugs (block-scalar handling, false bundle-bloat claim about
+// js-yaml). Replaced by a shared js-yaml-based helper in lib/yamlMask.
+// Re-exported here for backward compat with any importer that might
+// still reference SecretDrillDown.maskSecretYaml; new code should
+// import maskKubernetesYamlData from '../../../lib/yamlMask' directly.
+import { maskKubernetesYamlData } from '../../../lib/yamlMask'
+/** @deprecated use `maskKubernetesYamlData` from `lib/yamlMask` */
+export const maskSecretYaml = maskKubernetesYamlData
 
 export function SecretDrillDown({ data }: Props) {
   const { t } = useTranslation()

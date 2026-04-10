@@ -57,92 +57,22 @@ describe('SecretDrillDown', () => {
   })
 })
 
-// #6209: maskSecretYaml replaces values inside `data:` and `stringData:`
-// blocks with a placeholder, while preserving keys, surrounding YAML
-// structure, and any sibling top-level keys.
-describe('maskSecretYaml (#6209)', () => {
-  const PLACEHOLDER = '••••••••••••••••'
-
-  it('masks values inside the data: block', () => {
-    const yaml = [
+// #6231: the regex-based maskSecretYaml that used to be pinned here was
+// replaced by a shared js-yaml-based helper in lib/yamlMask. The full
+// behavioral test suite (block scalars, multi-doc, parse-failure
+// sentinel, etc.) lives at lib/__tests__/yamlMask.test.ts. The
+// re-export from SecretDrillDown is kept for backward compat and is
+// smoke-tested below to confirm the alias still resolves.
+describe('maskSecretYaml backwards-compat re-export (#6231)', () => {
+  it('aliases the shared maskKubernetesYamlData helper', () => {
+    const input = [
       'apiVersion: v1',
       'kind: Secret',
-      'metadata:',
-      '  name: my-secret',
       'data:',
       '  password: cGFzczEyMw==',
-      '  username: dXNlcg==',
-      'type: Opaque',
     ].join('\n')
-    const masked = maskSecretYaml(yaml)
+    const masked = maskSecretYaml(input)
     expect(masked).not.toContain('cGFzczEyMw==')
-    expect(masked).not.toContain('dXNlcg==')
-    expect(masked).toContain(`password: ${PLACEHOLDER}`)
-    expect(masked).toContain(`username: ${PLACEHOLDER}`)
-    // Surrounding YAML preserved
-    expect(masked).toContain('apiVersion: v1')
-    expect(masked).toContain('kind: Secret')
-    expect(masked).toContain('  name: my-secret')
-    expect(masked).toContain('type: Opaque')
-  })
-
-  it('masks values inside the stringData: block', () => {
-    const yaml = [
-      'apiVersion: v1',
-      'kind: Secret',
-      'stringData:',
-      '  api-key: super-secret',
-      'kind: Secret',
-    ].join('\n')
-    const masked = maskSecretYaml(yaml)
-    expect(masked).not.toContain('super-secret')
-    expect(masked).toContain(`api-key: ${PLACEHOLDER}`)
-  })
-
-  it('does not mask keys outside the data block', () => {
-    const yaml = [
-      'metadata:',
-      '  name: my-secret',
-      '  labels:',
-      '    app: web',
-      'data:',
-      '  password: aGVsbG8=',
-    ].join('\n')
-    const masked = maskSecretYaml(yaml)
-    // metadata.name and metadata.labels.app should be untouched
-    expect(masked).toContain('name: my-secret')
-    expect(masked).toContain('app: web')
-    expect(masked).toContain(`password: ${PLACEHOLDER}`)
-  })
-
-  it('handles a secret with no data block (empty/well-formed pass-through)', () => {
-    const yaml = [
-      'apiVersion: v1',
-      'kind: Secret',
-      'metadata:',
-      '  name: empty',
-      'type: Opaque',
-    ].join('\n')
-    expect(maskSecretYaml(yaml)).toBe(yaml)
-  })
-
-  it('returns empty string unchanged', () => {
-    expect(maskSecretYaml('')).toBe('')
-  })
-
-  it('exits the data block when a sibling top-level key appears', () => {
-    const yaml = [
-      'data:',
-      '  password: secret1',
-      '  username: secret2',
-      'metadata:',
-      '  name: should-not-mask',
-      'type: Opaque',
-    ].join('\n')
-    const masked = maskSecretYaml(yaml)
-    expect(masked).toContain(`password: ${PLACEHOLDER}`)
-    expect(masked).toContain(`username: ${PLACEHOLDER}`)
-    // metadata.name is OUTSIDE the data block — must remain visible
-    expect(masked).toContain('name: should-not-mask')
+    expect(masked).toContain('••••••••••••••••')
   })
 })

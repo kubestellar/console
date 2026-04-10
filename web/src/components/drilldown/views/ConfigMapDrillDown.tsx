@@ -8,9 +8,10 @@ import { cn } from '../../../lib/cn'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { useTranslation } from 'react-i18next'
 import { copyToClipboard } from '../../../lib/clipboard'
-// Reuse the YAML masking helper from SecretDrillDown — same `data:` block
-// shape from `kubectl get configmap -o yaml`, so the same regex applies.
-import { maskSecretYaml } from './SecretDrillDown'
+// #6231: switched from the regex-based maskSecretYaml that lived in
+// SecretDrillDown to the shared js-yaml-based helper. Resource-agnostic
+// name + shared module + correct block-scalar handling.
+import { maskKubernetesYamlData } from '../../../lib/yamlMask'
 
 interface Props {
   data: Record<string, unknown>
@@ -282,10 +283,14 @@ export function ConfigMapDrillDown({ data }: Props) {
                 ergonomic than the per-key dance, but we keep the per-key
                 buttons too for the case where a single sensitive value
                 hides among harmless ones. */}
+            {/* #6231: warning text now reflects the current revealAll
+                state instead of always saying "hidden by default". */}
             <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-sm text-yellow-400 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Lock className="w-4 h-4" />
-                ConfigMap values are hidden by default. Click the eye icon to reveal.
+                {revealAll
+                  ? 'ConfigMap values are visible. Click "Mask all" to hide.'
+                  : 'ConfigMap values are hidden by default. Click the eye icon to reveal.'}
               </div>
               <button
                 onClick={() => setRevealAll(v => !v)}
@@ -381,7 +386,7 @@ export function ConfigMapDrillDown({ data }: Props) {
             {/* #6211: same masking model the Data tab uses, applied to the
                 YAML view so that tab isn't a bypass for the per-key reveal.
                 ConfigMap YAML uses the same `data:` block shape as Secret
-                YAML, so we share the maskSecretYaml() helper. */}
+                YAML, so we share the maskKubernetesYamlData() helper. */}
             <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-sm text-yellow-400 flex items-center gap-2">
               <Lock className="w-4 h-4" />
               {revealAll
@@ -396,7 +401,7 @@ export function ConfigMapDrillDown({ data }: Props) {
             ) : yamlOutput ? (
               <div className="relative">
                 {(() => {
-                  const displayedYaml = revealAll ? yamlOutput : maskSecretYaml(yamlOutput)
+                  const displayedYaml = revealAll ? yamlOutput : maskKubernetesYamlData(yamlOutput)
                   return (
                     <>
                       <button
