@@ -123,7 +123,11 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
 
   // Cache data for the selected cluster when it changes
   useEffect(() => {
-    if (!selectedCluster) return
+    // Capture `selectedCluster` at effect run-time — we key the cache write
+    // against this captured value, not whatever the closure would otherwise
+    // resolve to later.
+    const cluster = selectedCluster
+    if (!cluster) return
     // Cache once at least one hook has finished loading and has meaningful data
     const anyHookFinished = !nodesLoading || !namespacesLoading
     if (!anyHookFinished) return
@@ -132,9 +136,27 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                        (allDeployments && allDeployments.length > 0) ||
                        (allPods && allPods.length > 0)
     if (hasAnyData) {
+      // Guard against cross-cluster leakage (#6051): individual cached hooks
+      // do not atomically swap their returned data when the cluster key
+      // changes — a hook can still be returning the prior cluster's tagged
+      // results while its next fetch is in flight. Every hook tags items
+      // with `.cluster`, so if any top-level dataset references a different
+      // cluster, bail out and wait for a clean render where all hooks agree.
+      // Without this, switching A → B would persist A's nodes/pods under
+      // the cache key for B.
+      const tagMismatch = (tag?: string) => tag !== undefined && tag !== cluster
+      if (
+        (allNodes && allNodes.length > 0 && tagMismatch(allNodes[0].cluster)) ||
+        (allPods && allPods.length > 0 && tagMismatch(allPods[0].cluster)) ||
+        (allDeployments && allDeployments.length > 0 && tagMismatch(allDeployments[0].cluster)) ||
+        (allServices && allServices.length > 0 && tagMismatch(allServices[0].cluster))
+      ) {
+        return
+      }
+
       setClusterDataCache(prev => {
         const next = new Map(prev)
-        next.set(selectedCluster, {
+        next.set(cluster, {
           nodes: allNodes.slice(0, MAX_CACHED_PER_TYPE).map(n => ({ name: n.name, status: n.status })),
           namespaces: [...(allNamespaces || [])].slice(0, MAX_CACHED_PER_TYPE),
           deployments: (allDeployments || []).slice(0, MAX_CACHED_PER_TYPE).map(d => ({
@@ -228,11 +250,39 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
       // Mark this cluster as no longer loading
       setLoadingClusters(prev => {
         const next = new Set(prev)
-        next.delete(selectedCluster)
+        next.delete(cluster)
         return next
       })
     }
   }, [selectedCluster, nodesLoading, namespacesLoading, allNodes, allNamespaces, allDeployments, allServices, allPVCs, allPods, allConfigMaps, allSecrets, allServiceAccounts, allJobs, allHPAs, allReplicaSets, allStatefulSets, allDaemonSets, allCronJobs, allIngresses, allNetworkPolicies, podIssues])
+
+  // Evict cache entries for clusters that have transitioned to offline/
+  // unhealthy. Without this, stale resources captured while the cluster
+  // was reachable continue to render after the cluster goes down
+  // (issue #6051 — stale data persists past offline transition).
+  useEffect(() => {
+    const offlineClusterNames: string[] = []
+    for (const c of clusters) {
+      if (!c.healthy) offlineClusterNames.push(c.name)
+    }
+    if (offlineClusterNames.length === 0) return
+    // Cache eviction is a legitimate state synchronization: when a cluster
+    // transitions to offline we must drop its stale entry so `getClusterData`
+    // stops returning data that is no longer trustworthy. Matches the
+    // pattern used by the cache-write effect above.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setClusterDataCache(prev => {
+      let changed = false
+      const next = new Map(prev)
+      for (const name of offlineClusterNames) {
+        if (next.has(name)) {
+          next.delete(name)
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+  }, [clusters])
 
   // Helper to get cached data for a cluster
   const getClusterData = (clusterName: string): ClusterDataCache | null => {
