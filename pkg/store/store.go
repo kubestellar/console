@@ -106,6 +106,15 @@ type Store interface {
 	IsTokenRevoked(jti string) (bool, error)
 	CleanupExpiredTokens() (int64, error)
 
+	// OAuth State (persisted across server restarts so in-flight OAuth
+	// flows survive a backend restart between /auth/login and /auth/callback).
+	StoreOAuthState(state string, ttl time.Duration) error
+	// ConsumeOAuthState atomically looks up and deletes an OAuth state token.
+	// Returns true only when the state was found, not expired, and successfully
+	// deleted (single-use). Returns false for missing, expired, or already-consumed states.
+	ConsumeOAuthState(state string) (bool, error)
+	CleanupExpiredOAuthStates() (int64, error)
+
 	// Lifecycle
 	Close() error
 }
