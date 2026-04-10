@@ -9,6 +9,7 @@ import { Pagination } from '../ui/Pagination'
 import { CardClusterFilter, CardSearchInput } from '../../lib/cards/CardComponents'
 import { useCardData } from '../../lib/cards/cardHooks'
 import { StatusBadge } from '../ui/StatusBadge'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
 import { GitOpsDriftDetailModal } from './deploy/GitOpsDriftDetailModal'
 import { useTranslation } from 'react-i18next'
@@ -69,7 +70,8 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
     error,
     isFailed,
     consecutiveFailures,
-    isDemoFallback: isDemoData } = useCachedGitOpsDrifts(cluster, namespace)
+    isDemoFallback: isDemoData,
+    lastRefresh: driftLastRefresh } = useCachedGitOpsDrifts(cluster, namespace)
   const { selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
@@ -211,6 +213,14 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
               {t('gitOpsDrift.nDrifts', { count: totalDrifts })}
             </span>
           )}
+          {/* part 4: freshness indicator. */}
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={typeof driftLastRefresh === 'number' ? new Date(driftLastRefresh) : null}
+            size="sm"
+            showLabel={true}
+            staleThresholdMinutes={5}
+          />
         </div>
         <div className="flex items-center gap-2">
           {/* Cluster Filter */}

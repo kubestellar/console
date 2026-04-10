@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { CheckCircle, Clock, XCircle, Loader2, Filter, ChevronRight, Server } from 'lucide-react'
 import { useCachedDeployments } from '../../hooks/useCachedData'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { CardClusterFilter, CardSearchInput } from '../../lib/cards/CardComponents'
 import { Pagination } from '../ui/Pagination'
 import { CardControls } from '../ui/CardControls'
@@ -85,7 +86,8 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
     isDemoFallback,
     isFailed,
     consecutiveFailures,
-    error
+    error,
+    lastRefresh: deploymentsLastRefresh
   } = useCachedDeployments(cluster, namespace)
   const { drillToDeployment } = useDrillDownActions()
 
@@ -210,6 +212,14 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
               {filters.localClusterFilter.length}/{filters.availableClusters.length}
             </span>
           )}
+          {/* part 4: freshness indicator. */}
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={typeof deploymentsLastRefresh === 'number' ? new Date(deploymentsLastRefresh) : null}
+            size="sm"
+            showLabel={true}
+            staleThresholdMinutes={5}
+          />
         </div>
         <div className="flex items-center gap-2">
           {/* Cluster Filter */}

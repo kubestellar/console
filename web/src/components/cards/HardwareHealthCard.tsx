@@ -5,6 +5,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { CardControlsRow, CardSearchInput, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { StatusBadge } from '../ui/StatusBadge'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedHardwareHealth, type DeviceAlert, type NodeDeviceInventory, type DeviceCounts } from '../../hooks/useCachedData'
@@ -876,13 +877,18 @@ export function HardwareHealthCard() {
         needsPagination={currentNeedsPagination}
       />
 
-      {/* Last update */}
-      {lastUpdate && (
-        <div className="text-2xs text-muted-foreground text-center mt-2 flex items-center justify-center gap-1">
-          <RefreshCw className="w-3 h-3" />
-          Updated {lastUpdate.toLocaleTimeString()}
-        </div>
-      )}
+      {/* part 4: replaced bespoke "Updated HH:MM:SS" footer with the
+          standard RefreshIndicator so it matches the rest of the card
+          deck and shows a stale-data warning past 5 minutes. */}
+      <div className="mt-2 flex items-center justify-center">
+        <RefreshIndicator
+          isRefreshing={isRefreshing}
+          lastUpdated={lastUpdate}
+          size="sm"
+          showLabel={true}
+          staleThresholdMinutes={5}
+        />
+      </div>
     </div>
   )
 }
