@@ -1149,13 +1149,14 @@ func (h *WorkloadHandlers) GetDeployLogs(c *fiber.Ctx) error {
 		}
 	}
 
-	// Sort events by actual timestamp (newest last) (#3718)
+	// Sort events by actual timestamp (newest last) (#3718, #6042).
+	// Prefer modern EventTime; fall back to LastTimestamp then CreationTimestamp.
 	sort.Slice(allEvents, func(i, j int) bool {
-		ti := allEvents[i].LastTimestamp.Time
+		ti := k8s.EffectiveEventTime(&allEvents[i])
 		if ti.IsZero() {
 			ti = allEvents[i].CreationTimestamp.Time
 		}
-		tj := allEvents[j].LastTimestamp.Time
+		tj := k8s.EffectiveEventTime(&allEvents[j])
 		if tj.IsZero() {
 			tj = allEvents[j].CreationTimestamp.Time
 		}
@@ -1184,7 +1185,7 @@ func (h *WorkloadHandlers) GetDeployLogs(c *fiber.Ctx) error {
 
 // formatEvent formats a k8s event into a compact log line for mission display.
 func formatEvent(ev corev1.Event) string {
-	ts := ev.LastTimestamp.Time
+	ts := k8s.EffectiveEventTime(&ev)
 	if ts.IsZero() {
 		ts = ev.CreationTimestamp.Time
 	}

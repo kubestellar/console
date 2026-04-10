@@ -260,9 +260,10 @@ func (m *MultiClusterClient) GetEvents(ctx context.Context, contextName, namespa
 		return nil, err
 	}
 
-	// Sort by last timestamp descending
+	// Sort by effective event time descending (prefers modern EventTime,
+	// falls back to LastTimestamp for older clusters). See issue #6042.
 	sort.Slice(events.Items, func(i, j int) bool {
-		return events.Items[i].LastTimestamp.After(events.Items[j].LastTimestamp.Time)
+		return EffectiveEventTime(&events.Items[i]).After(EffectiveEventTime(&events.Items[j]))
 	})
 
 	var result []Event
@@ -270,6 +271,8 @@ func (m *MultiClusterClient) GetEvents(ctx context.Context, contextName, namespa
 		if limit > 0 && i >= limit {
 			break
 		}
+		evt := event
+		lastSeen := EffectiveEventTime(&evt)
 		e := Event{
 			Type:      event.Type,
 			Reason:    event.Reason,
@@ -278,13 +281,13 @@ func (m *MultiClusterClient) GetEvents(ctx context.Context, contextName, namespa
 			Namespace: event.Namespace,
 			Cluster:   contextName,
 			Count:     event.Count,
-			Age:       formatDuration(time.Since(event.LastTimestamp.Time)),
+		}
+		if !lastSeen.IsZero() {
+			e.Age = formatDuration(time.Since(lastSeen))
+			e.LastSeen = lastSeen.Format(time.RFC3339)
 		}
 		if !event.FirstTimestamp.IsZero() {
 			e.FirstSeen = event.FirstTimestamp.Time.Format(time.RFC3339)
-		}
-		if !event.LastTimestamp.IsZero() {
-			e.LastSeen = event.LastTimestamp.Time.Format(time.RFC3339)
 		}
 		result = append(result, e)
 	}
@@ -306,9 +309,10 @@ func (m *MultiClusterClient) GetWarningEvents(ctx context.Context, contextName, 
 		return nil, err
 	}
 
-	// Sort by last timestamp descending
+	// Sort by effective event time descending (prefers modern EventTime,
+	// falls back to LastTimestamp for older clusters). See issue #6042.
 	sort.Slice(events.Items, func(i, j int) bool {
-		return events.Items[i].LastTimestamp.After(events.Items[j].LastTimestamp.Time)
+		return EffectiveEventTime(&events.Items[i]).After(EffectiveEventTime(&events.Items[j]))
 	})
 
 	var result []Event
@@ -316,6 +320,8 @@ func (m *MultiClusterClient) GetWarningEvents(ctx context.Context, contextName, 
 		if limit > 0 && i >= limit {
 			break
 		}
+		evt := event
+		lastSeen := EffectiveEventTime(&evt)
 		e := Event{
 			Type:      event.Type,
 			Reason:    event.Reason,
@@ -324,13 +330,13 @@ func (m *MultiClusterClient) GetWarningEvents(ctx context.Context, contextName, 
 			Namespace: event.Namespace,
 			Cluster:   contextName,
 			Count:     event.Count,
-			Age:       formatDuration(time.Since(event.LastTimestamp.Time)),
+		}
+		if !lastSeen.IsZero() {
+			e.Age = formatDuration(time.Since(lastSeen))
+			e.LastSeen = lastSeen.Format(time.RFC3339)
 		}
 		if !event.FirstTimestamp.IsZero() {
 			e.FirstSeen = event.FirstTimestamp.Time.Format(time.RFC3339)
-		}
-		if !event.LastTimestamp.IsZero() {
-			e.LastSeen = event.LastTimestamp.Time.Format(time.RFC3339)
 		}
 		result = append(result, e)
 	}

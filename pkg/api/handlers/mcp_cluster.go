@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"log/slog"
-	"sort"
 	"sync"
 
 	"github.com/gofiber/fiber/v2"
@@ -281,10 +280,10 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 
 			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 
-			// Sort by timestamp (most recent first) and limit total
-			sort.Slice(allEvents, func(i, j int) bool {
-				return allEvents[i].LastSeen > allEvents[j].LastSeen
-			})
+			// Sort by LastSeen parsed as time (most recent first).
+			// Lexicographic string compare is unreliable across timezones
+			// and empty values (see issue #6043).
+			k8s.SortEventsByLastSeenDesc(allEvents)
 			if len(allEvents) > limit {
 				allEvents = allEvents[:limit]
 			}
@@ -384,10 +383,10 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 
 			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
 
-			// Sort by timestamp (most recent first) and limit total
-			sort.Slice(allEvents, func(i, j int) bool {
-				return allEvents[i].LastSeen > allEvents[j].LastSeen
-			})
+			// Sort by LastSeen parsed as time (most recent first).
+			// Lexicographic string compare is unreliable across timezones
+			// and empty values (see issue #6043).
+			k8s.SortEventsByLastSeenDesc(allEvents)
 			if len(allEvents) > limit {
 				allEvents = allEvents[:limit]
 			}
