@@ -26,6 +26,19 @@ import {
 const HOME_ROUTE = '/'
 // Target route for the navigation under measurement.
 const NAV_TARGET_ROUTE = '/clusters'
+// URL glob passed to waitForURL after the sidebar link click. Matches any
+// protocol/host with the target path.
+const NAV_TARGET_URL_GLOB = '**/clusters'
+// Case-insensitive accessible-name matcher for the sidebar link. Matches the
+// rendered "Clusters" link in the KubeStellar sidebar without locking us to
+// a brittle CSS selector.
+const NAV_TARGET_LINK_NAME = /clusters/i
+// localStorage key that forces demo mode. The CI runner has no backend, so
+// without demo mode the app bounces to the login screen and the commit
+// counter never sees a real SPA navigation. This is the same toggle the
+// Settings page flips. See src/lib/constants/storage.ts STORAGE_KEY_DEMO_MODE.
+const DEMO_MODE_STORAGE_KEY = 'kc-demo-mode'
+const DEMO_MODE_STORAGE_VALUE = 'true'
 
 // The init script uses a named global so we can read it later from the page.
 const COMMIT_COUNTER_KEY = '__perfCommitCount'
@@ -76,6 +89,23 @@ test.afterAll(() => {
 })
 
 test('react commits per navigation stays under budget', async ({ page }) => {
+  // Force demo mode BEFORE any app script runs. In CI there's no backend and
+  // no kc-agent, so without this the app would bounce to the login screen and
+  // the sidebar link we click below wouldn't exist. Demo mode short-circuits
+  // auth and serves canned data — exactly the same thing the Settings page
+  // toggle does. See #6170.
+  await page.addInitScript(
+    ({ storageKey, storageValue }) => {
+      try {
+        window.localStorage.setItem(storageKey, storageValue)
+      } catch {
+        // Ignore: happens when the test storage partition is not yet
+        // available. The next page load will still see the attempt.
+      }
+    },
+    { storageKey: DEMO_MODE_STORAGE_KEY, storageValue: DEMO_MODE_STORAGE_VALUE },
+  )
+
   // Install the fake DevTools hook BEFORE any app script runs. React 19
   // calls `onCommitFiberRoot` on every commit when the hook is present.
   await page.addInitScript(
@@ -99,6 +129,7 @@ test('react commits per navigation stays under budget', async ({ page }) => {
   )
 
   await page.goto(HOME_ROUTE)
+  await page.waitForLoadState('networkidle')
   await page.waitForTimeout(NAVIGATION_SETTLE_MS)
 
   // Reset counter — we only care about commits caused by the navigation.
@@ -106,7 +137,14 @@ test('react commits per navigation stays under budget', async ({ page }) => {
     ;(window as unknown as Record<string, number>)[key] = 0
   }, COMMIT_COUNTER_KEY)
 
-  await page.goto(NAV_TARGET_ROUTE)
+  // Real client-side navigation: click the sidebar link instead of calling
+  // `page.goto(NAV_TARGET_ROUTE)`. `page.goto` triggers a full document load,
+  // which would mount the entire React tree from scratch and measure the
+  // cold-mount cost — NOT the in-app SPA route transition that #6149 is
+  // about. Clicking the link exercises the React Router transition, which
+  // is exactly what we want to budget. See #6170.
+  await page.getByRole('link', { name: NAV_TARGET_LINK_NAME }).first().click()
+  await page.waitForURL(NAV_TARGET_URL_GLOB)
   await page.waitForTimeout(NAVIGATION_SETTLE_MS)
 
   const count = await page.evaluate(

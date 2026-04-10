@@ -96,6 +96,16 @@ jobs:
     name: Notify on regression
     needs: react-commits
     if: failure()
+    # Job-level permissions for the reusable workflow. A reusable workflow can
+    # never receive MORE permissions than its caller job, so this block is the
+    # documented way to guarantee `issues: write` reaches
+    # `_perf-regression-issue.yml` even if the workflow-level default is later
+    # tightened (e.g. to `read-all`). Without this, the auto-issue creator
+    # silently no-ops with a permission denied. See #6170.
+    permissions:
+      contents: read
+      issues: write
+      actions: read
     uses: ./.github/workflows/_perf-regression-issue.yml
     with:
       result-path: web/perf-result.json

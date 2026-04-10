@@ -83,8 +83,10 @@ jobs:
       - name: Write perf-result.json (scheduled runs only)
         # Only scheduled runs drive the auto-issue notifier. PR-time failures
         # already surface on the PR via the check status — no need to file
-        # extra issues there.
-        if: github.event_name == 'schedule'
+        # extra issues there. `always()` is required so this step still runs
+        # after the `Compare against baseline (hard fail)` step fails — that's
+        # exactly when we need the JSON written for the notify job. See #6170.
+        if: always() && github.event_name == 'schedule'
         working-directory: .
         env:
           LAST_SUCCESSFUL_SHA: ''
@@ -155,6 +157,16 @@ jobs:
     # Only file auto-issues on scheduled runs. PR failures already surface
     # as red checks on the PR — no need to open a bug there.
     if: failure() && github.event_name == 'schedule'
+    # Job-level permissions for the reusable workflow. A reusable workflow can
+    # never receive MORE permissions than its caller job, so this block is the
+    # documented way to guarantee `issues: write` reaches
+    # `_perf-regression-issue.yml` even if the workflow-level default is later
+    # tightened (e.g. to `read-all`). Without this, the auto-issue creator
+    # silently no-ops with a permission denied. See #6170.
+    permissions:
+      contents: read
+      issues: write
+      actions: read
     uses: ./.github/workflows/_perf-regression-issue.yml
     with:
       result-path: web/perf-result.json

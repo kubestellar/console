@@ -64,9 +64,26 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
   showHelpAndExit()
 }
 
+// Fallback exit code when spawnSync cannot launch the binary at all
+// (e.g. `gh` not on PATH). We MUST NOT default to 0 here — that would make
+// a missing binary look like success and the script would "succeed"
+// without filing anything. See #6170.
+const SH_SPAWN_FAILURE_CODE = 1
+
 function sh(cmd, args, opts = {}) {
   const res = spawnSync(cmd, args, { encoding: 'utf8', ...opts })
-  return { stdout: (res.stdout || '').trim(), stderr: (res.stderr || '').trim(), code: res.status ?? 0 }
+  if (res.error) {
+    // spawnSync sets `error` and leaves `status === null` when the binary
+    // cannot be spawned. Surface that as a non-zero exit code so callers
+    // take the failure branch instead of treating it as success.
+    log(`failed to spawn ${cmd}: ${res.error.message}`)
+    return { stdout: '', stderr: res.error.message, code: SH_SPAWN_FAILURE_CODE }
+  }
+  return {
+    stdout: (res.stdout || '').trim(),
+    stderr: (res.stderr || '').trim(),
+    code: res.status ?? SH_SPAWN_FAILURE_CODE,
+  }
 }
 
 function log(msg) {
@@ -90,7 +107,11 @@ function readResult(resultPath) {
 function buildMergeLog(lastSuccessfulSha, headSha) {
   if (!lastSuccessfulSha || !headSha) return null
   const range = `${lastSuccessfulSha}..${headSha}`
-  const { stdout, code } = sh('git', ['log', range, '--format=- %h %s'])
+  // `--merges` filters to merge commits only — matches the "Merges since last
+  // successful run" header below and keeps the bisect window narrow enough to
+  // be actionable. Without this flag we'd dump every commit in the range.
+  // See #6170.
+  const { stdout, code } = sh('git', ['log', '--merges', range, '--format=- %h %s'])
   if (code !== 0 || !stdout) return null
   const lines = stdout.split('\n').filter(Boolean)
   if (lines.length === 0) return null
