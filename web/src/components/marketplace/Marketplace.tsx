@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
@@ -45,6 +45,19 @@ function CNCFProgressBanner({ stats }: { stats: CNCFStats }) {
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem(BANNER_COLLAPSED_KEY) === 'true' } catch { return false }
   })
+
+  // Sync banner collapsed state across tabs (fix #6006).
+  // The `storage` event only fires in OTHER tabs when localStorage changes,
+  // so toggling in tab A will update tab B automatically.
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key !== BANNER_COLLAPSED_KEY) return
+      // If the key was removed, e.newValue is null — default to not collapsed.
+      setCollapsed(e.newValue === 'true')
+    }
+    window.addEventListener('storage', handleStorage)
+    return () => window.removeEventListener('storage', handleStorage)
+  }, [])
 
   const toggleCollapse = () => {
     const next = !collapsed
@@ -338,6 +351,18 @@ function AuthorBadge({ author, github, compact }: { author: string; github?: str
     updatePos()
     setHovered(true)
   }
+
+  // Dismiss tooltip on scroll (fix #6007).
+  // The tooltip captures its position once on mouse enter and does not
+  // track the trigger on scroll, so it detaches visually. Dismissing on
+  // scroll matches user expectation (the cursor has left the trigger anyway).
+  // Capture phase is used to catch scrolls in any nested container.
+  useEffect(() => {
+    if (!hovered) return
+    const dismiss = () => setHovered(false)
+    window.addEventListener('scroll', dismiss, true)
+    return () => window.removeEventListener('scroll', dismiss, true)
+  }, [hovered])
 
   if (!github) {
     return <span>{author}</span>
