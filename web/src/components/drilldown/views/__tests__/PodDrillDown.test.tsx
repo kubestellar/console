@@ -57,6 +57,10 @@ vi.mock('../../../../lib/clipboard', () => ({
   copyToClipboard: vi.fn(),
 }))
 
+vi.mock('../../../ui/Toast', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}))
+
 import { PodDrillDown } from '../PodDrillDown'
 
 describe('PodDrillDown', () => {

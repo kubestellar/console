@@ -16,8 +16,10 @@ import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
  * - `unhealthy`  — backend reports healthy=false AND no higher-priority
  *                  signal (healthUnknown/neverConnected) is set
  * - `unreachable`— reachable=false or an unreachable errorType
- * - `loading`    — initial load with no data yet (nodeCount and reachable
- *                  both undefined) OR an explicit refresh is in progress
+ * - `loading`    — initial load with no cached data yet (nodeCount and
+ *                  reachable both undefined). An explicit refresh on a
+ *                  cluster that has cached data does NOT return loading;
+ *                  it returns the cached state.
  * - `unknown`    — no authoritative health signal (no successful probe
  *                  yet or `healthUnknown`/`neverConnected` from backend)
  *
