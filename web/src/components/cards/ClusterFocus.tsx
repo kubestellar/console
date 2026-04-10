@@ -5,6 +5,7 @@ import { useCachedPodIssues, useCachedDeploymentIssues, useCachedGPUNodes } from
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -19,9 +20,12 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
   const { t } = useTranslation(['cards', 'common'])
   const selectedCluster = config?.cluster
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed, consecutiveFailures } = useClusters()
-  const { nodes: gpuNodes, isDemoFallback: gpuDemoFallback, isRefreshing: gpuRefreshing } = useCachedGPUNodes()
-  const { issues: podIssues, isDemoFallback: podsDemoFallback, isRefreshing: podsRefreshing } = useCachedPodIssues(selectedCluster)
-  const { issues: deploymentIssues, isDemoFallback: deployDemoFallback, isRefreshing: deploymentsRefreshing } = useCachedDeploymentIssues(selectedCluster)
+  // #6217: destructure lastRefresh from each underlying hook so the card
+  // can render a freshness indicator using the OLDEST timestamp (= the
+  // staler half of the data the user is looking at).
+  const { nodes: gpuNodes, isDemoFallback: gpuDemoFallback, isRefreshing: gpuRefreshing, lastRefresh: gpuLastRefresh } = useCachedGPUNodes()
+  const { issues: podIssues, isDemoFallback: podsDemoFallback, isRefreshing: podsRefreshing, lastRefresh: podsLastRefresh } = useCachedPodIssues(selectedCluster)
+  const { issues: deploymentIssues, isDemoFallback: deployDemoFallback, isRefreshing: deploymentsRefreshing, lastRefresh: deployLastRefresh } = useCachedDeploymentIssues(selectedCluster)
   const { drillToCluster, drillToPod, drillToDeployment } = useDrillDownActions()
   const [internalCluster, setInternalCluster] = useState<string>('')
   const { isDemoMode } = useDemoMode()
@@ -126,6 +130,18 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <span className="text-sm font-medium text-foreground truncate">{clusterName}</span>
           <div className={`w-2 h-2 rounded-full shrink-0 ${cluster?.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
+          {/* #6217: freshness indicator using the OLDEST of the 3 cache
+              timestamps so users see the staler half of the data. */}
+          <RefreshIndicator
+            isRefreshing={gpuRefreshing || podsRefreshing || deploymentsRefreshing}
+            lastUpdated={(() => {
+              const ts = [gpuLastRefresh, podsLastRefresh, deployLastRefresh].filter((t): t is number => t != null)
+              return ts.length > 0 ? new Date(Math.min(...ts)) : null
+            })()}
+            size="sm"
+            showLabel={true}
+            staleThresholdMinutes={5}
+          />
         </div>
         <div className="flex items-center gap-2">
           {!selectedCluster && (

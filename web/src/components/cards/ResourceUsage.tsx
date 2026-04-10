@@ -6,6 +6,7 @@ import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import { useChartFilters } from '../../lib/cards/cardHooks'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { Skeleton } from '../ui/Skeleton'
@@ -16,8 +17,10 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 // a runtime error in the 252-line component doesn't crash the dashboard.
 function ResourceUsageInternal() {
   const { t } = useTranslation(['cards', 'common'])
+  // #6217: destructure lastRefresh so the card can render a freshness
+  // indicator instead of leaving users guessing how stale the data is.
   const { isLoading: clustersLoading, isRefreshing: clustersRefreshing } = useClusters()
-  const { nodes: allGPUNodes, isDemoFallback, isRefreshing: gpuRefreshing } = useCachedGPUNodes()
+  const { nodes: allGPUNodes, isDemoFallback, isRefreshing: gpuRefreshing, lastRefresh: gpuLastRefresh } = useCachedGPUNodes()
   const { drillToResources } = useDrillDownActions()
   const { isDemoMode } = useDemoMode()
 
@@ -161,6 +164,14 @@ function ResourceUsageInternal() {
               {t('common:common.nClusters', { count: clusters.length })}
             </span>
           )}
+          {/* #6217: freshness indicator. */}
+          <RefreshIndicator
+            isRefreshing={clustersRefreshing || gpuRefreshing}
+            lastUpdated={gpuLastRefresh ? new Date(gpuLastRefresh) : null}
+            size="sm"
+            showLabel={true}
+            staleThresholdMinutes={5}
+          />
         </div>
 
         <div className="flex items-center gap-2">
