@@ -52,7 +52,13 @@ vi.mock('../../../lib/cards/cardHooks', () => ({
 
 vi.mock('../charts', () => ({ Gauge: () => null, TimeSeriesChart: () => null, MultiSeriesChart: () => null }))
 
-import { ClusterMetrics } from '../ClusterMetrics'
+import { ClusterMetrics, SUPPORTED_TIME_RANGE_KEYS } from '../ClusterMetrics'
+import { CLUSTER_POLL_INTERVAL_MS } from '../../../hooks/mcp/shared'
+
+// Keep in sync with MAX_HISTORY_POINTS in ClusterMetrics.tsx
+const EXPECTED_MAX_HISTORY_POINTS = 60
+const EXPECTED_MAX_HISTORY_DURATION_MS =
+  EXPECTED_MAX_HISTORY_POINTS * CLUSTER_POLL_INTERVAL_MS
 
 describe('ClusterMetrics', () => {
   beforeEach(() => {
@@ -82,6 +88,20 @@ describe('ClusterMetrics', () => {
     mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     const { container } = render(<ClusterMetrics />)
     expect(container).toBeTruthy()
+  })
+
+  it('only exposes time ranges the history buffer can cover (issue #6048)', () => {
+    // Every supported range must be achievable by the client-side buffer
+    for (const opt of SUPPORTED_TIME_RANGE_KEYS) {
+      expect(opt.rangeMs).toBeLessThanOrEqual(EXPECTED_MAX_HISTORY_DURATION_MS)
+    }
+    // At the current poll interval (60s) and 60-point cap, only 15m and 1h
+    // should be exposed; 6h and 24h would always render as empty.
+    const values = SUPPORTED_TIME_RANGE_KEYS.map((opt) => opt.value)
+    expect(values).toContain('15m')
+    expect(values).toContain('1h')
+    expect(values).not.toContain('6h')
+    expect(values).not.toContain('24h')
   })
 
   it('renders with cluster data available', () => {

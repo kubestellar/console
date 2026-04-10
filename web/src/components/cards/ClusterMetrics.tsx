@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { TimeSeriesChart, MultiSeriesChart } from '../charts'
 import { useClusters } from '../../hooks/useMCP'
+import { CLUSTER_POLL_INTERVAL_MS } from '../../hooks/mcp/shared'
 import { Server, Clock, Layers, TrendingUp } from 'lucide-react'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import { useChartFilters } from '../../lib/cards/cardHooks'
@@ -10,12 +11,76 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 
 type TimeRange = '15m' | '1h' | '6h' | '24h'
 
-const TIME_RANGE_KEYS = [
-  { value: '15m' as const, labelKey: 'clusterMetrics.timeRange15m' as const, points: 15, intervalMs: 60000 },
-  { value: '1h' as const, labelKey: 'clusterMetrics.timeRange1h' as const, points: 20, intervalMs: 180000 },
-  { value: '6h' as const, labelKey: 'clusterMetrics.timeRange6h' as const, points: 24, intervalMs: 900000 },
-  { value: '24h' as const, labelKey: 'clusterMetrics.timeRange24h' as const, points: 24, intervalMs: 3600000 },
+// History buffer is rebuilt client-side from live polling — nothing is
+// persisted beyond the localStorage TTL below. MAX_HISTORY_POINTS bounds the
+// buffer size, and at the shared cluster poll interval the buffer can span at
+// most MAX_HISTORY_DURATION_MS of wall-clock time. Any time-range option
+// larger than that can never have data, so we hide it from the selector
+// (fixes issue #6048).
+const MAX_HISTORY_POINTS = 60                                                  // buffer cap (points)
+const MAX_HISTORY_DURATION_MS = MAX_HISTORY_POINTS * CLUSTER_POLL_INTERVAL_MS  // max wall-clock span of buffer
+const MIN_POINT_SPACING_MS = 30 * 1000                                         // min delta between recorded points (30s)
+const MS_PER_SECOND = 1000
+const SECONDS_PER_MINUTE = 60
+const MINUTES_PER_HOUR = 60
+const MINUTES_15 = 15
+const HOURS_1 = 1
+const HOURS_6 = 6
+const HOURS_24 = 24
+const FIFTEEN_MIN_MS = MINUTES_15 * SECONDS_PER_MINUTE * MS_PER_SECOND
+const ONE_HOUR_MS = HOURS_1 * MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MS_PER_SECOND
+const SIX_HOURS_MS = HOURS_6 * MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MS_PER_SECOND
+const TWENTY_FOUR_HOURS_MS = HOURS_24 * MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MS_PER_SECOND
+
+// Sub-interval values for legacy TIME_RANGE_KEYS entries (kept for any
+// downstream consumer that still reads them). Values are illustrative only
+// and are not used for filtering the buffer itself.
+const LEGACY_15M_POINTS = 15
+const LEGACY_15M_INTERVAL_MS = 60 * MS_PER_SECOND         // 1 minute
+const LEGACY_1H_POINTS = 20
+const LEGACY_1H_INTERVAL_MS = 180 * MS_PER_SECOND         // 3 minutes
+const LEGACY_6H_POINTS = 24
+const LEGACY_6H_INTERVAL_MS = 900 * MS_PER_SECOND         // 15 minutes
+const LEGACY_24H_POINTS = 24
+const LEGACY_24H_INTERVAL_MS = 3600 * MS_PER_SECOND       // 1 hour
+
+const TIME_RANGE_KEYS: Array<{
+  value: TimeRange
+  labelKey:
+    | 'clusterMetrics.timeRange15m'
+    | 'clusterMetrics.timeRange1h'
+    | 'clusterMetrics.timeRange6h'
+    | 'clusterMetrics.timeRange24h'
+  points: number
+  intervalMs: number
+  rangeMs: number
+}> = [
+  { value: '15m', labelKey: 'clusterMetrics.timeRange15m', points: LEGACY_15M_POINTS, intervalMs: LEGACY_15M_INTERVAL_MS, rangeMs: FIFTEEN_MIN_MS },
+  { value: '1h', labelKey: 'clusterMetrics.timeRange1h', points: LEGACY_1H_POINTS, intervalMs: LEGACY_1H_INTERVAL_MS, rangeMs: ONE_HOUR_MS },
+  { value: '6h', labelKey: 'clusterMetrics.timeRange6h', points: LEGACY_6H_POINTS, intervalMs: LEGACY_6H_INTERVAL_MS, rangeMs: SIX_HOURS_MS },
+  { value: '24h', labelKey: 'clusterMetrics.timeRange24h', points: LEGACY_24H_POINTS, intervalMs: LEGACY_24H_INTERVAL_MS, rangeMs: TWENTY_FOUR_HOURS_MS },
 ]
+
+// Only expose time ranges the client-side history buffer can actually cover.
+// At CLUSTER_POLL_INTERVAL_MS = 60s and MAX_HISTORY_POINTS = 60, this yields
+// a 60-minute ceiling — so '15m' and '1h' remain, while '6h' and '24h' are
+// filtered out (they would always render as sparse/empty, issue #6048).
+export const SUPPORTED_TIME_RANGE_KEYS = TIME_RANGE_KEYS.filter(
+  (opt) => opt.rangeMs <= MAX_HISTORY_DURATION_MS,
+)
+
+const TIME_RANGE_MS: Record<TimeRange, number> = {
+  '15m': FIFTEEN_MIN_MS,
+  '1h': ONE_HOUR_MS,
+  '6h': SIX_HOURS_MS,
+  '24h': TWENTY_FOUR_HOURS_MS,
+}
+
+const SUPPORTED_TIME_RANGE_VALUES = new Set<TimeRange>(
+  SUPPORTED_TIME_RANGE_KEYS.map((opt) => opt.value),
+)
+const DEFAULT_TIME_RANGE: TimeRange =
+  SUPPORTED_TIME_RANGE_KEYS[SUPPORTED_TIME_RANGE_KEYS.length - 1]?.value ?? '15m'
 
 
 type MetricType = 'cpu' | 'memory' | 'pods' | 'nodes'
@@ -46,15 +111,25 @@ interface MetricPoint {
 }
 
 const STORAGE_KEY = 'cluster-metrics-history'
-const MAX_AGE_MS = 30 * 60 * 1000 // 30 minutes TTL
+// Keep saved history at least as long as the live buffer can span, so that a
+// page reload does not discard recent points that would still be visible.
+const MAX_AGE_MS = MAX_HISTORY_DURATION_MS
 
 export function ClusterMetrics() {
   const { t } = useTranslation(['cards', 'common'])
   const { isLoading, isRefreshing, deduplicatedClusters, isFailed, consecutiveFailures } = useClusters()
   const { isDemoMode } = useDemoMode()
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('cpu')
-  const [timeRange, setTimeRange] = useState<TimeRange>('1h')
+  const [timeRange, setTimeRange] = useState<TimeRange>(DEFAULT_TIME_RANGE)
   const [chartMode, setChartMode] = useState<ChartMode>('total')
+
+  // If an unsupported range was somehow persisted (e.g. older build), clamp
+  // it on mount to the default supported range.
+  useEffect(() => {
+    if (!SUPPORTED_TIME_RANGE_VALUES.has(timeRange)) {
+      setTimeRange(DEFAULT_TIME_RANGE)
+    }
+  }, [timeRange])
 
   // Build translated metric config and time range options
   const metricConfig = (() => {
@@ -65,7 +140,7 @@ export function ClusterMetrics() {
     return result
   })()
 
-  const TIME_RANGE_OPTIONS = TIME_RANGE_KEYS.map(opt => ({ ...opt, label: String(t(opt.labelKey)) }))
+  const TIME_RANGE_OPTIONS = SUPPORTED_TIME_RANGE_KEYS.map(opt => ({ ...opt, label: String(t(opt.labelKey)) }))
 
   // Report state to CardWrapper for refresh animation
   const hasData = deduplicatedClusters.length > 0
@@ -161,18 +236,19 @@ export function ClusterMetrics() {
       nodes: realValues.nodes,
       clusters: clusterValues }
 
-    // Only add if data changed or at least 30 seconds since last point
+    // Only add if data changed or at least MIN_POINT_SPACING_MS since last point
     const lastPoint = historyRef.current[historyRef.current.length - 1]
     const shouldAdd = !lastPoint ||
-      (now - lastPoint.timestamp > 30000) ||
+      (now - lastPoint.timestamp > MIN_POINT_SPACING_MS) ||
       lastPoint.cpu !== newPoint.cpu ||
       lastPoint.memory !== newPoint.memory ||
       lastPoint.pods !== newPoint.pods ||
       lastPoint.nodes !== newPoint.nodes
 
     if (shouldAdd) {
-      // Keep last 60 points (about 30 minutes at 30-second intervals)
-      const newHistory = [...historyRef.current, newPoint].slice(-60)
+      // Cap buffer at MAX_HISTORY_POINTS — at CLUSTER_POLL_INTERVAL_MS this
+      // caps the wall-clock span at MAX_HISTORY_DURATION_MS.
+      const newHistory = [...historyRef.current, newPoint].slice(-MAX_HISTORY_POINTS)
       historyRef.current = newHistory
       setHistory(newHistory)
     }
@@ -182,11 +258,7 @@ export function ClusterMetrics() {
   const data = (() => {
     // Filter history based on time range
     const now = Date.now()
-    const rangeMs = {
-      '15m': 15 * 60 * 1000,
-      '1h': 60 * 60 * 1000,
-      '6h': 6 * 60 * 60 * 1000,
-      '24h': 24 * 60 * 60 * 1000 }[timeRange]
+    const rangeMs = TIME_RANGE_MS[timeRange]
 
     const filteredHistory = history.filter(p => now - p.timestamp <= rangeMs)
 
@@ -200,11 +272,7 @@ export function ClusterMetrics() {
     if (chartMode !== 'per-cluster') return { data: [], series: [] }
 
     const now = Date.now()
-    const rangeMs = {
-      '15m': 15 * 60 * 1000,
-      '1h': 60 * 60 * 1000,
-      '6h': 6 * 60 * 60 * 1000,
-      '24h': 24 * 60 * 60 * 1000 }[timeRange]
+    const rangeMs = TIME_RANGE_MS[timeRange]
 
     const filteredHistory = history.filter(p => now - p.timestamp <= rangeMs && p.clusters)
 
