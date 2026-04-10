@@ -11,6 +11,7 @@ import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions }
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { LOCAL_AGENT_WS_URL } from '../../lib/constants'
+import { safeGetJSON, safeSetJSON } from '../../lib/safeLocalStorage'
 import { useTranslation } from 'react-i18next'
 
 const WS_CONNECTION_TIMEOUT_MS = 5000
@@ -32,25 +33,21 @@ const STORAGE_KEY = 'kc-cluster-versions'
 const VERSION_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 // Load persisted cache from localStorage on module init
-const versionCache: Record<string, { version: string; timestamp: number }> = (() => {
-  if (typeof window === 'undefined') return {}
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    return stored ? JSON.parse(stored) : {}
-  } catch {
-    return {}
-  }
-})()
+const versionCache: Record<string, { version: string; timestamp: number }> =
+  typeof window === 'undefined'
+    ? {}
+    : safeGetJSON<Record<string, { version: string; timestamp: number }>>(STORAGE_KEY, {})
+
+/** Debounce interval for persisting the version cache to localStorage */
+const PERSIST_DEBOUNCE_MS = 500
 
 // Persist cache to localStorage (debounced to avoid excessive writes)
 let persistTimer: ReturnType<typeof setTimeout> | null = null
 function persistCache() {
   if (persistTimer) clearTimeout(persistTimer)
   persistTimer = setTimeout(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(versionCache))
-    } catch { /* quota exceeded — non-critical */ }
-  }, 500)
+    safeSetJSON(STORAGE_KEY, versionCache)
+  }, PERSIST_DEBOUNCE_MS)
 }
 
 // Get cached version if still valid

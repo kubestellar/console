@@ -24,6 +24,7 @@ import { usePersistedSettings } from './hooks/usePersistedSettings'
 import { SHORT_DELAY_MS } from './lib/constants/network'
 import { isDemoMode } from './lib/demoMode'
 import { STORAGE_KEY_TOKEN } from './lib/constants'
+import { safeGet, safeSet } from './lib/safeLocalStorage'
 import { emitPageView, emitDashboardViewed } from './lib/analytics'
 import { fetchEnabledDashboards, getEnabledDashboardIds } from './hooks/useSidebarConfig'
 import { safeLazy } from './lib/safeLazy'
@@ -210,7 +211,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     // If the token is expired, showing protected children would leak content
     // to an unauthenticated user during the brief refreshUser() window. In
     // that case render nothing (a spinner placeholder) until auth resolves.
-    const storedToken = localStorage.getItem(STORAGE_KEY_TOKEN)
+    const storedToken = safeGet(STORAGE_KEY_TOKEN)
     if (storedToken && (storedToken === DEMO_TOKEN_VALUE || !isJWTExpired(storedToken))) {
       return <>{children}</>
     }
@@ -222,7 +223,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     // This preserves deep-link params like ?mission= through the OAuth round-trip.
     const destination = location.pathname + location.search
     if (destination !== '/' && destination !== '/login') {
-      localStorage.setItem(RETURN_TO_KEY, destination)
+      safeSet(RETURN_TO_KEY, destination)
     }
     return <Navigate to={ROUTES.LOGIN} replace />
   }

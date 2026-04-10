@@ -355,6 +355,36 @@ export interface UseCardDataResult<T, S extends string> {
   containerStyle: React.CSSProperties | undefined
 }
 
+/**
+ * Canonical card data hook. Consolidates filtering, sorting, and pagination
+ * for list-based cards.
+ *
+ * **Canonical destructuring pattern** (used by ~41 cards — please match this
+ * for new cards so controls render consistently, see issue #6121):
+ *
+ * ```tsx
+ * const {
+ *   paginatedItems,
+ *   currentPage,
+ *   totalPages,
+ *   itemsPerPage,
+ *   goToPage,
+ *   setItemsPerPage,
+ *   needsPagination,
+ *   filters,
+ *   sorting,
+ *   containerRef,
+ *   containerStyle,
+ * } = useCardData(items, {
+ *   filter: { searchFields: ['name'] },
+ *   sort: { defaultKey: 'name', comparators: { name: commonComparators.string(x => x.name) } },
+ *   defaultLimit: 5,
+ * })
+ * ```
+ *
+ * Prefer this shape over ad-hoc destructuring; the order above matches
+ * `<CardControlsRow>` + `<CardPaginationFooter>` prop layouts.
+ */
 export function useCardData<T, S extends string = string>(
   items: T[],
   config: CardDataConfig<T, S>

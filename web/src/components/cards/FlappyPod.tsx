@@ -5,6 +5,12 @@ import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeys } from '../../hooks/useGameKeys'
+import { safeGet, safeSet } from '../../lib/safeLocalStorage'
+
+/** localStorage key for Flappy Pod high score */
+const HIGH_SCORE_KEY = 'flappy-pod-high'
+/** Default high score string when none has been persisted yet */
+const DEFAULT_HIGH_SCORE = '0'
 
 // Game constants
 const GRAVITY = 0.5
@@ -34,11 +40,7 @@ export function FlappyPod(_props: CardComponentProps) {
   const [gameOver, setGameOver] = useState(false)
   const [score, setScore] = useState(0)
   const [highScore, setHighScore] = useState(() => {
-    try {
-      return parseInt(localStorage.getItem('flappy-pod-high') || '0')
-    } catch {
-      return 0
-    }
+    return parseInt(safeGet(HIGH_SCORE_KEY) || DEFAULT_HIGH_SCORE)
   })
 
   // Game state refs (for animation loop)
@@ -76,7 +78,7 @@ export function FlappyPod(_props: CardComponentProps) {
 
     if (scoreRef.current > highScore) {
       setHighScore(scoreRef.current)
-      localStorage.setItem('flappy-pod-high', String(scoreRef.current))
+      safeSet(HIGH_SCORE_KEY, String(scoreRef.current))
     }
   }, [highScore])
 

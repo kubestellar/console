@@ -5,6 +5,10 @@ import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
+import { safeGet, safeGetJSON, safeSetJSON, safeRemove } from '../../lib/safeLocalStorage'
+
+/** localStorage key for Checkers win/loss score tracking */
+const SCORE_STORAGE_KEY = 'checkers-score'
 
 // Board is 8x8, pieces only on dark squares
 const BOARD_SIZE = 8
@@ -398,20 +402,17 @@ interface SavedGameState {
 }
 
 function loadGameState(): SavedGameState | null {
+  const stored = safeGet(STORAGE_KEY)
+  if (!stored) return null
   try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    return stored ? JSON.parse(stored) : null
+    return JSON.parse(stored) as SavedGameState
   } catch {
     return null
   }
 }
 
 function saveGameState(state: SavedGameState) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-  } catch {
-    // Ignore storage errors
-  }
+  safeSetJSON(STORAGE_KEY, state)
 }
 
 export function Checkers(_props: CardComponentProps) {
@@ -436,14 +437,9 @@ export function Checkers(_props: CardComponentProps) {
   const [pirateTaunt, setPirateTaunt] = useState('')
   const [combatCell, setCombatCell] = useState<Position | null>(null)
   const [showCombat, setShowCombat] = useState(false)
-  const [highScore, setHighScore] = useState<{ wins: number; losses: number }>(() => {
-    try {
-      const stored = localStorage.getItem('checkers-score')
-      return stored ? JSON.parse(stored) : { wins: 0, losses: 0 }
-    } catch {
-      return { wins: 0, losses: 0 }
-    }
-  })
+  const [highScore, setHighScore] = useState<{ wins: number; losses: number }>(() =>
+    safeGetJSON<{ wins: number; losses: number }>(SCORE_STORAGE_KEY, { wins: 0, losses: 0 }),
+  )
 
   // Check for game over
   useEffect(() => {
@@ -458,7 +454,7 @@ export function Checkers(_props: CardComponentProps) {
       emitGameEnded('checkers', 'loss', moveCount)
       setHighScore(prev => {
         const newScore = { ...prev, losses: prev.losses + 1 }
-        localStorage.setItem('checkers-score', JSON.stringify(newScore))
+        safeSetJSON(SCORE_STORAGE_KEY, newScore)
         return newScore
       })
     } else if (counts.nodes === 0 || nodeMoves.length === 0) {
@@ -466,7 +462,7 @@ export function Checkers(_props: CardComponentProps) {
       emitGameEnded('checkers', 'win', moveCount)
       setHighScore(prev => {
         const newScore = { ...prev, wins: prev.wins + 1 }
-        localStorage.setItem('checkers-score', JSON.stringify(newScore))
+        safeSetJSON(SCORE_STORAGE_KEY, newScore)
         return newScore
       })
     }
@@ -476,7 +472,7 @@ export function Checkers(_props: CardComponentProps) {
   useEffect(() => {
     if (gameOver) {
       // Clear saved game on game over
-      localStorage.removeItem(STORAGE_KEY)
+      safeRemove(STORAGE_KEY)
     } else {
       saveGameState({
         board,

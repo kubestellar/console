@@ -15,6 +15,7 @@ import {
   CHART_TOOLTIP_CONTENT_STYLE,
   CHART_TICK_COLOR } from '../../lib/constants'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { safeGet, safeSet } from '../../lib/safeLocalStorage'
 
 interface HealthPoint {
   time: string
@@ -74,14 +75,13 @@ export function PodHealthTrend() {
 
   // Load from localStorage on mount
   const loadSavedHistory = (): HealthPoint[] => {
+    const saved = safeGet(STORAGE_KEY)
+    if (!saved) return []
     try {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved) {
-        const parsed = JSON.parse(saved) as { data: HealthPoint[]; timestamp: number }
-        // Check if data is not too old
-        if (Date.now() - parsed.timestamp < MAX_AGE_MS) {
-          return parsed.data
-        }
+      const parsed = JSON.parse(saved) as { data: HealthPoint[]; timestamp: number }
+      // Check if data is not too old
+      if (Date.now() - parsed.timestamp < MAX_AGE_MS) {
+        return parsed.data
       }
     } catch {
       // Ignore parse errors
@@ -97,11 +97,11 @@ export function PodHealthTrend() {
   useEffect(() => {
     if (history.length > 0) {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        safeSet(STORAGE_KEY, JSON.stringify({
           data: history,
           timestamp: Date.now() }))
       } catch {
-        // Ignore storage errors (quota exceeded, etc.)
+        // Ignore stringify errors
       }
     }
   }, [history])

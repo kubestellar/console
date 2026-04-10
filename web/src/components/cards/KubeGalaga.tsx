@@ -6,6 +6,12 @@ import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeyTracking } from '../../hooks/useGameKeys'
+import { safeGet, safeSet } from '../../lib/safeLocalStorage'
+
+/** localStorage key for Kube Galaga high score persistence */
+const HIGH_SCORE_KEY = 'kubeGalagaHighScore'
+/** Numeric base for parseInt when reading the stored high score */
+const PARSE_INT_RADIX = 10
 
 // Game constants
 const CANVAS_WIDTH = 400
@@ -68,8 +74,8 @@ export function KubeGalaga() {
   const [lives, setLives] = useState(3)
   const [level, setLevel] = useState(1)
   const [highScore, setHighScore] = useState(() => {
-    const saved = localStorage.getItem('kubeGalagaHighScore')
-    return saved ? parseInt(saved, 10) : 0
+    const saved = safeGet(HIGH_SCORE_KEY)
+    return saved ? parseInt(saved, PARSE_INT_RADIX) : 0
   })
 
   const playerRef = useRef({ x: CANVAS_WIDTH / 2 - PLAYER_WIDTH / 2, y: CANVAS_HEIGHT - 50 })
@@ -294,7 +300,7 @@ export function KubeGalaga() {
             if (l <= 1) {
               if (score > highScore) {
                 setHighScore(score)
-                localStorage.setItem('kubeGalagaHighScore', score.toString())
+                safeSet(HIGH_SCORE_KEY, score.toString())
               }
               setGameState('gameover')
               emitGameEnded('kube_galaga', 'loss', score)
@@ -324,7 +330,7 @@ export function KubeGalaga() {
             if (l <= 1) {
               if (score > highScore) {
                 setHighScore(score)
-                localStorage.setItem('kubeGalagaHighScore', score.toString())
+                safeSet(HIGH_SCORE_KEY, score.toString())
               }
               setGameState('gameover')
               emitGameEnded('kube_galaga', 'loss', score)
@@ -348,7 +354,7 @@ export function KubeGalaga() {
     if (lowestEnemy > CANVAS_HEIGHT - 100) {
       if (score > highScore) {
         setHighScore(score)
-        localStorage.setItem('kubeGalagaHighScore', score.toString())
+        safeSet(HIGH_SCORE_KEY, score.toString())
       }
       setGameState('gameover')
       emitGameEnded('kube_galaga', 'loss', score)
