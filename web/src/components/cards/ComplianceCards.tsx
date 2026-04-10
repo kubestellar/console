@@ -196,7 +196,10 @@ export function TrivyScan({ config: _config }: CardConfig) {
   })()
 
   const hasData = installed || isDemoData
-  useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData })
+  // #6219: surface failure state. `hasErrors` from useTrivy means at least
+  // one cluster's scan errored — wire it through as isFailed so CardWrapper
+  // can show the error path immediately instead of a stale-data fallthrough.
+  useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData, isFailed: hasErrors })
 
   // Detect degraded state: installed but no reports generated (excludes clusters with errors)
   const isDegraded = (() => {
@@ -414,7 +417,8 @@ export function KubescapeScan({ config: _config }: CardConfig) {
   }, [statuses, aggregated, selectedClusters])
 
   const ksHasData = installed || isDemoData
-  useCardLoadingState({ isLoading: isLoading && !ksHasData, isRefreshing, hasAnyData: ksHasData, isDemoData })
+  // #6219: surface failure state via the same `hasErrors` field useKubescape exposes.
+  useCardLoadingState({ isLoading: isLoading && !ksHasData, isRefreshing, hasAnyData: ksHasData, isDemoData, isFailed: hasErrors })
 
   // Detect degraded state: installed but no scan data produced (excludes clusters with errors)
   const isDegraded = (() => {
@@ -735,7 +739,8 @@ export function PolicyViolations({ config: _config }: CardConfig) {
   const participatingClusters = Object.values(kyvernoStatuses).filter(s => s.installed).map(s => s.cluster)
 
   const hasData = violations.length > 0 || kyvernoDemoData
-  useCardLoadingState({ isLoading: kyvernoLoading && !hasData, isRefreshing: kyvernoRefreshing, hasAnyData: hasData, isDemoData: kyvernoDemoData })
+  // #6219: surface kyverno fetch failures.
+  useCardLoadingState({ isLoading: kyvernoLoading && !hasData, isRefreshing: kyvernoRefreshing, hasAnyData: hasData, isDemoData: kyvernoDemoData, isFailed: kyvernoHasErrors })
 
   if (violations.length === 0 && !kyvernoDemoData) {
     // Still scanning — show loading state instead of definitive empty state
@@ -885,8 +890,8 @@ export function PolicyViolations({ config: _config }: CardConfig) {
 
 export function ComplianceScore({ config: _config }: CardConfig) {
   const { t } = useTranslation(['common', 'cards'])
-  const { statuses: kubescapeStatuses, aggregated: kubescapeAgg, isLoading: ksLoading, isDemoData: ksDemoData, installed: ksInstalled, clustersChecked: ksChecked, totalClusters: ksTotal } = useKubescape()
-  const { statuses: kyvernoStatuses, isLoading: kyLoading, isDemoData: kyDemoData, installed: kyInstalled, clustersChecked: kyChecked, totalClusters: kyTotal } = useKyverno()
+  const { statuses: kubescapeStatuses, aggregated: kubescapeAgg, isLoading: ksLoading, isDemoData: ksDemoData, installed: ksInstalled, hasErrors: ksHasErrors, clustersChecked: ksChecked, totalClusters: ksTotal } = useKubescape()
+  const { statuses: kyvernoStatuses, isLoading: kyLoading, isDemoData: kyDemoData, installed: kyInstalled, hasErrors: kyHasErrors, clustersChecked: kyChecked, totalClusters: kyTotal } = useKyverno()
   const { selectedClusters } = useGlobalFilters()
   const { startMission } = useMissions()
   const [showBreakdown, setShowBreakdown] = useState(false)
@@ -979,7 +984,10 @@ export function ComplianceScore({ config: _config }: CardConfig) {
   }
 
   const scoreHasData = !usingFallback || isDemoData
-  useCardLoadingState({ isLoading: isLoading && !scoreHasData, hasAnyData: scoreHasData, isDemoData })
+  // #6219: card is failed when both Kubescape and Kyverno had errors
+  // (single-tool failure still produces a meaningful partial score).
+  const scoreFailed = ksHasErrors && kyHasErrors
+  useCardLoadingState({ isLoading: isLoading && !scoreHasData, hasAnyData: scoreHasData, isDemoData, isFailed: scoreFailed })
 
   const scoreCtx = getScoreContext(score)
 

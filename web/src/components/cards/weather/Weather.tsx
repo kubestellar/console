@@ -185,7 +185,9 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   const currentWeather = weatherData.current
   const forecast = weatherData.forecast
   const hourlyForecast = weatherData.hourly
-  useCardLoadingState({ isLoading, isRefreshing, hasAnyData: !!currentWeather, isDemoData: isDemoFallback, lastRefresh })
+  // #6219: pass isFailed through so CardWrapper enters its error render path
+  // immediately on a failed fetch instead of waiting for CARD_LOADING_TIMEOUT_MS.
+  useCardLoadingState({ isLoading, isRefreshing, hasAnyData: !!currentWeather, isDemoData: isDemoFallback, isFailed, lastRefresh })
 
   // Save locations to localStorage whenever they change
   useEffect(() => {

@@ -553,7 +553,7 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
     <div className="rounded-lg border border-blue-500/40 bg-blue-500/5 p-3 space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-blue-400">{t('cards:clusterGroups.newClusterGroup')}</span>
-        <button onClick={onCancel} className="p-2 hover:bg-gray-900/10 dark:hover:bg-white/10 rounded min-h-11 min-w-11 flex items-center justify-center">
+        <button onClick={onCancel} aria-label={t('common:common.cancel')} className="p-2 hover:bg-gray-900/10 dark:hover:bg-white/10 rounded min-h-11 min-w-11 flex items-center justify-center">
           <X className="w-3.5 h-3.5 text-muted-foreground" />
         </button>
       </div>
@@ -918,6 +918,7 @@ function QueryBuilder({
                 {/* Remove */}
                 <button
                   onClick={() => onRemoveFilter(i)}
+                  aria-label={t('cards:clusterGroups.removeFilter', 'Remove filter')}
                   className="p-0.5 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400"
                 >
                   <X className="w-3 h-3" />
@@ -1055,7 +1056,7 @@ function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onC
     <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/5 p-3 space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-yellow-400">{t('common:common.edit')}: {group.name}</span>
-        <button onClick={onCancel} className="p-2 hover:bg-gray-900/10 dark:hover:bg-white/10 rounded min-h-11 min-w-11 flex items-center justify-center">
+        <button onClick={onCancel} aria-label={t('common:common.cancel')} className="p-2 hover:bg-gray-900/10 dark:hover:bg-white/10 rounded min-h-11 min-w-11 flex items-center justify-center">
           <X className="w-3.5 h-3.5 text-muted-foreground" />
         </button>
       </div>

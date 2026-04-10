@@ -34,15 +34,22 @@ interface TopoEdge {
 export function KagentTopology({ config }: { config?: Record<string, unknown> }) {
   const { t } = useTranslation('cards')
   const cluster = config?.cluster as string | undefined
-  const { data: agents, isLoading: agentsLoading, isDemoFallback: agentsDemo } = useKagentCRDAgents({ cluster })
-  const { data: tools, isLoading: toolsLoading, isDemoFallback: toolsDemo } = useKagentCRDTools({ cluster })
-  const { data: models, isLoading: modelsLoading, isDemoFallback: modelsDemo } = useKagentCRDModels({ cluster })
+  const { data: agents, isLoading: agentsLoading, isDemoFallback: agentsDemo, isFailed: agentsFailed, consecutiveFailures: agentsFails } = useKagentCRDAgents({ cluster })
+  const { data: tools, isLoading: toolsLoading, isDemoFallback: toolsDemo, isFailed: toolsFailed, consecutiveFailures: toolsFails } = useKagentCRDTools({ cluster })
+  const { data: models, isLoading: modelsLoading, isDemoFallback: modelsDemo, isFailed: modelsFailed, consecutiveFailures: modelsFails } = useKagentCRDModels({ cluster })
 
   const hasData = agents.length > 0 || tools.length > 0 || models.length > 0
+  // #6219: surface failure state to CardWrapper. We treat the card as
+  // failed when ALL three CRD hooks are failing — partial failure of one
+  // hook still leaves a useful topology.
+  const isFailed = agentsFailed && toolsFailed && modelsFailed
+  const consecutiveFailures = Math.max(agentsFails || 0, toolsFails || 0, modelsFails || 0)
   useCardLoadingState({
     isLoading: (agentsLoading || toolsLoading || modelsLoading) && !hasData,
     hasAnyData: hasData,
     isDemoData: agentsDemo || toolsDemo || modelsDemo,
+    isFailed,
+    consecutiveFailures,
   })
 
   const { nodes, edges } = useMemo(() => {

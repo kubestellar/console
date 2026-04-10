@@ -434,7 +434,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
               className="flex-1 px-2 py-1 text-xs bg-secondary rounded border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
             />
             {searchFilter && (
-              <button onClick={() => setSearchFilter('')} className="text-muted-foreground hover:text-foreground">
+              <button onClick={() => setSearchFilter('')} aria-label={t('common:common.clearSearch', 'Clear search')} className="text-muted-foreground hover:text-foreground">
                 <X className="w-3 h-3" />
               </button>
             )}

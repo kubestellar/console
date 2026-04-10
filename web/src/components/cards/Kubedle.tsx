@@ -369,7 +369,7 @@ export function Kubedle(_props: CardComponentProps) {
           <div className="bg-card border border-border rounded-lg p-4 max-w-sm">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-foreground">How to Play</h3>
-              <button onClick={() => setShowHelp(false)}>
+              <button onClick={() => setShowHelp(false)} aria-label="Close help">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -401,7 +401,7 @@ export function Kubedle(_props: CardComponentProps) {
           <div className="bg-card border border-border rounded-lg p-4 max-w-sm w-full">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-foreground">Statistics</h3>
-              <button onClick={() => setShowStats(false)}>
+              <button onClick={() => setShowStats(false)} aria-label="Close statistics">
                 <X className="w-4 h-4" />
               </button>
             </div>

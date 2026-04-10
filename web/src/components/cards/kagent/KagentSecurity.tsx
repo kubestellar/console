@@ -8,17 +8,28 @@ export function KagentSecurity({ config }: { config?: Record<string, unknown> })
   const {
     data: agents,
     isLoading: agentsLoading,
-    isDemoFallback: agentsDemo } = useKagentCRDAgents({ cluster })
+    isDemoFallback: agentsDemo,
+    isFailed: agentsFailed,
+    consecutiveFailures: agentsFails } = useKagentCRDAgents({ cluster })
   const {
     data: tools,
     isLoading: toolsLoading,
-    isDemoFallback: toolsDemo } = useKagentCRDTools({ cluster })
+    isDemoFallback: toolsDemo,
+    isFailed: toolsFailed,
+    consecutiveFailures: toolsFails } = useKagentCRDTools({ cluster })
 
   const hasData = agents.length > 0 || tools.length > 0
+  // #6219: surface failure state. We treat the card as failed only when
+  // BOTH hooks are failing — partial failure still leaves a useful summary.
+  const isFailed = agentsFailed && toolsFailed
+  const consecutiveFailures = Math.max(agentsFails || 0, toolsFails || 0)
   useCardLoadingState({
     isLoading: (agentsLoading || toolsLoading) && !hasData,
     hasAnyData: hasData,
-    isDemoData: agentsDemo || toolsDemo })
+    isDemoData: agentsDemo || toolsDemo,
+    isFailed,
+    consecutiveFailures,
+  })
 
   const stats = useMemo(() => {
     const totalAgents = agents.length
