@@ -82,6 +82,12 @@ function createVersionWsHandle(): VersionWsHandle {
   let connecting = false
   let destroyed = false
   const pendingRequests = new Map<string, (version: string | null) => void>()
+  /** Outstanding `setTimeout` handles created inside `ensureWs()` so
+   * `destroy()` can cancel them. Previously these were discarded, so the
+   * 10s connection timeout fired AFTER unmount and held stale closure
+   * references calling `clearInterval` and `reject` on already-settled
+   * promises (#6206). */
+  const pendingEnsureTimers = new Set<ReturnType<typeof setTimeout>>()
 
   function rejectAllPending() {
     pendingRequests.forEach((resolver) => resolver(null))
@@ -117,7 +123,16 @@ function createVersionWsHandle(): VersionWsHandle {
           if (destroyed) { clearInterval(checkInterval); reject(new Error('Handle destroyed')); return }
           if (ws?.readyState === WebSocket.OPEN) { clearInterval(checkInterval); resolve(ws) }
         }, 100)
-        setTimeout(() => { clearInterval(checkInterval); reject(new Error('WebSocket connection timeout')) }, WS_CONNECTION_TIMEOUT_MS)
+        // #6206: store the timeout handle so destroy() can cancel it.
+        // Without this, the timeout would fire after unmount, call
+        // clearInterval on a dead handle, and reject an already-settled
+        // promise — holding stale closure references for up to 10s.
+        const timeoutHandle = setTimeout(() => {
+          pendingEnsureTimers.delete(timeoutHandle)
+          clearInterval(checkInterval)
+          reject(new Error('WebSocket connection timeout'))
+        }, WS_CONNECTION_TIMEOUT_MS)
+        pendingEnsureTimers.add(timeoutHandle)
       })
     }
 
@@ -228,6 +243,10 @@ function createVersionWsHandle(): VersionWsHandle {
 
   function destroy() {
     destroyed = true
+    // Cancel any in-flight ensureWs() timeouts before closing the socket
+    // so their stale closures don't fire after unmount (#6206).
+    pendingEnsureTimers.forEach(t => clearTimeout(t))
+    pendingEnsureTimers.clear()
     closeWs()
   }
 

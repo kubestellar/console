@@ -42,6 +42,11 @@ let lastEnrichmentTime = 0
 let lastRequestHash = ''
 let wsConnection: WebSocket | null = null
 let wsReconnectAttempts = 0
+/** Tracked reconnect timer handle (#6205). Previously the reconnect
+ * `setTimeout` inside `onclose` discarded its handle, so the cleanup path
+ * could never cancel a pending reconnect — when the last subscriber
+ * unmounted, the reconnect loop kept firing into the void. */
+let wsReconnectTimer: ReturnType<typeof setTimeout> | null = null
 /** Set to false after receiving 404 — endpoint doesn't exist */
 let enrichmentEndpointAvailable = true
 const subscribers = new Set<() => void>()
@@ -157,13 +162,22 @@ function connectWebSocket(): void {
       wsReconnectAttempts++
       if (wsReconnectAttempts >= MAX_WS_RECONNECT_ATTEMPTS) return
       if (!isAgentConnected() || isAgentUnavailable()) return
+      // Don't schedule a reconnect if every subscriber has unmounted —
+      // the loop would keep firing forever otherwise (#6205).
+      if (subscribers.size === 0) return
 
       // Exponential backoff: 5s, 10s, 20s, 40s, 80s (capped at 2 min)
       const delay = Math.min(
         WS_BASE_RECONNECT_DELAY_MS * Math.pow(2, wsReconnectAttempts - 1),
         WS_MAX_RECONNECT_DELAY_MS,
       )
-      setTimeout(connectWebSocket, delay)
+      // #6205: store the handle so the cleanup path can cancel a pending
+      // reconnect. The previous version discarded this so the loop kept
+      // firing after the last subscriber unmounted.
+      wsReconnectTimer = setTimeout(() => {
+        wsReconnectTimer = null
+        connectWebSocket()
+      }, delay)
     }
 
     wsConnection.onerror = () => {
@@ -173,6 +187,28 @@ function connectWebSocket(): void {
   } catch {
     wsConnection = null
   }
+}
+
+/** Tear down the singleton WebSocket and any pending reconnect (#6204, #6205).
+ * Called when the last subscriber unmounts. Mirrors the `stopSingleton()`
+ * pattern used by useAIPredictions. */
+function disconnectWebSocket(): void {
+  if (wsReconnectTimer !== null) {
+    clearTimeout(wsReconnectTimer)
+    wsReconnectTimer = null
+  }
+  if (wsConnection) {
+    // Drop event handlers BEFORE closing so the close handler doesn't
+    // fire and immediately schedule another reconnect.
+    wsConnection.onopen = null
+    wsConnection.onmessage = null
+    wsConnection.onclose = null
+    wsConnection.onerror = null
+    try { wsConnection.close() } catch { /* ignore */ }
+    wsConnection = null
+  }
+  // Reset backoff so the next mount starts fresh.
+  wsReconnectAttempts = 0
 }
 
 // ── Public API ───────────────────────────────────────────────────────────
@@ -235,14 +271,24 @@ export function useInsightEnrichment(heuristicInsights: MultiClusterInsight[]): 
   const insightsRef = useRef(heuristicInsights)
   insightsRef.current = heuristicInsights
 
-  // Subscribe to enrichment changes
+  // Subscribe to enrichment changes. When the last subscriber unmounts,
+  // tear down the singleton WebSocket and cancel any pending reconnect
+  // (#6204, #6205) — without this, the singleton stays open forever and
+  // the reconnect loop keeps firing into the void.
   useEffect(() => {
     const subscriber = () => forceUpdate(n => n + 1)
     subscribers.add(subscriber)
-    return () => { subscribers.delete(subscriber) }
+    return () => {
+      subscribers.delete(subscriber)
+      if (subscribers.size === 0) {
+        disconnectWebSocket()
+      }
+    }
   }, [])
 
-  // Connect WebSocket on mount
+  // Connect WebSocket on mount. The teardown lives in the subscribers
+  // useEffect above so we don't double-disconnect when multiple consumers
+  // share the singleton — it only disconnects when subscribers.size === 0.
   useEffect(() => {
     connectWebSocket()
   }, [])

@@ -576,6 +576,63 @@ describe('useCardData — additional coverage', () => {
     expect(result.current.items).toHaveLength(10)
   })
 
+  // ── localStorage persistence (#6203 follow-up to #6199 / #6070) ──────────
+  // The four tests below assert the round-trip added in #6199:
+  //   1. setItemsPerPage writes to kubestellar-card-limit:<key>
+  //   2. A subsequent renderHook reads it back as the initial value
+  //   3. Missing key falls back to defaultLimit
+  //   4. The literal 'unlimited' round-trips correctly
+
+  describe('itemsPerPage persistence to localStorage (#6203)', () => {
+    const STORAGE_PREFIX = 'kubestellar-card-limit:'
+    const STORAGE_KEY = 'test-persistence-card'
+
+    const persistConfig: CardDataConfig<TestItem, 'name' | 'value'> = {
+      ...config,
+      filter: { searchFields: ['name'], storageKey: STORAGE_KEY },
+    }
+
+    beforeEach(() => {
+      localStorage.removeItem(`${STORAGE_PREFIX}${STORAGE_KEY}`)
+    })
+
+    it('writes setItemsPerPage value through to localStorage', () => {
+      const { result } = renderHook(() => useCardData(items, persistConfig))
+      act(() => { result.current.setItemsPerPage(7) })
+      expect(localStorage.getItem(`${STORAGE_PREFIX}${STORAGE_KEY}`)).toBe('7')
+    })
+
+    it('reads persisted itemsPerPage as initial value on next mount', () => {
+      localStorage.setItem(`${STORAGE_PREFIX}${STORAGE_KEY}`, '8')
+      const { result } = renderHook(() => useCardData(items, persistConfig))
+      // Should be 8 from storage, NOT defaultLimit (5) from config
+      expect(result.current.itemsPerPage).toBe(8)
+    })
+
+    it('falls back to defaultLimit when no value is persisted', () => {
+      // No localStorage entry exists (cleared in beforeEach)
+      const { result } = renderHook(() => useCardData(items, persistConfig))
+      expect(result.current.itemsPerPage).toBe(5)
+    })
+
+    it('round-trips the literal "unlimited" value', () => {
+      const { result } = renderHook(() => useCardData(items, persistConfig))
+      act(() => { result.current.setItemsPerPage('unlimited') })
+      expect(localStorage.getItem(`${STORAGE_PREFIX}${STORAGE_KEY}`)).toBe('unlimited')
+      // Mount a fresh hook and check it reads back as 'unlimited'
+      const { result: result2 } = renderHook(() => useCardData(items, persistConfig))
+      expect(result2.current.itemsPerPage).toBe('unlimited')
+    })
+
+    it('does not persist when storageKey is missing', () => {
+      // config (without storageKey) should NOT touch localStorage
+      const { result } = renderHook(() => useCardData(items, config))
+      act(() => { result.current.setItemsPerPage(9) })
+      // No write should happen for the test-persistence-card key OR any other
+      expect(localStorage.getItem(`${STORAGE_PREFIX}${STORAGE_KEY}`)).toBeNull()
+    })
+  })
+
   it('goToPage clamps to min 1', () => {
     const { result } = renderHook(() => useCardData(items, config))
     act(() => { result.current.goToPage(-5) })

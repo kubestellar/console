@@ -314,25 +314,43 @@ async function flushPendingDeltas(): Promise<void> {
 // the unload — but only if the user is authenticated and there is something
 // pending. Browsers without sendBeacon fall back to the queued flush, which
 // will run if the user reopens the tab.
-if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
-  window.addEventListener('pagehide', () => {
-    if (backendUnauthenticated || pendingDeltas.size === 0) return
-    if (typeof navigator.sendBeacon !== 'function') return
-    for (const [category, delta] of pendingDeltas.entries()) {
-      if (delta <= 0) continue
-      const body = new Blob(
-        [JSON.stringify({ category, delta, agent_session_id: lastKnownSessionId ?? '' })],
-        { type: 'application/json' }
-      )
-      try {
-        navigator.sendBeacon('/api/token-usage/delta', body)
-      } catch {
-        // Ignore — best effort only.
-      }
+//
+// #6202: This used to register an anonymous arrow function as the listener,
+// which made it impossible to remove. Vite HMR re-evaluates this module on
+// every hot reload, so each reload accumulated another listener — closing
+// the tab would fire all N copies and send N duplicate beacons. Now uses a
+// named function reference and a module-level guard so re-evaluation under
+// HMR replaces the listener instead of stacking copies. The guard also
+// removes the prior listener using the captured reference (safe even if
+// the previous run is gone, removeEventListener is a no-op for unknowns).
+function flushPendingDeltasOnPagehide(): void {
+  if (backendUnauthenticated || pendingDeltas.size === 0) return
+  if (typeof navigator.sendBeacon !== 'function') return
+  for (const [category, delta] of pendingDeltas.entries()) {
+    if (delta <= 0) continue
+    const body = new Blob(
+      [JSON.stringify({ category, delta, agent_session_id: lastKnownSessionId ?? '' })],
+      { type: 'application/json' }
+    )
+    try {
+      navigator.sendBeacon('/api/token-usage/delta', body)
+    } catch {
+      // Ignore — best effort only.
     }
-    pendingDeltas.clear()
-    pendingDeltaTotal = 0
-  })
+  }
+  pendingDeltas.clear()
+  pendingDeltaTotal = 0
+}
+
+if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
+  // HMR cleanup — remove any stale listener from a previous module instance
+  // before installing the new one.
+  const existing = (window as unknown as { __kcTokenUsagePagehide?: () => void }).__kcTokenUsagePagehide
+  if (existing) {
+    window.removeEventListener('pagehide', existing)
+  }
+  window.addEventListener('pagehide', flushPendingDeltasOnPagehide)
+  ;(window as unknown as { __kcTokenUsagePagehide?: () => void }).__kcTokenUsagePagehide = flushPendingDeltasOnPagehide
 }
 
 // Initialize from localStorage
