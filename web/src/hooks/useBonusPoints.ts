@@ -48,6 +48,15 @@ function saveCache(login: string, data: BonusPointsResponse): void {
   }
 }
 
+/**
+ * Module-level flag indicating the bonus endpoint is unavailable in this
+ * environment (e.g. local dev with the Go backend, which does not implement
+ * /api/rewards/bonus — that route only exists as a Netlify function in
+ * production). Once set, subsequent fetch attempts are skipped for the life
+ * of the tab so we don't spam the console with 404s (issue #6013).
+ */
+let bonusEndpointUnavailable = false
+
 export function useBonusPoints() {
   const { user, isAuthenticated } = useAuth()
   const [data, setData] = useState<BonusPointsResponse | null>(null)
@@ -70,6 +79,8 @@ export function useBonusPoints() {
 
   const fetchBonus = useCallback(async () => {
     if (!isAuthenticated || isDemoUser || !githubLogin) return
+    // Endpoint previously 404'd — don't retry in this session (issue #6013).
+    if (bonusEndpointUnavailable) return
 
     setIsLoading(true)
     try {
@@ -77,6 +88,18 @@ export function useBonusPoints() {
       const res = await fetch(`${apiBase}/api/rewards/bonus?login=${encodeURIComponent(githubLogin)}`, {
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
+      if (res.status === 404) {
+        // Bonus endpoint not implemented on this backend (e.g. Go backend in
+        // dev — this route only exists as a Netlify function in production).
+        // Treat bonus points as zero and stop polling for the rest of the
+        // session. No error is surfaced to the user because bonus points are
+        // purely additive and their absence is not a failure mode.
+        bonusEndpointUnavailable = true
+        if (loginRef.current === githubLogin) {
+          setData({ login: githubLogin, total_bonus_points: 0, entries: [] })
+        }
+        return
+      }
       if (!res.ok) throw new Error(`API error: ${res.status}`)
       const result = await res.json().catch(() => null) as BonusPointsResponse | null
       if (!result) throw new Error('Invalid JSON')

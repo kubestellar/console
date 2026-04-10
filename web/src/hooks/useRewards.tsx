@@ -1,10 +1,20 @@
 /**
  * Reward system hook for gamification
  * Tracks user coins, achievements, and reward events
+ *
+ * Known limitation (issue #6011): locally-earned coins are persisted only
+ * in `localStorage`. Clearing the browser cache, using a private window, or
+ * switching browsers/devices will reset the local coin balance. GitHub-sourced
+ * points (`useGitHubRewards`) and bonus points (`useBonusPoints`) are already
+ * backed by server state, so the merged total rehydrates from those sources —
+ * only in-app earnings (mission completions, games, sharing) are affected.
+ * A backend `/api/rewards/sync` endpoint that persists events to SQLite is
+ * tracked in #6011 and is the proper long-term fix.
  */
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react'
 import { useAuth } from '../lib/auth'
+import { getDemoMode } from '../lib/demoMode'
 import {
   RewardActionType,
   RewardEvent,
@@ -21,6 +31,15 @@ const REWARDS_STORAGE_KEY = 'kubestellar-rewards'
 const MAX_REWARD_EVENTS = 100
 /** Number of recent events to show in the UI */
 const RECENT_EVENTS_LIMIT = 10
+/**
+ * Shared user id used for rewards storage when the session is running in
+ * demo/dev mode. Without this, switching between dev mode (e.g. "demo-user")
+ * and a real OAuth login produces two distinct localStorage buckets and the
+ * user perceives their coin balance as "reset" (issue #6012). Consolidating
+ * demo sessions under a single namespace keeps balances stable when toggling
+ * modes during development.
+ */
+const DEMO_REWARDS_USER_ID = 'demo-user'
 
 interface RewardsContextType {
   rewards: UserRewards | null
@@ -80,6 +99,19 @@ function createInitialRewards(userId: string): UserRewards {
     lastUpdated: new Date().toISOString() }
 }
 
+/**
+ * Resolves the effective rewards storage key for a user. In demo/dev mode
+ * we collapse every session onto a single "demo-user" bucket so that
+ * switching between dev mode and oauth login does not appear to wipe the
+ * user's coin balance (issue #6012). Real oauth logins continue to use
+ * their unique backend user id.
+ */
+function resolveRewardsUserId(userId: string | undefined): string | null {
+  if (!userId) return null
+  if (getDemoMode() || userId === DEMO_REWARDS_USER_ID) return DEMO_REWARDS_USER_ID
+  return userId
+}
+
 export function RewardsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const [rewards, setRewards] = useState<UserRewards | null>(null)
@@ -87,24 +119,62 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
   const { githubRewards, githubPoints, refresh: refreshGitHubRewards } = useGitHubRewards()
   const { bonusPoints } = useBonusPoints()
 
+  // Keep the resolved id in a ref so the storage-event listener always sees
+  // the current user without having to re-subscribe on every render.
+  const effectiveUserId = resolveRewardsUserId(user?.id)
+  const effectiveUserIdRef = useRef<string | null>(effectiveUserId)
+  useEffect(() => {
+    effectiveUserIdRef.current = effectiveUserId
+  }, [effectiveUserId])
+
   // Load rewards when user changes
   useEffect(() => {
-    if (user?.id) {
-      const loaded = loadRewards(user.id)
+    if (effectiveUserId) {
+      const loaded = loadRewards(effectiveUserId)
       if (loaded) {
         setRewards(loaded)
       } else {
         // Initialize new user rewards
-        const initial = createInitialRewards(user.id)
+        const initial = createInitialRewards(effectiveUserId)
         setRewards(initial)
-        saveRewards(user.id, initial)
+        saveRewards(effectiveUserId, initial)
       }
       setIsLoading(false)
     } else {
       setRewards(null)
       setIsLoading(false)
     }
-  }, [user?.id])
+  }, [effectiveUserId])
+
+  // Cross-tab sync (issue #6014): when another tab mutates the rewards
+  // localStorage key, mirror the change in this tab so the coin balance,
+  // recent events, and achievements stay in sync everywhere. The `storage`
+  // event only fires in OTHER tabs, never the one that wrote the value, so
+  // this cannot loop.
+  useEffect(() => {
+    function handleStorage(e: StorageEvent) {
+      if (e.key !== REWARDS_STORAGE_KEY) return
+      const id = effectiveUserIdRef.current
+      if (!id) return
+      try {
+        const allRewards = e.newValue ? (JSON.parse(e.newValue) as Record<string, UserRewards>) : {}
+        const next = allRewards[id] ?? null
+        // Only update if the incoming value is actually different to avoid
+        // unnecessary re-renders when unrelated user buckets change.
+        setRewards(prev => {
+          if (!prev && !next) return prev
+          if (prev && next && prev.lastUpdated === next.lastUpdated && prev.totalCoins === next.totalCoins) {
+            return prev
+          }
+          return next
+        })
+      } catch (err) {
+        console.error('[useRewards] Failed to parse cross-tab rewards update:', err)
+      }
+    }
+    window.addEventListener('storage', handleStorage)
+    return () => window.removeEventListener('storage', handleStorage)
+  }, [])
 
   // Check if action has been earned (for one-time rewards)
   const hasEarnedAction = (action: RewardActionType): boolean => {
@@ -120,7 +190,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
 
   // Award coins for an action
   const awardCoins = (action: RewardActionType, metadata?: Record<string, unknown>): boolean => {
-    if (!rewards || !user?.id) return false
+    if (!rewards || !effectiveUserId) return false
 
     const rewardConfig = REWARD_ACTIONS[action]
     if (!rewardConfig) {
@@ -136,7 +206,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     // Create reward event
     const event: RewardEvent = {
       id: generateId(),
-      userId: user.id,
+      userId: effectiveUserId,
       action,
       coins: rewardConfig.coins,
       timestamp: new Date().toISOString(),
@@ -157,7 +227,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     }
 
     setRewards(updated)
-    saveRewards(user.id, updated)
+    saveRewards(effectiveUserId, updated)
 
     return true
   }
