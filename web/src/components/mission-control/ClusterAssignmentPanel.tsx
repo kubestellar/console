@@ -42,7 +42,12 @@ export function ClusterAssignmentPanel({
   aiStreaming,
   planningMission,
   installedOnCluster = new Map() }: ClusterAssignmentPanelProps) {
-  const { clusters, isLoading: clustersLoading } = useClusters()
+  // Use deduplicatedClusters so multiple kubeconfig contexts pointing at the
+  // same physical cluster (e.g. several user identities for the same
+  // OpenShift API server) collapse into a single picker entry. Using the raw
+  // `clusters` field surfaces every context, which produced rows like
+  // "Andrew.Anderson@ibm.com" repeated four times.
+  const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
   const { releases: helmReleases } = useHelmReleases()
   const [viewMode, setViewMode] = useState<ViewMode>('cards')
   const [autoAssignDone, setAutoAssignDone] = useState(false)

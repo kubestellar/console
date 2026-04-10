@@ -1,6 +1,7 @@
 import { api, isBackendUnavailable } from '../../lib/api'
 import { reportAgentDataError, reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
-import { isDemoMode, isNetlifyDeployment, isDemoToken, subscribeDemoMode } from '../../lib/demoMode'
+import { isDemoMode, isNetlifyDeployment, isDemoToken, hasRealToken, subscribeDemoMode } from '../../lib/demoMode'
+import { isInClusterMode } from '../useBackendHealth'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { registerCacheReset, triggerAllRefetches } from '../../lib/modeTransition'
 import { resetFailuresForCluster, resetAllCacheFailures } from '../../lib/cache'
@@ -1327,7 +1328,15 @@ export async function fullFetchClusters() {
   // DEMO MODE: When user has explicitly enabled demo mode, use demo data immediately.
   // Don't try to fetch from agent - user wants to see demo data, not live data.
   // This respects the user's explicit choice to enable demo mode.
-  if (isDemoMode()) {
+  //
+  // EXCEPTION: When the console is deployed in-cluster AND the user has a real
+  // auth token, always fetch live cluster data. Otherwise UI elements like the
+  // Create Namespace cluster dropdown would list demo clusters (eks-prod-us-east-1,
+  // gke-staging, etc.) instead of the actual cluster the console is running in
+  // (e.g. vllm-d). This matches the GPU-reservations live-mode bypass pattern in
+  // GPUReservations.tsx.
+  const inClusterLive = isInClusterMode() && hasRealToken()
+  if (isDemoMode() && !inClusterLive) {
     updateClusterCache({
       clusters: getDemoClusters(),
       isLoading: false,

@@ -42,13 +42,18 @@ export interface DemoMission {
 }
 
 export const DEMO_MISSIONS: DemoMission[] = [
-  // ── Completed Install Mission ─────────────────────────────────────
+  // ── Saved Install Mission (showcased in Saved Missions) ───────────
+  // status: 'saved' so the AI Missions panel shows install-class missions
+  // alongside the orbit ones. Was 'completed' until #5962 added 'completed'
+  // to INACTIVE_MISSION_STATUSES, which had the side effect of hiding all
+  // 4 'completed' demo missions from both the Active and Saved sections —
+  // the showcase intent (#5341) was lost.
   {
     id: 'demo-install-prometheus',
     title: 'Install Prometheus Stack',
     description: 'Deploy the kube-prometheus-stack for cluster monitoring and alerting.',
     type: 'deploy',
-    status: 'completed',
+    status: 'saved',
     cluster: 'eks-prod-us-east-1',
     feedback: 'positive',
     createdAt: daysAgo(3),
@@ -73,13 +78,14 @@ export const DEMO_MISSIONS: DemoMission[] = [
     ],
   },
 
-  // ── Completed Fix Mission ─────────────────────────────────────────
+  // ── Saved Fix Mission (showcased in Saved Missions) ───────────────
+  // Same showcase rationale as demo-install-prometheus above (#5962 fix).
   {
     id: 'demo-fix-crashloop',
     title: 'Fix CrashLoopBackOff on api-gateway',
     description: 'Diagnose and resolve CrashLoopBackOff on the api-gateway deployment in production.',
     type: 'troubleshoot',
-    status: 'completed',
+    status: 'saved',
     cluster: 'eks-prod-us-east-1',
     feedback: 'positive',
     createdAt: daysAgo(1),
@@ -96,13 +102,17 @@ export const DEMO_MISSIONS: DemoMission[] = [
     ],
   },
 
-  // ── Mission Control (completed deploy) ────────────────────────────
+  // ── Saved Mission Control (showcased in Saved Missions) ───────────
+  // Same showcase rationale as the install/fix entries above (#5962 fix).
+  // demo-planning-mission below stays 'completed' on purpose — it's the
+  // hidden AI conversation referenced internally by demo mission-control
+  // state and should NOT appear in the user-facing Saved Missions list.
   {
     id: 'demo-mission-control',
     title: 'Mission Control: Security Stack',
     description: 'Deploy Falco + Trivy + Kyverno across production clusters.',
     type: 'deploy',
-    status: 'completed',
+    status: 'saved',
     feedback: null,
     createdAt: hoursAgo(12),
     updatedAt: hoursAgo(12),
