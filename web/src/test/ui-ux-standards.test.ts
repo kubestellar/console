@@ -61,11 +61,12 @@ const COMPONENTS_DIR = path.resolve(
 //   288 → 290: #6254 test fixes
 //   290 → 293: #6217 part 2 freshness indicator additions
 //   293 → 296: #6217 part 3 freshness additions
+//   296 → 298: #6265 copilot follow-up comment refs
 //
 // When you bump this number, append a one-line entry above so future
 // bumps stay grep-able and reviewers can tell at a glance whether a
 // change is a real new violation or just a comment-level reference.
-const EXPECTED_RAW_HEX_COUNT = 296
+const EXPECTED_RAW_HEX_COUNT = 298
 const EXPECTED_RAW_RGBA_COUNT = 104
 const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 22
 const EXPECTED_INLINE_STYLE_COLOR_COUNT = 213
