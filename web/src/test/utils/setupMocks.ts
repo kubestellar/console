@@ -52,4 +52,6 @@ vi.mock('../../hooks/useTokenUsage', () => ({
   }),
   addCategoryTokens: () => {},
   setActiveTokenCategory: () => {},
+  clearActiveTokenCategory: () => {},
+  getActiveTokenCategories: () => [],
 }));

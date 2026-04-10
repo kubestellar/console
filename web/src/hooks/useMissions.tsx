@@ -3,7 +3,7 @@ import type { AgentInfo, AgentsListPayload, AgentSelectedPayload, ChatStreamPayl
 import { AgentCapabilityToolExec } from '../types/agent'
 import { getDemoMode } from './useDemoMode'
 import { DEMO_MISSIONS } from '../mocks/demoMissions'
-import { addCategoryTokens, setActiveTokenCategory } from './useTokenUsage'
+import { addCategoryTokens, setActiveTokenCategory, clearActiveTokenCategory } from './useTokenUsage'
 import { detectIssueSignature, findSimilarResolutionsStandalone, generateResolutionPromptContext } from './useResolutions'
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
@@ -1163,11 +1163,13 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             }
           }
 
-          // Clear active token tracking.
+          // Clear active token tracking for this specific mission (#6016 —
+          // per-operation tracking so concurrent missions don't clobber each
+          // other's category).
           // NOTE: Do NOT emit analytics completion here — stream-done is not
           // authoritative. The backend sends a separate 'result' message with
           // the final answer; emitMissionCompleted fires there (#5510).
-          setActiveTokenCategory(null)
+          clearActiveTokenCategory(missionId)
           // Start the watchdog that auto-fails the mission if no final result
           // message arrives within WAITING_INPUT_TIMEOUT_MS (#5936).
           startWaitingInputTimeout(missionId)
@@ -1200,8 +1202,9 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           }
         }
 
-        // Clear active token tracking and emit completion event
-        setActiveTokenCategory(null)
+        // Clear active token tracking for this mission and emit completion
+        // event (#6016 — per-operation tracking keyed by missionId).
+        clearActiveTokenCategory(missionId)
         if (m.status === 'running') {
           emitMissionCompleted(m.type, Math.round((Date.now() - m.createdAt.getTime()) / 1000))
         }
@@ -1586,8 +1589,9 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         m.id === missionId ? { ...m, status: 'running', currentStep: 'Connecting to agent...' } : m
       ))
 
-      // Track token usage for this mission
-      setActiveTokenCategory('missions')
+      // Track token usage for this specific mission (#6016 — keyed by
+      // missionId so concurrent missions get independent attribution).
+      setActiveTokenCategory(missionId, 'missions')
 
       wsSend(JSON.stringify({
         id: requestId,
@@ -1979,8 +1983,9 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       return
     }
 
-    // Track token usage for this mission
-    setActiveTokenCategory('missions')
+    // Track token usage for this specific mission (#6016 — keyed by
+    // missionId so concurrent missions get independent attribution).
+    setActiveTokenCategory(missionId, 'missions')
 
     setMissions(prev => prev.map(m => {
       if (m.id !== missionId) return m

@@ -15,6 +15,8 @@ vi.mock('./useDemoMode', () => ({
 vi.mock('./useTokenUsage', () => ({
   addCategoryTokens: vi.fn(),
   setActiveTokenCategory: vi.fn(),
+  clearActiveTokenCategory: vi.fn(),
+  getActiveTokenCategories: vi.fn(() => []),
 }))
 
 vi.mock('./useResolutions', () => ({
@@ -2878,10 +2880,10 @@ describe('token usage tracking', () => {
     expect(addCategoryTokens).toHaveBeenCalledWith(75, 'missions')
   })
 
-  it('calls setActiveTokenCategory when stream completes with usage', async () => {
-    const { setActiveTokenCategory } = await import('./useTokenUsage')
+  it('calls clearActiveTokenCategory when stream completes with usage', async () => {
+    const { clearActiveTokenCategory } = await import('./useTokenUsage')
     const { result } = renderHook(() => useMissions(), { wrapper })
-    const { requestId } = await startMissionWithConnection(result)
+    const { missionId, requestId } = await startMissionWithConnection(result)
 
     act(() => {
       MockWebSocket.lastInstance?.simulateMessage({
@@ -2891,8 +2893,8 @@ describe('token usage tracking', () => {
       })
     })
 
-    // Should clear active token category
-    expect(setActiveTokenCategory).toHaveBeenCalledWith(null)
+    // Should clear active token category for this specific mission (#6016)
+    expect(clearActiveTokenCategory).toHaveBeenCalledWith(missionId)
   })
 
   it('tracks token delta on stream-done with usage', async () => {
@@ -4087,7 +4089,7 @@ describe('setActiveTokenCategory on mission actions', () => {
     await act(async () => { await Promise.resolve() })
     await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
 
-    expect(setActiveTokenCategory).toHaveBeenCalledWith('missions')
+    expect(setActiveTokenCategory).toHaveBeenCalledWith(expect.any(String), 'missions')
   })
 
   it('sets active token category to "missions" on sendMessage', async () => {
@@ -4109,15 +4111,16 @@ describe('setActiveTokenCategory on mission actions', () => {
       result.current.sendMessage(missionId, 'follow up')
     })
 
-    expect(setActiveTokenCategory).toHaveBeenCalledWith('missions')
+    // Per-operation tracking keyed by missionId (#6016)
+    expect(setActiveTokenCategory).toHaveBeenCalledWith(missionId, 'missions')
   })
 
   it('clears active token category on result message', async () => {
-    const { setActiveTokenCategory } = await import('./useTokenUsage')
-    vi.mocked(setActiveTokenCategory).mockClear()
+    const { clearActiveTokenCategory } = await import('./useTokenUsage')
+    vi.mocked(clearActiveTokenCategory).mockClear()
 
     const { result } = renderHook(() => useMissions(), { wrapper })
-    const { requestId } = await startMissionWithConnection(result)
+    const { missionId, requestId } = await startMissionWithConnection(result)
 
     act(() => {
       MockWebSocket.lastInstance?.simulateMessage({
@@ -4127,7 +4130,8 @@ describe('setActiveTokenCategory on mission actions', () => {
       })
     })
 
-    expect(setActiveTokenCategory).toHaveBeenCalledWith(null)
+    // Per-operation clear keyed by missionId (#6016)
+    expect(clearActiveTokenCategory).toHaveBeenCalledWith(missionId)
   })
 })
 

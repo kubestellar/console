@@ -6,7 +6,7 @@ import type {
 import { getPredictionSettings, getSettingsForBackend } from './usePredictionSettings'
 import { getDemoMode } from './useDemoMode'
 import { isAgentUnavailable, reportAgentDataSuccess, reportAgentDataError } from './useLocalAgent'
-import { setActiveTokenCategory } from './useTokenUsage'
+import { setActiveTokenCategory, clearActiveTokenCategory } from './useTokenUsage'
 import { fullFetchClusters, clusterCache } from './mcp/shared'
 
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
@@ -323,8 +323,17 @@ export function useAIPredictions() {
 
   // Trigger analysis
   const analyze = async (specificProviders?: string[]) => {
+    // Generate a stable opId for the lifetime of this analyze call so
+    // concurrent analyze() invocations (e.g. from different providers)
+    // get independent token attribution (#6016). Fall back to a
+    // timestamp-based id when crypto.randomUUID is unavailable (non-secure
+    // contexts such as plain-http dev servers).
+    const opId: string =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `predictions-${Date.now()}-${Math.random().toString(36).slice(2)}`
     setIsAnalyzing(true)
-    setActiveTokenCategory('predictions')
+    setActiveTokenCategory(opId, 'predictions')
     try {
       await triggerAnalysis(specificProviders)
       // Wait a bit then fetch results
@@ -332,7 +341,7 @@ export function useAIPredictions() {
       await fetchAIPredictions()
     } finally {
       setIsAnalyzing(false)
-      setActiveTokenCategory(null)
+      clearActiveTokenCategory(opId)
     }
   }
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
-const { mockGetPredictionSettings, mockGetDemoMode, mockIsAgentUnavailable, mockReportAgentDataSuccess, mockReportAgentDataError, mockGetSettingsForBackend, mockSetActiveTokenCategory, mockFullFetchClusters, mockClusterCache } = vi.hoisted(() => ({
+const { mockGetPredictionSettings, mockGetDemoMode, mockIsAgentUnavailable, mockReportAgentDataSuccess, mockReportAgentDataError, mockGetSettingsForBackend, mockSetActiveTokenCategory, mockClearActiveTokenCategory, mockFullFetchClusters, mockClusterCache } = vi.hoisted(() => ({
   mockGetPredictionSettings: vi.fn(() => ({ aiEnabled: true, minConfidence: 50 })),
   mockGetDemoMode: vi.fn(() => true),
   mockIsAgentUnavailable: vi.fn(() => true),
@@ -9,6 +9,7 @@ const { mockGetPredictionSettings, mockGetDemoMode, mockIsAgentUnavailable, mock
   mockReportAgentDataError: vi.fn(),
   mockGetSettingsForBackend: vi.fn(() => ({ aiEnabled: true, minConfidence: 50 })),
   mockSetActiveTokenCategory: vi.fn(),
+  mockClearActiveTokenCategory: vi.fn(),
   mockFullFetchClusters: vi.fn(),
   mockClusterCache: { consecutiveFailures: 0, isFailed: false },
 }))
@@ -30,6 +31,7 @@ vi.mock('../useLocalAgent', () => ({
 
 vi.mock('../useTokenUsage', () => ({
   setActiveTokenCategory: mockSetActiveTokenCategory,
+  clearActiveTokenCategory: mockClearActiveTokenCategory,
 }))
 
 vi.mock('../mcp/shared', () => ({
@@ -491,9 +493,11 @@ describe('useAIPredictions', () => {
       await vi.advanceTimersByTimeAsync(2000)
     })
 
-    // setActiveTokenCategory should have been called with 'predictions' and then null
-    expect(mockSetActiveTokenCategory).toHaveBeenCalledWith('predictions')
-    expect(mockSetActiveTokenCategory).toHaveBeenCalledWith(null)
+    // Per-operation tracking (#6016): setActiveTokenCategory called with
+    // opId + 'predictions', then clearActiveTokenCategory called with the
+    // same opId.
+    expect(mockSetActiveTokenCategory).toHaveBeenCalledWith(expect.any(String), 'predictions')
+    expect(mockClearActiveTokenCategory).toHaveBeenCalledWith(expect.any(String))
   })
 
   it('analyze in non-demo mode sends POST to /predictions/analyze', async () => {

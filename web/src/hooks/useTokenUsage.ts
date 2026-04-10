@@ -10,6 +10,15 @@ const MAX_SINGLE_DELTA_TOKENS = 50_000
 /** Minimum valid stop threshold — prevents "AI Disabled" at 0% from corrupted localStorage */
 const MIN_STOP_THRESHOLD = 0.01
 
+/** localStorage key for the persisted last-known total token count (agent restart detection) */
+const LAST_KNOWN_USAGE_KEY = 'kc:tokenUsage:lastKnown'
+
+/** localStorage key for the persisted agent session marker (agent restart detection) */
+const AGENT_SESSION_KEY = 'kc:tokenUsage:agentSession'
+
+/** Default category used when a delta arrives with no active operation */
+const DEFAULT_CATEGORY: TokenCategory = 'other'
+
 export type TokenCategory = 'missions' | 'diagnose' | 'insights' | 'predictions' | 'other'
 
 export interface TokenUsageByCategory {
@@ -70,53 +79,125 @@ let pollStarted = false
 let pollIntervalId: ReturnType<typeof setInterval> | null = null
 const subscribers = new Set<(usage: TokenUsage) => void>()
 
-// Track active AI operation for attributing token usage
-let activeCategory: TokenCategory | null = null
-let lastKnownUsage: number | null = null // null means not yet initialized
+// Track all active AI operations for attributing token usage.
+// Keyed by a stable operation id (e.g. missionId, analyze-call uuid) so
+// concurrent operations across multiple tabs/cards don't clobber each
+// other — the previous module-level `let activeCategory` variable caused
+// bug #6016 where starting a second operation rerouted the first one's
+// tokens to the wrong category.
+const activeCategoriesByOp = new Map<string, TokenCategory>()
+
+// Persisted baseline for total token count reported by the local agent.
+// This is loaded from localStorage on module init so that an agent restart
+// (which resets `today` counters to a lower value) can be distinguished from
+// real usage growth — see bug #6015 and the restart-detection logic below.
+let lastKnownUsage: number | null = null
+let lastKnownSessionId: string | null = null
 
 /**
- * Set the currently active AI operation category.
- * Call this when starting an AI operation (mission, diagnose, etc.)
+ * Set the active token category for a specific operation id.
+ * The opId should be stable for the lifetime of the operation (mission id,
+ * analyze-call uuid, etc.) so concurrent operations are tracked separately.
  */
-export function setActiveTokenCategory(category: TokenCategory | null) {
-  activeCategory = category
+export function setActiveTokenCategory(opId: string, category: TokenCategory) {
+  activeCategoriesByOp.set(opId, category)
 }
 
 /**
- * Get the currently active category (for debugging/display)
+ * Clear the active token category for a specific operation id.
+ * Call this when the operation completes (success, failure, or cancel).
  */
-export function getActiveTokenCategory(): TokenCategory | null {
-  return activeCategory
+export function clearActiveTokenCategory(opId: string) {
+  activeCategoriesByOp.delete(opId)
+}
+
+/**
+ * Return the set of currently active categories. Exposed for debugging.
+ */
+export function getActiveTokenCategories(): TokenCategory[] {
+  return Array.from(activeCategoriesByOp.values())
+}
+
+/**
+ * Safely load the persisted last-known usage + agent session marker from
+ * localStorage. Returns null fields if localStorage is unavailable (SSR,
+ * private mode) or the stored data is corrupted.
+ */
+function loadPersistedUsage(): { lastKnown: number | null; sessionId: string | null } {
+  if (typeof window === 'undefined') return { lastKnown: null, sessionId: null }
+  try {
+    const rawLastKnown = localStorage.getItem(LAST_KNOWN_USAGE_KEY)
+    const rawSession = localStorage.getItem(AGENT_SESSION_KEY)
+    const lastKnown = rawLastKnown !== null ? Number(rawLastKnown) : null
+    return {
+      lastKnown: lastKnown !== null && Number.isFinite(lastKnown) ? lastKnown : null,
+      sessionId: rawSession,
+    }
+  } catch {
+    // localStorage may throw in private mode or when quota is exceeded.
+    return { lastKnown: null, sessionId: null }
+  }
+}
+
+/**
+ * Safely persist the last-known usage baseline + agent session marker to
+ * localStorage. Silently ignores quota/SSR/private-mode errors — persistence
+ * is best-effort and losing it only degrades restart detection on the next
+ * page load.
+ */
+function persistUsage(lastKnown: number, sessionId: string | null): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(LAST_KNOWN_USAGE_KEY, String(lastKnown))
+    if (sessionId !== null) {
+      localStorage.setItem(AGENT_SESSION_KEY, sessionId)
+    }
+  } catch {
+    // Quota exceeded / private mode — ignore, this is best-effort.
+  }
+}
+
+// Hydrate the in-memory baseline from localStorage at module init so that
+// page reloads and new tabs don't mis-attribute the entire current usage
+// count as fresh delta on the first poll.
+{
+  const persisted = loadPersistedUsage()
+  lastKnownUsage = persisted.lastKnown
+  lastKnownSessionId = persisted.sessionId
 }
 
 // Initialize from localStorage
 if (typeof window !== 'undefined') {
-  const settings = localStorage.getItem(SETTINGS_KEY)
-  if (settings) {
-    const parsedSettings = JSON.parse(settings)
-    sharedUsage = { ...sharedUsage, ...parsedSettings }
-    // Ensure limit is never zero/negative (causes NaN in percentage calculations)
-    if (sharedUsage.limit <= 0) sharedUsage.limit = DEFAULT_SETTINGS.limit
-    // Ensure thresholds are sane — corrupted stopThreshold=0 causes "AI Disabled" at 0% usage
-    if (!sharedUsage.stopThreshold || sharedUsage.stopThreshold < MIN_STOP_THRESHOLD) {
-      sharedUsage.stopThreshold = DEFAULT_SETTINGS.stopThreshold
+  try {
+    const settings = localStorage.getItem(SETTINGS_KEY)
+    if (settings) {
+      const parsedSettings = JSON.parse(settings)
+      sharedUsage = { ...sharedUsage, ...parsedSettings }
+      // Ensure limit is never zero/negative (causes NaN in percentage calculations)
+      if (sharedUsage.limit <= 0) sharedUsage.limit = DEFAULT_SETTINGS.limit
+      // Ensure thresholds are sane — corrupted stopThreshold=0 causes "AI Disabled" at 0% usage
+      if (!sharedUsage.stopThreshold || sharedUsage.stopThreshold < MIN_STOP_THRESHOLD) {
+        sharedUsage.stopThreshold = DEFAULT_SETTINGS.stopThreshold
+      }
+      if (!sharedUsage.criticalThreshold || sharedUsage.criticalThreshold <= 0) {
+        sharedUsage.criticalThreshold = DEFAULT_SETTINGS.criticalThreshold
+      }
+      if (!sharedUsage.warningThreshold || sharedUsage.warningThreshold <= 0) {
+        sharedUsage.warningThreshold = DEFAULT_SETTINGS.warningThreshold
+      }
     }
-    if (!sharedUsage.criticalThreshold || sharedUsage.criticalThreshold <= 0) {
-      sharedUsage.criticalThreshold = DEFAULT_SETTINGS.criticalThreshold
-    }
-    if (!sharedUsage.warningThreshold || sharedUsage.warningThreshold <= 0) {
-      sharedUsage.warningThreshold = DEFAULT_SETTINGS.warningThreshold
-    }
+  } catch {
+    // Corrupted settings JSON — fall back to defaults.
   }
   // Load persisted category data
-  const categoryData = localStorage.getItem(CATEGORY_KEY)
-  if (categoryData) {
-    try {
+  try {
+    const categoryData = localStorage.getItem(CATEGORY_KEY)
+    if (categoryData) {
       const parsedCategories = JSON.parse(categoryData)
       sharedUsage.byCategory = { ...DEFAULT_BY_CATEGORY, ...parsedCategories }
-    } catch {
-      // Ignore invalid data
     }
+  } catch {
+    // Ignore invalid data — start from zeroed byCategory.
   }
   // Set demo usage if in demo mode
   if (getDemoMode()) {
@@ -196,22 +277,78 @@ async function fetchTokenUsage() {
         // Track both input and output tokens
         const totalUsed = (todayTokens.input || 0) + (todayTokens.output || 0)
 
-        // Attribute token increase to active category (only after initialization)
-        if (lastKnownUsage !== null && totalUsed > lastKnownUsage && activeCategory) {
+        // --- Agent restart detection (bug #6015) ----------------------------
+        // The local kc-agent reports a `today` counter that resets to zero
+        // whenever the agent process restarts. Without detecting restarts we
+        // would either:
+        //   (a) attribute the full new total as a single huge delta, or
+        //   (b) silently swallow real usage because totalUsed < lastKnownUsage.
+        // We detect a restart by either:
+        //   1. The agent session marker changing (preferred — exact signal), or
+        //   2. totalUsed going backwards compared to our persisted baseline.
+        // On restart we reset the baseline without attributing a delta. The
+        // baseline is also persisted to localStorage so a page reload doesn't
+        // mis-attribute the current running total as fresh usage.
+        const reportedSessionId: string | null = data.claude?.agentSessionId ?? null
+        const sessionChanged =
+          reportedSessionId !== null &&
+          lastKnownSessionId !== null &&
+          reportedSessionId !== lastKnownSessionId
+        const wentBackwards = lastKnownUsage !== null && totalUsed < lastKnownUsage
+        const isRestart = sessionChanged || wentBackwards
+
+        if (isRestart || lastKnownUsage === null) {
+          // Reset baseline without attributing any delta. On first init
+          // (lastKnownUsage === null) we also take this branch to establish
+          // a baseline without pretending all current usage happened just now.
+          updateSharedUsage({ used: totalUsed })
+        } else if (totalUsed > lastKnownUsage) {
           const delta = totalUsed - lastKnownUsage
-          // Sanity check: don't attribute more than 50k tokens at once (likely a bug)
+          // Sanity check: don't attribute more than MAX_SINGLE_DELTA_TOKENS
+          // at once (likely a bug / init race).
           if (delta < MAX_SINGLE_DELTA_TOKENS) {
-            const newByCategory = { ...sharedUsage.byCategory }
-            newByCategory[activeCategory] += delta
-            updateSharedUsage({ used: totalUsed, byCategory: newByCategory })
+            const activeCount = activeCategoriesByOp.size
+            if (activeCount === 0) {
+              // No active operation — attribute to the default category.
+              const newByCategory = { ...sharedUsage.byCategory }
+              newByCategory[DEFAULT_CATEGORY] += delta
+              updateSharedUsage({ used: totalUsed, byCategory: newByCategory })
+            } else if (activeCount === 1) {
+              // Single operation — attribute the entire delta to it.
+              const category = activeCategoriesByOp.values().next().value as TokenCategory
+              const newByCategory = { ...sharedUsage.byCategory }
+              newByCategory[category] += delta
+              updateSharedUsage({ used: totalUsed, byCategory: newByCategory })
+            } else {
+              // Multiple concurrent operations — split the delta evenly
+              // across all active operations. This is a best-effort
+              // heuristic: the local agent reports only an aggregate count,
+              // so we cannot perfectly attribute per-operation usage. Any
+              // remainder from integer division goes to the first operation.
+              const perOp = Math.floor(delta / activeCount)
+              const remainder = delta - perOp * activeCount
+              const newByCategory = { ...sharedUsage.byCategory }
+              let first = true
+              for (const category of activeCategoriesByOp.values()) {
+                newByCategory[category] += perOp + (first ? remainder : 0)
+                first = false
+              }
+              updateSharedUsage({ used: totalUsed, byCategory: newByCategory })
+            }
           } else {
             console.warn(`[TokenUsage] Skipping large delta ${delta} - likely initialization`)
             updateSharedUsage({ used: totalUsed })
           }
         } else {
+          // totalUsed === lastKnownUsage — nothing to attribute.
           updateSharedUsage({ used: totalUsed })
         }
+
         lastKnownUsage = totalUsed
+        if (reportedSessionId !== null) {
+          lastKnownSessionId = reportedSessionId
+        }
+        persistUsage(totalUsed, reportedSessionId)
       }
     } else {
       reportAgentDataError('/health (token)', `HTTP ${response.status}`)

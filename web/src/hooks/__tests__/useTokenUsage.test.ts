@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
@@ -30,8 +30,13 @@ vi.mock('../../lib/constants/network', () => ({
   QUICK_ABORT_TIMEOUT_MS: 2000,
 }))
 
-import { useTokenUsage, setActiveTokenCategory, getActiveTokenCategory, addCategoryTokens } from '../useTokenUsage'
+import { useTokenUsage, setActiveTokenCategory, clearActiveTokenCategory, getActiveTokenCategories, addCategoryTokens } from '../useTokenUsage'
 import type { TokenCategory } from '../useTokenUsage'
+
+// Fixed opIds used across the concurrent-operation tests so assertions
+// don't depend on random UUIDs.
+const OP_ID_A = 'op-a-0000-0000'
+const OP_ID_B = 'op-b-0000-0000'
 
 describe('useTokenUsage', () => {
   beforeEach(() => {
@@ -439,22 +444,53 @@ describe('useTokenUsage', () => {
   })
 })
 
-describe('setActiveTokenCategory / getActiveTokenCategory', () => {
-  it('sets and gets active category', () => {
-    setActiveTokenCategory('missions')
-    expect(getActiveTokenCategory()).toBe('missions')
-    setActiveTokenCategory(null)
-    expect(getActiveTokenCategory()).toBeNull()
+describe('setActiveTokenCategory / clearActiveTokenCategory (per-op tracking, #6016)', () => {
+  beforeEach(() => {
+    // Clean all active ops between tests
+    for (const _ of getActiveTokenCategories()) {
+      // no-op: the loop body is just to read the list length
+    }
+    clearActiveTokenCategory(OP_ID_A)
+    clearActiveTokenCategory(OP_ID_B)
+  })
+
+  it('sets and clears a single active op', () => {
+    setActiveTokenCategory(OP_ID_A, 'missions')
+    expect(getActiveTokenCategories()).toEqual(['missions'])
+    clearActiveTokenCategory(OP_ID_A)
+    expect(getActiveTokenCategories()).toEqual([])
+  })
+
+  it('tracks multiple concurrent operations independently', () => {
+    setActiveTokenCategory(OP_ID_A, 'missions')
+    setActiveTokenCategory(OP_ID_B, 'predictions')
+    const active = getActiveTokenCategories()
+    expect(active).toHaveLength(2)
+    expect(active).toContain('missions')
+    expect(active).toContain('predictions')
+
+    // Clearing A must not remove B's entry
+    clearActiveTokenCategory(OP_ID_A)
+    expect(getActiveTokenCategories()).toEqual(['predictions'])
+    clearActiveTokenCategory(OP_ID_B)
+    expect(getActiveTokenCategories()).toEqual([])
   })
 
   it('cycles through all category types correctly', () => {
     const categories: TokenCategory[] = ['missions', 'diagnose', 'insights', 'predictions', 'other']
     for (const cat of categories) {
-      setActiveTokenCategory(cat)
-      expect(getActiveTokenCategory()).toBe(cat)
+      setActiveTokenCategory(OP_ID_A, cat)
+      expect(getActiveTokenCategories()).toEqual([cat])
     }
-    setActiveTokenCategory(null)
-    expect(getActiveTokenCategory()).toBeNull()
+    clearActiveTokenCategory(OP_ID_A)
+    expect(getActiveTokenCategories()).toEqual([])
+  })
+
+  it('overwriting the same opId replaces (not duplicates) the category', () => {
+    setActiveTokenCategory(OP_ID_A, 'missions')
+    setActiveTokenCategory(OP_ID_A, 'diagnose')
+    expect(getActiveTokenCategories()).toEqual(['diagnose'])
+    clearActiveTokenCategory(OP_ID_A)
   })
 })
 
@@ -534,5 +570,190 @@ describe('addCategoryTokens', () => {
     expect(result.current.usage.byCategory.predictions).toBeGreaterThanOrEqual(400)
     expect(result.current.usage.byCategory.other).toBeGreaterThanOrEqual(500)
     expect(result.current.usage.used).toBe(1500)
+  })
+})
+
+// ───────────────────────────────────────────────────────────────────────────
+// Agent restart detection + concurrent-op attribution (#6015, #6016)
+//
+// These tests drive the fetchTokenUsage polling path by stubbing global
+// fetch + marking the agent as available. Because module state (lastKnown,
+// active ops) persists across tests, each test uses vi.resetModules() +
+// dynamic import to get a clean copy of useTokenUsage.
+// ───────────────────────────────────────────────────────────────────────────
+
+const LAST_KNOWN_USAGE_KEY = 'kc:tokenUsage:lastKnown'
+const AGENT_SESSION_KEY = 'kc:tokenUsage:agentSession'
+const POLL_SETTLE_MS = 50
+
+describe('agent restart detection (#6015) + per-op attribution (#6016)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.resetModules()
+    vi.clearAllMocks()
+    mockGetDemoMode.mockReturnValue(false)
+    mockIsAgentUnavailable.mockReturnValue(false)
+  })
+
+  afterEach(() => {
+    // @ts-expect-error — cleanup global mock
+    delete globalThis.fetch
+  })
+
+  async function mountAndPoll(tokens: { input: number; output: number }, agentSessionId?: string) {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        claude: {
+          tokenUsage: { today: tokens },
+          ...(agentSessionId !== undefined ? { agentSessionId } : {}),
+        },
+      }),
+    }) as unknown as typeof fetch
+    const mod = await import('../useTokenUsage')
+    const { result } = renderHook(() => mod.useTokenUsage())
+    // Let the initial fetch + subscriber update flush
+    await act(async () => { await new Promise(r => setTimeout(r, POLL_SETTLE_MS)) })
+    return { mod, result }
+  }
+
+  it('first poll establishes baseline without attributing any delta', async () => {
+    // Baseline total: 10_000 tokens. With no active op and no prior
+    // baseline, the hook must set `used` to 10_000 without dumping all
+    // 10_000 into the default category.
+    const INITIAL_INPUT = 6000
+    const INITIAL_OUTPUT = 4000
+    const { result } = await mountAndPoll({ input: INITIAL_INPUT, output: INITIAL_OUTPUT }, 'session-1')
+    expect(result.current.usage.used).toBe(INITIAL_INPUT + INITIAL_OUTPUT)
+    // byCategory should still be all zero
+    const sum = Object.values(result.current.usage.byCategory).reduce((a, b) => a + b, 0)
+    expect(sum).toBe(0)
+  })
+
+  it('persists last-known usage + session id to localStorage', async () => {
+    const INITIAL_TOKENS = 5000
+    await mountAndPoll({ input: INITIAL_TOKENS, output: 0 }, 'session-abc')
+    expect(localStorage.getItem(LAST_KNOWN_USAGE_KEY)).toBe(String(INITIAL_TOKENS))
+    expect(localStorage.getItem(AGENT_SESSION_KEY)).toBe('session-abc')
+  })
+
+  it('agent session change resets baseline without attributing delta', async () => {
+    // Pre-populate localStorage as if a previous page-load saw 10_000 tokens
+    // under session-1.
+    const PRIOR_BASELINE = 10_000
+    localStorage.setItem(LAST_KNOWN_USAGE_KEY, String(PRIOR_BASELINE))
+    localStorage.setItem(AGENT_SESSION_KEY, 'session-1')
+
+    // The agent then restarts → new session id, counter reset to 3_000.
+    const RESTART_TOKENS = 3000
+    const { result } = await mountAndPoll({ input: RESTART_TOKENS, output: 0 }, 'session-2')
+
+    // `used` should track the new total, and no category should have
+    // absorbed the spurious "delta".
+    expect(result.current.usage.used).toBe(RESTART_TOKENS)
+    const sum = Object.values(result.current.usage.byCategory).reduce((a, b) => a + b, 0)
+    expect(sum).toBe(0)
+    // Session id should be updated in storage.
+    expect(localStorage.getItem(AGENT_SESSION_KEY)).toBe('session-2')
+  })
+
+  it('counter going backwards (no session id) is also treated as a restart', async () => {
+    const PRIOR_BASELINE = 50_000
+    localStorage.setItem(LAST_KNOWN_USAGE_KEY, String(PRIOR_BASELINE))
+
+    // Agent reports a lower value; no session id sent.
+    const RESTART_TOKENS = 1000
+    const { result } = await mountAndPoll({ input: RESTART_TOKENS, output: 0 })
+
+    expect(result.current.usage.used).toBe(RESTART_TOKENS)
+    const sum = Object.values(result.current.usage.byCategory).reduce((a, b) => a + b, 0)
+    expect(sum).toBe(0)
+  })
+
+  it('single active op receives the full delta', async () => {
+    // Baseline 1000 tokens.
+    const BASELINE = 1000
+    localStorage.setItem(LAST_KNOWN_USAGE_KEY, String(BASELINE))
+    localStorage.setItem(AGENT_SESSION_KEY, 'session-1')
+
+    // Start a single active op, then poll reports a higher total.
+    const NEXT_TOTAL = 1500
+    const EXPECTED_DELTA = NEXT_TOTAL - BASELINE
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ claude: { tokenUsage: { today: { input: NEXT_TOTAL, output: 0 } }, agentSessionId: 'session-1' } }),
+    }) as unknown as typeof fetch
+    const mod = await import('../useTokenUsage')
+    mod.setActiveTokenCategory('op-missions', 'missions')
+    const { result } = renderHook(() => mod.useTokenUsage())
+    await act(async () => { await new Promise(r => setTimeout(r, POLL_SETTLE_MS)) })
+    mod.clearActiveTokenCategory('op-missions')
+
+    expect(result.current.usage.byCategory.missions).toBe(EXPECTED_DELTA)
+  })
+
+  it('multiple concurrent ops split the delta evenly', async () => {
+    const BASELINE = 2000
+    localStorage.setItem(LAST_KNOWN_USAGE_KEY, String(BASELINE))
+    localStorage.setItem(AGENT_SESSION_KEY, 'session-1')
+
+    // Delta of 1000, split across 2 ops → 500 each.
+    const NEXT_TOTAL = 3000
+    const EXPECTED_PER_OP = (NEXT_TOTAL - BASELINE) / 2
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ claude: { tokenUsage: { today: { input: NEXT_TOTAL, output: 0 } }, agentSessionId: 'session-1' } }),
+    }) as unknown as typeof fetch
+    const mod = await import('../useTokenUsage')
+    mod.setActiveTokenCategory('op-m', 'missions')
+    mod.setActiveTokenCategory('op-p', 'predictions')
+    const { result } = renderHook(() => mod.useTokenUsage())
+    await act(async () => { await new Promise(r => setTimeout(r, POLL_SETTLE_MS)) })
+    mod.clearActiveTokenCategory('op-m')
+    mod.clearActiveTokenCategory('op-p')
+
+    expect(result.current.usage.byCategory.missions).toBe(EXPECTED_PER_OP)
+    expect(result.current.usage.byCategory.predictions).toBe(EXPECTED_PER_OP)
+  })
+
+  it('localStorage quota failure on persist is swallowed gracefully', async () => {
+    // Force setItem to throw to simulate QuotaExceededError.
+    const originalSetItem = Storage.prototype.setItem
+    Storage.prototype.setItem = vi.fn(() => { throw new Error('QuotaExceededError') })
+
+    try {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ claude: { tokenUsage: { today: { input: 500, output: 0 } }, agentSessionId: 'session-q' } }),
+      }) as unknown as typeof fetch
+      const mod = await import('../useTokenUsage')
+      const { result } = renderHook(() => mod.useTokenUsage())
+      // Poll must complete without throwing even though persistUsage hit quota.
+      await act(async () => { await new Promise(r => setTimeout(r, POLL_SETTLE_MS)) })
+      expect(result.current.usage.used).toBe(500)
+    } finally {
+      Storage.prototype.setItem = originalSetItem
+    }
+  })
+
+  it('corrupted localStorage baseline is ignored on init', async () => {
+    localStorage.setItem(LAST_KNOWN_USAGE_KEY, 'not-a-number')
+    localStorage.setItem(AGENT_SESSION_KEY, 'session-1')
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ claude: { tokenUsage: { today: { input: 100, output: 0 } }, agentSessionId: 'session-1' } }),
+    }) as unknown as typeof fetch
+    const mod = await import('../useTokenUsage')
+    const { result } = renderHook(() => mod.useTokenUsage())
+    await act(async () => { await new Promise(r => setTimeout(r, POLL_SETTLE_MS)) })
+    // Should treat as first-init (baseline null), no delta attributed.
+    expect(result.current.usage.used).toBe(100)
+    const sum = Object.values(result.current.usage.byCategory).reduce((a, b) => a + b, 0)
+    expect(sum).toBe(0)
   })
 })

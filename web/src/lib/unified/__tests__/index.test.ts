@@ -65,6 +65,8 @@ vi.mock('../../../hooks/useTokenUsage', () => ({
   }),
   addCategoryTokens: () => {},
   setActiveTokenCategory: () => {},
+  clearActiveTokenCategory: () => {},
+  getActiveTokenCategories: () => [],
 }))
 
 vi.mock('../../hooks/useTokenUsage', () => ({
@@ -81,6 +83,8 @@ vi.mock('../../hooks/useTokenUsage', () => ({
   }),
   addCategoryTokens: () => {},
   setActiveTokenCategory: () => {},
+  clearActiveTokenCategory: () => {},
+  getActiveTokenCategories: () => [],
 }))
 
 vi.mock('react-i18next', () => ({
