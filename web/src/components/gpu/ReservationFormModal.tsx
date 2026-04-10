@@ -38,14 +38,34 @@ function toDateInputValue(value: string | undefined | null): string {
 }
 
 /**
- * Convert a `<input type="date">` value (`YYYY-MM-DD`) to the RFC 3339
- * timestamp required by the backend API (`YYYY-MM-DDT00:00:00Z`).
- * If the input is already an RFC 3339 timestamp, it is returned as-is.
+ * Convert a `<input type="date">` value (`YYYY-MM-DD`) to an RFC 3339
+ * timestamp representing local midnight with an explicit timezone offset
+ * (`YYYY-MM-DDT00:00:00±HH:MM`). If the input is already an RFC 3339
+ * timestamp, it is returned as-is.
+ *
+ * The local-offset form (rather than `Z`) prevents an off-by-one-day
+ * display in calendar views: downstream code parses `start_date` with
+ * `new Date(...)` and normalizes via `setHours(0, 0, 0, 0)`, which
+ * shifts a hard-coded UTC midnight back a day for any user west of UTC
+ * (e.g. Jan 15 00:00 UTC → Jan 14 in PST). Encoding the user's local
+ * offset keeps the calendar day stable across the wire.
  */
 function toRFC3339StartDate(value: string): string {
   if (!value) return ''
   if (value.includes('T')) return value
-  return `${value}T00:00:00Z`
+
+  // Date.getTimezoneOffset returns minutes WEST of UTC (positive for the
+  // Americas, negative for Europe/Asia), so flip the sign to get the
+  // signed offset that goes into the RFC 3339 string.
+  const offsetMinutesWestOfUTC = new Date().getTimezoneOffset()
+  const totalOffsetMinutes = -offsetMinutesWestOfUTC
+  const offsetSign = totalOffsetMinutes >= 0 ? '+' : '-'
+  const absoluteOffsetMinutes = Math.abs(totalOffsetMinutes)
+  const minutesPerHour = 60
+  const offsetHours = String(Math.floor(absoluteOffsetMinutes / minutesPerHour)).padStart(2, '0')
+  const offsetMinutes = String(absoluteOffsetMinutes % minutesPerHour).padStart(2, '0')
+
+  return `${value}T00:00:00${offsetSign}${offsetHours}:${offsetMinutes}`
 }
 
 /**
