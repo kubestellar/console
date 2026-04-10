@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCachedPods } from '../../hooks/useCachedData'
 import { useCardLoadingState } from './CardDataContext'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 
 interface NamespaceUsage {
   namespace: string
@@ -13,7 +14,7 @@ interface NamespaceUsage {
 
 export function QuotaHeatmap() {
   const { t } = useTranslation('cards')
-  const { pods, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods(undefined, undefined, { limit: 500 })
+  const { pods, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, lastRefresh: podsLastRefresh } = useCachedPods(undefined, undefined, { limit: 500 })
   const [selectedNs, setSelectedNs] = useState<string | null>(null)
 
   const hasData = pods.length > 0
@@ -76,8 +77,18 @@ export function QuotaHeatmap() {
 
   return (
     <div className="space-y-2 p-1">
-      <div className="text-xs text-muted-foreground">
-        {t('quotaHeatmap.summary', { namespaces: namespaceData.length, clusters: new Set(namespaceData.map(d => d.cluster)).size })}
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-xs text-muted-foreground">
+          {t('quotaHeatmap.summary', { namespaces: namespaceData.length, clusters: new Set(namespaceData.map(d => d.cluster)).size })}
+        </div>
+        {/* #6217 part 2: freshness indicator. */}
+        <RefreshIndicator
+          isRefreshing={isRefreshing}
+          lastUpdated={typeof podsLastRefresh === 'number' ? new Date(podsLastRefresh) : null}
+          size="sm"
+          showLabel={true}
+          staleThresholdMinutes={5}
+        />
       </div>
       <div className="grid grid-cols-4 sm:grid-cols-6 gap-1 max-h-[350px] overflow-y-auto">
         {namespaceData.slice(0, 60).map(ns => {

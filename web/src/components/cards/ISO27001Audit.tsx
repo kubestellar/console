@@ -14,6 +14,7 @@ import { useCardData } from '../../lib/cards/cardHooks'
 import { CardClusterFilter, CardSearchInput, CardSkeleton } from '../../lib/cards/CardComponents'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useState } from 'react'
 
 // ── Demo Data ──────────────────────────────────────────────────────
@@ -102,7 +103,8 @@ export function ISO27001Audit({ config }: ISO27001AuditProps) {
     isRefreshing: cachedRefreshing,
     isDemoFallback,
     isFailed: cachedFailed,
-    consecutiveFailures: cachedFailures } = useCachedISO27001Audit(clusterConfig)
+    consecutiveFailures: cachedFailures,
+    lastRefresh: cachedLastRefresh } = useCachedISO27001Audit(clusterConfig)
 
   // 3. Switch between demo and live data (fall back to demo if fetch failed with no cache)
   const useDemoData = isDemoMode || isDemoFallback
@@ -222,6 +224,14 @@ export function ISO27001Audit({ config }: ISO27001AuditProps) {
             <span className="text-red-400">{stats.fail} fail</span>
             {stats.warn > 0 && <span className="text-yellow-400">{stats.warn} warn</span>}
           </div>
+          {/* #6217 part 2: freshness indicator. */}
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={typeof cachedLastRefresh === 'number' ? new Date(cachedLastRefresh) : null}
+            size="sm"
+            showLabel={false}
+            staleThresholdMinutes={5}
+          />
         </div>
         <div className="flex items-center gap-1">
           <CardClusterFilter

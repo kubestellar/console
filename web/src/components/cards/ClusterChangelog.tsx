@@ -4,6 +4,7 @@ import { AlertCircle } from 'lucide-react'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 
 const CHANGE_REASONS = new Set([
   'ScalingReplicaSet', 'SuccessfulCreate', 'SuccessfulDelete',
@@ -16,7 +17,7 @@ type TimeRange = '1h' | '6h' | '24h' | '7d'
 
 export function ClusterChangelog() {
   const { t } = useTranslation('cards')
-  const { events, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, refetch } = useCachedEvents(undefined, undefined, { limit: 200 })
+  const { events, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, refetch, lastRefresh: eventsLastRefresh } = useCachedEvents(undefined, undefined, { limit: 200 })
   const [timeRange, setTimeRange] = useState<TimeRange>('24h')
   const { showSkeleton } = useCardLoadingState({
     isLoading,
@@ -78,18 +79,28 @@ export function ClusterChangelog() {
 
   return (
     <div className="space-y-2 p-1">
-      <div className="flex gap-1">
-        {(['1h', '6h', '24h', '7d'] as TimeRange[]).map(r => (
-          <button
-            key={r}
-            onClick={() => setTimeRange(r)}
-            className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
-              timeRange === r ? 'bg-primary text-primary-foreground' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
-            }`}
-          >
-            {r}
-          </button>
-        ))}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex gap-1">
+          {(['1h', '6h', '24h', '7d'] as TimeRange[]).map(r => (
+            <button
+              key={r}
+              onClick={() => setTimeRange(r)}
+              className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+                timeRange === r ? 'bg-primary text-primary-foreground' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
+              }`}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+        {/* #6217 part 2: freshness indicator. */}
+        <RefreshIndicator
+          isRefreshing={isRefreshing}
+          lastUpdated={typeof eventsLastRefresh === 'number' ? new Date(eventsLastRefresh) : null}
+          size="sm"
+          showLabel={true}
+          staleThresholdMinutes={5}
+        />
       </div>
 
       {/* Error Display */}
