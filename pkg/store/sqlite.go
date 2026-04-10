@@ -31,6 +31,11 @@ const (
 	sqliteDefaultConnMaxLifetime = 5 * time.Minute
 	// sqliteDefaultConnMaxIdleTime closes long-idle connections
 	sqliteDefaultConnMaxIdleTime = 2 * time.Minute
+	// sqliteBusyTimeoutMs is the millisecond duration that a writer will
+	// wait for the SQLite write lock before returning SQLITE_BUSY. Under
+	// WAL mode only one writer holds the lock at a time; this timeout
+	// lets concurrent writers queue instead of failing immediately.
+	sqliteBusyTimeoutMs = 5000
 )
 
 // parseUUID parses a UUID string, logging a warning if malformed instead of
@@ -76,7 +81,20 @@ type SQLiteStore struct {
 
 // NewSQLiteStore creates a new SQLite store
 func NewSQLiteStore(dbPath string) (*SQLiteStore, error) {
-	db, err := sql.Open("sqlite", dbPath+"?_foreign_keys=on&_journal_mode=WAL&_synchronous=NORMAL")
+	// DSN notes (modernc.org/sqlite accepts PRAGMAs via _pragma=key=value):
+	//  - journal_mode=WAL enables Write-Ahead Logging so readers don't
+	//    block writers.
+	//  - synchronous=NORMAL is the recommended pairing with WAL for good
+	//    durability without the overhead of FULL fsyncs.
+	//  - busy_timeout queues contending writers instead of returning
+	//    SQLITE_BUSY immediately; required for safe concurrent writes
+	//    alongside db.SetMaxOpenConns > 1.
+	//  - foreign_keys=on enforces FK constraints (off by default in SQLite).
+	dsn := fmt.Sprintf(
+		"%s?_pragma=foreign_keys(on)&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)&_pragma=busy_timeout(%d)",
+		dbPath, sqliteBusyTimeoutMs,
+	)
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
@@ -639,19 +657,6 @@ func (s *SQLiteStore) GetDashboardCards(dashboardID uuid.UUID) ([]models.Card, e
 	return cards, rows.Err()
 }
 
-// CountDashboardCards returns the number of cards belonging to a dashboard
-// without materializing the full row set. This is used by the card-create
-// limit check (#6010) to avoid the overhead of GetDashboardCards just to
-// call len() on the result.
-func (s *SQLiteStore) CountDashboardCards(dashboardID uuid.UUID) (int, error) {
-	var count int
-	err := s.db.QueryRow(`SELECT COUNT(*) FROM cards WHERE dashboard_id = ?`, dashboardID.String()).Scan(&count)
-	if err != nil {
-		return 0, err
-	}
-	return count, nil
-}
-
 func (s *SQLiteStore) scanCard(row *sql.Row) (*models.Card, error) {
 	var c models.Card
 	var idStr, dashboardIDStr, positionStr string
@@ -739,11 +744,25 @@ func (s *SQLiteStore) CreateCard(card *models.Card) error {
 }
 
 // CreateCardWithLimit atomically enforces a per-dashboard card limit and
-// inserts the card in a single transaction. This closes the TOCTOU race
-// where two concurrent CreateCard handlers could both read a count of
-// maxCards-1 and both succeed inserting, pushing the dashboard above the
-// limit (#6010). Returns ErrDashboardCardLimitReached when the dashboard
-// is already at or above maxCards.
+// inserts the card in a single SQL statement. This closes the TOCTOU race
+// (#6010) where two concurrent CreateCard handlers could both read a count
+// of maxCards-1 and both succeed inserting, pushing the dashboard above
+// the limit.
+//
+// The previous implementation used db.Begin() (a deferred transaction),
+// which under SQLite's WAL journal mode does not acquire the write lock
+// until the first write statement runs. That left a window where two
+// transactions on separate connections could both run SELECT COUNT(*),
+// both observe a count below maxCards, and both proceed to INSERT — the
+// second write would simply wait for the first to commit and then succeed,
+// silently bypassing the limit.
+//
+// The fix is to make the count check and the insert a single atomic
+// statement: INSERT ... SELECT ... WHERE (SELECT COUNT(*) ...) < ?. SQLite
+// evaluates the subquery while holding the write lock for the INSERT, so
+// no other writer can add a row in between the count and the insert.
+// Returns ErrDashboardCardLimitReached when the dashboard is already at
+// or above maxCards.
 func (s *SQLiteStore) CreateCardWithLimit(card *models.Card, maxCards int) error {
 	if card.ID == uuid.Nil {
 		card.ID = uuid.New()
@@ -760,31 +779,27 @@ func (s *SQLiteStore) CreateCardWithLimit(card *models.Card, maxCards int) error
 		configStr = &str
 	}
 
-	tx, err := s.db.Begin()
+	// Conditional insert: the row is inserted only when the current count
+	// for this dashboard is strictly less than maxCards. Because this is a
+	// single statement, SQLite's per-database write lock serializes the
+	// count+insert atomically across connections under WAL mode.
+	result, err := s.db.Exec(
+		`INSERT INTO cards (id, dashboard_id, card_type, config, position, created_at)
+		 SELECT ?, ?, ?, ?, ?, ?
+		 WHERE (SELECT COUNT(*) FROM cards WHERE dashboard_id = ?) < ?`,
+		card.ID.String(), card.DashboardID.String(), string(card.CardType), configStr, string(positionJSON), card.CreatedAt,
+		card.DashboardID.String(), maxCards,
+	)
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer func() {
-		// Safe to call Rollback after Commit — it becomes a no-op that
-		// returns sql.ErrTxDone which we intentionally ignore.
-		_ = tx.Rollback()
-	}()
-
-	var count int
-	if err := tx.QueryRow(`SELECT COUNT(*) FROM cards WHERE dashboard_id = ?`, card.DashboardID.String()).Scan(&count); err != nil {
-		return fmt.Errorf("failed to count cards: %w", err)
-	}
-	if count >= maxCards {
-		return ErrDashboardCardLimitReached
-	}
-
-	if _, err := tx.Exec(`INSERT INTO cards (id, dashboard_id, card_type, config, position, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
-		card.ID.String(), card.DashboardID.String(), string(card.CardType), configStr, string(positionJSON), card.CreatedAt); err != nil {
 		return fmt.Errorf("failed to insert card: %w", err)
 	}
 
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit: %w", err)
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to read rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return ErrDashboardCardLimitReached
 	}
 	return nil
 }

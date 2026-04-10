@@ -67,21 +67,6 @@ func (m *MockStore) DeleteDashboard(id uuid.UUID) error                         
 func (m *MockStore) GetCard(id uuid.UUID) (*models.Card, error)                     { return nil, nil }
 func (m *MockStore) GetDashboardCards(dashboardID uuid.UUID) ([]models.Card, error) { return nil, nil }
 
-// CountDashboardCards is overridable via testify/mock expectations so tests
-// can exercise the per-dashboard card limit without materializing a full row set.
-func (m *MockStore) CountDashboardCards(dashboardID uuid.UUID) (int, error) {
-	if len(m.ExpectedCalls) == 0 {
-		return 0, nil
-	}
-	for _, call := range m.ExpectedCalls {
-		if call.Method == "CountDashboardCards" {
-			args := m.Called(dashboardID)
-			return args.Int(0), args.Error(1)
-		}
-	}
-	return 0, nil
-}
-
 func (m *MockStore) CreateCard(card *models.Card) error { return nil }
 
 // CreateCardWithLimit is overridable so tests can exercise both the success

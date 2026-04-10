@@ -3,6 +3,8 @@ package store
 import (
 	"encoding/json"
 	"path/filepath"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -362,6 +364,105 @@ func TestCardCRUD(t *testing.T) {
 		got, err := store.GetCard(card.ID)
 		require.NoError(t, err)
 		require.Nil(t, got)
+	})
+}
+
+// TestCreateCardWithLimit verifies that the per-dashboard card limit is
+// enforced both sequentially and under concurrent inserts. The concurrent
+// sub-test is a regression guard for #6027: the previous implementation
+// used a deferred BEGIN transaction which, under WAL mode, allowed two
+// writers to both observe a count below the limit and both succeed.
+func TestCreateCardWithLimit(t *testing.T) {
+	// cardLimitTest is the per-dashboard cap used in these tests. Small
+	// enough to be reachable, large enough to exercise multi-insert paths.
+	const cardLimitTest = 3
+
+	t.Run("allows inserts up to the limit and rejects the next one", func(t *testing.T) {
+		store := newTestStore(t)
+		user := createTestUser(t, store, "gh-limit-seq", "limitseq")
+		dash := &models.Dashboard{UserID: user.ID, Name: "LimitSeq"}
+		require.NoError(t, store.CreateDashboard(dash))
+
+		for i := 0; i < cardLimitTest; i++ {
+			err := store.CreateCardWithLimit(&models.Card{
+				DashboardID: dash.ID,
+				CardType:    models.CardTypeClusterHealth,
+				Position:    models.CardPosition{X: i, Y: 0, W: 4, H: 3},
+			}, cardLimitTest)
+			require.NoError(t, err, "insert %d should succeed under the limit", i)
+		}
+
+		err := store.CreateCardWithLimit(&models.Card{
+			DashboardID: dash.ID,
+			CardType:    models.CardTypeClusterHealth,
+			Position:    models.CardPosition{X: 0, Y: 1, W: 4, H: 3},
+		}, cardLimitTest)
+		require.ErrorIs(t, err, ErrDashboardCardLimitReached)
+
+		cards, err := store.GetDashboardCards(dash.ID)
+		require.NoError(t, err)
+		require.Len(t, cards, cardLimitTest)
+	})
+
+	t.Run("concurrent inserts never exceed the limit", func(t *testing.T) {
+		store := newTestStore(t)
+		user := createTestUser(t, store, "gh-limit-conc", "limitconc")
+		dash := &models.Dashboard{UserID: user.ID, Name: "LimitConc"}
+		require.NoError(t, store.CreateDashboard(dash))
+
+		// concurrentInserters is the number of goroutines racing to insert
+		// cards. Significantly larger than cardLimitTest so that most must
+		// be rejected — any extra successes beyond cardLimitTest indicate
+		// the TOCTOU race has returned.
+		const concurrentInserters = 16
+
+		var (
+			wg            sync.WaitGroup
+			successes     int64
+			rejections    int64
+			otherErrs     int64
+			firstOtherErr atomic.Value
+			start         = make(chan struct{})
+		)
+
+		wg.Add(concurrentInserters)
+		for i := 0; i < concurrentInserters; i++ {
+			i := i
+			go func() {
+				defer wg.Done()
+				<-start
+				err := store.CreateCardWithLimit(&models.Card{
+					DashboardID: dash.ID,
+					CardType:    models.CardTypeClusterHealth,
+					Position:    models.CardPosition{X: i, Y: 0, W: 4, H: 3},
+				}, cardLimitTest)
+				switch {
+				case err == nil:
+					atomic.AddInt64(&successes, 1)
+				case err == ErrDashboardCardLimitReached:
+					atomic.AddInt64(&rejections, 1)
+				default:
+					atomic.AddInt64(&otherErrs, 1)
+					firstOtherErr.CompareAndSwap(nil, err.Error())
+				}
+			}()
+		}
+		close(start)
+		wg.Wait()
+
+		if v := firstOtherErr.Load(); v != nil {
+			t.Logf("first unexpected error: %v", v)
+		}
+		require.Zero(t, atomic.LoadInt64(&otherErrs), "no unexpected errors")
+		require.Equal(t, int64(cardLimitTest), atomic.LoadInt64(&successes),
+			"exactly cardLimitTest inserts should succeed under concurrency")
+		require.Equal(t, int64(concurrentInserters-cardLimitTest), atomic.LoadInt64(&rejections),
+			"remaining inserts should be rejected with ErrDashboardCardLimitReached")
+
+		cards, err := store.GetDashboardCards(dash.ID)
+		require.NoError(t, err)
+		require.Len(t, cards, cardLimitTest,
+			"dashboard must never exceed cardLimitTest rows under concurrent writers")
 	})
 }
 
