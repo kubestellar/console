@@ -45,6 +45,14 @@ h1{font-size:1.25rem;font-weight:500;margin-bottom:.25rem}
 .stars{position:fixed;inset:0;pointer-events:none}
 .star{position:absolute;width:2px;height:2px;background:#fff;border-radius:50%;opacity:.3;animation:twinkle 3s ease-in-out infinite}
 @keyframes twinkle{0%,100%{opacity:.2}50%{opacity:.6}}
+
+/* Respect users who prefer reduced motion (#5904) */
+@media (prefers-reduced-motion: reduce){
+  .star{animation:none;opacity:.4}
+  .step.active .step-icon{animation:none;border-top-color:#6366f1}
+  .tip{animation:none;opacity:1}
+  .tip-text{transition:none}
+}
 </style>
 </head>
 <body>
@@ -70,13 +78,14 @@ h1{font-size:1.25rem;font-weight:500;margin-bottom:.25rem}
 // Star field
 (function(){var s=document.getElementById('stars');for(var i=0;i<25;i++){var d=document.createElement('div');d.className='star';d.style.left=Math.random()*100+'%';d.style.top=Math.random()*100+'%';d.style.animationDelay=Math.random()*3+'s';s.appendChild(d)}})();
 
-// Rotating tips for the loading screen (#5899)
+// Rotating tips for the loading screen (#5899). Plain text only — uses
+// textContent to prevent XSS if tips ever become user-configurable (#5904).
 var TIPS=[
-'Press <kbd>?</kbd> anywhere in the console to see all keyboard shortcuts.',
+'Press ? anywhere in the console to see all keyboard shortcuts.',
 'Use the global cluster filter at the top to scope every card to specific clusters.',
 'Right-click any resource for quick actions like logs, exec, and YAML view.',
 'Drag cards to rearrange your dashboard. Your layout auto-saves.',
-'Use <kbd>Cmd/Ctrl+K</kbd> to open the universal search across all clusters.',
+'Use Cmd/Ctrl+K to open the universal search across all clusters.',
 'The Mission sidebar lets you describe what you want — the AI will figure out the kubectl.',
 'Pin frequently-used dashboards so they appear at the top of the sidebar.',
 'Custom dashboards can mix cards from different categories. Try the Customize button.',
@@ -91,7 +100,7 @@ var TIPS=[
 var TIP_ROTATE_MS=8000;
 var tipTextEl=document.getElementById('tip-text');
 var tipIdx=Math.floor(Math.random()*TIPS.length);
-function showTip(){if(tipTextEl){tipTextEl.style.opacity='0';setTimeout(function(){tipTextEl.innerHTML=TIPS[tipIdx];tipTextEl.style.opacity='1';tipIdx=(tipIdx+1)%TIPS.length;},400);}}
+function showTip(){if(tipTextEl){tipTextEl.style.opacity='0';setTimeout(function(){tipTextEl.textContent=TIPS[tipIdx];tipTextEl.style.opacity='1';tipIdx=(tipIdx+1)%TIPS.length;},400);}}
 showTip();
 setInterval(showTip,TIP_ROTATE_MS);
 
