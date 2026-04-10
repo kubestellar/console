@@ -1,0 +1,115 @@
+name: Perf — React commits per second (idle)
+
+# Companion to perf-react-commits.yml. That workflow measures commits during
+# a sidebar navigation; this one measures the steady-state commits/sec after
+# the dashboard has fully settled with no user input. The two together catch
+# two distinct regression classes:
+#
+#   navigation gate (#6149): a cascade that runs during route transitions
+#   idle gate      (#6201): a cascade where a wall-clock interval, an
+#                            unstable provider value, or a sub-second tick
+#                            keeps re-rendering forever even at idle
+#
+# The idle case is invisible to the navigation gate because that gate only
+# watches the 2-second window after a click. Without this companion gate, a
+# regression that introduces a 1Hz ticker per card (the pattern that bit us
+# pre-#6184 in ServiceStatus.useNowTick) would happily report ~14 commits/nav
+# while accumulating ~30 commits/sec idle in the background.
+
+on:
+  schedule:
+    # Every 2 hours at :17 — offset from the navigation gate (:15) so the
+    # two specs don't compete for the same dev-server port at the exact
+    # same instant.
+    - cron: '17 */2 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+
+concurrency:
+  group: perf-react-commits-idle
+  cancel-in-progress: true
+
+env:
+  PERF_SIGNAL: react-commits-idle
+
+jobs:
+  react-commits-idle:
+    name: React commits per second (idle)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Resolve last successful SHA
+        id: last-success
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Most recent successful run of THIS workflow on main, so the
+          # auto-issue script can build a merge window for the diff. Same
+          # best-effort pattern as perf-react-commits.yml.
+          LAST=$(gh run list \
+            --workflow="perf-react-commits-idle.yml" \
+            --branch=main \
+            --status=success \
+            --limit=1 \
+            --json headSha \
+            --jq '.[0].headSha // ""' || echo '')
+          echo "sha=${LAST}" >> "$GITHUB_OUTPUT"
+
+      - name: Run idle perf spec (dev server, hook enabled)
+        # PERF_DEV=1 flips e2e/perf/perf.config.ts to `npm run dev`. React 19
+        # only calls onCommitFiberRoot in dev mode, so this is the only build
+        # where the perf hook works.
+        env:
+          PERF_DEV: '1'
+          LAST_SUCCESSFUL_SHA: ${{ steps.last-success.outputs.sha }}
+        run: npx playwright test --config e2e/perf/perf.config.ts e2e/perf/react-commits-idle.spec.ts
+
+      - name: Upload perf result artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-result-react-commits-idle
+          path: web/perf-result.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  notify:
+    name: Notify on regression
+    needs: react-commits-idle
+    if: failure()
+    # Job-level permissions so the reusable workflow has issues:write even
+    # if workflow defaults are later tightened. See #6170.
+    permissions:
+      contents: read
+      issues: write
+      actions: read
+    uses: ./.github/workflows/_perf-regression-issue.yml
+    with:
+      result-path: web/perf-result.json
+      signal: react-commits-idle

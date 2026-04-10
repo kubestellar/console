@@ -20,10 +20,32 @@ export const PERF_BUDGET_NAVIGATION_COMMITS = 20
 // without turning the test into a long-poll.
 export const NAVIGATION_SETTLE_MS = 2_000
 
+// Window size (ms) over which we measure the IDLE commit-per-second rate. The
+// test waits this long after the dashboard has fully settled, with no user
+// input, then divides commit count by IDLE_SAMPLE_WINDOW_MS / 1000.
+//
+// 15s is a deliberate choice: long enough to average out one-off cluster
+// poll responses (#6201), short enough to keep the perf workflow under 5min
+// total runtime.
+export const IDLE_SAMPLE_WINDOW_MS = 15_000
+
+// Max React commits per second allowed during idle on the dashboard. Local
+// dev measurement against a kc-agent + real clusters is ~3.6 commits/sec
+// (with React StrictMode dev double-render baked in, so the production cost
+// is ~1.8/sec). Budget is set to 8 commits/sec — generous headroom over the
+// observed baseline so legitimate growth (more cards, websocket events) is
+// allowed, while a regression that introduces a 1-second-tick cascade (the
+// pattern that previously bit us in #6149 and the post-#6184 followup
+// hunt 2026-04-10) gets caught immediately. The cascade I removed in
+// PR #6184 (`useNowTick` in ServiceStatus) ALONE was firing once per
+// second per visible service card, so this budget would have flagged it.
+export const PERF_BUDGET_IDLE_COMMITS_PER_SEC = 8
+
 // Signal slugs — must be unique across every perf workflow. These are used
 // verbatim in the perf-result.json file and as the `[perf-regression] <slug>`
 // de-dupe key in the auto-issue script.
 export const PERF_SIGNAL_REACT_COMMITS_NAV = 'react-commits-navigation'
+export const PERF_SIGNAL_REACT_COMMITS_IDLE = 'react-commits-idle'
 
 // Where specs drop their result JSON. The reusable workflow reads this exact
 // path via the PERF_RESULT_JSON env var.
