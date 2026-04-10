@@ -1,0 +1,56 @@
+name: Perf — React Commit Budget (Nightly)
+
+# Nightly guard against React commit cascades like #6149. Runs against the
+# dev server (PERF_DEV=1) because React only fires the DevTools
+# `onCommitFiberRoot` hook in non-production builds. Scheduled only — does
+# not run on PRs to keep PR builds fast.
+
+on:
+  schedule:
+    # 04:15 UTC — after existing nightlies (TTFI, dashboard-health, etc.)
+    - cron: '15 4 * * *'
+  workflow_dispatch:
+
+permissions: read-all
+
+env:
+  CI: true
+
+jobs:
+  react-commits:
+    name: React Commit Budget
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run React commit budget test
+        run: npm run test:e2e:perf:commits
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: react-commits-report
+          path: |
+            web/perf-report/
+            web/e2e/test-results/
+          retention-days: 14
