@@ -24,6 +24,8 @@ import React from 'react'
 
 vi.mock('../api', () => ({
   checkOAuthConfigured: vi.fn().mockResolvedValue({ backendUp: false, oauthConfigured: false }),
+  // #6055 — retry helper mirrors checkOAuthConfigured so tests don't hang on real setTimeout delays
+  checkOAuthConfiguredWithRetry: vi.fn().mockResolvedValue({ backendUp: false, oauthConfigured: false }),
 }))
 
 vi.mock('../dashboards/dashboardSync', () => ({
@@ -350,7 +352,7 @@ describe('showExpiryWarningBanner expanded', () => {
 // ============================================================================
 
 describe('AuthProvider expanded', () => {
-  it('refreshUser with real token: /api/me json() rejects', async () => {
+  it('refreshUser with real token drops session when /api/me json() rejects (#6067)', async () => {
     localStorage.setItem(STORAGE_KEY_TOKEN, 'real-jwt')
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -361,11 +363,11 @@ describe('AuthProvider expanded', () => {
     const { result } = await renderWithAuthProvider()
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    // json() threw, so it falls to the catch block -> demo mode
-    expect(result.current.token).toBe('demo-token')
+    // json() rejected → invalid JSON → no cache → session dropped (not demo mode)
+    expect(result.current.token).toBeNull()
   })
 
-  it('refreshUser with real token: /api/me returns 500', async () => {
+  it('refreshUser with real token drops session when /api/me returns 500 (#6067)', async () => {
     localStorage.setItem(STORAGE_KEY_TOKEN, 'real-jwt')
     const mockFetch = vi.fn().mockResolvedValue({
       ok: false,
@@ -376,28 +378,39 @@ describe('AuthProvider expanded', () => {
     const { result } = await renderWithAuthProvider()
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    // Non-ok -> throws -> demo mode
-    expect(result.current.token).toBe('demo-token')
+    // Non-ok → throws → no cache → session dropped
+    expect(result.current.token).toBeNull()
   })
 
-  it('storage event with null newValue is ignored', async () => {
+  it('storage event with null newValue clears local auth state (#6065)', async () => {
     localStorage.setItem(STORAGE_KEY_TOKEN, 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
+
+    // Stub window.location to avoid jsdom navigation errors on /login redirect
+    const originalLocation = window.location
+    delete (window as unknown as { location?: Location }).location
+    ;(window as unknown as { location: Partial<Location> }).location = {
+      ...originalLocation,
+      href: '/',
+      pathname: '/dashboard',
+    } as unknown as Location
 
     const { result } = await renderWithAuthProvider()
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    const tokenBefore = result.current.token
-
     act(() => {
+      localStorage.removeItem(STORAGE_KEY_TOKEN)
       window.dispatchEvent(new StorageEvent('storage', {
         key: STORAGE_KEY_TOKEN,
         newValue: null,
       }))
     })
 
-    // Should not change
-    expect(result.current.token).toBe(tokenBefore)
+    // Cross-tab logout mirrored locally
+    expect(result.current.token).toBeNull()
+    expect(result.current.user).toBeNull()
+
+    ;(window as unknown as { location: Location }).location = originalLocation
   })
 
   it('storage event with empty string newValue is ignored', async () => {

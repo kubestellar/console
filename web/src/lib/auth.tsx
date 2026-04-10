@@ -1,5 +1,5 @@
 import { createContext, use, useState, useEffect, useCallback, useRef, ReactNode } from 'react'
-import { checkOAuthConfigured } from './api'
+import { checkOAuthConfigured, checkOAuthConfiguredWithRetry } from './api'
 import { dashboardSync } from './dashboards/dashboardSync'
 import { clearPermissionsCache } from '../hooks/usePermissions'
 import { disconnectPresence } from '../hooks/useActiveUsers'
@@ -32,11 +32,21 @@ interface AuthContextType {
 }
 
 const AUTH_USER_CACHE_KEY = STORAGE_KEY_USER_CACHE
+/** Timestamp (ms) of the last successful /api/me round-trip — tracked so we
+ *  can bound how long cached user data is trusted when the backend is down (#6067). */
+const AUTH_USER_CACHE_VALIDATED_KEY = 'kc-user-cache-validated'
 
 // How often (in ms) to check if the JWT is nearing expiry
 const EXPIRY_CHECK_INTERVAL_MS = 60_000
 // Show a warning banner when the token expires within this many ms
 const EXPIRY_WARNING_THRESHOLD_MS = 30 * 60_000
+
+/** #6067 — maximum age of cached user data (5 min) before we force re-validation. */
+const MAX_CACHED_USER_AGE_MS = 5 * 60 * 1_000
+/** #6067 — interval for background re-validation when the backend is unreachable. */
+const BACKEND_REVALIDATE_INTERVAL_MS = 30_000
+/** Milliseconds per second — JWT `exp` is in seconds. */
+const MS_PER_SECOND = 1_000
 
 /**
  * Decode the expiry timestamp from a JWT without verifying signature.
@@ -51,12 +61,24 @@ function getJwtExpiryMs(token: string): number | null {
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
     const payload = JSON.parse(atob(base64))
     if (typeof payload.exp !== 'number') return null
-    const MS_PER_SECOND = 1000
     return payload.exp * MS_PER_SECOND
   } catch {
     return null
   }
 }
+
+/**
+ * #6058 — Return true only when a token is a *parseable* JWT whose `exp`
+ * has passed. For opaque / non-JWT tokens we return false (not expired)
+ * so we still attempt the /api/me call and let the backend decide. This
+ * avoids false-positive logouts for tokens that simply aren't JWTs.
+ */
+export function isJWTExpired(token: string): boolean {
+  const expiryMs = getJwtExpiryMs(token)
+  if (expiryMs === null) return false
+  return Date.now() >= expiryMs
+}
+
 
 /**
  * Inject a DOM-based warning banner when the session is about to expire.
@@ -237,19 +259,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = useCallback(async (overrideToken?: string) => {
     const effectiveToken = overrideToken || localStorage.getItem(STORAGE_KEY_TOKEN)
     if (!effectiveToken) {
-      // Check if backend requires OAuth login — if so, show the login page instead
-      // of auto-enabling demo mode. For Helm installs (no OAuth), auto-demo gives
-      // the same instant-dashboard experience as console.kubestellar.io.
+      // #6055 — Retry the OAuth-configured probe during backend startup so we
+      // don't race the backend into demo mode when the server is still coming
+      // online. checkOAuthConfiguredWithRetry attempts up to
+      // OAUTH_STARTUP_RETRY_ATTEMPTS times before giving up.
+      let backendUp = false
+      let oauthConfigured = false
       try {
-        const { backendUp, oauthConfigured } = await checkOAuthConfigured()
-        if (backendUp && oauthConfigured) {
-          // OAuth configured — user should authenticate via login page
-          return
-        }
+        ({ backendUp, oauthConfigured } = await checkOAuthConfiguredWithRetry())
       } catch {
-        // Backend unreachable — fall through to demo mode
+        // Complete failure — fall through to demo mode
+      }
+
+      if (backendUp && oauthConfigured) {
+        // #6066 — If the user has a valid HttpOnly cookie from a previous
+        // session, /auth/refresh will mint a new JWT. Try that before showing
+        // the login page so a page reload can restore the session silently.
+        try {
+          const refreshResponse = await fetch('/auth/refresh', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+          })
+          if (refreshResponse.ok) {
+            const data = await refreshResponse.json().catch(() => null) as { token?: string } | null
+            if (data?.token && !isJWTExpired(data.token)) {
+              localStorage.setItem(STORAGE_KEY_TOKEN, data.token)
+              setTokenState(data.token)
+              // Re-enter refreshUser with the newly restored token so we can
+              // populate the user cache via /api/me.
+              await refreshUser(data.token)
+              return
+            }
+          }
+        } catch {
+          // Refresh failed — fall through to show login page
+        }
+        // OAuth configured + no valid cookie — show login page
+        return
       }
       setDemoMode()
+      return
+    }
+
+    // #6058 — If the token is a real JWT but already expired, don't attempt
+    // /api/me with it (which will just 401). Clear it and recurse so the
+    // no-token branch above can try restoring from the HttpOnly cookie.
+    if (effectiveToken !== DEMO_TOKEN_VALUE && isJWTExpired(effectiveToken)) {
+      localStorage.removeItem(STORAGE_KEY_TOKEN)
+      localStorage.removeItem(AUTH_USER_CACHE_KEY)
+      localStorage.removeItem(AUTH_USER_CACHE_VALIDATED_KEY)
+      setTokenState(null)
+      setUser(null)
+      await refreshUser()
       return
     }
 
@@ -294,26 +357,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!userData) throw new Error('Invalid JSON from /api/me')
       setUser(userData)
       cacheUser(userData)
+      // #6067 — record when the cache was last validated so we can bound
+      // how long it's trusted if the backend later becomes unreachable.
+      try {
+        localStorage.setItem(AUTH_USER_CACHE_VALIDATED_KEY, String(Date.now()))
+      } catch {
+        // localStorage quota / private mode — cache will just be treated as fresh
+      }
       // Set anonymous analytics ID (SHA-256 hash — no PII)
       setAnalyticsUserId(userData.id)
       setAnalyticsUserProperties({ auth_mode: 'github-oauth' })
       // Detect developer running cloned repo with startup-oauth.sh
       emitDeveloperSession()
     } catch (error) {
-      // If the backend is temporarily unreachable but we have a real token,
-      // keep the token and use cached user data instead of destroying the
-      // session by falling back to demo mode.
+      // #6067 — If the backend is temporarily unreachable but we have a real
+      // token, keep the cached user ONLY if it's still fresh. Stale caches
+      // drop the user to login instead of silently trusting old data forever.
       const cachedUser = getCachedUser()
-      if (cachedUser) {
-        console.warn('Backend unreachable, using cached user data')
+      const validatedAtRaw = (() => {
+        try { return localStorage.getItem(AUTH_USER_CACHE_VALIDATED_KEY) } catch { return null }
+      })()
+      const validatedAt = validatedAtRaw ? Number(validatedAtRaw) : 0
+      const cacheAge = validatedAt ? Date.now() - validatedAt : Number.POSITIVE_INFINITY
+      if (cachedUser && cacheAge <= MAX_CACHED_USER_AGE_MS) {
+        console.warn('Backend unreachable, using cached user data (age ms):', cacheAge)
         setUser(cachedUser)
         setAnalyticsUserId(cachedUser.id)
         setAnalyticsUserProperties({ auth_mode: 'github-oauth' })
         return
       }
-      // No cached user — fall back to demo mode as last resort
-      console.error('Failed to fetch user and no cache, falling back to demo mode:', error)
-      setDemoMode()
+      // Cache is stale or missing — drop to login (clear token so the
+      // ProtectedRoute redirects and the user re-authenticates).
+      console.error('Failed to fetch user (cache stale or missing), dropping to login:', error)
+      localStorage.removeItem(STORAGE_KEY_TOKEN)
+      localStorage.removeItem(AUTH_USER_CACHE_KEY)
+      localStorage.removeItem(AUTH_USER_CACHE_VALIDATED_KEY)
+      setTokenState(null)
+      setUser(null)
     }
   }, [setDemoMode])
 
@@ -375,8 +455,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (expiryMs === null) return
 
       const timeUntilExpiry = expiryMs - Date.now()
-      if (timeUntilExpiry <= 0 || timeUntilExpiry > EXPIRY_WARNING_THRESHOLD_MS) {
-        // Token not near expiry (or already expired) — remove stale banner if present
+      // #6069 — Proactively log the user out the moment the token expires
+      // instead of waiting for the next 401 to surface. This prevents a
+      // window where the UI still looks authenticated but every API call
+      // returns 401.
+      if (timeUntilExpiry <= 0) {
+        document.getElementById('session-expiry-warning')?.remove()
+        logout()
+        return
+      }
+      if (timeUntilExpiry > EXPIRY_WARNING_THRESHOLD_MS) {
+        // Token not near expiry — remove stale banner if present
         document.getElementById('session-expiry-warning')?.remove()
         return
       }
@@ -416,7 +505,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // so the AuthProvider state stays in sync without a full page reload.
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY_TOKEN && e.newValue && e.newValue !== DEMO_TOKEN_VALUE) {
+      if (e.key !== STORAGE_KEY_TOKEN) return
+      // #6065 — cross-tab logout: when another tab removes the token,
+      // `e.newValue` is null. Immediately clear local auth state and
+      // redirect to /login so both tabs end up logged out. Without this
+      // branch, the other tab silently keeps stale auth until the user
+      // triggers an API call that 401s.
+      if (e.newValue === null) {
+        setTokenState(null)
+        setUser(null)
+        cacheUser(null)
+        try {
+          localStorage.removeItem(AUTH_USER_CACHE_VALIDATED_KEY)
+        } catch { /* ignore */ }
+        document.getElementById('session-expiry-warning')?.remove()
+        // Only redirect if we're not already on the login page to avoid a loop
+        if (!window.location.pathname.startsWith('/login')) {
+          window.location.href = '/login'
+        }
+        return
+      }
+      if (e.newValue && e.newValue !== DEMO_TOKEN_VALUE) {
         setTokenState(e.newValue)
         // Remove the expiry warning banner since the token was just refreshed
         document.getElementById('session-expiry-warning')?.remove()
@@ -425,6 +534,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.addEventListener('storage', handleStorageChange)
     return () => window.removeEventListener('storage', handleStorageChange)
   }, [])
+
+  // #6067 — When the backend is unreachable, re-validate the cached user
+  // periodically. If validation continues to fail past MAX_CACHED_USER_AGE_MS,
+  // refreshUser() itself will drop the session. This background retry gives
+  // us an opportunity to recover without requiring the user to interact.
+  useEffect(() => {
+    if (!token || token === DEMO_TOKEN_VALUE) return
+    const intervalId = setInterval(() => {
+      // Only re-validate if the cache is getting close to stale
+      const validatedAtRaw = (() => {
+        try { return localStorage.getItem(AUTH_USER_CACHE_VALIDATED_KEY) } catch { return null }
+      })()
+      const validatedAt = validatedAtRaw ? Number(validatedAtRaw) : 0
+      const cacheAge = validatedAt ? Date.now() - validatedAt : Number.POSITIVE_INFINITY
+      // Only re-validate if cache is older than half the max age — otherwise
+      // we're spending cycles validating fresh data.
+      const REVALIDATE_AGE_THRESHOLD_MS = MAX_CACHED_USER_AGE_MS / 2
+      if (cacheAge >= REVALIDATE_AGE_THRESHOLD_MS) {
+        refreshUser().catch(() => { /* refreshUser handles its own errors */ })
+      }
+    }, BACKEND_REVALIDATE_INTERVAL_MS)
+    return () => clearInterval(intervalId)
+  }, [token, refreshUser])
 
   // Always attempt to resolve the user on mount — even with no token.
   // When there's no token, refreshUser() auto-enables demo mode so the user
@@ -444,12 +576,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser().finally(() => setIsLoading(false))
   }, [refreshUser])
 
+  // #6058 — A real JWT that has already passed its `exp` must be treated as
+  // unauthenticated immediately, even before the background checkExpiry
+  // interval fires. Demo tokens (non-JWT sentinel values) are always valid
+  // as long as they're present.
+  const isAuthenticated = (() => {
+    if (!token) return false
+    if (token === DEMO_TOKEN_VALUE) return true
+    return !isJWTExpired(token)
+  })()
+
   return (
     <AuthContext.Provider
       value={{
         user,
         token,
-        isAuthenticated: !!token,
+        isAuthenticated,
         isLoading,
         login,
         logout,

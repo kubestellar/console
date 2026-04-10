@@ -21,6 +21,8 @@ import React from 'react'
 
 vi.mock('../api', () => ({
   checkOAuthConfigured: vi.fn().mockResolvedValue({ backendUp: false, oauthConfigured: false }),
+  // #6055 — retry helper mirrors checkOAuthConfigured so tests don't hang on real setTimeout delays
+  checkOAuthConfiguredWithRetry: vi.fn().mockResolvedValue({ backendUp: false, oauthConfigured: false }),
 }))
 
 vi.mock('../dashboards/dashboardSync', () => ({
@@ -599,5 +601,183 @@ describe('token refresh non-ok response', () => {
 
     // Token should remain the original near-expiry token
     expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBe(nearExpiryToken)
+  })
+})
+
+// ============================================================================
+// #6058 — isJWTExpired helper + isAuthenticated getter
+// ============================================================================
+
+describe('isJWTExpired helper (#6058)', () => {
+  it('returns true for a JWT whose exp has passed', async () => {
+    const { isJWTExpired } = await import('../auth')
+    const MS_PER_SECOND = 1000
+    const PAST_SECONDS = 100
+    const nowSec = Math.floor(Date.now() / MS_PER_SECOND)
+    const expiredToken = makeJwt({ exp: nowSec - PAST_SECONDS })
+    expect(isJWTExpired(expiredToken)).toBe(true)
+  })
+
+  it('returns false for a JWT whose exp is in the future', async () => {
+    const { isJWTExpired } = await import('../auth')
+    const MS_PER_SECOND = 1000
+    const FUTURE_SECONDS = 3600
+    const nowSec = Math.floor(Date.now() / MS_PER_SECOND)
+    const freshToken = makeJwt({ exp: nowSec + FUTURE_SECONDS })
+    expect(isJWTExpired(freshToken)).toBe(false)
+  })
+
+  it('returns false for a non-JWT opaque token (cannot determine expiry)', async () => {
+    const { isJWTExpired } = await import('../auth')
+    expect(isJWTExpired('opaque-server-token')).toBe(false)
+  })
+
+  it('isAuthenticated returns false for an expired JWT (#6058)', async () => {
+    const MS_PER_SECOND = 1000
+    const PAST_SECONDS = 100
+    const nowSec = Math.floor(Date.now() / MS_PER_SECOND)
+    const expiredToken = makeJwt({ exp: nowSec - PAST_SECONDS })
+    localStorage.setItem(STORAGE_KEY_TOKEN, expiredToken)
+    const cachedUser = { id: 'u1', github_id: '1', github_login: 'test', onboarded: true }
+    localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(cachedUser))
+
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue(cachedUser) })
+    vi.stubGlobal('fetch', mockFetch)
+
+    const { result } = await renderWithAuthProvider()
+    // Regardless of loading state, an expired token must never count as authenticated.
+    expect(result.current.isAuthenticated).toBe(false)
+  })
+})
+
+// ============================================================================
+// #6067 — cached user age bound
+// ============================================================================
+
+describe('cached user staleness bound (#6067)', () => {
+  const AUTH_USER_CACHE_VALIDATED_KEY = 'kc-user-cache-validated'
+  const FIVE_MIN_MS = 5 * 60 * 1_000
+
+  it('trusts cached user when validated within MAX_CACHED_USER_AGE_MS', async () => {
+    const cachedUser = { id: 'fresh', github_id: '1', github_login: 'fresh', onboarded: true }
+    localStorage.setItem(STORAGE_KEY_TOKEN, 'real-token')
+    localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(cachedUser))
+    // Validated 1 minute ago — well within the 5-minute bound
+    const ONE_MIN_MS = 60 * 1_000
+    localStorage.setItem(AUTH_USER_CACHE_VALIDATED_KEY, String(Date.now() - ONE_MIN_MS))
+
+    const mockFetch = vi.fn().mockRejectedValue(new Error('Network error'))
+    vi.stubGlobal('fetch', mockFetch)
+
+    const { result } = await renderWithAuthProvider()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.user).toEqual(cachedUser)
+    expect(result.current.token).toBe('real-token')
+  })
+
+  it('drops cached user when older than MAX_CACHED_USER_AGE_MS', async () => {
+    const cachedUser = { id: 'stale', github_id: '1', github_login: 'stale', onboarded: true }
+    localStorage.setItem(STORAGE_KEY_TOKEN, 'real-token')
+    localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(cachedUser))
+    // Validated 10 minutes ago — past the 5-minute bound
+    const TEN_MIN_MS = 10 * 60 * 1_000
+    localStorage.setItem(AUTH_USER_CACHE_VALIDATED_KEY, String(Date.now() - TEN_MIN_MS))
+
+    const mockFetch = vi.fn().mockRejectedValue(new Error('Network error'))
+    vi.stubGlobal('fetch', mockFetch)
+
+    const { result } = await renderWithAuthProvider()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // Stale cache → session dropped
+    expect(result.current.token).toBeNull()
+    expect(result.current.user).toBeNull()
+  })
+
+  it('writes validated timestamp after successful /api/me fetch', async () => {
+    const fetchedUser = { id: 'u1', github_id: '1', github_login: 'u1', onboarded: true }
+    localStorage.setItem(STORAGE_KEY_TOKEN, 'real-token')
+
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue(fetchedUser) })
+    vi.stubGlobal('fetch', mockFetch)
+
+    const before = Date.now()
+    await renderWithAuthProvider()
+    await waitFor(() => {
+      expect(localStorage.getItem(AUTH_USER_CACHE_VALIDATED_KEY)).not.toBeNull()
+    })
+    const validated = Number(localStorage.getItem(AUTH_USER_CACHE_VALIDATED_KEY))
+    expect(validated).toBeGreaterThanOrEqual(before)
+    expect(FIVE_MIN_MS).toBeGreaterThan(0) // sanity-reference the constant
+  })
+})
+
+// ============================================================================
+// #6065 — cross-tab logout
+// ============================================================================
+
+describe('cross-tab logout (#6065)', () => {
+  it('clears local state when storage event fires with newValue=null', async () => {
+    localStorage.setItem(STORAGE_KEY_TOKEN, 'demo-token')
+    localStorage.setItem('kc-demo-mode', 'true')
+
+    // Prevent jsdom navigation errors when the handler sets location.href
+    const originalLocation = window.location
+    delete (window as unknown as { location?: Location }).location
+    ;(window as unknown as { location: Partial<Location> }).location = {
+      ...originalLocation,
+      href: '/',
+      pathname: '/dashboard',
+    } as unknown as Location
+
+    const { result } = await renderWithAuthProvider()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    act(() => {
+      localStorage.removeItem(STORAGE_KEY_TOKEN)
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: STORAGE_KEY_TOKEN,
+        newValue: null,
+      }))
+    })
+
+    expect(result.current.token).toBeNull()
+    expect(result.current.user).toBeNull()
+
+    ;(window as unknown as { location: Location }).location = originalLocation
+  })
+})
+
+// ============================================================================
+// #6069 — proactive logout on expiry
+// ============================================================================
+
+describe('proactive logout on expiry (#6069)', () => {
+  it('calls logout() when timeUntilExpiry drops below zero', async () => {
+    const MS_PER_SECOND = 1000
+    const TWO_MINUTES_SEC = 120
+    const nowSec = Math.floor(Date.now() / MS_PER_SECOND)
+    // Token expires in 2 minutes — inside the 30-minute warning threshold
+    const aboutToExpireToken = makeJwt({ exp: nowSec + TWO_MINUTES_SEC })
+
+    localStorage.setItem(STORAGE_KEY_TOKEN, aboutToExpireToken)
+    const cachedUser = { id: 'u1', github_id: '1', github_login: 'test', onboarded: true }
+    localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(cachedUser))
+
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue(cachedUser) })
+    vi.stubGlobal('fetch', mockFetch)
+
+    const { result } = await renderWithAuthProvider()
+    await vi.advanceTimersByTimeAsync(100)
+
+    // Fast-forward past the token exp (2 min + buffer) and past the next
+    // checkExpiry interval (60s) so the proactive logout fires.
+    const THREE_MINUTES_MS = 3 * 60 * 1_000
+    await vi.advanceTimersByTimeAsync(THREE_MINUTES_MS)
+
+    // After expiry, the interval should have invoked logout() which clears
+    // the in-memory token.
+    expect(result.current.token).toBeNull()
   })
 })

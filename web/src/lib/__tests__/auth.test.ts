@@ -17,6 +17,8 @@ import { renderHook, waitFor, act } from '@testing-library/react'
 
 vi.mock('../api', () => ({
   checkOAuthConfigured: vi.fn().mockResolvedValue({ backendUp: false, oauthConfigured: false }),
+  // #6055 — retry helper mirrors checkOAuthConfigured so tests don't hang on real setTimeout delays
+  checkOAuthConfiguredWithRetry: vi.fn().mockResolvedValue({ backendUp: false, oauthConfigured: false }),
 }))
 
 vi.mock('../dashboards/dashboardSync', () => ({
@@ -400,6 +402,8 @@ const demoMod = await import('../demoMode')
 
 // Cast to vi.Mock for type-safe mock API
 const mockCheckOAuth = apiMod.checkOAuthConfigured as unknown as ReturnType<typeof vi.fn>
+// #6055 — retry helper is the one auth.tsx actually calls on the no-token path
+const mockCheckOAuthWithRetry = apiMod.checkOAuthConfiguredWithRetry as unknown as ReturnType<typeof vi.fn>
 const mockClearCache = dashMod.dashboardSync.clearCache as unknown as ReturnType<typeof vi.fn>
 const mockEmitLogin = analyticsMod.emitLogin as unknown as ReturnType<typeof vi.fn>
 const mockEmitLogout = analyticsMod.emitLogout as unknown as ReturnType<typeof vi.fn>
@@ -427,6 +431,8 @@ describe('AuthProvider', () => {
     document.getElementById('session-banner-animation')?.remove()
     // Default: backend down, no OAuth
     mockCheckOAuth.mockResolvedValue({ backendUp: false, oauthConfigured: false })
+    // #6055 — default the retry helper to the same "backend down" result
+    mockCheckOAuthWithRetry.mockResolvedValue({ backendUp: false, oauthConfigured: false })
     // Mock global fetch for /api/me calls
     vi.stubGlobal('fetch', vi.fn())
   })
@@ -479,6 +485,11 @@ describe('AuthProvider', () => {
 
   it('does not auto-enable demo mode when backend is up with OAuth', async () => {
     mockCheckOAuth.mockResolvedValue({ backendUp: true, oauthConfigured: true })
+    mockCheckOAuthWithRetry.mockResolvedValue({ backendUp: true, oauthConfigured: true })
+    // #6066 — when backend is up with OAuth, refreshUser attempts the cookie-restore
+    // path via POST /auth/refresh. Mock it to fail so we fall through to "show login".
+    const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 401 })
+    vi.stubGlobal('fetch', mockFetch)
 
     const { result } = await renderWithAuthProvider()
 
@@ -495,6 +506,8 @@ describe('AuthProvider', () => {
 
   it('falls back to demo mode when checkOAuthConfigured throws', async () => {
     mockCheckOAuth.mockRejectedValue(new Error('network error'))
+    // #6055 — retry helper is what auth.tsx actually calls; mimic the underlying throw
+    mockCheckOAuthWithRetry.mockResolvedValue({ backendUp: false, oauthConfigured: false })
 
     const { result } = await renderWithAuthProvider()
 
@@ -589,10 +602,12 @@ describe('AuthProvider', () => {
 
   // ---------- refreshUser: real token, /api/me fails, cached user exists ----------
 
-  it('falls back to cached user when /api/me fails', async () => {
+  it('falls back to fresh cached user when /api/me fails (#6067)', async () => {
     const cachedUser = { id: 'cached-1', github_id: '1', github_login: 'cached', onboarded: true }
     localStorage.setItem(STORAGE_KEY_TOKEN, 'real-jwt-token')
     localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(cachedUser))
+    // #6067 — cache was validated just now, so it's fresh and should be trusted
+    localStorage.setItem('kc-user-cache-validated', String(Date.now()))
 
     const mockFetch = vi.fn().mockRejectedValue(new Error('Network error'))
     vi.stubGlobal('fetch', mockFetch)
@@ -607,9 +622,33 @@ describe('AuthProvider', () => {
     expect(result.current.token).toBe('real-jwt-token')
   })
 
-  // ---------- refreshUser: real token, /api/me fails, no cache -> demo ----------
+  // ---------- #6067 — stale cache drops to login ----------
 
-  it('falls back to demo mode when /api/me fails and no cache', async () => {
+  it('drops session to login when /api/me fails and cache is stale (#6067)', async () => {
+    const cachedUser = { id: 'cached-1', github_id: '1', github_login: 'cached', onboarded: true }
+    localStorage.setItem(STORAGE_KEY_TOKEN, 'real-jwt-token')
+    localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(cachedUser))
+    // Cache validated 1 hour ago — well past MAX_CACHED_USER_AGE_MS (5 min)
+    const ONE_HOUR_MS = 60 * 60 * 1_000
+    localStorage.setItem('kc-user-cache-validated', String(Date.now() - ONE_HOUR_MS))
+
+    const mockFetch = vi.fn().mockRejectedValue(new Error('Network error'))
+    vi.stubGlobal('fetch', mockFetch)
+
+    const { result } = await renderWithAuthProvider()
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
+
+    // Stale cache → session dropped (token cleared, user null)
+    expect(result.current.token).toBeNull()
+    expect(result.current.user).toBeNull()
+  })
+
+  // ---------- refreshUser: real token, /api/me fails, no cache -> drops session ----------
+
+  it('drops session when /api/me fails and no cache (#6067)', async () => {
     localStorage.setItem(STORAGE_KEY_TOKEN, 'real-jwt-token')
 
     const mockFetch = vi.fn().mockRejectedValue(new Error('Network error'))
@@ -621,13 +660,14 @@ describe('AuthProvider', () => {
       expect(result.current.isLoading).toBe(false)
     })
 
-    expect(result.current.token).toBe('demo-token')
-    expect(result.current.user?.id).toBe('demo-user')
+    // No cache → dropped to login (not demo mode anymore per #6067)
+    expect(result.current.token).toBeNull()
+    expect(result.current.user).toBeNull()
   })
 
   // ---------- refreshUser: real token, /api/me returns non-ok ----------
 
-  it('treats non-ok /api/me response as failure', async () => {
+  it('drops session when /api/me returns non-ok (#6067)', async () => {
     localStorage.setItem(STORAGE_KEY_TOKEN, 'real-jwt-token')
 
     const mockFetch = vi.fn().mockResolvedValue({
@@ -642,13 +682,13 @@ describe('AuthProvider', () => {
       expect(result.current.isLoading).toBe(false)
     })
 
-    // No cache -> demo mode fallback
-    expect(result.current.token).toBe('demo-token')
+    // No cache → session dropped
+    expect(result.current.token).toBeNull()
   })
 
   // ---------- refreshUser: real token, /api/me returns invalid JSON ----------
 
-  it('treats invalid JSON from /api/me as failure', async () => {
+  it('drops session when /api/me returns invalid JSON (#6067)', async () => {
     localStorage.setItem(STORAGE_KEY_TOKEN, 'real-jwt-token')
 
     const mockFetch = vi.fn().mockResolvedValue({
@@ -663,8 +703,8 @@ describe('AuthProvider', () => {
       expect(result.current.isLoading).toBe(false)
     })
 
-    // null userData -> demo mode fallback
-    expect(result.current.token).toBe('demo-token')
+    // null userData → session dropped
+    expect(result.current.token).toBeNull()
   })
 
   // ---------- logout ----------
@@ -898,10 +938,12 @@ describe('AuthProvider', () => {
 
   // ---------- refreshUser: /api/me returns non-ok status with cached user → use cache ----------
 
-  it('uses cached user when /api/me returns 403 status', async () => {
+  it('uses fresh cached user when /api/me returns 403 status (#6067)', async () => {
     const cachedUser = { id: 'cached-403', github_id: '403', github_login: 'cached403', onboarded: true }
     localStorage.setItem(STORAGE_KEY_TOKEN, 'real-jwt-token')
     localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(cachedUser))
+    // Fresh cache — trusted by #6067 stale-cache bound
+    localStorage.setItem('kc-user-cache-validated', String(Date.now()))
 
     const mockFetch = vi.fn().mockResolvedValue({
       ok: false,
@@ -922,7 +964,7 @@ describe('AuthProvider', () => {
 
   // ---------- refreshUser: /api/me .json() throws → treats as invalid JSON ----------
 
-  it('falls back when /api/me returns ok but .json() throws', async () => {
+  it('drops session when /api/me returns ok but .json() throws (#6067)', async () => {
     localStorage.setItem(STORAGE_KEY_TOKEN, 'real-jwt-token')
 
     const mockFetch = vi.fn().mockResolvedValue({
@@ -937,8 +979,8 @@ describe('AuthProvider', () => {
       expect(result.current.isLoading).toBe(false)
     })
 
-    // .json().catch(() => null) returns null → "Invalid JSON from /api/me" → demo fallback
-    expect(result.current.token).toBe('demo-token')
+    // .json().catch(() => null) returns null → "Invalid JSON from /api/me" → session dropped
+    expect(result.current.token).toBeNull()
   })
 
   // ---------- refreshUser with overrideToken ----------
@@ -1035,26 +1077,42 @@ describe('AuthProvider', () => {
     expect(mockEmitConversionStep).toHaveBeenCalledWith(2, 'login', { method: 'demo' })
   })
 
-  // ---------- storage event: null newValue is ignored ----------
+  // ---------- storage event: null newValue clears local state (#6065) ----------
+  // Behavior changed in #6065 — previously `null` was ignored; now the other
+  // tab's logout is mirrored locally so both tabs end up logged out.
 
-  it('ignores storage events with null newValue', async () => {
+  it('clears local auth state when storage event fires with null newValue (#6065)', async () => {
     localStorage.setItem(STORAGE_KEY_TOKEN, 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
+
+    // Stub window.location.href to avoid jsdom navigation noise
+    const originalLocation = window.location
+    delete (window as unknown as { location?: Location }).location
+    ;(window as unknown as { location: Partial<Location> }).location = {
+      ...originalLocation,
+      href: '/',
+      pathname: '/dashboard',
+    } as unknown as Location
 
     const { result } = await renderWithAuthProvider()
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    const tokenBefore = result.current.token
-
     act(() => {
+      // Clear the underlying storage first so the auth provider's null-newValue
+      // handler observes the same state a real cross-tab logout would present.
+      localStorage.removeItem(STORAGE_KEY_TOKEN)
       window.dispatchEvent(new StorageEvent('storage', {
         key: STORAGE_KEY_TOKEN,
         newValue: null,
       }))
     })
 
-    // Token should not change because newValue is null (falsy)
-    expect(result.current.token).toBe(tokenBefore)
+    // Local auth state must have been wiped
+    expect(result.current.token).toBeNull()
+    expect(result.current.user).toBeNull()
+
+    // Restore
+    ;(window as unknown as { location: Location }).location = originalLocation
   })
 
   // ---------- refreshUser: demo token, backend down, explicit demo → stay demo ----------

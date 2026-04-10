@@ -2,7 +2,8 @@ import { Suspense, useState, useEffect, useRef } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { CardHistoryEntry } from './hooks/useCardHistory'
 import { Layout } from './components/layout/Layout'
-import { AuthProvider, useAuth } from './lib/auth'
+import { AuthProvider, useAuth, isJWTExpired } from './lib/auth'
+import { DEMO_TOKEN_VALUE } from './lib/constants'
 import { ThemeProvider } from './hooks/useTheme'
 import { BrandingProvider, useBranding } from './hooks/useBranding'
 import { DrillDownProvider } from './hooks/useDrillDown'
@@ -204,11 +205,13 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const location = useLocation()
 
   if (isLoading) {
-    // If we have a token (likely authenticated), render children optimistically
-    // to avoid a blank flash. Auth resolves almost instantly from localStorage
-    // cache. The stale-while-revalidate pattern in AuthProvider means isLoading
-    // is only true when there's no cached user, so this is safe.
-    if (localStorage.getItem(STORAGE_KEY_TOKEN)) {
+    // #6058 — Optimistically render only when the token in localStorage is
+    // either the demo sentinel or a JWT that's still within its exp window.
+    // If the token is expired, showing protected children would leak content
+    // to an unauthenticated user during the brief refreshUser() window. In
+    // that case render nothing (a spinner placeholder) until auth resolves.
+    const storedToken = localStorage.getItem(STORAGE_KEY_TOKEN)
+    if (storedToken && (storedToken === DEMO_TOKEN_VALUE || !isJWTExpired(storedToken))) {
       return <>{children}</>
     }
     return null

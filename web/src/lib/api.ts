@@ -16,6 +16,8 @@ const BACKEND_CACHE_TTL_MS = 300_000
 /** Delay before redirecting to login after session expiry (lets user see the banner) */
 const SESSION_EXPIRY_REDIRECT_MS = 3_000
 const TOKEN_REFRESH_HEADER = 'X-Token-Refresh' // server signals when token should be refreshed
+/** Endpoint used to invalidate the HttpOnly auth cookie on the server side (#6061). */
+const AUTH_LOGOUT_ENDPOINT = '/auth/logout'
 
 // Public API paths that don't require authentication (served without JWT on the backend)
 const PUBLIC_API_PREFIXES = ['/api/missions/browse', '/api/missions/file']
@@ -64,6 +66,28 @@ function handle401(): void {
   showSessionExpiredBanner()
 
   emitSessionExpired()
+
+  // Fire-and-forget: invalidate the HttpOnly auth cookie on the server so that
+  // a stale cookie doesn't resurrect the session on the next page load (#6061).
+  // We pass credentials:'include' so the browser sends the cookie. We don't
+  // await the response and we ignore failures — the client-side clear below
+  // is the source of truth for logout.
+  const expiredToken = localStorage.getItem(STORAGE_KEY_TOKEN)
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (expiredToken && expiredToken !== DEMO_TOKEN_VALUE) {
+      headers['Authorization'] = `Bearer ${expiredToken}`
+    }
+    fetch(`${API_BASE}${AUTH_LOGOUT_ENDPOINT}`, {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+    }).catch(() => {
+      // Backend unreachable — cookie will expire naturally
+    })
+  } catch {
+    // fetch() threw synchronously (very rare) — ignore
+  }
 
   // Clear auth state
   localStorage.removeItem(STORAGE_KEY_TOKEN)
@@ -197,6 +221,35 @@ export async function checkBackendAvailability(forceCheck = false): Promise<bool
   })()
 
   return backendCheckPromise
+}
+
+/** #6055 — number of retry attempts for checkOAuthConfiguredWithRetry during backend startup. */
+const OAUTH_STARTUP_RETRY_ATTEMPTS = 5
+/** #6055 — delay (ms) between retry attempts. */
+const OAUTH_STARTUP_RETRY_DELAY_MS = 2_000
+
+/**
+ * #6055 — Retry wrapper around checkOAuthConfigured() for bootstrap races
+ * where the frontend loads before the backend is accepting connections.
+ * Retries up to OAUTH_STARTUP_RETRY_ATTEMPTS times, sleeping
+ * OAUTH_STARTUP_RETRY_DELAY_MS between attempts, exiting early as soon as
+ * the backend comes up.
+ */
+export async function checkOAuthConfiguredWithRetry(): Promise<{ backendUp: boolean; oauthConfigured: boolean }> {
+  let lastResult: { backendUp: boolean; oauthConfigured: boolean } = { backendUp: false, oauthConfigured: false }
+  for (let attempt = 0; attempt < OAUTH_STARTUP_RETRY_ATTEMPTS; attempt++) {
+    try {
+      const result = await checkOAuthConfigured()
+      lastResult = result
+      if (result.backendUp) return result
+    } catch {
+      // swallow and retry
+    }
+    if (attempt < OAUTH_STARTUP_RETRY_ATTEMPTS - 1) {
+      await new Promise((resolve) => setTimeout(resolve, OAUTH_STARTUP_RETRY_DELAY_MS))
+    }
+  }
+  return lastResult
 }
 
 /**
