@@ -1237,8 +1237,17 @@ describe('fullFetchClusters', () => {
     vi.restoreAllMocks()
   })
 
-  it('returns demo clusters when isDemoMode() is true', async () => {
+  it('returns demo clusters when isDemoMode() is true and demo token is set', async () => {
+    // #6243 dropped the unconditional demo-mode short-circuit. Demo data
+    // is now returned only when:
+    //   1) Netlify forced demo, OR
+    //   2) fetchClusterListFromAgent() returns null AND
+    //      isDemoMode() && isDemoToken() are both true.
+    // Tests must mock both flags AND make agent fetch fail so the demo
+    // fallback branch fires.
     mockIsDemoMode.mockReturnValue(true)
+    mockIsDemoToken.mockReturnValue(true)
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('agent down'))
     await fullFetchClusters()
     expect(clusterCache.clusters.length).toBeGreaterThan(0)
     expect(clusterCache.isLoading).toBe(false)
