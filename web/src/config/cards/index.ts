@@ -122,6 +122,7 @@ import { podBrothersConfig } from './pod-brothers'
 import { podCrosserConfig } from './pod-crosser'
 import { podHealthTrendConfig } from './pod-health-trend'
 import { podIssuesConfig } from './pod-issues'
+import { podLogsConfig } from './pod-logs'
 import { podPitfallConfig } from './pod-pitfall'
 import { podSweeperConfig } from './pod-sweeper'
 import { policyViolationsConfig } from './policy-violations'
@@ -286,6 +287,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   pod_crosser: podCrosserConfig,
   pod_health_trend: podHealthTrendConfig,
   pod_issues: podIssuesConfig,
+  pod_logs: podLogsConfig,
   pod_pitfall: podPitfallConfig,
   pod_sweeper: podSweeperConfig,
   policy_violations: policyViolationsConfig,
@@ -537,6 +539,7 @@ export {
   podCrosserConfig,
   podHealthTrendConfig,
   podIssuesConfig,
+  podLogsConfig,
   podPitfallConfig,
   podSweeperConfig,
   policyViolationsConfig,

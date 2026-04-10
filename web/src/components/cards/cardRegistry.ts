@@ -26,6 +26,7 @@ import { HardwareHealthCard } from './HardwareHealthCard'
 import { ConsoleOfflineDetectionCard } from './console-missions/ConsoleOfflineDetectionCard'
 import { DeploymentStatus } from './DeploymentStatus'
 // Remaining cards are lazy-loaded for code splitting
+const PodLogs = safeLazy(() => import('./PodLogs'), 'PodLogs')
 const TopPods = safeLazy(() => import('./TopPods'), 'TopPods')
 const AppStatus = safeLazy(() => import('./AppStatus'), 'AppStatus')
 // Deploy dashboard cards — eagerly start loading the barrel at module parse time
@@ -319,6 +320,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   warning_events: WarningEvents,
   recent_events: RecentEvents,
   pod_issues: PodIssues,
+  pod_logs: PodLogs,
   top_pods: TopPods,
   app_status: AppStatus,
   resource_usage: ResourceUsage,
@@ -781,6 +783,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   warning_events: () => import('./WarningEvents'),
   recent_events: () => import('./RecentEvents'),
   pod_issues: () => import('./PodIssues'),
+  pod_logs: () => import('./PodLogs'),
   top_pods: () => import('./TopPods'),
   app_status: () => import('./AppStatus'),
   resource_usage: () => import('./ResourceUsage'),
@@ -1324,6 +1327,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
 
   // Medium cards (5-6 columns) - lists and tables
   event_stream: 6,
+  pod_logs: 12,
   pod_issues: 6,
   deployment_status: 6,
   deployment_issues: 6,

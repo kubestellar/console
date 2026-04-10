@@ -370,6 +370,22 @@ export const handlers = [
     })
   }),
 
+  // Pod logs (tail container output) — see issue #6045
+  http.get('/api/mcp/pods/logs', async ({ request }) => {
+    await delay(100)
+    const url = new URL(request.url)
+    const pod = url.searchParams.get('pod') || 'unknown-pod'
+    return HttpResponse.json({
+      source: 'mock',
+      logs: [
+        `[mock] Tail logs for pod=${pod}`,
+        '2024-01-01T00:00:00Z INFO  starting container',
+        '2024-01-01T00:00:01Z INFO  listening on :8080',
+        '2024-01-01T00:00:02Z INFO  handling request GET /',
+      ].join('\n'),
+    })
+  }),
+
   // Deployments list (for cluster-specific queries)
   http.get('/api/mcp/deployments', async () => {
     await delay(100)

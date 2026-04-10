@@ -1572,13 +1572,22 @@ export function useCronJobs(cluster?: string, namespace?: string) {
 // usePodLogs
 // ---------------------------------------------------------------------------
 
-export function usePodLogs(cluster: string, namespace: string, pod: string, container?: string, tail = 100) {
+/** Default tail line count when caller does not specify one (matches backend default). */
+export const USE_POD_LOGS_DEFAULT_TAIL = 100
+
+export function usePodLogs(cluster: string, namespace: string, pod: string, container?: string, tail = USE_POD_LOGS_DEFAULT_TAIL) {
   const [logs, setLogs] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
-    if (!cluster || !namespace || !pod) return
+    if (!cluster || !namespace || !pod) {
+      // Clear any stale state when required inputs are missing so the UI
+      // doesn't continue to show logs from a previously selected pod.
+      setLogs('')
+      setError(null)
+      return
+    }
     setIsLoading(true)
     setError(null)
     try {
@@ -1598,10 +1607,11 @@ export function usePodLogs(cluster: string, namespace: string, pod: string, cont
     }
   }, [cluster, namespace, pod, container, tail])
 
-  const logsInitRef = useRef(false)
+  // Re-fetch whenever cluster/namespace/pod/container/tail change. A previous
+  // implementation guarded this with a `useRef(false)` latch that only fired
+  // once, which meant switching pods in the Logs dashboard never refreshed
+  // the displayed logs.
   useEffect(() => {
-    if (logsInitRef.current) return
-    logsInitRef.current = true
     refetch()
   }, [refetch])
 

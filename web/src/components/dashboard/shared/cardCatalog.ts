@@ -185,6 +185,7 @@ export const CARD_CATALOG = {
   'Security & Events': [
     { type: 'security_issues', title: 'Security Issues', description: 'Security findings and vulnerabilities', visualization: 'table' },
     { type: 'event_stream', title: 'Event Stream', description: 'Live Kubernetes event feed', visualization: 'events' },
+    { type: 'pod_logs', title: 'Pod Logs', description: 'Tail container logs for any pod across your clusters', visualization: 'events' },
     { type: 'event_summary', title: 'Event Summary', description: 'Aggregated event counts grouped by type and reason', visualization: 'status' },
     { type: 'warning_events', title: 'Warning Events', description: 'Warning-level events that may need attention', visualization: 'events' },
     { type: 'recent_events', title: 'Recent Events', description: 'Most recent events across all clusters', visualization: 'events' },
@@ -520,6 +521,7 @@ export function generateCardSuggestions(query: string): CardSuggestion[] {
 
   if (lowerQuery.includes('event') || lowerQuery.includes('log') || lowerQuery.includes('error')) {
     return [
+      { type: 'pod_logs', title: 'Pod Logs', description: 'Tail container logs for any pod', visualization: 'events', config: {} },
       { type: 'event_stream', title: 'Event Stream', description: 'Live event feed', visualization: 'events', config: { filter: 'all' } },
       { type: 'events_timeline', title: 'Events Timeline', description: 'Warning vs normal events over time', visualization: 'timeseries', config: {} },
       { type: 'error_count', title: 'Errors Over Time', description: 'Error count trend', visualization: 'sparkline', config: { metric: 'errors' } },
