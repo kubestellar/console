@@ -212,10 +212,13 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
               {filters.localClusterFilter.length}/{filters.availableClusters.length}
             </span>
           )}
-          {/* part 4: freshness indicator. */}
+          {/* part 4: freshness indicator.
+              followup: hide timestamp in demo mode — `useCachedDeployments`
+              can preserve `lastRefresh` from a prior live session, which
+              would show a misleading "Updated X ago" against demo data. */}
           <RefreshIndicator
             isRefreshing={isRefreshing}
-            lastUpdated={typeof deploymentsLastRefresh === 'number' ? new Date(deploymentsLastRefresh) : null}
+            lastUpdated={isDemoFallback || typeof deploymentsLastRefresh !== 'number' ? null : new Date(deploymentsLastRefresh)}
             size="sm"
             showLabel={true}
             staleThresholdMinutes={5}

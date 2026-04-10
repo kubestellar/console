@@ -213,10 +213,13 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
               {t('gitOpsDrift.nDrifts', { count: totalDrifts })}
             </span>
           )}
-          {/* part 4: freshness indicator. */}
+          {/* part 4: freshness indicator.
+              followup: hide timestamp in demo mode — `useCachedGitOpsDrifts`
+              can preserve `lastRefresh` from a prior live session, which
+              would show a misleading "Updated X ago" against demo data. */}
           <RefreshIndicator
             isRefreshing={isRefreshing}
-            lastUpdated={typeof driftLastRefresh === 'number' ? new Date(driftLastRefresh) : null}
+            lastUpdated={isDemoData || typeof driftLastRefresh !== 'number' ? null : new Date(driftLastRefresh)}
             size="sm"
             showLabel={true}
             staleThresholdMinutes={5}

@@ -879,11 +879,14 @@ export function HardwareHealthCard() {
 
       {/* part 4: replaced bespoke "Updated HH:MM:SS" footer with the
           standard RefreshIndicator so it matches the rest of the card
-          deck and shows a stale-data warning past 5 minutes. */}
+          deck and shows a stale-data warning past 5 minutes.
+          part 4 followup: hide the timestamp in demo mode — the cache
+          can preserve `lastUpdate` from a prior live session, which
+          would show a misleading "Updated 3h ago" against demo data. */}
       <div className="mt-2 flex items-center justify-center">
         <RefreshIndicator
           isRefreshing={isRefreshing}
-          lastUpdated={lastUpdate}
+          lastUpdated={isDemoFallback ? null : lastUpdate}
           size="sm"
           showLabel={true}
           staleThresholdMinutes={5}
