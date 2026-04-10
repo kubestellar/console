@@ -20,7 +20,10 @@ export function AuthCallback() {
   const [searchParams] = useSearchParams()
   const { setToken, refreshUser } = useAuth()
   const { showToast } = useToast()
-  const [status, setStatus] = useState(t('authCallback.signingIn'))
+  // Initial status reflects the work the effect is about to do, so we can
+  // skip calling setStatus synchronously inside the effect body
+  // (react-hooks/set-state-in-effect).
+  const [status, setStatus] = useState(() => t('authCallback.fetchingUserInfo'))
   const hasProcessed = useRef(false)
   const errorTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
@@ -48,7 +51,14 @@ export function AuthCallback() {
     if (returnTo) safeRemoveItem(RETURN_TO_KEY)
     const destination = returnTo || getLastRoute() || ROUTES.HOME
 
-    setStatus(t('authCallback.fetchingUserInfo'))
+    // Track whether the component is still mounted and whether the token
+    // exchange actually succeeded. If `setToken` ran, the user is logged in
+    // — a later `refreshUser` failure is non-fatal and must NOT trigger
+    // the "failed to fetch user info" warning toast or the navigate-to-login,
+    // both of which were leaking through during the StrictMode double-mount
+    // race and after legitimate token exchanges (#6214 follow-up).
+    let cancelled = false
+    let tokenExchangeSucceeded = false
 
     // Exchange the HttpOnly cookie for a token via /auth/refresh
     const controller = new AbortController()
@@ -71,14 +81,27 @@ export function AuthCallback() {
         const isOnboarded = data.onboarded ?? onboarded
         setToken(token, isOnboarded)
         emitGitHubConnected()
+        tokenExchangeSucceeded = true
 
         return refreshUser(token)
       })
       .then(() => {
+        if (cancelled) return
         navigate(destination)
       })
       .catch((_err) => {
         clearTimeout(timeoutId)
+        if (cancelled) return
+
+        // Token exchange already succeeded — user is authenticated. The only
+        // thing that failed was the follow-up refreshUser() call, which the
+        // auth context will retry on demand. Proceed to the destination
+        // silently rather than bouncing back to login with a misleading toast.
+        if (tokenExchangeSucceeded) {
+          navigate(destination)
+          return
+        }
+
         showToast(t('authCallback.failedToFetchUser'), 'warning')
         setStatus(t('authCallback.completingSignIn'))
         errorTimerRef.current = setTimeout(() => {
@@ -86,7 +109,11 @@ export function AuthCallback() {
         }, NAVIGATE_AFTER_ERROR_DELAY_MS)
       })
 
-    return () => clearTimeout(errorTimerRef.current)
+    return () => {
+      cancelled = true
+      clearTimeout(timeoutId)
+      clearTimeout(errorTimerRef.current)
+    }
   }, [searchParams, setToken, refreshUser, navigate, showToast, t])
 
   return (
