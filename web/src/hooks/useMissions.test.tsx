@@ -444,7 +444,10 @@ describe('startMission', () => {
       })
     })
 
-    expect(emitMissionError).toHaveBeenCalledWith('troubleshoot', 'test_err')
+    // #6240: emitMissionError gained an `error_detail` 3rd arg in #6235.
+    // Use expect.anything() so this assertion stays valid as the 3rd arg
+    // evolves (test exists to verify the type+code, not the message body).
+    expect(emitMissionError).toHaveBeenCalledWith('troubleshoot', 'test_err', expect.anything())
   })
 
   it('transitions mission to failed when connection cannot be established', async () => {
@@ -2209,7 +2212,7 @@ describe('preflight check', () => {
     expect(mission.status).toBe('blocked')
     expect(mission.preflightError?.code).toBe('MISSING_CREDENTIALS')
     expect(mission.messages.some(m => m.content.includes('Preflight Check Failed'))).toBe(true)
-    expect(emitMissionError).toHaveBeenCalledWith('deploy', 'MISSING_CREDENTIALS')
+    expect(emitMissionError).toHaveBeenCalledWith('deploy', 'MISSING_CREDENTIALS', expect.anything())
   })
 
   it('blocks mission when preflight throws unexpectedly (#5846)', async () => {
@@ -2413,7 +2416,7 @@ describe('mission timeout interval', () => {
       const mission = result.current.missions.find(m => m.id === missionId)
       expect(mission?.status).toBe('failed')
       expect(mission?.messages.some(m => m.content.includes('Mission Timed Out'))).toBe(true)
-      expect(emitMissionError).toHaveBeenCalledWith('troubleshoot', 'mission_timeout')
+      expect(emitMissionError).toHaveBeenCalledWith('troubleshoot', 'mission_timeout', expect.anything())
     } finally {
       vi.useRealTimers()
     }
@@ -2440,7 +2443,7 @@ describe('mission timeout interval', () => {
       const mission = result.current.missions.find(m => m.id === missionId)
       expect(mission?.status).toBe('failed')
       expect(mission?.messages.some(m => m.content.includes('Agent Not Responding'))).toBe(true)
-      expect(emitMissionError).toHaveBeenCalledWith('troubleshoot', 'mission_inactivity')
+      expect(emitMissionError).toHaveBeenCalledWith('troubleshoot', 'mission_inactivity', expect.anything())
     } finally {
       vi.useRealTimers()
     }
@@ -3335,7 +3338,10 @@ describe('error classification edge cases', () => {
     const mission = result.current.missions[0]
     expect(mission.status).toBe('failed')
     expect(mission.messages.some(m => m.content.includes('Unknown error'))).toBe(true)
-    expect(emitMissionError).toHaveBeenCalledWith('troubleshoot', 'unknown')
+    // The "missing message" path explicitly passes `undefined` as the
+    // 3rd arg — toHaveBeenCalledWith requires an exact match for that
+    // arg, and expect.anything() does NOT match undefined.
+    expect(emitMissionError).toHaveBeenCalledWith('troubleshoot', 'unknown', undefined)
   })
 })
 
