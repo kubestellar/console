@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { Check, WifiOff, ChevronRight, CheckCircle, AlertTriangle, ChevronDown, FolderOpen, Plus, Trash2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Check, WifiOff, ChevronRight, CheckCircle, AlertTriangle, HelpCircle, Loader2, ChevronDown, FolderOpen, Plus, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { ClusterInfo } from '../../hooks/mcp/types'
 import type { ClusterGroup } from '../../hooks/useGlobalFilters'
-import { isClusterUnreachable } from './utils'
+import { deduplicateClustersByServer } from '../../hooks/mcp/shared'
+import { getClusterHealthState, isClusterUnreachable } from './utils'
 
 export interface ClusterGroupsSectionProps {
   /** All clusters (unfiltered) for the new-group cluster picker */
@@ -35,6 +36,11 @@ export function ClusterGroupsSection({
   const [showGroupForm, setShowGroupForm] = useState(false)
   const [newGroupName, setNewGroupName] = useState('')
   const [newGroupClusters, setNewGroupClusters] = useState<string[]>([])
+
+  // Deduplicate clusters so contexts pointing at the same server are not
+  // rendered twice in the picker (#5922). Uses the same helper as the main
+  // cluster list so both stay in sync.
+  const pickerClusters = useMemo(() => deduplicateClustersByServer(clusters), [clusters])
 
   // When no groups exist and form is not showing, render just the New Group button
   if (clusterGroups.length === 0 && !showGroupForm) {
@@ -95,8 +101,11 @@ export function ClusterGroupsSection({
               />
               <div className="text-xs text-muted-foreground mb-1">Select clusters for this group:</div>
               <div className="flex flex-wrap gap-2">
-                {clusters.map((cluster) => {
+                {pickerClusters.map((cluster) => {
                   const isInGroup = newGroupClusters.includes(cluster.name)
+                  // Use the shared health state machine so the picker icon
+                  // always matches the main grid (#5920, #5928).
+                  const healthState = getClusterHealthState(cluster)
                   const unreachable = isClusterUnreachable(cluster)
                   return (
                     <button
@@ -113,13 +122,18 @@ export function ClusterGroupsSection({
                           ? 'bg-primary/20 text-primary border border-primary/30'
                           : 'bg-secondary/50 text-muted-foreground hover:text-foreground border border-transparent'
                       }`}
+                      title={unreachable && cluster.errorMessage ? cluster.errorMessage : healthState}
                     >
-                      {unreachable ? (
+                      {healthState === 'unreachable' ? (
                         <WifiOff className="w-3 h-3 text-yellow-400" />
-                      ) : cluster.healthy ? (
+                      ) : healthState === 'healthy' ? (
                         <CheckCircle className="w-3 h-3 text-green-400" />
-                      ) : (
+                      ) : healthState === 'unhealthy' ? (
                         <AlertTriangle className="w-3 h-3 text-orange-400" />
+                      ) : healthState === 'loading' ? (
+                        <Loader2 className="w-3 h-3 text-blue-400 animate-spin" />
+                      ) : (
+                        <HelpCircle className="w-3 h-3 text-muted-foreground" />
                       )}
                       {cluster.context || cluster.name}
                     </button>

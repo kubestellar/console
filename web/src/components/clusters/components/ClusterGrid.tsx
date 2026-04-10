@@ -355,7 +355,18 @@ const FullClusterCard = memo(function FullClusterCard({
                   <KeyRound className="w-4 h-4 text-red-400" />
                 </div>
               ) : unreachable ? (
-                <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center" title="Offline - check network connection">
+                <div
+                  className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center"
+                  title={
+                    // Surface the reason for unreachability directly in
+                    // the status icon tooltip (#5925).
+                    cluster.errorMessage
+                      ? `Offline (${cluster.errorType || 'error'}): ${cluster.errorMessage}`
+                      : cluster.errorType
+                        ? `Offline: ${cluster.errorType}`
+                        : 'Offline - check network connection'
+                  }
+                >
                   <WifiOff className="w-4 h-4 text-yellow-400" />
                 </div>
               ) : !isClusterHealthy(cluster) ? (

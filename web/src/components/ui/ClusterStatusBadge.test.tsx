@@ -47,6 +47,22 @@ describe('ClusterStatusBadge Component', () => {
     expect(getByText('Offline')).toBeTruthy()
   })
 
+  it('renders loading badge with Loading label (#5924)', () => {
+    const { getByText } = render(<ClusterStatusBadge state="loading" />)
+    expect(getByText('Loading')).toBeTruthy()
+  })
+
+  it('renders unknown badge with Unknown label (#5923)', () => {
+    const { getByText } = render(<ClusterStatusBadge state="unknown" />)
+    expect(getByText('Unknown')).toBeTruthy()
+  })
+
+  it('applies animate-spin to the icon when state=loading', () => {
+    const { container } = render(<ClusterStatusBadge state="loading" />)
+    const icon = container.querySelector('svg')
+    expect(icon?.getAttribute('class') ?? '').toContain('animate-spin')
+  })
+
   it('applies green color classes for healthy state', () => {
     const { container } = render(<ClusterStatusBadge state="healthy" />)
     const badge = container.firstChild as HTMLElement
@@ -251,5 +267,15 @@ describe('getClusterState helper', () => {
 
   it('returns degraded when healthy=undefined and reachable', () => {
     expect(getClusterState(undefined, true)).toBe('degraded')
+  })
+
+  it('returns loading when loading=true regardless of other signals (#5924)', () => {
+    expect(
+      getClusterState(true, true, 3, 3, undefined, /* loading */ true),
+    ).toBe('loading')
+  })
+
+  it('returns unknown when healthy and reachable are both undefined (#5923)', () => {
+    expect(getClusterState(undefined, undefined)).toBe('unknown')
   })
 })

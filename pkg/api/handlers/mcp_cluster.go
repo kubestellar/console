@@ -46,6 +46,13 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 				clusters[i].Healthy = health.Healthy
 				clusters[i].NodeCount = health.NodeCount
 				clusters[i].PodCount = health.PodCount
+				// Surface the stale-kubeconfig signal: a cluster that has
+				// a health cache entry but has never been successfully
+				// reached (empty LastSeen) drives the "never connected"
+				// warning banner in the Clusters page (#5921).
+				if !health.Reachable && health.LastSeen == "" {
+					clusters[i].NeverConnected = true
+				}
 			} else {
 				// No health data collected yet (e.g. immediately after boot).
 				// Signal "initializing" rather than falsely reporting Unhealthy.

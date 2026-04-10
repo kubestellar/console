@@ -42,6 +42,7 @@ import { BaseModal } from '../../lib/modals'
 import { useModalState } from '../../lib/modals'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
+import { getClusterHealthState, isClusterUnreachable } from '../clusters/utils'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { DashboardHeader } from '../shared/DashboardHeader'
@@ -214,9 +215,10 @@ export function CustomDashboard() {
   const sidebarItem = [...config.primaryNav, ...config.secondaryNav]
       .find(item => item.href === `/custom-dashboard/${id}`)
 
-  // Stats data from clusters
-  const healthyClusters = deduplicatedClusters.filter((c) => c.healthy === true && c.reachable !== false).length
-  const unhealthyClusters = deduplicatedClusters.filter((c) => c.healthy === false && c.reachable !== false).length
+  // Stats data from clusters — use the centralised state machine so these
+  // counts always match the main cluster grid and sidebar (#5928).
+  const healthyClusters = deduplicatedClusters.filter((c) => !isClusterUnreachable(c) && getClusterHealthState(c) === 'healthy').length
+  const unhealthyClusters = deduplicatedClusters.filter((c) => !isClusterUnreachable(c) && getClusterHealthState(c) === 'unhealthy').length
   const totalNodes = deduplicatedClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
   const totalPods = deduplicatedClusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
 

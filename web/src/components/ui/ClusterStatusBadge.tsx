@@ -6,6 +6,8 @@ import {
   XCircle,
   ShieldAlert,
   AlertCircle,
+  HelpCircle,
+  Loader2,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import {
@@ -17,6 +19,8 @@ import {
 export type ClusterState =
   | 'healthy'
   | 'degraded'
+  | 'loading'
+  | 'unknown'
   | 'unreachable-timeout'
   | 'unreachable-auth'
   | 'unreachable-network'
@@ -56,6 +60,25 @@ const STATE_CONFIGS: Record<ClusterState, StateConfig> = {
     borderColor: 'border-yellow-500/30',
     icon: AlertTriangle,
     label: 'Degraded',
+  },
+  loading: {
+    // Distinct loading state (#5924) — rendered while a health probe is
+    // in flight and we have no cached data yet.
+    color: 'text-blue-400',
+    bgColor: 'bg-blue-500/10',
+    borderColor: 'border-blue-500/30',
+    icon: Loader2,
+    label: 'Loading',
+  },
+  unknown: {
+    // Distinct unknown state (#5923/#5924) — shown when the backend has
+    // not yet produced an authoritative health signal so the UI no
+    // longer silently pretends the cluster is healthy.
+    color: 'text-muted-foreground',
+    bgColor: 'bg-muted/30',
+    borderColor: 'border-muted/50',
+    icon: HelpCircle,
+    label: 'Unknown',
   },
   'unreachable-timeout': {
     color: 'text-yellow-400',
@@ -100,15 +123,30 @@ const STATE_CONFIGS: Record<ClusterState, StateConfig> = {
 }
 
 /**
- * Determine cluster state based on health data
+ * Determine cluster state based on health data.
+ *
+ * Supports the new `loading` and `unknown` states introduced in #5924 so
+ * consumers can surface a distinct visual state while a health probe is
+ * in flight or when no authoritative health signal is available yet
+ * (instead of silently defaulting to healthy — see #5923).
+ *
+ * Pass `loading=true` explicitly when the calling component knows a
+ * refresh is in progress; otherwise the helper falls back to inferring
+ * `unknown` when `healthy` is undefined and no reachability signal is
+ * available either.
  */
 export function getClusterState(
   healthy: boolean | undefined,
   reachable?: boolean,
   nodeCount?: number,
   readyNodes?: number,
-  errorType?: ClusterErrorType
+  errorType?: ClusterErrorType,
+  loading?: boolean,
 ): ClusterState {
+  // Loading takes precedence over everything else so users always see
+  // the spinner when a fresh probe is in flight (#5924).
+  if (loading) return 'loading'
+
   // If explicitly unreachable
   if (reachable === false) {
     switch (errorType) {
@@ -126,7 +164,7 @@ export function getClusterState(
   }
 
   // If healthy
-  if (healthy) {
+  if (healthy === true) {
     // Check if degraded (not all nodes ready)
     if (
       nodeCount !== undefined &&
@@ -138,7 +176,15 @@ export function getClusterState(
     return 'healthy'
   }
 
-  // Not healthy but reachable - degraded
+  // Explicitly unhealthy and reachable — degraded
+  if (healthy === false) return 'degraded'
+
+  // No authoritative signal anywhere — surface as unknown rather than
+  // defaulting to degraded/healthy (#5923).
+  if (reachable === undefined) return 'unknown'
+
+  // Reachable but `healthy` is undefined: degraded is the least
+  // surprising fallback since at least one signal came back.
   return 'degraded'
 }
 
@@ -193,7 +239,10 @@ export function ClusterStatusBadge({
       role="status"
       aria-label={`Cluster status: ${tooltip.replace(/\n/g, ', ')}`}
     >
-      <Icon className={iconSize} aria-hidden="true" />
+      <Icon
+        className={cn(iconSize, state === 'loading' && 'animate-spin')}
+        aria-hidden="true"
+      />
       {showLabel && <span>{displayLabel}</span>}
     </span>
   )
@@ -219,6 +268,8 @@ export function ClusterStatusDot({
   const dotColors: Record<ClusterState, string> = {
     healthy: 'bg-green-500',
     degraded: 'bg-orange-500',
+    loading: 'bg-blue-500',
+    unknown: 'bg-muted-foreground',
     'unreachable-timeout': 'bg-yellow-500',
     'unreachable-auth': 'bg-yellow-500',
     'unreachable-network': 'bg-yellow-500',

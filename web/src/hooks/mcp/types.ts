@@ -4,6 +4,11 @@ export interface ClusterInfo {
   server?: string
   user?: string
   healthy?: boolean
+  /** True when no health probe has returned yet (initial state). #5921/#5924 */
+  healthUnknown?: boolean
+  /** True when every health probe since startup has failed — used to drive
+   *  the stale-kubeconfig warning banner (#5921). */
+  neverConnected?: boolean
   source?: string
   nodeCount?: number
   podCount?: number

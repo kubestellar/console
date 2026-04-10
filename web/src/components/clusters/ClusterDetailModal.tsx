@@ -15,6 +15,7 @@ import { CloudProviderIcon, detectCloudProvider as detectCloudProviderShared, ge
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Button } from '../ui/Button'
+import { ClusterStatusDetails } from './ClusterStatusDetails'
 
 // Cloud provider types
 type CloudProvider = 'eks' | 'gke' | 'aks' | 'openshift' | 'oci' | 'alibaba' | 'digitalocean' | 'rancher' | 'coreweave' | 'kind' | 'minikube' | 'k3s' | 'unknown'
@@ -329,6 +330,12 @@ After I approve, help me execute the repairs step by step.`,
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Status details — surfaces unreachable reason (#5925),
+            external reachability (#5926) and freshness (#5927). */}
+        {clusterInfo && (
+          <ClusterStatusDetails cluster={clusterInfo} className="mb-4" />
+        )}
 
         {/* AI Actions */}
         <div className="mb-6 p-4 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">

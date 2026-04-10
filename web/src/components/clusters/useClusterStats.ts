@@ -58,7 +58,10 @@ export function useClusterStats({
 
     // Separate unreachable, healthy, unhealthy - simplified logic matching sidebar
     const unreachable = globalFilteredClusters.filter(c => isClusterUnreachable(c)).length
-    const staleContexts = globalFilteredClusters.filter(c => (c as unknown as Record<string, unknown>).neverConnected === true).length
+    // `neverConnected` is populated by the backend (pkg/k8s/client.go) when
+    // every health probe since startup has failed — surfaces the stale
+    // kubeconfig warning banner (#5921).
+    const staleContexts = globalFilteredClusters.filter(c => c.neverConnected === true).length
     const healthy = globalFilteredClusters.filter(c => !isClusterUnreachable(c) && isClusterHealthy(c)).length
     const unhealthy = globalFilteredClusters.filter(c => !isClusterUnreachable(c) && !isClusterHealthy(c)).length
     const loadingCount = globalFilteredClusters.filter(c =>
