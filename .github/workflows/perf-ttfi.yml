@@ -80,13 +80,15 @@ jobs:
           CI_TOLERANCE_PCT: '15'
         run: node e2e/perf/compare-ttfi.mjs
 
-      - name: Write perf-result.json (scheduled runs only)
-        # Only scheduled runs drive the auto-issue notifier. PR-time failures
-        # already surface on the PR via the check status — no need to file
-        # extra issues there. `always()` is required so this step still runs
-        # after the `Compare against baseline (hard fail)` step fails — that's
-        # exactly when we need the JSON written for the notify job. See #6170.
-        if: always() && github.event_name == 'schedule'
+      - name: Write perf-result.json (scheduled + manual dispatch)
+        # Scheduled runs drive the auto-issue notifier in production; manual
+        # dispatches need it too so we can dry-run the full notify pipeline
+        # without waiting for a cron tick. PR-time failures already surface on
+        # the PR via the check status, so PR runs are still excluded.
+        # `always()` is required so this step still runs after the
+        # `Compare against baseline (hard fail)` step fails — that's exactly
+        # when we need the JSON written for the notify job. See #6170.
+        if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         working-directory: .
         env:
           LAST_SUCCESSFUL_SHA: ''
@@ -117,8 +119,8 @@ jobs:
           }
           EOF
 
-      - name: Upload perf result artifact (scheduled runs only)
-        if: always() && github.event_name == 'schedule'
+      - name: Upload perf result artifact (scheduled + manual dispatch)
+        if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         uses: actions/upload-artifact@v4
         with:
           name: perf-result-ttfi-all-cards
@@ -154,9 +156,10 @@ jobs:
   notify:
     name: Notify on scheduled regression
     needs: all-cards-ttfi
-    # Only file auto-issues on scheduled runs. PR failures already surface
-    # as red checks on the PR — no need to open a bug there.
-    if: failure() && github.event_name == 'schedule'
+    # File auto-issues on scheduled runs and manual dispatches (so we can
+    # dry-run the full notifier pipeline without waiting for a cron tick).
+    # PR failures still excluded — they already surface as red checks on the PR.
+    if: failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     # Job-level permissions for the reusable workflow. A reusable workflow can
     # never receive MORE permissions than its caller job, so this block is the
     # documented way to guarantee `issues: write` reaches
