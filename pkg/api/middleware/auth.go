@@ -77,7 +77,12 @@ type TokenRevoker interface {
 //     request, even if instance B has never seen that JTI before.
 //   - The backfill in the slow path caches a zero-time entry so subsequent
 //     requests for the same revoked JTI hit the fast path. The periodic
-//     cleanup loop re-queries the DB for authoritative expiry.
+//     cleanup loop prunes expired rows from the persistent store
+//     (CleanupExpiredTokens) and evicts stale in-memory entries: entries
+//     whose JWT expiry has passed, plus zero-time backfilled entries when
+//     the cache exceeds half its max size (those can be re-fetched from
+//     the DB slow path on demand). Authoritative expiry continues to live
+//     in the persistent store.
 //
 // Deployment requirement: every instance must point at the same persistent
 // store (same SQLite file on shared storage, or an equivalent shared backend).
@@ -256,9 +261,20 @@ func JWTAuth(secret string) fiber.Handler {
 		// the fetch-based SSE client which sends the token via the
 		// Authorization header; this fallback exists for legacy EventSource
 		// callers. See #5979.
+		if tokenString == "" && c.Query("_token") != "" && strings.HasSuffix(c.Path(), "/stream") {
+			tokenString = c.Query("_token")
+		}
+
+		// SECURITY: Always strip the `_token` query parameter from the
+		// request URI whenever it is present, regardless of whether it
+		// was actually consumed for authentication. A misconfigured
+		// client could send both an Authorization header AND a
+		// `?_token=...` query param on the same request; without this
+		// unconditional scrub, the JWT in the URL would survive into
+		// downstream middleware, handlers, access logs, error pages,
+		// proxy-forwarded URLs, and metrics labels — leaking the token.
 		//
-		// SECURITY: Immediately after consuming the token, we strip the
-		// `_token` parameter from the request URI so that:
+		// Scrubbing ensures:
 		//   - downstream middleware and handlers never observe it,
 		//   - any code that serializes the URL (access logs, error pages,
 		//     proxy forwarding, metrics labels) cannot leak the JWT,
@@ -267,8 +283,7 @@ func JWTAuth(secret string) fiber.Handler {
 		// This is defense-in-depth: the top-level access logger already
 		// uses ${path} (no query string), but any future log line that
 		// prints the URL would otherwise leak the token.
-		if tokenString == "" && c.Query("_token") != "" && strings.HasSuffix(c.Path(), "/stream") {
-			tokenString = c.Query("_token")
+		if c.Query("_token") != "" {
 			args := c.Context().QueryArgs()
 			args.Del("_token")
 			// Rewrite the parsed URI so QueryArgs()/Query() no longer see the

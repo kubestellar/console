@@ -103,6 +103,70 @@ func TestJWTAuth(t *testing.T) {
 		assert.Contains(t, observedQuery, "cluster=prod", "other query params must be preserved")
 		assert.NotContains(t, observedOriginalURL, token, "token value must not appear in OriginalURL()")
 	})
+
+	t.Run("Token Scrubbed Even When Auth Came From Header (#5992)", func(t *testing.T) {
+		// A misconfigured client may send BOTH an Authorization header
+		// AND a ?_token=... query parameter on the same request. The
+		// middleware consumes the header (which takes priority), but the
+		// `_token` query parameter must still be scrubbed from the URL
+		// so it cannot leak into access logs, downstream handlers, or
+		// serialized URLs. Regression test for the Copilot review comment
+		// on PR #5986 / issue #5992.
+		token, _ := generateTestToken("test-secret", time.Now().Add(time.Hour))
+		bothTestApp := fiber.New()
+		var observedQuery string
+		var observedQueryToken string
+		var observedOriginalURL string
+		bothTestApp.Get("/events/stream", JWTAuth("test-secret"), func(c *fiber.Ctx) error {
+			observedQuery = string(c.Context().QueryArgs().QueryString())
+			observedQueryToken = c.Query("_token")
+			observedOriginalURL = c.OriginalURL()
+			return c.SendString("ok")
+		})
+
+		// Send both an Authorization header and a ?_token=... query param.
+		// Use a distinct "leaked" token in the query to make it obvious in
+		// assertions that the query value (not the header value) is what
+		// must be scrubbed.
+		leakedToken, _ := generateTestToken("test-secret", time.Now().Add(time.Hour))
+		req := httptest.NewRequest("GET", "/events/stream?cluster=prod&_token="+leakedToken, nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		resp, err := bothTestApp.Test(req, 5000)
+		assert.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+		assert.Empty(t, observedQueryToken, "_token must be scrubbed even when auth came from the header")
+		assert.NotContains(t, observedQuery, "_token=", "token parameter must be removed from query args")
+		assert.NotContains(t, observedQuery, leakedToken, "token value must not appear in query args")
+		assert.Contains(t, observedQuery, "cluster=prod", "other query params must be preserved")
+		assert.NotContains(t, observedOriginalURL, leakedToken, "token value must not appear in OriginalURL()")
+	})
+
+	t.Run("Token Scrubbed On Non-Stream Path When Auth From Header (#5992)", func(t *testing.T) {
+		// Even on non-/stream endpoints, a stray `_token` query param
+		// must be scrubbed from the URL when the request is otherwise
+		// authenticated (via header or cookie). This prevents leakage
+		// of tokens in URLs on any authenticated route, not just SSE.
+		token, _ := generateTestToken("test-secret", time.Now().Add(time.Hour))
+		nonStreamApp := fiber.New()
+		var observedQueryToken string
+		var observedOriginalURL string
+		nonStreamApp.Get("/api/resource", JWTAuth("test-secret"), func(c *fiber.Ctx) error {
+			observedQueryToken = c.Query("_token")
+			observedOriginalURL = c.OriginalURL()
+			return c.SendString("ok")
+		})
+
+		leakedToken, _ := generateTestToken("test-secret", time.Now().Add(time.Hour))
+		req := httptest.NewRequest("GET", "/api/resource?_token="+leakedToken, nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		resp, err := nonStreamApp.Test(req, 5000)
+		assert.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+		assert.Empty(t, observedQueryToken, "_token must be scrubbed on non-stream paths too")
+		assert.NotContains(t, observedOriginalURL, leakedToken, "token value must not appear in OriginalURL()")
+	})
 }
 
 func TestGetContextHelpers(t *testing.T) {
