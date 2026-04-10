@@ -54,6 +54,16 @@ const DESCRIPTORS: CardDescriptor[] = [
     component: () => import('./StockMarketTicker').then(m => ({ default: m.StockMarketTicker as ComponentType<CardComponentProps> })),
   },
 
+  // ── NATS monitoring card ──────────────────────────────────────────
+  {
+    id: 'nats_status',
+    title: 'NATS',
+    description: 'NATS messaging server status, JetStream streams, and consumer health.',
+    category: 'Streaming & Messaging',
+    defaultWidth: 6,
+    visualization: 'status',
+    component: () => import('./nats_status').then(m => ({ default: m.NatsStatus as ComponentType<CardComponentProps> })),
+  },
   // ── Active Alerts card ────────────────────────────────────────────────
   {
     id: 'active_alerts',

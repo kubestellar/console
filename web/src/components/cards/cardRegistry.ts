@@ -231,6 +231,8 @@ const FluentdStatus = safeLazy(() => import('./fluentd_status'), 'FluentdStatus'
 const CrioStatus = safeLazy(() => import('./crio_status'), 'CrioStatus')
 // Lima VM card
 const LimaStatus = safeLazy(() => import('./lima_status'), 'LimaStatus')
+// NATS messaging server monitoring card
+const NatsStatus = safeLazy(() => import('./nats_status'), 'NatsStatus')
 // CloudEvents monitoring card
 const CloudEventsStatus = safeLazy(() => import('./cloudevents_status'), 'CloudEventsStatus')
 // Strimzi Kafka operator card
@@ -549,6 +551,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   crio_status: CrioStatus,
   // Lima VM
   lima_status: LimaStatus,
+  // NATS messaging server
+  nats_status: NatsStatus,
   // CloudEvents messaging
   cloudevents_status: CloudEventsStatus,
   // Strimzi Kafka operator
@@ -950,6 +954,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   buildpacks_status: () => import('./buildpacks-status'),
   // KEDA
   keda_status: () => import('./keda_status'),
+  // NATS
+  nats_status: () => import('./nats_status'),
   // CloudEvents
   cloudevents_status: () => import('./cloudevents_status'),
   // CRI-O
@@ -1288,6 +1294,8 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   fluentd_status: 6,
   // Lima VM
   lima_status: 6,
+  // NATS
+  nats_status: 6,
   // CloudEvents
   cloudevents_status: 6,
   // Karmada
