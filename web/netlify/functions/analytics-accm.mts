@@ -25,14 +25,28 @@ const CACHE_TTL_MS = 60 * 60 * 1000;
 const WEEKS_OF_HISTORY = 12;
 /** GitHub API results per page (max 100) */
 const PER_PAGE = 100;
-/** Max pages to fetch per endpoint (rate-limit guard) */
-const MAX_PAGES = 3;
+/**
+ * Max pages to fetch per endpoint. Bumped from 3 → 15 (1500 items) because
+ * recent activity can exceed 300 PRs in a single week, which caused every
+ * older week to show 0 activity in the chart — the 3-page window never
+ * escaped the most recent week.
+ */
+const MAX_PAGES = 15;
 /** Request timeout for GitHub API calls */
 const API_TIMEOUT_MS = 15_000;
 /** AI-generated label used to classify AI contributions */
 const AI_LABEL = "ai-generated";
-/** Authors whose PRs/issues are always AI-generated (Claude Code sessions) */
-const AI_AUTHORS = new Set(["clubanderson"]);
+/**
+ * Authors whose PRs/issues are always AI-generated.
+ *   - clubanderson: the shared login Claude Code writes from
+ *   - Copilot / copilot-swe-agent[bot]: GitHub Copilot coding agent
+ * Any login ending in `[bot]` is also treated as AI (see isAIContribution).
+ */
+const AI_AUTHORS = new Set([
+  "clubanderson",
+  "Copilot",
+  "copilot-swe-agent[bot]",
+]);
 
 /** Workflow filenames to track for CI pass rates */
 const CI_WORKFLOWS: Record<string, string> = {
@@ -276,7 +290,10 @@ async function fetchWorkflowRuns(
 // ---------------------------------------------------------------------------
 
 function isAIContribution(labels: { name: string }[], author: string): boolean {
-  return AI_AUTHORS.has(author) || (labels || []).some((l) => l.name === AI_LABEL);
+  // Known AI authors, any GitHub App/bot account, or PRs explicitly labeled.
+  if (AI_AUTHORS.has(author)) return true;
+  if (author && author.endsWith("[bot]")) return true;
+  return (labels || []).some((l) => l.name === AI_LABEL);
 }
 
 function aggregateWeeklyActivity(
