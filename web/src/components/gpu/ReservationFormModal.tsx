@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Zap,
@@ -10,6 +10,7 @@ import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import {
   useNamespaces,
   createOrUpdateResourceQuota,
+  deleteResourceQuota,
   COMMON_RESOURCE_TYPES } from '../../hooks/useMCP'
 import type { GPUNode } from '../../hooks/useMCP'
 import type { GPUReservation, CreateGPUReservationInput, UpdateGPUReservationInput } from '../../hooks/useGPUReservations'
@@ -17,6 +18,27 @@ import { cn } from '../../lib/cn'
 
 // GPU resource keys used to identify GPU quotas
 const GPU_KEYS = ['nvidia.com/gpu', 'amd.com/gpu', 'gpu.intel.com/i915']
+
+/** Maximum length of the sanitized title segment in a generated quota name. */
+const QUOTA_NAME_TITLE_MAX_LEN = 40
+
+/** Default reservation duration in hours when the field is left blank. */
+const DEFAULT_RESERVATION_DURATION_HOURS = 24
+
+/**
+ * Derive the Kubernetes ResourceQuota name from a reservation title.
+ * Exported as a local helper so both the current-title quota name and
+ * the ORIGINAL-title quota name (used for cleanup on rename) are
+ * computed identically.
+ */
+function deriveQuotaName(title: string): string {
+  if (!title) return ''
+  return `gpu-${title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, QUOTA_NAME_TITLE_MAX_LEN)}`
+}
 
 // GPU cluster info for dropdown
 export interface GPUClusterInfo {
@@ -71,14 +93,54 @@ export function ReservationFormModal({
   const [error, setError] = useState<string | null>(null)
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
 
+  // Snapshot of the initial form state used for dirty detection. Captured
+  // once when the modal is first rendered for this editing target so the
+  // unsaved-changes dialog compares against the ORIGINAL values (not the
+  // current values, which would always look "clean").
+  const initialSnapshot = useMemo(
+    () => ({
+      cluster: editingReservation?.cluster || '',
+      namespace: editingReservation?.namespace || '',
+      title: editingReservation?.title || '',
+      description: editingReservation?.description || '',
+      gpuCount: editingReservation ? String(editingReservation.gpu_count) : '',
+      gpuPreference: editingReservation?.gpu_type || '',
+      startDate: editingReservation?.start_date || prefillDate || new Date().toISOString().split('T')[0],
+      durationHours: editingReservation ? String(editingReservation.duration_hours) : '',
+      notes: editingReservation?.notes || '' }),
+    // Re-snapshot only when the modal is opened for a different reservation
+    // or with a different prefill date.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [editingReservation?.id, prefillDate],
+  )
+
   const forceClose = () => {
     setShowDiscardConfirm(false)
     onClose()
   }
 
+  // Returns true if ANY user-editable field has diverged from the initial
+  // snapshot. Previously this only inspected title/description, so edits
+  // to cluster, namespace, GPU count/type, dates, duration, notes, or
+  // extra resources could be discarded without confirmation.
+  const isDirty = (): boolean => {
+    if (cluster !== initialSnapshot.cluster) return true
+    if (namespace !== initialSnapshot.namespace) return true
+    if (title !== initialSnapshot.title) return true
+    if (description !== initialSnapshot.description) return true
+    if (gpuCount !== initialSnapshot.gpuCount) return true
+    if (gpuPreference !== initialSnapshot.gpuPreference) return true
+    if (startDate !== initialSnapshot.startDate) return true
+    if (durationHours !== initialSnapshot.durationHours) return true
+    if (notes !== initialSnapshot.notes) return true
+    // extraResources always starts empty for both create and edit flows —
+    // any entry means the user added a row.
+    if (extraResources.length > 0) return true
+    return false
+  }
+
   const handleClose = () => {
-    const hasChanges = title.trim() !== '' || description.trim() !== ''
-    if (hasChanges) {
+    if (isDirty()) {
       setShowDiscardConfirm(true)
       return
     }
@@ -126,12 +188,21 @@ export function ReservationFormModal({
   })()
 
   // Auto-generate quota name from title
-  const quotaName = title
-    ? `gpu-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40)}`
-    : ''
+  const quotaName = deriveQuotaName(title)
+  // Quota name computed from the ORIGINAL title, used to clean up a
+  // stale ResourceQuota if the user renamed the reservation.
+  const originalQuotaName = deriveQuotaName(editingReservation?.title || '')
 
   const handleSave = async () => {
     const count = parseInt(gpuCount)
+    // For edits, capacity validation must account for the GPUs the current
+    // reservation already holds: max allowed = availableGPUs + originalCount.
+    // Without this, an edit could request more GPUs than the cluster has.
+    const originalCount = editingReservation?.gpu_count ?? 0
+    const sameClusterAsOriginal = editingReservation ? cluster === editingReservation.cluster : true
+    const capacityCeiling = editingReservation && sameClusterAsOriginal
+      ? maxGPUs + originalCount
+      : maxGPUs
     const validationError = !cluster
       ? t('gpuReservations.form.errors.selectCluster')
       : !namespace
@@ -140,8 +211,8 @@ export function ReservationFormModal({
       ? t('gpuReservations.form.errors.titleRequired')
       : !count || count < 1
       ? t('gpuReservations.form.errors.gpuCountMin')
-      : count > maxGPUs && !editingReservation
-      ? t('gpuReservations.form.errors.gpuCountMax', { max: maxGPUs, cluster })
+      : count > capacityCeiling
+      ? t('gpuReservations.form.errors.gpuCountMax', { max: capacityCeiling, cluster })
       : null
     setError(validationError)
     if (validationError) return
@@ -159,7 +230,7 @@ export function ReservationFormModal({
           gpu_count: count,
           gpu_type: gpuPreference || clusterGPUTypes[0]?.type || '',
           start_date: startDate,
-          duration_hours: parseInt(durationHours) || 24,
+          duration_hours: parseInt(durationHours) || DEFAULT_RESERVATION_DURATION_HOURS,
           notes,
           quota_enforced: enforceQuota,
           quota_name: enforceQuota ? quotaName : '',
@@ -175,7 +246,7 @@ export function ReservationFormModal({
           gpu_count: count,
           gpu_type: gpuPreference || clusterGPUTypes[0]?.type || '',
           start_date: startDate,
-          duration_hours: parseInt(durationHours) || 24,
+          duration_hours: parseInt(durationHours) || DEFAULT_RESERVATION_DURATION_HOURS,
           notes,
           quota_enforced: enforceQuota,
           quota_name: enforceQuota ? quotaName : '',
@@ -190,6 +261,27 @@ export function ReservationFormModal({
             [gpuResourceKey]: String(count) }
           for (const r of extraResources) {
             if (r.key && r.value) hard[r.key] = r.value
+          }
+          // If the reservation was renamed, the quota name (which is
+          // derived from the title) will be different. Delete the old
+          // quota first so it does not linger orphaned in the namespace.
+          if (
+            editingReservation &&
+            originalQuotaName &&
+            originalQuotaName !== quotaName &&
+            editingReservation.cluster &&
+            editingReservation.namespace
+          ) {
+            try {
+              await deleteResourceQuota(
+                editingReservation.cluster,
+                editingReservation.namespace,
+                originalQuotaName,
+              )
+            } catch {
+              // Non-fatal: old quota may already be gone (e.g. 404).
+              // Proceed with creating the renamed quota regardless.
+            }
           }
           await createOrUpdateResourceQuota({ cluster, namespace, name: quotaName, hard, ensure_namespace: isNewNamespace })
           // Quota enforced successfully — activate the reservation

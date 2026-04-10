@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { api } from '../lib/api'
 
 /** How often to refresh utilization data (5 minutes) */
@@ -20,14 +20,26 @@ export interface GPUUtilizationSnapshot {
 /**
  * Bulk-fetch GPU utilization snapshots for multiple reservations.
  * Polls every GPU_UTIL_REFRESH_MS. Skips fetch if no IDs provided.
+ *
+ * NOTE: The effect is keyed on a stable sorted-ids STRING (not the array
+ * identity) so a parent re-render that passes a new array with the same
+ * contents does not tear down / re-establish the interval. The interval
+ * reads the latest ids from a ref so it always polls the current set.
  */
 export function useGPUUtilizations(reservationIds: string[]) {
   const [data, setData] = useState<Record<string, GPUUtilizationSnapshot[]>>({})
   const [isLoading, setIsLoading] = useState(false)
-  const idsRef = useRef<string>('')
 
-  const fetchData = async (ids: string[]) => {
-    if (ids.length === 0) {
+  // Keep the latest id list in a ref so the polling interval always
+  // fetches the current set without needing to be re-created.
+  const latestIdsRef = useRef<string[]>(reservationIds || [])
+  latestIdsRef.current = reservationIds || []
+
+  // Stable key used to detect actual membership changes.
+  const idsKey = [...(reservationIds || [])].sort().join(',')
+
+  const fetchData = useCallback(async (ids: string[]) => {
+    if (!ids || ids.length === 0) {
       setData({})
       return
     }
@@ -45,26 +57,27 @@ export function useGPUUtilizations(reservationIds: string[]) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
-    const idsKey = [...(reservationIds || [])].sort().join(',')
-    // Only refetch if IDs actually changed
-    if (idsKey === idsRef.current && Object.keys(data).length > 0) {
+    // Initial fetch for the current id set.
+    fetchData(latestIdsRef.current)
+
+    // Do not set up an interval when there's nothing to poll.
+    if (!latestIdsRef.current || latestIdsRef.current.length === 0) {
       return
     }
-    idsRef.current = idsKey
 
-    fetchData(reservationIds)
-
-    if (reservationIds.length === 0) return
-
+    // Always set up the polling interval — it was previously skipped/torn
+    // down once data arrived, which left utilization stale indefinitely.
     const interval = setInterval(() => {
-      fetchData(reservationIds)
+      fetchData(latestIdsRef.current)
     }, GPU_UTIL_REFRESH_MS)
 
     return () => clearInterval(interval)
-  }, [reservationIds, fetchData]) // eslint-disable-line react-hooks/exhaustive-deps
+    // Re-run only when the set of reservation ids actually changes
+    // (by value, not by array identity) or the memoized fetcher changes.
+  }, [idsKey, fetchData])
 
   return { utilizations: data, isLoading }
 }
