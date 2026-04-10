@@ -175,7 +175,7 @@ export function GPUReservationsTab({
                 )}
                 <div className="p-2 rounded bg-secondary/30">
                   <div className="text-xs text-muted-foreground">{t('common:common.start')}</div>
-                  <div className="text-sm font-medium text-foreground">{r.start_date}</div>
+                  <div className="text-sm font-medium text-foreground">{(r.start_date || '').split('T')[0]}</div>
                 </div>
                 <div className="p-2 rounded bg-secondary/30">
                   <div className="text-xs text-muted-foreground">{t('common:common.duration')}</div>
@@ -263,7 +263,7 @@ export function GPUReservationsTab({
                     )}
                     <div>
                       <div className="text-sm text-muted-foreground">{t('gpuReservations.reservationDetails.fields.startDate')}</div>
-                      <div className="text-foreground">{r.start_date}</div>
+                      <div className="text-foreground">{(r.start_date || '').split('T')[0]}</div>
                     </div>
                     <div>
                       <div className="text-sm text-muted-foreground">{t('common:common.duration')}</div>
