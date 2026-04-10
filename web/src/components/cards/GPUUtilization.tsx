@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect, useRef } from 'react'
 import { TrendingUp, Clock, Server } from 'lucide-react'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import { Skeleton, SkeletonStats } from '../ui/Skeleton'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
 import ReactECharts from 'echarts-for-react'
 import { useClusters } from '../../hooks/useMCP'
@@ -40,7 +41,8 @@ export function GPUUtilization() {
     isRefreshing,
     isDemoFallback,
     isFailed,
-    consecutiveFailures } = useCachedGPUNodes()
+    consecutiveFailures,
+    lastRefresh: gpuLastRefresh } = useCachedGPUNodes()
   const { deduplicatedClusters: clusters } = useClusters()
   const { isDemoMode } = useDemoMode()
 
@@ -268,6 +270,14 @@ export function GPUUtilization() {
               {localClusterFilter.length}/{availableClustersForFilter.length}
             </span>
           )}
+          {/* #6217 part 3: freshness indicator. */}
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={typeof gpuLastRefresh === 'number' ? new Date(gpuLastRefresh) : null}
+            size="sm"
+            showLabel={true}
+            staleThresholdMinutes={5}
+          />
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1">

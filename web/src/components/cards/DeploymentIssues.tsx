@@ -6,6 +6,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
 import { StatusBadge } from '../ui/StatusBadge'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
@@ -47,7 +48,8 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
     isDemoFallback,
     isFailed,
     consecutiveFailures,
-    error
+    error,
+    lastRefresh: issuesLastRefresh
   } = useCachedDeploymentIssues(clusterConfig, namespaceConfig)
 
   const { drillToDeployment } = useDrillDownActions()
@@ -157,6 +159,14 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
           <StatusBadge color="red" title={t('deploymentIssues.issuesTitle', { count: rawIssues.length })}>
             {t('deploymentIssues.nIssues', { count: rawIssues.length })}
           </StatusBadge>
+          {/* #6217 part 3: freshness indicator. */}
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={typeof issuesLastRefresh === 'number' ? new Date(issuesLastRefresh) : null}
+            size="sm"
+            showLabel={true}
+            staleThresholdMinutes={5}
+          />
         </div>
         <CardControlsRow
           clusterIndicator={{
