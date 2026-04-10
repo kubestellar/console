@@ -3016,6 +3016,8 @@
     "noIssuesToRepair": "No issues to repair",
     "askTitle": "Ask AI any question about this cluster",
     "renameCluster": "Rename cluster",
+    "offlineRemoveTitle": "Cluster is offline",
+    "offlineRemoveDesc": "This cluster cannot be reached. If the underlying cluster no longer exists, remove its kubeconfig entry to clean up your cluster list. This does not affect the cluster itself.",
     "openConsole": "Open {{provider}} console",
     "akaLabel": "aka:",
     "alsoKnownAs": "Also known as: {{aliases}}",

@@ -424,6 +424,11 @@ export function Clusters() {
             setSelectedCluster(null)
             setRenamingCluster(name)
           }}
+          onRemove={isConnected ? (name) => {
+            // Close the detail modal first, then open the remove confirm (#5901).
+            setSelectedCluster(null)
+            setRemovingCluster(name)
+          } : undefined}
         />
       )}
 

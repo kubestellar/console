@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, CheckCircle, AlertTriangle, WifiOff, Pencil, ChevronRight, ChevronDown, Layers, Server, Network, HardDrive, Box, FolderOpen, Loader2, Cpu, MemoryStick, Database, Wand2, Stethoscope, Wrench, Bot, ExternalLink } from 'lucide-react'
+import { X, CheckCircle, AlertTriangle, WifiOff, Pencil, Trash2, ChevronRight, ChevronDown, Layers, Server, Network, HardDrive, Box, FolderOpen, Loader2, Cpu, MemoryStick, Database, Wand2, Stethoscope, Wrench, Bot, ExternalLink } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNodes, useNamespaceStats, useDeployments, useClusters } from '../../hooks/useMCP'
 import { isClusterUnreachable, isClusterHealthy } from './utils'
@@ -90,9 +90,14 @@ interface ClusterDetailModalProps {
   clusterUser?: string  // Optional kubeconfig user for provider detection
   onClose: () => void
   onRename?: (clusterName: string) => void
+  /**
+   * Invoked when the user clicks "Remove cluster" on an unreachable cluster (#5901).
+   * Only rendered when the cluster is unreachable and backed by a kubeconfig context.
+   */
+  onRemove?: (clusterName: string) => void
 }
 
-export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename }: ClusterDetailModalProps) {
+export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename, onRemove }: ClusterDetailModalProps) {
   const { t } = useTranslation()
   const { health, isLoading } = useClusterHealth(clusterName)
   const { deduplicatedClusters, clusters: rawClusters } = useClusters()
@@ -325,6 +330,20 @@ After I approve, help me execute the repairs step by step.`,
                 <Pencil className="w-4 h-4" />
               </button>
             )}
+            {/* Remove cluster button — only for unreachable clusters (#5901).
+                Only shown for kubeconfig-backed clusters where the `/kubeconfig/remove`
+                endpoint can actually delete the entry. */}
+            {onRemove && isUnreachable && (clusterInfo?.source === 'kubeconfig' || !clusterInfo?.source) && (
+              <button
+                onClick={() => onRemove(clusterName)}
+                className="p-1.5 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400"
+                title={t('cluster.removeCluster')}
+                aria-label={t('cluster.removeCluster')}
+                data-testid="cluster-detail-remove-button"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="w-5 h-5" />
@@ -335,6 +354,34 @@ After I approve, help me execute the repairs step by step.`,
             external reachability (#5926) and freshness (#5927). */}
         {clusterInfo && (
           <ClusterStatusDetails cluster={clusterInfo} className="mb-4" />
+        )}
+
+        {/* Remove offline cluster affordance (#5901) —
+            surfaces the `/kubeconfig/remove` endpoint (added in #5658) as a
+            discoverable primary action on the cluster detail modal. Only shown
+            when the cluster is unreachable AND is kubeconfig-backed AND the
+            parent provided a remove handler. */}
+        {onRemove && isUnreachable && (clusterInfo?.source === 'kubeconfig' || !clusterInfo?.source) && (
+          <div className="mb-6 flex items-start gap-3 p-4 rounded-lg bg-red-500/5 border border-red-500/20">
+            <WifiOff className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-medium text-foreground mb-1">
+                {t('clusterDetail.offlineRemoveTitle')}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {t('clusterDetail.offlineRemoveDesc')}
+              </p>
+            </div>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => onRemove(clusterName)}
+              icon={<Trash2 className="w-3.5 h-3.5" />}
+              data-testid="cluster-detail-remove-cta"
+            >
+              {t('cluster.removeCluster')}
+            </Button>
+          </div>
         )}
 
         {/* AI Actions */}
