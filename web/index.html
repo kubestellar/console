@@ -21,8 +21,16 @@
       #app-shell svg.logo{width:48px;height:48px;animation:pulse 2s ease-in-out infinite}
       #app-shell p{margin-top:16px;font-size:14px;letter-spacing:0.05em;opacity:0.7}
       .spinner{width:24px;height:24px;margin-top:20px;border:2.5px solid rgba(124,58,237,0.2);border-top-color:#7c3aed;border-radius:50%;animation:spin .8s linear infinite}
+      /* Rotating tips on the splash page (#5984) */
+      #app-shell-tip{margin-top:1.5rem;padding:.75rem 1rem;max-width:28rem;background:rgba(124,58,237,.05);border:1px solid rgba(124,58,237,.15);border-radius:.5rem;font-size:.75rem;color:#94a3b8;line-height:1.5;text-align:left;min-height:3rem;display:flex;align-items:center;gap:.5rem;opacity:0;animation:tipFadeIn .5s ease forwards .8s}
+      #app-shell-tip .tip-label{color:#a78bfa;font-weight:600;flex-shrink:0}
+      #app-shell-tip .tip-text{flex:1;transition:opacity .4s ease}
+      @keyframes tipFadeIn{to{opacity:1}}
       @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
       @keyframes spin{to{transform:rotate(360deg)}}
+      @media (prefers-reduced-motion:reduce){
+        #app-shell svg.logo,.spinner,#app-shell-tip,#app-shell-tip .tip-text{animation:none!important;transition:none!important;opacity:1}
+      }
     </style>
   </head>
   <body>
@@ -33,8 +41,10 @@
         </svg>
         <p>Loading KubeStellar Console</p>
         <div class="spinner"></div>
+        <div id="app-shell-tip"><span class="tip-label">Tip</span><span class="tip-text" id="app-shell-tip-text">Loading&hellip;</span></div>
       </div>
     </div>
+    <script src="/splash-tips.js"></script>
     <!--
       Secure-context preflight moved to an external file so that the CSP
       does not need script-src 'unsafe-inline'. See web/public/secure-context-check.js

@@ -113,7 +113,12 @@ export function SLOCompliance() {
           return (
             <DonutGauge
               key={target.metric}
-              label={target.name.split(' ').slice(0, 2).join(' ')}
+              // Issue #5991: do not manually truncate the label with
+              // .split(' ').slice(0, 2).join(' '). That loses meaningful
+              // content in non-English locales (and even English phrases
+              // like "P99 Latency (API)"). The DonutGauge label span
+              // already uses CSS `truncate max-w-16` to clip overflow.
+              label={target.name}
               value={budgetRemaining}
               burnRate={burnRate}
             />

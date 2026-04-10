@@ -95,8 +95,17 @@ export function GPUReservationsTab({
       {filteredReservations.length === 0 && !reservationsLoading && (
         <div className={'glass p-8 rounded-lg text-center'}>
           <Settings2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+          {/*
+            Issue #5991: do not manually truncate translation output with
+            .split('"')[0]. That assumes an English-shaped string containing
+            a literal double quote and silently drops text in locales whose
+            translated string has no such quote. Use a dedicated short key
+            for the empty-state headline instead.
+          */}
           <p className="text-muted-foreground mb-4">
-            {showOnlyMine ? t('gpuReservations.overview.noReservationsUser') : t('gpuReservations.overview.noReservationsYet').split('"')[0]}
+            {showOnlyMine
+              ? t('gpuReservations.overview.noReservationsUser')
+              : t('gpuReservations.overview.noReservationsYetShort')}
           </p>
           {!showOnlyMine && (
             <button onClick={onCreateReservation}
