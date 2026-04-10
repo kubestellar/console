@@ -7,7 +7,7 @@ import { AI_THINKING_DELAY_MS, FOCUS_DELAY_MS } from '../../lib/constants/networ
 import { authFetch } from '../../lib/api'
 import { useTranslation } from 'react-i18next'
 import { copyToClipboard } from '../../lib/clipboard'
-import { safeRevokeObjectURL } from '../../lib/download'
+import { downloadText } from '../../lib/download'
 
 interface LogEntry {
   id: string
@@ -378,13 +378,18 @@ Labels:       app=${resourceName.split('-')[0]}
     const text = logs.map(log =>
       `[${log.timestamp.toISOString()}] [${log.type.toUpperCase()}] ${log.message}${log.details ? `\n  ${log.details}` : ''}`
     ).join('\n')
-    const blob = new Blob([text], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `remediation-${resourceName}-${Date.now()}.log`
-    a.click()
-    safeRevokeObjectURL(url)
+    // #6226: route through downloadText so a failure (storage quota,
+    // browser blocker, etc.) is captured and surfaced in the remediation
+    // log itself rather than crashing the dialog. This dialog has no
+    // useToast, so an inline addLog entry is the most natural feedback.
+    const result = downloadText(`remediation-${resourceName}-${Date.now()}.log`, text)
+    if (!result.ok) {
+      addLog({
+        type: 'error',
+        message: 'Failed to download remediation log',
+        details: result.error?.message || 'unknown browser error',
+      })
+    }
   }
 
   if (!isOpen) return null

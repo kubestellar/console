@@ -28,6 +28,8 @@ import { isNetlifyDeployment } from '../../../lib/demoMode'
 import { useResolutions, detectIssueSignature } from '../../../hooks/useResolutions'
 import { cn } from '../../../lib/cn'
 import { ConfirmDialog } from '../../../lib/modals'
+import { useToast } from '../../ui/Toast'
+import { downloadText } from '../../../lib/download'
 import { MAX_MESSAGE_SIZE_CHARS } from '../../../lib/constants'
 import { AgentBadge, AgentIcon } from '../../agent/AgentIcon'
 import { PreflightFailure } from '../../missions/PreflightFailure'
@@ -41,6 +43,9 @@ import { MemoizedMessage } from './MemoizedMessage'
 
 export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontSize, onToggleFullScreen }: { mission: Mission; isFullScreen?: boolean; fontSize?: FontSize; onToggleFullScreen?: () => void }) {
   const { t } = useTranslation('common')
+  // #6226: useToast for download error feedback (replaces an unhandled
+  // exception path that could white-screen the dialog).
+  const { showToast } = useToast()
   const { sendMessage, retryPreflight, cancelMission, rateMission, setActiveMission, dismissMission, renameMission, runSavedMission, updateSavedMission } = useMissions()
   const { user } = useAuth()
   const { isDemoMode } = useDemoMode()
@@ -164,15 +169,14 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
     }
 
     const content = lines.filter(l => l !== undefined).join('\n')
-    const blob = new Blob([content], { type: 'text/markdown' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `mission-${mission.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${new Date().toISOString().split('T')[0]}.md`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    // #6226: route through downloadText so a failure surfaces as a
+    // toast instead of an unhandled exception that white-screens the
+    // mission chat.
+    const filename = `mission-${mission.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${new Date().toISOString().split('T')[0]}.md`
+    const result = downloadText(filename, content, 'text/markdown')
+    if (!result.ok) {
+      showToast(`Failed to export mission: ${result.error?.message || 'unknown error'}`, 'error')
+    }
   }
 
   // Check if user is at bottom of scroll container

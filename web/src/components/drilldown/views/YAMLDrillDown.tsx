@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { emitDataExported } from '../../../lib/analytics'
 import { copyToClipboard } from '../../../lib/clipboard'
-import { safeRevokeObjectURL } from '../../../lib/download'
+import { downloadText } from '../../../lib/download'
 
 interface Props {
   data: Record<string, unknown>
@@ -73,15 +73,14 @@ export function YAMLDrillDown({ data }: Props) {
   }
 
   const downloadYAML = () => {
-    const blob = new Blob([yaml], { type: 'text/yaml' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${resourceName}.yaml`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    safeRevokeObjectURL(url)
+    // #6226: route through downloadText so a failure (storage quota,
+    // browser blocker, detached document) surfaces as a toast instead
+    // of an unhandled exception that whites out the dialog.
+    const result = downloadText(`${resourceName}.yaml`, yaml, 'text/yaml')
+    if (!result.ok) {
+      showToast(`Failed to download YAML: ${result.error?.message || 'unknown error'}`, 'error')
+      return
+    }
     emitDataExported('yaml_download', resourceType)
   }
 

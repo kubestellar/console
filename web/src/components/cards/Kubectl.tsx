@@ -10,6 +10,8 @@ import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { copyToClipboard } from '../../lib/clipboard'
+import { downloadText } from '../../lib/download'
+import { useToast } from '../ui/Toast'
 
 interface CommandHistoryItem {
   id: string
@@ -29,6 +31,8 @@ interface YAMLManifest {
 
 export function Kubectl() {
   const { t } = useTranslation(['common', 'cards'])
+  // #6226: useToast for download error feedback.
+  const { showToast } = useToast()
   const { execute } = useKubectl()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { isDemoMode } = useDemoMode()
@@ -425,13 +429,12 @@ data:
   const exportYAML = () => {
     if (!yamlContent.trim()) return
 
-    const blob = new Blob([yamlContent], { type: 'text/yaml' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'manifest.yaml'
-    a.click()
-    URL.revokeObjectURL(url)
+    // #6226: surface download failures via toast instead of letting an
+    // unhandled exception white-screen the card.
+    const result = downloadText('manifest.yaml', yamlContent, 'text/yaml')
+    if (!result.ok) {
+      showToast(`Failed to export YAML: ${result.error?.message || 'unknown error'}`, 'error')
+    }
   }
 
   // Handle keyboard shortcuts

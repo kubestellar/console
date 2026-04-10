@@ -21,6 +21,7 @@ import {
   type ParetoPoint } from '../../../lib/llmd/benchmarkMockData'
 import { useTranslation } from 'react-i18next'
 import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
+import { downloadDataUrl } from '../../../lib/download'
 
 // ── Tooltip spacing constants (ECharts renders its own DOM, so Tailwind/CSS vars are unavailable) ──
 /** Spacing between tooltip header and grid body */
@@ -342,11 +343,18 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
   const handleDownload = () => {
     const inst = chartRef.current?.getEchartsInstance()
     if (!inst) return
-    const url = inst.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#fff' })
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `pareto-${chartKey}.png`
-    a.click()
+    // #6226: ECharts getDataURL can throw on a detached chart, and the
+    // anchor.click() can be blocked by the browser. Both paths flow
+    // through downloadDataUrl which captures any exception.
+    try {
+      const url = inst.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#fff' })
+      downloadDataUrl(`pareto-${chartKey}.png`, url)
+    } catch {
+      // Failure is non-fatal — chart export is a nice-to-have, not
+      // critical to the card. The card has no useToast plumbing in
+      // this scope, so we silently swallow rather than surfacing a
+      // toast that would require extra wiring.
+    }
   }
 
   const handleResetZoom = () => {
