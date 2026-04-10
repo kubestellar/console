@@ -143,7 +143,29 @@
     Strict-Transport-Security = "max-age=31536000; includeSubDomains"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
     X-XSS-Protection = "1; mode=block"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://analytics.kubestellar.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://github.com https://*.githubusercontent.com https://api.dicebear.com; connect-src 'self' https://*.google-analytics.com https://*.googleapis.com https://www.googletagmanager.com https://api.github.com https://api.dicebear.com https://fonts.gstatic.com https://analytics.kubestellar.io https://raw.githubusercontent.com ws://localhost:* wss:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; frame-src 'none'; worker-src 'self' blob:; manifest-src 'self'"
+    # Content Security Policy
+    #
+    # Hardened per OWASP ZAP findings (issue #5971):
+    #   - Removed script-src 'unsafe-inline' — the one inline <script> in
+    #     index.html was moved to /secure-context-check.js.
+    #   - Removed host wildcards (https://*.google-analytics.com etc.) in
+    #     favor of explicit subdomain allowlists.
+    #   - Removed scheme-only wss: wildcard; same-origin WebSockets are
+    #     already covered by 'self' under CSP Level 3.
+    #   - Removed ws://localhost:* — the local agent WebSocket is a dev-only
+    #     feature and never successfully connects from console.kubestellar.io.
+    #
+    # Retained unsafe directives (cannot be removed without breaking features):
+    #   - script-src 'unsafe-eval' — required by the Tier 2 dynamic cards
+    #     feature, which compiles user-authored card modules at runtime via
+    #     `new Function()` in web/src/lib/dynamic-cards/compiler.ts. Removing
+    #     this would disable the dynamic card factory entirely.
+    #   - style-src 'unsafe-inline' — React renders `style={{}}` props as
+    #     `style="..."` HTML attributes, which are blocked under strict CSP
+    #     without 'unsafe-inline'. Tailwind and our app-shell <style> block
+    #     also rely on inline styles. Removing this would require rewriting
+    #     every inline style across the entire component tree.
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-eval' https://www.googletagmanager.com https://analytics.kubestellar.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://github.com https://avatars.githubusercontent.com https://raw.githubusercontent.com https://api.dicebear.com; connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://fonts.googleapis.com https://www.googleapis.com https://www.googletagmanager.com https://api.github.com https://api.dicebear.com https://fonts.gstatic.com https://analytics.kubestellar.io https://raw.githubusercontent.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; frame-src 'none'; worker-src 'self' blob:; manifest-src 'self'"
     Cache-Control = "no-cache, no-store, must-revalidate"
     Pragma = "no-cache"
 
