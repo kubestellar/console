@@ -710,6 +710,8 @@
     "synced": "Synced",
     "outOfSync": "Out of Sync",
     "checking": "Checking...",
+    "driftCheckFailed": "Drift check failed",
+    "clusterUnresolved": "cluster: unknown",
     "appsConfigured": "apps configured",
     "helmReleases": "helm releases",
     "kustomizeApps": "kustomize apps",
