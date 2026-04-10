@@ -1,0 +1,101 @@
+name: ACCM History Update
+
+# Daily job that recomputes the full ACCM (AI Codebase Maturity Model)
+# historical dataset for kubestellar/console and writes it to a public gist.
+# The /api/analytics-accm endpoint reads this gist so the chart can show the
+# entire project history (since 2026-01-16) without being limited by the
+# GitHub Search API's 1000-result hard cap.
+#
+# Required secret:
+#   ACCM_HISTORY_GIST_TOKEN — a GitHub PAT with the `gist` scope, used to
+#                             PATCH the gist content. The default GITHUB_TOKEN
+#                             can't update gists, so a PAT is required.
+#
+# The gist ID is hardcoded below (it's public — not a secret).
+#
+# The workflow can also be triggered manually from the Actions tab.
+
+on:
+  schedule:
+    # Daily at 06:30 UTC (just after midnight US-East). Picked off-peak to
+    # avoid colliding with other recurring workflows in the repo.
+    - cron: "30 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Public gist that holds the computed history. Not a secret.
+  ACCM_HISTORY_GIST_ID: "21a665e2a49ced34f83bc290c3fd6a23"
+
+jobs:
+  update-gist:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build ACCM history JSON
+        id: build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node scripts/build-accm-history.mjs > accm-history.json
+          echo "size=$(stat -c%s accm-history.json)" >> "$GITHUB_OUTPUT"
+          echo "weeks=$(node -e 'console.log(JSON.parse(require("fs").readFileSync("accm-history.json")).weekCount)')" >> "$GITHUB_OUTPUT"
+
+      - name: Validate output
+        run: |
+          # Sanity-check the JSON is non-trivial — bail if the script
+          # produced an empty or obviously broken file
+          if [ ! -s accm-history.json ]; then
+            echo "ERROR: accm-history.json is empty"
+            exit 1
+          fi
+          node -e '
+            const d = JSON.parse(require("fs").readFileSync("accm-history.json"));
+            if (!Array.isArray(d.weeklyActivity) || d.weeklyActivity.length < 1) {
+              console.error("ERROR: weeklyActivity missing or empty");
+              process.exit(1);
+            }
+            console.log(`OK: ${d.weeklyActivity.length} weeks, ${d.contributorGrowth.total} contributors`);
+          '
+
+      - name: Update gist
+        env:
+          GIST_TOKEN: ${{ secrets.ACCM_HISTORY_GIST_TOKEN }}
+          GIST_ID: ${{ env.ACCM_HISTORY_GIST_ID }}
+        run: |
+          if [ -z "$GIST_TOKEN" ]; then
+            echo "ERROR: ACCM_HISTORY_GIST_TOKEN secret must be set (PAT with 'gist' scope)"
+            exit 1
+          fi
+          # Read the JSON and PATCH the gist. The gist must already exist
+          # and contain a file named "accm-history.json".
+          jq -n --rawfile content accm-history.json '{
+            files: {
+              "accm-history.json": { content: $content }
+            }
+          }' > payload.json
+          curl -sS -f -X PATCH \
+            -H "Authorization: Bearer $GIST_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -d @payload.json \
+            "https://api.github.com/gists/$GIST_ID" > /dev/null
+          echo "Gist updated: https://gist.github.com/$GIST_ID"
+
+      - name: Summary
+        run: |
+          echo "### ACCM History Updated" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Weeks: ${{ steps.build.outputs.weeks }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Size: ${{ steps.build.outputs.size }} bytes" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Gist: https://gist.github.com/${{ env.ACCM_HISTORY_GIST_ID }}" >> "$GITHUB_STEP_SUMMARY"

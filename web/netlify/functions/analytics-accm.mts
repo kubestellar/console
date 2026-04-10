@@ -21,10 +21,11 @@ const CACHE_STORE = "analytics-accm";
 const CACHE_KEY = "accm-data";
 /** Cache TTL: 1 hour */
 const CACHE_TTL_MS = 60 * 60 * 1000;
-/** Project start date — first commit / first PR landed on this date.
- *  History windows are computed from this date so the charts always
- *  show the full project history rather than a sliding window. */
-const PROJECT_START_DATE = "2025-12-15";
+/** Project start date — kubestellar/console repo creation date (verified
+ *  via the GitHub Repos API: created_at). History windows are computed
+ *  from this date so the charts always show the full project history
+ *  rather than a sliding window. */
+const PROJECT_START_DATE = "2026-01-16";
 /** Hard ceiling on history length, in case PROJECT_START_DATE drifts.
  *  At ~5 years this is generous but bounded. */
 const MAX_WEEKS_OF_HISTORY = 260;
@@ -38,6 +39,16 @@ const PER_PAGE = 100;
 const MAX_PAGES = 30;
 /** Request timeout for GitHub API calls */
 const API_TIMEOUT_MS = 15_000;
+/** Public gist (raw URL) holding the precomputed full ACCM history.
+ *  Updated daily by .github/workflows/accm-history-update.yml. Reading
+ *  this gist sidesteps the GitHub Search API's 1000-result hard cap so
+ *  the chart can show every week since PROJECT_START_DATE. If the gist
+ *  fetch fails for any reason, the function falls back to a live
+ *  computation (which only covers the most recent slice). */
+const ACCM_HISTORY_GIST_URL =
+  "https://gist.githubusercontent.com/clubanderson/21a665e2a49ced34f83bc290c3fd6a23/raw/accm-history.json";
+/** Timeout for the gist fetch (short — we want to fall back fast). */
+const GIST_FETCH_TIMEOUT_MS = 5_000;
 /** AI-generated label used to classify AI contributions */
 const AI_LABEL = "ai-generated";
 /**
@@ -478,6 +489,34 @@ function aggregateContributorGrowth(
 }
 
 // ---------------------------------------------------------------------------
+// Gist fetch — precomputed historical data
+// ---------------------------------------------------------------------------
+
+/** Fetch the precomputed full-history ACCM dataset from the public gist
+ *  written daily by the accm-history-update workflow. Returns null on any
+ *  failure so callers fall back to live computation. */
+async function fetchACCMFromGist(): Promise<ACCMData | null> {
+  // Skip if the gist URL hasn't been wired up yet (placeholder still present).
+  if (ACCM_HISTORY_GIST_URL.includes("__GIST_ID__")) return null;
+  try {
+    const res = await fetch(ACCM_HISTORY_GIST_URL, {
+      signal: AbortSignal.timeout(GIST_FETCH_TIMEOUT_MS),
+      // Bypass intermediate caches — the gist is the source of truth and
+      // we want the freshest version after the daily update job runs.
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as ACCMData;
+    if (!Array.isArray(data.weeklyActivity) || data.weeklyActivity.length === 0) {
+      return null;
+    }
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Main data fetch + aggregation
 // ---------------------------------------------------------------------------
 
@@ -546,7 +585,24 @@ export default async (req: Request) => {
     // Cache miss or parse error — proceed to fetch
   }
 
-  // Fetch fresh data
+  // Prefer the precomputed gist (full project history). The daily
+  // accm-history-update workflow refreshes this gist using a windowed
+  // fetch that bypasses the GitHub Search 1000-result hard cap.
+  const gistData = await fetchACCMFromGist();
+  if (gistData) {
+    const cacheEntry: CacheEntry = {
+      data: gistData,
+      expiresAt: Date.now() + CACHE_TTL_MS,
+    };
+    store.set(CACHE_KEY, JSON.stringify(cacheEntry)).catch(() => {});
+    return new Response(JSON.stringify({ ...gistData, source: "gist" }), {
+      status: 200,
+      headers: { ...headers, "Content-Type": "application/json" },
+    });
+  }
+
+  // Fall back to live computation (limited to recent weeks by the
+  // GitHub Search 1000-result cap).
   try {
     const data = await fetchACCMData(token);
 
