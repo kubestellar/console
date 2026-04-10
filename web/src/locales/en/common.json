@@ -3348,5 +3348,13 @@
         "troubleshootingEmpty": "Troubleshooting steps not yet available for this mission."
       }
     }
+  },
+  "confirmMissionPrompt": {
+    "title": "Review AI mission prompt",
+    "helpText": "Review the prompt below before running. You can edit it to add extra context, change parameters, or remove anything you do not want the AI agent to do.",
+    "promptLabel": "Prompt sent to the AI agent",
+    "emptyPromptError": "Prompt cannot be empty.",
+    "cancel": "Cancel",
+    "confirm": "Run mission"
   }
 }

@@ -6,6 +6,7 @@
  * installation mission.
  */
 
+import { useState } from 'react'
 import { AlertTriangle, CheckCircle, Network, RefreshCw, Wifi, WifiOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../../ui/Skeleton'
@@ -13,6 +14,7 @@ import { MetricTile } from '../../../../lib/cards/CardComponents'
 import { useModalState } from '../../../../lib/modals'
 import { useMissions } from '../../../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../../console-missions/shared'
+import { ConfirmMissionPromptDialog } from '../../../missions/ConfirmMissionPromptDialog'
 import { useOvnStatus } from './useOvnStatus'
 import { OVN_INSTALL_PROMPT } from '../shared'
 import { loadMissionPrompt } from '../missionLoader'
@@ -63,6 +65,8 @@ export function OvnStatus() {
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
   const { isOpen: isDetailModalOpen, open: openDetailModal, close: closeDetailModal } = useModalState()
+  // #5913 — Holds the AI prompt pending user review/edit before the mission runs.
+  const [pendingPrompt, setPendingPrompt] = useState<string | null>(null)
 
   // ------ Loading ------
   if (showSkeleton) {
@@ -103,12 +107,8 @@ export function OvnStatus() {
           onClick={() =>
             checkKeyAndRun(async () => {
               const prompt = await loadMissionPrompt('ovn', OVN_INSTALL_PROMPT)
-              startMission({
-                title: 'Install OVN-Kubernetes',
-                description: 'Install OVN-Kubernetes with UDN support for tenant network isolation',
-                type: 'deploy',
-                initialPrompt: prompt,
-              })
+              // #5913 — Let the user review/edit the prompt before running.
+              setPendingPrompt(prompt)
             })
           }
           className="mt-1 px-4 py-2 rounded-lg bg-blue-500/20 text-blue-400 text-xs font-medium hover:bg-blue-500/30 transition-colors"
@@ -116,6 +116,24 @@ export function OvnStatus() {
           {t('ovnStatus.installWithAgent')}
         </button>
         <ApiKeyPromptModal isOpen={showKeyPrompt} onDismiss={dismissPrompt} onGoToSettings={goToSettings} />
+        {pendingPrompt !== null && (
+          <ConfirmMissionPromptDialog
+            open={pendingPrompt !== null}
+            missionTitle="Install OVN-Kubernetes"
+            missionDescription="Install OVN-Kubernetes with UDN support for tenant network isolation"
+            initialPrompt={pendingPrompt}
+            onCancel={() => setPendingPrompt(null)}
+            onConfirm={(editedPrompt) => {
+              setPendingPrompt(null)
+              startMission({
+                title: 'Install OVN-Kubernetes',
+                description: 'Install OVN-Kubernetes with UDN support for tenant network isolation',
+                type: 'deploy',
+                initialPrompt: editedPrompt,
+              })
+            }}
+          />
+        )}
       </div>
     )
   }

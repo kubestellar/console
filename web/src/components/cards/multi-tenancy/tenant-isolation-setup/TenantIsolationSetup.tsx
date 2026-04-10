@@ -4,12 +4,14 @@
  * Shows component readiness, isolation levels, architecture description,
  * and CTA buttons to launch AI missions for configuration.
  */
+import { useState } from 'react'
 import {
   CheckCircle, XCircle, AlertTriangle, Shield, Wand2, Download,
   Network, Layers, Box, Monitor } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useMissions } from '../../../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../../console-missions/shared'
+import { ConfirmMissionPromptDialog } from '../../../missions/ConfirmMissionPromptDialog'
 import { useCardLoadingState } from '../../CardDataContext'
 import { useTenantIsolationSetup } from './useTenantIsolationSetup'
 import { DEMO_TENANT_ISOLATION_SETUP } from './demoData'
@@ -107,6 +109,13 @@ export function TenantIsolationSetup() {
     goToSettings,
     dismissPrompt } = useApiKeyCheck()
 
+  // #5913 — Holds a mission awaiting user review/edit of its prompt.
+  const [pendingMission, setPendingMission] = useState<{
+    title: string
+    description: string
+    prompt: string
+  } | null>(null)
+
   // Use demo data when all hooks return demo data
   const data = liveData.isDemoData ? DEMO_TENANT_ISOLATION_SETUP : liveData
 
@@ -119,11 +128,12 @@ export function TenantIsolationSetup() {
   const handleConfigureAll = () => {
     checkKeyAndRun(async () => {
       const prompt = await loadMissionPrompt('multi-tenancy', MULTI_TENANCY_SETUP_PROMPT)
-      startMission({
+      // #5913 — Let the user review/edit the prompt before running.
+      setPendingMission({
         title: 'Configure Multi-Tenancy',
         description: 'Set up OVN, KubeFlex, K3s, and KubeVirt for tenant isolation',
-        type: 'deploy',
-        initialPrompt: prompt })
+        prompt,
+      })
     })
   }
 
@@ -140,11 +150,12 @@ export function TenantIsolationSetup() {
 
     checkKeyAndRun(async () => {
       const prompt = await loadMissionPrompt(key, fallbackPrompt)
-      startMission({
+      // #5913 — Let the user review/edit the prompt before running.
+      setPendingMission({
         title: `Install ${componentNames[key] || key}`,
         description: `Install and configure ${componentNames[key] || key} for multi-tenancy`,
-        type: 'deploy',
-        initialPrompt: prompt })
+        prompt,
+      })
     })
   }
 
@@ -166,6 +177,27 @@ export function TenantIsolationSetup() {
         onDismiss={dismissPrompt}
         onGoToSettings={goToSettings}
       />
+
+      {/* #5913 — Review/edit the AI mission prompt before running */}
+      {pendingMission && (
+        <ConfirmMissionPromptDialog
+          open={!!pendingMission}
+          missionTitle={pendingMission.title}
+          missionDescription={pendingMission.description}
+          initialPrompt={pendingMission.prompt}
+          onCancel={() => setPendingMission(null)}
+          onConfirm={(editedPrompt) => {
+            const { title, description } = pendingMission
+            setPendingMission(null)
+            startMission({
+              title,
+              description,
+              type: 'deploy',
+              initialPrompt: editedPrompt,
+            })
+          }}
+        />
+      )}
 
       {/* Component readiness row */}
       <div>

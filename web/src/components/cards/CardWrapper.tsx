@@ -26,6 +26,7 @@ import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { CARD_INSTALL_MAP } from '../../lib/cards/cardInstallMap'
 import { loadMissionPrompt } from '../cards/multi-tenancy/missionLoader'
 import { ClusterSelectionDialog } from '../missions/ClusterSelectionDialog'
+import { ConfirmMissionPromptDialog } from '../missions/ConfirmMissionPromptDialog'
 // Lazy-load the widget export modal (~42 KB + code generator ~30 KB) — only when user exports
 const WidgetExportModal = lazy(() =>
   import('../widgets/WidgetExportModal').then(m => ({ default: m.WidgetExportModal }))
@@ -392,6 +393,15 @@ export function CardWrapper({
   const [showBugReport, setShowBugReport] = useState(false)
   const [showInstallClusterSelect, setShowInstallClusterSelect] = useState(false)
   const [showInstallGuide, setShowInstallGuide] = useState<{ mission: { mission?: { title?: string; description?: string; steps?: { title?: string; description?: string }[] } } } | null>(null)
+  /**
+   * State for the install-via-AI prompt confirmation dialog (#5913).
+   * After the user picks clusters, we load the prompt and stash it here so
+   * the user can review/edit it before the mission actually starts.
+   */
+  const [pendingInstallMission, setPendingInstallMission] = useState<{
+    prompt: string
+    clusters: string[]
+  } | null>(null)
   const installInfo = CARD_INSTALL_MAP[cardType]
 
   // Register expand trigger for keyboard navigation
@@ -1400,15 +1410,37 @@ export function CardWrapper({
                 const clusterContext = clusters.length > 0
                   ? `\n\n**Target cluster(s):** ${clusters.join(', ')}\n\nPlease install on ${clusters.length === 1 ? `cluster "${clusters[0]}"` : `the following clusters: ${clusters.join(', ')}`}.`
                   : ''
+                // #5913 — Do not start the mission yet. Stash the prompt and
+                // let the user review/edit it via ConfirmMissionPromptDialog.
+                setPendingInstallMission({
+                  prompt: prompt + clusterContext,
+                  clusters,
+                })
+              }}
+              missionTitle={`Install ${installInfo.project}`}
+            />
+          )}
+
+          {/* Install CTA: confirm and edit the AI mission prompt before running (#5913) */}
+          {pendingInstallMission && installInfo && (
+            <ConfirmMissionPromptDialog
+              open={!!pendingInstallMission}
+              missionTitle={`Install ${installInfo.project}`}
+              missionDescription={`Install and configure ${installInfo.project}`}
+              initialPrompt={pendingInstallMission.prompt}
+              onCancel={() => setPendingInstallMission(null)}
+              onConfirm={(editedPrompt) => {
+                const { clusters } = pendingInstallMission
+                setPendingInstallMission(null)
                 startMission({
                   title: `Install ${installInfo.project}`,
                   description: `Install and configure ${installInfo.project}`,
                   type: 'deploy',
                   cluster: clusters.length > 0 ? clusters.join(',') : undefined,
-                  initialPrompt: prompt + clusterContext })
+                  initialPrompt: editedPrompt,
+                })
                 openSidebar()
               }}
-              missionTitle={`Install ${installInfo.project}`}
             />
           )}
 
