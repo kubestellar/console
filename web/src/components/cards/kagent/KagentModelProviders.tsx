@@ -1,6 +1,7 @@
 import { Cpu, Server } from 'lucide-react'
 import { useKagentCRDModels } from '../../../hooks/mcp/kagent_crds'
 import { useCardLoadingState } from '../CardDataContext'
+import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../../lib/cards/CardComponents'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { Skeleton } from '../../ui/Skeleton'
@@ -63,7 +64,8 @@ const SORT_OPTIONS: { value: SortField; label: string }[] = [
   { value: 'cluster', label: 'Cluster' },
 ]
 
-export function KagentModelProviders({ config }: KagentModelProvidersProps) {
+// #6216 part 2: wrapped at the bottom in DynamicCardErrorBoundary.
+function KagentModelProvidersInternal({ config }: KagentModelProvidersProps) {
   const {
     data: models,
     isLoading,
@@ -199,5 +201,13 @@ export function KagentModelProviders({ config }: KagentModelProvidersProps) {
         needsPagination={needsPagination}
       />
     </div>
+  )
+}
+
+export function KagentModelProviders(props: KagentModelProvidersProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="KagentModelProviders">
+      <KagentModelProvidersInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }

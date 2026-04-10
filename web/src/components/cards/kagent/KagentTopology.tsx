@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Bot, Wrench, Cpu } from 'lucide-react'
 import { useKagentCRDAgents, useKagentCRDTools, useKagentCRDModels } from '../../../hooks/mcp/kagent_crds'
 import { useCardLoadingState } from '../CardDataContext'
+import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import { useTranslation } from 'react-i18next'
 import {
   KAGENT_RUNTIME_PYTHON, KAGENT_RUNTIME_GO, KAGENT_RUNTIME_BYO,
@@ -31,7 +32,10 @@ interface TopoEdge {
   type: 'agent-tool' | 'agent-model'
 }
 
-export function KagentTopology({ config }: { config?: Record<string, unknown> }) {
+// #6216 part 2: wrapped at the bottom of the file in DynamicCardErrorBoundary
+// so a runtime error in the 234-line topology renderer doesn't crash the
+// dashboard. Same pattern as #6237 part 1.
+function KagentTopologyInternal({ config }: { config?: Record<string, unknown> }) {
   const { t } = useTranslation('cards')
   const cluster = config?.cluster as string | undefined
   const { data: agents, isLoading: agentsLoading, isDemoFallback: agentsDemo } = useKagentCRDAgents({ cluster })
@@ -230,5 +234,13 @@ export function KagentTopology({ config }: { config?: Record<string, unknown> })
         </svg>
       </div>
     </div>
+  )
+}
+
+export function KagentTopology(props: { config?: Record<string, unknown> }) {
+  return (
+    <DynamicCardErrorBoundary cardId="KagentTopology">
+      <KagentTopologyInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }

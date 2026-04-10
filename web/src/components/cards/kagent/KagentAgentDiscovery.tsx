@@ -1,6 +1,7 @@
 import { Radar, Tag, Server, Wrench } from 'lucide-react'
 import { useKagentCRDAgents } from '../../../hooks/mcp/kagent_crds'
 import { useCardLoadingState } from '../CardDataContext'
+import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../../lib/cards/CardComponents'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { Skeleton } from '../../ui/Skeleton'
@@ -16,7 +17,8 @@ const SORT_OPTIONS: { value: SortField; label: string }[] = [
   { value: 'cluster', label: 'Cluster' },
 ]
 
-export function KagentAgentDiscovery({ config }: KagentAgentDiscoveryProps) {
+// #6216 part 2: wrapped at the bottom in DynamicCardErrorBoundary.
+function KagentAgentDiscoveryInternal({ config }: KagentAgentDiscoveryProps) {
   const {
     data: agents,
     isLoading,
@@ -184,5 +186,13 @@ export function KagentAgentDiscovery({ config }: KagentAgentDiscoveryProps) {
         needsPagination={needsPagination}
       />
     </div>
+  )
+}
+
+export function KagentAgentDiscovery(props: KagentAgentDiscoveryProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="KagentAgentDiscovery">
+      <KagentAgentDiscoveryInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }

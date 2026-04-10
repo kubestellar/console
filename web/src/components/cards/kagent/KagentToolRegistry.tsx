@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Wrench, Server, ChevronDown, ChevronUp } from 'lucide-react'
 import { useKagentCRDTools } from '../../../hooks/mcp/kagent_crds'
 import { useCardLoadingState } from '../CardDataContext'
+import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../../lib/cards/CardComponents'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { Skeleton } from '../../ui/Skeleton'
@@ -60,7 +61,8 @@ const SORT_OPTIONS: { value: SortField; label: string }[] = [
   { value: 'cluster', label: 'Cluster' },
 ]
 
-export function KagentToolRegistry({ config }: KagentToolRegistryProps) {
+// #6216 part 2: wrapped at the bottom in DynamicCardErrorBoundary.
+function KagentToolRegistryInternal({ config }: KagentToolRegistryProps) {
   const [expandedTool, setExpandedTool] = useState<string | null>(null)
 
   const {
@@ -220,5 +222,13 @@ export function KagentToolRegistry({ config }: KagentToolRegistryProps) {
         needsPagination={needsPagination}
       />
     </div>
+  )
+}
+
+export function KagentToolRegistry(props: KagentToolRegistryProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="KagentToolRegistry">
+      <KagentToolRegistryInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }
