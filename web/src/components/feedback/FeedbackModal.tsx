@@ -19,6 +19,7 @@ import { StatusBadge } from '../ui/StatusBadge'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
 import { useToast } from '../ui/Toast'
 import { emitFeedbackSubmitted, emitLinkedInShare, emitScreenshotAttached, emitScreenshotUploadFailed, emitScreenshotUploadSuccess } from '../../lib/analytics'
+import { copyBlobToClipboard } from '../../lib/clipboard'
 import { useBranding } from '../../hooks/useBranding'
 import { FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
 import { FEEDBACK_UPLOAD_TIMEOUT_MS } from '../../lib/constants/network'
@@ -127,7 +128,16 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
     try {
       const res = await fetch(preview, { signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       const blob = await res.blob()
-      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
+      // #6229: route through the shared lib/clipboard.copyBlobToClipboard
+      // helper which guards `navigator.clipboard.write` AND
+      // `typeof ClipboardItem === 'function'` so unsupported browsers
+      // (older Safari, Firefox <127, all browsers in non-secure contexts)
+      // get a clean false return instead of an unhandled exception.
+      const ok = await copyBlobToClipboard(blob)
+      if (!ok) {
+        showToast('Could not copy image to clipboard (browser may not support image copy)', 'error')
+        return
+      }
       setCopiedIndex(index)
       setTimeout(() => setCopiedIndex(null), COPY_FEEDBACK_TIMEOUT_MS)
     } catch {

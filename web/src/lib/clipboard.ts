@@ -38,3 +38,33 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     return false
   }
 }
+
+/**
+ * Safe clipboard write for image (or any non-text) blob data using the
+ * Async Clipboard API's `ClipboardItem` interface (#6229).
+ *
+ * Unlike `copyToClipboard()` (text), there is no graceful fallback for
+ * blob data — `document.execCommand('copy')` cannot copy images, so on
+ * browsers without `ClipboardItem` support (older Safari, Firefox before
+ * 127, all browsers in non-secure contexts) this returns `false` and the
+ * caller should surface a user-visible error.
+ *
+ * Guards on the full chain (`navigator.clipboard.write` AND
+ * `typeof ClipboardItem === 'function'`) so callers cannot accidentally
+ * trigger an unhandled exception on unsupported browsers.
+ */
+export async function copyBlobToClipboard(blob: Blob): Promise<boolean> {
+  try {
+    if (
+      typeof navigator?.clipboard?.write === 'function' &&
+      typeof ClipboardItem === 'function'
+    ) {
+      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
+      return true
+    }
+  } catch {
+    // ClipboardItem can throw on unsupported MIME types or when the
+    // browser denies the write (e.g., user-gesture missing). Fall through.
+  }
+  return false
+}

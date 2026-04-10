@@ -556,11 +556,13 @@ const T2_TEMPLATES: T2Template[] = [
     \`kubectl port-forward -n \${f.namespace} \${f.resource} \${f.localPort}:\${f.remotePort}\`
 
   const copyCommand = (f) => {
-    try {
-      navigator?.clipboard?.writeText?.(getCommand(f))
-      setCopied(f.id)
-      setTimeout(() => setCopied(null), ${COPY_FEEDBACK_TIMEOUT_MS})
-    } catch {}
+    // #6229: catch the dropped Promise so a failed write (clipboard
+    // permission denied, blocked iframe, etc.) doesn't surface as an
+    // unhandled rejection in the generated card. The optional chain
+    // already guards undefined.
+    navigator?.clipboard?.writeText?.(getCommand(f))?.catch?.(() => {})
+    setCopied(f.id)
+    setTimeout(() => setCopied(null), ${COPY_FEEDBACK_TIMEOUT_MS})
   }
 
   return (

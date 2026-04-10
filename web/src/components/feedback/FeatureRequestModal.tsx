@@ -20,6 +20,7 @@ import { FEEDBACK_UPLOAD_TIMEOUT_MS } from '../../lib/constants/network'
 import { GITHUB_TOKEN_CREATE_URL, GITHUB_TOKEN_FINE_GRAINED_PERMISSIONS } from '../../lib/constants/github-token'
 import { compressScreenshot } from '../../lib/imageCompression'
 import { emitLinkedInShare } from '../../lib/analytics'
+import { copyBlobToClipboard } from '../../lib/clipboard'
 import { isDemoModeForced } from '../../lib/demoMode'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
@@ -206,7 +207,14 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
     try {
       const res = await fetch(preview, { signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       const blob = await res.blob()
-      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
+      // #6229: shared clipboard helper guards `navigator.clipboard.write`
+      // AND `typeof ClipboardItem === 'function'`. See FeedbackModal for
+      // the same change.
+      const ok = await copyBlobToClipboard(blob)
+      if (!ok) {
+        showToast('Could not copy image to clipboard (browser may not support image copy)', 'error')
+        return
+      }
       setCopiedIndex(index)
       setTimeout(() => setCopiedIndex(null), COPY_FEEDBACK_TIMEOUT_MS)
     } catch {

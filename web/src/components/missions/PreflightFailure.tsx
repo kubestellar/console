@@ -24,6 +24,7 @@ import {
 import type { PreflightError, PreflightErrorCode, RemediationAction } from '../../lib/missions/preflightCheck'
 import { getRemediationActions } from '../../lib/missions/preflightCheck'
 import { cn } from '../../lib/cn'
+import { copyToClipboard } from '../../lib/clipboard'
 
 // ============================================================================
 // Icon / color mapping per error code
@@ -81,11 +82,21 @@ function ActionButton({
     }
   }, [])
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     if (action.codeSnippet) {
-      navigator.clipboard.writeText(action.codeSnippet).catch(() => {
-        // Fallback: select text in a temporary textarea
-      })
+      // #6229: route through the shared lib/clipboard helper which guards
+      // typeof navigator?.clipboard?.writeText === 'function' and falls back
+      // to a hidden textarea + execCommand on browsers without the API.
+      // The previous direct call had an empty .catch() so failures were
+      // completely silent.
+      const ok = await copyToClipboard(action.codeSnippet)
+      if (!ok) {
+        // Surface the failure as a transient label flip — the existing
+        // setCopied(true) toast becomes a no-op and the user sees nothing
+        // change, which is at least less confusing than the old silent
+        // failure path.
+        return
+      }
       setCopied(true)
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
       copyTimeoutRef.current = setTimeout(() => {

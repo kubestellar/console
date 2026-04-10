@@ -325,6 +325,13 @@ export function SearchDropdown() {
       // Open search with Cmd+K
       if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
         event.preventDefault()
+        // #6225: stop propagation so FloatingDashboardActions's bubble-phase
+        // listener does not also fire on the same Ctrl+K — without this,
+        // both the search dropdown and the dashboard actions menu opened
+        // simultaneously and required two Escape presses to close. Paired
+        // with the `capture: true` on the addEventListener call below so
+        // this listener wins regardless of registration order.
+        event.stopPropagation()
         inputRef.current?.focus()
         openSearch()
         emitGlobalSearchOpened('keyboard')
@@ -356,8 +363,12 @@ export function SearchDropdown() {
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    // #6225: capture phase so this listener fires BEFORE bubble-phase
+    // handlers (e.g. FloatingDashboardActions) — paired with the
+    // event.stopPropagation() inside the Ctrl+K branch above. The third
+    // arg must match between addEventListener and removeEventListener.
+    document.addEventListener('keydown', handleKeyDown, true)
+    return () => document.removeEventListener('keydown', handleKeyDown, true)
   }, [isSearchOpen, isResultsPanelActive, selectedIndex, handleSelect, handleAskAI, openSearch, closeSearch])
 
   // Reset selected index when results change
