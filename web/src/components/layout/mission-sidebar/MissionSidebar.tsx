@@ -574,7 +574,9 @@ export function MissionSidebar() {
         <div className="flex items-center gap-1 min-w-0">
           {/* Optional toolbar buttons — clipped when sidebar is narrow */}
           <div className="flex items-center gap-1 overflow-hidden min-w-0 flex-shrink">
-            {/* New Mission Button */}
+            {/* New Mission Button — uses "+" for discoverability (#6095).
+                Styled with a purple accent and ring so it stands out from
+                the font-size Plus control and reads clearly as "add new". */}
             <button
               onClick={() => {
                 setShowNewMission(!showNewMission)
@@ -583,14 +585,15 @@ export function MissionSidebar() {
                 }
               }}
               className={cn(
-                "p-1.5 rounded transition-colors flex-shrink-0",
+                "p-1.5 rounded transition-colors flex-shrink-0 ring-1",
                 showNewMission
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
+                  ? "bg-primary text-primary-foreground ring-primary"
+                  : "bg-purple-500/10 text-purple-400 ring-purple-500/30 hover:bg-purple-500/20 hover:text-purple-300"
               )}
-              title={t('missionSidebar.startNewMission')}
+              aria-label={t('missionSidebar.newMissionButton')}
+              title={t('missionSidebar.newMissionButton')}
             >
-              <Sparkles className="w-4 h-4" />
+              <Plus className="w-4 h-4" />
             </button>
             {/* Browse Community Missions */}
             <button
