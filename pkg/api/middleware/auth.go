@@ -67,9 +67,22 @@ type TokenRevoker interface {
 // TokenRevoker (typically SQLite). The cache avoids a DB query on every request
 // while the persistent store ensures revocations survive server restarts.
 //
-// Limitation: In multi-instance deployments, the in-memory cache on one instance
-// will not see tokens revoked by another instance until the next DB check (slow path).
-// For single-instance deployments (the current architecture), this is not an issue.
+// Cross-instance correctness (#5977):
+//   - Revocations are written through to the shared persistent store on
+//     every Revoke() call, so they are visible to every instance that shares
+//     the same DB as soon as the transaction commits.
+//   - IsRevoked() checks the in-memory cache first (fast path); on a cache
+//     miss it falls through to the persistent store (slow path). This means
+//     a token revoked on instance A is rejected by instance B on the next
+//     request, even if instance B has never seen that JTI before.
+//   - The backfill in the slow path caches a zero-time entry so subsequent
+//     requests for the same revoked JTI hit the fast path. The periodic
+//     cleanup loop re-queries the DB for authoritative expiry.
+//
+// Deployment requirement: every instance must point at the same persistent
+// store (same SQLite file on shared storage, or an equivalent shared backend).
+// Running multiple instances against independent stores would break the
+// cross-instance revocation guarantee.
 type revokedTokenCache struct {
 	sync.RWMutex
 	tokens map[string]time.Time // jti -> expiresAt
@@ -238,9 +251,34 @@ func JWTAuth(secret string) fiber.Handler {
 		}
 
 		// Fallback 2: accept _token query param for SSE /stream endpoints
-		// (EventSource API does not support custom headers)
+		// (EventSource API does not support custom headers, so SSE endpoints
+		// may receive the JWT as a query parameter). Preferred clients use
+		// the fetch-based SSE client which sends the token via the
+		// Authorization header; this fallback exists for legacy EventSource
+		// callers. See #5979.
+		//
+		// SECURITY: Immediately after consuming the token, we strip the
+		// `_token` parameter from the request URI so that:
+		//   - downstream middleware and handlers never observe it,
+		//   - any code that serializes the URL (access logs, error pages,
+		//     proxy forwarding, metrics labels) cannot leak the JWT,
+		//   - `c.OriginalURL()` and fasthttp's RequestURI reflect the
+		//     sanitized URL for the remainder of request handling.
+		// This is defense-in-depth: the top-level access logger already
+		// uses ${path} (no query string), but any future log line that
+		// prints the URL would otherwise leak the token.
 		if tokenString == "" && c.Query("_token") != "" && strings.HasSuffix(c.Path(), "/stream") {
 			tokenString = c.Query("_token")
+			args := c.Context().QueryArgs()
+			args.Del("_token")
+			// Rewrite the parsed URI so QueryArgs()/Query() no longer see the
+			// token, then sync the raw request URI header so OriginalURL()
+			// and RequestURI reflect the sanitized query string. Both writes
+			// are required — fasthttp caches the raw request URI on the
+			// request header separately from the parsed URI object.
+			reqURI := c.Context().Request.URI()
+			reqURI.SetQueryStringBytes(args.QueryString())
+			c.Context().Request.Header.SetRequestURIBytes(reqURI.RequestURI())
 		}
 
 		if tokenString == "" {

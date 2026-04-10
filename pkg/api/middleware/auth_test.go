@@ -73,6 +73,36 @@ func TestJWTAuth(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, 200, resp.StatusCode)
 	})
+
+	t.Run("Token Stripped From URL After Consumption (#5979)", func(t *testing.T) {
+		// After the auth middleware consumes a ?_token=... query param on
+		// an SSE /stream endpoint, the `_token` parameter MUST be removed
+		// from the request URI so that any downstream handler, access log,
+		// or serialized URL cannot leak the JWT.
+		token, _ := generateTestToken("test-secret", time.Now().Add(time.Hour))
+		stripTestApp := fiber.New()
+		var observedQuery string
+		var observedQueryToken string
+		var observedOriginalURL string
+		stripTestApp.Get("/events/stream", JWTAuth("test-secret"), func(c *fiber.Ctx) error {
+			observedQuery = string(c.Context().QueryArgs().QueryString())
+			observedQueryToken = c.Query("_token")
+			observedOriginalURL = c.OriginalURL()
+			return c.SendString("ok")
+		})
+
+		// Include an additional benign query param so we can verify only
+		// `_token` is removed (not the whole query string).
+		req := httptest.NewRequest("GET", "/events/stream?cluster=prod&_token="+token, nil)
+		resp, err := stripTestApp.Test(req, 5000)
+		assert.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+		assert.Empty(t, observedQueryToken, "_token should not be visible to downstream handlers")
+		assert.NotContains(t, observedQuery, "_token=", "token must be scrubbed from query args")
+		assert.NotContains(t, observedQuery, token, "token value must not appear in query args")
+		assert.Contains(t, observedQuery, "cluster=prod", "other query params must be preserved")
+		assert.NotContains(t, observedOriginalURL, token, "token value must not appear in OriginalURL()")
+	})
 }
 
 func TestGetContextHelpers(t *testing.T) {
