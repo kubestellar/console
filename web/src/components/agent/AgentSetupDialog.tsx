@@ -21,16 +21,23 @@ export function AgentSetupDialog() {
   const [show, setShow] = useState(false)
   const [copiedMacOS, setCopiedMacOS] = useState(false)
   const [copiedLinux, setCopiedLinux] = useState(false)
+  const [copiedWindows, setCopiedWindows] = useState(false)
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const copiedLinuxTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const copiedWindowsTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const macOSInstallCommand = 'brew tap kubestellar/tap && brew install kc-agent && kc-agent'
-  const linuxBuildCommand = 'git clone https://github.com/kubestellar/console.git && cd console && go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent'
+  const linuxBuildCommand = 'git clone https://github.com/kubestellar/console.git && cd console && mkdir -p bin && go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent'
+  // #6185: Windows users run inside WSL2 — same build path as Linux but
+  // with apt prereqs first. The README already covers this; the in-app
+  // modal had no Windows option until rishi-jat's follow-up.
+  const windowsBuildCommand = 'sudo apt-get update && sudo apt-get install -y software-properties-common curl git && sudo add-apt-repository -y ppa:longsleep/golang-backports && sudo apt-get update && sudo apt-get install -y golang-1.25 && git clone https://github.com/kubestellar/console.git && cd console && mkdir -p bin && go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent'
 
   useEffect(() => {
     return () => {
       clearTimeout(copiedTimerRef.current)
       clearTimeout(copiedLinuxTimerRef.current)
+      clearTimeout(copiedWindowsTimerRef.current)
     }
   }, [])
 
@@ -71,6 +78,7 @@ export function AgentSetupDialog() {
   }, [status, isConnected])
 
   const [showLinux, setShowLinux] = useState(false)
+  const [showWindows, setShowWindows] = useState(false)
 
   const copyMacOS = async () => {
     await copyToClipboard(macOSInstallCommand)
@@ -84,6 +92,13 @@ export function AgentSetupDialog() {
     setCopiedLinux(true)
     clearTimeout(copiedLinuxTimerRef.current)
     copiedLinuxTimerRef.current = setTimeout(() => setCopiedLinux(false), UI_FEEDBACK_TIMEOUT_MS)
+  }
+
+  const copyWindows = async () => {
+    await copyToClipboard(windowsBuildCommand)
+    setCopiedWindows(true)
+    clearTimeout(copiedWindowsTimerRef.current)
+    copiedWindowsTimerRef.current = setTimeout(() => setCopiedWindows(false), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   const handleSnooze = () => {
@@ -157,6 +172,41 @@ export function AgentSetupDialog() {
                 </button>
               </div>
               <p className="text-xs text-muted-foreground">{t('agentSetup.linuxBrewAlternative')}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Windows (WSL2) Install Option (collapsible) — #6185 */}
+        <div className="mt-2">
+          <button
+            onClick={() => setShowWindows(!showWindows)}
+            className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+          >
+            {showWindows ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            {t('agentSetup.windowsInstructions', 'Windows (WSL2) instructions')}
+          </button>
+          {showWindows && (
+            <div className="mt-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 space-y-2">
+              <p className="text-xs text-muted-foreground">
+                {t(
+                  'agentSetup.windowsBuildDesc',
+                  'Native Windows is not supported (the install scripts and kc-agent are POSIX shell + Go). Install WSL2 with Ubuntu first ("wsl --install -d Ubuntu" in PowerShell), then run this single command inside the WSL shell. Open http://localhost:8080 in your Windows browser — WSL2 forwards localhost automatically.',
+                )}
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 rounded bg-muted px-3 py-1.5 text-xs font-mono text-foreground select-all overflow-x-auto">
+                  {windowsBuildCommand}
+                </code>
+                <button
+                  onClick={copyWindows}
+                  className="shrink-0 rounded bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+                >
+                  {copiedWindows ? t('agentSetup.copied') : t('agentSetup.copy')}
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t('agentSetup.windowsReadmeRef', 'See README → Windows (WSL2) for the step-by-step version of this command.')}
+              </p>
             </div>
           )}
         </div>

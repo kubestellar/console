@@ -12,18 +12,25 @@ interface InClusterAgentDialogProps {
 }
 
 const BREW_INSTALL_CMD = 'brew tap kubestellar/tap && brew install kc-agent && kc-agent'
-const BUILD_FROM_SOURCE_CMD = 'git clone https://github.com/kubestellar/console.git && cd console && go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent'
+const BUILD_FROM_SOURCE_CMD = 'git clone https://github.com/kubestellar/console.git && cd console && mkdir -p bin && go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent'
+// #6185: Windows users run inside WSL2. Same Linux build path with apt
+// prereqs prepended (software-properties-common for add-apt-repository,
+// the longsleep PPA for current Go, then the standard build-from-source
+// command). The README has the step-by-step version of this.
+const WINDOWS_WSL_INSTALL_CMD = 'sudo apt-get update && sudo apt-get install -y software-properties-common curl git && sudo add-apt-repository -y ppa:longsleep/golang-backports && sudo apt-get update && sudo apt-get install -y golang-1.25 && git clone https://github.com/kubestellar/console.git && cd console && mkdir -p bin && go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent'
 const DOCS_URL = 'https://console-docs.kubestellar.io'
 
 /** Step key ranges: 100–199 = install section, 200–299 = CORS section */
 const COPY_KEY_BREW = 100
 const COPY_KEY_BUILD = 101
+const COPY_KEY_WSL = 102
 const COPY_KEY_CORS_ENV = 200
 const COPY_KEY_CORS_FLAG = 201
 
 export function InClusterAgentDialog({ isOpen, onClose }: InClusterAgentDialogProps) {
   const [copiedStep, setCopiedStep] = useState<number | null>(null)
   const [showBuildFromSource, setShowBuildFromSource] = useState(false)
+  const [showWindowsWsl, setShowWindowsWsl] = useState(false)
   const [showCorsDetails, setShowCorsDetails] = useState(false)
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
@@ -122,7 +129,7 @@ export function InClusterAgentDialog({ isOpen, onClose }: InClusterAgentDialogPr
                     ) : (
                       <ChevronRight className="w-3.5 h-3.5" />
                     )}
-                    Or build from source (requires Go 1.24+)
+                    Or build from source (Linux, requires Go 1.25+)
                   </button>
                   {showBuildFromSource && (
                     <div className="mt-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 space-y-2">
@@ -136,6 +143,47 @@ export function InClusterAgentDialog({ isOpen, onClose }: InClusterAgentDialogPr
                           title="Copy command"
                         >
                           {copiedStep === COPY_KEY_BUILD ? (
+                            <Check className="w-3.5 h-3.5 text-green-400" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Windows (WSL2) Install Option (collapsible) — #6185 */}
+                <div className="mt-2">
+                  <button
+                    onClick={() => setShowWindowsWsl(!showWindowsWsl)}
+                    className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                  >
+                    {showWindowsWsl ? (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    )}
+                    Windows (WSL2)
+                  </button>
+                  {showWindowsWsl && (
+                    <div className="mt-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 space-y-2">
+                      <p className="text-xs text-muted-foreground">
+                        Native Windows isn&apos;t supported. Install WSL2 with Ubuntu first
+                        (<code className="px-1 rounded bg-muted">wsl --install -d Ubuntu</code> in PowerShell), then
+                        run this single command inside the WSL shell. Open <code className="px-1 rounded bg-muted">http://localhost:8080</code> in
+                        your Windows browser when done — WSL2 forwards localhost automatically.
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 rounded bg-muted px-3 py-1.5 text-xs font-mono text-foreground select-all overflow-x-auto">
+                          {WINDOWS_WSL_INSTALL_CMD}
+                        </code>
+                        <button
+                          onClick={() => handleCopy(WINDOWS_WSL_INSTALL_CMD, COPY_KEY_WSL)}
+                          className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                          title="Copy command"
+                        >
+                          {copiedStep === COPY_KEY_WSL ? (
                             <Check className="w-3.5 h-3.5 text-green-400" />
                           ) : (
                             <Copy className="w-3.5 h-3.5" />
