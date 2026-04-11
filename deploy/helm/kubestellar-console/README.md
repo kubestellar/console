@@ -20,8 +20,10 @@ Helm chart for deploying the KubeStellar Console to a Kubernetes cluster.
 The chart has two modes for supplying secret material:
 
 1. **Chart-managed (default, easiest)** — pass values via `--set` or a values
-   file; the chart renders a single Kubernetes Secret named after the release
-   (`{release-name}-kubestellar-console`) that holds the JWT secret plus any
+   file; the chart renders a single Kubernetes Secret whose name is the
+   chart fullname (by default `{release-name}-kubestellar-console`, but
+   affected by `fullnameOverride` / `nameOverride` and truncated at 63
+   characters for DNS-label compliance). It holds the JWT secret plus any
    of the other optional keys (`github-client-id`, `github-client-secret`,
    `google-drive-api-key`, `claude-api-key`, `feedback-github-token`) you
    supplied via values.
@@ -30,18 +32,25 @@ The chart has two modes for supplying secret material:
      upgrade`** by looking up the existing Secret ([#6343](https://github.com/kubestellar/console/issues/6343)).
      This means JWT session cookies survive chart upgrades without forcing
      all users to sign in again.
+   - The `lookup` is skipped entirely when `jwt.secret` is set explicitly,
+     so Helm identities that have create/update on Secrets but lack `get`
+     can still install the chart ([#6348](https://github.com/kubestellar/console/issues/6348)).
 2. **Bring-your-own** — create Secrets yourself before `helm install` and
    reference them via `*.existingSecret` values.
-   - **Important:** the chart renders its own Secret only when
-     `jwt.existingSecret` is empty. If you're going BYO, set
-     `jwt.existingSecret` AND put every other secret key (github, claude,
-     google-drive, feedback-github-token) in that same Secret — don't mix
-     inline `github.clientId` values with `jwt.existingSecret`, because no
-     chart-managed Secret is rendered in that path and the inline values
-     have nowhere to land.
-   - You can point each `*.existingSecret` at the same Secret; the
-     per-field `existingSecretKey` / `existingSecretKeys.*` values let you
-     override the key name so one Secret can hold all of them.
+   - The chart's `existingSecret` values are independent per integration:
+     you can point `jwt.existingSecret`, `github.existingSecret`,
+     `claude.existingSecret`, `googleDrive.existingSecret`, and
+     `feedbackGithubToken.existingSecret` at any combination of Secrets —
+     the same one, or a different one per integration. Per-field
+     `existingSecretKey` / `existingSecretKeys.*` values let you override
+     the key name inside whichever Secret you pick.
+   - **One caveat:** the chart's own rendered Secret (holding the JWT
+     value plus any inline `github.clientId` / `claude.apiKey` / etc. you
+     passed as values) is gated solely on `jwt.existingSecret`. If you set
+     `jwt.existingSecret` you opt out of the chart-managed Secret entirely
+     — so any inline `github.clientId` / `claude.apiKey` / etc. values in
+     your values file have no Secret to land in, and must instead be
+     supplied via the matching `*.existingSecret` for that integration.
 
 ### Values that accept secret material
 
