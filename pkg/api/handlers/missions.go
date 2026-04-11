@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"strings"
 	"sync"
@@ -74,6 +75,52 @@ const (
 	// small enough that a single process footprint stays predictable.
 	missionsCacheMaxBytes = 256 * 1024 * 1024 // 256 MiB
 )
+
+// missionsDefaultShareRepos is the built-in allowlist of repositories that
+// ShareToGitHub will create PRs against. Operators can extend this via the
+// KC_ALLOWED_SHARE_REPOS environment variable (comma-separated list of
+// `owner/repo` entries). #6439 — without an allowlist, a misbehaving client
+// could point the handler at any repository the user's PAT has write access
+// to, using the console's UI as a confused-deputy PR-creation service.
+// console-kb is the canonical destination because shared missions land in the
+// community mission library (the same repo GetMissionFile reads from).
+var missionsDefaultShareRepos = []string{
+	"kubestellar/console-kb",
+}
+
+// allowedShareRepoEnvVar is the environment variable name operators use to
+// extend the built-in share-repo allowlist at runtime without a code change.
+const allowedShareRepoEnvVar = "KC_ALLOWED_SHARE_REPOS"
+
+// resolveAllowedShareRepos returns the effective allowlist of `owner/repo`
+// destinations for ShareToGitHub. The built-in defaults are always included;
+// any entries from KC_ALLOWED_SHARE_REPOS are appended. Empty/whitespace
+// entries are ignored.
+func resolveAllowedShareRepos() []string {
+	allowed := make([]string, 0, len(missionsDefaultShareRepos)+1)
+	allowed = append(allowed, missionsDefaultShareRepos...)
+	if extra := os.Getenv(allowedShareRepoEnvVar); extra != "" {
+		for _, r := range strings.Split(extra, ",") {
+			r = strings.TrimSpace(r)
+			if r != "" {
+				allowed = append(allowed, r)
+			}
+		}
+	}
+	return allowed
+}
+
+// isRepoAllowedForShare reports whether the given `owner/repo` string is on
+// the effective ShareToGitHub allowlist. Comparison is exact (case-sensitive)
+// to match GitHub's own slug handling.
+func isRepoAllowedForShare(repo string) bool {
+	for _, allowed := range resolveAllowedShareRepos() {
+		if repo == allowed {
+			return true
+		}
+	}
+	return false
+}
 
 // missionsCacheEntry holds a cached GitHub API response (directory listing or file content).
 type missionsCacheEntry struct {
@@ -765,6 +812,19 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	}
 	if req.Repo == "" || req.FilePath == "" || req.Content == "" || req.Branch == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "repo, filePath, content, and branch are required"})
+	}
+
+	// SECURITY #6439 — Enforce an allowlist on req.Repo. Without this, a
+	// misbehaving client could supply any owner/repo value and use the
+	// handler as a confused-deputy PR-creation service against whatever
+	// repositories the caller's PAT can write to. The default allowlist
+	// contains only `kubestellar/console-kb` (the canonical destination for
+	// shared missions); operators can append more via KC_ALLOWED_SHARE_REPOS.
+	if !isRepoAllowedForShare(req.Repo) {
+		return c.Status(400).JSON(fiber.Map{
+			"error":         "repo is not on the share allowlist",
+			"allowed_repos": resolveAllowedShareRepos(),
+		})
 	}
 
 	// SECURITY: Validate path and branch to prevent traversal/injection

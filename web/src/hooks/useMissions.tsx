@@ -960,6 +960,16 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         }
 
         wsRef.current.onerror = () => {
+          // #6440 — Architecture note for future readers who wonder why this
+          // sweeper doesn't filter by `agentId`: the console uses a SINGLE
+          // WebSocket connection to a SINGLE kc-agent process. There is no
+          // per-agent sub-connection and no `agentId` field on Mission
+          // objects. When this WS errors, by definition every in-flight
+          // mission on it is affected, so scoping the sweep by pending
+          // request (done below since #5851) is the correct granularity.
+          // If the backend ever grows a true multi-agent fan-out, the sweep
+          // must be re-scoped by agent — but until then, narrowing further
+          // would be incorrect, not safer.
           clearTimeout(timeout)
           // Forcibly close the socket and clear the ref to prevent zombie
           // connections. Nullify onclose first so the close doesn't trigger

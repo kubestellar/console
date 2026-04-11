@@ -207,7 +207,7 @@ func TestMissions_ShareToSlack_InvalidWebhook(t *testing.T) {
 func TestMissions_ShareToGitHub_NoToken(t *testing.T) {
 	app, _ := setupMissionsTest()
 
-	payload := `{"repo":"kubestellar/console","filePath":"missions/test.yaml","content":"dGVzdA==","branch":"mission-test","message":"add mission"}`
+	payload := `{"repo":"kubestellar/console-kb","filePath":"missions/test.yaml","content":"dGVzdA==","branch":"mission-test","message":"add mission"}`
 	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(payload))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
@@ -215,6 +215,47 @@ func TestMissions_ShareToGitHub_NoToken(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+// #6439 — ShareToGitHub must reject any repo not on the allowlist with 400.
+// Without this guard, a misbehaving client could use the handler as a
+// confused-deputy PR-creation service against any repository the caller's
+// PAT can write to.
+func TestMissions_ShareToGitHub_RepoNotAllowed(t *testing.T) {
+	app, _ := setupMissionsTest()
+
+	// A private repo the user might have a PAT for but that is NOT on the
+	// console's share allowlist. The handler must reject BEFORE making any
+	// GitHub API calls.
+	payload := `{"repo":"kubestellar/private-repo","filePath":"missions/test.yaml","content":"dGVzdA==","branch":"mission-test","message":"add mission"}`
+	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(payload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GitHub-Token", "ghp_test123")
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	var body map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Contains(t, body["error"], "allowlist")
+}
+
+// #6439 — KC_ALLOWED_SHARE_REPOS env var lets operators extend the allowlist
+// at runtime without a code change. A repo added via the env var must pass
+// the allowlist check.
+func TestMissions_ShareToGitHub_AllowlistEnvVarExtension(t *testing.T) {
+	t.Setenv(allowedShareRepoEnvVar, "myorg/my-missions, anotherorg/repo")
+
+	// Defaults still work.
+	assert.True(t, isRepoAllowedForShare("kubestellar/console-kb"))
+	// Env-var entries work.
+	assert.True(t, isRepoAllowedForShare("myorg/my-missions"))
+	assert.True(t, isRepoAllowedForShare("anotherorg/repo"))
+	// Anything else is rejected.
+	assert.False(t, isRepoAllowedForShare("kubestellar/private-repo"))
+	assert.False(t, isRepoAllowedForShare("myorg/other-repo"))
 }
 
 func TestMissions_ShareToGitHub_Success(t *testing.T) {
@@ -256,7 +297,7 @@ func TestMissions_ShareToGitHub_Success(t *testing.T) {
 	app, handler := setupMissionsTest()
 	handler.githubAPIURL = mock.URL
 
-	payload := `{"repo":"kubestellar/console","filePath":"missions/test.yaml","content":"dGVzdA==","branch":"mission-test","message":"add mission"}`
+	payload := `{"repo":"kubestellar/console-kb","filePath":"missions/test.yaml","content":"dGVzdA==","branch":"mission-test","message":"add mission"}`
 	req, err := http.NewRequest("POST", "/api/missions/share/github", strings.NewReader(payload))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
