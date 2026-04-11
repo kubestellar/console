@@ -17,11 +17,15 @@ export function NetworkOverview() {
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToService } = useDrillDownActions()
 
-  // Report card data state
+  // Report card data state.
+  // #6267: include clustersRefreshing so the card-level state matches
+  // the freshness indicator's combined refresh signal — otherwise a
+  // cluster cache refresh would tick the indicator without ticking the
+  // CardWrapper refresh animation.
   const combinedLoading = isLoading || servicesLoading
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: combinedLoading,
-    isRefreshing,
+    isRefreshing: isRefreshing || clustersRefreshing,
     isDemoData: isDemoFallback,
     hasAnyData: services.length > 0,
     isFailed,

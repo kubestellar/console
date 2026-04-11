@@ -135,4 +135,33 @@ describe('HelmValuesDiff', () => {
     expect(mockUseCardLoadingState).toHaveBeenCalled()
   })
 
+  // #6267: regression coverage for the freshness-indicator wiring
+  // introduced in #6266 (3-source min timestamp + demo-mode suppression).
+  describe('freshness indicator wiring (#6265, #6267)', () => {
+    it('reports isRefreshing=true when any source is refreshing', () => {
+      // Only values is refreshing — combined isRefreshing must still be true
+      mockHelmReleases.mockReturnValue({ releases: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+      mockHelmValues.mockReturnValue({ values: {}, isLoading: false, isRefreshing: true, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+      mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now() })
+      render(<HelmValuesDiff />)
+      const lastCall = mockUseCardLoadingState.mock.calls[mockUseCardLoadingState.mock.calls.length - 1][0]
+      expect(lastCall.isRefreshing).toBe(true)
+    })
+
+    it('reports isRefreshing=true when clusters source is refreshing', () => {
+      mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: true, error: null, lastRefresh: Date.now() })
+      render(<HelmValuesDiff />)
+      const lastCall = mockUseCardLoadingState.mock.calls[mockUseCardLoadingState.mock.calls.length - 1][0]
+      expect(lastCall.isRefreshing).toBe(true)
+    })
+
+    it('reports isRefreshing=false when all 3 sources are quiet', () => {
+      mockHelmReleases.mockReturnValue({ releases: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+      mockHelmValues.mockReturnValue({ values: {}, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+      mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now() })
+      render(<HelmValuesDiff />)
+      const lastCall = mockUseCardLoadingState.mock.calls[mockUseCardLoadingState.mock.calls.length - 1][0]
+      expect(lastCall.isRefreshing).toBe(false)
+    })
+  })
 })
