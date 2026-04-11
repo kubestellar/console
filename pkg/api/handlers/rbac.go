@@ -381,8 +381,17 @@ func (h *RBACHandler) CreateServiceAccount(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
-	if req.Name == "" || req.Namespace == "" || req.Cluster == "" {
-		return fiber.NewError(fiber.StatusBadRequest, "Name, namespace, and cluster are required")
+	// #6627: explicit field-level validation. Previously only non-empty
+	// checks were performed; a malformed name would be passed to the
+	// apiserver and return an opaque 500.
+	if err := validateDNSLabel("name", req.Name); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	if err := validateDNSLabel("namespace", req.Namespace); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	if err := validateClusterName("cluster", req.Cluster); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), rbacWriteTimeout)
@@ -414,8 +423,50 @@ func (h *RBACHandler) CreateRoleBinding(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
-	if req.Name == "" || req.Cluster == "" || req.RoleName == "" || req.SubjectName == "" {
-		return fiber.NewError(fiber.StatusBadRequest, "Missing required fields")
+	// #6627: explicit field-level validation. Previously only non-empty
+	// checks existed; empty subjectKind, out-of-range lengths, and invalid
+	// DNS labels were all silently accepted.
+	if err := validateDNSLabel("name", req.Name); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	if err := validateClusterName("cluster", req.Cluster); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	if err := validateRoleName("roleName", req.RoleName); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	// Namespace is empty for ClusterRoleBindings — only validate if present.
+	if req.Namespace != "" {
+		if err := validateDNSLabel("namespace", req.Namespace); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	}
+	// roleKind, subjectKind must be one of the known Kubernetes kinds.
+	if err := validateEnum("roleKind", req.RoleKind, []string{"Role", "ClusterRole"}); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	if err := validateEnum("subjectKind", string(req.SubjectKind), []string{"User", "Group", "ServiceAccount"}); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	// subjectName has different rules for SAs vs users/groups. For SA we
+	// enforce DNS label; for users/groups we only require non-empty +
+	// reasonable length since they can contain emails, colons, etc.
+	if req.SubjectKind == models.K8sSubjectServiceAccount {
+		if err := validateDNSLabel("subjectName", req.SubjectName); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+		if req.SubjectNS != "" {
+			if err := validateDNSLabel("subjectNamespace", req.SubjectNS); err != nil {
+				return fiber.NewError(fiber.StatusBadRequest, err.Error())
+			}
+		}
+	} else {
+		if req.SubjectName == "" {
+			return fiber.NewError(fiber.StatusBadRequest, "subjectName is required")
+		}
+		if len(req.SubjectName) > maxK8sDNSSubdomainLen {
+			return fiber.NewError(fiber.StatusBadRequest, "subjectName too long")
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), rbacWriteTimeout)

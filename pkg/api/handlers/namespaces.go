@@ -71,8 +71,13 @@ func (h *NamespaceHandler) CreateNamespace(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
-	if req.Cluster == "" || req.Name == "" {
-		return fiber.NewError(fiber.StatusBadRequest, "Cluster and name are required")
+	// #6627: explicit field-level validation. Previously empty/oversized
+	// names could reach the apiserver and return an opaque 500.
+	if err := validateClusterName("cluster", req.Cluster); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	if err := validateDNSLabel("name", req.Name); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), nsWriteTimeout)
@@ -208,18 +213,51 @@ func (h *NamespaceHandler) GrantNamespaceAccess(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Namespace name required")
 	}
 
+	// Validate the namespace path parameter as a DNS label before doing any
+	// more work. #6627.
+	if err := validateDNSLabel("namespace", namespace); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
 	var req models.GrantNamespaceAccessRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
-	if req.Cluster == "" || req.SubjectKind == "" || req.SubjectName == "" {
-		return fiber.NewError(fiber.StatusBadRequest, "Cluster, subjectKind, and subjectName are required")
+	// #6627: explicit field-level validation replaces the previous
+	// non-empty-only check.
+	if err := validateClusterName("cluster", req.Cluster); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	if err := validateEnum("subjectKind", req.SubjectKind, []string{"User", "Group", "ServiceAccount"}); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	if req.SubjectKind == "ServiceAccount" {
+		if err := validateDNSLabel("subjectName", req.SubjectName); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+		if req.SubjectNS != "" {
+			if err := validateDNSLabel("subjectNamespace", req.SubjectNS); err != nil {
+				return fiber.NewError(fiber.StatusBadRequest, err.Error())
+			}
+		}
+	} else {
+		if req.SubjectName == "" {
+			return fiber.NewError(fiber.StatusBadRequest, "subjectName is required")
+		}
+		if len(req.SubjectName) > maxK8sDNSSubdomainLen {
+			return fiber.NewError(fiber.StatusBadRequest, "subjectName too long")
+		}
 	}
 
 	// Default to admin role if not specified
 	if req.Role == "" {
 		req.Role = "admin"
+	}
+	// Role may be a shortcut ("admin"/"edit"/"view") or a custom role name.
+	// Validate as a role name either way.
+	if err := validateRoleName("role", req.Role); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), nsWriteTimeout)

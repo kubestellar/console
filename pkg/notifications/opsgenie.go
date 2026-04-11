@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -121,7 +123,21 @@ func (o *OpsGenieNotifier) createAlert(alert Alert, alias string) error {
 }
 
 func (o *OpsGenieNotifier) closeAlert(alias string) error {
-	url := fmt.Sprintf("%s/%s/close?identifierType=alias", opsgenieAlertsURL, alias)
+	// #6639: the alias is concatenated from user-controlled fields (rule ID
+	// and cluster name) and may contain characters that are reserved in URL
+	// paths (spaces, '/', '?', '#'). PathEscape avoids targeting the wrong
+	// endpoint or producing a malformed request. Also reject obviously
+	// hostile content (newlines / null bytes) that would corrupt the
+	// outbound HTTP request.
+	if strings.ContainsAny(alias, "\x00\n\r") {
+		return fmt.Errorf("opsgenie alias contains invalid characters")
+	}
+	// url.PathEscape leaves '/' unencoded because the stdlib treats it as a
+	// path separator. For a single path segment that must NOT span into a
+	// new segment we also replace '/' ourselves — otherwise an alias like
+	// "rule/1::cluster" would corrupt the URL path.
+	escapedAlias := strings.ReplaceAll(url.PathEscape(alias), "/", "%2F")
+	closeURL := fmt.Sprintf("%s/%s/close?identifierType=alias", opsgenieAlertsURL, escapedAlias)
 
 	body := map[string]string{
 		"source": "KubeStellar Console",
@@ -132,7 +148,7 @@ func (o *OpsGenieNotifier) closeAlert(alias string) error {
 		return fmt.Errorf("failed to marshal opsgenie close: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
+	req, err := http.NewRequest("POST", closeURL, bytes.NewBuffer(payload))
 	if err != nil {
 		return fmt.Errorf("failed to create opsgenie close request: %w", err)
 	}
