@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -94,7 +95,11 @@ type PredictionWorker struct {
 
 	// Token tracking callback
 	trackTokens        func(usage *ProviderTokenUsage)
-	loggedClusterError bool // suppress repeated "no kubeconfig" errors
+	// loggedClusterError suppresses repeated "no kubeconfig" errors. This is
+	// read/written from runAnalysis, which can be invoked concurrently from
+	// the ticker goroutine and from on-demand Trigger() callers, so it must
+	// be accessed atomically to avoid a data race.
+	loggedClusterError atomic.Bool
 }
 
 // NewPredictionWorker creates a new prediction worker
@@ -255,8 +260,9 @@ func (w *PredictionWorker) runAnalysis(specificProviders []string) {
 
 	clusterData, err := w.gatherClusterData(ctx)
 	if err != nil {
-		if !w.loggedClusterError {
-			w.loggedClusterError = true
+		// CompareAndSwap returns true exactly once (first false->true flip),
+		// so the slog.Info fires at most once across concurrent callers.
+		if w.loggedClusterError.CompareAndSwap(false, true) {
 			slog.Info("[PredictionWorker] cluster data unavailable (will retry silently)", "error", err)
 		}
 		return
