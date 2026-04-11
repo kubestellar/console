@@ -122,8 +122,15 @@ export function KubeKong(_props: CardComponentProps) {
     gameStateRef.current = { player, barrels }
   }, [player, barrels])
 
-  // Check if player is on a ladder
-  const getOnLadder = (x: number, y: number): Ladder | null => {
+  // Check if player is on a ladder.
+  // #6304: useCallback with [] so the reference is stable across
+  // renders. Previously this was a plain function redefined every
+  // render, which caused the game-loop useEffect (whose deps include
+  // this callback) to re-run on every render, clearing the
+  // setInterval and resetting `barrelSpawnCounter = 0` before it
+  // could reach the spawn threshold — so Kong never threw a single
+  // barrel. Reads only module-level constants, so [] is safe.
+  const getOnLadder = useCallback((x: number, y: number): Ladder | null => {
     const playerCenterX = x + PLAYER_WIDTH / 2
     for (const ladder of LADDERS) {
       if (Math.abs(playerCenterX - ladder.x - 10) < 12 &&
@@ -133,10 +140,10 @@ export function KubeKong(_props: CardComponentProps) {
       }
     }
     return null
-  }
+  }, [])
 
-  // Check platform collision for player
-  const checkPlatformCollision = (x: number, y: number, vy: number): { onGround: boolean; groundY: number } => {
+  // Check platform collision for player. Same #6304 fix reasoning.
+  const checkPlatformCollision = useCallback((x: number, y: number, vy: number): { onGround: boolean; groundY: number } => {
     const playerBottom = y + PLAYER_HEIGHT
     const playerCenterX = x + PLAYER_WIDTH / 2
 
@@ -149,7 +156,7 @@ export function KubeKong(_props: CardComponentProps) {
       }
     }
     return { onGround: false, groundY: y }
-  }
+  }, [])
 
   // Draw game
   const draw = useCallback(() => {
