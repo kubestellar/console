@@ -81,7 +81,14 @@ import { NetworkOverview } from '../NetworkOverview'
 describe('NetworkOverview', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    // #6276: default to non-demo mode in beforeEach. The tests that
+    // exercise demo behavior override `useDemoMode` and `isDemoFallback`
+    // explicitly. Defaulting to demo here meant `useDemoMode().isDemoMode`
+    // and `useCachedServices().isDemoFallback` disagreed by default,
+    // which doesn't match production (useCache flips isDemoFallback to
+    // true whenever a live fetch can't be served from a real backend
+    // and demo mode is on).
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
     mockServices.mockReturnValue({ services: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
     mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: new Date() })

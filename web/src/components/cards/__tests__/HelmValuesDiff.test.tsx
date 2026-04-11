@@ -88,7 +88,12 @@ import { HelmValuesDiff } from '../HelmValuesDiff'
 describe('HelmValuesDiff', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    // #6276: default to non-demo mode in beforeEach. Tests that
+    // exercise demo behavior override `useDemoMode` and `isDemoFallback`
+    // explicitly. Defaulting to demo here meant `useDemoMode().isDemoMode`
+    // and `useCachedHelm{Releases,Values}().isDemoFallback` disagreed
+    // by default, which doesn't match production.
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
     mockHelmReleases.mockReturnValue({ releases: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
     mockHelmValues.mockReturnValue({ values: {}, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
