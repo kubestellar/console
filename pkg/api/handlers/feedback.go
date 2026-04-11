@@ -12,6 +12,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strconv"
@@ -35,17 +36,51 @@ const githubAPITimeout = 10 * time.Second
 // Returned value has no trailing slash. For public github.com, returns
 // "https://api.github.com". For GHE (e.g. GITHUB_URL=https://github.example.com),
 // returns "https://github.example.com/api/v3" per GHE conventions.
+//
+// #6591: Previously, any non-empty GITHUB_URL that didn't literally contain
+// "api.github.com" was treated as GHE and had "/api/v3" appended. An operator
+// who set the natural vanity value GITHUB_URL=https://github.com ended up with
+// https://github.com/api/v3, which doesn't exist — github.com's API lives at
+// api.github.com. Recognize public github.com (with or without scheme, with
+// or without www.) as a special case.
 func resolveGitHubAPIBase() string {
 	raw := strings.TrimSpace(os.Getenv("GITHUB_URL"))
 	if raw == "" {
 		return githubAPIBase
 	}
-	raw = strings.TrimRight(raw, "/")
-	// If the user already set GITHUB_URL to api.github.com, return as-is.
-	if strings.Contains(raw, "api.github.com") {
-		return raw
+	// Special case: public github.com → api.github.com. Handle bare hosts
+	// ("github.com") as well as fully-qualified URLs ("https://github.com").
+	if host, err := extractHost(raw); err == nil {
+		switch host {
+		case "github.com", "www.github.com", "api.github.com":
+			return "https://api.github.com"
+		}
 	}
-	return raw + "/api/v3"
+	// Otherwise assume GitHub Enterprise Server: <base>/api/v3.
+	trimmed := strings.TrimRight(raw, "/")
+	if strings.HasSuffix(trimmed, "/api/v3") {
+		return trimmed
+	}
+	return trimmed + "/api/v3"
+}
+
+// extractHost parses a GITHUB_URL value (which may be a bare host like
+// "github.com" or a full URL like "https://ghe.example.com/foo") and returns
+// the lowercased hostname. It is tolerant of missing schemes.
+func extractHost(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", fmt.Errorf("empty URL")
+	}
+	// url.Parse treats bare hosts as Path, so inject a scheme if missing.
+	if !strings.Contains(raw, "://") {
+		raw = "https://" + raw
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "", err
+	}
+	return strings.ToLower(u.Hostname()), nil
 }
 
 // screenshotUploadTimeout is a longer timeout for uploading base64 screenshots

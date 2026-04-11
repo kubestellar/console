@@ -368,3 +368,30 @@ func TestWebhook_InvalidJSON_Returns400(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	assert.Contains(t, body, "Invalid JSON payload")
 }
+
+// TestResolveGitHubAPIBase covers #6591: GITHUB_URL=https://github.com was
+// being treated as GHE and rewritten to https://github.com/api/v3, which
+// doesn't exist. Public github.com must resolve to api.github.com, while
+// GHE hosts keep the /api/v3 suffix.
+func TestResolveGitHubAPIBase(t *testing.T) {
+	cases := []struct {
+		name string
+		env  string
+		want string
+	}{
+		{"empty defaults to public api", "", "https://api.github.com"},
+		{"fully qualified github.com", "https://github.com", "https://api.github.com"},
+		{"bare host github.com", "github.com", "https://api.github.com"},
+		{"www.github.com", "https://www.github.com", "https://api.github.com"},
+		{"already api.github.com", "https://api.github.com", "https://api.github.com"},
+		{"GHE bare URL gets /api/v3", "https://ghe.example.com", "https://ghe.example.com/api/v3"},
+		{"GHE URL already has /api/v3", "https://ghe.example.com/api/v3", "https://ghe.example.com/api/v3"},
+		{"GHE URL with trailing slash", "https://ghe.example.com/", "https://ghe.example.com/api/v3"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("GITHUB_URL", tc.env)
+			assert.Equal(t, tc.want, resolveGitHubAPIBase())
+		})
+	}
+}
