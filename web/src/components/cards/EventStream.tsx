@@ -1,5 +1,5 @@
 import { AlertTriangle, Info, XCircle, ChevronRight, Radio } from 'lucide-react'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import type { ClusterEvent } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -131,6 +131,23 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
     },
     defaultLimit: displayLimit,
   })
+
+  // #6070: when the user explicitly sets `config.limit` via the card
+  // settings modal, it must override any persisted itemsPerPage from
+  // localStorage (storageKey 'event-stream'). `useCardData` only
+  // consumes `defaultLimit` on initial mount — after that, its state
+  // is sourced from localStorage. Without this effect, a user's
+  // configured limit was silently ignored whenever they'd previously
+  // used the in-card "show N" dropdown, which is exactly the
+  // "show field disregarded, causing a very long card" bug in #6070.
+  // The user's workaround (minimize + maximize to force remount) only
+  // helped transiently because on some remounts localStorage was still
+  // catching up — the config.limit was never the source of truth.
+  useEffect(() => {
+    if (typeof config?.limit === 'number' && config.limit > 0) {
+      setItemsPerPage(config.limit)
+    }
+  }, [config?.limit, setItemsPerPage])
 
   const { drillToEvents, drillToPod, drillToDeployment, drillToReplicaSet } = useDrillDownActions()
 
