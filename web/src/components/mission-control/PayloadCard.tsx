@@ -3,7 +3,7 @@
  * Shows GitHub avatar, maturity badge, category gradient, priority, and remove button.
  */
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { X, Star, ChevronDown, ArrowLeftRight } from 'lucide-react'
@@ -63,6 +63,20 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
   const [imgFailed, setImgFailed] = useState(false)
   const [showPriorityMenu, setShowPriorityMenu] = useState(false)
   const [showDeps, setShowDeps] = useState(false)
+
+  // issue 6743 — Dismiss the priority dropdown when the user presses Escape. Without
+  // this, keyboard users had no way to close the menu once opened.
+  useEffect(() => {
+    if (!showPriorityMenu) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        setShowPriorityMenu(false)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [showPriorityMenu])
   const depRef = useRef<HTMLSpanElement>(null)
   const gradient = getCategoryGradient(project.category)
   const maturity = project.maturity ? MATURITY_CONFIG[project.maturity] : null

@@ -158,16 +158,32 @@ export function ClusterZone({
   const showNetwork = overlay === 'network'
   const showSecurity = overlay === 'security'
 
+  // issue 6744 — Stable hover payload reused by mouse + keyboard handlers
+  const hoverInfo = {
+    name, provider, nodeCount, cpuCores, cpuUsage,
+    memGB, memUsage, storageGB, gpuCount, tpuCount,
+    pvcCount, pvcBoundCount, podCount, rect,
+  }
+
   return (
     <motion.g
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5, delay: index * 0.15 }}
-      onMouseEnter={() => onHover?.({
-        name, provider, nodeCount, cpuCores, cpuUsage,
-        memGB, memUsage, storageGB, gpuCount, tpuCount,
-        pvcCount, pvcBoundCount, podCount, rect,
-      })}
+      /* issue 6744 — Make cluster zones keyboard-focusable so screen-reader /
+         keyboard users can navigate the SVG blueprint. */
+      tabIndex={0}
+      role="button"
+      aria-label={`Cluster ${name}${provider ? `, provider ${provider}` : ''}${nodeCount != null ? `, ${nodeCount} nodes` : ''}`}
+      onFocus={() => onHover?.(hoverInfo)}
+      onBlur={() => onHover?.(null)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onHover?.(hoverInfo)
+        }
+      }}
+      onMouseEnter={() => onHover?.(hoverInfo)}
       onMouseLeave={() => onHover?.(null)}
     >
       {/* Zone background — fully opaque */}

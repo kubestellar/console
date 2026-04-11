@@ -450,8 +450,19 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 : t('missionChat.terminateSession', { defaultValue: 'Terminate Session' })}
             </button>
           )}
-          <div className={cn('flex items-center gap-1', config.color)}>
-            <StatusIcon className={cn('w-4 h-4', (mission.status === 'running' || mission.status === 'cancelling') && 'animate-spin')} />
+          {/* issue 6741 — aria-live=polite so status transitions (running → completed,
+              blocked, failed, etc.) are announced by screen readers. */}
+          <div
+            className={cn('flex items-center gap-1', config.color)}
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            aria-label={`Mission status: ${config.label}`}
+          >
+            <StatusIcon
+              className={cn('w-4 h-4', (mission.status === 'running' || mission.status === 'cancelling') && 'animate-spin')}
+              aria-hidden="true"
+            />
             <span className="text-xs">{config.label}</span>
           </div>
         </div>
@@ -500,9 +511,16 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       )}
 
       {/* Messages - using memoized component for better scroll performance */}
+      {/* issue 6740 — role=log + aria-live=polite so screen readers announce streaming AI
+          tokens as they arrive. aria-atomic=false keeps announcements incremental. */}
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
+        role="log"
+        aria-live="polite"
+        aria-atomic="false"
+        aria-relevant="additions text"
+        aria-label="Mission chat messages"
         className="flex-1 overflow-y-auto scroll-enhanced p-4 space-y-4 min-h-[150px] min-w-0"
       >
         {/* Inline Run button + editable mission description/steps for saved missions (#3917, #4273) */}

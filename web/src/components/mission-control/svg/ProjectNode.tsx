@@ -149,6 +149,13 @@ export function ProjectNode({
     }
   }, [name, _onDragStart, _onDragEnd])
 
+  // issue 6744 — Memoized hover info so focus/blur/keydown handlers can share a stable payload
+  const hoverInfo = {
+    name, displayName, category, status, isRequired, installed,
+    reason, dependencies, kbPath, maturity, priority,
+    cx, cy, radius,
+  }
+
   return (
     <motion.g
       ref={dragRef}
@@ -160,11 +167,21 @@ export function ProjectNode({
         opacity: { duration: 0.1 },
       }}
       style={{ transformOrigin: `${cx}px ${cy}px`, pointerEvents: 'all' as const }}
-      onMouseEnter={() => onHover?.({
-        name, displayName, category, status, isRequired, installed,
-        reason, dependencies, kbPath, maturity, priority,
-        cx, cy, radius,
-      })}
+      /* issue 6744 — SVG nodes must opt in to keyboard focus explicitly. tabIndex=0
+         makes the group focusable; role=button + aria-label expose it to AT;
+         Enter/Space surfaces the same hover payload mouse users see. */
+      tabIndex={0}
+      role="button"
+      aria-label={`${displayName} — ${category}${installed ? ', installed' : ''}${isRequired ? ', required' : ''}`}
+      onFocus={() => onHover?.(hoverInfo)}
+      onBlur={() => onHover?.(null)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onHover?.(hoverInfo)
+        }
+      }}
+      onMouseEnter={() => onHover?.(hoverInfo)}
       onMouseLeave={() => onHover?.(null)}
     >
       {/* Invisible hit target — ensures mouse events fire even when dimmed */}

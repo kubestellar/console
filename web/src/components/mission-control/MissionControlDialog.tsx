@@ -10,7 +10,8 @@
  * Phase 3: Flight Plan (SVG blueprint + deploy)
  */
 
-import { useEffect, useCallback, useState, lazy, Suspense } from 'react'
+import { useEffect, useCallback, useRef, useState, lazy, Suspense } from 'react'
+import { useModalFocusTrap } from '../../lib/modals/useModalNavigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   X,
@@ -67,10 +68,28 @@ const PHASE_STEPS: {
   },
 ]
 
+/** Fallback a11y label when the user hasn't entered a mission title yet (issue 6745) */
+const DEFAULT_DIALOG_ARIA_LABEL = 'Mission control dialog'
+
 export function MissionControlDialog({ open, onClose }: MissionControlDialogProps) {
   const mc = useMissionControl()
   const { showToast } = useToast()
   const { state } = mc
+  // issue 6738 — Ref used by useModalFocusTrap to keep Tab/Shift+Tab inside the dialog
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useModalFocusTrap(dialogRef, open)
+  // issue 6738 — Restore focus to the element that opened the dialog on close
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null)
+  useEffect(() => {
+    if (open) {
+      previouslyFocusedRef.current = document.activeElement as HTMLElement | null
+      return
+    }
+    const prev = previouslyFocusedRef.current
+    if (prev && typeof prev.focus === 'function') {
+      prev.focus()
+    }
+  }, [open])
 
   // Escape to close
   const handleKeyDown = useCallback(
@@ -167,9 +186,10 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
 
           {/* ── Modal panel ───────────────────────────────────────── */}
           <motion.div
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
-            aria-label={state.title || 'Mission Control'}
+            aria-label={state.title || DEFAULT_DIALOG_ARIA_LABEL}
             data-testid="mission-control-dialog"
             className="fixed z-modal flex flex-col bg-background rounded-xl border border-border shadow-2xl shadow-black/30 overflow-hidden"
             style={{
@@ -212,7 +232,23 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
               </div>
 
               {/* ── Stepper ─────────────────────────────────────────── */}
-              <nav className="hidden md:flex items-center gap-1">
+              {/* issue 6739 — role=tablist + Arrow key handling so the stepper is keyboard navigable,
+                  especially on mobile where there's no persistent Next/Back focus path. */}
+              <nav
+                className="hidden md:flex items-center gap-1"
+                role="tablist"
+                aria-label="Mission control phases"
+                onKeyDown={(e) => {
+                  if (isLaunching || isComplete) return
+                  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+                  e.preventDefault()
+                  const delta = e.key === 'ArrowRight' ? 1 : -1
+                  const nextIdx = Math.max(0, Math.min(highestReached, currentStepIndex + delta))
+                  if (nextIdx !== currentStepIndex) {
+                    mc.setPhase(PHASE_STEPS[nextIdx].key)
+                  }
+                }}
+              >
                 {PHASE_STEPS.map((step, i) => {
                   const isCurrent = step.key === state.phase
                   const isPast = currentStepIndex > i
@@ -220,10 +256,17 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
                   return (
                     <div key={step.key} className="flex items-center gap-1">
                       {i > 0 && (
-                        <ChevronRight className="w-3 h-3 text-muted-foreground/40 mx-1" />
+                        <ChevronRight
+                          className="w-3 h-3 text-muted-foreground/40 mx-1"
+                          aria-hidden="true"
+                        />
                       )}
                       <button
                         data-testid={`mission-control-phase-${i + 1}`}
+                        role="tab"
+                        aria-selected={isCurrent}
+                        aria-controls={`mission-control-phase-panel-${step.key}`}
+                        tabIndex={isCurrent ? 0 : -1}
                         onClick={() => {
                           if (i <= highestReached && !isLaunchOrComplete) mc.setPhase(step.key)
                         }}
@@ -288,7 +331,11 @@ export function MissionControlDialog({ open, onClose }: MissionControlDialogProp
             </header>
 
             {/* ── Content ────────────────────────────────────────────── */}
-            <div className="flex-1 overflow-hidden">
+            <div
+              className="flex-1 overflow-hidden"
+              id={`mission-control-phase-panel-${state.phase}`}
+              role="tabpanel"
+            >
               <AnimatePresence mode="wait">
                 {state.phase === 'define' && (
                   <PhaseWrapper key="define">

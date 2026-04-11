@@ -565,10 +565,14 @@ export function MissionSidebar() {
   return (
     <>
       {/* Mobile backdrop */}
+      {/* issue 6742 — tabIndex=-1 removes the backdrop from the Tab order, aria-hidden
+          hides it from assistive tech. The sidebar itself handles close semantics. */}
       {isMobile && isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-overlay md:hidden"
           onClick={closeSidebar}
+          tabIndex={-1}
+          aria-hidden="true"
         />
       )}
       {/* Tablet backdrop — the sidebar renders as an overlay at < lg so main
@@ -577,6 +581,8 @@ export function MissionSidebar() {
         <div
           className="fixed inset-0 bg-black/40 backdrop-blur-sm z-overlay lg:hidden"
           onClick={closeSidebar}
+          tabIndex={-1}
+          aria-hidden="true"
         />
       )}
 
