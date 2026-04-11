@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useRef, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useMemo, useState, useRef, useEffect, ReactNode } from 'react'
 import type { AgentInfo, AgentsListPayload, AgentSelectedPayload, ChatStreamPayload } from '../types/agent'
 import { AgentCapabilityToolExec } from '../types/agent'
 import { getDemoMode } from './useDemoMode'
@@ -2593,40 +2593,104 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     }
   }, [])
 
+  // #6730 — Memoize the context value so consumers of MissionContext don't
+  // re-render on every render of MissionProvider. Prior to this fix, the
+  // inline object literal created a fresh reference on every parent render,
+  // which cascaded through every component that reads the context (the
+  // MissionSidebar layout, every card that queries `activeMission`, the
+  // global header, etc.) and caused visible jank on sidebar toggle and
+  // during message streaming (#6737 reproduced as a side effect).
+  //
+  // The mutation handlers (startMission, sendMessage, toggleSidebar, …) are
+  // plain function declarations inside this component, so they're recreated
+  // on every render. Rather than convert all ~20 of them to useCallback
+  // (which also doesn't help unless their own deps are stable), we stash
+  // them in a ref and expose stable proxy functions that forward to the
+  // latest implementation. The proxies themselves have identity lifetime
+  // equal to the provider, so the memo below only invalidates when real
+  // state changes.
+  const handlersRef = useRef({
+    startMission, saveMission, runSavedMission, updateSavedMission, sendMessage,
+    retryPreflight, cancelMission, dismissMission, renameMission, rateMission,
+    setActiveMission, markMissionAsRead, selectAgent, connectToAgent,
+    toggleSidebar, openSidebar, closeSidebar, minimizeSidebar, expandSidebar,
+    handleSetFullScreen })
+  handlersRef.current = {
+    startMission, saveMission, runSavedMission, updateSavedMission, sendMessage,
+    retryPreflight, cancelMission, dismissMission, renameMission, rateMission,
+    setActiveMission, markMissionAsRead, selectAgent, connectToAgent,
+    toggleSidebar, openSidebar, closeSidebar, minimizeSidebar, expandSidebar,
+    handleSetFullScreen }
+  // Stable proxies. Created once via useMemo with an empty dep array; every
+  // call forwards to the currently-live handler on `handlersRef.current`.
+  const stableHandlers = useMemo(() => ({
+    startMission: (...args: Parameters<typeof startMission>) =>
+      handlersRef.current.startMission(...args),
+    saveMission: (...args: Parameters<typeof saveMission>) =>
+      handlersRef.current.saveMission(...args),
+    runSavedMission: (...args: Parameters<typeof runSavedMission>) =>
+      handlersRef.current.runSavedMission(...args),
+    updateSavedMission: (...args: Parameters<typeof updateSavedMission>) =>
+      handlersRef.current.updateSavedMission(...args),
+    sendMessage: (...args: Parameters<typeof sendMessage>) =>
+      handlersRef.current.sendMessage(...args),
+    retryPreflight: (...args: Parameters<typeof retryPreflight>) =>
+      handlersRef.current.retryPreflight(...args),
+    cancelMission: (...args: Parameters<typeof cancelMission>) =>
+      handlersRef.current.cancelMission(...args),
+    dismissMission: (...args: Parameters<typeof dismissMission>) =>
+      handlersRef.current.dismissMission(...args),
+    renameMission: (...args: Parameters<typeof renameMission>) =>
+      handlersRef.current.renameMission(...args),
+    rateMission: (...args: Parameters<typeof rateMission>) =>
+      handlersRef.current.rateMission(...args),
+    setActiveMission: (...args: Parameters<typeof setActiveMission>) =>
+      handlersRef.current.setActiveMission(...args),
+    markMissionAsRead: (...args: Parameters<typeof markMissionAsRead>) =>
+      handlersRef.current.markMissionAsRead(...args),
+    selectAgent: (...args: Parameters<typeof selectAgent>) =>
+      handlersRef.current.selectAgent(...args),
+    connectToAgent: (...args: Parameters<typeof connectToAgent>) =>
+      handlersRef.current.connectToAgent(...args),
+    toggleSidebar: () => handlersRef.current.toggleSidebar(),
+    openSidebar: () => handlersRef.current.openSidebar(),
+    closeSidebar: () => handlersRef.current.closeSidebar(),
+    minimizeSidebar: () => handlersRef.current.minimizeSidebar(),
+    expandSidebar: () => handlersRef.current.expandSidebar(),
+    setFullScreen: (fullScreen: boolean) =>
+      handlersRef.current.handleSetFullScreen(fullScreen),
+  }), [])
+
+  const contextValue = useMemo(() => ({
+    missions,
+    activeMission,
+    isSidebarOpen,
+    isSidebarMinimized,
+    isFullScreen,
+    unreadMissionCount: unreadMissionIds.size,
+    unreadMissionIds,
+    agents,
+    selectedAgent,
+    defaultAgent,
+    agentsLoading,
+    isAIDisabled: selectedAgent === 'none' || !selectedAgent,
+    ...stableHandlers,
+  }), [
+    missions,
+    activeMission,
+    isSidebarOpen,
+    isSidebarMinimized,
+    isFullScreen,
+    unreadMissionIds,
+    agents,
+    selectedAgent,
+    defaultAgent,
+    agentsLoading,
+    stableHandlers,
+  ])
+
   return (
-    <MissionContext.Provider value={{
-      missions,
-      activeMission,
-      isSidebarOpen,
-      isSidebarMinimized,
-      isFullScreen,
-      unreadMissionCount: unreadMissionIds.size,
-      unreadMissionIds,
-      agents,
-      selectedAgent,
-      defaultAgent,
-      agentsLoading,
-      isAIDisabled: selectedAgent === 'none' || !selectedAgent,
-      startMission,
-      saveMission,
-      runSavedMission,
-      updateSavedMission,
-      sendMessage,
-      retryPreflight,
-      cancelMission,
-      dismissMission,
-      renameMission,
-      rateMission,
-      setActiveMission,
-      markMissionAsRead,
-      selectAgent,
-      connectToAgent,
-      toggleSidebar,
-      openSidebar,
-      closeSidebar,
-      minimizeSidebar,
-      expandSidebar,
-      setFullScreen: handleSetFullScreen }}>
+    <MissionContext.Provider value={contextValue}>
       {children}
     </MissionContext.Provider>
   )

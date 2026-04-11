@@ -549,7 +549,13 @@ export function FlightPlanBlueprint({
     return { ...state, assignments }
   }, [state, clusters])
 
-  const layout = computeLayout(healthyState)
+  // #6731 — Memoize layout computation. Previously this ran on every render,
+  // and computeLayout traverses every assignment × project to produce node
+  // positions, dependency edges, and phase timelines — expensive enough to
+  // show up on the main-thread profiler during sidebar toggles and message
+  // streaming. `healthyState` is itself memoized, so this re-runs only when
+  // the underlying state.assignments / state.projects / clusters change.
+  const layout = useMemo(() => computeLayout(healthyState), [healthyState])
   const [infoPanel, setInfoPanel] = useState<InfoPanelData | null>(null)
   const [stickyPanel, setStickyPanel] = useState<InfoPanelData | null>(
     () => ({ kind: 'deployMode' as const, mode: state.deployMode, phases: state.phases })

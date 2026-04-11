@@ -10,6 +10,21 @@ import { FETCH_DEFAULT_TIMEOUT_MS, DEPLOY_ABORT_TIMEOUT_MS } from '../lib/consta
 const HTTP_UNAUTHORIZED = 401
 const HTTP_FORBIDDEN = 403
 
+/**
+ * #6729 — Safe numeric parse for replica counts coming off a JSON payload.
+ * Raw `Number(x)` returns NaN for strings that don't parse, for objects,
+ * and for `null`, which then silently propagates through comparisons
+ * (`readyReplicas >= replicas` is `false` when either side is NaN) and
+ * leaves deploy missions stuck in "applying". Non-finite and negative
+ * inputs collapse to the fallback (default 0) — a negative replica count
+ * is not a physical state K8s can report.
+ */
+function safeReplicaCount(raw: unknown, fallback = 0): number {
+  const parsed = typeof raw === 'number' ? raw : Number(raw)
+  if (!Number.isFinite(parsed) || parsed < 0) return fallback
+  return parsed
+}
+
 /** Check whether a mission status is terminal (no longer needs active polling) */
 function isTerminalStatus(s: DeployMissionStatus): boolean {
   return s === 'orbit' || s === 'abort' || s === 'partial'
@@ -392,8 +407,13 @@ export function useDeployMissions() {
                         (d) => String(d.name) === mission.workload
                       )
                       if (match) {
-                        const replicas = Number(match.replicas ?? 0)
-                        const readyReplicas = Number(match.readyReplicas ?? 0)
+                        // #6729 — Safe numeric cast. `Number('foo')` returns
+                        // NaN, which then flows into comparisons like
+                        // `readyReplicas >= replicas` and silently evaluates
+                        // to `false`, leaving missions stuck in "applying".
+                        // Fall back to 0 for non-finite values.
+                        const replicas = safeReplicaCount(match.replicas)
+                        const readyReplicas = safeReplicaCount(match.readyReplicas)
                         let status: DeployClusterStatus['status'] = 'applying'
                         // Zero-replica workloads are valid (e.g. scale-to-zero) — treat
                         // readyReplicas >= replicas as success even when both are zero.
@@ -492,15 +512,20 @@ export function useDeployMissions() {
                   }
                 }
                 let status: DeployClusterStatus['status'] = 'applying'
-                const restReplicas = Number(data.replicas ?? 0)
-                const restReady = Number(data.readyReplicas ?? 0)
+                // #6729 — Safe numeric casts. See safeReplicaCount for the
+                // rationale. The REST path is the more common one in
+                // production and was the original symptom on #6729.
+                const restReplicas = safeReplicaCount(data.replicas)
+                const restReady = safeReplicaCount(data.readyReplicas)
                 // #5955 — Require updatedReplicas >= replicas so a partial rollout
                 // is not marked "running" just because availableReplicas reached desired.
                 // When the backend doesn't include updatedReplicas (older servers
                 // or tests), fall back to restReplicas so existing callers keep
                 // working. `undefined` means "don't enforce the check".
                 const restUpdatedRaw = data.updatedReplicas
-                const restUpdated = restUpdatedRaw === undefined ? restReplicas : Number(restUpdatedRaw)
+                const restUpdated = restUpdatedRaw === undefined
+                  ? restReplicas
+                  : safeReplicaCount(restUpdatedRaw)
                 // Zero-replica workloads are valid — treat readyReplicas >= replicas
                 // as success even when both are zero.
                 if (data.status === 'Running' && restReady >= restReplicas && restUpdated >= restReplicas) {

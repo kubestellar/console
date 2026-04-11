@@ -137,6 +137,42 @@ describe('extractJSON — balanced block extraction (#6382)', () => {
   // vitest default timeout (5s) already catches a true infinite loop,
   // so we replace the time gate with structural assertions on the parse
   // result.
+  // #6727 — Malformed fenced block (open fence + large body + no close)
+  // must not trigger catastrophic backtracking in the fence regex. The
+  // old pattern used an unbounded `([\s\S]*?)`, which on this input could
+  // run for seconds. The bounded `{0,MAX_FENCE_BODY}` makes the engine
+  // bail early; we keep a generous wall-clock budget so the assertion
+  // fires only on a genuine regression, not CI jitter.
+  it('does not hang on malformed fenced code blocks (ReDoS guard)', () => {
+    // Generous wall-clock budget for the regex bail-out. If this ever
+    // regresses to the old unbounded pattern, the actual runtime on the
+    // same input was observed at several hundred ms; 2000 ms gives CI
+    // plenty of headroom while still catching a true infinite loop.
+    const REDOS_BUDGET_MS = 2000
+    const payload = '```json\n' + 'a'.repeat(10_000)
+    const start = Date.now()
+    const parsed = extractJSON<unknown>(payload)
+    const elapsed = Date.now() - start
+    // Unparseable — we only care that it returns rather than hanging.
+    expect(parsed).toBeNull()
+    expect(elapsed).toBeLessThan(REDOS_BUDGET_MS)
+  })
+
+  // #6728 — BOM or leading whitespace on the fenced body must not break
+  // JSON.parse. Previously, a BOM-prefixed body fell through to
+  // `candidates` being empty and extractJSON returned null.
+  it('parses a fenced JSON block with a leading BOM', () => {
+    const text = '```json\n\uFEFF{"projects": [{"name": "falco"}]}\n```'
+    const parsed = extractJSON<{ projects: Array<{ name: string }> }>(text, 'projects')
+    expect(parsed?.projects?.[0]?.name).toBe('falco')
+  })
+
+  it('parses a fenced JSON block with surrounding whitespace', () => {
+    const text = '```json\n   \n   {"projects": [{"name": "cert-manager"}]}   \n```'
+    const parsed = extractJSON<{ projects: Array<{ name: string }> }>(text, 'projects')
+    expect(parsed?.projects?.[0]?.name).toBe('cert-manager')
+  })
+
   it('handles heavy nested backslash escaping without losing characters', () => {
     // Construct a JSON string whose `reason` field contains escaped
     // backslashes followed by escaped quotes. In the raw JSON text this

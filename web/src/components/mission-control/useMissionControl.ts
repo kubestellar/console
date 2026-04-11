@@ -104,8 +104,22 @@ const STREAM_JSON_DEBOUNCE_MS = 250
 /** #6468 — localStorage persist debounce window (ms). Coalesces bursts of
  * state changes before calling persistState(), which writes to localStorage
  * (see STORAGE_KEY usage below). Earlier revision of this comment said
- * "sessionStorage" which is incorrect — fixed in PR #6518 item D. */
+ * "sessionStorage" which is incorrect — fixed in PR #6518 item D.
+ * #6732 — Alias kept so future refactors can find the "per-keystroke" intent
+ * via either name. Both constants resolve to the same 300 ms window. */
 const PERSIST_STATE_DEBOUNCE_MS = 300
+/** #6732 — Explicit per-keystroke debounce window (ms). Same value as
+ * PERSIST_STATE_DEBOUNCE_MS; this name documents the intent at the call site
+ * that the debounce specifically protects localStorage from every keystroke
+ * in the description/title inputs. */
+const PERSIST_KEYSTROKE_DEBOUNCE_MS = PERSIST_STATE_DEBOUNCE_MS
+/** #6727 — Upper bound on the body length of a ```json ... ``` fence block
+ * when scanning AI output. The old pattern `([\s\S]*?)` on a malformed fence
+ * (e.g. ``` ``` followed by tens of thousands of `a` with no close fence)
+ * forces the regex engine into catastrophic backtracking. Bounding the inner
+ * repetition lets the engine bail quickly while still handling realistic
+ * JSON payloads (largest observed in production is ~20 kB). */
+const MAX_FENCE_BODY = 50_000
 
 // ---------------------------------------------------------------------------
 // Persisted state (survives page reload / accidental close)
@@ -193,12 +207,25 @@ function makeInitialState(persisted?: Partial<MissionControlState> | null): Miss
  * Falls back to the first parseable block otherwise.
  */
 export function extractJSON<T>(text: string, requiredKey?: string): T | null {
-  const fencedRe = /```json\s*\n?([\s\S]*?)```/g
+  // #6727 — Bounded inner repetition prevents catastrophic backtracking on
+  // malformed input (e.g. an open fence with tens of thousands of body chars
+  // and no close fence). `{0,MAX_FENCE_BODY}` caps the engine's work per
+  // match attempt to O(MAX_FENCE_BODY). Constructed via `RegExp` so the
+  // numeric bound interpolates cleanly.
+  const fencedRe = new RegExp(
+    String.raw`\`\`\`json\s*\n?([\s\S]{0,${MAX_FENCE_BODY}}?)\`\`\``,
+    'g',
+  )
   const candidates: T[] = []
   let m: RegExpExecArray | null
   while ((m = fencedRe.exec(text)) !== null) {
     try {
-      const parsed = JSON.parse(m[1]) as T
+      // #6728 — Trim whitespace and strip a leading BOM before parsing.
+      // Some agents (notably streaming providers that re-wrap output) emit a
+      // \ufeff BOM at the start of the fenced body, which JSON.parse rejects
+      // as "Unexpected token" even though the body is otherwise valid.
+      const body = m[1].replace(/^\uFEFF/, '').trim()
+      const parsed = JSON.parse(body) as T
       if (requiredKey && typeof parsed === 'object' && parsed !== null && requiredKey in parsed) {
         return parsed
       }
@@ -218,7 +245,11 @@ export function extractJSON<T>(text: string, requiredKey?: string): T | null {
   let bestLen = 0
   for (const block of blocks) {
     try {
-      const parsed = JSON.parse(block) as T
+      // #6728 — Trim + BOM strip before JSON.parse (see fenced-block path
+      // above). extractBalancedBlocks can pick up a leading BOM when the
+      // opening `{` is the very first non-BOM character in the message.
+      const body = block.replace(/^\uFEFF/, '').trim()
+      const parsed = JSON.parse(body) as T
       if (requiredKey && typeof parsed === 'object' && parsed !== null && requiredKey in parsed) {
         return parsed
       }
@@ -334,12 +365,13 @@ export function useMissionControl() {
     userMutationGenerationRef.current += 1
   }
 
-  // issue 6468 — Persist on change, debounced.
-  // Previously this fired on EVERY state change, which during AI streaming
-  // or rapid slider drags caused dozens of sessionStorage writes per second.
-  // Debouncing by 300ms coalesces bursts into a single write while still
-  // surviving accidental tab close within a half second of the last edit.
-  const debouncedState = useDebouncedValue(state, PERSIST_STATE_DEBOUNCE_MS)
+  // issue 6468 / #6732 — Persist on change, debounced.
+  // Previously this fired on EVERY state change, which during AI streaming,
+  // rapid slider drags, or rapid typing in the description/title inputs
+  // caused dozens of localStorage writes per second. Debouncing by
+  // PERSIST_KEYSTROKE_DEBOUNCE_MS coalesces bursts into a single write while
+  // still surviving accidental tab close within a half second of the last edit.
+  const debouncedState = useDebouncedValue(state, PERSIST_KEYSTROKE_DEBOUNCE_MS)
   useEffect(() => {
     persistState(debouncedState)
   }, [debouncedState])
@@ -452,14 +484,26 @@ export function useMissionControl() {
     // Try to parse structured data from the latest AI message
     if (state.phase === 'define') {
       const parsed = extractJSON<{ projects?: PayloadProject[] }>(latest.content, 'projects')
-      if (parsed?.projects && parsed.projects.length > 0) {
+      // #6725 — Schema guard. The AI occasionally returns
+      // `{ "projects": { ... } }` (object) instead of
+      // `{ "projects": [ ... ] }` (array). Without this guard, downstream
+      // `.filter` / `.map` calls crash the hook. Treat any non-array value
+      // as "no projects" and skip the update.
+      const projectsRaw = parsed?.projects
+      const projectsArr = Array.isArray(projectsRaw) ? projectsRaw : []
+      if (projectsRaw !== undefined && !Array.isArray(projectsRaw)) {
+        console.warn(
+          '[MissionControl] issue 6725 — AI returned non-array `projects` payload; ignoring.',
+        )
+      }
+      if (projectsArr.length > 0) {
         // #6383 — The AI can return `{"projects": [{}]}` with objects
         // missing a usable `name`. Filter them out before downstream code
         // tries to read `p.name` / `p.displayName` and crashes.
         // #6379 — Also filter out names that fail the allow-list check,
         // so a malicious or hallucinated name can't get as far as
         // Phase 4's install-prompt splicer.
-        const validProjects = parsed.projects.filter((p) => {
+        const validProjects = projectsArr.filter((p) => {
           if (!isSafeProjectName(p?.name)) return false
           // displayName is optional — if present it must also be safe,
           // otherwise we fall back to `name` at the splice site.
@@ -472,9 +516,9 @@ export function useMissionControl() {
           console.warn('[MissionControl] AI returned projects payload with no valid entries; skipping update.')
           return
         }
-        if (validProjects.length !== parsed.projects.length) {
+        if (validProjects.length !== projectsArr.length) {
           console.warn(
-            `[MissionControl] filtered ${parsed.projects.length - validProjects.length} invalid project(s) from AI payload`
+            `[MissionControl] filtered ${projectsArr.length - validProjects.length} invalid project(s) from AI payload`
           )
         }
         // Ensure dependencies defaults to []
@@ -492,7 +536,17 @@ export function useMissionControl() {
         phases?: DeployPhase[]
         warnings?: string[]
       }>(latest.content, 'assignments')
-      if (parsed?.assignments) {
+      // #6726 — Schema guard. Same class of crash as #6725 for projects:
+      // the AI can return `{ "assignments": { ... } }` instead of an array,
+      // which immediately crashes the `.map(a => a.clusterName)` below.
+      const assignmentsRaw = parsed?.assignments
+      const assignmentsArr = Array.isArray(assignmentsRaw) ? assignmentsRaw : []
+      if (assignmentsRaw !== undefined && !Array.isArray(assignmentsRaw)) {
+        console.warn(
+          '[MissionControl] issue 6726 — AI returned non-array `assignments` payload; ignoring.',
+        )
+      }
+      if (assignmentsArr.length > 0) {
         // #6404 — Discard late-arriving AI responses that would clobber
         // manual assignments. If the user has mutated state (or changed
         // phase) since this prompt was dispatched, drop the result.
@@ -507,7 +561,7 @@ export function useMissionControl() {
         }
         lastParsedContentRef.current = latest.content
         setState((prev) => {
-          const aiAssignments = parsed.assignments!
+          const aiAssignments = assignmentsArr
           const aiClusterNames = new Set(aiAssignments.map(a => a.clusterName))
           // Keep clusters the AI didn't mention as-is (user may have manually edited them)
           const preserved = prev.assignments
@@ -515,7 +569,7 @@ export function useMissionControl() {
           return {
             ...prev,
             assignments: [...aiAssignments, ...preserved],
-            phases: parsed.phases ?? prev.phases }
+            phases: parsed?.phases ?? prev.phases }
         })
       }
     }
