@@ -357,11 +357,20 @@ func (m *MultiClusterClient) parseStatefulSetsAsWorkloads(list interface{}, cont
 			if readyReplicas, ok := status["readyReplicas"].(int64); ok {
 				w.ReadyReplicas = safeInt32(readyReplicas)
 			}
-			if w.ReadyReplicas == w.Replicas && w.Replicas > 0 {
+			switch {
+			case w.Replicas == 0:
+				// Scaled to zero is an intentional idle state, not Pending
+				// (#6495). Previously, `readyReplicas == replicas && replicas > 0`
+				// was false for 0/0, so the status fell through to Pending
+				// and the UI showed a zero-replica StatefulSet as "stuck".
+				// Deployments already handle this at
+				// parseDeploymentsAsWorkloads switch case `w.Replicas == 0`.
 				w.Status = v1alpha1.WorkloadStatusRunning
-			} else if w.ReadyReplicas > 0 {
+			case w.ReadyReplicas == w.Replicas:
+				w.Status = v1alpha1.WorkloadStatusRunning
+			case w.ReadyReplicas > 0:
 				w.Status = v1alpha1.WorkloadStatusDegraded
-			} else {
+			default:
 				w.Status = v1alpha1.WorkloadStatusPending
 			}
 		}

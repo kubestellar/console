@@ -1180,16 +1180,22 @@ func (m *MultiClusterClient) WarmupHealthCache() {
 			client, clientErr := m.GetClient(ctxName)
 			if clientErr != nil {
 				errType := classifyError(clientErr.Error())
+				// Drop the write if the warmup context has already expired
+				// (#6497). Without this check a slow probe that returned
+				// after WarmupHealthCache's 8s deadline would stomp on fresh
+				// entries written by real request-path health checks.
 				m.mu.Lock()
-				m.healthCache[ctxName] = &ClusterHealth{
-					Cluster:      name,
-					Reachable:    false,
-					Healthy:      false,
-					ErrorType:    errType,
-					ErrorMessage: clientErr.Error(),
-					CheckedAt:    time.Now().Format(time.RFC3339),
+				if ctx.Err() == nil {
+					m.healthCache[ctxName] = &ClusterHealth{
+						Cluster:      name,
+						Reachable:    false,
+						Healthy:      false,
+						ErrorType:    errType,
+						ErrorMessage: clientErr.Error(),
+						CheckedAt:    time.Now().Format(time.RFC3339),
+					}
+					m.cacheTime[ctxName] = time.Now()
 				}
-				m.cacheTime[ctxName] = time.Now()
 				m.mu.Unlock()
 				if errType == "auth" {
 					slog.Info("[Warmup] auth failure — run credential refresh to restore access", "cluster", name)
@@ -1203,15 +1209,18 @@ func (m *MultiClusterClient) WarmupHealthCache() {
 			if listErr != nil {
 				errType := classifyError(listErr.Error())
 				m.mu.Lock()
-				m.healthCache[ctxName] = &ClusterHealth{
-					Cluster:      name,
-					Reachable:    false,
-					Healthy:      false,
-					ErrorType:    errType,
-					ErrorMessage: listErr.Error(),
-					CheckedAt:    time.Now().Format(time.RFC3339),
+				// See the GetClient-error branch above for #6497 rationale.
+				if ctx.Err() == nil {
+					m.healthCache[ctxName] = &ClusterHealth{
+						Cluster:      name,
+						Reachable:    false,
+						Healthy:      false,
+						ErrorType:    errType,
+						ErrorMessage: listErr.Error(),
+						CheckedAt:    time.Now().Format(time.RFC3339),
+					}
+					m.cacheTime[ctxName] = time.Now()
 				}
-				m.cacheTime[ctxName] = time.Now()
 				m.mu.Unlock()
 				if errType == "auth" {
 					slog.Info("[Warmup] auth failure (will cache to avoid exec-plugin spam)", "cluster", name, "cacheTTL", authFailureCacheTTL)
@@ -1220,13 +1229,16 @@ func (m *MultiClusterClient) WarmupHealthCache() {
 				}
 			} else {
 				m.mu.Lock()
-				m.healthCache[ctxName] = &ClusterHealth{
-					Cluster:   name,
-					Reachable: true,
-					Healthy:   true,
-					CheckedAt: time.Now().Format(time.RFC3339),
+				// See the GetClient-error branch above for #6497 rationale.
+				if ctx.Err() == nil {
+					m.healthCache[ctxName] = &ClusterHealth{
+						Cluster:   name,
+						Reachable: true,
+						Healthy:   true,
+						CheckedAt: time.Now().Format(time.RFC3339),
+					}
+					m.cacheTime[ctxName] = time.Now()
 				}
-				m.cacheTime[ctxName] = time.Now()
 				m.mu.Unlock()
 				slog.Info("[Warmup] reachable", "cluster", name)
 			}

@@ -10,6 +10,39 @@ import (
 	"github.com/kubestellar/console/pkg/k8s"
 )
 
+// listClustersHealthWarmup coordinates background health-refresh goroutines
+// triggered from ListClusters. Previously each /api/mcp/clusters request
+// spawned a new GetAllClusterHealth goroutine, so a polling UI (or a pile of
+// concurrent tabs) would stack up overlapping expensive health sweeps that
+// all raced to write the same cache (#6484). A simple in-flight flag is
+// enough to collapse concurrent callers onto a single warmup: if one is
+// already running, additional callers skip spawning and rely on the existing
+// goroutine to refresh the cache.
+var (
+	listClustersWarmupMu       sync.Mutex
+	listClustersWarmupInFlight bool
+)
+
+// tryStartClusterHealthWarmup returns true if the caller became the warmup
+// owner. Only the owner should spawn a goroutine; everyone else must drop
+// the refresh. The owner MUST call finishClusterHealthWarmup when done so
+// the flag clears and the next cycle can start.
+func tryStartClusterHealthWarmup() bool {
+	listClustersWarmupMu.Lock()
+	defer listClustersWarmupMu.Unlock()
+	if listClustersWarmupInFlight {
+		return false
+	}
+	listClustersWarmupInFlight = true
+	return true
+}
+
+func finishClusterHealthWarmup() {
+	listClustersWarmupMu.Lock()
+	listClustersWarmupInFlight = false
+	listClustersWarmupMu.Unlock()
+}
+
 // ListClusters returns all discovered clusters with health data
 func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately without trying real clusters
@@ -59,12 +92,19 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 			}
 		}
 
-		// Kick off a background health refresh so subsequent calls get fresh data
-		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), mcpHealthTimeout)
-			defer cancel()
-			h.k8sClient.GetAllClusterHealth(ctx)
-		}()
+		// Kick off a background health refresh so subsequent calls get fresh
+		// data — but only if another refresh is not already in flight. Under
+		// polling load the previous unconditional `go` stacked up overlapping
+		// health sweeps, each expensive and all racing on the same cache
+		// (#6484).
+		if tryStartClusterHealthWarmup() {
+			go func() {
+				defer finishClusterHealthWarmup()
+				ctx, cancel := context.WithTimeout(context.Background(), mcpHealthTimeout)
+				defer cancel()
+				h.k8sClient.GetAllClusterHealth(ctx)
+			}()
+		}
 
 		if clusters == nil {
 			clusters = make([]k8s.ClusterInfo, 0)

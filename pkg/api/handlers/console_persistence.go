@@ -693,52 +693,43 @@ func (h *ConsolePersistenceHandlers) GetWorkloadDeployment(c *fiber.Ctx) error {
 	return c.JSON(deployment)
 }
 
-// CreateWorkloadDeployment creates a new workload deployment
+// CreateWorkloadDeployment creates a new workload deployment.
+//
 // POST /api/persistence/deployments
+//
+// NOTE (#6482): Actual reconciliation is not yet implemented. The previous
+// behavior silently accepted the request, persisted a CR, and spawned a
+// background goroutine that only flipped the status to `InProgress` without
+// ever deploying anything — the client received 201 Created and then
+// indefinitely polled a deployment that would never complete.
+//
+// Until reconcileDeployment grows a real implementation, this handler returns
+// 501 Not Implemented so clients get an explicit, machine-readable signal that
+// the feature is unavailable, instead of hanging on a phantom deployment.
+// Followup: https://github.com/kubestellar/console/issues/6513 (Option B:
+// implement the full reconciliation loop).
 func (h *ConsolePersistenceHandlers) CreateWorkloadDeployment(c *fiber.Ctx) error {
 	if err := h.requireAdmin(c); err != nil {
 		return err
 	}
 
+	// Still parse the body so obviously malformed requests get 400 before
+	// the 501 is returned — this matches the behavior clients expect from a
+	// validated endpoint.
 	var deployment v1alpha1.WorkloadDeployment
 	if err := c.BodyParser(&deployment); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	client, _, err := h.persistenceStore.GetActiveClient(c.Context())
-	if err != nil {
-		slog.Info("[ConsolePersistence] service unavailable", "error", err)
-		return c.Status(503).JSON(fiber.Map{"error": "service unavailable"})
-	}
+	slog.Warn("[ConsolePersistence] CreateWorkloadDeployment called but reconciliation is not implemented (#6482)",
+		"name", deployment.Name,
+		"namespace", deployment.Namespace)
 
-	namespace := h.persistenceStore.GetNamespace()
-	persistence := k8s.NewConsolePersistence(client)
-
-	// Set namespace and metadata
-	deployment.Namespace = namespace
-	if deployment.APIVersion == "" {
-		deployment.APIVersion = v1alpha1.GroupVersion.String()
-	}
-	if deployment.Kind == "" {
-		deployment.Kind = "WorkloadDeployment"
-	}
-	deployment.CreationTimestamp = metav1.Now()
-
-	// Initialize status
-	deployment.Status.Phase = "Pending"
-	now := metav1.Now()
-	deployment.Status.StartedAt = &now
-
-	created, err := persistence.CreateWorkloadDeployment(c.Context(), &deployment)
-	if err != nil {
-		slog.Error("[ConsolePersistence] internal error", "error", err)
-		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
-	}
-
-	// Trigger deployment reconciliation asynchronously
-	go h.reconcileDeployment(context.Background(), created)
-
-	return c.Status(201).JSON(created)
+	return c.Status(501).JSON(fiber.Map{
+		"error":     "Workload deployment reconciliation is not implemented in this backend build. The request was rejected instead of silently persisting a deployment that would never complete.",
+		"errorCode": "DEPLOYMENT_RECONCILIATION_NOT_IMPLEMENTED",
+		"issue":     "https://github.com/kubestellar/console/issues/6513",
+	})
 }
 
 // UpdateWorkloadDeploymentStatus updates the status of a workload deployment

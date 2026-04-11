@@ -299,6 +299,15 @@ func streamClusters(
 	// the callback runs, so c.Locals is not safe to read inside it (#6029).
 	userID := middleware.GetUserID(c)
 
+	// Capture a standalone parent context derived from the request context so
+	// the SetBodyStreamWriter callback does not touch fiber.Ctx after it may
+	// have been reused (#6480). Previously the stream context derived from
+	// context.Background(), which meant client disconnect never propagated
+	// to the per-cluster goroutines — contradicting the comment below. We
+	// snapshot a Done channel from the fiber.Ctx here and merge it into the
+	// stream context inside the callback.
+	requestCtx := c.UserContext()
+
 	c.Set("Content-Type", "text/event-stream")
 	c.Set("Cache-Control", "no-cache")
 	c.Set("Connection", "keep-alive")
@@ -307,9 +316,13 @@ func streamClusters(
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
 		// Create a cancellable context with the overall deadline so that all
 		// spawned goroutines are cancelled when the client disconnects or the
-		// deadline expires.  Previously context.Background() was used, which
-		// caused goroutine leaks on client disconnect (see #3291).
-		streamCtx, streamCancel := context.WithTimeout(context.Background(), sseOverallDeadline)
+		// deadline expires. Derived from the request context so that client
+		// disconnect propagates as promised (#6480). Previously
+		// context.Background() was used, which meant the comment below about
+		// disconnect-driven cancellation was a lie: nothing ever cancelled
+		// the goroutines on client disconnect — only the overall deadline or
+		// a Logout fired cancel().
+		streamCtx, streamCancel := context.WithTimeout(requestCtx, sseOverallDeadline)
 		defer streamCancel()
 
 		// Register this stream's cancel with the per-user SSE session
@@ -326,12 +339,28 @@ func streamClusters(
 		totalClusters := len(healthy) + len(offline)
 		completedClusters := 0
 
+		// emitEvent writes an SSE event and, on error (typically client
+		// disconnect), cancels the stream context so every in-flight
+		// goroutine aborts immediately instead of continuing to burn
+		// cluster-side work nobody will read (#6480). Returns true on
+		// success so callers can early-return on failure.
+		emitEvent := func(name string, data interface{}) bool {
+			if err := writeSSEEvent(w, name, data); err != nil {
+				slog.Info("[SSE] write failed, cancelling stream", "event", name, "error", err)
+				streamCancel()
+				return false
+			}
+			return true
+		}
+
 		// Instantly emit skipped events for offline clusters
 		for _, cl := range offline {
-			writeSSEEvent(w, sseEventClusterSkipped, fiber.Map{
+			if !emitEvent(sseEventClusterSkipped, fiber.Map{
 				"cluster": cl.Name,
 				"reason":  "offline",
-			})
+			}) {
+				return
+			}
 			completedClusters++
 		}
 
@@ -347,12 +376,15 @@ func streamClusters(
 			if cached := sseCacheGet(cacheKey); cached != nil {
 				mu.Lock()
 				completedClusters++
-				writeSSEEvent(w, sseEventClusterData, fiber.Map{
+				ok := emitEvent(sseEventClusterData, fiber.Map{
 					"cluster":   cl.Name,
 					cfg.demoKey: cached,
 					"source":    "cache",
 				})
 				mu.Unlock()
+				if !ok {
+					return
+				}
 				continue
 			}
 
@@ -388,7 +420,7 @@ func streamClusters(
 					// event type.
 					mu.Lock()
 					completedClusters++
-					writeSSEEvent(w, sseEventClusterError, fiber.Map{
+					emitEvent(sseEventClusterError, fiber.Map{
 						"cluster": clusterName,
 						"error":   fetchErr.Error(),
 					})
@@ -405,7 +437,7 @@ func streamClusters(
 
 				mu.Lock()
 				completedClusters++
-				writeSSEEvent(w, sseEventClusterData, fiber.Map{
+				emitEvent(sseEventClusterData, fiber.Map{
 					"cluster":   clusterName,
 					cfg.demoKey: data,
 					"source":    "k8s",
@@ -431,7 +463,7 @@ func streamClusters(
 		}
 
 		mu.Lock()
-		writeSSEEvent(w, sseEventDone, fiber.Map{
+		emitEvent(sseEventDone, fiber.Map{
 			"totalClusters":     totalClusters,
 			"completedClusters": completedClusters,
 			"skippedOffline":    len(offline),

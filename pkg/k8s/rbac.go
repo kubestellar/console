@@ -14,8 +14,27 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/kubestellar/console/pkg/models"
 )
+
+// maxConcurrentClusterRBACQueries bounds how many clusters GetAllPermissionsSummaries
+// fans out to at once. A plain unbounded errgroup would let 50+ clusters each
+// hammer the kube-apiserver with five SelfSubjectAccessReview calls
+// concurrently, which can saturate a control plane. 5 is a deliberate
+// compromise — high enough that a typical 5-10 cluster setup sees near-zero
+// serialization, low enough that a 50-cluster fleet queues requests in
+// batches of 5 and stays inside the handler's overall rbacAnalysisTimeout.
+const maxConcurrentClusterRBACQueries = 5
+
+// perClusterRBACTimeout caps the per-cluster RBAC summary fetch. The previous
+// code relied only on the caller's parent timeout (rbacAnalysisTimeout ~45s),
+// which let a single slow cluster consume the entire UI-facing budget. 15s
+// is short enough that the UI is never held hostage by one dead cluster and
+// long enough that a healthy cluster with 5 SelfSubjectAccessReview calls
+// finishes comfortably within budget.
+const perClusterRBACTimeout = 15 * time.Second
 
 // ListServiceAccounts returns all service accounts in a cluster
 func (m *MultiClusterClient) ListServiceAccounts(ctx context.Context, contextName, namespace string) ([]models.K8sServiceAccount, error) {
@@ -706,25 +725,57 @@ func (m *MultiClusterClient) getAccessibleNamespaces(ctx context.Context, contex
 	return accessible, nil
 }
 
-// GetAllPermissionsSummaries returns permission summaries for all clusters
+// GetAllPermissionsSummaries returns permission summaries for all clusters.
+//
+// Previously this iterated clusters sequentially: N clusters × 5 RBAC probes
+// × up-to-45s-per-cluster meant a 10-cluster fleet could block the UI for
+// minutes when even one cluster was slow (#6487). The fan-out now:
+//
+//   - runs per-cluster probes concurrently with errgroup
+//   - caps concurrency at maxConcurrentClusterRBACQueries so a large fleet
+//     doesn't hammer every apiserver at once
+//   - enforces perClusterRBACTimeout as an inner cap so one slow cluster
+//     can't consume the caller's entire budget
+//   - preserves the "partial info on error" contract: a failed cluster still
+//     appears in the result with just its Cluster field set, so callers can
+//     distinguish "no info" from "cluster missing"
+//
+// Results are written by index into a preallocated slice so cluster order
+// matches the input listing (no nondeterminism from scheduler race).
 func (m *MultiClusterClient) GetAllPermissionsSummaries(ctx context.Context) ([]PermissionsSummary, error) {
 	clusters, err := m.ListClusters(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var summaries []PermissionsSummary
-	for _, cluster := range clusters {
-		summary, err := m.GetPermissionsSummary(ctx, cluster.Name)
-		if err != nil {
-			// Include partial info on error
-			summaries = append(summaries, PermissionsSummary{
-				Cluster: cluster.Name,
-			})
-			continue
-		}
-		summaries = append(summaries, *summary)
+	summaries := make([]PermissionsSummary, len(clusters))
+
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(maxConcurrentClusterRBACQueries)
+
+	for i, cluster := range clusters {
+		i, cluster := i, cluster // capture per-iteration
+		g.Go(func() error {
+			clusterCtx, cancel := context.WithTimeout(gctx, perClusterRBACTimeout)
+			defer cancel()
+
+			summary, err := m.GetPermissionsSummary(clusterCtx, cluster.Name)
+			if err != nil {
+				// Partial info on error — same contract as the old code.
+				summaries[i] = PermissionsSummary{Cluster: cluster.Name}
+				return nil
+			}
+			summaries[i] = *summary
+			return nil
+		})
 	}
+
+	// None of the goroutines return a non-nil error (we swallow per-cluster
+	// failures into partial summaries above), so g.Wait() only surfaces
+	// context cancellation. Ignore by design — a cancelled parent context
+	// will already have propagated into the per-cluster calls and produced
+	// partial entries.
+	_ = g.Wait()
 
 	return summaries, nil
 }
