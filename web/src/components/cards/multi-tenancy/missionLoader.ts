@@ -52,12 +52,23 @@ export async function loadMissionPrompt(
     const parsed = await response.json()
     const mission = parsed.mission || parsed
 
-    // Build a structured prompt from the mission steps
-    const steps = (mission.steps || []) as Array<{ title: string; description: string }>
+    // issue 6430 — Guard every field access against schema drift. Old v1
+    // exports may omit `troubleshooting`/`prerequisites`; v2+ exports may
+    // add new nested shapes. Never trust the incoming object's shape —
+    // check `typeof` / `Array.isArray` before dereferencing.
+    const rawSteps: unknown = mission?.steps
+    const steps = Array.isArray(rawSteps)
+      ? (rawSteps.filter(
+          (s): s is { title: string; description: string } =>
+            !!s && typeof s === 'object'
+            && typeof (s as { title?: unknown }).title === 'string'
+            && typeof (s as { description?: unknown }).description === 'string',
+        ))
+      : []
     if (steps.length === 0) return fallbackPrompt
 
-    const title = mission.title || 'Install Component'
-    const description = mission.description || ''
+    const title = typeof mission?.title === 'string' ? mission.title : 'Install Component'
+    const description = typeof mission?.description === 'string' ? mission.description : ''
 
     let prompt = `# ${title}\n\n${description}\n\n## Steps\n\n`
 
@@ -66,8 +77,16 @@ export async function loadMissionPrompt(
       prompt += `### Step ${i + 1}: ${step.title}\n${step.description}\n\n`
     }
 
-    // Add troubleshooting if available
-    const troubleshooting = (mission.troubleshooting || []) as Array<{ title: string; description: string }>
+    // Add troubleshooting if available (v2+ schema field — absent in older exports)
+    const rawTroubleshooting: unknown = mission?.troubleshooting
+    const troubleshooting = Array.isArray(rawTroubleshooting)
+      ? (rawTroubleshooting.filter(
+          (t): t is { title: string; description: string } =>
+            !!t && typeof t === 'object'
+            && typeof (t as { title?: unknown }).title === 'string'
+            && typeof (t as { description?: unknown }).description === 'string',
+        ))
+      : []
     if (troubleshooting.length > 0) {
       prompt += `## Troubleshooting\n\n`
       for (const item of troubleshooting) {

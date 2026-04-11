@@ -249,27 +249,38 @@ function extractBalancedBlocks(text: string): string[] {
     let escape = false
 
     while (j < text.length && depth > 0) {
+      // issue 6426 — Belt-and-suspenders forward-progress guard. Every
+      // branch below advances `j`, but we capture the pre-iteration index
+      // and break out if somehow `j` fails to advance. This makes the
+      // state machine provably terminating regardless of input pathology
+      // (heavy nested `\\` escapes, embedded quotes, etc).
+      const jStart = j
       const c = text[j]
       if (escape) {
+        // Previous char was a backslash inside a string. Consume this
+        // char unconditionally and reset the escape flag.
         escape = false
         j++
-        continue
-      }
-      if (c === '\\' && inString) {
+      } else if (c === '\\' && inString) {
+        // Enter escape state. Next char will be consumed verbatim.
         escape = true
         j++
-        continue
-      }
-      if (c === '"') {
+      } else if (c === '"') {
+        // Toggle string state. JSON only allows double-quoted strings.
         inString = !inString
         j++
-        continue
+      } else {
+        if (!inString) {
+          if (c === ch) depth++
+          else if (c === expected) depth--
+        }
+        j++
       }
-      if (!inString) {
-        if (c === ch) depth++
-        else if (c === expected) depth--
+      if (j <= jStart) {
+        // Forward progress invariant violated — bail to avoid any chance
+        // of an infinite loop. Should be unreachable.
+        break
       }
-      j++
     }
 
     if (depth === 0) {
@@ -290,7 +301,7 @@ export function useMissionControl() {
   )
   const { startMission, sendMessage, missions } = useMissions()
   const { releases: helmReleases } = useHelmReleases()
-  const { clusters } = useClusters()
+  const { clusters, isLoading: clustersLoading, lastUpdated: clustersLastUpdated } = useClusters()
   const lastParsedContentRef = useRef('')
   // #6403 — Stale persisted state can reference clusters that were renamed or
   // deleted between sessions. When the current cluster list loads, cross-check
@@ -316,15 +327,18 @@ export function useMissionControl() {
   }, [state])
 
   // #6403 — Reconcile persisted cluster references against the current
-  // cluster list. Runs once after clusters have loaded (non-empty list or
-  // explicit empty-after-load). We can't tell "still loading" from "zero
-  // clusters" purely by length, so we gate on the first render where
-  // `clusters` is a non-null array — the first truthy load — and only
-  // reconcile if the persisted state actually references cluster names
-  // (an empty wizard has nothing to reconcile).
+  // cluster list. Runs once after clusters have actually finished loading,
+  // NOT on the initial `clusters: []` render that useClusters() emits while
+  // `isLoading: true`. Per Copilot review on PR #6424 (issue #6427), we gate
+  // on `!clustersLoading && clustersLastUpdated != null` so an empty cached
+  // state during initial fetch does not wipe valid persisted assignments.
   useEffect(() => {
     if (staleReconcileDoneRef.current) return
     if (!clusters) return
+    // issue 6427 — wait until useClusters() has produced a real load, not
+    // the stub `[]` returned during the initial fetch.
+    if (clustersLoading) return
+    if (clustersLastUpdated == null) return
     const hasReferences =
       state.assignments.length > 0 || state.targetClusters.length > 0
     if (!hasReferences) {
@@ -332,11 +346,23 @@ export function useMissionControl() {
       staleReconcileDoneRef.current = true
       return
     }
-    const liveNames = new Set(clusters.map((c) => c.name))
+    const liveByName = new Map(clusters.map((c) => [c.name, c]))
+    // issue 6433 — also drop assignments where the NAME still exists but
+    // the underlying server URL has changed (recreate-with-same-name). Only
+    // applies when the assignment captured a clusterServer at creation time
+    // (older persisted state without clusterServer gets the legacy name-only
+    // behavior to avoid wiping known-good assignments).
     const staleFromAssignments = state.assignments
-      .filter((a) => !liveNames.has(a.clusterName))
+      .filter((a) => {
+        const live = liveByName.get(a.clusterName)
+        if (!live) return true
+        if (a.clusterServer && live.server && a.clusterServer !== live.server) {
+          return true
+        }
+        return false
+      })
       .map((a) => a.clusterName)
-    const staleFromTargets = state.targetClusters.filter((n) => !liveNames.has(n))
+    const staleFromTargets = state.targetClusters.filter((n) => !liveByName.has(n))
     const allStale = Array.from(new Set([...staleFromAssignments, ...staleFromTargets]))
     if (allStale.length === 0) {
       staleReconcileDoneRef.current = true
@@ -349,18 +375,21 @@ export function useMissionControl() {
     // runs exactly once per load.
     /* eslint-disable react-hooks/set-state-in-effect */
     setStaleClusterNames(allStale)
+    const staleAssignmentNames = new Set(staleFromAssignments)
     setState((prev) => ({
       ...prev,
-      assignments: prev.assignments.filter((a) => liveNames.has(a.clusterName)),
-      targetClusters: prev.targetClusters.filter((n) => liveNames.has(n)),
+      assignments: prev.assignments.filter(
+        (a) => liveByName.has(a.clusterName) && !staleAssignmentNames.has(a.clusterName),
+      ),
+      targetClusters: prev.targetClusters.filter((n) => liveByName.has(n)),
       // Phases may reference projects on the removed clusters — clear phases
       // so Flight Plan regenerates them from the surviving assignments.
       phases: [] }))
     /* eslint-enable react-hooks/set-state-in-effect */
     console.warn(
-      `[MissionControl] #6403 — dropped ${allStale.length} stale cluster reference(s) from persisted state: ${allStale.join(', ')}`,
+      `[MissionControl] issue 6403 — dropped ${allStale.length} stale cluster reference(s) from persisted state: ${allStale.join(', ')}`,
     )
-  }, [clusters, state.assignments, state.targetClusters])
+  }, [clusters, clustersLoading, clustersLastUpdated, state.assignments, state.targetClusters])
 
   const acknowledgeStaleClusters = () => {
     setStaleClusterNames([])
@@ -453,7 +482,7 @@ export function useMissionControl() {
           lastDispatchedGenerationRef.current !== userMutationGenerationRef.current
         ) {
           console.warn(
-            '[MissionControl] #6404 — discarding stale AI assignment stream (user mutated state after dispatch)',
+            '[MissionControl] issue 6404 — discarding stale AI assignment stream (user mutated state after dispatch)',
           )
           lastParsedContentRef.current = latest.content
           return
@@ -569,7 +598,7 @@ export function useMissionControl() {
       // rapid double-clicks can still land a second call before the state
       // updates — so early-return here too (belt-and-suspenders).
       if (currentState.aiStreaming) {
-        console.warn('[MissionControl] #6406 — askAIForSuggestions called while already streaming; ignoring')
+        console.warn('[MissionControl] issue 6406 — askAIForSuggestions called while already streaming; ignoring')
         return
       }
       const currentHelmReleases = helmReleasesRef.current
@@ -694,7 +723,7 @@ Include real CNCF projects only. Consider dependencies between projects.`
   const askAIForAssignments = (projects: PayloadProject[], clustersJson: string) => {
       // #6406 — Early return if a planning request is already in flight.
       if (stateRef.current.aiStreaming) {
-        console.warn('[MissionControl] #6406 — askAIForAssignments called while already streaming; ignoring')
+        console.warn('[MissionControl] issue 6406 — askAIForAssignments called while already streaming; ignoring')
         return
       }
       let missionId = stateRef.current.planningMissionId
@@ -773,7 +802,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
   /** Move a project from one cluster to another (for drag-and-drop in blueprint) */
   const moveProjectToCluster = (projectName: string, fromCluster: string, toCluster: string) => {
       if (fromCluster === toCluster) return
-      bumpUserGeneration() // #6404 — manual mutation invalidates in-flight AI streams
+      bumpUserGeneration() // issue 6404 — manual mutation invalidates in-flight AI streams
       setState((prev) => ({
         ...prev,
         assignments: prev.assignments.map((a) => {
@@ -790,7 +819,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
     }
 
   const setAssignment = (clusterName: string, projectName: string, assigned: boolean) => {
-      bumpUserGeneration() // #6404 — manual mutation invalidates in-flight AI streams
+      bumpUserGeneration() // issue 6404 — manual mutation invalidates in-flight AI streams
       setState((prev) => {
         const assignments = [...prev.assignments]
         const idx = assignments.findIndex((a) => a.clusterName === clusterName)
@@ -805,9 +834,14 @@ Order phases by dependency — prerequisites first. Each phase completes before 
                 : [...existing.projectNames, projectName]
               : existing.projectNames.filter((n) => n !== projectName) }
         } else if (assigned) {
+          // issue 6433 — capture server URL from the live cluster list so
+          // recreate-with-same-name scenarios (common with Kind) are
+          // detectable later by stale reconciliation.
+          const liveCluster = clusters?.find((c) => c.name === clusterName)
           assignments.push({
             clusterName,
-            clusterContext: clusterName,
+            clusterContext: liveCluster?.context ?? clusterName,
+            clusterServer: liveCluster?.server,
             provider: 'kubernetes',
             projectNames: [projectName],
             warnings: [],
@@ -882,7 +916,14 @@ Order phases by dependency — prerequisites first. Each phase completes before 
       ingress: ['nginx', 'traefik', 'haproxy', 'ingress-nginx'],
       'gatekeeper-system': ['opa', 'open-policy-agent', 'opa-gatekeeper'] }
 
-    // Build per-cluster name sets from helm releases
+    // issue 6428 — Build per-cluster name sets from actual Helm releases only.
+    // Previously we also added every namespace name on every cluster, which
+    // meant that creating an unrelated Deployment in a namespace called
+    // `tempo` would falsely mark the Tempo observability project as installed.
+    // Helm release `name` and normalized `chart` are strong signals (the
+    // release was actually deployed). Namespace names are NOT a signal —
+    // they only correlate when a project happens to use its own name as its
+    // default namespace, which is not guaranteed and routinely collides.
     const clusterNames = new Map<string, Set<string>>()
     helmReleases?.forEach(r => {
       const cName = r.cluster || '_unknown'
@@ -890,19 +931,28 @@ Order phases by dependency — prerequisites first. Each phase completes before 
       const names = clusterNames.get(cName)!
       names.add(r.name.toLowerCase())
       if (r.chart) names.add(r.chart.toLowerCase().replace(/-\d+.*$/, ''))
-      if (r.namespace) names.add(r.namespace.toLowerCase())
+      // Note: r.namespace intentionally NOT added. See issue 6428.
     })
 
-    // Add cluster namespaces + expand aliases
+    // issue 6428 — Alias expansion is still useful for operator-managed
+    // namespaces (a release named `kube-prometheus-stack` exposes prometheus,
+    // grafana, alertmanager). For each helm release whose namespace is a
+    // known shared-operator namespace, also add its aliased project names
+    // to that cluster's set. Plain cluster namespace lists no longer
+    // contribute to project detection.
+    helmReleases?.forEach(r => {
+      if (!r.namespace) return
+      const aliased = NS_ALIASES[r.namespace.toLowerCase()]
+      if (!aliased) return
+      const cName = r.cluster || '_unknown'
+      if (!clusterNames.has(cName)) clusterNames.set(cName, new Set())
+      const names = clusterNames.get(cName)!
+      aliased.forEach(a => names.add(a))
+    })
+
+    // Ensure every cluster has an entry (even if no releases)
     clusters?.forEach(c => {
       if (!clusterNames.has(c.name)) clusterNames.set(c.name, new Set())
-      const names = clusterNames.get(c.name)!
-      c.namespaces?.forEach(ns => {
-        const lower = ns.toLowerCase()
-        names.add(lower)
-        const aliased = NS_ALIASES[lower]
-        if (aliased) aliased.forEach(a => names.add(a))
-      })
     })
 
     // Match projects against each cluster's known names
@@ -940,7 +990,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
   // Auto-assign: deterministic local algorithm (no AI)
   // ---------------------------------------------------------------------------
 
-  const autoAssignProjects = (availableClusters: Array<{ name: string; context?: string; distribution?: string; cpuCores?: number; memoryGB?: number; storageGB?: number; cpuUsageCores?: number; cpuRequestsCores?: number; memoryUsageGB?: number; memoryRequestsGB?: number }>) => {
+  const autoAssignProjects = (availableClusters: Array<{ name: string; context?: string; server?: string; distribution?: string; cpuCores?: number; memoryGB?: number; storageGB?: number; cpuUsageCores?: number; cpuRequestsCores?: number; memoryUsageGB?: number; memoryRequestsGB?: number }>) => {
       if (availableClusters.length === 0 || state.projects.length === 0) return
 
       // Category groups — projects in the same group have affinity
@@ -997,7 +1047,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
           if (priority && !warnedUnknownPriorities.has(priority)) {
             warnedUnknownPriorities.add(priority)
             console.warn(
-              `[MissionControl] Unknown priority "${priority}" — treating as lowest (#6402)`,
+              `[MissionControl] Unknown priority "${priority}" — treating as lowest (issue 6402)`,
             )
           }
           return UNKNOWN_PRIORITY_RANK
@@ -1066,6 +1116,9 @@ Order phases by dependency — prerequisites first. Each phase completes before 
           return {
             clusterName: c.name,
             clusterContext: c.context ?? c.name,
+            // issue 6433 — capture server URL so recreate-with-same-name
+            // scenarios (common with Kind) can be detected at rehydration.
+            clusterServer: c.server,
             provider: c.distribution ?? 'kubernetes',
             projectNames: newAssignments.get(c.name) ?? [],
             warnings: existing?.warnings ?? [],

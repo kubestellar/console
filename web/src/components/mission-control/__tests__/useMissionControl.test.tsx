@@ -115,4 +115,24 @@ describe('extractJSON — balanced block extraction (#6382)', () => {
     const parsed = extractJSON<{ a: string }>(text)
     expect(parsed).toBeNull()
   })
+
+  // issue 6426 — heavy nested backslash escaping should neither hang nor
+  // lose characters. The original concern was that `inString` tracking
+  // could get confused by sequences like `\\\\` followed by `\\"`.
+  it('handles heavy nested backslash escaping without looping', () => {
+    // Construct a JSON string whose `reason` field contains escaped
+    // backslashes followed by escaped quotes. In the raw JSON text this
+    // is `"reason": "path\\with\\quotes: \"x\""` — JS source escapes
+    // each backslash and quote one more level.
+    const text =
+      '{"reason": "path\\\\with\\\\quotes: \\"x\\"", "name": "falco"}'
+    const start = Date.now()
+    const parsed = extractJSON<{ reason: string; name: string }>(text)
+    // Hard upper bound: this should complete in well under 100ms. If the
+    // state machine ever regresses to an infinite loop, vitest's per-test
+    // timeout will fire; this assertion adds a tighter local gate.
+    expect(Date.now() - start).toBeLessThan(100)
+    expect(parsed?.name).toBe('falco')
+    expect(parsed?.reason).toBe('path\\with\\quotes: "x"')
+  })
 })

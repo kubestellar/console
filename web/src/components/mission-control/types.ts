@@ -49,6 +49,15 @@ export interface ClusterAssignment {
   clusterName: string
   /** Cluster context (from ClusterInfo.context) */
   clusterContext: string
+  /**
+   * Cluster server URL (from ClusterInfo.server) captured at assignment
+   * time. Used to detect re-created clusters during stale-reconciliation:
+   * if a Kind cluster was deleted and a new one was registered with the
+   * SAME name but a different server URL, the persisted assignment is
+   * orphaned and must be dropped. Optional for backward-compatibility
+   * with assignments persisted before this field existed (issue 6433).
+   */
+  clusterServer?: string
   /** Cloud provider / distribution (eks, gke, aks, kind, etc.) */
   provider: string
   /** Project names assigned to this cluster */

@@ -183,6 +183,11 @@ export function useDeployMissions() {
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined)
   const missionsRef = useRef(missions)
   missionsRef.current = missions
+  // issue 6427 — track grace-window re-poll timeouts keyed by mission id
+  // so we can clear them on unmount and on the next regular poll cycle.
+  // Without this, a hook unmount inside the grace window would still fire
+  // `poll()` and call `setMissions` on a dead component.
+  const graceRepollsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   // Persist missions to localStorage
   useEffect(() => {
@@ -496,7 +501,13 @@ export function useDeployMissions() {
             const remaining = MIN_ACTIVE_MS - elapsed
             // Small fudge (50ms) so `elapsed` is definitely past MIN_ACTIVE_MS on re-entry
             const GRACE_REPOLL_FUDGE_MS = 50
-            setTimeout(() => {
+            // issue 6427 — clear any previously scheduled grace repoll for this
+            // mission (the regular poll may have already run once in between)
+            // and track the new handle so unmount cleanup can cancel it.
+            const existing = graceRepollsRef.current.get(mission.id)
+            if (existing) clearTimeout(existing)
+            const handle = setTimeout(() => {
+              graceRepollsRef.current.delete(mission.id)
               // Only re-poll if this mission still exists and is still non-terminal.
               // The regular interval may have already run by now, which is fine
               // — calling poll() again is idempotent.
@@ -505,6 +516,7 @@ export function useDeployMissions() {
                 poll()
               }
             }, remaining + GRACE_REPOLL_FUDGE_MS)
+            graceRepollsRef.current.set(mission.id, handle)
           }
 
           return {
@@ -541,9 +553,19 @@ export function useDeployMissions() {
       pollRef.current = setInterval(poll, POLL_INTERVAL_MS)
     }, 1000)
 
+    // issue 6427 — Snapshot the grace-repoll map reference inside the
+    // effect body so the cleanup closure uses a captured handle rather
+    // than reading `.current` at cleanup time (react-hooks/exhaustive-deps).
+    const graceRepolls = graceRepollsRef.current
     return () => {
       clearTimeout(initialTimeout)
       if (pollRef.current) clearInterval(pollRef.current)
+      // Cancel any outstanding grace-window re-polls so they don't fire
+      // on an unmounted hook and call setMissions on a dead tree.
+      for (const handle of graceRepolls.values()) {
+        clearTimeout(handle)
+      }
+      graceRepolls.clear()
     }
   }, []) // No dependencies - uses ref for current missions
 

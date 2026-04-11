@@ -186,6 +186,15 @@ const MISSION_RECONNECT_DELAY_MS = 500
  * meeting gaps while still protecting against overnight reconnects.
  */
 const MISSION_RECONNECT_MAX_AGE_MS = 30 * 60 * 1000
+/**
+ * issue 6429 — Cap how many prior messages we re-append to the prompt on
+ * reconnect. Long-running missions can accumulate hundreds of turns; some
+ * agents (notably ones with 8k–32k token budgets) reject the payload
+ * outright with HTTP 413. We always keep the most recent
+ * MAX_RESENT_MESSAGES items (which always include the last user message
+ * that is re-sent separately) and drop anything older.
+ */
+const MAX_RESENT_MESSAGES = 20
 /** Initial delay (ms) before auto-reconnecting WebSocket after close */
 const WS_RECONNECT_INITIAL_DELAY_MS = 1_000
 /** Maximum delay (ms) between reconnection attempts (backoff cap) */
@@ -337,7 +346,17 @@ function loadMissions(): Mission[] {
       })
     }
   } catch (e) {
-    console.error('Failed to load missions from localStorage:', e)
+    // issue 6437 — If the persisted payload is unparseable (the previous
+    // saveMissions pass may have been interrupted mid-write, or quota
+    // pressure corrupted it), fully clear the key instead of leaving a
+    // broken entry that will keep crashing every load. The user loses
+    // their history, which is strictly better than an unusable app.
+    console.error('[Missions] Failed to parse kc_missions, clearing:', e)
+    try {
+      localStorage.removeItem(MISSIONS_STORAGE_KEY)
+    } catch {
+      // If removeItem itself throws (e.g., private mode), nothing we can do.
+    }
   }
 
   // In demo mode, seed with orbit demo missions so the feature is visible
@@ -806,12 +825,21 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                   const requestId = `claude-reconnect-${Date.now()}-${mission.id}`
                   pendingRequests.current.set(requestId, mission.id)
 
-                  // Build history from all messages except system messages
-                  const history = mission.messages
+                  // Build history from all messages except system messages.
+                  // issue 6429 — Cap at MAX_RESENT_MESSAGES to avoid HTTP 413
+                  // against small-context agents. Keep the most recent items;
+                  // older turns are dropped with a warning.
+                  const fullHistory = mission.messages
                     .filter(msg => msg.role === 'user' || msg.role === 'assistant')
                     .map(msg => ({
                       role: msg.role,
                       content: msg.content }))
+                  const history = fullHistory.slice(-MAX_RESENT_MESSAGES)
+                  if (fullHistory.length > MAX_RESENT_MESSAGES) {
+                    console.warn(
+                      `[Missions] issue 6429 — truncated reconnect history from ${fullHistory.length} to ${MAX_RESENT_MESSAGES} messages to avoid oversized payload`,
+                    )
+                  }
 
                   const mId = mission.id
                   wsSend(JSON.stringify({
