@@ -88,17 +88,24 @@ import { HelmValuesDiff } from '../HelmValuesDiff'
 describe('HelmValuesDiff', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // #6276/#6278: default both `useDemoMode().isDemoMode` and the
-    // cache hooks' `isDemoFallback` to false. In production, `useCache`
-    // (web/src/lib/cache/index.ts:1324) sets `isDemoFallback: true`
-    // whenever the user is being shown demo data instead of live cache
-    // results — that includes ALL of:
-    //   - shouldFallbackToDemo (a real fetch failed)
-    //   - !effectiveEnabled (caching disabled, e.g. demo-mode toggle on)
-    //   - showOptimisticDemo (first load while live fetch is pending)
-    // So `isDemoMode === true` AND `isDemoFallback === false` is not
-    // a state production ever produces. Tests that want demo behavior
-    // override BOTH explicitly.
+    // #6276/#6278/#6280: default both `useDemoMode().isDemoMode` and
+    // the cache hooks' `isDemoFallback` to false. In production,
+    // `useCache` (web/src/lib/cache/index.ts:1324) sets
+    // `isDemoFallback: true` via:
+    //     shouldFallbackToDemo || !effectiveEnabled || showOptimisticDemo
+    // where:
+    //   - shouldFallbackToDemo: live fetch returned an EMPTY array AND
+    //     the hook was created with `demoWhenEmpty: true`.
+    //   - !effectiveEnabled: caching is disabled. `effectiveEnabled =
+    //     enabled && (!demoMode || liveInDemoMode)`. So this fires when
+    //     demoMode is on AND the hook did NOT opt into liveInDemoMode.
+    //   - showOptimisticDemo: first load while a demoWhenEmpty fetch is
+    //     pending.
+    // The combination `isDemoMode === true && isDemoFallback === false`
+    // IS reachable in production for hooks that pass `liveInDemoMode:
+    // true`, but useCachedHelm{Releases,Values} don't, so for these
+    // tests defaulting to non-demo and overriding `useDemoMode` +
+    // `isDemoFallback` together is the production-faithful state.
     mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
     mockHelmReleases.mockReturnValue({ releases: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
