@@ -1,0 +1,48 @@
+{{- /*
+  Helm template validation — fails fast on misconfigurations that would
+  otherwise produce a broken Deployment (pod CrashLoopBackOff or missing
+  Secret references).
+
+  Issue #6358: If the user sets `jwt.existingSecret` (bring-your-own JWT),
+  templates/secret.yaml is skipped entirely (gated on
+  `not .Values.jwt.existingSecret`). But the Deployment still references
+  `github-client-id`, `github-client-secret`, `claude-api-key`,
+  `google-drive-api-key`, and `feedback-github-token` from a Secret with
+  the chart's fullname — which no longer exists in this path.
+
+  When `jwt.existingSecret` is set, every other credential MUST also be
+  provided via its own `*.existingSecret`. Inline `clientId` / `clientSecret`
+  / `apiKey` / `token` values have no Secret to land in, and silently fail
+  at pod startup.
+
+  See: deploy/helm/kubestellar-console/README.md — "Secrets and configuration"
+  (Bring-your-own caveat).
+
+  This template intentionally emits no Kubernetes resources: it only calls
+  `fail` on misconfiguration. A bare `{{- if false -}}{{- end -}}` pair
+  at the end keeps the file non-empty but produces zero YAML on success.
+*/ -}}
+
+{{- if .Values.jwt.existingSecret -}}
+
+{{- /* GitHub OAuth inline values with no Secret to land in */ -}}
+{{- if and (or .Values.github.clientId .Values.github.clientSecret) (not .Values.github.existingSecret) -}}
+{{- fail (printf "kubestellar-console: when jwt.existingSecret is set (%q), the chart does not render its own Secret. Inline github.clientId/github.clientSecret have nowhere to land. Set github.existingSecret to a pre-existing Secret containing the github-client-id and github-client-secret keys. See deploy/helm/kubestellar-console/README.md — 'Secrets and configuration' (Bring-your-own caveat)." .Values.jwt.existingSecret) -}}
+{{- end -}}
+
+{{- /* Claude API key inline with no Secret to land in */ -}}
+{{- if and .Values.claude.apiKey (not .Values.claude.existingSecret) -}}
+{{- fail (printf "kubestellar-console: when jwt.existingSecret is set (%q), claude.apiKey has no Secret to land in. Set claude.existingSecret to a pre-existing Secret containing the claude-api-key key. See deploy/helm/kubestellar-console/README.md — 'Secrets and configuration' (Bring-your-own caveat)." .Values.jwt.existingSecret) -}}
+{{- end -}}
+
+{{- /* Google Drive API key inline with no Secret to land in */ -}}
+{{- if and .Values.googleDrive.apiKey (not .Values.googleDrive.existingSecret) -}}
+{{- fail (printf "kubestellar-console: when jwt.existingSecret is set (%q), googleDrive.apiKey has no Secret to land in. Set googleDrive.existingSecret to a pre-existing Secret containing the google-drive-api-key key. See deploy/helm/kubestellar-console/README.md — 'Secrets and configuration' (Bring-your-own caveat)." .Values.jwt.existingSecret) -}}
+{{- end -}}
+
+{{- /* Feedback GitHub token inline with no Secret to land in */ -}}
+{{- if and .Values.feedbackGithubToken.token (not .Values.feedbackGithubToken.existingSecret) -}}
+{{- fail (printf "kubestellar-console: when jwt.existingSecret is set (%q), feedbackGithubToken.token has no Secret to land in. Set feedbackGithubToken.existingSecret to a pre-existing Secret containing the feedback-github-token key. See deploy/helm/kubestellar-console/README.md — 'Secrets and configuration' (Bring-your-own caveat)." .Values.jwt.existingSecret) -}}
+{{- end -}}
+
+{{- end -}}

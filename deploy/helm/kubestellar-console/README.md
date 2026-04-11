@@ -163,6 +163,39 @@ Common knobs:
 
 Common failures and what to do about them.
 
+### `Error: execution error at (kubestellar-console/templates/validation.yaml...): when jwt.existingSecret is set...`
+
+You set `jwt.existingSecret` (bring-your-own JWT) **and** supplied one of
+`github.clientId`, `github.clientSecret`, `claude.apiKey`, `googleDrive.apiKey`,
+or `feedbackGithubToken.token` as inline values.
+
+This combination used to silently produce a broken Deployment ([#6358](https://github.com/kubestellar/console/issues/6358)):
+`templates/secret.yaml` is gated on `not .Values.jwt.existingSecret`, so when
+you set it, the chart renders **no** Secret at all — and your inline
+credentials have nowhere to land. The Deployment would still reference keys
+like `github-client-id` from a Secret named after the chart release, and pods
+crash on startup with `secret "<release>-kubestellar-console" not found`.
+
+The chart now fails template rendering early with a clear message. To fix:
+create your own pre-existing Secrets for every credential you need and
+point the chart at them via `*.existingSecret`:
+
+```bash
+kubectl -n kubestellar-console create secret generic my-kc-github \
+  --from-literal=github-client-id=xxx \
+  --from-literal=github-client-secret=yyy
+
+helm install kc ./deploy/helm/kubestellar-console \
+  --set jwt.existingSecret=my-kc-jwt \
+  --set github.existingSecret=my-kc-github \
+  --set claude.existingSecret=my-kc-claude \
+  --set googleDrive.existingSecret=my-kc-gd \
+  --set feedbackGithubToken.existingSecret=my-kc-feedback
+```
+
+Alternatively, leave `jwt.existingSecret` empty and let the chart render
+its own Secret containing all credentials.
+
 ### `CreateContainerConfigError: secret "<name>" not found`
 
 You pointed the chart at an `existingSecret` that doesn't exist in the
