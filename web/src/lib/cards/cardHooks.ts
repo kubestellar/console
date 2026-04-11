@@ -711,10 +711,17 @@ export const commonComparators = {
     return (order[aStatus] ?? 999) - (order[bStatus] ?? 999)
   },
 
-  /** Compare dates (ISO strings or Date objects) */
+  /** Compare dates (ISO strings or Date objects).
+   * Invalid dates (NaN) are sorted to the END of the list in ascending order
+   * so valid, chronological data stays front-loaded. We use
+   * Number.MAX_SAFE_INTEGER as the sentinel rather than 0 so that legitimate
+   * epoch-zero timestamps still sort before invalid values. */
   date: <T>(field: keyof T) => (a: T, b: T) => {
-    const aDate = new Date(a[field] as string | Date).getTime()
-    const bDate = new Date(b[field] as string | Date).getTime()
+    const INVALID_DATE_SENTINEL = Number.MAX_SAFE_INTEGER
+    const aRaw = new Date(a[field] as string | Date).getTime()
+    const bRaw = new Date(b[field] as string | Date).getTime()
+    const aDate = Number.isNaN(aRaw) ? INVALID_DATE_SENTINEL : aRaw
+    const bDate = Number.isNaN(bRaw) ? INVALID_DATE_SENTINEL : bRaw
     return aDate - bDate
   } }
 

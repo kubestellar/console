@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { CARD_INSTALL_MAP } from '../cardInstallMap'
+import { describe, it, expect, vi } from 'vitest'
+import { CARD_INSTALL_MAP, validateCardInstallMap } from '../cardInstallMap'
 
 describe('CARD_INSTALL_MAP', () => {
   it('is a non-empty record', () => {
@@ -126,6 +126,41 @@ describe('CARD_INSTALL_MAP', () => {
       for (const path of info.kbPaths) {
         expect(path).toMatch(/^fixes\//)
       }
+    }
+  })
+})
+
+// #6699 — validateCardInstallMap flags install-map keys that don't match a
+// registered card type so dead aliases get surfaced instead of rotting.
+describe('validateCardInstallMap', () => {
+  it('returns an empty list when every key is registered', () => {
+    const known = Object.keys(CARD_INSTALL_MAP)
+    const unknown = validateCardInstallMap(known)
+    expect(unknown).toEqual([])
+  })
+
+  it('reports keys that are missing from the registered set', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      // Pretend only a single key is registered — every other key should
+      // come back as unknown.
+      const unknown = validateCardInstallMap(['opa_policies'])
+      expect(unknown.length).toBeGreaterThan(0)
+      expect(unknown).not.toContain('opa_policies')
+      // Validator logs exactly once with the offending keys.
+      expect(warn).toHaveBeenCalledTimes(1)
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  it('does not warn when every key is registered', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      validateCardInstallMap(Object.keys(CARD_INSTALL_MAP))
+      expect(warn).not.toHaveBeenCalled()
+    } finally {
+      warn.mockRestore()
     }
   })
 })

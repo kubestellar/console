@@ -36,7 +36,7 @@
  * ```
  */
 
-import { ReactNode } from 'react'
+import { ReactNode, useState } from 'react'
 import { getIcon } from '../icons'
 import { CardDefinition, CardColumnDefinition } from './types'
 import { useCardData, SortDirection } from './cardHooks'
@@ -125,6 +125,17 @@ registerRenderer('percentage', (value) => (
   <span className="font-mono text-sm">{Number(value).toFixed(1)}%</span>
 ))
 
+// Allowlist for column alignment values — keeps unvalidated user config from
+// producing garbage Tailwind classes like "text-foo" that silently drop styles.
+const VALID_ALIGN_VALUES = ['left', 'center', 'right'] as const
+type ValidAlign = (typeof VALID_ALIGN_VALUES)[number]
+const DEFAULT_ALIGN: ValidAlign = 'left'
+function normalizeAlign(align: string | undefined): ValidAlign {
+  return (VALID_ALIGN_VALUES as readonly string[]).includes(align ?? '')
+    ? (align as ValidAlign)
+    : DEFAULT_ALIGN
+}
+
 // ============================================================================
 // CardRuntime Props
 // ============================================================================
@@ -164,9 +175,22 @@ export function CardRuntime({ definition, config: _config, title }: CardRuntimeP
     emptyState,
     loadingState } = definition
 
-  // Get the data hook (fall back to noop so hooks are always called unconditionally)
-  const useDataHook = dataHookRegistry.get(dataSource.hook) || noopDataHook
-  const hookMissing = !dataHookRegistry.has(dataSource.hook)
+  // Rules of Hooks require the same hook be called every render for the life
+  // of this component instance. If we re-read dataHookRegistry on each render,
+  // a hook that gets registered (or unregistered) between renders would change
+  // which function is called — and different registered hooks call different
+  // numbers of inner hooks, which violates the Rules of Hooks and crashes
+  // React. Snapshot the resolved hook on first render via lazy useState so the
+  // same function is called for the entire component lifetime. If callers need
+  // to pick up a newly-registered hook, they should remount CardRuntime with a
+  // new `key` prop (e.g. key={dataSource.hook}).
+  const [{ useDataHook, hookMissing }] = useState(() => {
+    const resolved = dataHookRegistry.get(dataSource.hook)
+    return {
+      useDataHook: resolved || noopDataHook,
+      hookMissing: !resolved,
+    }
+  })
 
   // Call the data hook
   const {
@@ -332,7 +356,7 @@ export function CardRuntime({ definition, config: _config, title }: CardRuntimeP
                   {columns?.map(col => (
                     <th
                       key={col.field}
-                      className={`px-2 py-1.5 text-xs font-medium text-muted-foreground text-${col.align || 'left'}`}
+                      className={`px-2 py-1.5 text-xs font-medium text-muted-foreground text-${normalizeAlign(col.align)}`}
                       style={col.width ? { width: col.width } : undefined}
                     >
                       {col.header}
@@ -350,7 +374,7 @@ export function CardRuntime({ definition, config: _config, title }: CardRuntimeP
                     {columns?.map(col => (
                       <td
                         key={col.field}
-                        className={`px-2 py-2 text-${col.align || 'left'}`}
+                        className={`px-2 py-2 text-${normalizeAlign(col.align)}`}
                       >
                         {renderCell(item, col)}
                       </td>

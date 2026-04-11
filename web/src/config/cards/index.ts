@@ -400,7 +400,9 @@ export function getCardConfig(cardType: string): UnifiedCardConfig | undefined {
 }
 
 export function hasUnifiedConfig(cardType: string): boolean {
-  return cardType in CARD_CONFIGS
+  // Use hasOwnProperty to avoid false positives from inherited Object.prototype
+  // keys such as 'toString', 'constructor', '__proto__', etc.
+  return Object.prototype.hasOwnProperty.call(CARD_CONFIGS, cardType)
 }
 
 export function getUnifiedCardTypes(): string[] {
