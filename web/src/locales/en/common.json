@@ -1549,6 +1549,8 @@
     "clusterMode": "Cluster Mode",
     "localAgentDisconnectedLabel": "Local Agent: Disconnected",
     "agentBypassedInDemo": "Agent connection bypassed in demo mode",
+    "hostedDemoBypassed": "Agent not available in the hosted demo — self-host the console to connect a local agent and view real cluster data",
+    "selfHostToConnect": "Self-host the console to connect a cluster →",
     "connectedButErrors": "Connected but experiencing data errors ({{count}} in last minute)",
     "connectedButErrors_one": "Connected but experiencing data errors ({{count}} in last minute)",
     "connectedButErrors_other": "Connected but experiencing data errors ({{count}} in last minute)",

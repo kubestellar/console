@@ -1,0 +1,82 @@
+{{- /*
+NOTES.txt — shown to users after `helm install` / `helm upgrade`.
+
+Purpose (ref: kubestellar/console#6342): when a user sets any *.existingSecret
+to reference a pre-existing Kubernetes Secret but hasn't actually created it
+yet, the pod starts up in CreateContainerConfigError with no hint at what went
+wrong. Helm cannot query the cluster at template time to validate that the
+referenced Secret actually exists, so the best we can do is print an explicit,
+actionable checklist right after install with the exact `kubectl get secret`
+command the user should run to verify.
+*/ -}}
+{{ .Chart.Name }} {{ .Chart.Version }} — {{ include "kubestellar-console.fullname" . }}
+
+Access:
+  1. Get the service URL:
+     kubectl get svc {{ include "kubestellar-console.fullname" . }} -n {{ .Release.Namespace }}
+
+  2. Or port-forward for local access:
+     kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "kubestellar-console.fullname" . }} 8080:{{ .Values.service.port | default 8080 }}
+     Then open: http://localhost:8080
+
+{{- $anyExisting := false }}
+{{- if .Values.github.existingSecret }}{{ $anyExisting = true }}{{ end }}
+{{- if .Values.feedbackGithubToken.existingSecret }}{{ $anyExisting = true }}{{ end }}
+{{- if .Values.googleDrive.existingSecret }}{{ $anyExisting = true }}{{ end }}
+{{- if .Values.claude.existingSecret }}{{ $anyExisting = true }}{{ end }}
+{{- if .Values.jwt.existingSecret }}{{ $anyExisting = true }}{{ end }}
+
+{{- if $anyExisting }}
+
+IMPORTANT — pre-flight Secret validation
+=========================================
+This release references one or more pre-existing Kubernetes Secrets. Helm
+cannot verify that these Secrets exist at template time. If any referenced
+Secret is missing, the pod will fail to start with `CreateContainerConfigError`
+or `CreateContainerError`.
+
+Run the commands below to verify each referenced Secret exists BEFORE the pod
+rollout finishes. If any command returns "NotFound", create the Secret (or
+clear the corresponding `*.existingSecret` value so the chart renders its own).
+
+  {{- if .Values.github.existingSecret }}
+  # GitHub OAuth (github.existingSecret):
+  kubectl get secret {{ .Values.github.existingSecret }} -n {{ .Release.Namespace }}
+    # expected keys: {{ .Values.github.existingSecretKeys.clientId }}, {{ .Values.github.existingSecretKeys.clientSecret }}
+  {{- end }}
+  {{- if .Values.feedbackGithubToken.existingSecret }}
+  # Feedback/GitHub PAT (feedbackGithubToken.existingSecret):
+  kubectl get secret {{ .Values.feedbackGithubToken.existingSecret }} -n {{ .Release.Namespace }}
+    # expected key: {{ .Values.feedbackGithubToken.existingSecretKey }}
+  {{- end }}
+  {{- if .Values.googleDrive.existingSecret }}
+  # Google Drive API key (googleDrive.existingSecret):
+  kubectl get secret {{ .Values.googleDrive.existingSecret }} -n {{ .Release.Namespace }}
+    # expected key: {{ .Values.googleDrive.existingSecretKey }}
+  {{- end }}
+  {{- if .Values.claude.existingSecret }}
+  # Claude API key (claude.existingSecret):
+  kubectl get secret {{ .Values.claude.existingSecret }} -n {{ .Release.Namespace }}
+    # expected key: {{ .Values.claude.existingSecretKey }}
+  {{- end }}
+  {{- if .Values.jwt.existingSecret }}
+  # JWT signing key (jwt.existingSecret):
+  kubectl get secret {{ .Values.jwt.existingSecret }} -n {{ .Release.Namespace }}
+    # expected key: {{ .Values.jwt.existingSecretKey }}
+  {{- end }}
+
+Check rollout status:
+  kubectl rollout status deploy/{{ include "kubestellar-console.fullname" . }} -n {{ .Release.Namespace }}
+
+If the pod is stuck in CreateContainerConfigError, describe it to see which
+Secret is missing:
+  kubectl describe pod -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+{{- else }}
+
+All secrets for this release are rendered by the chart itself — no external
+Secret objects are required. Check rollout status:
+  kubectl rollout status deploy/{{ include "kubestellar-console.fullname" . }} -n {{ .Release.Namespace }}
+{{- end }}
+
+Docs:   https://kubestellar.io/docs/console/readme
+Issues: https://github.com/kubestellar/console/issues

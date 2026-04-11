@@ -283,7 +283,11 @@ export function AgentStatusIndicator() {
             })()}
             <p className="text-xs text-muted-foreground mt-1">
               {isDemoMode
-                ? t('agent.agentBypassedInDemo')
+                ? isDemoModeForced
+                  // Hosted demo (e.g. console.kubestellar.io): agent can never connect
+                  // from this origin, so point the user at the self-host path.
+                  ? t('agent.hostedDemoBypassed')
+                  : t('agent.agentBypassedInDemo')
                 : isDegraded
                 ? t('agent.connectedButErrors', { count: dataErrorCount })
                 : isConnected
@@ -293,6 +297,20 @@ export function AgentStatusIndicator() {
                 : t('agent.unableToConnect')
               }
             </p>
+            {/* When running on the hosted demo, surface a self-host link so
+                users who want real cluster data know where to go next. */}
+            {isDemoMode && isDemoModeForced && (
+              <p className="text-xs text-muted-foreground mt-1">
+                <a
+                  href="https://github.com/kubestellar/console#quick-start"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-purple-400 hover:text-purple-300 underline underline-offset-2"
+                >
+                  {t('agent.selfHostToConnect')}
+                </a>
+              </p>
+            )}
             {!isDemoMode && isDegraded && lastDataError && (
               <p className="text-xs text-yellow-400 mt-1">
                 {t('agent.lastError', { error: lastDataError })}

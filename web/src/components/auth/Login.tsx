@@ -147,6 +147,13 @@ export function Login() {
     return { ...UNKNOWN_ERROR_FALLBACK, message: `An unexpected error occurred during login (code: ${oauthError}).` }
   })()
   const branding = useBranding()
+  // True when the user lands on the Login page while visiting the hosted demo
+  // domain (e.g. "console.kubestellar.io"). Real GitHub OAuth is not configured
+  // at that origin, so we surface an explicit notice and disable the button to
+  // prevent a dead-end click-through (ref: #6338).
+  const isHostedDemoLogin = typeof window !== 'undefined'
+    && !!branding.hostedDomain
+    && window.location.hostname === branding.hostedDomain
 
   // Pre-compute random star positions so render stays pure (no Math.random() in JSX)
   const STAR_COUNT = 30
@@ -157,7 +164,8 @@ export function Login() {
       top: Math.random() * 100 + '%',
       animationDelay: Math.random() * 3 + 's' }))
 
-  // Auto-login for Netlify deploy previews or when backend has no OAuth configured
+  // Auto-login for Netlify deploy previews, the hosted demo domain, or when
+  // the backend has no OAuth configured.
   // Skip auto-login when there's an OAuth error so the user can see the troubleshooting info
   useEffect(() => {
     if (isLoading || isAuthenticated || oauthError) return
@@ -165,8 +173,14 @@ export function Login() {
     const isNetlifyPreview = window.location.hostname.includes('deploy-preview-') ||
       window.location.hostname.includes('netlify.app')
     const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true'
+    // Hosted demo domain from branding (e.g. "console.kubestellar.io") — there
+    // is no real OAuth backend at that origin, so auto-login with a demo user.
+    // This fixes the case where users visiting the hosted demo would otherwise
+    // see a "Sign in with GitHub" button that leads nowhere.
+    const hostedDomain = branding.hostedDomain
+    const isHostedDemo = !!hostedDomain && window.location.hostname === hostedDomain
 
-    if (isNetlifyPreview || isDemoMode) {
+    if (isNetlifyPreview || isDemoMode || isHostedDemo) {
       emitLogin('auto-netlify'); login()
       return
     }
@@ -178,7 +192,7 @@ export function Login() {
         emitLogin('auto-quickstart'); login()
       }
     }).catch(() => { /* checkOAuthConfigured always resolves — defensive catch */ })
-  }, [isLoading, isAuthenticated, login, oauthError])
+  }, [isLoading, isAuthenticated, login, oauthError, branding.hostedDomain])
 
   // Show loading while checking auth status
   if (isLoading) {
@@ -292,11 +306,36 @@ export function Login() {
             </p>
           </div>
 
+          {/* Hosted demo notice — shown when on the hosted demo domain so users
+              understand that GitHub OAuth is intentionally unavailable and that
+              they'll be auto-logged-in as a demo user. Ref: #6338. */}
+          {isHostedDemoLogin && (
+            <div className="mb-4 px-4 py-3 rounded-lg border border-purple-500/30 bg-purple-500/10 text-purple-200 text-xs">
+              <div className="font-medium text-purple-300 mb-1">Hosted demo</div>
+              <p className="text-purple-300/80">
+                Real GitHub sign-in is not available on the hosted demo. You'll be
+                signed in as a demo user automatically. To enable GitHub OAuth and
+                connect a real cluster,{' '}
+                <a
+                  href="https://github.com/kubestellar/console#quick-start"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-purple-100"
+                >
+                  self-host the console
+                </a>
+                .
+              </p>
+            </div>
+          )}
+
           {/* GitHub login button */}
           <button
             data-testid="github-login-button"
-            onClick={() => { emitLogin('github'); login() }}
-            className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-medium py-3 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-lg"
+            onClick={() => { if (!isHostedDemoLogin) { emitLogin('github'); login() } }}
+            disabled={isHostedDemoLogin}
+            title={isHostedDemoLogin ? 'Not available in the hosted demo — self-host to enable GitHub OAuth' : undefined}
+            className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-medium py-3 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-gray-800 disabled:hover:shadow-none"
           >
             <Github className="w-5 h-5" />
             {t('login.continueWithGitHub')}
