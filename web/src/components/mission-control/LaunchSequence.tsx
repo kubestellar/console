@@ -21,6 +21,7 @@ import { Button } from '../ui/Button'
 import { useMissions } from '../../hooks/useMissions'
 import { loadMissionPrompt } from '../cards/multi-tenancy/missionLoader'
 import type { MissionControlState, PhaseProgress, PhaseStatus } from './types'
+import { buildInstallPromptForProject, isSafeProjectName } from './useMissionControl'
 
 /** Terminal statuses that indicate a project is no longer in-flight */
 const TERMINAL_STATUSES: readonly string[] = ['completed', 'failed', 'skipped']
@@ -130,19 +131,32 @@ export function LaunchSequence({
       )
 
       try {
-        // Load the KB mission prompt
-        const fallbackPrompt = `Install ${project.displayName} on the Kubernetes cluster.`
+        // #6379 — Build the fallback prompt through a sanitizing helper so
+        // AI-supplied names can't inject instructions into the downstream
+        // LLM call. `buildInstallPromptForProject` validates the name
+        // against an allow-list and wraps it in a triple-quoted opaque
+        // literal fence.
+        const fallbackPrompt = buildInstallPromptForProject(
+          project.name,
+          project.displayName,
+        )
         const prompt = await loadMissionPrompt(
           project.name,
           fallbackPrompt,
           project.kbPath ? [project.kbPath] : undefined,
         )
 
+        // Derive a safe display name for UI strings too — the title is
+        // user-visible and we don't want a prompt-injection payload rendering
+        // in our own sidebar either.
+        const uiSafeDisplayName = isSafeProjectName(project.displayName)
+          ? project.displayName
+          : project.name
         const dryRunPrefix = state.isDryRun ? '[DRY RUN] ' : ''
         const clusterContext = `\n\n**Target cluster:** ${clusterName}`
         const missionId = startMission({
-          title: `${dryRunPrefix}Install ${project.displayName}`,
-          description: `${state.isDryRun ? 'Dry-run validation' : 'Automated install'} of ${project.displayName} as part of Mission Control deployment`,
+          title: `${dryRunPrefix}Install ${uiSafeDisplayName}`,
+          description: `${state.isDryRun ? 'Dry-run validation' : 'Automated install'} of ${uiSafeDisplayName} as part of Mission Control deployment`,
           type: 'deploy',
           cluster: clusterName,
           initialPrompt: prompt + clusterContext,
