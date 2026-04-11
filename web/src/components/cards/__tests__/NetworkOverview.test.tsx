@@ -64,6 +64,18 @@ vi.mock('../../../lib/cards/cardHooks', () => ({
   commonComparators: { string: () => () => 0, number: () => () => 0, statusOrder: () => () => 0, date: () => () => 0, boolean: () => () => 0 },
 }))
 
+// #6269: capture RefreshIndicator props so the freshness-indicator
+// contract (oldest-of-two timestamps + demo-mode null + combined
+// isRefreshing) can be asserted directly on the rendered indicator,
+// not just on the card-level useCardLoadingState call.
+const refreshIndicatorProps = vi.fn()
+vi.mock('../../ui/RefreshIndicator', () => ({
+  RefreshIndicator: (props: { isRefreshing: boolean; lastUpdated: Date | null }) => {
+    refreshIndicatorProps(props)
+    return null
+  },
+}))
+
 import { NetworkOverview } from '../NetworkOverview'
 
 describe('NetworkOverview', () => {
@@ -144,7 +156,7 @@ describe('NetworkOverview', () => {
   // #6267: regression coverage for the freshness-indicator wiring
   // introduced in #6266 (oldest-of-two timestamps + demo-mode suppression
   // + clustersRefreshing in card-level state).
-  describe('freshness indicator wiring (#6265, #6267)', () => {
+  describe('freshness indicator wiring (#6265, #6267, #6269)', () => {
     it('reports clustersRefreshing OR servicesRefreshing to useCardLoadingState', () => {
       // Services not refreshing, clusters refreshing → card state must show isRefreshing=true
       mockServices.mockReturnValue({ services: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
@@ -160,6 +172,36 @@ describe('NetworkOverview', () => {
       render(<NetworkOverview />)
       const lastCall = mockUseCardLoadingState.mock.calls[mockUseCardLoadingState.mock.calls.length - 1][0]
       expect(lastCall.isRefreshing).toBe(false)
+    })
+
+    // #6269: assert directly on RefreshIndicator props rather than just
+    // the card-level isRefreshing — the previous tests only proved the
+    // card animation flag was correct, not the timestamp/null contract.
+    it('passes the OLDER of clusters and services lastRefresh to RefreshIndicator', () => {
+      const OLDER = 1_000_000_000_000
+      const NEWER = 2_000_000_000_000
+      mockServices.mockReturnValue({ services: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: NEWER })
+      mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: OLDER })
+      render(<NetworkOverview />)
+      const props = refreshIndicatorProps.mock.calls[refreshIndicatorProps.mock.calls.length - 1][0]
+      expect(props.lastUpdated).toEqual(new Date(OLDER))
+    })
+
+    it('passes null lastUpdated when isDemoFallback is true (regardless of lastRefresh)', () => {
+      // Cache holds a stale lastRefresh from a prior live session — must be hidden in demo mode
+      mockServices.mockReturnValue({ services: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+      mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now() })
+      render(<NetworkOverview />)
+      const props = refreshIndicatorProps.mock.calls[refreshIndicatorProps.mock.calls.length - 1][0]
+      expect(props.lastUpdated).toBeNull()
+    })
+
+    it('passes isRefreshing=true to RefreshIndicator when clusters source is refreshing', () => {
+      mockServices.mockReturnValue({ services: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+      mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: true, error: null, lastRefresh: Date.now() })
+      render(<NetworkOverview />)
+      const props = refreshIndicatorProps.mock.calls[refreshIndicatorProps.mock.calls.length - 1][0]
+      expect(props.isRefreshing).toBe(true)
     })
   })
 })
