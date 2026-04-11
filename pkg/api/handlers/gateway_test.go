@@ -79,7 +79,12 @@ func TestListGateways(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp2.StatusCode)
 
-	// Case 3: List specific cluster (failure — error swallowed, returns 200 with empty list)
+	// Case 3: List specific cluster — real listing failures (auth/network/
+	// RBAC, anything other than "CRDs not installed") must now be
+	// propagated to the caller as 500 instead of being swallowed and
+	// returning an empty list. Previously the handler always returned
+	// 200 + empty items, which hid cluster-level failures in the UI
+	// (#6660). The 200-on-error behavior was a bug, not a contract.
 	dynClient.PrependReactor("list", "*", func(action k8stesting.Action) (bool, runtime.Object, error) {
 		return true, nil, errors.New("simulated error")
 	})
@@ -87,7 +92,8 @@ func TestListGateways(t *testing.T) {
 	req3, _ := http.NewRequest("GET", "/api/gateway/gateways?cluster=test-cluster", nil)
 	resp3, err := env.App.Test(req3, 5000)
 	require.NoError(t, err)
-	assert.Equal(t, 200, resp3.StatusCode)
+	assert.Equal(t, 500, resp3.StatusCode,
+		"per-cluster list error must propagate as 500 (#6660)")
 }
 
 func TestGetGateway(t *testing.T) {
@@ -127,14 +133,20 @@ func TestGetGateway(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 404, resp2.StatusCode)
 
-	// Case 3: Client Error → treated as not found
+	// Case 3: Client Error — real listing failures now surface as 5xx
+	// via handleK8sError rather than being masked as 404. Previously
+	// ListGatewaysForCluster swallowed every error including auth/RBAC
+	// and returned an empty list, which the caller then observed as
+	// "not found" (#6660). The handler now sees the real error.
 	dynClient.PrependReactor("list", "*", func(action k8stesting.Action) (bool, runtime.Object, error) {
 		return true, nil, errors.New("list failure")
 	})
 	req3, _ := http.NewRequest("GET", "/api/gateway/gateways/c1/default/target-gw", nil)
 	resp3, err := env.App.Test(req3, 5000)
 	require.NoError(t, err)
-	assert.Equal(t, 404, resp3.StatusCode)
+	if resp3.StatusCode == 404 {
+		t.Errorf("per-cluster list error must no longer be silently masked as 404 (#6660); got %d", resp3.StatusCode)
+	}
 }
 
 func TestListHTTPRoutes(t *testing.T) {
@@ -175,14 +187,18 @@ func TestListHTTPRoutes(t *testing.T) {
 	assert.NotEmpty(t, list.Items)
 	assert.Equal(t, "my-route", list.Items[0].Name)
 
-	// Case 2: Specific cluster failure — error swallowed, returns 200
+	// Case 2: Specific cluster failure — real errors now propagate as 500
+	// instead of being silently swallowed into a 200 with empty items
+	// (#6660). This behavior change is intentional: the old behavior
+	// hid cluster-level RBAC/network failures in the UI.
 	dynClient.PrependReactor("list", "*", func(action k8stesting.Action) (bool, runtime.Object, error) {
 		return true, nil, errors.New("route error")
 	})
 	req2, _ := http.NewRequest("GET", "/api/gateway/httproutes?cluster=test-cluster", nil)
 	resp2, err := env.App.Test(req2, 5000)
 	require.NoError(t, err)
-	assert.Equal(t, 200, resp2.StatusCode)
+	assert.Equal(t, 500, resp2.StatusCode,
+		"per-cluster list error must propagate as 500 (#6660)")
 }
 
 func TestGetHTTPRoute(t *testing.T) {
