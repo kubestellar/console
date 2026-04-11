@@ -497,7 +497,11 @@ export function Layout({ children: _children }: LayoutProps) {
           style={{
             marginLeft: isMobile ? 0 : sidebarWidthPx + SIDEBAR_CONTROLS_OFFSET_PX,
             marginRight: 'var(--mission-sidebar-width, 0px)' }}
-          className="relative flex-1 p-4 pb-24 md:p-6 md:pb-28 transition-[margin] duration-300 overflow-y-auto scroll-enhanced min-w-0"
+          // overflow-x-hidden prevents stray wide children from pushing the
+          // entire main column past the viewport at narrow breakpoints
+          // (issues 6385, 6387, 6394). Individual scrollable children
+          // (tables, code blocks) still scroll horizontally inside wrappers.
+          className="relative flex-1 p-4 pb-24 md:p-6 md:pb-28 transition-[margin] duration-300 overflow-y-auto overflow-x-hidden scroll-enhanced min-w-0"
         >
           <NavigationProgress />
           <Suspense fallback={<ContentLoadingSkeleton />}>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, ReactNode } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
-import { Plus, LayoutGrid, ChevronDown, ChevronRight } from 'lucide-react'
+import { LayoutGrid, ChevronDown, ChevronRight } from 'lucide-react'
+import { EmptyState, EmptyStateAction } from '../../components/ui/EmptyState'
 import { getIcon } from '../icons'
 import {
   DndContext,
@@ -67,10 +68,13 @@ export interface DashboardPageProps {
   headerExtra?: ReactNode
   /** Extra content rendered on the right side of the header (e.g., action buttons) */
   rightExtra?: ReactNode
-  /** Empty state configuration for no cards */
+  /** Empty state configuration for no cards. An optional `action` (primary CTA)
+   *  and `secondaryAction` surface next-step guidance — see issue 6392. */
   emptyState?: {
     title: string
     description: string
+    action?: EmptyStateAction
+    secondaryAction?: EmptyStateAction
   }
   /** Whether this dashboard shows demo/mock data */
   isDemoData?: boolean
@@ -285,7 +289,12 @@ export function DashboardPage({
   const emptyDescription = emptyState?.description || `Add cards to monitor your ${title.toLowerCase()} across clusters.`
 
   return (
-    <div className="pt-16">
+    // `min-w-0 max-w-full` + overflow-x-hidden on the outer wrapper prevents
+    // wide inline content (tables, pre blocks, long URLs) from pushing the
+    // whole page past the viewport width at narrow breakpoints (issues 6385,
+    // 6387, 6394). Individual scrollable children (tables) still get their
+    // own horizontal scroll inside this clipped box.
+    <div className="pt-16 min-w-0 max-w-full overflow-x-hidden">
       {/* Header */}
       <DashboardHeader
         title={title}
@@ -341,22 +350,17 @@ export function DashboardPage({
         {showCards && (
           <>
             {cards.length === 0 ? (
-              <div className="glass p-8 rounded-lg border-2 border-dashed border-border/50 text-center">
-                <div className="flex justify-center mb-4">
-                  <Icon className="w-12 h-12 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-medium text-foreground mb-2">{emptyTitle}</h3>
-                <p className="text-muted-foreground text-sm max-w-md mx-auto mb-4">
-                  {emptyDescription}
-                </p>
-                <button
-                  onClick={() => setShowAddCard(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Cards
-                </button>
-              </div>
+              <EmptyState
+                icon={<Icon className="w-12 h-12 text-muted-foreground" />}
+                title={emptyTitle}
+                description={emptyDescription}
+                action={emptyState?.action ?? {
+                  label: 'Add Cards',
+                  onClick: () => setShowAddCard(true),
+                }}
+                secondaryAction={emptyState?.secondaryAction}
+                data-testid="dashboard-empty-state"
+              />
             ) : (
               <DndContext
                 sensors={sensors}

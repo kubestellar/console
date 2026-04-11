@@ -1,5 +1,7 @@
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Server } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useClusters, useServices } from '../../hooks/useMCP'
+import { ROUTES } from '../../config/routes'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
@@ -14,6 +16,7 @@ const SERVICES_CARDS_KEY = 'kubestellar-services-cards'
 const DEFAULT_SERVICES_CARDS = getDefaultCards('services')
 
 export function Services() {
+  const navigate = useNavigate()
   const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
   const { services, error: servicesError } = useServices()
   const error = clustersError || servicesError
@@ -90,8 +93,22 @@ export function Services() {
       lastUpdated={lastUpdated}
       hasData={reachableClusters.length > 0}
       emptyState={{
-        title: 'Services Dashboard',
-        description: 'Add cards to monitor Kubernetes services, endpoints, and network connectivity across your clusters.' }}
+        // Issues 6391/6392/6393: give the Services empty state actionable guidance.
+        // The primary CTA (add cards) is provided automatically by DashboardPage;
+        // we surface a secondary "Connect a cluster" action when there are no
+        // reachable clusters so the user knows what to do next.
+        title: reachableClusters.length === 0 ? 'No services yet' : 'Services Dashboard',
+        description: reachableClusters.length === 0
+          ? 'Connect a Kubernetes cluster to start monitoring services, endpoints, and network connectivity.'
+          : 'Add cards to monitor Kubernetes services, endpoints, and network connectivity across your clusters.',
+        secondaryAction: reachableClusters.length === 0
+          ? {
+              label: 'Connect a cluster',
+              icon: Server,
+              onClick: () => navigate(ROUTES.CLUSTERS),
+            }
+          : undefined,
+      }}
     >
       {/* Error Display */}
       {error && (
