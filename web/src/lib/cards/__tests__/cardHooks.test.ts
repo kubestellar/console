@@ -192,12 +192,52 @@ describe('commonComparators', () => {
       ).toBeLessThan(0)
     })
 
-    it('handles invalid dates (NaN comparison)', () => {
+    // #6748 — commonComparators.date now sorts invalid dates to the END of
+    // ascending order using Number.MAX_SAFE_INTEGER as a sentinel instead of
+    // producing NaN comparisons (which violated the Array.prototype.sort
+    // contract and caused non-deterministic ordering). See the date comparator
+    // definition in cardHooks.ts for the rationale.
+    it('sorts an invalid date AFTER a valid date in ascending order', () => {
       const result = compare(
         { createdAt: 'not-a-date' },
         { createdAt: '2024-01-01' }
       )
-      expect(Number.isNaN(result)).toBe(true)
+      expect(result).toBeGreaterThan(0)
+      expect(Number.isNaN(result)).toBe(false)
+    })
+
+    it('sorts a valid date BEFORE an invalid date in ascending order', () => {
+      const result = compare(
+        { createdAt: '2024-01-01' },
+        { createdAt: 'not-a-date' }
+      )
+      expect(result).toBeLessThan(0)
+      expect(Number.isNaN(result)).toBe(false)
+    })
+
+    it('treats two invalid dates as equal', () => {
+      const result = compare(
+        { createdAt: 'not-a-date' },
+        { createdAt: 'also-not-a-date' }
+      )
+      expect(result).toBe(0)
+    })
+
+    it('produces a stable deterministic sort order with invalid dates mixed in', () => {
+      const items = [
+        { createdAt: 'garbage' },
+        { createdAt: '2024-06-01' },
+        { createdAt: '2024-01-01' },
+        { createdAt: 'also-garbage' },
+      ]
+      const sorted = [...items].sort(compare)
+      // Valid dates first, in chronological order; invalid dates tail.
+      expect(sorted[0].createdAt).toBe('2024-01-01')
+      expect(sorted[1].createdAt).toBe('2024-06-01')
+      // Remaining two are the invalid entries (order between them is arbitrary
+      // but they must both trail the valid dates).
+      expect(['garbage', 'also-garbage']).toContain(sorted[2].createdAt)
+      expect(['garbage', 'also-garbage']).toContain(sorted[3].createdAt)
     })
   })
 })

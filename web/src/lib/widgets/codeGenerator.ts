@@ -575,7 +575,16 @@ export function generateTemplateWidget(
   // `<apiEndpoint>undefined`, which silently 404'd at runtime. Fall back to
   // the first stat's endpoint when cards are empty, and throw a clear error
   // if nothing at all is resolvable so callers see the problem immediately.
-  const firstEndpoint = allEndpoints[0]
+  //
+  // #6747 — Skip empty-string endpoints when selecting the primary. Previously
+  // `allEndpoints[0]` could be `''` if the first card/stat exposed an empty
+  // apiEndpoint, which would then pass the `if (!firstEndpoint)` guard as
+  // falsy and throw even when a valid endpoint existed later in the list.
+  // Filter to non-empty strings so the first VALID endpoint wins.
+  const validEndpoints = allEndpoints.filter(
+    (ep): ep is string => typeof ep === 'string' && ep.length > 0,
+  )
+  const firstEndpoint = validEndpoints[0]
   if (!firstEndpoint) {
     throw new Error(
       `Template "${templateId}" has no resolvable data endpoint (no cards and no stat.apiEndpoint)`,

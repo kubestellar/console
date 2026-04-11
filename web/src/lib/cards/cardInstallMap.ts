@@ -130,3 +130,4 @@ export function validateCardInstallMap(registeredCardTypes: readonly string[]): 
   }
   return unknown
 }
+

@@ -298,6 +298,98 @@ describe('generator hardening', () => {
     }
   })
 
+  // #6747 — When a template's first stat/card exposes an empty-string
+  // apiEndpoint but a later entry has a valid one, the generator must pick
+  // the valid endpoint. Previously it picked the empty string and fell
+  // through to the "no resolvable endpoint" throw even though a valid
+  // endpoint was available.
+  it('skips empty-string endpoints and uses the first VALID endpoint', async () => {
+    const { WIDGET_TEMPLATES, WIDGET_STATS } = await import('../widgetRegistry')
+    const MIXED_ID = '__mixed_empty_first__'
+    const EMPTY_STAT_ID = '__empty_first_stat__'
+    const VALID_STAT_ID = '__valid_second_stat__'
+    const VALID_ENDPOINT = '/api/valid-second'
+    ;(WIDGET_STATS as Record<string, unknown>)[EMPTY_STAT_ID] = {
+      id: EMPTY_STAT_ID,
+      displayName: 'Empty First',
+      apiEndpoint: '',
+      dataPath: 'foo',
+      color: '#fff',
+      format: 'number',
+    }
+    ;(WIDGET_STATS as Record<string, unknown>)[VALID_STAT_ID] = {
+      id: VALID_STAT_ID,
+      displayName: 'Valid Second',
+      apiEndpoint: VALID_ENDPOINT,
+      dataPath: 'bar',
+      color: '#fff',
+      format: 'number',
+    }
+    ;(WIDGET_TEMPLATES as Record<string, unknown>)[MIXED_ID] = {
+      id: MIXED_ID,
+      displayName: 'Mixed',
+      description: 'empty first stat, valid second stat',
+      cards: [],
+      stats: [EMPTY_STAT_ID, VALID_STAT_ID],
+      layout: 'row',
+    }
+    try {
+      const code = generateTemplateWidget(MIXED_ID, 'http://localhost:8080')
+      // The curl command must use the valid endpoint, not an empty string.
+      expect(code).toContain(`http://localhost:8080${VALID_ENDPOINT}`)
+      // And must NOT contain the bug signature: an unterminated curl that
+      // ends with the base URL followed by whitespace/quote (i.e. empty path).
+      expect(code).not.toMatch(/curl -s[^"]*http:\/\/localhost:8080\s/)
+    } finally {
+      delete (WIDGET_TEMPLATES as Record<string, unknown>)[MIXED_ID]
+      delete (WIDGET_STATS as Record<string, unknown>)[EMPTY_STAT_ID]
+      delete (WIDGET_STATS as Record<string, unknown>)[VALID_STAT_ID]
+    }
+  })
+
+  // #6747 — When every stat in a template exposes an empty-string
+  // apiEndpoint, the generator must throw the clear "no resolvable data
+  // endpoint" error rather than silently producing a curl with a bare base
+  // URL.
+  it('throws when every endpoint is an empty string', async () => {
+    const { WIDGET_TEMPLATES, WIDGET_STATS } = await import('../widgetRegistry')
+    const ALL_EMPTY_ID = '__all_empty_endpoints__'
+    const EMPTY_A = '__empty_stat_a__'
+    const EMPTY_B = '__empty_stat_b__'
+    ;(WIDGET_STATS as Record<string, unknown>)[EMPTY_A] = {
+      id: EMPTY_A,
+      displayName: 'Empty A',
+      apiEndpoint: '',
+      dataPath: 'foo',
+      color: '#fff',
+      format: 'number',
+    }
+    ;(WIDGET_STATS as Record<string, unknown>)[EMPTY_B] = {
+      id: EMPTY_B,
+      displayName: 'Empty B',
+      apiEndpoint: '',
+      dataPath: 'bar',
+      color: '#fff',
+      format: 'number',
+    }
+    ;(WIDGET_TEMPLATES as Record<string, unknown>)[ALL_EMPTY_ID] = {
+      id: ALL_EMPTY_ID,
+      displayName: 'All Empty',
+      description: 'all stats have empty endpoints',
+      cards: [],
+      stats: [EMPTY_A, EMPTY_B],
+      layout: 'row',
+    }
+    try {
+      expect(() => generateTemplateWidget(ALL_EMPTY_ID, 'http://localhost:8080'))
+        .toThrow(/no resolvable data endpoint/)
+    } finally {
+      delete (WIDGET_TEMPLATES as Record<string, unknown>)[ALL_EMPTY_ID]
+      delete (WIDGET_STATS as Record<string, unknown>)[EMPTY_A]
+      delete (WIDGET_STATS as Record<string, unknown>)[EMPTY_B]
+    }
+  })
+
   it('throws a clear error when a stats-only template has no resolvable endpoint', async () => {
     const { WIDGET_TEMPLATES, WIDGET_STATS } = await import('../widgetRegistry')
     const STATS_ONLY_ID = '__stats_only_no_endpoint__'
