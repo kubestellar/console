@@ -160,7 +160,7 @@ Common knobs:
 | `route.enabled` | `false` | OpenShift Route (alternative to Ingress). |
 | `persistence.enabled` | `true` | PVC for the SQLite database. |
 | `backup.enabled` | `true` | SQLite auto-backup CronJob + restore init container. |
-| `securityContext.runAsUser` | `1001` | Must be numeric for Kind/Minikube — see [#6323](https://github.com/kubestellar/console/issues/6323). On OpenShift, set this (and `runAsGroup`, `runAsNonRoot`) to `null` to let SCC assign the UID — see [#6344](https://github.com/kubestellar/console/issues/6344). |
+| `securityContext.runAsUser` | `1001` | Must be numeric for Kind/Minikube — see [#6323](https://github.com/kubestellar/console/issues/6323). On OpenShift, set this **and** `runAsGroup` to `null` to let SCC assign the UID — see [#6344](https://github.com/kubestellar/console/issues/6344). Leave `runAsNonRoot: true` as-is; PodSecurity `restricted` still requires it ([#6353](https://github.com/kubestellar/console/issues/6353)). |
 
 ## Troubleshooting
 
@@ -189,13 +189,14 @@ The chart default (`runAsUser: 1001`) is correct for Kind/Minikube but
 breaks OpenShift silently — the helm upgrade rolls back with no
 container-level error message.
 
-Fix: override the chart defaults to let SCC inject its own values:
+Fix: null out just the UID/GID numbers so SCC can inject its own values
+while keeping `runAsNonRoot: true` intact (PodSecurity `restricted` still
+requires it — see [#6353](https://github.com/kubestellar/console/issues/6353)):
 
 ```bash
 helm upgrade kc ./deploy/helm/kubestellar-console -n kubestellar-console \
   --set securityContext.runAsUser=null \
-  --set securityContext.runAsGroup=null \
-  --set securityContext.runAsNonRoot=null
+  --set securityContext.runAsGroup=null
 ```
 
 ### `container has runAsNonRoot and image has non-numeric user (appuser)`

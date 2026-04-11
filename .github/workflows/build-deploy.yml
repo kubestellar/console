@@ -255,12 +255,15 @@ jobs:
             helm rollback ${{ env.HELM_RELEASE_NAME }} -n kc --wait --timeout 2m || true
           fi
 
-      # #6344: OpenShift SCC allocates a namespace-specific UID range and
-      # rejects pods whose runAsUser falls outside that range. The chart
-      # default (1001) is correct for Kind/Minikube but breaks OpenShift
-      # with a silent "Replicas: 0/1" timeout. The --set overrides below
-      # unset runAsUser/runAsGroup/runAsNonRoot so the SCC admission
-      # controller can inject its own values.
+      # #6344 / #6353: OpenShift SCC allocates a namespace-specific UID
+      # range and rejects pods whose runAsUser falls outside that range.
+      # The chart default (runAsUser=1001) is correct for Kind/Minikube
+      # but breaks OpenShift with a silent "Replicas: 0/1" timeout. The
+      # --set overrides below unset runAsUser/runAsGroup so the SCC
+      # admission controller can inject its own values. IMPORTANT:
+      # runAsNonRoot stays `true` (chart default) so PodSecurity
+      # "restricted" still accepts the pod — only the UID/GID numbers
+      # need to be null.
       - name: Deploy with Helm
         run: |
           helm upgrade --install ${{ env.HELM_RELEASE_NAME }} ./deploy/helm/kubestellar-console \
@@ -280,7 +283,6 @@ jobs:
             --set rbac.namespaceCreationEnabled=true \
             --set securityContext.runAsUser=null \
             --set securityContext.runAsGroup=null \
-            --set securityContext.runAsNonRoot=null \
             --atomic \
             --wait \
             --timeout 5m
@@ -346,10 +348,11 @@ jobs:
             helm rollback ${{ env.HELM_RELEASE_NAME }} -n kubestellar-console --wait --timeout 2m || true
           fi
 
-      # #6344: OpenShift SCC — see comment on the vllm-d Deploy with Helm
-      # step above. Same fix: unset runAsUser/runAsGroup/runAsNonRoot so
-      # the SCC admission controller can assign a namespace-appropriate
-      # UID instead of the chart default 1001.
+      # #6344 / #6353: OpenShift SCC — see comment on the vllm-d Deploy
+      # with Helm step above. Same fix: unset runAsUser/runAsGroup so the
+      # SCC admission controller can assign a namespace-appropriate UID.
+      # runAsNonRoot stays true so PodSecurity "restricted" still accepts
+      # the pod.
       - name: Deploy with Helm
         run: |
           helm upgrade --install ${{ env.HELM_RELEASE_NAME }} ./deploy/helm/kubestellar-console \
@@ -368,7 +371,6 @@ jobs:
             --set rbac.namespaceCreationEnabled=true \
             --set securityContext.runAsUser=null \
             --set securityContext.runAsGroup=null \
-            --set securityContext.runAsNonRoot=null \
             --atomic \
             --wait \
             --timeout 5m
