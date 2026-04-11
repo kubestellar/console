@@ -66,9 +66,7 @@ const COMPONENTS_DIR = path.resolve(
 //   300 → 301: #6289 gauge readiness color inversion issue ref
 //   301 → 302: #6308 MissionBrowser close button on right issue ref
 //   302 → 303: #6309 upgrade confirm dialog issue ref
-//   303 → 304: #6366 ratchet drift — one unaccounted-for raw hex existed
-//               at the time of the 303 bump (pre-existing, not introduced
-//               by #6365), so the ratchet tripped on next CI run. Corrected.
+//   303 → 304: #6366 ratchet drift — pre-existing unaccounted-for raw hex from before 303 bump, not introduced by #6365
 //
 // When you bump this number, append a one-line entry above so future
 // bumps stay grep-able and reviewers can tell at a glance whether a
