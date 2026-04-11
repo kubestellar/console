@@ -64,11 +64,12 @@ const COMPONENTS_DIR = path.resolve(
 //   296 → 298: #6265 copilot follow-up comment refs
 //   298 → 300: #6273 followup comment refs
 //   300 → 301: #6289 gauge readiness color inversion issue ref
+//   301 → 302: #6308 MissionBrowser close button on right issue ref
 //
 // When you bump this number, append a one-line entry above so future
 // bumps stay grep-able and reviewers can tell at a glance whether a
 // change is a real new violation or just a comment-level reference.
-const EXPECTED_RAW_HEX_COUNT = 301
+const EXPECTED_RAW_HEX_COUNT = 302
 const EXPECTED_RAW_RGBA_COUNT = 104
 const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 22
 const EXPECTED_INLINE_STYLE_COLOR_COUNT = 213
