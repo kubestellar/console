@@ -208,7 +208,9 @@ func (h *RewardsPersistenceHandler) IncrementCoins(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "delta exceeds per-request limit"})
 	}
 
-	updated, err := h.store.IncrementUserCoins(userID, body.Delta)
+	// #6613: thread the request context through the store so a client
+	// disconnect or deadline aborts the BEGIN IMMEDIATE transaction.
+	updated, err := h.store.IncrementUserCoins(c.UserContext(), userID, body.Delta)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to increment coins"})
 	}
@@ -228,7 +230,8 @@ func (h *RewardsPersistenceHandler) ClaimDailyBonus(c *fiber.Ctx) error {
 	}
 
 	interval := time.Duration(dailyBonusIntervalHours) * time.Hour
-	updated, err := h.store.ClaimDailyBonus(userID, dailyBonusPoints, interval, time.Now())
+	// #6613: thread the request context through the store.
+	updated, err := h.store.ClaimDailyBonus(c.UserContext(), userID, dailyBonusPoints, interval, time.Now())
 	if err != nil {
 		if errors.Is(err, store.ErrDailyBonusUnavailable) {
 			// Surface the current state so the UI can still render the

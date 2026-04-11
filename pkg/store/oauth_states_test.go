@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -31,7 +32,7 @@ func TestOAuthStateRoundTrip(t *testing.T) {
 		const state = "state-happy-path"
 		require.NoError(t, s.StoreOAuthState(state, oauthStateTestTTL))
 
-		ok, err := s.ConsumeOAuthState(state)
+		ok, err := s.ConsumeOAuthState(context.Background(), state)
 		require.NoError(t, err)
 		require.True(t, ok, "fresh state should validate on first consume")
 	})
@@ -40,18 +41,18 @@ func TestOAuthStateRoundTrip(t *testing.T) {
 		const state = "state-single-use"
 		require.NoError(t, s.StoreOAuthState(state, oauthStateTestTTL))
 
-		ok, err := s.ConsumeOAuthState(state)
+		ok, err := s.ConsumeOAuthState(context.Background(), state)
 		require.NoError(t, err)
 		require.True(t, ok)
 
 		// Second consume must fail — the row was deleted.
-		ok, err = s.ConsumeOAuthState(state)
+		ok, err = s.ConsumeOAuthState(context.Background(), state)
 		require.NoError(t, err)
 		require.False(t, ok, "already-consumed state must not validate again")
 	})
 
 	t.Run("ConsumeOAuthState returns false for unknown state", func(t *testing.T) {
-		ok, err := s.ConsumeOAuthState("never-stored")
+		ok, err := s.ConsumeOAuthState(context.Background(), "never-stored")
 		require.NoError(t, err)
 		require.False(t, ok)
 	})
@@ -60,12 +61,12 @@ func TestOAuthStateRoundTrip(t *testing.T) {
 		const state = "state-expired"
 		require.NoError(t, s.StoreOAuthState(state, oauthStateExpiredTTL))
 
-		ok, err := s.ConsumeOAuthState(state)
+		ok, err := s.ConsumeOAuthState(context.Background(), state)
 		require.NoError(t, err)
 		require.False(t, ok, "expired state must not validate")
 
 		// It should also be deleted so a retry does not succeed either.
-		ok, err = s.ConsumeOAuthState(state)
+		ok, err = s.ConsumeOAuthState(context.Background(), state)
 		require.NoError(t, err)
 		require.False(t, ok, "expired state should have been deleted on first consume")
 	})
@@ -84,12 +85,12 @@ func TestCleanupExpiredOAuthStates(t *testing.T) {
 	require.Equal(t, int64(2), removed)
 
 	// Valid entry should still consume successfully.
-	ok, err := s.ConsumeOAuthState("valid-1")
+	ok, err := s.ConsumeOAuthState(context.Background(), "valid-1")
 	require.NoError(t, err)
 	require.True(t, ok)
 
 	// Expired entries should be gone.
-	ok, err = s.ConsumeOAuthState("expired-1")
+	ok, err = s.ConsumeOAuthState(context.Background(), "expired-1")
 	require.NoError(t, err)
 	require.False(t, ok)
 }
@@ -112,7 +113,7 @@ func TestOAuthStateSurvivesRestart(t *testing.T) {
 	require.NoError(t, err)
 	defer s2.Close()
 
-	ok, err := s2.ConsumeOAuthState(state)
+	ok, err := s2.ConsumeOAuthState(context.Background(), state)
 	require.NoError(t, err)
 	require.True(t, ok, "OAuth state should survive a process restart (#6028)")
 }
@@ -142,7 +143,7 @@ func TestConsumeOAuthState_ConcurrentSingleUse(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			<-start // align all goroutines to fire at the same instant
-			ok, err := s.ConsumeOAuthState(state)
+			ok, err := s.ConsumeOAuthState(context.Background(), state)
 			if err != nil {
 				atomic.AddInt64(&errs, 1)
 				return
@@ -164,7 +165,7 @@ func TestConsumeOAuthState_ConcurrentSingleUse(t *testing.T) {
 		"every other concurrent consumer must observe (false, nil)")
 
 	// The state row should be gone afterwards regardless of which consumer won.
-	ok, err := s.ConsumeOAuthState(state)
+	ok, err := s.ConsumeOAuthState(context.Background(), state)
 	require.NoError(t, err)
 	require.False(t, ok, "state row must be deleted after the race resolves")
 }

@@ -63,8 +63,11 @@ func (h *AuthHandler) storeOAuthState(state string) error {
 // successfully consumed (single-use). Returns false on any error or miss so
 // callers can respond with a generic csrf_validation_failed without leaking
 // details.
-func (h *AuthHandler) validateAndConsumeOAuthState(state string) bool {
-	ok, err := h.store.ConsumeOAuthState(state)
+// #6613: pass the request context so a browser disconnect or callback
+// deadline aborts the BEGIN IMMEDIATE transaction in the store instead of
+// running to completion with a dangling context.Background().
+func (h *AuthHandler) validateAndConsumeOAuthState(ctx context.Context, state string) bool {
+	ok, err := h.store.ConsumeOAuthState(ctx, state)
 	if err != nil {
 		slog.Error("[Auth] failed to consume OAuth state", "error", err)
 		return false
@@ -530,7 +533,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	// CSRF validation: verify state parameter matches server-side store
 	// (Safari blocks cookies in OAuth redirect flows, so we use server-side state)
 	state := c.Query("state")
-	if state == "" || !h.validateAndConsumeOAuthState(state) {
+	if state == "" || !h.validateAndConsumeOAuthState(c.UserContext(), state) {
 		// #6064 — State validation can fail for reasons that are entirely
 		// benign from the user's perspective: a stale OAuth tab left open
 		// from a previous session, a server restart that cleared the

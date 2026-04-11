@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"sync"
 	"testing"
 
@@ -93,13 +94,13 @@ func TestUpdateUserTokenUsage_ClampsNegativesToZero(t *testing.T) {
 func TestAddUserTokenDelta_AccumulatesAcrossCalls(t *testing.T) {
 	store := newTestStore(t)
 
-	r1, err := store.AddUserTokenDelta(testTokenUsageUserID, testCategoryMissions, testTokenDelta1, testSessionA)
+	r1, err := store.AddUserTokenDelta(context.Background(), testTokenUsageUserID, testCategoryMissions, testTokenDelta1, testSessionA)
 	require.NoError(t, err)
 	assert.Equal(t, testTokenDelta1, r1.TotalTokens)
 	assert.Equal(t, testTokenDelta1, r1.TokensByCategory[testCategoryMissions])
 	assert.Equal(t, testSessionA, r1.LastAgentSessionID)
 
-	r2, err := store.AddUserTokenDelta(testTokenUsageUserID, testCategoryDiagnose, testTokenDelta2, testSessionA)
+	r2, err := store.AddUserTokenDelta(context.Background(), testTokenUsageUserID, testCategoryDiagnose, testTokenDelta2, testSessionA)
 	require.NoError(t, err)
 	assert.Equal(t, testTokenDelta1Plus2, r2.TotalTokens)
 	assert.Equal(t, testTokenDelta1, r2.TokensByCategory[testCategoryMissions])
@@ -110,19 +111,19 @@ func TestAddUserTokenDelta_SessionChangeResetsBaseline(t *testing.T) {
 	store := newTestStore(t)
 
 	// First call establishes session A and adds delta1.
-	_, err := store.AddUserTokenDelta(testTokenUsageUserID, testCategoryMissions, testTokenDelta1, testSessionA)
+	_, err := store.AddUserTokenDelta(context.Background(), testTokenUsageUserID, testCategoryMissions, testTokenDelta1, testSessionA)
 	require.NoError(t, err)
 
 	// Second call arrives with a new session id — the server must NOT add
 	// the delta (baseline reset semantics) and must rewrite the marker.
-	got, err := store.AddUserTokenDelta(testTokenUsageUserID, testCategoryMissions, testTokenDelta2, testSessionB)
+	got, err := store.AddUserTokenDelta(context.Background(), testTokenUsageUserID, testCategoryMissions, testTokenDelta2, testSessionB)
 	require.NoError(t, err)
 	assert.Equal(t, testTokenDelta1, got.TotalTokens, "session change must skip the delta add")
 	assert.Equal(t, testTokenDelta1, got.TokensByCategory[testCategoryMissions])
 	assert.Equal(t, testSessionB, got.LastAgentSessionID)
 
 	// Third call on the new session continues to accumulate normally.
-	got, err = store.AddUserTokenDelta(testTokenUsageUserID, testCategoryMissions, testTokenDelta2, testSessionB)
+	got, err = store.AddUserTokenDelta(context.Background(), testTokenUsageUserID, testCategoryMissions, testTokenDelta2, testSessionB)
 	require.NoError(t, err)
 	assert.Equal(t, testTokenDelta1+testTokenDelta2, got.TotalTokens)
 }
@@ -130,13 +131,13 @@ func TestAddUserTokenDelta_SessionChangeResetsBaseline(t *testing.T) {
 func TestAddUserTokenDelta_NegativeDeltaRejected(t *testing.T) {
 	store := newTestStore(t)
 	const negativeDelta int64 = -1
-	_, err := store.AddUserTokenDelta(testTokenUsageUserID, testCategoryMissions, negativeDelta, "")
+	_, err := store.AddUserTokenDelta(context.Background(), testTokenUsageUserID, testCategoryMissions, negativeDelta, "")
 	require.Error(t, err)
 }
 
 func TestAddUserTokenDelta_EmptyCategoryRejected(t *testing.T) {
 	store := newTestStore(t)
-	_, err := store.AddUserTokenDelta(testTokenUsageUserID, "", testTokenDelta1, "")
+	_, err := store.AddUserTokenDelta(context.Background(), testTokenUsageUserID, "", testTokenDelta1, "")
 	require.Error(t, err)
 }
 
@@ -152,7 +153,7 @@ func TestAddUserTokenDelta_ConcurrentIncrementsAreAtomic(t *testing.T) {
 	for i := 0; i < testConcurrentWorkers; i++ {
 		go func() {
 			defer wg.Done()
-			_, err := store.AddUserTokenDelta(testTokenUsageUserID, testCategoryMissions, testConcurrentDelta, testSessionA)
+			_, err := store.AddUserTokenDelta(context.Background(), testTokenUsageUserID, testCategoryMissions, testConcurrentDelta, testSessionA)
 			assert.NoError(t, err)
 		}()
 	}

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"sync/atomic"
@@ -114,13 +115,13 @@ func TestIncrementUserCoins_AddsToBalance(t *testing.T) {
 	const secondDelta = 15
 	const wantTotal = firstDelta + secondDelta
 
-	r1, err := store.IncrementUserCoins(testUserRewardsID, firstDelta)
+	r1, err := store.IncrementUserCoins(context.Background(), testUserRewardsID, firstDelta)
 	require.NoError(t, err)
 	require.Equal(t, firstDelta, r1.Coins)
 	// Positive deltas also accumulate lifetime points
 	require.Equal(t, firstDelta, r1.Points)
 
-	r2, err := store.IncrementUserCoins(testUserRewardsID, secondDelta)
+	r2, err := store.IncrementUserCoins(context.Background(), testUserRewardsID, secondDelta)
 	require.NoError(t, err)
 	require.Equal(t, wantTotal, r2.Coins)
 	require.Equal(t, wantTotal, r2.Points)
@@ -131,10 +132,10 @@ func TestIncrementUserCoins_NegativeDeltaClampsToFloor(t *testing.T) {
 	const startingBalance = 20
 	const subtractAmount = -50
 
-	_, err := store.IncrementUserCoins(testUserRewardsID, startingBalance)
+	_, err := store.IncrementUserCoins(context.Background(), testUserRewardsID, startingBalance)
 	require.NoError(t, err)
 
-	got, err := store.IncrementUserCoins(testUserRewardsID, subtractAmount)
+	got, err := store.IncrementUserCoins(context.Background(), testUserRewardsID, subtractAmount)
 	require.NoError(t, err)
 	require.Equal(t, MinCoinBalance, got.Coins, "negative delta must clamp to MinCoinBalance")
 	// Lifetime points should NOT decrease on a negative delta
@@ -145,7 +146,7 @@ func TestClaimDailyBonus_FirstClaimSucceeds(t *testing.T) {
 	store := newTestStore(t)
 	now := time.Date(2026, 4, 10, 12, 0, 0, 0, time.UTC)
 
-	got, err := store.ClaimDailyBonus(testUserRewardsID, testDailyBonusAmount, testDailyBonusInterval, now)
+	got, err := store.ClaimDailyBonus(context.Background(), testUserRewardsID, testDailyBonusAmount, testDailyBonusInterval, now)
 	require.NoError(t, err)
 	require.Equal(t, testDailyBonusAmount, got.BonusPoints)
 	require.NotNil(t, got.LastDailyBonusAt)
@@ -156,12 +157,12 @@ func TestClaimDailyBonus_WithinCooldownReturnsError(t *testing.T) {
 	store := newTestStore(t)
 	firstClaim := time.Date(2026, 4, 10, 12, 0, 0, 0, time.UTC)
 
-	_, err := store.ClaimDailyBonus(testUserRewardsID, testDailyBonusAmount, testDailyBonusInterval, firstClaim)
+	_, err := store.ClaimDailyBonus(context.Background(), testUserRewardsID, testDailyBonusAmount, testDailyBonusInterval, firstClaim)
 	require.NoError(t, err)
 
 	// 23 hours later — still inside the 24h window
 	tooSoon := firstClaim.Add(23 * time.Hour)
-	_, err = store.ClaimDailyBonus(testUserRewardsID, testDailyBonusAmount, testDailyBonusInterval, tooSoon)
+	_, err = store.ClaimDailyBonus(context.Background(), testUserRewardsID, testDailyBonusAmount, testDailyBonusInterval, tooSoon)
 	require.Error(t, err)
 	require.True(t, errors.Is(err, ErrDailyBonusUnavailable))
 
@@ -175,12 +176,12 @@ func TestClaimDailyBonus_AfterCooldownSucceedsAgain(t *testing.T) {
 	store := newTestStore(t)
 	firstClaim := time.Date(2026, 4, 10, 12, 0, 0, 0, time.UTC)
 
-	_, err := store.ClaimDailyBonus(testUserRewardsID, testDailyBonusAmount, testDailyBonusInterval, firstClaim)
+	_, err := store.ClaimDailyBonus(context.Background(), testUserRewardsID, testDailyBonusAmount, testDailyBonusInterval, firstClaim)
 	require.NoError(t, err)
 
 	// 24h + 1 minute later — just past the cooldown
 	laterEnough := firstClaim.Add(testDailyBonusInterval).Add(1 * time.Minute)
-	got, err := store.ClaimDailyBonus(testUserRewardsID, testDailyBonusAmount, testDailyBonusInterval, laterEnough)
+	got, err := store.ClaimDailyBonus(context.Background(), testUserRewardsID, testDailyBonusAmount, testDailyBonusInterval, laterEnough)
 	require.NoError(t, err)
 	require.Equal(t, testDailyBonusAmount*2, got.BonusPoints)
 	require.NotNil(t, got.LastDailyBonusAt)
@@ -200,7 +201,7 @@ func TestIncrementUserCoins_ConcurrentIncrementsAreAtomic(t *testing.T) {
 	for i := 0; i < testRewardsConcurrentWorkers; i++ {
 		go func() {
 			defer wg.Done()
-			_, err := store.IncrementUserCoins(testUserRewardsID, testRewardsConcurrentDelta)
+			_, err := store.IncrementUserCoins(context.Background(), testUserRewardsID, testRewardsConcurrentDelta)
 			assert.NoError(t, err)
 		}()
 	}
@@ -234,7 +235,7 @@ func TestClaimDailyBonus_ConcurrentClaimsOnlyOneWins(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			<-start
-			_, err := store.ClaimDailyBonus(testUserRewardsID, testDailyBonusAmount, testDailyBonusInterval, now)
+			_, err := store.ClaimDailyBonus(context.Background(), testUserRewardsID, testDailyBonusAmount, testDailyBonusInterval, now)
 			if err == nil {
 				atomic.AddInt64(&successCount, 1)
 				return

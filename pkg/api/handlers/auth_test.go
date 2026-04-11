@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -499,11 +500,11 @@ func TestOAuthStatePersistence_RoundTrip(t *testing.T) {
 	const state = "round-trip-state"
 	require.NoError(t, h.storeOAuthState(state))
 
-	ok := h.validateAndConsumeOAuthState(state)
+	ok := h.validateAndConsumeOAuthState(context.Background(), state)
 	assert.True(t, ok, "freshly stored state should validate")
 
 	// Single-use: a second call must fail.
-	ok = h.validateAndConsumeOAuthState(state)
+	ok = h.validateAndConsumeOAuthState(context.Background(), state)
 	assert.False(t, ok, "consumed state should not validate twice")
 }
 
@@ -541,7 +542,7 @@ func TestOAuthStatePersistence_SurvivesRestart(t *testing.T) {
 		BackendURL:     "http://backend",
 	})
 
-	ok := h2.validateAndConsumeOAuthState(state)
+	ok := h2.validateAndConsumeOAuthState(context.Background(), state)
 	assert.True(t, ok, "OAuth state must survive backend restart (#6028)")
 }
 
@@ -549,7 +550,7 @@ func TestOAuthStatePersistence_SurvivesRestart(t *testing.T) {
 // continue to fail CSRF validation — no regression in the rejection path.
 func TestOAuthStatePersistence_InvalidStateRejected(t *testing.T) {
 	h, _ := newRealStoreAuthHandler(t)
-	assert.False(t, h.validateAndConsumeOAuthState("never-issued"))
+	assert.False(t, h.validateAndConsumeOAuthState(context.Background(), "never-issued"))
 }
 
 // TestSanitizeOAuthErrorDescription covers #6583: externally-supplied OAuth

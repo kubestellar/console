@@ -197,7 +197,8 @@ func (h *TokenUsageHandler) AddTokenDelta(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "delta exceeds per-request limit"})
 	}
 
-	updated, err := h.store.AddUserTokenDelta(userID, body.Category, body.Delta, body.AgentSessionID)
+	// #6613: thread the request context through the store.
+	updated, err := h.store.AddUserTokenDelta(c.UserContext(), userID, body.Category, body.Delta, body.AgentSessionID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to add token delta"})
 	}
