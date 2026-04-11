@@ -38,7 +38,7 @@ export function NamespaceCard({ namespace, isSelected, onSelect, onDelete, isSys
           </span>
         </div>
         <p className="text-sm text-muted-foreground">
-          Created {new Date(namespace.created_at).toLocaleDateString()}
+          Created {new Date(namespace.createdAt).toLocaleDateString()}
         </p>
       </div>
       {showCluster && <ClusterBadge cluster={namespace.cluster} size="sm" />}

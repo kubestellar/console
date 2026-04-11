@@ -69,7 +69,7 @@ func (m *MultiClusterClient) ListServiceAccounts(ctx context.Context, contextNam
 			Cluster:   contextName,
 			Secrets:   secrets,
 			Roles:     roles,
-			CreatedAt: sa.CreationTimestamp.Format(time.RFC3339),
+			CreatedAt: sa.CreationTimestamp.Time,
 		})
 	}
 
@@ -373,7 +373,7 @@ func (m *MultiClusterClient) CreateServiceAccount(ctx context.Context, contextNa
 		Name:      created.Name,
 		Namespace: created.Namespace,
 		Cluster:   contextName,
-		CreatedAt: created.CreationTimestamp.Format(time.RFC3339),
+		CreatedAt: created.CreationTimestamp.Time,
 	}, nil
 }
 
@@ -888,7 +888,7 @@ func (m *MultiClusterClient) ListNamespacesWithDetails(ctx context.Context, cont
 			Cluster:   contextName,
 			Status:    string(ns.Status.Phase),
 			Labels:    ns.Labels,
-			CreatedAt: ns.CreationTimestamp.Format(time.RFC3339),
+			CreatedAt: ns.CreationTimestamp.Time,
 		})
 	}
 	return namespaces, nil
@@ -918,7 +918,7 @@ func (m *MultiClusterClient) CreateNamespace(ctx context.Context, contextName, n
 		Cluster:   contextName,
 		Status:    string(created.Status.Phase),
 		Labels:    created.Labels,
-		CreatedAt: created.CreationTimestamp.Format(time.RFC3339),
+		CreatedAt: created.CreationTimestamp.Time,
 	}, nil
 }
 
@@ -972,9 +972,11 @@ func parseOpenShiftUser(item unstructured.Unstructured, cluster string) models.O
 		user.Name = name
 	}
 
-	// Get creationTimestamp from metadata
+	// Get creationTimestamp from metadata (parsed from RFC3339 string; zero value on parse failure)
 	if createdAt, found, _ := unstructured.NestedString(item.Object, "metadata", "creationTimestamp"); found {
-		user.CreatedAt = createdAt
+		if parsed, err := time.Parse(time.RFC3339, createdAt); err == nil {
+			user.CreatedAt = parsed
+		}
 	}
 
 	// Get fullName
