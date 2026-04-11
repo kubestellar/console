@@ -24,12 +24,22 @@ export function UnifiedStatsSection({
   isLoading = false,
   lastUpdated,
   className = '' }: UnifiedStatsSectionProps) {
-  // Collapsed state with localStorage persistence
+  // Collapsed state with localStorage persistence.
+  // The storage key name says "collapsed", so the stored value represents
+  // collapsed state (true = collapsed). Historically the read path here
+  // interpreted the saved value as `isExpanded` while the write path stored
+  // `!isExpanded` — they disagreed, so reloading the page showed the inverse
+  // of the last toggle. Keep read and write aligned with the name of the key.
   const storageKey = config.storageKey || `kubestellar-${config.type}-stats-collapsed`
   const [isExpanded, setIsExpanded] = useState(() => {
     try {
       const saved = localStorage.getItem(storageKey)
-      return saved !== null ? JSON.parse(saved) : !config.defaultCollapsed
+      if (saved !== null) {
+        const parsed = JSON.parse(saved) as boolean
+        // parsed represents COLLAPSED state
+        return !parsed
+      }
+      return !config.defaultCollapsed
     } catch {
       return !config.defaultCollapsed
     }

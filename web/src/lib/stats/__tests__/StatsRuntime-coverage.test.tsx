@@ -201,12 +201,14 @@ describe('StatsRuntime collapse', () => {
     render(<StatsRuntime definition={def} getStatValue={getStatValue} />)
 
     const toggleBtn = screen.getByText('Test Stats')
+    // Starts expanded; first click collapses it, so collapsed=true is stored.
     fireEvent.click(toggleBtn)
 
-    expect(localStorage.getItem(storageKey)).toBe('false')
-
-    fireEvent.click(toggleBtn)
     expect(localStorage.getItem(storageKey)).toBe('true')
+
+    // Second click expands it, so collapsed=false is stored.
+    fireEvent.click(toggleBtn)
+    expect(localStorage.getItem(storageKey)).toBe('false')
   })
 
   it('uses custom collapsedStorageKey', () => {
@@ -223,9 +225,10 @@ describe('StatsRuntime collapse', () => {
     )
 
     const toggleBtn = screen.getByText('Test Stats')
+    // Starts expanded; first click collapses, so collapsed=true is stored.
     fireEvent.click(toggleBtn)
 
-    expect(localStorage.getItem(customKey)).toBe('false')
+    expect(localStorage.getItem(customKey)).toBe('true')
   })
 
   it('reads initial collapsed state from localStorage', () => {
@@ -233,12 +236,12 @@ describe('StatsRuntime collapse', () => {
     const getStatValue = (): StatBlockValue => ({ value: 99 })
     const storageKey = 'kubestellar-saved-state-stats-collapsed'
 
-    // Pre-set collapsed state
-    localStorage.setItem(storageKey, 'false')
+    // Pre-set collapsed state (true = collapsed)
+    localStorage.setItem(storageKey, 'true')
 
     render(<StatsRuntime definition={def} getStatValue={getStatValue} />)
 
-    // Should be collapsed because localStorage says false
+    // Should be collapsed because localStorage says collapsed=true
     expect(screen.queryByText('99')).toBeNull()
   })
 

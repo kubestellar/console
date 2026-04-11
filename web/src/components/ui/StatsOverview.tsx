@@ -463,14 +463,24 @@ export function StatsOverview({
     window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
   }
 
-  // Manage collapsed state with localStorage persistence
+  // Manage collapsed state with localStorage persistence.
+  // Storage key ends in "-stats-collapsed", so the stored value represents
+  // the COLLAPSED state (true = collapsed). Previously this file stored
+  // `isExpanded` under the same key, which inverted across reloads and
+  // disagreed with sibling components that use the collapsed sense.
   const storageKey = collapsedStorageKey || `kubestellar-${dashboardType}-stats-collapsed`
-  const [isExpanded, setIsExpanded] = useState(() => safeGetJSON<boolean>(storageKey) ?? defaultExpanded)
+  const [isExpanded, setIsExpanded] = useState(() => {
+    const savedCollapsed = safeGetJSON<boolean>(storageKey)
+    return savedCollapsed === null || savedCollapsed === undefined
+      ? defaultExpanded
+      : !savedCollapsed
+  })
 
   const toggleExpanded = () => {
     const newValue = !isExpanded
     setIsExpanded(newValue)
-    safeSetJSON(storageKey, newValue)
+    // Store COLLAPSED state to match the storage-key semantics.
+    safeSetJSON(storageKey, !newValue)
   }
 
   // Dynamic grid columns based on visible blocks
