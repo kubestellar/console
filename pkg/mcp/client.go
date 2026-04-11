@@ -13,17 +13,53 @@ import (
 
 // Client is a generic MCP client that communicates with an MCP server via stdio
 type Client struct {
-	name    string
-	cmd     *exec.Cmd
-	stdin   io.WriteCloser
-	stdout  *bufio.Reader
-	stderr  io.ReadCloser
-	mu      sync.Mutex
-	idSeq   atomic.Int64
-	pending map[interface{}]chan *Response
-	tools   []Tool
-	ready   bool
-	done    chan struct{}
+	name   string
+	cmd    *exec.Cmd
+	stdin  io.WriteCloser
+	stdout *bufio.Reader
+	stderr io.ReadCloser
+	mu     sync.Mutex
+	idSeq  atomic.Int64
+	// pending maps request IDs (as strings) to response channels. IDs are
+	// keyed as strings to avoid Go's JSON decoder returning numeric IDs as
+	// float64 (from interface{} fields) while outgoing IDs are stored as
+	// int64 — a type mismatch that caused every call() to block until the
+	// context deadline fired (#6622).
+	pending  map[string]chan *Response
+	tools    []Tool
+	ready    bool
+	done     chan struct{}
+	stopOnce sync.Once
+}
+
+// idKey converts a JSON-RPC request/response ID of any supported shape
+// (int64, float64, json.Number, string) to the canonical string key used by
+// the pending map. Returns "" if the value is nil or an unsupported type —
+// callers should treat an empty key as "unroutable notification" and drop
+// the response.
+func idKey(v interface{}) string {
+	switch t := v.(type) {
+	case nil:
+		return ""
+	case string:
+		return t
+	case int:
+		return fmt.Sprintf("%d", t)
+	case int64:
+		return fmt.Sprintf("%d", t)
+	case float64:
+		// Integer-valued floats (the common case for JSON numeric IDs)
+		// should match the int64 form exactly. Non-integer floats are
+		// allowed by the JSON-RPC spec but we format with %g as a fallback.
+		if t == float64(int64(t)) {
+			return fmt.Sprintf("%d", int64(t))
+		}
+		return fmt.Sprintf("%g", t)
+	case json.Number:
+		return t.String()
+	default:
+		return fmt.Sprintf("%v", t)
+	}
 }
 
 // JSON-RPC types
@@ -140,7 +176,7 @@ func NewClient(name, binaryPath string, args ...string) (*Client, error) {
 		stdin:   stdin,
 		stdout:  bufio.NewReader(stdout),
 		stderr:  stderr,
-		pending: make(map[interface{}]chan *Response),
+		pending: make(map[string]chan *Response),
 		done:    make(chan struct{}),
 	}
 
@@ -177,26 +213,36 @@ func (c *Client) Start(ctx context.Context) error {
 // Stop stops the MCP server process and reaps the child to avoid zombie
 // processes. Also closes the stderr pipe to release associated file
 // descriptors (#4727).
+//
+// Stop is idempotent: calling it multiple times is safe and only the first
+// invocation performs the shutdown. This matches the sync.Once pattern
+// already used for other shutdown paths (#4727, #6478, #6586) and fixes
+// the double-close panic when Stop was invoked more than once — for
+// example, once by Bridge.Start rollback and once by Bridge.Stop (#6623).
 func (c *Client) Stop() error {
-	// Signal readResponses goroutine to exit
-	close(c.done)
+	c.stopOnce.Do(func() {
+		// Signal readResponses goroutine to exit
+		close(c.done)
 
-	// Close stdin pipe to send EOF to the server process
-	c.stdin.Close()
+		// Close stdin pipe to send EOF to the server process
+		if c.stdin != nil {
+			c.stdin.Close()
+		}
 
-	if c.cmd.Process != nil {
-		// Kill the process, then Wait() to reap it and release OS resources
-		// (process table entry, pipes, file descriptors).
-		_ = c.cmd.Process.Kill()
-		// Wait releases all resources associated with the Cmd.
-		// The error from Wait is expected (killed process returns non-zero).
-		_ = c.cmd.Wait()
-	}
+		if c.cmd != nil && c.cmd.Process != nil {
+			// Kill the process, then Wait() to reap it and release OS resources
+			// (process table entry, pipes, file descriptors).
+			_ = c.cmd.Process.Kill()
+			// Wait releases all resources associated with the Cmd.
+			// The error from Wait is expected (killed process returns non-zero).
+			_ = c.cmd.Wait()
+		}
 
-	// Close stderr pipe to release the file descriptor
-	if c.stderr != nil {
-		c.stderr.Close()
-	}
+		// Close stderr pipe to release the file descriptor
+		if c.stderr != nil {
+			c.stderr.Close()
+		}
+	})
 
 	return nil
 }
@@ -277,6 +323,7 @@ func (c *Client) listTools(ctx context.Context) error {
 
 func (c *Client) call(ctx context.Context, method string, params interface{}) (json.RawMessage, error) {
 	id := c.idSeq.Add(1)
+	key := idKey(id)
 
 	req := Request{
 		JSONRPC: "2.0",
@@ -287,12 +334,12 @@ func (c *Client) call(ctx context.Context, method string, params interface{}) (j
 
 	respCh := make(chan *Response, 1)
 	c.mu.Lock()
-	c.pending[id] = respCh
+	c.pending[key] = respCh
 	c.mu.Unlock()
 
 	defer func() {
 		c.mu.Lock()
-		delete(c.pending, id)
+		delete(c.pending, key)
 		c.mu.Unlock()
 	}()
 
@@ -357,10 +404,14 @@ func (c *Client) readResponses() {
 			continue
 		}
 
-		// Route response to waiting caller
-		if resp.ID != nil {
+		// Route response to waiting caller. Normalize the incoming ID via
+		// idKey so that float64 (from default json.Unmarshal of interface{})
+		// and int64 (from outgoing send) both map to the same pending-map
+		// key (#6622).
+		key := idKey(resp.ID)
+		if key != "" {
 			c.mu.Lock()
-			ch, ok := c.pending[resp.ID]
+			ch, ok := c.pending[key]
 			c.mu.Unlock()
 			if ok {
 				select {

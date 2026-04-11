@@ -168,6 +168,18 @@ func (b *Bridge) Start(ctx context.Context) error {
 	}
 
 	if len(errs) > 0 {
+		// Rollback: any clients that successfully started before the
+		// failure are still running. Stop them so we don't leak
+		// goroutines, child processes, or file descriptors on a partial
+		// Start failure (#6624).
+		if stopErr := b.Stop(); stopErr != nil {
+			slog.Warn("[MCP] errors during Start rollback", "error", stopErr)
+		}
+		b.mu.Lock()
+		b.opsClient = nil
+		b.deployClient = nil
+		b.gadgetClient = nil
+		b.mu.Unlock()
 		return fmt.Errorf("failed to start MCP clients: %v", errs)
 	}
 
