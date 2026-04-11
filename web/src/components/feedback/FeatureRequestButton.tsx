@@ -13,7 +13,13 @@ export function FeatureRequestButton() {
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useModalState()
   const [initialRequestType, setInitialRequestType] = useState<RequestType | undefined>()
   const { notifications } = useNotifications()
-  const { requests } = useFeatureRequests()
+  // PR #6518 item G — this navbar button only needs the closed-request IDs
+  // to filter notifications for the badge count; it does not render any
+  // queue items, titles, or descriptions. Pass { countOnly: true } so the
+  // hook fetches the lean `?count_only=true` payload ({id, status} pairs).
+  // Consumers that render the full queue (FeatureRequestModal, Updates tab)
+  // must NOT pass this flag.
+  const { requests } = useFeatureRequests(undefined, { countOnly: true })
 
   // issue 6475 — Unify the navbar badge count with the Updates tab.
   // Previously the navbar used the raw `unreadCount` returned by

@@ -77,12 +77,18 @@ async function setupMissionsTest(page: Page) {
 
   // Mock GitHub mission listings used by the missions browser. An empty list
   // is fine for the dialog-renders test. Tests that need specific mission data
-  // must override this BEFORE setupMissionsTest() runs by using page.unroute()
-  // then re-registering — see the "project card" test below.
+  // must override this AFTER setupMissionsTest() runs by calling
+  // page.unroute('**/api/missions/list**') to drop this default handler, then
+  // registering a fresh page.route() with the desired response — see the
+  // "project card" test below.
   //
-  // #6474 — Previously we registered a second route handler inline in the
-  // specific test; the second registration does not override the first, so the
-  // empty-list handler won that race and the project-card test was dead.
+  // #6474 / PR #6518 item E — Previously we registered a second route handler
+  // inline in the specific test without unroute(); the second registration
+  // does NOT override the first — Playwright stacks handlers and matches in
+  // order, so the empty-list handler won that race and the project-card test
+  // was dead. Earlier comment incorrectly said "override BEFORE
+  // setupMissionsTest()" which was impossible (setupMissionsTest runs in
+  // beforeEach, before any test body).
   await page.route('**/api/missions/list**', (route) =>
     route.fulfill({
       status: 200,

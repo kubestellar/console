@@ -5,7 +5,7 @@
  * Sources: KubeStellar Community repo, GitHub repos with kubestellar-missions, local files.
  */
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
   Search, X, Upload, Filter, Grid3X3, List, Sparkles, CheckCircle,
   Loader2, ExternalLink, RefreshCw } from 'lucide-react'
@@ -398,7 +398,11 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
   // Track the latest selection to prevent stale async responses from overwriting
   const latestSelectionRef = useRef<string>('')
 
-  const selectCardMission = async (mission: MissionExport) => {
+  // PR #6518 item F — wrap in useCallback so the deep-link effect below can
+  // safely list it in its dependency array without thrashing every render.
+  // All captured references are either state setters (stable) or module-level
+  // imports (fetchMissionContent) — so the callback itself is stable.
+  const selectCardMission = useCallback(async (mission: MissionExport) => {
     // Use title + type as unique key (MissionExport has no id field)
     const selectionKey = `${mission.title}::${mission.type}`
     latestSelectionRef.current = selectionKey
@@ -427,7 +431,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
         setIsMissionLoading(false)
       }
     }
-  }
+  }, [])
 
   // ============================================================================
   // Copy shareable link for a mission
@@ -548,11 +552,11 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission }: Mi
     if (installerMissions.length === 0 && fixerMissions.length === 0 && activeTab !== 'installers') {
       setActiveTab('installers')
     }
-    // `selectCardMission` intentionally omitted — it's re-created every
-    // render and would cause this effect to thrash. We rely on the stable
-    // behavior: when data or `initialMission` changes, the effect runs and
-    // picks the best match using the current closure's selectCardMission.
-  }, [initialMission, isOpen, installerMissions, fixerMissions, selectedMission, activeTab])
+    // PR #6518 item F — `selectCardMission` is now wrapped in useCallback
+    // with an empty dep array, so it's a stable reference across renders.
+    // Including it in the dep array satisfies react-hooks/exhaustive-deps
+    // without causing the effect to re-run on every render.
+  }, [initialMission, isOpen, installerMissions, fixerMissions, selectedMission, activeTab, selectCardMission])
 
   // ============================================================================
   // Filtered installer & fixer lists

@@ -893,22 +893,35 @@ func (m *MultiClusterClient) RemoveContext(contextName string) error {
 // second watcher goroutine. Previously every call created a fresh
 // fsnotify.Watcher and watchLoop goroutine, orphaning the previous one.
 func (m *MultiClusterClient) StartWatching() error {
+	// PR #6518 item A — hold the lock across the check-and-set so two
+	// concurrent callers can't both see watching=false and both install a
+	// watcher (previous impl dropped the lock, created a fresh fsnotify
+	// watcher, then re-acquired — the loser leaked a watcher + goroutine).
 	m.mu.Lock()
 	if m.watching {
 		m.mu.Unlock()
 		slog.Info("kubeconfig watcher already running, skipping StartWatching")
 		return nil
 	}
+	// Reserve ownership immediately. If watcher construction fails below
+	// we roll this back before returning the error.
+	m.watching = true
 	m.mu.Unlock()
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
+		m.mu.Lock()
+		m.watching = false
+		m.mu.Unlock()
 		return fmt.Errorf("failed to create watcher: %w", err)
 	}
 
 	// Watch the kubeconfig file
 	if err := watcher.Add(m.kubeconfig); err != nil {
 		watcher.Close()
+		m.mu.Lock()
+		m.watching = false
+		m.mu.Unlock()
 		return fmt.Errorf("failed to watch kubeconfig: %w", err)
 	}
 
@@ -926,7 +939,6 @@ func (m *MultiClusterClient) StartWatching() error {
 	// succeeded but watchLoop exited immediately because stopWatch was closed.
 	m.stopWatch = make(chan struct{})
 	m.stopWatchOnce = sync.Once{}
-	m.watching = true
 	// Snapshot for the goroutine so it reads a stable value even if a
 	// concurrent Stop+Start rotates m.stopWatch.
 	stopCh := m.stopWatch
@@ -955,14 +967,19 @@ func (m *MultiClusterClient) reloadAndNotify() {
 	}
 	slog.Info("Kubeconfig reloaded successfully")
 
-	// Re-add file watch — after atomic writes (rm+create or rename-over),
-	// the old inode-level watch is dead. This re-establishes it on the new inode.
-	if m.watcher != nil {
+	// PR #6518 item H — Re-add file watch under the lock. This runs from
+	// a debounce timer on a separate goroutine; without locking it races
+	// with StartWatching / StopWatching which mutate m.watcher. We also
+	// check m.watching so a Stop-then-timer-fires sequence doesn't touch
+	// a closed watcher.
+	m.mu.Lock()
+	if m.watching && m.watcher != nil {
 		_ = m.watcher.Remove(m.kubeconfig)
 		if err := m.watcher.Add(m.kubeconfig); err != nil {
 			slog.Warn("could not re-watch kubeconfig file", "error", err)
 		}
 	}
+	m.mu.Unlock()
 
 	// Notify listeners
 	m.mu.RLock()
@@ -1055,6 +1072,12 @@ func (m *MultiClusterClient) watchLoop(stopCh <-chan struct{}, watcher *fsnotify
 // The sync.Once guards the close; the watching flag prevents double-close
 // of the fsnotify watcher too.
 func (m *MultiClusterClient) StopWatching() {
+	// PR #6518 item B — hold the lock through once.Do so a concurrent
+	// Stop→Start that replaces m.stopWatchOnce cannot race with this Do.
+	// Previously we captured &m.stopWatchOnce then released the lock; a
+	// concurrent StartWatching could assign a fresh sync.Once to that
+	// address while this goroutine was still inside Do, producing a
+	// data race on the Once's internal state.
 	m.mu.Lock()
 	if !m.watching {
 		m.mu.Unlock()
@@ -1063,12 +1086,11 @@ func (m *MultiClusterClient) StopWatching() {
 	m.watching = false
 	stopCh := m.stopWatch
 	w := m.watcher
-	once := &m.stopWatchOnce
+	if stopCh != nil {
+		m.stopWatchOnce.Do(func() { close(stopCh) })
+	}
 	m.mu.Unlock()
 
-	if stopCh != nil {
-		once.Do(func() { close(stopCh) })
-	}
 	if w != nil {
 		w.Close()
 	}

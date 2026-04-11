@@ -235,14 +235,30 @@ function sortRequests(requests: FeatureRequest[], currentGitHubLogin: string): F
   return [...userRequests, ...otherRequests]
 }
 
+/**
+ * PR #6518 item G — Options for useFeatureRequests.
+ *
+ * `countOnly`: when true, the hook passes `?count_only=true` to
+ * `/api/feedback/queue`. The backend responds with a minimal payload of
+ * {id, status} pairs per issue — no titles, bodies, PR URLs, etc. The
+ * FeatureRequestButton navbar badge only needs the closed-ID set to filter
+ * notifications, so it can avoid fetching the full queue on every page load.
+ * Consumers that render queue items (FeatureRequestModal, etc.) must omit
+ * this flag so they receive the full response.
+ */
+export interface UseFeatureRequestsOptions {
+  countOnly?: boolean
+}
+
 // Feature Requests Hook
-export function useFeatureRequests(currentUserId?: string) {
+export function useFeatureRequests(currentUserId?: string, options?: UseFeatureRequestsOptions) {
   const [requests, setRequests] = useState<FeatureRequest[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const isDemoMode = isDemoUser()
+  const countOnly = options?.countOnly === true
 
   const loadRequests = useCallback(async () => {
     // In demo mode, use mock data
@@ -254,8 +270,12 @@ export function useFeatureRequests(currentUserId?: string) {
     }
     try {
       setIsLoading(true)
-      // Fetch from queue endpoint to get all issues
-      const { data } = await api.get<FeatureRequest[]>('/api/feedback/queue')
+      // Fetch from queue endpoint to get all issues. When countOnly is set,
+      // the server returns {id, status} pairs only — enough to compute the
+      // navbar badge (filter notifications by closed request IDs) without
+      // fetching the full queue. See UseFeatureRequestsOptions above.
+      const url = countOnly ? '/api/feedback/queue?count_only=true' : '/api/feedback/queue'
+      const { data } = await api.get<FeatureRequest[]>(url)
       const safeData = Array.isArray(data) ? data : []
       const sorted = currentUserId ? sortRequests(safeData, currentUserId) : safeData
       setRequests(sorted)
@@ -265,7 +285,7 @@ export function useFeatureRequests(currentUserId?: string) {
     } finally {
       setIsLoading(false)
     }
-  }, [currentUserId])
+  }, [currentUserId, countOnly])
 
   useEffect(() => {
     loadRequests()

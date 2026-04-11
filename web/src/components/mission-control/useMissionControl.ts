@@ -101,7 +101,10 @@ export function buildInstallPromptForProject(
  * projects appear within one frame of the stream pausing.
  */
 const STREAM_JSON_DEBOUNCE_MS = 250
-/** #6468 — sessionStorage persist debounce window (ms). Coalesces bursts of state changes. */
+/** #6468 — localStorage persist debounce window (ms). Coalesces bursts of
+ * state changes before calling persistState(), which writes to localStorage
+ * (see STORAGE_KEY usage below). Earlier revision of this comment said
+ * "sessionStorage" which is incorrect — fixed in PR #6518 item D. */
 const PERSIST_STATE_DEBOUNCE_MS = 300
 
 // ---------------------------------------------------------------------------

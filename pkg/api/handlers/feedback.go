@@ -275,8 +275,18 @@ type QueueItem struct {
 // ListAllFeatureRequests returns all issues from GitHub as a queue
 // For untriaged issues that don't belong to the current user, title and description are redacted
 // Frontend will display these with blur effect
+//
+// PR #6518 item G — supports `?count_only=true` which returns a minimal
+// payload of just {id, status} pairs for every queue item. The navbar
+// FeatureRequestButton only needs closed-request IDs (to filter notifications
+// for the badge count) and does not render titles/descriptions/bodies on
+// mount, so requesting the full queue on every page load wastes bandwidth
+// and CPU. The lean response still requires the GitHub round-trip (we need
+// each issue's current status/labels) but avoids serializing bodies, titles,
+// and user-blurring logic the client doesn't consume.
 func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
+	countOnly := c.Query("count_only") == "true"
 
 	// Get current user's GitHub login for ownership comparison
 	user, _ := h.store.GetUser(userID)
@@ -386,6 +396,18 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 
 		// Check if issue was closed by the current user (the one viewing the queue)
 		closedByUser := issue.State == "closed" && issue.ClosedBy != nil && issue.ClosedBy.Login == currentGitHubLogin
+
+		// PR #6518 item G — count_only responses carry only id + status, no
+		// titles or bodies. The client uses these to compute the navbar
+		// badge (which filters notifications by the set of closed-request
+		// IDs); nothing else is needed for that path.
+		if countOnly {
+			queueItems = append(queueItems, QueueItem{
+				ID:     fmt.Sprintf("gh-%s-%d", tagged.TargetRepo, issue.Number),
+				Status: status,
+			})
+			continue
+		}
 
 		queueItems = append(queueItems, QueueItem{
 			ID:                fmt.Sprintf("gh-%s-%d", tagged.TargetRepo, issue.Number),

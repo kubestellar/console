@@ -4,12 +4,19 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 )
+
+// concurrentStartCallers — number of goroutines used by the concurrency race
+// test for StartWatching. Chosen to be large enough that a naive unlocked
+// check-and-set would lose the race with high probability under `go test
+// -race`, while still completing quickly on CI.
+const concurrentStartCallers = 100
 
 // writeTempKubeconfig writes a minimal kubeconfig to a temp file and returns
 // its path. Used by the StartWatching/StopWatching lifecycle tests below.
@@ -167,6 +174,83 @@ func TestConsoleWatcher_Stop_DoubleCallSafe(t *testing.T) {
 
 	w.Stop()
 	w.Stop() // must not panic
+}
+
+// PR #6518 item A — StartWatching must be concurrency-safe. Many goroutines
+// calling StartWatching simultaneously must result in exactly one installed
+// watcher, not a race where the check-and-set gap lets two callers both
+// construct a fresh fsnotify.Watcher (leaking the loser). Run under
+// `go test -race` to catch unlocked mutation of m.watching / m.watcher.
+func TestMultiClusterClient_StartWatching_ConcurrentRace(t *testing.T) {
+	path := writeTempKubeconfig(t)
+	m, err := NewMultiClusterClient(path)
+	if err != nil {
+		t.Fatalf("NewMultiClusterClient: %v", err)
+	}
+
+	var wg sync.WaitGroup
+	errs := make(chan error, concurrentStartCallers)
+	start := make(chan struct{})
+	for i := 0; i < concurrentStartCallers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			if e := m.StartWatching(); e != nil {
+				errs <- e
+			}
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(errs)
+	for e := range errs {
+		t.Fatalf("concurrent StartWatching error: %v", e)
+	}
+
+	// Exactly one watcher should be installed and watching must be true.
+	m.mu.Lock()
+	w := m.watcher
+	watching := m.watching
+	m.mu.Unlock()
+	if !watching {
+		t.Fatal("expected watching=true after concurrent StartWatching")
+	}
+	if w == nil {
+		t.Fatal("expected exactly one watcher to be installed")
+	}
+	m.StopWatching()
+}
+
+// PR #6518 item B — StopWatching must be concurrency-safe against
+// interleaved StartWatching calls that rotate m.stopWatchOnce. The previous
+// impl captured &m.stopWatchOnce then released the lock and called Do, which
+// raced with Start replacing the Once. Run under `go test -race`.
+func TestMultiClusterClient_StopStartRace(t *testing.T) {
+	path := writeTempKubeconfig(t)
+	m, err := NewMultiClusterClient(path)
+	if err != nil {
+		t.Fatalf("NewMultiClusterClient: %v", err)
+	}
+	if err := m.StartWatching(); err != nil {
+		t.Fatalf("initial StartWatching: %v", err)
+	}
+
+	var wg sync.WaitGroup
+	const cycles = 25 // kept modest because each cycle does real fsnotify I/O
+	for i := 0; i < cycles; i++ {
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			m.StopWatching()
+		}()
+		go func() {
+			defer wg.Done()
+			_ = m.StartWatching()
+		}()
+	}
+	wg.Wait()
+	m.StopWatching()
 }
 
 // Issue 6471 — The kubeconfig watcher must invoke onWatchError when an
