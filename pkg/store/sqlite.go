@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -362,8 +363,16 @@ func (s *SQLiteStore) migrate() error {
 		"ALTER TABLE feature_requests ADD COLUMN latest_comment TEXT",
 	}
 	for _, migration := range migrations {
-		// Ignore errors - column may already exist
-		s.db.Exec(migration)
+		if _, err := s.db.Exec(migration); err != nil {
+			// #6291: distinguish "column already exists" (expected) from
+			// other errors (DB locked / read-only / corrupt). The former
+			// is how we get idempotent migrations; the latter is a real
+			// problem worth surfacing. SQLite returns "duplicate column
+			// name: X" for the expected case.
+			if !strings.Contains(err.Error(), "duplicate column name") {
+				slog.Warn("[SQLite] migration failed", "migration", migration, "error", err)
+			}
+		}
 	}
 
 	return nil
@@ -1158,22 +1167,22 @@ func (s *SQLiteStore) CreateFeatureRequest(request *models.FeatureRequest) error
 }
 
 func (s *SQLiteStore) GetFeatureRequest(id uuid.UUID) (*models.FeatureRequest, error) {
-	row := s.db.QueryRow(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, created_at, updated_at FROM feature_requests WHERE id = ?`, id.String())
+	row := s.db.QueryRow(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests WHERE id = ?`, id.String())
 	return s.scanFeatureRequest(row)
 }
 
 func (s *SQLiteStore) GetFeatureRequestByIssueNumber(issueNumber int) (*models.FeatureRequest, error) {
-	row := s.db.QueryRow(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, created_at, updated_at FROM feature_requests WHERE github_issue_number = ?`, issueNumber)
+	row := s.db.QueryRow(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests WHERE github_issue_number = ?`, issueNumber)
 	return s.scanFeatureRequest(row)
 }
 
 func (s *SQLiteStore) GetFeatureRequestByPRNumber(prNumber int) (*models.FeatureRequest, error) {
-	row := s.db.QueryRow(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, created_at, updated_at FROM feature_requests WHERE pr_number = ?`, prNumber)
+	row := s.db.QueryRow(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests WHERE pr_number = ?`, prNumber)
 	return s.scanFeatureRequest(row)
 }
 
 func (s *SQLiteStore) GetUserFeatureRequests(userID uuid.UUID) ([]models.FeatureRequest, error) {
-	rows, err := s.db.Query(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, created_at, updated_at FROM feature_requests WHERE user_id = ? ORDER BY created_at DESC`, userID.String())
+	rows, err := s.db.Query(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests WHERE user_id = ? ORDER BY created_at DESC`, userID.String())
 	if err != nil {
 		return nil, err
 	}
@@ -1191,7 +1200,7 @@ func (s *SQLiteStore) GetUserFeatureRequests(userID uuid.UUID) ([]models.Feature
 }
 
 func (s *SQLiteStore) GetAllFeatureRequests() ([]models.FeatureRequest, error) {
-	rows, err := s.db.Query(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, created_at, updated_at FROM feature_requests ORDER BY created_at DESC`)
+	rows, err := s.db.Query(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -1213,11 +1222,11 @@ func (s *SQLiteStore) scanFeatureRequest(row *sql.Row) (*models.FeatureRequest, 
 	var idStr, userIDStr string
 	var requestType, status string
 	var issueNumber, prNumber sql.NullInt64
-	var prURL, copilotSessionURL, previewURL sql.NullString
+	var prURL, copilotSessionURL, previewURL, latestComment sql.NullString
 	var closedByUser sql.NullInt64
 	var updatedAt sql.NullTime
 
-	err := row.Scan(&idStr, &userIDStr, &r.Title, &r.Description, &requestType, &issueNumber, &status, &prNumber, &prURL, &copilotSessionURL, &previewURL, &closedByUser, &r.CreatedAt, &updatedAt)
+	err := row.Scan(&idStr, &userIDStr, &r.Title, &r.Description, &requestType, &issueNumber, &status, &prNumber, &prURL, &copilotSessionURL, &previewURL, &closedByUser, &latestComment, &r.CreatedAt, &updatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -1249,6 +1258,9 @@ func (s *SQLiteStore) scanFeatureRequest(row *sql.Row) (*models.FeatureRequest, 
 	if closedByUser.Valid {
 		r.ClosedByUser = closedByUser.Int64 == 1
 	}
+	if latestComment.Valid {
+		r.LatestComment = latestComment.String
+	}
 	if updatedAt.Valid {
 		r.UpdatedAt = &updatedAt.Time
 	}
@@ -1260,11 +1272,11 @@ func (s *SQLiteStore) scanFeatureRequestRow(rows *sql.Rows) (*models.FeatureRequ
 	var idStr, userIDStr string
 	var requestType, status string
 	var issueNumber, prNumber sql.NullInt64
-	var prURL, copilotSessionURL, previewURL sql.NullString
+	var prURL, copilotSessionURL, previewURL, latestComment sql.NullString
 	var closedByUser sql.NullInt64
 	var updatedAt sql.NullTime
 
-	err := rows.Scan(&idStr, &userIDStr, &r.Title, &r.Description, &requestType, &issueNumber, &status, &prNumber, &prURL, &copilotSessionURL, &previewURL, &closedByUser, &r.CreatedAt, &updatedAt)
+	err := rows.Scan(&idStr, &userIDStr, &r.Title, &r.Description, &requestType, &issueNumber, &status, &prNumber, &prURL, &copilotSessionURL, &previewURL, &closedByUser, &latestComment, &r.CreatedAt, &updatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -1292,6 +1304,9 @@ func (s *SQLiteStore) scanFeatureRequestRow(rows *sql.Rows) (*models.FeatureRequ
 	}
 	if closedByUser.Valid {
 		r.ClosedByUser = closedByUser.Int64 == 1
+	}
+	if latestComment.Valid {
+		r.LatestComment = latestComment.String
 	}
 	if updatedAt.Valid {
 		r.UpdatedAt = &updatedAt.Time

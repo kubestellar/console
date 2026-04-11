@@ -1071,6 +1071,14 @@ func (h *FeedbackHandler) GetNotifications(c *fiber.Ctx) error {
 	if limit > 100 {
 		limit = 100
 	}
+	// #6291: a caller passing limit<=0 previously returned 0 rows (SQLite
+	// treats LIMIT 0 as zero rows). After #6286 added clampLimit(limit)
+	// to the store, limit=0 would return 1 row instead — a silent
+	// semantic change. Treat any non-positive value as "use default" so
+	// the handler contract is preserved.
+	if limit <= 0 {
+		limit = 50
+	}
 
 	notifications, err := h.store.GetUserNotifications(userID, limit)
 	if err != nil {

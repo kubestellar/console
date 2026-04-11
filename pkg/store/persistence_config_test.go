@@ -29,6 +29,26 @@ func TestPersistenceStore_LoadAndSave(t *testing.T) {
 		require.Equal(t, "primary-only", cfg.SyncMode)
 	})
 
+	// #6285/#6291: a config file containing literal JSON `null` is
+	// valid JSON that used to crash Load() with a nil-pointer panic
+	// (p.config became nil after Unmarshal, then the Namespace
+	// dereference panicked). Load() must now detect this and reset
+	// to the same defaults as the "file does not exist" branch.
+	t.Run("Load resets to defaults on literal null JSON (#6285)", func(t *testing.T) {
+		configPath := filepath.Join(t.TempDir(), "null.json")
+		require.NoError(t, os.WriteFile(configPath, []byte("null"), 0o600))
+
+		ps := NewPersistenceStore(configPath)
+		require.NotPanics(t, func() {
+			require.NoError(t, ps.Load())
+		}, "Load() must not panic on literal null JSON")
+
+		cfg := ps.GetConfig()
+		require.False(t, cfg.Enabled)
+		require.Equal(t, DefaultNamespace, cfg.Namespace)
+		require.Equal(t, "primary-only", cfg.SyncMode)
+	})
+
 	t.Run("Save and Load round-trip", func(t *testing.T) {
 		configPath := filepath.Join(t.TempDir(), "config.json")
 		ps := NewPersistenceStore(configPath)
