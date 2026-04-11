@@ -244,6 +244,7 @@ export const CARD_CATALOG = {
     { type: 'vault_secrets', title: 'HashiCorp Vault', description: 'Secrets management, dynamic credentials, and encryption-as-a-service', visualization: 'status' },
     { type: 'external_secrets', title: 'External Secrets', description: 'Sync secrets from external providers (AWS, Azure, GCP, Vault)', visualization: 'status' },
     { type: 'cert_manager', title: 'Cert-Manager', description: 'TLS certificate lifecycle management with automatic renewal', visualization: 'status' },
+    { type: 'keycloak_status', title: 'Keycloak', description: 'Keycloak realm health, active user sessions, and registered clients', visualization: 'status' },
     { type: 'namespace_rbac', title: 'Access Controls', description: 'RBAC policies and permission auditing per namespace', visualization: 'table' },
   ],
   'Workload Detection': [
@@ -516,10 +517,17 @@ export function generateCardSuggestions(query: string): CardSuggestion[] {
     ]
   }
 
+  if (lowerQuery.includes('keycloak') || lowerQuery.includes('sso') || lowerQuery.includes('realm') || lowerQuery.includes('identity') || lowerQuery.includes('iam') || lowerQuery.includes('oauth') || lowerQuery.includes('oidc') || lowerQuery.includes('authentication')) {
+    return [
+      { type: 'keycloak_status', title: 'Keycloak', description: 'Keycloak realm health, active user sessions, and registered clients', visualization: 'status', config: {} },
+    ]
+  }
+
   if (lowerQuery.includes('user') || lowerQuery.includes('service account') || lowerQuery.includes('access') || lowerQuery.includes('permission')) {
     return [
       { type: 'user_management', title: 'User Management', description: 'Console users and Kubernetes RBAC', visualization: 'table', config: {} },
       { type: 'namespace_rbac', title: 'Namespace RBAC', description: 'Roles, bindings, service accounts', visualization: 'table', config: {} },
+      { type: 'keycloak_status', title: 'Keycloak', description: 'SSO realm health, user sessions, and registered clients', visualization: 'status', config: {} },
     ]
   }
 

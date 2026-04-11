@@ -1,0 +1,327 @@
+import { useState } from 'react'
+import {
+  CheckCircle,
+  AlertTriangle,
+  RefreshCw,
+  Shield,
+  XCircle,
+  Loader2,
+  Users,
+  Globe,
+  Key,
+} from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { Skeleton, SkeletonStats, SkeletonList } from '../../ui/Skeleton'
+import { CardSearchInput } from '../../../lib/cards/CardComponents'
+import { useKeycloakStatus } from './useKeycloakStatus'
+import type { KeycloakRealm, KeycloakRealmStatus } from './demoData'
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const STATUS_CONFIG: Record<
+  KeycloakRealmStatus,
+  { label: string; color: string; icon: React.ReactNode }
+> = {
+  ready: {
+    label: 'Ready',
+    color: 'text-green-400',
+    icon: <CheckCircle className="w-3.5 h-3.5 text-green-400" />,
+  },
+  degraded: {
+    label: 'Degraded',
+    color: 'text-yellow-400',
+    icon: <AlertTriangle className="w-3.5 h-3.5 text-yellow-400" />,
+  },
+  provisioning: {
+    label: 'Provisioning',
+    color: 'text-blue-400',
+    icon: <Loader2 className="w-3.5 h-3.5 text-blue-400 animate-spin" />,
+  },
+  error: {
+    label: 'Error',
+    color: 'text-red-400',
+    icon: <XCircle className="w-3.5 h-3.5 text-red-400" />,
+  },
+}
+
+function useFormatRelativeTime() {
+  const { t } = useTranslation('cards')
+  return (isoString: string): string => {
+    const diff = Date.now() - new Date(isoString).getTime()
+    if (isNaN(diff) || diff < 0) return t('keycloak.syncedJustNow')
+    const minute = 60_000
+    const hour = 60 * minute
+    const day = 24 * hour
+    if (diff < minute) return t('keycloak.syncedJustNow')
+    if (diff < hour) return t('keycloak.syncedMinutesAgo', { count: Math.floor(diff / minute) })
+    if (diff < day) return t('keycloak.syncedHoursAgo', { count: Math.floor(diff / hour) })
+    return t('keycloak.syncedDaysAgo', { count: Math.floor(diff / day) })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+function StatTile({
+  icon,
+  label,
+  value,
+  colorClass,
+  borderClass,
+}: {
+  icon: React.ReactNode
+  label: string
+  value: number
+  colorClass: string
+  borderClass: string
+}) {
+  return (
+    <div className={`p-3 rounded-lg bg-secondary/30 border ${borderClass}`}>
+      <div className="flex items-center gap-2 mb-1">
+        {icon}
+        <span className={`text-xs ${colorClass}`}>{label}</span>
+      </div>
+      <span className="text-2xl font-bold text-foreground">{value.toLocaleString()}</span>
+    </div>
+  )
+}
+
+function RealmRow({ realm }: { realm: KeycloakRealm }) {
+  const { t } = useTranslation('cards')
+  const cfg = STATUS_CONFIG[realm.status]
+
+  return (
+    <div className="rounded-md bg-muted/30 px-3 py-2 space-y-1.5">
+      {/* Row 1: name + status */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          {cfg.icon}
+          <span className="text-xs font-medium truncate">{realm.name}</span>
+          {!realm.enabled && (
+            <span className="text-xs text-muted-foreground/60 shrink-0">
+              ({t('keycloak.disabled', 'disabled')})
+            </span>
+          )}
+        </div>
+        <span className={`text-xs shrink-0 ${cfg.color}`}>{cfg.label}</span>
+      </div>
+
+      {/* Row 2: namespace + metrics */}
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span className="truncate">{realm.namespace}</span>
+        <div className="flex items-center gap-3 shrink-0 ml-2">
+          <span className="flex items-center gap-1">
+            <Users className="w-3 h-3" />
+            {realm.users.toLocaleString()}
+          </span>
+          <span className="flex items-center gap-1">
+            <Globe className="w-3 h-3" />
+            {realm.clients}
+          </span>
+          {realm.activeSessions > 0 && (
+            <span className="flex items-center gap-1 text-green-400">
+              <Key className="w-3 h-3" />
+              {realm.activeSessions}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
+export function KeycloakStatus() {
+  const { t } = useTranslation('cards')
+  const formatRelativeTime = useFormatRelativeTime()
+  const { data, isRefreshing, error, showSkeleton, showEmptyState } = useKeycloakStatus()
+  const [search, setSearch] = useState('')
+
+  const realms = data.realms || []
+  const operatorPods = data.operatorPods || { ready: 0, total: 0 }
+
+  // Derived stats
+  const stats = (() => {
+    return {
+      ready: realms.filter(r => r.status === 'ready').length,
+      issues: realms.filter(r => r.status === 'degraded' || r.status === 'error').length,
+    }
+  })()
+
+  // Filtered list (local search)
+  const filteredRealms = (() => {
+    if (!search.trim()) return realms
+    const q = search.toLowerCase()
+    return realms.filter(
+      r =>
+        r.name.toLowerCase().includes(q) ||
+        r.namespace.toLowerCase().includes(q),
+    )
+  })()
+
+  // ── Loading ───────────────────────────────────────────────────────────────
+  if (showSkeleton) {
+    return (
+      <div className="h-full flex flex-col min-h-card gap-4">
+        <div className="flex items-center justify-between">
+          <Skeleton variant="rounded" width={120} height={28} />
+          <Skeleton variant="rounded" width={80} height={20} />
+        </div>
+        <SkeletonStats className="grid-cols-4" />
+        <Skeleton variant="rounded" height={32} />
+        <SkeletonList items={3} className="flex-1" />
+      </div>
+    )
+  }
+
+  // ── Error ─────────────────────────────────────────────────────────────────
+  if (error && showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+        <AlertTriangle className="w-6 h-6 text-red-400" />
+        <p className="text-sm text-red-400">
+          {t('keycloak.fetchError', 'Failed to fetch Keycloak status')}
+        </p>
+      </div>
+    )
+  }
+
+  // ── Not installed ──────────────────────────────────────────────────────────
+  if (data.health === 'not-installed') {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+        <Shield className="w-6 h-6 text-muted-foreground/50" />
+        <p className="text-sm font-medium">
+          {t('keycloak.notInstalled', 'Keycloak not detected')}
+        </p>
+        <p className="text-xs text-center max-w-xs">
+          {t(
+            'keycloak.notInstalledHint',
+            'No Keycloak operator pods found. Deploy the Keycloak Operator to manage realms and SSO.',
+          )}
+        </p>
+      </div>
+    )
+  }
+
+  const isHealthy = data.health === 'healthy'
+  const healthColorClass = isHealthy
+    ? 'bg-green-500/15 text-green-400'
+    : 'bg-yellow-500/15 text-yellow-400'
+
+  return (
+    <div className="h-full flex flex-col min-h-card content-loaded gap-4 overflow-hidden">
+      {/* ── Header: health badge + operator pods + last check ── */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${healthColorClass}`}
+          >
+            {isHealthy ? (
+              <CheckCircle className="w-4 h-4" />
+            ) : (
+              <AlertTriangle className="w-4 h-4" />
+            )}
+            {isHealthy
+              ? t('keycloak.healthy', 'Healthy')
+              : t('keycloak.degraded', 'Degraded')}
+          </div>
+          <span className="text-xs text-muted-foreground flex items-center gap-1">
+            <Shield className="w-3 h-3" />
+            {operatorPods.ready}/{operatorPods.total}{' '}
+            {t('keycloak.pods', 'pods')}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <span>{formatRelativeTime(data.lastCheckTime)}</span>
+        </div>
+      </div>
+
+      {/* ── Stats grid ── */}
+      {realms.length > 0 && (
+        <div className="grid grid-cols-4 gap-2">
+          <StatTile
+            icon={<Globe className="w-4 h-4 text-blue-400" />}
+            label={t('keycloak.realms', 'Realms')}
+            value={realms.length}
+            colorClass="text-blue-400"
+            borderClass="border-blue-500/20"
+          />
+          <StatTile
+            icon={<CheckCircle className="w-4 h-4 text-green-400" />}
+            label={t('keycloak.ready', 'Ready')}
+            value={stats.ready}
+            colorClass="text-green-400"
+            borderClass="border-green-500/20"
+          />
+          <StatTile
+            icon={<Users className="w-4 h-4 text-cyan-400" />}
+            label={t('keycloak.sessions', 'Sessions')}
+            value={data.totalActiveSessions}
+            colorClass="text-cyan-400"
+            borderClass="border-cyan-500/20"
+          />
+          <StatTile
+            icon={<AlertTriangle className="w-4 h-4 text-red-400" />}
+            label={t('keycloak.issues', 'Issues')}
+            value={stats.issues}
+            colorClass="text-red-400"
+            borderClass="border-red-500/20"
+          />
+        </div>
+      )}
+
+      {/* ── Search ── */}
+      {realms.length > 0 && (
+        <CardSearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder={t('keycloak.searchPlaceholder', 'Search realms…')}
+        />
+      )}
+
+      {/* ── Realm list ── */}
+      <div className="flex-1 space-y-2 overflow-y-auto">
+        {filteredRealms.length > 0 ? (
+          filteredRealms.map(realm => (
+            <RealmRow key={`${realm.namespace}/${realm.name}`} realm={realm} />
+          ))
+        ) : realms.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-1 py-6">
+            <Shield className="w-6 h-6 opacity-40" />
+            <p className="text-sm">{t('keycloak.noRealms', 'Operator running')}</p>
+            <p className="text-xs text-center">
+              {t(
+                'keycloak.noRealmsHint',
+                'Realm data requires the Keycloak CRD API.',
+              )}
+            </p>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center py-6 text-xs text-muted-foreground">
+            {t('keycloak.noSearchResults', 'No realms match your search.')}
+          </div>
+        )}
+      </div>
+
+      {/* ── Footer: totals ── */}
+      {realms.length > 0 && (
+        <div className="pt-2 border-t border-border/50 text-xs text-muted-foreground flex gap-4">
+          <span>
+            {data.totalUsers.toLocaleString()} {t('keycloak.users', 'users')}
+          </span>
+          <span>
+            {data.totalClients} {t('keycloak.clients', 'clients')}
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}

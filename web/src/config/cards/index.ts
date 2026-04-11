@@ -91,6 +91,7 @@ import { kubedleConfig } from './kubedle'
 import { kubescapeScanConfig } from './kubescape-scan'
 import { kubevirtStatusConfig } from './kubevirt-status'
 import { kustomizationStatusConfig } from './kustomization-status'
+import { keycloakStatusConfig } from './keycloak-status'
 import { kyvernoPoliciesConfig } from './kyverno-policies'
 import { limitRangeStatusConfig } from './limit-range-status'
 import { llmInferenceConfig } from './llm-inference'
@@ -257,6 +258,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   kubescape_scan: kubescapeScanConfig,
   kubevirt_status: kubevirtStatusConfig,
   kustomization_status: kustomizationStatusConfig,
+  keycloak_status: keycloakStatusConfig,
   kyverno_policies: kyvernoPoliciesConfig,
   limit_range_status: limitRangeStatusConfig,
   llm_inference: llmInferenceConfig,

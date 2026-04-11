@@ -281,7 +281,8 @@
     "keda_status": "KEDA",
     "strimzi_status": "Strimzi",
     "kubevela_status": "KubeVela",
-    "cloudevents_status": "CloudEvents"
+    "cloudevents_status": "CloudEvents",
+    "keycloak_status": "Keycloak"
   },
   "descriptions": {
     "cluster_health": "Overall health status of all connected Kubernetes clusters.",
@@ -455,7 +456,8 @@
     "keda_status": "KEDA autoscaler status, scaled object metrics, and trigger queue depths.",
     "strimzi_status": "Strimzi Kafka cluster health, topic status, and consumer group lag.",
     "kubevela_status": "KubeVela application delivery, component status, and workflow progress.",
-    "cloudevents_status": "CloudEvents message flow, event source tracking, and delivery status."
+    "cloudevents_status": "CloudEvents message flow, event source tracking, and delivery status.",
+    "keycloak_status": "Keycloak realm health, active user sessions, and registered clients."
   },
   "categories": {
     "core": "Core",
@@ -3516,5 +3518,28 @@
         }
       }
     }
+  },
+  "keycloak": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "notInstalled": "Keycloak not detected",
+    "notInstalledHint": "No Keycloak operator pods found. Deploy the Keycloak Operator to manage realms and SSO.",
+    "fetchError": "Failed to fetch Keycloak status",
+    "pods": "pods",
+    "realms": "Realms",
+    "ready": "Ready",
+    "sessions": "Sessions",
+    "issues": "Issues",
+    "users": "users",
+    "clients": "clients",
+    "disabled": "disabled",
+    "noRealms": "Operator running",
+    "noRealmsHint": "Realm data requires the Keycloak CRD API.",
+    "noSearchResults": "No realms match your search.",
+    "searchPlaceholder": "Search realms…",
+    "syncedJustNow": "just now",
+    "syncedMinutesAgo": "{{count}}m ago",
+    "syncedHoursAgo": "{{count}}h ago",
+    "syncedDaysAgo": "{{count}}d ago"
   }
 }

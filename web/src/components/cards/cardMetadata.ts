@@ -270,7 +270,8 @@ export const CARD_TITLES: Record<string, string> = {
   openfeature_status: 'OpenFeature',
   // OpenKruise advanced workloads
   openkruise_status: 'OpenKruise',
-
+  // Keycloak Identity & Access Management
+  keycloak_status: 'Keycloak',
   // KubeVela application delivery
   kubevela_status: 'KubeVela',
   // CloudEvents monitoring
@@ -557,6 +558,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   deployment_rollout_tracker: 'Tracks deployment rollout progress across clusters.',
   // KEDA
   keda_status: 'KEDA (Kubernetes Event-Driven Autoscaling) automatically scales workloads based on external event sources like message queues, databases, or custom metrics. This card shows which workloads are being autoscaled, their current triggers, and queue depths.',
+  // Keycloak Identity & Access Management
+  keycloak_status: 'Keycloak is a CNCF-incubating open-source Identity and Access Management solution. This card monitors the Keycloak Operator health, realm status, active user sessions, and registered clients across your clusters.',
   // Karmada multi-cluster orchestration
   karmada_status: 'Karmada is a multi-cluster orchestration tool that propagates resources (Deployments, Services, etc.) across multiple clusters using placement policies. This card shows propagation status, member cluster health, and policy compliance.',
   kuberay_fleet: 'Discovers RayCluster, RayService, and RayJob CRDs across all connected clusters. Shows fleet-level Ray workload status including GPU allocations, serving endpoints, and job progress.',
