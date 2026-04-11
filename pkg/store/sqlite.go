@@ -73,6 +73,15 @@ func parseUUID(s string, field string) uuid.UUID {
 // This provides defense-in-depth against unbounded queries from internal callers.
 const maxSQLLimit = 1000
 
+// defaultPageLimit is the default page size for list queries when the caller
+// does not supply one (limit <= 0). #6598-#6602.
+const defaultPageLimit = 500
+
+// defaultAdminPageLimit is the default page size for admin list queries that
+// are hit on every dashboard load (e.g. GetAllFeatureRequests). Smaller than
+// defaultPageLimit because the admin UI pages through results. #6602.
+const defaultAdminPageLimit = 100
+
 // clampLimit ensures a SQL LIMIT parameter is within safe bounds (1 to maxSQLLimit).
 func clampLimit(limit int) int {
 	if limit < 1 {
@@ -82,6 +91,23 @@ func clampLimit(limit int) int {
 		return maxSQLLimit
 	}
 	return limit
+}
+
+// resolvePageLimit applies the supplied limit (falling back to fallback when
+// limit <= 0) and clamps the result to maxSQLLimit. #6598-#6602.
+func resolvePageLimit(limit, fallback int) int {
+	if limit <= 0 {
+		limit = fallback
+	}
+	return clampLimit(limit)
+}
+
+// resolvePageOffset clamps negative offsets to 0. #6598-#6602.
+func resolvePageOffset(offset int) int {
+	if offset < 0 {
+		return 0
+	}
+	return offset
 }
 
 // getEnvInt reads an integer from the environment, falling back to defaultVal.
@@ -991,8 +1017,14 @@ func (s *SQLiteStore) GetUserPendingSwaps(userID uuid.UUID) ([]models.PendingSwa
 	return swaps, rows.Err()
 }
 
-func (s *SQLiteStore) GetDueSwaps() ([]models.PendingSwap, error) {
-	rows, err := s.db.Query(`SELECT id, user_id, card_id, new_card_type, new_card_config, reason, swap_at, status, created_at FROM pending_swaps WHERE status = 'pending' AND swap_at <= ?`, time.Now())
+// GetDueSwaps returns pending swaps whose swap_at has arrived, ordered by
+// swap_at ascending so the oldest due swaps are processed first.
+// #6598: LIMIT/OFFSET prevent OOM when a scheduler outage leaves a large
+// backlog. Callers that need to drain the full backlog must page.
+func (s *SQLiteStore) GetDueSwaps(limit, offset int) ([]models.PendingSwap, error) {
+	lim := resolvePageLimit(limit, defaultPageLimit)
+	off := resolvePageOffset(offset)
+	rows, err := s.db.Query(`SELECT id, user_id, card_id, new_card_type, new_card_config, reason, swap_at, status, created_at FROM pending_swaps WHERE status = 'pending' AND swap_at <= ? ORDER BY swap_at ASC LIMIT ? OFFSET ?`, time.Now(), lim, off)
 	if err != nil {
 		return nil, err
 	}
@@ -1114,9 +1146,14 @@ func (s *SQLiteStore) RecordEvent(event *models.UserEvent) error {
 	return err
 }
 
-func (s *SQLiteStore) GetRecentEvents(userID uuid.UUID, since time.Duration) ([]models.UserEvent, error) {
+// GetRecentEvents returns a user's events within the given window, newest first.
+// #6599: LIMIT/OFFSET bound the read so a chatty client cannot force an
+// unbounded scan of user_events.
+func (s *SQLiteStore) GetRecentEvents(userID uuid.UUID, since time.Duration, limit, offset int) ([]models.UserEvent, error) {
 	cutoff := time.Now().Add(-since)
-	rows, err := s.db.Query(`SELECT id, user_id, event_type, card_id, metadata, created_at FROM user_events WHERE user_id = ? AND created_at >= ? ORDER BY created_at DESC`, userID.String(), cutoff)
+	lim := resolvePageLimit(limit, defaultPageLimit)
+	off := resolvePageOffset(offset)
+	rows, err := s.db.Query(`SELECT id, user_id, event_type, card_id, metadata, created_at FROM user_events WHERE user_id = ? AND created_at >= ? ORDER BY created_at DESC LIMIT ? OFFSET ?`, userID.String(), cutoff, lim, off)
 	if err != nil {
 		return nil, err
 	}
@@ -1181,8 +1218,12 @@ func (s *SQLiteStore) GetFeatureRequestByPRNumber(prNumber int) (*models.Feature
 	return s.scanFeatureRequest(row)
 }
 
-func (s *SQLiteStore) GetUserFeatureRequests(userID uuid.UUID) ([]models.FeatureRequest, error) {
-	rows, err := s.db.Query(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests WHERE user_id = ? ORDER BY created_at DESC`, userID.String())
+// GetUserFeatureRequests returns a user's feature requests, newest first.
+// #6601: LIMIT/OFFSET prevent unbounded per-user reads.
+func (s *SQLiteStore) GetUserFeatureRequests(userID uuid.UUID, limit, offset int) ([]models.FeatureRequest, error) {
+	lim := resolvePageLimit(limit, defaultPageLimit)
+	off := resolvePageOffset(offset)
+	rows, err := s.db.Query(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`, userID.String(), lim, off)
 	if err != nil {
 		return nil, err
 	}
@@ -1199,8 +1240,14 @@ func (s *SQLiteStore) GetUserFeatureRequests(userID uuid.UUID) ([]models.Feature
 	return requests, rows.Err()
 }
 
-func (s *SQLiteStore) GetAllFeatureRequests() ([]models.FeatureRequest, error) {
-	rows, err := s.db.Query(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests ORDER BY created_at DESC`)
+// GetAllFeatureRequests returns the full feature_requests table, newest first.
+// #6602: LIMIT/OFFSET required. The admin dashboard hits this on every load,
+// so the default page size (defaultAdminPageLimit) is intentionally smaller
+// than the generic defaultPageLimit; callers that need more must page.
+func (s *SQLiteStore) GetAllFeatureRequests(limit, offset int) ([]models.FeatureRequest, error) {
+	lim := resolvePageLimit(limit, defaultAdminPageLimit)
+	off := resolvePageOffset(offset)
+	rows, err := s.db.Query(`SELECT id, user_id, title, description, request_type, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests ORDER BY created_at DESC LIMIT ? OFFSET ?`, lim, off)
 	if err != nil {
 		return nil, err
 	}

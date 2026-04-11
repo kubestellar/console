@@ -86,22 +86,35 @@ type Store interface {
 	// Pending Swaps
 	GetPendingSwap(id uuid.UUID) (*models.PendingSwap, error)
 	GetUserPendingSwaps(userID uuid.UUID) ([]models.PendingSwap, error)
-	GetDueSwaps() ([]models.PendingSwap, error)
+	// GetDueSwaps returns pending swaps whose swap_at time has arrived.
+	// #6598: limit/offset are required to prevent unbounded scans when the
+	// swap backlog grows large (e.g. scheduler outage). Pass 0 for limit to
+	// use the store default.
+	GetDueSwaps(limit, offset int) ([]models.PendingSwap, error)
 	CreatePendingSwap(swap *models.PendingSwap) error
 	UpdateSwapStatus(id uuid.UUID, status models.SwapStatus) error
 	SnoozeSwap(id uuid.UUID, newSwapAt time.Time) error
 
 	// User Events
 	RecordEvent(event *models.UserEvent) error
-	GetRecentEvents(userID uuid.UUID, since time.Duration) ([]models.UserEvent, error)
+	// GetRecentEvents returns a user's events within the given time window.
+	// #6599: limit/offset are required to bound event history reads.
+	// Pass 0 for limit to use the store default.
+	GetRecentEvents(userID uuid.UUID, since time.Duration, limit, offset int) ([]models.UserEvent, error)
 
 	// Feature Requests
 	CreateFeatureRequest(request *models.FeatureRequest) error
 	GetFeatureRequest(id uuid.UUID) (*models.FeatureRequest, error)
 	GetFeatureRequestByIssueNumber(issueNumber int) (*models.FeatureRequest, error)
 	GetFeatureRequestByPRNumber(prNumber int) (*models.FeatureRequest, error)
-	GetUserFeatureRequests(userID uuid.UUID) ([]models.FeatureRequest, error)
-	GetAllFeatureRequests() ([]models.FeatureRequest, error)
+	// GetUserFeatureRequests returns a user's feature requests, newest first.
+	// #6601: limit/offset required. Pass 0 for limit to use the store default.
+	GetUserFeatureRequests(userID uuid.UUID, limit, offset int) ([]models.FeatureRequest, error)
+	// GetAllFeatureRequests returns the global feature-request table, newest first.
+	// #6602: limit/offset required; admin dashboard uses a smaller default (100)
+	// because this is hit on every dashboard load. Pass 0 for limit to use the
+	// store default.
+	GetAllFeatureRequests(limit, offset int) ([]models.FeatureRequest, error)
 	UpdateFeatureRequest(request *models.FeatureRequest) error
 	UpdateFeatureRequestStatus(id uuid.UUID, status models.RequestStatus) error
 	CloseFeatureRequest(id uuid.UUID, closedByUser bool) error

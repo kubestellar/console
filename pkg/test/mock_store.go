@@ -98,13 +98,15 @@ func (m *MockStore) GetPendingSwap(id uuid.UUID) (*models.PendingSwap, error) { 
 func (m *MockStore) GetUserPendingSwaps(userID uuid.UUID) ([]models.PendingSwap, error) {
 	return nil, nil
 }
-func (m *MockStore) GetDueSwaps() ([]models.PendingSwap, error)                    { return nil, nil }
+func (m *MockStore) GetDueSwaps(limit, offset int) ([]models.PendingSwap, error) {
+	return nil, nil
+}
 func (m *MockStore) CreatePendingSwap(swap *models.PendingSwap) error              { return nil }
 func (m *MockStore) UpdateSwapStatus(id uuid.UUID, status models.SwapStatus) error { return nil }
 func (m *MockStore) SnoozeSwap(id uuid.UUID, newSwapAt time.Time) error            { return nil }
 
 func (m *MockStore) RecordEvent(event *models.UserEvent) error { return nil }
-func (m *MockStore) GetRecentEvents(userID uuid.UUID, since time.Duration) ([]models.UserEvent, error) {
+func (m *MockStore) GetRecentEvents(userID uuid.UUID, since time.Duration, limit, offset int) ([]models.UserEvent, error) {
 	return nil, nil
 }
 
@@ -116,10 +118,12 @@ func (m *MockStore) GetFeatureRequestByIssueNumber(issueNumber int) (*models.Fea
 func (m *MockStore) GetFeatureRequestByPRNumber(prNumber int) (*models.FeatureRequest, error) {
 	return nil, nil
 }
-func (m *MockStore) GetUserFeatureRequests(userID uuid.UUID) ([]models.FeatureRequest, error) {
+func (m *MockStore) GetUserFeatureRequests(userID uuid.UUID, limit, offset int) ([]models.FeatureRequest, error) {
 	return nil, nil
 }
-func (m *MockStore) GetAllFeatureRequests() ([]models.FeatureRequest, error)   { return nil, nil }
+func (m *MockStore) GetAllFeatureRequests(limit, offset int) ([]models.FeatureRequest, error) {
+	return nil, nil
+}
 func (m *MockStore) UpdateFeatureRequest(request *models.FeatureRequest) error { return nil }
 func (m *MockStore) UpdateFeatureRequestStatus(id uuid.UUID, status models.RequestStatus) error {
 	return nil

@@ -1965,13 +1965,27 @@ func (h *GitOpsHandlers) findReleaseNamespace(ctx context.Context, cluster, rele
 const helmOperationTimeout = 10 * time.Minute
 
 // detachedHelmContext returns a context suitable for state-mutating helm
-// subprocesses (install, upgrade, uninstall, rollback). It preserves values
-// from the request context (deadlines-as-values, trace IDs, logging tags)
-// via context.WithoutCancel but drops cancellation propagation — otherwise a
-// user closing their browser tab mid-install would SIGKILL the helm process
-// and orphan the release in `pending-install`, deadlocking future operations
-// on that namespace until the release lock is cleared manually. A fresh
-// WithTimeout using helmOperationTimeout then caps the server-side lifetime.
+// subprocesses (install, upgrade, uninstall, rollback). The returned context
+// has these semantics:
+//
+//   - Values (trace IDs, logging tags, any other ctx.Value lookups) are
+//     inherited from the request context via context.WithoutCancel.
+//   - Cancellation is NOT inherited: when the client disconnects and the
+//     request context is cancelled, the helm subprocess keeps running.
+//     Otherwise a user closing their browser tab mid-install would SIGKILL
+//     the helm process and orphan the release in `pending-install`,
+//     deadlocking future operations on that namespace until the release
+//     lock is cleared manually.
+//   - The request context's deadline is NOT inherited either — context.WithoutCancel
+//     strips both cancellation and deadline. We then wrap the detached
+//     context in context.WithTimeout(helmOperationTimeout) so the detached
+//     operation still has a server-side ceiling independent of whatever
+//     deadline the client set.
+//
+// #6600: an earlier version of this comment incorrectly claimed WithoutCancel
+// preserves "deadlines-as-values" from the request context. It does not —
+// WithoutCancel preserves only Value lookups and explicitly drops both
+// cancellation and any deadline.
 //
 // Read-only operations (helm ls, helm get, helm history, helm template) must
 // NOT use this helper — they should remain bound to the request context so a

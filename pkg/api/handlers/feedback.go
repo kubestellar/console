@@ -32,6 +32,38 @@ import (
 // githubAPITimeout is the timeout for HTTP requests to the GitHub API.
 const githubAPITimeout = 10 * time.Second
 
+// feedbackMaxClientLimit is the largest page size a client may request on
+// feedback list endpoints. #6601/#6602: the handler rejects anything above
+// this; the store additionally clamps to its own internal ceiling.
+const feedbackMaxClientLimit = 2000
+
+// parsePageParams reads `limit` and `offset` query params with defense against
+// malformed or oversized requests. Returns (limit, offset, err). When limit is
+// absent/invalid, 0 is returned so the store applies its default. When limit
+// exceeds feedbackMaxClientLimit, a 400 error is returned. #6598-#6602.
+func parsePageParams(c *fiber.Ctx) (int, int, error) {
+	limit := 0
+	if raw := c.Query("limit"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 0 {
+			return 0, 0, fiber.NewError(fiber.StatusBadRequest, "invalid limit")
+		}
+		if n > feedbackMaxClientLimit {
+			return 0, 0, fiber.NewError(fiber.StatusBadRequest, "limit too large")
+		}
+		limit = n
+	}
+	offset := 0
+	if raw := c.Query("offset"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 0 {
+			return 0, 0, fiber.NewError(fiber.StatusBadRequest, "invalid offset")
+		}
+		offset = n
+	}
+	return limit, offset, nil
+}
+
 // resolveGitHubAPIBase returns the API base URL, honoring GITHUB_URL for GHE.
 // Returned value has no trailing slash. For public github.com, returns
 // "https://api.github.com". For GHE (e.g. GITHUB_URL=https://github.example.com),
@@ -270,7 +302,12 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 func (h *FeedbackHandler) ListFeatureRequests(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
 
-	requests, err := h.store.GetUserFeatureRequests(userID)
+	limit, offset, err := parsePageParams(c)
+	if err != nil {
+		return err
+	}
+
+	requests, err := h.store.GetUserFeatureRequests(userID, limit, offset)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to list feature requests")
 	}
@@ -814,7 +851,11 @@ func (h *FeedbackHandler) fetchGitHubIssuesFromRepo(githubLogin string, repoName
 
 // listLocalFeatureRequests falls back to local database when GitHub is unavailable
 func (h *FeedbackHandler) listLocalFeatureRequests(c *fiber.Ctx, userID uuid.UUID) error {
-	requests, err := h.store.GetAllFeatureRequests()
+	limit, offset, err := parsePageParams(c)
+	if err != nil {
+		return err
+	}
+	requests, err := h.store.GetAllFeatureRequests(limit, offset)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to list feature requests")
 	}
