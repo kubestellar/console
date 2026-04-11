@@ -351,12 +351,12 @@ async function navigateToConsole(page: Page) {
   await setupAIMocks(page)
 
   // Set demo auth token to bypass OAuth login screen
-  await page.goto('http://localhost:8080/login')
+  await page.goto('/login')
   await page.waitForLoadState('domcontentloaded')
   await page.evaluate(() => {
     localStorage.setItem('token', 'demo-token')
   })
-  await page.goto('http://localhost:8080')
+  await page.goto('/')
   await page.waitForLoadState('domcontentloaded', { timeout: DIALOG_RENDER_TIMEOUT_MS })
   // Wait for React to hydrate and dashboard to render
   await page.waitForLoadState('networkidle', { timeout: DIALOG_RENDER_TIMEOUT_MS })
@@ -368,14 +368,14 @@ async function openMissionControl(page: Page) {
   if (await mcButton.isVisible({ timeout: 5000 }).catch(() => false)) {
     await mcButton.click()
   } else {
-    await page.goto('http://localhost:8080/?mission-control=open')
+    await page.goto('/?mission-control=open')
     await page.waitForLoadState('domcontentloaded', { timeout: DIALOG_RENDER_TIMEOUT_MS })
   }
   await expect(page.getByText('Define', { exact: false })).toBeVisible({ timeout: DIALOG_RENDER_TIMEOUT_MS })
 }
 
 async function openMissionBrowser(page: Page) {
-  await page.goto('http://localhost:8080/?browse=missions')
+  await page.goto('/?browse=missions')
   await page.waitForLoadState('domcontentloaded', { timeout: DIALOG_RENDER_TIMEOUT_MS })
   await expect(page.getByText('KubeStellar Community', { exact: false })).toBeVisible({ timeout: DIALOG_RENDER_TIMEOUT_MS })
 }

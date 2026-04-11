@@ -397,7 +397,7 @@ async function setupAllMocks(page: Page) {
 async function navigateTo(page: Page) {
   await setupAllMocks(page)
 
-  await page.goto('http://localhost:8080/login')
+  await page.goto('/login')
   await page.waitForLoadState('domcontentloaded')
   await page.evaluate(() => {
     localStorage.setItem('token', 'demo-token')
@@ -408,7 +408,7 @@ async function navigateTo(page: Page) {
       email: 'demo@example.com', role: 'viewer', onboarded: true,
     }))
   })
-  await page.goto('http://localhost:8080')
+  await page.goto('/')
   await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS })
   await expect(page.locator('body')).not.toBeEmpty({ timeout: DIALOG_TIMEOUT_MS })
 }
@@ -446,7 +446,7 @@ async function seedAndOpenMC(page: Page, overrides: Record<string, unknown>) {
   await setupAllMocks(page)
 
   // Go to login page to get same-origin localStorage access
-  await page.goto('http://localhost:8080/login')
+  await page.goto('/login')
   await page.waitForLoadState('domcontentloaded')
 
   // Seed token + demo mode + MC state BEFORE navigating to dashboard.
@@ -475,7 +475,7 @@ async function seedAndOpenMC(page: Page, overrides: Record<string, unknown>) {
   )
 
   // Navigate to dashboard — React mounts and reads seeded state
-  await page.goto('http://localhost:8080')
+  await page.goto('/')
   await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS })
   await expect(page.locator('body')).not.toBeEmpty({ timeout: DIALOG_TIMEOUT_MS })
 
@@ -497,7 +497,7 @@ async function ensureDashboard(page: Page) {
       email: 'demo@example.com', role: 'viewer', onboarded: true,
     }))
   })
-    await page.goto('http://localhost:8080')
+    await page.goto('/')
     await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS })
     await expect(page.locator('body')).not.toBeEmpty({ timeout: DIALOG_TIMEOUT_MS })
   }

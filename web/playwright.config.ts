@@ -61,8 +61,15 @@ export default defineConfig({
 
   // Shared settings for all projects
   use: {
-    // Base URL for all tests
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5174',
+    // Base URL for all tests.
+    //
+    // #6452 — Default to the Go backend port (8080). In production the Go
+    // backend serves BOTH the API and the built frontend on 8080, which is
+    // also how startup-oauth.sh launches the console. Tests must match the
+    // real deployment, not a standalone vite dev server. Override with
+    // PLAYWRIGHT_BASE_URL=http://localhost:5174 if running against a detached
+    // vite dev server (e.g. for fast local UI iteration).
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:8080',
 
     // Collect trace on first retry
     trace: 'on-first-retry',
@@ -122,16 +129,16 @@ export default defineConfig({
     },
   ],
 
-  // Web server config - starts dev server before tests
-  // Skip webServer if PLAYWRIGHT_BASE_URL is set (using existing server)
-  webServer: process.env.PLAYWRIGHT_BASE_URL
-    ? undefined
-    : {
-        command: 'npm run dev -- --port 5174',
-        url: 'http://localhost:5174',
-        reuseExistingServer: true,
-        timeout: 120000,
-      },
+  // Web server config - starts dev server before tests.
+  //
+  // #6452 — When PLAYWRIGHT_BASE_URL is not set, default to running against
+  // a pre-started Go backend on port 8080 (the real deployment topology).
+  // We do NOT launch vite here because the backend also serves the built
+  // frontend from the same port, and launching vite separately would mask
+  // server-routing bugs. Callers are expected to have run startup-oauth.sh
+  // or `go run .` first. If PLAYWRIGHT_BASE_URL explicitly points at 5174,
+  // the caller is using a vite dev server and is responsible for starting it.
+  webServer: undefined,
 
   // Output directory
   outputDir: 'test-results',
