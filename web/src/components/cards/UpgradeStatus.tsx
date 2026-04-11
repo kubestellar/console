@@ -534,6 +534,13 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
     prompt: string
   }
   const [pendingUpgrade, setPendingUpgrade] = useState<PendingUpgrade | null>(null)
+  // #6320: guards against double-clicking the Confirm button in the
+  // dialog. `setPendingUpgrade(null)` is async, so a second click that
+  // fires before React re-renders would still see `pendingUpgrade`
+  // non-null, pass the !pendingUpgrade guard, and call startMission
+  // again. A ref flipped synchronously at the top of the handler
+  // closes that window.
+  const startingMissionRef = useRef(false)
 
   const buildUpgradePrompt = (clusterName: string, currentVersion: string, targetVersion: string) =>
     `I want to upgrade the Kubernetes cluster "${clusterName}" from version ${currentVersion} to ${targetVersion}.
@@ -559,7 +566,14 @@ Please proceed step by step and ask for confirmation before making any changes.`
   }
 
   const confirmStartUpgrade = (editedPrompt: string) => {
-    if (!pendingUpgrade) return
+    // #6320: double-click guard. The two checks work together:
+    //   - startingMissionRef: synchronous; catches back-to-back clicks
+    //     inside a single React commit cycle.
+    //   - !pendingUpgrade: catches stale-closure invocations after
+    //     the dialog has been dismissed but a queued click is still
+    //     pending.
+    if (!pendingUpgrade || startingMissionRef.current) return
+    startingMissionRef.current = true
     const { clusterName, currentVersion, targetVersion } = pendingUpgrade
     startMission({
       title: `Upgrade ${clusterName}`,
@@ -572,6 +586,9 @@ Please proceed step by step and ask for confirmation before making any changes.`
         currentVersion,
         targetVersion } })
     setPendingUpgrade(null)
+    // Reset the ref on the next tick so a subsequent (new) upgrade
+    // mission can run normally.
+    setTimeout(() => { startingMissionRef.current = false }, 0)
   }
 
   // Apply global filters to get clusters, then build version data
