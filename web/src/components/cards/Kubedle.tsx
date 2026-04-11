@@ -33,6 +33,12 @@ const FALLBACK_WORDS = [
 
 const WORDS = WORD_LIST.length >= 20 ? WORD_LIST : FALLBACK_WORDS
 
+// #6306: Set of valid guesses (the same pool used for target words).
+// The original submit handler only checked `length === 5` and accepted
+// any random letters as a guess, letting players burn rows with junk
+// like "XXXXX". Lookup in a Set is O(1); words are already uppercased.
+const VALID_GUESSES = new Set(WORDS)
+
 // Get today's word (deterministic based on date)
 function getTodaysWord(): string {
   const today = new Date()
@@ -170,6 +176,23 @@ export function Kubedle(_props: CardComponentProps) {
       if (currentGuess.length !== 5) {
         setShake(true)
         setMessage('Not enough letters')
+        if (shakeTimeoutRef.current) clearTimeout(shakeTimeoutRef.current)
+        shakeTimeoutRef.current = setTimeout(() => {
+          setShake(false)
+          setMessage('')
+          shakeTimeoutRef.current = null
+        }, 500)
+        return
+      }
+
+      // #6306: reject guesses that aren't in the word pool. Previously
+      // any 5-letter string was accepted, so players could type junk
+      // like "XXXXX" and burn a row. The word pool is the same set
+      // used to pick the target, so every valid target is a valid
+      // guess. Ties into the existing "Not enough letters" shake UX.
+      if (!VALID_GUESSES.has(currentGuess)) {
+        setShake(true)
+        setMessage('Not in word list')
         if (shakeTimeoutRef.current) clearTimeout(shakeTimeoutRef.current)
         shakeTimeoutRef.current = setTimeout(() => {
           setShake(false)

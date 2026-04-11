@@ -133,16 +133,18 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
   })
 
   // #6070: when the user explicitly sets `config.limit` via the card
-  // settings modal, it must override any persisted itemsPerPage from
-  // localStorage (storageKey 'event-stream'). `useCardData` only
-  // consumes `defaultLimit` on initial mount — after that, its state
-  // is sourced from localStorage. Without this effect, a user's
-  // configured limit was silently ignored whenever they'd previously
-  // used the in-card "show N" dropdown, which is exactly the
-  // "show field disregarded, causing a very long card" bug in #6070.
-  // The user's workaround (minimize + maximize to force remount) only
-  // helped transiently because on some remounts localStorage was still
-  // catching up — the config.limit was never the source of truth.
+  // settings modal, it must override the persisted itemsPerPage that
+  // `useCardData` seeds from localStorage (key
+  // `kubestellar-card-limit:event-stream`, which matches the
+  // `storageKey: 'event-stream'` passed below). `useCardData` reads
+  // that key once during the initial useState and never re-consults
+  // `defaultLimit` after the first mount, so a user's configured
+  // limit was silently ignored whenever they'd previously touched
+  // the in-card "show N" dropdown. That's the "show field
+  // disregarded, causing a very long card" bug. The minimize-then-
+  // maximize workaround only appeared to help because the remount
+  // happened to land before a state update — config.limit was never
+  // the source of truth.
   useEffect(() => {
     if (typeof config?.limit === 'number' && config.limit > 0) {
       setItemsPerPage(config.limit)
