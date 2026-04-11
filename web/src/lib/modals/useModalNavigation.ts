@@ -1,5 +1,24 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { UseModalNavigationOptions, UseModalNavigationResult } from './types'
+
+/**
+ * #6749-B (Copilot on PR #6746) — Module-level stable no-op ref object
+ * used as a fallback when a `useModal` caller omits `modalRef`/`backdropRef`.
+ *
+ * Each consumer of `useModal` uses a `useMemo(() => ({current: null}), [])`
+ * locked once per component instance so the ref identity is stable across
+ * renders of that component. A module-level singleton would also be stable,
+ * but sharing it across components risks one component's focus-trap logic
+ * (if we ever switch away from always calling `.current = null`)
+ * trampling another component's ref target. Per-consumer useMemo is the
+ * safe middle ground: still stable, still isolated.
+ *
+ * The previous code created a fresh `{ current: null }` object literal on
+ * every render. Both `useModalBackdropClose` and `useModalFocusTrap`
+ * include `ref` in their effect dep arrays, so the effects re-ran on
+ * every render when the caller omitted a ref — detaching and reattaching
+ * event listeners hundreds of times during streaming renders.
+ */
 
 /**
  * useModalNavigation - Keyboard navigation hook for modals
@@ -213,8 +232,13 @@ export function useModal({
   // when `false`, the hook short-circuits and installs no listeners.
   //
   // Callers that pass no ref get a stable no-op ref object so the hook
-  // signature is satisfied.
-  const noopRef = { current: null } as React.RefObject<HTMLElement | null>
+  // signature is satisfied. The ref is memoized once per consumer so its
+  // identity is stable across renders — see the file-header note on
+  // #6749-B for why we do this via useMemo rather than a module singleton.
+  const noopRef = useMemo(
+    () => ({ current: null } as React.RefObject<HTMLElement | null>),
+    [],
+  )
   useModalBackdropClose(
     backdropRef ?? noopRef,
     isOpen && !!backdropRef && enableBackdropClose,
