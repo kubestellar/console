@@ -153,23 +153,24 @@ export function resolveComputedExpression(data: unknown, expression: string): un
       }
 
       case 'min': {
-        if (currentItems.length === 0) return 0
-        return Math.min(
-          ...currentItems.map((item) => {
-            const val = resolveFieldPath(item, arg)
-            return typeof val === 'number' ? val : Infinity
-          })
-        )
+        // #6713 — Pre-filter to finite numbers so non-numeric values don't
+        // leak Infinity into the result. If NO items are numeric after the
+        // filter, return null so the UI can render a placeholder instead
+        // of "Infinity".
+        const nums = currentItems
+          .map((item) => resolveFieldPath(item, arg))
+          .filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+        if (nums.length === 0) return null
+        return Math.min(...nums)
       }
 
       case 'max': {
-        if (currentItems.length === 0) return 0
-        return Math.max(
-          ...currentItems.map((item) => {
-            const val = resolveFieldPath(item, arg)
-            return typeof val === 'number' ? val : -Infinity
-          })
-        )
+        // #6713 — See 'min' above; same pre-filter logic for Math.max.
+        const nums = currentItems
+          .map((item) => resolveFieldPath(item, arg))
+          .filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+        if (nums.length === 0) return null
+        return Math.max(...nums)
       }
 
       case 'latest': {
@@ -258,23 +259,24 @@ export function resolveAggregate(
     }
 
     case 'min': {
-      if (items.length === 0) return 0
-      return Math.min(
-        ...items.map((item) => {
-          const val = resolveFieldPath(item, field)
-          return typeof val === 'number' ? val : Infinity
-        })
-      )
+      // #6713 — Pre-filter to finite numbers so non-numeric values don't
+      // leak Infinity into the result. Returns 0 when no numeric items
+      // are present (resolveAggregate's return type is `number`, not
+      // nullable — see path-based resolver for the null variant).
+      const nums = items
+        .map((item) => resolveFieldPath(item, field))
+        .filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+      if (nums.length === 0) return 0
+      return Math.min(...nums)
     }
 
     case 'max': {
-      if (items.length === 0) return 0
-      return Math.max(
-        ...items.map((item) => {
-          const val = resolveFieldPath(item, field)
-          return typeof val === 'number' ? val : -Infinity
-        })
-      )
+      // #6713 — See 'min' above; same pre-filter logic for Math.max.
+      const nums = items
+        .map((item) => resolveFieldPath(item, field))
+        .filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+      if (nums.length === 0) return 0
+      return Math.max(...nums)
     }
 
     default:

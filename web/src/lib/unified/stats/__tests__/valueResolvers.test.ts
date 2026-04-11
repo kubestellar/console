@@ -102,8 +102,10 @@ describe('resolveComputedExpression', () => {
 
   it('returns 0 for empty array aggregates', () => {
     expect(resolveComputedExpression([], 'avg:value')).toBe(0)
-    expect(resolveComputedExpression([], 'min:value')).toBe(0)
-    expect(resolveComputedExpression([], 'max:value')).toBe(0)
+    // #6713 — min/max on empty / non-numeric arrays return null so the
+    // UI can render a placeholder instead of Infinity / -Infinity.
+    expect(resolveComputedExpression([], 'min:value')).toBe(null)
+    expect(resolveComputedExpression([], 'max:value')).toBe(null)
   })
 
   it('returns undefined for empty array latest/first', () => {
