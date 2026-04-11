@@ -519,6 +519,134 @@ func TestMissions_CacheEviction(t *testing.T) {
 	assert.NotNil(t, cache.get("new-key", time.Hour), "newest entry should exist")
 }
 
+// ---------- Security regression tests ----------
+
+// TestSanitizePath_DoubleEncodedTraversal covers the #6418 regression:
+// Fiber's c.Query decodes once, so a payload of %252e%252e%252f arrives at
+// sanitizePath as the literal string "%2e%2e%2f". The pre-fix implementation
+// used strings.Contains(rawPath, "..") and missed this because the literal
+// ".." characters aren't present until a second decode happens.
+func TestSanitizePath_DoubleEncodedTraversal(t *testing.T) {
+	bad := []string{
+		// Single-encoded traversal — rejected because we decode once inside sanitizePath
+		"%2e%2e%2ftarget",
+		// Double-encoded — decoded by sanitizePath to %2e%2e%2f, then cleaned to ..
+		"%252e%252e%252ftarget",
+		// Mixed
+		"missions/%2e%2e/%2e%2e/etc/passwd",
+		// Raw traversal
+		"../etc/passwd",
+		"foo/../../bar",
+		// Backslash (decoded from %5c)
+		"missions%5c..%5cetc",
+		// Single literal backslash
+		"missions\\file",
+	}
+	for _, p := range bad {
+		_, err := sanitizePath(p)
+		assert.Error(t, err, "expected sanitizePath to reject %q", p)
+	}
+
+	good := []string{
+		"",                             // repo root
+		"missions/fixes/cncf-generated", // nested path
+		"fixes/kubernetes/foo.json",
+		"a/b/c",
+	}
+	for _, p := range good {
+		_, err := sanitizePath(p)
+		assert.NoError(t, err, "expected sanitizePath to accept %q", p)
+	}
+}
+
+// TestValidateSlackWebhookURL covers the #6416 regression: The pre-fix check
+// used strings.HasPrefix to validate Slack webhook URLs, which is structural
+// rather than semantic. Any URL parser quirk (userinfo, port, fragment,
+// case-folding) could sneak past. The fixed version uses net/url.Parse and
+// compares parsed.Hostname() to the literal allowlist entry.
+func TestValidateSlackWebhookURL(t *testing.T) {
+	cases := []struct {
+		name    string
+		url     string
+		wantErr bool
+	}{
+		{"valid", "https://hooks.slack.com/services/T1/B1/xxx", false},
+		{"empty", "", true},
+		{"http not https", "http://hooks.slack.com/services/T1/B1/xxx", true},
+		{"subdomain bypass", "https://hooks.slack.com.evil.example/services/x", true},
+		{"userinfo smuggling", "https://hooks.slack.com@attacker.example/services/x", true},
+		{"nested userinfo", "https://real:pass@hooks.slack.com/services/x", true},
+		{"wrong host", "https://evil.example/services/x", true},
+		{"port specified", "https://hooks.slack.com:8080/services/x", true},
+		{"wrong path", "https://hooks.slack.com/not-services/x", true},
+		{"missing path", "https://hooks.slack.com/", true},
+		{"garbage", "not a url at all", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateSlackWebhookURL(tc.url)
+			if tc.wantErr {
+				assert.Error(t, err, "expected rejection for %q", tc.url)
+			} else {
+				assert.NoError(t, err, "expected acceptance for %q", tc.url)
+			}
+		})
+	}
+}
+
+// TestMissionsCache_ByteCap covers the #6417 regression. The pre-fix cache
+// bounded only the entry count (missionsCacheMaxEntries), allowing an
+// attacker to pack 256 slots with up to ~10 MiB of body each, pushing
+// several GiB of resident memory. The fixed version evicts oldest entries
+// until both the entry-count AND the byte-size caps are satisfied.
+func TestMissionsCache_ByteCap(t *testing.T) {
+	cache := &missionsResponseCache{entries: make(map[string]*missionsCacheEntry)}
+
+	// entrySize chosen so that ~10 entries would blow the 256 MiB cap.
+	// 30 MiB each * 10 = 300 MiB > 256 MiB cap.
+	const entrySize = 30 * 1024 * 1024
+	const numEntries = 10
+	body := make([]byte, entrySize)
+
+	for i := 0; i < numEntries; i++ {
+		cache.set(
+			// deterministic unique keys
+			"k-"+string(rune('a'+i)),
+			&missionsCacheEntry{
+				body:      body,
+				fetchedAt: time.Now().Add(time.Duration(i) * time.Second),
+			},
+		)
+	}
+
+	// totalBytes must not exceed the cap.
+	assert.LessOrEqual(t, cache.totalBytes, missionsCacheMaxBytes,
+		"cache totalBytes should respect missionsCacheMaxBytes")
+
+	// At entrySize=30 MiB and cap=256 MiB, at most 8 entries can fit
+	// (8 * 30 = 240). The earliest entries should have been evicted.
+	maxFit := missionsCacheMaxBytes / entrySize
+	assert.LessOrEqual(t, len(cache.entries), maxFit,
+		"cache should have evicted down to what fits in the byte cap")
+	assert.NotNil(t, cache.get("k-"+string(rune('a'+numEntries-1)), time.Hour),
+		"newest entry should survive byte-cap eviction")
+	assert.Nil(t, cache.get("k-a", time.Hour),
+		"oldest entry should have been evicted by byte cap")
+}
+
+// TestMissionsCache_ByteCapRejectsOversizeEntry ensures a single entry
+// larger than the whole cap is rejected rather than evicting everything.
+func TestMissionsCache_ByteCapRejectsOversizeEntry(t *testing.T) {
+	cache := &missionsResponseCache{entries: make(map[string]*missionsCacheEntry)}
+	cache.set("small", &missionsCacheEntry{body: []byte("abc"), fetchedAt: time.Now()})
+
+	huge := make([]byte, missionsCacheMaxBytes+1)
+	cache.set("huge", &missionsCacheEntry{body: huge, fetchedAt: time.Now()})
+
+	assert.NotNil(t, cache.get("small", time.Hour), "small entry should survive")
+	assert.Nil(t, cache.get("huge", time.Hour), "oversize entry should be rejected")
+}
+
 // ---------- Helpers ----------
 
 // mockTransport is a http.RoundTripper that delegates to a handler function.

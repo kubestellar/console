@@ -7,6 +7,8 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -21,15 +23,32 @@ const (
 	missionsMaxBodyBytes = 10 * 1024 * 1024 // 10MB
 	missionsMaxPathLen   = 512              // max length for path/ref parameters
 
-	// forkHeadSHAMaxRetries is the number of attempts to resolve the fork's HEAD SHA
-	// after fork creation, since GitHub may not have the ref ready immediately.
+	// missionsGitHubShareMaxBytes bounds the JSON payload accepted by
+	// ShareToGitHub. The GitHub Contents API accepts base64 file content;
+	// anything larger than ~1 MiB of encoded content is almost certainly
+	// abusive (we are sharing kc-mission JSON docs, not binaries). Reject
+	// oversize payloads with 413 instead of buffering up to
+	// missionsMaxBodyBytes and holding an http client goroutine for 30s
+	// (see #6419).
+	missionsGitHubShareMaxBytes = 1 * 1024 * 1024 // 1 MiB
+
+	// forkHeadSHAMaxRetries bounds how many times we poll for the fork's HEAD
+	// SHA after fork creation, since GitHub may not have the ref ready
+	// immediately. The retry budget below is deliberately tight — the handler
+	// is synchronous and must not hold a goroutine for longer than a user is
+	// willing to wait on an HTTP request (see #6420). With an initial backoff
+	// of 1s and a 1.5x multiplier, 5 attempts fit inside ~10s wall time
+	// (1 + 1.5 + 2.25 + 3.375 ~= 8.1s of sleep). A true fix would make the
+	// fork flow asynchronous (202 Accepted + poll endpoint), but that
+	// requires frontend changes tracked separately.
 	forkHeadSHAMaxRetries = 5
-	// forkHeadSHAInitialBackoff is the initial delay before the first retry when
-	// polling for the fork's HEAD SHA.
+	// forkHeadSHAInitialBackoff is the initial delay before the first retry
+	// when polling for the fork's HEAD SHA.
 	forkHeadSHAInitialBackoff = 1 * time.Second
-	// forkHeadSHABackoffMultiplier is the factor by which the backoff delay increases
-	// on each retry attempt.
-	forkHeadSHABackoffMultiplier = 2
+	// forkHeadSHABackoffMultiplier is the factor by which the backoff delay
+	// increases on each retry attempt. Uses a float multiplier so the total
+	// wait time stays bounded under ~10s (#6420).
+	forkHeadSHABackoffMultiplier = 1.5
 
 	// missionsCacheTTL is how long cached GitHub API responses are considered fresh.
 	// Directory listings and file contents change infrequently (console-kb is updated
@@ -43,9 +62,17 @@ const (
 	missionsCacheStaleTTL = 1 * time.Hour
 
 	// missionsCacheMaxEntries is the maximum number of entries in the response cache.
-	// Each entry stores a directory listing or file body. This prevents unbounded
-	// memory growth from deep directory traversals.
+	// Each entry stores a directory listing or file body.
 	missionsCacheMaxEntries = 256
+
+	// missionsCacheMaxBytes bounds the TOTAL byte size of all cache entries,
+	// not just the entry count. Without this bound an attacker could fill
+	// missionsCacheMaxEntries slots with ~10 MiB file bodies each (the
+	// per-request missionsMaxBodyBytes cap), pushing ~2.5 GiB into resident
+	// memory (#6417). 256 MiB is a reasonable ceiling: large enough to hold
+	// the entire kubestellar/console-kb repo (~tens of MiB) with headroom,
+	// small enough that a single process footprint stays predictable.
+	missionsCacheMaxBytes = 256 * 1024 * 1024 // 256 MiB
 )
 
 // missionsCacheEntry holds a cached GitHub API response (directory listing or file content).
@@ -57,11 +84,13 @@ type missionsCacheEntry struct {
 }
 
 // missionsResponseCache is a concurrency-safe in-memory cache for GitHub API responses.
-// The cache key is the full request URL. Entries are evicted when the cache exceeds
-// missionsCacheMaxEntries (oldest-first eviction).
+// The cache key is the full request URL. Entries are evicted (oldest-first) when
+// either the entry count exceeds missionsCacheMaxEntries or the total byte size
+// exceeds missionsCacheMaxBytes (#6417).
 type missionsResponseCache struct {
-	mu      sync.RWMutex
-	entries map[string]*missionsCacheEntry
+	mu         sync.RWMutex
+	entries    map[string]*missionsCacheEntry
+	totalBytes int
 }
 
 // get returns a cached entry if it exists and is within the given TTL.
@@ -94,49 +123,136 @@ func (c *missionsResponseCache) getStale(key string, staleTTL time.Duration) *mi
 	return entry
 }
 
-// set stores a response in the cache, evicting the oldest entry if the cache is full.
+// evictOldestLocked removes the single oldest entry from the cache. The caller
+// MUST hold c.mu in write mode. Returns true if an entry was evicted.
+func (c *missionsResponseCache) evictOldestLocked() bool {
+	var oldestKey string
+	var oldestTime time.Time
+	for k, v := range c.entries {
+		if oldestKey == "" || v.fetchedAt.Before(oldestTime) {
+			oldestKey = k
+			oldestTime = v.fetchedAt
+		}
+	}
+	if oldestKey == "" {
+		return false
+	}
+	if prev, ok := c.entries[oldestKey]; ok {
+		c.totalBytes -= len(prev.body)
+	}
+	delete(c.entries, oldestKey)
+	return true
+}
+
+// set stores a response in the cache, evicting older entries until both the
+// entry-count cap (missionsCacheMaxEntries) and the byte-size cap
+// (missionsCacheMaxBytes) are satisfied (#6417). A single entry larger than
+// the byte cap is rejected rather than evicting the entire cache to make room.
 func (c *missionsResponseCache) set(key string, entry *missionsCacheEntry) {
+	entrySize := len(entry.body)
+	// Reject pathological single entries that would blow the byte cap on their own.
+	if entrySize > missionsCacheMaxBytes {
+		return
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	// Evict oldest entry if at capacity (simple strategy: find oldest and remove it)
-	if len(c.entries) >= missionsCacheMaxEntries {
-		var oldestKey string
-		var oldestTime time.Time
-		for k, v := range c.entries {
-			if oldestKey == "" || v.fetchedAt.Before(oldestTime) {
-				oldestKey = k
-				oldestTime = v.fetchedAt
-			}
-		}
-		if oldestKey != "" {
-			delete(c.entries, oldestKey)
+	// If the key already exists, account for its old size before replacing.
+	if prev, ok := c.entries[key]; ok {
+		c.totalBytes -= len(prev.body)
+		delete(c.entries, key)
+	}
+	// Evict oldest entries until both caps will be satisfied after insertion.
+	for len(c.entries) >= missionsCacheMaxEntries || c.totalBytes+entrySize > missionsCacheMaxBytes {
+		if !c.evictOldestLocked() {
+			break
 		}
 	}
 	c.entries[key] = entry
+	c.totalBytes += entrySize
 }
 
 // sanitizePath validates and sanitizes a file path parameter.
-// SECURITY: Blocks path traversal (../) and dangerous characters.
-func sanitizePath(path string) (string, error) {
-	if len(path) > missionsMaxPathLen {
+//
+// SECURITY (#6418): The naive version of this function used
+// `strings.Contains(rawPath, "..")` to block traversal, but Fiber's c.Query
+// URL-decodes exactly once. An attacker sending %252e%252e%252f gets one
+// decode from Fiber down to %2e%2e%2f, which does NOT contain the literal
+// string ".." and so bypassed the check. The raw string was then forwarded
+// into a fmt.Sprintf'd GitHub URL where a downstream consumer could decode
+// it a second time into ../ and escape the /missions/ base directory.
+//
+// The hardened version URL-decodes the input one extra time (matching the
+// worst-case double-decoding downstream), runs path.Clean on it, and
+// rejects any result that still contains a traversal component.
+func sanitizePath(raw string) (string, error) {
+	if len(raw) > missionsMaxPathLen {
 		return "", fmt.Errorf("path exceeds maximum length of %d", missionsMaxPathLen)
 	}
-	// Block path traversal
-	if strings.Contains(path, "..") {
-		return "", fmt.Errorf("path traversal (..) is not allowed")
+	// Decode repeatedly until the string stops changing. Fiber's c.Query
+	// has already decoded once before we see the value; an attacker who
+	// knows this can defeat a naive single-pass check by double- or
+	// triple-encoding (%252e → %2e → .). Iterating until a fixed point
+	// catches arbitrary nesting. Bound the iteration count so a
+	// pathological input cannot spin forever.
+	const maxDecodeIterations = 5
+	decoded := raw
+	for i := 0; i < maxDecodeIterations; i++ {
+		next, err := url.QueryUnescape(decoded)
+		if err != nil {
+			return "", fmt.Errorf("invalid path encoding")
+		}
+		if next == decoded {
+			break
+		}
+		decoded = next
+	}
+	// If the input required the maximum number of decode passes and is
+	// still changing, it's pathologically nested — reject outright.
+	if next, err := url.QueryUnescape(decoded); err == nil && next != decoded {
+		return "", fmt.Errorf("invalid path encoding")
+	}
+	// Normalize forward and backslash variants — Windows-style separators
+	// should never appear in a GitHub content path, but decoded %5c would
+	// produce them and some downstream callers treat them as separators.
+	if strings.ContainsAny(decoded, "\\") {
+		return "", fmt.Errorf("path contains invalid character")
 	}
 	// Block null bytes
-	if strings.ContainsRune(path, 0) {
+	if strings.ContainsRune(decoded, 0) {
 		return "", fmt.Errorf("path contains null bytes")
 	}
 	// Block shell metacharacters and control characters
-	for _, ch := range path {
-		if ch < 0x20 || ch == '`' || ch == '$' || ch == '|' || ch == ';' || ch == '&' || ch == '\\' {
+	for _, ch := range decoded {
+		if ch < 0x20 || ch == '`' || ch == '$' || ch == '|' || ch == ';' || ch == '&' {
 			return "", fmt.Errorf("path contains invalid character")
 		}
 	}
-	// Normalize leading slash
-	return strings.TrimPrefix(path, "/"), nil
+	// Detect traversal explicitly before path.Clean — path.Clean would
+	// silently collapse "../etc/passwd" to "etc/passwd" and hide the
+	// escape attempt from any post-clean check. Split on slash and reject
+	// if any segment is exactly ".." (the only form that walks up a
+	// directory in POSIX path semantics after decoding).
+	for _, seg := range strings.Split(decoded, "/") {
+		if seg == ".." {
+			return "", fmt.Errorf("path traversal (..) is not allowed")
+		}
+	}
+	// Belt-and-suspenders: path.Clean as a second-pass canonicalizer
+	// catches adjacent-slash artifacts and leading "./". We anchor on
+	// "/" so that a cleaned result of "/" maps back to the empty root.
+	cleaned := path.Clean("/" + decoded)
+	// After Clean, the literal ".." substring should never survive unless
+	// the attacker smuggled something pathological (e.g. ".../...//").
+	if strings.Contains(cleaned, "..") {
+		return "", fmt.Errorf("path traversal (..) is not allowed")
+	}
+	// Strip the leading slash we added for path.Clean; empty path (root of
+	// console-kb) is valid and maps to the repo root listing.
+	result := strings.TrimPrefix(cleaned, "/")
+	if result == "." {
+		result = ""
+	}
+	return result, nil
 }
 
 // sanitizeRef validates a git ref (branch/tag) parameter.
@@ -315,13 +431,11 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 
 	// Files and directories to hide from the browser UI — infrastructure
 	// and metadata entries that are not missions and would confuse users.
+	// #6421 — Any dot-prefixed entry is hidden by the dotfile check below,
+	// so this map only needs to cover non-dot files.
 	hiddenFiles := map[string]bool{
-		".gitkeep":         true,
 		"index.json":       true,
 		"search-state.json": true,
-	}
-	hiddenDirs := map[string]bool{
-		".github": true,
 	}
 
 	var entries []fiber.Map
@@ -335,11 +449,10 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 		if entryType == "file" && hiddenFiles[name] {
 			continue
 		}
-		// Skip internal directories (e.g. .github)
-		if entryType == "directory" && hiddenDirs[name] {
-			continue
-		}
-		// Skip dotfiles/dotdirs not explicitly listed above
+		// #6421 — Skip any dotfile/dotdir (standard hidden-entry convention).
+		// This is intentionally exhaustive rather than an allowlist so that
+		// newly-added infrastructure dirs (.gitlab, .vscode, .well-known…)
+		// don't leak into the mission browser UI automatically.
 		if strings.HasPrefix(name, ".") {
 			continue
 		}
@@ -515,6 +628,67 @@ type SlackShareRequest struct {
 	Text       string `json:"text"`
 }
 
+// validSlackWebhookHost is the ONLY host a Slack incoming webhook URL may
+// point at. Any other host is a potential SSRF target (see #6416).
+const validSlackWebhookHost = "hooks.slack.com"
+
+// validSlackWebhookPathPrefix is the required path prefix for a real Slack
+// incoming webhook — anything else is either a misconfiguration or an
+// attempt to proxy the request elsewhere.
+const validSlackWebhookPathPrefix = "/services/"
+
+// validateSlackWebhookURL parses the given URL and enforces a strict
+// allowlist: HTTPS only, host MUST equal hooks.slack.com (no subdomain or
+// userinfo tricks), and path MUST start with /services/. Returns an error
+// describing the rejection reason, or nil if the URL is safe.
+//
+// SECURITY (#6416): The previous check used
+// `strings.HasPrefix(url, "https://hooks.slack.com/")` which accepted
+// several bypass shapes depending on how URL parsers canonicalize the
+// request:
+//   - `https://hooks.slack.com/@attacker.evil/` — rejected by prefix but
+//     the HasPrefix check is still structural, not semantic, so any
+//     addition of URL grammar (userinfo, fragments, etc.) risks bypass
+//     when the parser normalizes.
+//   - `https://hooks.slack.com\\@attacker.evil/` — backslash is a
+//     separator in some parsers (WHATWG) but not Go's net/url, producing
+//     host mismatches across components.
+//   - `https://hooks.slack.com/` followed by an open redirect path — not
+//     strictly an SSRF but exfiltrates the webhook token.
+//
+// Parsing explicitly and comparing parsed.Host to the literal allowed
+// host eliminates the whole class of prefix-based bypasses.
+func validateSlackWebhookURL(rawURL string) error {
+	if rawURL == "" {
+		return fmt.Errorf("webhook URL is required")
+	}
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return fmt.Errorf("webhook URL is not a valid URL")
+	}
+	if parsed.Scheme != "https" {
+		return fmt.Errorf("webhook URL must use https")
+	}
+	// User info (user:pass@host) is never valid for a Slack webhook and is
+	// the most common SSRF smuggling shape — reject outright.
+	if parsed.User != nil {
+		return fmt.Errorf("webhook URL must not include userinfo")
+	}
+	// Host must match EXACTLY; no subdomains, no suffix tricks. Hostname()
+	// strips any port, which Slack never uses, but we guard against that
+	// below anyway by rejecting non-empty Port().
+	if parsed.Hostname() != validSlackWebhookHost {
+		return fmt.Errorf("webhook URL host must be %s", validSlackWebhookHost)
+	}
+	if parsed.Port() != "" {
+		return fmt.Errorf("webhook URL must not specify a port")
+	}
+	if !strings.HasPrefix(parsed.Path, validSlackWebhookPathPrefix) {
+		return fmt.Errorf("webhook URL path must begin with %s", validSlackWebhookPathPrefix)
+	}
+	return nil
+}
+
 // ShareToSlack posts a message to a Slack webhook.
 // POST /api/missions/share/slack
 func (h *MissionsHandler) ShareToSlack(c *fiber.Ctx) error {
@@ -522,8 +696,8 @@ func (h *MissionsHandler) ShareToSlack(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request body"})
 	}
-	if req.WebhookURL == "" || !strings.HasPrefix(req.WebhookURL, "https://hooks.slack.com/") {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid or missing webhook URL"})
+	if err := validateSlackWebhookURL(req.WebhookURL); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 	}
 	if req.Text == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "text is required"})
@@ -568,6 +742,21 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	token := c.Get("X-GitHub-Token")
 	if token == "" {
 		return c.Status(401).JSON(fiber.Map{"error": "X-GitHub-Token header is required"})
+	}
+
+	// #6419 — Reject oversized payloads before parsing. A misbehaving or
+	// malicious client could post up to missionsMaxBodyBytes (10 MiB) of
+	// base64-encoded content, which the handler would then hold in memory
+	// while making 4 sequential GitHub API calls (fork, ref, commit, PR)
+	// with missionsAPITimeout (30s) each — pinning a goroutine for up to
+	// two minutes per request. Cap the share endpoint at
+	// missionsGitHubShareMaxBytes (1 MiB), which is more than enough for
+	// a kc-mission-v1 JSON document.
+	if len(c.Body()) > missionsGitHubShareMaxBytes {
+		return c.Status(fiber.StatusRequestEntityTooLarge).JSON(fiber.Map{
+			"error":   "payload too large",
+			"maxSize": missionsGitHubShareMaxBytes,
+		})
 	}
 
 	var req GitHubShareRequest
@@ -663,11 +852,21 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 			slog.Info("[missions] fork HEAD SHA not yet available, retrying",
 				"attempt", attempt+1, "maxRetries", forkHeadSHAMaxRetries, "status", mainRefResp.StatusCode, "backoff", backoff)
 			time.Sleep(backoff)
-			backoff *= forkHeadSHABackoffMultiplier
+			backoff = time.Duration(float64(backoff) * forkHeadSHABackoffMultiplier)
 		}
 	}
 	if headSHA == "" {
-		return c.Status(502).JSON(fiber.Map{"error": fmt.Sprintf("could not resolve HEAD SHA for fork's %s branch after retries", defaultBranch)})
+		// #6420 — After exhausting the retry budget, return 504 Gateway
+		// Timeout instead of 502. 504 is the correct status for "upstream
+		// didn't respond in time"; 502 implies the upstream returned an
+		// error response, which isn't the case here (we got 404 or 200
+		// without an object SHA). The frontend should retry this specific
+		// error (eventual consistency) rather than surfacing it as a hard
+		// failure.
+		return c.Status(fiber.StatusGatewayTimeout).JSON(fiber.Map{
+			"error": fmt.Sprintf("could not resolve HEAD SHA for fork's %s branch after retries; GitHub fork is still initializing — retry in a few seconds", defaultBranch),
+			"code":  "fork_not_ready",
+		})
 	}
 
 	refURL := fmt.Sprintf("%s/repos/%s/git/refs", h.githubAPIURL, forkFullName)
