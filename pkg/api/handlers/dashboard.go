@@ -43,7 +43,9 @@ func NewDashboardHandler(s store.Store) *DashboardHandler {
 	return &DashboardHandler{store: s}
 }
 
-// ListDashboards returns all dashboards for the current user
+// ListDashboards returns a page of dashboards for the current user.
+// Supports limit/offset query params via parsePageParams (#6596); a response
+// may therefore be a partial page. Absent limit yields the store default.
 func (h *DashboardHandler) ListDashboards(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
 	// #6596: bound the read. Same limit/offset contract as the feedback list

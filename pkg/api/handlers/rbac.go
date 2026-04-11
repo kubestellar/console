@@ -39,7 +39,10 @@ func NewRBACHandler(s store.Store, k8sClient *k8s.MultiClusterClient) *RBACHandl
 	return &RBACHandler{store: s, k8sClient: k8sClient}
 }
 
-// ListConsoleUsers returns all console users.
+// ListConsoleUsers returns a page of console users. Supports limit/offset
+// query params via parsePageParams (#6595); a response may therefore be a
+// partial page. Absent limit yields the store default page size.
+//
 // SECURITY: Restricted to admin users to prevent non-admin users from
 // enumerating all user records (#5458).
 func (h *RBACHandler) ListConsoleUsers(c *fiber.Ctx) error {

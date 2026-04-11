@@ -32,9 +32,10 @@ import (
 // githubAPITimeout is the timeout for HTTP requests to the GitHub API.
 const githubAPITimeout = 10 * time.Second
 
-// feedbackMaxClientLimit is the largest page size a client may request on
-// feedback list endpoints. #6601/#6602: the handler rejects anything above
-// this with HTTP 400.
+// maxClientPageLimit is the largest page size a client may request on any
+// list endpoint that routes through parsePageParams (feedback, RBAC user
+// listing, dashboards, swaps). #6601/#6602: the handler rejects anything
+// above this with HTTP 400.
 //
 // #6621: this is intentionally aligned to store.maxSQLLimit. Previously this
 // was 2000 while the store clamped to 1000, so a client could ask for 1500
@@ -43,7 +44,11 @@ const githubAPITimeout = 10 * time.Second
 // more rows than the store can return is rejected up front with a clear
 // 400 instead of being silently clamped. If the store ceiling is ever
 // raised, raise this in lockstep.
-const feedbackMaxClientLimit = 1000
+//
+// #6644: name/comment were previously feedback-specific, but parsePageParams
+// is reused by non-feedback handlers. Renamed to maxClientPageLimit and
+// scoped the comment to all list endpoints.
+const maxClientPageLimit = 1000
 
 // parsePageParams reads `limit` and `offset` query params with defense against
 // malformed or oversized requests. Returns (limit, offset, err).
@@ -52,7 +57,7 @@ const feedbackMaxClientLimit = 1000
 //   - limit absent       → returns 0 so the store applies its default.
 //   - limit malformed    → HTTP 400 "invalid limit" (non-integer or negative).
 //   - limit > ceiling    → HTTP 400 "limit too large" (exceeds
-//     feedbackMaxClientLimit, which is aligned to the store ceiling).
+//     maxClientPageLimit, which is aligned to the store ceiling).
 //   - offset absent      → returns 0.
 //   - offset malformed   → HTTP 400 "invalid offset".
 //
@@ -64,7 +69,7 @@ func parsePageParams(c *fiber.Ctx) (int, int, error) {
 		if err != nil || n < 0 {
 			return 0, 0, fiber.NewError(fiber.StatusBadRequest, "invalid limit")
 		}
-		if n > feedbackMaxClientLimit {
+		if n > maxClientPageLimit {
 			return 0, 0, fiber.NewError(fiber.StatusBadRequest, "limit too large")
 		}
 		limit = n
