@@ -3657,6 +3657,12 @@ describe('WebSocket auto-reconnect backoff arithmetic', () => {
   })
 
   it('resets backoff attempts on successful connection', async () => {
+    // #6375 / #6407 — The backoff counter is no longer reset on transport
+    // `onopen`. It's only reset once the first real application-layer frame
+    // arrives (see `connectionEstablished` ref + reset in
+    // `handleAgentMessage`). This test proves the connection works by
+    // delivering an `agents_list` frame before the second close, which is
+    // the cheapest app-level message to simulate.
     vi.useFakeTimers()
     try {
       const { result } = renderHook(() => useMissions(), { wrapper })
@@ -3667,9 +3673,19 @@ describe('WebSocket auto-reconnect backoff arithmetic', () => {
       act(() => { MockWebSocket.lastInstance?.simulateClose() })
       act(() => { vi.advanceTimersByTime(1_100) })
 
-      // Second connect succeeds -> should reset counter
+      // Second connect succeeds -> should reset counter, but ONLY after an
+      // application-layer frame arrives (not merely on `onopen`).
       const ws2 = MockWebSocket.lastInstance
       await act(async () => { ws2?.simulateOpen() })
+      // Deliver a real app-level frame — this is what now triggers the
+      // backoff reset per the #6375 fix.
+      act(() => {
+        ws2?.simulateMessage({
+          id: 'test-agents-list',
+          type: 'agents_list',
+          payload: { agents: [], defaultAgent: null },
+        })
+      })
 
       // Close again -> delay should be back to 1000ms (not 4000ms)
       act(() => { ws2?.simulateClose() })

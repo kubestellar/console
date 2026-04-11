@@ -975,6 +975,17 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           // #6376 — drop any tool-in-flight tracking for the dead socket;
           // the agent will re-report status after the reconnect.
           toolsInFlight.current.clear()
+          // #6410 — also clear the remaining per-mission tracking state so
+          // nothing is carried over from the dead socket. `waitingInputTimeouts`
+          // holds real setTimeout handles and must be clearTimeout'd first
+          // (just `.clear()` would leak the timers and they could fire after
+          // reconnect, flipping missions to `failed`).
+          for (const t of waitingInputTimeouts.current.values()) {
+            clearTimeout(t)
+          }
+          waitingInputTimeouts.current.clear()
+          lastStreamTimestamp.current.clear()
+          streamSplitCounter.current.clear()
           setAgentsLoading(false)
           reject(new Error('CONNECTION_FAILED'))
         }
@@ -1068,6 +1079,8 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       if (mId === missionId) pendingRequests.current.delete(reqId)
     }
     lastStreamTimestamp.current.delete(missionId)
+    streamSplitCounter.current.delete(missionId) // #6410 — terminal state cleanup
+    toolsInFlight.current.delete(missionId) // #6410 — terminal state cleanup
     clearWaitingInputTimeout(missionId) // #5936
 
     setMissions(prev => prev.map(m => {
@@ -1183,20 +1196,35 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
 
     // #6376 — Track background tool-call lifecycle so the inactivity watchdog
     // can pause while a long-running Kubernetes tool is in flight. The agent
-    // protocol uses several frame names depending on the agent CLI flavour;
-    // count any tool-start frame as +1 and any matching tool-result frame as -1.
-    if (message.type === 'tool_exec' || message.type === 'tool_use' || message.type === 'tool_call') {
-      const prevCount = toolsInFlight.current.get(missionId) ?? 0
-      toolsInFlight.current.set(missionId, prevCount + 1)
-      // Bump last stream timestamp so a tool that fires right at the edge of
-      // the silence window doesn't trip the watchdog on the next interval.
-      lastStreamTimestamp.current.set(missionId, Date.now())
-    } else if (message.type === 'tool_result' || message.type === 'tool_done') {
-      const prevCount = toolsInFlight.current.get(missionId) ?? 0
-      const next = Math.max(0, prevCount - 1)
-      if (next === 0) toolsInFlight.current.delete(missionId)
-      else toolsInFlight.current.set(missionId, next)
-      lastStreamTimestamp.current.set(missionId, Date.now())
+    // protocol actually surfaces tool lifecycle events as `type: 'progress'`
+    // frames with tool metadata in the payload (see `onProgress` in
+    // pkg/agent/server_ai.go). A tool-start frame has `payload.tool` set and
+    // no `payload.output`; a tool-result frame has `payload.tool` set AND
+    // `payload.output` populated (truncated stdout). Count each shape as +1
+    // or -1 respectively. Earlier revisions of this code keyed on
+    // `tool_exec`/`tool_use`/`tool_call`/`tool_result`/`tool_done` message
+    // types that never reach the frontend — that branch was dead code.
+    if (message.type === 'progress') {
+      const progressPayload = (message.payload ?? {}) as {
+        tool?: string
+        output?: string
+      }
+      if (progressPayload.tool) {
+        if (progressPayload.output) {
+          // Tool completed — decrement.
+          const prevCount = toolsInFlight.current.get(missionId) ?? 0
+          const next = Math.max(0, prevCount - 1)
+          if (next === 0) toolsInFlight.current.delete(missionId)
+          else toolsInFlight.current.set(missionId, next)
+        } else {
+          // Tool started — increment.
+          const prevCount = toolsInFlight.current.get(missionId) ?? 0
+          toolsInFlight.current.set(missionId, prevCount + 1)
+        }
+        // Bump last stream timestamp so a tool that fires right at the edge
+        // of the silence window doesn't trip the watchdog on the next interval.
+        lastStreamTimestamp.current.set(missionId, Date.now())
+      }
     }
 
     setMissions(prev => prev.map(m => {
@@ -1376,6 +1404,10 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         const payload = message.payload as ChatStreamPayload | { content?: string; output?: string }
         pendingRequests.current.delete(message.id)
         clearWaitingInputTimeout(missionId) // #5936 — result received, cancel watchdog
+        // #6410 — mission reached terminal state; drop its per-mission tracking.
+        streamSplitCounter.current.delete(missionId)
+        toolsInFlight.current.delete(missionId)
+        lastStreamTimestamp.current.delete(missionId)
         markMissionAsUnread(missionId)
 
         // Extract token usage if available
@@ -1464,6 +1496,10 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         const payload = message.payload as { code?: string; message?: string }
         pendingRequests.current.delete(message.id)
         clearWaitingInputTimeout(missionId) // #5936 — terminal error, cancel watchdog
+        // #6410 — mission reached terminal state; drop its per-mission tracking.
+        streamSplitCounter.current.delete(missionId)
+        toolsInFlight.current.delete(missionId)
+        lastStreamTimestamp.current.delete(missionId)
         emitMissionError(m.type, payload.code || 'unknown', payload.message)
 
         // Create helpful error message based on error code
@@ -2297,6 +2333,9 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       if (mId === missionId) pendingRequests.current.delete(reqId)
     }
     lastStreamTimestamp.current.delete(missionId)
+    // #6410 — mission is being removed from UI; drop per-mission tracking.
+    streamSplitCounter.current.delete(missionId)
+    toolsInFlight.current.delete(missionId)
     setMissions(prev => prev.filter(m => m.id !== missionId))
     if (activeMissionId === missionId) {
       setActiveMissionId(null)
@@ -2462,7 +2501,20 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         clearTimeout(t)
       }
       waitingInputTimeoutsRef.clear()
-      wsRef.current?.close()
+      // #6410 — nullify handlers BEFORE close(). `onclose` is what schedules
+      // reconnection (see `wsReconnectTimer.current = setTimeout(...)` in
+      // ensureConnection); if we don't detach it, an unmounted provider can
+      // still enqueue reconnect attempts after tear-down. Detach the other
+      // handlers too so late events from the dying socket can't touch state
+      // on an unmounted component.
+      const dyingWs = wsRef.current
+      if (dyingWs) {
+        dyingWs.onopen = null
+        dyingWs.onmessage = null
+        dyingWs.onerror = null
+        dyingWs.onclose = null
+        dyingWs.close()
+      }
     }
   }, [])
 

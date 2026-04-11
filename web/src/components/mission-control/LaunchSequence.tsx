@@ -148,9 +148,16 @@ export function LaunchSequence({
 
         // Derive a safe display name for UI strings too — the title is
         // user-visible and we don't want a prompt-injection payload rendering
-        // in our own sidebar either.
-        const uiSafeDisplayName = isSafeProjectName(project.displayName)
-          ? project.displayName
+        // in our own sidebar either. #6410 — `isSafeProjectName` validates
+        // the TRIMMED value (see its impl), so we must trim first and use
+        // the trimmed value for BOTH validation and the rendered label.
+        // Otherwise `'  foo  '` would validate as the trimmed form but then
+        // render with the original leading/trailing whitespace.
+        const displayNameRaw = typeof project.displayName === 'string'
+          ? project.displayName.trim()
+          : ''
+        const uiSafeDisplayName = isSafeProjectName(displayNameRaw)
+          ? displayNameRaw
           : project.name
         const dryRunPrefix = state.isDryRun ? '[DRY RUN] ' : ''
         const clusterContext = `\n\n**Target cluster:** ${clusterName}`

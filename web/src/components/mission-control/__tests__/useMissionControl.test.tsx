@@ -44,6 +44,18 @@ describe('isSafeProjectName (#6379)', () => {
     expect(isSafeProjectName('a'.repeat(PROJECT_NAME_MAX_LENGTH))).toBe(true)
     expect(isSafeProjectName('a'.repeat(PROJECT_NAME_MAX_LENGTH + 1))).toBe(false)
   })
+
+  it('accepts names that become valid after trimming (#6410)', () => {
+    // The implementation validates the trimmed form, so leading/trailing
+    // whitespace should not cause false rejections. Callers that render
+    // the name in the UI must also trim BEFORE passing it in (see the
+    // LaunchSequence `uiSafeDisplayName` wiring) so validation and display
+    // agree on which string they're talking about.
+    expect(isSafeProjectName('  foo  ')).toBe(true)
+    expect(isSafeProjectName('\tfalco\n')).toBe(true)
+    // Whitespace-only still fails (trimmed length is 0).
+    expect(isSafeProjectName('   ')).toBe(false)
+  })
 })
 
 describe('buildInstallPromptForProject (#6379)', () => {

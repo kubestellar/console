@@ -64,9 +64,12 @@ export function isSafeProjectName(name: unknown): name is string {
  * caller-supplied name in a triple-quoted "opaque literal" fence so the
  * agent treats it as a string value rather than as instructions (#6379).
  *
- * If the supplied name fails the allow-list check, falls back to a short
- * literal placeholder and records the raw value separately so it cannot
- * steer the agent.
+ * If the supplied name fails the allow-list check, substitutes the
+ * literal placeholder `[invalid-name]` for BOTH the name and displayName
+ * slots so the raw value is dropped entirely — it never appears in the
+ * generated prompt, so it cannot steer the agent. The displayName has its
+ * own independent check: if it's unsafe but the name is safe, the safe
+ * name is reused in the display slot.
  */
 export function buildInstallPromptForProject(
   name: string,
