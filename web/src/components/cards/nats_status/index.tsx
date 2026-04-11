@@ -1,5 +1,6 @@
 import { AlertTriangle, CheckCircle, CircleDashed, RefreshCw, Radio, Database, Zap, Users } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { MetricTile, CardSearchInput } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonStats, SkeletonList } from '../../ui/Skeleton'
 import { useNatsStatus } from './useNatsStatus'
@@ -25,6 +26,7 @@ const STATE_STYLE: Record<NatsServerState, { badge: string; icon: React.ReactNod
 // NatsStatusInternal does all the real work
 // It's separate from the exported function so errors get caught by the boundary
 function NatsStatusInternal() {
+  const { t } = useTranslation('cards')
   const { data, isRefreshing, error, showSkeleton, showEmptyState } = useNatsStatus()
   const [search, setSearch] = useState('')
 
@@ -103,7 +105,7 @@ function NatsStatusInternal() {
           {isHealthy
             ? <CheckCircle className="w-4 h-4" />
             : <AlertTriangle className="w-4 h-4" />}
-          {isHealthy ? 'Healthy' : 'Degraded'}
+          {isHealthy ? t('nats_status.healthy') : t('nats_status.degraded')}
         </div>
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -117,25 +119,25 @@ function NatsStatusInternal() {
       {/* 4 metric tiles — the key numbers at a glance */}
       <div className="grid grid-cols-4 gap-2">
         <MetricTile
-          label="Connections"
+          label={t('nats_status.metric.connections')}
           value={data.messaging.totalConnections}
           colorClass="text-blue-400"
           icon={<Users className="w-4 h-4 text-blue-400" />}
         />
         <MetricTile
-          label="Msgs/s In"
+          label={t('nats_status.metric.msgsIn')}
           value={data.messaging.inMsgsPerSec}
           colorClass="text-green-400"
           icon={<Zap className="w-4 h-4 text-green-400" />}
         />
         <MetricTile
-          label="Msgs/s Out"
+          label={t('nats_status.metric.msgsOut')}
           value={data.messaging.outMsgsPerSec}
           colorClass="text-purple-400"
           icon={<Zap className="w-4 h-4 text-purple-400" />}
         />
         <MetricTile
-          label="JS Streams"
+          label={t('nats_status.metric.jsStreams')}
           value={data.jetstream.enabled ? data.jetstream.streams : 0}
           colorClass={data.jetstream.enabled ? 'text-cyan-400' : 'text-muted-foreground'}
           icon={<Database className="w-4 h-4 text-cyan-400" />}
@@ -146,12 +148,12 @@ function NatsStatusInternal() {
       <CardSearchInput
         value={search}
         onChange={setSearch}
-        placeholder="Search servers or streams..."
+        placeholder={t('nats_status.searchPlaceholder')}
       />
 
       {/* Servers section */}
       <div className="flex flex-col overflow-hidden gap-2">
-        <p className="text-xs font-medium text-muted-foreground">Servers</p>
+        <p className="text-xs font-medium text-muted-foreground">{t('nats_status.servers')}</p>
         <div className="space-y-1.5 overflow-y-auto scrollbar-thin max-h-32">
           {filteredServers.length === 0 ? (
             <div className="rounded-md bg-secondary/20 border border-border/40 px-3 py-3 text-xs text-muted-foreground text-center">
@@ -188,7 +190,7 @@ function NatsStatusInternal() {
       {/* JetStream streams section — only shown if JetStream is enabled */}
       {data.jetstream.enabled && (
         <div className="flex flex-col overflow-hidden gap-2">
-          <p className="text-xs font-medium text-muted-foreground">JetStream Streams</p>
+          <p className="text-xs font-medium text-muted-foreground">{t('nats_status.jetStreamStreams')}</p>
           <div className="space-y-1.5 overflow-y-auto scrollbar-thin max-h-32">
             {filteredStreams.length === 0 ? (
               <div className="rounded-md bg-secondary/20 border border-border/40 px-3 py-3 text-xs text-muted-foreground text-center">

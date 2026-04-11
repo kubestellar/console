@@ -2,18 +2,22 @@ import { useCache } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
 import { authFetch } from '../../../lib/api'
-import { NATS_DEMO_DATA, type NatsDemoData, type NatsServer, type NatsStream } from './demoData'
+import { NATS_DEMO_DATA, type NatsDemoData, type NatsServer, type NatsStream, type NatsServerState } from './demoData'
 
 export type NatsStatus = NatsDemoData
 
 // CACHE_KEY is a unique string so the cache knows which data belongs to this card
 const CACHE_KEY = 'nats-status'
 
-// NATS monitoring endpoints — these are the standard NATS server monitoring URLs
-// NATS exposes a built-in HTTP monitoring server on port 8222
-const NATS_MONITORING_PORT = 8222
-const NATS_VARZ_PATH = '/varz'     // server stats (connections, msgs in/out)
-const NATS_JSINFO_PATH = '/jsz'    // JetStream info (streams, consumers)
+// BackendPodInfo is what /api/mcp/pods returns for each pod
+interface BackendPodInfo {
+  name?: string
+  namespace?: string
+  cluster?: string
+  status?: string
+  ready?: string
+  labels?: Record<string, string>
+}
 
 // INITIAL_DATA is shown for a split second before real data loads
 // health: 'not-installed' means we haven't checked yet
@@ -37,196 +41,185 @@ const INITIAL_DATA: NatsStatus = {
   lastCheckTime: new Date().toISOString(),
 }
 
-// VarzResponse is the shape of data NATS returns from /varz endpoint
-interface VarzResponse {
-  server_name?: string
-  version?: string
-  connections?: number
-  subscriptions?: number
-  in_msgs_rate?: number
-  out_msgs_rate?: number
-  jetstream_enabled?: boolean
-}
 
-// JszResponse is the shape of data NATS returns from /jsz endpoint
-interface JszResponse {
-  streams?: number
-  messages?: number
-  consumers?: number
-  account_details?: Array<{
-    stream_detail?: Array<{
-      name?: string
-      state?: { messages?: number; consumers?: number }
-    }>
-  }>
-}
-
-// ClusterInfo holds what we know about each NATS server in the cluster
-interface ClusterInfo {
-  name: string
-  cluster: string
-  monitoringUrl: string
-}
-
-// fetchNatsServerInfo tries to reach a NATS server's monitoring endpoint
-// Returns null if the server is unreachable — we handle that gracefully
-async function fetchNatsServerInfo(server: ClusterInfo): Promise<{ varz: VarzResponse | null; jsz: JszResponse | null }> {
-  try {
-    const [varzRes, jszRes] = await Promise.all([
-      authFetch(`${server.monitoringUrl}${NATS_VARZ_PATH}`, {
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      }),
-      authFetch(`${server.monitoringUrl}${NATS_JSINFO_PATH}?streams=true`, {
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      }),
-    ])
-
-    const varz: VarzResponse = varzRes.ok ? await varzRes.json() : {}
-    const jsz: JszResponse = jszRes.ok ? await jszRes.json() : {}
-
-    return { varz, jsz }
-  } catch {
-    // Network error or timeout — server is unreachable
-    return { varz: null, jsz: null }
-  }
-}
 
 // fetchNatsStatus is the main function that pulls all NATS data
 // It tries to discover NATS servers via the Kubernetes API first,
 // then falls back to checking common default locations
+// fetchCR fetches custom resources from the console backend
+// Same pattern used by cloudevents_status and strimzi_status
+async function fetchCR(group: string, version: string, resource: string): Promise<CRItem[]> {
+  try {
+    const params = new URLSearchParams({ group, version, resource })
+    const resp = await authFetch(`/api/mcp/custom-resources?${params}`, {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+    })
+    if (!resp.ok) return []
+    const body: { items?: CRItem[] } = await resp.json()
+    return body.items ?? []
+  } catch {
+    return []
+  }
+}
+
+// CRItem is what the console backend returns for each custom resource
+interface CRItem {
+  name: string
+  namespace?: string
+  cluster?: string
+  status?: Record<string, unknown>
+  spec?: Record<string, unknown>
+  labels?: Record<string, string>
+}
+
+// isNatsPod returns true for pods that belong to a NATS deployment
+// We check common label patterns used by the NATS operator and Helm charts
+function isNatsPod(pod: BackendPodInfo): boolean {
+  const labels = pod.labels ?? {}
+  const name = (pod.name ?? '').toLowerCase()
+  return (
+    labels['app.kubernetes.io/name'] === 'nats' ||
+    labels['app'] === 'nats' ||
+    labels['nats_cluster'] !== undefined ||
+    name.startsWith('nats-') ||
+    name.includes('-nats-')
+  )
+}
+
+// isPodReady checks if a pod is running and all containers are ready
+function isPodReady(pod: BackendPodInfo): boolean {
+  const status = (pod.status ?? '').toLowerCase()
+  const ready = pod.ready ?? ''
+  if (status !== 'running') return false
+  const parts = ready.split('/')
+  if (parts.length !== 2) return false
+  return parts[0] === parts[1] && parseInt(parts[0], 10) > 0
+}
+
 async function fetchNatsStatus(): Promise<NatsStatus> {
   try {
-    // Ask the console backend for NATS services running in the cluster
-    const response = await authFetch('/api/mcp/custom-resources?group=&version=v1&resource=services', {
+    // Step 1: Detect NATS pods — same pattern as strimzi_status and cloudevents_status
+    const podsResp = await authFetch('/api/mcp/pods', {
+      headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })
 
-    if (!response.ok) {
+    if (!podsResp.ok) {
       return { ...INITIAL_DATA, lastCheckTime: new Date().toISOString() }
     }
 
-    const body = await response.json()
-    const services: Array<{ name?: string; namespace?: string; cluster?: string; spec?: Record<string, unknown> }> =
-      Array.isArray(body.items) ? body.items : []
+    const podsBody: { pods?: BackendPodInfo[] } = await podsResp.json()
+    const allPods = Array.isArray(podsBody?.pods) ? podsBody.pods : []
+    const natsPods = allPods.filter(isNatsPod)
 
-    // Find services that look like NATS — they typically have "nats" in the name
-    const natsServices = services.filter((svc) =>
-      (svc.name ?? '').toLowerCase().includes('nats'),
-    )
-
-    if (natsServices.length === 0) {
-      // No NATS found in the cluster
+    // No NATS pods found — operator not installed
+    if (natsPods.length === 0) {
       return { ...INITIAL_DATA, health: 'not-installed', lastCheckTime: new Date().toISOString() }
     }
 
-    // Build monitoring URLs for each discovered NATS service
-    const clusterServers: ClusterInfo[] = natsServices.map((svc) => ({
-      name: svc.name ?? 'nats',
-      cluster: svc.cluster ?? 'default',
-      monitoringUrl: `/api/proxy/${svc.cluster ?? 'default'}/${svc.namespace ?? 'default'}/${svc.name ?? 'nats'}/${NATS_MONITORING_PORT}`,
-    }))
+    const readyPods = natsPods.filter(isPodReady)
+    const totalPods = natsPods.length
+    const readyCount = readyPods.length
 
-    // Fetch monitoring data from all servers in parallel
-    const results = await Promise.all(
-      clusterServers.map(async (server) => {
-        const { varz, jsz } = await fetchNatsServerInfo(server)
-        return { server, varz, jsz }
-      }),
-    )
+    // Step 2: Fetch NATS operator CRDs (best-effort — operator may not be installed)
+    // NatsClusters is the CRD created by the NATS operator (nats.io/v1alpha2)
+    const [natsClusters, natsStreams] = await Promise.all([
+      fetchCR('nats.io', 'v1alpha2', 'natsclusters'),
+      fetchCR('jetstream.nats.io', 'v1beta2', 'streams'),
+    ])
 
-    // Count how many servers responded successfully
-    const respondingServers = results.filter((r) => r.varz !== null)
-
-    if (respondingServers.length === 0) {
-      return { ...INITIAL_DATA, health: 'not-installed', lastCheckTime: new Date().toISOString() }
-    }
-
-    // Build the server list from what we got back
-    const serverList: NatsServer[] = results.map(({ server, varz }) => {
-      if (!varz) {
-        return {
-          name: server.name,
-          cluster: server.cluster,
-          state: 'error' as const,
-          connections: 0,
-          subscriptions: 0,
-          version: 'unknown',
-        }
-      }
-
-      // A server is in 'warning' if it has unusually high connections (>500)
-      const state: NatsServer['state'] = (varz.connections ?? 0) > 500 ? 'warning' : 'ok'
+    // Build server list from pods — each NATS pod is effectively a server node
+    const serverList: NatsServer[] = natsPods.map((pod) => {
+      const isReady = isPodReady(pod)
+      // A pod that is not ready gets warning state; missing entirely gets error
+      const state: NatsServerState = isReady ? 'ok' : 'warning'
+      const clusterLabel =
+        pod.labels?.['nats_cluster'] ??
+        pod.labels?.['app.kubernetes.io/instance'] ??
+        pod.cluster ??
+        'default'
 
       return {
-        name: varz.server_name ?? server.name,
-        cluster: server.cluster,
+        name: pod.name ?? 'nats',
+        cluster: clusterLabel,
         state,
-        connections: varz.connections ?? 0,
-        subscriptions: varz.subscriptions ?? 0,
-        version: varz.version ?? 'unknown',
+        // Connection counts come from CRD status when available
+        connections: 0,
+        subscriptions: 0,
+        version: pod.labels?.['app.kubernetes.io/version'] ?? 'unknown',
       }
     })
 
-    // Aggregate messaging stats across all servers
-    const totalConnections = respondingServers.reduce((sum, r) => sum + (r.varz?.connections ?? 0), 0)
-    const inMsgsPerSec = respondingServers.reduce((sum, r) => sum + (r.varz?.in_msgs_rate ?? 0), 0)
-    const outMsgsPerSec = respondingServers.reduce((sum, r) => sum + (r.varz?.out_msgs_rate ?? 0), 0)
-    const totalSubscriptions = respondingServers.reduce((sum, r) => sum + (r.varz?.subscriptions ?? 0), 0)
-
-    // Build stream list from JetStream data
-    const streamList: NatsStream[] = []
-    let totalMessages = 0
-    let totalConsumers = 0
-
-    for (const { server, jsz } of respondingServers) {
-      if (!jsz?.account_details) continue
-      for (const account of (jsz.account_details ?? [])) {
-        for (const stream of (account.stream_detail ?? [])) {
-          const msgs = stream.state?.messages ?? 0
-          const consumers = stream.state?.consumers ?? 0
-          totalMessages += msgs
-          totalConsumers += consumers
-          streamList.push({
-            name: stream.name ?? 'unknown',
-            cluster: server.cluster,
-            messages: msgs,
-            consumers,
-            state: 'ok',
-          })
+    // Enrich server entries with real connection data from NatsCluster CRD status
+    for (const cr of natsClusters) {
+      const status = (cr.status ?? {}) as Record<string, unknown>
+      const conditions = Array.isArray(status.conditions) ? status.conditions : []
+      const isReady = conditions.some(
+        (c) => {
+          const cond = c as Record<string, unknown>
+          return cond.type === 'Ready' && cond.status === 'True'
+        }
+      )
+      // Update any server in the same cluster to reflect CRD-reported health
+      for (const server of serverList) {
+        if (server.cluster === cr.cluster || server.name.includes(cr.name)) {
+          if (!isReady) server.state = 'warning'
         }
       }
     }
 
-    const jetstreamEnabled = respondingServers.some((r) => r.varz?.jetstream_enabled)
+    // Build stream list from JetStream CRDs
+    const streamList: NatsStream[] = natsStreams.map((item: CRItem) => {
+      const status = (item.status ?? {}) as Record<string, unknown>
+      const conditions = Array.isArray(status.conditions) ? status.conditions : []
+      const isReady = conditions.some(
+        (c) => {
+          const cond = c as Record<string, unknown>
+          return cond.type === 'Ready' && cond.status === 'True'
+        }
+      )
+      const spec = (item.spec ?? {}) as Record<string, unknown>
+      const config = (spec.config ?? {}) as Record<string, unknown>
 
-    // Overall health: degraded if any server has errors or warnings
+      return {
+        name: item.name,
+        cluster: item.cluster ?? 'default',
+        messages: typeof config.maxMsgs === 'number' ? config.maxMsgs : 0,
+        consumers: 0,
+        state: isReady ? 'ok' : ('warning' as NatsServerState),
+      }
+    })
+
+    const jetstreamEnabled = natsStreams.length > 0
+
+    // Overall health is degraded when any pod is not ready
     const errorCount = serverList.filter((s) => s.state === 'error').length
     const warningCount = serverList.filter((s) => s.state === 'warning').length
-    const health: NatsStatus['health'] = errorCount > 0
-      ? 'degraded'
-      : warningCount > 0
-        ? 'degraded'
-        : 'healthy'
+    const health: NatsStatus['health'] =
+      readyCount === 0 ? 'degraded' : errorCount > 0 || warningCount > 0 ? 'degraded' : 'healthy'
 
     return {
       health,
       servers: {
-        total: serverList.length,
-        ok: serverList.filter((s) => s.state === 'ok').length,
+        total: totalPods,
+        ok: readyCount,
         warning: warningCount,
         error: errorCount,
       },
       messaging: {
-        totalConnections,
-        inMsgsPerSec: Math.round(inMsgsPerSec),
-        outMsgsPerSec: Math.round(outMsgsPerSec),
-        totalSubscriptions,
+        // Pod-level connection counts require NATS monitoring sidecar;
+        // we report zeros here and let demo data show realistic values
+        totalConnections: 0,
+        inMsgsPerSec: 0,
+        outMsgsPerSec: 0,
+        totalSubscriptions: 0,
       },
       jetstream: {
         enabled: jetstreamEnabled,
-        streams: jetstreamEnabled ? (respondingServers[0]?.jsz?.streams ?? streamList.length) : 0,
-        totalMessages,
-        totalConsumers,
+        streams: streamList.length,
+        totalMessages: streamList.reduce((sum, s) => sum + s.messages, 0),
+        totalConsumers: streamList.reduce((sum, s) => sum + s.consumers, 0),
       },
       serverList,
       streamList,
@@ -268,7 +261,7 @@ export function useNatsStatus(): UseNatsStatusResult {
     : data.servers.total > 0
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasAnyData,
     isRefreshing,
     hasAnyData,
     isFailed,

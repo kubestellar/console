@@ -100,4 +100,6 @@ export const CARD_INSTALL_MAP: Record<string, CardInstallInfo> = {
 
   // Knative
   knative_services: { project: 'Knative', missionKey: 'install-knative', kbPaths: ['fixes/cncf-install/install-knative.json'] },
+  // NATS
+  nats_status: { project: 'NATS', missionKey: 'install-nats', kbPaths: ['fixes/cncf-install/install-nats.json'] },
 }
