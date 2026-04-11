@@ -55,7 +55,12 @@ const SORT_OPTIONS = [
 
 export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   const { t } = useTranslation()
-  const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersFailures, lastRefresh: clustersLastRefresh } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersFailures, lastRefresh: clustersLastRefreshDate } = useClusters()
+  // #6271: useClusters returns Date|null; normalize to numeric epoch
+  // so it merges cleanly with the numeric `lastRefresh` from useCache.
+  const clustersLastRefresh: number | null = clustersLastRefreshDate instanceof Date
+    ? clustersLastRefreshDate.getTime()
+    : (typeof clustersLastRefreshDate === 'number' ? clustersLastRefreshDate : null)
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
   const { drillToHelm } = useDrillDownActions()

@@ -19,7 +19,11 @@ function ResourceUsageInternal() {
   const { t } = useTranslation(['cards', 'common'])
   // #6217: destructure lastRefresh so the card can render a freshness
   // indicator instead of leaving users guessing how stale the data is.
-  const { isLoading: clustersLoading, isRefreshing: clustersRefreshing, lastRefresh: clustersLastRefresh } = useClusters()
+  // #6271: useClusters returns Date|null; normalize to numeric epoch.
+  const { isLoading: clustersLoading, isRefreshing: clustersRefreshing, lastRefresh: clustersLastRefreshDate } = useClusters()
+  const clustersLastRefresh: number | null = clustersLastRefreshDate instanceof Date
+    ? clustersLastRefreshDate.getTime()
+    : (typeof clustersLastRefreshDate === 'number' ? clustersLastRefreshDate : null)
   const { nodes: allGPUNodes, isDemoFallback, isRefreshing: gpuRefreshing, lastRefresh: gpuLastRefresh } = useCachedGPUNodes()
   const { drillToResources } = useDrillDownActions()
   const { isDemoMode } = useDemoMode()

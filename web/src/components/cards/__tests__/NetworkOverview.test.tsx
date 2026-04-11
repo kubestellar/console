@@ -180,8 +180,12 @@ describe('NetworkOverview', () => {
     it('passes the OLDER of clusters and services lastRefresh to RefreshIndicator', () => {
       const OLDER = 1_000_000_000_000
       const NEWER = 2_000_000_000_000
+      // #6271: useClusters().lastRefresh is `Date | null` per shared.ts,
+      // useCachedServices().lastRefresh is numeric epoch — mocks must
+      // match the real types, otherwise the source's normalization
+      // path isn't actually exercised.
       mockServices.mockReturnValue({ services: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: NEWER })
-      mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: OLDER })
+      mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: new Date(OLDER) })
       render(<NetworkOverview />)
       const props = refreshIndicatorProps.mock.calls[refreshIndicatorProps.mock.calls.length - 1][0]
       expect(props.lastUpdated).toEqual(new Date(OLDER))

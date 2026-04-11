@@ -19,7 +19,12 @@ interface ClusterFocusProps {
 export function ClusterFocus({ config }: ClusterFocusProps) {
   const { t } = useTranslation(['cards', 'common'])
   const selectedCluster = config?.cluster
-  const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed, consecutiveFailures, lastRefresh: clustersLastRefresh } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed, consecutiveFailures, lastRefresh: clustersLastRefreshDate } = useClusters()
+  // #6271: useClusters returns Date|null; normalize to numeric epoch
+  // so it merges cleanly with the numeric `lastRefresh` from useCache.
+  const clustersLastRefresh: number | null = clustersLastRefreshDate instanceof Date
+    ? clustersLastRefreshDate.getTime()
+    : (typeof clustersLastRefreshDate === 'number' ? clustersLastRefreshDate : null)
   // #6217: destructure lastRefresh from each underlying hook so the card
   // can render a freshness indicator using the OLDEST timestamp (= the
   // staler half of the data the user is looking at).

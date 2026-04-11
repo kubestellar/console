@@ -182,7 +182,10 @@ describe('HelmValuesDiff', () => {
       const OLDEST = 1_000_000_000_000
       const MIDDLE = 2_000_000_000_000
       const NEWEST = 3_000_000_000_000
-      mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: NEWEST })
+      // #6271: useClusters().lastRefresh is `Date | null` per shared.ts;
+      // useCachedHelm{Releases,Values}().lastRefresh is numeric epoch.
+      // Mocks must match the real types.
+      mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: new Date(NEWEST) })
       mockHelmReleases.mockReturnValue({ releases: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: MIDDLE })
       mockHelmValues.mockReturnValue({ values: {}, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: OLDEST })
       render(<HelmValuesDiff />)

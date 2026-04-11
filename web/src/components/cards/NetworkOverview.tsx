@@ -11,7 +11,12 @@ import { ClusterStatusDot } from '../ui/ClusterStatusBadge'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 
 export function NetworkOverview() {
-  const { deduplicatedClusters: clusters, isLoading, isRefreshing: clustersRefreshing, lastRefresh: clustersLastRefresh } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing: clustersRefreshing, lastRefresh: clustersLastRefreshDate } = useClusters()
+  // #6271: useClusters returns lastRefresh as `Date | null`, but the
+  // freshness merge below expects a numeric epoch. Normalize once.
+  const clustersLastRefresh: number | null = clustersLastRefreshDate instanceof Date
+    ? clustersLastRefreshDate.getTime()
+    : (typeof clustersLastRefreshDate === 'number' ? clustersLastRefreshDate : null)
   const { services, isLoading: servicesLoading, isRefreshing, isDemoFallback, consecutiveFailures, isFailed, lastRefresh: servicesLastRefresh } = useCachedServices()
 
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
