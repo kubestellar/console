@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"testing"
 	"time"
@@ -86,6 +87,18 @@ func TestDevModeLogin(t *testing.T) {
 	})
 }
 
+// refreshReq builds a POST /auth/refresh request with the CSRF header
+// set so the handler does not reject it at the CSRF gate (#6588). Tests
+// that want to exercise the CSRF gate should build requests directly.
+func refreshReq(authHeader string) *http.Request {
+	req, _ := http.NewRequest("POST", "/auth/refresh", nil)
+	req.Header.Set("X-Requested-With", "XMLHttpRequest")
+	if authHeader != "" {
+		req.Header.Set("Authorization", authHeader)
+	}
+	return req
+}
+
 func TestRefreshToken(t *testing.T) {
 	app, mockStore, handler := setupAuthTest()
 	app.Post("/auth/refresh", handler.RefreshToken)
@@ -100,8 +113,7 @@ func TestRefreshToken(t *testing.T) {
 		mockStore.On("GetUser", uid).Return(user, nil).Once()
 
 		// 3. Request
-		req, _ := http.NewRequest("POST", "/auth/refresh", nil)
-		req.Header.Set("Authorization", "Bearer "+token)
+		req := refreshReq("Bearer " + token)
 		resp, err := app.Test(req, 5000)
 
 		assert.NoError(t, err)
@@ -109,33 +121,59 @@ func TestRefreshToken(t *testing.T) {
 
 		var body map[string]interface{}
 		json.NewDecoder(resp.Body).Decode(&body)
-		assert.NotEmpty(t, body["token"])
+		// #6590 — the refreshed token MUST NOT appear in the response body.
+		// It is delivered exclusively via the HttpOnly kc_auth cookie so
+		// JavaScript cannot read it.
+		_, hasToken := body["token"]
+		assert.False(t, hasToken, "token must not be returned in JSON body (#6590)")
+		assert.Equal(t, true, body["refreshed"])
 		assert.Equal(t, true, body["onboarded"])
+
+		// The refreshed cookie must still be set on the response.
+		var found bool
+		for _, ck := range resp.Cookies() {
+			if ck.Name == "kc_auth" && ck.Value != "" {
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "kc_auth cookie must be set on refresh")
 	})
 
 	t.Run("Missing Authorization Header", func(t *testing.T) {
-		req, _ := http.NewRequest("POST", "/auth/refresh", nil)
+		req := refreshReq("")
 		resp, _ := app.Test(req, 5000)
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	})
 
-	t.Run("Short Authorization Header (< Bearer prefix length)", func(t *testing.T) {
+	t.Run("Missing CSRF header (#6588)", func(t *testing.T) {
+		// Omit X-Requested-With to verify the handler rejects the request
+		// at the CSRF gate before even looking at the token.
+		uid := uuid.New()
+		user := &models.User{ID: uid, GitHubLogin: "test"}
+		token, _ := handler.generateJWT(user)
+
 		req, _ := http.NewRequest("POST", "/auth/refresh", nil)
-		req.Header.Set("Authorization", "Bad")
+		req.Header.Set("Authorization", "Bearer "+token)
+		resp, _ := app.Test(req, 5000)
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode,
+			"requests without CSRF header must be rejected (#6588)")
+	})
+
+	t.Run("Short Authorization Header (< Bearer prefix length)", func(t *testing.T) {
+		req := refreshReq("Bad")
 		resp, _ := app.Test(req, 5000)
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	})
 
 	t.Run("Authorization Header without Bearer prefix", func(t *testing.T) {
-		req, _ := http.NewRequest("POST", "/auth/refresh", nil)
-		req.Header.Set("Authorization", "Basic dXNlcjpwYXNz")
+		req := refreshReq("Basic dXNlcjpwYXNz")
 		resp, _ := app.Test(req, 5000)
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	})
 
 	t.Run("Invalid Token", func(t *testing.T) {
-		req, _ := http.NewRequest("POST", "/auth/refresh", nil)
-		req.Header.Set("Authorization", "Bearer invalid-token-string")
+		req := refreshReq("Bearer invalid-token-string")
 		resp, _ := app.Test(req, 5000)
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	})
@@ -147,8 +185,7 @@ func TestRefreshToken(t *testing.T) {
 
 		mockStore.On("GetUser", uid).Return(nil, nil).Once()
 
-		req, _ := http.NewRequest("POST", "/auth/refresh", nil)
-		req.Header.Set("Authorization", "Bearer "+token)
+		req := refreshReq("Bearer " + token)
 		resp, _ := app.Test(req, 5000)
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	})
@@ -164,8 +201,7 @@ func TestRefreshToken(t *testing.T) {
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 		signed, _ := token.SignedString([]byte("test-secret"))
 
-		req, _ := http.NewRequest("POST", "/auth/refresh", nil)
-		req.Header.Set("Authorization", "Bearer "+signed)
+		req := refreshReq("Bearer " + signed)
 		resp, _ := app.Test(req, 5000)
 
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
@@ -514,4 +550,140 @@ func TestOAuthStatePersistence_SurvivesRestart(t *testing.T) {
 func TestOAuthStatePersistence_InvalidStateRejected(t *testing.T) {
 	h, _ := newRealStoreAuthHandler(t)
 	assert.False(t, h.validateAndConsumeOAuthState("never-issued"))
+}
+
+// TestSanitizeOAuthErrorDescription covers #6583: externally-supplied OAuth
+// error descriptions must be scrubbed before being reflected into the
+// redirect URL on /login.
+func TestSanitizeOAuthErrorDescription(t *testing.T) {
+	t.Run("empty input", func(t *testing.T) {
+		assert.Equal(t, "", sanitizeOAuthErrorDescription(""))
+	})
+	t.Run("plain ascii passes through", func(t *testing.T) {
+		got := sanitizeOAuthErrorDescription("App is suspended.")
+		assert.Equal(t, "App is suspended.", got)
+	})
+	t.Run("control characters stripped", func(t *testing.T) {
+		got := sanitizeOAuthErrorDescription("line1\r\nline2\x00\x07")
+		assert.NotContains(t, got, "\r")
+		assert.NotContains(t, got, "\n")
+		assert.NotContains(t, got, "\x00")
+		assert.NotContains(t, got, "\x07")
+	})
+	t.Run("non-ascii replaced", func(t *testing.T) {
+		got := sanitizeOAuthErrorDescription("caf\u00e9 \u00e9chec")
+		for _, r := range got {
+			assert.True(t, r >= 0x20 && r < 0x7f,
+				"rune %q must be printable ASCII", r)
+		}
+	})
+	t.Run("length bounded", func(t *testing.T) {
+		big := make([]byte, 10_000)
+		for i := range big {
+			big[i] = 'a'
+		}
+		got := sanitizeOAuthErrorDescription(string(big))
+		assert.LessOrEqual(t, len(got), maxOAuthErrorDescriptionLen)
+	})
+}
+
+// TestGitHubCallback_SanitizesErrorDescription ensures the redirect URL
+// produced by GitHubCallback contains only sanitized error detail when
+// GitHub returns a malicious-looking error_description (#6583).
+func TestGitHubCallback_SanitizesErrorDescription(t *testing.T) {
+	app, _, handler := setupAuthTest()
+	app.Get("/auth/callback", handler.GitHubCallback)
+
+	// Include CR/LF in the query param; after URL decoding the handler
+	// should strip the control characters before reflecting them.
+	req, _ := http.NewRequest("GET",
+		"/auth/callback?error=access_denied&error_description=bad%0D%0Ainjected",
+		nil)
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusTemporaryRedirect, resp.StatusCode)
+	loc, _ := resp.Location()
+	// Percent-decode to compare against the sanitized form.
+	dec, _ := url.QueryUnescape(loc.String())
+	assert.NotContains(t, dec, "\r", "CR must be stripped (#6583)")
+	assert.NotContains(t, dec, "\n", "LF must be stripped (#6583)")
+}
+
+// TestLogout_RequiresCSRFHeader covers #6588: logout must reject requests
+// that are missing the X-Requested-With header as a CSRF mitigation even
+// when a valid JWT is presented.
+func TestLogout_RequiresCSRFHeader(t *testing.T) {
+	app, _, handler := setupAuthTest()
+	app.Post("/auth/logout", handler.Logout)
+
+	uid := uuid.New()
+	user := &models.User{ID: uid, GitHubLogin: "test"}
+	token, _ := handler.generateJWT(user)
+
+	// Without the CSRF header: 403.
+	req, _ := http.NewRequest("POST", "/auth/logout", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, _ := app.Test(req, 5000)
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+
+	// With the CSRF header: 200.
+	req2, _ := http.NewRequest("POST", "/auth/logout", nil)
+	req2.Header.Set("Authorization", "Bearer "+token)
+	req2.Header.Set("X-Requested-With", "XMLHttpRequest")
+	resp2, _ := app.Test(req2, 5000)
+	assert.Equal(t, http.StatusOK, resp2.StatusCode)
+}
+
+// TestLogout_ExpiredTokenIdempotent covers #6580: when the caller presents
+// an expired (but otherwise well-formed) JWT, logout returns 200 and does
+// NOT add the expired JTI to the revocation store. Adding already-expired
+// JTIs only bloats the persistent table for no security benefit.
+func TestLogout_ExpiredTokenIdempotent(t *testing.T) {
+	app, _, handler := setupAuthTest()
+	app.Post("/auth/logout", handler.Logout)
+
+	expClaims := middleware.UserClaims{
+		UserID: uuid.New(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        uuid.NewString(),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
+		},
+	}
+	tok := jwt.NewWithClaims(jwt.SigningMethodHS256, expClaims)
+	signed, _ := tok.SignedString([]byte("test-secret"))
+
+	req, _ := http.NewRequest("POST", "/auth/logout", nil)
+	req.Header.Set("Authorization", "Bearer "+signed)
+	req.Header.Set("X-Requested-With", "XMLHttpRequest")
+	resp, _ := app.Test(req, 5000)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// The expired JTI must NOT have been added to the revocation store.
+	assert.False(t, middleware.IsTokenRevoked(expClaims.ID),
+		"expired tokens must not be added to revocation store (#6580)")
+}
+
+// TestCookieSameSiteStrict covers #6588: the kc_auth cookie must be set
+// with SameSite=Strict so that cross-origin form POSTs cannot carry it.
+func TestCookieSameSiteStrict(t *testing.T) {
+	app, mockStore, handler := setupAuthTest()
+	app.Get("/auth/dev", handler.devModeLogin)
+
+	mockStore.On("GetUserByGitHubID", "dev-dev-user").Return(nil, nil).Once()
+	mockStore.On("CreateUser", mock.Anything).Return(nil).Once()
+	mockStore.On("UpdateLastLogin", mock.Anything).Return(nil).Once()
+
+	req, _ := http.NewRequest("GET", "/auth/dev", nil)
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+
+	var sameSite http.SameSite
+	for _, ck := range resp.Cookies() {
+		if ck.Name == "kc_auth" {
+			sameSite = ck.SameSite
+			break
+		}
+	}
+	assert.Equal(t, http.SameSiteStrictMode, sameSite,
+		"kc_auth cookie must be SameSite=Strict (#6588)")
 }
